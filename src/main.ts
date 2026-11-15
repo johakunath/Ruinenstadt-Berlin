@@ -53,6 +53,10 @@ const ui = new Ui(opts, {
     opts.rumble = on;
     storeOptions(opts);
   },
+  onShowPerf: (on) => {
+    opts.showPerf = on;
+    storeOptions(opts);
+  },
 }, input);
 
 input.onMenu = () => {
@@ -176,7 +180,7 @@ function frame(now: number): void {
 
   renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, PLAYER.maxHp, sim.kills);
-  if (opts.debugPerf) {
+  if (opts.showPerf) {
     const pf = renderer.perf;
     ui.setPerf(
       `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms\n` +

@@ -11,6 +11,7 @@ const FRAME_Z = -1.4;
 const LOOK_AHEAD = 0.22;
 const LOOK_AHEAD_MAX = 1.6;
 const FOLLOW = 7;
+const SPRING_STEP = 1 / 120;
 
 export class FollowCamera {
   readonly camera = new PerspectiveCamera(FOV, 16 / 9, 1, 120);
@@ -18,6 +19,10 @@ export class FollowCamera {
   private readonly ahead = new Vector3();
   private readonly kick = new Vector3();
   private readonly kickVel = new Vector3();
+  /** Read by the test: current shake offset at the look-at point. */
+  get kickOffset(): number {
+    return Math.hypot(this.kick.x, this.kick.z);
+  }
   private trauma = 0;
   private time = 0;
   private distance = DISTANCE;
@@ -68,17 +73,22 @@ export class FollowCamera {
     this.target.z += (tz - this.target.z) * k;
 
     // Shake: a damped spring for the kick, noise scaled by trauma squared.
+    // Fixed substeps: one Euler step per frame diverges below about 18 fps and throws the view off screen.
     const stiff = 320;
     const damp = 26;
-    this.kickVel.x += (-stiff * this.kick.x - damp * this.kickVel.x) * dt;
-    this.kickVel.z += (-stiff * this.kick.z - damp * this.kickVel.z) * dt;
-    this.kick.x += this.kickVel.x * dt;
-    this.kick.z += this.kickVel.z * dt;
+    const n = Math.max(1, Math.ceil(dt / SPRING_STEP));
+    const h = dt / n;
+    for (let i = 0; i < n; i++) {
+      this.kickVel.x += (-stiff * this.kick.x - damp * this.kickVel.x) * h;
+      this.kickVel.z += (-stiff * this.kick.z - damp * this.kickVel.z) * h;
+      this.kick.x += this.kickVel.x * h;
+      this.kick.z += this.kickVel.z * h;
+    }
     this.trauma = Math.max(0, this.trauma - dt * 2.4);
-    const n = this.trauma * this.trauma * 0.12;
-    const sx = this.kick.x + Math.sin(this.time * 71) * n;
-    const sy = Math.sin(this.time * 93 + 1.3) * n;
-    const sz = this.kick.z + Math.sin(this.time * 57 + 2.1) * n;
+    const noise = this.trauma * this.trauma * 0.12;
+    const sx = this.kick.x + Math.sin(this.time * 71) * noise;
+    const sy = Math.sin(this.time * 93 + 1.3) * noise;
+    const sz = this.kick.z + Math.sin(this.time * 57 + 2.1) * noise;
 
     const lookX = this.target.x + sx;
     const lookZ = this.target.z + sz;

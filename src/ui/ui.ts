@@ -18,6 +18,7 @@ export interface UiHandlers {
   onLook(id: LookId): void;
   onVolume(v: number): void;
   onRumble(on: boolean): void;
+  onShowPerf(on: boolean): void;
 }
 
 export class Ui {
@@ -57,7 +58,13 @@ export class Ui {
     const rumble = el<HTMLInputElement>('opt-rumble');
     rumble.checked = opts.rumble;
     rumble.addEventListener('change', () => handlers.onRumble(rumble.checked));
-    this.perf.hidden = !opts.debugPerf;
+    const perf = el<HTMLInputElement>('opt-perf');
+    perf.checked = opts.showPerf;
+    perf.addEventListener('change', () => {
+      this.perf.hidden = !perf.checked;
+      handlers.onShowPerf(perf.checked);
+    });
+    this.perf.hidden = !opts.showPerf;
     this.setupTouch(input);
   }
 

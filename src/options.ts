@@ -13,6 +13,8 @@ export interface Options {
   seed: number;
   volume: number;
   rumble: boolean;
+  /** Performance readout bottom left (options menu or ?debug=perf). */
+  showPerf: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
@@ -26,6 +28,7 @@ interface Stored {
   look?: LookId;
   volume?: number;
   rumble?: boolean;
+  showPerf?: boolean;
 }
 
 function readStored(): Stored {
@@ -38,7 +41,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, look: o.look, volume: o.volume, rumble: o.rumble };
+    const s: Stored = { profile: o.profile, look: o.look, volume: o.volume, rumble: o.rumble, showPerf: o.showPerf };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -91,6 +94,7 @@ export function readOptions(): Options {
     seed: Number(q.get('seed') ?? 0) || (Date.now() & 0xffff) + 1,
     volume: stored.volume ?? 0.7,
     rumble: stored.rumble ?? true,
+    showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     autostart: q.has('autostart'),
     cam: parseCam(q.get('cam')),
   };
