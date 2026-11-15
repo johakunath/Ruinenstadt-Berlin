@@ -10,7 +10,24 @@ Adapted from the 2D game (`pipeline/workflow.md`, token rules of 2026-11-12, des
 | Claude | Plans and writes tasks, architecture, sim rules, rendering and shaders, combat feel, debugging, reviews of Codex PRs, performance work, final acceptance | Redo Codex work without a note in the task file |
 | Codex | Well-specified tasks end to end: data ports, UI from an approved mockup, tools, tests for a given spec, image generation (menu art) | Change task scope, architecture or the look on its own: write the question into the task file and stop |
 
-Task titles carry the owner in brackets, e.g. `[Codex]`, `[Claude · Opus high]`, `[PC · Blender]`. A task without a tag is Claude's.
+Task titles carry the recommended owner and model in brackets, e.g. `[Codex]`, `[Claude · Opus high]`, `[PC · Blender]`. It is a recommendation: Johannes swaps Codex and Claude depending on access and tokens, so every task must be doable by either. A task without a tag is Claude's.
+
+## Document structure
+
+Follows the 2D repo, with two changes.
+
+| File | Role | 2D equivalent |
+|---|---|---|
+| `CLAUDE.md` (`AGENTS.md` points to it) | Index and rules | Same |
+| `docs/plan-3d.md` | Decisions, architecture, budgets | `BACKLOG.md` › Decisions, Tech |
+| `docs/migration.md` | Ordered steps, owners, open questions | `BACKLOG.md` › Next |
+| `docs/backlog.md` | Ideas and wishes not yet scheduled | `BACKLOG.md` › table and Ideas |
+| `docs/status.md` | What is in the game now, known weak spots | `BACKLOG.md` › Done (version rows) |
+| `docs/playtests.md` | Playtest history | Same |
+| `docs/tasks/` | One file per task, handover notes under `Questions` and in the PR | `pipeline/tasks/` plus `pipeline/log.md` |
+| `docs/vision.md`, `docs/story.md`, `docs/style-bible.md`, `docs/district-design-directions.md` | Intent, story, art | Same |
+
+Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now live with their task and PR), and no version bump per release (CI deploys `main`).
 
 ## Token budget
 

@@ -23,7 +23,8 @@ Carried over from the 2D game `johakunath/Ruinenstadt` (`BACKLOG.md` › Intent 
 | Powers | Regular power chosen per weapon, ultimate always equipped on its own button |
 | Item level | Shown level = item level (+3 per district) plus a rarity bonus (white 0, magic +3, rare and set +6, legendary +10) |
 | Damage fairness | No single hit takes more than 45 % of max life (already in the 3D sim) |
-| Structure | Districts of 2 to 3 zones, U-Bahn lines as progression and fast travel, a walkable camp in a station |
+| Structure | Districts of 2 to 3 zones, U-Bahn lines as progression and fast travel, a walkable camp in a station. In 3D the player walks through a zone and fights at fixed places (encounters) instead of standing in one arena |
+| Progression in a run | Through items and blessings. No XP levels for now (2D #45 still open) |
 | Story | Light: artefacts, tapes, plaques, one line per NPC |
 
 ## New in 3D (Johannes, 2026-11-15)
