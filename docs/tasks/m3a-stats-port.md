@@ -1,6 +1,6 @@
 # M3a Hero stats port [Codex]
 
-Status: implemented (PR pending).
+Status: done (PR #9).
 
 ## Goal
 
