@@ -41,10 +41,22 @@ describe('heights', () => {
     expect(end.x).toBeLessThan(17);
   });
 
-  it('the stairs lead up', () => {
-    const s = kirche.stairs[0]!;
-    const end = walk(s.x - 4, s.z, 1, 0, 1.5);
-    expect(end.x).toBeGreaterThan(19);
-    expect(heightAt(m, end.x, end.z)).toBeCloseTo(kirche.h);
-  });
+  for (const scale of [1, 1.3]) {
+    it(`every stair leads up onto its terrace (scale ${scale})`, () => {
+      const ms = koepenickMap(scale);
+      const lv = mapLevel(ms, generateLots(ms));
+      for (const t of ms.terraces) {
+        for (const s of t.stairs) {
+          const ux = Math.sin(s.rot);
+          const uz = Math.cos(s.rot);
+          const sim = createSim({ level: lv });
+          const p = sim.player;
+          p.x = p.px = s.x - ux * (s.len / 2 + 2);
+          p.z = p.pz = s.z - uz * (s.len / 2 + 2);
+          for (let i = 0; i < 90; i++) stepSim(sim, { ...NO_INPUT, moveX: ux, moveZ: uz });
+          expect(heightAt(ms, p.x, p.z), `${t.name} ${s.rot}`).toBeCloseTo(t.h);
+        }
+      }
+    });
+  }
 });

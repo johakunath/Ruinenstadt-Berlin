@@ -8,7 +8,7 @@
 import type { BossKind, EnemyKind } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
-import { ellipse, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street } from './map';
+import { ellipse, type Stair, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street } from './map';
 
 /** Difficulty of normal wave number `g` (0 … 19 over the whole district). */
 export function waveTier(g: number, bosses: BossKind[] = []): WaveDef {
@@ -33,6 +33,16 @@ function bossWave(g: number, boss: BossKind, adds: number): WaveDef {
 }
 
 const NORMAL_HEAL = 0.3;
+
+/**
+ * A stair whose top end sits on a terrace edge point (already scaled), rising along `rot`.
+ * Its size never scales, so it stays attached to the edge at any map scale.
+ */
+function stairTo(edge: Pt, rot: number, width = 5, len = 5): Stair {
+  // The top overlaps the edge by half a meter so the retaining wall opens there.
+  const back = len / 2 - 0.5;
+  return { x: edge[0] - Math.sin(rot) * back, z: edge[1] - Math.cos(rot) * back, rot, width, len };
+}
 
 export function koepenickMap(scale = 1): MapDef {
   const s = scale;
@@ -172,19 +182,13 @@ export function koepenickMap(scale = 1): MapDef {
       {
         name: 'Riesenrad-Plattform', h: 2.4,
         poly: [P(-243, -106), P(-214, -106), P(-214, -82), P(-243, -82)],
-        stairs: [
-          { x: -211.5 * s, z: -92 * s, rot: -90 * DEG, width: 5, len: 5 },
-          { x: -229 * s, z: -79.5 * s, rot: 180 * DEG, width: 5, len: 5 },
-        ],
+        stairs: [stairTo(P(-214, -92), -90 * DEG), stairTo(P(-229, -82), 180 * DEG)],
       },
       // St. Laurentius on its church hill above the Rathausplatz; stairs to the square and to the Grünstraße.
       {
         name: 'Kirchhügel', h: 1.8,
         poly: [P(17, 5), P(36, 5), P(36, 29), P(17, 29)],
-        stairs: [
-          { x: 14.5 * s, z: 17 * s, rot: 90 * DEG, width: 5, len: 5 },
-          { x: 26 * s, z: 2.5 * s, rot: 0, width: 5, len: 5 },
-        ],
+        stairs: [stairTo(P(17, 17), 90 * DEG), stairTo(P(26, 5), 0)],
       },
     ],
     seed: 1906,
