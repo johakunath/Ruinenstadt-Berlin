@@ -15,7 +15,7 @@ What is in the game now. Updated 2026-11-15. Next work: `docs/migration.md` › 
 | HUD | Objective with distance and arrow, wave banner, boss bar, map (M), victory screen |
 | Input | Keyboard and mouse, gamepad, touch stick plus two buttons |
 | Items | Data and rolls ported (M1, M2), not in the game yet: no drops, no stats from gear |
-| CI | Type check, 99 unit tests, build, Playwright smoke, Pages deploy from `main` |
+| CI | Type check, 124 unit tests, build, Playwright smoke, Pages deploy from `main` |
 
 ## Known weak or unverified
 
