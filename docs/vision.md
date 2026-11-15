@@ -32,6 +32,7 @@ Carried over from the 2D game `johakunath/Ruinenstadt` (`BACKLOG.md` › Intent 
 | Topic | Direction |
 |---|---|
 | Look | One look (`src/render/looks.ts`): painted PBR shading, thin ink line, saturated color. District palettes vary on top (dark green Köpenick, saturated neon Mitte, saturated GDR Alexanderplatz) |
-| Maps | Rebuilt, not ported. Real geography (streets, bridges, rivers, landmarks in their real relative positions), strongly compressed space between them, fewer buildings, more room to fight and camp. Not a diamond-shaped iso square. Larger maps if performance allows |
+| Maps | Rebuilt, not ported. Each district is a mini open world: real geography (landmarks, rivers, bridges, main streets in their real relative positions), miniaturized so distances are much shorter, fewer buildings, more room to fight and camp. Not a diamond-shaped iso square. Size set by performance |
+| U-Bahn tunnels | Mostly linear, with short side branches for a chest or a mini-boss |
 | Heights | Stairs, ramps and hills to look down from (backlog B3) |
 | Landmarks | Iconic buildings should be visible; a landmark view button near them (backlog B2) |
