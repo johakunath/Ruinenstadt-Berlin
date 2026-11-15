@@ -11,6 +11,7 @@ export interface Options {
   stress: number;
   seed: number;
   volume: number;
+  music: boolean;
   rumble: boolean;
   /** Performance readout bottom left (options menu or ?debug=perf). */
   showPerf: boolean;
@@ -30,6 +31,7 @@ const KEY = 'ruinenstadt-berlin.options';
 interface Stored {
   profile?: ProfileId;
   volume?: number;
+  music?: boolean;
   rumble?: boolean;
   showPerf?: boolean;
 }
@@ -44,7 +46,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, volume: o.volume, rumble: o.rumble, showPerf: o.showPerf };
+    const s: Stored = { profile: o.profile, volume: o.volume, music: o.music, rumble: o.rumble, showPerf: o.showPerf };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -86,6 +88,7 @@ export function readOptions(): Options {
     stress: Math.max(0, Math.min(200, Number(q.get('stress') ?? 0) || 0)),
     seed: Number(q.get('seed') ?? 0) || (Date.now() & 0xffff) + 1,
     volume: stored.volume ?? 0.7,
+    music: stored.music ?? true,
     rumble: stored.rumble ?? true,
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     autostart: q.has('autostart'),

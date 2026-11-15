@@ -1,6 +1,6 @@
 # S1 Sound port [Codex]
 
-Status: open. Independent of M3 to M8; runs any time.
+Status: implemented (PR pending). Independent of M3 to M8.
 
 ## Goal
 
@@ -52,4 +52,14 @@ Enemy and boss voices (S2, S3), new sounds, balance.
 
 ## Questions
 
-None yet.
+Source clarification: 2D `die()` has no separate sound call. Preserve silence on `playerDie`; lethal damage still produces `hurt` on its damage step. No new death recipe invented.
+
+## Handover
+
+- All 20 FX recipes and seven melodic cues ported unchanged; district chord/melody tables retained.
+- Damage-step event routing now also covers encounter/wave horns, clear bells/heals and victory.
+- Music has an independent persistent option; volume zero silences the master and stops music.
+- Leistung: one cached take and no room send; Qualität: three takes and 1.6 s room/compressor.
+- Gate 1 enemy growl retained for S2; no new voices. See source clarification above.
+- PCM, event mapping, caches, music lifecycle and mute tests included (23 audio tests).
+- `npm run check` green; browser checks and options screenshot recorded in the PR.

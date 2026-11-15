@@ -5,7 +5,7 @@ import {
   type RarityId, type SetId, type SlotId, type WeaponKindId,
 } from '../data/items';
 import * as N from '../data/item-names';
-import type { MaterialId } from '../data/crafting';
+import type { WeaponModId, MaterialId } from '../data/crafting';
 import { Rng } from './math';
 
 export interface Item {
@@ -20,6 +20,8 @@ export interface Item {
   affixes: Affix[];
   element?: ElementId;
   set?: SetId;
+  mods?: WeaponModId[];
+  implantMode?: 0 | 1 | 2;
 }
 
 export interface LootContext {

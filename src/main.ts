@@ -22,6 +22,8 @@ const opts = readOptions();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const audio = new GameAudio();
 audio.setVolume(opts.volume);
+audio.setMusic(opts.music);
+audio.setEco(opts.profile === 'leistung');
 const input = new Input(canvas);
 
 // Köpenick (M11) unless ?map=hof asks for the gate 1 courtyard.
@@ -74,6 +76,9 @@ const ui = new Ui(opts, {
     opts.volume = v;
     audio.setVolume(v);
     storeOptions(opts);
+  },
+  onMusic: (on) => {
+    opts.music = on; audio.setMusic(on); storeOptions(opts);
   },
   onRumble: (on) => {
     opts.rumble = on;
@@ -151,30 +156,19 @@ function readInput(): SimInput {
 function drainEvents(): void {
   for (const ev of sim.events) {
     renderer?.onEvent(ev, sim);
+    audio.onEvent(ev);
     switch (ev.type) {
-      case 'swing':
-        audio.swing(ev.weight);
-        break;
       case 'hit': {
         const feel = HIT_FEEL[ev.weight];
-        audio.hit(ev.weight, ev.killed);
         if (opts.rumble) input.rumble(feel.rumble, feel.rumbleMs + (ev.killed ? 40 : 0));
         break;
       }
       case 'dodge':
-        audio.dodge();
         if (opts.rumble) input.rumble(0.25, 30);
         break;
       case 'playerHit':
-        audio.hurt();
         ui.flashHurt();
         if (opts.rumble) input.rumble(1, 120);
-        break;
-      case 'playerDie':
-        audio.death();
-        break;
-      case 'enemyWindup':
-        audio.growl();
         break;
       case 'waveStart': {
         const enc = level?.encounters[ev.index];
@@ -185,7 +179,6 @@ function drainEvents(): void {
         break;
       }
       case 'encounterClear':
-        audio.growl();
         ui.banner('Geschafft', ev.heal > 0 ? `+${ev.heal} Leben` : '');
         break;
       case 'zoneClear': {
@@ -208,6 +201,11 @@ let last = performance.now();
 let acc = 0;
 
 function frame(now: number): void {
+  audio.tick(Math.min(.1, Math.max(0, (now - last) / 1000)), {
+    district: 0, fighting: phase === 'play' && !ui.optionsOpen && !ui.mapOpen,
+    enemies: sim.enemies.filter(e => e.state !== 'dead').length,
+    boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
+  });
   requestAnimationFrame(frame);
   const frameMs = now - last;
   last = now;
