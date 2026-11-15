@@ -3,6 +3,7 @@ import { koepenickMap } from '../data/koepenick';
 import { generateLots, mapLevel } from '../data/map';
 import { PLAYER } from '../data/combat';
 import { createSim, stepSim } from './sim';
+import { setLoadout } from './loadout';
 import { DT, NO_INPUT, type Sim, type SimEvent } from './types';
 
 const map = koepenickMap(1);
@@ -98,6 +99,19 @@ describe('encounter director', () => {
     sim.player.hp = 20;
     clearEncounter(sim, []);
     expect(sim.player.hp).toBe(20 + PLAYER.maxHp * level.encounters[0]!.heal);
+  });
+
+  it('heals against equipped max HP and reports only actual health restored', () => {
+    for (const initial of [20, 195, 200]) {
+      const sim = createSim({ level });
+      setLoadout(sim, { ...sim.equipment, a: { ...sim.equipment.w!, slot: 'a', kind: 'armor', value: 100 } });
+      sim.player.hp = initial;
+      const log: SimEvent[] = [];
+      clearEncounter(sim, log);
+      const restored = Math.min(200 - initial, Math.round(200 * level.encounters[0]!.heal));
+      expect(sim.player.hp).toBe(initial + restored);
+      expect(log.find(e => e.type === 'encounterClear')).toMatchObject({ heal: restored });
+    }
   });
 
   it('a retry starts at the entry of the zone', () => {

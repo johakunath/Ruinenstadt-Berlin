@@ -177,11 +177,11 @@ export class Animator {
 // ---------------------------------------------------------------- hero
 
 /** Maps time inside an attack to clip time: wind-up and active frames are squeezed onto the swing. */
-function attackClipTime(a: AttackDef, t: number): number {
+function attackClipTime(a: AttackDef, t: number, speed: number): number {
   if (t <= a.windup) return lerp(a.clipStart, a.clipSwing, t / a.windup);
   const strike = a.windup + a.active;
   if (t <= strike) return lerp(a.clipSwing, a.clipHit, (t - a.windup) / a.active);
-  return a.clipHit + (t - strike);
+  return a.clipHit + (t - strike) * speed;
 }
 
 /** Roll clip range used for the dodge. */
@@ -255,7 +255,7 @@ export class HeroView {
     const t = p.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;
     if (p.state === 'attack' && p.attack) {
-      const ct = attackClipTime(p.attack, t);
+      const ct = attackClipTime(p.attack, t, p.attackSpeed);
       const len = a.duration(p.attack.clip);
       if (ct < len || !p.attack.rec) a.pose(p.attack.clip, ct, 0.05);
       else a.pose(p.attack.rec, ct - len, 0.06);

@@ -1,6 +1,6 @@
 # M3a Hero stats port [Codex]
 
-Status: open.
+Status: done (PR #9).
 
 ## Goal
 
@@ -69,3 +69,14 @@ Wiring into `src/sim/player.ts` or combat (M3b), UI, balance changes, perk effec
 ## Questions
 
 None yet.
+
+## Handover
+
+- Pure `gearAffixes`, `heroStats`, `setCount`, normalized `power`; no combat wiring (M3b).
+- Ported UPG, IMODE, TM, SHRN, Drill; Item supports mods and implant mode.
+- Globals: S.upg → upgrades; run.perks/pk → perks; S.camp → camp; cLv('imbiss') → imbissLevel.
+- Globals: S.surv/hasS → survivors; run.meal → meal; S.drill → drill; SHR → shrines; S.eq → eq argument.
+- P.lvl fixed at 1; daily dm_ terms omitted; skill/ultimate cooldowns expressed as cooldownFactor.
+- S.upg.luck stays out of heroStats.luck, exactly as in 2D (loot context adds it separately).
+- Hammer slows normalized attackSpeed after the .4 asF clamp, matching the 2D rate multiplier.
+- 14 stat tests, including three numeric loadouts; `npm run check` green (161 tests total).

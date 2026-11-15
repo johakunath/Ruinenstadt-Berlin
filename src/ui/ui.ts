@@ -15,6 +15,7 @@ export interface UiHandlers {
   onOptionsToggle(open: boolean): void;
   onProfile(id: ProfileId): void;
   onVolume(v: number): void;
+  onMusic(on: boolean): void;
   onRumble(on: boolean): void;
   onShowPerf(on: boolean): void;
   /** Expedition maps: the in-game map opened or closed (pauses the game). */
@@ -29,6 +30,7 @@ export class Ui {
   private readonly hurt = el<HTMLDivElement>('hurt');
   private readonly options = el<HTMLDivElement>('options');
   private lastHp = -1;
+  private lastMaxHp = -1;
   private lastKills = -1;
   private lastObjective = '';
   private lastArrow = 999;
@@ -61,6 +63,9 @@ export class Ui {
     const volume = el<HTMLInputElement>('opt-volume');
     volume.value = String(Math.round(opts.volume * 100));
     volume.addEventListener('input', () => handlers.onVolume(Number(volume.value) / 100));
+    const music = el<HTMLInputElement>('opt-music');
+    music.checked = opts.music;
+    music.addEventListener('change', () => handlers.onMusic(music.checked));
     const rumble = el<HTMLInputElement>('opt-rumble');
     rumble.checked = opts.rumble;
     rumble.addEventListener('change', () => handlers.onRumble(rumble.checked));
@@ -199,8 +204,9 @@ export class Ui {
   }
 
   hud(hp: number, maxHp: number, kills: number): void {
-    if (hp !== this.lastHp) {
+    if (hp !== this.lastHp || maxHp !== this.lastMaxHp) {
       this.lastHp = hp;
+      this.lastMaxHp = maxHp;
       this.hpFill.style.transform = `scaleX(${Math.max(0, hp / maxHp)})`;
     }
     if (kills !== this.lastKills) {

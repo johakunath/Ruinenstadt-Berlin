@@ -329,3 +329,15 @@ export const WEAPON_KINDS: Readonly<Record<WeaponKindId, WeaponKindDefinition>> 
   sling: { name: 'Werfer', damageFactor: 0.85 },
   spear: { name: 'Speer', damageFactor: 1.45 },
 };
+
+/** 2D TM: talisman, ring and implant main stats. */
+export const ATTRIBUTE_STATS: Readonly<Record<AttributeKindId, AffixId>> = {
+  krit: 'crit', tempo: 'spd', heil: 'regen',
+};
+
+/** 2D IMODE, in the stored mode order. */
+export const IMPLANT_MODES: readonly { readonly id: string; readonly name: string; readonly description: string; readonly affixes: Readonly<Partial<Record<AffixId, number>>> }[] = [
+  { id: 'lauf', name: 'Laufwerk', description: '+12% Lauftempo', affixes: { spd: 12 } },
+  { id: 'takt', name: 'Taktgeber', description: '+10% Angriffstempo', affixes: { as: 10 } },
+  { id: 'haut', name: 'Panzerhaut', description: '+8% Widerstand', affixes: { res: 8 } },
+];

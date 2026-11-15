@@ -1,12 +1,14 @@
 // Game loop: fixed 60 Hz sim steps, interpolated rendering, input polled every frame.
 import './ui/style.css';
 import { GameAudio } from './audio/audio';
-import { HIT_FEEL, PLAYER } from './data/combat';
+import { HIT_FEEL } from './data/combat';
 import { Input } from './input/input';
 import { readOptions, reloadWith, storeOptions } from './options';
 import { LOOK } from './render/looks';
 import { PROFILES } from './render/profile';
 import { GameRenderer } from './render/renderer';
+import { setLoadout } from './sim/loadout';
+import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
@@ -23,6 +25,8 @@ const opts = readOptions();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const audio = new GameAudio();
 audio.setVolume(opts.volume);
+audio.setMusic(opts.music);
+audio.setEco(opts.profile === 'leistung');
 const input = new Input(canvas);
 
 // Köpenick (M11) unless ?map=hof asks for the gate 1 courtyard.
@@ -51,12 +55,12 @@ let renderer: GameRenderer | null = null;
 const ui = new Ui(opts, {
   onPlay: () => start(),
   onRetry: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint() });
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext });
     renderer?.reset(sim);
     start();
   },
   onAgain: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level });
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext });
     renderer?.reset(sim);
     start();
   },
@@ -75,6 +79,9 @@ const ui = new Ui(opts, {
     opts.volume = v;
     audio.setVolume(v);
     storeOptions(opts);
+  },
+  onMusic: (on) => {
+    opts.music = on; audio.setMusic(on); storeOptions(opts);
   },
   onRumble: (on) => {
     opts.rumble = on;
@@ -155,30 +162,19 @@ function readInput(): SimInput {
 function drainEvents(): void {
   for (const ev of sim.events) {
     renderer?.onEvent(ev, sim);
+    audio.onEvent(ev);
     switch (ev.type) {
-      case 'swing':
-        audio.swing(ev.weight);
-        break;
       case 'hit': {
         const feel = HIT_FEEL[ev.weight];
-        audio.hit(ev.weight, ev.killed);
         if (opts.rumble) input.rumble(feel.rumble, feel.rumbleMs + (ev.killed ? 40 : 0));
         break;
       }
       case 'dodge':
-        audio.dodge();
         if (opts.rumble) input.rumble(0.25, 30);
         break;
       case 'playerHit':
-        audio.hurt();
         ui.flashHurt();
         if (opts.rumble) input.rumble(1, 120);
-        break;
-      case 'playerDie':
-        audio.death();
-        break;
-      case 'enemyWindup':
-        audio.growl();
         break;
       case 'waveStart': {
         const enc = level?.encounters[ev.index];
@@ -189,7 +185,6 @@ function drainEvents(): void {
         break;
       }
       case 'encounterClear':
-        audio.growl();
         ui.banner('Geschafft', ev.heal > 0 ? `+${ev.heal} Leben` : '');
         break;
       case 'zoneClear': {
@@ -217,6 +212,11 @@ const FRAME_MS = 1000 / 60;
 let nextAt = 0;
 
 function frame(now: number): void {
+  audio.tick(Math.min(.1, Math.max(0, (now - last) / 1000)), {
+    district: 0, fighting: phase === 'play' && !ui.optionsOpen && !ui.mapOpen,
+    enemies: sim.enemies.filter(e => e.state !== 'dead').length,
+    boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
+  });
   requestAnimationFrame(frame);
   if (now < nextAt - 1) return;
   nextAt = Math.max(nextAt + FRAME_MS, now - FRAME_MS);
@@ -268,7 +268,7 @@ function frame(now: number): void {
   if (level) expeditionHud(dt);
 
   renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
-  ui.hud(sim.player.hp, PLAYER.maxHp, sim.kills);
+  ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
     ui.setPerf(
@@ -318,6 +318,7 @@ declare global {
       sim(): Sim;
       perf(): { fps: number; p95: number; calls: number; triangles: number; simMs: number } | null;
       start(): void;
+      setLoadout(equipment: Equipment, context?: Partial<StatContext>): void;
       /** Stops the automatic sim steps so a script can step by hand. */
       hold(on: boolean): void;
       step(input: Partial<SimInput>, steps: number): void;
@@ -329,6 +330,7 @@ window.__game = {
   sim: () => sim,
   perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs } : null),
   start,
+  setLoadout: (equipment, context) => setLoadout(sim, equipment, context),
   hold: (on) => {
     held = on;
   },

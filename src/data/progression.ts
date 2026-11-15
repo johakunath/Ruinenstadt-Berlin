@@ -300,3 +300,22 @@ export const CAMP_BUILDINGS: readonly CampBuildingDefinition[] = [
     description: 'Zweihändige Waffen bekommen in Dunkelzonen eine Stirnlampe',
     scrapCost: 160 },
 ];
+
+export type CampUpgradeId = 'dmg' | 'hp' | 'dash' | 'luck';
+/** 2D UPG: descriptions represented as a numeric per-level contribution. */
+export const CAMP_UPGRADES: readonly { readonly id: CampUpgradeId; readonly name: string; readonly max: number; readonly baseCost: number; readonly perLevel: number; readonly unit: '%' | '' }[] = [
+  { id: 'dmg', name: 'Schärfen', max: 10, baseCost: 15, perLevel: 7, unit: '%' },
+  { id: 'hp', name: 'Panzerung', max: 10, baseCost: 15, perLevel: 5, unit: '%' },
+  { id: 'dash', name: 'Ausdauer', max: 5, baseCost: 25, perLevel: -8, unit: '%' },
+  { id: 'luck', name: 'Spürnase', max: 5, baseCost: 30, perLevel: 1, unit: '' },
+];
+/** 2D DRILL_D / DRILL_H. */
+export const DRILL = { damage: .02, life: .02 } as const;
+/** 2D SHRN. */
+export const SHRINES = {
+  as: { name: 'Adrenalin', description: '+30% Angriffstempo' },
+  res: { name: 'Eisenhaut', description: '+25% Widerstand' },
+  gold: { name: 'Goldrausch', description: 'doppelter Schrott von Gegnern' },
+  spd: { name: 'Rückenwind', description: '+25% Lauftempo' },
+  zap: { name: 'Funkenflug', description: 'Treffer lösen oft Blitze aus' },
+} as const;

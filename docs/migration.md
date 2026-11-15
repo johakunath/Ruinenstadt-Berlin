@@ -8,11 +8,11 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 
 | # | Task | Owner | File | Status |
 |---|---|---|---|---|
-| 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | open |
-| 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | open |
+| 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | done (PR #9) |
+| 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | done (PR #9) |
 | 3 | M11b Köpenick v2 part 1: concept C, new layout, streets, curbs, L-shaped lots, shops, cars and props, minimap, edge triangles; then playtest notes: ferry boat, ruins, lamps, bus, tram, map edge, fight ring | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #11) |
 | 3b | M11b part 2: relief and irregular banks and quays, ground textures (alternatives first), enterable Späti (safe room) | Claude · Opus high | `docs/maps/koepenick.md` | open |
-| 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Claude · Opus high | after M3a | open |
+| 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Codex (Johannes) | `docs/tasks/m3b-stats-in-sim.md` | done (PR #10) |
 | 5 | M4 Loot in the world, with breakable bins and crates (2D port) | Claude · Opus high | after M3b, M11b | open |
 | 6 | M5 Inventory mockup (Claude), then build (Codex task written after Johannes picks) | Claude, Codex | after M4 | open |
 
@@ -35,7 +35,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Minimap, 2D edge triangles | M11b | Done |
 | Enterable Späti (safe room), relief, irregular banks, ground textures | M11b part 2 | Open |
 | Item data and rolls | M1, M2 | Done |
-| Gear stats in combat | M3a, M3b | Open |
+| Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b done (PR #10) |
 | Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Open |
 | Inventory, equip, compare, salvage, sets | M5 | Open |
 | Save, wave checkpoint, difficulty | M6 | Open |
@@ -50,7 +50,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
 | Endless mode after the district boss | M18 | Open |
 | One U-Bahn tunnel with Der Schaffner | M19 | Open |
-| Sound: 2D port, enemy sounds | S1, S2 | Open |
+| Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 open |
 
 Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walkable camp, other districts.
 

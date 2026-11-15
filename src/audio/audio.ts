@@ -1,5 +1,8 @@
 // Sound, generated with WebAudio: no audio files. Hits play on the exact sim step of the damage frame.
 import type { HitWeight } from '../data/combat';
+import type { SimEvent } from '../sim/types';
+import { SoundEffects, Synth, type SfxId } from './sfx';
+import { Music, type MusicState } from './music';
 
 export class GameAudio {
   private ctx: AudioContext | null = null;
@@ -7,6 +10,12 @@ export class GameAudio {
   private noise: AudioBuffer | null = null;
   private volume = 0.7;
   private lastGrowl = 0;
+  private effects: SoundEffects | null = null;
+  private music: Music | null = null;
+  private musicEnabled = true;
+  private eco = false;
+  private room: GainNode | null = null;
+  private cancelPrewarm: (() => void) | null = null;
 
   /** Must be called from a user gesture (the Spielen button). */
   start(): void {
@@ -20,17 +29,39 @@ export class GameAudio {
     this.master = this.ctx.createGain();
     this.master.gain.value = this.volume;
     const comp = this.ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 4;
+    comp.attack.value = .004; comp.release.value = .18;
     this.master.connect(comp).connect(this.ctx.destination);
+    const send = this.ctx.createGain(), cv = this.ctx.createConvolver(), wet = this.ctx.createGain();
+    const sr = this.ctx.sampleRate, n = Math.floor(sr * 1.6), ir = this.ctx.createBuffer(2, n, sr);
+    for (let c = 0; c < 2; c++) {
+      const data = ir.getChannelData(c); let lo = 0;
+      for (let i = 0; i < n; i++) {
+        const t = i / n; lo += ((Math.random() * 2 - 1) - lo) * (.5 * Math.pow(1 - t, 1.5) + .04);
+        data[i] = lo * Math.pow(1 - t, 3) * Math.min(1, i / (sr * .006));
+      }
+    }
+    cv.buffer = ir; wet.gain.value = .45;
+    send.connect(cv); cv.connect(wet); wet.connect(this.master);
+    this.room = send; send.gain.value = this.eco ? 0 : 1;
+    const synth = new Synth(this.ctx, this.master, send);
+    this.effects = new SoundEffects(synth); this.effects.setEco(this.eco);
+    this.cancelPrewarm = this.effects.prewarm();
+    this.music = new Music(synth);
+    if (this.musicEnabled && this.volume > 0) this.music.start();
     const len = this.ctx.sampleRate;
     this.noise = this.ctx.createBuffer(1, len, len);
     const data = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
     this.ambience();
+    void this.ctx.resume();
   }
 
   setVolume(v: number): void {
+    v = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
     this.volume = v;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+    if (v === 0) this.music?.stop(); else if (this.musicEnabled) this.music?.start();
   }
 
   private burst(freq: number, q: number, type: BiquadFilterType, gain: number, attack: number, decay: number, sweepTo?: number): void {
@@ -68,32 +99,40 @@ export class GameAudio {
     osc.stop(t + decay + 0.02);
   }
 
-  swing(weight: HitWeight): void {
-    const heavy = weight === 'heavy';
-    this.burst(heavy ? 500 : 800, 1.2, 'bandpass', heavy ? 0.28 : 0.2, 0.03, heavy ? 0.2 : 0.12, heavy ? 1600 : 2200);
+  setMusic(enabled: boolean): void {
+    this.musicEnabled = enabled;
+    if (enabled && this.volume > 0) this.music?.start(); else this.music?.stop();
   }
 
-  /** Pipe on flesh: thump, crack and a short metallic ring, pitch varied per hit. */
-  hit(weight: HitWeight, killed: boolean): void {
-    const heavy = weight === 'heavy';
-    const pitch = 0.92 + Math.random() * 0.16;
-    this.tone('sine', (heavy ? 150 : 190) * pitch, 50, heavy ? 0.9 : 0.6, heavy ? 0.2 : 0.11);
-    this.burst(heavy ? 1400 : 2200, 0.7, 'lowpass', heavy ? 0.7 : 0.5, 0.002, heavy ? 0.14 : 0.07);
-    this.tone('triangle', 1180 * pitch, 1120 * pitch, heavy ? 0.16 : 0.1, heavy ? 0.28 : 0.14);
-    this.tone('sine', 1890 * pitch, 1800 * pitch, heavy ? 0.1 : 0.06, heavy ? 0.2 : 0.1);
-    if (killed) {
-      this.burst(380, 0.8, 'lowpass', 0.6, 0.004, 0.25);
-      this.tone('sawtooth', 110 * pitch, 45, 0.25, 0.3, 0.02);
+  setEco(eco: boolean): void {
+    this.eco = eco;
+    this.effects?.setEco(eco);
+    if (this.room) this.room.gain.value = eco ? 0 : 1;
+  }
+
+  tick(dt: number, state: MusicState): void { this.music?.tick(dt, state); }
+  play(id: SfxId, rarity = 0, pan = 0, volume = 1): void {
+    if (this.volume > 0) this.effects?.play(id, rarity, pan, volume);
+  }
+  swing(weight: HitWeight): void { this.play(weight === 'heavy' ? 'heavy' : 'swing'); }
+  hit(_weight: HitWeight, killed: boolean, critical = false): void { this.play(critical ? 'crit' : 'hit'); if (killed) this.play('kill'); }
+  dodge(): void { this.play('dash'); }
+  hurt(): void { this.play('hurt'); }
+
+  /** Called exactly when the loop drains each damage-step event. */
+  onEvent(event: SimEvent): void {
+    switch (event.type) {
+      case 'swing': this.swing(event.weight); break;
+      case 'hit': this.hit(event.weight, event.killed, event.critical); break;
+      case 'dodge': this.dodge(); break;
+      case 'playerHit': this.hurt(); break;
+      case 'playerDie': this.death(); break;
+      case 'enemyWindup': this.growl(); break;
+      case 'encounterStart': case 'waveStart': this.play('horn'); break;
+      case 'encounterClear': this.play('bell'); if (event.heal > 0) this.play('heal'); break;
+      case 'zoneClear': this.play('bell'); break;
+      case 'victory': this.play('win'); break;
     }
-  }
-
-  dodge(): void {
-    this.burst(300, 0.9, 'bandpass', 0.22, 0.04, 0.2, 1400);
-  }
-
-  hurt(): void {
-    this.tone('sine', 110, 40, 0.9, 0.25);
-    this.burst(700, 0.6, 'lowpass', 0.5, 0.003, 0.16);
   }
 
   /** Zombie wind-up growl; rate limited so a pack does not drone. */
@@ -108,33 +147,22 @@ export class GameAudio {
   }
 
   death(): void {
-    this.tone('sawtooth', 160, 35, 0.5, 1.1);
-    this.burst(300, 0.6, 'lowpass', 0.5, 0.01, 0.8);
+    // 2D die() has no separate cue; the fatal damage step already plays hurt.
   }
 
-  /** Night wind and fire crackle, very quiet. */
+  dispose(): void {
+    this.cancelPrewarm?.(); this.music?.stop();
+    if (this.ctx) void this.ctx.close();
+    this.ctx = null; this.master = null; this.effects = null; this.music = null;
+  }
+
+  /** 2D initAudio ambient wind. */
   private ambience(): void {
     if (!this.ctx || !this.master || !this.noise) return;
-    const wind = this.ctx.createBufferSource();
-    wind.buffer = this.noise;
-    wind.loop = true;
-    const lp = this.ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 320;
-    const g = this.ctx.createGain();
-    g.gain.value = 0.05;
-    const lfo = this.ctx.createOscillator();
-    lfo.frequency.value = 0.13;
-    const lfoGain = this.ctx.createGain();
-    lfoGain.gain.value = 120;
-    lfo.connect(lfoGain).connect(lp.frequency);
-    wind.connect(lp).connect(g).connect(this.master);
-    wind.start();
-    lfo.start();
-    const crackle = (): void => {
-      if (!this.ctx || this.ctx.state !== 'running') return;
-      if (Math.random() < 0.7) this.burst(2500 + Math.random() * 3000, 2, 'bandpass', 0.03 + Math.random() * 0.05, 0.001, 0.03);
-    };
-    window.setInterval(crackle, 110);
+    const s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.noise; s.loop = true; f.type = 'lowpass'; f.frequency.value = 380; g.gain.value = .05;
+    const lfo = this.ctx.createOscillator(), lg = this.ctx.createGain();
+    lfo.frequency.value = .13; lg.gain.value = .03; lfo.connect(lg); lg.connect(g.gain);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(); lfo.start();
   }
 }
