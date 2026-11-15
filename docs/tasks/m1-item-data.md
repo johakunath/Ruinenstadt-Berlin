@@ -1,6 +1,6 @@
 # M1 Item data port [Codex]
 
-Status: open
+Status: implemented on `codex/m1-item-data`; awaiting validation, review and merge.
 
 ## Goal
 
@@ -43,4 +43,12 @@ Item rolling and logic (M2), UI, icons, `src/sim` changes, balance changes.
 
 ## Questions
 
-(Codex writes here if a step does not work as written.)
+No data-port questions. Local browser smoke tests already report HTTP 404 console errors on the unchanged baseline (the dev-server follow-up identified `/favicon.ico`). Keep the PR draft until CI is green; this data-only task does not change the page or suppress console errors.
+
+## Handover (2026-11-15)
+
+- Source: `johakunath/Ruinenstadt` at `61bf9198a72f0c21ee33bd67456e252b630efc65`, `js/data.js` and `RIL` in `js/items.js`. A field-name reverse comparison of all 53 requested constants matches every value, string, optional field and array order (only `KIND.n/k` included, as specified).
+- Added the four typed data files and 18 invariant tests. `npm run check` passes: type check, 58 tests total, production build.
+- Types preserve the original ids; tables and arrays are readonly. `ELC` and `ELN` are joined as `ELEMENTS`; tuple fields become named objects. Source constant comments and the full PR mapping identify every table.
+- Skipped 2D spatial/drawing data, `KIND` timing/reach/knockback, SVG references and runtime helpers. The 2D reference, map, renderer and sim stay unchanged. No player-visible change, so no `docs/status.md` update.
+- M2 starts after this task is merged.
