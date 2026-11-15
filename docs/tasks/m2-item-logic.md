@@ -1,6 +1,6 @@
 # M2 Item logic [Codex, review Claude]
 
-Status: open. Needs M1 merged.
+Status: implemented in PR #7 (`codex/m2-item-logic`). Codex review completed without findings; CI gates merge. M1 merged in PR #5.
 
 ## Goal
 
@@ -52,4 +52,12 @@ Applying affixes to hero stats, world drops, inventory, saves, balance changes.
 
 ## Questions
 
-(Codex writes here if a step does not work as written.)
+No implementation questions. The optional caller-owned `LootContext.itemId` counter preserves the requested generator signatures without module-level mutable state. Share one context across generators in a sim and persist the counter with it.
+
+## Handover (2026-11-15)
+
+- Ported `rollR`, `makeItem`, `makeSetItem`, `lootItem`, `rollAfx`, `ilv`/`RIL`, `better`, `avgIl`, `scrapVal`, `SALVM`/`SALVN`, `salvage`, `itemPrice` into `src/sim/items.ts`. Source: 2D `61bf9198a72f0c21ee33bd67456e252b630efc65`.
+- Global mapping: `D.i` → `district`; `D.cyber`/`D.gdr` → `flavor`; `S.upg.luck + DF().luck + ST.luck + run.th + (dm_('eisen') ? 3 : 0)` → combined `luck`; `run ? wE() : 1` → effective `wave`; `uid` → caller-owned `itemId`; `S.eq` → explicit equipped item / equipment map; `S.scrap`, `S.mat` and salvage totals → returned scrap/materials. `Math.random`, `R`, `pick` → `rng.next`, `rng.range`, `rng.pick`.
+- Preserved: set pieces omit the district level bonus and always have rarity 2, even through a legendary-minimum loot call; `setChance = 0` uses the source's 5% fallback. Installed-mod returns (`retMods`) are outside this Item type and M2; no save or inventory mutations.
+- Added 41 unit tests (99 total). `npm run check` passes. A temporary read-only differential harness matched all fields, salvage returns and random draw order for 12,000 mixed ordinary/set/loot items across slots, flavors and districts against the original source; it is not part of the shipped suite.
+- No player-visible change; no `docs/status.md` update. Browser smoke with installed Chromium: pause/resume passes; both render tests reach the final assertion but fail on HTTP 404 console errors (also recorded by M1). The temporary browser config was removed. Johannes authorized push, code review, fixes and merge. PR #7 is open; Codex reviewed the implementation without findings.
