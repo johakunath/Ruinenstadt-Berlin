@@ -113,6 +113,10 @@ function rideFerries(sim: Sim): void {
       if (!onFerryBoat(f, sim.time, body.x, body.z)) continue;
       body.x += dx;
       body.z += dz;
+      // The step's rollback position (`Level.resolve`) moves too, or it would lie over water.
+      // Render interpolation then starts one step (about 2 cm) ahead; not visible.
+      body.px += dx;
+      body.pz += dz;
     }
   }
   lv.time = sim.time + DT;

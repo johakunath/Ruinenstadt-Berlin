@@ -46,6 +46,21 @@ describe('ferry', () => {
     expect(along).toBeLessThan(-(lane.len / 2 - FERRY.pier));
   });
 
+  it('walking along the moving boat never leaves the hero over water (Codex review)', () => {
+    for (const dir of [1, -1]) {
+      const sim = createSim({ level });
+      const p = sim.player;
+      sim.time = 8;
+      const c = ferryPos(lane, 8);
+      p.x = p.px = c.x;
+      p.z = p.pz = c.z;
+      for (let i = 0; i < 240; i++) {
+        stepSim(sim, { ...NO_INPUT, moveX: ux * dir, moveZ: uz * dir });
+        expect(level.blocked(p.x, p.z, 0), `step ${i} dir ${dir}`).toBe(false);
+      }
+    }
+  });
+
   it('cannot step off the boat into the water mid-crossing', () => {
     const sim = createSim({ level });
     const p = sim.player;
