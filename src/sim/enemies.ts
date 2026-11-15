@@ -1,33 +1,35 @@
 // Enemy behavior: chase along the flow field with separation, wind up, strike, recover, stagger, die.
 import { PLAYER } from '../data/combat';
 import { ENEMIES, SPAWN, type EnemyKind } from '../data/enemies';
-import { COURTYARD } from '../data/courtyard';
-import { colliderDistance, resolveStatic } from './collide';
+import { colliderDistance } from './collide';
 import { angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Sim } from './types';
+import { ARENA_ENEMY_SLACK, keepInArena } from './director';
 
 const KNOCK_DAMP = 9;
 const SEPARATION_PAD = 0.25;
 const dir = { x: 0, z: 0 };
 
-function pickKind(sim: Sim): EnemyKind {
-  const kinds = Object.values(ENEMIES);
+export function pickKind(sim: Sim, mix?: Partial<Record<EnemyKind, number>>): EnemyKind {
+  const kinds = Object.values(ENEMIES).filter((k) => (mix ? (mix[k.kind] ?? 0) : k.weight) > 0);
   let total = 0;
-  for (const k of kinds) total += k.weight;
+  const w = (k: (typeof kinds)[number]): number => (mix ? (mix[k.kind] ?? 0) : k.weight);
+  for (const k of kinds) total += w(k);
   let roll = sim.rng.next() * total;
   for (const k of kinds) {
-    roll -= k.weight;
+    roll -= w(k);
     if (roll <= 0) return k.kind;
   }
   return 'walker';
 }
 
-export function spawnEnemy(sim: Sim, x: number, z: number, kind: EnemyKind = pickKind(sim)): Enemy {
+export function spawnEnemy(sim: Sim, x: number, z: number, kind: EnemyKind = pickKind(sim), hpMul = 1, dmgMul = 1): Enemy {
   const def = ENEMIES[kind];
+  const hp = Math.round(def.hp * hpMul);
   const facing = angleOf(sim.player.x - x, sim.player.z - z);
   const e: Enemy = {
     id: sim.nextId++, kind, def, x, z, px: x, pz: z, facing, pfacing: facing,
-    kx: 0, kz: 0, speed: 0, hp: def.hp, state: 'chase', stateT: 0, staggerDur: 0, struck: false,
+    kx: 0, kz: 0, speed: 0, hp, maxHp: hp, dmgMul, state: 'chase', stateT: 0, staggerDur: 0, struck: false,
   };
   sim.enemies.push(e);
   sim.events.push({ type: 'spawn', id: e.id });
@@ -36,12 +38,16 @@ export function spawnEnemy(sim: Sim, x: number, z: number, kind: EnemyKind = pic
 
 /** A free spot inside the yard, away from the player. Used for the opening group and `?stress=`. */
 export function randomYardSpot(sim: Sim, minPlayerDist: number): { x: number; z: number } {
-  const y = COURTYARD.yard;
+  const p = sim.player;
+  // Expedition maps: a ring around the player.
+  const y = sim.level.expedition
+    ? { minX: p.x - 14, maxX: p.x + 14, minZ: p.z - 12, maxZ: p.z + 12 }
+    : sim.level.playerBox;
   for (let tries = 0; tries < 60; tries++) {
     const x = sim.rng.range(y.minX + 1, y.maxX - 1);
     const z = sim.rng.range(y.minZ + 1, y.maxZ - 1);
     if (Math.hypot(x - sim.player.x, z - sim.player.z) < minPlayerDist) continue;
-    if (sim.colliders.some((c) => colliderDistance(c, x, z) < 0.8)) continue;
+    if (sim.level.near(x, z, 1).some((c) => colliderDistance(c, x, z) < 0.8) || sim.level.blocked(x, z, 0.8)) continue;
     return { x, z };
   }
   return { x: y.minX + 2, z: y.minZ + 2 };
@@ -53,18 +59,27 @@ export function aliveCount(sim: Sim): number {
   return n;
 }
 
-export function updateSpawner(sim: Sim): void {
-  // Remove bodies whose death animation is over.
+/** Removes bodies whose death animation is over. */
+export function removeCorpses(sim: Sim): void {
   for (let i = sim.enemies.length - 1; i >= 0; i--) {
     const e = sim.enemies[i] as Enemy;
     if (e.state === 'dead' && e.stateT >= SPAWN.corpseTime) sim.enemies.splice(i, 1);
   }
+}
+
+/** Arena levels (and `?stress=`): keeps a growing number of enemies alive. */
+export function updateSpawner(sim: Sim): void {
   if (sim.player.state === 'dead') return;
   sim.spawnT -= DT;
   const target = sim.stress > 0 ? sim.stress : Math.min(SPAWN.maxAlive, SPAWN.startAlive + Math.floor(sim.kills / SPAWN.killsPerStep));
   if (sim.spawnT > 0 || aliveCount(sim) >= target) return;
   sim.spawnT = sim.stress > 0 ? 0.08 : SPAWN.interval;
-  const s = sim.rng.pick(COURTYARD.spawns);
+  if (sim.level.spawns.length === 0) {
+    const s = randomYardSpot(sim, 8);
+    spawnEnemy(sim, s.x, s.z);
+    return;
+  }
+  const s = sim.rng.pick(sim.level.spawns);
   spawnEnemy(sim, s.x + sim.rng.range(-0.6, 0.6), s.z + sim.rng.range(-0.6, 0.6));
 }
 
@@ -163,8 +178,11 @@ export function updateEnemies(sim: Sim): void {
     const damp = Math.exp(-KNOCK_DAMP * DT);
     e.kx *= damp;
     e.kz *= damp;
-    if (e.state !== 'dead' || Math.abs(e.kx) + Math.abs(e.kz) > 0.05) resolveStatic(e, def.radius, sim.colliders);
-    const b = COURTYARD.bounds;
+    if (e.state !== 'dead' || Math.abs(e.kx) + Math.abs(e.kz) > 0.05) {
+      sim.level.resolve(e, def.radius);
+      keepInArena(sim, e, def.radius, ARENA_ENEMY_SLACK);
+    }
+    const b = sim.level.bounds;
     e.x = clamp(e.x, b.minX + def.radius, b.maxX - def.radius);
     e.z = clamp(e.z, b.minZ + def.radius, b.maxZ - def.radius);
   }
@@ -214,10 +232,10 @@ export function resolveBodies(sim: Sim): void {
       p.x -= (dx / d) * push * (1 - we);
       p.z -= (dz / d) * push * (1 - we);
     }
-    resolveStatic(p, PLAYER.radius, sim.colliders);
+    sim.level.resolve(p, PLAYER.radius);
   }
   // Separation may have pushed a body into a wall or prop: walls win over crowding.
   for (const e of list) {
-    if (e.state !== 'dead') resolveStatic(e, e.def.radius, sim.colliders);
+    if (e.state !== 'dead') sim.level.resolve(e, e.def.radius);
   }
 }

@@ -2,6 +2,7 @@
 // both the sim (static footprints, spawn points) and the renderer (facades, props, lights).
 // Ground plane: +X east, +Z south (toward the camera). Units are meters.
 import type { Collider } from '../sim/collide';
+import { Level } from '../sim/level';
 import { DEG } from '../sim/math';
 
 export type FacadeStyle = 'altbau' | 'yardWall';
@@ -166,4 +167,9 @@ export function courtyardColliders(): Collider[] {
     if (c) list.push(c);
   }
   return list;
+}
+
+/** The courtyard as an arena level: endless spawner, the player stays in the yard. */
+export function courtyardLevel(): Level {
+  return new Level('hof', COURTYARD.bounds, COURTYARD.playerStart, courtyardColliders(), null, COURTYARD.spawns, COURTYARD.yard);
 }

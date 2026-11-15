@@ -14,5 +14,5 @@ if (js) console.log('eval:', JSON.stringify(await page.evaluate(js)));
 await page.waitForTimeout(+waitAfter);
 await page.screenshot({ path: out, timeout: 180000 });
 console.log(JSON.stringify(await page.evaluate(() => window.__game?.perf())));
-for (const e of errors.slice(0, 12)) console.log(e);
+for (const e of errors.slice(0, +(process.env.ERRN ?? 12))) console.log(e);
 await browser.close();

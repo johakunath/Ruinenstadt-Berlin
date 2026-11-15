@@ -9,7 +9,7 @@ Still to merge from the 2D `BACKLOG.md`: camp as a place (#16, #37), Umschmieden
 | B1 | Checkpoint after every wave: a reload (tab killed, browser switch) resumes at the last wave instead of restarting the mission. Was a problem in the 2D game too | Gate 1 playtest | M6 |
 | B2 | Landmark view: near a landmark a button appears, the camera pulls out and shows the whole building; press again to return | Gate 1 playtest | After M11 |
 | B3 | Height levels: stairs, ramps, hills to look down from. Needs ground height in the sim (still 2D collision with a height per cell or per area) | Gate 1 playtest | M10, M11 |
-| B4 | Tall buildings (from the 2D map) vs camera: keep the camera steep and show part of the facade, keep gaps between tall buildings, or fade occluders. Decide per district | Gate 1 playtest | M10, M11 |
+| B4 | Tall buildings (from the 2D map) vs camera: keep the camera steep and show part of the facade, keep gaps between tall buildings, or fade occluders. Decide per district. First answer in Köpenick: dithered see-through cutout around the hero (`src/render/cutout.ts`) | Gate 1 playtest | M10, M11 |
 | B5 | Easier start for newcomers (gate 1 is hard: about 40 to 45 kills with effort). Tune in the real game, not now | Gate 1 playtest | M14 (balance bot) |
 | B6 | One finisher per weapon (gate 1 finisher stays as the pipe finisher) | Gate 1 playtest | M7 |
 | B7 | Head lamp or torch for very dark areas, migrated from the 2D game | Gate 1 playtest, 2D game | With the first dark area |

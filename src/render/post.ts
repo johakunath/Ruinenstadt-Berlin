@@ -14,6 +14,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { Look } from './looks';
 import type { Profile } from './profile';
+import { applyCutout } from './cutout';
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -116,7 +117,7 @@ const GradeShader = {
 export class Post {
   private readonly composer: EffectComposer;
   private readonly gbuffer: WebGLRenderTarget | null;
-  private readonly normalMaterial = new MeshNormalMaterial({ blending: NoBlending });
+  private readonly normalMaterial = withCutout(new MeshNormalMaterial({ blending: NoBlending }));
   private readonly ink: ShaderPass | null = null;
   private readonly gtao: GTAOPass | null = null;
   private readonly bloom: UnrealBloomPass;
@@ -209,4 +210,9 @@ export class Post {
     }
     this.composer.render(dt);
   }
+}
+
+function withCutout<T extends MeshNormalMaterial>(m: T): T {
+  applyCutout(m);
+  return m;
 }

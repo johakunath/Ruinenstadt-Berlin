@@ -1,5 +1,6 @@
 // Start options from the URL and from the options menu (stored in localStorage).
 //   ?profile=Qualität|Leistung   ?debug=hit,perf,flow   ?stress=40   ?seed=7
+//   ?map=hof (gate 1 courtyard)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
 import { PROFILES, type ProfileId } from './render/profile';
 
 export interface Options {
@@ -17,6 +18,11 @@ export interface Options {
   autostart: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
+  /** Köpenick (default) or the gate 1 courtyard. */
+  map: 'koepenick' | 'hof';
+  mapScale: number;
+  /** Debug: start at this encounter. */
+  startAt: number;
 }
 
 const KEY = 'ruinenstadt-berlin.options';
@@ -84,6 +90,9 @@ export function readOptions(): Options {
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     autostart: q.has('autostart'),
     cam: parseCam(q.get('cam')),
+    map: q.get('map') === 'hof' ? 'hof' : 'koepenick',
+    mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
+    startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
   };
 }
 

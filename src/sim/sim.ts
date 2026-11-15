@@ -1,10 +1,12 @@
 // The simulation: one fixed 60 Hz step. No rendering, no DOM, no Three.js; unit tested.
 import { HIT_FEEL, PLAYER } from '../data/combat';
-import { COURTYARD, courtyardColliders } from '../data/courtyard';
+import { courtyardLevel } from '../data/courtyard';
 import { SPAWN } from '../data/enemies';
 import { sectorHitsCircle } from './collide';
-import { randomYardSpot, resolveBodies, spawnEnemy, updateEnemies, updateSpawner } from './enemies';
+import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
+import { randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, updateEnemies, updateSpawner } from './enemies';
 import { FlowField } from './flowfield';
+import type { Level } from './level';
 import { lerp, Rng } from './math';
 import { createPlayer, updatePlayer } from './player';
 import { DT, type Enemy, type Sim, type SimInput } from './types';
@@ -15,28 +17,42 @@ export interface SimOptions {
   stress?: number;
   /** Skip the opening group and the spawner (tests place enemies themselves). */
   empty?: boolean;
+  /** Map; the gate 1 courtyard when left out. */
+  level?: Level;
+  /** Expedition maps: start at this encounter (retry after death starts at its zone's entry). */
+  startAt?: number;
 }
 
 export function createSim(opts: SimOptions = {}): Sim {
-  const colliders = courtyardColliders();
+  const level = opts.level ?? courtyardLevel();
+  const startAt = opts.startAt ?? 0;
+  const zone = level.encounters[startAt]?.zone ?? 0;
+  const entry = startAt > 0 ? level.zones[zone]?.entry : undefined;
   const sim: Sim = {
     tick: 0,
     time: 0,
-    player: createPlayer(),
+    player: createPlayer(level, entry),
     enemies: [],
     events: [],
     hitstop: 0,
     consumed: { attack: false, dodge: false },
-    colliders,
-    flow: new FlowField(COURTYARD.bounds, colliders),
+    level,
+    colliders: level.colliders,
+    flow: level.expedition ? new FlowField({ minX: 0, maxX: 1, minZ: 0, maxZ: 1 }, []) : new FlowField(level.bounds, level.colliders),
+    flowCenter: { x: 0, z: 0 },
+    run: { index: 0, phase: 'travel', wave: 0, toSpawn: 0, bossesToSpawn: [], spawnT: 0, pauseT: 0 },
     rng: new Rng(opts.seed ?? 1),
     nextId: 1,
     kills: 0,
-    spawnT: opts.empty ? Infinity : 1.5,
+    spawnT: opts.empty || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
   };
+  if (level.expedition) {
+    startRunAt(sim, startAt);
+    focusFlow(sim, sim.player.x, sim.player.z);
+  }
   sim.flow.setTarget(sim.player.x, sim.player.z);
-  if (!opts.empty) {
+  if (!opts.empty && (!level.expedition || sim.stress > 0)) {
     const opening = sim.stress > 0 ? sim.stress : SPAWN.startAlive - 2;
     for (let i = 0; i < opening; i++) {
       const s = randomYardSpot(sim, 6);
@@ -66,12 +82,15 @@ export function stepSim(sim: Sim, input: SimInput): void {
     return;
   }
   updatePlayer(sim, input);
+  followFlow(sim);
   sim.flow.setTarget(p.x, p.z);
   updateEnemies(sim);
   resolveBodies(sim);
   playerSweep(sim);
   enemyStrikes(sim);
-  updateSpawner(sim);
+  removeCorpses(sim);
+  if (sim.level.expedition && sim.stress === 0) updateDirector(sim);
+  else updateSpawner(sim);
   sim.tick++;
   sim.time += DT;
 }
@@ -139,7 +158,7 @@ function enemyStrikes(sim: Sim): void {
     const def = e.def;
     if (!sectorHitsCircle(e.x, e.z, e.facing, -def.halfAngle, def.halfAngle, 0, def.reach, p.x, p.z, PLAYER.radius)) continue;
     e.struck = true;
-    const damage = Math.min(def.damage, PLAYER.maxHp * PLAYER.maxHitShare);
+    const damage = Math.min(def.damage * e.dmgMul, PLAYER.maxHp * PLAYER.maxHitShare);
     let dx = p.x - e.x;
     let dz = p.z - e.z;
     const d = Math.hypot(dx, dz) || 1;

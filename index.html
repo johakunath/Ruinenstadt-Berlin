@@ -13,7 +13,26 @@
     <div id="hud" hidden>
       <div class="hp" aria-label="Leben"><div id="hp-fill"></div></div>
       <div class="kills">Erledigt <b id="kills">0</b></div>
+      <div id="objective" hidden><span id="obj-arrow">▲</span><span id="obj-text"></span></div>
+      <button id="map-btn" type="button" aria-label="Karte" hidden>Karte</button>
       <button id="menu-btn" type="button" aria-label="Optionen">☰</button>
+    </div>
+    <div id="bossbar" hidden><span id="boss-name"></span><div class="bar"><div id="boss-fill"></div></div></div>
+    <div id="banner" hidden><b id="banner-title"></b><span id="banner-sub"></span></div>
+
+    <div id="karte" class="overlay" hidden>
+      <div class="panel wide">
+        <div id="karte-svg"></div>
+        <button id="close-karte" type="button" class="primary">Weiter</button>
+      </div>
+    </div>
+
+    <div id="won" class="overlay" hidden>
+      <div class="panel">
+        <h2>Köpenick befreit</h2>
+        <p class="sub">Erledigt: <b id="won-kills">0</b></p>
+        <button id="again" type="button" class="primary">Nochmal</button>
+      </div>
     </div>
 
     <div id="touch" hidden>
@@ -26,7 +45,7 @@
     <div id="title" class="overlay">
       <div class="panel">
         <h1>Ruinenstadt<span>Berlin</span></h1>
-        <p class="sub">Köpenick · Hinterhof bei Nacht</p>
+        <p class="sub" id="title-sub">Köpenick bei Nacht</p>
         <button id="play" type="button" class="primary" disabled>Spielen</button>
         <button id="open-options" type="button">Optionen</button>
         <p id="loading">Lädt …</p>
@@ -39,6 +58,7 @@
         <h2>Gefallen</h2>
         <p class="sub">Erledigt: <b id="dead-kills">0</b></p>
         <button id="retry" type="button" class="primary">Nochmal</button>
+        <p class="sub" id="retry-hint" hidden></p>
       </div>
     </div>
 

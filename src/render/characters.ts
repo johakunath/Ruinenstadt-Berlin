@@ -310,6 +310,10 @@ const TINTS: Record<EnemyKind, number[]> = {
   walker: [0xb9c7ae, 0xa9b9b0, 0xc4bd9c],
   runner: [0xcfc9a4, 0xb6c9b8],
   brute: [0x93a58f, 0xa08f86],
+  schaffner: [0x7f9a8a],
+  waechter: [0x8a8577],
+  rex: [0x7d9a5a],
+  hauptmann: [0xa98f7a],
 };
 
 export class EnemyView {
@@ -360,7 +364,7 @@ export class EnemyView {
     this.root.scale.setScalar(e.def.scale);
     // Gaunt runners, heavy brutes.
     if (e.kind === 'runner') this.root.scale.set(e.def.scale * 0.86, e.def.scale, e.def.scale * 0.86);
-    if (e.kind === 'brute') this.root.scale.set(e.def.scale * 1.12, e.def.scale, e.def.scale * 1.12);
+    if (e.kind === 'brute' || e.def.boss) this.root.scale.set(e.def.scale * 1.12, e.def.scale, e.def.scale * 1.12);
     const tints = TINTS[e.kind];
     const tint = tints[Math.floor(this.seed * tints.length)] as number;
     for (const m of this.mats) {

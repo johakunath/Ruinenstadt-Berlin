@@ -13,14 +13,14 @@
 | Folder | Rule |
 |---|---|
 | `src/sim` | Game state and rules at a fixed 60 Hz step. No Three.js, no DOM, no `Math.random` (use `sim.rng`). Every rule has a unit test. Ground plane is XZ in meters; facing θ means direction `(sin θ, cos θ)` |
-| `src/data` | Typed tuning and map data. `courtyard.ts` is the single source for sim footprints and render meshes; `combat.ts` holds attack timing |
+| `src/data` | Typed tuning and map data, single source for sim footprints and render meshes. `map.ts` is the expedition map format with seeded lot and prop generators; `koepenick.ts` the Köpenick map, route and wave tiers (`docs/maps/koepenick.md`); `courtyard.ts` the gate 1 yard (`?map=hof`); `combat.ts` attack timing |
 | `src/render` | Three.js scene. Reads sim state, interpolates between steps, never writes to it. One-shot clips are posed from sim time so pose and hitbox match |
 | `src/input` | Devices → move vector plus buffered actions. Polled every render frame, also during hitstop |
 | `src/audio`, `src/ui` | WebAudio synth, DOM overlay |
 | `assets/` | Built GLBs. Every file has a row in `assets/LICENSES.md` |
 | `tools/` | Asset build and dev tools (`screenshot.mjs`, `sequence.mjs`, `clip-swing.mjs`) |
 
-The sim reports through `sim.events`; the loop in `src/main.ts` hands them to renderer, audio and rumble.
+The sim reports through `sim.events`; the loop in `src/main.ts` hands them to renderer, audio and rumble. A `Level` (`src/sim/level.ts`) holds colliders in a spatial hash plus a walk grid (water); the encounter director (`src/sim/director.ts`) runs waves on expedition maps. Maps render in 48 m chunks (`src/render/map-world.ts`); building and tree materials get the see-through cutout (`src/render/cutout.ts`).
 
 ## Rules
 
@@ -40,6 +40,6 @@ The sim reports through `sim.events`; the loop in `src/main.ts` hands them to re
 | `npm run e2e` | Playwright smoke test against the built game (`npm run build` first) |
 | `npm run assets` | Rebuild `assets/characters/*.glb` from `assets-src/` (`tools/fetch-assets.sh` downloads it) |
 
-URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`.
+URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4).
 
 CI runs type check, unit tests, build and the smoke test on every PR and deploys `main` to GitHub Pages. Cloud browsers have no real GPU: measure performance only on the PC and the Tab S9.
