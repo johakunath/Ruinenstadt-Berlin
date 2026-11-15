@@ -116,7 +116,8 @@ export class Ui {
     } else if (Math.abs(angle - this.lastArrow) > 0.02) {
       this.lastArrow = angle;
       arrow.style.visibility = 'visible';
-      arrow.style.transform = `rotate(${angle}rad)`;
+      // The glyph ➤ points right; an equilateral ▲ has no readable tip once rotated.
+      arrow.style.transform = `rotate(${angle - Math.PI / 2}rad)`;
     }
   }
 

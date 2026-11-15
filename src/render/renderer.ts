@@ -213,9 +213,26 @@ export class GameRenderer {
 
   /** CSS-pixel screen position of a world point (may lie off screen). */
   screenOf(x: number, y: number, z: number): { x: number; y: number } {
-    const v = tmpScreen.set(x, y, z).project(this.cam.camera);
-    return { x: ((v.x + 1) / 2) * window.innerWidth, y: ((1 - v.y) / 2) * window.innerHeight };
+    const cam = this.cam.camera;
+    const toScreen = (v: Vector3): { x: number; y: number } => {
+      v.project(cam);
+      return { x: ((v.x + 1) / 2) * window.innerWidth, y: ((1 - v.y) / 2) * window.innerHeight };
+    };
+    // Behind the camera the projection flips. Then use the ground direction from the hero instead:
+    // project a point 2 m from the hero toward the target and push it far along that screen ray.
+    if (tmpScreen.set(x, y, z).applyMatrix4(cam.matrixWorldInverse).z < -0.1) return toScreen(tmpScreen.set(x, y, z));
+    const dx = x - this.heroX;
+    const dz = z - this.heroZ;
+    const l = Math.hypot(dx, dz) || 1;
+    const hy = groundY(this.heroX, this.heroZ);
+    const h = toScreen(tmpScreen.set(this.heroX, hy, this.heroZ));
+    const a = toScreen(tmpScreen.set(this.heroX + (dx / l) * 2, hy, this.heroZ + (dz / l) * 2));
+    const k = 1e4 / (Math.hypot(a.x - h.x, a.y - h.y) || 1);
+    return { x: h.x + (a.x - h.x) * k, y: h.y + (a.y - h.y) * k };
   }
+
+  private heroX = 0;
+  private heroZ = 0;
 
   render(sim: Sim, alpha: number, dt: number): void {
     this.time += dt;
@@ -254,6 +271,8 @@ export class GameRenderer {
     const px = lerp(p.px, p.x, alpha);
     const pz = lerp(p.pz, p.z, alpha);
     const py = groundY(px, pz);
+    this.heroX = px;
+    this.heroZ = pz;
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     this.world.follow?.(px, pz);
