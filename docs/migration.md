@@ -11,7 +11,7 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 | 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | done (PR #9) |
 | 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | done (PR #9) |
 | 3 | M11b Köpenick v2: tighter, livelier, readable (playtest 2026-11-15, list in `docs/playtests.md`). Concept first, then build | Claude · Opus high | `docs/maps/koepenick.md` | open |
-| 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Codex (Johannes) | `docs/tasks/m3b-stats-in-sim.md` | implemented (PR pending) |
+| 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Codex (Johannes) | `docs/tasks/m3b-stats-in-sim.md` | done (PR #10) |
 | 5 | M4 Loot in the world | Claude · Opus high | after M3b, M11b | open |
 | 6 | M5 Inventory mockup (Claude), then build (Codex task written after Johannes picks) | Claude, Codex | after M4 | open |
 
@@ -33,7 +33,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Map, route, encounters, waves, heights | M10, M11 | First version; v2 open (M11b) |
 | Enterable Späti (safe room), minimap, 2D edge triangles | M11b | Open |
 | Item data and rolls | M1, M2 | Done |
-| Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b implemented (PR pending) |
+| Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b done (PR #10) |
 | Drops, glow, pickup, exit warning | M4 | Open |
 | Inventory, equip, compare, salvage, sets | M5 | Open |
 | Save, wave checkpoint, difficulty | M6 | Open |

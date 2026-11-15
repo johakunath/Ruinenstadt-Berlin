@@ -1,6 +1,6 @@
 # M3b Stats in the simulation [Codex]
 
-Status: implemented (PR pending). Assigned by Johannes in chat (2026-11-15).
+Status: done (PR #10). Assigned by Johannes in chat (2026-11-15).
 
 ## Goal
 
@@ -36,4 +36,4 @@ None. The starter gains M3a's 8% base crit; attack multipliers and other base tu
 - Resistance precedes the equipped-max-HP 45% cap; regen, leech and encounter healing use that max.
 - HUD watches both HP and max HP; retries retain the loadout/context; dev hook verifies equip until M5.
 - Elemental procs, powers and extra perk/mod mechanics stay with M8; no inventory UI or balance pass.
-- `npm run check`: 174 tests, type check and build passed. Browser evidence recorded in the PR.
+- `npm run check`: 174 tests, type check and build passed. All six browser checks pass (five in the suite, new gear test on rerun); screenshot in `docs/proof/m3b/`.

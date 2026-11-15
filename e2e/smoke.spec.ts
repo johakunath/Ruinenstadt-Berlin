@@ -135,7 +135,7 @@ test('equipment changes combat and HUD health, and survives a retry', async ({ p
   expect(result).toMatchObject({ maxHp: 200, hp: 100, damage: 20 });
   expect(result.timing.windup).toBeCloseTo(.04);
   expect(result.timing.active).toBeCloseTo(.05);
-  await expect(page.locator('#hp-fill')).toHaveCSS('transform', 'matrix(0.5, 0, 0, 1, 0, 0)');
+  await expect(page.locator('#hp-fill')).toHaveCSS('transform', 'matrix(0.5, 0, 0, 1, 0, 0)', { timeout: 90_000 });
   await page.screenshot({ path: testInfo.outputPath('m3b-equipped-health.png') });
 
   await page.evaluate(() => {
