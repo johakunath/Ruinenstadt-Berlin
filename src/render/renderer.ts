@@ -63,6 +63,7 @@ function nightEnvironment(renderer: WebGLRenderer): Texture {
   return tex;
 }
 const tmp = new Vector3();
+const tmpScreen = new Vector3();
 
 export class GameRenderer {
   readonly perf = new PerfStats();
@@ -175,6 +176,12 @@ export class GameRenderer {
       default:
         break;
     }
+  }
+
+  /** CSS-pixel screen position of a world point (may lie off screen). */
+  screenOf(x: number, y: number, z: number): { x: number; y: number } {
+    const v = tmpScreen.set(x, y, z).project(this.cam.camera);
+    return { x: ((v.x + 1) / 2) * window.innerWidth, y: ((1 - v.y) / 2) * window.innerHeight };
   }
 
   render(sim: Sim, alpha: number, dt: number): void {

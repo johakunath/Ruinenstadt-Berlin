@@ -564,6 +564,36 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       }
       break;
     }
+    case 'car': {
+      // Abandoned saloon (generic boxy East German shape): body, cabin, dark windows, flat tires.
+      const tint = rng.pick([[1.7, 0.75, 0.6], [0.8, 1.05, 1.5], [1.6, 1.45, 1.1], [0.9, 1.3, 0.85], [1.3, 1.3, 1.3]] as Array<[number, number, number]>);
+      const tilt = at(p, 0, 0, 0, rng.range(-0.03, 0.03), 0, rng.range(-0.04, 0.04));
+      const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+      b.box(m.iron, part(0, 0.62, 0), 1.7, 0.62, 4.0, tint);
+      b.box(m.iron, part(0, 1.18, -0.25), 1.48, 0.52, 2.0, [tint[0] * 0.9, tint[1] * 0.9, tint[2] * 0.9]);
+      b.box(m.rubber, part(0, 1.2, -0.25), 1.52, 0.36, 1.7, [0.35, 0.4, 0.42]);
+      b.box(m.rubber, part(0, 0.36, 2.02), 1.6, 0.18, 0.1);
+      b.box(m.rubber, part(0, 0.36, -2.02), 1.6, 0.18, 0.1);
+      const wheel = new CylinderGeometry(0.3, 0.3, 0.2, 10);
+      for (const [x, z] of [[0.78, 1.3], [-0.78, 1.3], [0.78, -1.3], [-0.78, -1.3]] as Array<[number, number]>) {
+        b.geo(m.rubber, wheel, part(x, 0.26, z).multiply(new Matrix4().makeRotationZ(Math.PI / 2)));
+      }
+      b.shadowBox(part(0, 0.8, 0), 1.7, 1.4, 4.0);
+      break;
+    }
+    case 'bollard': {
+      b.geo(m.iron, new CylinderGeometry(0.11, 0.13, 0.9, 8), at(p, 0, 0.45, 0), [0.8, 0.8, 0.8]);
+      b.geo(m.iron, new CylinderGeometry(0.13, 0.13, 0.08, 8), at(p, 0, 0.72, 0), [1.6, 1.5, 1.2]);
+      break;
+    }
+    case 'fence': {
+      // Garden fence: posts and two rails, wooden pickets.
+      const L = p.size;
+      for (let x = -L / 2; x <= L / 2 + 1e-3; x += Math.max(1, L / Math.ceil(L / 2))) b.box(m.wood, at(p, x, 0.5, 0), 0.1, 1.0, 0.1, [0.6, 0.55, 0.5]);
+      for (const y of [0.3, 0.8]) b.box(m.wood, at(p, 0, y, 0), L, 0.07, 0.05, [0.75, 0.7, 0.62]);
+      for (let x = -L / 2 + 0.15; x < L / 2; x += 0.3) if (rng.next() > 0.12) b.box(m.wood, at(p, x, 0.5, 0.04, 0, 0, rng.range(-0.06, 0.06)), 0.08, rng.range(0.85, 1.0), 0.03, [0.85, 0.8, 0.7]);
+      break;
+    }
     case 'bench': {
       b.box(m.wood, at(p, 0, 0.46, 0), 1.7, 0.07, 0.5);
       b.box(m.wood, at(p, 0, 0.75, -0.24, -0.15), 1.7, 0.4, 0.05, [0.9, 0.85, 0.8]);

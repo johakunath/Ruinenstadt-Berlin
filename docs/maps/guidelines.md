@@ -27,15 +27,16 @@ How every district map is made, so all maps grow in the same direction no matter
 | Topic | Rule |
 |---|---|
 | Structure | A hub (the district's center, e.g. Altstadt) and 2 to 3 zones around it. Route visits each zone, then returns to the district landmark for the final boss |
-| Size | Author at scale 1 with the `scale` factor (distances stretch, building sizes do not, water widths with √scale). Köpenick at scale 1: 510 × 428 m, about 2.5 min of pure running. Tests run at 1 and 1.3 |
+| Size | Author at scale 1 with the `scale` factor (distances stretch, building sizes do not, water widths with √scale). Köpenick v2 at scale 1: 318 × 304 m, route about 840 m (2.3 min of pure running); v1 at 510 × 428 m felt too big and empty. Keep the hub at real building scale and pull the zones in. Tests run at 1 and 1.3 |
 | Length | A full district may take 15 to 20 minutes (Johannes, 2026-11-15). A checkpoint per zone comes with the save (M6) |
 | Encounters | Circle radius 13 to 16 m, at least 80 % open ground (test), no terrace edge or water inside. 2 to 3 waves each. Fixed place, triggered only when it is the objective |
 | Waves and bosses | Wave count per zone is decided per district (Köpenick 6/7/7). One boss per zone, the district boss last at its landmark. Difficulty follows `waveTier` (one curve per district, rising) |
 | Bosses | Der Schaffner belongs to the U-Bahn tunnels and is not used as a district boss. District bosses fit the district's era and story (`docs/story.md`) |
-| Space | Fewer buildings, more open ground than the real city. Streets are the main paths; buildings line them (generated lots); arenas, landmarks and stairs stay free |
+| Space | Streets are the main paths; buildings line them (generated lots); arenas, landmarks and stairs stay free. Every stretch has something: buildings, cars or props (test). Prefer a loop route that never walks the same street twice |
+| Streets | Main 7 to 7.5 m, side 5 to 6.5 m, paths 4 m, curbs on streets. Parked and abandoned cars, sidewalk props, fences in front of houses, bollards at bridge heads |
 | Landmarks | Built in code with their recognizable silhouette first (tower, gables, roof shape, material color). 3 to 6 per district, each visible from the route |
 | Heights (B3) | Soft hills up to about 8 m (walkable everywhere), terraces 1.5 to 3 m with retaining walls and stairs (walls block in the sim). Not inside an encounter circle. Good spots: summits, platforms overlooking an arena |
-| Camera | Ordinary buildings: ground floor plus 1 to 3 floors. Walls and crowns between camera and hero use the see-through cutout |
+| Camera | Ordinary buildings: ground floor plus 1 to 2 floors, L-shaped footprints and single-storey shops for variety. Walls and crowns between camera and hero use the see-through cutout |
 | Light | Lanterns along streets (26 m main, 32 m side), 2 fire barrels and some cover per encounter. Light count is a fixed pool; lamps are spots |
 | Water | Rivers as polylines, lakes as polygons, bridges as rectangles at least river width + 12 m long. Banks drop to the water plane |
 
@@ -56,3 +57,4 @@ Headless numbers are not representative. On Leistung keep a typical view under a
 | Date | Change |
 |---|---|
 | 2026-11-15 | Started with Köpenick: geography check, layout rules, heights, invariants |
+| 2026-11-15 | Köpenick v2 (M11b, playtest): tighter size, loop route, narrower streets with curbs, lower and L-shaped buildings, shops, cars and props on every stretch (test) |

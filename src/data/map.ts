@@ -19,6 +19,8 @@ export interface River {
 
 export interface Bridge {
   name: string;
+  /** A moored ferry deck instead of a fixed bridge (same walkable crossing). */
+  kind?: 'ferry';
   x: number;
   z: number;
   /** Direction of travel across, as a facing angle (0 = along +Z). */
@@ -37,7 +39,7 @@ export interface Street {
 }
 
 export type GroundKind = 'cobbles' | 'asphalt' | 'grass' | 'forest' | 'jungle';
-export type LotKind = 'altbau' | 'house' | 'platte';
+export type LotKind = 'altbau' | 'house' | 'platte' | 'shop';
 
 export interface Area {
   id: string;
@@ -79,6 +81,8 @@ export interface Lot {
   floors: number;
   seed: number;
   jungle?: boolean;
+  /** Back wing (Seitenflügel, annex): same facing, centered at (x, z), so the footprint is an L. */
+  wing?: { x: number; z: number; w: number; d: number };
 }
 
 /** Round hill: flat top of radius `r`, smooth slope `slope` meters wide down to the plain. */
@@ -280,10 +284,13 @@ export function landmarkCollider(l: Landmark): Collider {
 
 // ---------------------------------------------------------------- lots
 
-const LOT: Record<LotKind, { w: [number, number]; d: [number, number]; floors: [number, number]; setback: number }> = {
-  altbau: { w: [14, 22], d: [11, 14], floors: [1, 3], setback: 2.2 },
-  house: { w: [8, 11], d: [8, 10], floors: [0, 1], setback: 4 },
-  platte: { w: [26, 34], d: [11, 12], floors: [3, 4], setback: 6 },
+// v2 (M11b): smaller, lower and denser than v1. `gap` is the space to the next lot along the street,
+// `wing` the chance of an L-shaped footprint.
+const LOT: Record<LotKind, { w: [number, number]; d: [number, number]; floors: [number, number]; setback: number; gap: [number, number]; wing: number }> = {
+  altbau: { w: [9, 16], d: [9, 12], floors: [1, 2], setback: 1.6, gap: [0.3, 1.5], wing: 0.45 },
+  house: { w: [7, 10], d: [7, 9], floors: [0, 1], setback: 3, gap: [2, 5], wing: 0.35 },
+  platte: { w: [24, 30], d: [10, 11], floors: [3, 4], setback: 6, gap: [4, 8], wing: 0 },
+  shop: { w: [6, 9], d: [6, 8], floors: [0, 0], setback: 1.6, gap: [0.5, 2], wing: 0 },
 };
 
 /** Occupancy raster (2 m) so generated lots never overlap each other or kept-free places. */
@@ -356,7 +363,9 @@ export function generateLots(m: MapDef): Lot[] {
             t += 6;
             continue;
           }
-          const L = LOT[kind];
+          // Altbau streets get single-storey shops (Läden, Spätis) between the blocks.
+          const kind2: LotKind = kind === 'altbau' && rng.next() < 0.18 ? 'shop' : kind;
+          const L = LOT[kind2];
           const w = rng.range(L.w[0], L.w[1]);
           const d = rng.range(L.d[0], L.d[1]);
           // Normal pointing away from the street on this side; the front faces the street.
@@ -365,14 +374,32 @@ export function generateLots(m: MapDef): Lot[] {
           const off = s.width / 2 + L.setback + d / 2;
           const x = cx + dx * (w / 2) + nx * off;
           const z = cz + dz * (w / 2) + nz * off;
-          const rot = Math.atan2(-nx, -nz);
-          const ok = t + w < len + 2 && areaAt(m, x, z) === area && streetDist(m, x, z).d > d / 2 - 0.5 && cornersOk(m, x, z, rot, w / 2, d / 2) && occ.free(x, z, rot, w / 2 + 1, d / 2 + 1);
-          if (ok && rng.next() > 0.12) {
-            occ.take(x, z, rot, w / 2 + 1, d / 2 + 1);
-            lots.push({ kind, x, z, rot, w, d, floors: L.floors[0] + rng.int(L.floors[1] - L.floors[0] + 1), seed: rng.int(1e6) });
-            t += w + rng.range(0.5, 3);
+          // Houses sit slightly askew; Altbau follows the street line.
+          const rot = Math.atan2(-nx, -nz) + (kind2 === 'house' ? rng.range(-0.15, 0.15) : 0);
+          // Altbau and shops close the street front (small margin); houses keep their gardens.
+          const mg = kind2 === 'house' || kind2 === 'platte' ? 1 : 0.3;
+          const ok = t + w < len + 2 && areaAt(m, x, z) === area && streetDist(m, x, z).d > d / 2 - 0.5 && cornersOk(m, x, z, rot, w / 2, d / 2) && occ.free(x, z, rot, w / 2 + mg, d / 2 + mg);
+          if (ok && rng.next() > 0.07) {
+            const lot: Lot = { kind: kind2, x, z, rot, w, d, floors: L.floors[0] + rng.int(L.floors[1] - L.floors[0] + 1), seed: rng.int(1e6) };
+            if (rng.next() < L.wing) {
+              // Wing behind the back facade at one end: local +a along the front, -b away from the street.
+              const ww = rng.range(4, Math.min(7, w * 0.5));
+              const wd = rng.range(4, 8);
+              const a = rng.pick([-1, 1]) * (w / 2 - ww / 2);
+              const b = -(d / 2 + wd / 2) + 0.05;
+              const wx = x + Math.cos(rot) * a + Math.sin(rot) * b;
+              const wz = z - Math.sin(rot) * a + Math.cos(rot) * b;
+              // Checked before the main lot takes its cells (the wing touches its back facade).
+              if (cornersOk(m, wx, wz, rot, ww / 2, wd / 2) && areaAt(m, wx, wz) === area && occ.free(wx, wz, rot, ww / 2 + mg, wd / 2 + mg - 0.3)) {
+                occ.take(wx, wz, rot, ww / 2 + mg, wd / 2 + mg);
+                lot.wing = { x: wx, z: wz, w: ww, d: wd };
+              }
+            }
+            occ.take(x, z, rot, w / 2 + mg, d / 2 + mg);
+            lots.push(lot);
+            t += w + rng.range(L.gap[0], L.gap[1]);
           } else {
-            t += rng.range(3, 6);
+            t += rng.range(1.5, 3);
           }
         }
       }
@@ -414,9 +441,11 @@ function cornersOk(m: MapDef, x: number, z: number, rot: number, hw: number, hd:
   return true;
 }
 
-export function lotCollider(l: Lot): Collider {
-  if (l.kind === 'tree') return { kind: 'circle', x: l.x, z: l.z, r: l.jungle ? 0.55 : 0.4 };
-  return { kind: 'box', x: l.x, z: l.z, hx: l.w / 2, hz: l.d / 2, rot: l.rot };
+export function lotColliders(l: Lot): Collider[] {
+  if (l.kind === 'tree') return [{ kind: 'circle', x: l.x, z: l.z, r: l.jungle ? 0.55 : 0.4 }];
+  const out: Collider[] = [{ kind: 'box', x: l.x, z: l.z, hx: l.w / 2, hz: l.d / 2, rot: l.rot }];
+  if (l.wing) out.push({ kind: 'box', x: l.wing.x, z: l.wing.z, hx: l.wing.w / 2, hz: l.wing.d / 2, rot: l.rot });
+  return out;
 }
 
 /**
@@ -490,6 +519,77 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
+  // v2 (M11b): every stretch has something. Parked and abandoned cars along the curbs, street
+  // furniture on the sidewalks, garden fences in front of houses, bollards at the bridge heads.
+  for (const s of m.streets) {
+    if (s.kind === 'path') continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [ax, az] = s.pts[i - 1] as Pt;
+      const [bx, bz] = s.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      const dx = (bx - ax) / len;
+      const dz = (bz - az) / len;
+      const along = Math.atan2(dx, dz);
+      for (let t = rng.range(3, 8); t < len - 3; t += rng.range(7, 14)) {
+        const side = rng.pick([-1, 1]);
+        const stray = rng.next() < 0.2;
+        // Parked: 1.1 m inside the curb. Abandoned: askew, partly on the lane.
+        const off = side * (s.width / 2 - (stray ? rng.range(1.6, 2.4) : 1.1));
+        const x = ax + dx * t - dz * off;
+        const z = az + dz * t + dx * off;
+        if (onBridge(m, x, z, 3) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 2.5)) continue;
+        // On the street, so only props and other cars can be in the way (lots stand behind the curb).
+        if (m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < 5) || m.terraces.some((tr) => polyEdgeDist(tr.poly, x, z) < 3 || onStair(tr, x, z, 3) !== null)) continue;
+        if (isWater(m, x, z) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 3.4) || m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + 2 && Math.abs(z - l.z) < l.hz + 2)) continue;
+        if (rng.next() < 0.75) props.push({ kind: 'car', x, z, rot: along + (rng.next() < 0.5 ? Math.PI : 0) + (stray ? rng.range(-0.6, 0.6) : rng.range(-0.05, 0.05)), size: 1 });
+      }
+      // Benches, bins and crates on the sidewalk where buildings front the street.
+      for (let t = rng.range(6, 14); t < len - 3; t += rng.range(12, 24)) {
+        const side = rng.pick([-1, 1]);
+        const off = side * (s.width / 2 + 0.9);
+        const x = ax + dx * t - dz * off;
+        const z = az + dz * t + dx * off;
+        if (!areaAt(m, x, z)?.frontage || onBridge(m, x, z, 2) || hit(x, z, 0.9)) continue;
+        if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.7)) continue;
+        const kind = rng.pick(['bench', 'bins', 'crates', 'bench', 'rubble'] as const);
+        props.push({ kind, x, z, rot: along + (side > 0 ? Math.PI / 2 : -Math.PI / 2), size: kind === 'rubble' ? rng.range(0.5, 0.8) : 1 });
+      }
+    }
+  }
+  for (const l of lots) {
+    if (l.kind !== 'house' || rng.next() < 0.25) continue;
+    // Front fence 1.4 m in front of the facade, with a gate gap; local +b is towards the street.
+    const fx = Math.sin(l.rot);
+    const fz = Math.cos(l.rot);
+    const ux = Math.cos(l.rot);
+    const uz = -Math.sin(l.rot);
+    const half = l.w / 2 + 1;
+    const gate = rng.range(-half + 1.5, half - 2.5);
+    for (const [a0, a1] of [[-half, gate], [gate + 1.2, half]] as Array<[number, number]>) {
+      const L = a1 - a0;
+      if (L < 0.8) continue;
+      const c = (a0 + a1) / 2;
+      const x = l.x + fx * (l.d / 2 + 1.4) + ux * c;
+      const z = l.z + fz * (l.d / 2 + 1.4) + uz * c;
+      if (streetDist(m, x, z).d < 0.4 || isWater(m, x, z) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + L / 2)) continue;
+      props.push({ kind: 'fence', x, z, rot: l.rot, size: L });
+    }
+  }
+  for (const br of m.bridges) {
+    if (br.kind === 'ferry') continue;
+    const ux = Math.sin(br.rot);
+    const uz = Math.cos(br.rot);
+    for (const end of [-1, 1]) {
+      for (const k of [-1.5, -0.5, 0.5, 1.5]) {
+        const a = end * (br.len / 2 + 1.2);
+        const c = k * (br.width / 4.5);
+        const x = br.x + ux * a - uz * c;
+        const z = br.z + uz * a + ux * c;
+        if (Math.abs(k) < 1 || hit(x, z, 0.2)) continue;
+        props.push({ kind: 'bollard', x, z, rot: 0, size: 1 });
+      }
+    }
+  }
   return props;
 }
 
@@ -501,7 +601,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     if (c) colliders.push(c);
   }
   for (const l of m.landmarks) if (l.hx > 0) colliders.push(landmarkCollider(l));
-  for (const l of lots) colliders.push(lotCollider(l));
+  for (const l of lots) colliders.push(...lotColliders(l));
   if (m.rail) {
     const r = m.rail;
     const left = (r.gapX - r.gapW / 2 + r.minX) / 2;

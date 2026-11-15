@@ -217,6 +217,16 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         // quad() takes counter-clockwise corners seen from above; UVs in world meters.
         batch.quad(quad, [0, 0, 1, 1]);
         fixWorldUv(batch, 4, 4);
+        // Curbs mark the walkable street edge (v2, M11b); not on paths and bridges.
+        if (s.kind !== 'path' && !onBridge(m, x0, z0, 1) && !onBridge(m, x1, z1, 1)) {
+          const yaw = Math.atan2(dx, dz);
+          for (const side of [-1, 1]) {
+            const cx = (x0 + x1) / 2 + side * nx * (1 + 0.12 / (s.width / 2));
+            const cz = (z0 + z1) / 2 + side * nz * (1 + 0.12 / (s.width / 2));
+            if (isWater(m, cx, cz)) continue;
+            b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + 0.06, cz), 0.24, 0.16, t1 - t0 + 0.02, [0.8, 0.8, 0.78]);
+          }
+        }
       }
       if (i < s.pts.length - 1 || s.kind === 'path') {
         const disc = new CircleGeometry(s.width / 2, 16);
@@ -250,6 +260,19 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
     const mats = b.mm;
     const base = new Matrix4().makeRotationY(br.rot).setPosition(br.x, 0, br.z);
     const local = (x: number, y: number, z: number): Matrix4 => base.clone().multiply(new Matrix4().setPosition(x, y, z));
+    if (br.kind === 'ferry') {
+      // Moored ferry: a rusty hull with a plank deck, wooden landing stages at both banks, a wheelhouse.
+      const hull = br.len - 10;
+      b.box(mats.rust, local(0, -0.65, 0), br.width + 0.6, 1.1, hull, [0.6, 0.55, 0.5]);
+      b.box(mats.wood, local(0, -0.08, 0), br.width, 0.16, br.len, [1.25, 1.12, 0.95]);
+      for (const side of [-1, 1]) {
+        b.box(mats.rust, local(side * (br.width / 2 + 0.2), 0.45, 0), 0.12, 0.9, hull, [0.55, 0.5, 0.45]);
+        for (const z of [-br.len / 2 + 1.5, br.len / 2 - 1.5]) b.box(mats.wood, local(side * (br.width / 2 - 0.3), -0.8, z), 0.4, 1.8, 0.4, [0.5, 0.45, 0.4]);
+      }
+      b.box(mats.stucco, local(br.width / 2 + 1.6, 1.1, hull / 4), 2.4, 2.2, 3, [0.85, 0.85, 0.82]);
+      b.box(mats.rust, local(br.width / 2 + 1.6, 2.3, hull / 4), 2.8, 0.2, 3.4, [0.5, 0.4, 0.35]);
+      continue;
+    }
     // Deck (top flush with the ground), stone sides, iron railing, two lamps.
     b.box(mats.cobbles, local(0, -0.2, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
     for (const side of [-1, 1]) {
@@ -347,14 +370,19 @@ function blockFacades(l: { x: number; z: number; rot: number; w: number; d: numb
   ];
 }
 
-function buildAltbauLot(b: ChunkBuilder, l: Lot, m: MapDef): void {
+/** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
+function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
   const rng = new Rng(l.seed);
   const tone = rng.pick(TONES);
   const sides = blockFacades(l);
   const main = streetDist(m, l.x + Math.sin(l.rot) * l.d, l.z + Math.cos(l.rot) * l.d).street?.kind === 'main';
   sides.forEach((s, i) => {
     const features: FacadeFeature[] = [];
-    if (i === 0) {
+    if (i === 0 && l.kind === 'shop') {
+      // Single-storey Laden / Späti: shop window over most of the front.
+      const from = Math.max(0.6, (s.len - 7) / 2);
+      features.push({ kind: 'spati', from, to: Math.min(s.len - 0.6, from + 7) });
+    } else if (i === 0 && !l.inner) {
       if (s.len > 15 && rng.next() < (main ? 0.4 : 0.22)) {
         const from = rng.range(1.5, s.len - 9.5);
         features.push({ kind: 'spati', from, to: from + 7 });
@@ -707,9 +735,16 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     Math.min(heightAt(m, x, z), heightAt(m, x - r, z - r), heightAt(m, x + r, z - r), heightAt(m, x - r, z + r), heightAt(m, x + r, z + r));
   for (const l of lots) {
     const b = chunkOf(l.x, l.z);
-    if (l.kind === 'altbau' || l.kind === 'platte') b.on(base(l.x, l.z, Math.max(l.w, l.d) / 2), () => buildAltbauLot(b, l, m));
-    else if (l.kind === 'house') b.on(base(l.x, l.z, Math.max(l.w, l.d) / 2), () => buildHouse(b, l));
+    const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
+    if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
+    else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
     else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
+    if (l.wing) {
+      // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
+      const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
+      if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
+      else b.on(y0, () => buildAltbauLot(b, wing, m));
+    }
   }
   for (const l of m.landmarks) {
     const b = chunkOf(l.x, l.z);

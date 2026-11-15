@@ -34,14 +34,14 @@ export interface Facade {
   seed: number;
 }
 
-export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'bins' | 'rubble' | 'planks' | 'bench';
+export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence';
 
 export interface Prop {
   kind: PropKind;
   x: number;
   z: number;
   rot: number;
-  /** Rubble pile radius; unused for other kinds. */
+  /** Rubble pile radius, fence length; a scale for other kinds. */
   size: number;
 }
 
@@ -124,6 +124,12 @@ export function propCollider(p: Prop): Collider | null {
       return { kind: 'circle', x: p.x, z: p.z, r: p.size * 0.85 };
     case 'bench':
       return { kind: 'box', x: p.x, z: p.z, hx: 0.85, hz: 0.28, rot: p.rot };
+    case 'car':
+      return { kind: 'box', x: p.x, z: p.z, hx: 0.9, hz: 2.05, rot: p.rot };
+    case 'bollard':
+      return { kind: 'circle', x: p.x, z: p.z, r: 0.14 };
+    case 'fence':
+      return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.08, rot: p.rot };
     case 'planks':
       return null;
   }

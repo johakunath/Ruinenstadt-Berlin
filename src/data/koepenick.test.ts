@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { koepenickMap } from './koepenick';
-import { generateLots, isWater, mapLevel, onBridge, streetDist } from './map';
+import { generateLots, generateProps, isWater, mapLevel, onBridge, streetDist } from './map';
 
 describe('Köpenick map', () => {
   for (const scale of [1, 1.3]) {
@@ -65,6 +65,44 @@ describe('Köpenick map', () => {
       }
     });
   }
+
+  it('v2: L-shaped lots keep their wing off streets and out of the water, shops exist', () => {
+    const m = koepenickMap(1);
+    const lots = generateLots(m);
+    const wings = lots.filter((l) => l.wing);
+    expect(wings.length).toBeGreaterThan(5);
+    expect(lots.some((l) => l.kind === 'shop')).toBe(true);
+    for (const l of wings) {
+      expect(isWater(m, l.wing!.x, l.wing!.z)).toBe(false);
+      expect(streetDist(m, l.wing!.x, l.wing!.z).d).toBeGreaterThan(0);
+    }
+  });
+
+  it('v2: every 20 m of street has a building, car or prop nearby', () => {
+    const m = koepenickMap(1);
+    const lots = generateLots(m).filter((l) => l.kind !== 'tree');
+    const props = generateProps(m, lots);
+    expect(props.filter((p) => p.kind === 'car').length).toBeGreaterThan(30);
+    const things = [...lots, ...props];
+    let empty = 0;
+    let n = 0;
+    for (const s of m.streets) {
+      if (s.kind === 'path') continue;
+      for (let i = 1; i < s.pts.length; i++) {
+        const [ax, az] = s.pts[i - 1]!;
+        const [bx, bz] = s.pts[i]!;
+        const len = Math.hypot(bx - ax, bz - az);
+        for (let t = 10; t < len; t += 20) {
+          const x = ax + ((bx - ax) / len) * t;
+          const z = az + ((bz - az) / len) * t;
+          if (onBridge(m, x, z, 2) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r)) continue;
+          n++;
+          if (!things.some((o) => Math.hypot(o.x - x, o.z - z) < 14)) empty++;
+        }
+      }
+    }
+    expect(empty / n).toBeLessThan(0.1);
+  });
 
   it('bigger scale means a bigger map with more lots', () => {
     const a = generateLots(koepenickMap(1)).length;

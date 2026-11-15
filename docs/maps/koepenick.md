@@ -1,6 +1,6 @@
-# Köpenick map (M10 concept, M11 build)
+# Köpenick map (M10 concept, M11 build, M11b v2)
 
-Concept A "Drehkreuz Altstadt", chosen by Johannes on 2026-11-15. Map image drawn from the game data: [`koepenick.svg`](koepenick.svg) (regenerate: `MAP_SVG=docs/maps/koepenick.svg npx vitest run src/data/map-svg.test.ts`). In game: button **Karte** or key M.
+v2: concept C "Rundweg", chosen by Johannes on 2026-11-15 after the first playtest (v1 was concept A "Drehkreuz Altstadt"). Screens: [`koepenick-v2.jpg`](koepenick-v2.jpg). Map image drawn from the game data: [`koepenick.svg`](koepenick.svg) (regenerate: `MAP_SVG=docs/maps/koepenick.svg npx vitest run src/data/map-svg.test.ts`). In game: button **Karte** or key M.
 
 ## Decisions (Johannes, 2026-11-15)
 
@@ -11,35 +11,48 @@ Concept A "Drehkreuz Altstadt", chosen by Johannes on 2026-11-15. Map image draw
 | K3 | 20 normal waves: 6 in zone 1, 7 in zone 2, 7 in zone 3. A boss after each zone (Feldwebel, Turmwächter, Rex), Hauptmann von Köpenick at the Rathaus last |
 | K4 | Enemies get harder wave by wave; drops and stronger skills must keep up (M3, M4, M8) |
 | K5 | Positions do not have to be to scale, but directions do: what is north in Köpenick is north here. Each small area roughly real. Landmark buildings recognizable |
+| K7 | v2 (M11b): concept C "Rundweg". One loop without doubling back: Müggelberge → ferry over the Dahme → Johannisthal → Spreepark → along the Spree → Rathaus. Distances about 0.6 of v1; the Altstadt island keeps its v1 size. Minimap M1 (round, top left, north up) |
 | K6 | Size can grow: the map is authored with one scale factor (`koepenickMap(scale)`, `?mapscale=1.3`). Distances stretch, buildings and streets keep their size, generated buildings and trees fill the extra space |
 
 ## Geography check (OpenStreetMap, 2026-11-15, method in `guidelines.md`)
 
-Real offsets from the Rathaus, compressed in the map (scale 1).
+Real offsets from the Rathaus, compressed in the map (scale 1). v1 map offsets for the Altstadt rows still hold (core unchanged); outer rows are v2.
 
 | Place | Real | Map | Note |
 |---|---|---|---|
-| S Köpenick | 1.6 km N, 0.3 km E | 190 m N | North ✓ |
+| S Köpenick | 1.6 km N, 0.3 km E | 140 m N | North ✓ |
 | Dammbrücke | 0.35 km N | 46 m N | Over the Spree ✓ |
 | Schloss Köpenick | 0.17 km S, 0.17 km W | 42 m S, 55 m W | On the Schlossinsel in the Dahme ✓ |
 | Lange Brücke | 0.1 km S, 0.23 km W | 4 m S, 30 m W | Over the Dahme, west ✓ |
 | Frauentog | 0.24 km S | 50 m S | Bay south of the Altstadt ✓ |
 | Müggelsee | 1 km S, 5 km E | east edge | East ✓ |
-| Müggelturm | 3.1 km S, 3.4 km E | 200 m S, 196 m E | South-east ✓ |
-| Spreepark | 4.4 km N, 5.9 km W | 60 m N, 210 m W | North-west along the Spree ✓. Really in Plänterwald (Treptow), pulled in as a neighbour |
+| Müggelturm | 3.1 km S, 3.4 km E | 124 m S, 146 m E | South-east ✓ |
+| Spreepark | 4.4 km N, 5.9 km W | 30 m N, 108 m W | North-west along the Spree ✓. Really in Plänterwald (Treptow), pulled in as a neighbour |
+| Wendenschloß | 2.8 km S, 1.0 km E | 106 m S, 8 m E (ferry landing) | South ✓ |
+| Grünau (ferry F12 to Wendenschloß) | 3.3 km S, 0.4 km E, west bank of the Dahme | 104 m S, 54 m W | South ✓ (west bank; the map Dahme runs west of the real one) |
+| Landschaftspark Johannisthal (former airfield) | 0.9 km S, 3.3 km W | 62 m S, 100 m W | West-south-west ✓. In Adlershof/Johannisthal, pulled in as a neighbour |
+| Kämmereiheide | 0.2 km S, 2.4 km E | not used | Checked for zone 2 and rejected: it lies east, not south-west |
 
-Not checked against real streets: the exact course of the side streets and the Kietz layout. They are placeholders for "dense Altbau here".
+Not checked against real streets: the exact course of the side streets, the Kietz layout, and the v2 loop paths (Waldweg, Heideweg are placeholder names). They are placeholders for "dense Altbau here".
 
-## Layout (scale 1: 510 × 428 m)
+## Layout v2 (scale 1: 318 × 304 m)
 
 | Zone | Encounters (waves) | Boss | Landmarks |
 |---|---|---|---|
-| 0 Bahnhofsviertel | Bahnhofsvorplatz (2), Forum (2), Lindenstraße (2) | Der Feldwebel at the Dammbrücke | S-Bahnhof Köpenick, Forum Köpenick |
+| 0 Bahnhofsviertel | Bahnhofsvorplatz (2), Lindenstraße (2), Forum (2) | Der Feldwebel at the Dammbrücke | S-Bahnhof Köpenick, Forum Köpenick |
 | 1 Müggelberge | Kietz (2), Müggelheimer Straße (2), Teufelssee (3) | Der Turmwächter at the Müggelturm | Müggelturm, Teufelssee, Müggelsee shore |
-| 2 Spreepark | Köllnische Vorstadt (2), Spreeufer (2), Dino-Wiese (3) | Der Rex at the Riesenrad | Riesenrad, toppled dinosaurs, jungle |
+| 2 Spreepark | Fähre Grünau (2), Flugfeld Johannisthal (2), Dino-Wiese (3) | Der Rex at the Riesenrad | Ferry, Riesenrad, toppled dinosaurs, jungle |
 | 3 Rathaus | | Hauptmann von Köpenick on the Rathausplatz | Rathaus (tower, stepped gables), Schloss, St. Laurentius |
 
-Walking the route takes about 2.5 minutes at full run speed; with fights the whole district is roughly 15 to 20 minutes. A death restarts at the start of the zone (in-memory checkpoint; a saved checkpoint is M6/B1).
+Route about 840 m of pure running (v1 about 1380 m by the same measure), roughly 2.3 minutes at run speed. A death restarts at the start of the zone (in-memory checkpoint; a saved checkpoint is M6/B1).
+
+### v2 street and lot rules (M11b)
+
+| Topic | Rule |
+|---|---|
+| Streets | Main 7 to 7.5 m, side 5 to 6.5 m, paths 4 m. Curbs on every street except paths and bridges |
+| Buildings | Altbau 9 to 16 m wide, ground floor plus 1 to 2 floors, almost closed street front. Single-storey shops (Läden, Spätis) between Altbau blocks. Houses slightly askew with front fences. About 45 % of Altbau and 35 % of houses are L-shaped (back wing one floor lower) |
+| Life | Parked and abandoned cars every 7 to 14 m of street, benches, bins, crates and rubble on sidewalks, bollards at the bridge heads. Test: under 10 % of 20 m street stretches without a building, car or prop within 14 m |
 
 ## Heights (B3, 2026-11-15)
 
