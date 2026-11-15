@@ -10,7 +10,7 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 |---|---|---|---|---|
 | 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | open |
 | 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | open |
-| 3 | M11b Köpenick v2 part 1: concept C, new layout, streets, curbs, L-shaped lots, shops, cars and props, ferry, minimap, edge triangles | Claude · Opus high | `docs/maps/koepenick.md` | done (PR pending) |
+| 3 | M11b Köpenick v2 part 1: concept C, new layout, streets, curbs, L-shaped lots, shops, cars and props, ferry, minimap, edge triangles | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #11) |
 | 3b | M11b part 2: relief and irregular banks and quays, ground textures (alternatives first), enterable Späti (safe room) | Claude · Opus high | `docs/maps/koepenick.md` | open |
 | 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Claude · Opus high | after M3a | open |
 | 5 | M4 Loot in the world | Claude · Opus high | after M3b, M11b | open |
