@@ -44,7 +44,7 @@ function nightEnvironment(renderer: WebGLRenderer): Texture {
   env.add(new Mesh(sky, new MeshBasicMaterial({ vertexColors: true, side: BackSide })));
   const lamp = new SphereGeometry(4, 8, 6);
   for (const [x, y, z, c] of [[-30, 6, -30, 0xffa040], [35, 8, -20, 0xff9a3a], [20, 5, 38, 0xffb060], [-40, 30, 20, 0x9fd6dc]] as Array<[number, number, number, number]>) {
-    const m = new Mesh(lamp, new MeshBasicMaterial({ color: new Color(c).multiplyScalar(c === 0x9fd6dc ? 3 : 5) }));
+    const m = new Mesh(lamp, new MeshBasicMaterial({ color: new Color(c).multiplyScalar(c === 0x9fd6dc ? 2 : 2.2) }));
     m.position.set(x, y, z);
     env.add(m);
   }

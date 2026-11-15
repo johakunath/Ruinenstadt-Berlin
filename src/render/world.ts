@@ -638,9 +638,9 @@ function buildPuddles(b: Builder, materials: Materials): void {
   const mat = materials.look.shading === 'toon'
     ? new MeshBasicMaterial({ color: 0x2c5a5c, transparent: true, opacity: 0.3, depthWrite: false })
     : (() => {
-        const s = materials.surface({ color: 0x1a2a2c, roughness: 0.04, metalness: 0.6 });
+        const s = materials.surface({ color: 0x0e1a1c, roughness: 0.6, metalness: 0 });
         s.transparent = true;
-        s.opacity = 0.5;
+        s.opacity = 0.42;
         s.depthWrite = false;
         return s;
       })();

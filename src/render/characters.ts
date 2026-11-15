@@ -142,8 +142,7 @@ export class Animator {
 
   private setWeight(l: Layer, w: number): void {
     if (w > 0) {
-      if (!l.action.isRunning() && !l.action.paused) l.action.play();
-      else if (!l.action.isScheduled()) l.action.play();
+      if (!l.action.isScheduled()) l.action.play();
       l.action.setEffectiveWeight(w);
     } else if (l.action.isScheduled()) {
       l.action.stop();
@@ -236,7 +235,7 @@ export class HeroView {
     this.weapon = buildPipe(materials);
     const hand = model.getObjectByName('hand_r');
     if (hand) {
-      // Grip offset in the hand bone's frame (found with ?debug=hit and the pose viewer).
+      // Grip offset in the hand bone's frame (checked with `?cam=5,30` close-ups).
       this.weapon.position.set(0, 0.09, 0.03);
       this.weapon.rotation.set(Math.PI / 2, 0, 0);
       hand.add(this.weapon);
@@ -245,11 +244,6 @@ export class HeroView {
       const bone = model.getObjectByName(name) as Bone | undefined;
       if (bone) this.scarf.push({ bone, rest: bone.quaternion.clone(), back: 0, side: 0 });
     }
-  }
-
-  /** World position of a point along the weapon (0 = grip, 1 = tip). */
-  weaponPoint(t: number, out: Vector3): Vector3 {
-    return this.weapon.localToWorld(out.set(0, 0.1 + t * 0.9, 0));
   }
 
   update(p: Player, alpha: number, dt: number, frozen: boolean): void {
