@@ -1,11 +1,12 @@
 // Post-processing chain. Profile and look decide which passes exist:
-//   beauty → [GTAO] → [painterly filter] → [ink outline] → bloom → grade → output (tone map, sRGB)
+//   beauty → [GTAO] → ink outline → bloom → grade → output (tone map, sRGB) → [FXAA]
 // GTAO and the ink outline share one normal/depth pre-pass.
 import {
   DepthTexture, HalfFloatType, MeshNormalMaterial, NearestFilter, NoBlending, Vector2, WebGLRenderTarget,
   type Camera, type PerspectiveCamera, type Scene, type WebGLRenderer,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -52,59 +53,21 @@ const InkShader = {
       vec4 color = texture2D(tDiffuse, vUv);
       float zc = viewZ(vUv);
       vec3 nc = texture2D(tNormal, vUv).xyz * 2.0 - 1.0;
+      // One-sided differences (right and up only): the line lands on one side of an edge, 1 px wide.
       float dz = 0.0;
       float dn = 0.0;
-      for (int i = 0; i < 4; i++) {
-        vec2 o = i == 0 ? vec2(texel.x, 0.0) : i == 1 ? vec2(-texel.x, 0.0) : i == 2 ? vec2(0.0, texel.y) : vec2(0.0, -texel.y);
+      for (int i = 0; i < 2; i++) {
+        vec2 o = i == 0 ? vec2(texel.x, 0.0) : vec2(0.0, texel.y);
         dz += abs(viewZ(vUv + o) - zc);
         dn += 1.0 - dot(nc, texture2D(tNormal, vUv + o).xyz * 2.0 - 1.0);
       }
-      // Depth steps scale with distance so far walls do not turn black.
-      float edge = max(smoothstep(0.012, 0.035, dz / zc), smoothstep(0.35, 0.9, dn));
+      // Depth steps scale with distance so far walls do not turn black. Wide ramps give soft, partial lines.
+      float edge = max(smoothstep(0.006, 0.024, dz / zc), smoothstep(0.1, 0.55, dn));
       // Lines thin out in the distance fog.
       edge *= strength * (1.0 - smoothstep(30.0, 60.0, zc));
       gl_FragColor = vec4(mix(color.rgb, ink * (0.5 + color.rgb * 0.6), edge), color.a);
     }`,
 };
-
-/** Kuwahara filter: flattens detail into brush-like patches while keeping edges. */
-function paintShader(radius: number): { uniforms: Record<string, { value: unknown }>; vertexShader: string; fragmentShader: string } {
-  return {
-    uniforms: { tDiffuse: { value: null }, texel: { value: new Vector2() } },
-    vertexShader: VERT,
-    fragmentShader: /* glsl */ `
-      uniform sampler2D tDiffuse;
-      uniform vec2 texel;
-      varying vec2 vUv;
-      const int R = ${radius};
-      void main() {
-        vec3 best = vec3(0.0);
-        float bestVar = 1e9;
-        for (int q = 0; q < 4; q++) {
-          vec2 dir = vec2(q == 0 || q == 3 ? -1.0 : 1.0, q < 2 ? -1.0 : 1.0);
-          vec3 sum = vec3(0.0);
-          vec3 sq = vec3(0.0);
-          for (int x = 0; x <= R; x++) {
-            for (int y = 0; y <= R; y++) {
-              // Clamp highlights for the statistics so lamps do not smear into blocks.
-              vec3 c = min(texture2D(tDiffuse, vUv + vec2(float(x), float(y)) * dir * texel).rgb, vec3(4.0));
-              sum += c;
-              sq += c * c;
-            }
-          }
-          float n = float((R + 1) * (R + 1));
-          vec3 mean = sum / n;
-          vec3 var = abs(sq / n - mean * mean);
-          float v = var.r + var.g + var.b;
-          if (v < bestVar) {
-            bestVar = v;
-            best = mean;
-          }
-        }
-        gl_FragColor = vec4(best, 1.0);
-      }`,
-  };
-}
 
 /** Grade in linear light: split toning (teal shadows, warm lights), saturation, contrast, vignette. */
 const GradeShader = {
@@ -115,6 +78,7 @@ const GradeShader = {
     split: { value: 0.5 },
     vignette: { value: 0.5 },
     exposure: { value: 1 },
+    shoulder: { value: 1 },
   },
   vertexShader: VERT,
   fragmentShader: /* glsl */ `
@@ -124,10 +88,19 @@ const GradeShader = {
     uniform float split;
     uniform float vignette;
     uniform float exposure;
+    uniform float shoulder;
     varying vec2 vUv;
     void main() {
       vec3 c = texture2D(tDiffuse, vUv).rgb * exposure;
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      // Highlight shoulder: luminance above the knee rolls off (Reinhard on the excess) and keeps its hue,
+      // so lamps, fire and shop windows stay readable instead of clipping to white.
+      if (l > shoulder) {
+        float e = l - shoulder;
+        float nl = shoulder + e / (1.0 + e / 0.9);
+        c *= nl / l;
+        l = nl;
+      }
       // Köpenick: shadows lean teal-green, lights lean amber.
       vec3 cool = vec3(0.78, 1.06, 1.08);
       vec3 warm = vec3(1.1, 1.0, 0.86);
@@ -145,7 +118,6 @@ export class Post {
   private readonly gbuffer: WebGLRenderTarget | null;
   private readonly normalMaterial = new MeshNormalMaterial({ blending: NoBlending });
   private readonly ink: ShaderPass | null = null;
-  private readonly paint: ShaderPass | null = null;
   private readonly gtao: GTAOPass | null = null;
   private readonly bloom: UnrealBloomPass;
 
@@ -171,10 +143,6 @@ export class Post {
       this.gtao.blendIntensity = look.ao;
       this.composer.addPass(this.gtao);
     }
-    if (look.paintFilter && profile.paintRadius > 0) {
-      this.paint = new ShaderPass(paintShader(profile.paintRadius));
-      this.composer.addPass(this.paint);
-    }
     if (look.outline > 0 && this.gbuffer) {
       this.ink = new ShaderPass(InkShader);
       const u = this.ink.uniforms;
@@ -193,8 +161,11 @@ export class Post {
     grade.uniforms.split!.value = look.split;
     grade.uniforms.vignette!.value = look.vignette;
     grade.uniforms.exposure!.value = look.exposure;
+    grade.uniforms.shoulder!.value = look.shoulder;
     this.composer.addPass(grade);
     this.composer.addPass(new OutputPass());
+    // FXAA after tone mapping smooths the ink line and, in Leistung (no MSAA), every geometry edge.
+    this.composer.addPass(new FXAAPass());
     this.look = look;
   }
 
@@ -210,9 +181,10 @@ export class Post {
       const s = this.profile.gbufferScale;
       this.gbuffer.setSize(Math.round(w * s), Math.round(h * s));
     }
-    const px = this.look.outlineWidth * Math.max(1, dpr * 0.85);
-    this.ink?.uniforms.texel!.value.set(px / w, px / h);
-    this.paint?.uniforms.texel!.value.set(1 / w, 1 / h);
+    // Offsets in pre-pass pixels: one step at full resolution is the thinnest clean line.
+    const s = this.profile.gbufferScale;
+    const px = Math.max(1, this.look.outlineWidth * s);
+    this.ink?.uniforms.texel!.value.set(px / Math.round(w * s), px / Math.round(h * s));
   }
 
   render(dt: number): void {

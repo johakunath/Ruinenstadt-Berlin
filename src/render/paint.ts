@@ -1,6 +1,6 @@
 // Painted-look textures, generated on 2D canvases at start (style bible: painterly fills with visible
 // texture, wear at stress points, Köpenick palette). No image files: everything here is code.
-import { CanvasTexture, DataTexture, NearestFilter, RedFormat, RepeatWrapping, SRGBColorSpace, type Texture } from 'three';
+import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Texture } from 'three';
 import { Rng } from '../sim/math';
 
 type Ctx = CanvasRenderingContext2D;
@@ -126,7 +126,7 @@ function toTexture(c: HTMLCanvasElement, repeat = true, anisotropy = 4): CanvasT
   return t;
 }
 
-/** Pulls every pixel toward the mean color (the Comic look wants calmer surfaces). */
+/** Pulls every pixel toward the mean color (calmer surfaces). */
 function flatten(ctx: Ctx, w: number, h: number, amount: number): void {
   if (amount <= 0) return;
   const img = ctx.getImageData(0, 0, w, h);
@@ -990,15 +990,3 @@ export function paintGlow(inner: string, outer: string): Texture {
   t.colorSpace = SRGBColorSpace;
   return t;
 }
-
-/** Toon ramp: hard light steps. */
-export function toonRamp(steps: number[] = [70, 150, 255]): Texture {
-  const data = new Uint8Array(steps);
-  const t = new DataTexture(data, steps.length, 1, RedFormat);
-  t.minFilter = NearestFilter;
-  t.magFilter = NearestFilter;
-  t.generateMipmaps = false;
-  t.needsUpdate = true;
-  return t;
-}
-

@@ -1,6 +1,6 @@
 # Ruinenstadt 3D: plan
 
-Decided 2026-11-14 (Johannes, with Claude; Codex/ChatGPT proposal reviewed). Time box: 3 weeks, then decide on a migration.
+Decided 2026-11-14 (Johannes, with Claude; Codex/ChatGPT proposal reviewed). Gate 1 passed 2026-11-15; Johannes decided to continue in 3D. Gates 2 and 3 are replaced by the steps in `docs/migration.md`.
 
 ## Why
 
@@ -22,6 +22,8 @@ The ceiling of the Canvas 2D renderer is the main limit on the look: lights, sha
 | 3D10 | No Godot benchmark planned. Trigger for one: gate 1 or 2 fails on tablet performance with animated characters, or the animation tooling blocks progress | Avoid a second project |
 | 3D11 | `#35 Combat flow` (snappiness) is done in the 3D game after gate 1, not in the 2D game (Johannes, 2026-11-14) | No effort into code that gets replaced |
 | 3D12 | Fable 5.2 builds the first version (gate 1) as the foundation for everything after | Strong at 3D; the first session sets the architecture |
+| 3D13 | Look fixed after the gate 1 playtest: painted PBR shading, thin ink line, saturated grade, highlight shoulder, FXAA (Johannes, 2026-11-15). Feedback adjusts it, no more variant rounds | Supersedes the variant part of 3D9 |
+| 3D14 | Continue in 3D (Johannes, 2026-11-15). The custom hero and enemies are PC tasks, not gates. Migration order: `docs/migration.md` | Gate 1 convinced on feel and performance |
 
 ## Build setup: why TypeScript + Vite
 
@@ -100,16 +102,15 @@ Goal: realistic proportions, red scarf, long brown leather coat, harness, pouche
 
 ## Gates
 
-| Gate | Week | Deliverable | Pass criteria |
-|---|---|---|---|
-| 1 Look, feel, perf | 1 | Köpenick courtyard: code-built Altbau and Späti, cobblestones, lanterns, fire barrel, fog, bloom, embers. CC0/Mixamo hero: run, 3-hit combo, dodge, with controller, keyboard/mouse, touch. 20 to 40 CC0 zombies chase and die with hitstop, flash, sound. Qualität and Leistung profiles. Shareable Pages link | Johannes: clearly better looking than 2D, feel at least on the level of the 2D game, budgets above met on PC and Tab S9. Look variant chosen |
-| 2 Hero and combat | 2 | Custom hero with 2 outfits and 2 weapons, #35 combat flow (Hades feel) tuned and written to `docs/combat-feel.md`, hitboxes, one custom Köpenick ghoul | Hero fits the style bible; Hades-like feel on controller |
-| 3 Vertical slice | 3 | Small Köpenick expedition: several encounters, 3 enemy types, 1 boss, loot drops with ported item data, return to camp stub | Fun for 10 minutes; friends test it |
-| Decision | end of 3 | Migrate content to 3D or stay 2D | Slice clearly better than the 2D game |
+| Gate | Result |
+|---|---|
+| 1 Look, feel, perf | Passed 2026-11-15 on PC, Tab S9 and phone (Leistung). Look fixed (3D13) |
+| 2 Hero and combat | Dissolved (3D14): hero and ghoul are PC tasks H1 and H2, combat tuning continues with more weapons (M7, M8) |
+| 3 Vertical slice, decision | Replaced by the migration steps in `docs/migration.md` |
 
 ## Not now
 
-Godot, Rapier, lightmaps, multiple districts, inventory UI port, save migration, story, camp in 3D.
+Godot, Rapier, lightmaps, import of 2D saves.
 
 ## Model
 
@@ -117,6 +118,7 @@ Godot, Rapier, lightmaps, multiple districts, inventory UI port, save migration,
 |---|---|
 | Gate 1 kickoff (setup, scene, look variants) | Fable 5.2 if usage allows, else Opus 5.5 high. Unverified whether Fable is better here; the first session makes many broad decisions at once |
 | Iterations, assets integration, tuning | Opus 5.5 high |
+| After gate 1 | Opus 5.5: high for look shaders and combat tuning, medium for docs, small fixes and routine changes. Fable 5.2 only if a session fails at a broad architectural step |
 
 ## Getting started
 

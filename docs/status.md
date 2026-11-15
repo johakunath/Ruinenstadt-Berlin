@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-15 after the gate 1 build (first session). Plan and gates: `docs/plan-3d.md`.
+Updated 2026-11-15 after the gate 1 playtest. Plan and gates: `docs/plan-3d.md`.
 
 ## Gate 1: what is in
 
@@ -14,9 +14,9 @@ Updated 2026-11-15 after the gate 1 build (first session). Plan and gates: `docs
 | Enemies | Three sizes (Schlurfer, Hetzer, Brocken), flow field plus separation, wind-up, strike, recover, stagger, death; spawner through three passages |
 | Input | Keyboard and mouse, gamepad standard mapping, touch stick and two buttons; 180 ms buffer that survives hitstop |
 | Profiles | Qualität and Leistung (`?profile=`, options menu) |
-| Looks | Gemalt, Comic, Tusche (`?look=`, options menu). Screenshots: `docs/gate1/` |
-| Debug | `?debug=hit` (all shapes), `?debug=perf`, `?debug=flow`, `?stress=40`, `?cam=distance,pitch` |
-| CI | Type check, 39 unit tests, build, 5 Playwright smoke tests, Pages deploy from `main` |
+| Look | One fixed look: painted PBR, thin ink line, saturated grade, highlight shoulder, FXAA. Screenshot: `docs/gate1/look-final.jpg` |
+| Debug | Optionen → Leistungsanzeige (or `?debug=perf`), `?debug=hit` (all shapes), `?debug=flow`, `?stress=40`, `?cam=distance,pitch` |
+| CI | Type check, 40 unit tests, build, 5 Playwright smoke tests, Pages deploy from `main` |
 
 ## Not verified or known weak
 
@@ -27,11 +27,11 @@ Updated 2026-11-15 after the gate 1 build (first session). Plan and gates: `docs
 | Controller, rumble | Code path exists, never tried with a pad |
 | Touch | Checked in an emulated tablet only. Layout is provisional; #35 asks for a mockup |
 | Sound | Synthesized, checked for errors only, not by ear |
-| Hero | CC0 base body with painted clothing regions. The coat skirt can cut through the legs in wide poses. Custom hero is gate 2 |
+| Hero | CC0 base body with painted clothing regions. The coat skirt can cut through the legs in wide poses. Custom hero is task H1 |
 | Zombies | The male base body in grey-green with rags. Readable, but not the gaunt board zombie |
 | Dodge | The roll clip is squeezed into 0.24 s |
 | Facades | The fixed camera shows ground floor and first floor; upper floors are mostly out of frame |
-| Look and profile switch | Reloads the page |
+| Profile switch | Reloads the page |
 | Shadows | Static world and characters share one shadow map that renders every frame |
 | Leistung | No dynamic resolution yet. Enemies use blob shadows |
 | Asset download | `tools/fetch-assets.sh` follows the itch.io free download flow and breaks if that changes |
@@ -50,18 +50,20 @@ Cloud Chromium with SwiftShader (software rendering, no GPU), 1280 × 720. Usefu
 
 Draw calls and triangles depend on how many enemies are in view at that moment. Sim cost in Node: 0.05 ms per step with 20 enemies, 0.07 ms with 40.
 
-## Open questions for Johannes
+## Gate 1 playtest
 
-| # | Question |
-|---|---|
-| 1 | Which look: Gemalt, Comic or Tusche? |
-| 2 | Camera: now 18.5 m away at 44°. Closer for bigger characters, or flatter to show more facade? |
-| 3 | Finisher is an overhead smash with a frontal cone (that is what the clip does). Keep, or a wide sweep? |
-| 4 | Hits never interrupt the hero (Hades style, short slow instead). Keep? |
-| 5 | The dodge passes through enemies. Keep? |
-| 6 | A soft fill light travels with the hero for readability. Acceptable, or should the hero carry a visible lantern? |
-| 7 | Hero base for gate 2: the board shows a woman with tied-up dark hair; gate 1 uses the female base body. Confirm before the custom hero starts |
+Passed 2026-11-15. Findings and answers: `docs/playtests.md`.
 
-## Next (gate 2 in the plan)
+## Next
 
-Custom hero with outfits and weapons, #35 combat flow tuned by playing and written to `docs/combat-feel.md`, touch layout mockup, one custom Köpenick ghoul.
+Gates 2 and 3 are replaced by `docs/migration.md` (plan 3D14).
+
+| Order | Work | Where |
+|---|---|---|
+| 1 | M1 item data port, then M2 item logic (`docs/tasks/`) | Cloud, Codex |
+| 2 | M10 Köpenick map concept, in parallel | Cloud, Claude, Johannes decides |
+| 3 | S1 sound port from the 2D game, S2 enemy sounds | Cloud |
+| 4 | M3 to M6: stats, loot, inventory, save with wave checkpoint | Cloud |
+| 5 | H1 custom hero, H2 Köpenick ghoul | PC with Blender |
+
+Backlog: `docs/backlog.md`.

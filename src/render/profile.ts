@@ -17,8 +17,6 @@ export interface Profile {
   gbufferScale: number;
   bloomStrength: number;
   normalMaps: boolean;
-  /** Radius of the painterly filter of the Tusche look (0 = off). */
-  paintRadius: number;
   /** Enemies farther than this (meters from the hero) animate at half / third rate. 0 = always full rate. */
   animHalfRateFrom: number;
   animThirdRateFrom: number;
@@ -29,12 +27,12 @@ export interface Profile {
 export const PROFILES: Record<ProfileId, Profile> = {
   qualitaet: {
     id: 'qualitaet', label: 'Qualität', maxDpr: 2, msaa: 4, shadowMap: 2048, enemyShadows: true, maxPointLights: 8,
-    gtao: true, gbufferScale: 1, bloomStrength: 1, normalMaps: true, paintRadius: 3,
+    gtao: true, gbufferScale: 1, bloomStrength: 1, normalMaps: true,
     animHalfRateFrom: 0, animThirdRateFrom: 0, embers: 140, anisotropy: 8,
   },
   leistung: {
     id: 'leistung', label: 'Leistung', maxDpr: 1.25, msaa: 0, shadowMap: 1024, enemyShadows: false, maxPointLights: 4,
-    gtao: false, gbufferScale: 0.75, bloomStrength: 0.7, normalMaps: false, paintRadius: 2,
+    gtao: false, gbufferScale: 0.75, bloomStrength: 0.7, normalMaps: false,
     animHalfRateFrom: 6, animThirdRateFrom: 11, embers: 60, anisotropy: 2,
   },
 };

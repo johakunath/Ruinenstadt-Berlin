@@ -101,7 +101,7 @@ interface Mats {
 }
 
 function makeMats(m: Materials): Mats {
-  const o: PaintOptions = { flatten: m.look.flatten, normalMaps: m.profile.normalMaps && m.look.shading === 'pbr', anisotropy: m.profile.anisotropy };
+  const o: PaintOptions = { flatten: m.look.flatten, normalMaps: m.profile.normalMaps, anisotropy: m.profile.anisotropy };
   const plaster: Record<string, LitMaterial> = {};
   for (const tone of ['cream', 'ochre', 'oxblood']) {
     const s = paintPlaster(tone, o, tone.length * 7);
@@ -120,8 +120,8 @@ function makeMats(m: Materials): Mats {
     brick: m.surface({ map: brick.map, normalMap: brick.normalMap, roughness: 0.9, vertexColors: true }),
     stucco: m.surface({ map: paintStucco(o).map, roughness: 0.85, vertexColors: true }),
     cobbles: m.surface({ map: cobbles.map, normalMap: cobbles.normalMap, roughness: 0.78, vertexColors: true }),
-    windows: m.surface({ map: windows.map, emissiveMap: windows.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.5, roughness: 0.35 }),
-    shop: m.surface({ map: shop.map, emissiveMap: shop.emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.4 }),
+    windows: m.surface({ map: windows.map, emissiveMap: windows.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.2, roughness: 0.35 }),
+    shop: m.surface({ map: shop.map, emissiveMap: shop.emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.6, roughness: 0.4 }),
     sign: m.surface({ map: sign.map, emissiveMap: sign.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.5, roughness: 0.6 }),
     door: m.surface({ map: paintDoor(o).map, roughness: 0.7 }),
     wood: m.surface({ map: wood.map, roughness: 0.85, vertexColors: true }),
@@ -394,7 +394,7 @@ function buildSpati(b: Builder, run: Run, from: number, to: number): void {
   b.box(m.wood, run.mat(winA[0] + 0.5, 0.3, 0.55), 0.7, 0.6, 0.5);
   b.box(m.wood, run.mat(winA[0] + 0.55, 0.85, 0.52, 0, 0.1), 0.6, 0.45, 0.45, [0.85, 0.8, 0.75]);
   // The shop is the big warm light source of the yard.
-  b.light(run.pt(mid, 2.1, 2.0), 0xffb061, 46, 15, 0.06, 6.5);
+  b.light(run.pt(mid, 2.1, 2.0), 0xffb061, 38, 15, 0.06, 6.5);
   b.light(run.pt(to - 1.3, 1.6, 1.0), 0x8fe0d8, 10, 6, 0.05, 2);
 }
 
@@ -460,7 +460,7 @@ function buildProp(b: Builder, p: Prop, rng: Rng): void {
       for (const y of [0.3, 0.66]) b.geo(m.rust, new CylinderGeometry(0.415, 0.415, 0.05, 14, 1, true), at(p, 0, y, 0), [0.7, 0.65, 0.6]);
       b.geo(m.coals, new CircleGeometry(0.38, 14), at(p, 0, 0.8, 0, -Math.PI / 2));
       b.fires.push(new Vector3(p.x, 0.85, p.z));
-      b.light(new Vector3(p.x, 1.6, p.z), 0xff8a3c, 38, 14, 1, 5.5);
+      b.light(new Vector3(p.x, 1.6, p.z), 0xff8a3c, 32, 14, 1, 5.5);
       b.shadowBox(at(p, 0, 0.475, 0), 0.7, 0.95, 0.7);
       break;
     }
@@ -635,15 +635,10 @@ function buildGreens(b: Builder): void {
 
 function buildPuddles(b: Builder, materials: Materials): void {
   const rng = new Rng(303);
-  const mat = materials.look.shading === 'toon'
-    ? new MeshBasicMaterial({ color: 0x2c5a5c, transparent: true, opacity: 0.3, depthWrite: false })
-    : (() => {
-        const s = materials.surface({ color: 0x0e1a1c, roughness: 0.6, metalness: 0 });
-        s.transparent = true;
-        s.opacity = 0.42;
-        s.depthWrite = false;
-        return s;
-      })();
+  const mat = materials.surface({ color: 0x0e1a1c, roughness: 0.6, metalness: 0 });
+  mat.transparent = true;
+  mat.opacity = 0.42;
+  mat.depthWrite = false;
   const spots: Array<[number, number, number]> = [[2.6, 0.4, 1.5], [-3.4, 0.2, 1.1], [5.5, -3.6, 1.3], [-7.5, -3.2, 1.0], [0.6, 5.2, 1.2], [8.2, 2.6, 0.9], [-1.5, -5.6, 0.8]];
   for (const [x, z, r] of spots) {
     const geo = new CircleGeometry(r, 18);

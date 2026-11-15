@@ -1,7 +1,6 @@
 // DOM overlay: title, HUD, options, touch controls, perf readout. Text is German and short.
 import type { Input } from '../input/input';
 import type { Options } from '../options';
-import { LOOKS, type LookId } from '../render/looks';
 import { PROFILES, type ProfileId } from '../render/profile';
 
 function el<T extends HTMLElement>(id: string): T {
@@ -15,9 +14,9 @@ export interface UiHandlers {
   onRetry(): void;
   onOptionsToggle(open: boolean): void;
   onProfile(id: ProfileId): void;
-  onLook(id: LookId): void;
   onVolume(v: number): void;
   onRumble(on: boolean): void;
+  onShowPerf(on: boolean): void;
 }
 
 export class Ui {
@@ -50,14 +49,19 @@ export class Ui {
       { id: 'qualitaet' as ProfileId, label: PROFILES.qualitaet.label, hint: 'PC, alle Effekte' },
       { id: 'leistung' as ProfileId, label: PROFILES.leistung.label, hint: 'Tablet, flüssig' },
     ], opts.profile, (id) => handlers.onProfile(id));
-    choice('opt-look', Object.values(LOOKS).map((l) => ({ id: l.id, label: l.label, hint: l.hint })), opts.look, (id) => handlers.onLook(id));
     const volume = el<HTMLInputElement>('opt-volume');
     volume.value = String(Math.round(opts.volume * 100));
     volume.addEventListener('input', () => handlers.onVolume(Number(volume.value) / 100));
     const rumble = el<HTMLInputElement>('opt-rumble');
     rumble.checked = opts.rumble;
     rumble.addEventListener('change', () => handlers.onRumble(rumble.checked));
-    this.perf.hidden = !opts.debugPerf;
+    const perf = el<HTMLInputElement>('opt-perf');
+    perf.checked = opts.showPerf;
+    perf.addEventListener('change', () => {
+      this.perf.hidden = !perf.checked;
+      handlers.onShowPerf(perf.checked);
+    });
+    this.perf.hidden = !opts.showPerf;
     this.setupTouch(input);
   }
 
