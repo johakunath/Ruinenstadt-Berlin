@@ -34,7 +34,7 @@ export interface Facade {
   seed: number;
 }
 
-export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence';
+export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier';
 
 export interface Prop {
   kind: PropKind;
@@ -126,6 +126,17 @@ export function propCollider(p: Prop): Collider | null {
       return { kind: 'box', x: p.x, z: p.z, hx: 0.85, hz: 0.28, rot: p.rot };
     case 'car':
       return { kind: 'box', x: p.x, z: p.z, hx: 0.9, hz: 2.05, rot: p.rot };
+    case 'lampBroken':
+      return { kind: 'circle', x: p.x, z: p.z, r: 0.2 };
+    case 'campfire':
+      return { kind: 'circle', x: p.x, z: p.z, r: 0.7 };
+    case 'bus':
+      return { kind: 'box', x: p.x, z: p.z, hx: 1.28, hz: 5.5, rot: p.rot };
+    case 'tram':
+      return { kind: 'box', x: p.x, z: p.z, hx: 1.15, hz: 7.6, rot: p.rot };
+    case 'bauzaun':
+    case 'barrier':
+      return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2 + 0.05, hz: 0.3, rot: p.rot };
     case 'bollard':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.14 };
     case 'fence':

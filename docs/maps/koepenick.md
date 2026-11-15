@@ -1,6 +1,6 @@
 # Köpenick map (M10 concept, M11 build, M11b v2)
 
-v2: concept C "Rundweg", chosen by Johannes on 2026-11-15 after the first playtest (v1 was concept A "Drehkreuz Altstadt"). Screens: [`koepenick-v2.jpg`](koepenick-v2.jpg). Map image drawn from the game data: [`koepenick.svg`](koepenick.svg) (regenerate: `MAP_SVG=docs/maps/koepenick.svg npx vitest run src/data/map-svg.test.ts`). In game: button **Karte** or key M.
+v2: concept C "Rundweg", chosen by Johannes on 2026-11-15 after the first playtest (v1 was concept A "Drehkreuz Altstadt"). Screens: [`koepenick-v2.jpg`](koepenick-v2.jpg), [`koepenick-v2b.jpg`](koepenick-v2b.jpg) (ferry, tram, ruins, map edge). Map image drawn from the game data: [`koepenick.svg`](koepenick.svg) (regenerate: `MAP_SVG=docs/maps/koepenick.svg npx vitest run src/data/map-svg.test.ts`). In game: button **Karte** or key M.
 
 ## Decisions (Johannes, 2026-11-15)
 
@@ -12,6 +12,7 @@ v2: concept C "Rundweg", chosen by Johannes on 2026-11-15 after the first playte
 | K4 | Enemies get harder wave by wave; drops and stronger skills must keep up (M3, M4, M8) |
 | K5 | Positions do not have to be to scale, but directions do: what is north in Köpenick is north here. Each small area roughly real. Landmark buildings recognizable |
 | K7 | v2 (M11b): concept C "Rundweg". One loop without doubling back: Müggelberge → ferry over the Dahme → Johannisthal → Spreepark → along the Spree → Rathaus. Distances about 0.6 of v1; the Altstadt island keeps its v1 size. Minimap M1 (round, top left, north up) |
+| K8 | Playtest notes on v2 (2026-11-15): the ferry is a boat that shuttles on its own (about 11 s across, 5 s at each pier, the hero rides along); a broken-down tram on the Dammbrücke with tracks from the station to the Altstadt; half the buildings are ruins; construction fence and roadblocks at the map edge |
 | K6 | Size can grow: the map is authored with one scale factor (`koepenickMap(scale)`, `?mapscale=1.3`). Distances stretch, buildings and streets keep their size, generated buildings and trees fill the extra space |
 
 ## Geography check (OpenStreetMap, 2026-11-15, method in `guidelines.md`)

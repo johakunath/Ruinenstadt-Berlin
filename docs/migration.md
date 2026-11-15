@@ -10,10 +10,10 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 |---|---|---|---|---|
 | 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | open |
 | 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | open |
-| 3 | M11b Köpenick v2 part 1: concept C, new layout, streets, curbs, L-shaped lots, shops, cars and props, ferry, minimap, edge triangles | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #11) |
+| 3 | M11b Köpenick v2 part 1: concept C, new layout, streets, curbs, L-shaped lots, shops, cars and props, minimap, edge triangles; then playtest notes: ferry boat, ruins, lamps, bus, tram, map edge, fight ring | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #11) |
 | 3b | M11b part 2: relief and irregular banks and quays, ground textures (alternatives first), enterable Späti (safe room) | Claude · Opus high | `docs/maps/koepenick.md` | open |
 | 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Claude · Opus high | after M3a | open |
-| 5 | M4 Loot in the world | Claude · Opus high | after M3b, M11b | open |
+| 5 | M4 Loot in the world, with breakable bins and crates (2D port) | Claude · Opus high | after M3b, M11b | open |
 | 6 | M5 Inventory mockup (Claude), then build (Codex task written after Johannes picks) | Claude, Codex | after M4 | open |
 
 Claude writes the next Codex task file before Codex's queue runs empty.
@@ -36,14 +36,16 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Enterable Späti (safe room), relief, irregular banks, ground textures | M11b part 2 | Open |
 | Item data and rolls | M1, M2 | Done |
 | Gear stats in combat | M3a, M3b | Open |
-| Drops, glow, pickup, exit warning | M4 | Open |
+| Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Open |
 | Inventory, equip, compare, salvage, sets | M5 | Open |
 | Save, wave checkpoint, difficulty | M6 | Open |
 | Weapons: Klinge, Hammer, Speer, Werfer, finishers | M7 | Open |
 | Powers, ultimates, blessings with families and duos | M8 | Open |
 | Touch layout for more buttons | M9 | Open |
 | Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Open (placeholders) |
-| Run content: Verband, Molotow, healing drops, breakable crates, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Open |
+| Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Open |
+| Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
+| World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
 | Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Open |
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
 | Endless mode after the district boss | M18 | Open |
@@ -58,6 +60,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walka
 |---|---|---|---|---|
 | M3a | Stats port | Codex | M2 | Task file |
 | M11b | Köpenick v2: layout about 0.6 of today's distances (new lots, not `mapscale`), narrower streets with clear edges, cars and props on every stretch, more building types and non-rectangular footprints, relief and irregular banks, ground textures (alternatives first), enterable Späti, minimap (mockup first), 2D edge triangles | Claude · Opus high, Johannes picks | M11 | Playtest on the Tab S9: walking feels short, every stretch has something |
+| M11c | World variety (P1 row): lot types, decals, weather per district, area messages. Mockup or look alternatives for weather first | Claude · Opus medium | M11b | Each zone of Köpenick has two lot types the others do not |
 | M3b | Stats in the sim | Claude · Opus high | M3a | Equipped item changes damage and life in a run; sim tests |
 | M4 | Drops, rarity glow and beam, labels, pickup, exit warning for rare and better. Loot stays where it drops; no vacuum | Claude · Opus high | M3b | Visible on both profiles |
 | M5 | Inventory and equipment UI | Mockup Claude, build Codex | M4 | Equip and compare on touch, pad, mouse |
@@ -67,6 +70,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walka
 | M9 | Touch layout for power, ultimate, consumables: mockup, then build | Claude · Opus medium | M8 | |
 | M12 | Köpenick roster from 2D roles (ghoul, brute, spitter, Raser, crow, dinos), elites, bosses Feldwebel, Turmwächter, Rex, Hauptmann with own attacks | Sim Claude, models PC | M3b | Each type needs a different answer |
 | M16 | Run content (row in P1). Consumable and event rules port first as a Codex task | Codex (rules), Claude (world) | M4 | All 2D event types occur in a run |
+| M16b | Side branches: 2 to 3 per district, 20 to 40 m off the route, each ends in a surprise from M16 (ambush, mini-boss elite, cache crate, hidden blessing). Map rule in `docs/maps/guidelines.md` | Claude · Opus high | M16, M12 | Johannes finds them without the minimap and wants to take them |
 | M13 | Camp as a menu between runs; port station table (`STN` area in 2D `js/data.js`) | Claude, Codex (UI) | M6 | Upgrades and meals change the next run |
 | M17 | Menus: start, intro/tutorial cards, end screen, Kodex, options | Codex after mockup | M5 | |
 | M18 | Endless mode | Claude | M12 | |

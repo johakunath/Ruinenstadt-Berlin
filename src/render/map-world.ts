@@ -8,6 +8,7 @@ import {
   SphereGeometry, TorusGeometry, Vector3, type Material,
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
+import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { areaAt, heightAt, isWater, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
@@ -16,7 +17,7 @@ import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
 import { paintAsphalt, paintConcrete, paintFern, paintGround, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
-  Builder, buildAltbau, buildProp, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type Mats, type World,
+  Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type Mats, type World,
 } from './world';
 
 type RGB = readonly [number, number, number];
@@ -217,6 +218,15 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         // quad() takes counter-clockwise corners seen from above; UVs in world meters.
         batch.quad(quad, [0, 0, 1, 1]);
         fixWorldUv(batch, 4, 4);
+        if (s.tram) {
+          // Double tram track: grooved rails flush with the asphalt (also on the bridge).
+          const yaw = Math.atan2(dx, dz);
+          for (const off of [-2.22, -0.78, 0.78, 2.22]) {
+            const cx = (x0 + x1) / 2 - dz * off;
+            const cz = (z0 + z1) / 2 + dx * off;
+            b.box(mats.iron, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + (onBridge(m, cx, cz) ? 0.065 : y + 0.012), cz), 0.09, 0.03, t1 - t0 + 0.02, [1.5, 1.45, 1.4]);
+          }
+        }
         // Curbs mark the walkable street edge (v2, M11b); not on paths and bridges.
         if (s.kind !== 'path' && !onBridge(m, x0, z0, 1) && !onBridge(m, x1, z1, 1)) {
           const yaw = Math.atan2(dx, dz);
@@ -254,23 +264,52 @@ function worldUv(g: BufferGeometry, ox: number, oz: number, scale: number): void
   for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + ox) / scale, (pos.getZ(i) + oz) / scale);
 }
 
-function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+/** The ferry boat at its own origin, deck top at y 0, length along local Z. */
+function buildFerryBoat(mats: MapMats, width: number): Group {
+  const b = new ChunkBuilder(mats);
+  const L = FERRY.boat;
+  b.box(mats.rust, new Matrix4().setPosition(0, -0.6, 0), width + 0.4, 1.0, L - 0.6, [0.75, 0.6, 0.5]);
+  b.box(mats.rust, new Matrix4().setPosition(0, -0.35, 0), width + 0.6, 0.25, L, [0.9, 0.85, 0.8]);
+  b.box(mats.wood, new Matrix4().setPosition(0, -0.06, 0), width, 0.12, L, [1.25, 1.12, 0.95]);
+  for (const side of [-1, 1]) {
+    // Rails along both long sides, open at the bow and the stern.
+    b.box(mats.iron, new Matrix4().setPosition(side * (width / 2 + 0.1), 0.95, 0), 0.07, 0.07, L - 0.4, [1.3, 1.25, 1.1]);
+    for (let z = -L / 2 + 0.3; z <= L / 2 - 0.3; z += 1.2) b.box(mats.iron, new Matrix4().setPosition(side * (width / 2 + 0.1), 0.48, z), 0.06, 0.95, 0.06, [1.3, 1.25, 1.1]);
+    // Ramps hinged at both ends.
+    b.box(mats.iron, new Matrix4().makeRotationX(side * 0.12).setPosition(0, -0.02, side * (L / 2 + 0.3)), width - 0.4, 0.08, 0.7, [0.8, 0.8, 0.75]);
+  }
+  // Small wheelhouse hanging over the side, out of the walkway.
+  b.box(mats.stucco, new Matrix4().setPosition(width / 2 + 1.1, 1.0, 1.2), 1.8, 2.0, 2.4, [1.05, 1.0, 0.95]);
+  b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, 2.08, 1.2), 2.2, 0.16, 2.8, [0.6, 0.45, 0.35]);
+  b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, -0.55, 1.2), 2.0, 1.0, 2.8, [0.75, 0.6, 0.5]);
+  const g = new Group();
+  for (const mesh of b.solid.meshes()) {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    g.add(mesh);
+  }
+  return g;
+}
+
+function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder, boats: Array<{ lane: FerryLane; group: Group }>): void {
   for (const br of m.bridges) {
     const b = chunkOf(br.x, br.z);
     const mats = b.mm;
     const base = new Matrix4().makeRotationY(br.rot).setPosition(br.x, 0, br.z);
     const local = (x: number, y: number, z: number): Matrix4 => base.clone().multiply(new Matrix4().setPosition(x, y, z));
     if (br.kind === 'ferry') {
-      // Moored ferry: a rusty hull with a plank deck, wooden landing stages at both banks, a wheelhouse.
-      const hull = br.len - 10;
-      b.box(mats.rust, local(0, -0.65, 0), br.width + 0.6, 1.1, hull, [0.6, 0.55, 0.5]);
-      b.box(mats.wood, local(0, -0.08, 0), br.width, 0.16, br.len, [1.25, 1.12, 0.95]);
-      for (const side of [-1, 1]) {
-        b.box(mats.rust, local(side * (br.width / 2 + 0.2), 0.45, 0), 0.12, 0.9, hull, [0.55, 0.5, 0.45]);
-        for (const z of [-br.len / 2 + 1.5, br.len / 2 - 1.5]) b.box(mats.wood, local(side * (br.width / 2 - 0.3), -0.8, z), 0.4, 1.8, 0.4, [0.5, 0.45, 0.4]);
+      // Two wooden piers on posts; the boat itself moves (`buildFerryBoat`, `World.sync`).
+      const pl = FERRY.pier + 0.5;
+      for (const end of [-1, 1]) {
+        const c = end * (br.len / 2 - pl / 2);
+        b.box(mats.wood, local(0, -0.1, c), br.width, 0.2, pl, [1.15, 1.05, 0.9]);
+        for (const side of [-1, 1]) {
+          for (const z of [c - pl / 2 + 0.3, c + pl / 2 - 0.3]) b.box(mats.wood, local(side * (br.width / 2 - 0.2), -0.9, z), 0.3, 1.6, 0.3, [0.55, 0.5, 0.45]);
+          b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.5, c), 0.06, 0.06, pl);
+          b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.25, c - pl / 2 + 0.2), 0.06, 0.5, 0.06);
+        }
       }
-      b.box(mats.stucco, local(br.width / 2 + 1.6, 1.1, hull / 4), 2.4, 2.2, 3, [0.85, 0.85, 0.82]);
-      b.box(mats.rust, local(br.width / 2 + 1.6, 2.3, hull / 4), 2.8, 0.2, 3.4, [0.5, 0.4, 0.35]);
+      boats.push({ lane: br, group: buildFerryBoat(mats, br.width) });
       continue;
     }
     // Deck (top flush with the ground), stone sides, iron railing, two lamps.
@@ -370,6 +409,50 @@ function blockFacades(l: { x: number; z: number; rot: number; w: number; d: numb
   ];
 }
 
+/**
+ * Burnt-out shell of an Altbau, shop or house: no roof, every bay broken off at its own height, empty
+ * window holes, a dark inner face and rubble inside. Same footprint and collider as the intact lot.
+ */
+function buildRuin(b: ChunkBuilder, l: Lot): void {
+  const rng = new Rng(l.seed + 77);
+  const tone = rng.pick(TONES);
+  const plaster = b.mm.plaster[tone] as LitMaterial;
+  const H = l.kind === 'house' ? 3.4 + l.floors * 2.9 : GROUND_H + l.floors * FLOOR_H + PARAPET;
+  const wall = 0.4;
+  const inner: RGB = [0.32, 0.3, 0.3];
+  blockFacades(l).forEach((side, i) => {
+    const run = new Run({ id: 'r', style: 'altbau', ax: side.a[0], az: side.a[1], bx: side.b[0], bz: side.b[1], depth: 1, floors: 0, tone, features: [], seed: l.seed + i });
+    const bays = Math.max(1, Math.round(side.len / 2.7));
+    const bw = side.len / bays;
+    // The street front stands highest; back and sides crumble more.
+    const keep: [number, number] = i === 0 ? [0.45, 1] : [0.2, 0.85];
+    for (let k = 0; k < bays; k++) {
+      const s0 = k * bw;
+      const s1 = (k + 1) * bw;
+      const h = Math.max(1.2, H * rng.range(keep[0], keep[1]));
+      wallFace(b, run, plaster, s0, s1, 0, h);
+      b.solid.of(plaster).quad([run.pt(s1, 0, -wall), run.pt(s0, 0, -wall), run.pt(s0, h, -wall), run.pt(s1, h, -wall)], [0, 0, bw / 6, h / 6], [inner]);
+      // Broken top: a slab of masonry, then loose bricks.
+      b.box(b.mm.brick, run.mat((s0 + s1) / 2, h - 0.08, -wall / 2, 0, rng.range(-0.06, 0.06)), bw + 0.02, 0.16, wall + 0.04, [0.7, 0.62, 0.58]);
+      for (let j = 0; j < 2; j++) b.box(b.mm.brick, run.mat(rng.range(s0 + 0.2, s1 - 0.2), h + 0.1, -wall / 2, rng.range(-0.4, 0.4), rng.range(-0.4, 0.4)), rng.range(0.25, 0.6), rng.range(0.15, 0.3), 0.35, [0.75, 0.68, 0.62]);
+      // Empty window holes on every floor that still stands.
+      const mid = (s0 + s1) / 2;
+      const rows = l.kind === 'house' ? [1.1, 4.0] : [1.55, ...Array.from({ length: l.floors }, (_, f) => GROUND_H + f * FLOOR_H + 0.95)];
+      for (const y of rows) if (y + 2 < h) windowAt(b, run, rng, mid, y, 1.15, 1.75, 0, false);
+    }
+    b.shadowBox(run.mat(side.len / 2, H * 0.35, -wall / 2), side.len, H * 0.7, wall);
+  });
+  // Inside: charred floor, rubble heaps, a fallen beam.
+  const m4 = new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0.04, l.z);
+  b.box(b.mm.tar, m4, l.w - 0.8, 0.06, l.d - 0.8, [0.35, 0.33, 0.32]);
+  for (let i = 0; i < 6; i++) {
+    const g = rng.range(0.55, 0.85);
+    const p = m4.clone().multiply(new Matrix4().makeRotationY(rng.range(0, 3)).setPosition(rng.range(-l.w / 2 + 1.2, l.w / 2 - 1.2), 0.2, rng.range(-l.d / 2 + 1.2, l.d / 2 - 1.2)));
+    b.box(b.mm.brick, p.multiply(new Matrix4().makeRotationX(rng.range(-0.3, 0.3))), rng.range(1, 2.6), rng.range(0.4, 1.1), rng.range(1, 2.2), [g, g * 0.92, g * 0.88]);
+  }
+  b.box(b.mm.darkWood, m4.clone().multiply(new Matrix4().makeRotationY(rng.range(0, 3)).setPosition(0, 0.9, 0)).multiply(new Matrix4().makeRotationZ(0.35)), Math.min(l.w, l.d) * 0.8, 0.25, 0.25, [0.4, 0.35, 0.3]);
+}
+
 /** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
 function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
   const rng = new Rng(l.seed);
@@ -459,7 +542,7 @@ function buildHouse(b: ChunkBuilder, l: Lot): void {
   const tone = rng.pick(TONES);
   const h = 3.4 + l.floors * 2.9;
   const plaster = b.mm.plaster[tone] as LitMaterial;
-  walls(b, l, plaster, h, l.floors ? [1.1, 4.0] : [1.1], l.seed, 0.3);
+  walls(b, l, plaster, h, l.floors ? [1.1, 4.0] : [1.1], l.seed, 0.08);
   const m4 = new Matrix4().makeRotationY(l.rot).setPosition(l.x, h, l.z);
   const ridge = Math.min(l.w, l.d) * 0.42;
   b.geo(b.mm.roof, gableRoof(l.w, l.d, ridge), m4, [rng.range(0.75, 1), 0.85, 0.8]);
@@ -729,20 +812,24 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
 
   buildGround(m, mats, group);
   buildStreets(m, mats, chunkOf);
-  buildBridges(m, chunkOf);
+  const boats: Array<{ lane: FerryLane; group: Group }> = [];
+  buildBridges(m, chunkOf, boats);
+  for (const bt of boats) group.add(bt.group);
   // Buildings stand on the lowest corner of their footprint; the rest sinks into the slope.
   const base = (x: number, z: number, r: number): number =>
     Math.min(heightAt(m, x, z), heightAt(m, x - r, z - r), heightAt(m, x + r, z - r), heightAt(m, x - r, z + r), heightAt(m, x + r, z + r));
   for (const l of lots) {
     const b = chunkOf(l.x, l.z);
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
-    if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
+    if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
+    else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
     else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
     else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
     if (l.wing) {
       // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
       const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
-      if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
+      if (l.ruin) b.on(y0, () => buildRuin(b, wing));
+      else if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
       else b.on(y0, () => buildAltbauLot(b, wing, m));
     }
   }
@@ -871,6 +958,15 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       if (pickT > 0.25) {
         pickT = 0;
         pick();
+      }
+    },
+    sync(simTime: number): void {
+      for (const bt of boats) {
+        const c = ferryPos(bt.lane, simTime);
+        bt.group.position.set(c.x, 0, c.z);
+        bt.group.rotation.y = bt.lane.rot;
+        // A slow bob on the water.
+        bt.group.position.y = 0.04 * Math.sin(simTime * 1.3);
       }
     },
     follow(x: number, z: number): void {

@@ -49,6 +49,7 @@ describe('Köpenick map', () => {
 
     it(`crosses water only on bridges (scale ${scale})`, () => {
       for (const b of m.bridges) {
+        if (b.kind === 'ferry') continue; // tested in src/sim/ferry.test.ts
         expect(onBridge(m, b.x, b.z)).toBe(b);
         expect(level.blocked(b.x, b.z, 0.5)).toBe(false);
       }
@@ -102,6 +103,32 @@ describe('Köpenick map', () => {
       }
     }
     expect(empty / n).toBeLessThan(0.1);
+  });
+
+  it('no invisible walls: land at the map edge has a fence or roadblock', () => {
+    const m = koepenickMap(1);
+    const lots = generateLots(m);
+    const edge = generateProps(m, lots).filter((p) => p.kind === 'bauzaun' || p.kind === 'barrier');
+    const B = m.bounds;
+    const pts: Array<[number, number]> = [];
+    for (let x = B.minX + 3; x < B.maxX - 3; x += 2) pts.push([x, B.minZ + 1], [x, B.maxZ - 1]);
+    for (let z = B.minZ + 3; z < B.maxZ - 3; z += 2) pts.push([B.minX + 1, z], [B.maxX - 1, z]);
+    for (const [x, z] of pts) {
+      if (isWater(m, x, z) && !onBridge(m, x, z)) continue;
+      expect(edge.some((p) => Math.hypot(p.x - x, p.z - z) < 2.2), `${x},${z}`).toBe(true);
+    }
+  });
+
+  it('lamps stand beside streets and at least 22 m apart; some are broken', () => {
+    const m = koepenickMap(1);
+    const props = generateProps(m, generateLots(m));
+    const lamps = props.filter((p) => p.kind === 'lantern' || p.kind === 'lampBroken');
+    expect(props.some((p) => p.kind === 'lampBroken')).toBe(true);
+    for (const a of lamps) {
+      expect(streetDist(m, a.x, a.z).d).toBeGreaterThan(0);
+      expect(streetDist(m, a.x, a.z).d).toBeLessThan(2);
+      for (const b of lamps) if (a !== b) expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThanOrEqual(22);
+    }
   });
 
   it('bigger scale means a bigger map with more lots', () => {

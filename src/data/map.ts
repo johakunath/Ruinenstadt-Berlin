@@ -7,6 +7,7 @@ import type { Collider } from '../sim/collide';
 import type { Bounds } from '../sim/flowfield';
 import { Level, WalkGrid, type EncounterDef, type Point, type ZoneDef } from '../sim/level';
 import { Rng } from '../sim/math';
+import { onFerryPier } from '../sim/ferry';
 import { propCollider, type Prop } from './courtyard';
 
 export type Pt = readonly [number, number];
@@ -36,6 +37,8 @@ export interface Street {
   pts: Pt[];
   width: number;
   kind: StreetKind;
+  /** Double tram track down the middle. */
+  tram?: boolean;
 }
 
 export type GroundKind = 'cobbles' | 'asphalt' | 'grass' | 'forest' | 'jungle';
@@ -81,6 +84,8 @@ export interface Lot {
   floors: number;
   seed: number;
   jungle?: boolean;
+  /** Burnt-out shell: no roof, broken wall tops, empty windows (about half of all buildings). */
+  ruin?: boolean;
   /** Back wing (Seitenflügel, annex): same facing, centered at (x, z), so the footprint is an L. */
   wing?: { x: number; z: number; w: number; d: number };
 }
@@ -134,6 +139,8 @@ export interface MapDef {
   hills: Hill[];
   /** Raised platforms with retaining walls, reachable by stairs only. */
   terraces: Terrace[];
+  /** Hand-placed props (wrecks on a bridge, the tram). */
+  fixedProps: Prop[];
   seed: number;
 }
 
@@ -178,9 +185,16 @@ export function ellipse(cx: number, cz: number, rx: number, rz: number, n = 20):
   return out;
 }
 
-/** Is (x, z) on a bridge deck (with `pad` meters of slack)? */
+/**
+ * Is (x, z) on a bridge deck (with `pad` meters of slack)? A ferry lane counts only at its two
+ * piers; the water between is crossed by the boat (`src/sim/ferry.ts`).
+ */
 export function onBridge(m: MapDef, x: number, z: number, pad = 0): Bridge | null {
   for (const b of m.bridges) {
+    if (b.kind === 'ferry') {
+      if (onFerryPier(b, x, z) || (pad > 0 && onFerryPier({ ...b, width: b.width + 2 * pad, len: b.len + 2 * pad }, x, z))) return b;
+      continue;
+    }
     const ux = Math.sin(b.rot);
     const uz = Math.cos(b.rot);
     const dx = x - b.x;
@@ -233,6 +247,9 @@ export function heightAt(m: MapDef, x: number, z: number): number {
   }
   return h;
 }
+
+/** Minimum distance between two street lamps. */
+const LAMP_GAP = 22;
 
 /** Retaining walls and stair sides block; the stair runs stay open. */
 export function terraceWall(m: MapDef, x: number, z: number): boolean {
@@ -381,6 +398,8 @@ export function generateLots(m: MapDef): Lot[] {
           const ok = t + w < len + 2 && areaAt(m, x, z) === area && streetDist(m, x, z).d > d / 2 - 0.5 && cornersOk(m, x, z, rot, w / 2, d / 2) && occ.free(x, z, rot, w / 2 + mg, d / 2 + mg);
           if (ok && rng.next() > 0.07) {
             const lot: Lot = { kind: kind2, x, z, rot, w, d, floors: L.floors[0] + rng.int(L.floors[1] - L.floors[0] + 1), seed: rng.int(1e6) };
+            // Ruinenstadt: about half of the ordinary buildings are burnt-out shells (Johannes, 2026-11-15).
+            if (rng.next() < 0.5) lot.ruin = true;
             if (rng.next() < L.wing) {
               // Wing behind the back facade at one end: local +a along the front, -b away from the street.
               const ww = rng.range(4, Math.min(7, w * 0.5));
@@ -461,7 +480,16 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
     m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
     m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r);
-  // Lanterns along streets, alternating sides.
+  // Lanterns along streets, alternating sides, never closer than LAMP_GAP to another lamp (bridge
+  // lamps included). About a third are broken: dark and bent (playtest 2026-11-15).
+  const lamps: Array<[number, number]> = [];
+  for (const br of m.bridges) {
+    if (br.kind === 'ferry' || br.len <= 15) continue;
+    for (const [side, a] of [[-1, -br.len / 4], [1, br.len / 4]] as Array<[number, number]>) {
+      const c = side * (br.width / 2 + 0.2);
+      lamps.push([br.x + Math.cos(br.rot) * c + Math.sin(br.rot) * a, br.z - Math.sin(br.rot) * c + Math.cos(br.rot) * a]);
+    }
+  }
   for (const s of m.streets) {
     if (s.kind === 'path') continue;
     let side = 1;
@@ -475,9 +503,12 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         side = -side;
         const x = ax + dx * t - dz * side * (s.width / 2 + 0.8);
         const z = az + dz * t + dx * side * (s.width / 2 + 0.8);
-        if (hit(x, z, 0.3) || onBridge(m, x, z, 1)) continue;
+        if (hit(x, z, 0.3) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3) continue;
         if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6)) continue;
-        props.push({ kind: 'lantern', x, z, rot: 0, size: 1 });
+        if (lamps.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LAMP_GAP)) continue;
+        lamps.push([x, z]);
+        const broken = rng.next() < 0.35;
+        props.push({ kind: broken ? 'lampBroken' : 'lantern', x, z, rot: broken ? rng.range(0, Math.PI * 2) : 0, size: 1 });
       }
     }
   }
@@ -513,7 +544,16 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         const x = ax + ((bx - ax) / len) * t + rng.range(-2, 2);
         const z = az + ((bz - az) / len) * t + rng.range(-2, 2);
         if (onBridge(m, x, z, 2) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 3)) continue;
-        const van = rng.next() < 0.35;
+        const roll = rng.next();
+        const van = roll < 0.35;
+        const bus = roll > 0.8 && s.width >= 7;
+        if (bus) {
+          // A broken-down bus along the lane, 11 m long: needs room and no fight nearby.
+          if (hit(x, z, 6) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 8)) continue;
+          const off = (s.width / 2 - 1.5) * rng.pick([-1, 1]);
+          props.push({ kind: 'bus', x: x - ((bz - az) / len) * off, z: z + ((bx - ax) / len) * off, rot: Math.atan2(bx - ax, bz - az) + rng.range(-0.08, 0.08), size: 1 });
+          continue;
+        }
         if (hit(x, z, van ? 3 : 1.2)) continue;
         props.push({ kind: van ? 'van' : 'rubble', x, z, rot: Math.atan2(bx - ax, bz - az) + rng.range(-0.5, 0.5), size: rng.range(0.8, 1.3) });
       }
@@ -556,6 +596,49 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
+  // Campfires of survivors beside the streets: light where lamps are broken.
+  for (const s of m.streets) {
+    if (s.kind === 'path') continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [ax, az] = s.pts[i - 1] as Pt;
+      const [bx, bz] = s.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      for (let t = rng.range(12, 30); t < len - 4; t += rng.range(35, 60)) {
+        const side = rng.pick([-1, 1]);
+        const off = side * (s.width / 2 + 2.2);
+        const x = ax + ((bx - ax) / len) * t - ((bz - az) / len) * off;
+        const z = az + ((bz - az) / len) * t + ((bx - ax) / len) * off;
+        if (hit(x, z, 1.2) || onBridge(m, x, z, 2) || streetDist(m, x, z).d < 0.8) continue;
+        if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 2) || lamps.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < 8)) continue;
+        props.push({ kind: rng.next() < 0.5 ? 'campfire' : 'fireBarrel', x, z, rot: rng.range(0, Math.PI * 2), size: 1 });
+      }
+    }
+  }
+  // No invisible walls (Johannes, 2026-11-15): where land meets the map edge a construction fence
+  // stands 1 m inside it, with concrete roadblocks where a street runs out. Water edges stay open.
+  const B = m.bounds;
+  const EDGE = 1.0;
+  const PANEL = 3.4;
+  for (const [x0, z0, x1, z1] of [[B.minX, B.minZ, B.maxX, B.minZ], [B.maxX, B.minZ, B.maxX, B.maxZ], [B.maxX, B.maxZ, B.minX, B.maxZ], [B.minX, B.maxZ, B.minX, B.minZ]] as Array<[number, number, number, number]>) {
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const dx = (x1 - x0) / len;
+    const dz = (z1 - z0) / len;
+    // Inward normal of a clockwise rectangle in XZ (+Z south).
+    const nx = -dz;
+    const nz = dx;
+    // Prop local X runs along the edge: (cos rot, -sin rot) = (dx, dz).
+    const rot = Math.atan2(-dz, dx);
+    for (let t = EDGE + PANEL / 2; t < len - EDGE; t += PANEL) {
+      const x = x0 + dx * t + nx * EDGE;
+      const z = z0 + dz * t + nz * EDGE;
+      // Skip only panels fully in the water, so the fence reaches every bank.
+      const wet = (k: number): boolean => isWater(m, x + dx * k, z + dz * k) && !onBridge(m, x + dx * k, z + dz * k);
+      if (wet(0) && wet(-PANEL / 2) && wet(PANEL / 2)) continue;
+      const kind = streetDist(m, x, z).d < 1.5 ? 'barrier' : 'bauzaun';
+      props.push({ kind, x, z, rot, size: PANEL });
+    }
+  }
+  for (const p of m.fixedProps) if (!isWater(m, p.x, p.z) || onBridge(m, p.x, p.z)) props.push(p);
   for (const l of lots) {
     if (l.kind !== 'house' || rng.next() < 0.25) continue;
     // Front fence 1.4 m in front of the facade, with a gate gap; local +b is towards the street.
@@ -610,5 +693,5 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     colliders.push({ kind: 'box', x: right, z: r.z, hx: (r.maxX - r.gapX - r.gapW / 2) / 2, hz: 4, rot: 0 });
   }
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z));
-  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones);
+  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'));
 }

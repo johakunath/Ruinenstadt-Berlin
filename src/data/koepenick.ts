@@ -112,7 +112,7 @@ export function koepenickMap(scale = 1): MapDef {
   ];
 
   const streets: Street[] = [
-    { name: 'Bahnhofstraße', kind: 'main', width: 7.5, pts: line([[10, -150], [9, -100], [7, -60], [6, -46], [4, -22]]) },
+    { name: 'Bahnhofstraße', kind: 'main', width: 7.5, tram: true, pts: line([[10, -150], [9, -100], [7, -60], [6, -46], [4, -22]]) },
     { name: 'Alt-Köpenick', kind: 'side', width: 6.5, pts: line([[4, -22], [2, 10], [0, 28]]) },
     { name: 'Grünstraße', kind: 'side', width: 5.5, pts: line([[-12, -4], [14, 0], [44, 0]]) },
     { name: 'Lange Brücke', kind: 'side', width: 7, pts: line([[-52, -4], [-12, -4]]) },
@@ -194,6 +194,8 @@ export function koepenickMap(scale = 1): MapDef {
         stairs: [stairTo(P(17, 17), 90 * DEG), stairTo(P(26, 5), 0)],
       },
     ],
+    // A tram broke down on the Dammbrücke on its way into the Altstadt.
+    fixedProps: [{ kind: 'tram', x: 6 * s + 1.5, z: -42 * s, rot: 0.05, size: 1 }],
     seed: 1906,
   };
 }

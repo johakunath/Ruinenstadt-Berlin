@@ -3,6 +3,7 @@ import { HIT_FEEL, PLAYER } from '../data/combat';
 import { courtyardLevel } from '../data/courtyard';
 import { SPAWN } from '../data/enemies';
 import { sectorHitsCircle } from './collide';
+import { ferryPos, onFerryBoat } from './ferry';
 import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
 import { randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, updateEnemies, updateSpawner } from './enemies';
 import { FlowField } from './flowfield';
@@ -81,6 +82,8 @@ export function stepSim(sim: Sim, input: SimInput): void {
     sim.hitstop = Math.max(0, sim.hitstop - DT);
     return;
   }
+  // After the hitstop check: the boat stands still while the world is frozen.
+  rideFerries(sim);
   updatePlayer(sim, input);
   followFlow(sim);
   sim.flow.setTarget(p.x, p.z);
@@ -93,6 +96,26 @@ export function stepSim(sim: Sim, input: SimInput): void {
   else updateSpawner(sim);
   sim.tick++;
   sim.time += DT;
+}
+
+/** Bodies on a ferry boat move with it; the walk check then uses the boat at the end of this step. */
+function rideFerries(sim: Sim): void {
+  const lv = sim.level;
+  lv.time = sim.time;
+  if (lv.ferries.length === 0) return;
+  for (const f of lv.ferries) {
+    const a = ferryPos(f, sim.time);
+    const b = ferryPos(f, sim.time + DT);
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    if (dx === 0 && dz === 0) continue;
+    for (const body of [sim.player, ...sim.enemies]) {
+      if (!onFerryBoat(f, sim.time, body.x, body.z)) continue;
+      body.x += dx;
+      body.z += dz;
+    }
+  }
+  lv.time = sim.time + DT;
 }
 
 /** Sweeps the weapon arc through this step's slice of the active frames. One hit per target per swing. */

@@ -36,8 +36,12 @@ How every district map is made, so all maps grow in the same direction no matter
 | Streets | Main 7 to 7.5 m, side 5 to 6.5 m, paths 4 m, curbs on streets. Parked and abandoned cars, sidewalk props, fences in front of houses, bollards at bridge heads |
 | Landmarks | Built in code with their recognizable silhouette first (tower, gables, roof shape, material color). 3 to 6 per district, each visible from the route |
 | Heights (B3) | Soft hills up to about 8 m (walkable everywhere), terraces 1.5 to 3 m with retaining walls and stairs (walls block in the sim). Not inside an encounter circle. Good spots: summits, platforms overlooking an arena |
+| Edges | No invisible walls (Johannes, 2026-11-15): every blocking edge is visible. Land at the map edge gets a construction fence, streets end in a roadblock; fights show their circle as a glowing ring; water is its own edge |
+| Ruins | About half of the ordinary buildings are burnt-out shells (no roof, broken wall tops, empty windows, rubble). Intact ones have few lit windows (about 10 %) |
+| Light | Lamps at least 22 m apart and beside the street, about a third broken. Survivor campfires and fire barrels fill the gaps |
+| Side branches | Planned (M16b): 2 to 3 short dead ends per district with a surprise. Keep room for them when laying out a map |
 | Camera | Ordinary buildings: ground floor plus 1 to 2 floors, L-shaped footprints and single-storey shops for variety. Walls and crowns between camera and hero use the see-through cutout |
-| Light | Lanterns along streets (26 m main, 32 m side), 2 fire barrels and some cover per encounter. Light count is a fixed pool; lamps are spots |
+| Light pool | 2 fire barrels and some cover per encounter. Light count is a fixed pool; lamps are spots |
 | Water | Rivers as polylines, lakes as polygons, bridges as rectangles at least river width + 12 m long. Banks drop to the water plane |
 
 ## Invariants (tests per map)
@@ -57,4 +61,5 @@ Headless numbers are not representative. On Leistung keep a typical view under a
 | Date | Change |
 |---|---|
 | 2026-11-15 | Started with Köpenick: geography check, layout rules, heights, invariants |
+| 2026-11-15 | No invisible walls, half ruins, fewer and broken lamps, side branches planned (Johannes) |
 | 2026-11-15 | Köpenick v2 (M11b, playtest): tighter size, loop route, narrower streets with curbs, lower and L-shaped buildings, shops, cars and props on every stretch (test) |
