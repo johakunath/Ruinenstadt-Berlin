@@ -78,6 +78,9 @@ export class Ui {
     this.setupTouch(input);
     el<HTMLButtonElement>('map-btn').addEventListener('click', () => this.toggleMap(true));
     el<HTMLButtonElement>('close-karte').addEventListener('click', () => this.toggleMap(false));
+    el<HTMLButtonElement>('x-karte').addEventListener('click', () => this.toggleMap(false));
+    // A tap beside the map panel closes it too.
+    this.karte.addEventListener('click', (e) => { if (e.target === this.karte) this.toggleMap(false); });
     el<HTMLButtonElement>('again').addEventListener('click', () => handlers.onAgain?.());
     window.addEventListener('keydown', (e) => {
       if ((e.code === 'KeyM' || e.code === 'Tab') && this.mapSource && el('title').hidden) {

@@ -253,6 +253,10 @@ h3 {
   inset: 0;
   pointer-events: none;
 }
+/* The stick zone sits above earlier overlays and swallowed taps on the map's Weiter button. */
+body:has(.overlay:not([hidden])) #touch {
+  display: none;
+}
 #stick-zone {
   position: absolute;
   left: 0;
@@ -397,10 +401,29 @@ h3 {
 .panel.wide {
   width: min(900px, 94vw);
 }
+#karte .panel {
+  position: relative;
+  max-height: 100dvh;
+}
 #karte-svg svg {
   width: 100%;
   height: auto;
-  max-height: 72vh;
+  /* dvh: the visible height on tablets with a browser bar, so Weiter always fits */
+  max-height: calc(100dvh - 150px);
   display: block;
   border-radius: 4px;
+}
+
+.x-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--cream);
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
 }
