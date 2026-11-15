@@ -4,7 +4,7 @@ import { GameAudio } from './audio/audio';
 import { HIT_FEEL, PLAYER } from './data/combat';
 import { Input } from './input/input';
 import { readOptions, reloadWith, storeOptions } from './options';
-import { LOOKS } from './render/looks';
+import { LOOK } from './render/looks';
 import { PROFILES } from './render/profile';
 import { GameRenderer } from './render/renderer';
 import { createSim, stepSim } from './sim/sim';
@@ -38,11 +38,6 @@ const ui = new Ui(opts, {
     opts.profile = id;
     storeOptions(opts);
     reloadWith({ profile: id });
-  },
-  onLook: (id) => {
-    opts.look = id;
-    storeOptions(opts);
-    reloadWith({ look: id });
   },
   onVolume: (v) => {
     opts.volume = v;
@@ -185,7 +180,7 @@ function frame(now: number): void {
     ui.setPerf(
       `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms\n` +
         `${pf.calls} draw calls · ${(pf.triangles / 1000).toFixed(0)}k Dreiecke · ${sim.enemies.length} Gegner\n` +
-        `${PROFILES[opts.profile].label} · ${LOOKS[opts.look].label}`,
+        PROFILES[opts.profile].label,
     );
   }
 }
@@ -220,7 +215,7 @@ window.__game = {
   },
 };
 
-GameRenderer.create(canvas, { profile: PROFILES[opts.profile], look: LOOKS[opts.look], debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam })
+GameRenderer.create(canvas, { profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam })
   .then((r) => {
     renderer = r;
     r.reset(sim);

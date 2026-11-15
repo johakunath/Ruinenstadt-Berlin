@@ -40,15 +40,13 @@ test('scene loads, play starts, the fight runs, no page errors', async ({ page }
   expect(errors).toEqual([]);
 });
 
-for (const look of ['gemalt', 'comic', 'tusche']) {
-  test(`look ${look} renders on Qualität without errors`, async ({ page }, testInfo) => {
-    const errors = watchErrors(page);
-    await page.goto(`/?profile=Qualität&look=${look}&seed=7&autostart`);
-    await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 110_000 });
-    await page.screenshot({ path: testInfo.outputPath(`courtyard-${look}.png`), timeout: 110_000 });
-    expect(errors).toEqual([]);
-  });
-}
+test('Qualität renders without errors', async ({ page }, testInfo) => {
+  const errors = watchErrors(page);
+  await page.goto('/?profile=Qualität&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 110_000 });
+  await page.screenshot({ path: testInfo.outputPath('courtyard-qualitaet.png'), timeout: 110_000 });
+  expect(errors).toEqual([]);
+});
 
 test('options menu pauses the fight', async ({ page }) => {
   await page.goto('/?profile=Leistung&seed=7&autostart');

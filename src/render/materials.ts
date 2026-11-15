@@ -1,10 +1,9 @@
-// Material factory. The look decides the shading model; everything else asks here.
+// Material factory: every lit surface asks here.
 import {
-  Color, DoubleSide, FrontSide, MeshBasicMaterial, MeshStandardMaterial, MeshToonMaterial,
+  Color, DoubleSide, FrontSide, MeshBasicMaterial, MeshStandardMaterial,
   type ColorRepresentation, type Material, type Side, type Texture,
 } from 'three';
 import type { Look } from './looks';
-import { toonRamp } from './paint';
 import type { Profile } from './profile';
 
 export interface SurfaceParams {
@@ -21,19 +20,15 @@ export interface SurfaceParams {
   alphaTest?: number;
 }
 
-export type LitMaterial = MeshStandardMaterial | MeshToonMaterial;
+export type LitMaterial = MeshStandardMaterial;
 
 export class Materials {
-  private readonly ramp: Texture;
-
   constructor(
     readonly look: Look,
     readonly profile: Profile,
-  ) {
-    this.ramp = toonRamp();
-  }
+  ) {}
 
-  /** A lit surface in the current look. */
+  /** A lit surface. */
   surface(p: SurfaceParams): LitMaterial {
     const side: Side = p.doubleSided ? DoubleSide : FrontSide;
     const common = {
@@ -46,7 +41,6 @@ export class Materials {
       side,
       alphaTest: p.alphaTest ?? 0,
     };
-    if (this.look.shading === 'toon') return new MeshToonMaterial({ ...common, gradientMap: this.ramp });
     return new MeshStandardMaterial({
       ...common,
       roughness: p.roughness ?? 0.85,
