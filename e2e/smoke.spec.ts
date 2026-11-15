@@ -85,6 +85,11 @@ test('Köpenick: the first encounter starts, waves spawn, the map opens and paus
   expect(await page.evaluate(() => window.__game?.sim().tick ?? 0)).toBe(tick);
   await page.screenshot({ path: testInfo.outputPath('koepenick-karte.png'), timeout: 110_000 });
   await page.locator('#close-karte').click();
+  await expect(page.locator('#karte')).toBeHidden();
+  await page.locator('#map-btn').click();
+  await expect(page.locator('#touch')).toBeHidden();
+  await page.locator('#x-karte').click();
+  await expect(page.locator('#karte')).toBeHidden();
   expect(errors).toEqual([]);
 });
 

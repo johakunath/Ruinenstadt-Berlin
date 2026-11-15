@@ -1,6 +1,6 @@
 # M2 Item logic [Codex, review Claude]
 
-Status: implemented in PR #7 (`codex/m2-item-logic`). Codex review completed without findings; CI gates merge. M1 merged in PR #5.
+Status: done (PR #7). Claude review 2026-11-15: faithful port, no fixes needed; follow-ups below.
 
 ## Goal
 
@@ -61,3 +61,8 @@ No implementation questions. The optional caller-owned `LootContext.itemId` coun
 - Preserved: set pieces omit the district level bonus and always have rarity 2, even through a legendary-minimum loot call; `setChance = 0` uses the source's 5% fallback. Installed-mod returns (`retMods`) are outside this Item type and M2; no save or inventory mutations.
 - Added 41 unit tests (99 total). `npm run check` passes. A temporary read-only differential harness matched all fields, salvage returns and random draw order for 12,000 mixed ordinary/set/loot items across slots, flavors and districts against the original source; it is not part of the shipped suite.
 - No player-visible change; no `docs/status.md` update. Browser smoke with installed Chromium: pause/resume passes; both render tests reach the final assertion but fail on HTTP 404 console errors (also recorded by M1). The temporary browser config was removed. Johannes authorized push, code review, fixes and merge. PR #7 is open; Codex reviewed the implementation without findings.
+
+## Review follow-ups (Claude, 2026-11-15)
+
+- `Item` lacks `mods` and `implantMode` (2D `it.mods`, `it.im`): added in M3a.
+- Not ported in M1: `UPG`, `IMODE`, `TM`, `SHRN`, `DRILL_*` (M3a); station table and `retMods` (M13).

@@ -1,6 +1,6 @@
 # M1 Item data port [Codex]
 
-Status: implemented on `codex/m1-item-data`; awaiting validation, review and merge.
+Status: done (PR #5).
 
 ## Goal
 

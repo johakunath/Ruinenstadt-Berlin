@@ -1,78 +1,116 @@
 # Migration: Ruinenstadt (2D) → Ruinenstadt Berlin (3D)
 
-Decided 2026-11-15 (Johannes): the 3D game is the future of the project. The custom hero is no longer a gate but a PC task; the remaining work moves in steps below. The 2D repo `johakunath/Ruinenstadt` stays playable and read only from here.
+This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo `johakunath/Ruinenstadt` is a read-only reference for data, rules and feel.
 
-## What moves how
+## Queue
 
-| Area | 2D source | Way | Why |
-|---|---|---|---|
-| Vision, story, district directions, style bible | `BACKLOG.md` › Intent, `docs/story.md`, `docs/district-design-directions.md`, `docs/style-bible.md` | **Copied** (done: `docs/vision.md`, `docs/story.md`, `docs/district-design-directions.md`) | Engine independent |
-| Workflow and token rules | `pipeline/workflow.md`, `CLAUDE.md` | **Adapted** (done: `docs/workflow.md`) | Same people, new stack |
-| Item data: rarities, elements, affixes, pacts, implicits, sets, set bonuses, legendary powers, materials, mods, ingredients, meals, consumables, difficulty, perks (blessings) | `js/data.js` (`RAR`, `ELC`, `AFX`, `PACTS`, `IMP`, `SETS`, `SETB`, `LEGP`, `MATS`, `MODS`, `SLOTS`, `ZUT`, `MEALS`, `CONS`, `DIFF`, `PERKS`) | **Ported** to typed TS with tests | Pure data, the balance work of 99 versions |
-| Item logic: rolls, item level, compare, salvage, prices | `js/items.js` (`rollR`, `makeItem`, `rollAfx`, `lootItem`, `RIL`, `better`, `salvage`, `itemPrice`) | **Ported** into `src/sim`, seeded by `sim.rng` | Rules, testable |
-| Weapon classes | `KIND` in `js/data.js`, `attack`/`skill` in `js/combat.js` | **Redesigned**: names, roles and damage ratios kept; moves, hit arcs and timing new per weapon in `src/data/combat.ts` | 2D swings do not carry over; 3D needs clips and arcs |
-| Powers, ultimates, blessings | `js/combat.js`, `PERKS` | **Redesigned** on the ported data | Need 3D effects and hitboxes |
-| Enemy roster and roles | `mkEnemy` in `js/combat.js`, `RES` | **Ported as design** (role, resistances, HP and damage ratios), behavior rebuilt in `src/sim` | Behavior lives in the 3D sim |
-| Bosses | `js/combat.js`, boss art in `assets/bosses/` | **Redesigned** per district | Need 3D models and attacks |
-| Maps and districts | `js/geo.js`, `js/mitte.js`, `js/alex.js`, `js/world.js`, `js/biomes.js` | **Rebuilt**, nothing ported. Landmark list and district order kept | New map concept (vision.md › New in 3D) |
-| U-Bahn tunnels, network map | `js/ubahn.js` | **Rebuilt later**: mostly linear, with short side branches holding a chest or a mini-boss | Same reason as maps; linear keeps tunnels quick |
-| Camp, stations, NPCs, quests | `js/base.js`, `CAMP`, `SURV`, `JOBT` | **Ported as data**, place rebuilt in 3D later | Camp is its own step |
-| Inventory and menus | `js/panels.js` | **Rebuilt** as DOM UI after a mockup; behavior and rules kept | 2D code is dense and tied to its globals |
-| Menu art: item icons, portraits | `assets/icons/` (112), `assets/portraits/` (29), `docs/chatgpt-assets.md` | **Copied as placeholders** when the inventory step needs them. Keep or redo: open (Q5) | Johannes decides later |
-| In-world sprites (enemies, props, buildings, vehicles) | `assets/` | **Not copied** | 3D needs models |
-| Save | `js/save.js`, `js/sync.js` | **New format**, versioned from the start. No import of 2D saves (Q4) | Different game state |
-| Balance bot, telemetry | `tools/sim.js`, `tools/balance.mjs`, `S.tlog` | **Ported later** against the 3D sim (it runs headless already) | Bot rules carry over |
-| Audio | `js/audio.js` (synthesized recipes: room reverb, compressor, three takes per effect) | **Ported** early (S1); enemy and boss sounds are new (S2, S3) | Liked in the 2D game; the 3D prototype has only a few basic sounds |
+"Next task" means: the first row with status `open` for your agent. Owner tags are recommendations; Johannes may swap Codex and Claude.
+
+| # | Task | Owner | File | Status |
+|---|---|---|---|---|
+| 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | open |
+| 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | open |
+| 3 | M11b Köpenick v2: tighter, livelier, readable (playtest 2026-11-15, list in `docs/playtests.md`). Concept first, then build | Claude · Opus high | `docs/maps/koepenick.md` | open |
+| 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Claude · Opus high | after M3a | open |
+| 5 | M4 Loot in the world | Claude · Opus high | after M3b, M11b | open |
+| 6 | M5 Inventory mockup (Claude), then build (Codex task written after Johannes picks) | Claude, Codex | after M4 | open |
+
+Claude writes the next Codex task file before Codex's queue runs empty.
+
+### Finishing a task
+
+1. Task file: `Status: done (PR #n)`, a `Handover` of at most 8 lines (what changed, deviations, follow-ups).
+2. This file: set the queue row to `done`, add follow-ups as new rows or backlog items.
+3. `docs/status.md`: only if a player sees a change.
+4. PR as draft until CI is green.
+
+## Milestone P1: Köpenick at 2D parity
+
+Goal: play Köpenick with every 2D feature that matters, then work only here. Characters (H1, H2) are not required; CC0 bodies stay until then.
+
+| Feature | Step | State |
+|---|---|---|
+| Map, route, encounters, waves, heights | M10, M11 | First version; v2 open (M11b) |
+| Enterable Späti (safe room), minimap, 2D edge triangles | M11b | Open |
+| Item data and rolls | M1, M2 | Done |
+| Gear stats in combat | M3a, M3b | Open |
+| Drops, glow, pickup, exit warning | M4 | Open |
+| Inventory, equip, compare, salvage, sets | M5 | Open |
+| Save, wave checkpoint, difficulty | M6 | Open |
+| Weapons: Klinge, Hammer, Speer, Werfer, finishers | M7 | Open |
+| Powers, ultimates, blessings with families and duos | M8 | Open |
+| Touch layout for more buttons | M9 | Open |
+| Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Open (placeholders) |
+| Run content: Verband, Molotow, healing drops, breakable crates, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Open |
+| Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Open |
+| Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
+| Endless mode after the district boss | M18 | Open |
+| One U-Bahn tunnel with Der Schaffner | M19 | Open |
+| Sound: 2D port, enemy sounds | S1, S2 | Open |
+
+Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walkable camp, other districts.
 
 ## Steps
 
-Owner tags are recommendations, not rules: Johannes swaps Codex and Claude depending on access and tokens. `[Codex]`, `[Claude · Opus high]`, `[Claude · Opus medium]`, `[PC · Blender]` (Johannes with Codex or Claude on the PC), `[Johannes]`. Steps without a PC tag run in the cloud.
-
 | # | Step | Owner | Needs | Done when |
 |---|---|---|---|---|
-| M0 | Docs: vision, story, district directions, workflow | Claude · Opus medium | | Done 2026-11-15 |
-| M1 | Item data port (task: `docs/tasks/m1-item-data.md`) | Codex | | `src/data/items.ts` and friends typed, invariant tests green |
-| M2 | Item logic: roll, item level, compare, salvage, seeded (task: `docs/tasks/m2-item-logic.md`) | Codex, review Claude | M1 | Unit tests reproduce 2D distributions within tolerance |
-| S1 | Sound port: the 2D sounds from `js/audio.js` (synthesized in code, no audio files) into `src/audio`, mapped to the 3D events (swing, hit, kill, dodge, hurt, death). They replace the gate 1 placeholder sounds | Codex | | Every sim event has its 2D sound; volume option works |
-| S2 | Enemy sounds per type: idle growl, wind-up, attack, hit, death; distance volume. Placeholder from synthesis or CC0 packs first | Claude · Opus medium | S1 | Each enemy type is recognizable by ear |
-| M3 | Hero stats from gear: damage, life, speed, crit, elements, resist feed the sim | Claude · Opus high | M2 | Sim tests; equipped item changes damage in a run |
-| M4 | Loot in the world: drops, rarity glow and beam, name labels, pickup, exit warning for rare and better | Claude · Opus high | M2 | Visible in the courtyard on both profiles |
-| M5 | Inventory and equipment UI: mockup first, then build | Mockup Claude, build Codex | M4 | Johannes picks the mockup; equip and compare work on touch, pad, mouse |
-| M6 | Save and wave checkpoint (backlog B1) | Claude · Opus high (format), Codex (UI) | M5 | Reload during a run resumes at the last wave; save has a version field |
-| M7 | Weapon classes in the 2D order: **Klinge first** (the gate 1 pipe moves become the Klinge baseline, a blade replaces the pipe), then **Hammer**, then Speer and Werfer. Each with its own finisher (backlog B6) | Claude · Opus high | Hero clips (H1) for best result, CC0 clips meanwhile | Klinge and Hammer feel different on controller |
-| M8 | Powers, ultimates, blessings (Zeitsplitter) | Claude · Opus high | M3, M7 | One power and one ultimate per weapon, blessing choice after each encounter |
-| M9 | Touch layout for more buttons (power, ultimate, consumables): mockup, then build | Claude · Opus medium | M8 | Only needed once there are more than two actions |
-| M10 | Köpenick map concept: a miniaturized Köpenick. Landmarks, rivers (Dahme, Spree), bridges, Altstadt, Schloss and Rathaus in their real relative positions; distances strongly compressed; fewer buildings, more open space. A mini open world with encounter places and zones | Claude · Opus high, Johannes decides | | Done 2026-11-15: concept A, `docs/maps/koepenick.md`. Perf test on the Tab S9 still sets the size (`?mapscale=`) |
-| M11 | Köpenick build: streets, landmarks, bridges, water, heights and stairs (backlog B3), camera vs tall buildings (B4) | Claude · Opus high | M10 | First version 2026-11-15: whole route playable with 20 waves and 4 placeholder bosses, see-through cutout for B4. Open: heights (B3), art pass, Tab S9 check |
-| M12 | Köpenick enemies: roster from 2D roles (ghoul, brute, spitter, Raser, dinos), elites with modifiers, Hauptmann boss | Sim Claude, models PC · Blender | M10 | Each type needs a different answer |
-| S3 | Boss voices: short lines or growls per boss. Needs a voice or sound-effect generator outside the repo (Q9) | Claude · Opus medium, Johannes picks the tool | M12 | Hauptmann has a voice |
-| M13 | Camp: walkable station, stations as data, meals, consumables | Claude, art PC · Blender | M6 | Camp reachable from a run |
-| M14 | Balance bot and telemetry on the 3D sim: port `tools/sim.js` and `tools/balance.mjs`, then rework the bot for 3D moves, powers and blessings and calibrate it to Johannes' own play (backlog B9) | Codex port, Claude rework and calibration | M8 | `node tools/balance.mjs` prints the 2D fields; bot clear times and deaths match Johannes' playtests within tolerance |
-| M15 | Next districts as mini open worlds, one at a time, each with a map concept first and built after `docs/maps/guidelines.md`; U-Bahn tunnels between them (mostly linear, side branches with chest or mini-boss; Der Schaffner stays the tunnel boss as in 2D) | Claude, Johannes | M11 to M14 | |
+| M3a | Stats port | Codex | M2 | Task file |
+| M11b | Köpenick v2: layout about 0.6 of today's distances (new lots, not `mapscale`), narrower streets with clear edges, cars and props on every stretch, more building types and non-rectangular footprints, relief and irregular banks, ground textures (alternatives first), enterable Späti, minimap (mockup first), 2D edge triangles | Claude · Opus high, Johannes picks | M11 | Playtest on the Tab S9: walking feels short, every stretch has something |
+| M3b | Stats in the sim | Claude · Opus high | M3a | Equipped item changes damage and life in a run; sim tests |
+| M4 | Drops, rarity glow and beam, labels, pickup, exit warning for rare and better. Loot stays where it drops; no vacuum | Claude · Opus high | M3b | Visible on both profiles |
+| M5 | Inventory and equipment UI | Mockup Claude, build Codex | M4 | Equip and compare on touch, pad, mouse |
+| M6 | Versioned save, wave checkpoint (B1), difficulty choice | Claude (format), Codex (UI) | M5 | Reload resumes at the last wave |
+| M7 | Weapons in 2D order: Klinge (pipe moves become its baseline), Hammer, Speer, Werfer; finisher each (B6) | Claude · Opus high | M3b | Klinge and Hammer feel different on a pad |
+| M8 | Powers, ultimates, blessings (Zeitsplitter), families and duos | Claude · Opus high | M7 | One power and one ultimate per weapon; blessing choice after each encounter |
+| M9 | Touch layout for power, ultimate, consumables: mockup, then build | Claude · Opus medium | M8 | |
+| M12 | Köpenick roster from 2D roles (ghoul, brute, spitter, Raser, crow, dinos), elites, bosses Feldwebel, Turmwächter, Rex, Hauptmann with own attacks | Sim Claude, models PC | M3b | Each type needs a different answer |
+| M16 | Run content (row in P1). Consumable and event rules port first as a Codex task | Codex (rules), Claude (world) | M4 | All 2D event types occur in a run |
+| M13 | Camp as a menu between runs; port station table (`STN` area in 2D `js/data.js`) | Claude, Codex (UI) | M6 | Upgrades and meals change the next run |
+| M17 | Menus: start, intro/tutorial cards, end screen, Kodex, options | Codex after mockup | M5 | |
+| M18 | Endless mode | Claude | M12 | |
+| M19 | U-Bahn tunnel: linear with short side branches (chest or mini-boss), Der Schaffner | Claude · Opus high | M12 | Reachable after Köpenick |
+| S2 | Enemy sounds per type, distance volume | Claude · Opus medium | S1 | Each type recognizable by ear |
+| S3 | Boss voices (tool: Q9) | Claude, Johannes | M12 | |
+| M14 | Balance bot: port `tools/sim.js`, `tools/balance.mjs`, then calibrate to Johannes (B9, B10) | Codex port, Claude rework | M8 | Bot clear times match playtests |
+| M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`) | Claude, Johannes | P1 | |
 
-Character work runs in parallel on the PC and does not block the cloud steps:
+Parallel on the PC: H1 custom hero (2 test heroes, pick, rig on current skeleton, 2 outfits, weapons), H2 Köpenick ghoul and other enemies.
 
-| # | Step | Owner |
-|---|---|---|
-| H1 | Custom hero: 2 test heroes (MPFB in Blender vs AI generator), pick one, rig on the current skeleton, 2 outfits, pipe and second weapon | PC · Blender |
-| H2 | Köpenick ghoul, then the other Köpenick enemies | PC · Blender |
+## How each area moves
+
+| Area | Way |
+|---|---|
+| Vision, story, style, district directions, workflow | Copied/adapted (done) |
+| Item, crafting, progression data | Ported exactly, typed, tested |
+| Item and stat rules | Ported into `src/sim`, seeded |
+| Weapons, powers, bosses | Redesigned: 2D names, roles and ratios; new moves, arcs, timing |
+| Enemies | Roles, resistances, ratios ported; behavior rebuilt |
+| Maps, tunnels, camp place | Rebuilt from scratch |
+| Menus | Rebuilt as DOM UI after a mockup |
+| Menu art (icons, portraits) | 2D files as placeholders (Q5) |
+| In-world sprites | Not copied |
+| Save | New versioned format, no 2D import |
+| Audio | Ported (S1), new enemy and boss sounds |
+| Balance bot, telemetry | Ported later (M14) |
 
 ## Decided (Johannes, 2026-11-15)
 
 | # | Question | Decision |
 |---|---|---|
-| Q1 | Run structure | Walk through a zone and fight at fixed places (encounters), try that first |
-| Q2 | Expedition levels | No XP levels for now; progression inside a run comes from items and blessings. Decide later |
-| Q3 | Weapon order | Follow the 2D classes: Klinge, then Hammer, then Speer and Werfer |
-| Q4 | 2D saves | Not imported, fresh start |
-| Q7 | Map size | No fixed multiple of the 2D map. Concept first (miniaturized real geography), then the size that runs well on the Tab S9. Denser with fewer buildings is fine |
-| D | 3D or 2D | 3D is the game from now on |
+| D | 3D or 2D | 3D only; 2D is reference |
+| Q1 | Run structure | Walk a zone, fight at fixed encounters |
+| Q2 | XP levels | None; progression from items, blessings, camp. Confirmed for P1 |
+| Q3 | Weapon order | Klinge, Hammer, Speer, Werfer |
+| Q4 | 2D saves | Not imported |
+| Q7 | Map size | Concept first, size set by the Tab S9 |
+| Q8 | Districts | Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg, Fernsehturm finale. Each redrawn. Not migrated: Tempelhof, Wedding, Spandau, Marzahn |
+| Q10 | Parity scope | P1 above: with endless mode and one tunnel; without threat levels and daily fight |
+| Q11 | Camp | Menu first; walkable 3D camp later |
 
-## Open questions
+## Open
 
-| # | Question | Default if nobody decides |
+| # | Question | Default |
 |---|---|---|
-| Q5 | Menu art: keep the ChatGPT icons and portraits, or render 3D items? | Keep as placeholders |
-| Q6 | Online save and telemetry via the Google Sheet (2D `js/sync.js`): carry over? | Later, after M6 |
-| Q8 | Districts: the seven of the 2D story (Köpenick, Xhain, Alexanderplatz, Mitte, Wedding, Tempelhof, Charlottenburg) plus the Fernsehturm finale? | Yes, as in `docs/story.md` |
-| Q9 | Tool for enemy and boss voices: synthesis, CC0 packs, or a generator (text to sound effect or speech)? | Synthesis and CC0 placeholders in S2; tool chosen in S3 |
+| Q5 | Menu art: keep ChatGPT icons and portraits or render 3D items? | Keep as placeholders |
+| Q6 | Online save and telemetry (2D `js/sync.js`) | After P1 |
+| Q9 | Tool for enemy and boss voices | Synthesis and CC0 in S2; tool in S3 |

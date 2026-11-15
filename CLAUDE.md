@@ -1,8 +1,9 @@
 # Ruinenstadt Berlin
 
-3D loot ARPG in a post-collapse Berlin. Successor test of the 2D game `johakunath/Ruinenstadt` (read only, never change it from here).
+3D loot ARPG in a post-collapse Berlin. This is the game; only this repo is developed. The 2D game `johakunath/Ruinenstadt` is a read-only reference (never change it from here).
 
-- Read `docs/plan-3d.md` first: decisions, architecture, render budgets. Status: `docs/status.md`. Migration steps from the 2D game: `docs/migration.md`, task files in `docs/tasks/`, backlog `docs/backlog.md`.
+- **Next task:** `docs/migration.md` › Queue, first `open` row for your agent; follow its task file and finish with the steps in Queue › Finishing a task.
+- Plan and budgets: `docs/plan-3d.md`. Status: `docs/status.md`. Roadmap, queue, decisions: `docs/migration.md`; tasks in `docs/tasks/`; backlog `docs/backlog.md`. Read only what your task needs.
 - Maps: every district follows `docs/maps/guidelines.md` (concept, OpenStreetMap check, layout rules, invariants); Köpenick is the reference (`docs/maps/koepenick.md`).
 - Vision: `docs/vision.md`. Story: `docs/story.md`. Roles, token rules and task format for Claude and Codex: `docs/workflow.md`.
 - Art: `docs/style-bible.md` and the boards in `docs/style/` are the source of truth (Köpenick = default look). Check them before any visual work.

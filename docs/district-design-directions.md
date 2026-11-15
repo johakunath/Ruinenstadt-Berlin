@@ -2,6 +2,8 @@
 
 Copied from the 2D game `johakunath/Ruinenstadt` on 2026-11-15. Links into `assets/raw/` and `pipeline/` point to that repo. The 2:1 isometric production notes below are 2D-only; in 3D the boards guide models, materials and palettes.
 
+**3D (Johannes, 2026-11-15, migration Q8):** districts are Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg and the Fernsehturm finale. Tempelhof and Wedding are not migrated; their sections stay as reference only.
+
 **Johannes selected Tempelhof B, Wedding C and Charlottenburg A+C.** The three
 expanded final boards below develop those choices and supersede conflicting
 branding, clothing and material motifs in the historical alternatives. These

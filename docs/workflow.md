@@ -20,7 +20,7 @@ Follows the 2D repo, with two changes.
 |---|---|---|
 | `CLAUDE.md` (`AGENTS.md` points to it) | Index and rules | Same |
 | `docs/plan-3d.md` | Decisions, architecture, budgets | `BACKLOG.md` › Decisions, Tech |
-| `docs/migration.md` | Ordered steps, owners, open questions | `BACKLOG.md` › Next |
+| `docs/migration.md` | Queue (next task per agent), P1 parity milestone, steps, decisions | `BACKLOG.md` › Next |
 | `docs/backlog.md` | Ideas and wishes not yet scheduled | `BACKLOG.md` › table and Ideas |
 | `docs/status.md` | What is in the game now, known weak spots | `BACKLOG.md` › Done (version rows) |
 | `docs/playtests.md` | Playtest history | Same |
@@ -60,10 +60,14 @@ Every task in `docs/tasks/` has:
 
 If a step does not work as written, stop at that step, write the problem into the task file under `Questions`, and open the PR as draft.
 
+## Next task
+
+When Johannes says "next task": `docs/migration.md` › Queue, first `open` row for your agent. Finish with Queue › Finishing a task (task file handover, queue row, status if player-visible). Claude keeps at least one Codex task file ready.
+
 ## Definition of done
 
 - `npm run check` passes; `npm run e2e` passes after `npm run build`.
 - Sim rules have unit tests; ported data has invariant tests (ids unique, references resolve, ranges sane).
 - Visual changes: one screenshot in the PR at 1280 × 720 (`node tools/screenshot.mjs`).
-- `docs/status.md` updated when something a player sees changes.
+- `docs/status.md` updated when something a player sees changes; queue row in `docs/migration.md` set to `done`.
 - PR is a draft until CI is green.
