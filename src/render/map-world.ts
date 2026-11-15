@@ -110,8 +110,9 @@ function makeMapMats(materials: Materials): MapMats {
     })(),
     frond: materials.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
   };
-  // Everything that can stand between the camera and the hero gets the see-through cutout.
-  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.wood, m.darkWood, m.iron, m.rust, m.greenSign, m.forumSign, m.frond, ...Object.values(m.plaster)]) {
+  // Buildings, landmarks and tree crowns get the see-through cutout. Small props (iron: lamps, bridge
+  // rails, fences; wood: crates, benches) stay solid (playtest 2026-11-15).
+  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.frond, ...Object.values(m.plaster)]) {
     applyCutout(mat);
   }
   return m;
@@ -476,7 +477,7 @@ function buildPalm(b: ChunkBuilder, l: Lot): void {
   }
 }
 
-function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number, z: number) => string, group: Group, profile: { enemyShadows: boolean }): void {
+function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number, z: number) => string, group: Group): void {
   const buckets = new Map<string, TreeBucket>();
   for (const l of lots) {
     if (l.kind !== 'tree' || l.jungle) continue;
@@ -508,7 +509,8 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
   for (const bk of buckets.values()) {
     const trunks = new InstancedMesh(trunkGeo, mats.trunk, bk.trunks.length);
     bk.trunks.forEach((m, i) => trunks.setMatrixAt(i, m));
-    trunks.castShadow = profile.enemyShadows;
+    // Always: without trunk shadows the crown shadows float (playtest 2026-11-15). Instanced, cheap.
+    trunks.castShadow = true;
     trunks.receiveShadow = true;
     trunks.computeBoundingSphere();
     group.add(trunks);
@@ -727,7 +729,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       for (const z of [-1.5, 1.5]) cb.box(mats.iron, new Matrix4().setPosition(x + 20, 1.9, r.z + z), 40, 0.15, 0.12);
     }
   }
-  buildTrees(m, lots, mats, chunkKey, group, materials.profile);
+  buildTrees(m, lots, mats, chunkKey, group);
 
   const spots: LightSpot[] = [];
   const caster = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
@@ -771,10 +773,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const size = materials.profile.shadowMap;
   moon.shadow.mapSize.set(size, size);
   const cam = moon.shadow.camera;
-  cam.left = -24;
-  cam.right = 24;
-  cam.top = 22;
-  cam.bottom = -22;
+  cam.left = -30;
+  cam.right = 30;
+  cam.top = 28;
+  cam.bottom = -28;
   cam.near = 4;
   cam.far = 80;
   moon.shadow.bias = -0.0006;

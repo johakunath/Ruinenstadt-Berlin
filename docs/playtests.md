@@ -2,6 +2,26 @@
 
 Newest first. 2D history: `docs/playtests.md` in `johakunath/Ruinenstadt`.
 
+## 2026-11-15 · Köpenick first look (Johannes, Tab S9)
+
+Result: performance fine (over 90 fps, a bit warm). The map feels too big, empty and flat. Answers: `docs/migration.md` › M11b.
+
+| Point | Finding | Answer |
+|---|---|---|
+| Size | `mapscale=0.8` walks better, could be smaller still | M11b: new tighter layout; scale below 1 breaks the current lots (tests fail at 0.8) |
+| Life | Too few objects, no cars, nothing going on | M11b: cars, prop density per stretch |
+| Buildings | Too uniform, too tall; Späti and streets always rectangular | M11b: more building types, non-rectangular footprints and streets |
+| Walkable area | Streets too wide, unclear where the hero can walk | M11b: narrower streets, curbs, fences, bollards |
+| Terrain | Too flat; river banks are straight edges | M11b: more relief, irregular banks and quays |
+| Ground | Plain rectangles | M11b: ground textures, alternatives first |
+| Cutout | Lamps and bridge rails turned transparent | Fixed: only buildings, landmarks, crowns |
+| Trees | Shadow incomplete | Fixed: trunks always cast shadows, larger shadow area |
+| Späti | Should be enterable (as in 2D: safe room) | M11b |
+| Minimap | Missing | M11b, mockup first |
+| Navigation | 2D edge triangles were better | M11b: port 2D edge triangles |
+| Heat | 90+ fps on a 120 Hz tablet | Fixed: 60 fps cap |
+| Map | Could not close on touch | Fixed: touch layer swallowed taps |
+
 ## 2026-11-15 · Gate 1 (Johannes, PC, phone, Tab S9)
 
 Result: passed for feel and performance. Look fixed afterwards (plan 3D13). Later answers (run structure, weapon order, map size): `docs/migration.md` › Decided.
