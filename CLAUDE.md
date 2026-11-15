@@ -2,7 +2,8 @@
 
 3D loot ARPG in a post-collapse Berlin. Successor test of the 2D game `johakunath/Ruinenstadt` (read only, never change it from here).
 
-- Read `docs/plan-3d.md` first: decisions, architecture, render budgets, gates. Status and next steps: `docs/status.md`.
+- Read `docs/plan-3d.md` first: decisions, architecture, render budgets. Status: `docs/status.md`. Migration steps from the 2D game: `docs/migration.md`, task files in `docs/tasks/`, backlog `docs/backlog.md`.
+- Vision: `docs/vision.md`. Story: `docs/story.md`. Roles, token rules and task format for Claude and Codex: `docs/workflow.md`.
 - Art: `docs/style-bible.md` and the boards in `docs/style/` are the source of truth (Köpenick = default look). Check them before any visual work.
 - Stack: Three.js (WebGL 2), TypeScript strict, Vite, Vitest, Playwright. Versions are pinned exactly in `package.json`. No React, no ECS, no physics engine.
 - Game text is German, short: a few words or one line. Code, comments and docs are English.
@@ -28,7 +29,7 @@ The sim reports through `sim.events`; the loop in `src/main.ts` hands them to re
 - Geometry of the world is built in code and merged per material (`src/render/batch.ts`). Keep draw calls low; things that must not show in the normal/depth pre-pass go on `FX_LAYER`.
 - Keep the light count constant at runtime (a changing count recompiles every shader).
 - Critical visual or layout decisions: show clearly distinct alternatives first (look variants, mockups). Routine work inside an approved direction: build, show, continue.
-- Do not add: inventory, loot, saves, more districts, Rapier, lightmaps, before the gate that asks for them.
+- Build features in the order of `docs/migration.md`; do not start a step before the steps it needs. Not planned: Rapier, lightmaps.
 
 ## Commands
 

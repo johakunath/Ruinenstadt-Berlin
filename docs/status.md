@@ -14,7 +14,7 @@ Updated 2026-11-15 after the gate 1 playtest. Plan and gates: `docs/plan-3d.md`.
 | Enemies | Three sizes (Schlurfer, Hetzer, Brocken), flow field plus separation, wind-up, strike, recover, stagger, death; spawner through three passages |
 | Input | Keyboard and mouse, gamepad standard mapping, touch stick and two buttons; 180 ms buffer that survives hitstop |
 | Profiles | Qualität and Leistung (`?profile=`, options menu) |
-| Looks | Gemalt, Comic, Tusche (`?look=`, options menu). Screenshots: `docs/gate1/` |
+| Look | One fixed look: painted PBR, thin ink line, saturated grade, highlight shoulder, FXAA. Screenshot: `docs/gate1/look-final.jpg` |
 | Debug | Optionen → Leistungsanzeige (or `?debug=perf`), `?debug=hit` (all shapes), `?debug=flow`, `?stress=40`, `?cam=distance,pitch` |
 | CI | Type check, 40 unit tests, build, 5 Playwright smoke tests, Pages deploy from `main` |
 
@@ -27,11 +27,11 @@ Updated 2026-11-15 after the gate 1 playtest. Plan and gates: `docs/plan-3d.md`.
 | Controller, rumble | Code path exists, never tried with a pad |
 | Touch | Checked in an emulated tablet only. Layout is provisional; #35 asks for a mockup |
 | Sound | Synthesized, checked for errors only, not by ear |
-| Hero | CC0 base body with painted clothing regions. The coat skirt can cut through the legs in wide poses. Custom hero is gate 2 |
+| Hero | CC0 base body with painted clothing regions. The coat skirt can cut through the legs in wide poses. Custom hero is task H1 |
 | Zombies | The male base body in grey-green with rags. Readable, but not the gaunt board zombie |
 | Dodge | The roll clip is squeezed into 0.24 s |
 | Facades | The fixed camera shows ground floor and first floor; upper floors are mostly out of frame |
-| Look and profile switch | Reloads the page |
+| Profile switch | Reloads the page |
 | Shadows | Static world and characters share one shadow map that renders every frame |
 | Leistung | No dynamic resolution yet. Enemies use blob shadows |
 | Asset download | `tools/fetch-assets.sh` follows the itch.io free download flow and breaks if that changes |
@@ -52,7 +52,7 @@ Draw calls and triangles depend on how many enemies are in view at that moment. 
 
 ## Gate 1 playtest (Johannes, PC, phone, Tab S9)
 
-Result: passed for feel and performance. Look not chosen yet.
+Result: passed for feel and performance. Look fixed afterwards (plan 3D13).
 
 | Point | Finding |
 |---|---|
@@ -71,7 +71,7 @@ Result: passed for feel and performance. Look not chosen yet.
 
 | # | Question | Answer |
 |---|---|---|
-| 1 | Look | Not yet: a mixed variant (see above) |
+| 1 | Look | Fixed: one look from the three (plan 3D13), screenshot `docs/gate1/look-final.jpg` |
 | 2 | Camera | Keep 44°, maybe slightly flatter. Tall buildings must not block the view (backlog B4) |
 | 3 | Finisher | Keep. One finisher per weapon later |
 | 4 | Hits never interrupt the hero | Keep |
@@ -79,14 +79,15 @@ Result: passed for feel and performance. Look not chosen yet.
 | 6 | Hero readability | Good. Dark areas get a head lamp or torch (backlog B7) |
 | 7 | Hero base | Woman with tied-up dark hair, female base body: confirmed |
 
-## Next (gate 2)
+## Next
+
+Gates 2 and 3 are replaced by `docs/migration.md` (plan 3D14).
 
 | Order | Work | Where |
 |---|---|---|
-| 1 | Look variants for the mixed look: 2 to 3 renders side by side, Johannes picks. Thinner outline (1 px at device resolution, antialiased), saturation up, highlights tone-mapped so windows and fire do not blow out | Cloud |
-| 2 | #35 combat flow tuned by playing, written to `docs/combat-feel.md` | Cloud builds, Johannes plays |
-| 3 | Custom hero: 2 test heroes (MPFB vs AI generator), then 2 outfits and 2 weapons | PC with Blender |
-| 4 | Touch layout mockup | Cloud |
-| 5 | One custom Köpenick ghoul | PC with Blender |
+| 1 | M1 item data port (`docs/tasks/m1-item-data.md`) | Cloud, Codex |
+| 2 | M10 Köpenick map concept, in parallel with M1 to M4 | Cloud, Claude, Johannes decides |
+| 3 | M2 to M6: item logic, stats, loot, inventory, save with wave checkpoint | Cloud |
+| 4 | H1 custom hero, H2 Köpenick ghoul | PC with Blender |
 
-Backlog from the playtest: `docs/backlog.md`.
+Backlog: `docs/backlog.md`.
