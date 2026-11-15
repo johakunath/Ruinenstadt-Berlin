@@ -15,6 +15,7 @@ export interface UiHandlers {
   onOptionsToggle(open: boolean): void;
   onProfile(id: ProfileId): void;
   onVolume(v: number): void;
+  onMusic(on: boolean): void;
   onRumble(on: boolean): void;
   onShowPerf(on: boolean): void;
   /** Expedition maps: the in-game map opened or closed (pauses the game). */
@@ -61,6 +62,9 @@ export class Ui {
     const volume = el<HTMLInputElement>('opt-volume');
     volume.value = String(Math.round(opts.volume * 100));
     volume.addEventListener('input', () => handlers.onVolume(Number(volume.value) / 100));
+    const music = el<HTMLInputElement>('opt-music');
+    music.checked = opts.music;
+    music.addEventListener('change', () => handlers.onMusic(music.checked));
     const rumble = el<HTMLInputElement>('opt-rumble');
     rumble.checked = opts.rumble;
     rumble.addEventListener('change', () => handlers.onRumble(rumble.checked));

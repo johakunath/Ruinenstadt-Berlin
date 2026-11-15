@@ -48,16 +48,27 @@ test('Qualität renders without errors', async ({ page }, testInfo) => {
   expect(errors).toEqual([]);
 });
 
-test('options menu pauses the fight', async ({ page }) => {
+test('options pause the fight and persist independent music and volume controls', async ({ page }) => {
   await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');
   await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 90_000 });
   await page.locator('#menu-btn').click();
   await expect(page.locator('#options')).toBeVisible();
+  await expect(page.locator('#opt-music')).toBeChecked();
+  await page.locator('#opt-music').uncheck();
+  await page.locator('#opt-volume').fill('35');
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.options') ?? '{}') as { music: boolean; volume: number });
+  expect(stored.music).toBe(false);
+  expect(stored.volume).toBe(.35);
   const tick = await page.evaluate(() => window.__game?.sim().tick ?? 0);
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__game?.sim().tick ?? 0)).toBe(tick);
   await page.locator('#close-options').click();
   await page.waitForFunction((t) => (window.__game?.sim().tick ?? 0) > t, tick, { timeout: 60_000 });
+  await page.reload();
+  await page.locator('#menu-btn').click();
+  await expect(page.locator('#opt-music')).not.toBeChecked();
+  await expect(page.locator('#opt-volume')).toHaveValue('35');
+  await page.locator('#opt-music').check();
 });
 
 test('Köpenick: the first encounter starts, waves spawn, the map opens and pauses', async ({ page }, testInfo) => {
