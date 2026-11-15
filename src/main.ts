@@ -208,11 +208,14 @@ let last = performance.now();
 let acc = 0;
 
 /** 60 fps cap: the sim steps at 60 Hz, so faster frames only heat the tablet (playtest 2026-11-15, 90+ fps on the Tab S9). */
-const MIN_FRAME_MS = 1000 / 60 - 2;
+const FRAME_MS = 1000 / 60;
+// Deadline keeps the remainder, so 75, 90 and 144 Hz displays still average 60 fps (Codex review).
+let nextAt = 0;
 
 function frame(now: number): void {
   requestAnimationFrame(frame);
-  if (now - last < MIN_FRAME_MS) return;
+  if (now < nextAt - 1) return;
+  nextAt = Math.max(nextAt + FRAME_MS, now - FRAME_MS);
   const frameMs = now - last;
   last = now;
   const dt = Math.min(0.1, frameMs / 1000);
