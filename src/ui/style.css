@@ -1,0 +1,313 @@
+:root {
+  --panel: #14282b;
+  --panel-2: #20363e;
+  --cream: #f0d9b0;
+  --ochre: #db8c2b;
+  --rust: #8b4a35;
+  --scarf: #b8261c;
+  --ink: #0d1113;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1a1d;
+  color: var(--cream);
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Red edge when the hero is hit. */
+#hurt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 18vmin 4vmin rgba(184, 38, 28, 0.75);
+  opacity: 0;
+}
+#hurt.on {
+  animation: hurt 0.45s ease-out;
+}
+@keyframes hurt {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.hp {
+  width: min(300px, 38vw);
+  height: 16px;
+  border: 2px solid var(--ink);
+  outline: 1px solid rgba(240, 217, 176, 0.35);
+  background: rgba(13, 17, 19, 0.75);
+  border-radius: 3px;
+  overflow: hidden;
+}
+#hp-fill {
+  height: 100%;
+  background: linear-gradient(#d2382b, #8f1d17);
+  transform-origin: left;
+  transition: transform 0.12s ease-out;
+}
+.kills {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px #000;
+  line-height: 20px;
+}
+.kills b {
+  color: var(--ochre);
+  font-size: 17px;
+}
+#menu-btn {
+  pointer-events: auto;
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  padding: 0;
+}
+
+button {
+  font: inherit;
+  color: var(--cream);
+  background: var(--panel-2);
+  border: 2px solid var(--ink);
+  outline: 1px solid rgba(240, 217, 176, 0.25);
+  border-radius: 4px;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  background: #2b4852;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+button.primary {
+  background: var(--scarf);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+button.primary:hover:not(:disabled) {
+  background: #d2382b;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(ellipse at center, rgba(11, 26, 29, 0.35), rgba(11, 26, 29, 0.82));
+}
+.panel {
+  width: min(420px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 26px 26px 22px;
+  background: linear-gradient(var(--panel-2), var(--panel));
+  border: 2px solid var(--ink);
+  outline: 1px solid rgba(240, 217, 176, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+h1,
+h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-shadow: 0 2px 0 var(--ink);
+}
+h1 {
+  font-size: clamp(26px, 6vw, 38px);
+  line-height: 1.05;
+}
+h1 span {
+  display: block;
+  color: var(--ochre);
+  font-size: 0.62em;
+  letter-spacing: 0.5em;
+  margin-top: 6px;
+}
+h2 {
+  font-size: 26px;
+}
+h3 {
+  margin: 6px 0 -4px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ochre);
+  text-align: left;
+}
+.sub {
+  margin: 0 0 6px;
+  opacity: 0.8;
+  letter-spacing: 0.06em;
+}
+.keys,
+#loading {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  opacity: 0.7;
+}
+.choices {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+}
+.choice {
+  padding: 9px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.choice span {
+  font-size: 11px;
+  opacity: 0.7;
+  line-height: 1.25;
+}
+.choice.on {
+  border-color: var(--ochre);
+  outline-color: var(--ochre);
+  background: #2f4a3f;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+}
+.row input[type='range'] {
+  flex: 1;
+  accent-color: var(--ochre);
+}
+.row input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--ochre);
+}
+
+#perf {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  margin: 0;
+  padding: 6px 9px;
+  font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace;
+  color: #bfe9e2;
+  background: rgba(13, 17, 19, 0.72);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Touch controls: stick on the left half, two thumb buttons on the right. */
+#touch {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+#stick-zone {
+  position: absolute;
+  left: 0;
+  top: 64px;
+  bottom: 0;
+  width: 50%;
+  pointer-events: auto;
+}
+#stick {
+  position: absolute;
+  width: 124px;
+  height: 124px;
+  margin: -62px 0 0 -62px;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 217, 176, 0.35);
+  background: rgba(13, 17, 19, 0.3);
+  left: 110px;
+  top: calc(100% - 120px);
+  opacity: 0.45;
+}
+#stick.on {
+  opacity: 0.9;
+}
+#knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(240, 217, 176, 0.55);
+  transform: translate(-50%, -50%);
+}
+#btn-attack,
+#btn-dodge {
+  position: absolute;
+  pointer-events: auto;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+#btn-attack {
+  right: max(26px, env(safe-area-inset-right));
+  bottom: max(34px, env(safe-area-inset-bottom));
+  width: 104px;
+  height: 104px;
+  background: rgba(184, 38, 28, 0.75);
+}
+#btn-dodge {
+  right: calc(max(26px, env(safe-area-inset-right)) + 116px);
+  bottom: max(22px, env(safe-area-inset-bottom));
+  width: 78px;
+  height: 78px;
+  background: rgba(32, 54, 62, 0.8);
+}

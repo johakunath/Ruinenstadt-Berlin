@@ -1,0 +1,163 @@
+// The simulation: one fixed 60 Hz step. No rendering, no DOM, no Three.js; unit tested.
+import { HIT_FEEL, PLAYER } from '../data/combat';
+import { COURTYARD, courtyardColliders } from '../data/courtyard';
+import { SPAWN } from '../data/enemies';
+import { sectorHitsCircle } from './collide';
+import { randomYardSpot, resolveBodies, spawnEnemy, updateEnemies, updateSpawner } from './enemies';
+import { FlowField } from './flowfield';
+import { lerp, Rng } from './math';
+import { createPlayer, updatePlayer } from './player';
+import { DT, type Enemy, type Sim, type SimInput } from './types';
+
+export interface SimOptions {
+  seed?: number;
+  /** Keep this many enemies alive from the first step (`?stress=40`). */
+  stress?: number;
+  /** Skip the opening group and the spawner (tests place enemies themselves). */
+  empty?: boolean;
+}
+
+export function createSim(opts: SimOptions = {}): Sim {
+  const colliders = courtyardColliders();
+  const sim: Sim = {
+    tick: 0,
+    time: 0,
+    player: createPlayer(),
+    enemies: [],
+    events: [],
+    hitstop: 0,
+    consumed: { attack: false, dodge: false },
+    colliders,
+    flow: new FlowField(COURTYARD.bounds, colliders),
+    rng: new Rng(opts.seed ?? 1),
+    nextId: 1,
+    kills: 0,
+    spawnT: opts.empty ? Infinity : 1.5,
+    stress: opts.stress ?? 0,
+  };
+  sim.flow.setTarget(sim.player.x, sim.player.z);
+  if (!opts.empty) {
+    const opening = sim.stress > 0 ? sim.stress : SPAWN.startAlive - 2;
+    for (let i = 0; i < opening; i++) {
+      const s = randomYardSpot(sim, 6);
+      spawnEnemy(sim, s.x, s.z);
+    }
+  }
+  sim.events.length = 0;
+  return sim;
+}
+
+/** Advances the world by one fixed step. */
+export function stepSim(sim: Sim, input: SimInput): void {
+  sim.consumed.attack = false;
+  sim.consumed.dodge = false;
+  const p = sim.player;
+  p.px = p.x;
+  p.pz = p.z;
+  p.pfacing = p.facing;
+  for (const e of sim.enemies) {
+    e.px = e.x;
+    e.pz = e.z;
+    e.pfacing = e.facing;
+  }
+  // Hitstop: attacker and targets freeze; the input layer keeps buffering.
+  if (sim.hitstop > 0) {
+    sim.hitstop = Math.max(0, sim.hitstop - DT);
+    return;
+  }
+  updatePlayer(sim, input);
+  sim.flow.setTarget(p.x, p.z);
+  updateEnemies(sim);
+  resolveBodies(sim);
+  playerSweep(sim);
+  enemyStrikes(sim);
+  updateSpawner(sim);
+  sim.tick++;
+  sim.time += DT;
+}
+
+/** Sweeps the weapon arc through this step's slice of the active frames. One hit per target per swing. */
+function playerSweep(sim: Sim): void {
+  const p = sim.player;
+  const a = p.attack;
+  p.sweeping = false;
+  if (p.state !== 'attack' || !a) return;
+  const t1 = p.stateT;
+  const t0 = t1 - DT;
+  if (t1 < a.windup || t0 >= a.windup + a.active) return;
+  const f0 = Math.max(0, (t0 - a.windup) / a.active);
+  const f1 = Math.min(1, (t1 - a.windup) / a.active);
+  const a0 = lerp(a.from, a.to, f0);
+  const a1 = lerp(a.from, a.to, f1);
+  const lo = Math.min(a0, a1) - a.width;
+  const hi = Math.max(a0, a1) + a.width;
+  p.sweeping = true;
+  p.sweepLo = lo;
+  p.sweepHi = hi;
+  const feel = HIT_FEEL[a.weight];
+  for (const e of sim.enemies) {
+    if (e.state === 'dead' || p.hits.includes(e.id)) continue;
+    if (!sectorHitsCircle(p.x, p.z, p.facing, lo, hi, a.inner, a.reach, e.x, e.z, e.def.radius)) continue;
+    p.hits.push(e.id);
+    let dx = e.x - p.x;
+    let dz = e.z - p.z;
+    const d = Math.hypot(dx, dz) || 1;
+    dx /= d;
+    dz /= d;
+    e.hp -= a.damage;
+    e.kx += dx * a.knockback * e.def.knockbackTaken;
+    e.kz += dz * a.knockback * e.def.knockbackTaken;
+    const killed = e.hp <= 0;
+    if (killed) {
+      killEnemy(sim, e);
+    } else if (!e.def.poise || a.weight === 'heavy') {
+      e.state = 'stagger';
+      e.stateT = 0;
+      e.staggerDur = feel.stagger;
+    }
+    sim.hitstop = Math.max(sim.hitstop, feel.hitstop + (killed ? PLAYER.killHitstop : 0));
+    sim.events.push({
+      type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius,
+      dx, dz, weight: a.weight, killed, damage: a.damage,
+    });
+  }
+}
+
+function killEnemy(sim: Sim, e: Enemy): void {
+  e.state = 'dead';
+  e.stateT = 0;
+  e.hp = 0;
+  sim.kills++;
+}
+
+function enemyStrikes(sim: Sim): void {
+  const p = sim.player;
+  if (p.state === 'dead') return;
+  for (const e of sim.enemies) {
+    if (e.state !== 'strike' || e.struck) continue;
+    if (p.invuln > 0 || p.hurtT < PLAYER.hitGrace) continue;
+    const def = e.def;
+    if (!sectorHitsCircle(e.x, e.z, e.facing, -def.halfAngle, def.halfAngle, 0, def.reach, p.x, p.z, PLAYER.radius)) continue;
+    e.struck = true;
+    const damage = Math.min(def.damage, PLAYER.maxHp * PLAYER.maxHitShare);
+    let dx = p.x - e.x;
+    let dz = p.z - e.z;
+    const d = Math.hypot(dx, dz) || 1;
+    dx /= d;
+    dz /= d;
+    p.hp = Math.max(0, p.hp - damage);
+    p.hurtT = 0;
+    sim.hitstop = Math.max(sim.hitstop, PLAYER.hitByEnemyHitstop);
+    sim.events.push({ type: 'playerHit', x: p.x, z: p.z, dx, dz, damage });
+    if (p.hp <= 0) {
+      p.state = 'dead';
+      p.stateT = 0;
+      p.attack = null;
+      p.sweeping = false;
+      p.vx = dx * 3;
+      p.vz = dz * 3;
+      sim.events.push({ type: 'playerDie' });
+      return;
+    }
+  }
+}
