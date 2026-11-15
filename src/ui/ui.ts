@@ -30,6 +30,7 @@ export class Ui {
   private readonly hurt = el<HTMLDivElement>('hurt');
   private readonly options = el<HTMLDivElement>('options');
   private lastHp = -1;
+  private lastMaxHp = -1;
   private lastKills = -1;
   private lastObjective = '';
   private lastArrow = 999;
@@ -202,8 +203,9 @@ export class Ui {
   }
 
   hud(hp: number, maxHp: number, kills: number): void {
-    if (hp !== this.lastHp) {
+    if (hp !== this.lastHp || maxHp !== this.lastMaxHp) {
       this.lastHp = hp;
+      this.lastMaxHp = maxHp;
       this.hpFill.style.transform = `scaleX(${Math.max(0, hp / maxHp)})`;
     }
     if (kills !== this.lastKills) {

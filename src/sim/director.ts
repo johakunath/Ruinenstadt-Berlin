@@ -3,7 +3,6 @@
 // all are beaten (bosses come with the last wave). Then the circle opens, life is partly restored
 // and the next encounter becomes the objective.
 import { ENEMIES } from '../data/enemies';
-import { PLAYER } from '../data/combat';
 import { colliderDistance } from './collide';
 import { aliveCount, pickKind, spawnEnemy } from './enemies';
 import { FlowField, type Bounds } from './flowfield';
@@ -137,8 +136,8 @@ export function updateDirector(sim: Sim): void {
     return;
   }
   // Encounter won.
-  const heal = Math.round(PLAYER.maxHp * enc.heal);
-  p.hp = Math.min(PLAYER.maxHp, p.hp + heal);
+  const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * enc.heal));
+  p.hp += heal;
   sim.events.push({ type: 'encounterClear', index: run.index, heal });
   const next = sim.level.encounters[run.index + 1];
   if (!next || next.zone !== enc.zone) sim.events.push({ type: 'zoneClear', zone: enc.zone });

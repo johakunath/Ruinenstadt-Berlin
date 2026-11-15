@@ -1,12 +1,14 @@
 // Game loop: fixed 60 Hz sim steps, interpolated rendering, input polled every frame.
 import './ui/style.css';
 import { GameAudio } from './audio/audio';
-import { HIT_FEEL, PLAYER } from './data/combat';
+import { HIT_FEEL } from './data/combat';
 import { Input } from './input/input';
 import { readOptions, reloadWith, storeOptions } from './options';
 import { LOOK } from './render/looks';
 import { PROFILES } from './render/profile';
 import { GameRenderer } from './render/renderer';
+import { setLoadout } from './sim/loadout';
+import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
@@ -52,12 +54,12 @@ let renderer: GameRenderer | null = null;
 const ui = new Ui(opts, {
   onPlay: () => start(),
   onRetry: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint() });
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext });
     renderer?.reset(sim);
     start();
   },
   onAgain: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level });
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext });
     renderer?.reset(sim);
     start();
   },
@@ -259,7 +261,7 @@ function frame(now: number): void {
   if (level) expeditionHud();
 
   renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
-  ui.hud(sim.player.hp, PLAYER.maxHp, sim.kills);
+  ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
     ui.setPerf(
@@ -296,6 +298,7 @@ declare global {
       sim(): Sim;
       perf(): { fps: number; p95: number; calls: number; triangles: number; simMs: number } | null;
       start(): void;
+      setLoadout(equipment: Equipment, context?: Partial<StatContext>): void;
       /** Stops the automatic sim steps so a script can step by hand. */
       hold(on: boolean): void;
       step(input: Partial<SimInput>, steps: number): void;
@@ -307,6 +310,7 @@ window.__game = {
   sim: () => sim,
   perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs } : null),
   start,
+  setLoadout: (equipment, context) => setLoadout(sim, equipment, context),
   hold: (on) => {
     held = on;
   },

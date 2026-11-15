@@ -4,6 +4,7 @@ import type { Collider } from './collide';
 import type { FlowField } from './flowfield';
 import type { Level } from './level';
 import type { Rng } from './math';
+import type { Equipment, HeroStats, StatContext } from './stats';
 
 /** Fixed simulation step. */
 export const DT = 1 / 60;
@@ -42,6 +43,9 @@ export interface Player {
   /** Seconds in the current state. */
   stateT: number;
   attack: AttackDef | null;
+  /** Gear speed and critical roll captured when this swing starts. */
+  attackSpeed: number;
+  critical: boolean;
   /** Counts swings; render uses it to restart clips and trails. */
   swing: number;
   /** Enemy ids already hit by the current swing. */
@@ -94,7 +98,7 @@ export interface Enemy {
 
 export type SimEvent =
   | { type: 'swing'; attack: AttackId; weight: HitWeight }
-  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number }
+  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean }
   | { type: 'dodge' }
   | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number }
   | { type: 'playerDie' }
@@ -124,6 +128,9 @@ export interface RunState {
 }
 
 export interface Sim {
+  equipment: Equipment;
+  statContext: StatContext;
+  stats: HeroStats;
   tick: number;
   time: number;
   player: Player;

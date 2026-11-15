@@ -215,6 +215,7 @@ class Smear {
       const head = (t - a.windup) / a.active;
       if (head > 0) {
         this.mesh.geometry = this.geos.get(a.id) as BufferGeometry;
+        this.mesh.scale.setScalar(a.reach / ATTACKS[a.id].reach);
         const sx = lerp(p.px, p.x, alpha);
         const sz = lerp(p.pz, p.z, alpha);
         this.mesh.position.set(sx, groundY(sx, sz) + (a.style === 'smash' ? 0.12 : 1.05), sz);

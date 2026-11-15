@@ -115,7 +115,7 @@ export class GameAudio {
     if (this.volume > 0) this.effects?.play(id, rarity, pan, volume);
   }
   swing(weight: HitWeight): void { this.play(weight === 'heavy' ? 'heavy' : 'swing'); }
-  hit(_weight: HitWeight, killed: boolean): void { this.play('hit'); if (killed) this.play('kill'); }
+  hit(_weight: HitWeight, killed: boolean, critical = false): void { this.play(critical ? 'crit' : 'hit'); if (killed) this.play('kill'); }
   dodge(): void { this.play('dash'); }
   hurt(): void { this.play('hurt'); }
 
@@ -123,7 +123,7 @@ export class GameAudio {
   onEvent(event: SimEvent): void {
     switch (event.type) {
       case 'swing': this.swing(event.weight); break;
-      case 'hit': this.hit(event.weight, event.killed); break;
+      case 'hit': this.hit(event.weight, event.killed, event.critical); break;
       case 'dodge': this.dodge(); break;
       case 'playerHit': this.hurt(); break;
       case 'playerDie': this.death(); break;
