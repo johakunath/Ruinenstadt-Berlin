@@ -262,14 +262,14 @@ async function buildHero() {
   const body = mesh.listPrimitives()[0];
   const dom = dominantJoints(body, skin);
 
-  const COAT = '#6f4a2a';
+  const COAT = '#8a5c33';
   const TROUSERS = '#3d3a36';
   const BOOTS = '#2a1f17';
   const SHIRT = '#b3a283';
   const WRAP = '#c2b08e';
   const LEATHER = '#4a2f1a';
   const BRASS = '#c9973a';
-  const SCARF = '#b8261c';
+  const SCARF = '#d22c1e';
 
   // Section radii must be sampled before the cloth grows.
   const waistY = jointPos(skin, 'spine_01')[1] - 0.01;
@@ -524,15 +524,15 @@ async function buildZombie() {
       blots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" opacity="${(0.25 + hash(i, 4, 4) * 0.45).toFixed(2)}"/>`;
     }
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><filter id="b"><feGaussianBlur stdDeviation="4"/></filter><g filter="url(#b)">${blots}</g></svg>`;
-    const base = await img.modulate({ saturation: 0.3, brightness: 0.92 }).tint({ r: 150, g: 172, b: 146 }).toBuffer();
+    const base = await img.modulate({ saturation: 0.25, brightness: 1.35 }).tint({ r: 196, g: 200, b: 176 }).toBuffer();
     return sharp(base).composite([{ input: Buffer.from(svg), blend: 'multiply' }]);
   });
   const skin = root.listSkins()[0];
   const bodyNode = root.listNodes().find((n) => n.getName() === 'SuperHero_Male');
   const mesh = bodyNode.getMesh();
   const body = mesh.listPrimitives()[0];
-  const RAGS = '#46493a';
-  const SHIRT = '#5a5347';
+  const RAGS = '#4f5a52';
+  const SHIRT = '#7a6a55';
   dress(doc, mesh, body, skin, (joint, x, y, z) => {
     // Torn trousers: one leg longer than the other.
     if (/^(pelvis|thigh)/.test(joint) || (/^calf/.test(joint) && y > (x > 0 ? 0.42 : 0.24))) return { color: RAGS, grow: 0.006 };

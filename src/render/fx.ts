@@ -103,7 +103,7 @@ class Particles {
           float d = length(gl_PointCoord - 0.5);
           float a = smoothstep(0.5, 0.12, d) * vColor.a;
           if (a < 0.003) discard;
-          gl_FragColor = vec4(vColor.rgb * ${blending === AdditiveBlending ? 'a' : '1.0'}, a);
+          gl_FragColor = vec4(vColor.rgb * ${blending === AdditiveBlending ? 'a' : '1.0'}, a${blending === AdditiveBlending ? '' : ' * 0.4'});
         }`,
       blending,
       transparent: true,
@@ -215,10 +215,10 @@ class Smear {
       const head = (t - a.windup) / a.active;
       if (head > 0) {
         this.mesh.geometry = this.geos.get(a.id) as BufferGeometry;
-        this.mesh.position.set(lerp(p.px, p.x, alpha), 1.05, lerp(p.pz, p.z, alpha));
+        this.mesh.position.set(lerp(p.px, p.x, alpha), a.style === 'smash' ? 0.12 : 1.05, lerp(p.pz, p.z, alpha));
         this.mesh.rotation.set(0, lerpAngle(p.pfacing, p.facing, alpha), 0);
-        // Diagonal slashes lean with the swing direction; the finisher stays flat.
-        this.mesh.rotateZ(a.weight === 'heavy' ? 0 : Math.sign(a.to - a.from) * 0.22);
+        // Slashes lean with the swing direction; the smash fans out flat on the ground.
+        this.mesh.rotateZ(a.style === 'smash' ? 0 : Math.sign(a.to - a.from) * 0.2);
         this.material.uniforms.head!.value = Math.min(1, head);
         this.fade = head <= 1 ? 1 : Math.max(0, 1 - (head - 1) * a.active * 9);
       }
@@ -273,7 +273,7 @@ class Telegraphs {
       slot.fill.scale.setScalar(Math.max(0.05, k));
       const strike = e.state === 'strike';
       (slot.rim.material as MeshBasicMaterial).opacity = strike ? 0.5 : 0.1 + 0.12 * k;
-      (slot.fill.material as MeshBasicMaterial).opacity = strike ? 0.9 : 0.16 + 0.3 * k;
+      (slot.fill.material as MeshBasicMaterial).opacity = strike ? 0.8 : 0.1 + 0.22 * k;
       (slot.fill.material as MeshBasicMaterial).color.setHex(strike ? 0xffd6a0 : 0xff4a1e);
     }
     for (let i = used; i < this.pool.length; i++) {
@@ -393,7 +393,7 @@ export class Fx {
         x: x + Math.cos(a) * 0.2, y: 0.15, z: z + Math.sin(a) * 0.2,
         vx: Math.cos(a) * s, vy: this.rng.range(0.2, 0.9), vz: Math.sin(a) * s,
         life: this.rng.range(0.35, 0.7), size: this.rng.range(0.35, 0.7), grow: 2.2,
-        r: 0.42, g: 0.4, b: 0.36, gravity: -0.3, drag: 3,
+        r: 0.2, g: 0.2, b: 0.19, gravity: -0.3, drag: 3,
       });
     }
   }

@@ -495,9 +495,9 @@ function buildProp(b: Builder, p: Prop, rng: Rng): void {
       }
       b.shadowBox(part(0, 1.3, 0), 2.2, 2.5, 5.5);
       const ivyGeo = new PlaneGeometry(1, 1);
-      for (let i = 0; i < 26; i++) {
+      for (let i = 0; i < 12; i++) {
         const g = rng.range(0.6, 1);
-        b.cards.of(m.ivy).add(ivyGeo, part(rng.range(-1.0, 1.0), 2.6 + rng.range(-0.02, 0.1), rng.range(-2.7, 0.5)).multiply(new Matrix4().makeRotationX(-Math.PI / 2 + rng.range(-0.4, 0.4))).multiply(tmpScale.makeScale(1.1, 1.1, 1)), [g * 0.9, g, g * 0.7]);
+        b.cards.of(m.ivy).add(ivyGeo, part(rng.range(-1.0, 1.0), 2.6 + rng.range(-0.02, 0.1), rng.range(-2.7, -0.9)).multiply(new Matrix4().makeRotationX(-Math.PI / 2 + rng.range(-0.4, 0.4))).multiply(tmpScale.makeScale(1.1, 1.1, 1)), [g * 0.9, g, g * 0.7]);
       }
       for (let i = 0; i < 18; i++) {
         const g = rng.range(0.6, 1);
@@ -720,7 +720,8 @@ export function buildWorld(materials: Materials): World {
 
   // Lights sorted by importance; the profile caps how many are real.
   b.lights.sort((a, c) => c.base * (1 + c.flicker) - a.base * (1 + a.flicker));
-  const lights = b.lights.slice(0, materials.profile.maxPointLights);
+  // One slot is kept for the hero's fill light (see GameRenderer).
+  const lights = b.lights.slice(0, materials.profile.maxPointLights - 1);
   for (const l of lights) group.add(l.light);
 
   // The far ends of the passages fade into darkness.

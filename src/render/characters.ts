@@ -160,6 +160,11 @@ export class Animator {
       if (l.w !== target) l.w = target > l.w ? Math.min(1, l.w + step) : Math.max(0, l.w - step);
       sum += l.w;
     }
+    if (sum === 0 && this.current) {
+      // Nothing is posed yet (a view created during hitstop): show the current clip at once.
+      this.layer(this.current).w = 1;
+      sum = 1;
+    }
     const base = sum > 0 ? (1 - this.overlayW) / sum : 0;
     for (const [name, l] of this.layers) {
       if (name === this.overlay) this.setWeight(l, this.overlayW);
@@ -173,14 +178,17 @@ export class Animator {
 
 /** Maps time inside an attack to clip time: wind-up and active frames are squeezed onto the swing. */
 function attackClipTime(a: AttackDef, t: number): number {
+  if (t <= a.windup) return lerp(a.clipStart, a.clipSwing, t / a.windup);
   const strike = a.windup + a.active;
-  if (t <= strike) return lerp(a.clipStart, a.clipHit, t / strike);
+  if (t <= strike) return lerp(a.clipSwing, a.clipHit, (t - a.windup) / a.active);
   return a.clipHit + (t - strike);
 }
 
 /** Roll clip range used for the dodge. */
-const ROLL_FROM = 0.12;
-const ROLL_TO = 0.92;
+const ROLL_FROM = 0.22;
+const ROLL_TO = 0.95;
+/** Death01 starts with a long stagger; skip into it. */
+const DEATH_FROM = 0.35;
 const RUN_CLIP_SPEED = 6.2;
 
 function buildPipe(materials: Materials): Group {
@@ -252,11 +260,14 @@ export class HeroView {
     const t = p.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;
     if (p.state === 'attack' && p.attack) {
-      a.pose(p.attack.clip, attackClipTime(p.attack, t), 0.05);
+      const ct = attackClipTime(p.attack, t);
+      const len = a.duration(p.attack.clip);
+      if (ct < len || !p.attack.rec) a.pose(p.attack.clip, ct, 0.05);
+      else a.pose(p.attack.rec, ct - len, 0.06);
     } else if (p.state === 'dodge') {
       a.pose('Roll', lerp(ROLL_FROM, ROLL_TO, Math.min(1, t / PLAYER.dodge.duration)), 0.04);
     } else if (p.state === 'dead') {
-      a.pose('Death01', t, 0.12);
+      a.pose('Death01', DEATH_FROM + t * 1.2, 0.12);
     } else {
       const speed = Math.hypot(p.vx, p.vz);
       if (speed > 0.8) a.loop('Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED));
@@ -295,8 +306,8 @@ export class HeroView {
 // ---------------------------------------------------------------- enemies
 
 /** Clip time of Zombie_Scratch at which the claw lands. */
-const SCRATCH_HIT = 0.78;
-const SCRATCH_SWIPE = 0.2;
+const SCRATCH_HIT = 0.55;
+const SCRATCH_SWIPE = 0.16;
 const WALK_CLIP_SPEED = 1.15;
 const FLASH_TIME = 0.1;
 const WHITE = new Color(0xffffff);
@@ -376,7 +387,7 @@ export class EnemyView {
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt);
       const k = Math.min(1, (this.flash / FLASH_TIME) * 2);
-      for (const m of this.mats) m.emissive.copy(WHITE).multiplyScalar(k * 1.6);
+      for (const m of this.mats) m.emissive.copy(WHITE).multiplyScalar(k * 0.85);
     }
     const t = e.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;
@@ -402,7 +413,7 @@ export class EnemyView {
         else a.pose('Hit_Chest', t, 0.03);
         break;
       case 'dead': {
-        a.pose('Death01', t * 1.25, 0.06);
+        a.pose('Death01', DEATH_FROM + t * 1.3, 0.06);
         // Sink into the ground before the body is removed.
         const sink = Math.max(0, t - (SPAWN.corpseTime - 0.8)) / 0.8;
         this.root.position.y = -sink * 0.55;

@@ -1,7 +1,8 @@
 // Ties the scene together: world, characters, effects, camera, post-processing.
 // The sim knows nothing about this file; it reads sim state and events and draws them.
 import {
-  ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, Scene, SphereGeometry, Vector3,
+  ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
+  SphereGeometry, Vector3,
   WebGLRenderer, type Texture,
 } from 'three';
 import { HIT_FEEL } from '../data/combat';
@@ -64,6 +65,8 @@ export class GameRenderer {
   private readonly views = new Map<number, EnemyView>();
   private readonly pool: EnemyView[] = [];
   private readonly debug: HitDebug | null;
+  /** Soft fill that travels with the hero so the fight reads against the dark ground. */
+  private readonly heroLight = new PointLight(0xffe2bd, 9, 7, 1.4);
   private time = 0;
   private height = 720;
 
@@ -81,7 +84,7 @@ export class GameRenderer {
     this.scene.environmentIntensity = 0.55;
     this.scene.add(world.group);
     this.hero = new HeroView(assets, materials);
-    this.scene.add(this.hero.root);
+    this.scene.add(this.hero.root, this.heroLight);
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows });
     this.scene.add(this.fx.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
@@ -182,6 +185,7 @@ export class GameRenderer {
     const px = lerp(p.px, p.x, alpha);
     const pz = lerp(p.pz, p.z, alpha);
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt);
+    this.heroLight.position.set(px, 2.8, pz + 1.6);
     this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height));
     this.debug?.update(sim, alpha);
 

@@ -12,7 +12,7 @@ export const PALETTE = {
   teal: '#516a62',
   rust: '#8b4a35',
   oxblood: '#591e1e',
-  bvg: '#eba71e',
+  bvg: '#e89a1a',
   ink: '#16110f',
   scarf: '#b8261c',
 } as const;
@@ -892,10 +892,10 @@ export function paintVan(view: 'side' | 'front' | 'roof', o: PaintOptions): Surf
     ctx.fillRect(0, 430, W, 82);
   }
   // Rust from the roof edge and the sills, plus chips.
-  for (let i = 0; i < (view === 'roof' ? 60 : 34); i++) {
+  for (let i = 0; i < (view === 'roof' ? 22 : 34); i++) {
     const x = rng.range(0, W);
     const y = view === 'roof' ? rng.range(0, H) : rng.pick([rng.range(0, 40), rng.range(240, 300), rng.range(400, H)]);
-    const r = rng.range(6, 30);
+    const r = rng.range(6, view === 'roof' ? 16 : 30);
     ctx.fillStyle = 'rgba(110,56,28,0.55)';
     ctx.fillRect(x - r * 0.35, y, r * 0.7, r * rng.range(2, 5));
     ctx.fillStyle = '#7b4326';

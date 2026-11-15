@@ -8,11 +8,19 @@ export type AttackId = 'light1' | 'light2' | 'light3' | 'dash';
 
 export interface AttackDef {
   id: AttackId;
-  /** Animation clip and where the sim phases sit inside it (see `src/render/characters.ts`). */
+  /**
+   * Animation clip and where the sim phases sit inside it (measured with tools/clip-swing.mjs):
+   * the wind-up plays clipStart → clipSwing, the active frames clipSwing → clipHit, then the clip
+   * runs on at normal speed and hands over to `rec` when it ends.
+   */
   clip: string;
-  /** Clip time at which the swing starts and at which the weapon has passed through. */
   clipStart: number;
+  clipSwing: number;
   clipHit: number;
+  /** Recovery clip that returns to the guard pose, or null when the clip contains it. */
+  rec: string | null;
+  /** `slash` sweeps a flat arc at chest height, `smash` comes down in front. */
+  style: 'slash' | 'smash';
   /** Time before the first active frame. Light ≤ 0.10, heavy ≤ 0.20. */
   windup: number;
   /** Active frames: the weapon arc sweeps `from` → `to` over this time. */
@@ -36,27 +44,28 @@ export interface AttackDef {
 
 export const ATTACKS: Record<AttackId, AttackDef> = {
   light1: {
-    id: 'light1', clip: 'Sword_Regular_A', clipStart: 0.1, clipHit: 0.3,
+    id: 'light1', clip: 'Sword_Regular_A', clipStart: 0.1, clipSwing: 0.2, clipHit: 0.275, rec: 'Sword_Regular_A_Rec', style: 'slash',
     windup: 0.08, active: 0.1, recovery: 0.26,
     from: -75 * DEG, to: 55 * DEG, width: 8 * DEG, inner: 0.2, reach: 2.15,
     damage: 10, knockback: 5, weight: 'light', lunge: 0.55, next: 'light2',
   },
   light2: {
-    id: 'light2', clip: 'Sword_Regular_B', clipStart: 0.12, clipHit: 0.36,
+    id: 'light2', clip: 'Sword_Regular_B', clipStart: 0.1, clipSwing: 0.2, clipHit: 0.285, rec: 'Sword_Regular_B_Rec', style: 'slash',
     windup: 0.08, active: 0.1, recovery: 0.28,
     from: 70 * DEG, to: -60 * DEG, width: 8 * DEG, inner: 0.2, reach: 2.15,
     damage: 10, knockback: 5, weight: 'light', lunge: 0.55, next: 'light3',
   },
+  // Finisher: the overhead smash at the end of the clip. A frontal cone instead of a wide slash.
   light3: {
-    id: 'light3', clip: 'Sword_Regular_C', clipStart: 0.2, clipHit: 0.62,
-    windup: 0.17, active: 0.12, recovery: 0.42,
-    from: -100 * DEG, to: 100 * DEG, width: 10 * DEG, inner: 0.2, reach: 2.45,
+    id: 'light3', clip: 'Sword_Regular_C', clipStart: 0.42, clipSwing: 0.6, clipHit: 0.71, rec: null, style: 'smash',
+    windup: 0.17, active: 0.08, recovery: 0.45,
+    from: -42 * DEG, to: 42 * DEG, width: 8 * DEG, inner: 0.2, reach: 2.6,
     damage: 18, knockback: 10, weight: 'heavy', lunge: 0.9, next: null,
   },
   dash: {
-    id: 'dash', clip: 'Sword_Dash', clipStart: 0.3, clipHit: 0.6,
+    id: 'dash', clip: 'Sword_Dash', clipStart: 0.18, clipSwing: 0.265, clipHit: 0.345, rec: null, style: 'slash',
     windup: 0.05, active: 0.12, recovery: 0.3,
-    from: -85 * DEG, to: 85 * DEG, width: 10 * DEG, inner: 0.2, reach: 2.6,
+    from: 85 * DEG, to: -85 * DEG, width: 10 * DEG, inner: 0.2, reach: 2.6,
     damage: 15, knockback: 9, weight: 'heavy', lunge: 1.8, next: 'light2',
   },
 };

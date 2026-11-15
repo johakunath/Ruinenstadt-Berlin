@@ -2,7 +2,8 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 120_000,
+  timeout: 240_000,
+  workers: 2,
   retries: process.env.CI ? 1 : 0,
   outputDir: 'test-results',
   use: {
