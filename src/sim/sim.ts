@@ -8,10 +8,14 @@ import { randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, updateEnemies
 import { FlowField } from './flowfield';
 import type { Level } from './level';
 import { lerp, Rng } from './math';
+import { starterEquipment, statContext } from './loadout';
+import { heroStats, type Equipment, type StatContext } from './stats';
 import { createPlayer, updatePlayer } from './player';
 import { DT, type Enemy, type Sim, type SimInput } from './types';
 
 export interface SimOptions {
+  equipment?: Equipment;
+  statContext?: Partial<StatContext>;
   seed?: number;
   /** Keep this many enemies alive from the first step (`?stress=40`). */
   stress?: number;
@@ -28,7 +32,11 @@ export function createSim(opts: SimOptions = {}): Sim {
   const startAt = opts.startAt ?? 0;
   const zone = level.encounters[startAt]?.zone ?? 0;
   const entry = startAt > 0 ? level.zones[zone]?.entry : undefined;
+  const equipment = structuredClone(opts.equipment ?? starterEquipment());
+  const context = statContext(opts.statContext);
+  const stats = heroStats(equipment, context);
   const sim: Sim = {
+    equipment, statContext: context, stats,
     tick: 0,
     time: 0,
     player: createPlayer(level, entry),
@@ -47,6 +55,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     spawnT: opts.empty || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
   };
+  sim.player.hp = stats.maxHp;
   if (level.expedition) {
     startRunAt(sim, startAt);
     focusFlow(sim, sim.player.x, sim.player.z);
@@ -137,7 +146,7 @@ function playerSweep(sim: Sim): void {
     sim.hitstop = Math.max(sim.hitstop, feel.hitstop + (killed ? PLAYER.killHitstop : 0));
     sim.events.push({
       type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius,
-      dx, dz, weight: a.weight, killed, damage: a.damage,
+      dx, dz, weight: a.weight, killed, damage: a.damage, critical: p.critical,
     });
   }
 }
@@ -147,6 +156,7 @@ function killEnemy(sim: Sim, e: Enemy): void {
   e.stateT = 0;
   e.hp = 0;
   sim.kills++;
+  if (sim.player.state !== 'dead') sim.player.hp = Math.min(sim.stats.maxHp, sim.player.hp + sim.stats.leech);
 }
 
 function enemyStrikes(sim: Sim): void {
@@ -158,7 +168,7 @@ function enemyStrikes(sim: Sim): void {
     const def = e.def;
     if (!sectorHitsCircle(e.x, e.z, e.facing, -def.halfAngle, def.halfAngle, 0, def.reach, p.x, p.z, PLAYER.radius)) continue;
     e.struck = true;
-    const damage = Math.min(def.damage * e.dmgMul, PLAYER.maxHp * PLAYER.maxHitShare);
+    const damage = Math.min(def.damage * e.dmgMul * (1 - sim.stats.res), sim.stats.maxHp * PLAYER.maxHitShare);
     let dx = p.x - e.x;
     let dz = p.z - e.z;
     const d = Math.hypot(dx, dz) || 1;

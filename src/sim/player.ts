@@ -4,6 +4,7 @@ import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
 import { DT, type Player, type Sim, type SimInput } from './types';
 import { keepInArena } from './director';
+import { dodgeCooldown, STARTER_DAMAGE } from './loadout';
 
 /** Gap between the last active frame and the earliest chained attack. */
 const CHAIN_GAP = 0.04;
@@ -13,7 +14,7 @@ export function createPlayer(level: Level, at = level.start): Player {
   return {
     x, z, px: x, pz: z, facing: Math.PI, pfacing: Math.PI, vx: 0, vz: 0,
     hp: PLAYER.maxHp, state: 'move', stateT: 0,
-    attack: null, swing: 0, hits: [], chain: null, chainT: 0,
+    attack: null, attackSpeed: 1, critical: false, swing: 0, hits: [], chain: null, chainT: 0,
     dodgeX: 0, dodgeZ: 0, dodgeCd: 0, invuln: 0, strikeT: 0, hurtT: 99,
     sweeping: false, sweepLo: 0, sweepHi: 0,
   };
@@ -53,7 +54,13 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   p.facing = attackFacing(sim, inp);
   p.state = 'attack';
   p.stateT = 0;
-  p.attack = def;
+  // Keep pose, hitbox, lunge and damage on one immutable swing snapshot.
+  const speed = sim.stats.attackSpeed;
+  p.attackSpeed = speed;
+  p.critical = sim.rng.next() < sim.stats.crit;
+  p.attack = { ...def, windup: def.windup / speed, active: def.active / speed, recovery: def.recovery / speed,
+    reach: def.reach * sim.stats.reachFactor,
+    damage: def.damage * sim.stats.damage / STARTER_DAMAGE * (p.critical ? 2 : 1) };
   p.swing++;
   p.hits.length = 0;
   p.chain = null;
@@ -112,6 +119,8 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     return;
   }
 
+  p.hp = Math.min(sim.stats.maxHp, p.hp + sim.stats.regen * DT);
+
   // Timed state ends first, so a buffered press can fire on the first legal step.
   if (p.state === 'attack' && p.attack) {
     const a = p.attack;
@@ -121,7 +130,7 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
       endToMove(p);
     }
   } else if (p.state === 'dodge' && p.stateT >= PLAYER.dodge.duration) {
-    p.dodgeCd = PLAYER.dodge.cooldown;
+    p.dodgeCd = dodgeCooldown(sim);
     p.strikeT = PLAYER.dodge.strikeGrace;
     endToMove(p);
   }
@@ -135,10 +144,10 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
       startAttack(sim, inp, p.strikeT > 0 ? 'dash' : p.chainT > 0 && p.chain ? p.chain : 'light1');
     } else if (p.state === 'dodge') {
       if (p.stateT >= PLAYER.dodge.duration * PLAYER.dodge.strikeFrom) {
-        p.dodgeCd = PLAYER.dodge.cooldown;
+        p.dodgeCd = dodgeCooldown(sim);
         startAttack(sim, inp, 'dash');
       }
-    } else if (p.state === 'attack' && p.attack?.next && p.stateT >= p.attack.windup + p.attack.active + CHAIN_GAP) {
+    } else if (p.state === 'attack' && p.attack?.next && p.stateT >= p.attack.windup + p.attack.active + CHAIN_GAP / p.attackSpeed) {
       startAttack(sim, inp, p.attack.next);
     }
   }
@@ -148,13 +157,13 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     const scale = len > 1 ? 1 / len : 1;
     // Brief slow after taking a hit instead of a stun: attacks and dodges are never interrupted.
     const slow = p.hurtT < PLAYER.hitStun ? 0.45 : 1;
-    const tx = inp.moveX * scale * PLAYER.speed * slow;
-    const tz = inp.moveZ * scale * PLAYER.speed * slow;
+    const tx = inp.moveX * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
+    const tz = inp.moveZ * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     // Linear ramp: full speed (or a full stop) within `accelTime`.
     const dvx = tx - p.vx;
     const dvz = tz - p.vz;
     const dv = Math.hypot(dvx, dvz);
-    const maxDv = (PLAYER.speed * DT) / PLAYER.accelTime;
+    const maxDv = (PLAYER.speed * sim.stats.moveSpeed * DT) / PLAYER.accelTime;
     const k = dv > maxDv ? maxDv / dv : 1;
     p.vx += dvx * k;
     p.vz += dvz * k;
