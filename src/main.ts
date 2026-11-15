@@ -200,6 +200,9 @@ let held = false;
 let last = performance.now();
 let acc = 0;
 
+/** 60 fps cap: the sim steps at 60 Hz, so faster frames only heat the tablet (playtest 2026-11-15, 90+ fps on the Tab S9). */
+const MIN_FRAME_MS = 1000 / 60 - 2;
+
 function frame(now: number): void {
   audio.tick(Math.min(.1, Math.max(0, (now - last) / 1000)), {
     district: 0, fighting: phase === 'play' && !ui.optionsOpen && !ui.mapOpen,
@@ -207,6 +210,7 @@ function frame(now: number): void {
     boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
   });
   requestAnimationFrame(frame);
+  if (now - last < MIN_FRAME_MS) return;
   const frameMs = now - last;
   last = now;
   const dt = Math.min(0.1, frameMs / 1000);

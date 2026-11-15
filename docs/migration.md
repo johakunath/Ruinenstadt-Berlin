@@ -10,9 +10,10 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 |---|---|---|---|---|
 | 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | done (PR #9) |
 | 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | done (PR #9) |
-| 3 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Claude · Opus high | after M3a | open |
-| 4 | M4 Loot in the world | Claude · Opus high | after M3b | open |
-| 5 | M5 Inventory mockup (Claude), then build (Codex task written after Johannes picks) | Claude, Codex | after M4 | open |
+| 3 | M11b Köpenick v2: tighter, livelier, readable (playtest 2026-11-15, list in `docs/playtests.md`). Concept first, then build | Claude · Opus high | `docs/maps/koepenick.md` | open |
+| 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Claude · Opus high | after M3a | open |
+| 5 | M4 Loot in the world | Claude · Opus high | after M3b, M11b | open |
+| 6 | M5 Inventory mockup (Claude), then build (Codex task written after Johannes picks) | Claude, Codex | after M4 | open |
 
 Claude writes the next Codex task file before Codex's queue runs empty.
 
@@ -29,7 +30,8 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 
 | Feature | Step | State |
 |---|---|---|
-| Map, route, encounters, waves, heights | M10, M11 | Done (first version) |
+| Map, route, encounters, waves, heights | M10, M11 | First version; v2 open (M11b) |
+| Enterable Späti (safe room), minimap, 2D edge triangles | M11b | Open |
 | Item data and rolls | M1, M2 | Done |
 | Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b open |
 | Drops, glow, pickup, exit warning | M4 | Open |
@@ -53,6 +55,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walka
 | # | Step | Owner | Needs | Done when |
 |---|---|---|---|---|
 | M3a | Stats port | Codex | M2 | Task file |
+| M11b | Köpenick v2: layout about 0.6 of today's distances (new lots, not `mapscale`), narrower streets with clear edges, cars and props on every stretch, more building types and non-rectangular footprints, relief and irregular banks, ground textures (alternatives first), enterable Späti, minimap (mockup first), 2D edge triangles | Claude · Opus high, Johannes picks | M11 | Playtest on the Tab S9: walking feels short, every stretch has something |
 | M3b | Stats in the sim | Claude · Opus high | M3a | Equipped item changes damage and life in a run; sim tests |
 | M4 | Drops, rarity glow and beam, labels, pickup, exit warning for rare and better. Loot stays where it drops; no vacuum | Claude · Opus high | M3b | Visible on both profiles |
 | M5 | Inventory and equipment UI | Mockup Claude, build Codex | M4 | Equip and compare on touch, pad, mouse |
