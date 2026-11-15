@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ATTACKS, HIT_FEEL, PLAYER } from '../data/combat';
 import { ENEMIES } from '../data/enemies';
+import { colliderDistance } from './collide';
 import { spawnEnemy } from './enemies';
 import { createSim, stepSim } from './sim';
 import { DT, NO_INPUT, type Sim, type SimEvent, type SimInput } from './types';
@@ -194,6 +195,19 @@ describe('enemies', () => {
       expect(e.state).toBe('windup');
       run(sim, secs(0.25), input({ attack: true }));
       expect(e.state).toBe(kind === 'walker' ? 'stagger' : 'windup');
+    }
+  });
+
+  it('are not pushed into props by a crowd', () => {
+    const sim = arena();
+    sim.player.invuln = 1e9;
+    sim.player.x = sim.player.px = 8;
+    // A walker squeezed between the fire barrel at (-1.4, -3.2) and a brute.
+    const walker = spawnEnemy(sim, -0.5, -3.2, 'walker');
+    spawnEnemy(sim, 0, -3.2, 'brute');
+    for (let i = 0; i < 30; i++) {
+      stepSim(sim, NO_INPUT);
+      for (const c of sim.colliders) expect(colliderDistance(c, walker.x, walker.z)).toBeGreaterThan(walker.def.radius - 1e-3);
     }
   });
 

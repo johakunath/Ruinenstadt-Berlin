@@ -116,8 +116,16 @@ export class GameRenderer {
     this.cam.setAspect(w / h);
   }
 
-  /** Puts the camera on the hero without easing (start and restart). */
-  snapCamera(sim: Sim): void {
+  /**
+   * Call when the sim is replaced (start and restart). A new sim reuses enemy ids, so every
+   * enemy view goes back to the pool and is assigned again; the camera snaps to the hero.
+   */
+  reset(sim: Sim): void {
+    for (const view of this.views.values()) {
+      view.root.visible = false;
+      this.pool.push(view);
+    }
+    this.views.clear();
     this.cam.snap(sim.player.x, sim.player.z);
   }
 

@@ -28,7 +28,7 @@ const ui = new Ui(opts, {
   onPlay: () => start(),
   onRetry: () => {
     sim = createSim({ seed: (opts.seed += 1), stress: opts.stress });
-    renderer?.snapCamera(sim);
+    renderer?.reset(sim);
     start();
   },
   onOptionsToggle: (open) => {
@@ -219,7 +219,7 @@ window.__game = {
 GameRenderer.create(canvas, { profile: PROFILES[opts.profile], look: LOOKS[opts.look], debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam })
   .then((r) => {
     renderer = r;
-    r.snapCamera(sim);
+    r.reset(sim);
     window.addEventListener('resize', () => r.resize());
     ui.loaded();
     if (opts.autostart) start();

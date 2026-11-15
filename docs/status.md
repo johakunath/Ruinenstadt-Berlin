@@ -16,7 +16,7 @@ Updated 2026-11-15 after the gate 1 build (first session). Plan and gates: `docs
 | Profiles | Qualität and Leistung (`?profile=`, options menu) |
 | Looks | Gemalt, Comic, Tusche (`?look=`, options menu). Screenshots: `docs/gate1/` |
 | Debug | `?debug=hit` (all shapes), `?debug=perf`, `?debug=flow`, `?stress=40`, `?cam=distance,pitch` |
-| CI | Type check, 38 unit tests, build, 5 Playwright smoke tests, Pages deploy from `main` |
+| CI | Type check, 39 unit tests, build, 5 Playwright smoke tests, Pages deploy from `main` |
 
 ## Not verified or known weak
 

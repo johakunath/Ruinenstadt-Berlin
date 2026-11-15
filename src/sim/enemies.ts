@@ -198,21 +198,26 @@ export function resolveBodies(sim: Sim): void {
   }
   const p = sim.player;
   // The dodge passes through enemies; a dead player is no obstacle.
-  if (p.state === 'dodge' || p.state === 'dead') return;
-  for (const e of list) {
-    if (e.state === 'dead') continue;
-    const dx = e.x - p.x;
-    const dz = e.z - p.z;
-    const min = e.def.radius + PLAYER.radius;
-    const d2 = dx * dx + dz * dz;
-    if (d2 >= min * min) continue;
-    const d = Math.sqrt(d2) || 0.001;
-    const push = min - d;
-    const we = e.def.poise ? 0.3 : 0.6;
-    e.x += (dx / d) * push * we;
-    e.z += (dz / d) * push * we;
-    p.x -= (dx / d) * push * (1 - we);
-    p.z -= (dz / d) * push * (1 - we);
+  if (p.state !== 'dodge' && p.state !== 'dead') {
+    for (const e of list) {
+      if (e.state === 'dead') continue;
+      const dx = e.x - p.x;
+      const dz = e.z - p.z;
+      const min = e.def.radius + PLAYER.radius;
+      const d2 = dx * dx + dz * dz;
+      if (d2 >= min * min) continue;
+      const d = Math.sqrt(d2) || 0.001;
+      const push = min - d;
+      const we = e.def.poise ? 0.3 : 0.6;
+      e.x += (dx / d) * push * we;
+      e.z += (dz / d) * push * we;
+      p.x -= (dx / d) * push * (1 - we);
+      p.z -= (dz / d) * push * (1 - we);
+    }
+    resolveStatic(p, PLAYER.radius, sim.colliders);
   }
-  resolveStatic(p, PLAYER.radius, sim.colliders);
+  // Separation may have pushed a body into a wall or prop: walls win over crowding.
+  for (const e of list) {
+    if (e.state !== 'dead') resolveStatic(e, e.def.radius, sim.colliders);
+  }
 }
