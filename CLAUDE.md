@@ -3,6 +3,7 @@
 3D loot ARPG in a post-collapse Berlin. Successor test of the 2D game `johakunath/Ruinenstadt` (read only, never change it from here).
 
 - Read `docs/plan-3d.md` first: decisions, architecture, render budgets. Status: `docs/status.md`. Migration steps from the 2D game: `docs/migration.md`, task files in `docs/tasks/`, backlog `docs/backlog.md`.
+- Maps: every district follows `docs/maps/guidelines.md` (concept, OpenStreetMap check, layout rules, invariants); Köpenick is the reference (`docs/maps/koepenick.md`).
 - Vision: `docs/vision.md`. Story: `docs/story.md`. Roles, token rules and task format for Claude and Codex: `docs/workflow.md`.
 - Art: `docs/style-bible.md` and the boards in `docs/style/` are the source of truth (Köpenick = default look). Check them before any visual work.
 - Stack: Three.js (WebGL 2), TypeScript strict, Vite, Vitest, Playwright. Versions are pinned exactly in `package.json`. No React, no ECS, no physics engine.

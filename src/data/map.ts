@@ -81,6 +81,32 @@ export interface Lot {
   jungle?: boolean;
 }
 
+/** Round hill: flat top of radius `r`, smooth slope `slope` meters wide down to the plain. */
+export interface Hill {
+  name: string;
+  x: number;
+  z: number;
+  r: number;
+  slope: number;
+  h: number;
+}
+
+/** A stair or ramp: centered on (x, z), rising along facing `rot` from 0 to the terrace height. */
+export interface Stair {
+  x: number;
+  z: number;
+  rot: number;
+  width: number;
+  len: number;
+}
+
+export interface Terrace {
+  name: string;
+  poly: Pt[];
+  h: number;
+  stairs: Stair[];
+}
+
 export interface MapDef {
   id: string;
   name: string;
@@ -100,6 +126,10 @@ export interface MapDef {
   zones: ZoneDef[];
   /** A railway embankment: blocks except at the station passage. */
   rail: { z: number; minX: number; maxX: number; gapX: number; gapW: number } | null;
+  /** Soft ground heights (walkable everywhere). */
+  hills: Hill[];
+  /** Raised platforms with retaining walls, reachable by stairs only. */
+  terraces: Terrace[];
   seed: number;
 }
 
@@ -156,6 +186,64 @@ export function onBridge(m: MapDef, x: number, z: number, pad = 0): Bridge | nul
     if (Math.abs(along) <= b.len / 2 + pad && Math.abs(across) <= b.width / 2 + pad) return b;
   }
   return null;
+}
+
+// ---------------------------------------------------------------- heights (backlog B3)
+// The sim stays 2D: retaining walls and stair sides are blocked cells of the walk grid; the
+// renderer lifts ground, buildings and characters to `heightAt`.
+
+/** Position on a stair: along (0 at the low end … 1 at the top) and across (meters from the axis). */
+function stairLocal(s: Stair, x: number, z: number): { along: number; across: number } {
+  const ux = Math.sin(s.rot);
+  const uz = Math.cos(s.rot);
+  const dx = x - s.x;
+  const dz = z - s.z;
+  return { along: (dx * ux + dz * uz) / s.len + 0.5, across: -dx * uz + dz * ux };
+}
+
+export function onStair(t: Terrace, x: number, z: number, pad = 0): Stair | null {
+  for (const s of t.stairs) {
+    const l = stairLocal(s, x, z);
+    if (l.along >= -pad / s.len && l.along <= 1 + pad / s.len && Math.abs(l.across) <= s.width / 2 + pad) return s;
+  }
+  return null;
+}
+
+/** Distance from a point to the outline of a closed polygon. */
+export function polyEdgeDist(poly: readonly Pt[], x: number, z: number): number {
+  return lineDist([...poly, poly[0] as Pt], x, z);
+}
+
+export function heightAt(m: MapDef, x: number, z: number): number {
+  let h = 0;
+  for (const hill of m.hills) {
+    const d = Math.hypot(x - hill.x, z - hill.z);
+    if (d >= hill.r + hill.slope) continue;
+    const t = d <= hill.r ? 1 : 1 - (d - hill.r) / hill.slope;
+    h = Math.max(h, hill.h * t * t * (3 - 2 * t));
+  }
+  for (const t of m.terraces) {
+    if (inPoly(t.poly, x, z)) h = Math.max(h, t.h);
+    const s = onStair(t, x, z);
+    if (s) h = Math.max(h, t.h * Math.max(0, Math.min(1, stairLocal(s, x, z).along)));
+  }
+  return h;
+}
+
+/** Retaining walls and stair sides block; the stair runs stay open. */
+export function terraceWall(m: MapDef, x: number, z: number): boolean {
+  for (const t of m.terraces) {
+    for (const s of t.stairs) {
+      const l = stairLocal(s, x, z);
+      if (l.along < -0.05 || l.along > 1.05) continue;
+      const side = Math.abs(l.across) - s.width / 2;
+      if (side <= 0) return false;
+      // Side walls where the stair is more than knee high.
+      if (side < 0.45 && l.along * t.h > 0.5) return true;
+    }
+    if (polyEdgeDist(t.poly, x, z) < 0.45) return true;
+  }
+  return false;
 }
 
 export function isWater(m: MapDef, x: number, z: number): boolean {
@@ -238,6 +326,7 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
   for (const e of m.encounters) if (Math.hypot(x - e.x, z - e.z) < e.r + pad) return true;
   for (const l of m.landmarks) if (Math.abs(x - l.x) < l.hx + l.clear + pad && Math.abs(z - l.z) < l.hz + l.clear + pad) return true;
   if (m.rail && Math.abs(z - m.rail.z) < 6 + pad && x > m.rail.minX && x < m.rail.maxX) return true;
+  for (const t of m.terraces) if (polyEdgeDist(t.poly, x, z) < pad + 1 || onStair(t, x, z, pad + 1.5)) return true;
   return x < m.bounds.minX + 2 || x > m.bounds.maxX - 2 || z < m.bounds.minZ + 2 || z > m.bounds.maxZ - 2;
 }
 
@@ -341,6 +430,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
     isWater(m, x, z) ||
     lots.some((l) => Math.abs(x - l.x) < l.w / 2 + r + 1 && Math.abs(z - l.z) < Math.max(l.w, l.d) / 2 + r + 1 && (l.kind !== 'tree' || Math.hypot(x - l.x, z - l.z) < r + 1)) ||
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
+    m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
     m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r);
   // Lanterns along streets, alternating sides.
   for (const s of m.streets) {
@@ -419,6 +509,6 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     colliders.push({ kind: 'box', x: left, z: r.z, hx: (r.gapX - r.gapW / 2 - r.minX) / 2, hz: 4, rot: 0 });
     colliders.push({ kind: 'box', x: right, z: r.z, hx: (r.maxX - r.gapX - r.gapW / 2) / 2, hz: 4, rot: 0 });
   }
-  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => isWater(m, x, z) && !onBridge(m, x, z));
+  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z));
   return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones);
 }

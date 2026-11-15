@@ -8,7 +8,7 @@ import {
   SphereGeometry, TorusGeometry, Vector3, type Material,
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
-import { areaAt, isWater, onBridge, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
+import { areaAt, heightAt, isWater, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
@@ -59,8 +59,25 @@ class ChunkBuilder extends Builder {
     super(mm);
   }
 
+  private lift = 0;
+
+  /** Builds `fn` standing on ground height `y`: geometry, lights, fires and shadow casters move up. */
+  on(y: number, fn: () => void): void {
+    const fires = this.fires.length;
+    this.lift = y;
+    this.solid.lift = this.cards.lift = this.glows.lift = y;
+    fn();
+    for (let i = fires; i < this.fires.length; i++) (this.fires[i] as Vector3).y += y;
+    this.lift = 0;
+    this.solid.lift = this.cards.lift = this.glows.lift = 0;
+  }
+
+  override shadowBox(m: Matrix4, sx: number, sy: number, sz: number): void {
+    super.shadowBox(new Matrix4().makeTranslation(0, this.lift, 0).multiply(m), sx, sy, sz);
+  }
+
   override light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4): void {
-    this.spots.push({ pos: pos.clone(), color, intensity, distance, flicker, phase: Math.random() * 6 });
+    this.spots.push({ pos: pos.clone().setY(pos.y + this.lift), color, intensity, distance, flicker, phase: Math.random() * 6 });
     let mat = this.glowMats.get(color);
     if (!mat) this.glowMats.set(color, (mat = Materials.glow(this.glowTex, color, 0.22)));
     const geo = new PlaneGeometry(pool * 2, pool * 2);
@@ -113,7 +130,7 @@ const GROUND_TINT: Record<GroundKind, RGB> = {
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   const step = 1.5;
   const B = m.bounds;
-  const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : 0);
+  const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += CHUNK) {
     for (let cx = B.minX; cx < B.maxX; cx += CHUNK) {
       const n = Math.ceil(Math.min(CHUNK, B.maxX - cx) / step);
@@ -127,14 +144,14 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           const x = cx + i * step;
           const z = cz + j * step;
           const y = height(x, z);
-          wet.push(y < 0);
+          wet.push(y < -0.5);
           pos.push(x, y, z);
           uv.push(x / 5, z / 5);
           const a = areaAt(m, x, z);
           const t = GROUND_TINT[a?.ground ?? m.defaultGround];
           const noise = 0.82 + 0.3 * (0.5 + 0.5 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2) * Math.cos(z * 0.19 + Math.sin(x * 0.13) * 1.6));
           // Damp, dark banks.
-          const shore = y < 0 ? 0.35 : isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6) ? 0.6 : 1;
+          const shore = y < -0.5 ? 0.35 : isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6) ? 0.6 : 1;
           col.push(t[0] * noise * shore, t[1] * noise * shore, t[2] * noise * shore);
         }
       }
@@ -180,8 +197,8 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
       const len = Math.hypot(bx - ax, bz - az);
       const dx = (bx - ax) / len;
       const dz = (bz - az) / len;
-      // Pieces of at most 12 m, so they land in the right chunk and follow the banks.
-      const pieces = Math.ceil(len / 12);
+      // Pieces of at most 3 m, so they land in the right chunk and follow banks and hills.
+      const pieces = Math.ceil(len / 3);
       for (let p = 0; p < pieces; p++) {
         const t0 = (p / pieces) * len;
         const t1 = ((p + 1) / pieces) * len;
@@ -192,9 +209,8 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         if (isWater(m, (x0 + x1) / 2, (z0 + z1) / 2) && !onBridge(m, (x0 + x1) / 2, (z0 + z1) / 2)) continue;
         const nx = -dz * (s.width / 2);
         const nz = dx * (s.width / 2);
-        const quad: [Vector3, Vector3, Vector3, Vector3] = [
-          new Vector3(x0 - nx, y, z0 - nz), new Vector3(x0 + nx, y, z0 + nz), new Vector3(x1 + nx, y, z1 + nz), new Vector3(x1 - nx, y, z1 - nz),
-        ];
+        const v = (x: number, z: number): Vector3 => new Vector3(x, y + heightAt(m, x, z), z);
+        const quad: [Vector3, Vector3, Vector3, Vector3] = [v(x0 - nx, z0 - nz), v(x0 + nx, z0 + nz), v(x1 + nx, z1 + nz), v(x1 - nx, z1 - nz)];
         const b = chunkOf((x0 + x1) / 2, (z0 + z1) / 2);
         const batch = b.solid.of(mat);
         // quad() takes counter-clockwise corners seen from above; UVs in world meters.
@@ -205,7 +221,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         const disc = new CircleGeometry(s.width / 2, 16);
         disc.rotateX(-Math.PI / 2);
         worldUv(disc, bx, bz, 4);
-        chunkOf(bx, bz).solid.of(mat).add(disc, new Matrix4().setPosition(bx, y + 0.001, bz));
+        chunkOf(bx, bz).solid.of(mat).add(disc, new Matrix4().setPosition(bx, y + 0.001 + heightAt(m, bx, bz), bz));
       }
     }
   }
@@ -246,6 +262,64 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
       for (const [side, z] of [[-1, -br.len / 4], [1, br.len / 4]] as Array<[number, number]>) {
         const p = new Vector3(side * (br.width / 2 + 0.2), 0, z).applyMatrix4(base);
         buildProp(b, { kind: 'lantern', x: p.x, z: p.z, rot: 0, size: 1 }, new Rng(3));
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- terraces
+
+/** Retaining walls with a low parapet along the outline (open at the stairs), stone steps. */
+function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  for (const t of m.terraces) {
+    const n = t.poly.length;
+    for (let i = 0; i < n; i++) {
+      const [ax, az] = t.poly[i] as Pt;
+      const [bx, bz] = t.poly[(i + 1) % n] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      const dx = (bx - ax) / len;
+      const dz = (bz - az) / len;
+      const yaw = Math.atan2(dx, dz);
+      // Wall pieces of 1 m; leave out what a stair crosses.
+      let run0 = -1;
+      const flush = (t0: number, t1: number): void => {
+        if (t1 - t0 < 0.05) return;
+        const mid = (t0 + t1) / 2;
+        const x = ax + dx * mid;
+        const z = az + dz * mid;
+        const b = chunkOf(x, z);
+        const mm = new Matrix4().makeRotationY(yaw).setPosition(x, (t.h - 0.4) / 2, z);
+        b.box(b.mm.stucco, mm, 0.6, t.h + 0.4, t1 - t0, [0.5, 0.5, 0.47]);
+        b.box(b.mm.stucco, new Matrix4().makeRotationY(yaw).setPosition(x, t.h + 0.3, z), 0.7, 0.6, t1 - t0, [0.62, 0.6, 0.56]);
+        b.shadowBox(mm, 0.6, t.h + 0.4, t1 - t0);
+      };
+      for (let k = 0; k <= Math.ceil(len); k++) {
+        const tt = Math.min(len, k);
+        const open = onStair(t, ax + dx * tt, az + dz * tt, 0.4) !== null;
+        if (!open && run0 < 0) run0 = tt;
+        if ((open || k === Math.ceil(len)) && run0 >= 0) {
+          flush(run0, open ? Math.max(run0, tt - 0.5) : tt);
+          run0 = -1;
+        }
+      }
+    }
+    for (const st of t.stairs) {
+      const b = chunkOf(st.x, st.z);
+      const steps = Math.max(3, Math.round(t.h / 0.3));
+      const ux = Math.sin(st.rot);
+      const uz = Math.cos(st.rot);
+      for (let k = 0; k < steps; k++) {
+        const f = (k + 0.5) / steps;
+        const top = (t.h * (k + 1)) / steps;
+        const cx = st.x + ux * (f - 0.5) * st.len;
+        const cz = st.z + uz * (f - 0.5) * st.len;
+        b.box(b.mm.stucco, new Matrix4().makeRotationY(st.rot).setPosition(cx, top / 2, cz), st.width, top, st.len / steps + 0.02, [0.6, 0.58, 0.54]);
+      }
+      // Side cheeks.
+      for (const side of [-1, 1]) {
+        const cx = st.x + uz * side * (st.width / 2 + 0.2);
+        const cz = st.z - ux * side * (st.width / 2 + 0.2);
+        b.box(b.mm.stucco, new Matrix4().makeRotationY(st.rot).setPosition(cx, t.h / 2, cz), 0.4, t.h + 0.2, st.len, [0.5, 0.5, 0.47]);
       }
     }
   }
@@ -402,7 +476,7 @@ function buildPalm(b: ChunkBuilder, l: Lot): void {
   }
 }
 
-function buildTrees(lots: Lot[], mats: MapMats, chunkKey: (x: number, z: number) => string, group: Group, profile: { enemyShadows: boolean }): void {
+function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number, z: number) => string, group: Group, profile: { enemyShadows: boolean }): void {
   const buckets = new Map<string, TreeBucket>();
   for (const l of lots) {
     if (l.kind !== 'tree' || l.jungle) continue;
@@ -412,13 +486,14 @@ function buildTrees(lots: Lot[], mats: MapMats, chunkKey: (x: number, z: number)
     const rng = new Rng(l.seed);
     const h = rng.range(3.5, 6);
     const lean = rng.range(-0.12, 0.12);
-    bk.trunks.push(new Matrix4().makeRotationZ(lean).setPosition(l.x, h / 2, l.z).multiply(tmpScale.makeScale(1, h, 1)));
+    const base = heightAt(m, l.x, l.z);
+    bk.trunks.push(new Matrix4().makeRotationZ(lean).setPosition(l.x, base + h / 2, l.z).multiply(tmpScale.makeScale(1, h, 1)));
     const blobs = 3 + rng.int(2);
     const hue = rng.next();
     for (let i = 0; i < blobs; i++) {
       const s = l.w * rng.range(0.24, 0.34);
       const m = new Matrix4().compose(
-        new Vector3(l.x + rng.range(-1.1, 1.1), h + rng.range(-0.6, 1.4), l.z + rng.range(-1.1, 1.1)),
+        new Vector3(l.x + rng.range(-1.1, 1.1), base + h + rng.range(-0.6, 1.4), l.z + rng.range(-1.1, 1.1)),
         new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), rng.range(0, 6)),
         new Vector3(s, s * 0.85, s),
       );
@@ -625,14 +700,25 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildGround(m, mats, group);
   buildStreets(m, mats, chunkOf);
   buildBridges(m, chunkOf);
+  // Buildings stand on the lowest corner of their footprint; the rest sinks into the slope.
+  const base = (x: number, z: number, r: number): number =>
+    Math.min(heightAt(m, x, z), heightAt(m, x - r, z - r), heightAt(m, x + r, z - r), heightAt(m, x - r, z + r), heightAt(m, x + r, z + r));
   for (const l of lots) {
-    if (l.kind === 'altbau' || l.kind === 'platte') buildAltbauLot(chunkOf(l.x, l.z), l, m);
-    else if (l.kind === 'house') buildHouse(chunkOf(l.x, l.z), l);
-    else if (l.kind === 'tree' && l.jungle) buildPalm(chunkOf(l.x, l.z), l);
+    const b = chunkOf(l.x, l.z);
+    if (l.kind === 'altbau' || l.kind === 'platte') b.on(base(l.x, l.z, Math.max(l.w, l.d) / 2), () => buildAltbauLot(b, l, m));
+    else if (l.kind === 'house') b.on(base(l.x, l.z, Math.max(l.w, l.d) / 2), () => buildHouse(b, l));
+    else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
   }
-  for (const l of m.landmarks) buildLandmark(chunkOf(l.x, l.z), l);
+  for (const l of m.landmarks) {
+    const b = chunkOf(l.x, l.z);
+    b.on(base(l.x, l.z, Math.max(l.hx, l.hz)), () => buildLandmark(b, l));
+  }
   const rng = new Rng(m.seed);
-  for (const p of props) buildProp(chunkOf(p.x, p.z), p, rng);
+  for (const p of props) {
+    const b = chunkOf(p.x, p.z);
+    b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
+  }
+  buildTerraces(m, chunkOf);
   if (m.rail) {
     const r = m.rail;
     for (let x = r.minX; x < r.maxX; x += 40) {
@@ -641,7 +727,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       for (const z of [-1.5, 1.5]) cb.box(mats.iron, new Matrix4().setPosition(x + 20, 1.9, r.z + z), 40, 0.15, 0.12);
     }
   }
-  buildTrees(lots, mats, chunkKey, group, materials.profile);
+  buildTrees(m, lots, mats, chunkKey, group, materials.profile);
 
   const spots: LightSpot[] = [];
   const caster = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });

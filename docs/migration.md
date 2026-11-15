@@ -47,8 +47,8 @@ Owner tags are recommendations, not rules: Johannes swaps Codex and Claude depen
 | M12 | Köpenick enemies: roster from 2D roles (ghoul, brute, spitter, Raser, dinos), elites with modifiers, Hauptmann boss | Sim Claude, models PC · Blender | M10 | Each type needs a different answer |
 | S3 | Boss voices: short lines or growls per boss. Needs a voice or sound-effect generator outside the repo (Q9) | Claude · Opus medium, Johannes picks the tool | M12 | Hauptmann has a voice |
 | M13 | Camp: walkable station, stations as data, meals, consumables | Claude, art PC · Blender | M6 | Camp reachable from a run |
-| M14 | Balance bot and telemetry on the 3D sim | Codex, review Claude | M8 | `node tools/balance.mjs` prints the 2D fields |
-| M15 | Next districts as mini open worlds, one at a time, each with a map concept first; U-Bahn tunnels between them (mostly linear, side branches with chest or mini-boss) | Claude, Johannes | M11 to M14 | |
+| M14 | Balance bot and telemetry on the 3D sim: port `tools/sim.js` and `tools/balance.mjs`, then rework the bot for 3D moves, powers and blessings and calibrate it to Johannes' own play (backlog B9) | Codex port, Claude rework and calibration | M8 | `node tools/balance.mjs` prints the 2D fields; bot clear times and deaths match Johannes' playtests within tolerance |
+| M15 | Next districts as mini open worlds, one at a time, each with a map concept first and built after `docs/maps/guidelines.md`; U-Bahn tunnels between them (mostly linear, side branches with chest or mini-boss; Der Schaffner stays the tunnel boss as in 2D) | Claude, Johannes | M11 to M14 | |
 
 Character work runs in parallel on the PC and does not block the cloud steps:
 

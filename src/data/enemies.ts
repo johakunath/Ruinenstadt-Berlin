@@ -3,7 +3,7 @@
 import { DEG } from '../sim/math';
 
 export type EnemyKind = 'walker' | 'runner' | 'brute' | BossKind;
-export type BossKind = 'schaffner' | 'waechter' | 'rex' | 'hauptmann';
+export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann';
 
 export interface EnemyDef {
   kind: EnemyKind;
@@ -51,8 +51,8 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     reach: 2.3, halfAngle: 60 * DEG, damage: 26, knockbackTaken: 0.45, poise: true, weight: 1,
   },
   // Zone bosses (placeholders until M12).
-  schaffner: {
-    kind: 'schaffner', name: 'Der Schaffner', radius: 0.7, scale: 1.45, hp: 380, speed: 2.5,
+  feldwebel: {
+    kind: 'feldwebel', name: 'Der Feldwebel', radius: 0.7, scale: 1.45, hp: 380, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },

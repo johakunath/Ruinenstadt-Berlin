@@ -8,7 +8,7 @@ Carried over from the 2D game `johakunath/Ruinenstadt` (`BACKLOG.md` › Intent 
 |---|---|
 | Fantasy | A survivor reclaims Berlin district by district and grows visibly stronger through loot |
 | Pillars | Satisfying combat feel, loot worth reading, a reason for one more run |
-| Difficulty | Fun first, but big attacks must be dodged. Köpenick gentle, from Mitte on one death per district is normal on Normal. Hard mode opt-in. Newcomers get an easier start (backlog B5) |
+| Difficulty | Fun first, never frustrating: the hero gets clearly stronger every zone and ends a district far more powerful than at its start (backlog B10). Big attacks must be dodged. Köpenick gentle, from Mitte on one death per district is normal on Normal. Hard mode opt-in. Newcomers get an easier start (backlog B5) |
 | Session | 5 to 15 minutes. Devices: PC with controller, Galaxy Tab S9, Xiaomi phone; later Steam Deck |
 | Inspirations | Hades (dash, weapon = playstyle, boons, feel), Diablo 2/3 (loot, acts), V Rising (boss-gated unlocks, base), Valheim (weak to strong), Enshrouded (authored points of interest) |
 | UI text | German, a few words or one line. Details behind a tooltip or in the Kodex |

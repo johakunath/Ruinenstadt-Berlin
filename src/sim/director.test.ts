@@ -89,7 +89,7 @@ describe('encounter director', () => {
         sim.events.length = 0;
       }
     }
-    for (const b of ['schaffner', 'waechter', 'rex', 'hauptmann']) expect(seen.get(b)).toBe(1);
+    for (const b of ['feldwebel', 'waechter', 'rex', 'hauptmann']) expect(seen.get(b)).toBe(1);
     expect(lastWalkerHp).toBeGreaterThan(firstHp[0]! * 1.5);
   });
 

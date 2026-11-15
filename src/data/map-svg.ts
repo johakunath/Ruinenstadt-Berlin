@@ -33,6 +33,17 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
   for (const l of m.lakes) out.push(`<polygon points="${poly(l)}" fill="#1d4a55"/>`);
   for (const r of m.rivers) out.push(`<path d="${path(r.pts)}" fill="none" stroke="#1d4a55" stroke-width="${r.width}" stroke-linejoin="round" stroke-linecap="round"/>`);
   for (const i of m.islands) out.push(`<polygon points="${poly(i)}" fill="${GROUND.grass}"/>`);
+  for (const h of m.hills) {
+    out.push(`<circle cx="${h.x}" cy="${h.z}" r="${h.r + h.slope}" fill="#c8b48a" fill-opacity="0.06" stroke="#c8b48a" stroke-opacity="0.35" stroke-dasharray="3 3"/>`);
+    out.push(`<circle cx="${h.x}" cy="${h.z}" r="${h.r}" fill="#c8b48a" fill-opacity="0.1"/>`);
+  }
+  for (const t of m.terraces) {
+    out.push(`<polygon points="${poly(t.poly)}" fill="#c8b48a" fill-opacity="0.18" stroke="#d8cdb4" stroke-width="1.2"/>`);
+    for (const st of t.stairs) {
+      const deg = (-st.rot * 180) / Math.PI;
+      out.push(`<rect x="${-st.width / 2}" y="${-st.len / 2}" width="${st.width}" height="${st.len}" fill="#d8cdb4" transform="translate(${st.x} ${st.z}) rotate(${deg})"/>`);
+    }
+  }
   if (m.rail) out.push(`<rect x="${m.rail.minX}" y="${m.rail.z - 4}" width="${m.rail.maxX - m.rail.minX}" height="8" fill="#2a2724"/><line x1="${m.rail.minX}" y1="${m.rail.z}" x2="${m.rail.maxX}" y2="${m.rail.z}" stroke="#77706a" stroke-width="1.4" stroke-dasharray="3 2"/>`);
   for (const s of m.streets) {
     const col = s.kind === 'path' ? '#6a5d45' : '#6f6656';

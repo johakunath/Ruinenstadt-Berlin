@@ -2,7 +2,7 @@
 // distances: S Köpenick north, Altstadt island in the middle between Spree (north), Dahme (west) and
 // Frauentog (south), Müggelberge with the Müggelturm south-east, Spreepark north-west along the Spree.
 // Anchors checked against OpenStreetMap on 2026-11-15 (see docs/maps/koepenick.md).
-// Route: station → Bahnhofsviertel (6 waves, Schaffner) → Altstadt → Müggelberge (7 waves,
+// Route: station → Bahnhofsviertel (6 waves, Feldwebel) → Altstadt → Müggelberge (7 waves,
 // Turmwächter) → back across the Altstadt → Spreepark (7 waves, Rex) → Rathaus (Hauptmann).
 // Meters, +X east, +Z south, origin at the Rathaus. `scale` stretches distances only.
 import type { BossKind, EnemyKind } from './enemies';
@@ -55,7 +55,7 @@ export function koepenickMap(scale = 1): MapDef {
     enc('vorplatz', 'Bahnhofsvorplatz', 0, 10, -160, 13, 2),
     enc('forum', 'Forum', 0, 46, -112, 14, 2),
     enc('linden', 'Lindenstraße', 0, -40, -100, 13, 2),
-    boss('damm', 'Dammbrücke', 0, 8, -80, 14, 'schaffner', 3),
+    boss('damm', 'Dammbrücke', 0, 8, -80, 14, 'feldwebel', 3),
     // Zone 1: Müggelberge (7 waves).
     enc('kietz', 'Kietz', 1, 62, 14, 13, 2),
     enc('mueggelheimer', 'Müggelheimer Straße', 1, 112, 70, 14, 2),
@@ -162,6 +162,31 @@ export function koepenickMap(scale = 1): MapDef {
     encounters,
     zones,
     rail: { z: -192 * s, minX: -265 * s, maxX: 245 * s, gapX: 10 * s, gapW: 9 },
+    hills: [
+      // Müggelberge: the Turm fight on the summit, the Teufelssee fight on the lower slope.
+      { name: 'Müggelberge', x: 184 * s, z: 172 * s, r: 22, slope: 40 * s, h: 7 },
+      { name: 'Dino-Hügel', x: -214 * s, z: -28 * s, r: 9, slope: 20 * s, h: 3.5 },
+    ],
+    terraces: [
+      // Platform of the Riesenrad, looking over the Rex arena; stairs east and south.
+      {
+        name: 'Riesenrad-Plattform', h: 2.4,
+        poly: [P(-243, -106), P(-214, -106), P(-214, -82), P(-243, -82)],
+        stairs: [
+          { x: -211.5 * s, z: -92 * s, rot: -90 * DEG, width: 5, len: 5 },
+          { x: -229 * s, z: -79.5 * s, rot: 180 * DEG, width: 5, len: 5 },
+        ],
+      },
+      // St. Laurentius on its church hill above the Rathausplatz; stairs to the square and to the Grünstraße.
+      {
+        name: 'Kirchhügel', h: 1.8,
+        poly: [P(17, 5), P(36, 5), P(36, 29), P(17, 29)],
+        stairs: [
+          { x: 14.5 * s, z: 17 * s, rot: 90 * DEG, width: 5, len: 5 },
+          { x: 26 * s, z: 2.5 * s, rot: 0, width: 5, len: 5 },
+        ],
+      },
+    ],
     seed: 1906,
   };
 }

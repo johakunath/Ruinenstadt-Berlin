@@ -8,12 +8,12 @@ Concept A "Drehkreuz Altstadt", chosen by Johannes on 2026-11-15. Map image draw
 |---|---|
 | K1 | Concept A: Altstadt island as the hub, three zones around it |
 | K2 | Route: S Köpenick → Bahnhofsviertel → south-east to the Müggelberge → north-west to the Spreepark (dinosaurs) → back to the Rathaus for the final boss |
-| K3 | 20 normal waves: 6 in zone 1, 7 in zone 2, 7 in zone 3. A boss after each zone (Schaffner, Turmwächter, Rex), Hauptmann von Köpenick at the Rathaus last |
+| K3 | 20 normal waves: 6 in zone 1, 7 in zone 2, 7 in zone 3. A boss after each zone (Feldwebel, Turmwächter, Rex), Hauptmann von Köpenick at the Rathaus last |
 | K4 | Enemies get harder wave by wave; drops and stronger skills must keep up (M3, M4, M8) |
 | K5 | Positions do not have to be to scale, but directions do: what is north in Köpenick is north here. Each small area roughly real. Landmark buildings recognizable |
 | K6 | Size can grow: the map is authored with one scale factor (`koepenickMap(scale)`, `?mapscale=1.3`). Distances stretch, buildings and streets keep their size, generated buildings and trees fill the extra space |
 
-## Geography check (OpenStreetMap, 2026-11-15)
+## Geography check (OpenStreetMap, 2026-11-15, method in `guidelines.md`)
 
 Real offsets from the Rathaus, compressed in the map (scale 1).
 
@@ -34,12 +34,25 @@ Not checked against real streets: the exact course of the side streets and the K
 
 | Zone | Encounters (waves) | Boss | Landmarks |
 |---|---|---|---|
-| 0 Bahnhofsviertel | Bahnhofsvorplatz (2), Forum (2), Lindenstraße (2) | Der Schaffner at the Dammbrücke | S-Bahnhof Köpenick, Forum Köpenick |
+| 0 Bahnhofsviertel | Bahnhofsvorplatz (2), Forum (2), Lindenstraße (2) | Der Feldwebel at the Dammbrücke | S-Bahnhof Köpenick, Forum Köpenick |
 | 1 Müggelberge | Kietz (2), Müggelheimer Straße (2), Teufelssee (3) | Der Turmwächter at the Müggelturm | Müggelturm, Teufelssee, Müggelsee shore |
 | 2 Spreepark | Köllnische Vorstadt (2), Spreeufer (2), Dino-Wiese (3) | Der Rex at the Riesenrad | Riesenrad, toppled dinosaurs, jungle |
 | 3 Rathaus | | Hauptmann von Köpenick on the Rathausplatz | Rathaus (tower, stepped gables), Schloss, St. Laurentius |
 
 Walking the route takes about 2.5 minutes at full run speed; with fights the whole district is roughly 15 to 20 minutes. A death restarts at the start of the zone (in-memory checkpoint; a saved checkpoint is M6/B1).
+
+## Heights (B3, 2026-11-15)
+
+| Place | Kind | Height |
+|---|---|---|
+| Müggelberge | Soft hill, the Turm fight on the summit, the Teufelssee fight on its lower slope | 7 m |
+| Dino-Hügel (Spreepark) | Soft hill under the Dino-Wiese | 3.5 m |
+| Riesenrad-Plattform | Terrace with retaining wall, stairs east (to the Rex arena) and south | 2.4 m |
+| Kirchhügel (St. Laurentius) | Terrace above the Rathausplatz, stairs west (to the final arena) and north | 1.8 m |
+
+The sim stays 2D: walls and stair sides are blocked cells; the renderer lifts ground, buildings, props and characters (`heightAt` in `src/data/map.ts`, `src/render/ground.ts`).
+
+The zone 1 boss is Der Feldwebel (the Hauptmann's sergeant, 1906): Der Schaffner stays the U-Bahn tunnel boss as in the 2D game.
 
 ## How it plays
 
@@ -55,5 +68,5 @@ Walking the route takes about 2.5 minutes at full run speed; with fights the who
 |---|---|---|
 | KQ1 | Is 15 to 20 minutes for the whole district too long for one session (vision: 5 to 15)? Option: save a checkpoint per zone (M6) so a session can end after a zone | Checkpoint per zone with M6 |
 | KQ2 | Waves scale up but the hero does not yet (no gear stats before M3, no drops before M4). Zones 2 and 3 will feel too hard until then | Keep the curve, tune after M3/M4 with the balance bot (M14) |
-| KQ3 | Heights (B3): Müggelberge, Rathaus steps and the Schloss terrace are flat for now. The sim needs a ground height first | After M11 basics |
+| KQ3 | More heights later: Rathaus steps, Schloss terrace, Kietz slope to the Frauentog | After the playtest |
 | KQ4 | Shortcut back from the Spreepark to the Rathaus (about 30 s of walking)? E.g. a ferry over the Spree | Walk for now |

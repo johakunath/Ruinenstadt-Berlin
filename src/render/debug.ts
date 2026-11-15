@@ -1,4 +1,5 @@
 // Debug overlays. ?debug=hit draws every collision and hit shape in 3D; ?debug=flow adds the flow field.
+import { groundY } from './ground';
 import { BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments } from 'three';
 import { PLAYER } from '../data/combat';
 import type { Collider } from '../sim/collide';
@@ -32,7 +33,7 @@ export class HitDebug {
 
   private seg(x0: number, z0: number, x1: number, z1: number, c: RGB, y = 0.06): void {
     if (this.n + 2 > MAX_VERTS) return;
-    this.pos.set([x0, y, z0, x1, y, z1], this.n * 3);
+    this.pos.set([x0, y + groundY(x0, z0), z0, x1, y + groundY(x1, z1), z1], this.n * 3);
     this.col.set([c[0], c[1], c[2], c[0], c[1], c[2]], this.n * 3);
     this.n += 2;
   }

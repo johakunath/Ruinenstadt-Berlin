@@ -1,5 +1,6 @@
 // Effects: particles (fire, embers, sparks, dust), weapon smear, enemy telegraphs, impact
 // flashes, blob shadows, drifting mist. All of it lives on the FX layer.
+import { groundY } from './ground';
 import {
   AdditiveBlending, BufferAttribute, BufferGeometry, Color, DoubleSide, DynamicDrawUsage, Group, InstancedMesh, Matrix4, Mesh,
   MeshBasicMaterial, NormalBlending, PlaneGeometry, Points, ShaderMaterial, Sprite, SpriteMaterial, Vector3, type Blending,
@@ -214,7 +215,9 @@ class Smear {
       const head = (t - a.windup) / a.active;
       if (head > 0) {
         this.mesh.geometry = this.geos.get(a.id) as BufferGeometry;
-        this.mesh.position.set(lerp(p.px, p.x, alpha), a.style === 'smash' ? 0.12 : 1.05, lerp(p.pz, p.z, alpha));
+        const sx = lerp(p.px, p.x, alpha);
+        const sz = lerp(p.pz, p.z, alpha);
+        this.mesh.position.set(sx, groundY(sx, sz) + (a.style === 'smash' ? 0.12 : 1.05), sz);
         this.mesh.rotation.set(0, lerpAngle(p.pfacing, p.facing, alpha), 0);
         // Slashes lean with the swing direction; the smash fans out flat on the ground.
         this.mesh.rotateZ(a.style === 'smash' ? 0 : Math.sign(a.to - a.from) * 0.2);
@@ -264,7 +267,7 @@ class Telegraphs {
       const z = lerp(e.pz, e.z, alpha);
       for (const m of [slot.rim, slot.fill]) {
         m.geometry = this.geos.get(e.kind) as BufferGeometry;
-        m.position.set(x, 0.05, z);
+        m.position.set(x, groundY(x, z) + 0.05, z);
         m.rotation.y = e.facing;
         m.visible = true;
       }
@@ -391,7 +394,7 @@ export class Fx {
       const a = this.rng.range(0, Math.PI * 2);
       const s = this.rng.range(0.4, 1.8) * spread;
       this.dust.spawn({
-        x: x + Math.cos(a) * 0.2, y: 0.15, z: z + Math.sin(a) * 0.2,
+        x: x + Math.cos(a) * 0.2, y: groundY(x, z) + 0.15, z: z + Math.sin(a) * 0.2,
         vx: Math.cos(a) * s, vy: this.rng.range(0.2, 0.9), vz: Math.sin(a) * s,
         life: this.rng.range(0.35, 0.7), size: this.rng.range(0.35, 0.7), grow: 2.2,
         r: 0.2, g: 0.2, b: 0.19, gravity: -0.3, drag: 3,
@@ -466,7 +469,9 @@ export class Fx {
 
   private setBlob(i: number, e: Enemy, alpha: number): void {
     const s = e.def.radius * 3.4;
-    m4.makeScale(s, 1, s).setPosition(lerp(e.px, e.x, alpha), 0.04, lerp(e.pz, e.z, alpha));
+    const bx = lerp(e.px, e.x, alpha);
+    const bz = lerp(e.pz, e.z, alpha);
+    m4.makeScale(s, 1, s).setPosition(bx, groundY(bx, bz) + 0.04, bz);
     (this.blobs as InstancedMesh).setMatrixAt(i, m4);
   }
 }

@@ -12,7 +12,7 @@ describe('Köpenick map', () => {
     it(`has 20 normal waves and 4 boss fights (scale ${scale})`, () => {
       const waves = m.encounters.flatMap((e) => e.waves);
       expect(waves.filter((w) => w.bosses.length === 0)).toHaveLength(20);
-      expect(waves.flatMap((w) => w.bosses)).toEqual(['schaffner', 'waechter', 'rex', 'hauptmann']);
+      expect(waves.flatMap((w) => w.bosses)).toEqual(['feldwebel', 'waechter', 'rex', 'hauptmann']);
       const perZone = [0, 1, 2].map((z) => m.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves).filter((w) => w.bosses.length === 0).length);
       expect(perZone).toEqual([6, 7, 7]);
     });

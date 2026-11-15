@@ -54,8 +54,8 @@ export class FollowCamera {
     return this.camera.position;
   }
 
-  snap(x: number, z: number): void {
-    this.target.set(x, 0, z + FRAME_Z);
+  snap(x: number, z: number, y = 0): void {
+    this.target.set(x, y, z + FRAME_Z);
     this.ahead.set(0, 0, 0);
   }
 
@@ -66,7 +66,8 @@ export class FollowCamera {
     this.trauma = Math.min(1, this.trauma + amount * 2.2);
   }
 
-  update(x: number, z: number, vx: number, vz: number, dt: number): void {
+  /** `y` is the ground height under the hero; the view eases up and down hills with it. */
+  update(x: number, z: number, vx: number, vz: number, dt: number, y = 0): void {
     this.time += dt;
     const k = 1 - Math.exp(-FOLLOW * dt);
     const ax = clamp(vx * LOOK_AHEAD, -LOOK_AHEAD_MAX, LOOK_AHEAD_MAX);
@@ -79,6 +80,8 @@ export class FollowCamera {
     const tz = clamp(z + this.ahead.z + FRAME_Z, Y.minZ, Y.maxZ);
     this.target.x += (tx - this.target.x) * k;
     this.target.z += (tz - this.target.z) * k;
+    this.target.y += (y - this.target.y) * k;
+    this.ground.constant = -this.target.y;
 
     // Shake: a damped spring for the kick, noise scaled by trauma squared.
     // Fixed substeps: one Euler step per frame diverges below about 18 fps and throws the view off screen.
@@ -100,8 +103,9 @@ export class FollowCamera {
 
     const lookX = this.target.x + sx;
     const lookZ = this.target.z + sz;
-    this.camera.position.set(lookX, 0.9 + Math.sin(this.pitch) * this.distance + sy, lookZ + Math.cos(this.pitch) * this.distance);
-    this.camera.lookAt(lookX, 0.9 + sy, lookZ);
+    const lookY = this.target.y + 0.9 + sy;
+    this.camera.position.set(lookX, lookY + Math.sin(this.pitch) * this.distance, lookZ + Math.cos(this.pitch) * this.distance);
+    this.camera.lookAt(lookX, lookY, lookZ);
   }
 
   /** World point on the ground under a screen position (normalized device coordinates). */
