@@ -15,6 +15,7 @@ import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
 import { generateLots, generateProps, mapLevel } from './data/map';
 import { mapSvg } from './data/map-svg';
+import { EdgeMarkers, Minimap } from './ui/minimap';
 import { ENEMIES } from './data/enemies';
 import type { Level } from './sim/level';
 
@@ -95,6 +96,9 @@ const ui = new Ui(opts, {
 input.onMenu = () => {
   if (phase !== 'title') ui.toggleOptions(!ui.optionsOpen);
 };
+
+const minimap = map ? new Minimap(map.def, map.lots, () => ui.toggleMap(true)) : null;
+const edges = new EdgeMarkers();
 
 if (map) {
   ui.setExpedition(true);
@@ -261,7 +265,7 @@ function frame(now: number): void {
       ui.showWon(sim.kills);
     }
   }
-  if (level) expeditionHud();
+  if (level) expeditionHud(dt);
 
   renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
@@ -275,10 +279,23 @@ function frame(now: number): void {
   }
 }
 
-function expeditionHud(): void {
+function expeditionHud(dt: number): void {
   if (!level) return;
   const p = sim.player;
   const enc = level.encounters[sim.run.index];
+  const alive = sim.enemies.filter((e) => e.state !== 'dead');
+  const travel = sim.run.phase === 'travel';
+  minimap?.show(phase === 'play');
+  minimap?.update(dt, sim.run.index, p, enc && travel ? enc : null, alive.map((e) => ({ x: e.x, z: e.z, boss: !!e.def.boss })));
+  // Edge triangles: the objective while travelling, the last three enemies of a wave (2D rule).
+  const marks: Array<{ x: number; y: number; color: string }> = [];
+  if (renderer && phase === 'play') {
+    if (enc && travel) marks.push({ ...renderer.screenOf(enc.x, 0, enc.z), color: '#43d1cf' });
+    if (!travel && sim.run.toSpawn <= 0 && sim.run.bossesToSpawn.length === 0 && alive.length <= 3) {
+      for (const e of alive) marks.push({ ...renderer.screenOf(e.x, 1, e.z), color: e.def.boss ? '#ff6a2a' : '#c23a2e' });
+    }
+  }
+  edges.update(marks);
   if (!enc) {
     ui.objective('Köpenick befreit', null);
   } else if (sim.run.phase === 'travel') {

@@ -4,6 +4,7 @@
 import { pushOut, type Collider } from './collide';
 import type { Bounds } from './flowfield';
 import type { EnemyKind } from '../data/enemies';
+import { onFerryBoat, type FerryLane } from './ferry';
 
 export interface Point {
   x: number;
@@ -99,6 +100,8 @@ export class Level {
     readonly playerBox: Bounds,
     readonly encounters: EncounterDef[] = [],
     readonly zones: ZoneDef[] = [],
+    /** Ferry lanes: water in the walk grid, walkable where the boat is (`time`). */
+    readonly ferries: FerryLane[] = [],
   ) {
     for (const c of colliders) {
       const e = c.kind === 'circle' ? c.r : Math.hypot(c.hx, c.hz);
@@ -111,6 +114,15 @@ export class Level {
         }
       }
     }
+  }
+
+  /** Sim time the boat positions refer to; the sim sets it every step. */
+  time = 0;
+
+  /** The ferry lane whose boat deck holds (x, z) right now, if any. */
+  boatAt(x: number, z: number, pad = 0): FerryLane | null {
+    for (const f of this.ferries) if (onFerryBoat(f, this.time, x, z, pad)) return f;
+    return null;
   }
 
   get expedition(): boolean {
@@ -144,7 +156,14 @@ export class Level {
 
   blocked(x: number, z: number, r = 0): boolean {
     if (x < this.bounds.minX + r || x > this.bounds.maxX - r || z < this.bounds.minZ + r || z > this.bounds.maxZ - r) return true;
-    return this.ground !== null && (r > 0 ? this.ground.circle(x, z, r) : this.ground.at(x, z));
+    if (this.ground === null) return false;
+    if (!(r > 0 ? this.ground.circle(x, z, r) : this.ground.at(x, z))) return false;
+    if (this.ferries.length === 0) return true;
+    // A blocked sample point is free again where the ferry boat floats over it.
+    const g = this.ground;
+    const k = r * 0.8;
+    const at = (px: number, pz: number): boolean => g.at(px, pz) && !this.boatAt(px, pz, 0.15);
+    return r > 0 ? at(x, z) || at(x + k, z) || at(x - k, z) || at(x, z + k) || at(x, z - k) : at(x, z);
   }
 
   /**

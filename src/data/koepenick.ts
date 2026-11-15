@@ -1,9 +1,11 @@
-// Köpenick as a mini open world (M10 concept A, Johannes 2026-11-15). Real directions, compressed
-// distances: S Köpenick north, Altstadt island in the middle between Spree (north), Dahme (west) and
-// Frauentog (south), Müggelberge with the Müggelturm south-east, Spreepark north-west along the Spree.
-// Anchors checked against OpenStreetMap on 2026-11-15 (see docs/maps/koepenick.md).
-// Route: station → Bahnhofsviertel (6 waves, Feldwebel) → Altstadt → Müggelberge (7 waves,
-// Turmwächter) → back across the Altstadt → Spreepark (7 waves, Rex) → Rathaus (Hauptmann).
+// Köpenick as a mini open world. v2 (M11b, concept C "Rundweg", Johannes 2026-11-15): real
+// directions, distances about 0.6 of v1. The Altstadt island keeps its size; the zones around it
+// moved closer. S Köpenick north, Müggelberge south-east, the ferry Wendenschloß – Grünau over the
+// Dahme south, Johannisthal and the Spreepark west and north-west. Anchors checked against
+// OpenStreetMap on 2026-11-15 (see docs/maps/koepenick.md).
+// Route, one loop without doubling back: station → Bahnhofsviertel (6 waves, Feldwebel) → Altstadt →
+// Müggelberge (7 waves, Turmwächter) → ferry → Johannisthal → Spreepark (7 waves, Rex) → along the
+// Spree over the Lange Brücke → Rathaus (Hauptmann).
 // Meters, +X east, +Z south, origin at the Rathaus. `scale` stretches distances only.
 import type { BossKind, EnemyKind } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
@@ -62,42 +64,42 @@ export function koepenickMap(scale = 1): MapDef {
 
   const encounters: EncounterDef[] = [
     // Zone 0: Bahnhofsviertel (6 waves).
-    enc('vorplatz', 'Bahnhofsvorplatz', 0, 10, -160, 13, 2),
-    enc('forum', 'Forum', 0, 46, -112, 14, 2),
-    enc('linden', 'Lindenstraße', 0, -40, -100, 13, 2),
-    boss('damm', 'Dammbrücke', 0, 8, -80, 14, 'feldwebel', 3),
+    enc('vorplatz', 'Bahnhofsvorplatz', 0, 10, -108, 13, 2),
+    enc('linden', 'Lindenstraße', 0, -36, -92, 13, 2),
+    enc('forum', 'Forum', 0, 46, -96, 14, 2),
+    boss('damm', 'Dammbrücke', 0, 6, -74, 14, 'feldwebel', 3),
     // Zone 1: Müggelberge (7 waves).
-    enc('kietz', 'Kietz', 1, 62, 14, 13, 2),
-    enc('mueggelheimer', 'Müggelheimer Straße', 1, 112, 70, 14, 2),
-    enc('teufelssee', 'Teufelssee', 1, 128, 148, 14, 3),
-    boss('turm', 'Müggelturm', 1, 180, 165, 15, 'waechter', 4),
-    // Zone 2: Spreepark (7 waves).
-    enc('vorstadt', 'Köllnische Vorstadt', 2, -82, -16, 13, 2),
-    enc('spreeufer', 'Spreeufer', 2, -140, -45, 14, 2),
-    enc('dinowiese', 'Dino-Wiese', 2, -205, -22, 15, 3),
-    boss('riesenrad', 'Riesenrad', 2, -198, -68, 16, 'rex', 4),
-    // Zone 3: back to the Rathaus.
+    enc('kietz', 'Kietz', 1, 60, 16, 13, 2),
+    enc('mueggelheimer', 'Müggelheimer Straße', 1, 92, 52, 14, 2),
+    enc('teufelssee', 'Teufelssee', 1, 98, 98, 14, 3),
+    boss('turm', 'Müggelturm', 1, 134, 112, 15, 'waechter', 4),
+    // Zone 2: over the Dahme by ferry, west through Johannisthal up to the Spreepark (7 waves).
+    enc('faehre', 'Fähre Grünau', 2, -54, 104, 13, 2),
+    enc('flugfeld', 'Flugfeld Johannisthal', 2, -100, 62, 15, 2),
+    enc('dinowiese', 'Dino-Wiese', 2, -112, 12, 15, 3),
+    boss('riesenrad', 'Riesenrad', 2, -108, -30, 16, 'rex', 4),
+    // Zone 3: along the Spree, over the Lange Brücke to the Rathaus.
     boss('rathaus', 'Rathausplatz', 3, 0, 12, 15, 'hauptmann', 6),
   ];
 
   const zones: ZoneDef[] = [
-    { id: 'bahnhof', name: 'Bahnhofsviertel', entry: { x: 10 * s, z: -176 * s } },
-    { id: 'mueggelberge', name: 'Müggelberge', entry: { x: 48 * s, z: 4 * s } },
-    { id: 'spreepark', name: 'Spreepark', entry: { x: -52 * s, z: -4 * s } },
-    { id: 'rathaus', name: 'Rathaus', entry: { x: 6 * s, z: -26 * s } },
+    { id: 'bahnhof', name: 'Bahnhofsviertel', entry: { x: 10 * s, z: -124 * s } },
+    { id: 'mueggelberge', name: 'Müggelberge', entry: { x: 48 * s, z: 0 } },
+    { id: 'spreepark', name: 'Spreepark', entry: { x: 8 * s, z: 106 * s } },
+    { id: 'rathaus', name: 'Rathaus', entry: { x: -56 * s, z: -6 * s } },
   ];
 
   const rivers: River[] = [
-    { name: 'Spree', width: rw(22), pts: line([[150, -25], [110, -38], [70, -45], [30, -47], [-10, -45], [-28, -40]]) },
-    { name: 'Spree', width: rw(28), pts: line([[-28, -40], [-60, -55], [-100, -75], [-140, -95], [-180, -112], [-220, -128], [-270, -148]]) },
-    { name: 'Dahme', width: rw(24), pts: line([[-42, 220], [-40, 160], [-36, 100], [-32, 50], [-30, 0], [-28, -40]]) },
+    { name: 'Spree', width: rw(22), pts: line([[108, -26], [70, -40], [30, -47], [-10, -45], [-28, -40]]) },
+    { name: 'Spree', width: rw(26), pts: line([[-28, -40], [-60, -55], [-100, -75], [-130, -90], [-156, -102]]) },
+    { name: 'Dahme', width: rw(22), pts: line([[-14, 156], [-18, 110], [-28, 70], [-32, 50], [-30, 0], [-28, -40]]) },
   ];
 
   const lakes: Pt[][] = [
-    line([[136, -110], [250, -130], [250, 100], [205, 94], [176, 72], [150, 36], [138, 0], [134, -60]]), // Müggelsee
+    line([[104, -60], [166, -70], [166, 70], [140, 66], [124, 48], [112, 22], [106, -10], [104, -40]]), // Müggelsee
     line([[-52, 3], [-12, 3], [-10, 44], [-50, 46]]), // Dahme around the Schlossinsel
     line([[-20, 33], [28, 31], [46, 46], [38, 64], [4, 68], [-22, 58]]), // Frauentog
-    ellipse(92 * s, 180 * s, 13 * s, 9 * s, 16), // Teufelssee
+    ellipse(72 * s, 118 * s, 10 * s, 7 * s, 16), // Teufelssee
   ];
   const islands: Pt[][] = [ellipse(-31 * s, 24 * s, 10 * Math.sqrt(s), 15 * Math.sqrt(s), 18)];
 
@@ -105,61 +107,62 @@ export function koepenickMap(scale = 1): MapDef {
     { name: 'Dammbrücke', x: 6 * s, z: -46 * s, rot: 0, len: rw(22) + 12, width: 12 },
     { name: 'Lange Brücke', x: -30 * s, z: -4 * s, rot: 90 * DEG, len: rw(24) + 12, width: 11 },
     { name: 'Schlossbrücke', x: -15.5 * s, z: 24 * s, rot: 90 * DEG, len: 12, width: 5 },
+    // Fähre Wendenschloß – Grünau: the moored ferry is the way over the Dahme.
+    { name: 'Fähre', kind: 'ferry', x: -17.5 * s, z: 104 * s, rot: 90 * DEG, len: rw(22) + 12, width: 6 },
   ];
 
   const streets: Street[] = [
-    { name: 'Bahnhofstraße', kind: 'main', width: 10, pts: line([[10, -205], [9, -130], [7, -70], [6, -46], [4, -22]]) },
-    { name: 'Alt-Köpenick', kind: 'side', width: 8, pts: line([[4, -22], [2, 10], [0, 28]]) },
-    { name: 'Grünstraße', kind: 'side', width: 7, pts: line([[-12, -4], [14, 0], [44, 0]]) },
-    { name: 'Lange Brücke', kind: 'side', width: 9, pts: line([[-50, -4], [-12, -4]]) },
-    { name: 'Müggelheimer Straße', kind: 'main', width: 9, pts: line([[44, 0], [64, 10], [90, 38], [116, 74], [138, 112], [160, 148], [178, 166]]) },
-    { name: 'Kietz', kind: 'side', width: 6, pts: line([[28, 18], [52, 30], [70, 44]]) },
-    { name: 'Spreeufer', kind: 'main', width: 9, pts: line([[-50, -4], [-72, -12], [-100, -26], [-130, -40], [-160, -52], [-192, -62]]) },
-    { name: 'Lindenstraße', kind: 'side', width: 8, pts: line([[-80, -100], [9, -104], [96, -110]]) },
-    { name: 'Friedrichshagener Straße', kind: 'side', width: 7, pts: line([[9, -148], [90, -152], [130, -150]]) },
-    { name: 'Seelenbinderstraße', kind: 'side', width: 7, pts: line([[-110, -132], [-40, -130], [9, -128]]) },
-    { name: 'Mahlsdorfer Straße', kind: 'side', width: 7, pts: line([[-100, -176], [-40, -174], [9, -172], [80, -176], [135, -178]]) },
-    { name: 'Hirtestraße', kind: 'side', width: 6, pts: line([[-40, -174], [-40, -130], [-45, -70]]) },
-    { name: 'Puchanstraße', kind: 'side', width: 6, pts: line([[90, -176], [96, -110], [100, -66]]) },
-    { name: 'Freiheit', kind: 'side', width: 6, pts: line([[-14, 18], [0, 22]]) },
-    { name: 'Böttcherstraße', kind: 'side', width: 6, pts: line([[18, -30], [44, -26], [50, -10]]) },
-    { name: 'Lindenstraße Süd', kind: 'side', width: 7, pts: line([[-72, -12], [-80, 20], [-90, 50]]) },
-    { name: 'Wendenschloß Quer', kind: 'side', width: 6, pts: line([[-8, 80], [40, 90]]) },
-    { name: 'Wendenschloßstraße', kind: 'side', width: 7, pts: line([[-2, 28], [-8, 80], [-14, 140], [-18, 205]]) },
-    { name: 'Spreepark', kind: 'path', width: 6, pts: line([[-192, -62], [-212, -82], [-232, -58], [-222, -18], [-196, -6], [-172, -28], [-192, -62]]) },
-    { name: 'Kammweg', kind: 'path', width: 5, pts: line([[128, 148], [150, 168], [178, 166]]) },
+    { name: 'Bahnhofstraße', kind: 'main', width: 7.5, tram: true, pts: line([[10, -150], [9, -100], [7, -60], [6, -46], [4, -22]]) },
+    { name: 'Alt-Köpenick', kind: 'side', width: 6.5, pts: line([[4, -22], [2, 10], [0, 28]]) },
+    { name: 'Grünstraße', kind: 'side', width: 5.5, pts: line([[-12, -4], [14, 0], [44, 0]]) },
+    { name: 'Lange Brücke', kind: 'side', width: 7, pts: line([[-52, -4], [-12, -4]]) },
+    { name: 'Müggelheimer Straße', kind: 'main', width: 7, pts: line([[44, 0], [64, 10], [80, 32], [92, 52], [104, 80], [120, 100], [134, 112]]) },
+    { name: 'Kietz', kind: 'side', width: 5, pts: line([[28, 18], [52, 30], [70, 44]]) },
+    { name: 'Böttcherstraße', kind: 'side', width: 5, pts: line([[18, -30], [44, -26], [50, -10]]) },
+    { name: 'Freiheit', kind: 'side', width: 5, pts: line([[-14, 18], [0, 22]]) },
+    { name: 'Mahlsdorfer Straße', kind: 'side', width: 6, pts: line([[-90, -118], [-36, -116], [9, -116], [70, -118], [100, -120]]) },
+    { name: 'Lindenstraße', kind: 'side', width: 6, pts: line([[-80, -88], [-36, -90], [8, -88], [46, -92], [96, -94]]) },
+    { name: 'Hirtestraße', kind: 'side', width: 5, pts: line([[-36, -116], [-36, -90], [-40, -60]]) },
+    { name: 'Puchanstraße', kind: 'side', width: 5, pts: line([[76, -118], [78, -94], [80, -60]]) },
+    // The loop south and west (placeholder names: course not checked against real streets).
+    { name: 'Waldweg', kind: 'side', width: 5, pts: line([[134, 112], [112, 124], [84, 130], [56, 126], [30, 116], [4, 104]]) },
+    { name: 'Heideweg', kind: 'side', width: 5.5, pts: line([[-30, 104], [-54, 104], [-78, 86], [-100, 62], [-108, 36], [-112, 12]]) },
+    { name: 'Spreeufer', kind: 'main', width: 7, pts: line([[-52, -4], [-72, -12], [-92, -22], [-108, -30]]) },
+    { name: 'Lindenstraße Süd', kind: 'side', width: 5.5, pts: line([[-72, -12], [-76, 14], [-82, 40]]) },
+    { name: 'Spreepark', kind: 'path', width: 4, pts: line([[-92, -22], [-104, -50], [-130, -38], [-132, -8], [-112, 12], [-94, 2], [-92, -22]]) },
+    { name: 'Kammweg', kind: 'path', width: 4, pts: line([[98, 98], [116, 108], [134, 112]]) },
   ];
 
   const areas: Area[] = [
-    { id: 'bahnhof', name: 'Bahnhofsviertel', ground: 'asphalt', frontage: 'altbau', trees: 0.4, poly: line([[-120, -205], [140, -205], [140, -62], [-40, -60], [-120, -90]]) },
+    { id: 'bahnhof', name: 'Bahnhofsviertel', ground: 'asphalt', frontage: 'altbau', trees: 0.4, poly: line([[-100, -156], [104, -156], [104, -58], [-40, -56], [-100, -72]]) },
     { id: 'altstadt', name: 'Altstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.2, poly: line([[-20, -36], [48, -38], [54, -10], [46, 32], [-18, 34]]) },
-    { id: 'kietz', name: 'Kietz', ground: 'grass', frontage: 'house', trees: 1.2, poly: line([[44, -34], [140, 34], [152, 112], [64, 118], [40, 64], [46, 32], [54, -10]]) },
-    { id: 'mueggelberge', name: 'Müggelberge', ground: 'forest', frontage: null, trees: 5.5, poly: line([[40, 118], [152, 112], [175, 72], [205, 94], [250, 100], [250, 225], [40, 225]]) },
-    { id: 'vorstadt', name: 'Köllnische Vorstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.5, poly: line([[-44, -50], [-118, -82], [-122, 30], [-44, 60]]) },
-    { id: 'spreepark', name: 'Spreepark', ground: 'jungle', frontage: null, trees: 3.2, jungle: true, poly: line([[-270, -140], [-118, -82], [-122, 30], [-270, 40]]) },
-    { id: 'wald', name: 'Wald', ground: 'forest', frontage: 'house', trees: 5, poly: line([[-270, 40], [-122, 30], [-44, 60], [-28, 225], [-270, 225]]) },
-    { id: 'wendenschloss', name: 'Wendenschloß', ground: 'grass', frontage: 'house', trees: 1.6, poly: line([[-28, 60], [40, 64], [64, 118], [40, 225], [-28, 225]]) },
-    { id: 'friedrichshagen', name: 'Friedrichshagen', ground: 'forest', frontage: null, trees: 2.6, poly: line([[140, -205], [250, -205], [250, -130], [136, -110]]) },
+    { id: 'kietz', name: 'Kietz', ground: 'grass', frontage: 'house', trees: 1.2, poly: line([[44, -34], [104, -24], [112, 22], [124, 48], [104, 70], [62, 84], [40, 64], [46, 32], [54, -10]]) },
+    { id: 'mueggelberge', name: 'Müggelberge', ground: 'forest', frontage: null, trees: 5, poly: line([[62, 84], [104, 70], [124, 48], [140, 66], [166, 70], [166, 156], [50, 156], [36, 110]]) },
+    { id: 'wendenschloss', name: 'Wendenschloß', ground: 'grass', frontage: 'house', trees: 1.6, poly: line([[-26, 60], [40, 64], [62, 84], [36, 110], [50, 156], [-14, 156], [-22, 110]]) },
+    { id: 'vorstadt', name: 'Köllnische Vorstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.5, poly: line([[-44, -50], [-86, -66], [-88, 30], [-44, 60]]) },
+    { id: 'spreepark', name: 'Spreepark', ground: 'jungle', frontage: null, trees: 3, jungle: true, poly: line([[-160, -110], [-86, -66], [-88, 30], [-160, 32]]) },
+    { id: 'johannisthal', name: 'Johannisthal', ground: 'grass', frontage: 'house', trees: 1.8, poly: line([[-160, 32], [-88, 30], [-44, 60], [-26, 156], [-160, 156]]) },
+    { id: 'friedrichshagen', name: 'Friedrichshagen', ground: 'forest', frontage: null, trees: 2.6, poly: line([[104, -156], [166, -156], [166, -70], [104, -60]]) },
   ];
 
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear });
   const landmarks: Landmark[] = [
-    L('sbahnhof', 10, -190, 0, 15, 7, 6),
-    L('forum', 46, -138, 0, 22, 11, 3),
+    L('sbahnhof', 10, -140, 0, 15, 7, 6),
+    L('forum', 52, -126, 0, 22, 11, 3),
     L('rathaus', 24, -18, 270 * DEG, 13, 15, 3),
     L('schloss', -31, 24, 90 * DEG, 6, 9, 0),
     L('kirche', 26, 18, 0, 5, 9, 2),
-    L('mueggelturm', 196, 180, 0, 3, 3, 6),
-    L('riesenrad', -228, -94, 30 * DEG, 2.5, 6, 6),
-    L('dino', -190, -36, 200 * DEG, 0, 0, 4),
-    L('dino', -232, -34, 120 * DEG, 0, 0, 4),
-    L('dino', -168, -76, 300 * DEG, 0, 0, 4),
+    L('mueggelturm', 146, 124, 0, 3, 3, 6),
+    L('riesenrad', -137, -51, 30 * DEG, 2.5, 6, 6),
+    L('dino', -96, -4, 200 * DEG, 0, 0, 4),
+    L('dino', -140, -14, 120 * DEG, 0, 0, 4),
+    L('dino', -126, 36, 300 * DEG, 0, 0, 4),
   ];
 
   return {
     id: 'koepenick',
     name: 'Köpenick',
-    bounds: { minX: -265 * s, maxX: 245 * s, minZ: -208 * s, maxZ: 220 * s },
+    bounds: { minX: -156 * s, maxX: 162 * s, minZ: -152 * s, maxZ: 152 * s },
     start: zones[0]!.entry,
     rivers,
     lakes,
@@ -171,18 +174,18 @@ export function koepenickMap(scale = 1): MapDef {
     landmarks,
     encounters,
     zones,
-    rail: { z: -192 * s, minX: -265 * s, maxX: 245 * s, gapX: 10 * s, gapW: 9 },
+    rail: { z: -142 * s, minX: -156 * s, maxX: 162 * s, gapX: 10 * s, gapW: 9 },
     hills: [
       // Müggelberge: the Turm fight on the summit, the Teufelssee fight on the lower slope.
-      { name: 'Müggelberge', x: 184 * s, z: 172 * s, r: 22, slope: 40 * s, h: 7 },
-      { name: 'Dino-Hügel', x: -214 * s, z: -28 * s, r: 9, slope: 20 * s, h: 3.5 },
+      { name: 'Müggelberge', x: 138 * s, z: 116 * s, r: 20, slope: 30 * s, h: 7 },
+      { name: 'Dino-Hügel', x: -124 * s, z: 4 * s, r: 8, slope: 14 * s, h: 3.5 },
     ],
     terraces: [
       // Platform of the Riesenrad, looking over the Rex arena; stairs east and south.
       {
         name: 'Riesenrad-Plattform', h: 2.4,
-        poly: [P(-243, -106), P(-214, -106), P(-214, -82), P(-243, -82)],
-        stairs: [stairTo(P(-214, -92), -90 * DEG), stairTo(P(-229, -82), 180 * DEG)],
+        poly: [P(-148, -64), P(-127, -64), P(-127, -42), P(-148, -42)],
+        stairs: [stairTo(P(-127, -53), -90 * DEG), stairTo(P(-137, -42), 180 * DEG)],
       },
       // St. Laurentius on its church hill above the Rathausplatz; stairs to the square and to the Grünstraße.
       {
@@ -191,6 +194,8 @@ export function koepenickMap(scale = 1): MapDef {
         stairs: [stairTo(P(17, 17), 90 * DEG), stairTo(P(26, 5), 0)],
       },
     ],
+    // A tram broke down on the Dammbrücke on its way into the Altstadt.
+    fixedProps: [{ kind: 'tram', x: 6 * s + 1.5, z: -42 * s, rot: 0.05, size: 1 }],
     seed: 1906,
   };
 }

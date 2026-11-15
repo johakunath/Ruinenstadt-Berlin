@@ -20,6 +20,8 @@ export const FX_LAYER = 1;
 export const GROUND_H = 4.3;
 export const FLOOR_H = 3.5;
 export const PARAPET = 0.7;
+/** Share of lit windows on intact buildings: few faint lights, it is a ruined city (2026-11-15). */
+export const LIT = 0.1;
 const GATE_H = 3.7;
 const SHOP_H = 3.45;
 
@@ -42,6 +44,8 @@ export interface World {
   update(time: number): void;
   /** Big maps: moon shadow and pooled lights follow the hero. */
   follow?(x: number, z: number): void;
+  /** Moving map parts (ferry boat) at the interpolated sim time. */
+  sync?(simTime: number): void;
 }
 
 /** Local frame of a facade run: s along the wall, y up, n out into the yard. */
@@ -329,10 +333,10 @@ export function buildAltbau(b: Builder, f: Facade): void {
   for (let i = 0; i < bays; i++) {
     const s = (i + 0.5) * spacing;
     const blocked = [...cuts, ...doors].some((c) => s > c.from - 0.9 && s < c.to + 0.9);
-    if (!blocked) windowAt(b, run, rng, s, 1.55, 1.15, 1.75, 0.3, false);
+    if (!blocked) windowAt(b, run, rng, s, 1.55, 1.15, 1.75, LIT * 0.6, false);
     for (let k = 0; k < f.floors; k++) {
       const y = GROUND_H + k * FLOOR_H + 0.95;
-      windowAt(b, run, rng, s, y, 1.15, 1.95, k === 0 ? 0.38 : 0.2, k === 0);
+      windowAt(b, run, rng, s, y, 1.15, 1.95, k === 0 ? LIT : LIT * 0.5, k === 0);
       if (k === 0 && rng.next() < 0.28) balcony(b, run, s, y - 0.1);
     }
   }
@@ -562,6 +566,134 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
         const g = rng.range(0.7, 1.05);
         b.box(m.wood, at(p, (i - 2) * 0.27 + rng.range(-0.03, 0.03), 1.25, 0.32 + rng.range(-0.05, 0.05), -0.2 + rng.range(-0.04, 0.04), 0, rng.range(-0.05, 0.05)), 0.22, rng.range(2.2, 2.9), 0.05, [g, g, g]);
       }
+      break;
+    }
+    case 'car': {
+      // Abandoned saloon (generic boxy East German shape): body, cabin, dark windows, flat tires.
+      const tint = rng.pick([[1.7, 0.75, 0.6], [0.8, 1.05, 1.5], [1.6, 1.45, 1.1], [0.9, 1.3, 0.85], [1.3, 1.3, 1.3]] as Array<[number, number, number]>);
+      const tilt = at(p, 0, 0, 0, rng.range(-0.03, 0.03), 0, rng.range(-0.04, 0.04));
+      const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+      b.box(m.iron, part(0, 0.62, 0), 1.7, 0.62, 4.0, tint);
+      b.box(m.iron, part(0, 1.18, -0.25), 1.48, 0.52, 2.0, [tint[0] * 0.9, tint[1] * 0.9, tint[2] * 0.9]);
+      b.box(m.rubber, part(0, 1.2, -0.25), 1.52, 0.36, 1.7, [0.35, 0.4, 0.42]);
+      b.box(m.rubber, part(0, 0.36, 2.02), 1.6, 0.18, 0.1);
+      b.box(m.rubber, part(0, 0.36, -2.02), 1.6, 0.18, 0.1);
+      const wheel = new CylinderGeometry(0.3, 0.3, 0.2, 10);
+      for (const [x, z] of [[0.78, 1.3], [-0.78, 1.3], [0.78, -1.3], [-0.78, -1.3]] as Array<[number, number]>) {
+        b.geo(m.rubber, wheel, part(x, 0.26, z).multiply(new Matrix4().makeRotationZ(Math.PI / 2)));
+      }
+      b.shadowBox(part(0, 0.8, 0), 1.7, 1.4, 4.0);
+      break;
+    }
+    case 'lampBroken': {
+      // Dead street lamp: bent mast, smashed head, no light.
+      b.geo(m.iron, new CylinderGeometry(0.16, 0.2, 0.55, 8), at(p, 0, 0.275, 0));
+      const lean = rng.range(0.12, 0.35);
+      b.geo(m.iron, new CylinderGeometry(0.06, 0.08, 2.5, 8), at(p, 0, 1.75, 0, lean, 0, 0).multiply(new Matrix4().makeTranslation(0, 0, 0)));
+      b.geo(m.iron, new ConeGeometry(0.32, 0.26, 6), at(p, 0, 2.95 - lean, Math.sin(lean) * 1.3, lean + 0.5, 0, 0), [0.7, 0.7, 0.7]);
+      b.shadowBox(at(p, 0, 1.6, 0), 0.14, 3.0, 0.14);
+      break;
+    }
+    case 'campfire': {
+      // Stone ring, crossed logs, embers; same light as a barrel but lower.
+      const stone = new SphereGeometry(0.2, 6, 4);
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2;
+        const g = rng.range(0.55, 0.85);
+        b.geo(m.stucco, stone, at(p, Math.cos(a) * 0.62, 0.08, Math.sin(a) * 0.62, 0, a).multiply(tmpScale.makeScale(1.1, 0.7, 0.9)), [g, g, g * 0.95]);
+      }
+      for (let i = 0; i < 4; i++) b.box(m.wood, at(p, 0, 0.16, 0, 0.2, (i / 4) * Math.PI, 0), 0.14, 0.14, 1.0, [0.5, 0.4, 0.32]);
+      b.geo(m.coals, new CircleGeometry(0.42, 12), at(p, 0, 0.06, 0, -Math.PI / 2));
+      b.fires.push(new Vector3(p.x, 0.25, p.z));
+      b.light(new Vector3(p.x, 1.1, p.z), 0xff8a3c, 28, 12, 1, 5.5);
+      break;
+    }
+    case 'bus': {
+      // Articulated-length city bus without livery: cream body, window band, doors, six wheels.
+      const L = 11;
+      const W = 2.5;
+      const tilt = at(p, 0, 0, 0, 0.012, 0, rng.range(-0.03, 0.03));
+      const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+      // Painted body (plaster materials take colour; iron would stay near black at night).
+      const paint = m.plaster[rng.pick(['cream', 'ochre', 'oxblood'])] as Material;
+      const tint: [number, number, number] = [1, 1, 1];
+      b.box(paint, part(0, 0.95, 0), W, 1.1, L, tint);
+      b.box(paint, part(0, 2.75, 0), W, 0.3, L, tint);
+      b.box(paint, part(0, 3.0, 0), W - 0.1, 0.2, L - 0.3, [0.8, 0.8, 0.8]);
+      // Window band (dark glass, some panes missing) and pillars.
+      b.box(m.rubber, part(0, 2.05, 0), W - 0.08, 1.1, L - 0.1, [0.45, 0.55, 0.6]);
+      for (let z = -L / 2 + 0.2; z <= L / 2 - 0.2; z += 1.35) for (const sx of [-1, 1]) b.box(paint, part(sx * (W / 2 - 0.02), 2.05, z), 0.08, 1.1, 0.14, tint);
+      for (const [sx, z] of [[1, L / 2 - 1.2], [1, 0.4], [1, -L / 2 + 2]] as Array<[number, number]>) b.box(m.rubber, part(sx * (W / 2 + 0.01), 1.45, z), 0.05, 2.3, 1.1, [0.35, 0.38, 0.4]);
+      b.box(m.rubber, part(0, 1.9, L / 2 + 0.01), W - 0.2, 1.3, 0.05, [0.4, 0.5, 0.55]);
+      b.box(m.iron, part(0, 0.45, L / 2 + 0.05), W, 0.25, 0.12, [0.6, 0.6, 0.6]);
+      b.box(m.iron, part(0, 0.45, -L / 2 - 0.05), W, 0.25, 0.12, [0.6, 0.6, 0.6]);
+      const wheel = new CylinderGeometry(0.5, 0.5, 0.3, 12);
+      for (const z of [L / 2 - 2.2, -L / 2 + 2.5, -L / 2 + 3.9]) for (const sx of [-1, 1]) b.geo(m.rubber, wheel, part(sx * (W / 2 - 0.12), 0.42, z).multiply(new Matrix4().makeRotationZ(Math.PI / 2)));
+      b.shadowBox(part(0, 1.55, 0), W, 3.1, L);
+      break;
+    }
+    case 'tram': {
+      // Two-car tram (generic, no livery), one bogie off the rails, pantograph folded.
+      const L = 15;
+      const W = 2.25;
+      const tilt = at(p, 0, 0, 0, 0.01, 0, 0.035);
+      const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+      const creamM = m.plaster['cream'] as Material;
+      const redM = m.plaster['oxblood'] as Material;
+      for (const c of [-1, 1]) {
+        const z0 = c * (L / 4 + 0.1);
+        b.box(redM, part(0, 1.0, z0), W, 1.2, L / 2 - 0.2);
+        b.box(creamM, part(0, 2.85, z0), W, 0.35, L / 2 - 0.2);
+        b.box(m.rubber, part(0, 2.05, z0), W - 0.06, 1.25, L / 2 - 0.3, [0.42, 0.52, 0.56]);
+        for (let z = z0 - L / 4 + 0.3; z <= z0 + L / 4 - 0.3; z += 1.2) for (const sx of [-1, 1]) b.box(creamM, part(sx * (W / 2 - 0.02), 2.05, z), 0.08, 1.25, 0.12);
+        b.box(creamM, part(0, 3.1, z0), W - 0.3, 0.16, L / 2 - 0.6, [0.8, 0.8, 0.78]);
+        for (const bz of [z0 - 2.2, z0 + 2.2]) b.box(m.rubber, part(0, 0.28, bz), W - 0.3, 0.45, 1.8, [0.5, 0.5, 0.5]);
+      }
+      b.box(m.rubber, part(0, 1.6, 0), W - 0.3, 2.4, 0.3, [0.3, 0.3, 0.3]);
+      b.box(m.rubber, part(0, 1.95, L / 2 + 0.02), W - 0.25, 1.1, 0.05, [0.4, 0.5, 0.55]);
+      b.box(m.iron, part(0, 3.35, L / 4), 0.08, 0.5, 1.4, [0.5, 0.5, 0.5]);
+      b.box(m.iron, part(0, 3.62, L / 4), 1.5, 0.06, 0.1, [0.5, 0.5, 0.5]);
+      b.shadowBox(part(0, 1.6, 0), W, 3.2, L);
+      break;
+    }
+    case 'bauzaun': {
+      // Construction fence panel: two posts in concrete feet, frame, mesh bars, a warning strip.
+      const L = p.size;
+      for (const x of [-L / 2, L / 2]) {
+        b.box(m.cobbles, at(p, x, 0.09, 0), 0.25, 0.18, 0.62, [1.25, 1.25, 1.2]);
+        b.box(m.iron, at(p, x, 1.0, 0), 0.05, 2.0, 0.05, [1.2, 1.2, 1.15]);
+      }
+      for (const y of [0.15, 1.95]) b.box(m.iron, at(p, 0, y, 0), L, 0.04, 0.04, [1.2, 1.2, 1.15]);
+      for (let x = -L / 2 + 0.2; x < L / 2; x += 0.2) b.box(m.iron, at(p, x, 1.05, 0), 0.015, 1.8, 0.015, [1.0, 1.0, 0.95]);
+      for (const y of [0.6, 1.4]) b.box(m.iron, at(p, 0, y, 0), L, 0.015, 0.015, [1.0, 1.0, 0.95]);
+      if (rng.next() < 0.4) b.box(m.awning, at(p, rng.range(-0.6, 0.6), 1.2, 0.04), rng.range(1.2, 2.2), 0.5, 0.02);
+      b.shadowBox(at(p, 0, 1.0, 0), L, 2.0, 0.05);
+      break;
+    }
+    case 'barrier': {
+      // Concrete roadblock: jersey barriers with a sign, the street ends here.
+      const L = p.size;
+      for (const x of [-L / 4, L / 4]) {
+        const g = rng.range(1.05, 1.3);
+        b.box(m.cobbles, at(p, x, 0.2, 0, 0, rng.range(-0.08, 0.08)), L / 2 - 0.1, 0.4, 0.7, [g, g, g * 0.95]);
+        b.box(m.cobbles, at(p, x, 0.65, 0, 0, rng.range(-0.08, 0.08)), L / 2 - 0.15, 0.5, 0.32, [g, g, g * 0.95]);
+      }
+      b.box(m.awning, at(p, 0, 1.15, 0), 1.4, 0.4, 0.05);
+      b.box(m.iron, at(p, 0, 0.95, 0.04), 0.06, 0.4, 0.06);
+      b.shadowBox(at(p, 0, 0.45, 0), L, 0.9, 0.7);
+      break;
+    }
+    case 'bollard': {
+      b.geo(m.iron, new CylinderGeometry(0.11, 0.13, 0.9, 8), at(p, 0, 0.45, 0), [0.8, 0.8, 0.8]);
+      b.geo(m.iron, new CylinderGeometry(0.13, 0.13, 0.08, 8), at(p, 0, 0.72, 0), [1.6, 1.5, 1.2]);
+      break;
+    }
+    case 'fence': {
+      // Garden fence: posts and two rails, wooden pickets.
+      const L = p.size;
+      for (let x = -L / 2; x <= L / 2 + 1e-3; x += Math.max(1, L / Math.ceil(L / 2))) b.box(m.wood, at(p, x, 0.5, 0), 0.1, 1.0, 0.1, [0.6, 0.55, 0.5]);
+      for (const y of [0.3, 0.8]) b.box(m.wood, at(p, 0, y, 0), L, 0.07, 0.05, [0.75, 0.7, 0.62]);
+      for (let x = -L / 2 + 0.15; x < L / 2; x += 0.3) if (rng.next() > 0.12) b.box(m.wood, at(p, x, 0.5, 0.04, 0, 0, rng.range(-0.06, 0.06)), 0.08, rng.range(0.85, 1.0), 0.03, [0.85, 0.8, 0.7]);
       break;
     }
     case 'bench': {

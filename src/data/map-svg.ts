@@ -58,8 +58,9 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
       if (o.trees) out.push(`<circle cx="${l.x.toFixed(1)}" cy="${l.z.toFixed(1)}" r="${(l.w * 0.45).toFixed(1)}" fill="${l.jungle ? '#4f7a35' : '#1f3324'}" opacity="0.9"/>`);
       continue;
     }
-    const col = l.kind === 'altbau' ? '#9c7a5c' : l.kind === 'platte' ? '#8a8a80' : '#8c6a50';
+    const col = l.kind === 'altbau' ? '#9c7a5c' : l.kind === 'platte' ? '#8a8a80' : l.kind === 'shop' ? '#b08a4a' : '#8c6a50';
     const deg = (-l.rot * 180) / Math.PI;
+    if (l.wing) out.push(`<rect x="${(-l.wing.w / 2).toFixed(1)}" y="${(-l.wing.d / 2).toFixed(1)}" width="${l.wing.w.toFixed(1)}" height="${l.wing.d.toFixed(1)}" fill="${col}" stroke="#14282b" stroke-width="0.5" transform="translate(${l.wing.x.toFixed(1)} ${l.wing.z.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`);
     out.push(`<rect x="${(-l.w / 2).toFixed(1)}" y="${(-l.d / 2).toFixed(1)}" width="${l.w.toFixed(1)}" height="${l.d.toFixed(1)}" fill="${col}" stroke="#14282b" stroke-width="0.5" transform="translate(${l.x.toFixed(1)} ${l.z.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`);
   }
   for (const l of m.landmarks) {
