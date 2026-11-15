@@ -990,3 +990,114 @@ export function paintGlow(inner: string, outer: string): Texture {
   t.colorSpace = SRGBColorSpace;
   return t;
 }
+
+// ---------------------------------------------------------------- map (M11)
+
+/** Neutral painted earth: vertex colors tint it into grass, forest floor, jungle or paving. */
+export function paintGround(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(61);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#8a8a7a';
+  ctx.fillRect(0, 0, S, S);
+  mottle(ctx, rng, S, S, 50, ['#9a9a86', '#6e7064', '#a39a82', '#7a806c'], [30, 120], 0.45);
+  strokes(ctx, rng, S, S, { count: 2400, colors: ['#b0ad96', '#5f6258', '#8c8a70', '#727a62'], len: [6, 26], width: [2, 7], alpha: [0.1, 0.32] });
+  // Grass blades and leaf litter as short bright and dark flecks.
+  strokes(ctx, rng, S, S, { count: 1400, colors: ['#c4c3a8', '#4e5248'], len: [3, 9], width: [1, 2.5], alpha: [0.2, 0.5], angle: -Math.PI / 2, spread: 0.5 });
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+export function paintAsphalt(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(67);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#3b3936';
+  ctx.fillRect(0, 0, S, S);
+  mottle(ctx, rng, S, S, 40, ['#47433e', '#2e2d2b', '#4a4a3c', '#33302c'], [20, 90], 0.5);
+  strokes(ctx, rng, S, S, { count: 2600, colors: ['#5a5650', '#262523', '#4d483f'], len: [3, 12], width: [1, 4], alpha: [0.15, 0.4] });
+  for (let i = 0; i < 26; i++) crack(ctx, rng, rng.range(0, S), rng.range(0, S), rng.int(10) + 5, 16, rng.range(0, Math.PI * 2), 1.6);
+  mottle(ctx, rng, S, S, 12, ['#3d4a26', '#4d5326'], [10, 40], 0.45);
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Clay roof tiles, rows along V. */
+export function paintRoofTiles(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(71);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#5a2a20';
+  ctx.fillRect(0, 0, S, S);
+  const rows = 16;
+  const rh = S / rows;
+  for (let r = 0; r < rows; r++) {
+    let x = r % 2 ? -12 : 0;
+    while (x < S) {
+      const w = rng.range(20, 28);
+      ctx.fillStyle = shade(rng.pick(['#8b4a35', '#7a3c2c', '#94553a', '#6b3528']), rng.range(-0.2, 0.1));
+      ctx.beginPath();
+      ctx.roundRect(x + 1, r * rh + 1, w - 2, rh - 2, [0, 0, 8, 8]);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(x + 1, r * rh + rh - 6, w - 2, 4);
+      x += w;
+    }
+  }
+  mottle(ctx, rng, S, S, 20, ['#3d4a26', '#1c1814', '#4d5326'], [20, 80], 0.35);
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Weathered GDR concrete with formwork lines. */
+export function paintConcrete(o: PaintOptions, base = '#8f8b80'): Surface {
+  const S = 512;
+  const rng = new Rng(73);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, S, S);
+  mottle(ctx, rng, S, S, 40, [shade(base, 0.08), shade(base, -0.1), '#7f8476'], [30, 120], 0.18);
+  ctx.strokeStyle = 'rgba(40,36,30,0.35)';
+  ctx.lineWidth = 2;
+  for (let y = 0; y < S; y += 64) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(S, y);
+    ctx.stroke();
+  }
+  // Rust and water streaks.
+  for (let i = 0; i < 30; i++) {
+    const x = rng.range(0, S);
+    const g = ctx.createLinearGradient(x, 0, x, S);
+    g.addColorStop(0, 'rgba(90,50,30,0.25)');
+    g.addColorStop(1, 'rgba(90,50,30,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, rng.range(0, S / 2), rng.range(2, 6), rng.range(60, 260));
+  }
+  strokes(ctx, rng, S, S, { count: 1600, colors: [shade(base, 0.15), shade(base, -0.2)], len: [4, 18], width: [1, 4], alpha: [0.08, 0.22] });
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** A lit shop sign with painted letters (Forum, Rathaus clock …). */
+export function paintTextSign(text: string, bg: string, fg: string): EmissiveSurface {
+  const W = 512;
+  const H = 96;
+  const [c, ctx] = canvas(W, H);
+  const [e, ectx] = canvas(W, H);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ectx.fillStyle = '#000';
+  ectx.fillRect(0, 0, W, H);
+  for (const [k, color] of [[ctx, fg], [ectx, '#ffffff']] as Array<[Ctx, string]>) {
+    k.fillStyle = color;
+    k.font = 'bold 68px Georgia, serif';
+    k.textAlign = 'center';
+    k.textBaseline = 'middle';
+    k.fillText(text, W / 2, H / 2 + 4);
+  }
+  // A few dead letters.
+  ectx.fillStyle = 'rgba(0,0,0,0.75)';
+  ectx.fillRect(W * 0.58, 0, W * 0.09, H);
+  return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
+}

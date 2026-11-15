@@ -1,5 +1,6 @@
 // Grid flow field toward one target (the player). One Dijkstra pass serves every enemy.
 import { colliderDistance, type Collider } from './collide';
+import type { WalkGrid } from './level';
 
 export interface Bounds {
   minX: number;
@@ -30,6 +31,7 @@ export class FlowField {
     colliders: readonly Collider[],
     cell = 0.5,
     clearance = 0.3,
+    ground: WalkGrid | null = null,
   ) {
     this.cell = cell;
     this.cols = Math.ceil((bounds.maxX - bounds.minX) / cell);
@@ -44,6 +46,10 @@ export class FlowField {
       for (let c = 0; c < this.cols; c++) {
         const x = bounds.minX + (c + 0.5) * cell;
         const z = bounds.minZ + (r + 0.5) * cell;
+        if (ground?.at(x, z)) {
+          this.blocked[r * this.cols + c] = 1;
+          continue;
+        }
         for (const col of colliders) {
           if (colliderDistance(col, x, z) < clearance) {
             this.blocked[r * this.cols + c] = 1;

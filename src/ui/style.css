@@ -311,3 +311,96 @@ h3 {
   height: 78px;
   background: rgba(32, 54, 62, 0.8);
 }
+
+/* ---- expedition HUD (M11) */
+#objective {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px #000;
+  line-height: 20px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#obj-arrow {
+  display: inline-block;
+  color: #43d1cf;
+  font-size: 15px;
+  transition: transform 0.1s linear;
+}
+#map-btn {
+  pointer-events: auto;
+  margin-left: auto;
+  height: 44px;
+  padding: 0 12px;
+}
+#map-btn:not([hidden]) + #menu-btn {
+  margin-left: 0;
+}
+#bossbar {
+  position: fixed;
+  left: 50%;
+  bottom: max(26px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(520px, 70vw);
+  pointer-events: none;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#bossbar .bar {
+  margin-top: 4px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  background: rgba(13, 17, 19, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+}
+#boss-fill {
+  height: 100%;
+  background: linear-gradient(#e0a03a, #9a5a14);
+  transform-origin: left;
+  transition: transform 0.12s ease-out;
+}
+#banner {
+  position: fixed;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  text-align: center;
+  text-shadow: 0 2px 6px #000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: banner 2.4s ease-out forwards;
+}
+#banner b {
+  font-size: 30px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+#banner span {
+  font-size: 15px;
+  color: var(--ochre);
+  letter-spacing: 0.06em;
+}
+@keyframes banner {
+  0% { opacity: 0; transform: translate(-50%, 8px); }
+  12% { opacity: 1; transform: translate(-50%, 0); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.panel.wide {
+  width: min(900px, 94vw);
+}
+#karte-svg svg {
+  width: 100%;
+  height: auto;
+  max-height: 72vh;
+  display: block;
+  border-radius: 4px;
+}

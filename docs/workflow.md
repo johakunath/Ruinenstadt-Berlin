@@ -37,6 +37,10 @@ Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now 
 - Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule.
 - Model choice: Opus 5.5 high for look, shaders, combat feel and architecture; medium for docs, small fixes and routine changes (plan-3d.md › Model).
 
+## Maps
+
+Every district map follows `docs/maps/guidelines.md`: concept mockups, geography check against OpenStreetMap, map SVG from the data before the 3D build, the shared layout rules and the map invariant tests. Rules that change while building a map go into that file, dated.
+
 ## Design autonomy
 
 Critical visual or layout decisions get clearly distinct alternatives first (SVG mockup for layouts, render for looks). About 80 % of routine work is chosen inside the approved direction, shown, and continued unless Johannes objects. Near-identical alternatives are not a decision.

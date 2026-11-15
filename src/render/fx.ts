@@ -1,5 +1,6 @@
 // Effects: particles (fire, embers, sparks, dust), weapon smear, enemy telegraphs, impact
 // flashes, blob shadows, drifting mist. All of it lives on the FX layer.
+import { groundY } from './ground';
 import {
   AdditiveBlending, BufferAttribute, BufferGeometry, Color, DoubleSide, DynamicDrawUsage, Group, InstancedMesh, Matrix4, Mesh,
   MeshBasicMaterial, NormalBlending, PlaneGeometry, Points, ShaderMaterial, Sprite, SpriteMaterial, Vector3, type Blending,
@@ -7,7 +8,6 @@ import {
 import type { AttackDef, AttackId } from '../data/combat';
 import { ATTACKS } from '../data/combat';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
-import { COURTYARD } from '../data/courtyard';
 import { lerp, lerpAngle, Rng } from '../sim/math';
 import { DT, type Enemy, type Player, type Sim } from '../sim/types';
 import { paintGlow } from './paint';
@@ -215,7 +215,9 @@ class Smear {
       const head = (t - a.windup) / a.active;
       if (head > 0) {
         this.mesh.geometry = this.geos.get(a.id) as BufferGeometry;
-        this.mesh.position.set(lerp(p.px, p.x, alpha), a.style === 'smash' ? 0.12 : 1.05, lerp(p.pz, p.z, alpha));
+        const sx = lerp(p.px, p.x, alpha);
+        const sz = lerp(p.pz, p.z, alpha);
+        this.mesh.position.set(sx, groundY(sx, sz) + (a.style === 'smash' ? 0.12 : 1.05), sz);
         this.mesh.rotation.set(0, lerpAngle(p.pfacing, p.facing, alpha), 0);
         // Slashes lean with the swing direction; the smash fans out flat on the ground.
         this.mesh.rotateZ(a.style === 'smash' ? 0 : Math.sign(a.to - a.from) * 0.2);
@@ -265,7 +267,7 @@ class Telegraphs {
       const z = lerp(e.pz, e.z, alpha);
       for (const m of [slot.rim, slot.fill]) {
         m.geometry = this.geos.get(e.kind) as BufferGeometry;
-        m.position.set(x, 0.05, z);
+        m.position.set(x, groundY(x, z) + 0.05, z);
         m.rotation.y = e.facing;
         m.visible = true;
       }
@@ -288,6 +290,8 @@ class Telegraphs {
 export interface FxOptions {
   embers: number;
   blobShadows: boolean;
+  /** Where the mist starts (the yard, or around the map start). */
+  mistBox: { minX: number; maxX: number; minZ: number; maxZ: number };
 }
 
 const m4 = new Matrix4();
@@ -337,7 +341,7 @@ export class Fx {
     }
     // Low mist that drifts across the yard.
     const mistTex = paintGlow('rgba(150,200,195,0.5)', 'rgba(150,200,195,0)');
-    const Y = COURTYARD.yard;
+    const Y = opts.mistBox;
     for (let i = 0; i < 12; i++) {
       const sprite = new Sprite(new SpriteMaterial({ map: mistTex, transparent: true, depthWrite: false, opacity: this.rng.range(0.05, 0.11), fog: false }));
       const s = this.rng.range(7, 13);
@@ -390,7 +394,7 @@ export class Fx {
       const a = this.rng.range(0, Math.PI * 2);
       const s = this.rng.range(0.4, 1.8) * spread;
       this.dust.spawn({
-        x: x + Math.cos(a) * 0.2, y: 0.15, z: z + Math.sin(a) * 0.2,
+        x: x + Math.cos(a) * 0.2, y: groundY(x, z) + 0.15, z: z + Math.sin(a) * 0.2,
         vx: Math.cos(a) * s, vy: this.rng.range(0.2, 0.9), vz: Math.sin(a) * s,
         life: this.rng.range(0.35, 0.7), size: this.rng.range(0.35, 0.7), grow: 2.2,
         r: 0.2, g: 0.2, b: 0.19, gravity: -0.3, drag: 3,
@@ -401,25 +405,33 @@ export class Fx {
   update(sim: Sim, alpha: number, dt: number, frozen: boolean, pixelScale: number): void {
     this.time += dt;
     // Fire and embers keep burning through hitstop: only the fight freezes.
-    this.flameDebt += dt * 34;
-    this.emberDebt += dt * (this.opts.embers / 3);
-    for (const f of this.fires) {
-      for (; this.flameDebt >= 1; this.flameDebt--) {
-        this.glow.spawn({
-          x: f.x + this.rng.range(-0.2, 0.2), y: f.y + this.rng.range(0, 0.15), z: f.z + this.rng.range(-0.2, 0.2),
-          vx: this.rng.range(-0.25, 0.25), vy: this.rng.range(1.2, 2.6), vz: this.rng.range(-0.25, 0.25),
-          life: this.rng.range(0.3, 0.6), size: this.rng.range(0.4, 0.75), grow: 0.25,
-          r: 1.5, g: 0.62, b: 0.12, gravity: -1.5, drag: 1.2,
-        });
-      }
-      for (; this.emberDebt >= 1; this.emberDebt--) {
-        this.glow.spawn({
-          x: f.x + this.rng.range(-0.25, 0.25), y: f.y + 0.3, z: f.z + this.rng.range(-0.25, 0.25),
-          vx: this.rng.range(-0.5, 0.9), vy: this.rng.range(0.8, 2.4), vz: this.rng.range(-0.5, 0.5),
-          life: this.rng.range(1.6, 3.6), size: this.rng.range(0.035, 0.07), grow: 0.5,
-          r: 5, g: 1.8, b: 0.35, gravity: -0.5, drag: 0.5,
-        });
-      }
+    // Only fires near the hero burn (a map has dozens); each gets the same rate as the courtyard barrel.
+    const p = sim.player;
+    const near = this.fires.filter((f) => (f.x - p.x) ** 2 + (f.z - p.z) ** 2 < 35 * 35);
+    this.flameDebt += dt * 34 * near.length;
+    this.emberDebt += dt * (this.opts.embers / 3) * Math.min(near.length, 2);
+    let k = 0;
+    for (; near.length > 0 && this.flameDebt >= 1; this.flameDebt--) {
+      const f = near[k++ % near.length] as Vector3;
+      this.glow.spawn({
+        x: f.x + this.rng.range(-0.2, 0.2), y: f.y + this.rng.range(0, 0.15), z: f.z + this.rng.range(-0.2, 0.2),
+        vx: this.rng.range(-0.25, 0.25), vy: this.rng.range(1.2, 2.6), vz: this.rng.range(-0.25, 0.25),
+        life: this.rng.range(0.3, 0.6), size: this.rng.range(0.4, 0.75), grow: 0.25,
+        r: 1.5, g: 0.62, b: 0.12, gravity: -1.5, drag: 1.2,
+      });
+    }
+    for (; near.length > 0 && this.emberDebt >= 1; this.emberDebt--) {
+      const f = near[k++ % near.length] as Vector3;
+      this.glow.spawn({
+        x: f.x + this.rng.range(-0.25, 0.25), y: f.y + 0.3, z: f.z + this.rng.range(-0.25, 0.25),
+        vx: this.rng.range(-0.5, 0.9), vy: this.rng.range(0.8, 2.4), vz: this.rng.range(-0.5, 0.5),
+        life: this.rng.range(1.6, 3.6), size: this.rng.range(0.035, 0.07), grow: 0.5,
+        r: 5, g: 1.8, b: 0.35, gravity: -0.5, drag: 0.5,
+      });
+    }
+    if (near.length === 0) {
+      this.flameDebt = 0;
+      this.emberDebt = 0;
     }
     this.glow.update(dt, this.time, pixelScale);
     this.dust.update(dt, this.time, pixelScale);
@@ -443,17 +455,23 @@ export class Fx {
       this.blobs.count = n;
       this.blobs.instanceMatrix.needsUpdate = true;
     }
-    const Y = COURTYARD.yard;
+    // Arena: mist drifts across the yard. Map: it wraps around the hero.
+    const Y = sim.level.expedition ? { minX: p.x - 22, maxX: p.x + 22, minZ: p.z - 18, maxZ: p.z + 14 } : sim.level.playerBox;
     for (const m of this.mist) {
       m.sprite.position.x += m.vx * dt;
       m.sprite.position.y += Math.sin(this.time * 0.4 + m.phase) * 0.05 * dt;
       if (m.sprite.position.x > Y.maxX + 6) m.sprite.position.x = Y.minX - 6;
+      else if (m.sprite.position.x < Y.minX - 6) m.sprite.position.x = Y.maxX + 6;
+      if (m.sprite.position.z > Y.maxZ) m.sprite.position.z -= Y.maxZ - Y.minZ;
+      else if (m.sprite.position.z < Y.minZ) m.sprite.position.z += Y.maxZ - Y.minZ;
     }
   }
 
   private setBlob(i: number, e: Enemy, alpha: number): void {
     const s = e.def.radius * 3.4;
-    m4.makeScale(s, 1, s).setPosition(lerp(e.px, e.x, alpha), 0.04, lerp(e.pz, e.z, alpha));
+    const bx = lerp(e.px, e.x, alpha);
+    const bz = lerp(e.pz, e.z, alpha);
+    m4.makeScale(s, 1, s).setPosition(bx, groundY(bx, bz) + 0.04, bz);
     (this.blobs as InstancedMesh).setMatrixAt(i, m4);
   }
 }

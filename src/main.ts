@@ -10,8 +10,13 @@ import { GameRenderer } from './render/renderer';
 import { createSim, stepSim } from './sim/sim';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
+import { koepenickMap } from './data/koepenick';
+import { generateLots, generateProps, mapLevel } from './data/map';
+import { mapSvg } from './data/map-svg';
+import { ENEMIES } from './data/enemies';
+import type { Level } from './sim/level';
 
-type Phase = 'title' | 'play' | 'dead';
+type Phase = 'title' | 'play' | 'dead' | 'won';
 
 const opts = readOptions();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -19,17 +24,43 @@ const audio = new GameAudio();
 audio.setVolume(opts.volume);
 const input = new Input(canvas);
 
-let sim: Sim = createSim({ seed: opts.seed, stress: opts.stress });
+// Köpenick (M11) unless ?map=hof asks for the gate 1 courtyard.
+const map = opts.map === 'koepenick' ? (() => {
+  const def = koepenickMap(opts.mapScale);
+  const lots = generateLots(def);
+  const props = generateProps(def, lots);
+  return { def, lots, props, level: mapLevel(def, lots, props) };
+})() : null;
+const level: Level | undefined = map?.level;
+
+let sim: Sim = createSim({ seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt });
 let phase: Phase = 'title';
+let wonFor = -1;
+
+/** A retry starts at the first encounter of the zone the hero fell in. */
+function checkpoint(): number {
+  if (!level) return 0;
+  const i = Math.min(sim.run.index, level.encounters.length - 1);
+  const zone = level.encounters[i]?.zone ?? 0;
+  return level.encounters.findIndex((e) => e.zone === zone);
+}
 let deadFor = 0;
 let renderer: GameRenderer | null = null;
 
 const ui = new Ui(opts, {
   onPlay: () => start(),
   onRetry: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress });
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint() });
     renderer?.reset(sim);
     start();
+  },
+  onAgain: () => {
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level });
+    renderer?.reset(sim);
+    start();
+  },
+  onMapToggle: (open) => {
+    input.enabled = phase === 'play' && !open;
   },
   onOptionsToggle: (open) => {
     input.enabled = phase === 'play' && !open;
@@ -58,10 +89,29 @@ input.onMenu = () => {
   if (phase !== 'title') ui.toggleOptions(!ui.optionsOpen);
 };
 
+if (map) {
+  ui.setExpedition(true);
+  ui.mapSource = () => {
+    const p = sim.player;
+    const svg = mapSvg(map.def, map.lots, { trees: false, done: sim.run.index });
+    return svg.replace('</svg>', `<circle cx="${p.x.toFixed(1)}" cy="${p.z.toFixed(1)}" r="5" fill="#b8261c" stroke="#f0e2c8" stroke-width="1.5"/></svg>`);
+  };
+} else {
+  const sub = document.getElementById('title-sub');
+  if (sub) sub.textContent = 'Köpenick · Hinterhof bei Nacht';
+}
+
 function start(): void {
   audio.start();
   phase = 'play';
   deadFor = 0;
+  wonFor = -1;
+  ui.boss(null);
+  if (level) {
+    const enc = level.encounters[sim.run.index];
+    const zone = enc ? level.zones[enc.zone] : undefined;
+    if (zone) ui.banner(zone.name, sim.run.index === 0 ? 'Köpenick' : 'Neustart');
+  }
   input.buffer.clear();
   input.enabled = true;
   ui.showGame();
@@ -126,6 +176,26 @@ function drainEvents(): void {
       case 'enemyWindup':
         audio.growl();
         break;
+      case 'waveStart': {
+        const enc = level?.encounters[ev.index];
+        if (!enc) break;
+        const boss = enc.waves[ev.wave]?.bosses[0];
+        if (boss) ui.banner(ENEMIES[boss].name, enc.name);
+        else ui.banner(ev.waves > 1 ? `Welle ${ev.wave + 1}/${ev.waves}` : enc.name, ev.waves > 1 ? enc.name : '');
+        break;
+      }
+      case 'encounterClear':
+        audio.growl();
+        ui.banner('Geschafft', ev.heal > 0 ? `+${ev.heal} Leben` : '');
+        break;
+      case 'zoneClear': {
+        const zone = level?.zones[ev.zone];
+        if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
+        break;
+      }
+      case 'victory':
+        wonFor = 0;
+        break;
       default:
         break;
     }
@@ -146,7 +216,7 @@ function frame(now: number): void {
   renderer.perf.frame(frameMs);
   input.poll(dt, sim.hitstop > 0);
 
-  const running = phase !== 'title' && !ui.optionsOpen && !held;
+  const running = phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !held;
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -170,8 +240,21 @@ function frame(now: number): void {
   }
   if (phase === 'dead') {
     deadFor += dt;
-    if (deadFor > 1.4 && deadFor - dt <= 1.4) ui.showDead(sim.kills);
+    if (deadFor > 1.4 && deadFor - dt <= 1.4) {
+      const zone = level ? level.zones[level.encounters[checkpoint()]?.zone ?? 0] : undefined;
+      ui.retryHint(zone ? `Neustart: ${zone.name}` : '');
+      ui.showDead(sim.kills);
+    }
   }
+  if (wonFor >= 0 && phase === 'play') {
+    wonFor += dt;
+    if (wonFor > 2.5) {
+      phase = 'won';
+      input.enabled = false;
+      ui.showWon(sim.kills);
+    }
+  }
+  if (level) expeditionHud();
 
   renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, PLAYER.maxHp, sim.kills);
@@ -183,6 +266,24 @@ function frame(now: number): void {
         PROFILES[opts.profile].label,
     );
   }
+}
+
+function expeditionHud(): void {
+  if (!level) return;
+  const p = sim.player;
+  const enc = level.encounters[sim.run.index];
+  if (!enc) {
+    ui.objective('Köpenick befreit', null);
+  } else if (sim.run.phase === 'travel') {
+    const dx = enc.x - p.x;
+    const dz = enc.z - p.z;
+    // The camera looks north: world X is screen right, world -Z is screen up.
+    ui.objective(`${enc.name} · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
+  } else {
+    ui.objective(enc.waves.length > 1 ? `${enc.name} · Welle ${Math.min(sim.run.wave + 1, enc.waves.length)}/${enc.waves.length}` : enc.name, null);
+  }
+  const boss = sim.enemies.find((e) => e.def.boss && e.state !== 'dead');
+  ui.boss(boss ? boss.def.name : null, boss ? boss.hp / boss.maxHp : 0);
 }
 
 /** Hook for the smoke test and the headless perf run. Not used by the game itself. */
@@ -215,7 +316,10 @@ window.__game = {
   },
 };
 
-GameRenderer.create(canvas, { profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam })
+GameRenderer.create(canvas, {
+  profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam,
+  map: map ? { def: map.def, lots: map.lots, props: map.props } : undefined,
+})
   .then((r) => {
     renderer = r;
     r.reset(sim);

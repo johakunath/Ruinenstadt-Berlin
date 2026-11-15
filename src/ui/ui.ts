@@ -17,6 +17,9 @@ export interface UiHandlers {
   onVolume(v: number): void;
   onRumble(on: boolean): void;
   onShowPerf(on: boolean): void;
+  /** Expedition maps: the in-game map opened or closed (pauses the game). */
+  onMapToggle?(open: boolean): void;
+  onAgain?(): void;
 }
 
 export class Ui {
@@ -27,6 +30,12 @@ export class Ui {
   private readonly options = el<HTMLDivElement>('options');
   private lastHp = -1;
   private lastKills = -1;
+  private lastObjective = '';
+  private lastArrow = 999;
+  private lastBoss = -1;
+  private readonly karte = el<HTMLDivElement>('karte');
+  /** Draws the map SVG for the current progress (set by main for expedition maps). */
+  mapSource: (() => string) | null = null;
 
   constructor(opts: Options, private readonly handlers: UiHandlers, input: Input) {
     el<HTMLButtonElement>('play').addEventListener('click', () => handlers.onPlay());
@@ -63,6 +72,89 @@ export class Ui {
     });
     this.perf.hidden = !opts.showPerf;
     this.setupTouch(input);
+    el<HTMLButtonElement>('map-btn').addEventListener('click', () => this.toggleMap(true));
+    el<HTMLButtonElement>('close-karte').addEventListener('click', () => this.toggleMap(false));
+    el<HTMLButtonElement>('again').addEventListener('click', () => handlers.onAgain?.());
+    window.addEventListener('keydown', (e) => {
+      if ((e.code === 'KeyM' || e.code === 'Tab') && this.mapSource && el('title').hidden) {
+        e.preventDefault();
+        this.toggleMap(!this.mapOpen);
+      }
+    });
+  }
+
+  toggleMap(open: boolean): void {
+    if (!this.mapSource) return;
+    if (open) el('karte-svg').innerHTML = this.mapSource();
+    this.karte.hidden = !open;
+    this.handlers.onMapToggle?.(open);
+  }
+
+  get mapOpen(): boolean {
+    return !this.karte.hidden;
+  }
+
+  /** Expedition: map button, objective line. */
+  setExpedition(on: boolean): void {
+    el('map-btn').hidden = !on;
+    el('objective').hidden = !on;
+  }
+
+  /** Objective text and an arrow pointing to it (screen angle in radians, 0 = up). */
+  objective(text: string, angle: number | null): void {
+    if (text !== this.lastObjective) {
+      this.lastObjective = text;
+      el('obj-text').textContent = text;
+    }
+    const arrow = el('obj-arrow');
+    if (angle === null) {
+      arrow.style.visibility = 'hidden';
+      this.lastArrow = 999;
+    } else if (Math.abs(angle - this.lastArrow) > 0.02) {
+      this.lastArrow = angle;
+      arrow.style.visibility = 'visible';
+      arrow.style.transform = `rotate(${angle}rad)`;
+    }
+  }
+
+  /** Big centered message that fades out by itself. */
+  banner(title: string, sub = ''): void {
+    const b = el('banner');
+    el('banner-title').textContent = title;
+    el('banner-sub').textContent = sub;
+    b.hidden = false;
+    b.style.animation = 'none';
+    void b.offsetWidth;
+    b.style.animation = '';
+  }
+
+  /** Boss health bar; null hides it. */
+  boss(name: string | null, frac = 0): void {
+    const bar = el('bossbar');
+    if (name === null) {
+      if (!bar.hidden) bar.hidden = true;
+      this.lastBoss = -1;
+      return;
+    }
+    if (bar.hidden) {
+      bar.hidden = false;
+      el('boss-name').textContent = name;
+    }
+    if (Math.abs(frac - this.lastBoss) > 0.002) {
+      this.lastBoss = frac;
+      el('boss-fill').style.transform = `scaleX(${Math.max(0, frac)})`;
+    }
+  }
+
+  showWon(kills: number): void {
+    el('won-kills').textContent = String(kills);
+    el('won').hidden = false;
+  }
+
+  retryHint(text: string): void {
+    const h = el('retry-hint');
+    h.textContent = text;
+    h.hidden = text === '';
   }
 
   toggleOptions(open: boolean): void {
@@ -86,6 +178,7 @@ export class Ui {
   showGame(): void {
     el('title').hidden = true;
     el('dead').hidden = true;
+    el('won').hidden = true;
     el('hud').hidden = false;
   }
 

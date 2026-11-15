@@ -2,6 +2,18 @@
 
 Updated 2026-11-15 after the gate 1 playtest. Plan and gates: `docs/plan-3d.md`.
 
+## Köpenick (M10, M11 first version, 2026-11-15)
+
+| Area | State |
+|---|---|
+| Map | Concept A from `docs/maps/koepenick.md`: S-Bahnhof → Bahnhofsviertel → Müggelberge → Spreepark → Rathaus. Data in `src/data/koepenick.ts`, map format and generators in `src/data/map.ts`. `?mapscale=` stretches distances; `?map=hof` loads the gate 1 courtyard |
+| Fights | 13 encounters, 20 normal waves (6/7/7) and 4 placeholder bosses (Feldwebel, Turmwächter, Rex, Hauptmann) on the zombie body. Encounter director `src/sim/director.ts`: circle closes, waves on the rim, +30 % life per won encounter. Retry starts at the zone |
+| World | Ground with water banks, Spree, Dahme, Müggelsee, Frauentog, Teufelssee, three bridges, street ribbons, generated Altbau blocks (gate 1 facades) and houses, instanced trees, palms and ferns in the Spreepark, landmarks built in code (Rathaus with tower, Schloss, St. Laurentius, S-Bahnhof, Forum, Müggelturm, Riesenrad, dinosaurs), lanterns, fire barrels and cover per encounter |
+| Render | Chunks of 48 m (frustum culled), moon shadow follows the hero, fixed pool of point lights takes the nearest lamps, see-through cutout for walls and crowns between camera and hero (B4) |
+| HUD | Objective with distance and arrow, wave banner, boss bar, map overlay (Karte, M), victory screen |
+| Heights | Müggelberge and Dino-Hügel (soft hills), Riesenrad-Plattform and Kirchhügel (terraces with walls and stairs). Sim stays 2D; walls block in the walk grid |
+| Weak | Only four height features. Landmarks are code blockouts, not final art. Trees are simple. Bosses have no own attacks. No gear progression yet, so later zones are harder than intended (KQ2). Headless only: 100 to 330k triangles and 140 to 230 draw calls on Leistung, not measured on the Tab S9 |
+
 ## Gate 1: what is in
 
 | Area | State |
@@ -61,7 +73,7 @@ Gates 2 and 3 are replaced by `docs/migration.md` (plan 3D14).
 | Order | Work | Where |
 |---|---|---|
 | 1 | M1 item data port, then M2 item logic (`docs/tasks/`) | Cloud, Codex |
-| 2 | M10 Köpenick map concept, in parallel | Cloud, Claude, Johannes decides |
+| 2 | Köpenick playtest on PC and Tab S9 (`?debug=perf`), then M11 art pass and heights | Johannes, then Claude |
 | 3 | S1 sound port from the 2D game, S2 enemy sounds | Cloud |
 | 4 | M3 to M6: stats, loot, inventory, save with wave checkpoint | Cloud |
 | 5 | H1 custom hero, H2 Köpenick ghoul | PC with Blender |

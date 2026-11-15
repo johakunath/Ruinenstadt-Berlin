@@ -2,6 +2,7 @@ import type { AttackDef, AttackId, HitWeight } from '../data/combat';
 import type { EnemyDef, EnemyKind } from '../data/enemies';
 import type { Collider } from './collide';
 import type { FlowField } from './flowfield';
+import type { Level } from './level';
 import type { Rng } from './math';
 
 /** Fixed simulation step. */
@@ -81,6 +82,9 @@ export interface Enemy {
   /** Current walking speed (for the animation blend). */
   speed: number;
   hp: number;
+  maxHp: number;
+  /** Damage multiplier from the wave tier. */
+  dmgMul: number;
   state: EnemyState;
   stateT: number;
   staggerDur: number;
@@ -96,7 +100,28 @@ export type SimEvent =
   | { type: 'playerDie' }
   | { type: 'enemyWindup'; id: number }
   | { type: 'enemyStrike'; id: number }
-  | { type: 'spawn'; id: number };
+  | { type: 'spawn'; id: number }
+  | { type: 'encounterStart'; index: number }
+  | { type: 'waveStart'; index: number; wave: number; waves: number }
+  | { type: 'encounterClear'; index: number; heal: number }
+  | { type: 'zoneClear'; zone: number }
+  | { type: 'victory' };
+
+export type RunPhase = 'travel' | 'fight' | 'pause' | 'won';
+
+/** Expedition progress (encounter director). Arena levels leave it at travel forever. */
+export interface RunState {
+  /** Current encounter (the objective). Equals the encounter count when all are won. */
+  index: number;
+  phase: RunPhase;
+  wave: number;
+  /** Enemies of the current wave not spawned yet. */
+  toSpawn: number;
+  bossesToSpawn: EnemyKind[];
+  spawnT: number;
+  /** Pause before the next wave. */
+  pauseT: number;
+}
 
 export interface Sim {
   tick: number;
@@ -109,8 +134,13 @@ export interface Sim {
   hitstop: number;
   /** Buffered presses used by the last step. */
   consumed: { attack: boolean; dodge: boolean };
+  level: Level;
+  /** Same as `level.colliders` (debug view, tests). */
   colliders: Collider[];
   flow: FlowField;
+  /** Center of the flow field window (expedition maps). */
+  flowCenter: { x: number; z: number };
+  run: RunState;
   rng: Rng;
   nextId: number;
   kills: number;

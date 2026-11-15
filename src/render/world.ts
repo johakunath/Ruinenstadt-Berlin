@@ -17,9 +17,9 @@ import {
 /** Layer for things that must not show up in the normal/depth pre-pass (alpha cards, glows, effects). */
 export const FX_LAYER = 1;
 
-const GROUND_H = 4.3;
-const FLOOR_H = 3.5;
-const PARAPET = 0.7;
+export const GROUND_H = 4.3;
+export const FLOOR_H = 3.5;
+export const PARAPET = 0.7;
 const GATE_H = 3.7;
 const SHOP_H = 3.45;
 
@@ -40,10 +40,12 @@ export interface World {
   /** Fire barrel mouths (for flames and embers). */
   fires: Vector3[];
   update(time: number): void;
+  /** Big maps: moon shadow and pooled lights follow the hero. */
+  follow?(x: number, z: number): void;
 }
 
 /** Local frame of a facade run: s along the wall, y up, n out into the yard. */
-class Run {
+export class Run {
   readonly len: number;
   readonly dx: number;
   readonly dz: number;
@@ -73,7 +75,7 @@ class Run {
   }
 }
 
-interface Mats {
+export interface Mats {
   plaster: Record<string, LitMaterial>;
   brick: LitMaterial;
   stucco: LitMaterial;
@@ -100,7 +102,7 @@ interface Mats {
   dark: MeshBasicMaterial;
 }
 
-function makeMats(m: Materials): Mats {
+export function makeMats(m: Materials): Mats {
   const o: PaintOptions = { flatten: m.look.flatten, normalMaps: m.profile.normalMaps, anisotropy: m.profile.anisotropy };
   const plaster: Record<string, LitMaterial> = {};
   for (const tone of ['cream', 'ochre', 'oxblood']) {
@@ -143,10 +145,10 @@ function makeMats(m: Materials): Mats {
   };
 }
 
-const UNIT_BOX = new BoxGeometry(1, 1, 1);
+export const UNIT_BOX = new BoxGeometry(1, 1, 1);
 const tmpScale = new Matrix4();
 
-class Builder {
+export class Builder {
   readonly solid = new BatchSet();
   /** Alpha-tested cards: own meshes on the FX layer, no shadow casting. */
   readonly cards = new BatchSet();
@@ -155,7 +157,7 @@ class Builder {
   readonly extras: Object3D[] = [];
   /** Building bodies and big props, as invisible shadow casters. */
   readonly shadowBoxes: Array<{ m: Matrix4 }> = [];
-  private readonly glowTex = paintGlow('rgba(255,190,110,0.55)', 'rgba(255,170,90,0)');
+  protected readonly glowTex = paintGlow('rgba(255,190,110,0.55)', 'rgba(255,170,90,0)');
 
   constructor(readonly mats: Mats) {}
 
@@ -187,7 +189,7 @@ class Builder {
 
 // ---------------------------------------------------------------- facades
 
-function wallFace(b: Builder, run: Run, mat: Material, s0: number, s1: number, y0: number, y1: number, n = 0): void {
+export function wallFace(b: Builder, run: Run, mat: Material, s0: number, s1: number, y0: number, y1: number, n = 0): void {
   const tint = (y: number): RGB => {
     // Damp and dirt at the foot of the wall, slightly cooler toward the top.
     const low = Math.min(1, y / 1.8);
@@ -205,7 +207,7 @@ function wallFace(b: Builder, run: Run, mat: Material, s0: number, s1: number, y
   }
 }
 
-function windowAt(b: Builder, run: Run, rng: Rng, s: number, y: number, w: number, h: number, litChance: number, fancy: boolean): void {
+export function windowAt(b: Builder, run: Run, rng: Rng, s: number, y: number, w: number, h: number, litChance: number, fancy: boolean): void {
   const lit = rng.next() < litChance;
   const cell = lit ? rng.int(4) : 4 + rng.int(4);
   const cu = (cell % 4) / 4;
@@ -245,7 +247,7 @@ function ivyBlob(b: Builder, run: Run, rng: Rng, cs: number, width: number, heig
   }
 }
 
-function buildAltbau(b: Builder, f: Facade): void {
+export function buildAltbau(b: Builder, f: Facade): void {
   const run = new Run(f);
   const rng = new Rng(f.seed);
   const H = GROUND_H + f.floors * FLOOR_H + PARAPET;
@@ -452,7 +454,7 @@ function at(p: Prop, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0): Matrix4 {
   return m.multiply(local);
 }
 
-function buildProp(b: Builder, p: Prop, rng: Rng): void {
+export function buildProp(b: Builder, p: Prop, rng: Rng): void {
   const m = b.mats;
   switch (p.kind) {
     case 'fireBarrel': {

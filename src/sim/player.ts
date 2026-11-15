@@ -1,15 +1,15 @@
 // Player state machine: move, 3-hit chain, dodge with i-frames, dash strike.
 import { ATTACKS, PLAYER, type AttackId } from '../data/combat';
-import { COURTYARD } from '../data/courtyard';
-import { resolveStatic } from './collide';
+import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
 import { DT, type Player, type Sim, type SimInput } from './types';
+import { keepInArena } from './director';
 
 /** Gap between the last active frame and the earliest chained attack. */
 const CHAIN_GAP = 0.04;
 
-export function createPlayer(): Player {
-  const { x, z } = COURTYARD.playerStart;
+export function createPlayer(level: Level, at = level.start): Player {
+  const { x, z } = at;
   return {
     x, z, px: x, pz: z, facing: Math.PI, pfacing: Math.PI, vx: 0, vz: 0,
     hp: PLAYER.maxHp, state: 'move', stateT: 0,
@@ -177,8 +177,9 @@ function integrate(sim: Sim): void {
   const p = sim.player;
   p.x += p.vx * DT;
   p.z += p.vz * DT;
-  resolveStatic(p, PLAYER.radius, sim.colliders);
-  const y = COURTYARD.yard;
+  sim.level.resolve(p, PLAYER.radius);
+  const y = sim.level.playerBox;
   p.x = clamp(p.x, y.minX + PLAYER.radius, y.maxX - PLAYER.radius);
   p.z = clamp(p.z, y.minZ + PLAYER.radius, y.maxZ - PLAYER.radius);
+  keepInArena(sim, p, PLAYER.radius);
 }

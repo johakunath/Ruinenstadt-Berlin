@@ -8,6 +8,8 @@ const v = new Vector3();
 const n = new Vector3();
 
 export class Batch {
+  /** Added to every y while building (things standing on raised ground). */
+  lift = 0;
   private positions: number[] = [];
   private normals: number[] = [];
   private uvs: number[] = [];
@@ -28,6 +30,7 @@ export class Batch {
     const normalMatrix = new Matrix4().copy(m).invert().transpose();
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i).applyMatrix4(m);
+      v.y += this.lift;
       n.fromBufferAttribute(nor, i).transformDirection(normalMatrix);
       this.positions.push(v.x, v.y, v.z);
       this.normals.push(n.x, n.y, n.z);
@@ -50,7 +53,7 @@ export class Batch {
     const uvs = [uv[0], uv[1], uv[2], uv[1], uv[2], uv[3], uv[0], uv[3]];
     for (let i = 0; i < 4; i++) {
       const c = colors[i] ?? colors[0] ?? WHITE;
-      this.positions.push(p[i]!.x, p[i]!.y, p[i]!.z);
+      this.positions.push(p[i]!.x, p[i]!.y + this.lift, p[i]!.z);
       this.normals.push(n.x, n.y, n.z);
       this.uvs.push(uvs[i * 2]!, uvs[i * 2 + 1]!);
       this.colors.push(c[0], c[1], c[2]);
@@ -74,6 +77,8 @@ export class Batch {
 /** Batches keyed by material. */
 export class BatchSet {
   private readonly map = new Map<Material, Batch>();
+  /** Height offset handed to every batch (see Batch.lift). */
+  lift = 0;
 
   of(material: Material): Batch {
     let b = this.map.get(material);
@@ -81,6 +86,7 @@ export class BatchSet {
       b = new Batch();
       this.map.set(material, b);
     }
+    b.lift = this.lift;
     return b;
   }
 

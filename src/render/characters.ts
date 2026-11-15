@@ -1,6 +1,7 @@
 // Skinned characters: loading, per-look materials, clip blending, and the views that turn
 // sim state into poses. One-shot clips (attack, dodge, hit, death) are driven by sim time, so
 // the pose always matches the hitbox and freezes with hitstop; loops run on their own clock.
+import { groundY } from './ground';
 import {
   AnimationClip, AnimationMixer, Bone, Color, CylinderGeometry, Group, LoopRepeat, Mesh, PlaneGeometry, Quaternion,
   SkinnedMesh, Sphere, Vector3, type AnimationAction, type Object3D,
@@ -249,7 +250,7 @@ export class HeroView {
   update(p: Player, alpha: number, dt: number, frozen: boolean): void {
     const x = lerp(p.px, p.x, alpha);
     const z = lerp(p.pz, p.z, alpha);
-    this.root.position.set(x, 0, z);
+    this.root.position.set(x, groundY(x, z), z);
     this.root.rotation.y = lerpAngle(p.pfacing, p.facing, alpha);
     const t = p.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;
@@ -310,6 +311,10 @@ const TINTS: Record<EnemyKind, number[]> = {
   walker: [0xb9c7ae, 0xa9b9b0, 0xc4bd9c],
   runner: [0xcfc9a4, 0xb6c9b8],
   brute: [0x93a58f, 0xa08f86],
+  feldwebel: [0x7f9a8a],
+  waechter: [0x8a8577],
+  rex: [0x7d9a5a],
+  hauptmann: [0xa98f7a],
 };
 
 export class EnemyView {
@@ -360,7 +365,7 @@ export class EnemyView {
     this.root.scale.setScalar(e.def.scale);
     // Gaunt runners, heavy brutes.
     if (e.kind === 'runner') this.root.scale.set(e.def.scale * 0.86, e.def.scale, e.def.scale * 0.86);
-    if (e.kind === 'brute') this.root.scale.set(e.def.scale * 1.12, e.def.scale, e.def.scale * 1.12);
+    if (e.kind === 'brute' || e.def.boss) this.root.scale.set(e.def.scale * 1.12, e.def.scale, e.def.scale * 1.12);
     const tints = TINTS[e.kind];
     const tint = tints[Math.floor(this.seed * tints.length)] as number;
     for (const m of this.mats) {
@@ -375,7 +380,9 @@ export class EnemyView {
   }
 
   update(e: Enemy, alpha: number, dt: number, frozen: boolean, skip: number): void {
-    this.root.position.set(lerp(e.px, e.x, alpha), 0, lerp(e.pz, e.z, alpha));
+    const ex = lerp(e.px, e.x, alpha);
+    const ez = lerp(e.pz, e.z, alpha);
+    this.root.position.set(ex, groundY(ex, ez), ez);
     this.root.rotation.y = lerpAngle(e.pfacing, e.facing, alpha);
     // White hit flash: full for half the time, then fading. Runs through hitstop.
     if (this.flash > 0) {
@@ -410,7 +417,7 @@ export class EnemyView {
         a.pose('Death01', DEATH_FROM + t * 1.3, 0.06);
         // Sink into the ground before the body is removed.
         const sink = Math.max(0, t - (SPAWN.corpseTime - 0.8)) / 0.8;
-        this.root.position.y = -sink * 0.55;
+        this.root.position.y -= sink * 0.55;
         break;
       }
     }

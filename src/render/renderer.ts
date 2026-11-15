@@ -17,6 +17,13 @@ import { Materials } from './materials';
 import { Post } from './post';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
+import { buildMapWorld } from './map-world';
+import { cutout } from './cutout';
+import { groundY, setGround } from './ground';
+import { heightAt } from '../data/map';
+import { COURTYARD } from '../data/courtyard';
+import type { Lot, MapDef } from '../data/map';
+import type { Prop } from '../data/courtyard';
 
 export interface RendererOptions {
   profile: Profile;
@@ -25,6 +32,8 @@ export interface RendererOptions {
   debugFlow: boolean;
   /** ?cam=distance,pitch for close-up checks. */
   cam?: { distance: number; pitch: number };
+  /** Expedition map; the gate 1 courtyard when left out. */
+  map?: { def: MapDef; lots: Lot[]; props: Prop[] };
 }
 
 const NIGHT = 0x0b1a1d;
@@ -77,7 +86,15 @@ export class GameRenderer {
     materials: Materials,
     private readonly opts: RendererOptions,
   ) {
-    this.cam = new FollowCamera(opts.cam);
+    const Y = COURTYARD.yard;
+    const B = opts.map?.def.bounds;
+    this.cam = new FollowCamera(
+      opts.cam,
+      B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 14 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
+    );
+    cutout.on.value = opts.map ? 1 : 0;
+    const def = opts.map?.def;
+    setGround(def ? (x, z) => heightAt(def, x, z) : () => 0);
     this.scene.background = new Color(NIGHT);
     this.scene.fog = new FogExp2(NIGHT, 0.017);
     this.scene.environment = nightEnvironment(renderer);
@@ -85,7 +102,9 @@ export class GameRenderer {
     this.scene.add(world.group);
     this.hero = new HeroView(assets, materials);
     this.scene.add(this.hero.root, this.heroLight);
-    this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows });
+    const start = opts.map?.def.start;
+    const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
+    this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.scene.add(this.fx.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
@@ -100,7 +119,7 @@ export class GameRenderer {
     renderer.shadowMap.type = PCFShadowMap;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
-    const world = buildWorld(materials);
+    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props) : buildWorld(materials);
     const assets = await loadCharacters(materials);
     return new GameRenderer(renderer, world, assets, materials, opts);
   }
@@ -126,7 +145,8 @@ export class GameRenderer {
       this.pool.push(view);
     }
     this.views.clear();
-    this.cam.snap(sim.player.x, sim.player.z);
+    this.cam.snap(sim.player.x, sim.player.z, groundY(sim.player.x, sim.player.z));
+    this.world.follow?.(sim.player.x, sim.player.z);
   }
 
   /** Ground point under a pointer position, for mouse aim. */
@@ -140,7 +160,7 @@ export class GameRenderer {
       case 'hit': {
         this.views.get(ev.id)?.hit();
         const feel = HIT_FEEL[ev.weight];
-        this.fx.sparks(ev.x, 1.15, ev.z, ev.dx, ev.dz, ev.weight === 'heavy');
+        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, ev.weight === 'heavy');
         this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1));
         if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
         break;
@@ -192,8 +212,12 @@ export class GameRenderer {
 
     const px = lerp(p.px, p.x, alpha);
     const pz = lerp(p.pz, p.z, alpha);
-    this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt);
-    this.heroLight.position.set(px, 2.8, pz + 1.6);
+    const py = groundY(px, pz);
+    this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py);
+    this.heroLight.position.set(px, py + 2.8, pz + 1.6);
+    this.world.follow?.(px, pz);
+    cutout.hero.value.set(px, py, pz);
+    cutout.cam.value.copy(this.cam.position);
     this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height));
     this.debug?.update(sim, alpha);
 
