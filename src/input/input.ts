@@ -30,6 +30,8 @@ export class Input {
   enabled = false;
   onMenu: () => void = () => {};
   onInventory: () => void = () => {};
+  /** M, pad View: the map tab. */
+  onMap: () => void = () => {};
   /** Switch between the two regular powers. */
   onSwap: () => void = () => {};
 
@@ -49,6 +51,7 @@ export class Input {
         return;
       }
       if (e.code === 'KeyI' || (e.code === 'Tab' && this.enabled)) { e.preventDefault(); this.onInventory(); return; }
+      if (e.code === 'KeyM') { this.onMap(); return; }
       if (!this.enabled) return;
       this.keys.add(e.code);
       if (e.code === 'KeyE') this.press('power', 'keyboard');
@@ -143,6 +146,7 @@ export class Input {
       if (edge(15)) this.press('molotow', 'gamepad');
       if (edge(12) && this.enabled) this.onSwap();
       if (edge(3)) this.onInventory();
+      if (edge(8)) this.onMap();
       if (edge(PAD_MENU)) this.onMenu();
       this.padDown = down;
       break;

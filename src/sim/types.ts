@@ -220,6 +220,8 @@ export type SimEvent =
   | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material' | 'food'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId }
   | { type: 'scrap'; amount: number; x: number; z: number }
   | { type: 'bagFull' }
+  /** U2: first kill of a kind or first find of a legendary or set base. */
+  | { type: 'kodex'; name: string }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
   | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean };
 

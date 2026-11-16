@@ -15,9 +15,7 @@
       <div class="hp" aria-label="Leben"><div id="hp-fill"></div></div>
       <div class="kills">Erledigt <b id="kills">0</b></div>
       <div id="objective" hidden><span id="obj-arrow">➤</span><span id="obj-text"></span></div>
-      <button id="map-btn" type="button" aria-label="Karte" hidden>Karte</button>
-      <button id="inventory-btn" type="button" aria-label="Inventar">Inventar</button>
-      <button id="menu-btn" type="button" aria-label="Optionen">☰</button>
+      <button id="menu-btn" type="button" aria-label="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg></button>
     </div>
     <canvas id="minimap" hidden aria-label="Minikarte"></canvas>
     <div id="edges"></div>
@@ -26,14 +24,6 @@
     <div id="toast" hidden></div>
     <button id="loot-chip" type="button" hidden>Beute: <b id="loot-n">0</b> · Weiterziehen<span id="loot-pad" hidden> (Select)</span></button>
     <div id="banner" hidden><b id="banner-title"></b><span id="banner-sub"></span></div>
-
-    <div id="karte" class="overlay" hidden>
-      <div class="panel wide">
-        <button id="x-karte" type="button" class="x-btn" aria-label="Schließen">×</button>
-        <div id="karte-svg"></div>
-        <button id="close-karte" type="button" hidden>Schließen</button>
-      </div>
-    </div>
 
     <div id="lootwarn" class="overlay" hidden>
       <div class="panel">
@@ -82,11 +72,10 @@
       </div>
     </div>
 
-    <div id="options" class="overlay" hidden>
-      <div class="panel">
-        <button id="close-options" type="button" class="x-btn" aria-label="Schließen">×</button>
-        <h2>Pause</h2>
-        <div id="pause-nav" class="choices"><button id="pause-inventory" type="button" class="choice"><b>Inventar</b></button><button id="pause-map" type="button" class="choice"><b>Karte</b></button><button id="pause-finish" type="button" class="choice" hidden><b>Abschließen</b></button></div>
+    <div id="options" class="opt-tab" hidden>
+      <div class="opt-cols">
+      <div class="opt-col">
+        <div id="run-actions" class="choices"><button id="pause-finish" type="button" class="choice" hidden><b>Abschließen</b></button><button id="run-abort" type="button" class="choice"><b>Expedition abbrechen</b></button></div>
         <h3>Grafik</h3>
         <div id="opt-profile" class="choices"></div>
         <label class="row">Musik <input id="opt-music" type="checkbox" /></label>
@@ -99,6 +88,8 @@
           <span><b>Online speichern</b><br /><small id="cloud-info"></small></span>
           <span class="cloud-btns"><button id="cloud-copy" type="button" class="choice">Kopieren</button><button id="cloud-join" type="button" class="choice">Code eingeben</button><button id="cloud-toggle" type="button" class="choice"></button></span>
         </div>
+      </div>
+      <div class="opt-col"><h3>Steuerung</h3><div id="controls"></div><p class="inv-hint" id="version"></p></div>
       </div>
     </div>
 

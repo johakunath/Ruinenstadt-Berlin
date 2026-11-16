@@ -13,8 +13,8 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
 | M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
 | M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Fable 5.2 | open: `docs/tasks/m11d-map-realism.md` |
-| U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | open: `docs/tasks/u1-pause-menu.md` |
-| U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | open, needs U1: `docs/tasks/u2-menu-tabs.md` |
+| U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |
+| U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
 | T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (paving image) | open: `docs/tasks/t1b-ground-polish.md` |
 | A2 Audio follow-ups | Sonnet | open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | open: `docs/tasks/l2-loot-followups.md` |

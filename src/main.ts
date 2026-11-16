@@ -1,5 +1,7 @@
 import { AbilitiesUi } from './ui/abilities';
 import { InventoryUi } from './ui/inventory';
+import { Menu } from './ui/menu';
+import { isUpgrade } from './sim/items';
 import { collectItem } from './sim/inventory';
 import type { Item } from './sim/items';
 // Game loop: fixed 60 Hz sim steps, interpolated rendering, input polled every frame.
@@ -22,7 +24,7 @@ import { mapSvg } from './data/map-svg';
 import { EdgeMarkers, Minimap } from './ui/minimap';
 import { ENEMIES } from './data/enemies';
 import type { Level } from './sim/level';
-import { Telemetry } from './telemetry';
+import { Telemetry, VERSION } from './telemetry';
 import { LootLabels, rarityColor } from './ui/loot-labels';
 import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
@@ -173,6 +175,20 @@ function newGame(): void {
   if (persist) { save = snapshot(sim, mapName, false); writeSave(save); cloud.queue(save); }
   start();
 }
+/** U2 Expedition abbrechen: the run ends as a loss, back to the title; gear and Schrott stay. */
+function abortRun(): void {
+  menu.close();
+  telemetry.end('quit');
+  saveNow(false);
+  phase = 'title';
+  input.enabled = false;
+  input.clear();
+  lootExit = 'off'; lootWarn.hidden = true; lootChip.hidden = true;
+  sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
+  renderer?.reset(sim);
+  ui.setResume(resumeLabel(), difficulty);
+  ui.showTitle();
+}
 let deadFor = 0;
 let renderer: GameRenderer | null = null;
 
@@ -213,14 +229,7 @@ const ui = new Ui(opts, {
     }
     again();
   },
-  onMapToggle: (open) => {
-    input.enabled = phase === 'play' && !open && !inventory.open;
-    input.clear();
-  },
-  onOptionsToggle: (open) => {
-    input.enabled = phase === 'play' && !open && !inventory.open;
-    input.clear();
-  },
+  onMenu: () => input.onMenu(),
   onProfile: (id) => {
     opts.profile = id;
     storeOptions(opts);
@@ -249,22 +258,39 @@ const ui = new Ui(opts, {
   },
 }, input);
 
-const inventory = new InventoryUi(() => sim, open => {
-  // Gear changes between fights are kept; during a wave they wait for its checkpoint.
-  if (!open && phase === 'play' && sim.run.phase === 'travel') saveNow(true);
-  else if (!open && sim.run.phase === 'won') saveNow(false);
-  input.enabled = phase === 'play' && !open && !ui.mapOpen && !ui.optionsOpen;
-  input.clear();
-});
-input.onInventory = () => {
-  if (phase === 'play' && !ui.mapOpen && !ui.optionsOpen) inventory.toggle(!inventory.open);
-};
-document.getElementById('inventory-btn')!.addEventListener('click', input.onInventory);
-// The pause menu leads to inventory and map (on touch the HUD has only the pause button).
-document.getElementById('pause-inventory')!.addEventListener('click', () => { ui.toggleOptions(false); input.onInventory(); });
-document.getElementById('pause-map')!.addEventListener('click', () => { ui.toggleOptions(false); ui.toggleMap(true); });
+const inventory = new InventoryUi(() => sim);
+// U1: one pause menu with tabs (2D layout). The sim does not step while it is open.
+const menu = new Menu({
+  sim: () => sim,
+  inRun: () => phase === 'play',
+  where: () => {
+    const enc = level?.encounters[Math.min(sim.run.index, level.encounters.length - 1)];
+    return level && enc ? `${level.zones[enc.zone]?.name ?? mapName} · Kampf ${Math.min(sim.run.index + 1, level.encounters.length)}/${level.encounters.length}` : mapName;
+  },
+  mapSvg: () => mapSource?.() ?? null,
+  onToggle: (open) => {
+    // Gear changes between fights are kept; during a wave they wait for its checkpoint.
+    if (!open && phase === 'play' && sim.run.phase === 'travel') saveNow(true);
+    else if (!open && sim.run.phase === 'won') saveNow(false);
+    input.enabled = phase === 'play' && !open;
+    input.clear();
+  },
+}, inventory, document.getElementById('options')!);
+input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
+input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search') menu.toggle('karte'); };
 document.getElementById('won-explore')!.addEventListener('click', explore);
-document.getElementById('pause-finish')!.addEventListener('click', () => { ui.toggleOptions(false); showWon(); });
+document.getElementById('pause-finish')!.addEventListener('click', () => { menu.close(); showWon(); });
+document.getElementById('version')!.textContent = `Ruinenstadt Berlin · ${VERSION}`;
+// U2: abort the expedition as a loss after a second tap; gear and Schrott stay, the checkpoint goes.
+{
+  const b = document.getElementById('run-abort') as HTMLButtonElement;
+  let armed = 0;
+  b.addEventListener('click', () => {
+    if (!armed || performance.now() - armed > 4000) { armed = performance.now(); b.innerHTML = '<b>Wirklich abbrechen?</b>'; return; }
+    armed = 0; b.innerHTML = '<b>Expedition abbrechen</b>';
+    abortRun();
+  });
+}
 // "Ganz neu anfangen" asks once: the second click within a few seconds wipes the save.
 {
   const b = document.getElementById('new-game') as HTMLButtonElement;
@@ -279,25 +305,24 @@ document.getElementById('pause-finish')!.addEventListener('click', () => { ui.to
 // Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
 window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
-window.addEventListener('keydown', e => {
-  if (inventory.open && ['KeyM', 'Tab', 'KeyP', 'Escape'].includes(e.code)) {
-    if (e.code === 'Escape' || e.code === 'KeyP') inventory.toggle(false);
-    if (e.code !== 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); }
-  }
-}, { capture: true });
 input.onMenu = () => {
-  if (inventory.open) { inventory.toggle(false); return; }
-  if (phase !== 'title') ui.toggleOptions(!ui.optionsOpen);
+  if (menu.isOpen) menu.close();
+  else if (phase === 'play') menu.open('inv');
+  else if (phase === 'title') menu.open('opt');
 };
 
-const minimap = map ? new Minimap(map.def, map.lots, () => ui.toggleMap(true)) : null;
+const minimap = map ? new Minimap(map.def, map.lots, () => { if (phase === 'play') menu.open('karte'); }) : null;
+let mapSource: (() => string) | null = null;
 const edges = new EdgeMarkers();
 
 if (map) {
   ui.setExpedition(true);
-  ui.mapSource = () => {
+  mapSource = () => {
     const p = sim.player;
-    const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false });
+    // Live marks (U2 legend): unused Litfaßsäulen and the enemies alive.
+    const marks = sim.content.shrines.filter(h => !h.used).map(h => `<circle cx="${h.x.toFixed(1)}" cy="${h.z.toFixed(1)}" r="3.2" fill="#7dd3ff" stroke="#14282b" stroke-width="0.8"/>`).join('')
+      + sim.enemies.filter(e => e.state !== 'dead').map(e => `<circle cx="${e.x.toFixed(1)}" cy="${e.z.toFixed(1)}" r="${e.def.boss ? 3.5 : 1.8}" fill="#c23a2e"/>`).join('');
+    const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false }).replace('</svg>', `${marks}</svg>`);
     // The hero: the same arrow as on the minimap, in a ring so it is found at a glance (playtest 2026-11-17).
     const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
     return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
@@ -532,6 +557,9 @@ function drainEvents(): void {
         }
         break;
       }
+      case 'kodex':
+        lootUi.toast(`Neu im Kodex · <span style="color:#ef9f27">${ev.name}</span>`);
+        break;
       case 'bagFull':
         lootUi.toast('<span style="color:#c23a2e">Rucksack voll</span> · Beute bleibt liegen');
         break;
@@ -543,6 +571,8 @@ function drainEvents(): void {
 }
 
 let held = false;
+let hotAt = 0;
+const menuBtn = document.getElementById('menu-btn')!;
 let last = performance.now();
 let acc = 0;
 
@@ -553,7 +583,7 @@ let nextAt = 0;
 
 function frame(now: number): void {
   audio.tick(Math.min(.1, Math.max(0, (now - last) / 1000)), {
-    district: 0, fighting: phase === 'play' && !ui.optionsOpen && !ui.mapOpen && !inventory.open,
+    district: 0, fighting: phase === 'play' && !menu.isOpen,
     enemies: sim.enemies.filter(e => e.state !== 'dead').length,
     boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
   });
@@ -566,11 +596,12 @@ function frame(now: number): void {
   if (!renderer) return;
   renderer.perf.frame(frameMs);
   input.poll(dt, sim.hitstop > 0);
-  inventory.pollPad(now);
+  menu.pollPad(now);
+  if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
 
-  abilitiesUi.update(sim, phase === 'play' && !ui.optionsOpen && !ui.mapOpen && !inventory.open);
+  abilitiesUi.update(sim, phase === 'play' && !menu.isOpen);
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
-  const running = !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
+  const running = !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask';
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -611,7 +642,7 @@ function frame(now: number): void {
   }
   if (wonFor >= 0 && phase === 'play') {
     wonFor += dt;
-    if (wonFor > WON_DELAY && !abilitiesUi.open && !inventory.open) showWon();
+    if (wonFor > WON_DELAY && !abilitiesUi.open && !menu.isOpen) showWon();
   }
   if (lootExit === 'search') {
     const left = importantDrops(sim).length;
@@ -627,9 +658,9 @@ function frame(now: number): void {
   if (level) expeditionHud(dt);
   pollLootPad();
   // Heights are above the local ground (hills and terraces).
-  lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !inventory.open);
+  lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !menu.isOpen);
 
-  if (!inventory.open) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
+  if (!menu.isOpen) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
