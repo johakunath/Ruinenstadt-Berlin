@@ -132,8 +132,8 @@ describe('Köpenick map', () => {
     }
   });
 
-  it('light coverage: almost every street point has a light source within reach', () => {
-    const m = koepenickMap(1);
+  it.each([1, 1.3])('light coverage: almost every street point has a light source within reach (scale %s)', (scale) => {
+    const m = koepenickMap(scale);
     const props = generateProps(m, generateLots(m));
     const lights = props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => [p.x, p.z] as const);
     const anchors = [...lights, ...m.landmarks.filter((l) => l.hx > 0).map((l) => [l.x, l.z] as const)];
@@ -154,8 +154,8 @@ describe('Köpenick map', () => {
         }
       }
     }
-    console.log(`light sources ${lights.length}, street samples ${n}, dark ${dark}`);
-    expect(dark / n).toBeLessThan(0.05);
+    console.log(`scale ${scale}: light sources ${lights.length}, street samples ${n}, dark ${dark}`);
+    expect(dark / n).toBeLessThan(0.02);
   });
 
   it('bigger scale means a bigger map with more lots', () => {

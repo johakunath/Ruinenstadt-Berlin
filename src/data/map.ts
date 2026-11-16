@@ -759,8 +759,20 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
-  fillLight(m, props, hit, rng);
+  fillLight(m, lots, props, hit, rng);
   return props;
+}
+
+/** Is (x, z) on a lot's footprint (main body or wing), with `pad` meters of margin? */
+function inLot(l: Lot, x: number, z: number, pad: number): boolean {
+  const c = Math.cos(l.rot);
+  const s = Math.sin(l.rot);
+  const inside = (cx: number, cz: number, w: number, d: number): boolean => {
+    const dx = x - cx;
+    const dz = z - cz;
+    return Math.abs(dx * c - dz * s) <= w / 2 + pad && Math.abs(dx * s + dz * c) <= d / 2 + pad;
+  };
+  return inside(l.x, l.z, l.w, l.d) || (l.wing !== undefined && inside(l.wing.x, l.wing.z, l.wing.w, l.wing.d));
 }
 
 /** Light sources: working lamps, fires, construction lamps and grave candles. */
@@ -773,7 +785,7 @@ export const LIGHT_COVER = 8;
  * source, Späti or landmark is within LIGHT_COVER, adds one beside the street. Mostly no-flame kinds
  * (construction lamps, grave candles) so flames stay special; lamps keep their 22 m gap.
  */
-function fillLight(m: MapDef, props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
+function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
   const lit: Array<[number, number]> = props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => [p.x, p.z]);
   for (const l of m.landmarks) if (l.hx > 0) lit.push([l.x, l.z]);
   const dark = (x: number, z: number): boolean => !lit.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LIGHT_COVER);
@@ -792,18 +804,36 @@ function fillLight(m: MapDef, props: Prop[], hit: (x: number, z: number, r: numb
         if (!dark(cx, cz) || onBridge(m, cx, cz, 1) || isWater(m, cx, cz)) continue;
         const kind = rng.pick(kinds);
         const r = kind === 'campfire' ? 1 : 0.6;
-        placed: for (const dt of [0, 2, -2, 4, -4]) {
-          for (const side of rng.next() < 0.5 ? [-1, 1] : [1, -1]) {
-            for (const extra of [1.0, 1.8, 2.8]) {
-              const off = side * (s.width / 2 + extra);
-              const x = ax + ux * (t + dt) - uz * off;
-              const z = az + uz * (t + dt) + ux * off;
-              if (hit(x, z, r) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3) continue;
-              if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6)) continue;
+        const sides = rng.next() < 0.5 ? [-1, 1] : [1, -1];
+        const spot = (dt: number, side: number, extra: number): [number, number] => {
+          const off = side * (s.width / 2 + extra);
+          return [ax + ux * (t + dt) - uz * off, az + uz * (t + dt) + ux * off];
+        };
+        const inFight = (x: number, z: number): boolean => m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6);
+        let done = false;
+        place: for (const dt of [0, 2, -2, 4, -4, 6, -6]) {
+          for (const side of sides) {
+            for (const extra of [1.0, 1.8, 2.8, 4.0]) {
+              const [x, z] = spot(dt, side, extra);
+              if (hit(x, z, r) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3 || inFight(x, z)) continue;
               props.push({ kind, x, z, rot: rng.range(0, Math.PI * 2), size: 1 });
               lit.push([x, z]);
-              break placed;
+              done = true;
+              break place;
             }
+          }
+        }
+        if (done) continue;
+        // Built-up stretch: grave candles at the curb. They do not block, so they only need to stay
+        // off building footprints, water and other props.
+        curb: for (const dt of [0, 2, -2, 4, -4]) {
+          for (const side of sides) {
+            const [x, z] = spot(dt, side, 0.6);
+            if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z)) continue;
+            if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
+            props.push({ kind: 'candles', x, z, rot: rng.range(0, Math.PI * 2), size: 1 });
+            lit.push([x, z]);
+            break curb;
           }
         }
       }

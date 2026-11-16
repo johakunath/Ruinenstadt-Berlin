@@ -57,7 +57,7 @@ Any new visual whose form is open (layout, minimap, ground look, a building type
 | Heights (B3) | Soft hills up to about 8 m (walkable everywhere), terraces 1.5 to 3 m with retaining walls and stairs (walls block in the sim). Not inside an encounter circle. Good spots: summits, platforms overlooking an arena |
 | Edges | No invisible walls (Johannes, 2026-11-15): every blocking edge is visible. Land at the map edge gets a construction fence, streets end in a roadblock; fights show their circle as a glowing ring; water is its own edge |
 | Ruins | About half of the ordinary buildings are burnt-out shells (no roof, broken wall tops, empty windows, rubble). Intact ones have few lit windows (about 10 %) |
-| Light | Street lamps at least 22 m apart and beside the street, about a third broken. Then a coverage pass (`fillLight` in `src/data/map.ts`): every street point has a light source within `LIGHT_COVER` = 8 m (test, under 5 % dark samples). Fill kinds: construction lamps and grave candles (no flame) more often than fire barrels and campfires, so flames stay special. Lit windows on about 10 % of intact facades, Spätis and landmarks add their own. Köpenick: about 150 light sources |
+| Light | Street lamps at least 22 m apart and beside the street, about a third broken. Then a coverage pass (`fillLight` in `src/data/map.ts`): every street point has a light source within `LIGHT_COVER` = 8 m (test at scale 1 and 1.3, under 2 % dark samples). Fill kinds: construction lamps and grave candles (no flame) more often than fire barrels and campfires, so flames stay special. Lit windows on about 10 % of intact facades, Spätis and landmarks add their own. Köpenick: about 150 light sources |
 | Side branches | Planned (M16b): 2 to 3 short dead ends per district with a surprise. Keep room for them when laying out a map |
 | Camera | Ordinary buildings: ground floor plus 1 to 2 floors, L-shaped footprints and single-storey shops for variety. Walls and crowns between camera and hero use the see-through cutout |
 | Light pool | 2 fire barrels and some cover per encounter. Only a fixed pool of point lights exists (Leistung 3, Qualität 7, the nearest to the hero); every light source also gets a ground glow decal and its flame, which carry the coverage cheaply. Never change the light count at runtime. New light colors cost a glow material per chunk: reuse fire `0xff8a3c` and lamp `0xffb060` |
@@ -75,7 +75,7 @@ Any new visual whose form is open (layout, minimap, ground look, a building type
 - Bridges walkable; water and terrace walls block; stairs lead up.
 - Generated buildings off streets and out of the water; a larger scale gives more lots.
 - A scripted run reaches victory (`director.test.ts`).
-- Every 20 m street stretch has something (under 10 % empty); lamps beside streets and 22 m apart; light coverage (under 5 % dark street samples).
+- Every 20 m street stretch has something (under 10 % empty); lamps beside streets and 22 m apart; light coverage (under 2 % dark street samples at scale 1 and 1.3).
 - No invisible walls: land at the map edge has a fence or barrier.
 - One Späti per zone near its route; doors walk in, walls hold.
 
