@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { koepenickMap } from './koepenick';
-import { generateLots, generateProps, isWater, mapLevel, onBridge, streetDist } from './map';
+import { generateLots, generateProps, isWater, LIGHT_COVER, LIGHT_PROPS, mapLevel, onBridge, streetDist } from './map';
 
 describe('Köpenick map', () => {
   for (const scale of [1, 1.3]) {
@@ -130,6 +130,32 @@ describe('Köpenick map', () => {
       expect(streetDist(m, a.x, a.z).d).toBeLessThan(2);
       for (const b of lamps) if (a !== b) expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThanOrEqual(22);
     }
+  });
+
+  it('light coverage: almost every street point has a light source within reach', () => {
+    const m = koepenickMap(1);
+    const props = generateProps(m, generateLots(m));
+    const lights = props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => [p.x, p.z] as const);
+    const anchors = [...lights, ...m.landmarks.filter((l) => l.hx > 0).map((l) => [l.x, l.z] as const)];
+    let n = 0;
+    let dark = 0;
+    for (const s of m.streets) {
+      if (s.kind === 'path') continue;
+      for (let i = 1; i < s.pts.length; i++) {
+        const [ax, az] = s.pts[i - 1]!;
+        const [bx, bz] = s.pts[i]!;
+        const len = Math.hypot(bx - ax, bz - az);
+        for (let t = 2; t < len; t += 4) {
+          const x = ax + ((bx - ax) / len) * t;
+          const z = az + ((bz - az) / len) * t;
+          if (onBridge(m, x, z, 1) || isWater(m, x, z)) continue;
+          n++;
+          if (!anchors.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LIGHT_COVER + 1)) dark++;
+        }
+      }
+    }
+    console.log(`light sources ${lights.length}, street samples ${n}, dark ${dark}`);
+    expect(dark / n).toBeLessThan(0.05);
   });
 
   it('bigger scale means a bigger map with more lots', () => {

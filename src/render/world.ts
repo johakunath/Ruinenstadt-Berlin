@@ -466,8 +466,29 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       for (const y of [0.3, 0.66]) b.geo(m.rust, new CylinderGeometry(0.415, 0.415, 0.05, 14, 1, true), at(p, 0, y, 0), [0.7, 0.65, 0.6]);
       b.geo(m.coals, new CircleGeometry(0.38, 14), at(p, 0, 0.8, 0, -Math.PI / 2));
       b.fires.push(new Vector3(p.x, 0.85, p.z));
-      b.light(new Vector3(p.x, 1.6, p.z), 0xff8a3c, 32, 14, 1, 5.5);
+      b.light(new Vector3(p.x, 1.6, p.z), 0xff8a3c, 32, 14, 1, 6.5);
       b.shadowBox(at(p, 0, 0.475, 0), 0.7, 0.95, 0.7);
+      break;
+    }
+    case 'workLamp': {
+      // Construction lamp: red and white board on two legs, a yellow lamp on top (no flame).
+      for (const x of [-0.45, 0.45]) b.box(m.iron, at(p, x, 0.45, 0), 0.05, 0.9, 0.05, [0.8, 0.8, 0.8]);
+      for (let i = 0; i < 4; i++) b.box(m.plaster.cream ?? m.stucco, at(p, -0.375 + i * 0.25, 0.75, 0), 0.25, 0.22, 0.04, i % 2 ? [1.3, 1.25, 1.2] : [1.3, 0.35, 0.25]);
+      b.geo(m.lampGlass, new CylinderGeometry(0.09, 0.09, 0.1, 10), at(p, 0.3, 0.95, 0, Math.PI / 2), [1.6, 1.2, 0.4]);
+      b.light(new Vector3(p.x, 1.4, p.z), 0xffb060, 22, 11, 0.02, 6);
+      break;
+    }
+    case 'candles': {
+      // Grave candles in red and white cups, as left at memorials across the ruined city.
+      const n = 5 + rng.int(4);
+      for (let i = 0; i < n; i++) {
+        const a = rng.range(0, Math.PI * 2);
+        const d = rng.range(0, 0.35);
+        const h = rng.range(0.1, 0.18);
+        b.geo(m.stucco, new CylinderGeometry(0.04, 0.035, h, 7), at(p, Math.cos(a) * d, h / 2, Math.sin(a) * d), rng.next() < 0.6 ? [1.3, 0.3, 0.25] : [1.3, 1.25, 1.2]);
+        b.geo(m.lampGlass, new SphereGeometry(0.025, 5, 4), at(p, Math.cos(a) * d, h + 0.03, Math.sin(a) * d), [1.8, 1.0, 0.4]);
+      }
+      b.light(new Vector3(p.x, 0.7, p.z), 0xff8a3c, 16, 8, 0.6, 5);
       break;
     }
     case 'lantern': {
@@ -477,7 +498,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       b.geo(m.lampGlass, new CylinderGeometry(0.24, 0.17, 0.42, 6), at(p, 0, 3.3, 0));
       b.geo(m.iron, new ConeGeometry(0.32, 0.26, 6), at(p, 0, 3.64, 0));
       b.geo(m.iron, new SphereGeometry(0.05, 6, 5), at(p, 0, 3.8, 0));
-      b.light(new Vector3(p.x, 3.25, p.z), 0xffb060, 34, 13, 0.08, 5);
+      b.light(new Vector3(p.x, 3.25, p.z), 0xffb060, 34, 13, 0.08, 6.5);
       b.shadowBox(at(p, 0, 1.6, 0), 0.14, 3.2, 0.14);
       break;
     }

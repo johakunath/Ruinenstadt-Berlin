@@ -9,9 +9,28 @@ How every district map is made, so all maps grow in the same direction no matter
 | 1 | Concept: 2 to 3 clearly distinct layouts as SVG mockups (route, zones, encounters, landmarks, size) | Mockup in chat | Johannes picks |
 | 2 | Geography check against OpenStreetMap (below) | Table in `docs/maps/<district>.md` | |
 | 3 | Data: anchors, streets, water, areas, landmarks, encounters, hills, terraces in `src/data/<district>.ts` | Map SVG from the data (`map-svg.test.ts`), shown in chat before the 3D build | Johannes can redirect |
-| 4 | Build: landmarks in code, generated lots, props, heights | Screenshots of each landmark and one fight | |
+| 4 | Build: landmarks in code, generated lots, props, heights, light, ground (code-painted placeholders) | Screenshots of each landmark, one fight, one street at night | |
 | 5 | Tests: the invariants below, at scale 1 and 1.3 | `npm run check` green | |
-| 6 | Playtest on PC and Tab S9 (`?debug=perf`, `?mapscale=`) | Row in `docs/playtests.md` | Johannes sets size and difficulty |
+| 6 | Textures: Codex generates the images for the new surfaces (`docs/asset-pipeline.md`), Claude does the performance pass | Rows in the asset queue | |
+| 7 | Playtest on PC and Tab S9 (`?debug=perf`, `?mapscale=`) | Row in `docs/playtests.md` | Johannes sets size and difficulty |
+
+Any new visual whose form is open (layout, minimap, ground look, a building type) gets clearly distinct alternatives as an SVG mockup in the chat first; build after Johannes picks. Routine work inside a picked direction: build, show, continue.
+
+## Johannes' standing requirements (collected 2026-11-15 to 2026-11-16)
+
+| Topic | Requirement |
+|---|---|
+| Size | Tight, not empty: walking always leads somewhere within seconds. Köpenick v1 (510 × 428 m) was too big; v2 at about 0.6 of the distances works |
+| Life | Every stretch of street has something: buildings, cars, props, light. No plain rectangles of ground |
+| Walkable space | It must be obvious where the hero can walk: narrow streets with curbs, fences, bollards |
+| Edges | No invisible walls, ever. A blocking edge is a visible object (construction fence, roadblock, building, water) or the fight ring |
+| Ruins | It is a ruined city: about half the ordinary buildings are burnt-out shells; intact ones have only a few faint lit windows |
+| Light | Alive at night: where one light pool ends the next begins, almost no fully dark area (the gate 1 market square is the reference). Street lamps beside the street, spaced, a third broken; the rest from fires, construction lamps, candles, Spätis, windows |
+| Vehicles | Real sizes (a bus is about 11 m), detailed enough to read; trams on tram tracks; a ferry is a real boat that shuttles and carries the hero |
+| Route | Not purely linear: short side branches with surprises (M16b). A loop that never walks the same street twice |
+| Rest | One enterable Späti per zone beside the route (rest stop, later the trader) |
+| Look | Fits the style bible; textures may be somewhat more realistic than the comic boards. Recognizable Berlin details |
+| Reuse | Recycle the 2D game's rules, numbers and art wherever they fit the 3D gameplay |
 
 ## Geography check (do it for every map)
 
@@ -38,14 +57,16 @@ How every district map is made, so all maps grow in the same direction no matter
 | Heights (B3) | Soft hills up to about 8 m (walkable everywhere), terraces 1.5 to 3 m with retaining walls and stairs (walls block in the sim). Not inside an encounter circle. Good spots: summits, platforms overlooking an arena |
 | Edges | No invisible walls (Johannes, 2026-11-15): every blocking edge is visible. Land at the map edge gets a construction fence, streets end in a roadblock; fights show their circle as a glowing ring; water is its own edge |
 | Ruins | About half of the ordinary buildings are burnt-out shells (no roof, broken wall tops, empty windows, rubble). Intact ones have few lit windows (about 10 %) |
-| Light | Lamps at least 22 m apart and beside the street, about a third broken. Survivor campfires and fire barrels fill the gaps |
+| Light | Street lamps at least 22 m apart and beside the street, about a third broken. Then a coverage pass (`fillLight` in `src/data/map.ts`): every street point has a light source within `LIGHT_COVER` = 8 m (test, under 5 % dark samples). Fill kinds: construction lamps and grave candles (no flame) more often than fire barrels and campfires, so flames stay special. Lit windows on about 10 % of intact facades, Spätis and landmarks add their own. Köpenick: about 150 light sources |
 | Side branches | Planned (M16b): 2 to 3 short dead ends per district with a surprise. Keep room for them when laying out a map |
 | Camera | Ordinary buildings: ground floor plus 1 to 2 floors, L-shaped footprints and single-storey shops for variety. Walls and crowns between camera and hero use the see-through cutout |
-| Light pool | 2 fire barrels and some cover per encounter. Light count is a fixed pool; lamps are spots |
+| Light pool | 2 fire barrels and some cover per encounter. Only a fixed pool of point lights exists (Leistung 3, Qualität 7, the nearest to the hero); every light source also gets a ground glow decal and its flame, which carry the coverage cheaply. Never change the light count at runtime. New light colors cost a glow material per chunk: reuse fire `0xff8a3c` and lamp `0xffb060` |
 | Water | Rivers as polylines, lakes as polygons, bridges as rectangles at least river width + 12 m long. Banks drop to the water plane. Natural banks wobble up to about 3 m; banks in cobbles or asphalt areas are straight stone quays; bridge and ferry heads keep the authored line |
 | Ground | Variant C: grass, dirt, paving and leaf litter blended per area with soft borders, grass overgrowing paving, plus scatter (puddles, leaves, trash, rubble, weed tufts). Textures follow `docs/asset-pipeline.md` (code placeholder first, generated images by Codex) |
 | Relief | Low rolling ground in parks and forests, flat on and beside streets, near water, buildings and landmarks |
-| Rest stops | One Späti per zone beside the route, front on a street, away from encounter circles (test) |
+| Rest stops | One Späti per zone beside the route, front on a street, away from encounter circles (test). Lit inside and outside, readable sign from the camera. Find spots with a probe over free land near each zone's route before placing |
+| Buildings | Altbau 9 to 16 m wide, ground floor plus 1 to 2 floors, L-shaped in about 40 %, single-storey shops between blocks, houses slightly askew with front fences. Small props (lamps, rails, fences, crates) never get the see-through cutout, only buildings, landmarks and crowns |
+| Vehicles | Cars every 7 to 14 m of street, off zone entries, stairs and landmarks. Wrecks: buses and vans on main streets, a tram on the tram line |
 
 ## Invariants (tests per map)
 
@@ -54,6 +75,23 @@ How every district map is made, so all maps grow in the same direction no matter
 - Bridges walkable; water and terrace walls block; stairs lead up.
 - Generated buildings off streets and out of the water; a larger scale gives more lots.
 - A scripted run reaches victory (`director.test.ts`).
+- Every 20 m street stretch has something (under 10 % empty); lamps beside streets and 22 m apart; light coverage (under 5 % dark street samples).
+- No invisible walls: land at the map edge has a fence or barrier.
+- One Späti per zone near its route; doors walk in, walls hold.
+
+## Lessons from Köpenick (2026-11-15 to 2026-11-16)
+
+| Lesson | Practice |
+|---|---|
+| Size first | Decide the size with a playable blockout and the minimap, not on paper. `mapscale` stretches distances only; a new layout beats scaling down (scale below 1 breaks lots) |
+| Density is tested | "Every stretch has something", light coverage and edge fences are tests, so a layout change cannot quietly leave empty or dark areas |
+| Data before render | Rules live in `src/data` (generators, colliders) so sim and renderer agree; the renderer only draws |
+| Water | Natural banks wobble (up to about 3 m), town banks are straight quays; bridge and ferry heads keep the authored line so decks always reach land. The ground mesh slopes into the riverbed, so quay walls reach 1.5 m inland to hide it |
+| Relief | Gentle (under 1.5 m) and only off streets, water, buildings and landmarks, cached on a grid because `heightAt` runs every frame |
+| Moving things | A moving platform (the ferry) is a pure function of sim time; bodies on it move with it, including their rollback position |
+| Placement | Hand-placed things (Späti, tram, landmarks) reserve space before the generators run; generators check water, streets, encounters, stairs and each other |
+| Screenshots | Cloud screenshots render in software: take them one after another, teleport the hero, wait about 4 s, and take a second shot because the camera lags after a long jump. Measure performance only on the PC and the Tab S9 |
+| 2D reuse | Read the 2D code for rules and numbers (`johakunath/Ruinenstadt`), map pixels to meters by dividing by 30, and check that each rule still fits the 3D structure (example: fights lock the hero into a circle, so the 2D safe-room rule became a rest stop) |
 
 ## Performance
 
@@ -66,4 +104,5 @@ Headless numbers are not representative. On Leistung keep a typical view under a
 | 2026-11-15 | Started with Köpenick: geography check, layout rules, heights, invariants |
 | 2026-11-15 | No invisible walls, half ruins, fewer and broken lamps, side branches planned (Johannes) |
 | 2026-11-16 | Irregular banks and quays, relief, ground variant C, Späti rest stops (M11b part 2) |
+| 2026-11-16 | Johannes' standing requirements, light coverage rule (`LIGHT_COVER` 8 m, test), lessons from Köpenick, skill `.claude/skills/map-building` |
 | 2026-11-15 | Köpenick v2 (M11b, playtest): tighter size, loop route, narrower streets with curbs, lower and L-shaped buildings, shops, cars and props on every stretch (test) |
