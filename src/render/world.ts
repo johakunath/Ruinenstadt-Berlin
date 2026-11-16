@@ -6,6 +6,8 @@ import {
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
 import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
+import { FX_LAYER, isLargeProp } from './layers';
+export { FX_LAYER } from './layers';
 import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
@@ -15,9 +17,6 @@ import {
   paintShopWindow, paintSign, paintStucco, paintVan, paintWindows, paintWood, type PaintOptions,
 } from './paint';
 import { buildBin, buildCrate } from './breakable-parts';
-
-/** Layer for things that must not show up in the normal/depth pre-pass (alpha cards, glows, effects). */
-export const FX_LAYER = 1;
 
 export const GROUND_H = 4.3;
 export const FLOOR_H = 3.5;
@@ -884,14 +883,21 @@ export function buildWorld(materials: Materials): World {
   group.name = 'courtyard';
 
   for (const f of COURTYARD.facades) {
-    if (f.style === 'altbau') buildAltbau(b, f);
-    else buildYardWall(b, f);
+    b.solid.captureOccluder(() => {
+      if (f.style === 'altbau') buildAltbau(b, f);
+      else buildYardWall(b, f);
+    });
   }
   const rng = new Rng(404);
-  for (const p of COURTYARD.props) buildProp(b, p, rng);
+  for (const p of COURTYARD.props) {
+    if (isLargeProp(p.kind)) b.solid.captureOccluder(() => buildProp(b, p, rng));
+    else buildProp(b, p, rng);
+  }
   buildGreens(b);
   buildPuddles(b, materials);
   group.add(buildGround(b));
+  const occluder = b.solid.occluderMesh();
+  if (occluder) group.add(occluder);
 
   for (const mesh of b.solid.meshes()) {
     mesh.castShadow = true;

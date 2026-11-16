@@ -14,7 +14,7 @@ Result: performance fine (over 90 fps, a bit warm). The map feels too big, empty
 | Walkable area | Streets too wide, unclear where the hero can walk | M11b: narrower streets, curbs, fences, bollards |
 | Terrain | Too flat; river banks are straight edges | M11b: more relief, irregular banks and quays |
 | Ground | Plain rectangles | M11b: ground textures, alternatives first |
-| Cutout | Lamps and bridge rails turned transparent | Fixed: only buildings, landmarks, crowns |
+| Occlusion | The proximity transparency bubble also triggered beside objects and looked strange (Johannes, 2026-11-16) | Replaced with opaque large objects and an occluded hero contour; small props, enemies, lamps and trees excluded (PR #14) |
 | Trees | Shadow incomplete | Fixed: trunks always cast shadows, larger shadow area |
 | Späti | Should be enterable (as in 2D: safe room) | M11b |
 | Minimap | Missing | M11b, mockup first |

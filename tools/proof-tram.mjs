@@ -19,7 +19,8 @@ try {
     await page.waitForFunction(() => document.getElementById('loading')?.hidden === true, null, { timeout: 120000 });
     await page.evaluate(async () => {
       window.__game.hold(true);
-      const { FollowCamera } = await import('/src/render/camera.ts');
+      const cameraUrl = performance.getEntriesByType('resource').find(r => new URL(r.name).pathname === '/src/render/camera.ts')?.name;
+      const { FollowCamera } = await import(cameraUrl ?? '/src/render/camera.ts');
       const update = FollowCamera.prototype.update;
       FollowCamera.prototype.update = function (x, z, vx, vz, dt, y) {
         this.snap(x, z, y); update.call(this, x, z, 0, 0, dt, y);

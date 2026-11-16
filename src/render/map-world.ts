@@ -16,7 +16,7 @@ import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet, boxGeo } from './batch';
-import { applyCutout } from './cutout';
+import { isLargeProp } from './layers';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
@@ -152,11 +152,6 @@ function makeMapMats(materials: Materials): MapMats {
     m.litter.map?.dispose();
     m.litter.map = texture;
   });
-  // Buildings, landmarks and tree crowns get the see-through cutout. Small props (iron: lamps, bridge
-  // rails, fences; wood: crates, benches) stay solid (playtest 2026-11-15).
-  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.spatiSign, m.frond, ...Object.values(m.plaster)]) {
-    applyCutout(mat);
-  }
   return m;
 }
 
@@ -1157,17 +1152,21 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   for (const l of lots) {
     const b = chunkOf(l.x, l.z);
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
-    if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
-    else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
-    else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
-    else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
-    if (l.wing) {
-      // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
-      const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
-      if (l.ruin) b.on(y0, () => buildRuin(b, wing));
-      else if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
-      else b.on(y0, () => buildAltbauLot(b, wing, m));
-    }
+    const build = (): void => {
+      if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
+      else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
+      else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
+      else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
+      if (l.wing) {
+        // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
+        const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
+        if (l.ruin) b.on(y0, () => buildRuin(b, wing));
+        else if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
+        else b.on(y0, () => buildAltbauLot(b, wing, m));
+      }
+    };
+    if (l.kind === 'tree') build();
+    else b.solid.captureOccluder(build);
   }
   // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
   const spatis: Array<{ rest: RestArea; upper: Group }> = [];
@@ -1176,7 +1175,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     const y0 = base(l.x, l.z, Math.max(l.hx, l.hz));
     if (l.kind === 'spati') {
       const up = new ChunkBuilder(mats);
-      b.on(y0, () => buildSpati(b, up, l));
+      up.solid.captureOccluder(() => b.on(y0, () => buildSpati(b, up, l)));
       const g = new Group();
       for (const mesh of up.solid.meshes()) {
         mesh.castShadow = true;
@@ -1184,11 +1183,13 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         g.add(mesh);
       }
       g.position.y = y0;
+      const occluder = up.solid.occluderMesh();
+      if (occluder) g.add(occluder);
       group.add(g);
       spatis.push({ rest: spatiRest(l), upper: g });
       continue;
     }
-    b.on(y0, () => buildLandmark(b, l));
+    b.solid.captureOccluder(() => b.on(y0, () => buildLandmark(b, l)));
   }
   const rng = new Rng(m.seed);
   const instanced = new Set(breakables.map((d) => d.prop));
@@ -1199,7 +1200,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       rng.next();
       return;
     }
-    b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    const build = (): void => b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
+    else build();
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
@@ -1217,6 +1220,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const caster = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
   const fires: Vector3[] = [];
   for (const b of chunks.values()) {
+    const occluder = b.solid.occluderMesh();
+    if (occluder) group.add(occluder);
     for (const mesh of b.solid.meshes()) {
       mesh.castShadow = true;
       mesh.receiveShadow = true;

@@ -1,5 +1,5 @@
 // Post-processing chain. Profile and look decide which passes exist:
-//   beauty → [GTAO] → ink outline → bloom → grade → output (tone map, sRGB) → [FXAA]
+//   beauty → [GTAO] → ink → hidden hero contour → bloom → grade → output → [FXAA]
 // GTAO and the ink outline share one normal/depth pre-pass.
 import {
   DepthTexture, HalfFloatType, MeshNormalMaterial, NearestFilter, NoBlending, Vector2, WebGLRenderTarget,
@@ -14,7 +14,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { Look } from './looks';
 import type { Profile } from './profile';
-import { applyCutout } from './cutout';
+import { HeroOutline } from './hero-outline';
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -117,7 +117,8 @@ const GradeShader = {
 export class Post {
   private readonly composer: EffectComposer;
   private readonly gbuffer: WebGLRenderTarget | null;
-  private readonly normalMaterial = withCutout(new MeshNormalMaterial({ blending: NoBlending }));
+  private readonly normalMaterial = new MeshNormalMaterial({ blending: NoBlending });
+  private readonly heroOutline: HeroOutline;
   private readonly ink: ShaderPass | null = null;
   private readonly gtao: GTAOPass | null = null;
   private readonly bloom: UnrealBloomPass;
@@ -154,6 +155,8 @@ export class Post {
       u.far!.value = camera.far;
       this.composer.addPass(this.ink);
     }
+    this.heroOutline = new HeroOutline(scene, camera);
+    this.composer.addPass(this.heroOutline);
     this.bloom = new UnrealBloomPass(new Vector2(4, 4), 0.42 * profile.bloomStrength * look.bloom, 0.5, 1.0);
     this.composer.addPass(this.bloom);
     const grade = new ShaderPass(GradeShader);
@@ -176,6 +179,7 @@ export class Post {
   setSize(width: number, height: number, dpr: number): void {
     this.composer.setPixelRatio(dpr);
     this.composer.setSize(width, height);
+    this.heroOutline.resizeMasks(width, height, dpr, this.profile.gbufferScale);
     const w = Math.round(width * dpr);
     const h = Math.round(height * dpr);
     if (this.gbuffer) {
@@ -189,11 +193,13 @@ export class Post {
   }
 
   render(dt: number): void {
+    this.heroOutline.prepare(this.renderer);
     if (this.gbuffer) {
       // Normal and depth of solid geometry only: no cards, glows or effects (FX layer).
       const r = this.renderer;
       const background = this.scene.background;
       const shadows = r.shadowMap.autoUpdate;
+      const layers = this.camera.layers.mask;
       this.scene.background = null;
       this.scene.overrideMaterial = this.normalMaterial;
       r.shadowMap.autoUpdate = false;
@@ -202,7 +208,7 @@ export class Post {
       r.setClearColor(0x7777ff, 1);
       r.clear();
       r.render(this.scene, this.camera);
-      this.camera.layers.enableAll();
+      this.camera.layers.mask = layers;
       r.shadowMap.autoUpdate = shadows;
       this.scene.overrideMaterial = null;
       this.scene.background = background;
@@ -210,9 +216,4 @@ export class Post {
     }
     this.composer.render(dt);
   }
-}
-
-function withCutout<T extends MeshNormalMaterial>(m: T): T {
-  applyCutout(m);
-  return m;
 }

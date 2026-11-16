@@ -1,0 +1,86 @@
+[
+  {
+    "name": "behind building",
+    "scale": 1,
+    "changedPixels": 380,
+    "expected": true
+  },
+  {
+    "name": "beside building",
+    "scale": 1,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "in front of building",
+    "scale": 1,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind crate",
+    "scale": 1,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind tree",
+    "scale": 1,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind enemy",
+    "scale": 1,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind lamp",
+    "scale": 1,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind building",
+    "scale": 0.75,
+    "changedPixels": 530,
+    "expected": true
+  },
+  {
+    "name": "beside building",
+    "scale": 0.75,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "in front of building",
+    "scale": 0.75,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind crate",
+    "scale": 0.75,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind tree",
+    "scale": 0.75,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind enemy",
+    "scale": 0.75,
+    "changedPixels": 0,
+    "expected": false
+  },
+  {
+    "name": "behind lamp",
+    "scale": 0.75,
+    "changedPixels": 0,
+    "expected": false
+  }
+]

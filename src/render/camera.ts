@@ -1,5 +1,6 @@
 // Fixed high three-quarter camera: smooth follow, slight look-ahead, directional shake.
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
+import { FX_LAYER } from './layers';
 import type { Bounds } from '../sim/flowfield';
 import { clamp } from '../sim/math';
 
@@ -39,7 +40,7 @@ export class FollowCamera {
     this.baseDistance = override?.distance ?? DISTANCE;
     this.pitch = ((override?.pitch ?? PITCH) * Math.PI) / 180;
     this.distance = this.baseDistance;
-    this.camera.layers.enableAll();
+    this.camera.layers.enable(FX_LAYER);
   }
 
   setAspect(aspect: number): void {
@@ -47,11 +48,6 @@ export class FollowCamera {
     // Portrait and narrow screens pull back so the fight stays in view.
     this.distance = this.baseDistance * (aspect < 1.5 ? clamp(1.5 / aspect, 1, 1.9) : 1);
     this.camera.updateProjectionMatrix();
-  }
-
-  /** Camera position (world), for the see-through cutout. */
-  get position(): Vector3 {
-    return this.camera.position;
   }
 
   snap(x: number, z: number, y = 0): void {

@@ -23,7 +23,7 @@
 | `assets/` | Built GLBs. Every file has a row in `assets/LICENSES.md` |
 | `tools/` | Asset build and dev tools (`screenshot.mjs`, `sequence.mjs`, `clip-swing.mjs`) |
 
-The sim reports through `sim.events`; the loop in `src/main.ts` hands them to renderer, audio and rumble. A `Level` (`src/sim/level.ts`) holds colliders in a spatial hash plus a walk grid (water); the encounter director (`src/sim/director.ts`) runs waves on expedition maps. Maps render in 48 m chunks (`src/render/map-world.ts`); building and tree materials get the see-through cutout (`src/render/cutout.ts`).
+The sim reports through `sim.events`; the loop in `src/main.ts` hands them to renderer, audio and rumble. A `Level` (`src/sim/level.ts`) holds colliders in a spatial hash plus a walk grid (water); the encounter director (`src/sim/director.ts`) runs waves on expedition maps. Maps render in 48 m chunks (`src/render/map-world.ts`). Buildings and large vehicles remain opaque; a depth-tested hero contour appears only behind their explicitly classified geometry (`src/render/hero-outline.ts`). Small props, enemies, lamps and trees never trigger it; do not add proximity fades or material-wide clipping.
 
 ## Rules
 
