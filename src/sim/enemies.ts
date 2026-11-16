@@ -4,7 +4,8 @@ import { ENEMIES, SPAWN, type EnemyKind } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Sim } from './types';
-import { ARENA_ENEMY_SLACK, keepInArena } from './director';
+import { POWER } from '../data/powers';
+import { STATUS } from './combat';
 
 const KNOCK_DAMP = 9;
 const SEPARATION_PAD = 0.25;
@@ -29,7 +30,7 @@ export function spawnEnemy(sim: Sim, x: number, z: number, kind: EnemyKind = pic
   const facing = angleOf(sim.player.x - x, sim.player.z - z);
   const e: Enemy = {
     id: sim.nextId++, kind, def, x, z, px: x, pz: z, facing, pfacing: facing,
-    kx: 0, kz: 0, speed: 0, hp, maxHp: hp, dmgMul, state: 'chase', stateT: 0, staggerDur: 0, struck: false,
+    kx: 0, kz: 0, speed: 0, hp, maxHp: hp, dmgMul, state: 'chase', stateT: 0, staggerDur: 0, struck: false, burn: 0, bdps: 0, burnAcc: 0, acid: 0,
   };
   sim.enemies.push(e);
   sim.events.push({ type: 'spawn', id: e.id });
@@ -131,8 +132,11 @@ export function updateEnemies(sim: Sim): void {
         if (ml > 1e-4) {
           mx /= ml;
           mz /= ml;
-          vx = mx * def.speed;
-          vz = mz * def.speed;
+          const banner=sim.abilities.banner;
+          // Standarte and Zersetzung slow by 30% each (2D).
+          const slow=(banner&&Math.hypot(e.x-banner.x,e.z-banner.z)<banner.r?POWER.stand.slow:1)*(e.acid>0&&(sim.statContext.perks.corrode??0)>0?STATUS.corrodeSlow:1)*((e.slow??0)>0?.6:1);
+          vx = mx * def.speed * slow;
+          vz = mz * def.speed * slow;
           e.facing = turnToward(e.facing, angleOf(mx, mz), 7 * DT);
         }
         break;
@@ -180,7 +184,6 @@ export function updateEnemies(sim: Sim): void {
     e.kz *= damp;
     if (e.state !== 'dead' || Math.abs(e.kx) + Math.abs(e.kz) > 0.05) {
       sim.level.resolve(e, def.radius);
-      keepInArena(sim, e, def.radius, ARENA_ENEMY_SLACK);
     }
     const b = sim.level.bounds;
     e.x = clamp(e.x, b.minX + def.radius, b.maxX - def.radius);
@@ -216,7 +219,9 @@ export function resolveBodies(sim: Sim): void {
   }
   const p = sim.player;
   // The dodge passes through enemies; a dead player is no obstacle.
-  if (p.state !== 'dodge' && p.state !== 'dead') {
+  // Leaps and the Fechtsprung pass over and through bodies too.
+  const through = p.state === 'cast' && p.cast !== null && (p.cast.id === 'fecht' || p.cast.id === 'abriss' || p.cast.id === 'stab');
+  if (p.state !== 'dodge' && p.state !== 'dead' && !through) {
     for (const e of list) {
       if (e.state === 'dead') continue;
       const dx = e.x - p.x;

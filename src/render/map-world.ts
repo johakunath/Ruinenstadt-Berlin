@@ -954,22 +954,28 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
       b.box(M.glass, lm(l, p.x - p.hx - 0.02, 1.1, p.z), 0.04, 1.7, p.hz * 2 - 0.2, [1.4, 2.2, 2.4]);
       b.light(lp(l, p.x - 1, 1.3, p.z), 0x8fe0ff, 3, 4, 0, 2);
     } else if (p.kind === 'counter') {
-      b.box(M.darkWood, lm(l, p.x, 0.5, p.z), p.hx * 2, 1.0, p.hz * 2, [1.3, 1.05, 0.9]);
-      b.box(M.rust, lm(l, p.x + 0.4, 1.13, p.z), 0.42, 0.26, 0.36, [0.7, 0.7, 0.75]);
-      b.box(M.sign, lm(l, p.x + 0.4, 1.3, p.z + 0.12), 0.3, 0.12, 0.03);
+      // Theke: a wooden body with a lighter top, the till, a jar, a stack of papers and a small price board.
+      b.box(M.darkWood, lm(l, p.x, 0.48, p.z), p.hx * 2, 0.96, p.hz * 2, [1.3, 1.05, 0.9]);
+      b.box(M.wood, lm(l, p.x, 1.0, p.z), p.hx * 2 + 0.12, 0.07, p.hz * 2 + 0.14, [1.25, 1.1, 0.95]);
+      b.box(M.rust, lm(l, p.x + 0.9, 1.17, p.z), 0.42, 0.26, 0.36, [0.7, 0.7, 0.75]);
+      b.box(M.sign, lm(l, p.x + 0.9, 1.34, p.z + 0.12), 0.3, 0.12, 0.03);
+      b.box(M.glass, lm(l, p.x - 0.2, 1.17, p.z - 0.05), 0.2, 0.28, 0.2, [1.6, 1.3, 0.6]);
+      b.box(M.stucco, lm(l, p.x - 0.9, 1.07, p.z + 0.05), 0.34, 0.07, 0.26, [1.3, 1.25, 1.1]);
+      b.box(M.stucco, lm(l, p.x - 1.35, 1.14, p.z), 0.14, 0.2, 0.14, [1.4, 0.4, 0.3]);
+      b.box(M.sign, lm(l, p.x, 0.62, p.z + p.hz + 0.02), 1.5, 0.42, 0.03);
     } else if (p.kind === 'bench') {
       b.box(M.wood, lm(l, p.x, 0.45, p.z), p.hx * 2, 0.9, p.hz * 2);
       b.box(M.rust, lm(l, p.x - 0.35, 1.03, p.z), 0.46, 0.26, 0.26, [0.5, 0.6, 0.7]);
       b.box(M.iron, lm(l, p.x - 0.2, 1.3, p.z), 0.03, 0.35, 0.03);
     }
   }
-  // Mattress and blanket in the corner left of the door.
-  b.box(M.burlap, lm(l, -3.9, 0.12, d / 2 - 1.6), 1.0, 0.24, 2.0, [1.15, 1.05, 0.95]);
-  b.box(M.burlap, lm(l, -3.9, 0.26, d / 2 - 1.9), 1.02, 0.06, 1.2, [0.6, 0.35, 0.3]);
+  // Mattress and blanket between the shelves at the back (the counter front stays free for customers).
+  b.box(M.burlap, lm(l, 2.0, 0.12, -1.9), 2.0, 0.24, 1.0, [1.15, 1.05, 0.95]);
+  b.box(M.burlap, lm(l, 1.7, 0.26, -1.9), 1.2, 0.06, 1.02, [0.6, 0.35, 0.3]);
   // Warm light inside (a bulb over the middle shelf, one over the counter) and a lamp under the awning
   // outside that lights the sandbag lane: the Späti reads as a safe, lit place from down the street.
   b.light(lp(l, 0.5, 2.7, -0.5), 0xffb070, 14, 10, 0.05, 4);
-  b.light(lp(l, -3.3, 2.5, 1.2), 0xffc890, 7, 6, 0.03, 3);
+  b.light(lp(l, -3.1, 2.5, 1.2), 0xffc890, 7, 6, 0.03, 3);
   b.light(lp(l, 0, 2.4, d / 2 + 1.6), 0xffc070, 12, 10, 0.08, 5);
   // Upper part: lintel, rolled-up shutter, sign, awning, barred shop windows, flat roof.
   up.box(M.brick, lm(l, 0, (2.4 + H) / 2, d / 2 - 0.15), door, H - 2.4, 0.3);

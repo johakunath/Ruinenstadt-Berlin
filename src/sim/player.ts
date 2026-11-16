@@ -1,10 +1,46 @@
 // Player state machine: move, 3-hit chain, dodge with i-frames, dash strike.
-import { ATTACKS, PLAYER, type AttackId } from '../data/combat';
+import { finisherOf, weaponAttack, PLAYER, WEAPON, type AttackId } from '../data/combat';
+import { POWER } from '../data/powers';
+import { CONSUMABLE, onDodge, shock, shoot, updateCast } from './abilities';
+import { hasL, knock, pk, STATUS } from './combat';
 import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
 import { DT, type Player, type Sim, type SimInput } from './types';
-import { keepInArena } from './director';
 import { dodgeCooldown, STARTER_DAMAGE } from './loadout';
+
+/** What a swing releases when its active frames start: shots, the hammer's rings, the thrown spear. */
+export function releaseSwing(sim: Sim): void {
+  const p = sim.player;
+  const a = p.attack;
+  if (!a) return;
+  const kind = sim.stats.kind;
+  const fin = p.finisher;
+  const fx = Math.sin(p.facing);
+  const fz = Math.cos(p.facing);
+  // Siegessäule: every attack also sends a golden blade (half damage, burns, passes two bodies).
+  if (hasL(sim, 'siegsp')) shoot(sim, { angle: p.facing, damage: a.damage * 0.5, crit: p.critical, speed: WEAPON.sling.speed * sim.stats.reachFactor, life: 0.55, pierce: 2, kind: 'nail', fire: true });
+  // Mauerstück: every fourth melee attack sends an acid wave.
+  if (kind !== 'sling' && hasL(sim, 'mauer') && ++sim.abilities.legSwings % 4 === 0) shock(sim, p.x, p.z, 130 / 30, { mul: 1.2, stun: 0, knock: knock(200), acid: true, kind: 'acid' });
+  if (kind === 'sling') {
+    const S = WEAPON.sling;
+    const speed = S.speed * sim.stats.reachFactor * (fin ? S.finSpeed : 1);
+    if (pk(sim, 'm_schrot')) {
+      for (const o of [-S.schrot.spread, 0, S.schrot.spread]) shoot(sim, { angle: p.facing + o, damage: a.damage * S.schrot.damage, crit: p.critical, speed, life: fin ? S.schrot.finLife : S.schrot.life, pierce: fin ? S.schrot.finPierce : 0, wucht: p.wucht });
+    } else {
+      shoot(sim, { angle: p.facing, damage: a.damage, crit: p.critical, speed, life: fin ? S.finLife : S.life, pierce: fin ? S.finPierce : 0, wucht: p.wucht });
+    }
+    return;
+  }
+  if (kind === 'hammer') {
+    const H = WEAPON.hammer;
+    if (fin) shock(sim, p.x + fx * H.shock.ahead, p.z + fz * H.shock.ahead, H.shock.radius, { mul: H.shock.damage, stun: H.shock.stun, knock: knock(260), kind: 'small' });
+    if (pk(sim, 'm_dampf')) shock(sim, p.x + fx * H.dampf.ahead, p.z + fz * H.dampf.ahead, H.dampf.radius, { mul: H.dampf.damage, stun: 0, knock: knock(140), kind: 'small' });
+  }
+  if (kind === 'spear' && fin && pk(sim, 'm_spiess')) {
+    const T = WEAPON.spear.spiess;
+    shoot(sim, { angle: p.facing, damage: a.damage * T.damage, crit: p.critical, speed: T.speed, life: T.life, pierce: T.pierce, kind: 'spear' });
+  }
+}
 
 /** Gap between the last active frame and the earliest chained attack. */
 const CHAIN_GAP = 0.04;
@@ -14,7 +50,7 @@ export function createPlayer(level: Level, at = level.start): Player {
   return {
     x, z, px: x, pz: z, facing: Math.PI, pfacing: Math.PI, vx: 0, vz: 0,
     hp: PLAYER.maxHp, state: 'move', stateT: 0,
-    attack: null, attackSpeed: 1, critical: false, swing: 0, hits: [], propHits: [], chain: null, chainT: 0,
+    attack: null, cast: null, finisher: false, wucht: false, attackSpeed: 1, critical: false, swing: 0, hits: [], propHits: [], chain: null, chainT: 0,
     dodgeX: 0, dodgeZ: 0, dodgeCd: 0, invuln: 0, strikeT: 0, hurtT: 99,
     sweeping: false, sweepLo: 0, sweepHi: 0,
   };
@@ -50,17 +86,39 @@ function attackFacing(sim: Sim, inp: SimInput): number {
 
 function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   const p = sim.player;
-  const def = ATTACKS[id];
+  const kind = sim.stats.kind;
+  const a = sim.abilities;
+  const def = weaponAttack(kind, id);
+  const fin = id === finisherOf(kind);
+  // Trommelfeuer: the finisher comes one swing earlier.
+  if (pk(sim, 'combo') && id === 'light1') def.next = 'light3';
+  // Rundumschlag: the blade finisher hits all around.
+  if (fin && kind === 'blade' && pk(sim, 'm_rund')) Object.assign(def, { from: -Math.PI, to: Math.PI, reach: def.reach * 1.2, style: 'slash' });
+  const frenzy = a.frenzy > 0;
+  // Säbeltanz: wider and longer swings.
+  if (frenzy && def.style !== 'throw') def.reach *= 1.2;
   p.facing = attackFacing(sim, inp);
   p.state = 'attack';
   p.stateT = 0;
+  p.cast = null;
   // Keep pose, hitbox, lunge and damage on one immutable swing snapshot.
-  const speed = sim.stats.attackSpeed;
+  const speed = sim.stats.attackSpeed * (frenzy ? POWER.saebel.speed : 1) * (1 + STATUS.jagdStep * a.jagd.n);
   p.attackSpeed = speed;
-  p.critical = sim.rng.next() < sim.stats.crit;
+  // Gegengewicht: every n-th attack is a Wucht hit (sure crit, double knockback, short stun).
+  p.wucht = sim.stats.weight > 0 && ++a.swings % sim.stats.weight === 0;
+  p.finisher = fin;
+  // Weltzeituhr: the first attack after a dodge always crits.
+  const armed = a.dcrit;
+  a.dcrit = false;
+  p.critical = p.wucht || frenzy || armed || (fin && pk(sim, 'pauke') > 0) || sim.rng.next() < sim.stats.crit;
+  const mul = (p.critical ? 2 : 1) * (a.fed > 0 ? CONSUMABLE.food.damage : 1) * (a.hus > 0 ? 1 + 0.4 * pk(sim, 'husar') : 1) * (a.ret ? 2 : 1);
+  if (a.ret) sim.events.push({ type: 'note', text: 'Retourkutsche', color: '#9aa4b0', x: p.x, z: p.z });
+  if (p.wucht) sim.events.push({ type: 'note', text: 'Wucht', color: '#f2a04b', x: p.x, z: p.z });
+  a.ret = false;
   p.attack = { ...def, windup: def.windup / speed, active: def.active / speed, recovery: def.recovery / speed,
     reach: def.reach * sim.stats.reachFactor,
-    damage: def.damage * sim.stats.damage / STARTER_DAMAGE * (p.critical ? 2 : 1) };
+    knockback: def.knockback * (fin ? WEAPON.finisherKnock : 1) * (p.wucht ? WEAPON.wucht.knock : 1),
+    damage: def.damage * mul * sim.stats.damage / STARTER_DAMAGE };
   p.swing++;
   p.hits.length = 0;
   p.propHits.length = 0;
@@ -93,6 +151,8 @@ function startDodge(sim: Sim, inp: SimInput): void {
   p.dodgeZ = dz;
   p.facing = angleOf(dx, dz);
   p.invuln = Math.max(p.invuln, PLAYER.dodge.iframes);
+  p.cast = null;
+  onDodge(sim);
   sim.consumed.dodge = true;
   sim.events.push({ type: 'dodge' });
 }
@@ -131,16 +191,30 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
       endToMove(p);
     }
   } else if (p.state === 'dodge' && p.stateT >= PLAYER.dodge.duration) {
+    // Rittersporn: the ground shakes where a dodge ends.
+    if (hasL(sim, 'ritter')) shock(sim, p.x, p.z, 110 / 30, { mul: 0.7, stun: 0.5, knock: knock(260), kind: 'small' });
     p.dodgeCd = dodgeCooldown(sim);
     p.strikeT = PLAYER.dodge.strikeGrace;
     endToMove(p);
+  }
+
+  // A cast (power, throw) runs on its own; a dodge cancels the rest once its effect is out.
+  if (p.state === 'cast') {
+    const c = p.cast;
+    const leaping = c !== null && (c.id === 'abriss' || c.id === 'stab' || c.id === 'fecht');
+    if (inp.dodge && p.dodgeCd <= 0 && c !== null && c.fired && !leaping) startDodge(sim, inp);
+    else {
+      updateCast(sim);
+      if (!leaping || p.state !== 'cast') integrate(sim);
+      return;
+    }
   }
 
   // Buffered actions. Dodge wins over attack when both are waiting.
   const pastDamage = p.state === 'attack' && p.attack !== null && p.stateT >= p.attack.windup + p.attack.active;
   if (inp.dodge && p.dodgeCd <= 0 && (p.state === 'move' || pastDamage)) {
     startDodge(sim, inp);
-  } else if (inp.attack) {
+  } else if (inp.attack && sim.abilities.spin <= 0) {
     if (p.state === 'move') {
       startAttack(sim, inp, p.strikeT > 0 ? 'dash' : p.chainT > 0 && p.chain ? p.chain : 'light1');
     } else if (p.state === 'dodge') {
@@ -157,7 +231,7 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     const len = Math.hypot(inp.moveX, inp.moveZ);
     const scale = len > 1 ? 1 / len : 1;
     // Brief slow after taking a hit instead of a stun: attacks and dodges are never interrupted.
-    const slow = p.hurtT < PLAYER.hitStun ? 0.45 : 1;
+    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? POWER.gully.slow : 1);
     const tx = inp.moveX * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     const tz = inp.moveZ * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     // Linear ramp: full speed (or a full stop) within `accelTime`.
@@ -191,5 +265,4 @@ function integrate(sim: Sim): void {
   const y = sim.level.playerBox;
   p.x = clamp(p.x, y.minX + PLAYER.radius, y.maxX - PLAYER.radius);
   p.z = clamp(p.z, y.minZ + PLAYER.radius, y.maxZ - PLAYER.radius);
-  keepInArena(sim, p, PLAYER.radius);
 }

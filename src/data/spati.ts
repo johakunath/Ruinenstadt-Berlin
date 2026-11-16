@@ -16,6 +16,9 @@ export const SPATI = {
   height: 3.2,
 };
 
+/** The counter and where keeper and customer stand (local frame). */
+export const COUNTER = { x: -3.1, z: 0.9, hx: 1.7, hz: 0.42, keeperZ: -0.05, deskZ: 1.85 };
+
 export interface SpatiPart {
   kind: 'wall' | 'shelf' | 'fridge' | 'counter' | 'bench';
   x: number;
@@ -39,7 +42,8 @@ export function spatiParts(): SpatiPart[] {
     { kind: 'shelf', x: 2.4, z: -d / 2 + 0.7, hx: 1.8, hz: 0.35 },
     { kind: 'shelf', x: 0.4, z: -0.8, hx: 1.8, hz: 0.3 },
     { kind: 'fridge', x: w / 2 - 0.7, z: -0.4, hx: 0.38, hz: 1.7 },
-    { kind: 'counter', x: -3.3, z: 1, hx: 1.2, hz: 0.45 },
+    // The Theke: the keeper stands behind it (toward the back wall), customers in front.
+    { kind: 'counter', x: COUNTER.x, z: COUNTER.z, hx: COUNTER.hx, hz: COUNTER.hz },
     { kind: 'bench', x: 3.2, z: d / 2 - 1.1, hx: 0.9, hz: 0.4 },
   ];
 }
@@ -59,7 +63,10 @@ export function spatiColliders(l: Landmark): Collider[] {
 }
 
 export function spatiRest(l: Landmark): RestArea {
-  return { name: l.name ?? 'Späti', x: l.x, z: l.z, rot: l.rot, hx: SPATI.w / 2 - SPATI.wall, hz: SPATI.d / 2 - SPATI.wall };
+  return {
+    name: l.name ?? 'Späti', x: l.x, z: l.z, rot: l.rot, hx: SPATI.w / 2 - SPATI.wall, hz: SPATI.d / 2 - SPATI.wall,
+    keeper: spatiWorld(l, COUNTER.x, COUNTER.keeperZ), desk: spatiWorld(l, COUNTER.x, COUNTER.deskZ),
+  };
 }
 
 /** Sandbag rows in front, leaving a lane to the door (the lit sign and windows mark it at night). */

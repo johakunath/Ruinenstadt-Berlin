@@ -31,7 +31,7 @@
       <div class="panel wide">
         <button id="x-karte" type="button" class="x-btn" aria-label="Schließen">×</button>
         <div id="karte-svg"></div>
-        <button id="close-karte" type="button" class="primary">Weiter</button>
+        <button id="close-karte" type="button" hidden>Schließen</button>
       </div>
     </div>
 
@@ -67,7 +67,7 @@
         <div id="title-diff" class="choices"></div>
         <button id="open-options" type="button">Optionen</button>
         <p id="loading">Lädt …</p>
-        <p class="keys">WASD laufen · Maus oder J schlagen · Leertaste rollen<br />Controller: Stick · X schlagen · A rollen</p>
+        <p class="keys">WASD laufen · Maus oder J schlagen · Leertaste rollen<br />E Kraft · R Ultimativ · Q Verband · G Molotow<br />Controller: X schlagen · A rollen · B Kraft · LB Ultimativ</p>
       </div>
     </div>
 
@@ -82,7 +82,9 @@
 
     <div id="options" class="overlay" hidden>
       <div class="panel">
-        <h2>Optionen</h2>
+        <button id="close-options" type="button" class="x-btn" aria-label="Schließen">×</button>
+        <h2>Pause</h2>
+        <div id="pause-nav" class="choices"><button id="pause-inventory" type="button" class="choice"><b>Inventar</b></button><button id="pause-map" type="button" class="choice"><b>Karte</b></button></div>
         <h3>Grafik</h3>
         <div id="opt-profile" class="choices"></div>
         <label class="row">Musik <input id="opt-music" type="checkbox" /></label>
@@ -94,7 +96,6 @@
           <span><b>Online speichern</b><br /><small id="cloud-info"></small></span>
           <span class="cloud-btns"><button id="cloud-copy" type="button" class="choice">Kopieren</button><button id="cloud-join" type="button" class="choice">Code eingeben</button><button id="cloud-toggle" type="button" class="choice"></button></span>
         </div>
-        <button id="close-options" type="button" class="primary">Weiter</button>
       </div>
     </div>
 

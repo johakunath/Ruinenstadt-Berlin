@@ -547,3 +547,156 @@ body:has(#inventory:not([hidden])) { touch-action:pan-y; }
   padding: 8px 14px;
   font-size: 14px;
 }
+
+/* ---- M8/M9/M16: action bar. One set of buttons: a bar at the bottom for mouse and pad, the thumb arc on touch. */
+#actions { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: flex-end; gap: 10px; z-index: 8; pointer-events: none; }
+.act { position: relative; width: 62px; height: 62px; margin: 0; padding: 0; border-radius: 14px; border: 2px solid #6a5a48; background: radial-gradient(circle at 50% 35%, #2c3f47, #131d20 78%); color: var(--cream); pointer-events: auto; touch-action: none; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55); transition: transform 0.08s, border-color 0.15s, box-shadow 0.15s; }
+.act:active { transform: scale(0.93); }
+.act.ready { border-color: #d8b64e; }
+.act .act-icon { position: absolute; inset: 7px; display: grid; place-items: center; }
+.act .act-icon svg { width: 100%; height: 100%; filter: drop-shadow(0 1px 2px #000); }
+/* Cooldown: a dark sweep that drains clockwise, seconds in the middle. */
+.act::after { content: ''; position: absolute; inset: 0; background: conic-gradient(rgba(6, 10, 12, 0.82) calc(var(--cd, 0) * 360deg), transparent 0); pointer-events: none; }
+.act .act-cd { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; font: 700 20px/1 system-ui, sans-serif; text-shadow: 0 1px 3px #000, 0 0 6px #000; }
+.act .act-key { position: absolute; left: 4px; top: 3px; z-index: 3; font: 700 11px/1 system-ui, sans-serif; font-style: normal; padding: 2px 4px; border-radius: 4px; background: rgba(6, 10, 12, 0.8); color: #cdbf9c; }
+.act .act-key:empty { display: none; }
+.act .act-count { position: absolute; right: 4px; bottom: 3px; z-index: 3; min-width: 18px; padding: 1px 4px; border-radius: 9px; background: #b8261c; font: 700 13px/1.2 system-ui, sans-serif; text-align: center; }
+.act .act-count:empty { display: none; }
+.act.off { filter: grayscale(0.9) brightness(0.6); }
+.act.off .act-count { background: #4a4038; }
+#btn-ultimate { width: 72px; height: 72px; border-radius: 50%; border-color: #8a6f2a; }
+#btn-ultimate.ready { border-color: #f2d14b; box-shadow: 0 0 0 2px rgba(242, 209, 75, 0.25), 0 0 22px rgba(242, 209, 75, 0.55); animation: ult-ready 1.6s ease-in-out infinite; }
+@keyframes ult-ready { 50% { box-shadow: 0 0 0 2px rgba(242, 209, 75, 0.4), 0 0 32px rgba(242, 209, 75, 0.85); } }
+#btn-power { width: 68px; height: 68px; }
+#btn-swap { width: 34px; height: 34px; border-radius: 50%; margin: 0 -4px 0 -6px; border-color: #4a5a60; }
+#btn-swap .act-icon { inset: 4px; }
+#btn-swap .act-key { left: auto; right: -2px; top: -4px; }
+#btn-verband, #btn-molotow { width: 52px; height: 52px; border-radius: 50%; }
+#btn-molotow { margin-right: 14px; }
+body:has(.overlay:not([hidden])) #actions, body:has(.overlay:not([hidden])) #buffs { display: none; }
+
+/* Touch: around the attack button, in reach of the right thumb. */
+body.touch-on #actions { left: auto; right: 0; bottom: 0; transform: none; width: 320px; height: 250px; display: block; }
+body.touch-on #actions .act { position: absolute; border-radius: 50%; opacity: 0.92; }
+body.touch-on #btn-power { right: calc(max(26px, env(safe-area-inset-right)) + 104px); bottom: calc(max(34px, env(safe-area-inset-bottom)) + 74px); width: 72px; height: 72px; margin: 0; }
+body.touch-on #btn-ultimate { right: calc(max(26px, env(safe-area-inset-right)) + 16px); bottom: calc(max(34px, env(safe-area-inset-bottom)) + 116px); width: 74px; height: 74px; }
+body.touch-on #btn-swap { right: calc(max(26px, env(safe-area-inset-right)) + 98px); bottom: calc(max(34px, env(safe-area-inset-bottom)) + 154px); width: 40px; height: 40px; margin: 0; }
+body.touch-on #btn-verband { right: calc(max(26px, env(safe-area-inset-right)) + 204px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 62px); width: 56px; height: 56px; margin: 0; }
+body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) + 208px); bottom: max(22px, env(safe-area-inset-bottom)); width: 56px; height: 56px; margin: 0; }
+@media (max-height: 450px) {
+  body.touch-on #btn-power { bottom: calc(max(34px, env(safe-area-inset-bottom)) + 66px); width: 64px; height: 64px; }
+  body.touch-on #btn-ultimate { bottom: calc(max(34px, env(safe-area-inset-bottom)) + 108px); width: 66px; height: 66px; }
+  body.touch-on #btn-swap { bottom: calc(max(34px, env(safe-area-inset-bottom)) + 138px); }
+}
+
+/* Buff chips under the life bar. */
+#buffs { position: fixed; left: max(14px, env(safe-area-inset-left)); top: 52px; display: flex; flex-wrap: wrap; gap: 6px; max-width: 46%; pointer-events: none; z-index: 7; }
+.buff { padding: 3px 9px; border-radius: 11px; border: 1px solid var(--c); background: rgba(11, 20, 22, 0.72); color: var(--c); font: 600 12px/1.4 system-ui, sans-serif; letter-spacing: 0.03em; text-shadow: 0 1px 2px #000; }
+.buff b { color: var(--cream); font-weight: 700; }
+
+/* ---- blessing choice (2D perk cards) */
+#blessings { z-index: 30; background: radial-gradient(ellipse at center, rgba(40, 22, 8, 0.55), rgba(6, 12, 14, 0.9)); }
+.panel.bless { width: min(980px, 100%); padding: 22px 22px 16px; gap: 10px; background: linear-gradient(#1d1712, #120d0a); border-color: #050403; outline-color: rgba(239, 159, 39, 0.35); }
+.panel.bless h2 { color: #ef9f27; font-size: 24px; text-shadow: 0 0 18px rgba(239, 159, 39, 0.45); }
+.panel.bless .sub { margin: 0; font-size: 13px; opacity: 0.7; }
+#blessing-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 6px; }
+.pcard { position: relative; display: grid; grid-template-rows: auto auto auto 1fr auto; justify-items: center; gap: 5px; margin: 0; padding: 18px 14px 14px; min-height: 250px; text-align: center; color: var(--cream); font: inherit; cursor: pointer; border-radius: 8px; border: 2px solid #4a3c2e; border-top: 4px solid var(--fc); background: linear-gradient(170deg, color-mix(in srgb, var(--fc) 13%, #221a14), #17110d 62%); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5); animation: card-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; animation-delay: calc(var(--i) * 70ms); transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
+@keyframes card-in { from { opacity: 0; transform: translateY(26px) scale(0.94); } }
+.pcard:hover, .pcard:focus-visible { transform: translateY(-6px); outline: none; border-color: #ef9f27; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6), 0 0 22px color-mix(in srgb, var(--fc) 55%, transparent); }
+.pcard .perk-icon { width: 72px; height: 72px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6)); }
+.pcard .pnum { position: absolute; left: 8px; top: 6px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0, 0, 0, 0.45); font: 700 12px/20px system-ui, sans-serif; color: #b5aa98; }
+.pcard .pfam { position: absolute; right: 8px; top: 7px; display: flex; gap: 4px; }
+.pcard .fam { width: 20px; height: 20px; opacity: 0.4; filter: grayscale(0.6); }
+.pcard .fam.on { opacity: 1; filter: drop-shadow(0 0 5px var(--fc)); }
+.prar { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #a3978a; }
+.pn { font: 700 21px/1.1 Georgia, 'Times New Roman', serif; letter-spacing: 0.03em; color: #f2c078; }
+.pd { font-size: 14px; line-height: 1.35; align-self: start; }
+.pl { font-size: 12px; color: #a3978a; }
+.pcard.fon .pl { color: var(--fc); }
+.pcard.ra { border-color: #7d9bff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), 0 0 20px rgba(125, 155, 255, 0.28); }
+.pcard.ra .prar { color: #7d9bff; }
+.pcard.ep, .pcard.duo { border-color: #f2d14b; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), 0 0 26px rgba(242, 209, 75, 0.38); }
+.pcard.ep .prar, .pcard.duo .prar { color: #f2d14b; }
+.pcard.duo { background: linear-gradient(160deg, rgba(242, 209, 75, 0.16), #17110d 58%); }
+.pcard.mod { border-color: #b48cff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), 0 0 24px rgba(180, 140, 255, 0.34); }
+.pcard.mod .prar, .pcard.mod .pn { color: #b48cff; }
+/* A slow shine across the better cards. */
+.pcard.ep::before, .pcard.duo::before, .pcard.mod::before { content: ''; position: absolute; inset: 0; border-radius: 6px; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.13) 50%, transparent 60%); background-size: 250% 100%; animation: shine 2.6s linear infinite; pointer-events: none; }
+@keyframes shine { from { background-position: 120% 0; } to { background-position: -130% 0; } }
+#bless-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
+#bless-build { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 34px; }
+.held { position: relative; display: inline-flex; }
+.held .perk-icon { width: 30px; height: 30px; }
+.held i { position: absolute; right: -2px; bottom: -3px; font: 700 10px/1 system-ui, sans-serif; font-style: normal; padding: 1px 3px; border-radius: 6px; background: #0b0806; color: #f2c078; }
+.held-none { font-size: 12px; opacity: 0.5; }
+#bless-reroll { width: auto; margin: 0; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
+@media (max-width: 720px), (max-height: 450px) {
+  .panel.bless { padding: 10px 12px 8px; gap: 5px; }
+  .panel.bless h2 { font-size: 17px; }
+  .panel.bless .sub { display: none; }
+  #blessing-choices { gap: 8px; margin-top: 2px; }
+  .pcard { min-height: 0; padding: 10px 8px 8px; gap: 2px; }
+  .pcard .perk-icon { width: 42px; height: 42px; }
+  .pn { font-size: 15px; } .pd { font-size: 12px; } .prar { font-size: 9px; } .pl { font-size: 11px; }
+  .pcard .fam { width: 15px; height: 15px; }
+  .held .perk-icon { width: 22px; height: 22px; }
+  #bless-reroll { padding: 6px 10px; font-size: 12px; }
+}
+@media (max-width: 560px) and (orientation: portrait) { #blessing-choices { grid-template-columns: 1fr; } .pcard { grid-template-rows: none; grid-template-columns: 52px 1fr; justify-items: start; text-align: left; column-gap: 10px; } .pcard .perk-icon { grid-row: 1 / 5; } }
+
+/* ---- trader */
+#trade { z-index: 30; touch-action: pan-y; }
+.panel.trade { width: min(980px, 100%); background: linear-gradient(#1d1712, #120d0a); text-align: left; touch-action: pan-y; }
+.panel.trade h2 { color: #8fd16a; text-align: center; }
+.panel.trade .sub { margin: 0; text-align: center; font-size: 13px; }
+.trade-offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.trade-offer { display: flex; flex-direction: column; gap: 6px; }
+.trade-offer .inv-card { flex: 1; margin: 0; }
+.trade-offer button, .trade-row button { width: auto; margin: 0; padding: 9px 12px; font-size: 14px; }
+.trade-delta { font-size: 13px; }
+.trade-sold { display: grid; place-items: center; min-height: 120px; border: 1px dashed #4c453a; color: #7a7064; }
+.trade-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #4c453a; background: #202520; }
+.trade-msg { min-height: 18px; margin: 0; color: #ef9f27; font-size: 13px; text-align: center; }
+
+/* Item names are sentences, not headings: no capitals, no spacing, break between words. */
+.inv-card h3 { font-size: 17px; letter-spacing: 0.01em; text-transform: none; overflow-wrap: normal; word-break: normal; hyphens: auto; line-height: 1.15; }
+/* ---- phone and tablet HUD (playtest 2026-11-16): one pause button; the minimap sits top right as in 2D and opens the map. */
+#minimap { left: auto; right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
+#loot-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
+body.touch-on #map-btn, body.touch-on #inventory-btn { display: none; }
+body.touch-on #menu-btn { margin-left: auto; }
+body:has(#title:not([hidden])) #pause-nav, body:has(#dead:not([hidden])) #pause-nav { display: none; }
+#pause-nav .choice { flex: 1; }
+@media (max-height: 500px) {
+  /* Landscape phone: small map under the pause button, clear of the thumb arc. */
+  #minimap { right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 50px); width: 84px; height: 84px; }
+  .kills { display: none; }
+  .hp { width: min(220px, 30vw); height: 13px; }
+  #objective { font-size: 12px; }
+  #buffs { top: 36px; }
+  /* Menus use the whole screen. */
+  .overlay { padding: 6px; }
+  .panel { padding: 12px 14px 10px; gap: 7px; }
+  .panel h2 { font-size: 17px; }
+  #karte .panel { width: 100%; height: 100%; max-height: 100dvh; padding: 6px; }
+  #karte-svg { flex: 1; min-height: 0; display: grid; place-items: center; }
+  #karte-svg svg { width: auto; height: 100%; max-height: calc(100dvh - 16px); max-width: 100%; }
+  #close-karte { display: none; }
+  #options .panel { width: min(640px, 100%); }
+  #options .panel h3 { margin: 0; font-size: 13px; }
+  #options .row { font-size: 13px; }
+  #inventory { padding: 4px; }
+  .inv-panel { padding: 8px; }
+  .inv-panel h2 { font-size: 16px; }
+  .inv-panel header { margin-bottom: 6px; gap: 8px; }
+  .inv-card { padding: 8px; font-size: 12px; }
+  .inv-card h3 { font-size: 15px; margin: 2px 0; }
+  .inv-card p { margin: 3px 0; font-size: 12px; }
+  .inv-card-head img { width: 34px; height: 34px; }
+  .inv-portrait { height: 150px; }
+}
+
+/* Menus close with a cross top right (Johannes, 2026-11-16); "Weiter" is for tutorial cards only. */
+#options .panel, .panel.trade { position: relative; }
+.inv-panel button.inv-x { min-width: 44px; font-size: 26px; line-height: 1; padding: 0; border: 0; background: none; }
+.panel.trade h2, #options .panel h2 { padding: 0 40px; }

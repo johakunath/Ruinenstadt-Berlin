@@ -260,6 +260,8 @@ export class Ui {
     const knob = el<HTMLDivElement>('knob');
     const show = (): void => {
       root.hidden = false;
+      // The action bar moves into the thumb arc (style.css).
+      document.body.classList.add('touch-on');
     };
     if (matchMedia('(pointer: coarse)').matches) show();
     window.addEventListener('touchstart', show, { once: true, passive: true });

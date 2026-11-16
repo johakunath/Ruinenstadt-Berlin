@@ -1,5 +1,5 @@
 // Pure port of 2D js/state.js gear/stats/pwParts. No XP levels or daily modifiers.
-import { AFFIXES, ATTRIBUTE_STATS, IMPLICITS, IMPLANT_MODES, SET_BONUSES, SLOTS, SLOT_MAIN_STATS,
+import { AFFIXES, ATTRIBUTE_STATS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, SET_BONUSES, SLOTS, SLOT_MAIN_STATS, type LegendaryId,
   type AffixId, type AttributeKindId, type BaseId, type ElementId, type SetId, type SlotId, type WeaponKindId } from '../data/items';
 import { BASES } from '../data/item-names';
 import { WEAPON_MODS, type MealId } from '../data/crafting';
@@ -19,6 +19,8 @@ export interface StatContext {
 }
 export interface HeroStats {
   kind: WeaponKindId;
+  /** Legendary powers of the equipped items (2D `hasL`): the bases that have one. */
+  legendary: LegendaryId[];
   affixes: Record<AffixId, number>;
   elements: ElementId[];
   elementChance: number;
@@ -39,6 +41,8 @@ export interface HeroStats {
   cooldownFactor: number;
 }
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
+/** 2D `KIND.rate`: seconds per attack. Only `power` uses it; real timing is in `data/combat.ts`. */
+const SWING_TIME: Record<WeaponKindId, number> = { blade: 0.3, hammer: 0.68, sling: 0.42, spear: 0.5 };
 
 /** 2D baseOf fallback without mutating an item. */
 function baseOf(item: Item): BaseId {
@@ -104,6 +108,7 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
   // Hero level is fixed at 1: the 2D (lv - 1) damage/life terms vanish.
   return {
     kind, affixes: a, elements,
+    legendary: SLOTS.flatMap((slot) => { const it = eq[slot]; const b = it ? baseOf(it) : ''; return b in LEGENDARY_POWERS ? [b as LegendaryId] : []; }),
     elementChance: wm.some(m => m.element) ? .5 : .3,
     elementBonus: wm.reduce((n, m) => n + (m.eliteBossBonus ?? 0), 0),
     weight: wm.find(m => m.heavyHitEvery)?.heavyHitEvery ?? 0,
@@ -124,8 +129,9 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
 }
 
 export function power(s: HeroStats): number {
-  // 3D uses normalized attackSpeed, not 1 / the 2D weapon's rate in seconds.
-  const dps = s.damage * (1 + s.crit) * s.attackSpeed
+  // 2D `pwParts`: damage per second with the weapon's swing time (blade 0.30 s, hammer 0.68, thrower 0.42,
+  // spear 0.50), normalized to the blade so the starter's power stays the same. Without it a hammer reads 2.3× a blade.
+  const dps = s.damage * (1 + s.crit) * s.attackSpeed * (0.3 / SWING_TIME[s.kind])
     * (1 + (s.elements.length ? .18 * s.elementPower * (s.elementChance || .3) / .3 * Math.min(2, s.elements.length) : 0))
     * (s.weight ? 1.12 : 1);
   const ehp = s.maxHp / (1 - s.res) * (1 + s.regen * .04);

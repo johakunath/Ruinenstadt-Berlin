@@ -2,7 +2,7 @@
 // The sim knows nothing about this file; it reads sim state and events and draws them.
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
-  RingGeometry, SphereGeometry, Vector3,
+  SphereGeometry, Vector3,
   WebGLRenderer, type Texture,
 } from 'three';
 import { HIT_FEEL } from '../data/combat';
@@ -13,11 +13,13 @@ import { EnemyView, HeroView, loadCharacters, type CharacterAssets } from './cha
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
 import { LootView } from './loot';
+import { ContentView } from './content';
+import { leapHeight } from '../sim/abilities';
 import type { Look } from './looks';
 import { Materials } from './materials';
 import { Post } from './post';
 import type { Profile } from './profile';
-import { buildWorld, FX_LAYER, type World } from './world';
+import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
 import { groundY, setGround } from './ground';
 import { heightAt } from '../data/map';
@@ -73,6 +75,7 @@ export class GameRenderer {
   private readonly post: Post;
   private readonly fx: Fx;
   private readonly loot = new LootView();
+  private readonly content: ContentView;
   private readonly hero: HeroView;
   private readonly views = new Map<number, EnemyView>();
   private readonly pool: EnemyView[] = [];
@@ -107,7 +110,8 @@ export class GameRenderer {
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
-    this.scene.add(this.fx.group, this.loot.group);
+    this.content = new ContentView(assets, materials);
+    this.scene.add(this.fx.group, this.loot.group, this.content.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
     this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look);
@@ -160,15 +164,48 @@ export class GameRenderer {
   }
 
   onEvent(ev: SimEvent, sim: Sim): void {
+    this.fx.onEvent(ev);
+    const y = (x: number, z: number, h: number): number => groundY(x, z) + h;
     switch (ev.type) {
       case 'hit': {
         this.views.get(ev.id)?.hit();
         const feel = HIT_FEEL[ev.weight];
-        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, ev.weight === 'heavy');
-        this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1));
+        // Procs and area ticks (quiet) spark a little and never shake the camera.
+        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical));
+        if (!ev.quiet) this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1) * (ev.critical ? 1.25 : 1));
         if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
         break;
       }
+      case 'dot':
+        if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
+        break;
+      case 'shock':
+        this.cam.shake(0, 0, ev.kind === 'earth' ? 0.3 : ev.kind === 'small' ? 0.12 : 0.18);
+        break;
+      case 'impact':
+        this.cam.shake(0, 0, ev.kind === 'boom' ? 0.06 : 0.12);
+        break;
+      case 'ability':
+        if (ev.ultimate) {
+          this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 40, 7);
+          this.cam.shake(0, 0, 0.14);
+        }
+        break;
+      case 'secondWind':
+        this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 60, 8);
+        break;
+      case 'hidden':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 3.4, 1, 50, 6);
+        break;
+      case 'shrine':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 2.6), ev.z, 2, 4.4, 6, 50, 6);
+        break;
+      case 'runEvent':
+        if (ev.phase === 'done') this.fx.burst(ev.x, y(ev.x, ev.z, 0.8), ev.z, 6, 5, 1.6, 50, 6);
+        break;
+      case 'pickup':
+        if (ev.what === 'food' || ev.what === 'heal') this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 0.9), sim.player.z, 1.6, 4.4, 1.2, 16, 3);
+        break;
       case 'playerHit':
         this.cam.shake(ev.dx, ev.dz, 0.2);
         this.fx.puff(ev.x, ev.z, 4, 0.6);
@@ -190,39 +227,6 @@ export class GameRenderer {
       default:
         break;
     }
-  }
-
-  private ring: Mesh | null = null;
-  private ringFor = '';
-
-  /** The closed fight circle is a glowing ground ring, so its edge is never an invisible wall. */
-  private fightRing(sim: Sim): void {
-    const run = sim.run;
-    const enc = sim.level.encounters[run.index];
-    const on = !!enc && (run.phase === 'fight' || run.phase === 'pause');
-    if (!on) {
-      if (this.ring) this.ring.visible = false;
-      return;
-    }
-    if (!this.ring) {
-      this.ring = new Mesh(new RingGeometry(0.9, 1, 8), new MeshBasicMaterial({ color: 0xff7a3a, transparent: true, opacity: 0.6, depthWrite: false }));
-      this.ring.layers.set(FX_LAYER);
-      this.ring.renderOrder = 2;
-      this.scene.add(this.ring);
-    }
-    if (this.ringFor !== enc.id) {
-      this.ringFor = enc.id;
-      this.ring.geometry.dispose();
-      // Baked in world space so the ring follows hills.
-      const g = new RingGeometry(enc.r - 0.25, enc.r + 0.05, 96);
-      g.rotateX(-Math.PI / 2);
-      g.translate(enc.x, 0, enc.z);
-      const pos = g.getAttribute('position');
-      for (let i = 0; i < pos.count; i++) pos.setY(i, groundY(pos.getX(i), pos.getZ(i)) + 0.07);
-      this.ring.geometry = g;
-    }
-    this.ring.visible = true;
-    (this.ring.material as MeshBasicMaterial).opacity = 0.45 + 0.2 * Math.sin(this.time * 3);
   }
 
   /** CSS-pixel screen position of a world point (may lie off screen). */
@@ -254,7 +258,9 @@ export class GameRenderer {
     const p = sim.player;
     this.world.update(this.time);
     this.world.sync?.(sim.time - DT * (1 - alpha));
-    this.hero.update(p, alpha, dt, frozen);
+    const leap = leapHeight(sim, frozen ? 1 : alpha);
+    const w = sim.equipment.w;
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap });
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();
@@ -290,10 +296,10 @@ export class GameRenderer {
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     this.world.follow?.(px, pz);
-    this.fightRing(sim);
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
-    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height));
+    this.content.update(sim, dt, px, pz);
+    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap);
     this.debug?.update(sim, alpha);
 
     this.renderer.info.reset();

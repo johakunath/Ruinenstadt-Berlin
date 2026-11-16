@@ -27,7 +27,7 @@ describe('heights', () => {
   });
 
   function walk(x: number, z: number, mx: number, mz: number, secs: number): { x: number; z: number } {
-    const sim = createSim({ level });
+    const sim = createSim({ level, empty: true });
     const p = sim.player;
     p.x = p.px = x;
     p.z = p.pz = z;
@@ -49,7 +49,7 @@ describe('heights', () => {
         for (const s of t.stairs) {
           const ux = Math.sin(s.rot);
           const uz = Math.cos(s.rot);
-          const sim = createSim({ level: lv });
+          const sim = createSim({ level: lv, empty: true });
           const p = sim.player;
           p.x = p.px = s.x - ux * (s.len / 2 + 2);
           p.z = p.pz = s.z - uz * (s.len / 2 + 2);
@@ -57,6 +57,7 @@ describe('heights', () => {
           expect(heightAt(ms, p.x, p.z), `${t.name} ${s.rot}`).toBeCloseTo(t.h);
         }
       }
-    });
+    // Builds a whole map at another scale and walks every stair: slow on small CI machines.
+    }, 20000);
   }
 });

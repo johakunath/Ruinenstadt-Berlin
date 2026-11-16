@@ -44,15 +44,24 @@ describe('encounter director', () => {
     expect(sim.run.phase).toBe('travel');
   });
 
-  it('closes the circle during a fight', () => {
+  it('fights are open: the hero can leave the place and the wave comes after them', () => {
     const sim = createSim({ level });
     const enc = level.encounters[0]!;
     teleport(sim, enc.x, enc.z);
     stepSim(sim, NO_INPUT);
     expect(sim.run.phase).toBe('fight');
     sim.player.invuln = 1e9;
-    for (let i = 0; i < 120; i++) stepSim(sim, { ...NO_INPUT, moveX: 1 });
-    expect(Math.hypot(sim.player.x - enc.x, sim.player.z - enc.z)).toBeLessThanOrEqual(enc.r);
+    // Walk back toward the start, well out of the circle.
+    const dx = level.start.x - enc.x, dz = level.start.z - enc.z, d = Math.hypot(dx, dz);
+    teleport(sim, enc.x + (dx / d) * (enc.r + 14), enc.z + (dz / d) * (enc.r + 14));
+    sim.enemies.length = 0;
+    sim.run.toSpawn = 3;
+    for (let i = 0; i < 90; i++) { sim.player.invuln = 1e9; stepSim(sim, NO_INPUT); }
+    expect(Math.hypot(sim.player.x - enc.x, sim.player.z - enc.z)).toBeGreaterThan(enc.r + 10);
+    expect(sim.run.phase).toBe('fight');
+    expect(sim.enemies.length).toBeGreaterThan(0);
+    // New enemies appear around the hero, not back at the place.
+    for (const e of sim.enemies) expect(Math.hypot(e.x - sim.player.x, e.z - sim.player.z)).toBeLessThan(18);
   });
 
   it('runs every wave and boss in order and ends in victory', () => {

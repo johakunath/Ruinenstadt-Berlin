@@ -152,4 +152,10 @@ describe('landing and pickup', () => {
     expect(pickup).toBeDefined();
     expect(sim.inventory.bag).toHaveLength(1);
   });
+  it('camp upgrade Spürnase counts as loot luck (2D rollR)', async () => {
+    const { lootContext } = await import('./loot');
+    const base = createSim({ empty: true });
+    const lucky = createSim({ empty: true, statContext: { upgrades: { luck: 3 } } });
+    expect(lootContext(lucky).luck).toBe(lootContext(base).luck + 3);
+  });
 });

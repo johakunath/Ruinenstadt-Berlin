@@ -1,6 +1,6 @@
 // Sound, generated with WebAudio: no audio files. Hits play on the exact sim step of the damage frame.
 import type { HitWeight } from '../data/combat';
-import type { SimEvent } from '../sim/types';
+import type { Sim, SimEvent } from '../sim/types';
 import { SoundEffects, Synth, type SfxId } from './sfx';
 import { Music, type MusicState } from './music';
 
@@ -120,14 +120,49 @@ export class GameAudio {
   hurt(): void { this.play('hurt'); }
 
   /** Called exactly when the loop drains each damage-step event. */
-  onEvent(event: SimEvent): void {
+  onEvent(event: SimEvent, sim?: Sim): void {
+    let volume = 1, pan = 0;
+    if (sim) {
+      const source = 'x' in event ? event : 'id' in event ? sim.enemies.find(e=>e.id===event.id) : undefined;
+      if(source) ({volume,pan}=spatialAudio(source.x-sim.player.x,source.z-sim.player.z));
+    }
+    // Out of earshot: no voices, and the hit throttle stays free for audible hits (2D returns early).
+    if (sim && volume <= 0.02 && (event.type === 'hit' || event.type === 'dot' || event.type === 'bolt' || event.type === 'ignite' || event.type === 'impact' || event.type === 'shock')) return;
     switch (event.type) {
-      case 'swing': this.swing(event.weight); break;
-      case 'hit': this.hit(event.weight, event.killed, event.critical); break;
+      case 'swing': if(sim?.stats.kind==='sling')this.play('sling');else this.swing(event.weight); break;
+      case 'hit':
+        // Procs and area ticks are quiet: one voice per element, the kill still sounds.
+        if (event.quiet) { if (event.killed) this.play('kill', 0, pan, volume * 0.8); break; }
+        if(sim){ this.play(event.critical?'crit':'hit',0,pan,volume);if(event.killed)this.play('kill',0,pan,volume); }else this.hit(event.weight, event.killed, event.critical); break;
+      case 'dot': if (event.killed) this.play('kill', 0, pan, volume * 0.8); break;
+      case 'shock': this.play('boom', 0, pan, volume * (event.kind === 'earth' ? 1 : 0.6)); break;
+      case 'bolt': this.play('zap', 0, pan, volume * 0.7); break;
+      case 'impact': this.play(event.kind === 'molotov' ? 'ignite' : 'pop', 0, pan, volume); if (event.kind === 'molotov') this.play('crash', 0, pan, volume * 0.7); break;
+      case 'ignite': this.play('ignite', 0, pan, volume * 0.5); break;
+      case 'abilityFire': if (event.id === 'molotow' || event.id === 'brand' || event.id === 'spiess') this.play('swing'); else if (event.id === 'nagel') this.play('sling'); break;
+      case 'consumable': if (event.id === 'verband') this.play('heal'); break;
+      case 'heal': if (event.source === 'trader') this.play('heal'); break;
+      case 'secondWind': this.play('lvl'); break;
+      case 'blessing': this.play('coin'); break;
+      case 'hidden': case 'shrine': this.play('legend'); break;
+      case 'trade': this.play('bell'); break;
+      case 'streak': this.play('coin'); break;
+      case 'runEvent': this.play(event.phase === 'done' ? 'win' : event.phase === 'lost' ? 'wood' : event.kind === 'ambush' || event.kind === 'horde' || event.kind === 'zone' ? 'horn' : 'bell'); break;
       case 'dodge': this.dodge(); break;
       case 'playerHit': this.hurt(); break;
       case 'playerDie': this.death(); break;
-      case 'enemyWindup': this.growl(); break;
+      case 'enemyWindup': {
+        if(!sim){this.growl();break;}
+        const e=sim.enemies.find(e=>e.id===event.id);
+        if(!e||!this.ctx||volume<=0||this.ctx.currentTime-this.lastGrowl<.25)break;
+        this.lastGrowl=this.ctx.currentTime;
+        this.play(e.def.boss?'growlBoss':e.kind==='runner'?'growlRunner':e.kind==='brute'?'growlBrute':'growlWalker',0,pan,volume);
+        break;
+      }
+      case 'ability': {
+        const cues:Record<string,SfxId>={Kreissäge:'spin',Fechtsprung:'dash',Säbeltanz:'spin',Fallhammer:'boom',Gullydeckel:'wood',Abrissbirne:'boom',Nagelsturm:'sling',Brandsatz:'ignite',Sperrfeuer:'heavy',Spießrute:'heavy',Stabhochsprung:'dash',Standarte:'legend'};
+        this.play(cues[event.name]??'spin');if(event.ultimate)this.play('legend');break;
+      }
       case 'encounterStart': case 'waveStart': this.play('horn'); break;
       case 'encounterClear': this.play('bell'); if (event.heal > 0) this.play('heal'); break;
       case 'zoneClear': this.play('bell'); break;
@@ -135,7 +170,7 @@ export class GameAudio {
       case 'victory': this.play('win'); break;
       case 'dropLand': if (event.rarity >= 1) this.play('coin'); break;
       case 'legendary': this.play('legend'); break;
-      case 'pickup': this.play(event.what === 'heal' ? 'heal' : event.what === 'material' ? 'coin' : 'pick', Math.max(0, event.rarity)); break;
+      case 'pickup': this.play(event.what === 'heal' || event.what === 'food' ? 'heal' : event.what === 'material' ? 'coin' : 'pick', Math.max(0, event.rarity)); break;
       case 'scrap': break;
       case 'breakableHit': this.play('wood'); break;
       case 'breakableBreak': this.play('crash'); break;
@@ -172,4 +207,10 @@ export class GameAudio {
     lfo.frequency.value = .13; lg.gain.value = .03; lfo.connect(lg); lg.connect(g.gain);
     s.connect(f); f.connect(g); g.connect(this.master); s.start(); lfo.start();
   }
+}
+
+/** Same distance rolloff as 2D sfx: near full volume, quiet off screen, silent beyond 30 m. */
+export function spatialAudio(dx:number,dz:number):{volume:number;pan:number} {
+  const d=Math.hypot(dx,dz);
+  return {volume:d>=30?0:Math.min(1,1/(1+(d/8)**2)),pan:Math.max(-1,Math.min(1,dx/12))};
 }

@@ -21,7 +21,7 @@ Follows the 2D repo, with two changes.
 | `CLAUDE.md` (`AGENTS.md` points to it) | Index and rules | Same |
 | `docs/plan-3d.md` | Decisions, architecture, budgets | `BACKLOG.md` › Decisions, Tech |
 | `docs/migration.md` | Queue (next task per agent), P1 parity milestone, steps, decisions | `BACKLOG.md` › Next |
-| `docs/backlog.md` | Ideas and wishes not yet scheduled | `BACKLOG.md` › table and Ideas |
+| `docs/backlog.md` | Wishes not yet scheduled (table) and pure ideas that are not decided (section Ideas: never build from it without Johannes' decision) | `BACKLOG.md` › table and Ideas |
 | `docs/status.md` | What is in the game now, known weak spots | `BACKLOG.md` › Done (version rows) |
 | `docs/playtests.md` | Playtest history | Same |
 | `docs/tasks/` | One file per task, handover notes under `Questions` and in the PR | `pipeline/tasks/` plus `pipeline/log.md` |

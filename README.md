@@ -9,6 +9,9 @@ Spielen: https://johakunath.github.io/Ruinenstadt-Berlin/
 | Laufen | WASD | Linker Stick | Linke Bildhälfte |
 | Schlagen | Linke Maustaste oder J | X | Schlag |
 | Rollen | Leertaste oder rechte Maustaste | A | Rolle |
+| Kraft | E | B | Kraft |
+| Ultimativ | R | LB | Ultimativ |
+| Inventar | I / Tab | Y | Inventar |
 | Optionen | Esc | Start | ☰ |
 
 ```bash

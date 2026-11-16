@@ -19,10 +19,15 @@ const OUT = 'assets/characters';
 const io = new NodeIO();
 
 const CLIPS = {
-  'UAL1_Standard.glb': ['Idle_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Roll', 'Hit_Chest', 'Death01', 'Sword_Idle'],
+  'UAL1_Standard.glb': ['Idle_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Roll', 'Hit_Chest', 'Death01', 'Sword_Idle',
+    // M7/M8/M16: spear thrusts, casts, leaps, interactions.
+    'Punch_Jab', 'Punch_Cross', 'Sword_Attack', 'Spell_Simple_Shoot', 'Jump_Start', 'Jump_Loop', 'Jump_Land', 'Interact'],
   'UAL2_Standard.glb': [
     'Sword_Regular_A', 'Sword_Regular_A_Rec', 'Sword_Regular_B', 'Sword_Regular_B_Rec', 'Sword_Regular_C', 'Sword_Dash',
     'Zombie_Idle_Loop', 'Zombie_Walk_Fwd_Loop', 'Zombie_Scratch', 'Hit_Knockback',
+    // M7/M8/M16: hammer swings, throws, guard, consumables.
+    'Sword_Heavy_Combo', 'Sword_Regular_Combo', 'TreeChopping_Loop', 'OverhandThrow', 'Sword_Block', 'Consume',
+    'NinjaJump_Start', 'NinjaJump_Idle_Loop', 'NinjaJump_Land', 'Shield_Dash', 'Melee_Hook', 'Idle_Shield_Loop', 'Chest_Open',
   ],
 };
 

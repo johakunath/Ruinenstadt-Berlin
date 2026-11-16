@@ -1,3 +1,4 @@
+import { AbilitiesUi } from './ui/abilities';
 import { InventoryUi } from './ui/inventory';
 import { collectItem } from './sim/inventory';
 import type { Item } from './sim/items';
@@ -26,10 +27,13 @@ import { LootLabels, rarityColor } from './ui/loot-labels';
 import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
+import { PERKS, SHRINES } from './data/progression';
+import { contentMarks, EVENT_TEXT } from './sim/runcontent';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
 import { backupSave, clearSave, loadSave, writeSave } from './save';
 import { CloudSave, formatCode, type SyncState } from './sync';
-import { simFromSave, snapshot, type SaveV1 } from './sim/save';
+import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
+
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
@@ -40,6 +44,9 @@ audio.setVolume(opts.volume);
 audio.setMusic(opts.music);
 audio.setEco(opts.profile === 'leistung');
 const input = new Input(canvas);
+const abilitiesUi = new AbilitiesUi(input);
+abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
+abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
 // Köpenick (M11) unless ?map=hof asks for the gate 1 courtyard.
 const map = opts.map === 'koepenick' ? (() => {
@@ -149,12 +156,12 @@ const ui = new Ui(opts, {
     ui.setDifficulty(id);
   },
   onRetry: () => {
-    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
   onAgain: () => {
-    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
@@ -205,6 +212,9 @@ input.onInventory = () => {
   if (phase === 'play' && !ui.mapOpen && !ui.optionsOpen) inventory.toggle(!inventory.open);
 };
 document.getElementById('inventory-btn')!.addEventListener('click', input.onInventory);
+// The pause menu leads to inventory and map (on touch the HUD has only the pause button).
+document.getElementById('pause-inventory')!.addEventListener('click', () => { ui.toggleOptions(false); input.onInventory(); });
+document.getElementById('pause-map')!.addEventListener('click', () => { ui.toggleOptions(false); ui.toggleMap(true); });
 window.addEventListener('keydown', e => {
   if (inventory.open && ['KeyM', 'Tab', 'KeyP', 'Escape'].includes(e.code)) {
     if (e.code === 'Escape' || e.code === 'KeyP') inventory.toggle(false);
@@ -234,6 +244,9 @@ if (map) {
 /** Wave checkpoint (B1) or, after the last encounter, the profile alone. */
 function saveNow(withRun: boolean): void {
   if (!persist) return;
+  // Mid-fight there is no checkpoint to write (fights are open: a shop or a hidden blessing can be
+  // reached during a wave). Keep the last one instead of replacing it with "no run".
+  if (withRun && level && sim.run.phase === 'fight' && sim.player.state !== 'dead') return;
   save = snapshot(sim, mapName, withRun);
   writeSave(save);
   cloud.queue(save);
@@ -334,13 +347,17 @@ function readInput(): SimInput {
   }
   simInput.attack = input.buffer.has('attack');
   simInput.dodge = input.buffer.has('dodge');
+  simInput.power = input.buffer.has('power');
+  simInput.ultimate = input.buffer.has('ultimate');
+  simInput.verband = input.buffer.has('verband');
+  simInput.molotow = input.buffer.has('molotow');
   return simInput;
 }
 
 function drainEvents(): void {
   for (const ev of sim.events) {
     renderer?.onEvent(ev, sim);
-    audio.onEvent(ev);
+    audio.onEvent(ev, sim);
     telemetry.event(ev);
     switch (ev.type) {
       case 'hit': {
@@ -398,8 +415,49 @@ function drainEvents(): void {
       case 'pickup':
         if (ev.what === 'item') lootUi.toast(`<span style="color:${rarityColor(ev.rarity, ev.set)}">${ev.name}</span>${ev.upgrade ? ' <span style="color:#8fd16a">▲</span>' : ''}`);
         else if (ev.what === 'heal') lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
+        else if (ev.what === 'food') { lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s'); if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z); }
         else if (ev.material) lootUi.float(`+1 ${MATERIALS[ev.material].name}`, MATERIALS[ev.material].color, sim.player.x, 1.8, sim.player.z);
         break;
+      case 'ability':
+        if (ev.ultimate) lootUi.float(ev.name, '#f2d14b', sim.player.x, 2.4, sim.player.z);
+        if (opts.rumble) input.rumble(ev.ultimate ? 0.8 : 0.4, ev.ultimate ? 120 : 50);
+        break;
+      case 'shock':
+        if (opts.rumble) input.rumble(ev.kind === 'earth' ? 1 : 0.5, ev.kind === 'earth' ? 160 : 70);
+        break;
+      case 'note':
+        lootUi.float(ev.text, ev.color, ev.x, 2.2, ev.z);
+        break;
+      case 'heal':
+        if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
+        break;
+      case 'secondWind':
+        ui.banner('Zweiter Atem');
+        break;
+      case 'blessing': {
+        const perk = PERKS.find((p) => p.id === ev.id);
+        if (perk) lootUi.toast(`Segen: <span style="color:#ef9f27">${perk.name}</span>`);
+        break;
+      }
+      case 'streak':
+        lootUi.toast(`Serie ${ev.kills} · <span style="color:#ef9f27">+${ev.scrap} Schrott</span>`);
+        break;
+      case 'shrine':
+        lootUi.toast(`Litfaßsäule · <span style="color:#7dd3ff">${SHRINES[ev.id].name}</span>: ${SHRINES[ev.id].description} (60 s)`, 4);
+        break;
+      case 'runEvent': {
+        const T = EVENT_TEXT[ev.kind];
+        if (ev.phase === 'start') {
+          if (ev.kind === 'ambush' || ev.kind === 'horde') ui.banner(T.title);
+          else lootUi.toast(`<span style="color:${T.color}">${T.title}</span>${T.sub ? ` · ${T.sub}` : ''}`, 4);
+        } else if (ev.phase === 'done') {
+          lootUi.toast(ev.kind === 'rescue' ? `<span style="color:#8fd16a">${ev.text ?? 'Befreit'}</span>` : { cache: 'Versteck gefunden', zone: 'Signal gehalten', crate: 'Nachschub geborgen', trader: '', ambush: '', horde: '', rescue: '' }[ev.kind], 4);
+          if (ev.kind === 'rescue') { ui.banner('Befreit'); saveNow(true); }
+        } else {
+          lootUi.toast({ cache: 'Das Versteck ist verloren', zone: 'Das Signal ist verloren', crate: 'Der Nachschub ist verloren', trader: 'Der Händler ist weitergezogen', ambush: '', horde: '', rescue: '' }[ev.kind]);
+        }
+        break;
+      }
       case 'bagFull':
         lootUi.toast('<span style="color:#c23a2e">Rucksack voll</span> · Beute bleibt liegen');
         break;
@@ -436,7 +494,9 @@ function frame(now: number): void {
   input.poll(dt, sim.hitstop > 0);
   inventory.pollPad(now);
 
-  const running = phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
+  abilitiesUi.update(sim, phase === 'play' && !ui.optionsOpen && !ui.mapOpen && !inventory.open);
+  if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
+  const running = !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -445,6 +505,12 @@ function frame(now: number): void {
       stepSim(sim, readInput());
       if (sim.consumed.attack) input.buffer.consume('attack');
       if (sim.consumed.dodge) input.buffer.consume('dodge');
+      if (sim.consumed.power) input.buffer.consume('power');
+      if (sim.consumed.ultimate) input.buffer.consume('ultimate');
+      if (sim.consumed.verband) input.buffer.consume('verband');
+      if (sim.consumed.molotow) input.buffer.consume('molotow');
+      if (sim.content.tradeOpen) { input.clear(); drainEvents(); break; }
+      if (sim.abilities.offers.length) input.clear();
       drainEvents();
       acc -= DT;
       steps++;
@@ -521,6 +587,8 @@ function expeditionHud(dt: number): void {
       for (const e of alive) marks.push({ ...renderer.screenOf(e.x, 1, e.z), color: e.def.boss ? '#ff6a2a' : '#c23a2e' });
     }
   }
+  // Open events: trader, captive, cache, zone, supply drop.
+  if (renderer && phase === 'play') for (const m of contentMarks(sim)) marks.push({ ...renderer.screenOf(m.x, groundY(m.x, m.z) + 1, m.z), color: EVENT_TEXT[m.kind].color });
   if (lootExit === 'search' && renderer) {
     const d = nearestImportantDrop(sim);
     if (d) marks.push({ ...renderer.screenOf(d.x, groundY(d.x, d.z) + 0.5, d.z), color: dropColor(d) });

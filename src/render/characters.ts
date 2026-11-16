@@ -4,7 +4,7 @@
 import { groundY } from './ground';
 import { HERO_LAYER } from './layers';
 import {
-  AnimationClip, AnimationMixer, Bone, Color, CylinderGeometry, Group, LoopRepeat, Mesh, PlaneGeometry, Quaternion,
+  AnimationClip, AnimationMixer, Bone, Color, Group, LoopRepeat, Mesh, Quaternion,
   SkinnedMesh, Sphere, Vector3, type AnimationAction, type Object3D,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -15,9 +15,10 @@ import zombieUrl from '../../assets/characters/zombie.glb?url';
 import { PLAYER, type AttackDef } from '../data/combat';
 import { SPAWN, type EnemyKind } from '../data/enemies';
 import { lerp, lerpAngle } from '../sim/math';
-import { DT, type Enemy, type Player } from '../sim/types';
+import { DT, type Cast, type Enemy, type Player } from '../sim/types';
+import type { ElementId, WeaponKindId } from '../data/items';
+import { WeaponRack, weaponModel } from './weapons';
 import type { LitMaterial, Materials } from './materials';
-import { paintMetal } from './paint';
 
 export interface CharacterAssets {
   hero: Object3D;
@@ -27,6 +28,7 @@ export interface CharacterAssets {
 }
 
 const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
+const ZOMBIE_CLIPS = /^(Zombie_|Hit_|Death01$|Idle_Loop$)/;
 
 /** Fits a clip to a body: scales the hip track to its leg length, optionally drops finger tracks. */
 function fitClip(clip: AnimationClip, hipScale: number, dropFingers: boolean): AnimationClip {
@@ -70,7 +72,8 @@ export async function loadCharacters(materials: Materials): Promise<CharacterAss
   const zombieClips = new Map<string, AnimationClip>();
   for (const clip of animGltf.animations) {
     heroClips.set(clip.name, fitClip(clip, hipLen(heroGltf.scene) / src, false));
-    zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
+    // Enemies only get the clips they play: every clip costs bindings per body.
+    if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
   }
   return { hero: heroGltf.scene, zombie: zombieGltf.scene, heroClips, zombieClips };
 }
@@ -192,38 +195,41 @@ const ROLL_TO = 0.95;
 const DEATH_FROM = 0.35;
 const RUN_CLIP_SPEED = 6.2;
 
-function buildPipe(materials: Materials): Group {
-  const g = new Group();
-  const metal = materials.surface({ map: paintMetal('#6a5a50', { flatten: materials.look.flatten, normalMaps: false, anisotropy: 1 }, 71, 1.2).map, roughness: 0.5, metalness: 0.6 });
-  const pipe = new Mesh(new CylinderGeometry(0.026, 0.026, 1.05, 8), metal);
-  pipe.position.y = 0.42;
-  const elbow = new Mesh(new CylinderGeometry(0.034, 0.034, 0.2, 8), metal);
-  elbow.rotation.z = Math.PI / 2;
-  elbow.position.set(0.07, 0.94, 0);
-  const collar = new Mesh(new CylinderGeometry(0.04, 0.04, 0.06, 8), metal);
-  collar.position.y = 0.9;
-  const grip = new Mesh(new CylinderGeometry(0.033, 0.033, 0.26, 8), materials.surface({ color: 0xc9b58c, roughness: 0.95 }));
-  grip.position.y = 0.02;
-  const ribbonMat = materials.surface({ color: 0xb8261c, roughness: 0.9, doubleSided: true });
-  const ribbon = new Mesh(new PlaneGeometry(0.07, 0.34), ribbonMat);
-  ribbon.position.set(-0.05, 0.62, 0.02);
-  ribbon.rotation.z = 0.5;
-  const knot = new Mesh(new CylinderGeometry(0.036, 0.036, 0.05, 8), ribbonMat);
-  knot.position.y = 0.74;
-  g.add(pipe, elbow, collar, grip, ribbon, knot);
-  g.traverse((o) => {
-    o.castShadow = true;
-  });
-  return g;
-}
-
 const q = new Quaternion();
 const X = new Vector3(1, 0, 0);
 const Z = new Vector3(0, 0, 1);
 
+/** Clip and the part of it a cast plays: `at` is the clip time when the effect happens. */
+const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; to: number }> = {
+  fecht: { clip: 'Sword_Dash', from: 0.2, at: 0.2, to: 0.5 },
+  fall: { clip: 'Sword_Heavy_Combo', from: 2.3, at: 2.66, to: 2.95 },
+  abriss: { clip: 'Sword_Heavy_Combo', from: 2.25, at: 2.66, to: 2.7 },
+  stab: { clip: 'Sword_Heavy_Combo', from: 2.3, at: 2.66, to: 2.7 },
+  nagel: { clip: 'OverhandThrow', from: 0.22, at: 0.37, to: 0.62 },
+  brand: { clip: 'OverhandThrow', from: 0.1, at: 0.37, to: 0.7 },
+  molotow: { clip: 'OverhandThrow', from: 0.12, at: 0.37, to: 0.7 },
+  sperr: { clip: 'OverhandThrow', from: 0.08, at: 0.33, to: 0.75 },
+  spiess: { clip: 'OverhandThrow', from: 0.1, at: 0.37, to: 0.7 },
+  stand: { clip: 'Sword_Regular_C', from: 0.42, at: 0.71, to: 1.0 },
+  saege: { clip: 'Sword_Regular_A', from: 0.24, at: 0.24, to: 0.24 },
+  saebel: { clip: 'Sword_Idle', from: 0, at: 0, to: 0 },
+  gully: { clip: 'Sword_Block', from: 0, at: 0, to: 0 },
+};
+
+/** Extra state the hero view needs beyond the player (weapon, power timers). */
+export interface HeroPose {
+  kind: WeaponKindId;
+  base: string;
+  element: ElementId | undefined;
+  spin: number;
+  guard: number;
+  leap: number;
+}
+
 export class HeroView {
   readonly root = new Group();
-  readonly weapon: Group;
+  readonly rack: WeaponRack;
+  private spinA = 0;
   private readonly anim: Animator;
   private readonly scarf: Array<{ bone: Bone; rest: Quaternion; back: number; side: number }> = [];
   private prevX = 0;
@@ -234,14 +240,9 @@ export class HeroView {
     const model = cloneSkinned(assets.hero);
     this.root.add(model);
     this.anim = new Animator(model, assets.heroClips);
-    this.weapon = buildPipe(materials);
-    const hand = model.getObjectByName('hand_r');
-    if (hand) {
-      // Grip offset in the hand bone's frame (checked with `?cam=5,30` close-ups).
-      this.weapon.position.set(0, 0.09, 0.03);
-      this.weapon.rotation.set(Math.PI / 2, 0, 0);
-      hand.add(this.weapon);
-    }
+    this.rack = new WeaponRack(materials);
+    this.rack.show('pipe', undefined);
+    model.getObjectByName('hand_r')?.add(this.rack.group);
     for (const name of ['scarf_01', 'scarf_02', 'scarf_03']) {
       const bone = model.getObjectByName(name) as Bone | undefined;
       if (bone) this.scarf.push({ bone, rest: bone.quaternion.clone(), back: 0, side: 0 });
@@ -249,14 +250,28 @@ export class HeroView {
     this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
   }
 
-  update(p: Player, alpha: number, dt: number, frozen: boolean): void {
+  update(p: Player, alpha: number, dt: number, frozen: boolean, pose: HeroPose): void {
     const x = lerp(p.px, p.x, alpha);
     const z = lerp(p.pz, p.z, alpha);
-    this.root.position.set(x, groundY(x, z), z);
+    this.root.position.set(x, groundY(x, z) + pose.leap, z);
     this.root.rotation.y = lerpAngle(p.pfacing, p.facing, alpha);
+    this.rack.show(weaponModel(pose.kind, pose.base), pose.element);
     const t = p.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;
-    if (p.state === 'attack' && p.attack) {
+    // Kreissäge: the whole body turns, blade held out.
+    if (pose.spin > 0 && p.state !== 'dead') {
+      if (!frozen) this.spinA += dt * 21;
+      this.root.rotation.y += this.spinA;
+      a.pose('Sword_Regular_A', 0.26, 0.05);
+    } else if (p.state === 'cast' && p.cast) {
+      this.spinA = 0;
+      const c = p.cast;
+      const k = CAST_CLIPS[c.id];
+      // Before the effect the clip runs from `from` to `at`, after it on to `to`.
+      const ct = c.fire <= 0 ? lerp(k.from, k.to, Math.min(1, t / Math.max(c.dur, 0.01)))
+        : t <= c.fire ? lerp(k.from, k.at, t / c.fire) : lerp(k.at, k.to, Math.min(1, (t - c.fire) / Math.max(0.01, c.dur - c.fire)));
+      a.pose(k.clip, ct, 0.05);
+    } else if (p.state === 'attack' && p.attack) {
       const ct = attackClipTime(p.attack, t, p.attackSpeed);
       const len = a.duration(p.attack.clip);
       if (ct < len || !p.attack.rec) a.pose(p.attack.clip, ct, 0.05);
@@ -267,8 +282,8 @@ export class HeroView {
       a.pose('Death01', DEATH_FROM + t * 1.2, 0.12);
     } else {
       const speed = Math.hypot(p.vx, p.vz);
-      if (speed > 0.8) a.loop('Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED));
-      else a.loop('Sword_Idle', 0.16);
+      if (speed > 0.8) a.loop(pose.guard > 0 ? 'Jog_Fwd_Loop' : 'Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED) * (pose.guard > 0 ? 1.6 : 1));
+      else a.loop(pose.guard > 0 ? 'Idle_Shield_Loop' : 'Sword_Idle', 0.16);
     }
     const flinch = p.state !== 'dead' && p.hurtT < 0.3 ? 0.75 * (1 - p.hurtT / 0.3) : 0;
     a.mix('Hit_Chest', p.hurtT, flinch);
@@ -364,7 +379,8 @@ export class EnemyView {
     this.id = e.id;
     this.kind = e.kind;
     this.flash = 0;
-    this.root.scale.setScalar(e.def.scale);
+    this.status = 0;
+    this.root.scale.setScalar(e.def.scale * (e.elite ? 1.15 : 1));
     // Gaunt runners, heavy brutes.
     if (e.kind === 'runner') this.root.scale.set(e.def.scale * 0.86, e.def.scale, e.def.scale * 0.86);
     if (e.kind === 'brute' || e.def.boss) this.root.scale.set(e.def.scale * 1.12, e.def.scale, e.def.scale * 1.12);
@@ -381,6 +397,8 @@ export class EnemyView {
     this.flash = FLASH_TIME;
   }
 
+  private status = 0;
+
   update(e: Enemy, alpha: number, dt: number, frozen: boolean, skip: number): void {
     const ex = lerp(e.px, e.x, alpha);
     const ez = lerp(e.pz, e.z, alpha);
@@ -391,6 +409,14 @@ export class EnemyView {
       this.flash = Math.max(0, this.flash - dt);
       const k = Math.min(1, (this.flash / FLASH_TIME) * 2);
       for (const m of this.mats) m.emissive.copy(WHITE).multiplyScalar(k * 0.85);
+      if (this.flash <= 0) this.status = -1;
+    } else {
+      // Burning bodies glow orange, corroded ones green (set only when it changes).
+      const st = e.state === 'dead' ? 0 : e.burn > 0 ? 1 : e.acid > 0 ? 2 : 0;
+      if (st !== this.status) {
+        this.status = st;
+        for (const m of this.mats) m.emissive.setHex(st === 1 ? 0x7a2a08 : st === 2 ? 0x2a4a10 : 0x000000);
+      }
     }
     const t = e.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;

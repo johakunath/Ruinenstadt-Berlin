@@ -14,7 +14,9 @@ async function setup(page: Page): Promise<void> {
     g.collectItem({...base,id:105,slot:'h',kind:'head',name:'Helm',base:'helm',rarity:0,value:5});
     g.hold(false);
   });
-  await page.locator('#inventory-btn').click();
+  // Touch HUD: the pause button leads to the inventory.
+  if (await page.locator('#inventory-btn').isVisible()) await page.locator('#inventory-btn').click();
+  else { await page.locator('#menu-btn').click(); await page.locator('#pause-inventory').click(); }
 }
 
 test('inventory equips, compares, protects loot, pauses, and closes without buffered attacks', async ({page}, info) => {
