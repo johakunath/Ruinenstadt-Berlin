@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { koepenickMap } from './koepenick';
-import { generateLots, generateProps, isWater, LIGHT_PROPS, lightCover, mapLevel, onBridge, streetDist } from './map';
+import { generateLots, generateProps, isWater, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, streetDist } from './map';
 
 describe('Köpenick map', () => {
   for (const scale of [1, 1.3]) {
@@ -120,15 +120,64 @@ describe('Köpenick map', () => {
     }
   });
 
-  it('lamps stand beside streets and at least 22 m apart; some are broken', () => {
+  it('street lamps: at the curb, evenly spaced along each street, about a third lit; no same-kind twins', () => {
     const m = koepenickMap(1);
     const props = generateProps(m, generateLots(m));
     const lamps = props.filter((p) => p.kind === 'lantern' || p.kind === 'lampBroken');
-    expect(props.some((p) => p.kind === 'lampBroken')).toBe(true);
+    const lit = lamps.filter((p) => p.kind === 'lantern').length / lamps.length;
+    expect(lit).toBeGreaterThan(0.2);
+    expect(lit).toBeLessThan(0.45);
     for (const a of lamps) {
-      expect(streetDist(m, a.x, a.z).d).toBeGreaterThan(0);
-      expect(streetDist(m, a.x, a.z).d).toBeLessThan(2);
-      for (const b of lamps) if (a !== b) expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThanOrEqual(22);
+      const d = streetDist(m, a.x, a.z).d;
+      expect(d).toBeGreaterThan(0.1);
+      expect(d).toBeLessThan(1.6);
+    }
+    // Along a street, lamp gaps are whole multiples of the spacing (a blocked spot leaves a gap).
+    let even = 0;
+    let gaps = 0;
+    for (const s of m.streets) {
+      if (s.kind === 'path') continue;
+      const spacing = LAMP_SPACING[s.kind === 'main' ? 'main' : 'side'];
+      const segs = s.pts.slice(1).map((b, i) => [s.pts[i]!, b] as const);
+      /** Position along the street and the side (+1 / -1) of a point. */
+      const along = (x: number, z: number): { at: number; side: number } => {
+        let best = Infinity;
+        let at = 0;
+        let side = 0;
+        let acc = 0;
+        for (const [a, b] of segs) {
+          const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          const t = Math.max(0, Math.min(1, ((x - a[0]) * (b[0] - a[0]) + (z - a[1]) * (b[1] - a[1])) / (l * l)));
+          const dd = Math.hypot(x - a[0] - (b[0] - a[0]) * t, z - a[1] - (b[1] - a[1]) * t);
+          if (dd < best) {
+            best = dd;
+            at = acc + t * l;
+            side = Math.sign((b[0] - a[0]) * (z - a[1]) - (b[1] - a[1]) * (x - a[0]));
+          }
+          acc += l;
+        }
+        return { at, side };
+      };
+      for (const side of [-1, 1]) {
+        const row = lamps
+          .filter((p) => streetDist(m, p.x, p.z).street === s && Math.abs(lineDist(s.pts, p.x, p.z) - (s.width / 2 + LAMP_CURB)) < 0.2)
+          .map((p) => along(p.x, p.z))
+          .filter((a) => a.side === side)
+          .map((a) => a.at)
+          .sort((a, b) => a - b);
+        for (let i = 1; i < row.length; i++) {
+          const g = row[i]! - row[i - 1]!;
+          gaps++;
+          const k = Math.max(1, Math.round(g / spacing));
+          if (Math.abs(g - k * spacing) < 2.2) even++;
+        }
+      }
+    }
+    expect(gaps).toBeGreaterThan(20);
+    expect(even / gaps, 'evenly spaced lamp gaps').toBeGreaterThan(0.8);
+    for (const [kind, gap] of Object.entries(SAME_KIND_GAP)) {
+      const xs = props.filter((p) => p.kind === kind);
+      for (const a of xs) for (const b of xs) if (a !== b) expect(Math.hypot(a.x - b.x, a.z - b.z), kind).toBeGreaterThanOrEqual(gap!);
     }
   });
 
