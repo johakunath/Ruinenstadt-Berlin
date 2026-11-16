@@ -5,6 +5,7 @@ import {
   Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
+import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
 import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
@@ -690,11 +691,11 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       break;
     }
     case 'tram': {
-      // Two-car tram (generic, no livery), one bogie off the rails, pantograph folded.
+      // Two-car tram (generic, no livery), stopped squarely on the rails, pantograph folded.
       const L = 15;
       const W = 2.25;
-      const tilt = at(p, 0, 0, 0, 0.01, 0, 0.035);
-      const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+      const base = at(p, 0, TRAM_BRIDGE_DECK + TRAM_HEAD_HEIGHT, 0);
+      const part = (x: number, y: number, z: number): Matrix4 => base.clone().multiply(new Matrix4().makeTranslation(x, y, z));
       const creamM = m.plaster['cream'] as Material;
       const redM = m.plaster['oxblood'] as Material;
       for (const c of [-1, 1]) {
@@ -704,7 +705,21 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
         b.box(m.rubber, part(0, 2.05, z0), W - 0.06, 1.25, L / 2 - 0.3, [0.42, 0.52, 0.56]);
         for (let z = z0 - L / 4 + 0.3; z <= z0 + L / 4 - 0.3; z += 1.2) for (const sx of [-1, 1]) b.box(creamM, part(sx * (W / 2 - 0.02), 2.05, z), 0.08, 1.25, 0.12);
         b.box(creamM, part(0, 3.1, z0), W - 0.3, 0.16, L / 2 - 0.6, [0.8, 0.8, 0.78]);
-        for (const bz of [z0 - 2.2, z0 + 2.2]) b.box(m.rubber, part(0, 0.28, bz), W - 0.3, 0.45, 1.8, [0.5, 0.5, 0.5]);
+      }
+      const wheel = new CylinderGeometry(TRAM_WHEEL_RADIUS, TRAM_WHEEL_RADIUS, 0.1, 12);
+      const flange = new CylinderGeometry(TRAM_WHEEL_RADIUS + 0.025, TRAM_WHEEL_RADIUS + 0.025, 0.025, 12);
+      const axle = new CylinderGeometry(0.055, 0.055, TRAM_WHEEL_OFFSET * 2, 8);
+      const across = new Matrix4().makeRotationZ(Math.PI / 2);
+      for (const bogie of TRAM_BOGIES) {
+        b.box(m.iron, part(0, 0.43, bogie), 1.2, 0.24, 1.8, [0.65, 0.65, 0.65]);
+        for (const offset of TRAM_AXLES) {
+          const z = bogie + offset;
+          b.geo(m.iron, axle, part(0, TRAM_WHEEL_RADIUS, z).multiply(across));
+          for (const side of [-1, 1]) {
+            b.geo(m.iron, wheel, part(side * TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS, z).multiply(across), [2, 2, 2]);
+            b.geo(m.iron, flange, part(side * (TRAM_WHEEL_OFFSET - 0.065), TRAM_WHEEL_RADIUS, z).multiply(across));
+          }
+        }
       }
       b.box(m.rubber, part(0, 1.6, 0), W - 0.3, 2.4, 0.3, [0.3, 0.3, 0.3]);
       b.box(m.rubber, part(0, 1.95, L / 2 + 0.02), W - 0.25, 1.1, 0.05, [0.4, 0.5, 0.55]);

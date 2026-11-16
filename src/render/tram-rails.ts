@@ -1,8 +1,8 @@
 import type { Pt } from '../data/map';
+import { TRAM_GAUGE, TRAM_HEAD_WIDTH as HEAD, TRAM_HEAD_HEIGHT } from '../data/tram';
+export { TRAM_GAUGE } from '../data/tram';
 
 // Gauge is between the inner faces of the running heads, not between rail centres.
-export const TRAM_GAUGE = 1.435;
-const HEAD = 0.07;
 export const TRAM_RAILS = [-1.5, 1.5].flatMap(track => [-1, 1].map(side => ({
   offset: track + side * (TRAM_GAUGE + HEAD) / 2,
   inward: -side,
@@ -14,7 +14,7 @@ export const TRAM_SECTION = [
   { kind: 'rust', offset: 0.035, width: 0.15, height: 0.005 },
   { kind: 'groove', offset: 0.056, width: 0.042, height: 0.007 },
   { kind: 'guard', offset: 0.091, width: 0.028, height: 0.012 },
-  { kind: 'head', offset: 0, width: HEAD, height: 0.014 },
+  { kind: 'head', offset: 0, width: HEAD, height: TRAM_HEAD_HEIGHT },
 ] as const;
 
 /** Mitered offset at a polyline vertex: adjoining rail ribbons share exactly the same ends. */

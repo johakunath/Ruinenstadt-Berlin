@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const stage = process.argv[2];
-assert(['before', 'after'].includes(stage));
+assert(['before', 'after', 'aligned'].includes(stage));
 const out = 'docs/proof/tram-rails';
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -25,7 +25,8 @@ try {
         this.snap(x, z, y); update.call(this, x, z, 0, 0, dt, y);
       };
     });
-    for (const [place, x, z] of [['street', 10, -86], ['bridge', 9, -39]]) {
+    const places = stage === 'aligned' ? [['bridge', 9, -39]] : [['street', 10, -86], ['bridge', 9, -39]];
+    for (const [place, x, z] of places) {
       await page.evaluate(({ x, z }) => Object.assign(window.__game.sim().player, { x, z, px: x, pz: z }), { x, z });
       await page.evaluate(async () => { for (let i = 0; i < 2; i++) await new Promise(requestAnimationFrame); });
       const path = `${out}/${stage}-${place}-${profile === 'Leistung' ? 'leistung' : 'qualitaet'}.jpg`;

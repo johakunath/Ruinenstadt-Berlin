@@ -19,6 +19,7 @@ import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
+import { TRAM_BRIDGE_DECK } from '../data/tram';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
   Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
@@ -455,7 +456,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
               const c = tramOffsetPoint(s.pts, i, offset);
               const x = a[0] + (c[0] - a[0]) * t;
               const z = a[1] + (c[1] - a[1]) * t;
-              const surface = onBridge(m, x, z) ? Math.max(y, 0.05) : y;
+              const surface = onBridge(m, x, z) ? Math.max(y, TRAM_BRIDGE_DECK) : y;
               return new Vector3(x, heightAt(m, x, z) + surface + band.height, z);
             };
             const half = band.width / 2;
