@@ -698,7 +698,7 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
 }
 
 /** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
-function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
+export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
   const rng = new Rng(l.seed);
   const tone = rng.pick(TONES);
   const sides = blockFacades(l);
@@ -741,8 +741,10 @@ function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef
       if (rng.next() < 0.45) {
         const roll = rng.next();
         const color = roll < 0.6 ? 0xffb060 : roll < 0.85 ? 0xd8ecff : 0x5fd8c8;
-        b.box(b.mm.iron, run.mat(mid, 3.0, 0.2), 0.05, 0.05, 0.4, [0.6, 0.6, 0.6]);
-        b.geo(b.mm.lampGlass, new SphereGeometry(0.13, 8, 6), run.mat(mid, 2.88, 0.42), color === 0xffb060 ? [1.6, 1.25, 0.6] : color === 0xd8ecff ? [1.3, 1.5, 1.8] : [0.7, 1.7, 1.6]);
+        b.solid.excludeOccluder(() => {
+          b.box(b.mm.iron, run.mat(mid, 3.0, 0.2), 0.05, 0.05, 0.4, [0.6, 0.6, 0.6]);
+          b.geo(b.mm.lampGlass, new SphereGeometry(0.13, 8, 6), run.mat(mid, 2.88, 0.42), color === 0xffb060 ? [1.6, 1.25, 0.6] : color === 0xd8ecff ? [1.3, 1.5, 1.8] : [0.7, 1.7, 1.6]);
+        });
         b.light(run.pt(mid, 2.85, 0.45), color, rng.range(10, 22), 9, 0.03, rng.range(3, 4.2), { yaw: run.yaw, stretch: 1.5, reach: 1.8, halo: 0.45 });
       }
     }

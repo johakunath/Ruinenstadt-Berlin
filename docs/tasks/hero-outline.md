@@ -14,5 +14,9 @@ Keep all world objects opaque. Show only a thin character contour where actual b
 - `HeroOutline` renders actual skinned hero/equipment depth and eligible object depth, then draws only occluded silhouette edges. Depth bias avoids contact artifacts. Targets use existing profile pre-pass resolution; resize, disposal and render-state restoration are included.
 - Späti upper masks follow their upper group's existing interior visibility. Trees, ordinary props, breakable crates/bins, loot and enemy meshes never enter the large-object mask.
 - 2D reference `js/render.js` was checked: its Canvas fades/enemy silhouettes cannot be reused for WebGL depth; reuse the approved palette and architecture instead. User's explicit request authorizes this rendering change beyond T1's texture-only scope.
-- Typecheck, 223 unit tests, build and all 13 browser tests pass. Pixel cases verify large occlusion only, with no changed pixels in beside/front/crate/tree/enemy/lamp controls at both profile resolutions. Requested screenshots and error logs: `docs/proof/hero-outline/`.
+- Typecheck, 226 unit tests and build pass, including actual attached-lamp regressions. All 13 browser tests passed for the initial outline implementation. Pixel cases verify large occlusion only, with no changed pixels in beside/front/crate/tree/enemy/lamp controls at both profile resolutions. Requested screenshots and error logs: `docs/proof/hero-outline/`.
 - Cost: two unlit depth passes, one contour composite, position-only eligible geometry; no new lights or beauty draw batches. Approximate extra targets at 1280 × 720/DPR 1: 14.1 MiB Qualität, 7.9 MiB Leistung. PC/Tab S9 acceptance remains with Claude/Johannes.
+
+## Review follow-up
+
+Codex found that attached lamps inherited their enclosing building's capture. `excludeOccluder` now omits wall/gate lamp geometry and the shop's small signboards/crates while preserving their normal rendering. Regression tests raycast lamps emitted by the actual `buildAltbau` and `buildAltbauLot` builders; they remain visible in beauty geometry and absent from occlusion geometry, with the building still classified.

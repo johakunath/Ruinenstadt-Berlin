@@ -322,8 +322,10 @@ export function buildAltbau(b: Builder, f: Facade): void {
       b.box(b.mats.stucco, run.mat(g.to + 0.2, GATE_H / 2, 0.1), 0.45, GATE_H, 0.24);
       b.box(b.mats.stucco, run.mat(mid, GATE_H + 0.22, 0.12), w + 0.9, 0.45, 0.28);
       b.box(b.mats.stucco, run.mat(mid, GATE_H + 0.3, 0.2), 0.5, 0.7, 0.3, [0.85, 0.8, 0.72]);
-      b.box(b.mats.iron, run.mat(mid, GATE_H - 0.25, 0.42), 0.08, 0.08, 0.5);
-      b.geo(b.mats.lampGlass, new CylinderGeometry(0.14, 0.1, 0.3, 6), run.mat(mid, GATE_H - 0.45, 0.62));
+      b.solid.excludeOccluder(() => {
+        b.box(b.mats.iron, run.mat(mid, GATE_H - 0.25, 0.42), 0.08, 0.08, 0.5);
+        b.geo(b.mats.lampGlass, new CylinderGeometry(0.14, 0.1, 0.3, 6), run.mat(mid, GATE_H - 0.45, 0.62));
+      });
       b.light(run.pt(mid, GATE_H - 0.6, 0.9), 0xffa850, 14, 9, 0.15, 3);
     } else {
       // Breach: broken brick edges, a sagging beam.
@@ -420,10 +422,12 @@ function buildSpati(b: Builder, run: Run, from: number, to: number): void {
   b.solid.of(m.awning).quad([run.pt(from + 0.1, 2.34, 0.76), run.pt(to - 0.1, 2.34, 0.76), run.pt(to - 0.1, 2.52, 0.75), run.pt(from + 0.1, 2.52, 0.75)], [0, 0, w / 2, 0.3]);
   // A-frame sign and crates by the door.
   const sx = doorFrom + doorW + 0.75;
-  b.box(m.sign, run.mat(sx, 0.55, 1.15, -0.22), 0.7, 1.05, 0.05);
-  b.box(m.darkWood, run.mat(sx, 0.5, 0.95, 0.22), 0.7, 1.0, 0.04);
-  b.box(m.wood, run.mat(winA[0] + 0.5, 0.3, 0.55), 0.7, 0.6, 0.5);
-  b.box(m.wood, run.mat(winA[0] + 0.55, 0.85, 0.52, 0, 0.1), 0.6, 0.45, 0.45, [0.85, 0.8, 0.75]);
+  b.solid.excludeOccluder(() => {
+    b.box(m.sign, run.mat(sx, 0.55, 1.15, -0.22), 0.7, 1.05, 0.05);
+    b.box(m.darkWood, run.mat(sx, 0.5, 0.95, 0.22), 0.7, 1.0, 0.04);
+    b.box(m.wood, run.mat(winA[0] + 0.5, 0.3, 0.55), 0.7, 0.6, 0.5);
+    b.box(m.wood, run.mat(winA[0] + 0.55, 0.85, 0.52, 0, 0.1), 0.6, 0.45, 0.45, [0.85, 0.8, 0.75]);
+  });
   // The shop is the big warm light source of the yard.
   b.light(run.pt(mid, 2.1, 2.0), 0xffb061, 38, 15, 0.06, 6.5);
   b.light(run.pt(to - 1.3, 1.6, 1.0), 0x8fe0d8, 10, 6, 0.05, 2);

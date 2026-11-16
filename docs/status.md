@@ -16,7 +16,7 @@ What is in the game now. Updated 2026-11-16. Next work: `docs/migration.md` › 
 | Input | Keyboard and mouse, gamepad, touch stick plus two buttons; Inventar button, I/Tab or controller Y opens inventory (D-pad/stick, A select, B close) |
 | Items | Data, rolls and combat stats connected (M1–M3b). Starter pipe in normal play; dev loadout setter for verification. 25-slot inventory with comparison, equip/unequip, locks, salvage and set descriptions; drops, pickup and the exit warning in Köpenick (M4) |
 | Telemetry | One anonymous row per run (win, death, quit) to the 2D Google Sheet "Telemetrie": encounter reached, time, kills, damage taken, rest visits, per-encounter time, damage and fps, overall fps, p95, 1 % low, draw calls, profile, device class, input. Version `3d-…` in column v. Switch in Optionen. Delivery from the live game not verified yet |
-| CI | Type check, 223 unit tests, build, Playwright smoke, Pages deploy from `main` |
+| CI | Type check, 226 unit tests, build, Playwright smoke, Pages deploy from `main` |
 
 ## Known weak or unverified
 

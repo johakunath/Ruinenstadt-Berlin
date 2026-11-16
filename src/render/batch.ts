@@ -17,11 +17,19 @@ export class Batch {
   private colors: number[] = [];
   private indices: number[] = [];
   private occluderIndices: number[] = [];
+  private excludedOccluderIndices = new Set<number>();
 
   get indexCount(): number { return this.indices.length; }
 
   captureOccluderFrom(first: number): void {
-    for (let i = first; i < this.indices.length; i++) this.occluderIndices.push(this.indices[i]!);
+    for (let i = first; i < this.indices.length; i++) {
+      if (!this.excludedOccluderIndices.has(i)) this.occluderIndices.push(this.indices[i]!);
+    }
+    this.excludedOccluderIndices.clear();
+  }
+
+  excludeOccluderFrom(first: number): void {
+    for (let i = first; i < this.indices.length; i++) this.excludedOccluderIndices.add(i);
   }
 
   /** Position-only copy of explicitly classified triangles; beauty batching remains unchanged. */
@@ -111,6 +119,15 @@ export class BatchSet {
     try { build(); } finally {
       this.capturing = false;
       for (const [material, batch] of this.map) batch.captureOccluderFrom(starts.get(material) ?? 0);
+    }
+  }
+
+  /** Small attachments remain visible but cannot inherit an enclosing building capture. */
+  excludeOccluder(build: () => void): void {
+    if (!this.capturing) { build(); return; }
+    const starts = new Map([...this.map].map(([material, batch]) => [material, batch.indexCount]));
+    try { build(); } finally {
+      for (const [material, batch] of this.map) batch.excludeOccluderFrom(starts.get(material) ?? 0);
     }
   }
 

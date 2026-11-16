@@ -14,10 +14,11 @@ Screenshots are 1280 × 720 at the normal game camera, seed 7, with a held simul
 
 ## Checks
 
-- Typecheck, all 223 unit tests and production build pass. Unit tests use one worker and a 30 s timeout on the cloud CPU.
+- Typecheck, all 226 unit tests and production build pass, including the review regressions. Unit tests use one worker and a 30 s timeout on the cloud CPU.
 - Full browser suite: 13/13 pass after merging main and replacing the effect.
 - `render-cases.json`: 14 GPU pixel cases across the two profile resolutions. Behind a large object: 380/530 changed contour pixels. Beside/in front of it, or behind an unclassified crate/tree/enemy/lamp control: zero changed pixels. The fixture deliberately reuses the same opaque object material and geometry so it tests classification rather than art differences.
 - Unit checks verify that geometry sharing a material remains excluded unless explicitly classified, nested capture does not duplicate triangles, and transforms/heights survive the position-only depth copy.
+- Review regression: actual gate and map Altbau builders are exercised across lamp-bearing seeds. Rays hit their attached lamps in beauty geometry and miss the occlusion mask. Nested exclusions also preserve building geometry emitted before and after a small attachment. Attached shop signboards/crates use the same exclusion scope.
 - No production `cutout`, `uCut*`, `vCut*` or `applyCutout` code remains. Old material hooks, pre-pass hooks, per-frame updates and the unused camera accessor were removed.
 
 ```sh
