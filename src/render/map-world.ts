@@ -890,12 +890,18 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
   // Mattress and blanket in the corner left of the door.
   b.box(M.burlap, lm(l, -3.9, 0.12, d / 2 - 1.6), 1.0, 0.24, 2.0, [1.15, 1.05, 0.95]);
   b.box(M.burlap, lm(l, -3.9, 0.26, d / 2 - 1.9), 1.02, 0.06, 1.2, [0.6, 0.35, 0.3]);
-  b.light(lp(l, 0, 2.6, 0), 0xffb070, 9, 9, 0.05, 4);
+  // Warm light inside (a bulb over the middle shelf, one over the counter) and a lamp under the awning
+  // outside that lights the sandbag lane: the Späti reads as a safe, lit place from down the street.
+  b.light(lp(l, 0.5, 2.7, -0.5), 0xffb070, 14, 10, 0.05, 4);
+  b.light(lp(l, -3.3, 2.5, 1.2), 0xffc890, 7, 6, 0.03, 3);
+  b.light(lp(l, 0, 2.4, d / 2 + 1.6), 0xffc070, 12, 10, 0.08, 5);
   // Upper part: lintel, rolled-up shutter, sign, awning, barred shop windows, flat roof.
   up.box(M.brick, lm(l, 0, (2.4 + H) / 2, d / 2 - 0.15), door, H - 2.4, 0.3);
   up.box(M.iron, lm(l, 0, 2.28, d / 2 + 0.08), door + 0.2, 0.26, 0.3, [0.9, 0.9, 0.85]);
   // Sign standing on the front edge of the awning, so the camera above sees it.
-  up.box(M.spatiSign, lm(l, 0, 2.98, d / 2 + 1.28), 4, 0.7, 0.1);
+  const tilt = new Matrix4().makeRotationX(-0.6);
+  up.geo(M.spatiSign, new PlaneGeometry(4.4, 0.95), lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt));
+  up.box(M.rust, lm(l, 0, 3.0, d / 2 + 1.24).multiply(tilt), 4.6, 1.1, 0.08, [0.35, 0.35, 0.38]);
   up.box(M.awning, lm(l, 0, 2.55, d / 2 + 0.7), w - 0.4, 0.08, 1.2);
   for (const side of [-1, 1]) {
     up.box(M.shop, lm(l, side * 3.4, 1.7, d / 2 + 0.02), 2.6, 1.0, 0.05);
