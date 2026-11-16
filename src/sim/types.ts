@@ -9,6 +9,7 @@ import type { Collider } from './collide';
 import type { FlowField } from './flowfield';
 import type { Level } from './level';
 import type { Rng } from './math';
+import type { DifficultyId } from '../data/difficulty';
 import type { Equipment, HeroStats, StatContext } from './stats';
 
 /** Fixed simulation step. */
@@ -119,6 +120,8 @@ export type SimEvent =
   /** The hero walked into a Späti (`first`: the first time this run). */
   | { type: 'restEnter'; index: number; first: boolean }
   | { type: 'victory' }
+  /** A wave or encounter just ended: the game loop saves (M6, B1). */
+  | { type: 'checkpoint' }
   /** A drop popped out (`rarity` -1: heal or material). */
   | { type: 'drop'; id: number; x: number; z: number; rarity: number; set: boolean }
   | { type: 'dropLand'; id: number; x: number; z: number; rarity: number }
@@ -146,6 +149,7 @@ export interface RunState {
 }
 
 export interface Sim {
+  difficulty: DifficultyId;
   inventory: Inventory;
   equipment: Equipment;
   statContext: StatContext;

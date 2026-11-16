@@ -33,6 +33,7 @@ The sim reports through `sim.events`; the loop in `src/main.ts` hands them to re
 - Geometry of the world is built in code and merged per material (`src/render/batch.ts`). Keep draw calls low; things that must not show in the normal/depth pre-pass go on `FX_LAYER`.
 - Keep the light count constant at runtime (a changing count recompiles every shader).
 - Critical visual or layout decisions: show clearly distinct alternatives first (look variants, mockups). Routine work inside an approved direction: build, show, continue.
+- Reviews and CI (Johannes, 2026-11-16): one Codex review per session and PR (again only after substantial new commits); CI is not run per commit but when the PR is marked ready after that review; cancel superseded runs. Details in `docs/workflow.md` › Token budget.
 - Build features in the order of `docs/migration.md`; do not start a step before the steps it needs. Not planned: Rapier, lightmaps.
 
 ## Commands

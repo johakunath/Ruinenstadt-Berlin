@@ -1,9 +1,14 @@
 name: CI
 
+# Actions minutes are limited (Johannes, 2026-11-16): no run per commit. A PR gets CI when it is opened
+# ready or marked ready for review (after the Codex review), never as a draft; main always runs (deploy).
+# Anything else: Actions tab > CI > Run workflow.
 on:
   pull_request:
+    types: [opened, reopened, ready_for_review]
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -11,6 +16,7 @@ concurrency:
 
 jobs:
   check:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

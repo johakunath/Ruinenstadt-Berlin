@@ -20,6 +20,8 @@ export interface MapSvgOptions {
   /** Encounters already won (dimmed) and the current one (highlighted). */
   done?: number;
   labels?: boolean;
+  /** Route line, fight circles with wave counts and their names (design review only; default on). */
+  encounters?: boolean;
 }
 
 export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
@@ -80,29 +82,45 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     }
     out.push(`<rect x="${-l.hx}" y="${-l.hz}" width="${l.hx * 2}" height="${l.hz * 2}" fill="#f0b27a" stroke="#14282b" stroke-width="0.6" transform="translate(${l.x} ${l.z}) rotate(${deg})"/>`);
   }
-  // Route and encounters.
-  const route = [m.start, ...m.encounters].map((e) => [e.x, e.z] as Pt);
-  out.push(`<path d="${path(route)}" fill="none" stroke="#f0e2c8" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.6"/>`);
-  m.encounters.forEach((e: EncounterDef, i: number) => {
-    const isBoss = e.waves.some((wv) => wv.bosses.length > 0);
-    const done = o.done !== undefined && i < o.done;
-    const cur = o.done === i;
-    const fill = isBoss ? '#c2453a' : '#14282b';
-    out.push(`<circle cx="${e.x}" cy="${e.z}" r="${e.r}" fill="${fill}" fill-opacity="${done ? 0.15 : 0.35}" stroke="${cur ? '#43d1cf' : '#f0e2c8'}" stroke-width="${cur ? 2.4 : 1}" stroke-dasharray="${done ? '2 2' : ''}"/>`);
-    const label = isBoss ? 'B' : String(e.waves.length);
-    out.push(`<text x="${e.x}" y="${e.z + 3}" font-size="9" font-weight="700" text-anchor="middle" fill="#f0e2c8">${label}</text>`);
-    if (o.labels !== false) out.push(`<text x="${e.x}" y="${e.z - e.r - 3}" font-size="7" text-anchor="middle" fill="#f0e2c8" paint-order="stroke" stroke="#14282b" stroke-width="2">${e.name}</text>`);
-  });
+  // Route and fight circles are a design aid only (review image). In game the compass arrow is the guide.
+  if (o.encounters !== false) {
+    const route = [m.start, ...m.encounters].map((e) => [e.x, e.z] as Pt);
+    out.push(`<path d="${path(route)}" fill="none" stroke="#f0e2c8" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.6"/>`);
+    m.encounters.forEach((e: EncounterDef, i: number) => {
+      const isBoss = e.waves.some((wv) => wv.bosses.length > 0);
+      const done = o.done !== undefined && i < o.done;
+      const cur = o.done === i;
+      const fill = isBoss ? '#c2453a' : '#14282b';
+      out.push(`<circle cx="${e.x}" cy="${e.z}" r="${e.r}" fill="${fill}" fill-opacity="${done ? 0.15 : 0.35}" stroke="${cur ? '#43d1cf' : '#f0e2c8'}" stroke-width="${cur ? 2.4 : 1}" stroke-dasharray="${done ? '2 2' : ''}"/>`);
+      const label = isBoss ? 'B' : String(e.waves.length);
+      out.push(`<text x="${e.x}" y="${e.z + 3}" font-size="9" font-weight="700" text-anchor="middle" fill="#f0e2c8">${label}</text>`);
+      if (o.labels !== false) out.push(`<text x="${e.x}" y="${e.z - e.r - 3}" font-size="7" text-anchor="middle" fill="#f0e2c8" paint-order="stroke" stroke="#14282b" stroke-width="2">${e.name}</text>`);
+    });
+  }
   out.push(`<rect x="${m.start.x - 4}" y="${m.start.z - 4}" width="8" height="8" fill="#43d1cf"/>`);
   if (o.labels !== false) {
-    for (const r of m.rivers) {
-      const [x, z] = r.pts[Math.floor(r.pts.length / 2)] as Pt;
-      out.push(`<text x="${x}" y="${z}" font-size="8" font-style="italic" fill="#7fb3bd">${r.name}</text>`);
-    }
-    for (const a of m.areas) {
+    // Few labels, never overlapping: big districts first, each name once, rivers where there is room.
+    const boxes: Array<[number, number, number, number]> = [];
+    const place = (x: number, z: number, text: string, size: number, anchor: 'middle' | 'start'): boolean => {
+      const wd = text.length * size * 0.58;
+      const x0 = anchor === 'middle' ? x - wd / 2 : x;
+      const box: [number, number, number, number] = [x0 - 3, z - size - 1, x0 + wd + 3, z + 3];
+      if (box[0] < B.minX || box[2] > B.maxX || box[1] < B.minZ || box[3] > B.maxZ) return false;
+      if (boxes.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) return false;
+      boxes.push(box);
+      return true;
+    };
+    const area = (p: readonly Pt[]): number => Math.abs(p.reduce((s, q, i) => { const n = p[(i + 1) % p.length]!; return s + q[0] * n[1] - n[0] * q[1]; }, 0)) / 2;
+    for (const a of [...m.areas].sort((p, q) => area(q.poly) - area(p.poly))) {
       const cx = a.poly.reduce((s, p) => s + p[0], 0) / a.poly.length;
       const cz = a.poly.reduce((s, p) => s + p[1], 0) / a.poly.length;
-      out.push(`<text x="${cx.toFixed(0)}" y="${cz.toFixed(0)}" font-size="10" font-weight="700" text-anchor="middle" fill="#f0e2c8" opacity="0.55">${a.name}</text>`);
+      if (place(cx, cz, a.name, 9, 'middle')) out.push(`<text x="${cx.toFixed(0)}" y="${cz.toFixed(0)}" font-size="9" font-weight="700" text-anchor="middle" fill="#f0e2c8" opacity="0.5">${a.name}</text>`);
+    }
+    const seen = new Set<string>();
+    for (const r of m.rivers) {
+      if (seen.has(r.name)) continue;
+      const [x, z] = r.pts[Math.floor(r.pts.length / 2)] as Pt;
+      if (place(x, z, r.name, 8, 'start')) { seen.add(r.name); out.push(`<text x="${x}" y="${z}" font-size="8" font-style="italic" fill="#7fb3bd">${r.name}</text>`); }
     }
     out.push(`<path d="M${B.minX + 10} ${B.maxZ - 10}h50" stroke="#f0e2c8" stroke-width="1.5"/><text x="${B.minX + 10}" y="${B.maxZ - 14}" font-size="7" fill="#f0e2c8">50 m</text>`);
   }

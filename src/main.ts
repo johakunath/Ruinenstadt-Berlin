@@ -26,6 +26,10 @@ import { LootLabels, rarityColor } from './ui/loot-labels';
 import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
+import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
+import { backupSave, clearSave, loadSave, writeSave } from './save';
+import { CloudSave, formatCode, type SyncState } from './sync';
+import { simFromSave, snapshot, type SaveV1 } from './sim/save';
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
@@ -46,7 +50,20 @@ const map = opts.map === 'koepenick' ? (() => {
 })() : null;
 const level: Level | undefined = map?.level;
 
-let sim: Sim = createSim({ seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt });
+// M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
+const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1;
+const mapName = map ? map.def.name : 'Hof';
+let save: SaveV1 | null = persist ? loadSave() : null;
+if (save?.run && (save.run.map !== mapName || !level)) save = { ...save, run: null };
+let difficulty: DifficultyId = save?.difficulty ?? DEFAULT_DIFFICULTY;
+// Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
+const cloud = new CloudSave(persist && !navigator.webdriver && !/^(localhost|127\.|0\.0\.0\.0|$)/.test(location.hostname));
+function freshSim(): Sim {
+  const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt };
+  try { if (save) return simFromSave(save, base, false); } catch (err) { console.warn('Save unbrauchbar', err); save = null; clearSave(); }
+  return createSim({ ...base, difficulty });
+}
+let sim: Sim = freshSim();
 let phase: Phase = 'title';
 let wonFor = -1;
 /** Exit warning: 'ask' shows the modal, 'search' leads the hero to the valuable loot left behind. */
@@ -113,14 +130,31 @@ let renderer: GameRenderer | null = null;
 const telemetry = new Telemetry(opts.telemetry, opts.autostart);
 
 const ui = new Ui(opts, {
-  onPlay: () => start(),
+  onPlay: () => {
+    // A new game keeps the hero's gear but drops the old checkpoint.
+    sim.difficulty = difficulty;
+    if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
+    start();
+  },
+  onResume: () => {
+    if (!save?.run) return;
+    try { sim = simFromSave(save, { seed: save.run.rng, stress: 0, level }, true); } catch (err) { console.warn('Save unbrauchbar', err); return; }
+    renderer?.reset(sim);
+    start(true);
+  },
+  onDifficulty: (id) => {
+    if (save?.run) return;
+    difficulty = id;
+    sim.difficulty = id;
+    ui.setDifficulty(id);
+  },
   onRetry: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
   onAgain: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
@@ -161,6 +195,9 @@ const ui = new Ui(opts, {
 }, input);
 
 const inventory = new InventoryUi(() => sim, open => {
+  // Gear changes between fights are kept; during a wave they wait for its checkpoint.
+  if (!open && phase === 'play' && sim.run.phase === 'travel') saveNow(true);
+  else if (!open && sim.run.phase === 'won') saveNow(false);
   input.enabled = phase === 'play' && !open && !ui.mapOpen && !ui.optionsOpen;
   input.clear();
 });
@@ -186,7 +223,7 @@ if (map) {
   ui.setExpedition(true);
   ui.mapSource = () => {
     const p = sim.player;
-    const svg = mapSvg(map.def, map.lots, { trees: false, done: sim.run.index });
+    const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false });
     return svg.replace('</svg>', `<circle cx="${p.x.toFixed(1)}" cy="${p.z.toFixed(1)}" r="5" fill="#b8261c" stroke="#f0e2c8" stroke-width="1.5"/></svg>`);
   };
 } else {
@@ -194,7 +231,62 @@ if (map) {
   if (sub) sub.textContent = 'Köpenick · Hinterhof bei Nacht';
 }
 
-function start(): void {
+/** Wave checkpoint (B1) or, after the last encounter, the profile alone. */
+function saveNow(withRun: boolean): void {
+  if (!persist) return;
+  save = snapshot(sim, mapName, withRun);
+  writeSave(save);
+  cloud.queue(save);
+}
+
+function resumeLabel(): string | null {
+  const r = save?.run;
+  if (!r || !level) return null;
+  return `Kampf ${Math.min(r.index + 1, level.encounters.length)}`;
+}
+ui.setResume(resumeLabel(), difficulty);
+
+const cloudRow = document.getElementById('cloud-row') as HTMLDivElement;
+const cloudInfo = document.getElementById('cloud-info') as HTMLElement;
+const cloudToggle = document.getElementById('cloud-toggle') as HTMLButtonElement;
+function showCloud(s: SyncState = cloud.state): void {
+  const label: Record<SyncState, string> = { off: 'Aus auf diesem Gerät.', sync: 'Verbindet …', on: 'Synchron.', slow: 'Nicht erreichbar, speichert lokal.', conflict: 'Anderes Gerät war neuer. Beim nächsten Start geladen.' };
+  cloudInfo.textContent = cloud.code ? `Code ${formatCode(cloud.code)} · ${label[s]}` : label.off;
+  (document.getElementById('cloud-copy') as HTMLButtonElement).hidden = !cloud.code;
+  cloudToggle.textContent = cloud.code ? 'Ausschalten' : 'Aktivieren';
+}
+/** A cloud save replaces the local one: back it up, store the remote, reload into it. */
+function adoptRemote(remote: SaveV1): void {
+  if (save) backupSave(save);
+  writeSave(remote);
+  location.reload();
+}
+if (cloud.available) {
+  cloudRow.hidden = false;
+  cloud.onState = showCloud;
+  cloud.autoStart();
+  showCloud();
+  void cloud.pull(save).then((remote) => {
+    if (!remote) return;
+    if (phase === 'title') adoptRemote(remote); else cloud.hold();
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) void cloud.flush(); });
+}
+document.getElementById('cloud-copy')!.addEventListener('click', () => { void navigator.clipboard?.writeText(formatCode(cloud.code)).catch(() => prompt('Online-Code:', formatCode(cloud.code))); });
+cloudToggle.addEventListener('click', () => {
+  if (cloud.code) { if (confirm(`Online-Speichern ausschalten? Code ${formatCode(cloud.code)} gut aufheben.`)) cloud.disable(); } else { cloud.enable(); if (save) cloud.queue(save, 0); }
+  showCloud();
+});
+document.getElementById('cloud-join')!.addEventListener('click', () => {
+  const raw = prompt('Online-Code eingeben (z. B. ABCD-1234). Der Stand auf diesem Gerät wird ersetzt, eine Sicherung bleibt.');
+  if (!raw) return;
+  void cloud.join(raw).then((r) => {
+    if ('save' in r) { adoptRemote(r.save); return; }
+    cloudInfo.textContent = { code: 'Ungültiger Code.', net: 'Server nicht erreichbar.', unknown: 'Code unbekannt.', damaged: 'Spielstand unbrauchbar.' }[r.error];
+  });
+});
+
+function start(resumed = false): void {
   audio.start();
   phase = 'play';
   deadFor = 0;
@@ -206,7 +298,7 @@ function start(): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, sim.run.index === 0 ? 'Köpenick' : 'Neustart');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? 'Köpenick' : 'Neustart');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -279,12 +371,16 @@ function drainEvents(): void {
         if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
         break;
       }
+      case 'checkpoint':
+        saveNow(true);
+        break;
       case 'restEnter': {
         const rest = level?.rests[ev.index];
         if (rest && ev.first) ui.banner(rest.name, 'Rast · hier heilst du');
         break;
       }
       case 'victory':
+        saveNow(false);
         if (importantDrops(sim).length > 0) {
           lootExit = 'ask';
           input.enabled = false;
@@ -377,6 +473,7 @@ function frame(now: number): void {
     wonFor += dt;
     if (wonFor > 2.5) {
       phase = 'won';
+      saveNow(false); // loot collected after the last encounter and gear changes during the exit search
       telemetry.end('win');
       input.enabled = false;
       ui.showWon(sim.kills);
@@ -415,7 +512,7 @@ function expeditionHud(dt: number): void {
   const alive = sim.enemies.filter((e) => e.state !== 'dead');
   const travel = sim.run.phase === 'travel';
   minimap?.show(phase === 'play');
-  minimap?.update(dt, sim.run.index, p, enc && travel ? enc : null, alive.map((e) => ({ x: e.x, z: e.z, boss: !!e.def.boss })), importantDrops(sim).map((d) => ({ x: d.x, z: d.z, color: dropColor(d) })));
+  minimap?.update(dt, p, alive.map((e) => ({ x: e.x, z: e.z, boss: !!e.def.boss })), importantDrops(sim).map((d) => ({ x: d.x, z: d.z, color: dropColor(d) })));
   // Edge triangles: the objective while travelling, the last three enemies of a wave (2D rule).
   const marks: Array<{ x: number; y: number; color: string }> = [];
   if (renderer && phase === 'play') {

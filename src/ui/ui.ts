@@ -1,6 +1,7 @@
 // DOM overlay: title, HUD, options, touch controls, perf readout. Text is German and short.
 import type { Input } from '../input/input';
 import type { Options } from '../options';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type DifficultyId } from '../data/difficulty';
 import { PROFILES, type ProfileId } from '../render/profile';
 
 function el<T extends HTMLElement>(id: string): T {
@@ -12,6 +13,8 @@ function el<T extends HTMLElement>(id: string): T {
 export interface UiHandlers {
   onPlay(): void;
   onRetry(): void;
+  onResume(): void;
+  onDifficulty(id: DifficultyId): void;
   onOptionsToggle(open: boolean): void;
   onProfile(id: ProfileId): void;
   onVolume(v: number): void;
@@ -42,6 +45,17 @@ export class Ui {
 
   constructor(opts: Options, private readonly handlers: UiHandlers, input: Input) {
     el<HTMLButtonElement>('play').addEventListener('click', () => handlers.onPlay());
+    el<HTMLButtonElement>('resume').addEventListener('click', () => handlers.onResume());
+    const diffHost = el<HTMLDivElement>('title-diff');
+    for (const d of DIFFICULTIES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.id = d.id;
+      b.className = 'choice' + (d.id === DEFAULT_DIFFICULTY ? ' on' : '');
+      b.innerHTML = `<b>${d.label}</b><span>${d.hint}</span>`;
+      b.addEventListener('click', () => handlers.onDifficulty(d.id));
+      diffHost.append(b);
+    }
     el<HTMLButtonElement>('retry').addEventListener('click', () => handlers.onRetry());
     for (const id of ['open-options', 'menu-btn']) el<HTMLButtonElement>(id).addEventListener('click', () => this.toggleOptions(true));
     el<HTMLButtonElement>('close-options').addEventListener('click', () => this.toggleOptions(false));
@@ -182,6 +196,21 @@ export class Ui {
   loaded(): void {
     el('loading').hidden = true;
     el<HTMLButtonElement>('play').disabled = false;
+    el<HTMLButtonElement>('resume').disabled = false;
+  }
+
+  /** Title: `label` shows Weiter (a wave checkpoint exists); the difficulty of that run is fixed. */
+  setResume(label: string | null, difficulty: DifficultyId): void {
+    const r = el<HTMLButtonElement>('resume');
+    r.hidden = label === null;
+    if (label !== null) r.textContent = `Weiter · ${label}`;
+    el<HTMLButtonElement>('play').classList.toggle('primary', label === null);
+    el('play').textContent = label === null ? 'Spielen' : 'Neu';
+    this.setDifficulty(difficulty);
+  }
+
+  setDifficulty(id: DifficultyId): void {
+    for (const b of el('title-diff').querySelectorAll<HTMLButtonElement>('button')) b.classList.toggle('on', b.dataset.id === id);
   }
 
   failed(message: string): void {

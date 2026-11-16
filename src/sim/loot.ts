@@ -1,6 +1,7 @@
 // Loot in the world (M4, 2D js/loot.js + combat.js kill/breakProp). Drops pop out of kills and
 // broken props, land on walkable ground and are picked up by walking within 1.2 m (no magnet).
 import type { MaterialId } from '../data/crafting';
+import { difficultyOf } from '../data/difficulty';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
 import { RARITIES } from '../data/items';
 import { colliderDistance } from './collide';
@@ -50,7 +51,7 @@ export function lootLevel(sim: Sim): number {
 
 /** One context per sim; it owns the item id counter. Luck and wave are refreshed before every roll. */
 function ctx(sim: Sim) {
-  sim.lootCtx.luck = sim.stats.luck;
+  sim.lootCtx.luck = sim.stats.luck + difficultyOf(sim.difficulty).luck;
   sim.lootCtx.wave = Math.max(1, sim.lootWaves) / 2;
   return sim.lootCtx;
 }
@@ -109,6 +110,7 @@ export function spawnDrop(sim: Sim, x: number, z: number, content: DropContent, 
 const spread = (sim: Sim, m: number): number => sim.rng.range(-m, m);
 
 function creditScrap(sim: Sim, amount: number, x: number, z: number): void {
+  amount = Math.round(amount * difficultyOf(sim.difficulty).scrap);
   if (amount <= 0) return;
   sim.inventory.scrap += amount;
   sim.events.push({ type: 'scrap', amount, x, z });
