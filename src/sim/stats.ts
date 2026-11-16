@@ -39,6 +39,8 @@ export interface HeroStats {
   cooldownFactor: number;
 }
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
+/** 2D `KIND.rate`: seconds per attack. Only `power` uses it; real timing is in `data/combat.ts`. */
+const SWING_TIME: Record<WeaponKindId, number> = { blade: 0.3, hammer: 0.68, sling: 0.42, spear: 0.5 };
 
 /** 2D baseOf fallback without mutating an item. */
 function baseOf(item: Item): BaseId {
@@ -124,8 +126,9 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
 }
 
 export function power(s: HeroStats): number {
-  // 3D uses normalized attackSpeed, not 1 / the 2D weapon's rate in seconds.
-  const dps = s.damage * (1 + s.crit) * s.attackSpeed
+  // 2D `pwParts`: damage per second with the weapon's swing time (blade 0.30 s, hammer 0.68, thrower 0.42,
+  // spear 0.50), normalized to the blade so the starter's power stays the same. Without it a hammer reads 2.3× a blade.
+  const dps = s.damage * (1 + s.crit) * s.attackSpeed * (0.3 / SWING_TIME[s.kind])
     * (1 + (s.elements.length ? .18 * s.elementPower * (s.elementChance || .3) / .3 * Math.min(2, s.elements.length) : 0))
     * (s.weight ? 1.12 : 1);
   const ehp = s.maxHp / (1 - s.res) * (1 + s.regen * .04);

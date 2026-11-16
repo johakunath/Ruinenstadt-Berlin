@@ -94,4 +94,10 @@ describe('ported hero stats', () => {
     // Includes both elements (.18*1.35*.5/.3*2), regen, movement and luck.
     expect(power(c)).toBe(187);
   });
+  it('power compares weapon kinds by damage per second, as 2D pwParts', () => {
+    const of = (kind: string, value: number): number => power(heroStats({ w: { id: 1, slot: 'w', kind, base: 'x', name: 'x', rarity: 0, value, itemLevel: 1, affixes: [] } }, { upgrades: {}, perks: {}, camp: {}, survivors: {} }));
+    // Same item level: a hammer hits 2.3× as hard and 2.27× as slowly as a blade.
+    expect(of('hammer', 23) / of('blade', 10)).toBeCloseTo(1, 1);
+    expect(of('spear', 14.5) / of('blade', 10)).toBeCloseTo(Math.sqrt(1.45 * 0.3 / 0.5), 1);
+  });
 });

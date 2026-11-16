@@ -212,6 +212,9 @@ input.onInventory = () => {
   if (phase === 'play' && !ui.mapOpen && !ui.optionsOpen) inventory.toggle(!inventory.open);
 };
 document.getElementById('inventory-btn')!.addEventListener('click', input.onInventory);
+// The pause menu leads to inventory and map (on touch the HUD has only the pause button).
+document.getElementById('pause-inventory')!.addEventListener('click', () => { ui.toggleOptions(false); input.onInventory(); });
+document.getElementById('pause-map')!.addEventListener('click', () => { ui.toggleOptions(false); ui.toggleMap(true); });
 window.addEventListener('keydown', e => {
   if (inventory.open && ['KeyM', 'Tab', 'KeyP', 'Escape'].includes(e.code)) {
     if (e.code === 'Escape' || e.code === 'KeyP') inventory.toggle(false);

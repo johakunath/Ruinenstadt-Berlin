@@ -126,6 +126,8 @@ export class GameAudio {
       const source = 'x' in event ? event : 'id' in event ? sim.enemies.find(e=>e.id===event.id) : undefined;
       if(source) ({volume,pan}=spatialAudio(source.x-sim.player.x,source.z-sim.player.z));
     }
+    // Out of earshot: no voices, and the hit throttle stays free for audible hits (2D returns early).
+    if (sim && volume <= 0.02 && (event.type === 'hit' || event.type === 'dot' || event.type === 'bolt' || event.type === 'ignite' || event.type === 'impact' || event.type === 'shock')) return;
     switch (event.type) {
       case 'swing': if(sim?.stats.kind==='sling')this.play('sling');else this.swing(event.weight); break;
       case 'hit':

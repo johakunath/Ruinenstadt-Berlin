@@ -6,6 +6,7 @@ import {
   type BufferGeometry, type Object3D,
 } from 'three';
 import type { ElementId, WeaponKindId } from '../data/items';
+import { HERO_LAYER } from './layers';
 import type { LitMaterial, Materials } from './materials';
 import { paintCloth, paintMetal, paintWood } from './paint';
 
@@ -152,7 +153,8 @@ export class WeaponRack {
     if (!g) {
       g = new Group();
       g.add(...BUILD[model](this.kit));
-      g.traverse((o) => { o.castShadow = true; });
+      // Hero layer too: the contour behind buildings includes the weapon (`hero-outline.ts`).
+      g.traverse((o) => { o.castShadow = true; o.layers.enable(HERO_LAYER); });
       this.models.set(model, g);
       this.group.add(g);
     }

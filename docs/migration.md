@@ -11,6 +11,15 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | S2 + M7/M8/M9 first playable pass | Codex | done (first pass, PR #17): `docs/tasks/combat-audio-migration.md` |
 | M7/M8 parity, M9 consumable controls, M16 run content | Claude | done (review of PR #17 and completion, same task file); Johannes playtest open |
 | M12 enemy roster and boss attacks | Claude | open: roadmap below |
+| U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | open: `docs/tasks/u1-pause-menu.md` |
+| U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | open, needs U1: `docs/tasks/u2-menu-tabs.md` |
+| T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (paving image) | open: `docs/tasks/t1b-ground-polish.md` |
+| A2 Audio follow-ups | Sonnet | open: `docs/tasks/a2-audio-followups.md` |
+| L2 Loot and item follow-ups | Sonnet | open: `docs/tasks/l2-loot-followups.md` |
+| R1 Hero outline cost | Opus 5.5 high, Johannes measures | open: `docs/tasks/r1-outline-cost.md` |
+| L1 Legendary item powers | Fable 5.2 or Opus 5.5 high | open: `docs/tasks/l1-legendary-powers.md` |
+
+Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 
 Finish: task status + ≤8-line handover, update this queue, update status only for player-visible changes. Draft PR → one review → fixes → ready/CI. Do not re-run prototype acceptance.
 

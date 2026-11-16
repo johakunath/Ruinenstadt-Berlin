@@ -58,7 +58,8 @@ export function lootLevel(sim: Sim): number {
 
 /** One context per sim; it owns the item id counter. Luck and wave are refreshed before every roll. */
 export function lootContext(sim: Sim) {
-  sim.lootCtx.luck = sim.stats.luck + difficultyOf(sim.difficulty).luck;
+  // 2D `rollR`: camp upgrade Spürnase + difficulty + gear and survivor luck.
+  sim.lootCtx.luck = (sim.statContext.upgrades.luck ?? 0) + sim.stats.luck + difficultyOf(sim.difficulty).luck;
   sim.lootCtx.wave = Math.max(1, sim.lootWaves) / 2;
   return sim.lootCtx;
 }
