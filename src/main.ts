@@ -286,7 +286,8 @@ function frame(now: number): void {
     input.enabled = false;
     telemetry.end('dead');
   }
-  if (phase === 'play' && running) telemetry.frame(dt, sim, renderer.perf, input.device);
+  // Telemetry gets the real frame time; `dt` is clamped for the sim and would hide slow frames.
+  if (phase === 'play' && running) telemetry.frame(frameMs / 1000, sim, renderer.perf, input.device);
   if (phase === 'dead') {
     deadFor += dt;
     if (deadFor > 1.4 && deadFor - dt <= 1.4) {

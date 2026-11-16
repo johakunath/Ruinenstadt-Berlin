@@ -122,6 +122,8 @@ export class Telemetry {
 
   begin(sim: Sim, ctx: { map: string; profile: string; scale: number; startAt: number; input: string }): void {
     if (this.run) this.end('quit');
+    // Automated, local or opted-out sessions record nothing, so nothing can be sent later either.
+    if (!this.allowed || !this.enabled) return;
     const now = new Date();
     this.frames = new FrameStats();
     this.encFrames = new FrameStats();
@@ -174,7 +176,7 @@ export class Telemetry {
     const r = this.run;
     if (!r) return;
     this.run = null;
-    if (r.t < 5) return; // a click through the title, not a run
+    if (r.t < 5 || !this.allowed || !this.enabled) return; // a click through the title, not a run
     r.end = end;
     r.t = Math.round(r.t);
     r.dmg = Math.round(r.dmg);
