@@ -26,6 +26,9 @@ import { LootLabels, rarityColor } from './ui/loot-labels';
 import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
+import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
+import { clearSave, loadSave, writeSave } from './save';
+import { simFromSave, snapshot, type SaveV1 } from './sim/save';
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
@@ -46,7 +49,18 @@ const map = opts.map === 'koepenick' ? (() => {
 })() : null;
 const level: Level | undefined = map?.level;
 
-let sim: Sim = createSim({ seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt });
+// M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
+const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1;
+const mapName = map ? map.def.name : 'Hof';
+let save: SaveV1 | null = persist ? loadSave() : null;
+if (save?.run && (save.run.map !== mapName || !level)) save = { ...save, run: null };
+let difficulty: DifficultyId = save?.difficulty ?? DEFAULT_DIFFICULTY;
+function freshSim(): Sim {
+  const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt };
+  try { if (save) return simFromSave(save, base, false); } catch (err) { console.warn('Save unbrauchbar', err); save = null; clearSave(); }
+  return createSim({ ...base, difficulty });
+}
+let sim: Sim = freshSim();
 let phase: Phase = 'title';
 let wonFor = -1;
 /** Exit warning: 'ask' shows the modal, 'search' leads the hero to the valuable loot left behind. */
@@ -113,14 +127,31 @@ let renderer: GameRenderer | null = null;
 const telemetry = new Telemetry(opts.telemetry, opts.autostart);
 
 const ui = new Ui(opts, {
-  onPlay: () => start(),
+  onPlay: () => {
+    // A new game keeps the hero's gear but drops the old checkpoint.
+    sim.difficulty = difficulty;
+    if (save?.run) { save = { ...save, run: null, difficulty }; writeSave(save); ui.setResume(null, difficulty); }
+    start();
+  },
+  onResume: () => {
+    if (!save?.run) return;
+    try { sim = simFromSave(save, { seed: save.run.rng, stress: 0, level }, true); } catch (err) { console.warn('Save unbrauchbar', err); return; }
+    renderer?.reset(sim);
+    start(true);
+  },
+  onDifficulty: (id) => {
+    if (save?.run) return;
+    difficulty = id;
+    sim.difficulty = id;
+    ui.setDifficulty(id);
+  },
   onRetry: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
   onAgain: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
@@ -161,6 +192,8 @@ const ui = new Ui(opts, {
 }, input);
 
 const inventory = new InventoryUi(() => sim, open => {
+  // Gear changes between fights are kept; during a wave they wait for its checkpoint.
+  if (!open && phase === 'play' && sim.run.phase === 'travel') saveNow(true);
   input.enabled = phase === 'play' && !open && !ui.mapOpen && !ui.optionsOpen;
   input.clear();
 });
@@ -194,7 +227,21 @@ if (map) {
   if (sub) sub.textContent = 'Köpenick · Hinterhof bei Nacht';
 }
 
-function start(): void {
+/** Wave checkpoint (B1) or, after the last encounter, the profile alone. */
+function saveNow(withRun: boolean): void {
+  if (!persist) return;
+  save = snapshot(sim, mapName, withRun);
+  writeSave(save);
+}
+
+function resumeLabel(): string | null {
+  const r = save?.run;
+  if (!r || !level) return null;
+  return `Kampf ${Math.min(r.index + 1, level.encounters.length)}`;
+}
+ui.setResume(resumeLabel(), difficulty);
+
+function start(resumed = false): void {
   audio.start();
   phase = 'play';
   deadFor = 0;
@@ -206,7 +253,7 @@ function start(): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, sim.run.index === 0 ? 'Köpenick' : 'Neustart');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? 'Köpenick' : 'Neustart');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -279,12 +326,16 @@ function drainEvents(): void {
         if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
         break;
       }
+      case 'checkpoint':
+        saveNow(true);
+        break;
       case 'restEnter': {
         const rest = level?.rests[ev.index];
         if (rest && ev.first) ui.banner(rest.name, 'Rast · hier heilst du');
         break;
       }
       case 'victory':
+        saveNow(false);
         if (importantDrops(sim).length > 0) {
           lootExit = 'ask';
           input.enabled = false;

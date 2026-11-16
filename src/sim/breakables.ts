@@ -54,6 +54,14 @@ export function hitBreakable(sim: Sim, b: Breakable): void {
   breakDrops(sim, b);
 }
 
+/** Marks a prop broken without drops or events (resuming a save). */
+export function hitBreakableState(sim: Sim, b: Breakable): void {
+  if (b.broken) return;
+  b.broken = true;
+  b.hp = 0;
+  sim.level.remove(b.def.collider);
+}
+
 /** The hero's active weapon sweep (`sim.ts` computes lo/hi) against props; one hit per prop per swing. */
 export function sweepBreakables(sim: Sim, lo: number, hi: number, inner: number, reach: number): void {
   const p = sim.player;

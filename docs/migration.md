@@ -39,7 +39,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b done (PR #10) |
 | Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Built; Johannes playtest open |
 | Inventory, equip, compare, salvage, sets | M5 | Implemented; M4 collection hookup done |
-| Save, wave checkpoint, difficulty | M6 | Open |
+| Save, wave checkpoint, difficulty | M6 | Done (PR pending); playtest open |
 | Weapons: Klinge, Hammer, Speer, Werfer, finishers | M7 | Open |
 | Powers, ultimates, blessings with families and duos | M8 | Open |
 | Touch layout for more buttons | M9 | Open |
@@ -66,7 +66,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walka
 | M3b | Stats in the sim | Claude · Opus high | M3a | Equipped item changes damage and life in a run; sim tests |
 | 5 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | done (PR #12) |
 | 6 | M4 Loot in the world, with breakable bins and crates (2D port); decisions prepared by Opus | Claude · Sonnet | `docs/tasks/m4-loot-world.md` | done (PR pending, playtest open) |
-| M6 | Versioned save, wave checkpoint (B1), difficulty choice | Claude (format), Codex (UI) | M5 | Reload resumes at the last wave |
+| M6 | Versioned save, wave checkpoint (B1), difficulty choice | Claude (format), Codex (UI) | M5 | Reload resumes at the last wave. Done (PR pending); title UI is minimal, Codex may restyle |
 | M7 | Weapons in 2D order: Klinge (pipe moves become its baseline), Hammer, Speer, Werfer; finisher each (B6) | Claude · Opus high | M3b | Klinge and Hammer feel different on a pad |
 | M8 | Powers, ultimates, blessings (Zeitsplitter), families and duos | Claude · Opus high | M7 | One power and one ultimate per weapon; blessing choice after each encounter |
 | M9 | Touch layout for power, ultimate, consumables: mockup, then build | Claude · Opus medium | M8 | |

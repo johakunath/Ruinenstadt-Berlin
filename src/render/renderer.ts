@@ -152,6 +152,7 @@ export class GameRenderer {
     this.cam.snap(sim.player.x, sim.player.z, groundY(sim.player.x, sim.player.z));
     this.world.follow?.(sim.player.x, sim.player.z);
     this.world.breakables?.reset();
+    for (const b of sim.breakables) if (b.broken) this.world.breakables?.broke(b.id);
   }
 
   /** Ground point under a pointer position, for mouse aim. */

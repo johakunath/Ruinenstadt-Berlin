@@ -2,6 +2,7 @@
 // fixed places. Entering the current encounter's circle closes it; waves spawn on its rim until
 // all are beaten (bosses come with the last wave). Then the circle opens, life is partly restored
 // and the next encounter becomes the objective.
+import { difficultyOf } from '../data/difficulty';
 import { ENEMIES } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { aliveCount, pickKind, spawnEnemy } from './enemies';
@@ -117,17 +118,18 @@ export function updateDirector(sim: Sim): void {
   if (run.phase !== 'fight') return;
   const w = enc.waves[run.wave];
   if (!w) return;
+  const df = difficultyOf(sim.difficulty);
   run.spawnT -= DT;
   if (run.spawnT <= 0 && (run.bossesToSpawn.length > 0 || (run.toSpawn > 0 && aliveCount(sim) < w.maxAlive))) {
     run.spawnT = SPAWN_GAP;
     const boss = run.bossesToSpawn.shift();
     if (boss) {
       const s = rimSpot(sim, enc, ENEMIES[boss].radius);
-      spawnEnemy(sim, s.x, s.z, boss, w.hpMul, w.dmgMul);
+      spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp, w.dmgMul * df.dmg);
     } else {
       const kind = pickKind(sim, w.mix);
       const s = rimSpot(sim, enc, ENEMIES[kind].radius);
-      spawnEnemy(sim, s.x, s.z, kind, w.hpMul, w.dmgMul);
+      spawnEnemy(sim, s.x, s.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
       run.toSpawn--;
     }
   }
@@ -137,6 +139,7 @@ export function updateDirector(sim: Sim): void {
   if (run.wave < enc.waves.length) {
     run.phase = 'pause';
     run.pauseT = WAVE_PAUSE;
+    sim.events.push({ type: 'checkpoint' });
     return;
   }
   // Encounter won.
@@ -151,6 +154,7 @@ export function updateDirector(sim: Sim): void {
     sim.events.push({ type: 'victory' });
   } else {
     run.phase = 'travel';
+    sim.events.push({ type: 'checkpoint' });
   }
 }
 

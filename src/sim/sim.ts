@@ -3,6 +3,7 @@ import { createBreakables, sweepBreakables } from './breakables';
 import { killDrops, updateDrops } from './loot';
 // The simulation: one fixed 60 Hz step. No rendering, no DOM, no Three.js; unit tested.
 import { HIT_FEEL, PLAYER } from '../data/combat';
+import { DEFAULT_DIFFICULTY, type DifficultyId } from '../data/difficulty';
 import { courtyardLevel } from '../data/courtyard';
 import { SPAWN } from '../data/enemies';
 import { sectorHitsCircle } from './collide';
@@ -19,6 +20,7 @@ import { createPlayer, updatePlayer } from './player';
 import { DT, type Enemy, type Sim, type SimInput } from './types';
 
 export interface SimOptions {
+  difficulty?: DifficultyId;
   inventory?: Inventory;
   equipment?: Equipment;
   statContext?: Partial<StatContext>;
@@ -43,6 +45,7 @@ export function createSim(opts: SimOptions = {}): Sim {
   const context = statContext(opts.statContext);
   const stats = heroStats(equipment, context);
   const sim: Sim = {
+    difficulty: opts.difficulty ?? DEFAULT_DIFFICULTY,
     equipment, statContext: context, stats,
     inventory: structuredClone(opts.inventory ?? createInventory()),
     tick: 0,
