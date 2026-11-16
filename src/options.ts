@@ -15,6 +15,8 @@ export interface Options {
   rumble: boolean;
   /** Performance readout bottom left (options menu or ?debug=perf). */
   showPerf: boolean;
+  /** Send anonymous run and performance telemetry (Optionen, default on). */
+  telemetry: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
@@ -34,6 +36,7 @@ interface Stored {
   music?: boolean;
   rumble?: boolean;
   showPerf?: boolean;
+  telemetry?: boolean;
 }
 
 function readStored(): Stored {
@@ -46,7 +49,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, volume: o.volume, music: o.music, rumble: o.rumble, showPerf: o.showPerf };
+    const s: Stored = { profile: o.profile, volume: o.volume, music: o.music, rumble: o.rumble, showPerf: o.showPerf, telemetry: o.telemetry };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -91,6 +94,7 @@ export function readOptions(): Options {
     music: stored.music ?? true,
     rumble: stored.rumble ?? true,
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
+    telemetry: stored.telemetry ?? true,
     autostart: q.has('autostart'),
     cam: parseCam(q.get('cam')),
     map: q.get('map') === 'hof' ? 'hof' : 'koepenick',

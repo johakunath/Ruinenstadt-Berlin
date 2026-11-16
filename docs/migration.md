@@ -100,7 +100,8 @@ Parallel on the PC: H1 custom hero (2 test heroes, pick, rig on current skeleton
 | In-world sprites | Not copied |
 | Save | New versioned format, no 2D import |
 | Audio | Ported (S1), new enemy and boss sounds |
-| Balance bot, telemetry | Ported later (M14) |
+| Balance bot | Ported later (M14) |
+| Run and performance telemetry | Done early (2026-11-16): `src/telemetry.ts` sends one anonymous row per run to the 2D sheet "Telemetrie" (same Apps Script). Off in Optionen ("Spieldaten senden"); never from localhost or automated browsers |
 
 ## Decided (Johannes, 2026-11-15)
 

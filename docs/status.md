@@ -15,6 +15,7 @@ What is in the game now. Updated 2026-11-16. Next work: `docs/migration.md` › 
 | HUD | Objective with distance and arrow, minimap (tap opens the map), edge triangles to the objective and the last enemies of a wave, wave banner, boss bar, map (M), victory screen |
 | Input | Keyboard and mouse, gamepad, touch stick plus two buttons; Inventar button, I/Tab or controller Y opens inventory (D-pad/stick, A select, B close) |
 | Items | Data, rolls and combat stats connected (M1–M3b). Starter pipe in normal play; dev loadout setter for verification. 25-slot inventory with comparison, equip/unequip, locks, salvage and set descriptions; drops pending (M4) |
+| Telemetry | One anonymous row per run (win, death, quit) to the 2D Google Sheet "Telemetrie": encounter reached, time, kills, damage taken, rest visits, per-encounter time, damage and fps, overall fps, p95, 1 % low, draw calls, profile, device class, input. Version `3d-…` in column v. Switch in Optionen. Delivery from the live game not verified yet |
 | CI | Type check, 192 unit tests, build, Playwright smoke, Pages deploy from `main` |
 
 ## Known weak or unverified
