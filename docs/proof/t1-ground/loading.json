@@ -1,0 +1,38 @@
+[
+  {
+    "profile": "Leistung",
+    "stage": "before",
+    "loaded": [],
+    "errors": []
+  },
+  {
+    "profile": "Leistung",
+    "stage": "after",
+    "loaded": [
+      "dirt.webp",
+      "grass.webp",
+      "leaves.webp",
+      "litter.webp",
+      "paving.webp"
+    ],
+    "errors": []
+  },
+  {
+    "profile": "Qualität",
+    "stage": "before",
+    "loaded": [],
+    "errors": []
+  },
+  {
+    "profile": "Qualität",
+    "stage": "after",
+    "loaded": [
+      "dirt.webp",
+      "grass.webp",
+      "leaves.webp",
+      "litter.webp",
+      "paving.webp"
+    ],
+    "errors": []
+  }
+]

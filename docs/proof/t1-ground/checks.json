@@ -1,0 +1,27 @@
+{
+  "typecheck": "passed",
+  "unitTests": {
+    "passed": 196,
+    "total": 196,
+    "command": "npm test -- --maxWorkers=1 --testTimeout=30000",
+    "initialDefaultRun": "194 passed, two terrain tests exceeded 5 s while software WebGL was running"
+  },
+  "build": "passed",
+  "e2e": {
+    "passed": 13,
+    "total": 13,
+    "command": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run e2e -- --workers=1"
+  },
+  "atlas": {
+    "occupiedPixelsPerCell": [
+      83461,
+      55013,
+      68782,
+      53647
+    ],
+    "maxAlphaAtCellBorders": 1,
+    "materialAlphaCutoff": 128,
+    "passed": true
+  },
+  "hardwarePerformance": "Deferred to Claude, per asset pipeline"
+}

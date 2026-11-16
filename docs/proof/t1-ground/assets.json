@@ -1,0 +1,57 @@
+[
+  {
+    "name": "grass",
+    "bytes": 323430,
+    "width": 1024,
+    "height": 1024,
+    "alpha": false,
+    "sourceSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "name": "dirt",
+    "bytes": 280888,
+    "width": 1024,
+    "height": 1024,
+    "alpha": false,
+    "sourceSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "name": "paving",
+    "bytes": 231862,
+    "width": 1024,
+    "height": 1024,
+    "alpha": false,
+    "sourceSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "name": "leaves",
+    "bytes": 325404,
+    "width": 1024,
+    "height": 1024,
+    "alpha": false,
+    "sourceSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "name": "litter",
+    "bytes": 321450,
+    "width": 1024,
+    "height": 1024,
+    "alpha": true,
+    "sourceSize": [
+      1254,
+      1254
+    ]
+  }
+]
