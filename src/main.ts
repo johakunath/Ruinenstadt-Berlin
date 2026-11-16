@@ -665,6 +665,7 @@ function drainEvents(): void {
 
 let held = false;
 let hotAt = 0;
+let audioLast = performance.now();
 const menuBtn = document.getElementById('menu-btn')!;
 let last = performance.now();
 let acc = 0;
@@ -675,7 +676,10 @@ const FRAME_MS = 1000 / 60;
 let nextAt = 0;
 
 function frame(now: number): void {
-  audio.tick(Math.min(.1, Math.max(0, (now - last) / 1000)), {
+  // Audio has its own clock: it ticks on every callback, before the 60 fps cap skips any (Codex review).
+  const audioDt = Math.min(.1, Math.max(0, (now - audioLast) / 1000));
+  audioLast = now;
+  audio.tick(audioDt, {
     district: 0, fighting: phase === 'play' && !menu.isOpen,
     enemies: sim.enemies.filter(e => e.state !== 'dead').length,
     boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
