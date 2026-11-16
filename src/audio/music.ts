@@ -28,10 +28,12 @@ export class Music {
     if (!v) return;
     clearInterval(v.timer);
     const t = this.synth.ctx.currentTime;
-    // Silence scheduled notes too; do not let repeated toggle cycles accumulate audible chords.
-    v.bus.disconnect(); v.send.disconnect();
+    // 2D stopMusic: a 1 s fade. The voice's own buses stay at zero for good, so notes already scheduled
+    // stay silent and repeated toggles do not stack (each start builds new buses).
     v.gain.gain.cancelScheduledValues(t);
-    v.gain.gain.setValueAtTime(0, t);
+    v.gain.gain.setValueAtTime(v.gain.gain.value, t);
+    v.gain.gain.linearRampToValueAtTime(0, t + 1);
+    for (const g of [v.bus.gain, v.send.gain]) { g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 1); }
     this.voice = null;
   }
   tick(dt: number, state: MusicState): void {

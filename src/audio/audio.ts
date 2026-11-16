@@ -110,7 +110,13 @@ export class GameAudio {
     if (this.room) this.room.gain.value = eco ? 0 : 1;
   }
 
-  tick(dt: number, state: MusicState): void { this.music?.tick(dt, state); }
+  private beatT = 0;
+  tick(dt: number, state: MusicState, lifeFrac = 1): void {
+    this.music?.tick(dt, state);
+    const h = heartbeat(this.beatT, dt, state.fighting ? lifeFrac : 1);
+    this.beatT = h.timer;
+    if (h.beat) this.play('beat');
+  }
   play(id: SfxId, rarity = 0, pan = 0, volume = 1): void {
     if (this.volume > 0) this.effects?.play(id, rarity, pan, volume);
   }
@@ -146,6 +152,7 @@ export class GameAudio {
       case 'blessing': this.play('coin'); break;
       case 'hidden': case 'shrine': this.play('legend'); break;
       case 'trade': this.play('bell'); break;
+      case 'buy': this.play('coin'); break;
       case 'streak': this.play('coin'); break;
       case 'runEvent': this.play(event.phase === 'done' ? 'win' : event.phase === 'lost' ? 'wood' : event.kind === 'ambush' || event.kind === 'horde' || event.kind === 'zone' ? 'horn' : 'bell'); break;
       case 'dodge': this.dodge(); break;
@@ -220,8 +227,15 @@ export class GameAudio {
   }
 }
 
-/** Same distance rolloff as 2D sfx: near full volume, quiet off screen, silent beyond 30 m. */
+/** 2D sfx rolloff (js/audio.js:67): clamp(1 - d/650 px)², 30 px per meter; pan = screen x × 0.6 (half screen 640 px). */
+export const AUDIO_FAR = 650 / 30, AUDIO_HALF_SCREEN = 640 / 30;
 export function spatialAudio(dx:number,dz:number):{volume:number;pan:number} {
-  const d=Math.hypot(dx,dz);
-  return {volume:d>=30?0:Math.min(1,1/(1+(d/8)**2)),pan:Math.max(-1,Math.min(1,dx/12))};
+  const d=Math.hypot(dx,dz), v=Math.max(0,1-d/AUDIO_FAR);
+  return {volume:v*v,pan:Math.max(-1,Math.min(1,dx/AUDIO_HALF_SCREEN))*.6};
+}
+/** 2D heartbeat (js/update.js:25): under 30 % life, one beat every 0.9 s. Returns the new timer and whether to beat. */
+export function heartbeat(timer:number,dt:number,lifeFrac:number):{timer:number;beat:boolean} {
+  if(lifeFrac>=.3||lifeFrac<=0)return {timer:0,beat:false};
+  timer-=dt;
+  return timer<=0?{timer:timer+.9,beat:true}:{timer,beat:false};
 }

@@ -13,7 +13,7 @@ describe('ported hero stats', () => {
     const s = heroStats(equipment, ctx);
     expect(s).toMatchObject({ kind: 'blade', damage: 10, maxHp: 100, crit: .08, moveSpeed: 1, attackSpeed: 1,
       regen: 0, res: 0, leech: 0, luck: 0, dashCooldown: 1.4, cooldownFactor: 1, reachFactor: 1,
-      elements: [], elementChance: .3, elementPower: 1, elementBonus: 0, weight: 0 });
+      elements: [], elementChance: .3, elementPower: 1, eliteBonus: 0, weight: 0 });
     expect(power(s)).toBe(33); // round(sqrt(10 * 1.08 * 100))
     expect(JSON.stringify([equipment, ctx])).toBe(before);
     expect(() => heroStats({}, ctx)).toThrow('weapon');
@@ -59,7 +59,7 @@ describe('ported hero stats', () => {
     expect(s.elements).toEqual(['fire', 'shock', 'acid']);
     expect(s.elementChance).toBe(.5);
     expect(s.elementPower).toBeCloseTo(2.2);
-    expect(s.elementBonus).toBe(.2);
+    expect(s.eliteBonus).toBe(.2);
     expect(s.weight).toBe(4);
     expect(s.damage).toBe(12);
     expect(heroStats(eq({ w: item({ kind: 'hammer' }) }), context({ perks: { m_dampf: 1 } }))).toMatchObject({ damage: 17, attackSpeed: 1 / 1.3 });

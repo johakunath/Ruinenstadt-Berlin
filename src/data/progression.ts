@@ -15,15 +15,6 @@ export type PerkId = 'dmg' | 'hp' | 'spd' | 'crit' | 'rate' | 'reach' | 'leech' 
   | 'm_doppel' | 'm_sturm' | 'm_beben' | 'm_wurf' | 'm_fege' | 'm_lanze' | 'm_quer' | 'm_salve';
 export type PerkFamilyId = 'boll' | 'sprint' | 'krit' | 'serie' | 'dist' | 'el' | 'glut';
 
-/** 2D DIFF entries, in the original easy/normal/hard order. */
-export interface DifficultyDefinition {
-  readonly name: string;
-  readonly hpMultiplier: number;
-  readonly damageMultiplier: number;
-  readonly luck: number;
-  readonly scrapMultiplier: number;
-}
-
 /** 2D PERKS, including prerequisite, family, duo and weapon-specific metadata. */
 export interface PerkDefinition {
   readonly id: PerkId;
@@ -52,13 +43,6 @@ export interface CampBuildingDefinition {
   readonly description: string;
   readonly scrapCost: number;
 }
-
-/** 2D DIFF. */
-export const DIFFICULTIES: readonly [DifficultyDefinition, DifficultyDefinition, DifficultyDefinition] = [
-  { name: 'Leicht', hpMultiplier: 0.7, damageMultiplier: 0.6, luck: 0, scrapMultiplier: 1 },
-  { name: 'Normal', hpMultiplier: 1.75, damageMultiplier: 1.45, luck: 0, scrapMultiplier: 1 },
-  { name: 'Schwer', hpMultiplier: 2.15, damageMultiplier: 1.75, luck: 4, scrapMultiplier: 1.3 },
-];
 
 /** 2D PERKS. */
 export const PERKS: readonly PerkDefinition[] = [

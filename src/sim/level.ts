@@ -115,6 +115,9 @@ export class Level {
   }
 
   private readonly removed: Collider[] = [];
+  /** L2: district index for loot (2D `D.lvl`: item level +3 per district) and item name flavor. Köpenick 0. */
+  district = 0;
+  flavor?: 'neon' | 'gdr';
 
   private cells(c: Collider, fn: (cell: number) => void): void {
     const e = c.kind === 'circle' ? c.r : Math.hypot(c.hx, c.hz);

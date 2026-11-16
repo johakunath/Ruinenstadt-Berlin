@@ -13,3 +13,6 @@ Status: open. Review of PR #9 (2026-11-16): the 19 effect recipes, the renderer,
 | 7 | `spit` | Ported, unused | Wait for the spitter (M12) |
 
 Done when: unit tests for 1, 4 and 5; `npm run check`; Johannes listens on the PC and the Tab S9.
+
+## Handover (Opus 5.5, 2026-11-16)
+1 heartbeat under 30 % life in fights (`heartbeat` in `src/audio/audio.ts`), 2 `ui` click on every overlay button (one capture listener in `src/main.ts`), 3 `coin` on every purchase (`buy` event from `src/sim/runcontent.ts`; events raised on paused screens are drained each frame), 4 music fades over 1 s, 5 2D distance curve and pan × 0.6 with tests, 6 district stays 0 for Köpenick. 7 `spit` plays since M12. Listening test on PC and Tab S9 open.

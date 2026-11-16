@@ -405,6 +405,9 @@ if (map) {
   if (sub) sub.textContent = 'Köpenick · Hinterhof bei Nacht';
 }
 
+// A2: the 2D ui click on every menu button (pause menu, camp, intro, title, trade, end screens).
+document.addEventListener('click', (e) => { if ((e.target as Element).closest('.overlay button, #menu-btn')) audio.play('ui'); }, true);
+
 /** Wave checkpoint (B1) or, after the last encounter, the profile alone. */
 function saveNow(withRun: boolean): void {
   if (!persist) return;
@@ -662,6 +665,7 @@ function drainEvents(): void {
 
 let held = false;
 let hotAt = 0;
+let audioLast = performance.now();
 const menuBtn = document.getElementById('menu-btn')!;
 let last = performance.now();
 let acc = 0;
@@ -672,11 +676,14 @@ const FRAME_MS = 1000 / 60;
 let nextAt = 0;
 
 function frame(now: number): void {
-  audio.tick(Math.min(.1, Math.max(0, (now - last) / 1000)), {
+  // Audio has its own clock: it ticks on every callback, before the 60 fps cap skips any (Codex review).
+  const audioDt = Math.min(.1, Math.max(0, (now - audioLast) / 1000));
+  audioLast = now;
+  audio.tick(audioDt, {
     district: 0, fighting: phase === 'play' && !menu.isOpen,
     enemies: sim.enemies.filter(e => e.state !== 'dead').length,
     boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
-  });
+  }, sim.player.state === 'dead' ? 1 : sim.player.hp / sim.stats.maxHp);
   requestAnimationFrame(frame);
   if (now < nextAt - 1) return;
   nextAt = Math.max(nextAt + FRAME_MS, now - FRAME_MS);
@@ -718,6 +725,8 @@ function frame(now: number): void {
     if (steps === 5) acc = 0;
   }
   renderer.perf.simMs = performance.now() - simStart;
+  // Paused screens (trade, camp, menu) can still raise events, e.g. the coin of a purchase (A2).
+  if (!running && sim.events.length) drainEvents();
 
   if (phase === 'play' && sim.player.state === 'dead') {
     phase = 'dead';

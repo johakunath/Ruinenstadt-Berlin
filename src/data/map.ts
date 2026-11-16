@@ -147,6 +147,9 @@ export interface MapDef {
   /** Hand-placed props (wrecks on a bridge, the tram). */
   fixedProps: Prop[];
   seed: number;
+  /** L2: district index (Köpenick 0) and item name flavor for the loot of this map. */
+  district?: number;
+  flavor?: 'neon' | 'gdr';
 }
 
 // ---------------------------------------------------------------- geometry
@@ -1027,7 +1030,10 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
   const breakables = breakableDefs(m, props, propColliders, rests);
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z));
-  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
+  const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
+  level.district = m.district ?? 0;
+  if (m.flavor) level.flavor = m.flavor;
+  return level;
 }
 
 /**

@@ -29,6 +29,7 @@ export const LOOT = {
 
 export const INGREDIENT_IDS: readonly IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
 /** 2D EZUT by role: ghoul and brute meat, spitter vegetables, the rest spices. */
+const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel' };
 const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese' };
 export const MATERIAL_IDS: readonly MaterialId[] = ['stoff', 'metall', 'chemie', 'kabel'];
 
@@ -162,7 +163,8 @@ export function killDrops(sim: Sim, e: Enemy): void {
   if (sim.rng.next() < zc) for (let i = 0; i < (boss ? 3 : 1); i++) spawnDrop(sim, e.x, e.z, { kind: 'ingredient', id: i ? sim.rng.pick(INGREDIENT_IDS) : ENEMY_INGREDIENT[kind] ?? 'gewuerz' }, spread(sim, 0.6), spread(sim, 0.6));
   if (sim.rng.next() < (boss ? 1 : e.elite ? 0.8 : 0.22) * mat) {
     const n = boss ? 5 : e.elite ? 2 : 1;
-    for (let i = 0; i < n; i++) spawnDrop(sim, e.x, e.z, { kind: 'material', id: sim.rng.pick(MATERIAL_IDS) });
+    // 2D EMAT: the first material follows the enemy's role (ghoul Stoff, brute Metall, spitter Chemie, raser and crow Kabel).
+    for (let i = 0; i < n; i++) spawnDrop(sim, e.x, e.z, { kind: 'material', id: i === 0 ? ENEMY_MATERIAL[kind] ?? sim.rng.pick(MATERIAL_IDS) : sim.rng.pick(MATERIAL_IDS) });
   } else if (sim.rng.next() < 0.03 * cook) {
     spawnDrop(sim, e.x, e.z, { kind: 'food' }, -0.33, 0);
   } else if (sim.rng.next() < (ITEM_CHANCE[kind] ?? 0.15) * 0.4) {
