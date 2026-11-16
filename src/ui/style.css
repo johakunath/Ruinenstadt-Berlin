@@ -663,8 +663,9 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 /* ---- phone and tablet HUD (playtest 2026-11-16): one pause button; the minimap sits top right as in 2D and opens the map. */
 #minimap { left: auto; right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
 #loot-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
-body.touch-on #map-btn, body.touch-on #inventory-btn { display: none; }
-body.touch-on #menu-btn { margin-left: auto; }
+/* Every device (playtest 2026-11-17): map and inventory open from the pause menu or by key (M, I/Tab, pad Y). */
+#map-btn, #inventory-btn { display: none; }
+#menu-btn { margin-left: auto; }
 body:has(#title:not([hidden])) #pause-nav, body:has(#dead:not([hidden])) #pause-nav { display: none; }
 #pause-nav .choice { flex: 1; }
 @media (max-height: 500px) {

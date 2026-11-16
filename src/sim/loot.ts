@@ -125,12 +125,14 @@ export function creditScrap(sim: Sim, amount: number, x: number, z: number, from
   sim.events.push({ type: 'scrap', amount, x, z });
 }
 
-const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55 };
-const SCRAP: Partial<Record<EnemyKind, number>> = { walker: 1, runner: 3, brute: 4, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70 };
+// 2D drop chances and Schrott by role (ghoul, raser, brute, spitter, crow).
+const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15 };
+const SCRAP: Partial<Record<EnemyKind, number>> = { walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, crow: 1, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70 };
 
 /** 2D `kill()`: bosses drop first, then one of material, item or heal. Scrap is credited at once. */
 export function killDrops(sim: Sim, e: Enemy): void {
   const kind = e.kind;
+  if (e.mini) return;
   const boss = !!ENEMIES[kind].boss;
   const big = kind === 'hauptmann';
   const il = lootLevel(sim);

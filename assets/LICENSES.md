@@ -13,10 +13,10 @@ Sounds are generated in code (`src/audio`). Textures start as code-painted place
 | `characters/hero.glb` | [Universal Base Characters [Standard]](https://quaternius.itch.io/universal-base-characters): `Superhero_Female_FullBody`, `Hair_Long` | Quaternius | CC0 1.0 | Base color only at 1024 px, clothing regions painted as vertex colors, code-built coat skirt, belt, pouches and scarf (3 extra scarf bones), hair recolored |
 | `characters/zombie.glb` | [Universal Base Characters [Standard]](https://quaternius.itch.io/universal-base-characters): `Superhero_Male_FullBody` | Quaternius | CC0 1.0 | Simplified to about 5k triangles, skin recolored at 512 px, rags as vertex colors, eyebrows removed |
 | `characters/anims.glb` | [Universal Animation Library [Standard]](https://quaternius.itch.io/universal-animation-library) and [Universal Animation Library 2 [Standard]](https://quaternius.itch.io/universal-animation-library-2) | Quaternius | CC0 1.0 | 38 clips kept (list: `CLIPS` in `tools/build-assets.mjs`), rotation tracks plus pelvis translation, resampled |
-
+| `characters/raptor.glb`, `characters/rex.glb` | [Animated Dinosaur Pack](https://quaternius.itch.io/animated-lowpoly-dinosaurs): `Velociraptor.fbx`, `Trex.fbx` | Quaternius | CC0 1.0 | Converted with `tools/build-creatures.mjs`: baked to meters, flat colors repainted as vertex colors (rotten hide, rib bars, wounds), clips renamed (Idle, Walk, Run, Attack, Jump, Death), scale tracks dropped |
 CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/ (each pack ships a `License.txt` with this dedication).
 
-The source packs are not committed. `tools/fetch-assets.sh` downloads them into `assets-src/`, `npm run assets` rebuilds the three files.
+The source packs are not committed. `tools/fetch-assets.sh` downloads them into `assets-src/`, `npm run assets` rebuilds the three files. The dinosaur pack is unpacked by hand to `assets-src/dinos/` (`Trex.fbx`, `Velociraptor.fbx`); `node tools/build-creatures.mjs` rebuilds `raptor.glb` and `rex.glb`.
 
 Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 

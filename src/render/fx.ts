@@ -1,4 +1,5 @@
-import { AbilityView } from './abilities';
+import { AbilityView, type Emitters } from './abilities';
+import { ThreatView } from './threats';
 import { allWeaponAttacks } from '../data/combat';
 import type { WeaponKindId } from '../data/items';
 // Effects: particles (fire, embers, sparks, dust), weapon smear, enemy telegraphs, impact
@@ -324,6 +325,7 @@ export class Fx {
   private flameDebt = 0;
   private time = 0;
   private readonly abilities: AbilityView;
+  private readonly threats: ThreatView;
 
   constructor(
     private readonly fires: Vector3[],
@@ -335,7 +337,12 @@ export class Fx {
       glow: (x, y, z, vx, vy, vz, life, size, r, g, b, gravity = 0, grow = 0.3) => this.glow.spawn({ x, y, z, vx, vy, vz, life, size, grow, r, g, b, gravity, drag: 1.5 }),
       dust: (x, y, z, vx, vy, vz, life, size, r, g, b) => this.dust.spawn({ x, y, z, vx, vy, vz, life, size, grow: 2, r, g, b, gravity: -0.3, drag: 3 }),
     });
-    this.group.add(this.glow.points, this.dust.points, this.smear.mesh, this.telegraphs.group, this.abilities.group);
+    const emit: Emitters = {
+      glow: (x, y, z, vx, vy, vz, life, size, r, g, b, gravity = 0, grow = 0.3) => this.glow.spawn({ x, y, z, vx, vy, vz, life, size, grow, r, g, b, gravity, drag: 1.5 }),
+      dust: (x, y, z, vx, vy, vz, life, size, r, g, b) => this.dust.spawn({ x, y, z, vx, vy, vz, life, size, grow: 2, r, g, b, gravity: -0.3, drag: 3 }),
+    };
+    this.threats = new ThreatView(emit);
+    this.group.add(this.glow.points, this.dust.points, this.smear.mesh, this.telegraphs.group, this.abilities.group, this.threats.group);
     const flashTex = paintGlow('rgba(255,245,220,1)', 'rgba(255,170,90,0)');
     for (let i = 0; i < 8; i++) {
       const sprite = new Sprite(new SpriteMaterial({ map: flashTex, blending: AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, opacity: 0 }));
@@ -439,6 +446,7 @@ export class Fx {
   /** One-shot ability effects (bolts, shock dust, impacts). */
   onEvent(ev: SimEvent): void {
     this.abilities.onEvent(ev);
+    this.threats.onEvent(ev);
   }
 
   /** A burst of colored sparks (pickups, shrines, found blessings). */
@@ -454,6 +462,7 @@ export class Fx {
     const hx = lerp(sim.player.px, sim.player.x, alpha);
     const hz = lerp(sim.player.pz, sim.player.z, alpha);
     this.abilities.update(sim, alpha, dt, hx, heroY, hz);
+    this.threats.update(sim, alpha, dt);
     this.time += dt;
     // Fire and embers keep burning through hitstop: only the fight freezes.
     // Only fires near the hero burn (a map has dozens); each gets the same rate as the courtyard barrel.

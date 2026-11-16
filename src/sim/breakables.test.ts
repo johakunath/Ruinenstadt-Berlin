@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { koepenickMap } from '../data/koepenick';
-import { generateLots, mapLevel } from '../data/map';
+import { generateLots, generateProps, mapLevel } from '../data/map';
 import { createBreakables, hitBreakable, type BreakableDef } from './breakables';
 import type { Collider } from './collide';
 import { Level } from './level';
@@ -92,11 +92,10 @@ describe('Köpenick breakables', () => {
   const map = koepenickMap(1);
   const level = mapLevel(map, generateLots(map));
 
-  it('has at least 30, none in the inner 60 % of an encounter', () => {
+  it('has at least 30; every crate and bin on the map can be broken', () => {
     expect(level.breakables.length).toBeGreaterThanOrEqual(30);
-    for (const b of level.breakables) {
-      for (const e of map.encounters) expect(Math.hypot(b.x - e.x, b.z - e.z)).toBeGreaterThanOrEqual(e.r * 0.6);
-    }
+    const props = generateProps(map, generateLots(map)).filter((p) => p.kind === 'crates' || p.kind === 'crate' || p.kind === 'bins');
+    expect(level.breakables.length).toBe(props.length);
   });
 
   it('has 3 crates in every Späti', () => {

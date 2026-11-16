@@ -58,7 +58,7 @@ const map = opts.map === 'koepenick' ? (() => {
 const level: Level | undefined = map?.level;
 
 // M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
-const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1;
+const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0;
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 if (save?.run && (save.run.map !== mapName || !level)) save = { ...save, run: null };
@@ -66,7 +66,7 @@ let difficulty: DifficultyId = save?.difficulty ?? DEFAULT_DIFFICULTY;
 // Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
 const cloud = new CloudSave(persist && !navigator.webdriver && !/^(localhost|127\.|0\.0\.0\.0|$)/.test(location.hostname));
 function freshSim(): Sim {
-  const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt };
+  const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt, spawn: opts.spawn };
   try { if (save) return simFromSave(save, base, false); } catch (err) { console.warn('Save unbrauchbar', err); save = null; clearSave(); }
   return createSim({ ...base, difficulty });
 }
@@ -86,9 +86,11 @@ function finishLootExit(leave: boolean): void {
   if (leave) {
     lootExit = 'off';
     lootChip.hidden = true;
-    wonFor = 0;
+    again();
   } else {
+    // Back into the map to fetch it.
     lootExit = 'search';
+    explore();
   }
 }
 /**
@@ -109,13 +111,14 @@ function pollLootPad(): void {
     else if (edge(0)) (document.activeElement === leave ? leave : find).click();
     else if (edge(1)) finishLootExit(false);
   } else if (lootExit === 'search' && edge(8)) {
-    finishLootExit(true);
+    lootExit = 'off';
+    lootChip.hidden = true;
   }
   lootPadDown = down;
 }
 document.getElementById('loot-find')!.addEventListener('click', () => finishLootExit(false));
 document.getElementById('loot-leave')!.addEventListener('click', () => finishLootExit(true));
-lootChip.addEventListener('click', () => finishLootExit(true));
+lootChip.addEventListener('click', () => { lootExit = 'off'; lootChip.hidden = true; });
 window.addEventListener('keydown', (e) => {
   if (lootExit === 'ask' && e.key === 'Escape') {
     e.preventDefault();
@@ -130,6 +133,45 @@ function checkpoint(): number {
   const i = Math.min(sim.run.index, level.encounters.length - 1);
   const zone = level.encounters[i]?.zone ?? 0;
   return level.encounters.findIndex((e) => e.zone === zone);
+}
+/** Seconds between the last boss's fall and the end screen. */
+const WON_DELAY = 6;
+function showWon(): void {
+  phase = 'won';
+  wonFor = -1;
+  saveNow(false); // loot collected after the last encounter and gear changes while exploring
+  input.enabled = false;
+  input.clear();
+  ui.showWon(sim.kills);
+}
+/** Stay in the freed district: walk, loot, break things, test the build. */
+function explore(): void {
+  document.getElementById('won')!.hidden = true;
+  document.getElementById('pause-finish')!.hidden = false;
+  phase = 'play';
+  wonFor = -1;
+  input.enabled = true;
+  input.clear();
+}
+/** A new run through the district with the gear the hero has. */
+function again(): void {
+  lootExit = 'off';
+  lootWarn.hidden = true;
+  lootChip.hidden = true;
+  sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
+  renderer?.reset(sim);
+  start();
+}
+/** Everything back to the start: gear, Schrott, checkpoint. The telemetry id stays. */
+function newGame(): void {
+  if (!renderer) return;
+  clearSave();
+  save = null;
+  sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, difficulty });
+  renderer?.reset(sim);
+  ui.setResume(null, difficulty);
+  if (persist) { save = snapshot(sim, mapName, false); writeSave(save); cloud.queue(save); }
+  start();
 }
 let deadFor = 0;
 let renderer: GameRenderer | null = null;
@@ -161,9 +203,15 @@ const ui = new Ui(opts, {
     start();
   },
   onAgain: () => {
-    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
-    renderer?.reset(sim);
-    start();
+    // Valuable loot still on the ground: ask once before the map is left.
+    if (importantDrops(sim).length > 0 && lootExit !== 'ask') {
+      lootExit = 'ask';
+      document.getElementById('won')!.hidden = true;
+      lootWarn.hidden = false;
+      document.getElementById('loot-find')?.focus();
+      return;
+    }
+    again();
   },
   onMapToggle: (open) => {
     input.enabled = phase === 'play' && !open && !inventory.open;
@@ -215,6 +263,22 @@ document.getElementById('inventory-btn')!.addEventListener('click', input.onInve
 // The pause menu leads to inventory and map (on touch the HUD has only the pause button).
 document.getElementById('pause-inventory')!.addEventListener('click', () => { ui.toggleOptions(false); input.onInventory(); });
 document.getElementById('pause-map')!.addEventListener('click', () => { ui.toggleOptions(false); ui.toggleMap(true); });
+document.getElementById('won-explore')!.addEventListener('click', explore);
+document.getElementById('pause-finish')!.addEventListener('click', () => { ui.toggleOptions(false); showWon(); });
+// "Ganz neu anfangen" asks once: the second click within a few seconds wipes the save.
+{
+  const b = document.getElementById('new-game') as HTMLButtonElement;
+  let armed = 0;
+  b.addEventListener('click', () => {
+    if (armed && performance.now() - armed < 4000) { b.textContent = 'Ganz neu anfangen'; armed = 0; newGame(); return; }
+    armed = performance.now();
+    b.textContent = 'Wirklich? Alles löschen';
+    setTimeout(() => { if (armed && performance.now() - armed >= 3900) { b.textContent = 'Ganz neu anfangen'; armed = 0; } }, 4000);
+  });
+}
+// Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
+window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
+canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
 window.addEventListener('keydown', e => {
   if (inventory.open && ['KeyM', 'Tab', 'KeyP', 'Escape'].includes(e.code)) {
     if (e.code === 'Escape' || e.code === 'KeyP') inventory.toggle(false);
@@ -234,7 +298,9 @@ if (map) {
   ui.mapSource = () => {
     const p = sim.player;
     const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false });
-    return svg.replace('</svg>', `<circle cx="${p.x.toFixed(1)}" cy="${p.z.toFixed(1)}" r="5" fill="#b8261c" stroke="#f0e2c8" stroke-width="1.5"/></svg>`);
+    // The hero: the same arrow as on the minimap, in a ring so it is found at a glance (playtest 2026-11-17).
+    const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
+    return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
   };
 } else {
   const sub = document.getElementById('title-sub');
@@ -301,6 +367,9 @@ document.getElementById('cloud-join')!.addEventListener('click', () => {
 
 function start(resumed = false): void {
   audio.start();
+  document.getElementById('pause-finish')!.hidden = true;
+  // Phones and tablets play in fullscreen (needs the tap that started the game; refused quietly elsewhere).
+  if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement && !navigator.webdriver) void document.documentElement.requestFullscreen?.()?.catch(() => undefined);
   phase = 'play';
   deadFor = 0;
   wonFor = -1;
@@ -397,14 +466,12 @@ function drainEvents(): void {
         break;
       }
       case 'victory':
+        // Playtest 2026-11-17: no dialog over the falling boss. The run counts as won now; the
+        // end screen follows after a while and offers to stay. The loot warning comes when leaving.
         saveNow(false);
-        if (importantDrops(sim).length > 0) {
-          lootExit = 'ask';
-          input.enabled = false;
-          input.clear();
-          lootWarn.hidden = false;
-          document.getElementById('loot-find')?.focus();
-        } else wonFor = 0;
+        telemetry.end('win');
+        ui.banner('Köpenick befreit');
+        wonFor = 0;
         break;
       case 'scrap':
         if (ev.amount > 0) lootUi.float(`+${ev.amount} Schrott`, '#a8957d', ev.x, 1.2, ev.z);
@@ -433,6 +500,13 @@ function drainEvents(): void {
         break;
       case 'secondWind':
         ui.banner('Zweiter Atem');
+        break;
+      case 'bossRage':
+        ui.banner(`${ev.name} tobt`);
+        if (opts.rumble) input.rumble(1, 220);
+        break;
+      case 'zoneHit':
+        if (ev.hit && opts.rumble) input.rumble(1, 160);
         break;
       case 'blessing': {
         const perk = PERKS.find((p) => p.id === ev.id);
@@ -537,18 +611,14 @@ function frame(now: number): void {
   }
   if (wonFor >= 0 && phase === 'play') {
     wonFor += dt;
-    if (wonFor > 2.5) {
-      phase = 'won';
-      saveNow(false); // loot collected after the last encounter and gear changes during the exit search
-      telemetry.end('win');
-      input.enabled = false;
-      ui.showWon(sim.kills);
-    }
+    if (wonFor > WON_DELAY && !abilitiesUi.open && !inventory.open) showWon();
   }
   if (lootExit === 'search') {
     const left = importantDrops(sim).length;
-    if (left === 0) finishLootExit(true);
-    else {
+    if (left === 0) {
+      lootExit = 'off';
+      lootChip.hidden = true;
+    } else {
       lootChip.hidden = false;
       document.getElementById('loot-n')!.textContent = String(left);
       document.getElementById('loot-pad')!.hidden = input.device !== 'gamepad';

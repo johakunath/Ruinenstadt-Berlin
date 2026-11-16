@@ -6,6 +6,7 @@ import {
   InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial,
 } from 'three';
 import { POWER } from '../data/powers';
+import { ELITES as ELITE_DEFS } from '../data/enemies';
 import { lerp, Rng } from '../sim/math';
 import type { Sim, SimEvent } from '../sim/types';
 import { groundY } from './ground';
@@ -298,6 +299,7 @@ export class AbilityView {
       m.visible = true;
       m.position.set(x, groundY(x, z) + 0.06, z);
       m.scale.setScalar(e.def.radius * 1.9 * (1 + 0.06 * Math.sin(this.time * 5)));
+      (m.material as MeshBasicMaterial).color.setHex(ELITE_DEFS[e.elite].color);
     }
     for (let i = ne; i < ELITES; i++) this.elites[i]!.visible = false;
 

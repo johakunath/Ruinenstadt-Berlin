@@ -1,6 +1,6 @@
 # M6 Save, wave checkpoint, difficulty [Claude]
 
-Status: done (PR pending)
+Status: done (PR #16)
 
 ## Goal
 A reload (tab killed, browser switch) resumes at the last wave (B1). Versioned save, no 2D import. Difficulty choice.
