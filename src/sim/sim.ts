@@ -1,4 +1,6 @@
 import { createInventory, type Inventory } from './inventory';
+import { createBreakables, sweepBreakables } from './breakables';
+import { killDrops, updateDrops } from './loot';
 // The simulation: one fixed 60 Hz step. No rendering, no DOM, no Three.js; unit tested.
 import { HIT_FEEL, PLAYER } from '../data/combat';
 import { courtyardLevel } from '../data/courtyard';
@@ -33,6 +35,7 @@ export interface SimOptions {
 
 export function createSim(opts: SimOptions = {}): Sim {
   const level = opts.level ?? courtyardLevel();
+  level.restore();
   const startAt = opts.startAt ?? 0;
   const zone = level.encounters[startAt]?.zone ?? 0;
   const entry = startAt > 0 ? level.zones[zone]?.entry : undefined;
@@ -57,10 +60,16 @@ export function createSim(opts: SimOptions = {}): Sim {
     rest: { at: -1, seen: [] },
     rng: new Rng(opts.seed ?? 1),
     nextId: 1,
+    drops: [],
+    breakables: createBreakables(level.breakables),
+    lootWaves: 0,
+    lootCtx: { district: 0, luck: stats.luck, wave: 1, itemId: 0 },
+    bagFullT: 0,
     kills: 0,
     spawnT: opts.empty || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
   };
+  sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...Object.values(equipment)].map((i) => i?.id ?? 0));
   sim.player.hp = stats.maxHp;
   if (level.expedition) {
     startRunAt(sim, startAt);
@@ -104,6 +113,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   updateEnemies(sim);
   resolveBodies(sim);
   playerSweep(sim);
+  updateDrops(sim);
   enemyStrikes(sim);
   removeCorpses(sim);
   if (sim.level.expedition && sim.stress === 0) updateDirector(sim);
@@ -155,6 +165,7 @@ function playerSweep(sim: Sim): void {
   p.sweeping = true;
   p.sweepLo = lo;
   p.sweepHi = hi;
+  if (sim.breakables.length > 0) sweepBreakables(sim, lo, hi, a.inner, a.reach);
   const feel = HIT_FEEL[a.weight];
   for (const e of sim.enemies) {
     if (e.state === 'dead' || p.hits.includes(e.id)) continue;
@@ -189,6 +200,7 @@ function killEnemy(sim: Sim, e: Enemy): void {
   e.stateT = 0;
   e.hp = 0;
   sim.kills++;
+  killDrops(sim, e);
   if (sim.player.state !== 'dead') sim.player.hp = Math.min(sim.stats.maxHp, sim.player.hp + sim.stats.leech);
 }
 

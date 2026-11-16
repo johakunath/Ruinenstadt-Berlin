@@ -70,5 +70,10 @@ export function spatiProps(l: Landmark): Prop[] {
     const w = spatiWorld(l, x, z);
     out.push({ kind: 'sandbags', x: w.x, z: w.z, rot: l.rot, size: 1 });
   }
+  // Three crates to break, clear of the furniture and the door lane.
+  for (const [x, z, rot] of [[-4.55, -1.6, 0.2], [-4.4, 2.3, -0.3], [4.55, 1.9, 0.1]] as const) {
+    const w = spatiWorld(l, x, z);
+    out.push({ kind: 'crate', x: w.x, z: w.z, rot: l.rot + rot, size: 1 });
+  }
   return out;
 }

@@ -6,6 +6,7 @@ import type { RestArea } from './rest';
 import type { Bounds } from './flowfield';
 import type { EnemyKind } from '../data/enemies';
 import { onFerryBoat, type FerryLane } from './ferry';
+import type { BreakableDef } from './breakables';
 
 export interface Point {
   x: number;
@@ -105,18 +106,49 @@ export class Level {
     readonly ferries: FerryLane[] = [],
     /** Späti rest stops (`src/sim/rest.ts`). */
     readonly rests: RestArea[] = [],
+    /** Props the hero can break (M4); their colliders are in `colliders` until broken. */
+    readonly breakables: BreakableDef[] = [],
   ) {
-    for (const c of colliders) {
-      const e = c.kind === 'circle' ? c.r : Math.hypot(c.hx, c.hz);
-      for (let gx = Math.floor((c.x - e) / HASH); gx <= Math.floor((c.x + e) / HASH); gx++) {
-        for (let gz = Math.floor((c.z - e) / HASH); gz <= Math.floor((c.z + e) / HASH); gz++) {
-          const k = key(gx, gz);
-          let list = this.hash.get(k);
-          if (!list) this.hash.set(k, (list = []));
-          list.push(c);
-        }
-      }
+    for (const c of colliders) this.insert(c);
+  }
+
+  private readonly removed: Collider[] = [];
+
+  private cells(c: Collider, fn: (cell: number) => void): void {
+    const e = c.kind === 'circle' ? c.r : Math.hypot(c.hx, c.hz);
+    for (let gx = Math.floor((c.x - e) / HASH); gx <= Math.floor((c.x + e) / HASH); gx++) {
+      for (let gz = Math.floor((c.z - e) / HASH); gz <= Math.floor((c.z + e) / HASH); gz++) fn(key(gx, gz));
     }
+  }
+
+  private insert(c: Collider): void {
+    this.cells(c, (k) => {
+      let list = this.hash.get(k);
+      if (!list) this.hash.set(k, (list = []));
+      list.push(c);
+    });
+  }
+
+  /** Takes a collider out of the level (a broken prop). `restore` puts it back for the next run. */
+  remove(c: Collider): void {
+    const i = this.colliders.indexOf(c);
+    if (i < 0) return;
+    this.colliders.splice(i, 1);
+    this.cells(c, (k) => {
+      const list = this.hash.get(k);
+      const j = list ? list.indexOf(c) : -1;
+      if (list && j >= 0) list.splice(j, 1);
+    });
+    this.removed.push(c);
+  }
+
+  /** Puts every removed collider back; a new sim starts on an intact map. */
+  restore(): void {
+    for (const c of this.removed) {
+      this.colliders.push(c);
+      this.insert(c);
+    }
+    this.removed.length = 0;
   }
 
   /** Sim time the boat positions refer to; the sim sets it every step. */
