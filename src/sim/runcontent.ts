@@ -174,6 +174,20 @@ function makeElite(e: ReturnType<typeof spawnEnemy>): void {
   e.hp = e.maxHp = Math.round(e.maxHp * STATUS.eliteHp);
 }
 
+/** The three guards of the captive (one elite). Also called when a checkpoint with an unfinished rescue is loaded. */
+export function spawnGuards(s: Sim, rng: Rng = new Rng(s.content.rng)): void {
+  const C = s.content.captive;
+  if (!C || C.free) return;
+  const L = s.level;
+  const T = tier(s);
+  for (let i = 0; i < 3; i++) {
+    const q = freeSpot(L, rng, C.x, C.z, 1.2, 2.6, 0.5, (x, z) => !inFight(L, x, z, 3) && restAt(L.rests, x, z) < 0) ?? C;
+    const g = spawnEnemy(s, q.x, q.z, i === 0 ? 'brute' : rng.pick(['walker', 'walker', 'runner'] as const), T.hp, T.dmg);
+    if (i === 0) makeElite(g);
+    g.guard = true;
+  }
+}
+
 function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
   const c = s.content;
   const p = s.player;
@@ -232,12 +246,7 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
       at = spot(CONTENT.rescue.near, CONTENT.rescue.far, 2);
       if (!at) break;
       c.captive = { ...at, survivor: rng.pick(free), free: false };
-      for (let i = 0; i < 3; i++) {
-        const q = freeSpot(L, rng, at.x, at.z, 1.2, 2.6, 0.5, clearOf) ?? at;
-        const g = spawnEnemy(s, q.x, q.z, i === 0 ? 'brute' : rng.pick(['walker', 'walker', 'runner'] as const), T.hp, T.dmg);
-        if (i === 0) makeElite(g);
-        g.guard = true;
-      }
+      spawnGuards(s, rng);
       break;
     }
     case 'cache':

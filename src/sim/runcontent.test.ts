@@ -294,4 +294,28 @@ describe('run content in a checkpoint', () => {
     expect(back.content.shrines).toEqual(s.content.shrines);
     expect(back.content.done[3]).toBe(true);
   });
+  it('an unfinished rescue gets its guards back on a reload (review of PR #18)', () => {
+    const s = make();
+    onLeg(s, 'rescue');
+    run(s, 2);
+    expect(s.content.captive).not.toBeNull();
+    const save = parseSave(JSON.stringify(snapshot(s, def.name, true)))!;
+    expect(save.run).not.toBeNull();
+    const back = simFromSave(save, { seed: save.run!.rng, level }, true);
+    expect(back.enemies.filter((e) => e.guard)).toHaveLength(3);
+    expect(back.enemies.filter((e) => e.elite)).toHaveLength(1);
+    walkTo(back, back.content.captive!);
+    run(back, 2);
+    expect(back.content.captive?.free).toBe(false);
+  });
+  it('the profile carries no run blessings and no shrine buffs into the next run', async () => {
+    const { profileOf } = await import('./save');
+    const s = make();
+    s.statContext.perks.dmg = 3;
+    s.statContext.shrines = { as: true };
+    const next = createSim({ level, statContext: profileOf(s).statContext });
+    expect(next.statContext.perks).toEqual({});
+    expect(next.stats.attackSpeed).toBeCloseTo(1);
+    expect(next.stats.damage).toBeCloseTo(10);
+  });
 });

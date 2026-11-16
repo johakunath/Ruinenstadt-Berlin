@@ -32,7 +32,7 @@ import { contentMarks, EVENT_TEXT } from './sim/runcontent';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
 import { backupSave, clearSave, loadSave, writeSave } from './save';
 import { CloudSave, formatCode, type SyncState } from './sync';
-import { simFromSave, snapshot, type SaveV1 } from './sim/save';
+import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
 
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
@@ -156,12 +156,12 @@ const ui = new Ui(opts, {
     ui.setDifficulty(id);
   },
   onRetry: () => {
-    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
   onAgain: () => {
-    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
+    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
@@ -244,6 +244,9 @@ if (map) {
 /** Wave checkpoint (B1) or, after the last encounter, the profile alone. */
 function saveNow(withRun: boolean): void {
   if (!persist) return;
+  // Mid-fight there is no checkpoint to write (fights are open: a shop or a hidden blessing can be
+  // reached during a wave). Keep the last one instead of replacing it with "no run".
+  if (withRun && level && sim.run.phase === 'fight' && sim.player.state !== 'dead') return;
   save = snapshot(sim, mapName, withRun);
   writeSave(save);
   cloud.queue(save);
