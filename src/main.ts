@@ -690,12 +690,13 @@ function frame(now: number): void {
   renderer.perf.frame(frameMs);
   input.poll(dt, sim.hitstop > 0);
   menu.pollPad(now);
-  intro.pollPad();
-  if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   camp.pollPad(now);
   if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
 
-  abilitiesUi.update(sim, phase === 'play' && !menu.isOpen);
+  // The tutorial card blocks the blessing pad; it is polled after, so its closing press is not a pick (Codex review).
+  abilitiesUi.update(sim, phase === 'play' && !menu.isOpen, intro.isOpen);
+  intro.pollPad();
+  if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
   const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask';
   const simStart = performance.now();

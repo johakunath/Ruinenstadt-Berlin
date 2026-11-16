@@ -232,7 +232,8 @@ export class AbilitiesUi {
     A.key.textContent = key;
   }
 
-  update(sim: Sim, visible: boolean): void {
+  /** `padBlocked`: a card lies on top (tutorial); pad state is tracked but not acted on. */
+  update(sim: Sim, visible: boolean, padBlocked = false): void {
     this.sim = sim;
     const a = sim.abilities;
     const wasOpen = this.open;
@@ -266,7 +267,7 @@ export class AbilitiesUi {
     const pad = Array.from(navigator.getGamepads?.() ?? []).find((p) => p?.connected);
     const down = pad?.buttons.map((b) => b.pressed) ?? [];
     const edge = (i: number): boolean => !!down[i] && !this.padDown[i];
-    if (this.open) {
+    if (padBlocked) { /* only track */ } else if (this.open) {
       if (edge(14) || edge(12)) this.focus(this.selection - 1);
       if (edge(15) || edge(13)) this.focus(this.selection + 1);
       if (edge(0)) this.pick(this.selection);
