@@ -196,10 +196,13 @@ function playerSweep(sim: Sim): void {
     if (e.state === 'dead' || p.hits.includes(e.id)) continue;
     if (!sectorHitsCircle(p.x, p.z, p.facing, lo, hi, a.inner, a.reach, e.x, e.z, e.def.radius)) continue;
     p.hits.push(e.id);
-    strike(sim, e, a.damage, {
-      crit: p.critical, knock: a.knockback, feel: p.critical || p.wucht ? 'heavy' : a.weight,
+    const o = {
+      crit: p.critical, knock: a.knockback, feel: p.critical || p.wucht ? 'heavy' as const : a.weight,
       stun: Math.max(hammer ? WEAPON.hammer.stun : 0, p.wucht ? WEAPON.wucht.stun : 0),
-    });
+    };
+    strike(sim, e, a.damage, o);
+    // Doppelklinge: the second cut (damage per cut was set when the swing started).
+    if (sim.stats.kind === 'blade' && (sim.statContext.perks.m_doppel ?? 0) > 0) strike(sim, e, a.damage, { ...o, knock: 0, feel: 'none' });
   }
 }
 

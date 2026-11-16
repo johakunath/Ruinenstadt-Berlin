@@ -79,18 +79,20 @@ describe('blessing choice (2D offerPerks)', () => {
     }
     expect(two).toBeGreaterThan(20);
   });
-  it('the weapon mod appears rarely, from wave five on, once per run, for the held weapon only', () => {
+  it('an Umbau appears rarely, from wave three on, once per run, one of the three of the held weapon', () => {
     const mods = (waves: number, perks: Perks = {}): string[] => {
       const out: string[] = [];
-      for (let seed = 1; seed <= 200; seed++) { const s = fresh('hammer', perks, seed); s.lootWaves = waves; offerBlessings(s); out.push(...s.abilities.offers.filter((o) => o.quality === 3).map((o) => o.id)); }
+      for (let seed = 1; seed <= 300; seed++) { const s = fresh('hammer', perks, seed); s.lootWaves = waves; offerBlessings(s); out.push(...s.abilities.offers.filter((o) => o.quality === 3).map((o) => o.id)); }
       return out;
     };
-    expect(mods(4)).toHaveLength(0);
-    const late = mods(6);
-    expect(late.length).toBeGreaterThan(20);
-    expect(late.length).toBeLessThan(80);
-    expect(new Set(late)).toEqual(new Set(['m_dampf']));
-    expect(mods(6, { m_dampf: 1 })).toHaveLength(0);
+    expect(mods(2)).toHaveLength(0);
+    const late = mods(3);
+    expect(late.length).toBeGreaterThan(35);
+    expect(late.length).toBeLessThan(110);
+    expect(new Set(late)).toEqual(new Set(['m_dampf', 'm_beben', 'm_wurf']));
+    expect(mods(6, { m_beben: 1 })).toHaveLength(0);
+    // Every weapon has three.
+    for (const k of ['blade', 'hammer', 'spear', 'sling'] as const) expect(PERKS.filter((p) => p.weapon === k)).toHaveLength(3);
   });
   it('one reroll per choice costs Schrott; a second choice queues', () => {
     const s = fresh();
@@ -395,5 +397,84 @@ describe('loot blessings', () => {
     expect(s.player.attack?.damage).toBeCloseTo(11);
     for (let t = 0; t < 31; t += DT) stepSim(s, NO_INPUT);
     expect(s.abilities.fed).toBe(0);
+  });
+});
+
+describe('G1 Umbau cards (3D additions)', () => {
+  it('Doppelklinge: every swing cuts twice for 60% each', () => {
+    const s = fresh('blade', { m_doppel: 1 }), e = dummy(s, 0, 1.4);
+    run(s, 1, { attack: true });
+    run(s, 30);
+    expect(lost(e)).toBe(12);
+  });
+  it('Sturmklinge: faster, weaker, and each swing carries the hero a meter further', () => {
+    const base = fresh('blade'), s = fresh('blade', { m_sturm: 1 });
+    expect(s.stats.attackSpeed).toBeCloseTo(1.25);
+    expect(s.stats.damage).toBeCloseTo(8.5);
+    const z0 = s.player.z, b0 = base.player.z;
+    run(s, 1, { attack: true }); run(s, 30);
+    run(base, 1, { attack: true }); run(base, 30);
+    const extra = (s.player.z - z0) - (base.player.z - b0);
+    expect(extra).toBeGreaterThan(0.9);
+    expect(extra).toBeLessThan(1.2);
+  });
+  it('Erdbeben: the hammer finisher ring is twice as wide and stuns for a second', () => {
+    const s = fresh('hammer', { m_beben: 1 }), far = dummy(s, 0, 8);
+    s.player.chain = 'light3'; s.player.chainT = 1;
+    run(s, 1, { attack: true });
+    run(s, 50);
+    expect(lost(far)).toBe(7);
+    expect(far.staggerDur).toBeCloseTo(1);
+    const n = fresh('hammer'), out = dummy(n, 0, 8);
+    n.player.chain = 'light3'; n.player.chainT = 1;
+    run(n, 1, { attack: true });
+    run(n, 50);
+    expect(lost(out)).toBe(0);
+  });
+  it('Wurfhammer: the finisher throws the hammer through three bodies', () => {
+    const s = fresh('hammer', { m_wurf: 1 }), row = [6, 7, 8, 9, 10].map((z) => dummy(s, 0, z));
+    s.player.chain = 'light3'; s.player.chainT = 1;
+    run(s, 1, { attack: true });
+    run(s, 70);
+    expect(row.map(lost)).toEqual([18, 18, 18, 18, 0]);
+  });
+  it('Fegestoß: thrusts become wide, shorter sweeps; the finisher stays a thrust', () => {
+    const s = fresh('spear', { m_fege: 1 }), side = dummy(s, 1.9, 1.3), far = dummy(s, 0, 3.9);
+    run(s, 1, { attack: true });
+    expect(s.player.attack?.style).toBe('slash');
+    run(s, 30);
+    expect(lost(side)).toBe(10);
+    expect(lost(far)).toBe(0);
+    s.player.state = 'move'; s.player.chain = 'light3'; s.player.chainT = 1;
+    run(s, 1, { attack: true });
+    expect(s.player.attack?.style).toBe('thrust');
+  });
+  it('Sturmlanze: thrusts right after a dodge hit twice as hard and reach further', () => {
+    const s = fresh('spear', { m_lanze: 1 });
+    run(s, 1, { attack: true });
+    expect(s.player.attack?.damage).toBe(10);
+    run(s, 40);
+    run(s, 1, { dodge: true });
+    run(s, 30);
+    s.player.chain = null;
+    run(s, 1, { attack: true });
+    expect(s.player.attack?.damage).toBe(20);
+    expect(s.player.attack?.reach).toBeCloseTo(3.27 * 1.5);
+  });
+  it('Querschläger: a shot jumps once to the nearest other enemy for 80%', () => {
+    const s = fresh('sling', { m_quer: 1 }), a = dummy(s, 0, 5), b = dummy(s, 3, 5);
+    run(s, 1, { attack: true });
+    run(s, 80);
+    expect(lost(a)).toBe(10);
+    expect(lost(b)).toBe(8);
+  });
+  it('Schnellfeuer: faster and weaker shots, the finisher is a fan of five', () => {
+    const s = fresh('sling', { m_salve: 1 });
+    expect(s.stats.attackSpeed).toBeCloseTo(1.4);
+    expect(s.stats.damage).toBeCloseTo(7.5);
+    s.player.chain = 'light4'; s.player.chainT = 1;
+    run(s, 1, { attack: true });
+    run(s, 8);
+    expect(s.abilities.projectiles).toHaveLength(5);
   });
 });
