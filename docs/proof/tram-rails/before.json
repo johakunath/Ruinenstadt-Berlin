@@ -1,0 +1,12 @@
+[
+  {
+    "stage": "before",
+    "profile": "Leistung",
+    "errors": []
+  },
+  {
+    "stage": "before",
+    "profile": "Qualität",
+    "errors": []
+  }
+]

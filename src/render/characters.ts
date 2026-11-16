@@ -2,6 +2,7 @@
 // sim state into poses. One-shot clips (attack, dodge, hit, death) are driven by sim time, so
 // the pose always matches the hitbox and freezes with hitstop; loops run on their own clock.
 import { groundY } from './ground';
+import { HERO_LAYER } from './layers';
 import {
   AnimationClip, AnimationMixer, Bone, Color, CylinderGeometry, Group, LoopRepeat, Mesh, PlaneGeometry, Quaternion,
   SkinnedMesh, Sphere, Vector3, type AnimationAction, type Object3D,
@@ -245,6 +246,7 @@ export class HeroView {
       const bone = model.getObjectByName(name) as Bone | undefined;
       if (bone) this.scarf.push({ bone, rest: bone.quaternion.clone(), back: 0, side: 0 });
     }
+    this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
   }
 
   update(p: Player, alpha: number, dt: number, frozen: boolean): void {

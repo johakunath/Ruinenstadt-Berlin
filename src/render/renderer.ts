@@ -19,7 +19,6 @@ import { Post } from './post';
 import type { Profile } from './profile';
 import { buildWorld, FX_LAYER, type World } from './world';
 import { buildMapWorld } from './map-world';
-import { cutout } from './cutout';
 import { groundY, setGround } from './ground';
 import { heightAt } from '../data/map';
 import { COURTYARD } from '../data/courtyard';
@@ -96,7 +95,6 @@ export class GameRenderer {
       opts.cam,
       B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 14 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
     );
-    cutout.on.value = opts.map ? 1 : 0;
     const def = opts.map?.def;
     setGround(def ? (x, z) => heightAt(def, x, z) : () => 0);
     this.scene.background = new Color(NIGHT);
@@ -291,8 +289,6 @@ export class GameRenderer {
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     this.world.follow?.(px, pz);
-    cutout.hero.value.set(px, py, pz);
-    cutout.cam.value.copy(this.cam.position);
     this.fightRing(sim);
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);

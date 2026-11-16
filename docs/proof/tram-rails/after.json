@@ -1,0 +1,12 @@
+[
+  {
+    "stage": "after",
+    "profile": "Leistung",
+    "errors": []
+  },
+  {
+    "stage": "after",
+    "profile": "Qualität",
+    "errors": []
+  }
+]

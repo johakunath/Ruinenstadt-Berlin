@@ -1,6 +1,7 @@
 // Collects static geometry per material and merges it into one mesh each, so the whole
 // courtyard costs a handful of draw calls.
-import { BoxGeometry, BufferAttribute, BufferGeometry, Matrix4, Vector3, type Material, Mesh } from 'three';
+import { BoxGeometry, BufferAttribute, BufferGeometry, Matrix4, Vector3, type Material, Mesh, MeshBasicMaterial } from 'three';
+import { OCCLUDER_LAYER } from './layers';
 
 type RGB = readonly [number, number, number];
 const WHITE: RGB = [1, 1, 1];
@@ -15,6 +16,35 @@ export class Batch {
   private uvs: number[] = [];
   private colors: number[] = [];
   private indices: number[] = [];
+  private occluderIndices: number[] = [];
+  private excludedOccluderIndices = new Set<number>();
+
+  get indexCount(): number { return this.indices.length; }
+
+  captureOccluderFrom(first: number): void {
+    for (let i = first; i < this.indices.length; i++) {
+      if (!this.excludedOccluderIndices.has(i)) this.occluderIndices.push(this.indices[i]!);
+    }
+    this.excludedOccluderIndices.clear();
+  }
+
+  excludeOccluderFrom(first: number): void {
+    for (let i = first; i < this.indices.length; i++) this.excludedOccluderIndices.add(i);
+  }
+
+  /** Position-only copy of explicitly classified triangles; beauty batching remains unchanged. */
+  appendOccluder(positions: number[], indices: number[]): void {
+    const remap = new Map<number, number>();
+    for (const old of this.occluderIndices) {
+      let next = remap.get(old);
+      if (next === undefined) {
+        next = positions.length / 3;
+        remap.set(old, next);
+        positions.push(this.positions[old * 3]!, this.positions[old * 3 + 1]!, this.positions[old * 3 + 2]!);
+      }
+      indices.push(next);
+    }
+  }
 
   get empty(): boolean {
     return this.indices.length === 0;
@@ -77,8 +107,43 @@ export class Batch {
 /** Batches keyed by material. */
 export class BatchSet {
   private readonly map = new Map<Material, Batch>();
+  private capturing = false;
   /** Height offset handed to every batch (see Batch.lift). */
   lift = 0;
+
+  /** Classify geometry by the object being built, never by its shared material. */
+  captureOccluder(build: () => void): void {
+    if (this.capturing) { build(); return; }
+    const starts = new Map([...this.map].map(([material, batch]) => [material, batch.indexCount]));
+    this.capturing = true;
+    try { build(); } finally {
+      this.capturing = false;
+      for (const [material, batch] of this.map) batch.captureOccluderFrom(starts.get(material) ?? 0);
+    }
+  }
+
+  /** Small attachments remain visible but cannot inherit an enclosing building capture. */
+  excludeOccluder(build: () => void): void {
+    if (!this.capturing) { build(); return; }
+    const starts = new Map([...this.map].map(([material, batch]) => [material, batch.indexCount]));
+    try { build(); } finally {
+      for (const [material, batch] of this.map) batch.excludeOccluderFrom(starts.get(material) ?? 0);
+    }
+  }
+
+  occluderMesh(): Mesh | null {
+    const positions: number[] = [], indices: number[] = [];
+    for (const batch of this.map.values()) batch.appendOccluder(positions, indices);
+    if (!indices.length) return null;
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+    geometry.setIndex(indices);
+    geometry.computeBoundingSphere();
+    const mesh = new Mesh(geometry, OCCLUDER_PLACEHOLDER);
+    mesh.name = 'large-occluder-depth';
+    mesh.layers.set(OCCLUDER_LAYER);
+    return mesh;
+  }
 
   of(material: Material): Batch {
     let b = this.map.get(material);
@@ -99,6 +164,8 @@ export class BatchSet {
     return list;
   }
 }
+
+const OCCLUDER_PLACEHOLDER = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 
 /** Box whose UVs are in meters times `uvScale`, so textures keep their world size on any box. */
 export function boxGeo(sx: number, sy: number, sz: number, uvScale = 1): BoxGeometry {

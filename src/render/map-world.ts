@@ -16,8 +16,11 @@ import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet, boxGeo } from './batch';
-import { applyCutout } from './cutout';
+import { isLargeProp } from './layers';
 import { Materials, type LitMaterial } from './materials';
+import { loadGroundTexture } from './ground-textures';
+import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
+import { TRAM_BRIDGE_DECK } from '../data/tram';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
   Builder, buildAltbau, buildProp, type BreakableView, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
@@ -37,6 +40,7 @@ interface LightSpot {
 }
 
 interface MapMats extends Mats {
+  railSteel: LitMaterial;
   ground: LitMaterial;
   /** Ground scatter atlas (puddles, leaves, trash, rubble). */
   litter: LitMaterial;
@@ -113,9 +117,11 @@ function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
+  const uDirt = { value: dirt };
   const m: MapMats = {
     ...base,
-    ground: groundMaterial(materials, o, dirt),
+    railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
+    ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
     asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
     path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
@@ -138,11 +144,14 @@ function makeMapMats(materials: Materials): MapMats {
     })(),
     frond: materials.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
   };
-  // Buildings, landmarks and tree crowns get the see-through cutout. Small props (iron: lamps, bridge
-  // rails, fences; wood: crates, benches) stay solid (playtest 2026-11-15).
-  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.spatiSign, m.frond, ...Object.values(m.plaster)]) {
-    applyCutout(mat);
-  }
+  loadGroundTexture('dirt', o.anisotropy, texture => {
+    uDirt.value = m.path.map = texture;
+    dirt.dispose();
+  });
+  loadGroundTexture('litter', o.anisotropy, texture => {
+    m.litter.map?.dispose();
+    m.litter.map = texture;
+  });
   return m;
 }
 
@@ -153,11 +162,20 @@ function makeMapMats(materials: Materials): MapMats {
  * vertex (`splat` weights) with a height blend, so grass grows into the paving joints and areas fade
  * into each other. Cost: three extra texture reads on ground pixels, no extra draw calls.
  */
-function groundMaterial(materials: Materials, o: PaintOptions, dirt: Texture): LitMaterial {
+function groundMaterial(materials: Materials, o: PaintOptions, uDirt: { value: Texture }): LitMaterial {
   const mat = materials.surface({ map: paintGrass(o).map, roughness: 0.95, vertexColors: true });
-  const uDirt = { value: dirt };
   const uPave = { value: paintPaving(o).map };
   const uLeaf = { value: paintLeafLitter(o).map };
+  loadGroundTexture('grass', o.anisotropy, texture => {
+    mat.map?.dispose();
+    mat.map = texture;
+  });
+  for (const [surface, uniform] of [['paving', uPave], ['leaves', uLeaf]] as const) {
+    loadGroundTexture(surface, o.anisotropy, texture => {
+      uniform.value.dispose();
+      uniform.value = texture;
+    });
+  }
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uDirt = uDirt;
     shader.uniforms.uPave = uPave;
@@ -395,6 +413,7 @@ function buildScatter(m: MapDef, lots: Lot[], mats: MapMats, chunkOf: (x: number
 
 /** Street ribbons with round joints; world-space UVs keep the texture seamless. */
 function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  const tramStreets = { ...m, streets: m.streets.filter(s => s.tram) };
   for (const s of m.streets) {
     const mat = s.kind === 'main' ? mats.asphalt : s.kind === 'path' ? mats.path : mats.cobbles;
     const y = s.kind === 'main' ? 0.025 : s.kind === 'path' ? 0.015 : 0.02;
@@ -424,12 +443,30 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         batch.quad(quad, [0, 0, 1, 1]);
         fixWorldUv(batch, 4, 4);
         if (s.tram) {
-          // Double tram track: grooved rails flush with the asphalt (also on the bridge).
-          const yaw = Math.atan2(dx, dz);
-          for (const off of [-2.22, -0.78, 0.78, 2.22]) {
-            const cx = (x0 + x1) / 2 - dz * off;
-            const cz = (z0 + z1) / 2 + dx * off;
-            b.box(mats.iron, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + (onBridge(m, cx, cz) ? 0.065 : y + 0.012), cz), 0.09, 0.03, t1 - t0 + 0.02, [1.5, 1.45, 1.4]);
+          // Embedded grooved rails: worn steel head, inward flange groove and guard lip,
+          // rust at the edges and an asphalt repair seam. No exposed railway sleepers in a street.
+          for (const rail of TRAM_RAILS) for (const band of TRAM_SECTION) {
+            const off = rail.offset + rail.inward * band.offset;
+            const point = (offset: number, t: number): Vector3 => {
+              const a = tramOffsetPoint(s.pts, i - 1, offset);
+              const c = tramOffsetPoint(s.pts, i, offset);
+              const x = a[0] + (c[0] - a[0]) * t;
+              const z = a[1] + (c[1] - a[1]) * t;
+              const surface = onBridge(m, x, z) ? Math.max(y, TRAM_BRIDGE_DECK) : y;
+              return new Vector3(x, heightAt(m, x, z) + surface + band.height, z);
+            };
+            const half = band.width / 2;
+            const corners: [Vector3, Vector3, Vector3, Vector3] = [
+              point(off + half, t0 / len), point(off - half, t0 / len),
+              point(off - half, t1 / len), point(off + half, t1 / len),
+            ];
+            const material = band.kind === 'seam' ? mats.asphalt : band.kind === 'rust' ? mats.rust
+              : band.kind === 'groove' ? mats.rubber : mats.railSteel;
+            const tint: RGB = band.kind === 'guard' ? [0.5, 0.47, 0.42] : band.kind === 'seam' ? [0.63, 0.59, 0.54]
+              : band.kind === 'head' ? [0.96, 0.98, 1] : [1, 1, 1];
+            const railBatch = b.solid.of(material);
+            railBatch.quad(corners, [0, 0, 1, 1], [tint]);
+            fixWorldUv(railBatch, 4, 4);
           }
         }
         // Curbs mark the walkable street edge (v2, M11b); not on paths and bridges.
@@ -439,6 +476,8 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
             const cx = (x0 + x1) / 2 + side * nx * (1 + 0.12 / (s.width / 2));
             const cz = (z0 + z1) / 2 + side * nz * (1 + 0.12 / (s.width / 2));
             if (isWater(m, cx, cz)) continue;
+            // A crossing side street must not put a raised curb across the tram rails.
+            if (!s.tram && streetDist(tramStreets, cx, cz).d < (t1 - t0) / 2 + 0.12) continue;
             b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + 0.06, cz), 0.24, 0.16, t1 - t0 + 0.02, [0.8, 0.8, 0.78]);
           }
         }
@@ -659,7 +698,7 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
 }
 
 /** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
-function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
+export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
   const rng = new Rng(l.seed);
   const tone = rng.pick(TONES);
   const sides = blockFacades(l);
@@ -702,8 +741,10 @@ function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef
       if (rng.next() < 0.45) {
         const roll = rng.next();
         const color = roll < 0.6 ? 0xffb060 : roll < 0.85 ? 0xd8ecff : 0x5fd8c8;
-        b.box(b.mm.iron, run.mat(mid, 3.0, 0.2), 0.05, 0.05, 0.4, [0.6, 0.6, 0.6]);
-        b.geo(b.mm.lampGlass, new SphereGeometry(0.13, 8, 6), run.mat(mid, 2.88, 0.42), color === 0xffb060 ? [1.6, 1.25, 0.6] : color === 0xd8ecff ? [1.3, 1.5, 1.8] : [0.7, 1.7, 1.6]);
+        b.solid.excludeOccluder(() => {
+          b.box(b.mm.iron, run.mat(mid, 3.0, 0.2), 0.05, 0.05, 0.4, [0.6, 0.6, 0.6]);
+          b.geo(b.mm.lampGlass, new SphereGeometry(0.13, 8, 6), run.mat(mid, 2.88, 0.42), color === 0xffb060 ? [1.6, 1.25, 0.6] : color === 0xd8ecff ? [1.3, 1.5, 1.8] : [0.7, 1.7, 1.6]);
+        });
         b.light(run.pt(mid, 2.85, 0.45), color, rng.range(10, 22), 9, 0.03, rng.range(3, 4.2), { yaw: run.yaw, stretch: 1.5, reach: 1.8, halo: 0.45 });
       }
     }
@@ -1113,17 +1154,21 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   for (const l of lots) {
     const b = chunkOf(l.x, l.z);
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
-    if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
-    else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
-    else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
-    else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
-    if (l.wing) {
-      // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
-      const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
-      if (l.ruin) b.on(y0, () => buildRuin(b, wing));
-      else if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
-      else b.on(y0, () => buildAltbauLot(b, wing, m));
-    }
+    const build = (): void => {
+      if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
+      else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
+      else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
+      else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
+      if (l.wing) {
+        // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
+        const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
+        if (l.ruin) b.on(y0, () => buildRuin(b, wing));
+        else if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
+        else b.on(y0, () => buildAltbauLot(b, wing, m));
+      }
+    };
+    if (l.kind === 'tree') build();
+    else b.solid.captureOccluder(build);
   }
   // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
   const spatis: Array<{ rest: RestArea; upper: Group }> = [];
@@ -1132,7 +1177,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     const y0 = base(l.x, l.z, Math.max(l.hx, l.hz));
     if (l.kind === 'spati') {
       const up = new ChunkBuilder(mats);
-      b.on(y0, () => buildSpati(b, up, l));
+      up.solid.captureOccluder(() => b.on(y0, () => buildSpati(b, up, l)));
       const g = new Group();
       for (const mesh of up.solid.meshes()) {
         mesh.castShadow = true;
@@ -1140,11 +1185,13 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         g.add(mesh);
       }
       g.position.y = y0;
+      const occluder = up.solid.occluderMesh();
+      if (occluder) g.add(occluder);
       group.add(g);
       spatis.push({ rest: spatiRest(l), upper: g });
       continue;
     }
-    b.on(y0, () => buildLandmark(b, l));
+    b.solid.captureOccluder(() => b.on(y0, () => buildLandmark(b, l)));
   }
   const rng = new Rng(m.seed);
   const instanced = new Set(breakables.map((d) => d.prop));
@@ -1155,7 +1202,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       rng.next();
       return;
     }
-    b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    const build = (): void => b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
+    else build();
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
@@ -1173,6 +1222,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const caster = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
   const fires: Vector3[] = [];
   for (const b of chunks.values()) {
+    const occluder = b.solid.occluderMesh();
+    if (occluder) group.add(occluder);
     for (const mesh of b.solid.meshes()) {
       mesh.castShadow = true;
       mesh.receiveShadow = true;

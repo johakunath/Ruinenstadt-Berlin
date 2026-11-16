@@ -5,6 +5,9 @@ import {
   Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
+import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
+import { FX_LAYER, isLargeProp } from './layers';
+export { FX_LAYER } from './layers';
 import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
@@ -14,9 +17,6 @@ import {
   paintShopWindow, paintSign, paintStucco, paintVan, paintWindows, paintWood, type PaintOptions,
 } from './paint';
 import { buildBin, buildCrate } from './breakable-parts';
-
-/** Layer for things that must not show up in the normal/depth pre-pass (alpha cards, glows, effects). */
-export const FX_LAYER = 1;
 
 export const GROUND_H = 4.3;
 export const FLOOR_H = 3.5;
@@ -322,8 +322,10 @@ export function buildAltbau(b: Builder, f: Facade): void {
       b.box(b.mats.stucco, run.mat(g.to + 0.2, GATE_H / 2, 0.1), 0.45, GATE_H, 0.24);
       b.box(b.mats.stucco, run.mat(mid, GATE_H + 0.22, 0.12), w + 0.9, 0.45, 0.28);
       b.box(b.mats.stucco, run.mat(mid, GATE_H + 0.3, 0.2), 0.5, 0.7, 0.3, [0.85, 0.8, 0.72]);
-      b.box(b.mats.iron, run.mat(mid, GATE_H - 0.25, 0.42), 0.08, 0.08, 0.5);
-      b.geo(b.mats.lampGlass, new CylinderGeometry(0.14, 0.1, 0.3, 6), run.mat(mid, GATE_H - 0.45, 0.62));
+      b.solid.excludeOccluder(() => {
+        b.box(b.mats.iron, run.mat(mid, GATE_H - 0.25, 0.42), 0.08, 0.08, 0.5);
+        b.geo(b.mats.lampGlass, new CylinderGeometry(0.14, 0.1, 0.3, 6), run.mat(mid, GATE_H - 0.45, 0.62));
+      });
       b.light(run.pt(mid, GATE_H - 0.6, 0.9), 0xffa850, 14, 9, 0.15, 3);
     } else {
       // Breach: broken brick edges, a sagging beam.
@@ -420,10 +422,12 @@ function buildSpati(b: Builder, run: Run, from: number, to: number): void {
   b.solid.of(m.awning).quad([run.pt(from + 0.1, 2.34, 0.76), run.pt(to - 0.1, 2.34, 0.76), run.pt(to - 0.1, 2.52, 0.75), run.pt(from + 0.1, 2.52, 0.75)], [0, 0, w / 2, 0.3]);
   // A-frame sign and crates by the door.
   const sx = doorFrom + doorW + 0.75;
-  b.box(m.sign, run.mat(sx, 0.55, 1.15, -0.22), 0.7, 1.05, 0.05);
-  b.box(m.darkWood, run.mat(sx, 0.5, 0.95, 0.22), 0.7, 1.0, 0.04);
-  b.box(m.wood, run.mat(winA[0] + 0.5, 0.3, 0.55), 0.7, 0.6, 0.5);
-  b.box(m.wood, run.mat(winA[0] + 0.55, 0.85, 0.52, 0, 0.1), 0.6, 0.45, 0.45, [0.85, 0.8, 0.75]);
+  b.solid.excludeOccluder(() => {
+    b.box(m.sign, run.mat(sx, 0.55, 1.15, -0.22), 0.7, 1.05, 0.05);
+    b.box(m.darkWood, run.mat(sx, 0.5, 0.95, 0.22), 0.7, 1.0, 0.04);
+    b.box(m.wood, run.mat(winA[0] + 0.5, 0.3, 0.55), 0.7, 0.6, 0.5);
+    b.box(m.wood, run.mat(winA[0] + 0.55, 0.85, 0.52, 0, 0.1), 0.6, 0.45, 0.45, [0.85, 0.8, 0.75]);
+  });
   // The shop is the big warm light source of the yard.
   b.light(run.pt(mid, 2.1, 2.0), 0xffb061, 38, 15, 0.06, 6.5);
   b.light(run.pt(to - 1.3, 1.6, 1.0), 0x8fe0d8, 10, 6, 0.05, 2);
@@ -705,11 +709,11 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       break;
     }
     case 'tram': {
-      // Two-car tram (generic, no livery), one bogie off the rails, pantograph folded.
+      // Two-car tram (generic, no livery), stopped squarely on the rails, pantograph folded.
       const L = 15;
       const W = 2.25;
-      const tilt = at(p, 0, 0, 0, 0.01, 0, 0.035);
-      const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+      const base = at(p, 0, TRAM_BRIDGE_DECK + TRAM_HEAD_HEIGHT, 0);
+      const part = (x: number, y: number, z: number): Matrix4 => base.clone().multiply(new Matrix4().makeTranslation(x, y, z));
       const creamM = m.plaster['cream'] as Material;
       const redM = m.plaster['oxblood'] as Material;
       for (const c of [-1, 1]) {
@@ -719,7 +723,21 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
         b.box(m.rubber, part(0, 2.05, z0), W - 0.06, 1.25, L / 2 - 0.3, [0.42, 0.52, 0.56]);
         for (let z = z0 - L / 4 + 0.3; z <= z0 + L / 4 - 0.3; z += 1.2) for (const sx of [-1, 1]) b.box(creamM, part(sx * (W / 2 - 0.02), 2.05, z), 0.08, 1.25, 0.12);
         b.box(creamM, part(0, 3.1, z0), W - 0.3, 0.16, L / 2 - 0.6, [0.8, 0.8, 0.78]);
-        for (const bz of [z0 - 2.2, z0 + 2.2]) b.box(m.rubber, part(0, 0.28, bz), W - 0.3, 0.45, 1.8, [0.5, 0.5, 0.5]);
+      }
+      const wheel = new CylinderGeometry(TRAM_WHEEL_RADIUS, TRAM_WHEEL_RADIUS, 0.1, 12);
+      const flange = new CylinderGeometry(TRAM_WHEEL_RADIUS + 0.025, TRAM_WHEEL_RADIUS + 0.025, 0.025, 12);
+      const axle = new CylinderGeometry(0.055, 0.055, TRAM_WHEEL_OFFSET * 2, 8);
+      const across = new Matrix4().makeRotationZ(Math.PI / 2);
+      for (const bogie of TRAM_BOGIES) {
+        b.box(m.iron, part(0, 0.43, bogie), 1.2, 0.24, 1.8, [0.65, 0.65, 0.65]);
+        for (const offset of TRAM_AXLES) {
+          const z = bogie + offset;
+          b.geo(m.iron, axle, part(0, TRAM_WHEEL_RADIUS, z).multiply(across));
+          for (const side of [-1, 1]) {
+            b.geo(m.iron, wheel, part(side * TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS, z).multiply(across), [2, 2, 2]);
+            b.geo(m.iron, flange, part(side * (TRAM_WHEEL_OFFSET - 0.065), TRAM_WHEEL_RADIUS, z).multiply(across));
+          }
+        }
       }
       b.box(m.rubber, part(0, 1.6, 0), W - 0.3, 2.4, 0.3, [0.3, 0.3, 0.3]);
       b.box(m.rubber, part(0, 1.95, L / 2 + 0.02), W - 0.25, 1.1, 0.05, [0.4, 0.5, 0.55]);
@@ -869,14 +887,21 @@ export function buildWorld(materials: Materials): World {
   group.name = 'courtyard';
 
   for (const f of COURTYARD.facades) {
-    if (f.style === 'altbau') buildAltbau(b, f);
-    else buildYardWall(b, f);
+    b.solid.captureOccluder(() => {
+      if (f.style === 'altbau') buildAltbau(b, f);
+      else buildYardWall(b, f);
+    });
   }
   const rng = new Rng(404);
-  for (const p of COURTYARD.props) buildProp(b, p, rng);
+  for (const p of COURTYARD.props) {
+    if (isLargeProp(p.kind)) b.solid.captureOccluder(() => buildProp(b, p, rng));
+    else buildProp(b, p, rng);
+  }
   buildGreens(b);
   buildPuddles(b, materials);
   group.add(buildGround(b));
+  const occluder = b.solid.occluderMesh();
+  if (occluder) group.add(occluder);
 
   for (const mesh of b.solid.meshes()) {
     mesh.castShadow = true;

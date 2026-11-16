@@ -164,6 +164,11 @@ export function koepenickMap(scale = 1): MapDef {
     { ...L('spati', -66, 9, -90 * DEG, 4, 5.5, 2), name: 'Späti an der Altstadt' },
   ];
 
+  // A stopped tram on the east track, with all axles past the bend on the bridge straight.
+  const tramPts = streets.find(street => street.tram)!.pts;
+  const tramA = tramPts[tramPts.length - 2]!, tramB = tramPts[tramPts.length - 1]!;
+  const tramRot = Math.atan2(tramB[0] - tramA[0], tramB[1] - tramA[1]);
+  const tramT = 7 / 24;
   return {
     id: 'koepenick',
     name: 'Köpenick',
@@ -199,8 +204,8 @@ export function koepenickMap(scale = 1): MapDef {
         stairs: [stairTo(P(17, 17), 90 * DEG), stairTo(P(26, 5), 0)],
       },
     ],
-    // A tram broke down on the Dammbrücke on its way into the Altstadt.
-    fixedProps: [{ kind: 'tram', x: 6 * s + 1.5, z: -42 * s, rot: 0.05, size: 1 }],
+    fixedProps: [{ kind: 'tram', x: tramA[0] + (tramB[0] - tramA[0]) * tramT + Math.cos(tramRot) * 1.5,
+      z: tramA[1] + (tramB[1] - tramA[1]) * tramT - Math.sin(tramRot) * 1.5, rot: tramRot, size: 1 }],
     seed: 1906,
   };
 }

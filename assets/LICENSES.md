@@ -5,6 +5,11 @@ Sounds are generated in code (`src/audio`). Textures start as code-painted place
 
 | File | Source | Author | License | Changes |
 |---|---|---|---|---|
+| `textures/koepenick/grass.webp` | OpenAI image generation; seamless unmown olive grass, dry stalks and bare spots; Ruinenstadt 2D ground art as image reference | Codex (for Johannes) | own work | Flat albedo; resized from 1254 to 1024 px, WebP quality 85 |
+| `textures/koepenick/dirt.webp` | OpenAI image generation; seamless earth, mud and pebbles; Ruinenstadt 2D ground art as image reference | Codex (for Johannes) | own work | Flat albedo; resized from 1254 to 1024 px, WebP quality 85 |
+| `textures/koepenick/paving.webp` | OpenAI image generation; ten by ten cracked Berlin sidewalk plates, dark joints; Ruinenstadt 2D ground art as image reference | Codex (for Johannes) | own work | Flat albedo; resized from 1254 to 1024 px, WebP quality 85 |
+| `textures/koepenick/leaves.webp` | OpenAI image generation; seamless old leaves, needles and twigs; Ruinenstadt 2D ground palette as image reference | Codex (for Johannes) | own work | Flat albedo; resized from 1254 to 1024 px, WebP quality 85 |
+| `textures/koepenick/litter.webp` | OpenAI image generation; transparent 2 × 2 puddle, leaves, paper/cans and rubble atlas; Köpenick style board as image reference | Codex (for Johannes) | own work | Alpha retained; resized from 1254 to 1024 px, WebP quality 85 |
 | `characters/hero.glb` | [Universal Base Characters [Standard]](https://quaternius.itch.io/universal-base-characters): `Superhero_Female_FullBody`, `Hair_Long` | Quaternius | CC0 1.0 | Base color only at 1024 px, clothing regions painted as vertex colors, code-built coat skirt, belt, pouches and scarf (3 extra scarf bones), hair recolored |
 | `characters/zombie.glb` | [Universal Base Characters [Standard]](https://quaternius.itch.io/universal-base-characters): `Superhero_Male_FullBody` | Quaternius | CC0 1.0 | Simplified to about 5k triangles, skin recolored at 512 px, rags as vertex colors, eyebrows removed |
 | `characters/anims.glb` | [Universal Animation Library [Standard]](https://quaternius.itch.io/universal-animation-library) and [Universal Animation Library 2 [Standard]](https://quaternius.itch.io/universal-animation-library-2) | Quaternius | CC0 1.0 | 17 clips kept, rotation tracks plus pelvis translation, resampled |
