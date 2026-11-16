@@ -206,6 +206,9 @@ const ui = new Ui(opts, {
     // A new game keeps the hero's gear but drops the old checkpoint.
     sim.difficulty = difficulty;
     if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
+    // The run starts from the profile as it is now (camp purchases: garden, Lazarett, Funkmast act in createSim).
+    sim = createSim({ difficulty, seed: (opts.seed += 1), stress: opts.stress, level, spawn: opts.spawn, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
+    renderer?.reset(sim);
     start();
   },
   onResume: () => {
@@ -664,6 +667,9 @@ function frame(now: number): void {
 
   if (phase === 'play' && sim.player.state === 'dead') {
     phase = 'dead';
+    // A fall ends the expedition (2D): the meal is eaten, the retry starts without it.
+    endExpedition(sim, false);
+    saveProfile();
     input.enabled = false;
     telemetry.end('dead');
   }

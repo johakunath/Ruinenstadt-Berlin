@@ -32,7 +32,7 @@ export function kodexFind(sim: Sim, item: Item): boolean { if (item.rarity < 3 &
 export function createInventory(): Inventory { return { bag: [], scrap: 0, materials: {}, mods: {}, consumables: { verband: 1, molotow: 1 } }; }
 /** False means leave the drop in the world. Item ids must be unique across bag and gear. */
 export function collectItem(sim: Sim, item: Item): boolean {
-  if (sim.inventory.bag.length >= BAG_SIZE || [...sim.inventory.bag, ...Object.values(sim.equipment)].some(i => i?.id === item.id)) return false;
+  if (sim.inventory.bag.length >= BAG_SIZE || [...sim.inventory.bag, ...(sim.inventory.camp?.stash ?? []), ...Object.values(sim.equipment)].some(i => i?.id === item.id)) return false;
   sim.inventory.bag.push(structuredClone(item));
   if (kodexFind(sim, item)) sim.events.push({ type: 'kodex', name: item.name });
   return true;

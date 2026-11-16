@@ -77,8 +77,17 @@ export class Menu {
     // A tap beside the panel closes the menu (as the old map overlay did).
     this.root.addEventListener('click', e => { if (e.target === this.root) this.close(); });
     this.root.addEventListener('keydown', e => {
-      if (e.code === 'Tab') { e.preventDefault(); this.step(e.shiftKey ? -1 : 1); }
+      // Tab moves focus and wraps inside the menu; [ ] switch tabs; arrow keys move like the pad.
+      if (e.code === 'Tab') {
+        const all = [...this.root.querySelectorAll<HTMLElement>('button:not(:disabled),input,summary')].filter(b => b.offsetParent !== null);
+        const i = all.indexOf(document.activeElement as HTMLElement);
+        if (e.shiftKey && i <= 0) { e.preventDefault(); all.at(-1)?.focus(); } else if (!e.shiftKey && i === all.length - 1) { e.preventDefault(); all[0]?.focus(); }
+      }
       else if (e.code === 'BracketRight' || e.code === 'BracketLeft') this.step(e.code === 'BracketRight' ? 1 : -1);
+      else if (e.code.startsWith('Arrow') && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault();
+        this.move(e.code === 'ArrowLeft' ? -1 : e.code === 'ArrowRight' ? 1 : 0, e.code === 'ArrowUp' ? -1 : e.code === 'ArrowDown' ? 1 : 0);
+      }
     });
   }
 

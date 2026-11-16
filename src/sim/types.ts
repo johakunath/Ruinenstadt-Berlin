@@ -239,6 +239,8 @@ export interface RunState {
   spawnT: number;
   /** Pause before the next wave. */
   pauseT: number;
+  /** M13: the expedition's camp effects were settled (`endExpedition` runs once). */
+  ended?: boolean;
 }
 
 export interface Sim {

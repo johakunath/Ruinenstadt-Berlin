@@ -297,7 +297,7 @@ export const CONTROLS: ReadonlyArray<readonly [string, string, string, string]> 
   ['Pause', 'Esc · P', 'Start', 'Pause-Knopf'],
   ['Inventar', 'I · Tab', 'Y', 'Pause › Inventar'],
   ['Karte', 'M', 'Ansicht', 'Minikarte'],
-  ['Reiter', 'Tab · [ ]', 'LB · RB', 'Antippen'],
+  ['Reiter', '[ ] · Pfeile wählen', 'LB · RB', 'Antippen'],
 ];
 function controlsTable(): string {
   return `<table class="ctl"><thead><tr><th></th><th>Tastatur</th><th>Controller</th><th>Touch</th></tr></thead><tbody>${CONTROLS.map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table>`;

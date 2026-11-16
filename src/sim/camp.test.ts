@@ -64,4 +64,14 @@ describe('M13 camp', () => {
     expect(back.inventory.camp!.stash[0]!.id).toBe(77); expect(back.statContext.drill).toBe(1);
     expect(fromStash(back, 0).ok).toBe(true); expect(back.inventory.bag[0]!.id).toBe(77);
   });
+  it('an expedition ends once; stashed item ids stay reserved', () => {
+    const s = rich();
+    s.statContext.camp.garten = true; s.run.index = 3; s.statContext.meal = 'suppe';
+    endExpedition(s, false); endExpedition(s, false);
+    expect(s.inventory.ingredients?.gemuese).toBe(2);
+    expect(s.statContext.meal).toBeUndefined();
+    s.inventory.camp!.stash.push({ id: 999, slot: 'h', kind: 'head', base: 'helm', name: 'Helm', rarity: 0, value: 5, itemLevel: 1, affixes: [] });
+    const t = createSim({ seed: 2, inventory: s.inventory, equipment: s.equipment, statContext: s.statContext });
+    expect(t.lootCtx.itemId).toBeGreaterThanOrEqual(999);
+  });
 });

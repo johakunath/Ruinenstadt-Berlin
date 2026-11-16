@@ -141,6 +141,8 @@ export function fromStash(s: Sim, i: number): Result {
  * that reached the third fight, a won district is freed (unlocks level 3 of the stations).
  */
 export function endExpedition(s: Sim, won: boolean, district = 0): void {
+  if (s.run.ended) return;
+  s.run.ended = true;
   const c = campOf(s);
   if (won && !c.freed.includes(district)) c.freed.push(district);
   if (s.statContext.camp.garten && s.run.index >= 2) { const ing = (s.inventory.ingredients ??= {}); ing.gemuese = (ing.gemuese ?? 0) + 2; }
