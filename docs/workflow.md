@@ -8,7 +8,7 @@ Adapted from the 2D game (`pipeline/workflow.md`, token rules of 2026-11-12, des
 |---|---|---|
 | Johannes | Chooses critical directions, playtests on PC, Tab S9 and phone, approves task scope, merges | Edit code |
 | Claude | Plans and writes tasks, architecture, sim rules, rendering and shaders, combat feel, debugging, reviews of Codex PRs, performance work, final acceptance | Redo Codex work without a note in the task file |
-| Codex | Well-specified tasks end to end: data ports, UI from an approved mockup, tools, tests for a given spec, image generation (menu art) | Change task scope, architecture or the look on its own: write the question into the task file and stop |
+| Codex | Well-specified tasks end to end: data ports, UI from an approved mockup, tools, tests for a given spec, image generation (menu art, all texture images per `docs/asset-pipeline.md`, including their first integration) | Change task scope, architecture or the look on its own: write the question into the task file and stop |
 
 Task titles carry the recommended owner and model in brackets, e.g. `[Codex]`, `[Claude · Opus high]`, `[PC · Blender]`. It is a recommendation: Johannes swaps Codex and Claude depending on access and tokens, so every task must be doable by either. A task without a tag is Claude's.
 

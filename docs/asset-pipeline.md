@@ -1,0 +1,65 @@
+# Asset pipeline: textures
+
+Decided by Johannes on 2026-11-16. This covers texture images for world surfaces and objects.
+Characters and animation (`assets/characters`, `npm run assets`) are out of scope here.
+
+## Roles and order
+
+Every new map, building type or prop goes through these steps in order. A step does not wait for later steps.
+
+| Step | Who | Does | Done when |
+|---|---|---|---|
+| 1. Build | Claude | Builds geometry in code (`src/render`). Paints placeholder textures in code (`src/render/paint.ts`), like ground variant C: blended surfaces plus scatter | Playable, readable at game camera. Johannes approved the direction (mockup first for critical looks) |
+| 2. Texture | **Codex only** | Generates the texture images with image generation, then the initial integration (below) | Images load in game, code placeholder kept as fallback, row in `assets/LICENSES.md` |
+| 3. Performance | Claude | Compression (KTX2 or smaller WebP), mipmaps, atlas merges, draw call and memory checks on both profiles | PC and Tab S9 budgets hold (`docs/plan-3d.md`) |
+| 4. Playtest | Johannes | Looks at it on the Tab S9 | Notes go to `docs/playtests.md` |
+
+Claude does not generate images; Codex does not change geometry, shaders, draw calls or render profiles.
+If a texture would need any of those changes, Codex writes the question into the task file and stops (`docs/workflow.md`).
+
+## Style requirements
+
+| Topic | Rule |
+|---|---|
+| Fit | Must fit the game's look (`docs/style-bible.md`, board `docs/style/koepenick.png` for Köpenick). Painterly, and it may be somewhat more realistic than the comic boards. It must not look like a photo scan from another game |
+| Palette | Style bible palette per district. Köpenick: cream, ochre, olive, teal, rust, oxblood, desaturated |
+| Light | No baked light, shadows, highlights or vignettes. The game lights everything (night, lamps, fire). Flat, even albedo |
+| Contrast | Medium to low. Surfaces sit under characters and loot, which must stay readable on top |
+| Scale | Painted for the stated world size per tile (table below), seen from the game camera (about 45°, 12 to 20 m away). Details smaller than 5 cm at that scale are noise: leave them out |
+| Theme | Post-collapse Berlin: wear, cracks, moss, weeds, soot, rubble. Half of the buildings are ruins |
+| Check | Look at each texture in game with `node tools/screenshot.mjs` on both profiles before the PR |
+
+## Technical requirements
+
+| Topic | Rule |
+|---|---|
+| Tiling | Seamless in both directions. Test: a 2 × 2 repeat shows no seams or obvious repeating blobs |
+| Size | 1024 × 1024 for ground and facades, 512 × 512 for small props. Power of two |
+| Format | WebP, quality about 85, at most 400 KB per file, sRGB color |
+| Alpha | Only for decals and cards (atlas cells, ivy, ferns): a clean cut-out edge, no soft halo |
+| Extra maps | Albedo only. Height or normal maps only when a task asks for them |
+| Files | `assets/textures/<district>/<surface>.webp`, e.g. `assets/textures/koepenick/grass.webp`; shared ones in `assets/textures/common/` |
+| License | One row per file in `assets/LICENSES.md`: tool, prompt summary, author Codex (for Johannes), license "own work" |
+
+## Initial integration (Codex)
+
+1. Add a loader for the task's textures (Three.js `TextureLoader`, `colorSpace = SRGBColorSpace`, `RepeatWrapping`, anisotropy from the render profile).
+2. The code-painted texture stays the default. Swap in the image when it has loaded; keep the painted one if loading fails.
+3. The hook is the material that already uses the surface, e.g. `makeMapMats` in `src/render/map-world.ts`. Ground: `ground.map` and the `uDirt`, `uPave`, `uLeaf` uniforms in `groundMaterial`.
+4. Keep UV scale: the image covers the same world size as the painted texture it replaces.
+5. Run `npm run check` and the e2e test once, and add before and after screenshots to the PR.
+
+## Recycling 2D art
+
+Read only: `johakunath/Ruinenstadt` `assets/buildings/koep-*.webp` (asphalt, pavement, path, plaza, water, bridge, walls, roofs, shop front, ivy, damage), and the same for other districts. They are 110 to 272 px, too small to use directly in 3D. Use them as style references or image-to-image input so 3D surfaces keep the 2D colors. `assets/manifest.json` there says what each one is for.
+
+## Texture queue
+
+| # | Textures | Replaces (code placeholder) | World size per tile | Task |
+|---|---|---|---|---|
+| T1 | Köpenick ground: grass, dirt, sidewalk plates, leaf litter; scatter atlas (puddle, leaf pile, trash, rubble, 2 × 2 cells) | `paintGrass`, `paintDirt`, `paintPaving`, `paintLeafLitter`, `paintLitter` | 5 m (atlas cell: 1 to 3 m decal) | `docs/tasks/t1-ground-textures.md` |
+| T2 | Street surfaces: cobbles, asphalt | `paintCobbles`, `paintAsphalt` | 5 m | after T1 |
+| T3 | Facades and roofs: plaster tones, brick, stucco, roof tiles, concrete, shop front | `paintPlaster`, `paintBrick`, `paintStucco`, `paintRoofTiles`, `paintConcrete` | 3 to 4 m | after T2 |
+| T4 | Props: wood, metal paint, car and bus paint, tram | `paintWood`, `paintMetal`, `paintVan` | per prop | after T3 |
+
+Claude adds a row and a task file whenever step 1 finishes for a new surface.
