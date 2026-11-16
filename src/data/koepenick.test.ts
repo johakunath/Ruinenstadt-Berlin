@@ -9,12 +9,12 @@ describe('Köpenick map', () => {
     const lots = generateLots(m);
     const level = mapLevel(m, lots);
 
-    it(`has 20 normal waves and 4 boss fights (scale ${scale})`, () => {
+    it(`has 27 normal waves and 4 boss fights (scale ${scale})`, () => {
       const waves = m.encounters.flatMap((e) => e.waves);
-      expect(waves.filter((w) => w.bosses.length === 0)).toHaveLength(20);
+      expect(waves.filter((w) => w.bosses.length === 0)).toHaveLength(27);
       expect(waves.flatMap((w) => w.bosses)).toEqual(['feldwebel', 'waechter', 'rex', 'hauptmann']);
       const perZone = [0, 1, 2].map((z) => m.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves).filter((w) => w.bosses.length === 0).length);
-      expect(perZone).toEqual([6, 7, 7]);
+      expect(perZone).toEqual([9, 9, 9]);
     });
 
     it(`gets harder wave by wave (scale ${scale})`, () => {

@@ -86,9 +86,11 @@ function finishLootExit(leave: boolean): void {
   if (leave) {
     lootExit = 'off';
     lootChip.hidden = true;
-    wonFor = 0;
+    again();
   } else {
+    // Back into the map to fetch it.
     lootExit = 'search';
+    explore();
   }
 }
 /**
@@ -109,13 +111,14 @@ function pollLootPad(): void {
     else if (edge(0)) (document.activeElement === leave ? leave : find).click();
     else if (edge(1)) finishLootExit(false);
   } else if (lootExit === 'search' && edge(8)) {
-    finishLootExit(true);
+    lootExit = 'off';
+    lootChip.hidden = true;
   }
   lootPadDown = down;
 }
 document.getElementById('loot-find')!.addEventListener('click', () => finishLootExit(false));
 document.getElementById('loot-leave')!.addEventListener('click', () => finishLootExit(true));
-lootChip.addEventListener('click', () => finishLootExit(true));
+lootChip.addEventListener('click', () => { lootExit = 'off'; lootChip.hidden = true; });
 window.addEventListener('keydown', (e) => {
   if (lootExit === 'ask' && e.key === 'Escape') {
     e.preventDefault();
@@ -130,6 +133,45 @@ function checkpoint(): number {
   const i = Math.min(sim.run.index, level.encounters.length - 1);
   const zone = level.encounters[i]?.zone ?? 0;
   return level.encounters.findIndex((e) => e.zone === zone);
+}
+/** Seconds between the last boss's fall and the end screen. */
+const WON_DELAY = 6;
+function showWon(): void {
+  phase = 'won';
+  wonFor = -1;
+  saveNow(false); // loot collected after the last encounter and gear changes while exploring
+  input.enabled = false;
+  input.clear();
+  ui.showWon(sim.kills);
+}
+/** Stay in the freed district: walk, loot, break things, test the build. */
+function explore(): void {
+  document.getElementById('won')!.hidden = true;
+  document.getElementById('pause-finish')!.hidden = false;
+  phase = 'play';
+  wonFor = -1;
+  input.enabled = true;
+  input.clear();
+}
+/** A new run through the district with the gear the hero has. */
+function again(): void {
+  lootExit = 'off';
+  lootWarn.hidden = true;
+  lootChip.hidden = true;
+  sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
+  renderer?.reset(sim);
+  start();
+}
+/** Everything back to the start: gear, Schrott, checkpoint. The telemetry id stays. */
+function newGame(): void {
+  if (!renderer) return;
+  clearSave();
+  save = null;
+  sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, difficulty });
+  renderer?.reset(sim);
+  ui.setResume(null, difficulty);
+  if (persist) { save = snapshot(sim, mapName, false); writeSave(save); cloud.queue(save); }
+  start();
 }
 let deadFor = 0;
 let renderer: GameRenderer | null = null;
@@ -161,9 +203,15 @@ const ui = new Ui(opts, {
     start();
   },
   onAgain: () => {
-    sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
-    renderer?.reset(sim);
-    start();
+    // Valuable loot still on the ground: ask once before the map is left.
+    if (importantDrops(sim).length > 0 && lootExit !== 'ask') {
+      lootExit = 'ask';
+      document.getElementById('won')!.hidden = true;
+      lootWarn.hidden = false;
+      document.getElementById('loot-find')?.focus();
+      return;
+    }
+    again();
   },
   onMapToggle: (open) => {
     input.enabled = phase === 'play' && !open && !inventory.open;
@@ -215,6 +263,19 @@ document.getElementById('inventory-btn')!.addEventListener('click', input.onInve
 // The pause menu leads to inventory and map (on touch the HUD has only the pause button).
 document.getElementById('pause-inventory')!.addEventListener('click', () => { ui.toggleOptions(false); input.onInventory(); });
 document.getElementById('pause-map')!.addEventListener('click', () => { ui.toggleOptions(false); ui.toggleMap(true); });
+document.getElementById('won-explore')!.addEventListener('click', explore);
+document.getElementById('pause-finish')!.addEventListener('click', () => { ui.toggleOptions(false); showWon(); });
+// "Ganz neu anfangen" asks once: the second click within a few seconds wipes the save.
+{
+  const b = document.getElementById('new-game') as HTMLButtonElement;
+  let armed = 0;
+  b.addEventListener('click', () => {
+    if (performance.now() - armed < 4000) { b.textContent = 'Ganz neu anfangen'; armed = 0; newGame(); return; }
+    armed = performance.now();
+    b.textContent = 'Wirklich? Alles löschen';
+    setTimeout(() => { if (armed && performance.now() - armed >= 3900) { b.textContent = 'Ganz neu anfangen'; armed = 0; } }, 4000);
+  });
+}
 // Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
 window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
@@ -306,6 +367,7 @@ document.getElementById('cloud-join')!.addEventListener('click', () => {
 
 function start(resumed = false): void {
   audio.start();
+  document.getElementById('pause-finish')!.hidden = true;
   // Phones and tablets play in fullscreen (needs the tap that started the game; refused quietly elsewhere).
   if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement && !navigator.webdriver) void document.documentElement.requestFullscreen?.()?.catch(() => undefined);
   phase = 'play';
@@ -404,14 +466,12 @@ function drainEvents(): void {
         break;
       }
       case 'victory':
+        // Playtest 2026-11-17: no dialog over the falling boss. The run counts as won now; the
+        // end screen follows after a while and offers to stay. The loot warning comes when leaving.
         saveNow(false);
-        if (importantDrops(sim).length > 0) {
-          lootExit = 'ask';
-          input.enabled = false;
-          input.clear();
-          lootWarn.hidden = false;
-          document.getElementById('loot-find')?.focus();
-        } else wonFor = 0;
+        telemetry.end('win');
+        ui.banner('Köpenick befreit');
+        wonFor = 0;
         break;
       case 'scrap':
         if (ev.amount > 0) lootUi.float(`+${ev.amount} Schrott`, '#a8957d', ev.x, 1.2, ev.z);
@@ -551,18 +611,14 @@ function frame(now: number): void {
   }
   if (wonFor >= 0 && phase === 'play') {
     wonFor += dt;
-    if (wonFor > 2.5) {
-      phase = 'won';
-      saveNow(false); // loot collected after the last encounter and gear changes during the exit search
-      telemetry.end('win');
-      input.enabled = false;
-      ui.showWon(sim.kills);
-    }
+    if (wonFor > WON_DELAY && !abilitiesUi.open && !inventory.open) showWon();
   }
   if (lootExit === 'search') {
     const left = importantDrops(sim).length;
-    if (left === 0) finishLootExit(true);
-    else {
+    if (left === 0) {
+      lootExit = 'off';
+      lootChip.hidden = true;
+    } else {
       lootChip.hidden = false;
       document.getElementById('loot-n')!.textContent = String(left);
       document.getElementById('loot-pad')!.hidden = input.device !== 'gamepad';

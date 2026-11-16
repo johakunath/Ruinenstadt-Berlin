@@ -47,7 +47,8 @@
       <div class="panel">
         <h2>Köpenick befreit</h2>
         <p class="sub">Erledigt: <b id="won-kills">0</b></p>
-        <button id="again" type="button" class="primary">Nochmal</button>
+        <button id="won-explore" type="button" class="primary">Weiter erkunden</button>
+        <button id="again" type="button">Nochmal</button>
       </div>
     </div>
 
@@ -65,6 +66,7 @@
         <button id="resume" type="button" class="primary" hidden disabled>Weiter</button>
         <button id="play" type="button" class="primary" disabled>Spielen</button>
         <div id="title-diff" class="choices"></div>
+        <button id="new-game" type="button" title="Ausrüstung, Schrott und Fortschritt löschen">Ganz neu anfangen</button>
         <button id="open-options" type="button">Optionen</button>
         <p id="loading">Lädt …</p>
         <p class="keys">WASD laufen · Maus oder J schlagen · Leertaste rollen<br />E Kraft · R Ultimativ · Q Verband · G Molotow<br />Controller: X schlagen · A rollen · B Kraft · LB Ultimativ</p>
@@ -84,7 +86,7 @@
       <div class="panel">
         <button id="close-options" type="button" class="x-btn" aria-label="Schließen">×</button>
         <h2>Pause</h2>
-        <div id="pause-nav" class="choices"><button id="pause-inventory" type="button" class="choice"><b>Inventar</b></button><button id="pause-map" type="button" class="choice"><b>Karte</b></button></div>
+        <div id="pause-nav" class="choices"><button id="pause-inventory" type="button" class="choice"><b>Inventar</b></button><button id="pause-map" type="button" class="choice"><b>Karte</b></button><button id="pause-finish" type="button" class="choice" hidden><b>Abschließen</b></button></div>
         <h3>Grafik</h3>
         <div id="opt-profile" class="choices"></div>
         <label class="row">Musik <input id="opt-music" type="checkbox" /></label>

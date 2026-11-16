@@ -69,7 +69,7 @@ describe('encounter director', () => {
     const log: SimEvent[] = [];
     while (sim.run.phase !== 'won') clearEncounter(sim, log);
     const waves = log.filter((e) => e.type === 'waveStart');
-    expect(waves).toHaveLength(24);
+    expect(waves).toHaveLength(31);
     expect(log.filter((e) => e.type === 'encounterClear')).toHaveLength(level.encounters.length);
     expect(log.filter((e) => e.type === 'zoneClear').map((e) => (e as { zone: number }).zone)).toEqual([0, 1, 2, 3]);
     expect(log.at(-1)?.type).toBe('victory');

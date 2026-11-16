@@ -3,8 +3,8 @@
 // moved closer. S Köpenick north, Müggelberge south-east, the ferry Wendenschloß – Grünau over the
 // Dahme south, Johannisthal and the Spreepark west and north-west. Anchors checked against
 // OpenStreetMap on 2026-11-15 (see docs/maps/koepenick.md).
-// Route, one loop without doubling back: station → Bahnhofsviertel (6 waves, Feldwebel) → Altstadt →
-// Müggelberge (7 waves, Turmwächter) → ferry → Johannisthal → Spreepark (7 waves, Rex) → along the
+// Route, one loop without doubling back: station → Bahnhofsviertel (9 waves, Feldwebel) → Altstadt →
+// Müggelberge (9 waves, Turmwächter) → ferry → Johannisthal → Spreepark (9 waves, Rex) → along the
 // Spree over the Lange Brücke → Rathaus (Hauptmann).
 // Meters, +X east, +Z south, origin at the Rathaus. `scale` stretches distances only.
 import { THREAT, type BossKind, type EnemyKind } from './enemies';
@@ -43,6 +43,8 @@ function bossWave(g: number, boss: BossKind, adds: number, zone: number): WaveDe
 }
 
 const NORMAL_HEAL = 0.3;
+/** Normal waves in the district: 9 per zone. */
+export const NORMAL_WAVES = 27;
 
 /**
  * A stair whose top end sits on a terrace edge point (already scaled), rising along `rot`.
@@ -61,29 +63,31 @@ export function koepenickMap(scale = 1): MapDef {
   const rw = (w: number): number => w * Math.sqrt(s);
 
   let g = 0;
+  // The 27 waves run through the same 0 … 19 difficulty scale the 20 did (playtest 2026-11-17: more waves).
+  const tier = (n: number): number => (n * 19) / (NORMAL_WAVES - 1);
   const enc = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number): EncounterDef => {
     const list: WaveDef[] = [];
-    for (let i = 0; i < waves; i++) list.push(waveTier(g++, [], Math.min(zone, 2)));
+    for (let i = 0; i < waves; i++) list.push(waveTier(tier(g++), [], Math.min(zone, 2)));
     return { id, name, zone, x: x * s, z: z * s, r, waves: list, heal: NORMAL_HEAL };
   };
   const boss = (id: string, name: string, zone: number, x: number, z: number, r: number, kind: BossKind, adds: number): EncounterDef => (
-    { id, name, zone, x: x * s, z: z * s, r, waves: [bossWave(Math.max(0, g - 1), kind, adds, Math.min(zone, 2))], heal: 1 }
+    { id, name, zone, x: x * s, z: z * s, r, waves: [bossWave(tier(Math.max(0, g - 1)), kind, adds, Math.min(zone, 2))], heal: 1 }
   );
 
   const encounters: EncounterDef[] = [
-    // Zone 0: Bahnhofsviertel (6 waves).
-    enc('vorplatz', 'Bahnhofsvorplatz', 0, 10, -108, 13, 2),
-    enc('linden', 'Lindenstraße', 0, -36, -92, 13, 2),
-    enc('forum', 'Forum', 0, 46, -96, 14, 2),
+    // Zone 0: Bahnhofsviertel (9 waves).
+    enc('vorplatz', 'Bahnhofsvorplatz', 0, 10, -108, 13, 3),
+    enc('linden', 'Lindenstraße', 0, -36, -92, 13, 3),
+    enc('forum', 'Forum', 0, 46, -96, 14, 3),
     boss('damm', 'Dammbrücke', 0, 6, -74, 14, 'feldwebel', 3),
-    // Zone 1: Müggelberge (7 waves).
-    enc('kietz', 'Kietz', 1, 60, 16, 13, 2),
-    enc('mueggelheimer', 'Müggelheimer Straße', 1, 92, 52, 14, 2),
+    // Zone 1: Müggelberge (9 waves).
+    enc('kietz', 'Kietz', 1, 60, 16, 13, 3),
+    enc('mueggelheimer', 'Müggelheimer Straße', 1, 92, 52, 14, 3),
     enc('teufelssee', 'Teufelssee', 1, 98, 98, 14, 3),
     boss('turm', 'Müggelturm', 1, 134, 112, 15, 'waechter', 4),
-    // Zone 2: over the Dahme by ferry, west through Johannisthal up to the Spreepark (7 waves).
-    enc('faehre', 'Fähre Grünau', 2, -54, 104, 13, 2),
-    enc('flugfeld', 'Flugfeld Johannisthal', 2, -100, 62, 15, 2),
+    // Zone 2: over the Dahme by ferry, west through Johannisthal up to the Spreepark (9 waves).
+    enc('faehre', 'Fähre Grünau', 2, -54, 104, 13, 3),
+    enc('flugfeld', 'Flugfeld Johannisthal', 2, -100, 62, 15, 3),
     enc('dinowiese', 'Dino-Wiese', 2, -112, 12, 15, 3),
     boss('riesenrad', 'Riesenrad', 2, -108, -30, 16, 'rex', 4),
     // Zone 3: along the Spree, over the Lange Brücke to the Rathaus.

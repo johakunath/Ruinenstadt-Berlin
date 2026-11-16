@@ -26,13 +26,19 @@ export interface BotSkill {
   dodgeMelee: number;
   /** Uses Verband below this share of life. */
   bandageAt: number;
+  /** Share of the time in reach it actually attacks (a person repositions, looks, hesitates). */
+  tempo: number;
 }
 
-/** Start value for Johannes (2D bot: 30 % missed, 0.25 to 0.5 s). Refit from telemetry after a playtest. */
-export const SKILL_DEFAULT: BotSkill = { miss: 0.3, react: [0.25, 0.5], dodgeMelee: 0.5, bandageAt: 0.45 };
-/** A careful player and a careless one, to bracket the curve. */
-export const SKILL_GOOD: BotSkill = { miss: 0.1, react: [0.18, 0.3], dodgeMelee: 0.8, bandageAt: 0.5 };
-export const SKILL_WEAK: BotSkill = { miss: 0.5, react: [0.35, 0.7], dodgeMelee: 0.25, bandageAt: 0.35 };
+/**
+ * Fitted to Johannes' first full 3D run (2026-11-16, pad, old roster; `docs/balance.md`): he took
+ * less damage than the 2D start values predicted (30 % missed) and needed about 1.4 times the
+ * bot's fight time. So: few missed telegraphs, quick reactions, attacks about 70 % of the time.
+ */
+export const SKILL_DEFAULT: BotSkill = { miss: 0.12, react: [0.2, 0.35], dodgeMelee: 0.75, bandageAt: 0.45, tempo: 0.7 };
+/** A sharper player and a careless one, to bracket the curve. */
+export const SKILL_GOOD: BotSkill = { miss: 0.05, react: [0.15, 0.25], dodgeMelee: 0.9, bandageAt: 0.5, tempo: 0.9 };
+export const SKILL_WEAK: BotSkill = { miss: 0.4, react: [0.3, 0.6], dodgeMelee: 0.35, bandageAt: 0.35, tempo: 0.6 };
 
 // ---------------------------------------------------------------- navigation
 
@@ -334,7 +340,8 @@ export class Bot {
       if (d < reach + near.def.radius + 0.2 && threat < 3) {
         // A person mashes: press, release, press.
         this.attackHeld = (this.attackHeld + 1) % 6;
-        inp.attack = this.attackHeld < 3;
+        // Bursts of about two seconds, then a pause that makes up the rest of `tempo`.
+        inp.attack = this.attackHeld < 3 && (s.time % 3) < 3 * this.skill.tempo;
       }
       const tough = !!near.def.boss || !!near.elite;
       if (s.abilities.powerCd <= 0 && (crowd >= 3 || (tough && d < 4.5)) && d < (ranged ? 10 : 4.5)) inp.power = true;
