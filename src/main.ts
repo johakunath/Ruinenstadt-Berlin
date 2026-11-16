@@ -23,6 +23,7 @@ import { ENEMIES } from './data/enemies';
 import type { Level } from './sim/level';
 import { Telemetry } from './telemetry';
 import { LootLabels, rarityColor } from './ui/loot-labels';
+import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
 
@@ -65,6 +66,28 @@ function finishLootExit(leave: boolean): void {
   } else {
     lootExit = 'search';
   }
+}
+/**
+ * Gamepad for the exit warning: D-pad or stick switches between the two buttons, A activates, B
+ * searches. During the search, Select leaves. Button state is tracked all the time, so a button
+ * held when the dialog opens does not fire.
+ */
+let lootPadDown: boolean[] = [];
+function pollLootPad(): void {
+  const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
+  if (!pad) { lootPadDown = []; return; }
+  const down = pad.buttons.map((b) => b.pressed || b.value > 0.5);
+  const edge = (i: number): boolean => !!down[i] && !lootPadDown[i];
+  if (lootExit === 'ask') {
+    const find = document.getElementById('loot-find') as HTMLButtonElement;
+    const leave = document.getElementById('loot-leave') as HTMLButtonElement;
+    if (edge(12) || edge(13) || edge(14) || edge(15)) (document.activeElement === find ? leave : find).focus();
+    else if (edge(0)) (document.activeElement === leave ? leave : find).click();
+    else if (edge(1)) finishLootExit(false);
+  } else if (lootExit === 'search' && edge(8)) {
+    finishLootExit(true);
+  }
+  lootPadDown = down;
 }
 document.getElementById('loot-find')!.addEventListener('click', () => finishLootExit(false));
 document.getElementById('loot-leave')!.addEventListener('click', () => finishLootExit(true));
@@ -365,10 +388,13 @@ function frame(now: number): void {
     else {
       lootChip.hidden = false;
       document.getElementById('loot-n')!.textContent = String(left);
+      document.getElementById('loot-pad')!.hidden = input.device !== 'gamepad';
     }
   }
   if (level) expeditionHud(dt);
-  lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y, z), phase === 'play' && !inventory.open);
+  pollLootPad();
+  // Heights are above the local ground (hills and terraces).
+  lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !inventory.open);
 
   if (!inventory.open) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
@@ -400,7 +426,7 @@ function expeditionHud(dt: number): void {
   }
   if (lootExit === 'search' && renderer) {
     const d = nearestImportantDrop(sim);
-    if (d) marks.push({ ...renderer.screenOf(d.x, 0.5, d.z), color: dropColor(d) });
+    if (d) marks.push({ ...renderer.screenOf(d.x, groundY(d.x, d.z) + 0.5, d.z), color: dropColor(d) });
   }
   edges.update(marks);
   const searchTarget = lootExit === 'search' ? nearestImportantDrop(sim) : null;
