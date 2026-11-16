@@ -7,7 +7,7 @@ import { POWER, POWERS, PX, type PowerDef } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { BREAKABLE, hitBreakable } from './breakables';
 import { colliderDistance } from './collide';
-import { hasL, ignite, knock, pk, strike } from './combat';
+import { hasL, ignite, knock, pk, strike, resist } from './combat';
 import { angleOf, clamp } from './math';
 import { DT, type Cast, type Enemy, type Sim, type SimInput } from './types';
 
@@ -539,7 +539,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
       if (dist > k.r + POWER.shock.band + e.def.radius || dist > k.max + e.def.radius) continue;
       k.hits.push(e.id);
       strike(s, e, d * k.mul, { knock: k.knock, stun: k.stun, feel: 'none', noproc: true, element: k.acid ? 'acid' : undefined });
-      if (k.acid && !dead(e)) e.acid = 3;
+      if (k.acid && !dead(e) && resist(e, 'acid') > 0) e.acid = 3;
     }
   }
   if (a.shocks.length) a.shocks = a.shocks.filter((k) => k.r < k.max);

@@ -139,6 +139,11 @@ describe('resistances (2D RES)', () => {
     expect(strike(s, w, 100, { element: 'fire', noproc: true }) / strike(s, w, 100, { noproc: true })).toBeCloseTo(1.6);
     expect(strike(s, sp, 100, { element: 'acid', noproc: true })).toBe(0);
     expect(strike(s, sp, 100, { element: 'shock', noproc: true })).toBe(160);
+    // An acid ring (Rattenmantel) leaves no acid on the immune Speier.
+    s.abilities.shocks.push({ x: sp.x, z: sp.z, r: 0.1, max: 3, hits: [], mul: 1, stun: 0, knock: 0, acid: true, kind: 'acid' });
+    for (let i = 0; i < 30; i++) { s.hitstop = 0; stepSim(s, NO_INPUT); }
+    expect(sp.acid).toBe(0);
+    expect(w.acid).toBeGreaterThan(0);
   });
 });
 
@@ -183,6 +188,33 @@ describe('elites (2D modifiers)', () => {
       stepSim(s, NO_INPUT);
       expect(e.sp?.kind, mod).toBe(want[mod]);
     }
+  });
+
+  it('an interrupted or killed elite does not land its marked attack', () => {
+    for (const how of ['stagger', 'kill'] as const) {
+      const s = fresh();
+      const e = put(s, 'walker', 0, 3.5);
+      makeElite(s, e, 'gepanzert');
+      e.def = { ...e.def, attackRange: 0, speed: 0 };
+      e.cd[0] = 0;
+      stepSim(s, NO_INPUT);
+      expect(s.threats.zones.length).toBe(1);
+      strike(s, e, how === 'kill' ? 1e6 : 1, { knock: 5 });
+      expect(e.state).toBe(how === 'kill' ? 'dead' : 'stagger');
+      const evs = run(s, THREAT.slam.wind + 0.2, {}, false);
+      expect(has(evs, 'playerHit'), how).toBe(false);
+      expect(has(evs, 'zoneHit'), how).toBe(false);
+    }
+  });
+
+  it('an elite raptor uses its modifier special beside the pounce', () => {
+    const s = fresh();
+    const e = put(s, 'raptor', 0, 3.5);
+    makeElite(s, e, 'gepanzert');
+    e.cd[0] = 0;
+    e.cd[1] = 99;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('stomp');
   });
 
   it('Brennend leaves fire that hurts the hero standing in it', () => {
@@ -275,7 +307,7 @@ describe('bosses (2D patterns)', () => {
 
   it('no hit takes more than 45 % of max life, floors included', () => {
     const s = fresh();
-    s.threats.zones.push({ x: s.player.x, z: s.player.z, r: 3, t: 0.01, max: 1, damage: 9999, floor: 0.9, kind: 'slam', src: 0 });
+    s.threats.zones.push({ x: s.player.x, z: s.player.z, r: 3, t: 0.01, max: 1, damage: 9999, floor: 0.9, kind: 'slam', src: 0, free: true });
     run(s, 0.1, {}, false);
     expect(s.player.hp).toBeGreaterThanOrEqual(s.stats.maxHp * 0.55 - 1);
   });

@@ -270,7 +270,7 @@ document.getElementById('pause-finish')!.addEventListener('click', () => { ui.to
   const b = document.getElementById('new-game') as HTMLButtonElement;
   let armed = 0;
   b.addEventListener('click', () => {
-    if (performance.now() - armed < 4000) { b.textContent = 'Ganz neu anfangen'; armed = 0; newGame(); return; }
+    if (armed && performance.now() - armed < 4000) { b.textContent = 'Ganz neu anfangen'; armed = 0; newGame(); return; }
     armed = performance.now();
     b.textContent = 'Wirklich? Alles löschen';
     setTimeout(() => { if (armed && performance.now() - armed >= 3900) { b.textContent = 'Ganz neu anfangen'; armed = 0; } }, 4000);

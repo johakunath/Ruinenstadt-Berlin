@@ -27,7 +27,11 @@ export interface Special {
 
 export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail';
 /** A marked circle: fills for `max` seconds, then hits the hero inside it. */
-export interface Zone { x: number; z: number; r: number; t: number; max: number; damage: number; floor: number; kind: ZoneKind; src: number }
+export interface Zone {
+  x: number; z: number; r: number; t: number; max: number; damage: number; floor: number; kind: ZoneKind; src: number;
+  /** Free zones go off whatever happens to their source (a barrage already thrown). All others fizzle when the source is interrupted or killed. */
+  free?: boolean;
+}
 export interface EnemyShot { x: number; z: number; px: number; pz: number; vx: number; vz: number; r: number; damage: number; life: number; boss: boolean }
 export interface Hazard { x: number; z: number; r: number; t: number; max: number; damage: number; tick: number; kind: 'fire' | 'acid' }
 /** An expanding ring; `r` may start negative (a second ring that follows the first). */
@@ -84,6 +88,8 @@ export function updateThreats(sim: Sim): void {
     z.t -= DT;
     if (z.t > 0) continue;
     T.zones.splice(i, 1);
+    // Interrupted or killed during the wind-up: the marked attack never lands.
+    if (!z.free && !sim.enemies.some((e) => e.id === z.src && e.state === 'special')) continue;
     let hit = false;
     if (Math.hypot(p.x - z.x, p.z - z.z) < z.r + PLAYER.radius * 0.5) {
       const a = away(sim, z.x, z.z);

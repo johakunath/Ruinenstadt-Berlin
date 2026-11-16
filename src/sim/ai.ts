@@ -77,10 +77,10 @@ function begin(sim: Sim, e: Enemy, kind: SpecialKind): void {
     case 'barrage': {
       const B = BOSS.barrage;
       const n = BOSS.waechter.extra + (e.rage ? 2 : 0);
-      addZone(sim, { x: p.x, z: p.z, r: B.radius, t: B.wind, max: B.wind, damage: damageOf(e, B.damage), floor: B.floor, kind: 'bomb', src });
+      addZone(sim, { x: p.x, z: p.z, r: B.radius, t: B.wind, max: B.wind, damage: damageOf(e, B.damage), floor: B.floor, kind: 'bomb', src, free: true });
       for (let i = 0; i < n; i++) {
         const t = B.wind + (i + 1) * B.step;
-        addZone(sim, { x: p.x + sim.rng.range(-B.spreadX, B.spreadX), z: p.z + sim.rng.range(-B.spreadZ, B.spreadZ), r: B.radius, t, max: t, damage: damageOf(e, B.damage), floor: B.floor, kind: 'bomb', src });
+        addZone(sim, { x: p.x + sim.rng.range(-B.spreadX, B.spreadX), z: p.z + sim.rng.range(-B.spreadZ, B.spreadZ), r: B.radius, t, max: t, damage: damageOf(e, B.damage), floor: B.floor, kind: 'bomb', src, free: true });
       }
       break;
     }
@@ -261,6 +261,8 @@ export function think(sim: Sim, e: Enemy, dist: number, toX: number, toZ: number
     }
     case 'pouncer': {
       const P = THREAT.pounce;
+      // An elite raptor has its modifier's special beside the pounce.
+      if (e.elite && eliteThink(sim, e, e.elite, dist)) return plan;
       if (e.cd[1] <= 0 && dist < P.range && dist > 1.6 && sim.flow.clearLine(e.x, e.z, p.x, p.z)) {
         e.cd[1] = P.every;
         begin(sim, e, 'pounce');
