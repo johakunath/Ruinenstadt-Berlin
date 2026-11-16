@@ -3,11 +3,12 @@
 // Blessing and weapon-mod rules live here so a swing, a shot, a power and a burn all obey them.
 import { HIT_FEEL, PLAYER, type HitWeight } from '../data/combat';
 import { ENEMY_RESISTANCES, type ElementId, type LegendaryId } from '../data/items';
-import { THREAT } from '../data/enemies';
+import { ELITES, THREAT } from '../data/enemies';
 import { splitElite } from './enemies';
 import { PX } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { killDrops } from './loot';
+import { kodexKill } from './inventory';
 import { DT, type Enemy, type Sim } from './types';
 
 export const pk = (s: Sim, k: PerkId): number => s.statContext.perks[k] ?? 0;
@@ -176,6 +177,8 @@ export function killEnemy(s: Sim, e: Enemy): void {
   e.open = 0;
   if (e.elite === 'spaltend') splitElite(s, e);
   s.kills++;
+  if (kodexKill(s, e.def.kind)) s.events.push({ type: 'kodex', name: e.def.name });
+  if (e.elite && kodexKill(s, `e:${e.elite}`)) s.events.push({ type: 'kodex', name: `Elite ${ELITES[e.elite].name}` });
   a.streak.n++;
   a.streak.t = STATUS.streakTime;
   killDrops(s, e);

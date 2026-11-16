@@ -23,3 +23,9 @@ Quests and Erfolge (the 2D job system is not ported: needs its own step), Auto-A
 
 ## Done when
 Each tab is usable at 844 × 390 with touch and pad; texts are short German lines; `npm run check`, `npm run e2e`; three screenshots in `docs/proof/u2-tabs/`.
+
+## Handover (Opus 5.5, 2026-11-16)
+- Segen: icon grid with family dots and level dots, detail card (Je Stufe, Jetzt, Nächste Stufe), Zweiter Atem state.
+- Karte: map with live marks (unused Litfaßsäulen, enemies) and a legend; hidden blessings n of 3.
+- Kodex: `inventory.kodex` (kills by kind and `e:<elite>`, finds by legendary and set base), filled in `killEnemy` and `collectItem`, saved with the profile, toast "Neu im Kodex". Sections Gegner, Endgegner, Elite-Gegner, Bewohner, Legendäre Funde, Sets. Unit test `src/sim/kodex.test.ts`.
+- Optionen: controls table for keyboard, pad and touch (`CONTROLS` in `src/ui/ui.ts`), "Expedition abbrechen" (two taps; the run ends as a loss, gear and Schrott stay, back to the title), "Abschließen" after a won run, version line.

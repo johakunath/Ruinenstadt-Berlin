@@ -38,3 +38,10 @@ Segen, Quests, Kodex tabs (U2). Stash, Aufsätze, Umschmieden (M13). A 3D hero p
 ## Notes
 - Interim state (PR #18): the options overlay is titled "Pause" and links to inventory and map; on touch the two HUD buttons are hidden. Replace it.
 - `itemCard` in `src/ui/inventory.ts` is also used by the trader screen (`src/ui/abilities.ts`); keep one card renderer.
+
+## Handover (Opus 5.5, 2026-11-16)
+- Built: `src/ui/menu.ts` shell (Inventar, Karte, Segen, Kodex, Optionen; title shows Kodex and Optionen), header with Schrott, Item Level, zone · Kampf n/13, hidden blessings. HUD keeps only the pause button, which pulses green when the bag holds an upgrade.
+- Inventory tab as 2D: doll, stat table, bag with salvage chips that show their Schrott and hide when empty ("Rest" needs two taps), two aligned cards with per-affix deltas, Item Level arrow, "Alle Werte nach Wechsel", Kraft chooser on the weapon card, implant mode via `setImplantMode`. Double tap equips (P4). Empty cells are not focusable; a selection re-renders only the detail column.
+- Keys: Esc/P pause, I inventory, M map, Tab and [ ] switch tabs; pad Start, Y, View, LB/RB, D-pad/stick move spatially (rows and columns), A press, B close.
+- Reused from 2D: `renderInv`, `detail`, `cmpRows`, `cmpBlock`, `statLine`, `SROWS`, `segenTab`, Kodex lists.
+- Screens: `docs/proof/u1-menu/` (844 × 390, 1280 × 800, 1280 × 720). Not checked on a real phone or the Tab S9.

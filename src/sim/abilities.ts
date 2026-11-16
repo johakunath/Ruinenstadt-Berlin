@@ -474,7 +474,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
   if (p.state !== 'dead') {
     if (a.hot > 0) {
       a.hot -= DT;
-      healPlayer(s, (s.stats.maxHp * CONSUMABLE.heal) / CONSUMABLE.hotTime * DT);
+      healPlayer(s, (s.stats.maxHp * ((s.inventory.camp?.stations.laz ?? 1) >= 3 ? 0.6 : CONSUMABLE.heal)) / CONSUMABLE.hotTime * DT);
     }
     if (a.guard > 0) {
       a.guard -= DT;

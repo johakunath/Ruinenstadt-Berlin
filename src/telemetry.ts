@@ -9,7 +9,7 @@ import type { Sim, SimEvent } from './sim/types';
 const URL = 'https://script.google.com/macros/s/AKfycbyUCf3slojkaYJhVemGU54EBidrXFhj2FoOANlOZQQdIxhO4YIWTW1kF9FPv3hVDXQ/exec';
 const QUEUE = 'ruinenstadt-berlin.tlq';
 const PID = 'ruinenstadt-berlin.pid';
-const VERSION = '3d-0.1.0';
+export const VERSION = '3d-0.1.0';
 
 export type RunEnd = 'win' | 'dead' | 'quit';
 

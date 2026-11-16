@@ -14,9 +14,9 @@ async function setup(page: Page): Promise<void> {
     g.collectItem({...base,id:105,slot:'h',kind:'head',name:'Helm',base:'helm',rarity:0,value:5});
     g.hold(false);
   });
-  // Touch HUD: the pause button leads to the inventory.
-  if (await page.locator('#inventory-btn').isVisible()) await page.locator('#inventory-btn').click();
-  else { await page.locator('#menu-btn').click(); await page.locator('#pause-inventory').click(); }
+  // U1: the pause button opens the menu on the Inventar tab, on every device.
+  await page.locator('#menu-btn').click();
+  await expect(page.locator('#inventory')).toBeVisible();
 }
 
 test('inventory equips, compares, protects loot, pauses, and closes without buffered attacks', async ({page}, info) => {
@@ -26,7 +26,8 @@ test('inventory equips, compares, protects loot, pauses, and closes without buff
   await page.waitForTimeout(300);
   expect(await page.evaluate(()=>window.__game!.sim().tick)).toBe(tick);
   await page.locator('[data-bag="0"]').click();
-  await expect(page.locator('.inv-deltas')).toContainText('Leben');
+  await expect(page.locator('.inv-detail')).toContainText('Leben');
+  await expect(page.locator('.inv-detail .cmp2 .inv-card')).toHaveCount(2);
   await page.getByRole('button',{name:'Anlegen',exact:true}).click();
   expect(await page.evaluate(()=>window.__game!.sim().equipment.a?.id)).toBe(101);
   await page.locator('[data-bag="0"]').click();
@@ -38,15 +39,15 @@ test('inventory equips, compares, protects loot, pauses, and closes without buff
   expect(await page.evaluate(()=>window.__game!.sim().inventory.bag.some(i=>i.id===103))).toBe(true);
   await expect(page.locator('#inventory footer')).toHaveText('Sicher? Erneut tippen.');
   await page.screenshot({path:info.outputPath('inventory-1280.png')});
-  await page.getByRole('button',{name:'Gewöhnl.',exact:true}).click();
-  await page.getByRole('button',{name:'Gewöhnl.',exact:true}).click();
+  await page.getByRole('button',{name:/^Gewöhnl\. \+/}).click();
   const ids=await page.evaluate(()=>window.__game!.sim().inventory.bag.map(i=>i.id));
   expect(ids).toContain(102); expect(ids).toContain(103); expect(ids).toContain(104); expect(ids).not.toContain(105);
-  // Focus wraps inside the dialog; Tab no longer opens the map.
-  await page.locator('[data-action="close"]').focus();
-  await page.keyboard.press('Shift+Tab');
-  expect(await page.evaluate(()=>document.activeElement?.closest('#inventory')!==null)).toBe(true);
-  await expect(page.locator('#karte')).toBeHidden();
+  // ] switches menu tabs; Tab moves focus and stays in the menu.
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(()=>document.activeElement?.closest('#menu')!==null)).toBe(true);
+  await page.keyboard.press('BracketRight');
+  await expect(page.locator('.menu-tabb.on')).not.toHaveText('Inventar');
+  expect(await page.evaluate(()=>document.activeElement?.closest('#menu')!==null)).toBe(true);
   await page.keyboard.press('KeyJ');
   const swings=await page.evaluate(()=>window.__game!.sim().player.swing);
   await page.keyboard.press('Escape');
@@ -76,8 +77,7 @@ test('phone touch selection, equipping, scroll and overflow',async({browser},inf
   await page.locator('[data-bag="0"]').tap();
   await page.locator('[data-action="equip"]').tap();
   expect(await page.evaluate(()=>window.__game!.sim().equipment.a?.id)).toBe(101);
-  expect(await page.evaluate(()=>document.querySelector('.inv-panel')!.scrollWidth <= document.querySelector('.inv-panel')!.clientWidth)).toBe(true);
-  await page.locator('.inv-panel').evaluate(el=>el.scrollTop=0);
+  expect(await page.evaluate(()=>document.querySelector('.menu-panel')!.scrollWidth <= document.querySelector('.menu-panel')!.clientWidth)).toBe(true);
   await page.screenshot({path:info.outputPath('inventory-phone.png')});
   await context.close();
 });
@@ -117,7 +117,7 @@ test('tablet long press drag equips without horizontal overflow',async({browser}
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:b.x+b.width/2,y:b.y+b.height/2}]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   expect(await page.evaluate(()=>window.__game!.sim().equipment.a?.id)).toBe(101);
-  expect(await page.evaluate(()=>document.querySelector('.inv-panel')!.scrollWidth<=document.querySelector('.inv-panel')!.clientWidth)).toBe(true);
+  expect(await page.evaluate(()=>document.querySelector('.menu-panel')!.scrollWidth<=document.querySelector('.menu-panel')!.clientWidth)).toBe(true);
   await page.screenshot({path:info.outputPath('inventory-tablet.png')});
   await context.close();
 });
@@ -139,7 +139,7 @@ test('stationary mouse holds select items without starting a drag', async ({page
   expect(await page.evaluate(() => window.__game!.sim().inventory.bag.map(i => i.id))).toEqual([101,102,103,104,105]);
 });
 
-test('equip, unequip and salvage keep keyboard focus trapped in the dialog', async ({page}) => {
+test('equip, unequip and salvage keep keyboard focus in the menu', async ({page}) => {
   await setup(page);
   await page.locator('[data-bag="0"]').click();
   await page.locator('[data-action="equip"]').focus();
@@ -152,9 +152,26 @@ test('equip, unequip and salvage keep keyboard focus trapped in the dialog', asy
   await page.locator('[data-action="salvage"]').focus();
   await page.keyboard.press('Enter');
   expect(await page.evaluate(() => window.__game!.sim().inventory.bag.some(i => i.id === 102))).toBe(false);
-  await expect(page.locator('[data-action="close"]')).toBeFocused();
-  await page.keyboard.press('Shift+Tab');
-  await expect(page.locator('[data-bag="24"]')).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(page.locator('[data-action="close"]')).toBeFocused();
+  expect(await page.evaluate(()=>document.activeElement?.closest('#menu')!==null)).toBe(true);
+  // Empty bag cells are not focusable (U1 step 4).
+  await expect(page.locator('#inventory div[data-bag="24"]')).toHaveCount(1);
+  await expect(page.locator('#inventory button[data-bag="24"]')).toHaveCount(0);
 });
+
+test('phone landscape: doll, bag and comparison fit; tabs Segen, Kodex, Optionen render',async({browser},info)=>{
+  const context=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true});
+  const page=await context.newPage(); await setup(page);
+  await page.locator('[data-bag="0"]').tap();
+  await expect(page.locator('.inv-detail .cmp2')).toBeVisible();
+  for (const sel of ['.inv-doll','.inv-grid','.inv-detail']) { const b=(await page.locator(sel).boundingBox())!; expect(b.y+Math.min(b.height,120)).toBeLessThanOrEqual(390); }
+  expect(await page.evaluate(()=>document.scrollingElement!.scrollHeight<=window.innerHeight+1)).toBe(true);
+  const name=await page.locator('.inv-detail h3').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
+  expect(name).toBe(16);
+  await page.screenshot({path:info.outputPath('menu-844x390-inventar.png')});
+  for (const [tab,check] of [['segen','.menu-tab[data-tab="segen"]'],['kodex','.cols2'],['opt','#controls table']] as const) {
+    await page.locator(`[data-t="${tab}"]`).tap(); await expect(page.locator(check).first()).toBeVisible();
+    await page.screenshot({path:info.outputPath(`menu-844x390-${tab}.png`)});
+  }
+  await context.close();
+});
+

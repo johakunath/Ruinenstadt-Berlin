@@ -13,8 +13,8 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
 | M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
 | M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Fable 5.2 | open: `docs/tasks/m11d-map-realism.md` |
-| U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | open: `docs/tasks/u1-pause-menu.md` |
-| U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | open, needs U1: `docs/tasks/u2-menu-tabs.md` |
+| U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |
+| U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
 | T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (paving image) | open: `docs/tasks/t1b-ground-polish.md` |
 | A2 Audio follow-ups | Sonnet | open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | open: `docs/tasks/l2-loot-followups.md` |
@@ -50,7 +50,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Built: one event per stretch between fights, every type once per run; places are seeded, M16b moves them into side branches |
 | Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
 | World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
-| Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Open |
+| Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Built (2026-11-16, `docs/tasks/m13-camp.md`): seven stations, meals from Zutaten, Lazarett, Aufsätze, Lager; playtest open |
 | Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
 | Endless mode after the district boss | M18 | Open |
