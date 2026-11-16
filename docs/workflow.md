@@ -32,7 +32,8 @@ Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now 
 ## Token budget
 
 - Read only what the task needs: `CLAUDE.md`, the task, the files it names. Do not re-read whole docs to re-derive decisions already written down.
-- Codex reviews: one, at most two per PR (the second only after a large change). Do not re-trigger after each push.
+- Codex reviews (Johannes, 2026-11-16): one per session and PR; another only after substantial new commits. Fix the findings, do not re-trigger after each push. Fewer sessions are better.
+- GitHub Actions minutes are limited: CI does not run per commit. Order: PR as draft, work, Codex review, fix, then mark ready (CI runs once on that head), then merge. A merge Johannes asks for does not wait for CI. Superseded runs are cancelled; `main` always runs (deploy).
 - Codex runs the checks a task names (`npm run check`, the e2e test once). No broad tuning or measurement passes; Claude does those.
 - Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule.
 - Model choice: Opus 5.5 high for look, shaders, combat feel and architecture; medium for docs, small fixes and routine changes (plan-3d.md › Model).
@@ -70,4 +71,4 @@ When Johannes says "next task": `docs/migration.md` › Queue, first `open` row 
 - Sim rules have unit tests; ported data has invariant tests (ids unique, references resolve, ranges sane).
 - Visual changes: one screenshot in the PR at 1280 × 720 (`node tools/screenshot.mjs`).
 - `docs/status.md` updated when something a player sees changes; queue row in `docs/migration.md` set to `done`.
-- PR is a draft until CI is green.
+- PR is a draft until the Codex review is done and fixed; marking it ready is what starts CI (see Token budget).
