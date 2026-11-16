@@ -22,7 +22,10 @@ const svg = (body: string, box = 48): string => `<svg viewBox="0 0 ${box} ${box}
 
 /** Hex badge with a blessing glyph (2D `pIcon`). */
 export function perkIcon(id: PerkId, quality = 0): string {
-  const g = PERK_GLYPHS[id] ?? PERK_GLYPHS.dmg!;
+  // The G1 Umbau cards have no glyph of their own yet: they show their weapon's 2D Umbau glyph.
+  const base = { blade: 'm_rund', hammer: 'm_dampf', sling: 'm_schrot', spear: 'm_spiess' } as const;
+  const weapon = perkOf(id).weapon;
+  const g = PERK_GLYPHS[id] ?? (weapon ? PERK_GLYPHS[base[weapon]] : undefined) ?? PERK_GLYPHS.dmg!;
   const stroke = g[1] === 's';
   return `<svg class="perk-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 1.5L29 9v14l-13 7.5L3 23V9z" fill="#1c140f" stroke="${QUALITY_COLOR[quality]}" stroke-width="2"/><g transform="translate(6 6) scale(.8333)" fill="${stroke ? 'none' : g[0]}" stroke="${stroke ? g[0] : 'none'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${g[2]}</g></svg>`;
 }

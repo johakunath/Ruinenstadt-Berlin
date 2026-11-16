@@ -585,7 +585,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
         if (q.fire && !dead(e)) ignite(s, e, q.damage * 0.45 * s.stats.elementPower, 2);
         // Krähenfeder: shots slow. Ring der Ringbahn: a shot jumps once to the nearest other enemy.
         if (hasL(s, 'kraehe') && !dead(e)) e.slow = 2;
-        if (hasL(s, 'ring') && !q.jumped && !q.fire) {
+        if ((hasL(s, 'ring') || (pk(s, 'm_quer') > 0 && q.kind === 'stone')) && !q.jumped && !q.fire) {
           let nb: Enemy | null = null;
           let nd = 220 * PX;
           for (const o of s.enemies) {

@@ -182,6 +182,9 @@ class Smear {
       this.geos.set(`${kind}:${a.id}`, { geo: sectorGeometry(a.reach * (thrust ? 0.18 : 0.42), a.reach, a.from - (thrust ? a.width : 0), a.to + (thrust ? a.width : 0), 28), reach: a.reach });
     }
     this.geos.set('round', { geo: sectorGeometry(1.1, 2.6, -Math.PI, Math.PI, 56), reach: 2.6 });
+    // Fegestoß (spear Umbau): a wide sweep in either direction.
+    this.geos.set('fanL', { geo: sectorGeometry(1.1, 2.6, -1.05, 1.05, 28), reach: 2.6 });
+    this.geos.set('fanR', { geo: sectorGeometry(1.1, 2.6, 1.05, -1.05, 28), reach: 2.6 });
     this.material = new ShaderMaterial({
       uniforms: { head: { value: 0 }, fade: { value: 0 }, tint: { value: new Color(1, 0.72, 0.4) } },
       vertexShader: /* glsl */ `
@@ -226,7 +229,8 @@ class Smear {
       const head = (t - a.windup) / a.active;
       if (head > 0) {
         // A full circle (Rundumschlag) has its own ring.
-        const g = (a.to - a.from > 6 ? this.geos.get('round') : this.geos.get(`${kind}:${a.id}`)) ?? this.geos.get('blade:light1')!;
+        const fan = kind === 'spear' && a.style === 'slash';
+        const g = (a.to - a.from > 6 ? this.geos.get('round') : fan ? this.geos.get(a.to > a.from ? 'fanL' : 'fanR') : this.geos.get(`${kind}:${a.id}`)) ?? this.geos.get('blade:light1')!;
         this.mesh.geometry = g.geo;
         this.mesh.scale.setScalar(a.reach / g.reach);
         const sx = lerp(p.px, p.x, alpha);

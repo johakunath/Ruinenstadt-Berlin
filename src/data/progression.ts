@@ -10,7 +10,9 @@ export type PerkId = 'dmg' | 'hp' | 'spd' | 'crit' | 'rate' | 'reach' | 'leech' 
   | 'corrode' | 'chain' | 'elp' | 'res' | 'combo' | 'loot' | 'breaker' | 'blast' | 'breath'
   | 'exec' | 'mat' | 'rush' | 'pauke' | 'husar' | 'jagd' | 'schwel' | 'kachel' | 'stellung'
   | 'retour' | 'kimme' | 'durch' | 'd_brand' | 'd_mauer' | 'd_sturm' | 'd_kurz' | 'd_ziel'
-  | 'm_rund' | 'm_dampf' | 'm_schrot' | 'm_spiess';
+  | 'm_rund' | 'm_dampf' | 'm_schrot' | 'm_spiess'
+  // 3D additions (G1, Johannes 2026-11-16): two more Umbau cards per weapon.
+  | 'm_doppel' | 'm_sturm' | 'm_beben' | 'm_wurf' | 'm_fege' | 'm_lanze' | 'm_quer' | 'm_salve';
 export type PerkFamilyId = 'boll' | 'sprint' | 'krit' | 'serie' | 'dist' | 'el' | 'glut';
 
 /** 2D DIFF entries, in the original easy/normal/hard order. */
@@ -262,6 +264,15 @@ export const PERKS: readonly PerkDefinition[] = [
     description: 'Jeder Finisher wirft zusätzlich einen Speer, der 4 Gegner durchbohrt',
     max: 1,
     weapon: 'spear' },
+  // 3D additions (G1): not in 2D. Each changes the basic attack; one Umbau per run.
+  { id: 'm_doppel', name: 'Doppelklinge', description: 'Jeder Hieb trifft zweimal mit je 60% Schaden', max: 1, weapon: 'blade' },
+  { id: 'm_sturm', name: 'Sturmklinge', description: 'Hiebe tragen dich 1 m weiter, +25% Angriffstempo, -15% Schaden', max: 1, weapon: 'blade' },
+  { id: 'm_beben', name: 'Erdbeben', description: 'Die Finisher-Welle ist doppelt so groß und betäubt 1 s', max: 1, weapon: 'hammer' },
+  { id: 'm_wurf', name: 'Wurfhammer', description: 'Der Finisher wirft den Hammer: 150% Schaden, durchschlägt 3 Gegner', max: 1, weapon: 'hammer' },
+  { id: 'm_fege', name: 'Fegestoß', description: 'Stöße fegen im breiten Bogen, -20% Reichweite', max: 1, weapon: 'spear' },
+  { id: 'm_lanze', name: 'Sturmlanze', description: 'Kurz nach einer Rolle: Stöße mit doppeltem Schaden und +50% Reichweite', max: 1, weapon: 'spear' },
+  { id: 'm_quer', name: 'Querschläger', description: 'Schüsse springen auf einen weiteren Gegner über (80% Schaden)', max: 1, weapon: 'sling' },
+  { id: 'm_salve', name: 'Schnellfeuer', description: '+40% Angriffstempo, -25% Schaden, der Finisher ist ein Fächer aus 5 Schüssen', max: 1, weapon: 'sling' },
 ];
 
 /** 2D SURV. */
