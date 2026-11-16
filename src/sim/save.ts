@@ -33,17 +33,17 @@ export interface SaveRun {
   /** Ground loot, landed and still. */
   drops: Drop[];
 }
-export interface SaveV1 { v: 1; difficulty: DifficultyId; profile: SaveProfile; run: SaveRun | null }
+export interface SaveV1 { v: 1; /** Save time in ms; the cloud sync compares it. */ t: number; difficulty: DifficultyId; profile: SaveProfile; run: SaveRun | null }
 
 export function profileOf(sim: Sim): SaveProfile {
   return structuredClone({ inventory: sim.inventory, equipment: sim.equipment, statContext: sim.statContext });
 }
 
-export function snapshot(sim: Sim, map: string, withRun: boolean): SaveV1 {
+export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now()): SaveV1 {
   const r = sim.run;
   const inRun = withRun && sim.level.expedition && (r.phase === 'pause' || r.phase === 'travel') && sim.player.state !== 'dead';
   return {
-    v: 1, difficulty: sim.difficulty, profile: profileOf(sim),
+    v: 1, t: now, difficulty: sim.difficulty, profile: profileOf(sim),
     run: !inRun ? null : {
       map, index: r.index, wave: r.phase === 'pause' ? r.wave : -1, hp: sim.player.hp,
       x: sim.player.x, z: sim.player.z, facing: sim.player.facing, rng: sim.rng.state, nextId: sim.nextId,
@@ -72,7 +72,7 @@ export function parseSave(text: string | null): SaveV1 | null {
         || !Array.isArray(r.broken) || !Array.isArray(r.drops) || !Array.isArray(r.restSeen)) return null;
       run = r as unknown as SaveRun;
     }
-    return { v: 1, difficulty: s.difficulty, profile: p as unknown as SaveProfile, run };
+    return { v: 1, t: num(s.t) ? s.t : 0, difficulty: s.difficulty, profile: p as unknown as SaveProfile, run };
   } catch {
     return null;
   }

@@ -90,6 +90,10 @@
         <label class="row">Vibration <input id="opt-rumble" type="checkbox" /></label>
         <label class="row">Leistungsanzeige <input id="opt-perf" type="checkbox" /></label>
         <label class="row">Spieldaten senden <input id="opt-telemetry" type="checkbox" /></label>
+        <div class="row" id="cloud-row" hidden>
+          <span><b>Online speichern</b><br /><small id="cloud-info"></small></span>
+          <span class="cloud-btns"><button id="cloud-copy" type="button" class="choice">Kopieren</button><button id="cloud-join" type="button" class="choice">Code eingeben</button><button id="cloud-toggle" type="button" class="choice"></button></span>
+        </div>
         <button id="close-options" type="button" class="primary">Weiter</button>
       </div>
     </div>

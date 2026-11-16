@@ -10,6 +10,10 @@ export function loadSave(): SaveV1 | null {
 export function writeSave(s: SaveV1): void {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* no save */ }
 }
+/** The previous local save, kept when a cloud save replaces it. */
+export function backupSave(s: SaveV1): void {
+  try { localStorage.setItem(KEY + '.backup', JSON.stringify(s)); } catch { /* no backup */ }
+}
 export function clearSave(): void {
   try { localStorage.removeItem(KEY); } catch { /* no save */ }
 }

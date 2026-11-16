@@ -27,7 +27,8 @@ import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
-import { clearSave, loadSave, writeSave } from './save';
+import { backupSave, clearSave, loadSave, writeSave } from './save';
+import { CloudSave, formatCode, type SyncState } from './sync';
 import { simFromSave, snapshot, type SaveV1 } from './sim/save';
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
@@ -55,6 +56,8 @@ const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 if (save?.run && (save.run.map !== mapName || !level)) save = { ...save, run: null };
 let difficulty: DifficultyId = save?.difficulty ?? DEFAULT_DIFFICULTY;
+// Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
+const cloud = new CloudSave(persist && !navigator.webdriver && !/^(localhost|127\.|0\.0\.0\.0|$)/.test(location.hostname));
 function freshSim(): Sim {
   const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt };
   try { if (save) return simFromSave(save, base, false); } catch (err) { console.warn('Save unbrauchbar', err); save = null; clearSave(); }
@@ -130,7 +133,7 @@ const ui = new Ui(opts, {
   onPlay: () => {
     // A new game keeps the hero's gear but drops the old checkpoint.
     sim.difficulty = difficulty;
-    if (save?.run) { save = { ...save, run: null, difficulty }; writeSave(save); ui.setResume(null, difficulty); }
+    if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
     start();
   },
   onResume: () => {
@@ -232,6 +235,7 @@ function saveNow(withRun: boolean): void {
   if (!persist) return;
   save = snapshot(sim, mapName, withRun);
   writeSave(save);
+  cloud.queue(save);
 }
 
 function resumeLabel(): string | null {
@@ -240,6 +244,46 @@ function resumeLabel(): string | null {
   return `Kampf ${Math.min(r.index + 1, level.encounters.length)}`;
 }
 ui.setResume(resumeLabel(), difficulty);
+
+const cloudRow = document.getElementById('cloud-row') as HTMLDivElement;
+const cloudInfo = document.getElementById('cloud-info') as HTMLElement;
+const cloudToggle = document.getElementById('cloud-toggle') as HTMLButtonElement;
+function showCloud(s: SyncState = cloud.state): void {
+  const label: Record<SyncState, string> = { off: 'Aus auf diesem Gerät.', sync: 'Verbindet …', on: 'Synchron.', slow: 'Nicht erreichbar, speichert lokal.', conflict: 'Anderes Gerät war neuer. Beim nächsten Start geladen.' };
+  cloudInfo.textContent = cloud.code ? `Code ${formatCode(cloud.code)} · ${label[s]}` : label.off;
+  (document.getElementById('cloud-copy') as HTMLButtonElement).hidden = !cloud.code;
+  cloudToggle.textContent = cloud.code ? 'Ausschalten' : 'Aktivieren';
+}
+/** A cloud save replaces the local one: back it up, store the remote, reload into it. */
+function adoptRemote(remote: SaveV1): void {
+  if (save) backupSave(save);
+  writeSave(remote);
+  location.reload();
+}
+if (cloud.available) {
+  cloudRow.hidden = false;
+  cloud.onState = showCloud;
+  cloud.autoStart();
+  showCloud();
+  void cloud.pull(save).then((remote) => {
+    if (!remote) return;
+    if (phase === 'title') adoptRemote(remote); else cloud.hold();
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) void cloud.flush(); });
+}
+document.getElementById('cloud-copy')!.addEventListener('click', () => { void navigator.clipboard?.writeText(formatCode(cloud.code)).catch(() => prompt('Online-Code:', formatCode(cloud.code))); });
+cloudToggle.addEventListener('click', () => {
+  if (cloud.code) { if (confirm(`Online-Speichern ausschalten? Code ${formatCode(cloud.code)} gut aufheben.`)) cloud.disable(); } else { cloud.enable(); if (save) cloud.queue(save, 0); }
+  showCloud();
+});
+document.getElementById('cloud-join')!.addEventListener('click', () => {
+  const raw = prompt('Online-Code eingeben (z. B. ABCD-1234). Der Stand auf diesem Gerät wird ersetzt, eine Sicherung bleibt.');
+  if (!raw) return;
+  void cloud.join(raw).then((r) => {
+    if ('save' in r) { adoptRemote(r.save); return; }
+    cloudInfo.textContent = { code: 'Ungültiger Code.', net: 'Server nicht erreichbar.', unknown: 'Code unbekannt.', damaged: 'Spielstand unbrauchbar.' }[r.error];
+  });
+});
 
 function start(resumed = false): void {
   audio.start();
