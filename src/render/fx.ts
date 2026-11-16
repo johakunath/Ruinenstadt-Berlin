@@ -1,4 +1,6 @@
 import { AbilityView } from './abilities';
+import { allWeaponAttacks } from '../data/combat';
+import type { WeaponKindId } from '../data/items';
 // Effects: particles (fire, embers, sparks, dust), weapon smear, enemy telegraphs, impact
 // flashes, blob shadows, drifting mist. All of it lives on the FX layer.
 import { groundY } from './ground';
@@ -6,11 +8,10 @@ import {
   AdditiveBlending, BufferAttribute, BufferGeometry, Color, DoubleSide, DynamicDrawUsage, Group, InstancedMesh, Matrix4, Mesh,
   MeshBasicMaterial, NormalBlending, PlaneGeometry, Points, ShaderMaterial, Sprite, SpriteMaterial, Vector3, type Blending,
 } from 'three';
-import type { AttackDef, AttackId } from '../data/combat';
-import { ATTACKS } from '../data/combat';
+import type { AttackDef } from '../data/combat';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
 import { lerp, lerpAngle, Rng } from '../sim/math';
-import { DT, type Enemy, type Player, type Sim } from '../sim/types';
+import { DT, type Enemy, type Player, type Sim, type SimEvent } from '../sim/types';
 import { paintGlow } from './paint';
 import { FX_LAYER } from './world';
 
@@ -168,12 +169,18 @@ class Particles {
 /** Arc that follows the weapon sweep: bright leading edge, fading tail. Matches the hit arc exactly. */
 class Smear {
   readonly mesh: Mesh;
-  private readonly geos = new Map<AttackId, BufferGeometry>();
+  private readonly geos = new Map<string, { geo: BufferGeometry; reach: number }>();
   private readonly material: ShaderMaterial;
   private fade = 0;
 
   constructor() {
-    for (const a of Object.values(ATTACKS)) this.geos.set(a.id, sectorGeometry(a.reach * 0.42, a.reach, a.from, a.to, 28));
+    // One arc per weapon attack, so the smear always matches the hit shape. A thrust is a lance of light.
+    for (const { kind, def: a } of allWeaponAttacks()) {
+      if (a.style === 'throw') continue;
+      const thrust = a.style === 'thrust';
+      this.geos.set(`${kind}:${a.id}`, { geo: sectorGeometry(a.reach * (thrust ? 0.18 : 0.42), a.reach, a.from - (thrust ? a.width : 0), a.to + (thrust ? a.width : 0), 28), reach: a.reach });
+    }
+    this.geos.set('round', { geo: sectorGeometry(1.1, 2.6, -Math.PI, Math.PI, 56), reach: 2.6 });
     this.material = new ShaderMaterial({
       uniforms: { head: { value: 0 }, fade: { value: 0 }, tint: { value: new Color(1, 0.72, 0.4) } },
       vertexShader: /* glsl */ `
@@ -202,27 +209,31 @@ class Smear {
       depthWrite: false,
       side: DoubleSide,
     });
-    this.mesh = new Mesh(this.geos.get('light1'), this.material);
+    this.mesh = new Mesh(this.geos.get('blade:light1')!.geo, this.material);
     this.mesh.layers.set(FX_LAYER);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 6;
     this.mesh.visible = false;
   }
 
-  update(p: Player, alpha: number, dt: number, frozen: boolean): void {
-    const a: AttackDef | null = p.state === 'attack' ? p.attack : null;
+  update(p: Player, alpha: number, dt: number, frozen: boolean, kind: WeaponKindId, frenzy: boolean): void {
+    const a: AttackDef | null = p.state === 'attack' && p.attack?.style !== 'throw' ? p.attack : null;
+    // Säbeltanz swings red, crits and finishers white-hot.
+    (this.material.uniforms.tint!.value as Color).setRGB(1, frenzy ? 0.25 : p.critical ? 0.86 : 0.72, frenzy ? 0.2 : p.critical ? 0.6 : 0.4);
     if (a) {
       const t = p.stateT + (frozen ? 0 : alpha * DT);
       const head = (t - a.windup) / a.active;
       if (head > 0) {
-        this.mesh.geometry = this.geos.get(a.id) as BufferGeometry;
-        this.mesh.scale.setScalar(a.reach / ATTACKS[a.id].reach);
+        // A full circle (Rundumschlag) has its own ring.
+        const g = (a.to - a.from > 6 ? this.geos.get('round') : this.geos.get(`${kind}:${a.id}`)) ?? this.geos.get('blade:light1')!;
+        this.mesh.geometry = g.geo;
+        this.mesh.scale.setScalar(a.reach / g.reach);
         const sx = lerp(p.px, p.x, alpha);
         const sz = lerp(p.pz, p.z, alpha);
-        this.mesh.position.set(sx, groundY(sx, sz) + (a.style === 'smash' ? 0.12 : 1.05), sz);
+        this.mesh.position.set(sx, groundY(sx, sz) + (a.style === 'smash' ? 0.12 : a.style === 'thrust' ? 1.2 : 1.05), sz);
         this.mesh.rotation.set(0, lerpAngle(p.pfacing, p.facing, alpha), 0);
         // Slashes lean with the swing direction; the smash fans out flat on the ground.
-        this.mesh.rotateZ(a.style === 'smash' ? 0 : Math.sign(a.to - a.from) * 0.2);
+        this.mesh.rotateZ(a.style === 'slash' && a.to - a.from < 6 ? Math.sign(a.to - a.from) * 0.2 : 0);
         this.material.uniforms.head!.value = Math.min(1, head);
         this.fade = head <= 1 ? 1 : Math.max(0, 1 - (head - 1) * a.active * 9);
       }
@@ -312,7 +323,7 @@ export class Fx {
   private emberDebt = 0;
   private flameDebt = 0;
   private time = 0;
-  private readonly abilities = new AbilityView();
+  private readonly abilities: AbilityView;
 
   constructor(
     private readonly fires: Vector3[],
@@ -320,7 +331,11 @@ export class Fx {
   ) {
     this.glow = new Particles(900, AdditiveBlending);
     this.dust = new Particles(260, NormalBlending);
-    this.group.add(this.glow.points, this.dust.points, this.smear.mesh, this.telegraphs.group);
+    this.abilities = new AbilityView({
+      glow: (x, y, z, vx, vy, vz, life, size, r, g, b, gravity = 0, grow = 0.3) => this.glow.spawn({ x, y, z, vx, vy, vz, life, size, grow, r, g, b, gravity, drag: 1.5 }),
+      dust: (x, y, z, vx, vy, vz, life, size, r, g, b) => this.dust.spawn({ x, y, z, vx, vy, vz, life, size, grow: 2, r, g, b, gravity: -0.3, drag: 3 }),
+    });
+    this.group.add(this.glow.points, this.dust.points, this.smear.mesh, this.telegraphs.group, this.abilities.group);
     const flashTex = paintGlow('rgba(255,245,220,1)', 'rgba(255,170,90,0)');
     for (let i = 0; i < 8; i++) {
       const sprite = new Sprite(new SpriteMaterial({ map: flashTex, blending: AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, opacity: 0 }));
@@ -421,9 +436,24 @@ export class Fx {
     }
   }
 
-  update(sim: Sim, alpha: number, dt: number, frozen: boolean, pixelScale: number): void {
-    if (!this.abilities.group.parent) this.group.add(this.abilities.group);
-    this.abilities.update(sim);
+  /** One-shot ability effects (bolts, shock dust, impacts). */
+  onEvent(ev: SimEvent): void {
+    this.abilities.onEvent(ev);
+  }
+
+  /** A burst of colored sparks (pickups, shrines, found blessings). */
+  burst(x: number, y: number, z: number, r: number, g: number, b: number, count: number, speed = 4): void {
+    for (let i = 0; i < count; i++) {
+      const a = this.rng.range(0, Math.PI * 2);
+      const s = this.rng.range(0.3, 1) * speed;
+      this.glow.spawn({ x, y, z, vx: Math.cos(a) * s, vy: this.rng.range(1, speed), vz: Math.sin(a) * s, life: this.rng.range(0.3, 0.8), size: this.rng.range(0.06, 0.12), grow: 0.3, r, g, b, gravity: 7, drag: 1.6 });
+    }
+  }
+
+  update(sim: Sim, alpha: number, dt: number, frozen: boolean, pixelScale: number, heroY = 0): void {
+    const hx = lerp(sim.player.px, sim.player.x, alpha);
+    const hz = lerp(sim.player.pz, sim.player.z, alpha);
+    this.abilities.update(sim, alpha, dt, hx, heroY, hz);
     this.time += dt;
     // Fire and embers keep burning through hitstop: only the fight freezes.
     // Only fires near the hero burn (a map has dozens); each gets the same rate as the courtyard barrel.
@@ -456,7 +486,7 @@ export class Fx {
     }
     this.glow.update(dt, this.time, pixelScale);
     this.dust.update(dt, this.time, pixelScale);
-    this.smear.update(sim.player, alpha, dt, frozen);
+    this.smear.update(sim.player, alpha, dt, frozen, sim.stats.kind, sim.abilities.frenzy > 0);
     this.telegraphs.update(sim, alpha);
     for (const f of this.flashes) {
       if (!f.sprite.visible) continue;

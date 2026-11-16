@@ -5,7 +5,7 @@ import { ActionBuffer, type Action } from './buffer';
 export type Device = 'keyboard' | 'mouse' | 'gamepad' | 'touch';
 
 const DEADZONE = 0.22;
-/** Standard mapping: A/LT dodge, X/RB/RT attack, B power, LB ultimate, Y inventory. */
+/** Standard mapping: A/LT dodge, X/RB/RT attack, B power, LB ultimate, Y inventory, D-pad left Verband, right Molotow, up switches the power. */
 const PAD_DODGE = [0, 6];
 const PAD_ATTACK = [2, 5, 7];
 const PAD_MENU = 9;
@@ -30,6 +30,8 @@ export class Input {
   enabled = false;
   onMenu: () => void = () => {};
   onInventory: () => void = () => {};
+  /** Switch between the two regular powers. */
+  onSwap: () => void = () => {};
 
   clear(): void { this.keys.clear(); this.touchX = this.touchZ = 0; this.buffer.clear(); }
 
@@ -51,6 +53,9 @@ export class Input {
       this.keys.add(e.code);
       if (e.code === 'KeyE') this.press('power', 'keyboard');
       if (e.code === 'KeyR') this.press('ultimate', 'keyboard');
+      if (e.code === 'KeyQ' || e.code === 'Digit1') this.press('verband', 'keyboard');
+      if (e.code === 'KeyG' || e.code === 'Digit2') this.press('molotow', 'keyboard');
+      if (e.code === 'KeyX') this.onSwap();
       if (KEY_ATTACK.has(e.code)) this.press('attack', 'keyboard');
       if (KEY_DODGE.has(e.code)) {
         e.preventDefault();
@@ -134,6 +139,9 @@ export class Input {
       if (PAD_DODGE.some(edge)) this.press('dodge', 'gamepad');
       if (edge(1)) this.press('power', 'gamepad');
       if (edge(4)) this.press('ultimate', 'gamepad');
+      if (edge(14)) this.press('verband', 'gamepad');
+      if (edge(15)) this.press('molotow', 'gamepad');
+      if (edge(12) && this.enabled) this.onSwap();
       if (edge(3)) this.onInventory();
       if (edge(PAD_MENU)) this.onMenu();
       this.padDown = down;

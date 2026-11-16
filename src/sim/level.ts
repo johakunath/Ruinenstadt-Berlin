@@ -142,8 +142,21 @@ export class Level {
     this.removed.push(c);
   }
 
+  private readonly added: Collider[] = [];
+
+  /** Adds a collider for this run only (a shrine column); `restore` takes it out again. */
+  add(c: Collider): void {
+    this.colliders.push(c);
+    this.insert(c);
+    this.added.push(c);
+  }
+
   /** Puts every removed collider back; a new sim starts on an intact map. */
   restore(): void {
+    for (const c of this.added.splice(0)) {
+      this.remove(c);
+      this.removed.pop();
+    }
     for (const c of this.removed) {
       this.colliders.push(c);
       this.insert(c);

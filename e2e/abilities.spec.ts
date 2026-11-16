@@ -8,7 +8,7 @@ test('powers, ultimate and blessing choice work through the real UI',async({page
   await page.waitForFunction(()=>(window.__game?.sim().abilities.powerCd??0)>0);
   await page.keyboard.press('KeyR');
   await page.waitForFunction(()=>(window.__game?.sim().abilities.ultimateCd??0)>0);
-  await page.evaluate(()=>{const s=window.__game!.sim();s.abilities.offers=['dmg','hp','crit'];});
+  await page.evaluate(()=>{const s=window.__game!.sim();s.abilities.offers=[{id:'dmg',level:1,quality:0},{id:'hp',level:2,quality:1},{id:'crit',level:1,quality:0}];});
   await expect(page.locator('#blessings')).toBeVisible();
   const tick=await page.evaluate(()=>window.__game!.sim().tick);
   await page.waitForTimeout(250);

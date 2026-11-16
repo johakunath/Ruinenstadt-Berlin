@@ -3,7 +3,7 @@ import { AFFIXES, ATTRIBUTE_STATS, ELEMENTS, IMPLICITS, IMPLANT_MODES, LEGENDARY
 import { BAG_SIZE, equipItem, salvageItem, unequipItem } from '../sim/inventory';
 import { avgIl, isUpgrade, scrapValue, shownLevel, type Item } from '../sim/items';
 import { setLoadout } from '../sim/loadout';
-import { heroStats, setCount, type HeroStats } from '../sim/stats';
+import { heroStats, setCount, type Equipment, type HeroStats } from '../sim/stats';
 import type { Sim } from '../sim/types';
 import { ITEM_ICONS } from './item-icons';
 
@@ -206,12 +206,17 @@ export class InventoryUi {
     return `${this.card(item, inBag ? 'Ausgewählt' : 'Angelegt')}<div class="inv-actions">${inBag ? '<button data-action="equip" data-key="equip">Anlegen</button>' : item.slot !== 'w' ? `<button data-action="unequip" data-key="unequip" ${sim.inventory.bag.length >= BAG_SIZE ? 'disabled' : ''}>Ablegen</button>` : ''}<button data-action="lock" data-key="lock" aria-pressed="${!!item.locked}">${item.locked ? 'Entsperren' : 'Sperren'}</button>${inBag ? `<button data-action="salvage" data-key="salvage" ${item.locked ? 'disabled' : ''}>Schrott +${scrapValue(item)}</button>` : ''}</div>${item.slot === 'i' ? IMPLANT_MODES.map((m, i) => `<button data-action="mode" data-value="${i}" data-key="mode-${i}" aria-pressed="${(item.implantMode ?? 0) === i}">${m.name} · ${m.description}</button>`).join('') : ''}${inBag ? (equipped ? this.card(equipped, 'Angelegt') : '<p>Angelegt: Leer</p>') : ''}${preview ? `<dl class="inv-stats inv-deltas">${statRows.flatMap(([n,k,d,u]) => { const diff = (preview[k] as number) - (sim.stats[k] as number); return Math.abs(diff) < .00001 ? [] : [`<dt>${n}</dt><dd class="${diff > 0 ? 'positive' : 'negative'}">${diff > 0 ? '+' : ''}${(diff * (u === '%' ? 100 : 1)).toFixed(d)}${u}</dd>`]; }).join('')}</dl>` : ''}`;
   }
   private card(item: Item, label: string): string {
-    const main = item.slot === 'w' ? 'Schaden' : item.slot === 't' || item.slot === 'r' || item.slot === 'i' ? AFFIXES[ATTRIBUTE_STATS[item.kind as AttributeKindId]].name : AFFIXES[SLOT_MAIN_STATS[item.slot]!].name;
-    const mainUnit = item.slot === 'w' || item.slot === 'a' || item.kind === 'heil' ? '' : '%';
-    const type = item.slot === 'w' ? WEAPON_KINDS[item.kind as WeaponKindId].name : SLOT_NAMES[item.slot];
-    const powers = LEGENDARY_POWERS[item.base as LegendaryId];
-    const set = item.set ? SETS[item.set] : undefined;
-    const n = item.set ? setCount(this.sim().equipment, item.set) : 0;
-    return `<article class="inv-card" style="--rarity:${color(item)}"><small>${label}</small><div class="inv-card-head">${icon(item)}<h3>${esc(item.name)}</h3></div><p>${item.set ? 'Set-Teil' : RARITIES[item.rarity].name} · ${type} · Item Level ${shownLevel(item)}</p><b>${item.value}${mainUnit} ${main}</b>${[...(IMPLICITS[item.base as BaseId] ?? []), ...item.affixes].map(a => `<div>${a.value > 0 ? (AFFIXES[a.id].negative ? '−' : '+') : (AFFIXES[a.id].negative ? '+' : '−')}${Math.abs(a.value)}${AFFIXES[a.id].unit} ${AFFIXES[a.id].name}</div>`).join('')}${item.element ? `<p style="color:${ELEMENTS[item.element].color}">${ELEMENTS[item.element].name}</p>` : ''}${(item.mods ?? []).map(id => { const mod = WEAPON_MODS.find(m => m.id === id); return mod ? `<p>${mod.name} · ${mod.description}</p>` : ''; }).join('')}${item.rarity === 3 && powers ? `<p>${esc(powers.description)}</p>` : ''}${set ? `<h4>${set.name} · ${n} angelegt</h4>${([2,3,5] as const).map(t => `<p class="${n >= t ? 'positive' : 'inv-hint'}">(${t}) ${set.bonusDescriptions[t]}</p>`).join('')}` : ''}</article>`;
+    return itemCard(item, label, this.sim().equipment);
   }
+}
+
+/** One item as a card: name, type, main value, affixes, element, mods, legendary power, set bonuses. */
+export function itemCard(item: Item, label: string, equipment: Equipment): string {
+  const main = item.slot === 'w' ? 'Schaden' : item.slot === 't' || item.slot === 'r' || item.slot === 'i' ? AFFIXES[ATTRIBUTE_STATS[item.kind as AttributeKindId]].name : AFFIXES[SLOT_MAIN_STATS[item.slot]!].name;
+  const mainUnit = item.slot === 'w' || item.slot === 'a' || item.kind === 'heil' ? '' : '%';
+  const type = item.slot === 'w' ? WEAPON_KINDS[item.kind as WeaponKindId].name : SLOT_NAMES[item.slot];
+  const powers = LEGENDARY_POWERS[item.base as LegendaryId];
+  const set = item.set ? SETS[item.set] : undefined;
+  const n = item.set ? setCount(equipment, item.set) : 0;
+  return `<article class="inv-card" style="--rarity:${color(item)}"><small>${label}</small><div class="inv-card-head">${icon(item)}<h3>${esc(item.name)}</h3></div><p>${item.set ? 'Set-Teil' : RARITIES[item.rarity].name} · ${type} · Item Level ${shownLevel(item)}</p><b>${item.value}${mainUnit} ${main}</b>${[...(IMPLICITS[item.base as BaseId] ?? []), ...item.affixes].map(a => `<div>${a.value > 0 ? (AFFIXES[a.id].negative ? '−' : '+') : (AFFIXES[a.id].negative ? '+' : '−')}${Math.abs(a.value)}${AFFIXES[a.id].unit} ${AFFIXES[a.id].name}</div>`).join('')}${item.element ? `<p style="color:${ELEMENTS[item.element].color}">${ELEMENTS[item.element].name}</p>` : ''}${(item.mods ?? []).map(id => { const mod = WEAPON_MODS.find(m => m.id === id); return mod ? `<p>${mod.name} · ${mod.description}</p>` : ''; }).join('')}${item.rarity === 3 && powers ? `<p>${esc(powers.description)}</p>` : ''}${set ? `<h4>${set.name} · ${n} angelegt</h4>${([2,3,5] as const).map(t => `<p class="${n >= t ? 'positive' : 'inv-hint'}">(${t}) ${set.bonusDescriptions[t]}</p>`).join('')}` : ''}</article>`;
 }

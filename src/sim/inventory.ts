@@ -11,8 +11,11 @@ export interface Inventory {
   scrap: number;
   materials: Partial<Record<MaterialId, number>>;
   mods: Partial<Record<WeaponModId, number>>;
+  /** Verband and Molotow in the pouch, up to three each (M16). Missing in older saves. */
+  consumables?: { verband: number; molotow: number };
 }
-export function createInventory(): Inventory { return { bag: [], scrap: 0, materials: {}, mods: {} }; }
+/** A new hero starts with one Verband and one Molotow (3D: there is no camp to make them yet, M13). */
+export function createInventory(): Inventory { return { bag: [], scrap: 0, materials: {}, mods: {}, consumables: { verband: 1, molotow: 1 } }; }
 /** False means leave the drop in the world. Item ids must be unique across bag and gear. */
 export function collectItem(sim: Sim, item: Item): boolean {
   if (sim.inventory.bag.length >= BAG_SIZE || [...sim.inventory.bag, ...Object.values(sim.equipment)].some(i => i?.id === item.id)) return false;

@@ -27,12 +27,13 @@ import { LootLabels, rarityColor } from './ui/loot-labels';
 import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
+import { PERKS, SHRINES } from './data/progression';
+import { contentMarks, EVENT_TEXT } from './sim/runcontent';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
 import { backupSave, clearSave, loadSave, writeSave } from './save';
 import { CloudSave, formatCode, type SyncState } from './sync';
 import { simFromSave, snapshot, type SaveV1 } from './sim/save';
 
-const abilitiesUi = new AbilitiesUi();
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
@@ -43,7 +44,9 @@ audio.setVolume(opts.volume);
 audio.setMusic(opts.music);
 audio.setEco(opts.profile === 'leistung');
 const input = new Input(canvas);
-abilitiesUi.onChoose = () => input.clear();
+const abilitiesUi = new AbilitiesUi(input);
+abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
+abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
 // Köpenick (M11) unless ?map=hof asks for the gate 1 courtyard.
 const map = opts.map === 'koepenick' ? (() => {
@@ -340,6 +343,8 @@ function readInput(): SimInput {
   simInput.dodge = input.buffer.has('dodge');
   simInput.power = input.buffer.has('power');
   simInput.ultimate = input.buffer.has('ultimate');
+  simInput.verband = input.buffer.has('verband');
+  simInput.molotow = input.buffer.has('molotow');
   return simInput;
 }
 
@@ -404,8 +409,49 @@ function drainEvents(): void {
       case 'pickup':
         if (ev.what === 'item') lootUi.toast(`<span style="color:${rarityColor(ev.rarity, ev.set)}">${ev.name}</span>${ev.upgrade ? ' <span style="color:#8fd16a">▲</span>' : ''}`);
         else if (ev.what === 'heal') lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
+        else if (ev.what === 'food') { lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s'); if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z); }
         else if (ev.material) lootUi.float(`+1 ${MATERIALS[ev.material].name}`, MATERIALS[ev.material].color, sim.player.x, 1.8, sim.player.z);
         break;
+      case 'ability':
+        if (ev.ultimate) lootUi.float(ev.name, '#f2d14b', sim.player.x, 2.4, sim.player.z);
+        if (opts.rumble) input.rumble(ev.ultimate ? 0.8 : 0.4, ev.ultimate ? 120 : 50);
+        break;
+      case 'shock':
+        if (opts.rumble) input.rumble(ev.kind === 'earth' ? 1 : 0.5, ev.kind === 'earth' ? 160 : 70);
+        break;
+      case 'note':
+        lootUi.float(ev.text, ev.color, ev.x, 2.2, ev.z);
+        break;
+      case 'heal':
+        if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
+        break;
+      case 'secondWind':
+        ui.banner('Zweiter Atem');
+        break;
+      case 'blessing': {
+        const perk = PERKS.find((p) => p.id === ev.id);
+        if (perk) lootUi.toast(`Segen: <span style="color:#ef9f27">${perk.name}</span>`);
+        break;
+      }
+      case 'streak':
+        lootUi.toast(`Serie ${ev.kills} · <span style="color:#ef9f27">+${ev.scrap} Schrott</span>`);
+        break;
+      case 'shrine':
+        lootUi.toast(`Litfaßsäule · <span style="color:#7dd3ff">${SHRINES[ev.id].name}</span>: ${SHRINES[ev.id].description} (60 s)`, 4);
+        break;
+      case 'runEvent': {
+        const T = EVENT_TEXT[ev.kind];
+        if (ev.phase === 'start') {
+          if (ev.kind === 'ambush' || ev.kind === 'horde') ui.banner(T.title);
+          else lootUi.toast(`<span style="color:${T.color}">${T.title}</span>${T.sub ? ` · ${T.sub}` : ''}`, 4);
+        } else if (ev.phase === 'done') {
+          lootUi.toast(ev.kind === 'rescue' ? `<span style="color:#8fd16a">${ev.text ?? 'Befreit'}</span>` : { cache: 'Versteck gefunden', zone: 'Signal gehalten', crate: 'Nachschub geborgen', trader: '', ambush: '', horde: '', rescue: '' }[ev.kind], 4);
+          if (ev.kind === 'rescue') { ui.banner('Befreit'); saveNow(true); }
+        } else {
+          lootUi.toast({ cache: 'Das Versteck ist verloren', zone: 'Das Signal ist verloren', crate: 'Der Nachschub ist verloren', trader: 'Der Händler ist weitergezogen', ambush: '', horde: '', rescue: '' }[ev.kind]);
+        }
+        break;
+      }
       case 'bagFull':
         lootUi.toast('<span style="color:#c23a2e">Rucksack voll</span> · Beute bleibt liegen');
         break;
@@ -443,8 +489,8 @@ function frame(now: number): void {
   inventory.pollPad(now);
 
   abilitiesUi.update(sim, phase === 'play' && !ui.optionsOpen && !ui.mapOpen && !inventory.open);
-  if(abilitiesUi.open) input.clear();
-  const running = !abilitiesUi.open && phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
+  if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
+  const running = !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -455,6 +501,9 @@ function frame(now: number): void {
       if (sim.consumed.dodge) input.buffer.consume('dodge');
       if (sim.consumed.power) input.buffer.consume('power');
       if (sim.consumed.ultimate) input.buffer.consume('ultimate');
+      if (sim.consumed.verband) input.buffer.consume('verband');
+      if (sim.consumed.molotow) input.buffer.consume('molotow');
+      if (sim.content.tradeOpen) { input.clear(); drainEvents(); break; }
       if (sim.abilities.offers.length) input.clear();
       drainEvents();
       acc -= DT;
@@ -532,6 +581,8 @@ function expeditionHud(dt: number): void {
       for (const e of alive) marks.push({ ...renderer.screenOf(e.x, 1, e.z), color: e.def.boss ? '#ff6a2a' : '#c23a2e' });
     }
   }
+  // Open events: trader, captive, cache, zone, supply drop.
+  if (renderer && phase === 'play') for (const m of contentMarks(sim)) marks.push({ ...renderer.screenOf(m.x, groundY(m.x, m.z) + 1, m.z), color: EVENT_TEXT[m.kind].color });
   if (lootExit === 'search' && renderer) {
     const d = nearestImportantDrop(sim);
     if (d) marks.push({ ...renderer.screenOf(d.x, groundY(d.x, d.z) + 0.5, d.z), color: dropColor(d) });

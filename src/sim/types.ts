@@ -11,6 +11,7 @@ import type { Level } from './level';
 import type { Rng } from './math';
 import type { DifficultyId } from '../data/difficulty';
 import type { Equipment, HeroStats, StatContext } from './stats';
+import type { ElementId } from '../data/items';
 
 /** Fixed simulation step. */
 export const DT = 1 / 60;
@@ -30,11 +31,31 @@ export interface SimInput {
   dodge: boolean;
   power?: boolean;
   ultimate?: boolean;
+  /** Consumables (M16): Verband, Molotow. */
+  verband?: boolean;
+  molotow?: boolean;
 }
 
 export const NO_INPUT: SimInput = { moveX: 0, moveZ: 0, aimX: 0, aimZ: 0, aimAssist: false, attack: false, dodge: false };
 
-export type PlayerState = 'move' | 'attack' | 'dodge' | 'dead';
+/** `cast`: committed to a power or a throw (`Player.cast`). */
+export type PlayerState = 'move' | 'attack' | 'dodge' | 'cast' | 'dead';
+
+/** A running cast: the effect happens at `fire`, the hero is free again at `dur`. */
+export interface Cast {
+  id: import('../data/powers').PowerId | 'molotow';
+  dur: number;
+  fire: number;
+  fired: boolean;
+  /** Leaps and the Fechtsprung move the hero from here to there. */
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+  /** Thrown things land here. */
+  tx: number;
+  tz: number;
+}
 
 export interface Player {
   x: number;
@@ -51,6 +72,10 @@ export interface Player {
   /** Seconds in the current state. */
   stateT: number;
   attack: AttackDef | null;
+  cast: Cast | null;
+  /** The current swing is a finisher / a Wucht hit (Gegengewicht). */
+  finisher: boolean;
+  wucht: boolean;
   /** Gear speed and critical roll captured when this swing starts. */
   attackSpeed: number;
   critical: boolean;
@@ -104,12 +129,42 @@ export interface Enemy {
   staggerDur: number;
   /** The current strike already landed. */
   struck: boolean;
+  /** Burning: seconds left and damage per second (2D `burn`, `bdps`). */
+  burn: number;
+  bdps: number;
+  /** Burn damage not yet reported as a `dot` event. */
+  burnAcc: number;
+  /** Verätzt: takes more damage (and is slower with Zersetzung). */
+  acid: number;
+  /** Elite (2D ×2.6 life, better loot); rescue guards carry `guard`. */
+  elite?: boolean;
+  guard?: boolean;
+  /** The last hit was critical (kill effects). */
+  lastCrit?: boolean;
 }
 
 export type SimEvent =
   | { type: 'swing'; attack: AttackId; weight: HitWeight }
-  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean }
-  | { type: 'ability'; name: string; ultimate: boolean }
+  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean; element?: ElementId; quiet?: boolean; note?: string }
+  /** Burn damage summed over a short time (no hit feel). */
+  | { type: 'dot'; id: number; x: number; z: number; damage: number; killed: boolean }
+  | { type: 'ability'; id: import('../data/powers').PowerId; name: string; ultimate: boolean }
+  /** The effect of a cast happens now (sound, flash). */
+  | { type: 'abilityFire'; id: import('../data/powers').PowerId | 'molotow'; x: number; z: number }
+  | { type: 'shock'; x: number; z: number; radius: number; kind: 'earth' | 'small' | 'blade' | 'guard' | 'acid' }
+  | { type: 'bolt'; x0: number; z0: number; x1: number; z1: number }
+  | { type: 'impact'; x: number; z: number; radius: number; kind: 'strike' | 'molotov' | 'boom' }
+  | { type: 'ignite'; id: number; x: number; z: number }
+  | { type: 'heal'; amount: number; source: 'verband' | 'food' | 'breath' | 'banner' | 'trader' }
+  | { type: 'consumable'; id: 'verband' | 'molotow'; left: number }
+  | { type: 'note'; text: string; color: string; x: number; z: number }
+  | { type: 'secondWind' }
+  | { type: 'blessing'; id: import('../data/progression').PerkId; level: number }
+  | { type: 'runEvent'; kind: import('./runcontent').RunEventKind | 'crate'; phase: 'start' | 'done' | 'lost'; x: number; z: number; text?: string }
+  | { type: 'shrine'; id: import('../data/progression').ShrineId; x: number; z: number }
+  | { type: 'hidden'; x: number; z: number; found: number; total: number }
+  | { type: 'trade' }
+  | { type: 'streak'; kills: number; scrap: number }
   | { type: 'dodge' }
   | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number }
   | { type: 'playerDie' }
@@ -129,7 +184,7 @@ export type SimEvent =
   | { type: 'drop'; id: number; x: number; z: number; rarity: number; set: boolean }
   | { type: 'dropLand'; id: number; x: number; z: number; rarity: number }
   | { type: 'legendary'; x: number; z: number }
-  | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId }
+  | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material' | 'food'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId }
   | { type: 'scrap'; amount: number; x: number; z: number }
   | { type: 'bagFull' }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
@@ -167,7 +222,9 @@ export interface Sim {
   /** Remaining freeze in seconds. While > 0 the world holds still; input is still buffered outside. */
   hitstop: number;
   /** Buffered presses used by the last step. */
-  consumed: { attack: boolean; dodge: boolean; power: boolean; ultimate: boolean };
+  consumed: { attack: boolean; dodge: boolean; power: boolean; ultimate: boolean; verband: boolean; molotow: boolean };
+  /** Run content (M16): events, hidden blessings, shrines, the trader. */
+  content: import('./runcontent').RunContent;
   level: Level;
   /** Same as `level.colliders` (debug view, tests). */
   colliders: Collider[];

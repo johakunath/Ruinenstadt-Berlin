@@ -128,7 +128,24 @@ export class GameAudio {
     }
     switch (event.type) {
       case 'swing': if(sim?.stats.kind==='sling')this.play('sling');else this.swing(event.weight); break;
-      case 'hit': if(sim){ this.play(event.critical?'crit':'hit',0,pan,volume);if(event.killed)this.play('kill',0,pan,volume); }else this.hit(event.weight, event.killed, event.critical); break;
+      case 'hit':
+        // Procs and area ticks are quiet: one voice per element, the kill still sounds.
+        if (event.quiet) { if (event.killed) this.play('kill', 0, pan, volume * 0.8); break; }
+        if(sim){ this.play(event.critical?'crit':'hit',0,pan,volume);if(event.killed)this.play('kill',0,pan,volume); }else this.hit(event.weight, event.killed, event.critical); break;
+      case 'dot': if (event.killed) this.play('kill', 0, pan, volume * 0.8); break;
+      case 'shock': this.play('boom', 0, pan, volume * (event.kind === 'earth' ? 1 : 0.6)); break;
+      case 'bolt': this.play('zap', 0, pan, volume * 0.7); break;
+      case 'impact': this.play(event.kind === 'molotov' ? 'ignite' : 'pop', 0, pan, volume); if (event.kind === 'molotov') this.play('crash', 0, pan, volume * 0.7); break;
+      case 'ignite': this.play('ignite', 0, pan, volume * 0.5); break;
+      case 'abilityFire': if (event.id === 'molotow' || event.id === 'brand' || event.id === 'spiess') this.play('swing'); else if (event.id === 'nagel') this.play('sling'); break;
+      case 'consumable': if (event.id === 'verband') this.play('heal'); break;
+      case 'heal': if (event.source === 'trader') this.play('heal'); break;
+      case 'secondWind': this.play('lvl'); break;
+      case 'blessing': this.play('coin'); break;
+      case 'hidden': case 'shrine': this.play('legend'); break;
+      case 'trade': this.play('bell'); break;
+      case 'streak': this.play('coin'); break;
+      case 'runEvent': this.play(event.phase === 'done' ? 'win' : event.phase === 'lost' ? 'wood' : event.kind === 'ambush' || event.kind === 'horde' || event.kind === 'zone' ? 'horn' : 'bell'); break;
       case 'dodge': this.dodge(); break;
       case 'playerHit': this.hurt(); break;
       case 'playerDie': this.death(); break;
@@ -151,7 +168,7 @@ export class GameAudio {
       case 'victory': this.play('win'); break;
       case 'dropLand': if (event.rarity >= 1) this.play('coin'); break;
       case 'legendary': this.play('legend'); break;
-      case 'pickup': this.play(event.what === 'heal' ? 'heal' : event.what === 'material' ? 'coin' : 'pick', Math.max(0, event.rarity)); break;
+      case 'pickup': this.play(event.what === 'heal' || event.what === 'food' ? 'heal' : event.what === 'material' ? 'coin' : 'pick', Math.max(0, event.rarity)); break;
       case 'scrap': break;
       case 'breakableHit': this.play('wood'); break;
       case 'breakableBreak': this.play('crash'); break;

@@ -13,6 +13,8 @@ import { EnemyView, HeroView, loadCharacters, type CharacterAssets } from './cha
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
 import { LootView } from './loot';
+import { ContentView } from './content';
+import { leapHeight } from '../sim/abilities';
 import type { Look } from './looks';
 import { Materials } from './materials';
 import { Post } from './post';
@@ -73,6 +75,7 @@ export class GameRenderer {
   private readonly post: Post;
   private readonly fx: Fx;
   private readonly loot = new LootView();
+  private readonly content: ContentView;
   private readonly hero: HeroView;
   private readonly views = new Map<number, EnemyView>();
   private readonly pool: EnemyView[] = [];
@@ -107,7 +110,8 @@ export class GameRenderer {
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
-    this.scene.add(this.fx.group, this.loot.group);
+    this.content = new ContentView(assets, materials);
+    this.scene.add(this.fx.group, this.loot.group, this.content.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
     this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look);
@@ -160,15 +164,48 @@ export class GameRenderer {
   }
 
   onEvent(ev: SimEvent, sim: Sim): void {
+    this.fx.onEvent(ev);
+    const y = (x: number, z: number, h: number): number => groundY(x, z) + h;
     switch (ev.type) {
       case 'hit': {
         this.views.get(ev.id)?.hit();
         const feel = HIT_FEEL[ev.weight];
-        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, ev.weight === 'heavy');
-        this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1));
+        // Procs and area ticks (quiet) spark a little and never shake the camera.
+        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical));
+        if (!ev.quiet) this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1) * (ev.critical ? 1.25 : 1));
         if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
         break;
       }
+      case 'dot':
+        if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
+        break;
+      case 'shock':
+        this.cam.shake(0, 0, ev.kind === 'earth' ? 0.3 : ev.kind === 'small' ? 0.12 : 0.18);
+        break;
+      case 'impact':
+        this.cam.shake(0, 0, ev.kind === 'boom' ? 0.06 : 0.12);
+        break;
+      case 'ability':
+        if (ev.ultimate) {
+          this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 40, 7);
+          this.cam.shake(0, 0, 0.14);
+        }
+        break;
+      case 'secondWind':
+        this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 60, 8);
+        break;
+      case 'hidden':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 3.4, 1, 50, 6);
+        break;
+      case 'shrine':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 2.6), ev.z, 2, 4.4, 6, 50, 6);
+        break;
+      case 'runEvent':
+        if (ev.phase === 'done') this.fx.burst(ev.x, y(ev.x, ev.z, 0.8), ev.z, 6, 5, 1.6, 50, 6);
+        break;
+      case 'pickup':
+        if (ev.what === 'food' || ev.what === 'heal') this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 0.9), sim.player.z, 1.6, 4.4, 1.2, 16, 3);
+        break;
       case 'playerHit':
         this.cam.shake(ev.dx, ev.dz, 0.2);
         this.fx.puff(ev.x, ev.z, 4, 0.6);
@@ -254,9 +291,9 @@ export class GameRenderer {
     const p = sim.player;
     this.world.update(this.time);
     this.world.sync?.(sim.time - DT * (1 - alpha));
-    this.hero.update(p, alpha, dt, frozen);
-    const vault = sim.abilities.vault;
-    if(vault) this.hero.root.position.y += Math.sin(Math.PI*(1-vault.left/vault.duration))*1.6;
+    const leap = leapHeight(sim, frozen ? 1 : alpha);
+    const w = sim.equipment.w;
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap });
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();
@@ -295,7 +332,8 @@ export class GameRenderer {
     this.fightRing(sim);
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
-    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height));
+    this.content.update(sim, dt, px, pz);
+    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap);
     this.debug?.update(sim, alpha);
 
     this.renderer.info.reset();

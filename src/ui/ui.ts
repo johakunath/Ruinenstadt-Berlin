@@ -260,6 +260,8 @@ export class Ui {
     const knob = el<HTMLDivElement>('knob');
     const show = (): void => {
       root.hidden = false;
+      // The action bar moves into the thumb arc (style.css).
+      document.body.classList.add('touch-on');
     };
     if (matchMedia('(pointer: coarse)').matches) show();
     window.addEventListener('touchstart', show, { once: true, passive: true });
@@ -299,7 +301,7 @@ export class Ui {
     });
     zone.addEventListener('pointerup', end);
     zone.addEventListener('pointercancel', end);
-    for (const [btn, action] of [['btn-attack', 'attack'], ['btn-dodge', 'dodge'], ['btn-power', 'power'], ['btn-ultimate', 'ultimate']] as const) {
+    for (const [btn, action] of [['btn-attack', 'attack'], ['btn-dodge', 'dodge']] as const) {
       el<HTMLButtonElement>(btn).addEventListener('pointerdown', (e) => {
         e.preventDefault();
         input.press(action, 'touch');

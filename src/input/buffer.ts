@@ -2,10 +2,11 @@
 // It is fed every render frame (also during hitstop) and does not expire while the world is frozen.
 import { INPUT_BUFFER } from '../data/combat';
 
-export type Action = 'attack' | 'dodge' | 'power' | 'ultimate';
+export type Action = 'attack' | 'dodge' | 'power' | 'ultimate' | 'verband' | 'molotow';
+const ACTIONS: readonly Action[] = ['attack', 'dodge', 'power', 'ultimate', 'verband', 'molotow'];
 
 export class ActionBuffer {
-  private readonly left: Record<Action, number> = { attack: 0, dodge: 0, power: 0, ultimate: 0 };
+  private readonly left: Record<Action, number> = { attack: 0, dodge: 0, power: 0, ultimate: 0, verband: 0, molotow: 0 };
 
   constructor(private readonly window: number = INPUT_BUFFER) {}
 
@@ -24,15 +25,10 @@ export class ActionBuffer {
   /** Ages the buffer by `dt` seconds. A frozen world (hitstop) keeps presses alive. */
   tick(dt: number, frozen: boolean): void {
     if (frozen) return;
-    this.left.power = Math.max(0, this.left.power - dt);
-    this.left.ultimate = Math.max(0, this.left.ultimate - dt);
-    this.left.attack = Math.max(0, this.left.attack - dt);
-    this.left.dodge = Math.max(0, this.left.dodge - dt);
+    for (const a of ACTIONS) this.left[a] = Math.max(0, this.left[a] - dt);
   }
 
   clear(): void {
-    this.left.power = this.left.ultimate = 0;
-    this.left.attack = 0;
-    this.left.dodge = 0;
+    for (const a of ACTIONS) this.left[a] = 0;
   }
 }

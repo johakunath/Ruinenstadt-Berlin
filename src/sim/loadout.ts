@@ -24,6 +24,8 @@ export function statContext(context: Partial<StatContext> = {}): StatContext {
 export function setLoadout(sim: Sim, equipment: Equipment, context: Partial<StatContext> = sim.statContext): void {
   const eq = structuredClone(equipment), ctx = statContext(context), stats = heroStats(eq, ctx);
   const hpShare = sim.player.hp / sim.stats.maxHp;
+  // Another weapon kind: timers of the old kind's powers end.
+  if (stats.kind !== sim.stats.kind) sim.abilities.spin = sim.abilities.guard = sim.abilities.frenzy = 0;
   sim.equipment = eq;
   sim.statContext = ctx;
   sim.stats = stats;

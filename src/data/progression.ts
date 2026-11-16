@@ -311,6 +311,7 @@ export const CAMP_UPGRADES: readonly { readonly id: CampUpgradeId; readonly name
 ];
 /** 2D DRILL_D / DRILL_H. */
 export const DRILL = { damage: .02, life: .02 } as const;
+export type ShrineId = 'as' | 'res' | 'gold' | 'spd' | 'zap';
 /** 2D SHRN. */
 export const SHRINES = {
   as: { name: 'Adrenalin', description: '+30% Angriffstempo' },
@@ -318,4 +319,9 @@ export const SHRINES = {
   gold: { name: 'Goldrausch', description: 'doppelter Schrott von Gegnern' },
   spd: { name: 'Rückenwind', description: '+25% Lauftempo' },
   zap: { name: 'Funkenflug', description: 'Treffer lösen oft Blitze aus' },
-} as const;
+} as const satisfies Record<ShrineId, { name: string; description: string }>;
+/** 2D FAM: family names and colors. */
+export const FAMILIES: Readonly<Record<PerkFamilyId, { name: string; color: string }>> = {
+  el: { name: 'Element', color: '#7dd3ff' }, krit: { name: 'Kombo und Krit', color: '#f2d14b' }, sprint: { name: 'Sprint', color: '#9fd8c8' },
+  serie: { name: 'Serie', color: '#e05050' }, glut: { name: 'Glut', color: '#ff7a2a' }, boll: { name: 'Bollwerk', color: '#9aa4b0' }, dist: { name: 'Distanz', color: '#b8e05a' },
+};

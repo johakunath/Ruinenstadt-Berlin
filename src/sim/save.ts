@@ -8,6 +8,8 @@ import type { Drop } from './loot';
 import type { Inventory } from './inventory';
 import type { Equipment, StatContext } from './stats';
 import { createSim, type SimOptions } from './sim';
+import { createAbilities } from './abilities';
+import { setLoadout } from './loadout';
 import type { Sim } from './types';
 
 export const SAVE_VERSION = 1;
@@ -17,6 +19,7 @@ export interface SaveRun {
   /** Map name; a run only resumes on the map it was saved on. */
   abilities?: import('./abilities').Abilities;
   perks?: StatContext['perks'];
+  content?: import('./runcontent').RunContent;
   map: string;
   index: number;
   /** Wave that starts next (phase pause) or -1 between encounters (phase travel). */
@@ -38,7 +41,7 @@ export interface SaveRun {
 export interface SaveV1 { v: 1; /** Save time in ms; the cloud sync compares it. */ t: number; difficulty: DifficultyId; profile: SaveProfile; run: SaveRun | null }
 
 export function profileOf(sim: Sim): SaveProfile {
-  return structuredClone({ inventory: sim.inventory, equipment: sim.equipment, statContext: { ...sim.statContext, perks: {} } });
+  return structuredClone({ inventory: sim.inventory, equipment: sim.equipment, statContext: { ...sim.statContext, perks: {}, shrines: {} } });
 }
 
 export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now()): SaveV1 {
@@ -47,7 +50,9 @@ export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now
   return {
     v: 1, t: now, difficulty: sim.difficulty, profile: profileOf(sim),
     run: !inRun ? null : {
-      abilities: structuredClone(sim.abilities), perks: { ...sim.statContext.perks },
+      // Things in flight are not saved: a resumed wave starts with a clean field.
+      abilities: structuredClone({ ...sim.abilities, projectiles: [], shocks: [], strikes: [], bottles: [], booms: [], fields: [], spin: 0, guard: 0 }), perks: { ...sim.statContext.perks },
+      content: structuredClone({ ...sim.content, tradeOpen: false }),
       map, index: r.index, wave: r.phase === 'pause' ? r.wave : -1, hp: sim.player.hp,
       x: sim.player.x, z: sim.player.z, facing: sim.player.facing, rng: sim.rng.state, nextId: sim.nextId,
       itemId: sim.lootCtx.itemId ?? 0, lootWaves: sim.lootWaves, kills: sim.kills,
@@ -87,9 +92,15 @@ export function parseSave(text: string | null): SaveV1 | null {
  */
 export function simFromSave(save: SaveV1, opts: Omit<SimOptions, 'inventory' | 'equipment' | 'statContext' | 'difficulty' | 'startAt'>, useRun: boolean): Sim {
   const run = useRun ? save.run : null;
-  const sim = createSim({ ...opts, ...save.profile, statContext: {...save.profile.statContext, perks: run?.perks ?? {}}, difficulty: save.difficulty, startAt: run?.index ?? 0 });
+  const sim = createSim({ ...opts, ...save.profile, statContext: {...save.profile.statContext, perks: run?.perks ?? {}}, difficulty: save.difficulty, startAt: run?.index ?? 0, resume: !!run });
   if (!run) return sim;
-  if(run.abilities) sim.abilities = structuredClone(run.abilities);
+  if (run.abilities) sim.abilities = { ...createAbilities(), ...structuredClone(run.abilities) };
+  if (run.content) {
+    sim.content = structuredClone(run.content);
+    for (const h of sim.content.shrines) sim.level.add({ kind: 'circle', x: h.x, z: h.z, r: 0.5 });
+    const sh = sim.content.shrine;
+    setLoadout(sim, sim.equipment, { ...sim.statContext, shrines: { as: (sh.as ?? 0) > 0, res: (sh.res ?? 0) > 0, spd: (sh.spd ?? 0) > 0 } });
+  }
   const L = sim.level;
   sim.player.x = sim.player.px = run.x;
   sim.player.z = sim.player.pz = run.z;
