@@ -26,7 +26,7 @@ export class InventoryUi {
   private armed = '';
   private message = '';
   private previousFocus: HTMLElement | null = null;
-  private drag: { selection: Selection; x: number; y: number; active: boolean; timer: ReturnType<typeof setTimeout> } | null = null;
+  private drag: { selection: Selection; x: number; y: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null = null;
   private suppressClick = false;
   private padDown: boolean[] = [];
   private padNext = 0;
@@ -47,7 +47,7 @@ export class InventoryUi {
       if (b.dataset.bag !== undefined) { this.selection = { bag: +b.dataset.bag }; this.armed = ''; }
       else if (b.dataset.slot) { this.selection = { slot: b.dataset.slot as SlotId }; this.armed = ''; }
       else this.act(b.dataset.action ?? '', b.dataset.value ?? '');
-      if (this.open) { this.render(); if (key) this.root.querySelector<HTMLElement>(`[data-key="${key}"]`)?.focus(); }
+      if (this.open) this.render(key);
     });
     this.root.addEventListener('keydown', e => {
       if (e.code === 'Escape') { e.stopPropagation(); this.toggle(false); }
@@ -62,7 +62,9 @@ export class InventoryUi {
       if (!b || (e.pointerType === 'mouse' && e.button !== 0)) return;
       const selection: Selection = b.dataset.bag !== undefined ? { bag: +b.dataset.bag } : { slot: b.dataset.slot as SlotId };
       if (!this.item(selection)) return;
-      const timer = setTimeout(() => { if (this.drag) { this.drag.active = true; b.classList.add('dragging'); } }, e.pointerType === 'touch' ? 350 : 100);
+      const timer = e.pointerType === 'touch'
+        ? setTimeout(() => { if (this.drag) { this.drag.active = true; b.classList.add('dragging'); } }, 350)
+        : null;
       this.drag = { selection, x: e.clientX, y: e.clientY, active: false, timer };
     });
     this.root.addEventListener('pointermove', e => {
@@ -85,7 +87,7 @@ export class InventoryUi {
       setTimeout(() => { this.suppressClick = false; }, 400);
       const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-slot],[data-bag]');
       if (target) this.drop(drag.selection, target);
-      this.render();
+      this.render(target?.dataset.key);
     });
     window.addEventListener('pointercancel', () => this.cancelDrag());
     this.root.addEventListener('touchmove', e => { if (this.drag?.active && e.cancelable) e.preventDefault(); }, { passive: false });
@@ -127,7 +129,7 @@ export class InventoryUi {
     return 'bag' in sel ? this.sim().inventory.bag[sel.bag] : this.sim().equipment[sel.slot];
   }
   private cancelDrag(): void {
-    if (this.drag) clearTimeout(this.drag.timer);
+    if (this.drag?.timer) clearTimeout(this.drag.timer);
     this.drag = null;
     this.root.querySelectorAll('.dragging,.drop-target').forEach(b => b.classList.remove('dragging', 'drop-target'));
   }
@@ -176,11 +178,23 @@ export class InventoryUi {
       this.selection = null; this.armed = ''; this.message = `+${sim.inventory.scrap - before} Schrott`;
     }
   }
-  render(): void {
+  render(preferredKey?: string): void {
+    const active = document.activeElement as HTMLElement | null;
+    const previousKey = preferredKey ?? (active && this.root.contains(active) ? active.dataset.key : undefined);
     const sim = this.sim(), inv = sim.inventory;
     const cell = (item: Item | undefined, attrs: string, label: string): string => `<button type="button" class="inv-cell" ${attrs} aria-label="${esc(label)}" ${item ? `style="--rarity:${color(item)}"` : ''}>${item ? `${icon(item)}<small>${shownLevel(item)}</small>${item.locked ? '<b class="inv-lock">◆</b>' : ''}${isUpgrade(item, sim.equipment[item.slot]) && !attrs.includes('data-slot') ? '<b class="inv-up">▲</b>' : ''}${item.element ? `<i style="background:${ELEMENTS[item.element].color}"></i>` : ''}` : '<span>—</span>'}</button>`;
     const gear = SLOTS.map(slot => `<div class="inv-slot inv-${slot}">${cell(sim.equipment[slot], `data-slot="${slot}" data-key="slot-${slot}"`, SLOT_NAMES[slot])}<span>${SLOT_NAMES[slot]}</span></div>`).join('');
     this.root.innerHTML = `<div class="inv-panel"><header><h2>Inventar</h2><span>Schrott <b>${inv.scrap}</b> · Item Level <b>${avgIl(sim.equipment)}</b></span><button data-action="close" data-key="close">Weiter</button></header><div class="inv-columns"><section class="inv-character"><div class="inv-doll"><img class="inv-portrait" src="${url('survivor')}" alt="Überlebende">${gear}</div><dl class="inv-stats">${statRows.map(([n,k,d,u]) => `<dt>${n}</dt><dd>${((sim.stats[k] as number) * (u === '%' ? 100 : 1)).toFixed(d)}${u}</dd>`).join('')}</dl></section><section class="inv-bag"><h3>Rucksack ${inv.bag.length}/${BAG_SIZE}</h3><div class="inv-bulk">${['Gewöhnl.', 'Magisch', 'Selten', 'Rest'].map((label, i) => `<button data-action="bulk" data-value="${i === 3 ? 'rest' : i}" data-key="bulk-${i}">${label}</button>`).join('')}</div><div class="inv-grid">${Array.from({length: BAG_SIZE}, (_, i) => cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, inv.bag[i]?.name ?? `Rucksackplatz ${i+1}`)).join('')}</div><p class="inv-hint">▲ Höherer Item Level.</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer></div>`;
+    this.restoreFocus(previousKey);
+  }
+  private restoreFocus(previousKey?: string): void {
+    if (!this.open) return;
+    const selectedKey = this.selection ? ('bag' in this.selection ? `bag-${this.selection.bag}` : `slot-${this.selection.slot}`) : undefined;
+    const buttons = this.buttons();
+    const target = buttons.find(b => b.dataset.key === previousKey)
+      ?? buttons.find(b => b.dataset.key === selectedKey)
+      ?? buttons[0];
+    target?.focus();
   }
   private detail(): string {
     const item = this.item(), sim = this.sim(), sel = this.selection;

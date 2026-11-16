@@ -26,3 +26,9 @@ M4 world drops, M6 saves, M7 weapon-specific moves, M8 powers, M13 camp/stash. T
 - Open with Inventar, I/Tab or controller Y; D-pad/stick traverses controls, A activates, B closes.
 - No extra Three.js scene, light or render pass; DOM and lazy browser image decoding only.
 - Validation: 189 unit tests, build/type check, six existing smoke tests and five inventory browser tests pass; screenshots in `docs/proof/m5-inventory/`.
+
+## Review fixes (PR #12)
+
+- Mouse/pen dragging requires movement beyond 8 px; only touch has a hold timer.
+- Every inventory render restores the previous control, selected item or first enabled control, including after actions and drag release.
+- Browser regressions cover deliberate stationary clicks, focus after equip/unequip/salvage, Tab wrapping, drag focus and consecutive controller activation.

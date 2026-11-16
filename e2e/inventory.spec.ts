@@ -61,6 +61,7 @@ test('mouse drag equips compatible gear and rejects the wrong slot',async({page}
   await page.mouse.move(a.x+a.width/2,a.y+a.height/2); await page.mouse.down();
   await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8}); await page.mouse.up();
   expect(await page.evaluate(()=>window.__game!.sim().equipment.a?.id)).toBe(101);
+  await expect(dest).toBeFocused();
   const c=(await page.locator('[data-bag="0"]').boundingBox())!, d=(await page.locator('[data-slot="h"]').boundingBox())!;
   await page.mouse.move(c.x+c.width/2,c.y+c.height/2); await page.mouse.down();
   await page.mouse.move(d.x+d.width/2,d.y+d.height/2,{steps:8}); await page.mouse.up();
@@ -97,6 +98,10 @@ test('controller Y opens, A activates and B closes',async({page})=>{
   await expect(page.locator('[data-action="equip"]')).toBeVisible();
   await page.locator('[data-action="equip"]').focus(); await press(0);
   expect(await page.evaluate(()=>window.__game!.sim().equipment.a?.id)).toBe(101);
+  await expect(page.locator('[data-slot="a"]')).toBeFocused();
+  await press(0); // Continue from the restored focus, without manually refocusing.
+  await expect(page.locator('[data-action="unequip"]')).toBeVisible();
+  await expect(page.locator('[data-slot="a"]')).toBeFocused();
   await press(1); await expect(page.locator('#inventory')).toBeHidden();
 });
 
@@ -113,4 +118,41 @@ test('tablet long press drag equips without horizontal overflow',async({browser}
   expect(await page.evaluate(()=>document.querySelector('.inv-panel')!.scrollWidth<=document.querySelector('.inv-panel')!.clientWidth)).toBe(true);
   await page.screenshot({path:info.outputPath('inventory-tablet.png')});
   await context.close();
+});
+
+
+test('stationary mouse holds select items without starting a drag', async ({page}) => {
+  await setup(page);
+  for (const [selector, name] of [['[data-bag="0"]', 'Mantel'], ['[data-bag="1"]', 'Ersatzmantel'], ['[data-slot="w"]', 'Rostiges Rohr']]) {
+    const cell = page.locator(selector!);
+    const box = (await cell.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(400); // A deliberate click beyond the old 100 ms drag timer.
+    await expect(page.locator('.dragging')).toHaveCount(0);
+    await page.mouse.up();
+    await expect(page.locator('.inv-detail h3').first()).toHaveText(name!);
+    await expect(cell).toBeFocused();
+  }
+  expect(await page.evaluate(() => window.__game!.sim().inventory.bag.map(i => i.id))).toEqual([101,102,103,104,105]);
+});
+
+test('equip, unequip and salvage keep keyboard focus trapped in the dialog', async ({page}) => {
+  await setup(page);
+  await page.locator('[data-bag="0"]').click();
+  await page.locator('[data-action="equip"]').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-slot="a"]')).toBeFocused();
+  await page.locator('[data-action="unequip"]').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-bag="4"]')).toBeFocused();
+  await page.locator('[data-bag="0"]').click();
+  await page.locator('[data-action="salvage"]').focus();
+  await page.keyboard.press('Enter');
+  expect(await page.evaluate(() => window.__game!.sim().inventory.bag.some(i => i.id === 102))).toBe(false);
+  await expect(page.locator('[data-action="close"]')).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.locator('[data-bag="24"]')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('[data-action="close"]')).toBeFocused();
 });
