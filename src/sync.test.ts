@@ -93,4 +93,14 @@ describe('cloud save', () => {
     again.autoStart();
     expect(again.code).toBeNull();
   });
+  it('a save queued during the startup pull is not replaced by the older startup snapshot', async () => {
+    const srv = server();
+    const c = new CloudSave(true, deps(srv));
+    c.enable();
+    const pulling = c.pull(save(100));
+    c.queue(save(200), 0);
+    await pulling;
+    await new Promise((r) => setTimeout(r, 10));
+    expect(srv.rows.get(c.code!)!.t).toBe(200);
+  });
 });

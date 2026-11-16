@@ -117,7 +117,8 @@ export class CloudSave {
       this.base = r.t ?? 0; this.keep();
     }
     if (!r.s) this.base = 0;
-    if (local && (!r.s || local.t > this.base)) this.queue(local, 0);
+    // A save queued while this request was in flight is newer than `local`: keep it.
+    if (local && (!r.s || local.t > this.base)) { if (!this.pending) this.queue(local, 0); }
     else this.set('on');
     return null;
   }

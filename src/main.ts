@@ -197,6 +197,7 @@ const ui = new Ui(opts, {
 const inventory = new InventoryUi(() => sim, open => {
   // Gear changes between fights are kept; during a wave they wait for its checkpoint.
   if (!open && phase === 'play' && sim.run.phase === 'travel') saveNow(true);
+  else if (!open && sim.run.phase === 'won') saveNow(false);
   input.enabled = phase === 'play' && !open && !ui.mapOpen && !ui.optionsOpen;
   input.clear();
 });
@@ -472,6 +473,7 @@ function frame(now: number): void {
     wonFor += dt;
     if (wonFor > 2.5) {
       phase = 'won';
+      saveNow(false); // loot collected after the last encounter and gear changes during the exit search
       telemetry.end('win');
       input.enabled = false;
       ui.showWon(sim.kills);
