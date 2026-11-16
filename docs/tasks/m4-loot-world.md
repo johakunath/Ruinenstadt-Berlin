@@ -1,6 +1,6 @@
 # M4 Loot in the world [Claude · Sonnet]
 
-Status: open. Prepared by Claude (Opus) on 2026-11-16; the design decisions below are made, so build them as written.
+Status: done (PR pending, playtest by Johannes open). Prepared by Claude (Opus) on 2026-11-16; the design decisions below are made, so build them as written.
 If something does not fit the code, write the question here and ask Johannes. Do not redesign.
 
 Needs: M5 inventory, merged (PR #12). Use its API: `collectItem(sim, item)` in `src/sim/inventory.ts` adds to the 25-slot bag. It rejects full bags and duplicate ids, so rejected drops stay in the world. Scrap and materials live in `sim.inventory.scrap` and `sim.inventory.materials`. Allocate unique item ids (the starter weapon is id 0); see the M5 handover in `docs/tasks/m5-inventory.md`.
@@ -76,4 +76,8 @@ Already ported (use, do not rewrite): `src/sim/items.ts` (`makeItem`, `lootItem`
 
 ## Handover
 
-(Fill in at the end, at most 8 lines.)
+- Sim: `src/sim/loot.ts`, `breakables.ts` (+ tests); `Level.remove/restore` (a new sim restores broken colliders); `sim.lootWaves` drives the item level (seeded from earlier encounters on a retry).
+- Look: variant B (crystal, ground ring, beam only from Selten; legendary taller) chosen by Johannes; benchmark image `docs/style/props-loot-benchmark.jpg`. Crates and bins rebuilt in code with more detail (`src/render/breakable-parts.ts`), drawn instanced: 3 draw calls for props, 3 for loot (crystals, glow+ring, beams). Measure on PC and Tab S9.
+- Köpenick has 39 breakables (extra `supplies` pass with its own rng, props elsewhere unchanged), 3 crates per Späti, none in an encounter's inner 60 %.
+- Deviations: no Kodex note (Kodex is M17); food, Verband, Molotow and ingredients are M16; Hauptmann legendary is guaranteed until M6 stores first kills; broken props leave no debris mesh, only a particle burst.
+- Follow-ups: judge crate and bin detail in game (hit state cracks, bin tilt, oil drum as a third breakable); no loot sounds beyond the existing 2D synth ids.

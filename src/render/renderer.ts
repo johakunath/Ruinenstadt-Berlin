@@ -12,6 +12,7 @@ import { FollowCamera } from './camera';
 import { EnemyView, HeroView, loadCharacters, type CharacterAssets } from './characters';
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
+import { LootView } from './loot';
 import type { Look } from './looks';
 import { Materials } from './materials';
 import { Post } from './post';
@@ -24,6 +25,7 @@ import { heightAt } from '../data/map';
 import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
 import type { Prop } from '../data/courtyard';
+import type { BreakableDef } from '../sim/breakables';
 
 export interface RendererOptions {
   profile: Profile;
@@ -33,7 +35,7 @@ export interface RendererOptions {
   /** ?cam=distance,pitch for close-up checks. */
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
-  map?: { def: MapDef; lots: Lot[]; props: Prop[] };
+  map?: { def: MapDef; lots: Lot[]; props: Prop[]; breakables?: BreakableDef[] };
 }
 
 const NIGHT = 0x0b1a1d;
@@ -71,6 +73,7 @@ export class GameRenderer {
   private readonly cam: FollowCamera;
   private readonly post: Post;
   private readonly fx: Fx;
+  private readonly loot = new LootView();
   private readonly hero: HeroView;
   private readonly views = new Map<number, EnemyView>();
   private readonly pool: EnemyView[] = [];
@@ -106,7 +109,7 @@ export class GameRenderer {
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
-    this.scene.add(this.fx.group);
+    this.scene.add(this.fx.group, this.loot.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
     this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look);
@@ -120,7 +123,7 @@ export class GameRenderer {
     renderer.shadowMap.type = PCFShadowMap;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
-    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props) : buildWorld(materials);
+    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables) : buildWorld(materials);
     const assets = await loadCharacters(materials);
     return new GameRenderer(renderer, world, assets, materials, opts);
   }
@@ -148,6 +151,7 @@ export class GameRenderer {
     this.views.clear();
     this.cam.snap(sim.player.x, sim.player.z, groundY(sim.player.x, sim.player.z));
     this.world.follow?.(sim.player.x, sim.player.z);
+    this.world.breakables?.reset();
   }
 
   /** Ground point under a pointer position, for mouse aim. */
@@ -172,6 +176,17 @@ export class GameRenderer {
         break;
       case 'dodge':
         this.fx.puff(sim.player.x, sim.player.z, 7);
+        break;
+      case 'breakableHit':
+        this.world.breakables?.hit(ev.id);
+        this.fx.debris(ev.x, groundY(ev.x, ev.z) + 0.6, ev.z, ev.kind, 5);
+        this.cam.shake(0, 0, 0.04);
+        break;
+      case 'breakableBreak':
+        this.world.breakables?.broke(ev.id);
+        this.fx.debris(ev.x, groundY(ev.x, ev.z) + 0.5, ev.z, ev.kind, 22);
+        this.fx.puff(ev.x, ev.z, 8, 1.2);
+        this.cam.shake(0, 0, 0.12);
         break;
       default:
         break;
@@ -279,6 +294,8 @@ export class GameRenderer {
     cutout.hero.value.set(px, py, pz);
     cutout.cam.value.copy(this.cam.position);
     this.fightRing(sim);
+    this.world.breakables?.update(dt);
+    this.loot.update(sim, this.time);
     this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height));
     this.debug?.update(sim, alpha);
 

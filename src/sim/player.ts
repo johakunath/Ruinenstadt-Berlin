@@ -14,7 +14,7 @@ export function createPlayer(level: Level, at = level.start): Player {
   return {
     x, z, px: x, pz: z, facing: Math.PI, pfacing: Math.PI, vx: 0, vz: 0,
     hp: PLAYER.maxHp, state: 'move', stateT: 0,
-    attack: null, attackSpeed: 1, critical: false, swing: 0, hits: [], chain: null, chainT: 0,
+    attack: null, attackSpeed: 1, critical: false, swing: 0, hits: [], propHits: [], chain: null, chainT: 0,
     dodgeX: 0, dodgeZ: 0, dodgeCd: 0, invuln: 0, strikeT: 0, hurtT: 99,
     sweeping: false, sweepLo: 0, sweepHi: 0,
   };
@@ -63,6 +63,7 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
     damage: def.damage * sim.stats.damage / STARTER_DAMAGE * (p.critical ? 2 : 1) };
   p.swing++;
   p.hits.length = 0;
+  p.propHits.length = 0;
   p.chain = null;
   p.chainT = 0;
   p.strikeT = 0;

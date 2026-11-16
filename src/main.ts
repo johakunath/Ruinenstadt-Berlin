@@ -22,6 +22,10 @@ import { EdgeMarkers, Minimap } from './ui/minimap';
 import { ENEMIES } from './data/enemies';
 import type { Level } from './sim/level';
 import { Telemetry } from './telemetry';
+import { LootLabels, rarityColor } from './ui/loot-labels';
+import { groundY } from './render/ground';
+import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
+import { MATERIALS } from './data/crafting';
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
@@ -45,6 +49,56 @@ const level: Level | undefined = map?.level;
 let sim: Sim = createSim({ seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt });
 let phase: Phase = 'title';
 let wonFor = -1;
+/** Exit warning: 'ask' shows the modal, 'search' leads the hero to the valuable loot left behind. */
+let lootExit: 'off' | 'ask' | 'search' = 'off';
+const lootUi = new LootLabels();
+const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
+const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
+
+function finishLootExit(leave: boolean): void {
+  lootWarn.hidden = true;
+  input.enabled = phase === 'play';
+  input.clear();
+  if (leave) {
+    lootExit = 'off';
+    lootChip.hidden = true;
+    wonFor = 0;
+  } else {
+    lootExit = 'search';
+  }
+}
+/**
+ * Gamepad for the exit warning: D-pad or stick switches between the two buttons, A activates, B
+ * searches. During the search, Select leaves. Button state is tracked all the time, so a button
+ * held when the dialog opens does not fire.
+ */
+let lootPadDown: boolean[] = [];
+function pollLootPad(): void {
+  const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
+  if (!pad) { lootPadDown = []; return; }
+  const down = pad.buttons.map((b) => b.pressed || b.value > 0.5);
+  const edge = (i: number): boolean => !!down[i] && !lootPadDown[i];
+  if (lootExit === 'ask') {
+    const find = document.getElementById('loot-find') as HTMLButtonElement;
+    const leave = document.getElementById('loot-leave') as HTMLButtonElement;
+    if (edge(12) || edge(13) || edge(14) || edge(15)) (document.activeElement === find ? leave : find).focus();
+    else if (edge(0)) (document.activeElement === leave ? leave : find).click();
+    else if (edge(1)) finishLootExit(false);
+  } else if (lootExit === 'search' && edge(8)) {
+    finishLootExit(true);
+  }
+  lootPadDown = down;
+}
+document.getElementById('loot-find')!.addEventListener('click', () => finishLootExit(false));
+document.getElementById('loot-leave')!.addEventListener('click', () => finishLootExit(true));
+lootChip.addEventListener('click', () => finishLootExit(true));
+window.addEventListener('keydown', (e) => {
+  if (lootExit === 'ask' && e.key === 'Escape') {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    finishLootExit(false);
+  }
+}, { capture: true });
 
 /** A retry starts at the first encounter of the zone the hero fell in. */
 function checkpoint(): number {
@@ -145,6 +199,9 @@ function start(): void {
   phase = 'play';
   deadFor = 0;
   wonFor = -1;
+  lootExit = 'off';
+  lootWarn.hidden = true;
+  lootChip.hidden = true;
   ui.boss(null);
   if (level) {
     const enc = level.encounters[sim.run.index];
@@ -228,7 +285,27 @@ function drainEvents(): void {
         break;
       }
       case 'victory':
-        wonFor = 0;
+        if (importantDrops(sim).length > 0) {
+          lootExit = 'ask';
+          input.enabled = false;
+          input.clear();
+          lootWarn.hidden = false;
+          document.getElementById('loot-find')?.focus();
+        } else wonFor = 0;
+        break;
+      case 'scrap':
+        if (ev.amount > 0) lootUi.float(`+${ev.amount} Schrott`, '#a8957d', ev.x, 1.2, ev.z);
+        break;
+      case 'legendary':
+        ui.banner('Legendär!');
+        break;
+      case 'pickup':
+        if (ev.what === 'item') lootUi.toast(`<span style="color:${rarityColor(ev.rarity, ev.set)}">${ev.name}</span>${ev.upgrade ? ' <span style="color:#8fd16a">▲</span>' : ''}`);
+        else if (ev.what === 'heal') lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
+        else if (ev.material) lootUi.float(`+1 ${MATERIALS[ev.material].name}`, MATERIALS[ev.material].color, sim.player.x, 1.8, sim.player.z);
+        break;
+      case 'bagFull':
+        lootUi.toast('<span style="color:#c23a2e">Rucksack voll</span> · Beute bleibt liegen');
         break;
       default:
         break;
@@ -263,7 +340,7 @@ function frame(now: number): void {
   input.poll(dt, sim.hitstop > 0);
   inventory.pollPad(now);
 
-  const running = phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held;
+  const running = phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -305,7 +382,19 @@ function frame(now: number): void {
       ui.showWon(sim.kills);
     }
   }
+  if (lootExit === 'search') {
+    const left = importantDrops(sim).length;
+    if (left === 0) finishLootExit(true);
+    else {
+      lootChip.hidden = false;
+      document.getElementById('loot-n')!.textContent = String(left);
+      document.getElementById('loot-pad')!.hidden = input.device !== 'gamepad';
+    }
+  }
   if (level) expeditionHud(dt);
+  pollLootPad();
+  // Heights are above the local ground (hills and terraces).
+  lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !inventory.open);
 
   if (!inventory.open) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
@@ -326,7 +415,7 @@ function expeditionHud(dt: number): void {
   const alive = sim.enemies.filter((e) => e.state !== 'dead');
   const travel = sim.run.phase === 'travel';
   minimap?.show(phase === 'play');
-  minimap?.update(dt, sim.run.index, p, enc && travel ? enc : null, alive.map((e) => ({ x: e.x, z: e.z, boss: !!e.def.boss })));
+  minimap?.update(dt, sim.run.index, p, enc && travel ? enc : null, alive.map((e) => ({ x: e.x, z: e.z, boss: !!e.def.boss })), importantDrops(sim).map((d) => ({ x: d.x, z: d.z, color: dropColor(d) })));
   // Edge triangles: the objective while travelling, the last three enemies of a wave (2D rule).
   const marks: Array<{ x: number; y: number; color: string }> = [];
   if (renderer && phase === 'play') {
@@ -335,8 +424,17 @@ function expeditionHud(dt: number): void {
       for (const e of alive) marks.push({ ...renderer.screenOf(e.x, 1, e.z), color: e.def.boss ? '#ff6a2a' : '#c23a2e' });
     }
   }
+  if (lootExit === 'search' && renderer) {
+    const d = nearestImportantDrop(sim);
+    if (d) marks.push({ ...renderer.screenOf(d.x, groundY(d.x, d.z) + 0.5, d.z), color: dropColor(d) });
+  }
   edges.update(marks);
-  if (!enc) {
+  const searchTarget = lootExit === 'search' ? nearestImportantDrop(sim) : null;
+  if (searchTarget) {
+    const dx = searchTarget.x - p.x;
+    const dz = searchTarget.z - p.z;
+    ui.objective(`Beute · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
+  } else if (!enc) {
     ui.objective('Köpenick befreit', null);
   } else if (sim.run.phase === 'travel') {
     const dx = enc.x - p.x;
@@ -386,7 +484,7 @@ window.__game = {
 
 GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam,
-  map: map ? { def: map.def, lots: map.lots, props: map.props } : undefined,
+  map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
 })
   .then((r) => {
     renderer = r;

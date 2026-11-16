@@ -133,6 +133,12 @@ export class GameAudio {
       case 'zoneClear': this.play('bell'); break;
       case 'restEnter': if (event.first) this.play('bell'); break;
       case 'victory': this.play('win'); break;
+      case 'dropLand': if (event.rarity >= 1) this.play('coin'); break;
+      case 'legendary': this.play('legend'); break;
+      case 'pickup': this.play(event.what === 'heal' ? 'heal' : event.what === 'material' ? 'coin' : 'pick', Math.max(0, event.rarity)); break;
+      case 'scrap': break;
+      case 'breakableHit': this.play('wood'); break;
+      case 'breakableBreak': this.play('crash'); break;
     }
   }
 

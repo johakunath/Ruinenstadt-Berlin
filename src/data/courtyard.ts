@@ -34,7 +34,7 @@ export interface Facade {
   seed: number;
 }
 
-export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights';
+export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights';
 
 export interface Prop {
   kind: PropKind;
@@ -116,6 +116,8 @@ export function propCollider(p: Prop): Collider | null {
       return { kind: 'box', x: p.x, z: p.z, hx: 1.1, hz: 2.75, rot: p.rot };
     case 'sandbags':
       return { kind: 'box', x: p.x, z: p.z, hx: 1.0, hz: 0.5, rot: p.rot };
+    case 'crate':
+      return { kind: 'box', x: p.x, z: p.z, hx: 0.36, hz: 0.36, rot: p.rot };
     case 'crates':
       return { kind: 'box', x: p.x, z: p.z, hx: 0.75, hz: 0.6, rot: p.rot };
     case 'bins':

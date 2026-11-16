@@ -14,6 +14,7 @@ import {
   paintAwning, paintBrick, paintCloth, paintCobbles, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster,
   paintShopWindow, paintSign, paintStucco, paintVan, paintWindows, paintWood, type PaintOptions,
 } from './paint';
+import { buildBin, buildCrate } from './breakable-parts';
 
 /** Layer for things that must not show up in the normal/depth pre-pass (alpha cards, glows, effects). */
 export const FX_LAYER = 1;
@@ -36,6 +37,15 @@ export interface FlickerLight {
   phase: number;
 }
 
+/** Visual side of the breakable props. */
+export interface BreakableView {
+  hit(id: number): void;
+  broke(id: number): void;
+  /** A new sim: every prop is whole again. */
+  reset(): void;
+  update(dt: number): void;
+}
+
 export interface World {
   group: Group;
   moon: DirectionalLight;
@@ -47,6 +57,8 @@ export interface World {
   follow?(x: number, z: number): void;
   /** Moving map parts (ferry boat) at the interpolated sim time. */
   sync?(simTime: number): void;
+  /** Breakable props (M4), drawn instanced so one can vanish. */
+  breakables?: BreakableView;
 }
 
 /**
@@ -584,10 +596,15 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       break;
     }
     case 'crates': {
-      b.box(m.wood, at(p, -0.32, 0.36, 0, 0, 0.1), 0.72, 0.72, 0.72);
-      b.box(m.wood, at(p, 0.4, 0.3, 0.1, 0, -0.2), 0.6, 0.6, 0.6, [0.85, 0.82, 0.78]);
-      b.box(m.wood, at(p, -0.25, 0.97, 0.02, 0, 0.5), 0.5, 0.5, 0.5, [0.95, 0.9, 0.82]);
+      buildCrate(b, at(p, -0.32, 0, 0, 0, 0.1), 0.72, rng);
+      buildCrate(b, at(p, 0.4, 0, 0.1, 0, -0.2), 0.6, rng);
+      buildCrate(b, at(p, -0.25, 0.72, 0.02, 0, 0.5), 0.5, rng);
       b.shadowBox(at(p, 0, 0.5, 0), 1.4, 1.0, 1.0);
+      break;
+    }
+    case 'crate': {
+      buildCrate(b, at(p, 0, 0, 0), 0.72, rng);
+      b.shadowBox(at(p, 0, 0.36, 0), 0.72, 0.72, 0.72);
       break;
     }
     case 'bins': {
@@ -595,9 +612,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
         const x = (i - 1) * 0.8;
         const fallen = i === 2;
         const base = fallen ? at(p, x + 0.2, 0.36, 0.5, Math.PI / 2 - 0.1, 0.3) : at(p, x, 0, 0, 0, rng.range(-0.15, 0.15));
-        const part = (y: number, z = 0): Matrix4 => base.clone().multiply(new Matrix4().makeTranslation(0, y, z));
-        b.box(m.bin, part(0.55), 0.62, 1.05, 0.72, i === 1 ? [1.2, 0.9, 0.5] : [1, 1, 1]);
-        b.box(m.bin, part(1.11, fallen ? 0.1 : 0).multiply(new Matrix4().makeRotationX(fallen ? -0.5 : -0.06)), 0.68, 0.07, 0.8, [0.7, 0.7, 0.7]);
+        buildBin(b, base, rng, fallen ? 0.5 : 0);
       }
       b.shadowBox(at(p, -0.4, 0.55, 0), 1.6, 1.1, 0.75);
       break;

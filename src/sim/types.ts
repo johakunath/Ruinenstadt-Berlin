@@ -1,4 +1,8 @@
 import type { Inventory } from './inventory';
+import type { MaterialId } from '../data/crafting';
+import type { Breakable, BreakableKind } from './breakables';
+import type { Drop } from './loot';
+import type { LootContext } from './items';
 import type { AttackDef, AttackId, HitWeight } from '../data/combat';
 import type { EnemyDef, EnemyKind } from '../data/enemies';
 import type { Collider } from './collide';
@@ -51,6 +55,8 @@ export interface Player {
   swing: number;
   /** Enemy ids already hit by the current swing. */
   hits: number[];
+  /** Breakable ids already hit by the current swing. */
+  propHits: number[];
   /** Next attack of the chain and how long it stays available. */
   chain: AttackId | null;
   chainT: number;
@@ -112,7 +118,16 @@ export type SimEvent =
   | { type: 'zoneClear'; zone: number }
   /** The hero walked into a Späti (`first`: the first time this run). */
   | { type: 'restEnter'; index: number; first: boolean }
-  | { type: 'victory' };
+  | { type: 'victory' }
+  /** A drop popped out (`rarity` -1: heal or material). */
+  | { type: 'drop'; id: number; x: number; z: number; rarity: number; set: boolean }
+  | { type: 'dropLand'; id: number; x: number; z: number; rarity: number }
+  | { type: 'legendary'; x: number; z: number }
+  | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId }
+  | { type: 'scrap'; amount: number; x: number; z: number }
+  | { type: 'bagFull' }
+  | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
+  | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean };
 
 export type RunPhase = 'travel' | 'fight' | 'pause' | 'won';
 
@@ -156,6 +171,14 @@ export interface Sim {
   rest: { at: number; seen: boolean[] };
   rng: Rng;
   nextId: number;
+  /** Ground loot (M4) and the props the hero can still break. */
+  drops: Drop[];
+  breakables: Breakable[];
+  /** Normal waves started this run (boss waves excluded); drives the item level. */
+  lootWaves: number;
+  lootCtx: LootContext;
+  /** Seconds until the next "bag full" notice. */
+  bagFullT: number;
   kills: number;
   spawnT: number;
   /** > 0: keep this many enemies alive (`?stress=`). */
