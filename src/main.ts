@@ -1,3 +1,6 @@
+import { InventoryUi } from './ui/inventory';
+import { collectItem } from './sim/inventory';
+import type { Item } from './sim/items';
 // Game loop: fixed 60 Hz sim steps, interpolated rendering, input polled every frame.
 import './ui/style.css';
 import { GameAudio } from './audio/audio';
@@ -55,20 +58,22 @@ let renderer: GameRenderer | null = null;
 const ui = new Ui(opts, {
   onPlay: () => start(),
   onRetry: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext });
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
   onAgain: () => {
-    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext });
+    sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: sim.statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
   },
   onMapToggle: (open) => {
-    input.enabled = phase === 'play' && !open;
+    input.enabled = phase === 'play' && !open && !inventory.open;
+    input.clear();
   },
   onOptionsToggle: (open) => {
-    input.enabled = phase === 'play' && !open;
+    input.enabled = phase === 'play' && !open && !inventory.open;
+    input.clear();
   },
   onProfile: (id) => {
     opts.profile = id;
@@ -93,7 +98,22 @@ const ui = new Ui(opts, {
   },
 }, input);
 
+const inventory = new InventoryUi(() => sim, open => {
+  input.enabled = phase === 'play' && !open && !ui.mapOpen && !ui.optionsOpen;
+  input.clear();
+});
+input.onInventory = () => {
+  if (phase === 'play' && !ui.mapOpen && !ui.optionsOpen) inventory.toggle(!inventory.open);
+};
+document.getElementById('inventory-btn')!.addEventListener('click', input.onInventory);
+window.addEventListener('keydown', e => {
+  if (inventory.open && ['KeyM', 'Tab', 'KeyP', 'Escape'].includes(e.code)) {
+    if (e.code === 'Escape' || e.code === 'KeyP') inventory.toggle(false);
+    if (e.code !== 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); }
+  }
+}, { capture: true });
 input.onMenu = () => {
+  if (inventory.open) { inventory.toggle(false); return; }
   if (phase !== 'title') ui.toggleOptions(!ui.optionsOpen);
 };
 
@@ -218,7 +238,7 @@ let nextAt = 0;
 
 function frame(now: number): void {
   audio.tick(Math.min(.1, Math.max(0, (now - last) / 1000)), {
-    district: 0, fighting: phase === 'play' && !ui.optionsOpen && !ui.mapOpen,
+    district: 0, fighting: phase === 'play' && !ui.optionsOpen && !ui.mapOpen && !inventory.open,
     enemies: sim.enemies.filter(e => e.state !== 'dead').length,
     boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
   });
@@ -231,8 +251,9 @@ function frame(now: number): void {
   if (!renderer) return;
   renderer.perf.frame(frameMs);
   input.poll(dt, sim.hitstop > 0);
+  inventory.pollPad(now);
 
-  const running = phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !held;
+  const running = phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held;
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -272,7 +293,7 @@ function frame(now: number): void {
   }
   if (level) expeditionHud(dt);
 
-  renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
+  if (!inventory.open) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
@@ -324,6 +345,7 @@ declare global {
       perf(): { fps: number; p95: number; calls: number; triangles: number; simMs: number } | null;
       start(): void;
       setLoadout(equipment: Equipment, context?: Partial<StatContext>): void;
+      collectItem(item: Item): boolean;
       /** Stops the automatic sim steps so a script can step by hand. */
       hold(on: boolean): void;
       step(input: Partial<SimInput>, steps: number): void;
@@ -336,6 +358,7 @@ window.__game = {
   perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs } : null),
   start,
   setLoadout: (equipment, context) => setLoadout(sim, equipment, context),
+  collectItem: item => collectItem(sim, item),
   hold: (on) => {
     held = on;
   },

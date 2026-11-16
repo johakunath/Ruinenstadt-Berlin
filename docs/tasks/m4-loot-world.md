@@ -3,7 +3,7 @@
 Status: open. Prepared by Claude (Opus) on 2026-11-16; the design decisions below are made, so build them as written.
 If something does not fit the code, write the question here and ask Johannes. Do not redesign.
 
-Needs: M5 inventory (Codex, in progress) merged first, so the bag exists. Start from `main` after that PR.
+Needs: M5 inventory, merged (PR #12). Use its API: `collectItem(sim, item)` in `src/sim/inventory.ts` adds to the 25-slot bag. It rejects full bags and duplicate ids, so rejected drops stay in the world. Scrap and materials live in `sim.inventory.scrap` and `sim.inventory.materials`. Allocate unique item ids (the starter weapon is id 0); see the M5 handover in `docs/tasks/m5-inventory.md`.
 
 ## Goal
 
@@ -45,7 +45,7 @@ Already ported (use, do not rewrite): `src/sim/items.ts` (`makeItem`, `lootItem`
 |---|---|
 | `src/sim/loot.ts` | `Drop` (id, x, z, vx, vz, h, vh, t, content: item, heal, material), `spawnDrop`, `updateDrops` (arc, landing on walkable ground, pickup), `killDrops(sim, enemy)`, `breakDrops(sim, breakable)`, `lootLevel(sim)`, `importantDrop` |
 | `src/sim/breakables.ts` | `Breakable` (id, prop index, kind, hp, inside, collider), hit by player sweeps, break → events, collider removal |
-| `src/sim/types.ts` | `sim.drops`, `sim.breakables`, `sim.scrap` and `sim.materials` (unless M5 already added them; reuse M5's bag and currency). Events: `drop`, `pickup`, `breakableHit`, `breakableBreak`, `legendary`, `scrap` |
+| `src/sim/types.ts` | `sim.drops`, `sim.breakables` (bag, scrap and materials are M5's `sim.inventory`). Events: `drop`, `pickup`, `breakableHit`, `breakableBreak`, `legendary`, `scrap` |
 | `src/data/map.ts`, `src/data/spati.ts` | Mark breakable props; Späti crates |
 | `src/render/loot.ts` | Instanced visuals: pouch per rarity (instance color from `RARITIES`; set = green), heal and material pickups, ground glow disc (additive, `FX_LAYER`, pulsing), vertical beam for rare and better and set (taller for legendary). No new point lights (fixed light count). Breakable bins and crates also become instanced (hidden by a zero-scale matrix on break) with a hit flash and a burst from `src/render/fx.ts`. At most 6 extra draw calls in total |
 | `src/ui/loot-labels.ts` | Pooled DOM labels (at most 12) with the item name in rarity color, shown for magic and better or set, or for commons within 12 m. Use the renderer's screen projection (`screenOf`) |

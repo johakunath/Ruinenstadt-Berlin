@@ -14,8 +14,8 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 | 3b | M11b part 2: relief and irregular banks and quays, ground textures (variant C chosen), enterable Späti as rest stop (one per zone) | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #13) |
 | 3c | T1 Köpenick ground textures (image generation) | Codex | `docs/tasks/t1-ground-textures.md` | open |
 | 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Codex (Johannes) | `docs/tasks/m3b-stats-in-sim.md` | done (PR #10) |
-| 5 | M5 Inventory and equipment screen, built from the 2D screen without a mockup (Johannes, 2026-11-16) | Codex | Codex's own task | in progress |
-| 6 | M4 Loot in the world, with breakable bins and crates (2D port); decisions prepared by Opus | Claude · Sonnet | `docs/tasks/m4-loot-world.md` (after M5 is merged) | open |
+| 5 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | done (PR #12) |
+| 6 | M4 Loot in the world, with breakable bins and crates (2D port); decisions prepared by Opus | Claude · Sonnet | `docs/tasks/m4-loot-world.md` | open |
 
 Claude writes the next Codex task file before Codex's queue runs empty.
 
@@ -38,7 +38,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Item data and rolls | M1, M2 | Done |
 | Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b done (PR #10) |
 | Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Open |
-| Inventory, equip, compare, salvage, sets | M5 | Open |
+| Inventory, equip, compare, salvage, sets | M5 | Implemented; M4 collection hookup pending |
 | Save, wave checkpoint, difficulty | M6 | Open |
 | Weapons: Klinge, Hammer, Speer, Werfer, finishers | M7 | Open |
 | Powers, ultimates, blessings with families and duos | M8 | Open |
@@ -64,8 +64,8 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walka
 | M11b | Köpenick v2: layout about 0.6 of today's distances (new lots, not `mapscale`), narrower streets with clear edges, cars and props on every stretch, more building types and non-rectangular footprints, relief and irregular banks, ground textures (alternatives first), enterable Späti, minimap (mockup first), 2D edge triangles | Claude · Opus high, Johannes picks | M11 | Playtest on the Tab S9: walking feels short, every stretch has something |
 | M11c | World variety (P1 row): lot types, decals, weather per district, area messages. Mockup or look alternatives for weather first | Claude · Opus medium | M11b | Each zone of Köpenick has two lot types the others do not |
 | M3b | Stats in the sim | Claude · Opus high | M3a | Equipped item changes damage and life in a run; sim tests |
-| M4 | Drops, rarity glow and beam, labels, pickup, exit warning for rare and better. Loot stays where it drops; no vacuum. Task: `docs/tasks/m4-loot-world.md` | Claude · Sonnet | M3b, M5 | Visible on both profiles |
-| M5 | Inventory and equipment UI, from the 2D screen (no mockup, Johannes 2026-11-16) | Codex | M3b | Equip and compare on touch, pad, mouse |
+| 5 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | done (PR #12) |
+| 6 | M4 Loot in the world, with breakable bins and crates (2D port); decisions prepared by Opus | Claude · Sonnet | `docs/tasks/m4-loot-world.md` | open |
 | M6 | Versioned save, wave checkpoint (B1), difficulty choice | Claude (format), Codex (UI) | M5 | Reload resumes at the last wave |
 | M7 | Weapons in 2D order: Klinge (pipe moves become its baseline), Hammer, Speer, Werfer; finisher each (B6) | Claude · Opus high | M3b | Klinge and Hammer feel different on a pad |
 | M8 | Powers, ultimates, blessings (Zeitsplitter), families and duos | Claude · Opus high | M7 | One power and one ultimate per weapon; blessing choice after each encounter |
