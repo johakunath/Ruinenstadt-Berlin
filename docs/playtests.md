@@ -23,7 +23,7 @@ Played the build without the new enemies. Fixed at once (same PR as M12): see th
 | Comparison | Layout and infos as in 2D, item level as the main number, coherent units | Backlog P6 (with U1) |
 | Outlines | Enemies and NPCs behind buildings too, in other colors | Backlog P8 (extends R1) |
 | Map | Sidewalks empty and too wide, streets too narrow and not like car streets; hard map limits; why generated and not hand-built? | Task M11d, with the answer on generation |
-| Zoom | Three zoom levels, nice to have | Backlog P9 |
+| Zoom | Three zoom levels, nice to have | Built for keyboard and mouse (Z, wheel); pad and touch: backlog P9 |
 | Pickups | Own look per item type | Backlog P10 |
 | Question | Map building effort in 3D compared with 2D | Answered in M11d |
 

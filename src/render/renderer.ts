@@ -158,6 +158,11 @@ export class GameRenderer {
     for (const b of sim.breakables) if (b.broken) this.world.breakables?.broke(b.id);
   }
 
+  /** Zoom: +1 farther, -1 nearer, 0 cycles through the three levels. */
+  zoom(dir: number): void {
+    this.cam.stepZoom(dir);
+  }
+
   private release(view: EnemyView): void {
     view.root.visible = false;
     const list = this.pool.get(view.body) ?? [];

@@ -215,6 +215,9 @@ document.getElementById('inventory-btn')!.addEventListener('click', input.onInve
 // The pause menu leads to inventory and map (on touch the HUD has only the pause button).
 document.getElementById('pause-inventory')!.addEventListener('click', () => { ui.toggleOptions(false); input.onInventory(); });
 document.getElementById('pause-map')!.addEventListener('click', () => { ui.toggleOptions(false); ui.toggleMap(true); });
+// Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
+window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
+canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
 window.addEventListener('keydown', e => {
   if (inventory.open && ['KeyM', 'Tab', 'KeyP', 'Escape'].includes(e.code)) {
     if (e.code === 'Escape' || e.code === 'KeyP') inventory.toggle(false);

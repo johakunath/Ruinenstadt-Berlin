@@ -40,7 +40,7 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P6 | Item comparison as in 2D: same layout and rows, item level as the main number instead of Kampfkraft, units coherent (%, per second, absolute) | Playtest 2026-11-17 | U1 |
 | P7 | A reward moment after a won fight (short line, drop shower or dialogue) before the blessing cards; the 1.3 s pause is in | Playtest 2026-11-17 | M17 |
 | P8 | Contour behind buildings also for enemies (red) and NPCs (green), hero stays amber | Playtest 2026-11-17 | With R1 (cost first) |
-| P9 | Three zoom levels (key, wheel, pad stick click) | Playtest 2026-11-17 | Any time, small |
+| P9 | Zoom: three levels are in (Z key, mouse wheel). Open: pad (stick click) and touch (pinch or a button) | Playtest 2026-11-17 | U2 |
 | P10 | Pickups: own model per item type (weapon kinds, armor slots, materials, food) instead of one bag | Playtest 2026-11-17 | L2 |
 
 ## Ideas (not decided)
