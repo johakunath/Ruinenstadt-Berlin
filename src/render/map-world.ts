@@ -12,6 +12,7 @@ import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
+import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet, boxGeo } from './batch';
@@ -19,7 +20,7 @@ import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
-  Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
+  Builder, buildAltbau, buildProp, type BreakableView, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
 
 type RGB = readonly [number, number, number];
@@ -1086,7 +1087,7 @@ function buildLandmark(b: ChunkBuilder, l: Landmark): void {
 
 // ---------------------------------------------------------------- assembly
 
-export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[]): World {
+export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = []): World {
   const mats = makeMapMats(materials);
   const group = new Group();
   group.name = m.id;
@@ -1146,10 +1147,17 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     b.on(y0, () => buildLandmark(b, l));
   }
   const rng = new Rng(m.seed);
-  for (const p of props) {
+  const instanced = new Set(breakables.map((d) => d.prop));
+  props.forEach((p, i) => {
+    // Breakable props are drawn instanced (below), so they can vanish when broken.
     const b = chunkOf(p.x, p.z);
+    if (instanced.has(i)) {
+      rng.next();
+      return;
+    }
     b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
-  }
+  });
+  const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
   if (m.rail) {
     const r = m.rail;
@@ -1249,6 +1257,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   return {
     group,
     moon,
+    breakables: breakableView,
     lights: [],
     fires,
     update(time: number): void {
@@ -1286,6 +1295,90 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       const sz = Math.round(z / texel) * texel;
       moon.target.position.set(sx, 0, sz);
       moon.position.set(sx + MOON.x, MOON.y, sz + MOON.z);
+    },
+  };
+}
+
+/**
+ * Crates and bins as instanced meshes: one draw call per kind (crate cluster, single crate, bin
+ * row). A broken prop gets a zero-scale matrix; a hit prop flashes and shakes for a moment.
+ */
+function buildBreakables(mm: MapMats, m: MapDef, props: Prop[], defs: BreakableDef[], group: Group): BreakableView {
+  type Kind = Prop['kind'];
+  const kinds: Kind[] = ['crates', 'crate', 'bins'];
+  const sets = new Map<Kind, { mesh: InstancedMesh; ids: number[] }>();
+  const base: Matrix4[] = [];
+  const slot: Array<{ kind: Kind; index: number }> = [];
+  for (const kind of kinds) {
+    const ids = defs.map((_, i) => i).filter((i) => props[defs[i]!.prop]!.kind === kind);
+    if (ids.length === 0) continue;
+    // Geometry of one prop at the origin; the instance matrix places it.
+    const b = new ChunkBuilder(mm);
+    buildProp(b, { kind, x: 0, z: 0, rot: 0, size: 1 }, new Rng(11));
+    const meshes = b.solid.meshes();
+    // One material per kind keeps this at one draw call per kind (see breakable-parts.ts).
+    const mesh = meshes[0]!;
+    const inst = new InstancedMesh(mesh.geometry, mesh.material, ids.length);
+    inst.castShadow = true;
+    inst.receiveShadow = true;
+    inst.frustumCulled = false;
+    ids.forEach((id, index) => {
+      const p = props[defs[id]!.prop]!;
+      const mat = new Matrix4().makeRotationY(p.rot).setPosition(p.x, heightAt(m, p.x, p.z), p.z);
+      base[id] = mat;
+      slot[id] = { kind, index };
+      inst.setMatrixAt(index, mat);
+      inst.setColorAt(index, new Color(1, 1, 1));
+    });
+    inst.instanceMatrix.needsUpdate = true;
+    group.add(inst);
+    sets.set(kind, { mesh: inst, ids });
+  }
+  const flash = new Map<number, number>();
+  const hidden = new Set<number>();
+  const m4 = new Matrix4();
+  const wobble = new Matrix4();
+  const white = new Color(1, 1, 1);
+  const hot = new Color(3.2, 2.8, 2.4);
+  const apply = (id: number, t: number): void => {
+    const s = slot[id];
+    if (!s) return;
+    const set = sets.get(s.kind)!;
+    if (hidden.has(id)) {
+      set.mesh.setMatrixAt(s.index, m4.makeScale(0, 0, 0));
+    } else {
+      // A hit prop jolts: a quick damped shake around its base.
+      const k = Math.max(0, t / FLASH) ** 2;
+      wobble.makeRotationZ(Math.sin(t * 90) * 0.07 * k).multiply(new Matrix4().makeRotationX(Math.cos(t * 70) * 0.05 * k));
+      set.mesh.setMatrixAt(s.index, m4.copy(base[id]!).multiply(wobble));
+    }
+    set.mesh.setColorAt(s.index, t > 0 ? hot.clone().lerp(white, 1 - t / FLASH) : white);
+    set.mesh.instanceMatrix.needsUpdate = true;
+    if (set.mesh.instanceColor) set.mesh.instanceColor.needsUpdate = true;
+  };
+  const FLASH = 0.16;
+  return {
+    hit(id: number): void {
+      flash.set(id, FLASH);
+      apply(id, FLASH);
+    },
+    broke(id: number): void {
+      hidden.add(id);
+      flash.delete(id);
+      apply(id, 0);
+    },
+    reset(): void {
+      hidden.clear();
+      flash.clear();
+      for (let id = 0; id < defs.length; id++) apply(id, 0);
+    },
+    update(dt: number): void {
+      for (const [id, t] of flash) {
+        const n = t - dt;
+        if (n <= 0) flash.delete(id);
+        else flash.set(id, n);
+        apply(id, Math.max(0, n));
+      }
     },
   };
 }

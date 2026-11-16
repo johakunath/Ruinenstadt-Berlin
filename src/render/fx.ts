@@ -389,6 +389,22 @@ export class Fx {
     f.sprite.visible = true;
   }
 
+  /** Splinters (crate) or plastic and dust (bin) thrown out of a hit or broken prop. */
+  debris(x: number, y: number, z: number, kind: 'crate' | 'bin', count: number): void {
+    const wood = kind === 'crate';
+    for (let i = 0; i < count; i++) {
+      const a = this.rng.range(0, Math.PI * 2);
+      const s = this.rng.range(1.2, 4.2);
+      const g = this.rng.range(0.7, 1.1);
+      this.dust.spawn({
+        x, y: y + this.rng.range(-0.15, 0.3), z,
+        vx: Math.cos(a) * s, vy: this.rng.range(1.5, 4.5), vz: Math.sin(a) * s,
+        life: this.rng.range(0.5, 1.0), size: this.rng.range(0.06, 0.15), grow: 0,
+        r: (wood ? 0.42 : 0.7) * g, g: (wood ? 0.28 : 0.32) * g, b: (wood ? 0.15 : 0.1) * g, gravity: 14, drag: 0.8,
+      });
+    }
+  }
+
   /** Ground puff: dodge start, heavy landings, falling bodies. */
   puff(x: number, z: number, count: number, spread = 1): void {
     for (let i = 0; i < count; i++) {

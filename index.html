@@ -22,6 +22,9 @@
     <canvas id="minimap" hidden aria-label="Minikarte"></canvas>
     <div id="edges"></div>
     <div id="bossbar" hidden><span id="boss-name"></span><div class="bar"><div id="boss-fill"></div></div></div>
+    <div id="loot-ui"></div>
+    <div id="toast" hidden></div>
+    <button id="loot-chip" type="button" hidden>Beute: <b id="loot-n">0</b> · Weiterziehen</button>
     <div id="banner" hidden><b id="banner-title"></b><span id="banner-sub"></span></div>
 
     <div id="karte" class="overlay" hidden>
@@ -29,6 +32,14 @@
         <button id="x-karte" type="button" class="x-btn" aria-label="Schließen">×</button>
         <div id="karte-svg"></div>
         <button id="close-karte" type="button" class="primary">Weiter</button>
+      </div>
+    </div>
+
+    <div id="lootwarn" class="overlay" hidden>
+      <div class="panel">
+        <h2>Wertvolle Beute liegt noch hier</h2>
+        <button id="loot-find" type="button" class="primary">Beute suchen</button>
+        <button id="loot-leave" type="button">Weiterziehen</button>
       </div>
     </div>
 

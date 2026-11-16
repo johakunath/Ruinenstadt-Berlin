@@ -2,6 +2,7 @@
 // broken props, land on walkable ground and are picked up by walking within 1.2 m (no magnet).
 import type { MaterialId } from '../data/crafting';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
+import { RARITIES } from '../data/items';
 import { colliderDistance } from './collide';
 import { collectItem, BAG_SIZE } from './inventory';
 import { isUpgrade, lootItem, makeItem, type Item } from './items';
@@ -52,6 +53,14 @@ function ctx(sim: Sim) {
   sim.lootCtx.luck = sim.stats.luck;
   sim.lootCtx.wave = Math.max(1, sim.lootWaves) / 2;
   return sim.lootCtx;
+}
+
+/** Display color of a drop: rarity, set green, heal red, material grey. */
+export function dropColor(d: Drop): string {
+  const c = d.content;
+  if (c.kind === 'heal') return '#e0584a';
+  if (c.kind === 'material') return '#9db0b4';
+  return c.item.set ? '#5fd36f' : RARITIES[c.item.rarity].color;
 }
 
 export const importantDrop = (d: Drop): boolean => d.content.kind === 'item' && (d.content.item.rarity >= 2 || !!d.content.item.set);

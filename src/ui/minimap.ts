@@ -18,6 +18,13 @@ export interface MiniEnemy {
   boss: boolean;
 }
 
+/** Rare and better drops (2D render.js:170). */
+export interface MiniLoot {
+  x: number;
+  z: number;
+  color: string;
+}
+
 export interface MiniTarget {
   x: number;
   z: number;
@@ -62,7 +69,7 @@ export class Minimap {
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
-  update(dt: number, done: number, hero: { x: number; z: number; facing: number }, target: MiniTarget | null, enemies: MiniEnemy[]): void {
+  update(dt: number, done: number, hero: { x: number; z: number; facing: number }, target: MiniTarget | null, enemies: MiniEnemy[], loot: MiniLoot[] = []): void {
     if (this.canvas.hidden) return;
     this.background(done);
     this.t -= dt;
@@ -95,6 +102,15 @@ export class Minimap {
       g.fillStyle = e.boss ? '#ff6a2a' : '#c23a2e';
       const r = e.boss ? 3.5 : 2;
       g.fillRect(sx(e.x) - r, sz(e.z) - r, r * 2, r * 2);
+    }
+    for (const l of loot) {
+      g.fillStyle = l.color;
+      g.strokeStyle = '#000';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.arc(sx(l.x), sz(l.z), 3, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
     }
     g.restore();
     // Hero: arrow along the facing (θ means direction (sin θ, cos θ) in XZ; +Z is screen down).
