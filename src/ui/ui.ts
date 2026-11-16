@@ -81,6 +81,11 @@ export class Ui {
     const music = el<HTMLInputElement>('opt-music');
     music.checked = opts.music;
     music.addEventListener('change', () => handlers.onMusic(music.checked));
+    // Fullscreen (playtest 2026-11-17): a switch in the pause menu; phones enter it when the game starts.
+    const full = el<HTMLInputElement>('opt-fullscreen');
+    el('fullscreen-row').hidden = !document.documentElement.requestFullscreen;
+    full.addEventListener('change', () => { void (full.checked ? document.documentElement.requestFullscreen?.() : document.exitFullscreen?.())?.catch(() => undefined); });
+    document.addEventListener('fullscreenchange', () => { full.checked = !!document.fullscreenElement; });
     const rumble = el<HTMLInputElement>('opt-rumble');
     rumble.checked = opts.rumble;
     rumble.addEventListener('change', () => handlers.onRumble(rumble.checked));

@@ -234,7 +234,9 @@ if (map) {
   ui.mapSource = () => {
     const p = sim.player;
     const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false });
-    return svg.replace('</svg>', `<circle cx="${p.x.toFixed(1)}" cy="${p.z.toFixed(1)}" r="5" fill="#b8261c" stroke="#f0e2c8" stroke-width="1.5"/></svg>`);
+    // The hero: the same arrow as on the minimap, in a ring so it is found at a glance (playtest 2026-11-17).
+    const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
+    return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
   };
 } else {
   const sub = document.getElementById('title-sub');
@@ -301,6 +303,8 @@ document.getElementById('cloud-join')!.addEventListener('click', () => {
 
 function start(resumed = false): void {
   audio.start();
+  // Phones and tablets play in fullscreen (needs the tap that started the game; refused quietly elsewhere).
+  if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement && !navigator.webdriver) void document.documentElement.requestFullscreen?.()?.catch(() => undefined);
   phase = 'play';
   deadFor = 0;
   wonFor = -1;

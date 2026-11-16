@@ -30,8 +30,8 @@ export function waveTier(g: number, bosses: BossKind[] = [], zone = g < 6 ? 0 : 
     count: Math.round(5 + g * 0.45),
     maxAlive: Math.min(12, 6 + Math.floor(g / 3)),
     mix,
-    hpMul: 1 + g * 0.04,
-    dmgMul: 1 + g * 0.025,
+    hpMul: 1 + g * 0.13,
+    dmgMul: 1 + g * 0.06,
     bosses,
     elite: THREAT.eliteChance(g),
   };

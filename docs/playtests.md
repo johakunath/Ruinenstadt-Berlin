@@ -2,6 +2,31 @@
 
 Newest first. 2D history: `docs/playtests.md` in `johakunath/Ruinenstadt`.
 
+## 2026-11-17 · Köpenick on main before M12 (Johannes, PC, phone)
+
+Played the build without the new enemies. Fixed at once (same PR as M12): see the last column. The rest is in `docs/backlog.md` (P rows) and `docs/tasks/m11d-map-realism.md`.
+
+| Point | Finding | Answer |
+|---|---|---|
+| Crates | Some break, some do not, they look the same | Fixed: every crate and bin breaks |
+| After a wave | Reward comes too abruptly | Fixed: 1.3 s breath before the blessing choice. Dialogue or a reward moment: backlog P7 |
+| Enemy life | No small life bars | Fixed: bars over hurt enemies (gold when open, violet for elites) |
+| PC interface | Map and inventory buttons not needed on screen | Fixed: hidden on every device; M, I/Tab, pad Y and the pause menu open them |
+| Mobile | Should enter fullscreen, and a way back into it | Fixed: fullscreen on start on touch devices, Vollbild switch in the pause menu |
+| Map marker | Red dot for the player is weak | Fixed: arrow in a ring on the big map (the minimap already had the arrow) |
+| Controls | Show them per input device, take over the 2D controller layout | Backlog P1 (with U2) |
+| Flicker | Textures flicker on the PC on Qualität until standing still | Backlog P2: needs the PC to reproduce; suspects are the temporal part of the post chain and anisotropy on the blended ground |
+| World shapes | World and buildings too rectangular, in plan and in the ruin walls | Task M11d |
+| Cars | More realistic models, Trabi | Backlog P3 (PC or Codex models) |
+| Inventory | Double click or drag and drop to equip | Backlog P4 (with U1) |
+| Trader | Item comparison missing; how on touch? | Backlog P5: tap selects and shows the comparison card beside the offer, second tap buys |
+| Comparison | Layout and infos as in 2D, item level as the main number, coherent units | Backlog P6 (with U1) |
+| Outlines | Enemies and NPCs behind buildings too, in other colors | Backlog P8 (extends R1) |
+| Map | Sidewalks empty and too wide, streets too narrow and not like car streets; hard map limits; why generated and not hand-built? | Task M11d, with the answer on generation |
+| Zoom | Three zoom levels, nice to have | Backlog P9 |
+| Pickups | Own look per item type | Backlog P10 |
+| Question | Map building effort in 3D compared with 2D | Answered in M11d |
+
 ## 2026-11-15 · Köpenick first look (Johannes, Tab S9)
 
 Result: performance fine (over 90 fps, a bit warm). The map feels too big, empty and flat. Answers: `docs/migration.md` › M11b.

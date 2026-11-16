@@ -18,6 +18,8 @@ import { DT, type Sim } from './types';
 const TRIGGER_INSET = 3;
 const WAVE_PAUSE = 1.6;
 const SPAWN_GAP = 0.35;
+/** A breath between the last kill and the blessing choice (playtest 2026-11-17). */
+export const REWARD_DELAY = 1.3;
 /** Flow field window half size around a fight or the player. */
 const WINDOW = 30;
 /** Farther than this from the fight place, a wave's enemies appear around the hero instead of on the rim. */
@@ -89,6 +91,10 @@ export function updateDirector(sim: Sim): void {
   const run = sim.run;
   const p = sim.player;
   const enc = currentEncounter(sim);
+  if ((sim.abilities.rewardT ?? 0) > 0 && p.state !== 'dead') {
+    sim.abilities.rewardT! -= DT;
+    if (sim.abilities.rewardT! <= 0) offerBlessings(sim);
+  }
   if (!enc || p.state === 'dead') return;
 
   if (run.phase === 'travel') {
@@ -138,8 +144,8 @@ export function updateDirector(sim: Sim): void {
     sim.events.push({ type: 'checkpoint' });
     return;
   }
-  // Encounter won.
-  offerBlessings(sim);
+  // Encounter won: the blessing choice follows after a short breath.
+  sim.abilities.rewardT = REWARD_DELAY;
   const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * enc.heal));
   p.hp += heal;
   sim.events.push({ type: 'encounterClear', index: run.index, heal });

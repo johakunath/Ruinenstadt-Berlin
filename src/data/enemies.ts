@@ -85,22 +85,22 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // Zone bosses.
   feldwebel: {
-    kind: 'feldwebel', name: 'Der Feldwebel', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 380, speed: 2.5,
+    kind: 'feldwebel', name: 'Der Feldwebel', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
   waechter: {
-    kind: 'waechter', name: 'Der Turmwächter', body: 'zombie', ai: 'waechter', res: 'turm', radius: 0.85, scale: 1.75, hp: 620, speed: 1.7,
+    kind: 'waechter', name: 'Der Turmwächter', body: 'zombie', ai: 'waechter', res: 'turm', radius: 0.85, scale: 1.75, hp: 2000, speed: 1.7,
     attackRange: 2.4, windup: 0.85, active: 0.16, recovery: 0.85,
     reach: 3.0, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
   rex: {
-    kind: 'rex', name: 'Der Rex', body: 'rex', ai: 'rex', res: 'brand', radius: 1.25, scale: 1, hp: 900, speed: 2.7,
+    kind: 'rex', name: 'Der Rex', body: 'rex', ai: 'rex', res: 'brand', radius: 1.25, scale: 1, hp: 3600, speed: 2.7,
     attackRange: 3.1, windup: 0.75, active: 0.16, recovery: 0.9,
     reach: 3.8, halfAngle: 50 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true,
   },
   hauptmann: {
-    kind: 'hauptmann', name: 'Hauptmann von Köpenick', body: 'zombie', ai: 'hauptmann', res: 'hauptmann', radius: 0.8, scale: 1.6, hp: 1300, speed: 2.9,
+    kind: 'hauptmann', name: 'Hauptmann von Köpenick', body: 'zombie', ai: 'hauptmann', res: 'hauptmann', radius: 0.8, scale: 1.6, hp: 4400, speed: 2.9,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 75 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
@@ -147,20 +147,20 @@ export const THREAT = {
 export const BOSS = {
   rageAt: 0.5, rageSpeed: 1.3, rageRate: 1.35,
   /** Marked circle on the hero (every boss that slams). */
-  slam: { range: 320 * PX, wind: 0.95, radius: 96 * PX, damage: 1.3, floor: 0.3 },
+  slam: { range: 320 * PX, wind: 0.95, radius: 96 * PX, damage: 1.3, floor: 0.25 },
   /** Ring of shots around the boss. */
   ring: { speed: 165 * PX, damage: 0.6, life: 3.5, radius: 0.28, wind: 0.6 },
   /** Marked line, then a rush (2D Zitadellenritter). */
-  charge: { range: 420 * PX, wind: 0.75, time: 0.6, speed: 600 * PX, damage: 1.1, floor: 0.3, open: 1.3 },
+  charge: { range: 420 * PX, wind: 0.75, time: 0.6, speed: 600 * PX, damage: 1.1, floor: 0.25, open: 1.3 },
   /** Expanding rings that hurt unless the hero rolls through (2D bass waves). */
-  roar: { speed: 300 * PX, max: 340 * PX, gap: 150 * PX, damage: 0.7, floor: 0.22, width: 14 * PX, wind: 0.8, buff: 3, buffRange: 220 * PX },
+  roar: { speed: 300 * PX, max: 340 * PX, gap: 150 * PX, damage: 0.7, floor: 0.18, width: 14 * PX, wind: 0.8, buff: 3, buffRange: 220 * PX },
   /** One circle on the hero, more around (2D Fliegerkönig). */
-  barrage: { wind: 1.1, step: 0.12, radius: 55 * PX, spreadX: 150 * PX, spreadZ: 130 * PX, damage: 0.9, floor: 0.25 },
+  barrage: { wind: 1.1, step: 0.12, radius: 55 * PX, spreadX: 150 * PX, spreadZ: 130 * PX, damage: 0.9, floor: 0.2 },
   summon: { wind: 0.7, spread: 60 * PX, maxAdds: 8 },
   feldwebel: { charge: [5, 7], summon: 9, adds: 3 },
-  waechter: { barrage: 4.5, ring: 7.5, slam: 4.2, shots: 12, extra: 5 },
+  waechter: { barrage: 5, ring: 7.5, slam: 4.5, shots: 12, extra: 4 },
   rex: { charge: [4.2, 3], roar: 8, tail: 5, tailRadius: 110 * PX, tailWind: 0.8, raptorsEvery: 3 },
-  hauptmann: { slam: 3.3, ring: 5, summon: 7, adds: 4, shots: 16 },
+  hauptmann: { slam: 3.6, ring: 5.5, summon: 9, adds: 3, shots: 16 },
 } as const;
 
 export const SPAWN = {

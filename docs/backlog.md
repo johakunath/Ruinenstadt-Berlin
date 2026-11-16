@@ -1,20 +1,47 @@
 # Backlog (3D)
 
-Open ideas only. Done: M6 wave checkpoints; prototype controller feel/rumble, PC performance and hero outline (Johannes, 2026-11-16). Scheduled work lives in `docs/migration.md` (steps M1 to M15, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`.
+Open ideas only. Done: B3 heights (hills, terraces with stairs, M11b), B6 finishers (M7), M6 wave checkpoints; prototype controller feel/rumble, PC performance and hero outline (Johannes, 2026-11-16). Scheduled work lives in `docs/migration.md` (steps M1 to M19, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`.
 
-Still to merge from the 2D `BACKLOG.md`: camp as a place (#16, #37), Umschmieden with control (#17), enemy voices (#18), quests (#41), collectibles (#27), line of sight (#28), garden (#33), smith and enchanter (#34), weapon crafting quests (#36), daggers and dual wield (#38), multi-level interiors (#13). Merge each when its migration step starts, not before.
+Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, not before:
+
+| 2D # | Item | With step |
+|---|---|---|
+| 2 | Legendaries and set pieces for head, hands, feet, ring | L2 |
+| 13 | Multi-level interiors | M15 |
+| 14, 27 | Story artefacts (tapes, notes), collectibles with permanent power | M16b |
+| 16, 37, 30 | Camp as a place, stations with levels and NPCs, stash purpose | After M13 |
+| 17, 34 | Umschmieden with control, smith and enchanter | M13 |
+| 18 | Enemy voices | S3 |
+| 19 | Authored arena spots with a special reward (dark zone replacement) | M16b |
+| 22 | Loot pacing check | M14 |
+| 24 | Save slots | After M17 |
+| 25, 33 | Meals and ingredients, garden | M13 |
+| 26, 36 | Attachment follow-ups, weapons by crafting quests | M13 |
+| 28 | Line of sight | Not planned |
+| 29 | Warning instead of ▲ when a swap breaks a set | U1 |
+| 31, 43, 44 | Dash look, hit flinch, death animation | H1 |
+| 38 | Daggers and dual wield | After G1 |
+| 41 | Quests | After M13 |
 
 | # | Item | Source | Earliest |
 |---|---|---|---|
 | B2 | Landmark view: near a landmark a button appears, the camera pulls out and shows the whole building; press again to return | Gate 1 playtest | After M11 |
-| B3 | Height levels: stairs, ramps, hills to look down from. Needs ground height in the sim (still 2D collision with a height per cell or per area) | Gate 1 playtest | M10, M11 |
 | B5 | Easier start for newcomers (gate 1 is hard: about 40 to 45 kills with effort). Tune in the real game, not now | Gate 1 playtest | M14 (balance bot) |
-| B6 | Finishers first pass built; animation/feel polish tracked in the combat task | Gate 1 playtest | M7 |
 | B7 | Head lamp or torch for very dark areas, migrated from the 2D game | Gate 1 playtest, 2D game | With the first dark area |
 | B8 | Qualität profile on tablets brings no visible gain and stutters: tablets stay on Leistung, consider hiding Qualität on coarse-pointer devices | Gate 1 playtest | Any time, small |
 | B9 | Balance bot calibrated to Johannes: after the port (M14) the bot plays with his reaction time, dodge rate and damage taken, measured from playtest telemetry, so tuning targets his skill, not a perfect player | Johannes, 2026-11-15 | M14 |
 | B10 | Power curve: never frustrating. Each zone the hero clearly gets stronger through drops, gear and skills, and by the district boss feels much more powerful than at the start. Target: early waves need care, late waves of the same district feel easier relative to the hero's power, bosses stay a real fight. The bot (B9) checks the curve after every balance change | Johannes, 2026-11-15 | M3, M4, M8, M14 |
 | B13 | Späti trader. In 2D the trader appeared as a random event (and in the tunnels). In 3D every Späti has one. Port the 2D trader first, then extend: a trade screen with the inventory on one side and the trader on the other; weapons, equipment, especially strong Aufsätze; blessings (Hades style): swap a blessing, buy a new one or upgrade one, paid in Schrott. The balance bot must learn to trade | Johannes, 2026-11-16 | M13b |
+| P1 | Controls shown per input device (keyboard and mouse, pad, touch) in the pause menu and as button hints; pad layout taken over from 2D (A attack, B sprint, Y skill, X Molotow, RB Verband, LB ultimate) | Playtest 2026-11-17 | U2 |
+| P2 | Texture flicker on the PC on Qualität until the hero stands still. Reproduce on the PC first; suspects: FXAA/outline pass on moving high-contrast ground, anisotropy, shadow map following the hero in steps | Playtest 2026-11-17 | Next PC session |
+| P3 | Cars as recognizable models (Trabi, Wartburg, BVG bus) instead of boxes | Playtest 2026-11-17 | PC or Codex models |
+| P4 | Inventory: double click or drag and drop equips | Playtest 2026-11-17 | U1 |
+| P5 | Trader: comparison with the worn item. Mouse: hover. Touch: first tap selects and shows the comparison, second tap buys | Playtest 2026-11-17 | M13b |
+| P6 | Item comparison as in 2D: same layout and rows, item level as the main number instead of Kampfkraft, units coherent (%, per second, absolute) | Playtest 2026-11-17 | U1 |
+| P7 | A reward moment after a won fight (short line, drop shower or dialogue) before the blessing cards; the 1.3 s pause is in | Playtest 2026-11-17 | M17 |
+| P8 | Contour behind buildings also for enemies (red) and NPCs (green), hero stays amber | Playtest 2026-11-17 | With R1 (cost first) |
+| P9 | Three zoom levels (key, wheel, pad stick click) | Playtest 2026-11-17 | Any time, small |
+| P10 | Pickups: own model per item type (weapon kinds, armor slots, materials, food) instead of one bag | Playtest 2026-11-17 | L2 |
 
 ## Ideas (not decided)
 

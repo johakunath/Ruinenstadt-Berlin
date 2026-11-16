@@ -2,7 +2,7 @@
 // shots, burning and acid ground, roar rings, the gold ring under an open body. Pooled, unlit,
 // on the FX layer: no lights, no shadows, the same cost on both profiles.
 import {
-  AdditiveBlending, CircleGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, SphereGeometry,
+  AdditiveBlending, CircleGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, SphereGeometry, Sprite, SpriteMaterial,
 } from 'three';
 import { BOSS, THREAT } from '../data/enemies';
 import { lerp, Rng } from '../sim/math';
@@ -12,6 +12,9 @@ import { groundY } from './ground';
 import { FX_LAYER } from './layers';
 import { paintGlow } from './paint';
 
+const BARS = 18;
+/** Where the life bar floats, per body. */
+const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2 } as const;
 const ZONES = 14, LINES = 6, SHOTS = 72, HAZARDS = 60, WAVES = 4, OPEN = 6;
 const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e } as const;
 const m4 = new Matrix4();
@@ -40,9 +43,23 @@ export class ThreatView {
   private readonly globs: InstancedMesh;
   private readonly bossShots: InstancedMesh;
   private readonly hazards: InstancedMesh;
+  private readonly bars: Array<{ back: Sprite; fill: Sprite }> = [];
   private time = 0;
 
   constructor(private readonly emit: Emitters) {
+    // Small life bars over hurt enemies (playtest 2026-11-17); bosses keep the big bar in the HUD.
+    for (let i = 0; i < BARS; i++) {
+      const mk = (color: number, order: number): Sprite => {
+        const sp = new Sprite(new SpriteMaterial({ color, depthTest: false, depthWrite: false, fog: false, transparent: true, opacity: 0.9 }));
+        sp.center.set(0, 0.5);
+        sp.layers.set(FX_LAYER);
+        sp.renderOrder = order;
+        sp.visible = false;
+        this.group.add(sp);
+        return sp;
+      };
+      this.bars.push({ back: mk(0x120c0a, 8), fill: mk(0xd8452e, 9) });
+    }
     for (let i = 0; i < ZONES; i++) {
       const rim = fx(flat(new Mesh(new RingGeometry(0.93, 1, 48), add(0xff4a1e, 0.85))), 2);
       const fill = fx(flat(new Mesh(new CircleGeometry(1, 36), add(0xff4a1e, 0.3))), 2);
@@ -152,6 +169,24 @@ export class ThreatView {
     }
     for (let i = nl; i < LINES; i++) this.lines[i]!.visible = false;
     for (let i = no; i < OPEN; i++) this.open[i]!.visible = false;
+
+    // Life bars: only on bodies that took damage, nearest slots first come first served.
+    let nbar = 0;
+    for (const e of s.enemies) {
+      if (nbar >= BARS) break;
+      if (e.state === 'dead' || e.def.boss || e.hp >= e.maxHp) continue;
+      const b = this.bars[nbar++]!;
+      const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
+      const w = Math.min(1.5, 0.7 + e.def.radius * 0.6), y = groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' ? e.def.scale : 1);
+      b.back.visible = b.fill.visible = true;
+      // Sprites face the camera; the left edge is the anchor, so shift half a width to the camera's left (screen x = world x here).
+      b.back.position.set(x - w / 2, y, z);
+      b.fill.position.set(x - w / 2 + 0.02, y, z);
+      b.back.scale.set(w, 0.13, 1);
+      b.fill.scale.set(Math.max(0.01, (w - 0.04) * (e.hp / e.maxHp)), 0.085, 1);
+      (b.fill.material as SpriteMaterial).color.setHex(e.open > 0 ? 0xf2d14b : e.elite ? 0xc98cff : 0xd8452e);
+    }
+    for (let i = nbar; i < BARS; i++) this.bars[i]!.back.visible = this.bars[i]!.fill.visible = false;
 
     // Shots: acid globs wobble, boss shots are embers.
     let ng = 0, nb = 0;

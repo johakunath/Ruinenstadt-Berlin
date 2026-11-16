@@ -1,6 +1,6 @@
 # M4 Loot in the world [Claude · Sonnet]
 
-Status: done (PR pending, playtest by Johannes open). Prepared by Claude (Opus) on 2026-11-16; the design decisions below are made, so build them as written.
+Status: done (PR #15, playtest by Johannes open). Prepared by Claude (Opus) on 2026-11-16; the design decisions below are made, so build them as written.
 If something does not fit the code, write the question here and ask Johannes. Do not redesign.
 
 Needs: M5 inventory, merged (PR #12). Use its API: `collectItem(sim, item)` in `src/sim/inventory.ts` adds to the 25-slot bag. It rejects full bags and duplicate ids, so rejected drops stay in the world. Scrap and materials live in `sim.inventory.scrap` and `sim.inventory.materials`. Allocate unique item ids (the starter weapon is id 0); see the M5 handover in `docs/tasks/m5-inventory.md`.

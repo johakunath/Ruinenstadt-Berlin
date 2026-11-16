@@ -86,8 +86,8 @@ The zone 1 boss is Der Feldwebel (the Hauptmann's sergeant, 1906): Der Schaffner
 - The next encounter is the objective: HUD line with name, distance and an arrow. Other encounters stay quiet.
 - Entering its circle closes it (nobody leaves until all waves are beaten). Waves spawn on the rim, away from the hero. 1.6 s pause between waves.
 - Won encounter: +30 % life (bosses: full life). This stands in for food and heal drops until M4.
-- Difficulty per normal wave g (0 … 19), `waveTier` in `src/data/koepenick.ts`: 5 → 14 enemies, up to 12 alive, life ×1.0 → ×1.76, damage ×1.0 → ×1.48, runners from wave 2, brutes from wave 4.
-- Bosses are placeholders on the zombie body (bigger, poise, own name, health bar) until M12 brings models and attacks.
+- Difficulty per normal wave g (0 … 19), `waveTier` in `src/data/koepenick.ts`: 5 → 14 enemies, up to 12 alive, life ×1.0 → ×3.5, damage ×1.0 → ×2.1 (retuned with the bot, `docs/balance.md`). Each zone teaches its types: Hetzer from wave 2, Speier from 4, Brocken from 5, Krähen in the Müggelberge, Raptoren in the Spreepark; elites from wave 4.
+- Bosses have their own attacks (M12, `docs/tasks/m12-enemies.md`).
 
 ## Open questions
 

@@ -48,6 +48,8 @@ export interface Abilities {
   booms: Array<{ x: number; z: number }>;
   /** Blessing choice on screen (the game pauses), how many more wait, and its kind. */
   offers: Offer[]; pending: number; hiddenOffer: boolean; rerolled: boolean;
+  /** Seconds until the blessing choice of a won encounter opens. */
+  rewardT?: number;
   /** Best card quality taken per blessing (card frame in the build list). */
   quality: Partial<Record<PerkId, number>>;
 }

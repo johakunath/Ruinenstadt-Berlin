@@ -10,7 +10,9 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 |---|---|---|
 | S2 + M7/M8/M9 first playable pass | Codex | done (first pass, PR #17): `docs/tasks/combat-audio-migration.md` |
 | M7/M8 parity, M9 consumable controls, M16 run content | Claude | done (review of PR #17 and completion, same task file); Johannes playtest open |
-| M12 enemy roster and boss attacks | Claude | open: roadmap below |
+| M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
+| M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
+| M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Fable 5.2 | open: `docs/tasks/m11d-map-realism.md` |
 | U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | open: `docs/tasks/u1-pause-menu.md` |
 | U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | open, needs U1: `docs/tasks/u2-menu-tabs.md` |
 | T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (paving image) | open: `docs/tasks/t1b-ground-polish.md` |
@@ -18,7 +20,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | L2 Loot and item follow-ups | Sonnet | open: `docs/tasks/l2-loot-followups.md` |
 | R1 Hero outline cost | Opus 5.5 high, Johannes measures | open: `docs/tasks/r1-outline-cost.md` |
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
-| G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | open, own PR after #18: `docs/tasks/g1-build-variety.md` |
+| G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | open: `docs/tasks/g1-build-variety.md` |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 
@@ -39,11 +41,12 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b done (PR #10) |
 | Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Built; Johannes playtest open |
 | Inventory, equip, compare, salvage, sets | M5 | Implemented; M4 collection hookup done |
-| Save, wave checkpoint, difficulty | M6 | Done (PR pending); playtest open |
+| Save, wave checkpoint, difficulty | M6 | Done (PR #16); playtest open |
 | Weapons and finishers | M7 | Built: own clips, models, arcs and finishers per weapon; playtest and balance open |
 | Powers, ultimates, blessings, families and duos | M8 | Built: all 12 powers, all 50 blessings with 2D offer rules, weapon mods; playtest open |
 | Touch layout for more buttons | M9 | Built: thumb arc with power, switch, ultimate, Verband, Molotow; spacing after the Tab S9 playtest |
-| Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Open (placeholders) |
+| Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Built: six types, four elite modifiers, four bosses with own specials, resistances; playtest open. Own models for the humanoid bosses stay with H2 |
+| Balance bot | M14 | Built: plays whole campaigns in Node; first tuning pass done, calibration open |
 | Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Built: one event per stretch between fights, every type once per run; places are seeded, M16b moves them into side branches |
 | Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
 | World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
@@ -52,7 +55,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
 | Endless mode after the district boss | M18 | Open |
 | One U-Bahn tunnel with Der Schaffner | M19 | Open |
-| Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 built for current roster, future types with M12 |
+| Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 covers the M12 roster (synth cues per type and special); boss voices S3 |
 
 Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, other districts.
 
@@ -94,7 +97,7 @@ Parallel on the PC: H1 custom hero (2 test heroes, pick, rig on current skeleton
 | In-world sprites | Not copied |
 | Save | New versioned format, no 2D import |
 | Audio | Ported (S1), new enemy and boss sounds |
-| Balance bot | Ported later (M14) |
+| Balance bot | Rebuilt on the 3D sim (M14), 2D skill model |
 | Run and performance telemetry | Done early (2026-11-16): `src/telemetry.ts` sends one anonymous row per run to the 2D sheet "Telemetrie" (same Apps Script). Off in Optionen ("Spieldaten senden"); never from localhost or automated browsers |
 
 ## Decided (Johannes, 2026-11-15)
