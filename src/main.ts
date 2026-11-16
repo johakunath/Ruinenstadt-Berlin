@@ -219,7 +219,7 @@ if (map) {
   ui.setExpedition(true);
   ui.mapSource = () => {
     const p = sim.player;
-    const svg = mapSvg(map.def, map.lots, { trees: false, done: sim.run.index });
+    const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false });
     return svg.replace('</svg>', `<circle cx="${p.x.toFixed(1)}" cy="${p.z.toFixed(1)}" r="5" fill="#b8261c" stroke="#f0e2c8" stroke-width="1.5"/></svg>`);
   };
 } else {
@@ -466,7 +466,7 @@ function expeditionHud(dt: number): void {
   const alive = sim.enemies.filter((e) => e.state !== 'dead');
   const travel = sim.run.phase === 'travel';
   minimap?.show(phase === 'play');
-  minimap?.update(dt, sim.run.index, p, enc && travel ? enc : null, alive.map((e) => ({ x: e.x, z: e.z, boss: !!e.def.boss })), importantDrops(sim).map((d) => ({ x: d.x, z: d.z, color: dropColor(d) })));
+  minimap?.update(dt, p, alive.map((e) => ({ x: e.x, z: e.z, boss: !!e.def.boss })), importantDrops(sim).map((d) => ({ x: d.x, z: d.z, color: dropColor(d) })));
   // Edge triangles: the objective while travelling, the last three enemies of a wave (2D rule).
   const marks: Array<{ x: number; y: number; color: string }> = [];
   if (renderer && phase === 'play') {

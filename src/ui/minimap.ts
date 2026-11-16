@@ -25,17 +25,11 @@ export interface MiniLoot {
   color: string;
 }
 
-export interface MiniTarget {
-  x: number;
-  z: number;
-  r: number;
-}
-
 export class Minimap {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private bg: HTMLCanvasElement | null = null;
-  private bgDone = -1;
+  private bgDone = false;
   private t = 0;
 
   constructor(private readonly def: MapDef, private readonly lots: Lot[], onTap: () => void) {
@@ -52,12 +46,12 @@ export class Minimap {
     this.canvas.hidden = !on;
   }
 
-  /** Redraws the background when the won-encounter count changes (won ones are dimmed). */
-  private background(done: number): void {
-    if (done === this.bgDone) return;
-    this.bgDone = done;
+  /** Bakes the background once. */
+  private background(): void {
+    if (this.bgDone) return;
+    this.bgDone = true;
     const B = this.def.bounds;
-    const svg = mapSvg(this.def, this.lots, { trees: false, done, labels: false });
+    const svg = mapSvg(this.def, this.lots, { trees: false, labels: false, encounters: false });
     const img = new Image();
     img.onload = () => {
       const c = document.createElement('canvas');
@@ -69,9 +63,9 @@ export class Minimap {
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
-  update(dt: number, done: number, hero: { x: number; z: number; facing: number }, target: MiniTarget | null, enemies: MiniEnemy[], loot: MiniLoot[] = []): void {
+  update(dt: number, hero: { x: number; z: number; facing: number }, enemies: MiniEnemy[], loot: MiniLoot[] = []): void {
     if (this.canvas.hidden) return;
-    this.background(done);
+    this.background();
     this.t -= dt;
     if (this.t > 0) return;
     this.t = 0.1;
@@ -90,13 +84,6 @@ export class Minimap {
     if (this.bg) {
       const half = SPAN / 2;
       g.drawImage(this.bg, (hero.x - half - B.minX) * PPM, (hero.z - half - B.minZ) * PPM, SPAN * PPM, SPAN * PPM, 0, 0, SIZE, SIZE);
-    }
-    if (target) {
-      g.strokeStyle = '#43d1cf';
-      g.lineWidth = 2;
-      g.beginPath();
-      g.arc(sx(target.x), sz(target.z), Math.max(3, target.r * k), 0, Math.PI * 2);
-      g.stroke();
     }
     for (const e of enemies) {
       g.fillStyle = e.boss ? '#ff6a2a' : '#c23a2e';
