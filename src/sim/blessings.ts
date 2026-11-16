@@ -19,6 +19,8 @@ export function heldFamilies(s: Sim): Set<PerkFamilyId> {
 }
 
 /** 2D `wE()`: half the waves started. */
+/** Umbau cards appear from this wave on. */
+export const UMBAU_FROM = 3;
 const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;
 export const rerollCost = (s: Sim): number => 20 + Math.round(waveE(s) * 8);
 
@@ -41,9 +43,10 @@ function roll(s: Sim): Offer[] {
     while (i < pool.length - 1 && (x -= weight(pool[i]!)) > 0) i++;
     picks.push(pool.splice(i, 1)[0]!);
   }
-  // Weapon mod (Umbau): rare, one per run, from the fifth wave on.
-  const mod = PERKS.find((p) => p.weapon === s.stats.kind);
-  if (mod && s.lootWaves >= 5 && !PERKS.some((p) => p.weapon && pk(s, p.id) > 0) && s.rng.next() < 0.22) picks[Math.min(2, picks.length)] = mod;
+  // Weapon mod (Umbau): rare, one per run, one of the weapon's three. 2D: one per weapon from wave five;
+  // 3D (G1): three per weapon from wave three, so two runs with one weapon can play differently.
+  const mods = PERKS.filter((p) => p.weapon === s.stats.kind);
+  if (mods.length && s.lootWaves >= UMBAU_FROM && !PERKS.some((p) => p.weapon && pk(s, p.id) > 0) && s.rng.next() < 0.22) picks[Math.min(2, picks.length)] = s.rng.pick(mods);
   return picks.map((p) => {
     const q = s.rng.next();
     const level: 1 | 2 = !p.duo && !p.weapon && p.max - pk(s, p.id) >= 2 && q < 0.18 + 0.01 * waveE(s) ? 2 : 1;

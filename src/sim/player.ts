@@ -24,7 +24,11 @@ export function releaseSwing(sim: Sim): void {
   if (kind === 'sling') {
     const S = WEAPON.sling;
     const speed = S.speed * sim.stats.reachFactor * (fin ? S.finSpeed : 1);
-    if (pk(sim, 'm_schrot')) {
+    if (fin && pk(sim, 'm_salve')) {
+      // Schnellfeuer: the finisher is a fan of five.
+      const V = WEAPON.umbau.salve;
+      for (let i = 0; i < V.count; i++) shoot(sim, { angle: p.facing + (i - (V.count - 1) / 2) * V.spread, damage: a.damage * V.damage, crit: p.critical, speed, life: S.finLife, pierce: 1, wucht: p.wucht });
+    } else if (pk(sim, 'm_schrot')) {
       for (const o of [-S.schrot.spread, 0, S.schrot.spread]) shoot(sim, { angle: p.facing + o, damage: a.damage * S.schrot.damage, crit: p.critical, speed, life: fin ? S.schrot.finLife : S.schrot.life, pierce: fin ? S.schrot.finPierce : 0, wucht: p.wucht });
     } else {
       shoot(sim, { angle: p.facing, damage: a.damage, crit: p.critical, speed, life: fin ? S.finLife : S.life, pierce: fin ? S.finPierce : 0, wucht: p.wucht });
@@ -33,7 +37,11 @@ export function releaseSwing(sim: Sim): void {
   }
   if (kind === 'hammer') {
     const H = WEAPON.hammer;
-    if (fin) shock(sim, p.x + fx * H.shock.ahead, p.z + fz * H.shock.ahead, H.shock.radius, { mul: H.shock.damage, stun: H.shock.stun, knock: knock(260), kind: 'small' });
+    // Erdbeben: the finisher ring is twice as wide and stuns for a second.
+    const beben = pk(sim, 'm_beben') > 0;
+    if (fin) shock(sim, p.x + fx * H.shock.ahead, p.z + fz * H.shock.ahead, H.shock.radius * (beben ? WEAPON.umbau.bebenRadius : 1), { mul: H.shock.damage, stun: beben ? WEAPON.umbau.bebenStun : H.shock.stun, knock: knock(260), kind: beben ? 'earth' : 'small' });
+    // Wurfhammer: the finisher also throws the hammer through three bodies.
+    if (fin && pk(sim, 'm_wurf')) { const W = WEAPON.umbau.wurf; shoot(sim, { angle: p.facing, damage: a.damage * W.damage, crit: p.critical, speed: W.speed, life: W.life, pierce: W.pierce, kind: 'spear' }); }
     if (pk(sim, 'm_dampf')) shock(sim, p.x + fx * H.dampf.ahead, p.z + fz * H.dampf.ahead, H.dampf.radius, { mul: H.dampf.damage, stun: 0, knock: knock(140), kind: 'small' });
   }
   if (kind === 'spear' && fin && pk(sim, 'm_spiess')) {
@@ -94,6 +102,21 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   if (pk(sim, 'combo') && id === 'light1') def.next = 'light3';
   // Rundumschlag: the blade finisher hits all around.
   if (fin && kind === 'blade' && pk(sim, 'm_rund')) Object.assign(def, { from: -Math.PI, to: Math.PI, reach: def.reach * 1.2, style: 'slash' });
+  const U = WEAPON.umbau;
+  // Sturmklinge: every swing carries the hero forward.
+  if (kind === 'blade' && pk(sim, 'm_sturm')) def.lunge += U.sturmLunge;
+  // Doppelklinge: two hits of 60% each (`playerSweep` strikes twice).
+  if (kind === 'blade' && pk(sim, 'm_doppel')) def.damage *= U.doppel;
+  // Fegestoß: thrusts become wide sweeps, a little shorter.
+  if (kind === 'spear' && pk(sim, 'm_fege') && !fin && id !== 'dash') {
+    // The sweep plays the blade's slash clips (a thrust clip would not match the arc).
+    const b = weaponAttack('blade', id);
+    const left = id === 'light2';
+    Object.assign(def, { from: left ? U.fege.half : -U.fege.half, to: left ? -U.fege.half : U.fege.half, reach: def.reach * U.fege.reach, style: 'slash', active: def.active * 1.4,
+      clip: b.clip, clipStart: b.clipStart, clipSwing: b.clipSwing, clipHit: b.clipHit, rec: b.rec });
+  }
+  // Sturmlanze: right after a dodge, thrusts hit twice as hard and reach further.
+  if (kind === 'spear' && pk(sim, 'm_lanze') && a.hus > 0) Object.assign(def, { damage: def.damage * U.lanze.damage, reach: def.reach * U.lanze.reach });
   const frenzy = a.frenzy > 0;
   // Säbeltanz: wider and longer swings.
   if (frenzy && def.style !== 'throw') def.reach *= 1.2;

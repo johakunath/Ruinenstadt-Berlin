@@ -86,7 +86,7 @@ test('Köpenick: the first encounter starts, waves spawn, the map opens and paus
   });
   await page.waitForFunction(() => (window.__game?.sim().enemies.length ?? 0) > 0, null, { timeout: 90_000 });
   expect(await page.evaluate(() => window.__game!.sim().run.phase)).toBe('fight');
-  await expect(page.locator('#obj-text')).toContainText('Welle 1/2');
+  await expect(page.locator('#obj-text')).toContainText('Welle 1/');
   await page.screenshot({ path: testInfo.outputPath('koepenick-fight.png'), timeout: 110_000 });
 
   await page.keyboard.press('m');

@@ -176,6 +176,11 @@ export const WEAPON = {
   hammer: { stun: 0.6, shock: { ahead: 40 / 30, radius: 95 / 30, damage: 0.7, stun: 0.5 }, dampf: { ahead: 46 / 30, radius: 75 / 30, damage: 0.5 } },
   sling: { speed: 560 / 30, life: 0.7, finLife: 0.9, finSpeed: 1.3, finPierce: 3, schrot: { spread: 0.18, damage: 0.55, life: 0.42, finLife: 0.55, finPierce: 2 } },
   spear: { spiess: { speed: 640 / 30, life: 0.6, damage: 0.9, pierce: 4 } },
+  /** G1 Umbau cards (3D additions). */
+  umbau: {
+    doppel: 0.6, sturmLunge: 1, bebenRadius: 2, bebenStun: 1, wurf: { damage: 1.5, pierce: 3, speed: 16, life: 0.7 },
+    fege: { half: 60 * DEG, reach: 0.8 }, lanze: { damage: 2, reach: 1.5 }, quer: 0.8, salve: { count: 5, spread: 0.16, damage: 0.6 },
+  },
   /** Gegengewicht: sure crit, double knockback, short stun. */
   wucht: { stun: 0.35, knock: 2 },
   finisherKnock: 1.7,

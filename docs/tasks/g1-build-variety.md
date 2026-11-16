@@ -1,6 +1,6 @@
 # G1 Weapon identity and build variety [Fable 5.2; Johannes picks the direction first]
 
-Status: open. Decided (Johannes, 2026-11-16): option C is built next. A and B are ideas only (`docs/backlog.md` › Ideas I1, I2), not decided. Goal (Johannes, 2026-11-16): the four base weapons play clearly differently and blessings change how a run plays, as in Hades. This is the main reason to start again.
+Status: done (option C). Decided (Johannes, 2026-11-16): option C. A and B are ideas only (`docs/backlog.md` › Ideas I1, I2), not decided. Goal (Johannes, 2026-11-16): the four base weapons play clearly differently and blessings change how a run plays, as in Hades. This is the main reason to start again.
 
 ## Where the game stands (read from the code, not playtested)
 
@@ -29,6 +29,18 @@ The verbs differ. What is thin:
 | C | **More Umbau cards** | Three per weapon instead of one, offered from wave three, one per run. Each changes the basic attack (as Rundumschlag, Dampfhammer, Schrotladung, Wurfspieße do) | Small, 8 new cards | Low |
 
 Decision: C. A and B stay ideas.
+
+## Handover (option C)
+
+| Weapon | 2D card | New in 3D |
+|---|---|---|
+| Klinge | Rundumschlag | Doppelklinge (two cuts of 60 %) · Sturmklinge (1 m more lunge, +25 % tempo, -15 % damage) |
+| Hammer | Dampfhammer | Erdbeben (finisher ring twice as wide, 1 s stun) · Wurfhammer (finisher throws the hammer, 150 %, through 3) |
+| Speer | Wurfspieße | Fegestoß (thrusts become wide sweeps, -20 % reach) · Sturmlanze (after a dodge: double damage, +50 % reach) |
+| Werfer | Schrotladung | Querschläger (shots jump once, 80 %) · Schnellfeuer (+40 % tempo, -25 % damage, finisher fan of five) |
+
+- One Umbau per run, 22 % per choice from wave three (2D: wave five), picked from the weapon's three. Numbers: `WEAPON.umbau` in `src/data/combat.ts`; rules in `src/sim/player.ts`; tests in `src/sim/blessings.test.ts`.
+- Open: own glyphs (the new cards show their weapon's 2D glyph), a hammer model for the thrown hammer (drawn as the spear shot), balance and playtest.
 
 ## Done when (whichever option)
 Johannes plays two runs with the same weapon and two with different ones and says they played differently; each new rule has a unit test.

@@ -9,7 +9,7 @@ describe('ported item and progression data', () => {
     ['mods', crafting.WEAPON_MODS, 6],
     ['meals', crafting.MEALS, 5],
     ['consumables', crafting.CONSUMABLES, 2],
-    ['perks', progression.PERKS, 50],
+    ['perks (50 from 2D plus 8 Umbau cards added in 3D, G1)', progression.PERKS, 58],
     ['survivors', progression.SURVIVORS, 6],
     ['camp buildings', progression.CAMP_BUILDINGS, 7],
   ] as const)('%s retain their source count and unique ids', (_label, rows, count) => {
