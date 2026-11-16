@@ -1,6 +1,9 @@
 import { AbilitiesUi } from './ui/abilities';
 import { InventoryUi } from './ui/inventory';
 import { Menu } from './ui/menu';
+import { CampUi } from './ui/camp';
+import { endExpedition } from './sim/camp';
+import { INGREDIENTS } from './data/crafting';
 import { isUpgrade } from './sim/items';
 import { collectItem } from './sim/inventory';
 import type { Item } from './sim/items';
@@ -77,6 +80,8 @@ let phase: Phase = 'title';
 let wonFor = -1;
 /** Exit warning: 'ask' shows the modal, 'search' leads the hero to the valuable loot left behind. */
 let lootExit: 'off' | 'ask' | 'search' = 'off';
+/** Where the exit warning leads after "Weiterziehen". */
+let afterLoot: 'again' | 'camp' = 'again';
 const lootUi = new LootLabels();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
@@ -88,6 +93,7 @@ function finishLootExit(leave: boolean): void {
   if (leave) {
     lootExit = 'off';
     lootChip.hidden = true;
+    if (afterLoot === 'camp') { afterLoot = 'again'; toCamp(); return; }
     again();
   } else {
     // Back into the map to fetch it.
@@ -179,6 +185,7 @@ function newGame(): void {
 function abortRun(): void {
   menu.close();
   telemetry.end('quit');
+  endExpedition(sim, false);
   saveNow(false);
   phase = 'title';
   input.enabled = false;
@@ -277,6 +284,25 @@ const menu = new Menu({
   },
 }, inventory, document.getElementById('options')!);
 input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
+// M13: the camp between expeditions, from the title and the victory screen.
+const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); });
+document.getElementById('open-camp')!.addEventListener('click', () => camp.open());
+document.getElementById('won-camp')!.addEventListener('click', () => {
+  // Leaving the freed district for the camp ends the run (same loot warning as Nochmal).
+  if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'camp'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
+  toCamp();
+});
+/** Back to the title with the camp open: a fresh run waits, gear and Schrott stay. */
+function toCamp(): void {
+  lootExit = 'off'; lootWarn.hidden = true; lootChip.hidden = true;
+  phase = 'title';
+  input.enabled = false; input.clear();
+  sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
+  renderer?.reset(sim);
+  ui.setResume(resumeLabel(), difficulty);
+  ui.showTitle();
+  camp.open();
+}
 input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search') menu.toggle('karte'); };
 document.getElementById('won-explore')!.addEventListener('click', explore);
 document.getElementById('pause-finish')!.addEventListener('click', () => { menu.close(); showWon(); });
@@ -339,6 +365,14 @@ function saveNow(withRun: boolean): void {
   // reached during a wave). Keep the last one instead of replacing it with "no run".
   if (withRun && level && sim.run.phase === 'fight' && sim.player.state !== 'dead') return;
   save = snapshot(sim, mapName, withRun);
+  writeSave(save);
+  cloud.queue(save);
+}
+
+/** Camp changes at the title: the profile is written, a waiting checkpoint stays. */
+function saveProfile(): void {
+  if (!persist) return;
+  save = save ? { ...save, t: Date.now(), profile: profileOf(sim) } : snapshot(sim, mapName, false);
   writeSave(save);
   cloud.queue(save);
 }
@@ -493,6 +527,7 @@ function drainEvents(): void {
       case 'victory':
         // Playtest 2026-11-17: no dialog over the falling boss. The run counts as won now; the
         // end screen follows after a while and offers to stay. The loot warning comes when leaving.
+        endExpedition(sim, true);
         saveNow(false);
         telemetry.end('win');
         ui.banner('Köpenick befreit');
@@ -508,6 +543,7 @@ function drainEvents(): void {
         if (ev.what === 'item') lootUi.toast(`<span style="color:${rarityColor(ev.rarity, ev.set)}">${ev.name}</span>${ev.upgrade ? ' <span style="color:#8fd16a">▲</span>' : ''}`);
         else if (ev.what === 'heal') lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
         else if (ev.what === 'food') { lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s'); if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z); }
+        else if (ev.ingredient) lootUi.float(`+1 ${INGREDIENTS[ev.ingredient].name}`, INGREDIENTS[ev.ingredient].color, sim.player.x, 1.8, sim.player.z);
         else if (ev.material) lootUi.float(`+1 ${MATERIALS[ev.material].name}`, MATERIALS[ev.material].color, sim.player.x, 1.8, sim.player.z);
         break;
       case 'ability':
@@ -597,6 +633,7 @@ function frame(now: number): void {
   renderer.perf.frame(frameMs);
   input.poll(dt, sim.hitstop > 0);
   menu.pollPad(now);
+  camp.pollPad(now);
   if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
 
   abilitiesUi.update(sim, phase === 'play' && !menu.isOpen);

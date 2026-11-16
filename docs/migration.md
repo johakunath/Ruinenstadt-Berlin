@@ -50,7 +50,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Built: one event per stretch between fights, every type once per run; places are seeded, M16b moves them into side branches |
 | Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
 | World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
-| Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Open |
+| Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Built (2026-11-16, `docs/tasks/m13-camp.md`): seven stations, meals from Zutaten, Lazarett, Aufsätze, Lager; playtest open |
 | Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
 | Endless mode after the district boss | M18 | Open |

@@ -1,5 +1,6 @@
 // M5: session inventory. M4 feeds collectItem; M6 will persist this state.
-import type { MaterialId, WeaponModId } from '../data/crafting';
+import type { IngredientId, MaterialId, WeaponModId } from '../data/crafting';
+import type { StationId } from '../data/camp';
 import type { SlotId } from '../data/items';
 import { isUpgrade, salvage, type Item } from './items';
 import { setLoadout } from './loadout';
@@ -15,7 +16,12 @@ export interface Inventory {
   consumables?: { verband: number; molotow: number };
   /** U2 Kodex: kills by enemy kind and elite (`e:flink`), first finds by legendary and set base. Missing in older saves. */
   kodex?: Kodex;
+  /** M13 Zutaten for the Imbiss. */
+  ingredients?: Partial<Record<IngredientId, number>>;
+  /** M13 camp: station levels (1..3), Lager items, districts freed (0 Köpenick). */
+  camp?: CampState;
 }
+export interface CampState { stations: Partial<Record<StationId, number>>; stash: Item[]; freed: number[] }
 export interface Kodex { kills: Partial<Record<string, number>>; found: Partial<Record<string, 1>> }
 const kodexOf = (sim: Sim): Kodex => sim.inventory.kodex ??= { kills: {}, found: {} };
 /** Counts a kill; true on the first of its kind (the UI shows "Neu im Kodex"). */

@@ -1,6 +1,6 @@
 // Loot in the world (M4, 2D js/loot.js + combat.js kill/breakProp). Drops pop out of kills and
 // broken props, land on walkable ground and are picked up by walking within 1.2 m (no magnet).
-import type { MaterialId } from '../data/crafting';
+import { INGREDIENTS, type IngredientId, type MaterialId } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
 import { RARITIES } from '../data/items';
@@ -27,6 +27,9 @@ export const LOOT = {
   fullToast: 6,
 };
 
+export const INGREDIENT_IDS: readonly IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
+/** 2D EZUT by role: ghoul and brute meat, spitter vegetables, the rest spices. */
+const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese' };
 export const MATERIAL_IDS: readonly MaterialId[] = ['stoff', 'metall', 'chemie', 'kabel'];
 
 export type DropContent =
@@ -34,7 +37,9 @@ export type DropContent =
   | { kind: 'heal' }
   /** Döner: heals and feeds (+10% damage for a while). */
   | { kind: 'food' }
-  | { kind: 'material'; id: MaterialId };
+  | { kind: 'material'; id: MaterialId }
+  /** M13 Zutat for the Imbiss (2D ZUT). */
+  | { kind: 'ingredient'; id: IngredientId };
 
 export interface Drop {
   id: number;
@@ -70,6 +75,7 @@ export function dropColor(d: Drop): string {
   if (c.kind === 'heal') return '#e0584a';
   if (c.kind === 'food') return '#f2a04b';
   if (c.kind === 'material') return '#9db0b4';
+  if (c.kind === 'ingredient') return INGREDIENTS[c.id].color;
   return c.item.set ? '#5fd36f' : RARITIES[c.item.rarity].color;
 }
 
@@ -151,6 +157,9 @@ export function killDrops(sim: Sim, e: Enemy): void {
     if (big) spawnDrop(sim, e.x, e.z, { kind: 'item', item: makeItem(sim.rng, c, il + 3, 3) }, 0, -0.8);
     spawnDrop(sim, e.x, e.z, { kind: 'heal' }, 0, 0.7);
   }
+  // 2D v0.78 ingredients: bosses three, elites 30 %, others 3 %; Oma Gerda doubles, Spreewaldgurken +50 %.
+  const zc = (boss ? 1 : e.elite ? 0.3 : 0.03) * (sim.statContext.survivors.koechin ? 2 : 1) * (sim.statContext.meal === 'gurke' ? 1.5 : 1);
+  if (sim.rng.next() < zc) for (let i = 0; i < (boss ? 3 : 1); i++) spawnDrop(sim, e.x, e.z, { kind: 'ingredient', id: i ? sim.rng.pick(INGREDIENT_IDS) : ENEMY_INGREDIENT[kind] ?? 'gewuerz' }, spread(sim, 0.6), spread(sim, 0.6));
   if (sim.rng.next() < (boss ? 1 : e.elite ? 0.8 : 0.22) * mat) {
     const n = boss ? 5 : e.elite ? 2 : 1;
     for (let i = 0; i < n; i++) spawnDrop(sim, e.x, e.z, { kind: 'material', id: sim.rng.pick(MATERIAL_IDS) });
@@ -222,6 +231,10 @@ export function updateDrops(sim: Sim): void {
       const heal = Math.round(healPlayer(sim, Math.round(sim.stats.maxHp * CONSUMABLE.food.heal)));
       sim.abilities.fed = CONSUMABLE.food.fed;
       sim.events.push({ type: 'pickup', id: d.id, what: 'food', x: d.x, z: d.z, rarity: -1, amount: heal });
+    } else if (c.kind === 'ingredient') {
+      const ing = (sim.inventory.ingredients ??= {});
+      ing[c.id] = (ing[c.id] ?? 0) + 1;
+      sim.events.push({ type: 'pickup', id: d.id, what: 'ingredient', x: d.x, z: d.z, rarity: -1, amount: 1, ingredient: c.id });
     } else if (c.kind === 'material') {
       sim.inventory.materials[c.id] = (sim.inventory.materials[c.id] ?? 0) + 1;
       sim.events.push({ type: 'pickup', id: d.id, what: 'material', x: d.x, z: d.z, rarity: -1, amount: 1, material: c.id });

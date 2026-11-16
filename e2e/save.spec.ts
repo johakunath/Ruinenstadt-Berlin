@@ -40,3 +40,26 @@ test('M6: damaged save is ignored', async ({ page }) => {
   await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
   await expect(page.locator('#resume')).toBeHidden();
 });
+
+test('M13: the camp spends Schrott, keeps the checkpoint and survives a reload', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript((s) => {
+    if (!localStorage.getItem('ruinenstadt-berlin.save')) localStorage.setItem('ruinenstadt-berlin.save', JSON.stringify({ ...s, profile: { ...s.profile, inventory: { ...s.profile.inventory, scrap: 100 } } }));
+  }, SAVE);
+  await page.goto('/?profile=Leistung');
+  await expect(page.locator('#open-camp')).toBeEnabled({ timeout: 90_000 });
+  await page.locator('#open-camp').click();
+  await page.locator('[data-up="dmg"]').click();
+  await expect(page.locator('.camp-msg')).toHaveText('Schärfen · Stufe 1');
+  await page.locator('[data-close]').click();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.save')!));
+  expect(saved.profile.inventory.scrap).toBe(81);
+  expect(saved.profile.statContext.upgrades.dmg).toBe(1);
+  expect(saved.run.index).toBe(1);
+  await page.reload();
+  await expect(page.locator('#resume')).toBeEnabled({ timeout: 90_000 });
+  await page.locator('#resume').click();
+  expect(await page.evaluate(() => window.__game!.sim().statContext.upgrades.dmg)).toBe(1);
+  expect(errors).toEqual([]);
+});

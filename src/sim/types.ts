@@ -1,5 +1,5 @@
 import type { Inventory } from './inventory';
-import type { MaterialId } from '../data/crafting';
+import type { IngredientId, MaterialId } from '../data/crafting';
 import type { Breakable, BreakableKind } from './breakables';
 import type { Drop } from './loot';
 import type { LootContext } from './items';
@@ -217,7 +217,7 @@ export type SimEvent =
   | { type: 'drop'; id: number; x: number; z: number; rarity: number; set: boolean }
   | { type: 'dropLand'; id: number; x: number; z: number; rarity: number }
   | { type: 'legendary'; x: number; z: number }
-  | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material' | 'food'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId }
+  | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material' | 'food' | 'ingredient'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId; ingredient?: IngredientId }
   | { type: 'scrap'; amount: number; x: number; z: number }
   | { type: 'bagFull' }
   /** U2: first kill of a kind or first find of a legendary or set base. */

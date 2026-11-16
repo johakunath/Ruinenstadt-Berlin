@@ -224,7 +224,7 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
       if (!at) break;
       const il = Math.max(lootLevel(s), ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
       const ctx = lootContext(s);
-      const n = s.statContext.survivors.kurier ? 4 : 3;
+      const n = (s.statContext.survivors.kurier ? 4 : 3) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
       const offers: TradeOffer[] = [];
       for (let i = 0; i < n; i++) {
         const item = makeItem(rng, ctx, il + (i === 2 ? 2 : 0), i === 2 && rng.next() < 0.15 ? 3 : 2);
@@ -336,7 +336,7 @@ export function updateContent(s: Sim): void {
     let shop = c.shops[at] ?? null;
     if (!shop) {
       const lvl = Math.max(il, ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
-      const n = CONTENT.shop.offers + (s.statContext.survivors.kurier ? 1 : 0);
+      const n = CONTENT.shop.offers + (s.statContext.survivors.kurier ? 1 : 0) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
       const offers: TradeOffer[] = [];
       for (let i = 0; i < n; i++) {
         const item = makeItem(rng, ctx(), lvl + (i === n - 1 ? 2 : 0), i === n - 1 && rng.next() < 0.15 ? 3 : i < 2 ? 1 : 2);
