@@ -266,7 +266,7 @@ describe('events', () => {
   it('an elite drops an item and pays four times the Schrott', () => {
     const s = make();
     const e = spawnEnemy(s, s.player.x + 1, s.player.z, 'walker');
-    e.elite = true;
+    e.elite = 'flink';
     e.hp = 1;
     const scrap = s.inventory.scrap;
     stepSim(s, NO_INPUT);

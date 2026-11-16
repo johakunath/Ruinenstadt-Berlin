@@ -9,7 +9,10 @@ import { HIT_FEEL } from '../data/combat';
 import { lerp } from '../sim/math';
 import { DT, type Sim, type SimEvent } from '../sim/types';
 import { FollowCamera } from './camera';
-import { EnemyView, HeroView, loadCharacters, type CharacterAssets } from './characters';
+import { HeroView, loadCharacters, type CharacterAssets } from './characters';
+import { EnemyView } from './enemies';
+import { threatShake } from './threats';
+import type { BodyKind } from '../data/enemies';
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
 import { LootView } from './loot';
@@ -78,7 +81,8 @@ export class GameRenderer {
   private readonly content: ContentView;
   private readonly hero: HeroView;
   private readonly views = new Map<number, EnemyView>();
-  private readonly pool: EnemyView[] = [];
+  /** Spare views per body rig. */
+  private readonly pool = new Map<BodyKind, EnemyView[]>();
   private readonly debug: HitDebug | null;
   /** Soft fill that travels with the hero so the fight reads against the dark ground. */
   private readonly heroLight = new PointLight(0xffe2bd, 9, 7, 1.4);
@@ -89,7 +93,7 @@ export class GameRenderer {
     private readonly renderer: WebGLRenderer,
     private readonly world: World,
     private readonly assets: CharacterAssets,
-    materials: Materials,
+    private readonly materials: Materials,
     private readonly opts: RendererOptions,
   ) {
     const Y = COURTYARD.yard;
@@ -146,15 +150,19 @@ export class GameRenderer {
    * enemy view goes back to the pool and is assigned again; the camera snaps to the hero.
    */
   reset(sim: Sim): void {
-    for (const view of this.views.values()) {
-      view.root.visible = false;
-      this.pool.push(view);
-    }
+    for (const view of this.views.values()) this.release(view);
     this.views.clear();
     this.cam.snap(sim.player.x, sim.player.z, groundY(sim.player.x, sim.player.z));
     this.world.follow?.(sim.player.x, sim.player.z);
     this.world.breakables?.reset();
     for (const b of sim.breakables) if (b.broken) this.world.breakables?.broke(b.id);
+  }
+
+  private release(view: EnemyView): void {
+    view.root.visible = false;
+    const list = this.pool.get(view.body) ?? [];
+    list.push(view);
+    this.pool.set(view.body, list);
   }
 
   /** Ground point under a pointer position, for mouse aim. */
@@ -166,6 +174,8 @@ export class GameRenderer {
   onEvent(ev: SimEvent, sim: Sim): void {
     this.fx.onEvent(ev);
     const y = (x: number, z: number, h: number): number => groundY(x, z) + h;
+    const ts = threatShake(ev);
+    if (ts > 0) this.cam.shake(0, 0, ts);
     switch (ev.type) {
       case 'hit': {
         this.views.get(ev.id)?.hit();
@@ -269,7 +279,7 @@ export class GameRenderer {
       seen.add(e.id);
       let view = this.views.get(e.id);
       if (!view) {
-        view = this.pool.pop() ?? new EnemyView(this.assets, profile.enemyShadows);
+        view = this.pool.get(e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows);
         if (!view.root.parent) this.scene.add(view.root);
         view.assign(e);
         this.views.set(e.id, view);
@@ -283,9 +293,8 @@ export class GameRenderer {
     }
     for (const [id, view] of this.views) {
       if (seen.has(id)) continue;
-      view.root.visible = false;
       this.views.delete(id);
-      this.pool.push(view);
+      this.release(view);
     }
 
     const px = lerp(p.px, p.x, alpha);

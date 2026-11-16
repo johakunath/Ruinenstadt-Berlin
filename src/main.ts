@@ -58,7 +58,7 @@ const map = opts.map === 'koepenick' ? (() => {
 const level: Level | undefined = map?.level;
 
 // M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
-const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1;
+const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0;
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 if (save?.run && (save.run.map !== mapName || !level)) save = { ...save, run: null };
@@ -66,7 +66,7 @@ let difficulty: DifficultyId = save?.difficulty ?? DEFAULT_DIFFICULTY;
 // Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
 const cloud = new CloudSave(persist && !navigator.webdriver && !/^(localhost|127\.|0\.0\.0\.0|$)/.test(location.hostname));
 function freshSim(): Sim {
-  const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt };
+  const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt, spawn: opts.spawn };
   try { if (save) return simFromSave(save, base, false); } catch (err) { console.warn('Save unbrauchbar', err); save = null; clearSave(); }
   return createSim({ ...base, difficulty });
 }
@@ -433,6 +433,13 @@ function drainEvents(): void {
         break;
       case 'secondWind':
         ui.banner('Zweiter Atem');
+        break;
+      case 'bossRage':
+        ui.banner(`${ev.name} tobt`);
+        if (opts.rumble) input.rumble(1, 220);
+        break;
+      case 'zoneHit':
+        if (ev.hit && opts.rumble) input.rumble(1, 160);
         break;
       case 'blessing': {
         const perk = PERKS.find((p) => p.id === ev.id);

@@ -2,7 +2,9 @@
 // through `strike`, every death through `killEnemy`, every hit on the hero through `hurtPlayer`.
 // Blessing and weapon-mod rules live here so a swing, a shot, a power and a burn all obey them.
 import { HIT_FEEL, PLAYER, type HitWeight } from '../data/combat';
-import type { ElementId, LegendaryId } from '../data/items';
+import { ENEMY_RESISTANCES, type ElementId, type LegendaryId } from '../data/items';
+import { THREAT } from '../data/enemies';
+import { splitElite } from './enemies';
 import { PX } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { killDrops } from './loot';
@@ -40,8 +42,14 @@ export interface StrikeOpts {
 
 const tough = (e: Enemy): boolean => !!e.def.boss || !!e.elite;
 
+/** Damage multiplier of an element against this body (2D `ER`): 0 is immune. */
+export const resist = (e: Enemy, el: ElementId): number => (e.def.res === 'none' ? 1 : ENEMY_RESISTANCES[e.def.res][el]);
+
 export function stun(e: Enemy, seconds: number): void {
   if (e.state === 'dead' || seconds <= 0) return;
+  // A boss finishes what it marked; a rush in flight cannot be stopped.
+  if (e.state === 'special' && e.sp && (e.def.boss || (e.sp.speed > 0 && e.stateT >= e.sp.wind))) return;
+  e.sp = null;
   const t = seconds * (e.def.boss ? 0.15 : 1);
   if (e.state === 'stagger' && e.staggerDur - e.stateT >= t) return;
   e.state = 'stagger';
@@ -51,6 +59,8 @@ export function stun(e: Enemy, seconds: number): void {
 
 export function ignite(s: Sim, e: Enemy, dps: number, time: number, stack = false): void {
   if (e.state === 'dead') return;
+  dps *= resist(e, 'fire');
+  if (dps <= 0) return;
   const cur = e.burn > 0 ? e.bdps : 0;
   if (e.burn <= 0) s.events.push({ type: 'ignite', id: e.id, x: e.x, z: e.z });
   e.bdps = stack ? Math.min(3 * dps, cur + dps) : Math.max(cur, dps);
@@ -87,6 +97,17 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (tough(e)) damage *= (1 + s.stats.elementBonus) * (1 + 0.25 * pk(s, 'breaker')) * (hasL(s, 'auge') ? 1.25 : 1);
   if (pk(s, 'rush') && a.streak.n >= 10) damage *= 1 + 0.02 * Math.floor(a.streak.n / 10);
   if (e.acid > 0) damage *= 1 + STATUS.acidBonus * s.stats.elementPower;
+  // M12: open bodies take more, armored elites half until they open; elemental hits meet the type's resistance.
+  if (e.open > 0) damage *= THREAT.openBonus;
+  else if (e.elite === 'gepanzert') damage *= THREAT.armored;
+  if (o.element) {
+    const w = resist(e, o.element);
+    if (w <= 0) {
+      s.events.push({ type: 'note', text: 'immun', color: '#9aa4b0', x: e.x, z: e.z });
+      return 0;
+    }
+    damage *= w;
+  }
   damage = Math.max(1, Math.round(damage));
   e.hp -= damage;
   e.lastCrit = crit;
@@ -124,7 +145,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
     for (const el of s.stats.elements) {
       if (!(crit && pk(s, 'd_kurz')) && s.rng.next() > s.stats.elementChance) continue;
       if (el === 'fire') ignite(s, e, damage * STATUS.burnShare * s.stats.elementPower, STATUS.burnTime + pk(s, 'schwel'), pk(s, 'schwel') > 0);
-      else if (el === 'acid') e.acid = STATUS.acidTime;
+      else if (el === 'acid') { if (resist(e, 'acid') > 0) e.acid = STATUS.acidTime; }
       else chain(s, e, damage * STATUS.chainShare * s.stats.elementPower, 2 + 2 * pk(s, 'chain'));
     }
     if ((s.content.shrine.zap ?? 0) > 0 && s.rng.next() < 0.25) chain(s, e, damage * 0.45, 2);
@@ -151,6 +172,9 @@ export function killEnemy(s: Sim, e: Enemy): void {
   e.state = 'dead';
   e.stateT = 0;
   e.hp = 0;
+  e.sp = null;
+  e.open = 0;
+  if (e.elite === 'spaltend') splitElite(s, e);
   s.kills++;
   a.streak.n++;
   a.streak.t = STATUS.streakTime;

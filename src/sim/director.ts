@@ -8,7 +8,7 @@ import { offerBlessings } from './blessings';
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES } from '../data/enemies';
 import { colliderDistance } from './collide';
-import { aliveCount, pickKind, spawnEnemy } from './enemies';
+import { aliveCount, makeElite, pickKind, spawnEnemy } from './enemies';
 import { freeSpot } from './reach';
 import { FlowField, type Bounds } from './flowfield';
 import type { EncounterDef } from './level';
@@ -124,7 +124,8 @@ export function updateDirector(sim: Sim): void {
     } else {
       const kind = pickKind(sim, w.mix);
       const s = rimSpot(sim, enc, ENEMIES[kind].radius);
-      spawnEnemy(sim, s.x, s.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      const e = spawnEnemy(sim, s.x, s.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      if (w.elite && sim.rng.next() < w.elite) makeElite(sim, e);
       run.toSpawn--;
     }
   }

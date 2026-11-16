@@ -7,8 +7,9 @@ import { difficultyOf } from '../data/difficulty';
 import { PX } from '../data/powers';
 import { SHRINES, SURVIVORS, type ShrineId, type SurvivorId } from '../data/progression';
 import { offerBlessings } from './blessings';
-import { STATUS, pk } from './combat';
-import { spawnEnemy } from './enemies';
+import { ELITE_MODS } from '../data/enemies';
+import { pk } from './combat';
+import { makeElite, spawnEnemy } from './enemies';
 import { BAG_SIZE } from './inventory';
 import { lootItem, makeItem, price, type Item } from './items';
 import type { Level } from './level';
@@ -169,11 +170,6 @@ function tier(s: Sim): { hp: number; dmg: number } {
 const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;
 export const healPrice = (s: Sim): number => 20 + Math.round(waveE(s) * 4);
 
-function makeElite(e: ReturnType<typeof spawnEnemy>): void {
-  e.elite = true;
-  e.hp = e.maxHp = Math.round(e.maxHp * STATUS.eliteHp);
-}
-
 /** The three guards of the captive (one elite). Also called when a checkpoint with an unfinished rescue is loaded. */
 export function spawnGuards(s: Sim, rng: Rng = new Rng(s.content.rng)): void {
   const C = s.content.captive;
@@ -183,7 +179,7 @@ export function spawnGuards(s: Sim, rng: Rng = new Rng(s.content.rng)): void {
   for (let i = 0; i < 3; i++) {
     const q = freeSpot(L, rng, C.x, C.z, 1.2, 2.6, 0.5, (x, z) => !inFight(L, x, z, 3) && restAt(L.rests, x, z) < 0) ?? C;
     const g = spawnEnemy(s, q.x, q.z, i === 0 ? 'brute' : rng.pick(['walker', 'walker', 'runner'] as const), T.hp, T.dmg);
-    if (i === 0) makeElite(g);
+    if (i === 0) makeElite(s, g, rng.pick(ELITE_MODS));
     g.guard = true;
   }
 }

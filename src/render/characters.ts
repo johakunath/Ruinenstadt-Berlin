@@ -4,18 +4,19 @@
 import { groundY } from './ground';
 import { HERO_LAYER } from './layers';
 import {
-  AnimationClip, AnimationMixer, Bone, Color, Group, LoopRepeat, Mesh, Quaternion,
-  SkinnedMesh, Sphere, Vector3, type AnimationAction, type Object3D,
+  AnimationClip, AnimationMixer, Bone, Group, LoopRepeat, Mesh, Quaternion,
+  Vector3, type AnimationAction, type Object3D,
 } from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import animsUrl from '../../assets/characters/anims.glb?url';
 import heroUrl from '../../assets/characters/hero.glb?url';
 import zombieUrl from '../../assets/characters/zombie.glb?url';
+import raptorUrl from '../../assets/characters/raptor.glb?url';
+import rexUrl from '../../assets/characters/rex.glb?url';
 import { PLAYER, type AttackDef } from '../data/combat';
-import { SPAWN, type EnemyKind } from '../data/enemies';
 import { lerp, lerpAngle } from '../sim/math';
-import { DT, type Cast, type Enemy, type Player } from '../sim/types';
+import { DT, type Cast, type Player } from '../sim/types';
 import type { ElementId, WeaponKindId } from '../data/items';
 import { WeaponRack, weaponModel } from './weapons';
 import type { LitMaterial, Materials } from './materials';
@@ -25,10 +26,16 @@ export interface CharacterAssets {
   zombie: Object3D;
   heroClips: Map<string, AnimationClip>;
   zombieClips: Map<string, AnimationClip>;
+  /** Dinosaurs (M12): own skeletons and clips (Idle, Walk, Run, Attack, Jump, Death). */
+  raptor: Object3D;
+  rex: Object3D;
+  raptorClips: Map<string, AnimationClip>;
+  rexClips: Map<string, AnimationClip>;
 }
 
 const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
-const ZOMBIE_CLIPS = /^(Zombie_|Hit_|Death01$|Idle_Loop$)/;
+// The last four carry the specials: slam, lunge, throw, command.
+const ZOMBIE_CLIPS = /^(Zombie_|Hit_|Death01$|Idle_Loop$|Sword_Heavy_Combo$|Shield_Dash$|OverhandThrow$|Spell_Simple_Shoot$)/;
 
 /** Fits a clip to a body: scales the hip track to its leg length, optionally drops finger tracks. */
 function fitClip(clip: AnimationClip, hipScale: number, dropFingers: boolean): AnimationClip {
@@ -63,9 +70,9 @@ function prepare(scene: Object3D, materials: Materials): void {
 
 export async function loadCharacters(materials: Materials): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
-  const [heroGltf, zombieGltf, animGltf] = await Promise.all([loader.loadAsync(heroUrl), loader.loadAsync(zombieUrl), loader.loadAsync(animsUrl)]);
-  prepare(heroGltf.scene, materials);
-  prepare(zombieGltf.scene, materials);
+  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF];
+  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf]) prepare(g.scene, materials);
+  const named = (g: GLTF): Map<string, AnimationClip> => new Map(g.animations.map((c) => [c.name, c]));
   const hipLen = (root: Object3D): number => root.getObjectByName('pelvis')?.position.length() ?? 1;
   const src = hipLen(animGltf.scene);
   const heroClips = new Map<string, AnimationClip>();
@@ -75,7 +82,7 @@ export async function loadCharacters(materials: Materials): Promise<CharacterAss
     // Enemies only get the clips they play: every clip costs bindings per body.
     if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
   }
-  return { hero: heroGltf.scene, zombie: zombieGltf.scene, heroClips, zombieClips };
+  return { hero: heroGltf.scene, zombie: zombieGltf.scene, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
 }
 
 // ---------------------------------------------------------------- animator
@@ -312,151 +319,5 @@ export class HeroView {
       s.side += (side - s.side) * k * (1 - i * 0.2);
       s.bone.quaternion.copy(s.rest).multiply(q.setFromAxisAngle(X, -s.back)).multiply(q.setFromAxisAngle(Z, s.side));
     });
-  }
-}
-
-// ---------------------------------------------------------------- enemies
-
-/** Clip time of Zombie_Scratch at which the claw lands. */
-const SCRATCH_HIT = 0.55;
-const SCRATCH_SWIPE = 0.16;
-const WALK_CLIP_SPEED = 1.15;
-const FLASH_TIME = 0.1;
-const WHITE = new Color(0xffffff);
-
-const TINTS: Record<EnemyKind, number[]> = {
-  walker: [0xb9c7ae, 0xa9b9b0, 0xc4bd9c],
-  runner: [0xcfc9a4, 0xb6c9b8],
-  brute: [0x93a58f, 0xa08f86],
-  feldwebel: [0x7f9a8a],
-  waechter: [0x8a8577],
-  rex: [0x7d9a5a],
-  hauptmann: [0xa98f7a],
-};
-
-export class EnemyView {
-  readonly root = new Group();
-  id = -1;
-  kind: EnemyKind = 'walker';
-  /** Frames to skip between animation updates (distance LOD). */
-  private skip = 0;
-  private pending = 0;
-  private flash = 0;
-  private readonly anim: Animator;
-  private readonly mats: LitMaterial[] = [];
-  private readonly glow: LitMaterial[] = [];
-  private readonly seed = Math.random();
-
-  constructor(assets: CharacterAssets, castShadow: boolean) {
-    const model = cloneSkinned(assets.zombie);
-    this.root.add(model);
-    this.anim = new Animator(model, assets.zombieClips);
-    const own = new Map<unknown, LitMaterial>();
-    model.traverse((o) => {
-      const mesh = o as SkinnedMesh;
-      if (!mesh.isMesh) return;
-      const src = mesh.material as LitMaterial;
-      let mat = own.get(src);
-      if (!mat) {
-        mat = src.clone();
-        own.set(src, mat);
-        if (src.name === 'eyes') {
-          mat.emissive.set(0xd8ff7a);
-          mat.emissiveIntensity = 2.2;
-          this.glow.push(mat);
-        } else {
-          this.mats.push(mat);
-        }
-      }
-      mesh.material = mat;
-      mesh.castShadow = castShadow;
-      mesh.frustumCulled = true;
-      mesh.boundingSphere = new Sphere(new Vector3(0, 0.9, 0), 1.7);
-    });
-  }
-
-  assign(e: Enemy): void {
-    this.id = e.id;
-    this.kind = e.kind;
-    this.flash = 0;
-    this.status = 0;
-    this.root.scale.setScalar(e.def.scale * (e.elite ? 1.15 : 1));
-    // Gaunt runners, heavy brutes.
-    if (e.kind === 'runner') this.root.scale.set(e.def.scale * 0.86, e.def.scale, e.def.scale * 0.86);
-    if (e.kind === 'brute' || e.def.boss) this.root.scale.set(e.def.scale * 1.12, e.def.scale, e.def.scale * 1.12);
-    const tints = TINTS[e.kind];
-    const tint = tints[Math.floor(this.seed * tints.length)] as number;
-    for (const m of this.mats) {
-      if (m.name === 'skin') m.color.set(tint);
-      m.emissive.setScalar(0);
-    }
-    this.root.visible = true;
-  }
-
-  hit(): void {
-    this.flash = FLASH_TIME;
-  }
-
-  private status = 0;
-
-  update(e: Enemy, alpha: number, dt: number, frozen: boolean, skip: number): void {
-    const ex = lerp(e.px, e.x, alpha);
-    const ez = lerp(e.pz, e.z, alpha);
-    this.root.position.set(ex, groundY(ex, ez), ez);
-    this.root.rotation.y = lerpAngle(e.pfacing, e.facing, alpha);
-    // White hit flash: full for half the time, then fading. Runs through hitstop.
-    if (this.flash > 0) {
-      this.flash = Math.max(0, this.flash - dt);
-      const k = Math.min(1, (this.flash / FLASH_TIME) * 2);
-      for (const m of this.mats) m.emissive.copy(WHITE).multiplyScalar(k * 0.85);
-      if (this.flash <= 0) this.status = -1;
-    } else {
-      // Burning bodies glow orange, corroded ones green (set only when it changes).
-      const st = e.state === 'dead' ? 0 : e.burn > 0 ? 1 : e.acid > 0 ? 2 : 0;
-      if (st !== this.status) {
-        this.status = st;
-        for (const m of this.mats) m.emissive.setHex(st === 1 ? 0x7a2a08 : st === 2 ? 0x2a4a10 : 0x000000);
-      }
-    }
-    const t = e.stateT + (frozen ? 0 : alpha * DT);
-    const a = this.anim;
-    const def = e.def;
-    switch (e.state) {
-      case 'chase':
-        if (e.speed > 0.2) a.loop('Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * def.scale))));
-        else a.loop('Zombie_Idle_Loop', 0.25);
-        break;
-      case 'windup':
-        a.pose('Zombie_Scratch', lerp(0.05, SCRATCH_HIT, Math.min(1, t / def.windup)), 0.12);
-        break;
-      case 'strike':
-        a.pose('Zombie_Scratch', SCRATCH_HIT + SCRATCH_SWIPE * Math.min(1, t / def.active), 0.03);
-        break;
-      case 'recover': {
-        const from = SCRATCH_HIT + SCRATCH_SWIPE;
-        a.pose('Zombie_Scratch', lerp(from, a.duration('Zombie_Scratch'), Math.min(1, t / def.recovery)), 0.05);
-        break;
-      }
-      case 'stagger':
-        if (e.staggerDur > 0.4) a.pose('Hit_Knockback', (t / e.staggerDur) * a.duration('Hit_Knockback'), 0.04);
-        else a.pose('Hit_Chest', t, 0.03);
-        break;
-      case 'dead': {
-        a.pose('Death01', DEATH_FROM + t * 1.3, 0.06);
-        // Sink into the ground before the body is removed.
-        const sink = Math.max(0, t - (SPAWN.corpseTime - 0.8)) / 0.8;
-        this.root.position.y -= sink * 0.55;
-        break;
-      }
-    }
-    // Distance LOD: far enemies update their skeleton every 2nd or 3rd frame with the summed time.
-    this.pending += frozen ? 0 : dt;
-    if (this.skip > 0 && this.flash <= 0 && e.state === 'chase') {
-      this.skip--;
-      return;
-    }
-    this.skip = skip;
-    a.update(this.pending);
-    this.pending = 0;
   }
 }

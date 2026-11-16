@@ -7,17 +7,24 @@
 // Müggelberge (7 waves, Turmwächter) → ferry → Johannisthal → Spreepark (7 waves, Rex) → along the
 // Spree over the Lange Brücke → Rathaus (Hauptmann).
 // Meters, +X east, +Z south, origin at the Rathaus. `scale` stretches distances only.
-import type { BossKind, EnemyKind } from './enemies';
+import { THREAT, type BossKind, type EnemyKind } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { ellipse, type Stair, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street } from './map';
 
-/** Difficulty of normal wave number `g` (0 … 19 over the whole district). */
-export function waveTier(g: number, bosses: BossKind[] = []): WaveDef {
+/**
+ * Difficulty of normal wave number `g` (0 … 19 over the whole district) in `zone`. Each zone
+ * teaches its own types one at a time (M12): Bahnhofsviertel Hetzer, then Speier, then Brocken;
+ * Müggelberge adds Krähen; the Spreepark adds Raptoren. Elites from the fourth wave (2D chance).
+ */
+export function waveTier(g: number, bosses: BossKind[] = [], zone = g < 6 ? 0 : g < 13 ? 1 : 2): WaveDef {
   const mix: Partial<Record<EnemyKind, number>> = {
     walker: 6,
     runner: g < 1 ? 0 : 1 + g * 0.3,
-    brute: g < 3 ? 0 : 0.3 + g * 0.12,
+    spitter: g < 3 ? 0 : 0.8 + g * 0.08,
+    brute: g < 4 ? 0 : 0.3 + g * 0.12,
+    crow: zone === 1 ? 1.6 + (g - 6) * 0.15 : zone === 2 ? 0.6 : 0,
+    raptor: zone === 2 ? 1.6 + (g - 13) * 0.4 : 0,
   };
   return {
     count: Math.round(5 + g * 0.45),
@@ -26,12 +33,13 @@ export function waveTier(g: number, bosses: BossKind[] = []): WaveDef {
     hpMul: 1 + g * 0.04,
     dmgMul: 1 + g * 0.025,
     bosses,
+    elite: THREAT.eliteChance(g),
   };
 }
 
-/** A boss fight: the boss plus a few adds of the zone's last tier. */
-function bossWave(g: number, boss: BossKind, adds: number): WaveDef {
-  return { ...waveTier(g, [boss]), count: adds, maxAlive: 4 };
+/** A boss fight: the boss plus a few adds of the zone's last tier (no elites beside a boss). */
+function bossWave(g: number, boss: BossKind, adds: number, zone: number): WaveDef {
+  return { ...waveTier(g, [boss], zone), count: adds, maxAlive: 4, elite: 0 };
 }
 
 const NORMAL_HEAL = 0.3;
@@ -55,11 +63,11 @@ export function koepenickMap(scale = 1): MapDef {
   let g = 0;
   const enc = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number): EncounterDef => {
     const list: WaveDef[] = [];
-    for (let i = 0; i < waves; i++) list.push(waveTier(g++));
+    for (let i = 0; i < waves; i++) list.push(waveTier(g++, [], Math.min(zone, 2)));
     return { id, name, zone, x: x * s, z: z * s, r, waves: list, heal: NORMAL_HEAL };
   };
   const boss = (id: string, name: string, zone: number, x: number, z: number, r: number, kind: BossKind, adds: number): EncounterDef => (
-    { id, name, zone, x: x * s, z: z * s, r, waves: [bossWave(Math.max(0, g - 1), kind, adds)], heal: 1 }
+    { id, name, zone, x: x * s, z: z * s, r, waves: [bossWave(Math.max(0, g - 1), kind, adds, Math.min(zone, 2))], heal: 1 }
   );
 
   const encounters: EncounterDef[] = [

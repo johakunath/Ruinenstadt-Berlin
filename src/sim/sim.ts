@@ -1,6 +1,7 @@
 import { createAbilities, updateAbilities } from './abilities';
 import { hurtPlayer, strike, updateStatuses } from './combat';
 import { createContent, updateContent } from './runcontent';
+import { createThreats, updateThreats } from './threats';
 import { createInventory, type Inventory } from './inventory';
 import { createBreakables, sweepBreakables } from './breakables';
 import { updateDrops } from './loot';
@@ -8,11 +9,11 @@ import { updateDrops } from './loot';
 import { PLAYER, WEAPON } from '../data/combat';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from '../data/difficulty';
 import { courtyardLevel } from '../data/courtyard';
-import { SPAWN } from '../data/enemies';
+import { ELITES, ENEMIES, SPAWN, type EliteMod, type EnemyKind } from '../data/enemies';
 import { sectorHitsCircle } from './collide';
 import { ferryPos, onFerryBoat } from './ferry';
 import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
-import { randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, updateEnemies, updateSpawner } from './enemies';
+import { makeElite, randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, updateEnemies, updateSpawner } from './enemies';
 import { FlowField } from './flowfield';
 import type { Level } from './level';
 import { lerp, Rng } from './math';
@@ -30,6 +31,8 @@ export interface SimOptions {
   seed?: number;
   /** Keep this many enemies alive from the first step (`?stress=40`). */
   stress?: number;
+  /** Debug (`?spawn=`): these kinds stand next to the hero at the start, `kind+mod` for an elite; replaces the arena spawner. */
+  spawn?: string[];
   /** Skip the opening group and the spawner (tests place enemies themselves). */
   empty?: boolean;
   /** Map; the gate 1 courtyard when left out. */
@@ -58,6 +61,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     time: 0,
     player: createPlayer(level, entry),
     enemies: [],
+    threats: createThreats(),
     events: [],
     hitstop: 0,
     consumed: { attack: false, dodge: false, power: false, ultimate: false, verband: false, molotow: false },
@@ -76,7 +80,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     lootCtx: { district: 0, luck: stats.luck, wave: 1, itemId: 0 },
     bagFullT: 0,
     kills: 0,
-    spawnT: opts.empty || (level.expedition && !opts.stress) ? Infinity : 1.5,
+    spawnT: opts.empty || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
   };
   sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...Object.values(equipment)].map((i) => i?.id ?? 0));
@@ -95,7 +99,15 @@ export function createSim(opts: SimOptions = {}): Sim {
     focusFlow(sim, sim.player.x, sim.player.z);
   }
   sim.flow.setTarget(sim.player.x, sim.player.z);
-  if (!opts.empty && (!level.expedition || sim.stress > 0)) {
+  if (opts.spawn?.length) {
+    opts.spawn.forEach((spec, i) => {
+      const [kind, mod] = spec.split('+') as [EnemyKind, EliteMod | undefined];
+      if (!(kind in ENEMIES)) return;
+      const a = (i / opts.spawn!.length) * Math.PI * 2;
+      const e = spawnEnemy(sim, sim.player.x + Math.sin(a) * 7, sim.player.z + Math.cos(a) * 7, kind);
+      if (mod) makeElite(sim, e, mod in ELITES ? mod : undefined);
+    });
+  } else if (!opts.empty && (!level.expedition || sim.stress > 0)) {
     const opening = sim.stress > 0 ? sim.stress : SPAWN.startAlive - 2;
     for (let i = 0; i < opening; i++) {
       const s = randomYardSpot(sim, 6);
@@ -137,6 +149,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   updateStatuses(sim);
   updateDrops(sim);
   enemyStrikes(sim);
+  updateThreats(sim);
   removeCorpses(sim);
   if (sim.level.expedition && sim.stress === 0) updateDirector(sim);
   else updateSpawner(sim);
