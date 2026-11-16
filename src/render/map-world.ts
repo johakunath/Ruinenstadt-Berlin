@@ -17,6 +17,7 @@ import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet, boxGeo } from './batch';
 import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
+import { loadGroundTexture } from './ground-textures';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
   Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
@@ -112,9 +113,10 @@ function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
+  const uDirt = { value: dirt };
   const m: MapMats = {
     ...base,
-    ground: groundMaterial(materials, o, dirt),
+    ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
     asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
     path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
@@ -137,6 +139,14 @@ function makeMapMats(materials: Materials): MapMats {
     })(),
     frond: materials.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
   };
+  loadGroundTexture('dirt', o.anisotropy, texture => {
+    uDirt.value = m.path.map = texture;
+    dirt.dispose();
+  });
+  loadGroundTexture('litter', o.anisotropy, texture => {
+    m.litter.map?.dispose();
+    m.litter.map = texture;
+  });
   // Buildings, landmarks and tree crowns get the see-through cutout. Small props (iron: lamps, bridge
   // rails, fences; wood: crates, benches) stay solid (playtest 2026-11-15).
   for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.spatiSign, m.frond, ...Object.values(m.plaster)]) {
@@ -152,11 +162,20 @@ function makeMapMats(materials: Materials): MapMats {
  * vertex (`splat` weights) with a height blend, so grass grows into the paving joints and areas fade
  * into each other. Cost: three extra texture reads on ground pixels, no extra draw calls.
  */
-function groundMaterial(materials: Materials, o: PaintOptions, dirt: Texture): LitMaterial {
+function groundMaterial(materials: Materials, o: PaintOptions, uDirt: { value: Texture }): LitMaterial {
   const mat = materials.surface({ map: paintGrass(o).map, roughness: 0.95, vertexColors: true });
-  const uDirt = { value: dirt };
   const uPave = { value: paintPaving(o).map };
   const uLeaf = { value: paintLeafLitter(o).map };
+  loadGroundTexture('grass', o.anisotropy, texture => {
+    mat.map?.dispose();
+    mat.map = texture;
+  });
+  for (const [surface, uniform] of [['paving', uPave], ['leaves', uLeaf]] as const) {
+    loadGroundTexture(surface, o.anisotropy, texture => {
+      uniform.value.dispose();
+      uniform.value = texture;
+    });
+  }
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uDirt = uDirt;
     shader.uniforms.uPave = uPave;

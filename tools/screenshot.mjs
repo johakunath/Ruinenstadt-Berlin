@@ -2,7 +2,7 @@
 // usage: node tools/screenshot.mjs "<query>" out.png [waitMs] [width] [height] [evalJs] [waitAfterEvalMs]
 import { chromium } from 'playwright';
 const [query = '', out = 'shot.png', wait = '2500', w = '1280', h = '720', js = '', waitAfter = '0'] = process.argv.slice(2);
-const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });
 const errors = [];
 page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message));
