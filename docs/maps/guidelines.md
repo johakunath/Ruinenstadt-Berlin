@@ -42,7 +42,10 @@ How every district map is made, so all maps grow in the same direction no matter
 | Side branches | Planned (M16b): 2 to 3 short dead ends per district with a surprise. Keep room for them when laying out a map |
 | Camera | Ordinary buildings: ground floor plus 1 to 2 floors, L-shaped footprints and single-storey shops for variety. Walls and crowns between camera and hero use the see-through cutout |
 | Light pool | 2 fire barrels and some cover per encounter. Light count is a fixed pool; lamps are spots |
-| Water | Rivers as polylines, lakes as polygons, bridges as rectangles at least river width + 12 m long. Banks drop to the water plane |
+| Water | Rivers as polylines, lakes as polygons, bridges as rectangles at least river width + 12 m long. Banks drop to the water plane. Natural banks wobble up to about 3 m; banks in cobbles or asphalt areas are straight stone quays; bridge and ferry heads keep the authored line |
+| Ground | Variant C: grass, dirt, paving and leaf litter blended per area with soft borders, grass overgrowing paving, plus scatter (puddles, leaves, trash, rubble, weed tufts). Textures follow `docs/asset-pipeline.md` (code placeholder first, generated images by Codex) |
+| Relief | Low rolling ground in parks and forests, flat on and beside streets, near water, buildings and landmarks |
+| Rest stops | One Späti per zone beside the route, front on a street, away from encounter circles (test) |
 
 ## Invariants (tests per map)
 
@@ -62,4 +65,5 @@ Headless numbers are not representative. On Leistung keep a typical view under a
 |---|---|
 | 2026-11-15 | Started with Köpenick: geography check, layout rules, heights, invariants |
 | 2026-11-15 | No invisible walls, half ruins, fewer and broken lamps, side branches planned (Johannes) |
+| 2026-11-16 | Irregular banks and quays, relief, ground variant C, Späti rest stops (M11b part 2) |
 | 2026-11-15 | Köpenick v2 (M11b, playtest): tighter size, loop route, narrower streets with curbs, lower and L-shaped buildings, shops, cars and props on every stretch (test) |

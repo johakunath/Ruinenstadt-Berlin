@@ -157,6 +157,11 @@ export function koepenickMap(scale = 1): MapDef {
     L('dino', -96, -4, 200 * DEG, 0, 0, 4),
     L('dino', -140, -14, 120 * DEG, 0, 0, 4),
     L('dino', -126, 36, 300 * DEG, 0, 0, 4),
+    // Späti rest stops, one per zone beside the route (front to the street; hx/hz are world extents).
+    { ...L('spati', -12, -98, 0, 5.5, 4, 2), name: 'Späti am Bahnhof' },
+    { ...L('spati', 58, -10, -90 * DEG, 4, 5.5, 2), name: 'Späti am Kietz' },
+    { ...L('spati', 4, 96, 0, 5.5, 4, 2), name: 'Späti Wendenschloß' },
+    { ...L('spati', -66, 9, -90 * DEG, 4, 5.5, 2), name: 'Späti an der Altstadt' },
   ];
 
   return {

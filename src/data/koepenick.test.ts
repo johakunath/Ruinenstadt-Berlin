@@ -59,7 +59,8 @@ describe('Köpenick map', () => {
 
     it(`places buildings off streets and out of the water (scale ${scale})`, () => {
       const houses = lots.filter((l) => l.kind !== 'tree');
-      expect(houses.length).toBeGreaterThan(40);
+      // 40 since the four Späti rest stops took their lots (M11b part 2).
+      expect(houses.length).toBeGreaterThanOrEqual(40);
       for (const l of houses) {
         expect(isWater(m, l.x, l.z)).toBe(false);
         expect(streetDist(m, l.x, l.z).d).toBeGreaterThan(0);

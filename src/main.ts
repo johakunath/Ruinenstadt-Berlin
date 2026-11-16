@@ -192,6 +192,11 @@ function drainEvents(): void {
         if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
         break;
       }
+      case 'restEnter': {
+        const rest = level?.rests[ev.index];
+        if (rest && ev.first) ui.banner(rest.name, 'Rast · hier heilst du');
+        break;
+      }
       case 'victory':
         wonFor = 0;
         break;

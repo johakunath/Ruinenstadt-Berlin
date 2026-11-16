@@ -9,6 +9,7 @@ import { Level, WalkGrid, type EncounterDef, type Point, type ZoneDef } from '..
 import { Rng } from '../sim/math';
 import { onFerryPier } from '../sim/ferry';
 import { propCollider, type Prop } from './courtyard';
+import { spatiColliders, spatiProps, spatiRest } from './spati';
 
 export type Pt = readonly [number, number];
 
@@ -57,7 +58,7 @@ export interface Area {
   jungle?: boolean;
 }
 
-export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche';
+export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati';
 
 export interface Landmark {
   kind: LandmarkKind;
@@ -70,6 +71,8 @@ export interface Landmark {
   hz: number;
   /** Extra free space kept around it (no generated lots). */
   clear: number;
+  /** Shown when the hero enters (Späti rest stops). */
+  name?: string;
 }
 
 export interface Lot {
@@ -555,6 +558,8 @@ export function lotColliders(l: Lot): Collider[] {
 export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
   const rng = new Rng(m.seed + 7);
   const props: Prop[] = [];
+  // Späti sandbags and lantern first, so everything else keeps clear of them.
+  for (const l of m.landmarks) if (l.kind === 'spati') props.push(...spatiProps(l));
   const hit = (x: number, z: number, r: number): boolean =>
     isWater(m, x, z) ||
     lots.some((l) => Math.abs(x - l.x) < l.w / 2 + r + 1 && Math.abs(z - l.z) < Math.max(l.w, l.d) / 2 + r + 1 && (l.kind !== 'tree' || Math.hypot(x - l.x, z - l.z) < r + 1)) ||
@@ -764,7 +769,10 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     const c = propCollider(p);
     if (c) colliders.push(c);
   }
-  for (const l of m.landmarks) if (l.hx > 0) colliders.push(landmarkCollider(l));
+  for (const l of m.landmarks) {
+    if (l.kind === 'spati') colliders.push(...spatiColliders(l));
+    else if (l.hx > 0) colliders.push(landmarkCollider(l));
+  }
   for (const l of lots) colliders.push(...lotColliders(l));
   if (m.rail) {
     const r = m.rail;
@@ -774,5 +782,5 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     colliders.push({ kind: 'box', x: right, z: r.z, hx: (r.maxX - r.gapX - r.gapW / 2) / 2, hz: 4, rot: 0 });
   }
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z));
-  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'));
+  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest));
 }

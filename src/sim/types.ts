@@ -109,6 +109,8 @@ export type SimEvent =
   | { type: 'waveStart'; index: number; wave: number; waves: number }
   | { type: 'encounterClear'; index: number; heal: number }
   | { type: 'zoneClear'; zone: number }
+  /** The hero walked into a Späti (`first`: the first time this run). */
+  | { type: 'restEnter'; index: number; first: boolean }
   | { type: 'victory' };
 
 export type RunPhase = 'travel' | 'fight' | 'pause' | 'won';
@@ -148,6 +150,8 @@ export interface Sim {
   /** Center of the flow field window (expedition maps). */
   flowCenter: { x: number; z: number };
   run: RunState;
+  /** Späti rest stops: the one the hero stands in (-1 = none) and which were visited. */
+  rest: { at: number; seen: boolean[] };
   rng: Rng;
   nextId: number;
   kills: number;

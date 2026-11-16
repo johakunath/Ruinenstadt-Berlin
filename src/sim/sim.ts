@@ -11,6 +11,7 @@ import type { Level } from './level';
 import { lerp, Rng } from './math';
 import { starterEquipment, statContext } from './loadout';
 import { heroStats, type Equipment, type StatContext } from './stats';
+import { updateRest } from './rest';
 import { createPlayer, updatePlayer } from './player';
 import { DT, type Enemy, type Sim, type SimInput } from './types';
 
@@ -50,6 +51,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     flow: level.expedition ? new FlowField({ minX: 0, maxX: 1, minZ: 0, maxZ: 1 }, []) : new FlowField(level.bounds, level.colliders),
     flowCenter: { x: 0, z: 0 },
     run: { index: 0, phase: 'travel', wave: 0, toSpawn: 0, bossesToSpawn: [], spawnT: 0, pauseT: 0 },
+    rest: { at: -1, seen: [] },
     rng: new Rng(opts.seed ?? 1),
     nextId: 1,
     kills: 0,
@@ -103,6 +105,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   removeCorpses(sim);
   if (sim.level.expedition && sim.stress === 0) updateDirector(sim);
   else updateSpawner(sim);
+  updateRest(sim);
   sim.tick++;
   sim.time += DT;
 }

@@ -12,6 +12,8 @@ import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
+import { restAt, type RestArea } from '../sim/rest';
+import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet, boxGeo } from './batch';
 import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
@@ -49,6 +51,7 @@ interface MapMats extends Mats {
   glass: LitMaterial;
   greenSign: LitMaterial;
   forumSign: LitMaterial;
+  spatiSign: LitMaterial;
   frond: LitMaterial;
 }
 
@@ -108,6 +111,10 @@ function makeMapMats(materials: Materials): MapMats {
     crown: materials.surface({ color: 0xffffff, roughness: 0.85 }),
     glass: materials.surface({ color: 0x1a2a2c, emissive: 0x5a8a7a, emissiveIntensity: 0.25, roughness: 0.15, metalness: 0.3 }),
     greenSign: materials.surface({ color: 0x0e3a1c, emissive: 0x2fbf5a, emissiveIntensity: 1.6, roughness: 0.5 }),
+    spatiSign: (() => {
+      const t = paintTextSign('SPÄTI', '#1a1e22', '#f2d14b');
+      return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffd060, emissiveIntensity: 1.5, roughness: 0.6 });
+    })(),
     forumSign: (() => {
       const t = paintTextSign('FORUM', '#2a1a14', '#f0b27a');
       return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffa050, emissiveIntensity: 1.4, roughness: 0.6 });
@@ -116,7 +123,7 @@ function makeMapMats(materials: Materials): MapMats {
   };
   // Buildings, landmarks and tree crowns get the see-through cutout. Small props (iron: lamps, bridge
   // rails, fences; wood: crates, benches) stay solid (playtest 2026-11-15).
-  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.frond, ...Object.values(m.plaster)]) {
+  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.spatiSign, m.frond, ...Object.values(m.plaster)]) {
     applyCutout(mat);
   }
   return m;
@@ -837,6 +844,67 @@ function steppedGable(b: ChunkBuilder, l: Landmark, x: number, y: number, z: num
   }
 }
 
+/**
+ * Späti rest stop (M11b part 2): brick shop with a rolled-up shutter, sign and lit shop windows; inside
+ * shelves full of goods, glowing fridges, counter with till, mattress and a workbench with a radio.
+ * `b` gets everything up to knee height plus the interior; `up` gets the upper walls and the roof.
+ */
+function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
+  const M = b.mm;
+  const { w, d, door, height: H } = SPATI;
+  const LOW = 1.1;
+  const rng = new Rng(Math.round(l.x * 31 + l.z * 17));
+  b.box(M.cobbles, lm(l, 0, 0.04, 0), w - 0.4, 0.08, d - 0.4, [0.42, 0.38, 0.34]);
+  for (const p of spatiParts()) {
+    if (p.kind === 'wall') {
+      b.box(M.brick, lm(l, p.x, LOW / 2, p.z), p.hx * 2, LOW, p.hz * 2);
+      up.box(M.brick, lm(l, p.x, LOW + (H - LOW) / 2, p.z), p.hx * 2, H - LOW, p.hz * 2);
+    } else if (p.kind === 'shelf') {
+      b.box(M.darkWood, lm(l, p.x, 0.9, p.z), p.hx * 2, 1.8, p.hz * 2, [1.1, 1, 0.95]);
+      // Goods on three boards, on both faces of the free-standing shelf.
+      const faces = p.z > -1 ? [-1, 1] : [1];
+      for (const f of faces) {
+        for (const y of [0.5, 1.0, 1.5]) {
+          for (let x = -p.hx + 0.15; x < p.hx - 0.1; x += rng.range(0.16, 0.26)) {
+            if (rng.next() < 0.18) continue; // looted gaps
+            const tint: [number, number, number] = rng.pick([[1.4, 0.4, 0.3], [0.4, 0.6, 1.4], [1.5, 1.3, 0.4], [0.5, 1.2, 0.5], [1.4, 1.3, 1.2], [1.3, 0.7, 0.3]] as Array<[number, number, number]>);
+            const h = rng.range(0.15, 0.3);
+            b.box(M.stucco, lm(l, p.x + x, y + h / 2, p.z + f * (p.hz + 0.06)), rng.range(0.1, 0.16), h, 0.12, tint);
+          }
+        }
+      }
+    } else if (p.kind === 'fridge') {
+      b.box(M.iron, lm(l, p.x, 1.05, p.z), p.hx * 2, 2.1, p.hz * 2, [1.2, 1.25, 1.3]);
+      b.box(M.glass, lm(l, p.x - p.hx - 0.02, 1.1, p.z), 0.04, 1.7, p.hz * 2 - 0.2, [1.4, 2.2, 2.4]);
+      b.light(lp(l, p.x - 1, 1.3, p.z), 0x8fe0ff, 3, 4, 0, 2);
+    } else if (p.kind === 'counter') {
+      b.box(M.darkWood, lm(l, p.x, 0.5, p.z), p.hx * 2, 1.0, p.hz * 2, [1.3, 1.05, 0.9]);
+      b.box(M.rust, lm(l, p.x + 0.4, 1.13, p.z), 0.42, 0.26, 0.36, [0.7, 0.7, 0.75]);
+      b.box(M.sign, lm(l, p.x + 0.4, 1.3, p.z + 0.12), 0.3, 0.12, 0.03);
+    } else if (p.kind === 'bench') {
+      b.box(M.wood, lm(l, p.x, 0.45, p.z), p.hx * 2, 0.9, p.hz * 2);
+      b.box(M.rust, lm(l, p.x - 0.35, 1.03, p.z), 0.46, 0.26, 0.26, [0.5, 0.6, 0.7]);
+      b.box(M.iron, lm(l, p.x - 0.2, 1.3, p.z), 0.03, 0.35, 0.03);
+    }
+  }
+  // Mattress and blanket in the corner left of the door.
+  b.box(M.burlap, lm(l, -3.9, 0.12, d / 2 - 1.6), 1.0, 0.24, 2.0, [1.15, 1.05, 0.95]);
+  b.box(M.burlap, lm(l, -3.9, 0.26, d / 2 - 1.9), 1.02, 0.06, 1.2, [0.6, 0.35, 0.3]);
+  b.light(lp(l, 0, 2.6, 0), 0xffb070, 9, 9, 0.05, 4);
+  // Upper part: lintel, rolled-up shutter, sign, awning, barred shop windows, flat roof.
+  up.box(M.brick, lm(l, 0, (2.4 + H) / 2, d / 2 - 0.15), door, H - 2.4, 0.3);
+  up.box(M.iron, lm(l, 0, 2.28, d / 2 + 0.08), door + 0.2, 0.26, 0.3, [0.9, 0.9, 0.85]);
+  // Sign standing on the front edge of the awning, so the camera above sees it.
+  up.box(M.spatiSign, lm(l, 0, 2.98, d / 2 + 1.28), 4, 0.7, 0.1);
+  up.box(M.awning, lm(l, 0, 2.55, d / 2 + 0.7), w - 0.4, 0.08, 1.2);
+  for (const side of [-1, 1]) {
+    up.box(M.shop, lm(l, side * 3.4, 1.7, d / 2 + 0.02), 2.6, 1.0, 0.05);
+    for (let x = -1.2; x <= 1.2; x += 0.3) up.box(M.iron, lm(l, side * 3.4 + x, 1.7, d / 2 + 0.07), 0.04, 1.0, 0.04);
+  }
+  up.box(M.tar, lm(l, 0, H + 0.12, 0), w + 0.4, 0.24, d + 0.4, [0.6, 0.6, 0.6]);
+  up.box(M.rust, lm(l, 2.5, H + 0.6, -1.5), 1.2, 0.7, 0.9, [0.8, 0.8, 0.8]);
+}
+
 function buildLandmark(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
   const frame = { x: l.x, z: l.z, rot: l.rot };
@@ -1016,9 +1084,26 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       else b.on(y0, () => buildAltbauLot(b, wing, m));
     }
   }
+  // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
+  const spatis: Array<{ rest: RestArea; upper: Group }> = [];
   for (const l of m.landmarks) {
     const b = chunkOf(l.x, l.z);
-    b.on(base(l.x, l.z, Math.max(l.hx, l.hz)), () => buildLandmark(b, l));
+    const y0 = base(l.x, l.z, Math.max(l.hx, l.hz));
+    if (l.kind === 'spati') {
+      const up = new ChunkBuilder(mats);
+      b.on(y0, () => buildSpati(b, up, l));
+      const g = new Group();
+      for (const mesh of up.solid.meshes()) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        g.add(mesh);
+      }
+      g.position.y = y0;
+      group.add(g);
+      spatis.push({ rest: spatiRest(l), upper: g });
+      continue;
+    }
+    b.on(y0, () => buildLandmark(b, l));
   }
   const rng = new Rng(m.seed);
   for (const p of props) {
@@ -1155,6 +1240,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     follow(x: number, z: number): void {
       hx = x;
       hz = z;
+      for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
       // Snap the shadow frustum to whole texels so shadows do not shimmer while walking.
       const sx = Math.round(x / texel) * texel;
       const sz = Math.round(z / texel) * texel;
