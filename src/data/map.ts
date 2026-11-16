@@ -9,6 +9,7 @@ import { Level, WalkGrid, type EncounterDef, type Point, type ZoneDef } from '..
 import { Rng } from '../sim/math';
 import { onFerryPier } from '../sim/ferry';
 import { propCollider, type Prop } from './courtyard';
+import { spatiColliders, spatiProps, spatiRest } from './spati';
 
 export type Pt = readonly [number, number];
 
@@ -57,7 +58,7 @@ export interface Area {
   jungle?: boolean;
 }
 
-export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche';
+export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati';
 
 export interface Landmark {
   kind: LandmarkKind;
@@ -70,6 +71,8 @@ export interface Landmark {
   hz: number;
   /** Extra free space kept around it (no generated lots). */
   clear: number;
+  /** Shown when the hero enters (Späti rest stops). */
+  name?: string;
 }
 
 export interface Lot {
@@ -232,6 +235,74 @@ export function polyEdgeDist(poly: readonly Pt[], x: number, z: number): number 
   return lineDist([...poly, poly[0] as Pt], x, z);
 }
 
+/** Smooth deterministic noise in about [-1, 1] (sums of sines), for banks and relief. */
+export function wobble(x: number, z: number, f = 1): number {
+  return (
+    (Math.sin(x * 0.11 * f + Math.sin(z * 0.07 * f) * 2.1) * Math.cos(z * 0.13 * f + Math.sin(x * 0.05 * f) * 1.7) +
+      0.5 * Math.sin((x + z) * 0.23 * f + 1.3)) /
+    1.5
+  );
+}
+
+/** Urban banks (cobbles or asphalt areas) are straight stone quays; the rest wobble. */
+export function isQuay(m: MapDef, x: number, z: number): boolean {
+  const g = areaAt(m, x, z)?.ground ?? m.defaultGround;
+  return g === 'cobbles' || g === 'asphalt';
+}
+
+/** Meters the natural bank moves into (+) or out of (-) the water here. */
+function bankShift(m: MapDef, x: number, z: number): number {
+  if (isQuay(m, x, z)) return 0;
+  // Bridge and ferry heads keep the authored width so decks always reach land.
+  for (const b of m.bridges) if (Math.hypot(x - b.x, z - b.z) < b.len / 2 + 6) return 0;
+  return 2.2 * wobble(x, z, 2.2) + 0.8 * wobble(z, x, 5);
+}
+
+// Relief: low rolling ground in parks and forests, flat on streets, near water, buildings and
+// landmarks. Precomputed on a 2 m grid per map (bilinear lookup) because heightAt runs per frame.
+const RELIEF_CELL = 2;
+const RELIEF_AMP: Record<GroundKind, number> = { cobbles: 0, asphalt: 0, grass: 0.6, forest: 1.5, jungle: 1.2 };
+const reliefGrids = new WeakMap<MapDef, { nx: number; nz: number; v: Float32Array }>();
+
+function smooth01(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
+}
+
+function reliefSample(m: MapDef, x: number, z: number): number {
+  const amp = RELIEF_AMP[areaAt(m, x, z)?.ground ?? m.defaultGround];
+  if (amp === 0) return 0;
+  let f = smooth01((streetDist(m, x, z).d - 3) / 10);
+  for (const h of m.hills) f = Math.min(f, smooth01((Math.hypot(x - h.x, z - h.z) - h.r - h.slope - 2) / 6));
+  for (const t of m.terraces) f = Math.min(f, inPoly(t.poly, x, z) ? 0 : smooth01((polyEdgeDist(t.poly, x, z) - 2) / 6));
+  for (const l of m.landmarks) f = Math.min(f, smooth01((Math.hypot(x - l.x, z - l.z) - Math.max(l.hx, l.hz) - l.clear) / 6));
+  if (f === 0) return 0;
+  for (const [dx, dz] of [[0, 0], [5, 0], [-5, 0], [0, 5], [0, -5]] as const) if (isWater(m, x + dx, z + dz)) return 0;
+  return amp * f * (0.5 + 0.5 * wobble(x + 40, z - 17, 0.45));
+}
+
+/** Rolling ground height (0 where the map is flat). */
+export function reliefAt(m: MapDef, x: number, z: number): number {
+  const B = m.bounds;
+  let g = reliefGrids.get(m);
+  if (!g) {
+    const nx = Math.ceil((B.maxX - B.minX) / RELIEF_CELL) + 1;
+    const nz = Math.ceil((B.maxZ - B.minZ) / RELIEF_CELL) + 1;
+    const v = new Float32Array(nx * nz);
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = reliefSample(m, B.minX + i * RELIEF_CELL, B.minZ + j * RELIEF_CELL);
+    g = { nx, nz, v };
+    reliefGrids.set(m, g);
+  }
+  const fx = Math.max(0, Math.min(g.nx - 1.001, (x - B.minX) / RELIEF_CELL));
+  const fz = Math.max(0, Math.min(g.nz - 1.001, (z - B.minZ) / RELIEF_CELL));
+  const i = Math.floor(fx);
+  const j = Math.floor(fz);
+  const u = fx - i;
+  const w = fz - j;
+  const at = (a: number, b: number): number => g.v[b * g.nx + a] ?? 0;
+  return (at(i, j) * (1 - u) + at(i + 1, j) * u) * (1 - w) + (at(i, j + 1) * (1 - u) + at(i + 1, j + 1) * u) * w;
+}
+
 export function heightAt(m: MapDef, x: number, z: number): number {
   let h = 0;
   for (const hill of m.hills) {
@@ -245,11 +316,19 @@ export function heightAt(m: MapDef, x: number, z: number): number {
     const s = onStair(t, x, z);
     if (s) h = Math.max(h, t.h * Math.max(0, Math.min(1, stairLocal(s, x, z).along)));
   }
-  return h;
+  return h + reliefAt(m, x, z);
 }
 
-/** Minimum distance between two street lamps. */
-const LAMP_GAP = 22;
+/** Street lamp spacing along a street (Johannes 2026-11-16: evenly spaced at the curb, most broken). */
+export const LAMP_SPACING = { main: 24, side: 20 } as const;
+/** Distance of a lamp from the street edge. */
+export const LAMP_CURB = 0.45;
+/** Share of street lamps that still work. */
+const LAMP_LIT = 0.3;
+/** Two lamps of crossing streets never stand closer than this. */
+const LAMP_MIN = 6;
+/** Two light sources of the same kind keep this distance (barrels may stand together). */
+export const SAME_KIND_GAP: Partial<Record<Prop['kind'], number>> = { campfire: 16, workLamp: 9, candles: 7, stringLights: 30 };
 
 /** Retaining walls and stair sides block; the stair runs stay open. */
 export function terraceWall(m: MapDef, x: number, z: number): boolean {
@@ -267,7 +346,20 @@ export function terraceWall(m: MapDef, x: number, z: number): boolean {
   return false;
 }
 
+/** Water with irregular natural banks (`bankShift`); quays and bridge heads keep the authored line. */
 export function isWater(m: MapDef, x: number, z: number): boolean {
+  if (m.islands.some((p) => inPoly(p, x, z))) return false;
+  const near = m.rivers.some((r) => lineDist(r.pts, x, z) < r.width / 2 + 3.2) || m.lakes.some((p) => inPoly(p, x, z) || polyEdgeDist(p, x, z) < 3.2);
+  if (!near) return false;
+  const e = bankShift(m, x, z);
+  return (
+    m.rivers.some((r) => lineDist(r.pts, x, z) < r.width / 2 + e) ||
+    m.lakes.some((p) => (inPoly(p, x, z) ? polyEdgeDist(p, x, z) > -e : polyEdgeDist(p, x, z) < e))
+  );
+}
+
+/** Water by the authored lines only (no wobble); for quay walls. */
+export function isWaterPlain(m: MapDef, x: number, z: number): boolean {
   if (m.islands.some((p) => inPoly(p, x, z))) return false;
   return m.lakes.some((p) => inPoly(p, x, z)) || m.rivers.some((r) => lineDist(r.pts, x, z) < r.width / 2);
 }
@@ -474,14 +566,17 @@ export function lotColliders(l: Lot): Collider[] {
 export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
   const rng = new Rng(m.seed + 7);
   const props: Prop[] = [];
+  // Späti sandbags and lantern first, so everything else keeps clear of them.
+  for (const l of m.landmarks) if (l.kind === 'spati') props.push(...spatiProps(l));
   const hit = (x: number, z: number, r: number): boolean =>
     isWater(m, x, z) ||
     lots.some((l) => Math.abs(x - l.x) < l.w / 2 + r + 1 && Math.abs(z - l.z) < Math.max(l.w, l.d) / 2 + r + 1 && (l.kind !== 'tree' || Math.hypot(x - l.x, z - l.z) < r + 1)) ||
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
     m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
     m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r);
-  // Lanterns along streets, alternating sides, never closer than LAMP_GAP to another lamp (bridge
-  // lamps included). About a third are broken: dark and bent (playtest 2026-11-15).
+  // Street lamps (Johannes 2026-11-16): evenly spaced along each street, right at the curb, one
+  // side on side streets and staggered on both sides of main streets, plus corner lamps where streets
+  // meet or bend. Only about a third still work; the rest are dark and bent.
   const lamps: Array<[number, number]> = [];
   for (const br of m.bridges) {
     if (br.kind === 'ferry' || br.len <= 15) continue;
@@ -490,25 +585,74 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       lamps.push([br.x + Math.cos(br.rot) * c + Math.sin(br.rot) * a, br.z - Math.sin(br.rot) * c + Math.cos(br.rot) * a]);
     }
   }
-  for (const s of m.streets) {
-    if (s.kind === 'path') continue;
-    let side = 1;
-    for (let i = 1; i < s.pts.length; i++) {
-      const [ax, az] = s.pts[i - 1] as Pt;
-      const [bx, bz] = s.pts[i] as Pt;
-      const len = Math.hypot(bx - ax, bz - az);
-      const dx = (bx - ax) / len;
-      const dz = (bz - az) / len;
-      for (let t = 8; t < len - 4; t += s.kind === 'main' ? 26 : 32) {
-        side = -side;
-        const x = ax + dx * t - dz * side * (s.width / 2 + 0.8);
-        const z = az + dz * t + dx * side * (s.width / 2 + 0.8);
-        if (hit(x, z, 0.3) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3) continue;
-        if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6)) continue;
-        if (lamps.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LAMP_GAP)) continue;
-        lamps.push([x, z]);
-        const broken = rng.next() < 0.35;
-        props.push({ kind: broken ? 'lampBroken' : 'lantern', x, z, rot: broken ? rng.range(0, Math.PI * 2) : 0, size: 1 });
+  const lampOk = (x: number, z: number): boolean =>
+    !hit(x, z, 0.3) && !onBridge(m, x, z, 1) && streetDist(m, x, z).d > 0.2 &&
+    !m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6) &&
+    !lamps.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LAMP_MIN);
+  const putLamp = (x: number, z: number): void => {
+    lamps.push([x, z]);
+    const lit = rng.next() < LAMP_LIT;
+    props.push({ kind: lit ? 'lantern' : 'lampBroken', x, z, rot: lit ? 0 : rng.range(0, Math.PI * 2), size: lit ? rng.range(0.8, 1.25) : 1 });
+  };
+  const streets = m.streets.filter((s) => s.kind !== 'path');
+  // Corner lamps first: at street ends that meet another street, and at sharp bends.
+  for (const s of streets) {
+    const n = s.pts.length;
+    for (let i = 0; i < n; i++) {
+      const [px, pz] = s.pts[i] as Pt;
+      const [qx, qz] = s.pts[i === 0 ? 1 : i - 1] as Pt;
+      // Direction along the street toward this point.
+      let ux = px - qx;
+      let uz = pz - qz;
+      const ul = Math.hypot(ux, uz) || 1;
+      ux /= ul;
+      uz /= ul;
+      let corner = false;
+      if (i === 0 || i === n - 1) {
+        corner = streets.some((o) => o !== s && lineDist(o.pts, px, pz) < o.width / 2 + 1.5);
+      } else {
+        const [rx, rz] = s.pts[i + 1] as Pt;
+        const vl = Math.hypot(rx - px, rz - pz) || 1;
+        corner = ux * ((rx - px) / vl) + uz * ((rz - pz) / vl) < Math.cos((35 * Math.PI) / 180);
+      }
+      if (!corner) continue;
+      const side = rng.pick([-1, 1]);
+      const off = s.width / 2 + LAMP_CURB + 0.3;
+      for (const sd of [side, -side]) {
+        const x = px - ux * (s.width / 2 + 1) - uz * sd * off;
+        const z = pz - uz * (s.width / 2 + 1) + ux * sd * off;
+        if (!lampOk(x, z)) continue;
+        putLamp(x, z);
+        break;
+      }
+    }
+  }
+  // Even rows along each street, measured continuously along the polyline.
+  for (const s of streets) {
+    const spacing = LAMP_SPACING[s.kind === 'main' ? 'main' : 'side'];
+    const rows: Array<[number, number]> = s.kind === 'main' ? [[1, 0], [-1, spacing / 2]] : [[rng.pick([-1, 1]), 0]];
+    const segLen = s.pts.slice(1).map((b, i) => Math.hypot(b[0] - (s.pts[i] as Pt)[0], b[1] - (s.pts[i] as Pt)[1]));
+    const total = segLen.reduce((a, b) => a + b, 0);
+    const at = (d: number): { x: number; z: number; ux: number; uz: number } => {
+      let i = 0;
+      while (i < segLen.length - 1 && d > segLen[i]!) d -= segLen[i++]!;
+      const [ax, az] = s.pts[i] as Pt;
+      const [bx, bz] = s.pts[i + 1] as Pt;
+      const l = segLen[i]! || 1;
+      return { x: ax + ((bx - ax) / l) * d, z: az + ((bz - az) / l) * d, ux: (bx - ax) / l, uz: (bz - az) / l };
+    };
+    for (const [side, shift] of rows) {
+      for (let d = spacing / 2 + shift; d < total - 4; d += spacing) {
+        // A blocked spot may move half a meter or a meter; otherwise the row keeps a gap there.
+        for (const nudge of [0, 0.5, -0.5, 1, -1]) {
+          const c = at(d + nudge);
+          const off = side * (s.width / 2 + LAMP_CURB);
+          const x = c.x - c.uz * off;
+          const z = c.z + c.ux * off;
+          if (!lampOk(x, z)) continue;
+          putLamp(x, z);
+          break;
+        }
       }
     }
   }
@@ -610,7 +754,8 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         const z = az + ((bz - az) / len) * t + ((bx - ax) / len) * off;
         if (hit(x, z, 1.2) || onBridge(m, x, z, 2) || streetDist(m, x, z).d < 0.8) continue;
         if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 2) || lamps.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < 8)) continue;
-        props.push({ kind: rng.next() < 0.5 ? 'campfire' : 'fireBarrel', x, z, rot: rng.range(0, Math.PI * 2), size: 1 });
+        const fire = rng.next() < 0.5 && !sameKindClash(props, 'campfire', x, z) ? 'campfire' : 'fireBarrel';
+        props.push({ kind: fire, x, z, rot: rng.range(0, Math.PI * 2), size: rng.range(0.7, 1.35) });
       }
     }
   }
@@ -673,7 +818,155 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
+  stringLights(m, props, hit, rng);
+  fillLight(m, lots, props, hit, rng);
   return props;
+}
+
+/** Is (x, z) on a lot's footprint (main body or wing), with `pad` meters of margin? */
+function inLot(l: Lot, x: number, z: number, pad: number): boolean {
+  const c = Math.cos(l.rot);
+  const s = Math.sin(l.rot);
+  const inside = (cx: number, cz: number, w: number, d: number): boolean => {
+    const dx = x - cx;
+    const dz = z - cz;
+    return Math.abs(dx * c - dz * s) <= w / 2 + pad && Math.abs(dx * s + dz * c) <= d / 2 + pad;
+  };
+  return inside(l.x, l.z, l.w, l.d) || (l.wing !== undefined && inside(l.wing.x, l.wing.z, l.wing.w, l.wing.d));
+}
+
+/** Light sources: working lamps, fires, construction lamps, grave candles, string lights. */
+export const LIGHT_PROPS: ReadonlySet<Prop['kind']> = new Set<Prop['kind']>(['lantern', 'fireBarrel', 'campfire', 'workLamp', 'candles', 'stringLights']);
+/**
+ * Light gap rule (Johannes 2026-11-16): where one light pool ends the next begins, but organic, not
+ * on a grid. The allowed distance to the nearest light varies with a slow noise between
+ * LIGHT_COVER_MIN (bright pockets) and LIGHT_COVER (dim stretches).
+ */
+export const LIGHT_COVER_MIN = 6;
+export const LIGHT_COVER = 13;
+
+/** Would a light of `kind` at (x, z) stand too close to another of the same kind? */
+export function sameKindClash(props: readonly Prop[], kind: Prop['kind'], x: number, z: number): boolean {
+  const gap = SAME_KIND_GAP[kind];
+  return gap !== undefined && props.some((p) => p.kind === kind && Math.hypot(p.x - x, p.z - z) < gap);
+}
+
+/** Allowed distance to the nearest light at (x, z). */
+export function lightCover(x: number, z: number): number {
+  return LIGHT_COVER_MIN + (LIGHT_COVER - LIGHT_COVER_MIN) * (0.5 + 0.5 * wobble(x * 0.9 + 13, z * 0.9 - 7, 0.6));
+}
+
+/** String lights across some side streets: two poles at the curbs, a sagging line of bulbs. */
+function stringLights(m: MapDef, props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
+  for (const s of m.streets) {
+    if (s.kind !== 'side') continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [ax, az] = s.pts[i - 1] as Pt;
+      const [bx, bz] = s.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      const ux = (bx - ax) / len;
+      const uz = (bz - az) / len;
+      for (let t = rng.range(10, 40); t < len - 6; t += rng.range(45, 90)) {
+        const x = ax + ux * t;
+        const z = az + uz * t;
+        const half = s.width / 2 + 0.5;
+        const poles: Array<[number, number]> = [[x - uz * half, z + ux * half], [x + uz * half, z - ux * half]];
+        if (poles.some(([px, pz]) => hit(px, pz, 0.3) || onBridge(m, px, pz, 1))) continue;
+        if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r) || m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < 6)) continue;
+        if (sameKindClash(props, 'stringLights', x, z)) continue;
+        // rot: the line runs across the street (facing along it).
+        props.push({ kind: 'stringLights', x, z, rot: Math.atan2(ux, uz), size: half * 2 });
+      }
+    }
+  }
+}
+
+/**
+ * Light coverage pass: walks every street (not paths, not bridges) and, where no light source,
+ * Späti or landmark is within the local `lightCover`, adds one beside the street at a random offset,
+ * with a random strength, and sometimes a small cluster around it (a campfire with candles, a work
+ * lamp by a barrel). Mostly no-flame kinds, so flames stay special; same kinds keep SAME_KIND_GAP.
+ */
+function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
+  const lit: Array<[number, number]> = props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => [p.x, p.z]);
+  for (const l of m.landmarks) if (l.hx > 0) lit.push([l.x, l.z]);
+  const dark = (x: number, z: number): boolean => !lit.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < lightCover(x, z));
+  const kinds: Array<Prop['kind']> = ['workLamp', 'workLamp', 'candles', 'candles', 'fireBarrel', 'fireBarrel', 'campfire'];
+  const inFight = (x: number, z: number): boolean => m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6);
+  const shuffled = <T>(xs: T[]): T[] => {
+    for (let i = xs.length - 1; i > 0; i--) {
+      const j = rng.int(i + 1);
+      [xs[i], xs[j]] = [xs[j] as T, xs[i] as T];
+    }
+    return xs;
+  };
+  const add = (kind: Prop['kind'], x: number, z: number, size: number): void => {
+    props.push({ kind, x, z, rot: rng.range(0, Math.PI * 2), size });
+    lit.push([x, z]);
+  };
+  for (const s of m.streets) {
+    if (s.kind === 'path') continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [ax, az] = s.pts[i - 1] as Pt;
+      const [bx, bz] = s.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      const ux = (bx - ax) / len;
+      const uz = (bz - az) / len;
+      for (let t = rng.range(0.5, 3); t < len; t += rng.range(2, 4.5)) {
+        const cx = ax + ux * t;
+        const cz = az + uz * t;
+        if (!dark(cx, cz) || onBridge(m, cx, cz, 1) || isWater(m, cx, cz)) continue;
+        const order = shuffled([...kinds]);
+        const spot = (dt: number, side: number, extra: number): [number, number] => {
+          const off = side * (s.width / 2 + extra);
+          return [ax + ux * (t + dt) - uz * off, az + uz * (t + dt) + ux * off];
+        };
+        const tries: Array<[number, number, number]> = [];
+        for (let k = 0; k < 14; k++) tries.push([rng.range(-6, 6), rng.pick([-1, 1]), rng.range(0.9, 4.2)]);
+        let placed: [number, number] | null = null;
+        let kind: Prop['kind'] = 'candles';
+        for (const [dt, side, extra] of tries) {
+          const [x, z] = spot(dt, side, extra);
+          if (onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3 || inFight(x, z)) continue;
+          // The first kind that fits here and has no twin nearby.
+          const k = order.find((c) => !hit(x, z, c === 'campfire' ? 1 : 0.6) && !sameKindClash(props, c, x, z));
+          if (!k) continue;
+          kind = k;
+          add(kind, x, z, rng.range(0.6, 1.4));
+          placed = [x, z];
+          break;
+        }
+        if (placed) {
+          // Sometimes a small cluster: people gather where there is light.
+          if (rng.next() < 0.4) {
+            const extraKinds: Array<Prop['kind']> = kind === 'workLamp' ? ['fireBarrel', 'candles'] : ['candles', 'candles', 'fireBarrel'];
+            for (let n = 1 + rng.int(2); n > 0; n--) {
+              const a = rng.range(0, Math.PI * 2);
+              const d = rng.range(1.6, 3.6);
+              const x = placed[0] + Math.sin(a) * d;
+              const z = placed[1] + Math.cos(a) * d;
+              const k = rng.pick(extraKinds);
+              if (sameKindClash(props, k, x, z)) continue;
+              if (streetDist(m, x, z).d < 0.3 || isWater(m, x, z) || inFight(x, z) || (k !== 'candles' && hit(x, z, 0.5))) continue;
+              if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
+              add(k, x, z, rng.range(0.5, 0.9));
+            }
+          }
+          continue;
+        }
+        // Built-up stretch: grave candles at the curb. They do not block, so they only need to stay
+        // off building footprints, water and other props.
+        for (const dt of shuffled([0, 1.5, -1.5, 3, -3, 4.5, -4.5])) {
+          const [x, z] = spot(dt, rng.pick([-1, 1]), rng.range(0.5, 0.8));
+          if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z)) continue;
+          if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
+          // Candles keep their gap; a barrel can stand anywhere.
+          add(sameKindClash(props, 'candles', x, z) ? 'fireBarrel' : 'candles', x, z, rng.range(0.6, 1.1));
+          break;
+        }
+      }
+    }
+  }
 }
 
 /** The sim side of a map. */
@@ -683,7 +976,10 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     const c = propCollider(p);
     if (c) colliders.push(c);
   }
-  for (const l of m.landmarks) if (l.hx > 0) colliders.push(landmarkCollider(l));
+  for (const l of m.landmarks) {
+    if (l.kind === 'spati') colliders.push(...spatiColliders(l));
+    else if (l.hx > 0) colliders.push(landmarkCollider(l));
+  }
   for (const l of lots) colliders.push(...lotColliders(l));
   if (m.rail) {
     const r = m.rail;
@@ -693,5 +989,5 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     colliders.push({ kind: 'box', x: right, z: r.z, hx: (r.maxX - r.gapX - r.gapW / 2) / 2, hz: 4, rot: 0 });
   }
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z));
-  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'));
+  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest));
 }

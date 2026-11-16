@@ -1,7 +1,7 @@
 # Asset licenses
 
 Every file in `assets/` is listed here with source, author and license. Add a row before committing a new asset.
-Textures and sounds are not files: they are generated in code (`src/render/paint.ts`, `src/audio/audio.ts`).
+Sounds are generated in code (`src/audio`). Textures start as code-painted placeholders (`src/render/paint.ts`); generated images replace them per `docs/asset-pipeline.md` and get a row here.
 
 | File | Source | Author | License | Changes |
 |---|---|---|---|---|

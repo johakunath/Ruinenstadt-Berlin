@@ -131,6 +131,7 @@ export class GameAudio {
       case 'encounterStart': case 'waveStart': this.play('horn'); break;
       case 'encounterClear': this.play('bell'); if (event.heal > 0) this.play('heal'); break;
       case 'zoneClear': this.play('bell'); break;
+      case 'restEnter': if (event.first) this.play('bell'); break;
       case 'victory': this.play('win'); break;
     }
   }

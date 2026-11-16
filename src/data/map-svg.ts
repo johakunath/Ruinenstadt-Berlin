@@ -69,6 +69,11 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
       out.push(`<path d="M-6 1Q-3-3 1-2L4-6L6-4L3-1Q4 2 2 2L2 5M-2 2L-2 5M-6 1L-9 0" fill="none" stroke="#9fd07a" stroke-width="1" transform="translate(${l.x} ${l.z})"/>`);
       continue;
     }
+    if (l.kind === 'spati') {
+      // Rest stop: yellow frame as in 2D.
+      out.push(`<rect x="-5.5" y="-4" width="11" height="8" fill="#3a2e26" stroke="#f2d14b" stroke-width="1.4" transform="translate(${l.x} ${l.z}) rotate(${deg})"/>`);
+      continue;
+    }
     if (l.kind === 'riesenrad') {
       out.push(`<circle cx="${l.x}" cy="${l.z}" r="9" fill="none" stroke="#f0b27a" stroke-width="1.2"/>`);
       continue;

@@ -5,19 +5,21 @@
 import {
   BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
-  SphereGeometry, TorusGeometry, Vector3, type Material,
+  SphereGeometry, TorusGeometry, Vector3, type Material, type Texture,
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
-import { areaAt, heightAt, isWater, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
+import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
+import { restAt, type RestArea } from '../sim/rest';
+import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet, boxGeo } from './batch';
 import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
-import { paintAsphalt, paintConcrete, paintFern, paintGround, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
+import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
-  Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type Mats, type World,
+  Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
 
 type RGB = readonly [number, number, number];
@@ -35,6 +37,8 @@ interface LightSpot {
 
 interface MapMats extends Mats {
   ground: LitMaterial;
+  /** Ground scatter atlas (puddles, leaves, trash, rubble). */
+  litter: LitMaterial;
   asphalt: LitMaterial;
   path: LitMaterial;
   roof: LitMaterial;
@@ -47,6 +51,7 @@ interface MapMats extends Mats {
   glass: LitMaterial;
   greenSign: LitMaterial;
   forumSign: LitMaterial;
+  spatiSign: LitMaterial;
   frond: LitMaterial;
 }
 
@@ -77,25 +82,42 @@ class ChunkBuilder extends Builder {
     super.shadowBox(new Matrix4().makeTranslation(0, this.lift, 0).multiply(m), sx, sy, sz);
   }
 
-  override light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4): void {
-    this.spots.push({ pos: pos.clone().setY(pos.y + this.lift), color, intensity, distance, flicker, phase: Math.random() * 6 });
+  override light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4, shape: LightShape = {}): void {
+    const yaw = shape.yaw ?? 0;
+    const reach = shape.reach ?? 0;
+    const ux = Math.sin(yaw);
+    const uz = Math.cos(yaw);
+    // Directional lights sit a little toward what they light, so the moving pool light agrees with the decal.
+    const lp = pos.clone().setY(pos.y + this.lift);
+    lp.x += ux * reach * 0.5;
+    lp.z += uz * reach * 0.5;
+    this.spots.push({ pos: lp, color, intensity, distance, flicker, phase: Math.random() * 6 });
     let mat = this.glowMats.get(color);
     if (!mat) this.glowMats.set(color, (mat = Materials.glow(this.glowTex, color, 0.22)));
-    const geo = new PlaneGeometry(pool * 2, pool * 2);
+    const geo = new PlaneGeometry(pool * 2, pool * 2 * (shape.stretch ?? 1));
     geo.rotateX(-Math.PI / 2);
-    this.glows.of(mat).add(geo, new Matrix4().setPosition(pos.x, 0.035, pos.z));
+    this.glows.of(mat).add(geo, new Matrix4().makeRotationY(yaw).setPosition(pos.x + ux * reach, 0.035, pos.z + uz * reach));
+    if (shape.halo) {
+      // Halo around the lamp head: three crossed cards with the same additive glow.
+      const h = shape.halo;
+      for (const [rx, ry] of [[0, 0], [0, Math.PI / 2], [-Math.PI / 2, 0]] as const) {
+        const card = new PlaneGeometry(h * 2, h * 2);
+        this.glows.of(mat).add(card, new Matrix4().makeRotationY(ry).multiply(new Matrix4().makeRotationX(rx)).setPosition(pos.x, pos.y, pos.z));
+      }
+    }
   }
 }
 
 function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
-  const ground = paintGround(o);
+  const dirt = paintDirt(o).map;
   const m: MapMats = {
     ...base,
-    ground: materials.surface({ map: ground.map, roughness: 0.95, vertexColors: true }),
+    ground: groundMaterial(materials, o, dirt),
+    litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
     asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
-    path: materials.surface({ map: ground.map, color: 0x9a7f5e, roughness: 0.95, vertexColors: true }),
+    path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
     roof: materials.surface({ map: paintRoofTiles(o).map, roughness: 0.8, vertexColors: true }),
     tar: materials.surface({ map: paintAsphalt(o).map, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
     concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
@@ -105,6 +127,10 @@ function makeMapMats(materials: Materials): MapMats {
     crown: materials.surface({ color: 0xffffff, roughness: 0.85 }),
     glass: materials.surface({ color: 0x1a2a2c, emissive: 0x5a8a7a, emissiveIntensity: 0.25, roughness: 0.15, metalness: 0.3 }),
     greenSign: materials.surface({ color: 0x0e3a1c, emissive: 0x2fbf5a, emissiveIntensity: 1.6, roughness: 0.5 }),
+    spatiSign: (() => {
+      const t = paintTextSign('SPÄTI', '#1a1e22', '#f2d14b');
+      return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffd060, emissiveIntensity: 1.5, roughness: 0.6 });
+    })(),
     forumSign: (() => {
       const t = paintTextSign('FORUM', '#2a1a14', '#f0b27a');
       return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffa050, emissiveIntensity: 1.4, roughness: 0.6 });
@@ -113,7 +139,7 @@ function makeMapMats(materials: Materials): MapMats {
   };
   // Buildings, landmarks and tree crowns get the see-through cutout. Small props (iron: lamps, bridge
   // rails, fences; wood: crates, benches) stay solid (playtest 2026-11-15).
-  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.frond, ...Object.values(m.plaster)]) {
+  for (const mat of [m.brick, m.stucco, m.windows, m.shop, m.sign, m.door, m.roof, m.tar, m.concrete, m.mossy, m.crown, m.glass, m.ivy, m.darkWood, m.rust, m.greenSign, m.forumSign, m.spatiSign, m.frond, ...Object.values(m.plaster)]) {
     applyCutout(mat);
   }
   return m;
@@ -121,13 +147,79 @@ function makeMapMats(materials: Materials): MapMats {
 
 // ---------------------------------------------------------------- ground and water
 
-const GROUND_TINT: Record<GroundKind, RGB> = {
-  cobbles: [0.6, 0.55, 0.5],
-  asphalt: [0.5, 0.49, 0.46],
-  grass: [0.42, 0.52, 0.34],
-  forest: [0.3, 0.36, 0.26],
-  jungle: [0.34, 0.5, 0.26],
+/**
+ * Ground variant C (M11b, Johannes 2026-11-16): grass, dirt, paving and leaf litter blended per
+ * vertex (`splat` weights) with a height blend, so grass grows into the paving joints and areas fade
+ * into each other. Cost: three extra texture reads on ground pixels, no extra draw calls.
+ */
+function groundMaterial(materials: Materials, o: PaintOptions, dirt: Texture): LitMaterial {
+  const mat = materials.surface({ map: paintGrass(o).map, roughness: 0.95, vertexColors: true });
+  const uDirt = { value: dirt };
+  const uPave = { value: paintPaving(o).map };
+  const uLeaf = { value: paintLeafLitter(o).map };
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uDirt = uDirt;
+    shader.uniforms.uPave = uPave;
+    shader.uniforms.uLeaf = uLeaf;
+    shader.vertexShader = shader.vertexShader.replace('void main() {', 'attribute vec4 splat;\nvarying vec4 vSplat;\nvoid main() {\n  vSplat = splat;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', 'uniform sampler2D uDirt;\nuniform sampler2D uPave;\nuniform sampler2D uLeaf;\nvarying vec4 vSplat;\nvoid main() {')
+      .replace(
+        '#include <map_fragment>',
+        `vec4 tG = texture2D(map, vMapUv);
+        vec4 tD = texture2D(uDirt, vMapUv * 0.83 + 0.31);
+        vec4 tP = texture2D(uPave, vMapUv);
+        vec4 tL = texture2D(uLeaf, vMapUv * 1.17 + 0.57);
+        // Height blend: dark paving joints and bright grass stalks win where weights are close.
+        vec4 hgt = vec4(tG.g, tD.r, 1.0 - tP.r * 1.6, tL.r * 1.4);
+        vec4 sw = vSplat + (hgt - 0.3) * 0.55 * step(0.02, vSplat);
+        float top = max(max(sw.x, sw.y), max(sw.z, sw.w));
+        sw = max(sw - (top - 0.2), vec4(0.0));
+        sw /= max(1e-4, sw.x + sw.y + sw.z + sw.w);
+        diffuseColor *= tG * sw.x + tD * sw.y + tP * sw.z + tL * sw.w;`,
+      );
+  };
+  mat.customProgramCacheKey = () => 'ground-splat';
+  return mat;
+}
+
+/** Base ground weights (grass, dirt, paving, leaves) per area kind. */
+const GROUND_SPLAT: Record<GroundKind, readonly [number, number, number, number]> = {
+  cobbles: [0.1, 0.05, 0.85, 0],
+  asphalt: [0.05, 0.1, 0.85, 0],
+  grass: [0.85, 0.15, 0, 0],
+  forest: [0.25, 0.15, 0, 0.6],
+  jungle: [0.75, 0.1, 0, 0.15],
 };
+
+/** Vertex tint per kind (the textures carry the hue; this only shifts it). */
+const GROUND_TINT: Record<GroundKind, RGB> = {
+  cobbles: [1, 0.97, 0.94],
+  asphalt: [0.78, 0.78, 0.76],
+  grass: [1, 1, 1],
+  forest: [0.85, 0.9, 0.82],
+  jungle: [0.9, 1.15, 0.8],
+};
+
+function groundSplat(m: MapDef, x: number, z: number, shore: boolean): [number, number, number, number] {
+  // Soft area borders: average the base weights over a 6 m cross.
+  const w = [0, 0, 0, 0];
+  for (const [dx, dz] of [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]] as const) {
+    const k = GROUND_SPLAT[areaAt(m, x + dx, z + dz)?.ground ?? m.defaultGround];
+    for (let i = 0; i < 4; i++) w[i]! += k[i]! / 5;
+  }
+  // Overgrowth: grass takes over patches of paving.
+  const grow = Math.min(1, Math.max(0, wobble(x - 13, z + 29, 3.1) + 0.2) * 1.2);
+  const take = w[2]! * grow * 0.8;
+  w[2]! -= take;
+  w[0]! += take;
+  // Bare earth patches, worn verges along streets, mud on natural banks.
+  w[1]! += Math.max(0, wobble(x + 77, z - 31, 2.6) - 0.25) * 0.9;
+  if (shore) w[1]! += 0.7;
+  const sd = streetDist(m, x, z).d;
+  if (sd < 1.5 && w[0]! > 0.4) w[1]! += 0.35;
+  return [w[0]!, w[1]!, w[2]!, w[3]!];
+}
 
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   const step = 1.5;
@@ -140,6 +232,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
       const pos: number[] = [];
       const col: number[] = [];
       const uv: number[] = [];
+      const splat: number[] = [];
       const wet: boolean[] = [];
       for (let j = 0; j <= k; j++) {
         for (let i = 0; i <= n; i++) {
@@ -152,9 +245,11 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           const a = areaAt(m, x, z);
           const t = GROUND_TINT[a?.ground ?? m.defaultGround];
           const noise = 0.82 + 0.3 * (0.5 + 0.5 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2) * Math.cos(z * 0.19 + Math.sin(x * 0.13) * 1.6));
+          const nearWater = y >= -0.5 && (isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6));
           // Damp, dark banks.
-          const shore = y < -0.5 ? 0.35 : isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6) ? 0.6 : 1;
+          const shore = y < -0.5 ? 0.35 : nearWater ? 0.6 : 1;
           col.push(t[0] * noise * shore, t[1] * noise * shore, t[2] * noise * shore);
+          splat.push(...groundSplat(m, x, z, nearWater && !isQuay(m, x, z)));
         }
       }
       const idx: number[] = [];
@@ -174,6 +269,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
       g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
       g.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
       g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
+      g.setAttribute('splat', new BufferAttribute(new Float32Array(splat), 4));
       g.setIndex(idx);
       g.computeVertexNormals();
       const mesh = new Mesh(g, mats.ground);
@@ -186,6 +282,114 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   water.position.set((B.minX + B.maxX) / 2, -0.45, (B.minZ + B.maxZ) / 2);
   water.receiveShadow = true;
   group.add(water);
+}
+
+/**
+ * Stone quays where a bank runs through cobbles or asphalt areas (natural banks wobble, `isWater`).
+ * The wall reaches 1.5 m into the land so it covers the ground mesh's slope down to the riverbed.
+ */
+function buildQuays(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  const edges: Array<{ pts: readonly Pt[]; off: number }> = [];
+  for (const r of m.rivers) for (const side of [-1, 1]) edges.push({ pts: r.pts, off: (side * r.width) / 2 });
+  for (const lake of m.lakes) edges.push({ pts: [...lake, lake[0] as Pt], off: 0 });
+  const STEP = 2;
+  for (const e of edges) {
+    for (let i = 1; i < e.pts.length; i++) {
+      const [ax, az] = e.pts[i - 1] as Pt;
+      const [bx, bz] = e.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.1) continue;
+      const dx = (bx - ax) / len;
+      const dz = (bz - az) / len;
+      const n = Math.ceil(len / STEP);
+      for (let k = 0; k < n; k++) {
+        const t = ((k + 0.5) / n) * len;
+        const x = ax + dx * t - dz * e.off;
+        const z = az + dz * t + dx * e.off;
+        // Water side: the normal whose short step lands in (authored) water.
+        let wx = -dz;
+        let wz = dx;
+        if (!isWaterPlain(m, x + wx, z + wz)) {
+          wx = dz;
+          wz = -dx;
+          if (!isWaterPlain(m, x + wx, z + wz)) continue;
+        }
+        if (isWaterPlain(m, x - wx * 1.2, z - wz * 1.2)) continue; // a junction, water on both sides
+        if (!isQuay(m, x - wx, z - wz) || onBridge(m, x, z, 1)) continue;
+        const piece = len / n + 0.05;
+        const yaw = Math.atan2(dx, dz);
+        const at = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(x - wx * o, y, z - wz * o);
+        const b = chunkOf(x, z);
+        b.box(mats.cobbles, at(0.6, -0.78), 1.8, 1.68, piece, [0.5, 0.48, 0.45]);
+        b.box(mats.cobbles, at(-0.05, 0.08), 0.5, 0.12, piece, [0.85, 0.82, 0.76]);
+      }
+    }
+  }
+}
+
+/**
+ * Ground scatter (variant C): puddles, leaf piles, trash and rubble decals from one atlas, plus weed
+ * tufts (fern cards). Seeded, on a jittered 4 m grid, chosen by where it lies.
+ */
+function buildScatter(m: MapDef, lots: Lot[], mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  type Kind = 'puddle' | 'leaves' | 'trash' | 'rubble' | 'tuft';
+  const cell: Record<Exclude<Kind, 'tuft'>, [number, number]> = { puddle: [0, 1], leaves: [1, 1], trash: [0, 0], rubble: [1, 0] };
+  const decal = new Map<Kind, PlaneGeometry>();
+  for (const [k, [cu, cv]] of Object.entries(cell) as Array<[Kind, [number, number]]>) {
+    const g = new PlaneGeometry(1, 1);
+    g.rotateX(-Math.PI / 2);
+    const uv = g.getAttribute('uv');
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (cu + uv.getX(i)) / 2, (cv + uv.getY(i)) / 2);
+    decal.set(k, g);
+  }
+  const tuft = new PlaneGeometry(1.3, 0.85);
+  tuft.translate(0, 0.42, 0);
+  // Chances per spot: [puddle, leaves, trash, rubble, tuft].
+  const odds = (onStreet: boolean, g: GroundKind): number[] =>
+    onStreet ? [0.1, 0.04, 0.05, 0.04, 0]
+    : g === 'forest' ? [0.02, 0.22, 0, 0.01, 0.06]
+    : g === 'grass' || g === 'jungle' ? [0.03, 0.05, 0.02, 0.02, 0.14]
+    : [0.06, 0.03, 0.05, 0.07, 0.1];
+  const kinds: Kind[] = ['puddle', 'leaves', 'trash', 'rubble', 'tuft'];
+  const rng = new Rng(m.seed + 91);
+  const B = m.bounds;
+  const G = 4;
+  for (let z = B.minZ + 2; z < B.maxZ - 2; z += G) {
+    for (let x = B.minX + 2; x < B.maxX - 2; x += G) {
+      const px = x + rng.range(-1.6, 1.6);
+      const pz = z + rng.range(-1.6, 1.6);
+      const roll = rng.next();
+      const size = rng.range(1, 2.4);
+      const yaw = rng.range(0, Math.PI * 2);
+      if (isWater(m, px, pz) || onBridge(m, px, pz, 1)) continue;
+      const sd = streetDist(m, px, pz).d;
+      const o = odds(sd < 0, areaAt(m, px, pz)?.ground ?? m.defaultGround);
+      let acc = 0;
+      let kind: Kind | null = null;
+      for (let i = 0; i < kinds.length; i++) {
+        acc += o[i]!;
+        if (roll < acc) {
+          kind = kinds[i]!;
+          break;
+        }
+      }
+      if (!kind) continue;
+      if (lots.some((l) => l.kind !== 'tree' && Math.hypot(px - l.x, pz - l.z) < Math.max(l.w, l.d) / 2 + 0.4)) continue;
+      if (m.landmarks.some((l) => Math.abs(px - l.x) < l.hx + 1 && Math.abs(pz - l.z) < l.hz + 1)) continue;
+      const y = heightAt(m, px, pz);
+      const b = chunkOf(px, pz);
+      if (kind === 'tuft') {
+        for (let i = 0; i < 2; i++) {
+          const mt = new Matrix4().makeRotationY(yaw + (i * Math.PI) / 2).setPosition(px, y, pz);
+          b.cards.of(mats.frond).add(tuft, mt, [0.95, 1.1, 0.7]);
+        }
+        continue;
+      }
+      const s = kind === 'puddle' ? size * 1.3 : size;
+      const mt = new Matrix4().makeRotationY(yaw).scale(new Vector3(s, 1, s)).setPosition(px, y + (sd < 0 ? 0.045 : 0.03), pz);
+      b.solid.of(mats.litter).add(decal.get(kind)!, mt);
+    }
+  }
 }
 
 /** Street ribbons with round joints; world-space UVs keep the texture seamless. */
@@ -484,6 +688,24 @@ function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef
       depth: Math.min(l.w, l.d) / 2, floors: l.floors, tone, features, seed: (l.seed + i * 13) % 997,
     };
     buildAltbau(b, f);
+    // Organic light at height (Johannes 2026-11-16): some street doors get front steps and a wall
+    // lamp that throws a pool onto the sidewalk; warm, cold LED or (rarely) teal.
+    const door = i === 0 && !l.inner ? features.find((g) => g.kind === 'door') : undefined;
+    if (door) {
+      const run = new Run(f);
+      const mid = (door.from + door.to) / 2;
+      if (rng.next() < 0.5) {
+        b.box(b.mm.cobbles, run.mat(mid, 0.1, 0.45), 2.0, 0.2, 0.9, [0.85, 0.82, 0.78]);
+        b.box(b.mm.cobbles, run.mat(mid, 0.27, 0.25), 1.7, 0.16, 0.5, [0.9, 0.87, 0.83]);
+      }
+      if (rng.next() < 0.45) {
+        const roll = rng.next();
+        const color = roll < 0.6 ? 0xffb060 : roll < 0.85 ? 0xd8ecff : 0x5fd8c8;
+        b.box(b.mm.iron, run.mat(mid, 3.0, 0.2), 0.05, 0.05, 0.4, [0.6, 0.6, 0.6]);
+        b.geo(b.mm.lampGlass, new SphereGeometry(0.13, 8, 6), run.mat(mid, 2.88, 0.42), color === 0xffb060 ? [1.6, 1.25, 0.6] : color === 0xd8ecff ? [1.3, 1.5, 1.8] : [0.7, 1.7, 1.6]);
+        b.light(run.pt(mid, 2.85, 0.45), color, rng.range(10, 22), 9, 0.03, rng.range(3, 4.2), { yaw: run.yaw, stretch: 1.5, reach: 1.8, halo: 0.45 });
+      }
+    }
   });
   // Flat tar roof with chimneys.
   const H = GROUND_H + l.floors * FLOOR_H + PARAPET;
@@ -656,6 +878,73 @@ function steppedGable(b: ChunkBuilder, l: Landmark, x: number, y: number, z: num
   }
 }
 
+/**
+ * Späti rest stop (M11b part 2): brick shop with a rolled-up shutter, sign and lit shop windows; inside
+ * shelves full of goods, glowing fridges, counter with till, mattress and a workbench with a radio.
+ * `b` gets everything up to knee height plus the interior; `up` gets the upper walls and the roof.
+ */
+function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
+  const M = b.mm;
+  const { w, d, door, height: H } = SPATI;
+  const LOW = 1.1;
+  const rng = new Rng(Math.round(l.x * 31 + l.z * 17));
+  b.box(M.cobbles, lm(l, 0, 0.04, 0), w - 0.4, 0.08, d - 0.4, [0.42, 0.38, 0.34]);
+  for (const p of spatiParts()) {
+    if (p.kind === 'wall') {
+      b.box(M.brick, lm(l, p.x, LOW / 2, p.z), p.hx * 2, LOW, p.hz * 2);
+      up.box(M.brick, lm(l, p.x, LOW + (H - LOW) / 2, p.z), p.hx * 2, H - LOW, p.hz * 2);
+    } else if (p.kind === 'shelf') {
+      b.box(M.darkWood, lm(l, p.x, 0.9, p.z), p.hx * 2, 1.8, p.hz * 2, [1.1, 1, 0.95]);
+      // Goods on three boards, on both faces of the free-standing shelf.
+      const faces = p.z > -1 ? [-1, 1] : [1];
+      for (const f of faces) {
+        for (const y of [0.5, 1.0, 1.5]) {
+          for (let x = -p.hx + 0.15; x < p.hx - 0.1; x += rng.range(0.16, 0.26)) {
+            if (rng.next() < 0.18) continue; // looted gaps
+            const tint: [number, number, number] = rng.pick([[1.4, 0.4, 0.3], [0.4, 0.6, 1.4], [1.5, 1.3, 0.4], [0.5, 1.2, 0.5], [1.4, 1.3, 1.2], [1.3, 0.7, 0.3]] as Array<[number, number, number]>);
+            const h = rng.range(0.15, 0.3);
+            b.box(M.stucco, lm(l, p.x + x, y + h / 2, p.z + f * (p.hz + 0.06)), rng.range(0.1, 0.16), h, 0.12, tint);
+          }
+        }
+      }
+    } else if (p.kind === 'fridge') {
+      b.box(M.iron, lm(l, p.x, 1.05, p.z), p.hx * 2, 2.1, p.hz * 2, [1.2, 1.25, 1.3]);
+      b.box(M.glass, lm(l, p.x - p.hx - 0.02, 1.1, p.z), 0.04, 1.7, p.hz * 2 - 0.2, [1.4, 2.2, 2.4]);
+      b.light(lp(l, p.x - 1, 1.3, p.z), 0x8fe0ff, 3, 4, 0, 2);
+    } else if (p.kind === 'counter') {
+      b.box(M.darkWood, lm(l, p.x, 0.5, p.z), p.hx * 2, 1.0, p.hz * 2, [1.3, 1.05, 0.9]);
+      b.box(M.rust, lm(l, p.x + 0.4, 1.13, p.z), 0.42, 0.26, 0.36, [0.7, 0.7, 0.75]);
+      b.box(M.sign, lm(l, p.x + 0.4, 1.3, p.z + 0.12), 0.3, 0.12, 0.03);
+    } else if (p.kind === 'bench') {
+      b.box(M.wood, lm(l, p.x, 0.45, p.z), p.hx * 2, 0.9, p.hz * 2);
+      b.box(M.rust, lm(l, p.x - 0.35, 1.03, p.z), 0.46, 0.26, 0.26, [0.5, 0.6, 0.7]);
+      b.box(M.iron, lm(l, p.x - 0.2, 1.3, p.z), 0.03, 0.35, 0.03);
+    }
+  }
+  // Mattress and blanket in the corner left of the door.
+  b.box(M.burlap, lm(l, -3.9, 0.12, d / 2 - 1.6), 1.0, 0.24, 2.0, [1.15, 1.05, 0.95]);
+  b.box(M.burlap, lm(l, -3.9, 0.26, d / 2 - 1.9), 1.02, 0.06, 1.2, [0.6, 0.35, 0.3]);
+  // Warm light inside (a bulb over the middle shelf, one over the counter) and a lamp under the awning
+  // outside that lights the sandbag lane: the Späti reads as a safe, lit place from down the street.
+  b.light(lp(l, 0.5, 2.7, -0.5), 0xffb070, 14, 10, 0.05, 4);
+  b.light(lp(l, -3.3, 2.5, 1.2), 0xffc890, 7, 6, 0.03, 3);
+  b.light(lp(l, 0, 2.4, d / 2 + 1.6), 0xffc070, 12, 10, 0.08, 5);
+  // Upper part: lintel, rolled-up shutter, sign, awning, barred shop windows, flat roof.
+  up.box(M.brick, lm(l, 0, (2.4 + H) / 2, d / 2 - 0.15), door, H - 2.4, 0.3);
+  up.box(M.iron, lm(l, 0, 2.28, d / 2 + 0.08), door + 0.2, 0.26, 0.3, [0.9, 0.9, 0.85]);
+  // Sign standing on the front edge of the awning, so the camera above sees it.
+  const tilt = new Matrix4().makeRotationX(-0.6);
+  up.geo(M.spatiSign, new PlaneGeometry(4.4, 0.95), lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt));
+  up.box(M.rust, lm(l, 0, 3.0, d / 2 + 1.24).multiply(tilt), 4.6, 1.1, 0.08, [0.35, 0.35, 0.38]);
+  up.box(M.awning, lm(l, 0, 2.55, d / 2 + 0.7), w - 0.4, 0.08, 1.2);
+  for (const side of [-1, 1]) {
+    up.box(M.shop, lm(l, side * 3.4, 1.7, d / 2 + 0.02), 2.6, 1.0, 0.05);
+    for (let x = -1.2; x <= 1.2; x += 0.3) up.box(M.iron, lm(l, side * 3.4 + x, 1.7, d / 2 + 0.07), 0.04, 1.0, 0.04);
+  }
+  up.box(M.tar, lm(l, 0, H + 0.12, 0), w + 0.4, 0.24, d + 0.4, [0.6, 0.6, 0.6]);
+  up.box(M.rust, lm(l, 2.5, H + 0.6, -1.5), 1.2, 0.7, 0.9, [0.8, 0.8, 0.8]);
+}
+
 function buildLandmark(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
   const frame = { x: l.x, z: l.z, rot: l.rot };
@@ -812,6 +1101,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
 
   buildGround(m, mats, group);
   buildStreets(m, mats, chunkOf);
+  buildQuays(m, mats, chunkOf);
+  buildScatter(m, lots, mats, chunkOf);
   const boats: Array<{ lane: FerryLane; group: Group }> = [];
   buildBridges(m, chunkOf, boats);
   for (const bt of boats) group.add(bt.group);
@@ -833,9 +1124,26 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       else b.on(y0, () => buildAltbauLot(b, wing, m));
     }
   }
+  // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
+  const spatis: Array<{ rest: RestArea; upper: Group }> = [];
   for (const l of m.landmarks) {
     const b = chunkOf(l.x, l.z);
-    b.on(base(l.x, l.z, Math.max(l.hx, l.hz)), () => buildLandmark(b, l));
+    const y0 = base(l.x, l.z, Math.max(l.hx, l.hz));
+    if (l.kind === 'spati') {
+      const up = new ChunkBuilder(mats);
+      b.on(y0, () => buildSpati(b, up, l));
+      const g = new Group();
+      for (const mesh of up.solid.meshes()) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        g.add(mesh);
+      }
+      g.position.y = y0;
+      group.add(g);
+      spatis.push({ rest: spatiRest(l), upper: g });
+      continue;
+    }
+    b.on(y0, () => buildLandmark(b, l));
   }
   const rng = new Rng(m.seed);
   for (const p of props) {
@@ -972,6 +1280,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     follow(x: number, z: number): void {
       hx = x;
       hz = z;
+      for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
       // Snap the shadow frustum to whole texels so shadows do not shimmer while walking.
       const sx = Math.round(x / texel) * texel;
       const sz = Math.round(z / texel) * texel;

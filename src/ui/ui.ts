@@ -18,6 +18,7 @@ export interface UiHandlers {
   onMusic(on: boolean): void;
   onRumble(on: boolean): void;
   onShowPerf(on: boolean): void;
+  onTelemetry(on: boolean): void;
   /** Expedition maps: the in-game map opened or closed (pauses the game). */
   onMapToggle?(open: boolean): void;
   onAgain?(): void;
@@ -76,6 +77,9 @@ export class Ui {
       handlers.onShowPerf(perf.checked);
     });
     this.perf.hidden = !opts.showPerf;
+    const tl = el<HTMLInputElement>('opt-telemetry');
+    tl.checked = opts.telemetry;
+    tl.addEventListener('change', () => handlers.onTelemetry(tl.checked));
     this.setupTouch(input);
     el<HTMLButtonElement>('map-btn').addEventListener('click', () => this.toggleMap(true));
     el<HTMLButtonElement>('close-karte').addEventListener('click', () => this.toggleMap(false));

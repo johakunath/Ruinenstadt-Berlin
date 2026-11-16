@@ -21,6 +21,7 @@ import { mapSvg } from './data/map-svg';
 import { EdgeMarkers, Minimap } from './ui/minimap';
 import { ENEMIES } from './data/enemies';
 import type { Level } from './sim/level';
+import { Telemetry } from './telemetry';
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
@@ -54,6 +55,8 @@ function checkpoint(): number {
 }
 let deadFor = 0;
 let renderer: GameRenderer | null = null;
+
+const telemetry = new Telemetry(opts.telemetry, opts.autostart);
 
 const ui = new Ui(opts, {
   onPlay: () => start(),
@@ -94,6 +97,11 @@ const ui = new Ui(opts, {
   },
   onShowPerf: (on) => {
     opts.showPerf = on;
+    storeOptions(opts);
+  },
+  onTelemetry: (on) => {
+    opts.telemetry = on;
+    telemetry.enabled = on;
     storeOptions(opts);
   },
 }, input);
@@ -146,6 +154,7 @@ function start(): void {
   input.buffer.clear();
   input.enabled = true;
   ui.showGame();
+  telemetry.begin(sim, { map: map ? map.def.name : 'Hof', profile: opts.profile, scale: opts.mapScale, startAt: sim.run.index, input: input.device });
 }
 
 const simInput: SimInput = { moveX: 0, moveZ: 0, aimX: 0, aimZ: 0, aimAssist: true, attack: false, dodge: false };
@@ -183,6 +192,7 @@ function drainEvents(): void {
   for (const ev of sim.events) {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev);
+    telemetry.event(ev);
     switch (ev.type) {
       case 'hit': {
         const feel = HIT_FEEL[ev.weight];
@@ -210,6 +220,11 @@ function drainEvents(): void {
       case 'zoneClear': {
         const zone = level?.zones[ev.zone];
         if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
+        break;
+      }
+      case 'restEnter': {
+        const rest = level?.rests[ev.index];
+        if (rest && ev.first) ui.banner(rest.name, 'Rast · hier heilst du');
         break;
       }
       case 'victory':
@@ -269,7 +284,10 @@ function frame(now: number): void {
   if (phase === 'play' && sim.player.state === 'dead') {
     phase = 'dead';
     input.enabled = false;
+    telemetry.end('dead');
   }
+  // Telemetry gets the real frame time; `dt` is clamped for the sim and would hide slow frames.
+  if (phase === 'play' && running) telemetry.frame(frameMs / 1000, sim, renderer.perf, input.device);
   if (phase === 'dead') {
     deadFor += dt;
     if (deadFor > 1.4 && deadFor - dt <= 1.4) {
@@ -282,6 +300,7 @@ function frame(now: number): void {
     wonFor += dt;
     if (wonFor > 2.5) {
       phase = 'won';
+      telemetry.end('win');
       input.enabled = false;
       ui.showWon(sim.kills);
     }

@@ -13,6 +13,7 @@ v2: concept C "Rundweg", chosen by Johannes on 2026-11-15 after the first playte
 | K5 | Positions do not have to be to scale, but directions do: what is north in Köpenick is north here. Each small area roughly real. Landmark buildings recognizable |
 | K7 | v2 (M11b): concept C "Rundweg". One loop without doubling back: Müggelberge → ferry over the Dahme → Johannisthal → Spreepark → along the Spree → Rathaus. Distances about 0.6 of v1; the Altstadt island keeps its v1 size. Minimap M1 (round, top left, north up) |
 | K8 | Playtest notes on v2 (2026-11-15): the ferry is a boat that shuttles on its own (about 11 s across, 5 s at each pier, the hero rides along); a broken-down tram on the Dammbrücke with tracks from the station to the Altstadt; half the buildings are ruins; construction fence and roadblocks at the map edge |
+| K9 | M11b part 2 (2026-11-16): ground variant C (grass, dirt, sidewalk plates and leaf litter blended, overgrown paving, puddles, leaves, trash, rubble and weed tufts); natural banks irregular, town banks stone quays; low relief in parks and forests. Späti as a rest stop, one per zone (fights lock the hero into the circle, so the 2D safe-room rule does not apply). A trader moves in later (M13b) |
 | K6 | Size can grow: the map is authored with one scale factor (`koepenickMap(scale)`, `?mapscale=1.3`). Distances stretch, buildings and streets keep their size, generated buildings and trees fill the extra space |
 
 ## Geography check (OpenStreetMap, 2026-11-15, method in `guidelines.md`)
@@ -55,12 +56,24 @@ Route about 840 m of pure running (v1 about 1380 m by the same measure), roughly
 | Buildings | Altbau 9 to 16 m wide, ground floor plus 1 to 2 floors, almost closed street front. Single-storey shops (Läden, Spätis) between Altbau blocks. Houses slightly askew with front fences. About 45 % of Altbau and 35 % of houses are L-shaped (back wing one floor lower) |
 | Life | Parked and abandoned cars every 7 to 14 m of street, benches, bins, crates and rubble on sidewalks, bollards at the bridge heads. Test: under 10 % of 20 m street stretches without a building, car or prop within 14 m |
 
+### Späti rest stops (M11b part 2)
+
+| Zone | Späti | Spot |
+|---|---|---|
+| 0 | Späti am Bahnhof | Lindenstraße, between Vorplatz and Lindenstraße fights |
+| 1 | Späti am Kietz | Böttcherstraße, at the zone entry |
+| 2 | Späti Wendenschloß | Waldweg, at the zone entry |
+| 3 | Späti an der Altstadt | Lindenstraße Süd, before the Lange Brücke |
+
+11 × 8 m brick shop, door 2.6 m in the front, sandbags leave a lane. Inside: shelves with goods, fridges, counter with till, mattress, workbench with radio. Roof and upper walls hide while the hero is inside. Heals 3 % of max life per second between fights; first visit shows its name and rings the bell; minimap and map show a yellow frame. Layout: `src/data/spati.ts`, rule: `src/sim/rest.ts`.
+
 ## Heights (B3, 2026-11-15)
 
 | Place | Kind | Height |
 |---|---|---|
 | Müggelberge | Soft hill, the Turm fight on the summit, the Teufelssee fight on its lower slope | 7 m |
 | Dino-Hügel (Spreepark) | Soft hill under the Dino-Wiese | 3.5 m |
+| Relief | Low rolling ground in grass (0.6 m), forest (1.5 m) and jungle (1.2 m), flat near streets, water, hills, terraces and landmarks (`reliefAt`) | up to 1.5 m |
 | Riesenrad-Plattform | Terrace with retaining wall, stairs east (to the Rex arena) and south | 2.4 m |
 | Kirchhügel (St. Laurentius) | Terrace above the Rathausplatz, stairs west (to the final arena) and north | 1.8 m |
 

@@ -1008,6 +1008,178 @@ export function paintGround(o: PaintOptions): Surface {
   return { map: toTexture(c, true, o.anisotropy) };
 }
 
+// Ground variant C (M11b, Johannes 2026-11-16): four painted grounds blended per vertex in one
+// shader (`groundMaterial` in map-world.ts), so paving gets overgrown and areas fade into each other.
+
+/** Rough grass with dry stalks. */
+export function paintGrass(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(201);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#4f5c38';
+  ctx.fillRect(0, 0, S, S);
+  mottle(ctx, rng, S, S, 46, ['#5d6b3f', '#3f4b2e', '#66703f', '#4a4a30'], [30, 110], 0.5);
+  strokes(ctx, rng, S, S, { count: 3200, colors: ['#73844a', '#3a4529', '#8a8a52', '#56663a'], len: [5, 16], width: [1.5, 4], alpha: [0.25, 0.6], angle: -Math.PI / 2, spread: 0.6 });
+  strokes(ctx, rng, S, S, { count: 500, colors: ['#a59a62', '#8c7a48'], len: [4, 10], width: [1, 2], alpha: [0.3, 0.6], angle: -Math.PI / 2, spread: 0.9 });
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Bare earth and mud with pebbles. */
+export function paintDirt(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(203);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#5a4a36';
+  ctx.fillRect(0, 0, S, S);
+  mottle(ctx, rng, S, S, 50, ['#4a3c2c', '#6a5640', '#3e3428', '#5f5038'], [20, 90], 0.55);
+  strokes(ctx, rng, S, S, { count: 1800, colors: ['#7a6448', '#3a3024', '#6a5a44'], len: [4, 14], width: [2, 5], alpha: [0.15, 0.35] });
+  for (let i = 0; i < 420; i++) {
+    const x = rng.range(0, S);
+    const y = rng.range(0, S);
+    const r = rng.range(1.5, 4.5);
+    wrapped(S, S, x, y, r + 1, (px, py) => {
+      ctx.fillStyle = shade(rng.pick(['#8a7d6a', '#6e665a', '#9a8a72']), rng.range(-0.2, 0.1));
+      ctx.beginPath();
+      ctx.ellipse(px, py, r, r * 0.75, rng.range(0, 3), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(20,14,10,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(px + r * 0.3, py + r * 0.35, r, r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Cracked sidewalk plates (50 cm at 5 m per tile), some missing, weeds in the joints. */
+export function paintPaving(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(207);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#3a3a30';
+  ctx.fillRect(0, 0, S, S);
+  const n = 10;
+  const p = S / n;
+  const tones = ['#5f5b54', '#67625a', '#57544e', '#6d675e', '#5a5850'];
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      if (rng.next() < 0.04) {
+        // Missing plate: earth.
+        ctx.fillStyle = shade('#4a3c2c', rng.range(-0.2, 0.1));
+        ctx.fillRect(i * p + 1, j * p + 1, p - 2, p - 2);
+        continue;
+      }
+      const x = i * p + 1.5;
+      const y = j * p + 1.5;
+      const w = p - 3;
+      ctx.fillStyle = shade(rng.pick(tones), rng.range(-0.18, 0.1));
+      ctx.fillRect(x, y, w, w);
+      ctx.fillStyle = 'rgba(255,235,210,0.05)';
+      ctx.fillRect(x, y, w, 2);
+      ctx.fillStyle = 'rgba(10,8,6,0.15)';
+      ctx.fillRect(x, y + w - 2, w, 2);
+    }
+  }
+  mottle(ctx, rng, S, S, 44, ['#2a2620', '#4d5326', '#3a3428', '#5a5444'], [20, 90], 0.55);
+  strokes(ctx, rng, S, S, { count: 1400, colors: ['#9a958a', '#3a3630', '#5a5a48'], len: [3, 12], width: [1, 3], alpha: [0.1, 0.3] });
+  for (let i = 0; i < 18; i++) crack(ctx, rng, rng.range(0, S), rng.range(0, S), rng.int(6) + 4, 14, rng.range(0, Math.PI * 2), 1.6);
+  // Weeds along some joints.
+  strokes(ctx, rng, S, S, { count: 260, colors: ['#5d7a34', '#6f8a3c'], len: [3, 8], width: [1.5, 3], alpha: [0.5, 0.8], angle: -Math.PI / 2, spread: 0.8 });
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Forest floor: old leaves, needles and twigs. */
+export function paintLeafLitter(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(211);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#3a3626';
+  ctx.fillRect(0, 0, S, S);
+  mottle(ctx, rng, S, S, 40, ['#2e2c1e', '#4a3e26', '#3a4228'], [20, 80], 0.5);
+  for (let i = 0; i < 1500; i++) {
+    const x = rng.range(0, S);
+    const y = rng.range(0, S);
+    const r = rng.range(3, 7);
+    const a = rng.range(0, Math.PI);
+    const col = shade(rng.pick(['#7a5a2a', '#5a4a22', '#8a6a32', '#6a4020', '#4f4a26']), rng.range(-0.3, 0.1));
+    wrapped(S, S, x, y, r + 1, (px, py) => {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.ellipse(px, py, r, r * 0.45, a, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  strokes(ctx, rng, S, S, { count: 500, colors: ['#2a2018', '#5a4a30'], len: [8, 22], width: [1, 2], alpha: [0.4, 0.7] });
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Ground scatter atlas, 2 × 2 cells: puddle, leaf pile, paper and trash, rubble crumbs (alpha cut). */
+export function paintLitter(): Texture {
+  const S = 512;
+  const H = S / 2;
+  const rng = new Rng(213);
+  const [c, ctx] = canvas(S, S);
+  ctx.clearRect(0, 0, S, S);
+  // Puddle (top left): irregular dark blob with a sky glint.
+  ctx.save();
+  ctx.translate(H / 2, H / 2);
+  ctx.fillStyle = '#16262a';
+  ctx.beginPath();
+  for (let i = 0; i <= 24; i++) {
+    const a = (i / 24) * Math.PI * 2;
+    const r = 96 + 18 * Math.sin(a * 3 + 1) + 10 * Math.sin(a * 5);
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.62);
+  }
+  ctx.fill();
+  ctx.fillStyle = 'rgba(120,160,170,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(-20, -14, 50, 7, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // Leaf pile (top right).
+  for (let i = 0; i < 260; i++) {
+    const a = rng.range(0, Math.PI * 2);
+    const d = Math.sqrt(rng.next()) * 100;
+    ctx.fillStyle = shade(rng.pick(['#8a6a32', '#7a5a2a', '#a07a36', '#6a4020', '#5a4a22']), rng.range(-0.25, 0.15));
+    ctx.beginPath();
+    ctx.ellipse(H + H / 2 + Math.cos(a) * d, H / 2 + Math.sin(a) * d, rng.range(5, 10), rng.range(2.5, 4.5), rng.range(0, Math.PI), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Paper, cans and plastic (bottom left).
+  for (let i = 0; i < 16; i++) {
+    const x = rng.range(30, H - 30);
+    const y = H + rng.range(30, H - 30);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rng.range(0, Math.PI));
+    ctx.fillStyle = shade(rng.pick(['#d8d0bc', '#c23a2e', '#3a6ad0', '#e8e0d0', '#f2d14b', '#5aa04a']), rng.range(-0.3, 0));
+    ctx.fillRect(-rng.range(6, 16), -rng.range(4, 10), rng.range(12, 30), rng.range(8, 18));
+    ctx.restore();
+  }
+  // Rubble crumbs (bottom right).
+  for (let i = 0; i < 110; i++) {
+    const a = rng.range(0, Math.PI * 2);
+    const d = Math.sqrt(rng.next()) * 100;
+    const r = rng.range(3, 11);
+    const x = H + H / 2 + Math.cos(a) * d;
+    const y = H + H / 2 + Math.sin(a) * d;
+    ctx.fillStyle = shade(rng.pick(['#8a7f70', '#7a4a35', '#9a9488', '#6a6258']), rng.range(-0.25, 0.1));
+    ctx.beginPath();
+    ctx.moveTo(x - r, y);
+    ctx.lineTo(x - r * 0.3, y - r * 0.8);
+    ctx.lineTo(x + r, y - r * 0.2);
+    ctx.lineTo(x + r * 0.4, y + r * 0.7);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(10,8,6,0.4)';
+    ctx.fillRect(x - r * 0.4, y + r * 0.3, r, r * 0.3);
+  }
+  return toTexture(c, false);
+}
+
 export function paintAsphalt(o: PaintOptions): Surface {
   const S = 512;
   const rng = new Rng(67);

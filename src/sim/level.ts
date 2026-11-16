@@ -2,6 +2,7 @@
 // hash so a city of colliders stays cheap), a walkability grid for water and map edges, the start,
 // and either arena spawn points (the gate 1 courtyard) or encounters (expedition maps).
 import { pushOut, type Collider } from './collide';
+import type { RestArea } from './rest';
 import type { Bounds } from './flowfield';
 import type { EnemyKind } from '../data/enemies';
 import { onFerryBoat, type FerryLane } from './ferry';
@@ -102,6 +103,8 @@ export class Level {
     readonly zones: ZoneDef[] = [],
     /** Ferry lanes: water in the walk grid, walkable where the boat is (`time`). */
     readonly ferries: FerryLane[] = [],
+    /** Späti rest stops (`src/sim/rest.ts`). */
+    readonly rests: RestArea[] = [],
   ) {
     for (const c of colliders) {
       const e = c.kind === 'circle' ? c.r : Math.hypot(c.hx, c.hz);
