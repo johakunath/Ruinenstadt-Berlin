@@ -594,7 +594,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         if (lamps.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LAMP_GAP)) continue;
         lamps.push([x, z]);
         const broken = rng.next() < 0.35;
-        props.push({ kind: broken ? 'lampBroken' : 'lantern', x, z, rot: broken ? rng.range(0, Math.PI * 2) : 0, size: 1 });
+        props.push({ kind: broken ? 'lampBroken' : 'lantern', x, z, rot: broken ? rng.range(0, Math.PI * 2) : 0, size: broken ? 1 : rng.range(0.8, 1.25) });
       }
     }
   }
@@ -696,7 +696,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         const z = az + ((bz - az) / len) * t + ((bx - ax) / len) * off;
         if (hit(x, z, 1.2) || onBridge(m, x, z, 2) || streetDist(m, x, z).d < 0.8) continue;
         if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 2) || lamps.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < 8)) continue;
-        props.push({ kind: rng.next() < 0.5 ? 'campfire' : 'fireBarrel', x, z, rot: rng.range(0, Math.PI * 2), size: 1 });
+        props.push({ kind: rng.next() < 0.5 ? 'campfire' : 'fireBarrel', x, z, rot: rng.range(0, Math.PI * 2), size: rng.range(0.7, 1.35) });
       }
     }
   }
@@ -759,6 +759,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
+  stringLights(m, props, hit, rng);
   fillLight(m, lots, props, hit, rng);
   return props;
 }
@@ -775,21 +776,68 @@ function inLot(l: Lot, x: number, z: number, pad: number): boolean {
   return inside(l.x, l.z, l.w, l.d) || (l.wing !== undefined && inside(l.wing.x, l.wing.z, l.wing.w, l.wing.d));
 }
 
-/** Light sources: working lamps, fires, construction lamps and grave candles. */
-export const LIGHT_PROPS: ReadonlySet<Prop['kind']> = new Set<Prop['kind']>(['lantern', 'fireBarrel', 'campfire', 'workLamp', 'candles']);
-/** Every street point should have a light source this close (Johannes 2026-11-16: where one light pool ends, the next begins). */
-export const LIGHT_COVER = 8;
+/** Light sources: working lamps, fires, construction lamps, grave candles, string lights. */
+export const LIGHT_PROPS: ReadonlySet<Prop['kind']> = new Set<Prop['kind']>(['lantern', 'fireBarrel', 'campfire', 'workLamp', 'candles', 'stringLights']);
+/**
+ * Light gap rule (Johannes 2026-11-16): where one light pool ends the next begins, but organic, not
+ * on a grid. The allowed distance to the nearest light varies with a slow noise between
+ * LIGHT_COVER_MIN (bright pockets) and LIGHT_COVER (dim stretches).
+ */
+export const LIGHT_COVER_MIN = 6;
+export const LIGHT_COVER = 13;
+
+/** Allowed distance to the nearest light at (x, z). */
+export function lightCover(x: number, z: number): number {
+  return LIGHT_COVER_MIN + (LIGHT_COVER - LIGHT_COVER_MIN) * (0.5 + 0.5 * wobble(x * 0.9 + 13, z * 0.9 - 7, 0.6));
+}
+
+/** String lights across some side streets: two poles at the curbs, a sagging line of bulbs. */
+function stringLights(m: MapDef, props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
+  for (const s of m.streets) {
+    if (s.kind !== 'side') continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [ax, az] = s.pts[i - 1] as Pt;
+      const [bx, bz] = s.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      const ux = (bx - ax) / len;
+      const uz = (bz - az) / len;
+      for (let t = rng.range(10, 40); t < len - 6; t += rng.range(45, 90)) {
+        const x = ax + ux * t;
+        const z = az + uz * t;
+        const half = s.width / 2 + 0.5;
+        const poles: Array<[number, number]> = [[x - uz * half, z + ux * half], [x + uz * half, z - ux * half]];
+        if (poles.some(([px, pz]) => hit(px, pz, 0.3) || onBridge(m, px, pz, 1))) continue;
+        if (m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r) || m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < 6)) continue;
+        // rot: the line runs across the street (facing along it).
+        props.push({ kind: 'stringLights', x, z, rot: Math.atan2(ux, uz), size: half * 2 });
+      }
+    }
+  }
+}
 
 /**
- * Light coverage pass: walks every street (not paths, not bridges) in 3 m steps and, where no light
- * source, Späti or landmark is within LIGHT_COVER, adds one beside the street. Mostly no-flame kinds
- * (construction lamps, grave candles) so flames stay special; lamps keep their 22 m gap.
+ * Light coverage pass: walks every street (not paths, not bridges) and, where no light source,
+ * Späti or landmark is within the local `lightCover`, adds one beside the street at a random offset,
+ * with a random strength, and sometimes a small cluster around it (a campfire with candles, a work
+ * lamp by a barrel). Mostly no-flame kinds, so flames stay special; lamps keep their 22 m gap.
  */
 function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
   const lit: Array<[number, number]> = props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => [p.x, p.z]);
   for (const l of m.landmarks) if (l.hx > 0) lit.push([l.x, l.z]);
-  const dark = (x: number, z: number): boolean => !lit.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LIGHT_COVER);
+  const dark = (x: number, z: number): boolean => !lit.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < lightCover(x, z));
   const kinds: Array<Prop['kind']> = ['workLamp', 'workLamp', 'candles', 'candles', 'fireBarrel', 'fireBarrel', 'campfire'];
+  const inFight = (x: number, z: number): boolean => m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6);
+  const shuffled = <T>(xs: T[]): T[] => {
+    for (let i = xs.length - 1; i > 0; i--) {
+      const j = rng.int(i + 1);
+      [xs[i], xs[j]] = [xs[j] as T, xs[i] as T];
+    }
+    return xs;
+  };
+  const add = (kind: Prop['kind'], x: number, z: number, size: number): void => {
+    props.push({ kind, x, z, rot: rng.range(0, Math.PI * 2), size });
+    lit.push([x, z]);
+  };
   for (const s of m.streets) {
     if (s.kind === 'path') continue;
     for (let i = 1; i < s.pts.length; i++) {
@@ -798,43 +846,51 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
       const len = Math.hypot(bx - ax, bz - az);
       const ux = (bx - ax) / len;
       const uz = (bz - az) / len;
-      for (let t = 1.5; t < len; t += 3) {
+      for (let t = rng.range(0.5, 3); t < len; t += rng.range(2, 4.5)) {
         const cx = ax + ux * t;
         const cz = az + uz * t;
         if (!dark(cx, cz) || onBridge(m, cx, cz, 1) || isWater(m, cx, cz)) continue;
         const kind = rng.pick(kinds);
         const r = kind === 'campfire' ? 1 : 0.6;
-        const sides = rng.next() < 0.5 ? [-1, 1] : [1, -1];
         const spot = (dt: number, side: number, extra: number): [number, number] => {
           const off = side * (s.width / 2 + extra);
           return [ax + ux * (t + dt) - uz * off, az + uz * (t + dt) + ux * off];
         };
-        const inFight = (x: number, z: number): boolean => m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6);
-        let done = false;
-        place: for (const dt of [0, 2, -2, 4, -4, 6, -6]) {
-          for (const side of sides) {
-            for (const extra of [1.0, 1.8, 2.8, 4.0]) {
-              const [x, z] = spot(dt, side, extra);
-              if (hit(x, z, r) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3 || inFight(x, z)) continue;
-              props.push({ kind, x, z, rot: rng.range(0, Math.PI * 2), size: 1 });
-              lit.push([x, z]);
-              done = true;
-              break place;
+        const tries: Array<[number, number, number]> = [];
+        for (let k = 0; k < 14; k++) tries.push([rng.range(-6, 6), rng.pick([-1, 1]), rng.range(0.9, 4.2)]);
+        let placed: [number, number] | null = null;
+        for (const [dt, side, extra] of tries) {
+          const [x, z] = spot(dt, side, extra);
+          if (hit(x, z, r) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3 || inFight(x, z)) continue;
+          add(kind, x, z, rng.range(0.6, 1.4));
+          placed = [x, z];
+          break;
+        }
+        if (placed) {
+          // Sometimes a small cluster: people gather where there is light.
+          if (rng.next() < 0.4) {
+            const extraKinds: Array<Prop['kind']> = kind === 'workLamp' ? ['fireBarrel', 'candles'] : ['candles', 'candles', 'fireBarrel'];
+            for (let n = 1 + rng.int(2); n > 0; n--) {
+              const a = rng.range(0, Math.PI * 2);
+              const d = rng.range(1.6, 3.6);
+              const x = placed[0] + Math.sin(a) * d;
+              const z = placed[1] + Math.cos(a) * d;
+              const k = rng.pick(extraKinds);
+              if (streetDist(m, x, z).d < 0.3 || isWater(m, x, z) || inFight(x, z) || (k !== 'candles' && hit(x, z, 0.5))) continue;
+              if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
+              add(k, x, z, rng.range(0.5, 0.9));
             }
           }
+          continue;
         }
-        if (done) continue;
         // Built-up stretch: grave candles at the curb. They do not block, so they only need to stay
         // off building footprints, water and other props.
-        curb: for (const dt of [0, 2, -2, 4, -4]) {
-          for (const side of sides) {
-            const [x, z] = spot(dt, side, 0.6);
-            if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z)) continue;
-            if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
-            props.push({ kind: 'candles', x, z, rot: rng.range(0, Math.PI * 2), size: 1 });
-            lit.push([x, z]);
-            break curb;
-          }
+        for (const dt of shuffled([0, 1.5, -1.5, 3, -3, 4.5, -4.5])) {
+          const [x, z] = spot(dt, rng.pick([-1, 1]), rng.range(0.5, 0.8));
+          if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z)) continue;
+          if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
+          add('candles', x, z, rng.range(0.6, 1.1));
+          break;
         }
       }
     }

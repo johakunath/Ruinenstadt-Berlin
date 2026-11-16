@@ -19,7 +19,7 @@ import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
-  Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type Mats, type World,
+  Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
 
 type RGB = readonly [number, number, number];
@@ -82,13 +82,29 @@ class ChunkBuilder extends Builder {
     super.shadowBox(new Matrix4().makeTranslation(0, this.lift, 0).multiply(m), sx, sy, sz);
   }
 
-  override light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4): void {
-    this.spots.push({ pos: pos.clone().setY(pos.y + this.lift), color, intensity, distance, flicker, phase: Math.random() * 6 });
+  override light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4, shape: LightShape = {}): void {
+    const yaw = shape.yaw ?? 0;
+    const reach = shape.reach ?? 0;
+    const ux = Math.sin(yaw);
+    const uz = Math.cos(yaw);
+    // Directional lights sit a little toward what they light, so the moving pool light agrees with the decal.
+    const lp = pos.clone().setY(pos.y + this.lift);
+    lp.x += ux * reach * 0.5;
+    lp.z += uz * reach * 0.5;
+    this.spots.push({ pos: lp, color, intensity, distance, flicker, phase: Math.random() * 6 });
     let mat = this.glowMats.get(color);
     if (!mat) this.glowMats.set(color, (mat = Materials.glow(this.glowTex, color, 0.22)));
-    const geo = new PlaneGeometry(pool * 2, pool * 2);
+    const geo = new PlaneGeometry(pool * 2, pool * 2 * (shape.stretch ?? 1));
     geo.rotateX(-Math.PI / 2);
-    this.glows.of(mat).add(geo, new Matrix4().setPosition(pos.x, 0.035, pos.z));
+    this.glows.of(mat).add(geo, new Matrix4().makeRotationY(yaw).setPosition(pos.x + ux * reach, 0.035, pos.z + uz * reach));
+    if (shape.halo) {
+      // Halo around the lamp head: three crossed cards with the same additive glow.
+      const h = shape.halo;
+      for (const [rx, ry] of [[0, 0], [0, Math.PI / 2], [-Math.PI / 2, 0]] as const) {
+        const card = new PlaneGeometry(h * 2, h * 2);
+        this.glows.of(mat).add(card, new Matrix4().makeRotationY(ry).multiply(new Matrix4().makeRotationX(rx)).setPosition(pos.x, pos.y, pos.z));
+      }
+    }
   }
 }
 
@@ -672,6 +688,24 @@ function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef
       depth: Math.min(l.w, l.d) / 2, floors: l.floors, tone, features, seed: (l.seed + i * 13) % 997,
     };
     buildAltbau(b, f);
+    // Organic light at height (Johannes 2026-11-16): some street doors get front steps and a wall
+    // lamp that throws a pool onto the sidewalk; warm, cold LED or (rarely) teal.
+    const door = i === 0 && !l.inner ? features.find((g) => g.kind === 'door') : undefined;
+    if (door) {
+      const run = new Run(f);
+      const mid = (door.from + door.to) / 2;
+      if (rng.next() < 0.5) {
+        b.box(b.mm.cobbles, run.mat(mid, 0.1, 0.45), 2.0, 0.2, 0.9, [0.85, 0.82, 0.78]);
+        b.box(b.mm.cobbles, run.mat(mid, 0.27, 0.25), 1.7, 0.16, 0.5, [0.9, 0.87, 0.83]);
+      }
+      if (rng.next() < 0.45) {
+        const roll = rng.next();
+        const color = roll < 0.6 ? 0xffb060 : roll < 0.85 ? 0xd8ecff : 0x5fd8c8;
+        b.box(b.mm.iron, run.mat(mid, 3.0, 0.2), 0.05, 0.05, 0.4, [0.6, 0.6, 0.6]);
+        b.geo(b.mm.lampGlass, new SphereGeometry(0.13, 8, 6), run.mat(mid, 2.88, 0.42), color === 0xffb060 ? [1.6, 1.25, 0.6] : color === 0xd8ecff ? [1.3, 1.5, 1.8] : [0.7, 1.7, 1.6]);
+        b.light(run.pt(mid, 2.85, 0.45), color, rng.range(10, 22), 9, 0.03, rng.range(3, 4.2), { yaw: run.yaw, stretch: 1.5, reach: 1.8, halo: 0.45 });
+      }
+    }
   });
   // Flat tar roof with chimneys.
   const H = GROUND_H + l.floors * FLOOR_H + PARAPET;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { koepenickMap } from './koepenick';
-import { generateLots, generateProps, isWater, LIGHT_COVER, LIGHT_PROPS, mapLevel, onBridge, streetDist } from './map';
+import { generateLots, generateProps, isWater, LIGHT_PROPS, lightCover, mapLevel, onBridge, streetDist } from './map';
 
 describe('Köpenick map', () => {
   for (const scale of [1, 1.3]) {
@@ -150,12 +150,20 @@ describe('Köpenick map', () => {
           const z = az + ((bz - az) / len) * t;
           if (onBridge(m, x, z, 1) || isWater(m, x, z)) continue;
           n++;
-          if (!anchors.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < LIGHT_COVER + 1)) dark++;
+          if (!anchors.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < lightCover(x, z) + 1)) dark++;
         }
       }
     }
     console.log(`scale ${scale}: light sources ${lights.length}, street samples ${n}, dark ${dark}`);
     expect(dark / n).toBeLessThan(0.02);
+    // Organic, not a grid: spacing to the nearest light varies a lot, and strengths differ.
+    const nn = lights.map(([x, z], i) => Math.min(...lights.filter((_, j) => j !== i).map(([a, b]) => Math.hypot(a - x, b - z))));
+    const mean = nn.reduce((a, b) => a + b, 0) / nn.length;
+    const sd = Math.sqrt(nn.reduce((a, b) => a + (b - mean) ** 2, 0) / nn.length);
+    expect(sd / mean, 'spacing variation').toBeGreaterThan(0.4);
+    const sizes = new Set(props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => p.size.toFixed(1)));
+    expect(sizes.size, 'light strengths').toBeGreaterThan(5);
+    expect(props.some((p) => p.kind === 'stringLights'), 'string lights').toBe(true);
   });
 
   it('bigger scale means a bigger map with more lots', () => {

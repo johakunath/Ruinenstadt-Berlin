@@ -48,6 +48,19 @@ export interface World {
   sync?(simTime: number): void;
 }
 
+/**
+ * Organic light (Johannes 2026-11-16): a directional pool is stretched along `yaw` and pushed
+ * `reach` meters that way (a wall lamp lights the street in front, a work lamp the spot it aims at);
+ * `halo` adds a soft glow around the light itself (crossed additive cards, no extra draw calls).
+ */
+export interface LightShape {
+  yaw?: number;
+  /** Pool length factor along `yaw` (1 = round). */
+  stretch?: number;
+  reach?: number;
+  halo?: number;
+}
+
 /** Local frame of a facade run: s along the wall, y up, n out into the yard. */
 export class Run {
   readonly len: number;
@@ -174,7 +187,7 @@ export class Builder {
   }
 
   /** A point light plus a soft glow pool on the ground so lamps read even when the light is culled. */
-  light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4): void {
+  light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4, _shape?: LightShape): void {
     const light = new PointLight(color, intensity, distance, 1.6);
     light.position.copy(pos);
     this.lights.push({ light, base: intensity, flicker, phase: this.lights.length * 1.7 });
@@ -466,7 +479,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       for (const y of [0.3, 0.66]) b.geo(m.rust, new CylinderGeometry(0.415, 0.415, 0.05, 14, 1, true), at(p, 0, y, 0), [0.7, 0.65, 0.6]);
       b.geo(m.coals, new CircleGeometry(0.38, 14), at(p, 0, 0.8, 0, -Math.PI / 2));
       b.fires.push(new Vector3(p.x, 0.85, p.z));
-      b.light(new Vector3(p.x, 1.6, p.z), 0xff8a3c, 32, 14, 1, 6.5);
+      b.light(new Vector3(p.x, 1.6, p.z), 0xff8a3c, 32 * p.size, 14 * Math.sqrt(p.size), 1, 6.5 * Math.sqrt(p.size), { halo: 0.6 * p.size });
       b.shadowBox(at(p, 0, 0.475, 0), 0.7, 0.95, 0.7);
       break;
     }
@@ -474,8 +487,31 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       // Construction lamp: red and white board on two legs, a yellow lamp on top (no flame).
       for (const x of [-0.45, 0.45]) b.box(m.iron, at(p, x, 0.45, 0), 0.05, 0.9, 0.05, [0.8, 0.8, 0.8]);
       for (let i = 0; i < 4; i++) b.box(m.plaster.cream ?? m.stucco, at(p, -0.375 + i * 0.25, 0.75, 0), 0.25, 0.22, 0.04, i % 2 ? [1.3, 1.25, 1.2] : [1.3, 0.35, 0.25]);
-      b.geo(m.lampGlass, new CylinderGeometry(0.09, 0.09, 0.1, 10), at(p, 0.3, 0.95, 0, Math.PI / 2), [1.6, 1.2, 0.4]);
-      b.light(new Vector3(p.x, 1.4, p.z), 0xffb060, 22, 11, 0.02, 6);
+      // Warm halogen or cold LED, aimed: the pool reaches out in front of the board.
+      const cold = rng.next() < 0.45;
+      b.geo(m.lampGlass, new CylinderGeometry(0.09, 0.09, 0.1, 10), at(p, 0.3, 0.95, 0, Math.PI / 2), cold ? [1.2, 1.5, 1.8] : [1.6, 1.2, 0.4]);
+      b.light(new Vector3(p.x, 1.4, p.z), cold ? 0xd8ecff : 0xffb060, 22 * p.size, 11 * Math.sqrt(p.size), 0.02, 5 * Math.sqrt(p.size), { yaw: p.rot, stretch: 1.7, reach: 2.6, halo: 0.35 });
+      break;
+    }
+    case 'stringLights': {
+      // Two poles at the curbs, a sagging line of warm bulbs across the street at about 4.5 m.
+      const half = p.size / 2;
+      for (const x of [-half, half]) b.geo(m.iron, new CylinderGeometry(0.05, 0.07, 4.8, 6), at(p, x, 2.4, 0), [0.7, 0.7, 0.7]);
+      const n = Math.max(8, Math.round(p.size * 1.6));
+      for (let i = 0; i <= n; i++) {
+        const u = i / n;
+        const x = -half + u * p.size;
+        const y = 4.7 - 0.9 * 4 * u * (1 - u);
+        b.geo(m.lampGlass, new SphereGeometry(0.06, 5, 4), at(p, x, y - 0.08, 0), i % 3 === 1 ? [1.8, 1.0, 0.5] : [1.7, 1.4, 0.8]);
+        if (i < n) {
+          const x2 = -half + ((i + 1) / n) * p.size;
+          const y2 = 4.7 - 0.9 * 4 * ((i + 1) / n) * (1 - (i + 1) / n);
+          const len = Math.hypot(x2 - x, y2 - y);
+          b.box(m.iron, at(p, (x + x2) / 2, (y + y2) / 2, 0, 0, 0, Math.atan2(y2 - y, x2 - x)), len, 0.015, 0.015, [0.4, 0.4, 0.4]);
+        }
+      }
+      // Pool stretched along the line (across the street), no halo: many small bulbs instead.
+      b.light(new Vector3(p.x, 3.6, p.z), 0xffc890, 16, 11, 0.04, 4.5, { yaw: p.rot + Math.PI / 2, stretch: 1.8 });
       break;
     }
     case 'candles': {
@@ -488,7 +524,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
         b.geo(m.stucco, new CylinderGeometry(0.04, 0.035, h, 7), at(p, Math.cos(a) * d, h / 2, Math.sin(a) * d), rng.next() < 0.6 ? [1.3, 0.3, 0.25] : [1.3, 1.25, 1.2]);
         b.geo(m.lampGlass, new SphereGeometry(0.025, 5, 4), at(p, Math.cos(a) * d, h + 0.03, Math.sin(a) * d), [1.8, 1.0, 0.4]);
       }
-      b.light(new Vector3(p.x, 0.7, p.z), 0xff8a3c, 16, 8, 0.6, 5);
+      b.light(new Vector3(p.x, 0.5, p.z), 0xff8a3c, 16 * p.size, 8 * Math.sqrt(p.size), 0.6, 4.5 * Math.sqrt(p.size), { halo: 0.3 });
       break;
     }
     case 'lantern': {
@@ -498,7 +534,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       b.geo(m.lampGlass, new CylinderGeometry(0.24, 0.17, 0.42, 6), at(p, 0, 3.3, 0));
       b.geo(m.iron, new ConeGeometry(0.32, 0.26, 6), at(p, 0, 3.64, 0));
       b.geo(m.iron, new SphereGeometry(0.05, 6, 5), at(p, 0, 3.8, 0));
-      b.light(new Vector3(p.x, 3.25, p.z), 0xffb060, 34, 13, 0.08, 6.5);
+      b.light(new Vector3(p.x, 3.25, p.z), 0xffb060, 34 * p.size, 13 * Math.sqrt(p.size), 0.08, 6.5 * Math.sqrt(p.size), { halo: 0.75 });
       b.shadowBox(at(p, 0, 1.6, 0), 0.14, 3.2, 0.14);
       break;
     }
@@ -626,7 +662,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       for (let i = 0; i < 4; i++) b.box(m.wood, at(p, 0, 0.16, 0, 0.2, (i / 4) * Math.PI, 0), 0.14, 0.14, 1.0, [0.5, 0.4, 0.32]);
       b.geo(m.coals, new CircleGeometry(0.42, 12), at(p, 0, 0.06, 0, -Math.PI / 2));
       b.fires.push(new Vector3(p.x, 0.25, p.z));
-      b.light(new Vector3(p.x, 1.1, p.z), 0xff8a3c, 28, 12, 1, 5.5);
+      b.light(new Vector3(p.x, 1.1, p.z), 0xff8a3c, 28 * p.size, 12 * Math.sqrt(p.size), 1, 5.5 * Math.sqrt(p.size), { halo: 0.7 * p.size });
       break;
     }
     case 'bus': {
