@@ -44,6 +44,9 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P10 | Pickups: own model per item type (weapon kinds, armor slots, materials, food) instead of one bag | Playtest 2026-11-17 | L2 |
 | P11 | Ground audit after the surface fix: walk every zone on hardware and note remaining clipping (terrace edges and stairs, banks, bridge ramps, building foundations on slopes) | Playtest 2026-11-17 | Next PC session |
 | P12 | Remaining 2D enemy types: Ratte (pack of five), Zünder (runs up, fuse, explodes), Schildträger (blocks from the front, hammer stun opens it), Heuler (stays back, drives the others). District types later with their districts: Kabelghul, Boxenkopf, Uhrwerkläufer, Wurzler, Kernspeier | Playtest 2026-11-17, 2D `mkEnemy` | After the M12 playtest |
+| P13 | Options from 2D not ported yet: Auto-Angriff, Akkusparen, Vollbild, Spielstand exportieren (2D `js/panels.js:264-271`) | Session audit 2026-11-17 (left out of U2) | With M17 (menus) |
+| P14 | Decision: after a death the retry starts at the zone without blessings (2D rule, set by the PR #18 review fix); a loaded checkpoint keeps them. Keep, or keep blessings on a retry too | Session audit 2026-11-17 | Johannes decides at the next playtest |
+| P15 | Check on a device that hidden blessings glow when the hero is within about 10 m and are findable without the map (placement and pickup are unit tested, the look was never seen in a screenshot) | Session audit 2026-11-17 | Next playtest |
 
 ## Ideas (not decided)
 
