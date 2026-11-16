@@ -3,7 +3,7 @@ import { createSim,stepSim } from './sim';
 import { NO_INPUT } from './types';
 import { spawnEnemy } from './enemies';
 import { setLoadout } from './loadout';
-import { chooseBlessing,offerBlessings,POWERS,selectPower,updateAbilities } from './abilities';
+import { chooseBlessing,offerBlessings,POWERS,selectPower,updateAbilities,onCombatHit,onCombatKill,onIncoming } from './abilities';
 import { weaponAttack } from '../data/combat';
 import type { WeaponKindId } from '../data/items';
 import { snapshot,simFromSave,parseSave } from './save';
@@ -48,4 +48,23 @@ describe('M8 builds',()=>{
     const next=simFromSave(save,{empty:true},false);expect(next.statContext.perks).toEqual({});expect(next.abilities.ultimateCd).toBe(0);
   });
   it('a dead hero cannot cast or create more projectiles',()=>{const s=fresh('sling');s.player.state='dead';updateAbilities(s,{...NO_INPUT,power:true},()=>{});expect(s.abilities.projectiles).toHaveLength(0);});
+});
+
+
+describe('ported blessing effects',()=>{
+  it('applies element statuses and chains to neighbours without recursive procs',()=>{
+    const s=fresh();setLoadout(s,s.equipment,{perks:{fire:1,acid:1,shock:1,chain:1}});s.stats.elementChance=1;
+    const e=spawnEnemy(s,0,0,'brute');spawnEnemy(s,1,0,'walker');
+    const hits:number[]=[];onCombatHit(s,e,20,(_s,t,d)=>{hits.push(t.id);expect(d).toBeGreaterThan(0);});
+    expect(s.abilities.ailments[e.id]?.burn).toBe(2);expect(s.abilities.ailments[e.id]?.acid).toBe(3);expect(hits).toHaveLength(1);
+  });
+  it('guard reduces damage, retaliation arms, thorns returns damage, second chance is once per run',()=>{
+    const s=fresh(),e=spawnEnemy(s,0,0,'walker');s.statContext.perks={thorns:1,retour:1,second:1};s.abilities.guard=3;
+    let thorns=0;expect(onIncoming(s,e,30,(_s,_e,d)=>{thorns+=d;})).toBe(9);expect(thorns).toBe(6);expect(s.abilities.retaliate).toBe(true);
+    s.abilities.guard=0;s.player.hp=3;expect(onIncoming(s,e,10,()=>{})).toBe(2);expect(onIncoming(s,e,10,()=>{})).toBe(10);
+  });
+  it('leech heals actual max-life percentage and sprint duo refreshes dodge on a kill',()=>{
+    const s=fresh(),e=spawnEnemy(s,0,0,'walker');s.statContext.perks={leech:2,d_sturm:1};s.player.hp=50;s.player.dodgeCd=1;s.abilities.sprint=.5;
+    onCombatKill(s,e,()=>{});expect(s.player.hp).toBe(52);expect(s.player.dodgeCd).toBe(0);
+  });
 });

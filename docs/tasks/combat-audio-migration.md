@@ -1,6 +1,6 @@
 # S2, M7–M9: first playable migration [Codex]
 
-Status: implemented on `feat/combat-audio-migration`; PR pending.
+Status: done (first playable pass, PR #17). Full parity follow-ups below remain open.
 
 ## Start here
 
@@ -32,3 +32,11 @@ Target: `src/sim/abilities.ts`, `src/data/combat.ts`, `src/sim/player.ts`, `src/
 - Reused 2D names, cooldowns, damage ratios, family weights and typed PERKS/stat formulas.
 - Kept the prototype's render look, hitbox architecture and existing pipe clips.
 - This is an explicitly authorized first pass; M7/M8 full parity remains open above.
+
+## Review
+
+One Codex self-review for this session: checked sim/render separation, hit-once projectiles, wall/ring constraints, run-only perk persistence, cooldown switching, input leakage after choices, and bounded effects. Fixed projectile hits on breakables, vault arena constraints, banner slow, and choice input clearing. External reviewer/merge remains with Johannes.
+
+## Validation (2026-11-16)
+
+Typecheck, 259 unit tests (`npm test -- --maxWorkers=2`), production build, all 16 browser smoke tests, and 2 focused final-build combat/phone tests pass. A concurrent unit/browser run hit three 5-second timeouts; the isolated rerun passed without increasing timeouts. Screenshots: `docs/proof/combat/blessings.png`, `docs/proof/combat/phone.png`.

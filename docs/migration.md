@@ -8,7 +8,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 
 | Task | Owner | Status / start file |
 |---|---|---|
-| S2 + M7/M8/M9 first playable pass | Codex | Implemented, PR pending: `docs/tasks/combat-audio-migration.md` |
+| S2 + M7/M8/M9 first playable pass | Codex | done (first pass, PR #17): `docs/tasks/combat-audio-migration.md` |
 | M7/M8 combat parity and polish | Claude · Opus high | open: follow-ups in `docs/tasks/combat-audio-migration.md`; retain the first pass |
 | M12 enemy roster and boss attacks | Claude | open: roadmap below |
 | M16 run content; then M9 consumable buttons | Codex rules, Claude world | open: roadmap below |
