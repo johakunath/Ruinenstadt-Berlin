@@ -5,17 +5,17 @@
 import {
   BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
-  SphereGeometry, TorusGeometry, Vector3, type Material,
+  SphereGeometry, TorusGeometry, Vector3, type Material, type Texture,
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
-import { areaAt, heightAt, isWater, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
+import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
 import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
-import { paintAsphalt, paintConcrete, paintFern, paintGround, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
+import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
   Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type Mats, type World,
 } from './world';
@@ -35,6 +35,8 @@ interface LightSpot {
 
 interface MapMats extends Mats {
   ground: LitMaterial;
+  /** Ground scatter atlas (puddles, leaves, trash, rubble). */
+  litter: LitMaterial;
   asphalt: LitMaterial;
   path: LitMaterial;
   roof: LitMaterial;
@@ -90,12 +92,13 @@ class ChunkBuilder extends Builder {
 function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
-  const ground = paintGround(o);
+  const dirt = paintDirt(o).map;
   const m: MapMats = {
     ...base,
-    ground: materials.surface({ map: ground.map, roughness: 0.95, vertexColors: true }),
+    ground: groundMaterial(materials, o, dirt),
+    litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
     asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
-    path: materials.surface({ map: ground.map, color: 0x9a7f5e, roughness: 0.95, vertexColors: true }),
+    path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
     roof: materials.surface({ map: paintRoofTiles(o).map, roughness: 0.8, vertexColors: true }),
     tar: materials.surface({ map: paintAsphalt(o).map, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
     concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
@@ -121,13 +124,79 @@ function makeMapMats(materials: Materials): MapMats {
 
 // ---------------------------------------------------------------- ground and water
 
-const GROUND_TINT: Record<GroundKind, RGB> = {
-  cobbles: [0.6, 0.55, 0.5],
-  asphalt: [0.5, 0.49, 0.46],
-  grass: [0.42, 0.52, 0.34],
-  forest: [0.3, 0.36, 0.26],
-  jungle: [0.34, 0.5, 0.26],
+/**
+ * Ground variant C (M11b, Johannes 2026-11-16): grass, dirt, paving and leaf litter blended per
+ * vertex (`splat` weights) with a height blend, so grass grows into the paving joints and areas fade
+ * into each other. Cost: three extra texture reads on ground pixels, no extra draw calls.
+ */
+function groundMaterial(materials: Materials, o: PaintOptions, dirt: Texture): LitMaterial {
+  const mat = materials.surface({ map: paintGrass(o).map, roughness: 0.95, vertexColors: true });
+  const uDirt = { value: dirt };
+  const uPave = { value: paintPaving(o).map };
+  const uLeaf = { value: paintLeafLitter(o).map };
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uDirt = uDirt;
+    shader.uniforms.uPave = uPave;
+    shader.uniforms.uLeaf = uLeaf;
+    shader.vertexShader = shader.vertexShader.replace('void main() {', 'attribute vec4 splat;\nvarying vec4 vSplat;\nvoid main() {\n  vSplat = splat;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', 'uniform sampler2D uDirt;\nuniform sampler2D uPave;\nuniform sampler2D uLeaf;\nvarying vec4 vSplat;\nvoid main() {')
+      .replace(
+        '#include <map_fragment>',
+        `vec4 tG = texture2D(map, vMapUv);
+        vec4 tD = texture2D(uDirt, vMapUv * 0.83 + 0.31);
+        vec4 tP = texture2D(uPave, vMapUv);
+        vec4 tL = texture2D(uLeaf, vMapUv * 1.17 + 0.57);
+        // Height blend: dark paving joints and bright grass stalks win where weights are close.
+        vec4 hgt = vec4(tG.g, tD.r, 1.0 - tP.r * 1.6, tL.r * 1.4);
+        vec4 sw = vSplat + (hgt - 0.3) * 0.55 * step(0.02, vSplat);
+        float top = max(max(sw.x, sw.y), max(sw.z, sw.w));
+        sw = max(sw - (top - 0.2), vec4(0.0));
+        sw /= max(1e-4, sw.x + sw.y + sw.z + sw.w);
+        diffuseColor *= tG * sw.x + tD * sw.y + tP * sw.z + tL * sw.w;`,
+      );
+  };
+  mat.customProgramCacheKey = () => 'ground-splat';
+  return mat;
+}
+
+/** Base ground weights (grass, dirt, paving, leaves) per area kind. */
+const GROUND_SPLAT: Record<GroundKind, readonly [number, number, number, number]> = {
+  cobbles: [0.1, 0.05, 0.85, 0],
+  asphalt: [0.05, 0.1, 0.85, 0],
+  grass: [0.85, 0.15, 0, 0],
+  forest: [0.25, 0.15, 0, 0.6],
+  jungle: [0.75, 0.1, 0, 0.15],
 };
+
+/** Vertex tint per kind (the textures carry the hue; this only shifts it). */
+const GROUND_TINT: Record<GroundKind, RGB> = {
+  cobbles: [1, 0.97, 0.94],
+  asphalt: [0.78, 0.78, 0.76],
+  grass: [1, 1, 1],
+  forest: [0.85, 0.9, 0.82],
+  jungle: [0.9, 1.15, 0.8],
+};
+
+function groundSplat(m: MapDef, x: number, z: number, shore: boolean): [number, number, number, number] {
+  // Soft area borders: average the base weights over a 6 m cross.
+  const w = [0, 0, 0, 0];
+  for (const [dx, dz] of [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]] as const) {
+    const k = GROUND_SPLAT[areaAt(m, x + dx, z + dz)?.ground ?? m.defaultGround];
+    for (let i = 0; i < 4; i++) w[i]! += k[i]! / 5;
+  }
+  // Overgrowth: grass takes over patches of paving.
+  const grow = Math.min(1, Math.max(0, wobble(x - 13, z + 29, 3.1) + 0.2) * 1.2);
+  const take = w[2]! * grow * 0.8;
+  w[2]! -= take;
+  w[0]! += take;
+  // Bare earth patches, worn verges along streets, mud on natural banks.
+  w[1]! += Math.max(0, wobble(x + 77, z - 31, 2.6) - 0.25) * 0.9;
+  if (shore) w[1]! += 0.7;
+  const sd = streetDist(m, x, z).d;
+  if (sd < 1.5 && w[0]! > 0.4) w[1]! += 0.35;
+  return [w[0]!, w[1]!, w[2]!, w[3]!];
+}
 
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   const step = 1.5;
@@ -140,6 +209,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
       const pos: number[] = [];
       const col: number[] = [];
       const uv: number[] = [];
+      const splat: number[] = [];
       const wet: boolean[] = [];
       for (let j = 0; j <= k; j++) {
         for (let i = 0; i <= n; i++) {
@@ -152,9 +222,11 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           const a = areaAt(m, x, z);
           const t = GROUND_TINT[a?.ground ?? m.defaultGround];
           const noise = 0.82 + 0.3 * (0.5 + 0.5 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2) * Math.cos(z * 0.19 + Math.sin(x * 0.13) * 1.6));
+          const nearWater = y >= -0.5 && (isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6));
           // Damp, dark banks.
-          const shore = y < -0.5 ? 0.35 : isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6) ? 0.6 : 1;
+          const shore = y < -0.5 ? 0.35 : nearWater ? 0.6 : 1;
           col.push(t[0] * noise * shore, t[1] * noise * shore, t[2] * noise * shore);
+          splat.push(...groundSplat(m, x, z, nearWater && !isQuay(m, x, z)));
         }
       }
       const idx: number[] = [];
@@ -174,6 +246,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
       g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
       g.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
       g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
+      g.setAttribute('splat', new BufferAttribute(new Float32Array(splat), 4));
       g.setIndex(idx);
       g.computeVertexNormals();
       const mesh = new Mesh(g, mats.ground);
@@ -186,6 +259,114 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   water.position.set((B.minX + B.maxX) / 2, -0.45, (B.minZ + B.maxZ) / 2);
   water.receiveShadow = true;
   group.add(water);
+}
+
+/**
+ * Stone quays where a bank runs through cobbles or asphalt areas (natural banks wobble, `isWater`).
+ * The wall reaches 1.5 m into the land so it covers the ground mesh's slope down to the riverbed.
+ */
+function buildQuays(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  const edges: Array<{ pts: readonly Pt[]; off: number }> = [];
+  for (const r of m.rivers) for (const side of [-1, 1]) edges.push({ pts: r.pts, off: (side * r.width) / 2 });
+  for (const lake of m.lakes) edges.push({ pts: [...lake, lake[0] as Pt], off: 0 });
+  const STEP = 2;
+  for (const e of edges) {
+    for (let i = 1; i < e.pts.length; i++) {
+      const [ax, az] = e.pts[i - 1] as Pt;
+      const [bx, bz] = e.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.1) continue;
+      const dx = (bx - ax) / len;
+      const dz = (bz - az) / len;
+      const n = Math.ceil(len / STEP);
+      for (let k = 0; k < n; k++) {
+        const t = ((k + 0.5) / n) * len;
+        const x = ax + dx * t - dz * e.off;
+        const z = az + dz * t + dx * e.off;
+        // Water side: the normal whose short step lands in (authored) water.
+        let wx = -dz;
+        let wz = dx;
+        if (!isWaterPlain(m, x + wx, z + wz)) {
+          wx = dz;
+          wz = -dx;
+          if (!isWaterPlain(m, x + wx, z + wz)) continue;
+        }
+        if (isWaterPlain(m, x - wx * 1.2, z - wz * 1.2)) continue; // a junction, water on both sides
+        if (!isQuay(m, x - wx, z - wz) || onBridge(m, x, z, 1)) continue;
+        const piece = len / n + 0.05;
+        const yaw = Math.atan2(dx, dz);
+        const at = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(x - wx * o, y, z - wz * o);
+        const b = chunkOf(x, z);
+        b.box(mats.cobbles, at(0.6, -0.78), 1.8, 1.68, piece, [0.5, 0.48, 0.45]);
+        b.box(mats.cobbles, at(-0.05, 0.08), 0.5, 0.12, piece, [0.85, 0.82, 0.76]);
+      }
+    }
+  }
+}
+
+/**
+ * Ground scatter (variant C): puddles, leaf piles, trash and rubble decals from one atlas, plus weed
+ * tufts (fern cards). Seeded, on a jittered 4 m grid, chosen by where it lies.
+ */
+function buildScatter(m: MapDef, lots: Lot[], mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  type Kind = 'puddle' | 'leaves' | 'trash' | 'rubble' | 'tuft';
+  const cell: Record<Exclude<Kind, 'tuft'>, [number, number]> = { puddle: [0, 1], leaves: [1, 1], trash: [0, 0], rubble: [1, 0] };
+  const decal = new Map<Kind, PlaneGeometry>();
+  for (const [k, [cu, cv]] of Object.entries(cell) as Array<[Kind, [number, number]]>) {
+    const g = new PlaneGeometry(1, 1);
+    g.rotateX(-Math.PI / 2);
+    const uv = g.getAttribute('uv');
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (cu + uv.getX(i)) / 2, (cv + uv.getY(i)) / 2);
+    decal.set(k, g);
+  }
+  const tuft = new PlaneGeometry(1.3, 0.85);
+  tuft.translate(0, 0.42, 0);
+  // Chances per spot: [puddle, leaves, trash, rubble, tuft].
+  const odds = (onStreet: boolean, g: GroundKind): number[] =>
+    onStreet ? [0.1, 0.04, 0.05, 0.04, 0]
+    : g === 'forest' ? [0.02, 0.22, 0, 0.01, 0.06]
+    : g === 'grass' || g === 'jungle' ? [0.03, 0.05, 0.02, 0.02, 0.14]
+    : [0.06, 0.03, 0.05, 0.07, 0.1];
+  const kinds: Kind[] = ['puddle', 'leaves', 'trash', 'rubble', 'tuft'];
+  const rng = new Rng(m.seed + 91);
+  const B = m.bounds;
+  const G = 4;
+  for (let z = B.minZ + 2; z < B.maxZ - 2; z += G) {
+    for (let x = B.minX + 2; x < B.maxX - 2; x += G) {
+      const px = x + rng.range(-1.6, 1.6);
+      const pz = z + rng.range(-1.6, 1.6);
+      const roll = rng.next();
+      const size = rng.range(1, 2.4);
+      const yaw = rng.range(0, Math.PI * 2);
+      if (isWater(m, px, pz) || onBridge(m, px, pz, 1)) continue;
+      const sd = streetDist(m, px, pz).d;
+      const o = odds(sd < 0, areaAt(m, px, pz)?.ground ?? m.defaultGround);
+      let acc = 0;
+      let kind: Kind | null = null;
+      for (let i = 0; i < kinds.length; i++) {
+        acc += o[i]!;
+        if (roll < acc) {
+          kind = kinds[i]!;
+          break;
+        }
+      }
+      if (!kind) continue;
+      if (lots.some((l) => l.kind !== 'tree' && Math.hypot(px - l.x, pz - l.z) < Math.max(l.w, l.d) / 2 + 0.4)) continue;
+      if (m.landmarks.some((l) => Math.abs(px - l.x) < l.hx + 1 && Math.abs(pz - l.z) < l.hz + 1)) continue;
+      const y = heightAt(m, px, pz);
+      const b = chunkOf(px, pz);
+      if (kind === 'tuft') {
+        for (let i = 0; i < 2; i++) {
+          const mt = new Matrix4().makeRotationY(yaw + (i * Math.PI) / 2).setPosition(px, y, pz);
+          b.cards.of(mats.frond).add(tuft, mt, [0.95, 1.1, 0.7]);
+        }
+        continue;
+      }
+      const s = kind === 'puddle' ? size * 1.3 : size;
+      const mt = new Matrix4().makeRotationY(yaw).scale(new Vector3(s, 1, s)).setPosition(px, y + (sd < 0 ? 0.045 : 0.03), pz);
+      b.solid.of(mats.litter).add(decal.get(kind)!, mt);
+    }
+  }
 }
 
 /** Street ribbons with round joints; world-space UVs keep the texture seamless. */
@@ -812,6 +993,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
 
   buildGround(m, mats, group);
   buildStreets(m, mats, chunkOf);
+  buildQuays(m, mats, chunkOf);
+  buildScatter(m, lots, mats, chunkOf);
   const boats: Array<{ lane: FerryLane; group: Group }> = [];
   buildBridges(m, chunkOf, boats);
   for (const bt of boats) group.add(bt.group);

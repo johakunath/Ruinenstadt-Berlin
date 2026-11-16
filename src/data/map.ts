@@ -232,6 +232,74 @@ export function polyEdgeDist(poly: readonly Pt[], x: number, z: number): number 
   return lineDist([...poly, poly[0] as Pt], x, z);
 }
 
+/** Smooth deterministic noise in about [-1, 1] (sums of sines), for banks and relief. */
+export function wobble(x: number, z: number, f = 1): number {
+  return (
+    (Math.sin(x * 0.11 * f + Math.sin(z * 0.07 * f) * 2.1) * Math.cos(z * 0.13 * f + Math.sin(x * 0.05 * f) * 1.7) +
+      0.5 * Math.sin((x + z) * 0.23 * f + 1.3)) /
+    1.5
+  );
+}
+
+/** Urban banks (cobbles or asphalt areas) are straight stone quays; the rest wobble. */
+export function isQuay(m: MapDef, x: number, z: number): boolean {
+  const g = areaAt(m, x, z)?.ground ?? m.defaultGround;
+  return g === 'cobbles' || g === 'asphalt';
+}
+
+/** Meters the natural bank moves into (+) or out of (-) the water here. */
+function bankShift(m: MapDef, x: number, z: number): number {
+  if (isQuay(m, x, z)) return 0;
+  // Bridge and ferry heads keep the authored width so decks always reach land.
+  for (const b of m.bridges) if (Math.hypot(x - b.x, z - b.z) < b.len / 2 + 6) return 0;
+  return 2.2 * wobble(x, z, 2.2) + 0.8 * wobble(z, x, 5);
+}
+
+// Relief: low rolling ground in parks and forests, flat on streets, near water, buildings and
+// landmarks. Precomputed on a 2 m grid per map (bilinear lookup) because heightAt runs per frame.
+const RELIEF_CELL = 2;
+const RELIEF_AMP: Record<GroundKind, number> = { cobbles: 0, asphalt: 0, grass: 0.6, forest: 1.5, jungle: 1.2 };
+const reliefGrids = new WeakMap<MapDef, { nx: number; nz: number; v: Float32Array }>();
+
+function smooth01(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
+}
+
+function reliefSample(m: MapDef, x: number, z: number): number {
+  const amp = RELIEF_AMP[areaAt(m, x, z)?.ground ?? m.defaultGround];
+  if (amp === 0) return 0;
+  let f = smooth01((streetDist(m, x, z).d - 3) / 10);
+  for (const h of m.hills) f = Math.min(f, smooth01((Math.hypot(x - h.x, z - h.z) - h.r - h.slope - 2) / 6));
+  for (const t of m.terraces) f = Math.min(f, inPoly(t.poly, x, z) ? 0 : smooth01((polyEdgeDist(t.poly, x, z) - 2) / 6));
+  for (const l of m.landmarks) f = Math.min(f, smooth01((Math.hypot(x - l.x, z - l.z) - Math.max(l.hx, l.hz) - l.clear) / 6));
+  if (f === 0) return 0;
+  for (const [dx, dz] of [[0, 0], [5, 0], [-5, 0], [0, 5], [0, -5]] as const) if (isWater(m, x + dx, z + dz)) return 0;
+  return amp * f * (0.5 + 0.5 * wobble(x + 40, z - 17, 0.45));
+}
+
+/** Rolling ground height (0 where the map is flat). */
+export function reliefAt(m: MapDef, x: number, z: number): number {
+  const B = m.bounds;
+  let g = reliefGrids.get(m);
+  if (!g) {
+    const nx = Math.ceil((B.maxX - B.minX) / RELIEF_CELL) + 1;
+    const nz = Math.ceil((B.maxZ - B.minZ) / RELIEF_CELL) + 1;
+    const v = new Float32Array(nx * nz);
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = reliefSample(m, B.minX + i * RELIEF_CELL, B.minZ + j * RELIEF_CELL);
+    g = { nx, nz, v };
+    reliefGrids.set(m, g);
+  }
+  const fx = Math.max(0, Math.min(g.nx - 1.001, (x - B.minX) / RELIEF_CELL));
+  const fz = Math.max(0, Math.min(g.nz - 1.001, (z - B.minZ) / RELIEF_CELL));
+  const i = Math.floor(fx);
+  const j = Math.floor(fz);
+  const u = fx - i;
+  const w = fz - j;
+  const at = (a: number, b: number): number => g.v[b * g.nx + a] ?? 0;
+  return (at(i, j) * (1 - u) + at(i + 1, j) * u) * (1 - w) + (at(i, j + 1) * (1 - u) + at(i + 1, j + 1) * u) * w;
+}
+
 export function heightAt(m: MapDef, x: number, z: number): number {
   let h = 0;
   for (const hill of m.hills) {
@@ -245,7 +313,7 @@ export function heightAt(m: MapDef, x: number, z: number): number {
     const s = onStair(t, x, z);
     if (s) h = Math.max(h, t.h * Math.max(0, Math.min(1, stairLocal(s, x, z).along)));
   }
-  return h;
+  return h + reliefAt(m, x, z);
 }
 
 /** Minimum distance between two street lamps. */
@@ -267,7 +335,20 @@ export function terraceWall(m: MapDef, x: number, z: number): boolean {
   return false;
 }
 
+/** Water with irregular natural banks (`bankShift`); quays and bridge heads keep the authored line. */
 export function isWater(m: MapDef, x: number, z: number): boolean {
+  if (m.islands.some((p) => inPoly(p, x, z))) return false;
+  const near = m.rivers.some((r) => lineDist(r.pts, x, z) < r.width / 2 + 3.2) || m.lakes.some((p) => inPoly(p, x, z) || polyEdgeDist(p, x, z) < 3.2);
+  if (!near) return false;
+  const e = bankShift(m, x, z);
+  return (
+    m.rivers.some((r) => lineDist(r.pts, x, z) < r.width / 2 + e) ||
+    m.lakes.some((p) => (inPoly(p, x, z) ? polyEdgeDist(p, x, z) > -e : polyEdgeDist(p, x, z) < e))
+  );
+}
+
+/** Water by the authored lines only (no wobble); for quay walls. */
+export function isWaterPlain(m: MapDef, x: number, z: number): boolean {
   if (m.islands.some((p) => inPoly(p, x, z))) return false;
   return m.lakes.some((p) => inPoly(p, x, z)) || m.rivers.some((r) => lineDist(r.pts, x, z) < r.width / 2);
 }
