@@ -190,6 +190,8 @@ export type SimEvent =
   | { type: 'shrine'; id: import('../data/progression').ShrineId; x: number; z: number }
   | { type: 'hidden'; x: number; z: number; found: number; total: number }
   | { type: 'trade' }
+  /** A purchase went through (A2: coin sound). */
+  | { type: 'buy' }
   | { type: 'streak'; kills: number; scrap: number }
   | { type: 'dodge' }
   | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number }

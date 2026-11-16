@@ -15,3 +15,6 @@ Status: open. Review of PRs #5, #7, #9, #10 (2026-11-16). The ports are exact: a
 Fixed in PR #18: Spürnase (camp luck upgrade) counts for loot; `power` compares weapon kinds by damage per second as 2D.
 
 Done when: unit tests per row; `npm run check`.
+
+## Handover (Opus 5.5, 2026-11-16)
+1 first material by role (walker/runner Stoff, brute Metall, spitter Chemie, raptor/crow Kabel), 2/3 `MapDef.district` and `flavor` reach `lootCtx` through `Level` (Köpenick 0, no flavor), 4 Zutaten drop since M13, 6 `elementBonus` renamed `eliteBonus`, 7 duplicate `DIFFICULTIES` removed (test moved to `src/data/difficulty.ts` values).

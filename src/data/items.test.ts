@@ -1,3 +1,4 @@
+import { DIFFICULTIES } from './difficulty';
 import { describe, expect, test } from 'vitest';
 import * as items from './items';
 import * as names from './item-names';
@@ -209,7 +210,8 @@ describe('ported item and progression data', () => {
   });
 
   test('difficulty and weapon damage factors preserve the current 2D balance', () => {
-    expect(progression.DIFFICULTIES.map(d => [d.hpMultiplier, d.damageMultiplier, d.luck, d.scrapMultiplier]))
+    // 2D DIFF as ratios to Normal (hp 1.75, damage 1.45), the single copy in src/data/difficulty.ts.
+    expect(DIFFICULTIES.map(d => [+(d.hp * 1.75).toFixed(4), +(d.dmg * 1.45).toFixed(4), d.luck, d.scrap]))
       .toEqual([[0.7, 0.6, 0, 1], [1.75, 1.45, 0, 1], [2.15, 1.75, 4, 1.3]]);
     expect(Object.values(items.WEAPON_KINDS).map(kind => kind.damageFactor)).toEqual([1, 2.3, 0.85, 1.45]);
   });

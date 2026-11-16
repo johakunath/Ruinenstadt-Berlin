@@ -24,7 +24,7 @@ export interface HeroStats {
   affixes: Record<AffixId, number>;
   elements: ElementId[];
   elementChance: number;
-  elementBonus: number;
+  eliteBonus: number;
   weight: number;
   elementPower: number;
   damage: number;
@@ -113,7 +113,7 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
     kind, affixes: a, elements,
     legendary: SLOTS.flatMap((slot) => { const it = eq[slot]; const b = it ? baseOf(it) : ''; return b in LEGENDARY_POWERS ? [b as LegendaryId] : []; }),
     elementChance: wm.some(m => m.element) ? .5 : .3,
-    elementBonus: wm.reduce((n, m) => n + (m.eliteBossBonus ?? 0), 0),
+    eliteBonus: wm.reduce((n, m) => n + (m.eliteBossBonus ?? 0), 0),
     weight: wm.find(m => m.heavyHitEvery)?.heavyHitEvery ?? 0,
     elementPower: Math.max(0, 1 + a.el / 100 + .25 * pk('elp')),
     damage: Math.max(1, w.value * (1 + .07 * upg('dmg') + .15 * pk('dmg') + a.dmg / 100 + DRILL.damage * drill) * (pk('m_dampf') && kind === 'hammer' ? 1.7 : 1)

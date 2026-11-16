@@ -98,7 +98,16 @@ describe('2D audio port', () => {
 it('attenuates distant enemy cues and keeps stereo pan bounded', async()=>{
   const {spatialAudio}=await import('./audio');
   expect(spatialAudio(0,0)).toEqual({volume:1,pan:0});
-  expect(spatialAudio(8,0).volume).toBeLessThan(1);
-  expect(spatialAudio(50,0)).toEqual({volume:0,pan:1});
+  expect(spatialAudio(8,0).volume).toBeCloseTo((1-8/(650/30))**2);
+  expect(spatialAudio(650/30,0).volume).toBe(0);
+  expect(spatialAudio(50,0)).toEqual({volume:0,pan:.6});
   expect(spatialAudio(-8,0).pan).toBeLessThan(0);
+});
+
+it('beats under 30 % life every 0.9 s (2D heartbeat)', async()=>{
+  const {heartbeat}=await import('./audio');
+  expect(heartbeat(0,.1,.5).beat).toBe(false);
+  let t=0,n=0;
+  for(let i=0;i<180;i++){const h=heartbeat(t,1/60,.2);t=h.timer;if(h.beat)n++;}
+  expect(n).toBe(4);
 });

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 760" font-family="Inter, Arial, sans-serif">
+  <rect width="960" height="760" fill="#0e1517"/>
+  <text x="24" y="34" fill="#f0d9b0" font-size="20" font-weight="700">M19 S3-Tunnel Köpenick → Warschauer Straße · drei Layouts (Draufsicht, Beispielwerte)</text>
+  <text x="24" y="56" fill="#b5aa98" font-size="13">Grau: Gleisbett begehbar · Gelb: Bahnsteig · Rot: Kampf · Grün: Nebengang mit Überraschung · Blau: Generator + Der Schaffner</text>
+
+  <!-- A -->
+  <g transform="translate(24,80)">
+    <text fill="#ef9f27" font-size="16" font-weight="700">A · Lange Strecke (2D Route A)</text>
+    <text y="18" fill="#b5aa98" font-size="12">Ein gekrümmter Tunnel, 7 Abschnitte mit Gittern, Geisterbahnhof in der Mitte. ~600 m, 22 Kämpfe in Paketen. Keine Abzweige.</text>
+    <path d="M20 120 C 200 40, 380 200, 560 110 S 820 60, 900 120" fill="none" stroke="#3b4447" stroke-width="34" stroke-linecap="round"/>
+    <path d="M20 120 C 200 40, 380 200, 560 110 S 820 60, 900 120" fill="none" stroke="#6b5a48" stroke-width="2" stroke-dasharray="6 6"/>
+    <rect x="0" y="92" width="70" height="56" fill="#d8b64e" opacity=".5"/><text x="8" y="166" fill="#f0d9b0" font-size="11">Köpenick</text>
+    <rect x="430" y="100" width="90" height="56" fill="#d8b64e" opacity=".5"/><text x="420" y="174" fill="#f0d9b0" font-size="11">Geisterbahnhof</text>
+    <rect x="860" y="92" width="70" height="56" fill="#d8b64e" opacity=".5"/><text x="850" y="166" fill="#f0d9b0" font-size="11">Warschauer</text>
+    <g fill="#c23a2e">
+      <circle cx="150" cy="78" r="9"/><circle cx="250" cy="110" r="9"/><circle cx="340" cy="150" r="9"/><circle cx="610" cy="98" r="9"/><circle cx="700" cy="82" r="9"/><circle cx="790" cy="90" r="9"/>
+    </g>
+    <g stroke="#9aa4b0" stroke-width="3"><path d="M200 70v28M380 145v28M560 92v28M740 70v28"/></g>
+    <circle cx="880" cy="120" r="14" fill="none" stroke="#7dd3ff" stroke-width="3"/>
+  </g>
+
+  <!-- B -->
+  <g transform="translate(24,310)">
+    <text fill="#ef9f27" font-size="16" font-weight="700">B · Strecke mit Nebengängen (Empfehlung, wie M19 geplant)</text>
+    <text y="18" fill="#b5aa98" font-size="12">Kürzer (~400 m), 5 Kämpfe auf der Strecke, 3 Sackgassen 20–40 m: Kiste · Mini-Boss · versteckter Segen. Generator + Schaffner am Ziel.</text>
+    <path d="M20 120 C 220 60, 420 170, 620 110 S 840 90, 900 120" fill="none" stroke="#3b4447" stroke-width="34" stroke-linecap="round"/>
+    <path d="M20 120 C 220 60, 420 170, 620 110 S 840 90, 900 120" fill="none" stroke="#6b5a48" stroke-width="2" stroke-dasharray="6 6"/>
+    <rect x="0" y="92" width="70" height="56" fill="#d8b64e" opacity=".5"/><text x="8" y="166" fill="#f0d9b0" font-size="11">Köpenick</text>
+    <rect x="860" y="92" width="70" height="56" fill="#d8b64e" opacity=".5"/><text x="850" y="166" fill="#f0d9b0" font-size="11">Warschauer</text>
+    <g stroke="#3b4447" stroke-width="20" stroke-linecap="round" fill="none"><path d="M240 92 L 260 40"/><path d="M500 140 L 520 196"/><path d="M720 100 L 760 50"/></g>
+    <g fill="#75d68a"><circle cx="262" cy="36" r="10"/><circle cx="522" cy="200" r="10"/><circle cx="762" cy="46" r="10"/></g>
+    <text x="276" y="40" fill="#75d68a" font-size="11">Kiste</text><text x="536" y="204" fill="#75d68a" font-size="11">Mini-Boss</text><text x="776" y="50" fill="#75d68a" font-size="11">Segen</text>
+    <g fill="#c23a2e"><circle cx="150" cy="86" r="9"/><circle cx="350" cy="128" r="9"/><circle cx="450" cy="148" r="9"/><circle cx="640" cy="108" r="9"/><circle cx="820" cy="104" r="9"/></g>
+    <circle cx="880" cy="120" r="14" fill="none" stroke="#7dd3ff" stroke-width="3"/>
+  </g>
+
+  <!-- C -->
+  <g transform="translate(24,540)">
+    <text fill="#ef9f27" font-size="16" font-weight="700">C · Bahnhofskette</text>
+    <text y="18" fill="#b5aa98" font-size="12">Drei große Hallen mit kurzen Tunneln dazwischen. Jede Halle eine Arena mit 2–3 Wellen, der Schaffner in der letzten. Wenig Laufweg.</text>
+    <g fill="#3b4447"><rect x="20" y="60" width="150" height="120"/><rect x="390" y="50" width="170" height="140"/><rect x="760" y="60" width="150" height="120"/></g>
+    <g stroke="#3b4447" stroke-width="30"><path d="M170 120 H 390"/><path d="M560 120 H 760"/></g>
+    <g fill="#d8b64e" opacity=".5"><rect x="20" y="60" width="150" height="24"/><rect x="390" y="50" width="170" height="24"/><rect x="760" y="60" width="150" height="24"/></g>
+    <text x="40" y="200" fill="#f0d9b0" font-size="11">Köpenick</text><text x="420" y="208" fill="#f0d9b0" font-size="11">Ostkreuz (Geister)</text><text x="780" y="200" fill="#f0d9b0" font-size="11">Warschauer</text>
+    <g fill="#c23a2e"><circle cx="95" cy="130" r="12"/><circle cx="280" cy="120" r="9"/><circle cx="475" cy="130" r="12"/><circle cx="660" cy="120" r="9"/></g>
+    <circle cx="835" cy="130" r="16" fill="none" stroke="#7dd3ff" stroke-width="3"/>
+  </g>
+</svg>

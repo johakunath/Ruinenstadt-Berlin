@@ -454,6 +454,7 @@ export function buyConsumable(s: Sim, id: 'verband' | 'molotow'): { ok: boolean;
   if (s.inventory.scrap < cost) return { ok: false, text: `Dir fehlen ${cost - s.inventory.scrap} Schrott.` };
   s.inventory.scrap -= cost;
   s.inventory.consumables = { verband: 0, molotow: 0, ...s.inventory.consumables, [id]: have + 1 };
+  s.events.push({ type: 'buy' });
   return { ok: true, text: 'Gekauft.' };
 }
 
@@ -466,6 +467,7 @@ export function buyOffer(s: Sim, i: number): { ok: boolean; text: string } {
   s.inventory.scrap -= o.price;
   s.inventory.bag.push(o.item);
   stock[i] = null;
+  s.events.push({ type: 'buy' });
   return { ok: true, text: 'Gekauft.' };
 }
 
@@ -477,6 +479,7 @@ export function buyHeal(s: Sim): { ok: boolean; text: string } {
   const amount = Math.round(s.stats.maxHp - s.player.hp);
   s.player.hp = s.stats.maxHp;
   s.events.push({ type: 'heal', amount, source: 'trader' });
+  s.events.push({ type: 'buy' });
   return { ok: true, text: 'Geheilt.' };
 }
 

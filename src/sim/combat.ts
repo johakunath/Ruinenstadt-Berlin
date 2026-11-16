@@ -95,7 +95,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   }
   if (pk(s, 'kimme')) damage *= 1 + Math.min(0.32, (0.04 * dist) / STATUS.kimmeStep);
   if (a.banner && Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) damage *= 1.5;
-  if (tough(e)) damage *= (1 + s.stats.elementBonus) * (1 + 0.25 * pk(s, 'breaker')) * (hasL(s, 'auge') ? 1.25 : 1);
+  if (tough(e)) damage *= (1 + s.stats.eliteBonus) * (1 + 0.25 * pk(s, 'breaker')) * (hasL(s, 'auge') ? 1.25 : 1);
   if (pk(s, 'rush') && a.streak.n >= 10) damage *= 1 + 0.02 * Math.floor(a.streak.n / 10);
   if (e.acid > 0) damage *= 1 + STATUS.acidBonus * s.stats.elementPower;
   // M12: open bodies take more, armored elites half until they open; elemental hits meet the type's resistance.

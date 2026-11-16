@@ -161,3 +161,21 @@ describe('landing and pickup', () => {
     expect(lootContext(lucky).luck).toBe(lootContext(base).luck + 3);
   });
 });
+
+describe('L2 follow-ups', () => {
+  it('the first material of a kill follows the enemy role (2D EMAT)', () => {
+    const sim = flat();
+    const got = new Set<string>();
+    for (let i = 0; i < 3000; i++) {
+      sim.drops.length = 0;
+      killDrops(sim, spawnEnemy(sim, 2, 2, 'brute'));
+      const m = sim.drops.find(d => d.content.kind === 'material');
+      if (m && m.content.kind === 'material') got.add(m.content.id);
+    }
+    expect([...got]).toEqual(['metall']);
+  });
+  it('the map district reaches the loot context', () => {
+    const sim = flat();
+    expect(sim.lootCtx.district).toBe(0);
+  });
+});
