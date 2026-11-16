@@ -18,43 +18,42 @@ Six campaigns, skill `johannes`: all won, 0 deaths, about 8 min each. Bosses fel
 
 | What | Before | After |
 |---|---|---|
-| Enemy life over the 20 waves (`waveTier`) | ×1.0 → ×1.76 | ×1.0 → ×3.47 |
-| Enemy damage over the 20 waves | ×1.0 → ×1.48 | ×1.0 → ×2.14 |
+| Normal waves | 20 | 27 |
+| Enemy life over the waves (`waveTier`) | ×1.0 → ×1.76 | ×1.0 → ×3.47 |
+| Enemy damage over the waves | ×1.0 → ×1.48 | ×1.0 → ×2.14 |
 | Boss life: Feldwebel, Turmwächter, Rex, Hauptmann | 380, 620, 900, 1300 | 900, 2000, 3600, 4400 |
 | Boss and elite cooldowns | Ran only while walking (specials rare) | Run always |
 | Roster | Three types, bosses strike only | M12 |
 
-## After the pass (2026-11-17, Normal, seed 1)
+## Johannes' first full run (telemetry, 2026-11-16, PC, pad, old roster and numbers)
 
-| Skill | Campaigns won | Deaths per campaign | Minutes per campaign |
-|---|---|---|---|
-| good (10 % missed, 0.18 to 0.3 s) | 4/4 | 1.3 | 15.9 |
-| johannes (30 % missed, 0.25 to 0.5 s) | 6/6 | 3.3 | 19.3 |
-| weak (50 % missed, 0.35 to 0.7 s) | 4/4 | 3.8 | 21.7 |
+Won without a death in 29.6 min, 240 kills. Damage taken over the whole map: about one life bar (105), zero in 8 of 13 fights. Fights took 13 to 51 s, about 1.4 times the bot's time. The bot with the 2D start values (30 % of telegraphs missed) took 10 to 20 % in nearly every fight, so it was fitted: `SKILL_DEFAULT` is now 12 % missed, 0.2 to 0.35 s reaction, attacking 70 % of the time. One run against three enemy types: refit after the next playtest.
 
-Skill `johannes`, six campaigns:
+## After the pass (2026-11-17, Normal, seed 1, 27 waves, fitted skill)
+
+Skill `johannes`, six campaigns: all won, 1.2 deaths and 17.2 min per campaign (0 to 2 deaths per run).
 
 | Encounter | Deaths per run | Time s | Damage taken | Lowest life | Power |
 |---|---|---|---|---|---|
-| Bahnhofsvorplatz | 0.0 | 17 | 0 % | 100 % | 36 |
-| Lindenstraße | 0.0 | 18 | 3 % | 97 % | 39 |
-| Forum | 0.0 | 25 | 33 % | 74 % | 47 |
-| ★ Dammbrücke (Feldwebel) | 0.3 | 27 | 56 % | 61 % | 50 |
-| Kietz | 0.0 | 23 | 21 % | 84 % | 83 |
-| Müggelheimer Straße | 0.0 | 24 | 16 % | 89 % | 99 |
-| Teufelssee | 0.0 | 39 | 41 % | 78 % | 117 |
-| ★ Müggelturm (Turmwächter) | 1.3 | 24 | 64 % | 47 % | 143 |
-| Fähre Grünau | 0.2 | 21 | 10 % | 92 % | 199 |
-| Flugfeld Johannisthal | 0.0 | 23 | 14 % | 88 % | 211 |
-| Dino-Wiese | 0.0 | 38 | 16 % | 90 % | 237 |
-| ★ Riesenrad (Rex) | 1.5 | 27 | 74 % | 43 % | 243 |
-| ★ Rathausplatz (Hauptmann) | 0.0 | 32 | 75 % | 50 % | 264 |
+| Bahnhofsvorplatz | 0.0 | 27 | 3 % | 97 % | 36 |
+| Lindenstraße | 0.0 | 36 | 15 % | 85 % | 39 |
+| Forum | 0.0 | 39 | 27 % | 78 % | 46 |
+| ★ Dammbrücke (Feldwebel) | 0.5 | 34 | 60 % | 52 % | 52 |
+| Kietz | 0.0 | 39 | 31 % | 85 % | 96 |
+| Müggelheimer Straße | 0.0 | 42 | 29 % | 87 % | 108 |
+| Teufelssee | 0.0 | 40 | 27 % | 87 % | 166 |
+| ★ Müggelturm (Turmwächter) | 0.7 | 24 | 59 % | 52 % | 184 |
+| Fähre Grünau | 0.0 | 41 | 24 % | 88 % | 209 |
+| Flugfeld Johannisthal | 0.0 | 43 | 23 % | 91 % | 230 |
+| Dino-Wiese | 0.0 | 44 | 21 % | 92 % | 271 |
+| ★ Riesenrad (Rex) | 0.0 | 38 | 88 % | 56 % | 288 |
+| ★ Rathausplatz (Hauptmann) | 0.0 | 37 | 51 % | 73 % | 317 |
 
-Damage taken is the winning try, as a share of max life (above 100 % means healing during the fight).
+Damage taken is the winning try, as a share of max life (healing during the fight lets it pass the lowest life). Skills `good` and `weak` were not rerun on these numbers.
 
 ## Findings
 
-- Bosses are the fights now; Turmwächter and Rex cost one to two tries each. Deaths vary a lot between runs (0 to 8) with the gear that dropped.
-- Normal fights in zone 3 are light (10 to 16 % damage): the hero outgrows them. If the playtest still reads as too easy, raise zone 3 pressure first (more alive at once, more elites) rather than more life.
-- The first two fights cost nothing. That is the gentle start B5 asked for; check that it is not dull.
+- Bosses are the fights now; Feldwebel and Turmwächter cost a try in about every second run, Rex takes the most life.
+- Normal fights cost 20 to 30 % of life in every zone and fall slightly toward zone 3: the hero outgrows them a little, as B10 wants. If the playtest still reads as too easy, raise zone 3 pressure first (more alive at once, more elites) rather than more life.
+- The first fight costs almost nothing. That is the gentle start B5 asked for; check that it is not dull.
 - Power grows about eightfold over one district. With six districts planned this needs a decision before M15 (2D finding: Mitte wall, late snowball).
