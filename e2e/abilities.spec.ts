@@ -14,9 +14,19 @@ test('powers, ultimate and blessing choice work through the real UI',async({page
   await page.waitForTimeout(250);
   expect(await page.evaluate(()=>window.__game!.sim().tick)).toBe(tick);
   await page.screenshot({path:info.outputPath('blessings-1280x720.png')});
+  await expect(page.locator('.pcard')).toHaveCount(3);
+  await expect(page.locator('.pcard.ra .prar')).toHaveText('Selten · zwei Stufen');
+  await page.waitForTimeout(400);
   await page.keyboard.press('Digit1');
   await expect(page.locator('#blessings')).toBeHidden();
   expect(await page.evaluate(()=>window.__game!.sim().statContext.perks.dmg)).toBe(1);
+  // Keyboard consumables: Q heals over time when hurt, G throws the bottle.
+  await page.evaluate(()=>{const s=window.__game!.sim();s.player.hp=20;});
+  await page.keyboard.press('KeyQ');
+  await page.waitForFunction(()=>window.__game!.sim().abilities.hot>0);
+  await expect(page.locator('#btn-verband .act-count')).toHaveText('0');
+  await page.keyboard.press('KeyX');
+  expect(await page.evaluate(()=>window.__game!.sim().equipment.w?.power)).toBe(1);
   expect(errors).toEqual([]);
 });
 
@@ -28,9 +38,17 @@ test('phone power controls accept touch without moving the stick',async({browser
   await expect(page.locator('#btn-power')).toBeVisible();
   await page.locator('#btn-power').tap();
   await page.waitForFunction(()=>(window.__game?.sim().abilities.powerCd??0)>0);
-  await expect(page.locator('#btn-power')).toBeDisabled();
+  await expect(page.locator('#btn-power')).not.toHaveClass(/ready/);
+  await expect(page.locator('#btn-power .act-cd')).not.toBeEmpty();
   await page.locator('#btn-ultimate').tap();
   await page.waitForFunction(()=>(window.__game?.sim().abilities.ultimateCd??0)>0);
+  // Consumables sit in the thumb arc too: the Molotow leaves the pouch, the Verband only when hurt.
+  await page.locator('#btn-verband').tap();
+  expect(await page.evaluate(()=>window.__game!.sim().inventory.consumables?.verband)).toBe(1);
+  await page.waitForFunction(()=>window.__game!.sim().player.state==='move');
+  await page.locator('#btn-molotow').tap();
+  await page.waitForFunction(()=>window.__game!.sim().inventory.consumables?.molotow===0);
+  await expect(page.locator('#btn-molotow')).toHaveClass(/off/);
   await page.screenshot({path:info.outputPath('combat-phone.png')});
   await context.close();
 });

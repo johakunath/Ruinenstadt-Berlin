@@ -9,9 +9,8 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | Task | Owner | Status / start file |
 |---|---|---|
 | S2 + M7/M8/M9 first playable pass | Codex | done (first pass, PR #17): `docs/tasks/combat-audio-migration.md` |
-| M7/M8 combat parity and polish | Claude · Opus high | open: follow-ups in `docs/tasks/combat-audio-migration.md`; retain the first pass |
+| M7/M8 parity, M9 consumable controls, M16 run content | Claude | done (review of PR #17 and completion, same task file); Johannes playtest open |
 | M12 enemy roster and boss attacks | Claude | open: roadmap below |
-| M16 run content; then M9 consumable buttons | Codex rules, Claude world | open: roadmap below |
 
 Finish: task status + ≤8-line handover, update this queue, update status only for player-visible changes. Draft PR → one review → fixes → ready/CI. Do not re-run prototype acceptance.
 
@@ -31,11 +30,11 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Built; Johannes playtest open |
 | Inventory, equip, compare, salvage, sets | M5 | Implemented; M4 collection hookup done |
 | Save, wave checkpoint, difficulty | M6 | Done (PR pending); playtest open |
-| Weapons and finishers | M7 | First pass built; animation/feel/parity polish open (task above) |
-| Powers, ultimates, blessings, families and duos | M8 | First pass built; remaining 2D perk effects/mods/duos open |
-| Touch layout for more buttons | M9 | Power/ultimate built; consumables with M16 |
+| Weapons and finishers | M7 | Built: own clips, models, arcs and finishers per weapon; playtest and balance open |
+| Powers, ultimates, blessings, families and duos | M8 | Built: all 12 powers, all 50 blessings with 2D offer rules, weapon mods; playtest open |
+| Touch layout for more buttons | M9 | Built: thumb arc with power, switch, ultimate, Verband, Molotow; spacing after the Tab S9 playtest |
 | Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Open (placeholders) |
-| Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Open |
+| Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Built: one event per stretch between fights, every type once per run; places are seeded, M16b moves them into side branches |
 | Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
 | World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
 | Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Open |
