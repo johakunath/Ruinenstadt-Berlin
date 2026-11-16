@@ -136,7 +136,8 @@ export function killDrops(sim: Sim, e: Enemy): void {
   const il = lootLevel(sim);
   const c = lootContext(sim);
   const mat = 1 + 0.5 * pk(sim, 'mat');
-  const cook = sim.statContext.survivors.koechin ? 2 : 1;
+  // Späti-Tüte (legendary): Döner and supplies twice as often.
+  const cook = (sim.statContext.survivors.koechin ? 2 : 1) * (sim.stats.legendary.includes('spaeti') ? 2 : 1);
   creditScrap(sim, (SCRAP[kind] ?? 1) * (e.elite ? 4 : 1), e.x, e.z, true);
   // 2D elites: always an item one level up, a quarter of them rare or better.
   if (e.elite) spawnDrop(sim, e.x, e.z, { kind: 'item', item: lootItem(sim.rng, c, il + 1, sim.rng.next() < 0.25 ? 1 : 0) }, spread(sim, 0.5), spread(sim, 0.5));
@@ -168,7 +169,7 @@ export function breakDrops(sim: Sim, b: Breakable): void {
   const loot = pk(sim, 'loot') > 0;
   creditScrap(sim, Math.round(inside ? sim.rng.range(4, 8) : sim.rng.range(1, 4)) * (loot ? 2 : 1), x, z);
   // 2D: 15% a Verband or Molotow straight into the pouch (up to three each).
-  if (sim.rng.next() < 0.15) {
+  if (sim.rng.next() < 0.15 * (sim.stats.legendary.includes('spaeti') ? 2 : 1)) {
     const id = sim.rng.pick(['verband', 'molotow'] as const);
     if (addConsumable(sim, id)) sim.events.push({ type: 'note', text: id === 'verband' ? '+1 Verband' : '+1 Molotow', color: '#8fd16a', x, z });
   }

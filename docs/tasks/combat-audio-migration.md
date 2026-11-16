@@ -48,7 +48,9 @@ Source (2D, read only): `js/data.js` (`PERKS`, `FAM`, `KR`, `KIND`, `CONS`), `js
 | Enemy resistances, shield bearers, rain rules | Not in 3D yet (M12, M11c) |
 | Sprengmeister | Bigger fields; "explosions do not hurt you" has no effect until bombers exist |
 | Consumable source | Crates, bins and the starter pair; making them at the camp comes with M13 |
-| Legendary item powers (2D `hasL`) | Not part of this task |
+| Legendary item powers (2D `hasL`) | Done in the same PR as task L1 |
+| Fight circle | Removed (Johannes, 2026-11-16): fights are open; a wave left behind spawns around the hero |
+| Späti | Keeper behind the counter sells four items, Verband, Molotow and a full heal (M13b first version) |
 
 ## Follow-ups
 
@@ -58,7 +60,7 @@ Source (2D, read only): `js/data.js` (`PERKS`, `FAM`, `KR`, `KIND`, `CONS`), `js
 
 ## Checks
 
-`npm run check` (type check, 325 unit tests, build) and `npm run e2e` (17 browser tests) pass. Screenshots: `docs/proof/combat/`. No GPU measurement: effects are pooled, unlit and add no lights; cost on the PC and the Tab S9 is open.
+`npm run check` (type check, 343 unit tests, build) and `npm run e2e` (17 browser tests) pass. Screenshots: `docs/proof/combat/`. No GPU measurement: effects are pooled, unlit and add no lights; cost on the PC and the Tab S9 is open.
 
 ## Handover
 

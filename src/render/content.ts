@@ -71,6 +71,8 @@ export class ContentView {
   private readonly people = new Group();
   private trader: { root: Group; anim: Animator } | null = null;
   private captive: { root: Group; anim: Animator; ring: Mesh } | null = null;
+  /** One Späti keeper, standing behind the counter of the nearest Späti. */
+  private keeper: { root: Group; anim: Animator } | null = null;
   private built: RunContent | null = null;
   private time = 0;
 
@@ -159,7 +161,7 @@ export class ContentView {
     }
   }
 
-  private person(tint: 'trader' | 'captive'): { root: Group; anim: Animator } {
+  private person(tint: 'trader' | 'captive' | 'keeper'): { root: Group; anim: Animator } {
     const root = new Group();
     const model = cloneSkinned(this.assets.hero);
     root.add(model);
@@ -185,6 +187,18 @@ export class ContentView {
       const lantern = glowSprite('rgba(170,255,140,1)', 'rgba(70,200,60,0)', 1.5);
       lantern.position.set(0, -0.2, 0.1);
       attach('hand_l', lantern);
+    }
+    if (tint === 'keeper') {
+      // Flat cap and a striped apron: the Späti keeper.
+      const cap = new Mesh(new CylinderGeometry(0.15, 0.17, 0.07, 12), this.materials.surface({ color: 0x2f3b44, roughness: 0.9 }));
+      cap.position.y = 0.2;
+      const peak = new Mesh(new BoxGeometry(0.2, 0.02, 0.14), this.materials.surface({ color: 0x232c33, roughness: 0.9 }));
+      peak.position.set(0, 0.17, 0.14);
+      attach('Head', cap);
+      attach('Head', peak);
+      const apron = new Mesh(new BoxGeometry(0.4, 0.62, 0.05), this.materials.surface({ color: 0x9a3a2e, roughness: 0.95 }));
+      apron.position.set(0, -0.12, 0.17);
+      attach('spine_02', apron);
     }
     root.traverse((o) => { if ((o as Mesh).isMesh) o.castShadow = true; });
     this.people.add(root);
@@ -238,6 +252,19 @@ export class ContentView {
       t.root.rotation.y = Math.atan2(heroX - c.trader.x, heroZ - c.trader.z);
       t.anim.update(dt);
     } else if (this.trader) this.trader.root.visible = false;
+    let shop: { x: number; z: number; rot: number } | null = null;
+    for (const r of s.level.rests) if (r.keeper && Math.hypot(r.x - heroX, r.z - heroZ) < 45) shop = { ...r.keeper, rot: r.rot };
+    if (shop) {
+      this.keeper ??= this.person('keeper');
+      const k = this.keeper;
+      k.root.visible = true;
+      k.root.position.set(shop.x, groundY(shop.x, shop.z), shop.z);
+      // Faces the customer side, turns the head of the body a little toward the hero when close.
+      const toHero = Math.atan2(heroX - shop.x, heroZ - shop.z);
+      const d = Math.atan2(Math.sin(toHero - shop.rot), Math.cos(toHero - shop.rot));
+      k.root.rotation.y = shop.rot + Math.max(-0.9, Math.min(0.9, d));
+      k.anim.update(dt);
+    } else if (this.keeper) this.keeper.root.visible = false;
     if (c.captive) {
       if (!this.captive) {
         const p = this.person('captive');

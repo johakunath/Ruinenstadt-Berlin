@@ -1,5 +1,5 @@
 // Pure port of 2D js/state.js gear/stats/pwParts. No XP levels or daily modifiers.
-import { AFFIXES, ATTRIBUTE_STATS, IMPLICITS, IMPLANT_MODES, SET_BONUSES, SLOTS, SLOT_MAIN_STATS,
+import { AFFIXES, ATTRIBUTE_STATS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, SET_BONUSES, SLOTS, SLOT_MAIN_STATS, type LegendaryId,
   type AffixId, type AttributeKindId, type BaseId, type ElementId, type SetId, type SlotId, type WeaponKindId } from '../data/items';
 import { BASES } from '../data/item-names';
 import { WEAPON_MODS, type MealId } from '../data/crafting';
@@ -19,6 +19,8 @@ export interface StatContext {
 }
 export interface HeroStats {
   kind: WeaponKindId;
+  /** Legendary powers of the equipped items (2D `hasL`): the bases that have one. */
+  legendary: LegendaryId[];
   affixes: Record<AffixId, number>;
   elements: ElementId[];
   elementChance: number;
@@ -106,6 +108,7 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
   // Hero level is fixed at 1: the 2D (lv - 1) damage/life terms vanish.
   return {
     kind, affixes: a, elements,
+    legendary: SLOTS.flatMap((slot) => { const it = eq[slot]; const b = it ? baseOf(it) : ''; return b in LEGENDARY_POWERS ? [b as LegendaryId] : []; }),
     elementChance: wm.some(m => m.element) ? .5 : .3,
     elementBonus: wm.reduce((n, m) => n + (m.eliteBossBonus ?? 0), 0),
     weight: wm.find(m => m.heavyHitEvery)?.heavyHitEvery ?? 0,

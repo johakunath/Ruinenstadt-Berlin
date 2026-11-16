@@ -219,15 +219,6 @@ describe('M8 powers', () => {
     expect(s.abilities.projectiles).toHaveLength(0);
     expect(s.abilities.powerCd).toBe(0);
   });
-  it('a cast cannot leave the fight circle', () => {
-    const s = fresh('blade', {}, 1);
-    s.level.encounters.push({ id: 't', name: 'T', zone: 0, x: s.player.x, z: s.player.z, r: 3, waves: [], heal: 0 });
-    s.run.phase = 'fight';
-    run(s, 1, { power: true });
-    run(s, 20);
-    expect(Math.hypot(s.player.x - s.level.encounters[0]!.x, s.player.z - s.level.encounters[0]!.z)).toBeLessThanOrEqual(3);
-    s.level.encounters.length = 0;
-  });
 });
 
 describe('consumables', () => {

@@ -136,6 +136,8 @@ export interface Enemy {
   burnAcc: number;
   /** Verätzt: takes more damage (and is slower with Zersetzung). */
   acid: number;
+  /** Slowed to 60% (Krähenfeder shots). */
+  slow?: number;
   /** Elite (2D ×2.6 life, better loot); rescue guards carry `guard`. */
   elite?: boolean;
   guard?: boolean;

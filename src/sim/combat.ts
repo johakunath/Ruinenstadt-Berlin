@@ -2,13 +2,15 @@
 // through `strike`, every death through `killEnemy`, every hit on the hero through `hurtPlayer`.
 // Blessing and weapon-mod rules live here so a swing, a shot, a power and a burn all obey them.
 import { HIT_FEEL, PLAYER, type HitWeight } from '../data/combat';
-import type { ElementId } from '../data/items';
+import type { ElementId, LegendaryId } from '../data/items';
 import { PX } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { killDrops } from './loot';
 import { DT, type Enemy, type Sim } from './types';
 
 export const pk = (s: Sim, k: PerkId): number => s.statContext.perks[k] ?? 0;
+/** An equipped legendary with this power (2D `hasL`). */
+export const hasL = (s: Sim, id: LegendaryId): boolean => s.stats.legendary.includes(id);
 
 /** 2D knockback impulses (px/s) on the 3D scale: the blade's 240 is the old 3D light hit of 5. */
 export const knock = (px: number): number => px / 48;
@@ -82,7 +84,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   }
   if (pk(s, 'kimme')) damage *= 1 + Math.min(0.32, (0.04 * dist) / STATUS.kimmeStep);
   if (a.banner && Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) damage *= 1.5;
-  if (tough(e)) damage *= (1 + s.stats.elementBonus) * (1 + 0.25 * pk(s, 'breaker'));
+  if (tough(e)) damage *= (1 + s.stats.elementBonus) * (1 + 0.25 * pk(s, 'breaker')) * (hasL(s, 'auge') ? 1.25 : 1);
   if (pk(s, 'rush') && a.streak.n >= 10) damage *= 1 + 0.02 * Math.floor(a.streak.n / 10);
   if (e.acid > 0) damage *= 1 + STATUS.acidBonus * s.stats.elementPower;
   damage = Math.max(1, Math.round(damage));
@@ -102,6 +104,21 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (feel !== 'none' && kb > 0 && (!e.def.poise || feel === 'heavy')) stun(e, HIT_FEEL[feel].stagger / (e.def.boss ? 0.15 : 1));
   if (o.stun) stun(e, o.stun);
   if (crit && pk(s, 'stun')) stun(e, STATUS.critStun);
+  if (!o.noproc) {
+    const n = ++a.legHits;
+    // Kiezbox: every fourth hit stuns. Bassarm: every fifth hit chains to four.
+    if (hasL(s, 'kiezbox') && n % 4 === 0) stun(e, 0.5);
+    if (hasL(s, 'bassarm') && n % 5 === 0) chain(s, e, damage * 0.6, 4);
+    // Fernsehturm: a crit bursts into fire on the neighbors.
+    if (crit && hasL(s, 'turm')) {
+      for (const t of s.enemies) {
+        if (t === e || t.state === 'dead' || Math.hypot(t.x - e.x, t.z - e.z) >= 75 * PX) continue;
+        strike(s, t, damage * 0.6, { knock: knock(220), noproc: true, feel: 'none', element: 'fire' });
+        ignite(s, t, damage * 0.3, 2);
+      }
+      s.events.push({ type: 'impact', x: e.x, z: e.z, radius: 75 * PX, kind: 'boom' });
+    }
+  }
 
   if (!o.noproc) {
     for (const el of s.stats.elements) {
@@ -138,7 +155,12 @@ export function killEnemy(s: Sim, e: Enemy): void {
   a.streak.n++;
   a.streak.t = STATUS.streakTime;
   killDrops(s, e);
-  if (p.state !== 'dead') p.hp = Math.min(s.stats.maxHp, p.hp + s.stats.leech + s.stats.maxHp * 0.01 * pk(s, 'leech'));
+  if (p.state !== 'dead') p.hp = Math.min(s.stats.maxHp, p.hp + s.stats.leech + s.stats.maxHp * 0.01 * pk(s, 'leech') + (tough(e) && hasL(s, 'pickel') ? s.stats.maxHp * 0.15 : 0));
+  // Schaffnerkelle: a kill shortens the dodge cooldown (2D 0.5 s of 1.4 s). Zitadellenklinge: one second off the power.
+  if (hasL(s, 'schaffner')) p.dodgeCd = Math.max(0, p.dodgeCd - (0.5 / 1.4) * PLAYER.dodge.cooldown);
+  if (hasL(s, 'zitklinge')) a.powerCd = Math.max(0, a.powerCd - 1);
+  // Presslufthammer: a crit kill of a normal enemy sends a stunning ring.
+  if (hasL(s, 'pbrecher') && e.lastCrit && !e.def.boss) a.shocks.push({ x: e.x, z: e.z, r: 10 * PX, max: 95 * PX, hits: [e.id], mul: 0.7, stun: 0.5, knock: knock(260), acid: false, kind: 'small' }), s.events.push({ type: 'shock', x: e.x, z: e.z, radius: 95 * PX, kind: 'small' });
   if (pk(s, 'jagd')) {
     a.jagd.n = Math.min(STATUS.jagdMax, a.jagd.n + 1);
     a.jagd.t = STATUS.jagdTime;
@@ -163,6 +185,7 @@ export function updateStatuses(s: Sim): void {
   for (const e of s.enemies) {
     if (e.state === 'dead') continue;
     if (e.acid > 0) e.acid = Math.max(0, e.acid - DT);
+    if (e.slow && e.slow > 0) e.slow = Math.max(0, e.slow - DT);
     if (e.burn <= 0) continue;
     const d = e.bdps * Math.min(DT, e.burn);
     e.burn -= DT;
@@ -209,6 +232,12 @@ export function incomingDamage(s: Sim, raw: number): number {
 export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz: number): boolean {
   const p = s.player;
   if (p.state === 'dead' || p.invuln > 0) return false;
+  // Panzerplatte: one hit in five is blocked outright.
+  if (hasL(s, 'panzer') && s.rng.next() < 0.2) {
+    p.invuln = 0.3;
+    s.events.push({ type: 'note', text: 'geblockt', color: '#d6cfc0', x: p.x, z: p.z });
+    return false;
+  }
   const damage = incomingDamage(s, raw);
   p.hp = Math.max(0, p.hp - damage);
   p.hurtT = 0;
@@ -216,9 +245,10 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
   s.hitstop = Math.max(s.hitstop, PLAYER.hitByEnemyHitstop);
   s.events.push({ type: 'playerHit', x: p.x, z: p.z, dx, dz, damage });
   if (p.hp <= 0) {
-    if (pk(s, 'second') && !s.abilities.secondUsed) {
+    if ((pk(s, 'second') || hasL(s, 'herz')) && !s.abilities.secondUsed) {
       s.abilities.secondUsed = true;
-      p.hp = Math.round(s.stats.maxHp * STATUS.secondHp);
+      // Herz der Spree: back at 40% instead of 30%.
+      p.hp = Math.round(s.stats.maxHp * (hasL(s, 'herz') ? 0.4 : STATUS.secondHp));
       p.invuln = STATUS.secondInvuln;
       s.events.push({ type: 'secondWind' });
     } else {
@@ -232,6 +262,12 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
       s.events.push({ type: 'playerDie' });
       return true;
     }
+  }
+  // Rattenmantel: an acid wave around the hero, at most every 1.5 s.
+  if (hasL(s, 'rattenmantel') && s.abilities.ratT <= 0) {
+    s.abilities.ratT = 1.5;
+    s.abilities.shocks.push({ x: p.x, z: p.z, r: 10 * PX, max: 120 * PX, hits: [], mul: 1.2, stun: 0, knock: knock(200), acid: true, kind: 'acid' });
+    s.events.push({ type: 'shock', x: p.x, z: p.z, radius: 120 * PX, kind: 'acid' });
   }
   if (e && e.state !== 'dead') {
     if (pk(s, 'thorns')) strike(s, e, s.stats.damage * STATUS.thorns * pk(s, 'thorns'), { knock: knock(300), noproc: true, feel: 'none' });

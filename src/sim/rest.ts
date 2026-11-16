@@ -13,6 +13,9 @@ export interface RestArea {
   /** Interior half extents along the local axes (x across the front, z front to back). */
   hx: number;
   hz: number;
+  /** Späti trader (M13b): where the keeper stands behind the counter and where a customer stands. */
+  keeper?: { x: number; z: number };
+  desk?: { x: number; z: number };
 }
 
 export const REST = {

@@ -212,6 +212,45 @@ describe('events', () => {
     const d = s.drops.find((x) => x.content.kind === 'item')!;
     expect(d.content.kind === 'item' && d.content.item.rarity).toBeGreaterThanOrEqual(2);
   });
+  it('Späti: a keeper behind the counter sells items, Verband and Molotow; stock is per Späti and run', async () => {
+    const { buyConsumable, tradeStock } = await import('./runcontent');
+    const s = make();
+    const rest = level.rests[0]!;
+    expect(rest.desk && rest.keeper).toBeTruthy();
+    walkTo(s, rest.desk!);
+    run(s, 1);
+    // The customer spot is free ground: the hero is not pushed away from it.
+    expect(Math.hypot(s.player.x - rest.desk!.x, s.player.z - rest.desk!.z)).toBeLessThan(0.05);
+    expect(s.content.tradeOpen).toBe(true);
+    expect(s.content.tradeAt).toBe(0);
+    expect(tradeStock(s)).toHaveLength(4);
+    s.inventory.scrap = 1000;
+    s.inventory.consumables = { verband: 2, molotow: 0 };
+    expect(buyConsumable(s, 'verband').ok).toBe(true);
+    expect(buyConsumable(s, 'verband').ok).toBe(false);
+    expect(buyConsumable(s, 'molotow').ok).toBe(true);
+    expect(s.inventory.scrap).toBe(1000 - 15 - 25);
+    expect(buyOffer(s, 1).ok).toBe(true);
+    closeTrade(s);
+    run(s, 3);
+    expect(s.content.tradeOpen).toBe(false);
+    // Leave and come back: same stock, the sold slot stays empty.
+    walkTo(s, level.start);
+    run(s, 2);
+    walkTo(s, rest.desk!);
+    run(s, 1);
+    expect(s.content.tradeOpen).toBe(true);
+    expect(tradeStock(s)[1]).toBeNull();
+    // Not with enemies at the door.
+    closeTrade(s);
+    walkTo(s, level.start);
+    run(s, 2);
+    spawnEnemy(s, rest.desk!.x + 3, rest.desk!.z + 3, 'walker');
+    walkTo(s, rest.desk!);
+    s.player.invuln = 99;
+    run(s, 1);
+    expect(s.content.tradeOpen).toBe(false);
+  });
   it('no event starts during a fight or while a choice is open', () => {
     const s = make();
     onLeg(s, 'ambush');

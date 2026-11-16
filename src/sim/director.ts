@@ -1,41 +1,30 @@
 import { offerBlessings } from './blessings';
 // Encounter director for expedition maps (migration Q1): the player walks a route and fights at
-// fixed places. Entering the current encounter's circle closes it; waves spawn on its rim until
-// all are beaten (bosses come with the last wave). Then the circle opens, life is partly restored
-// and the next encounter becomes the objective.
+// fixed places. Entering the current encounter's circle starts it; waves spawn on its rim until
+// all are beaten (bosses come with the last wave). Then life is partly restored and the next
+// encounter becomes the objective. The fight is open (Johannes, 2026-11-16): nobody is held in the
+// circle, the hero may kite, fall back to a pickup or a Späti; enemies follow, and a wave that is
+// left behind spawns around the hero.
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { aliveCount, pickKind, spawnEnemy } from './enemies';
+import { freeSpot } from './reach';
 import { FlowField, type Bounds } from './flowfield';
 import type { EncounterDef } from './level';
 import { DT, type Sim } from './types';
 
-/** Enemies may stand this far outside the fight circle (they spawn on its rim). */
-export const ARENA_ENEMY_SLACK = 1.5;
 /** The player triggers an encounter this far inside its circle. */
 const TRIGGER_INSET = 3;
 const WAVE_PAUSE = 1.6;
 const SPAWN_GAP = 0.35;
 /** Flow field window half size around a fight or the player. */
 const WINDOW = 30;
+/** Farther than this from the fight place, a wave's enemies appear around the hero instead of on the rim. */
+const AWAY = 10;
 
 export function currentEncounter(sim: Sim): EncounterDef | null {
   return sim.level.encounters[sim.run.index] ?? null;
-}
-
-/** During a fight nobody leaves the circle: the player stays inside, enemies near the rim. */
-export function keepInArena(sim: Sim, body: { x: number; z: number }, r: number, slack = 0): void {
-  if (sim.run.phase !== 'fight' && sim.run.phase !== 'pause') return;
-  const enc = currentEncounter(sim);
-  if (!enc) return;
-  const dx = body.x - enc.x;
-  const dz = body.z - enc.z;
-  const d = Math.hypot(dx, dz);
-  const max = enc.r - r + slack;
-  if (d <= max || d < 1e-6) return;
-  body.x = enc.x + (dx / d) * max;
-  body.z = enc.z + (dz / d) * max;
 }
 
 /** Builds the flow field over a window of the map (the whole map is too big for one field). */
@@ -73,6 +62,11 @@ function startWave(sim: Sim, enc: EncounterDef): void {
 /** A free spot on the rim, away from the player, preferably out of the camera's view. */
 function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: number } {
   const p = sim.player;
+  // The hero left the place: the wave comes to them, from out of view.
+  if (Math.hypot(p.x - enc.x, p.z - enc.z) > enc.r + AWAY) {
+    const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, radius + 0.2);
+    if (q) return q;
+  }
   let best = { x: enc.x, z: enc.z };
   let bestScore = -Infinity;
   for (let tries = 0; tries < 14; tries++) {
@@ -160,9 +154,9 @@ export function updateDirector(sim: Sim): void {
   }
 }
 
-/** Outside fights (stress test, stragglers) the flow window follows the player. */
+/** The flow window follows the player, in fights too (they are open). */
 export function followFlow(sim: Sim): void {
-  if (!sim.level.expedition || sim.run.phase === 'fight' || sim.run.phase === 'pause') return;
+  if (!sim.level.expedition) return;
   if (sim.enemies.length === 0) return;
   const c = sim.flowCenter;
   if (Math.hypot(sim.player.x - c.x, sim.player.z - c.z) > WINDOW * 0.4) focusFlow(sim, sim.player.x, sim.player.z);

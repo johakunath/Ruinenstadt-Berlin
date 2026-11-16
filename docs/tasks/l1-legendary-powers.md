@@ -1,6 +1,12 @@
 # L1 Legendary item powers [Fable 5.2 or Opus 5.5 high]
 
-Status: open. Gameplay task: every power touches the combat rules.
+Status: done (PR #18). Gameplay task: every power touches the combat rules.
+
+## Handover
+- All 18 powers have a rule and a test (`src/sim/legendary.test.ts`); `hasL(sim, id)` in `src/sim/combat.ts`, the list in `HeroStats.legendary`.
+- Reused: shock rings, `chain`, `ignite`, projectiles. New enemy status `slow` (60 % speed) for Krähenfeder.
+- 3D mapping: Schaffnerkelle takes 0.5/1.4 of the dodge cooldown per kill; Siegessäule and Ring shots are drawn as nail and stone (no own models).
+- Not playtested; no own effects beyond the shared rings, bolts and flames.
 
 ## Goal
 Each legendary item's power works as in 2D. Today the card shows the text (`LEGENDARY_POWERS` in `src/data/items.ts`) and nothing happens.

@@ -17,7 +17,8 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | A2 Audio follow-ups | Sonnet | open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | open: `docs/tasks/l2-loot-followups.md` |
 | R1 Hero outline cost | Opus 5.5 high, Johannes measures | open: `docs/tasks/r1-outline-cost.md` |
-| L1 Legendary item powers | Fable 5.2 or Opus 5.5 high | open: `docs/tasks/l1-legendary-powers.md` |
+| L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
+| G1 Weapon identity and build variety | Fable 5.2, Johannes picks A, B or C first | open: `docs/tasks/g1-build-variety.md` |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 
@@ -47,7 +48,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
 | World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
 | Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Open |
-| Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Open |
+| Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
 | Endless mode after the district boss | M18 | Open |
 | One U-Bahn tunnel with Der Schaffner | M19 | Open |

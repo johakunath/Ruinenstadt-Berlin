@@ -96,7 +96,7 @@ export function simFromSave(save: SaveV1, opts: Omit<SimOptions, 'inventory' | '
   if (!run) return sim;
   if (run.abilities) sim.abilities = { ...createAbilities(), ...structuredClone(run.abilities) };
   if (run.content) {
-    sim.content = structuredClone(run.content);
+    sim.content = { ...sim.content, ...structuredClone(run.content) };
     for (const h of sim.content.shrines) sim.level.add({ kind: 'circle', x: h.x, z: h.z, r: 0.5 });
     const sh = sim.content.shrine;
     setLoadout(sim, sim.equipment, { ...sim.statContext, shrines: { as: (sh.as ?? 0) > 0, res: (sh.res ?? 0) > 0, spd: (sh.spd ?? 0) > 0 } });

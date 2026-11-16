@@ -2,7 +2,7 @@
 // The sim knows nothing about this file; it reads sim state and events and draws them.
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
-  RingGeometry, SphereGeometry, Vector3,
+  SphereGeometry, Vector3,
   WebGLRenderer, type Texture,
 } from 'three';
 import { HIT_FEEL } from '../data/combat';
@@ -19,7 +19,7 @@ import type { Look } from './looks';
 import { Materials } from './materials';
 import { Post } from './post';
 import type { Profile } from './profile';
-import { buildWorld, FX_LAYER, type World } from './world';
+import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
 import { groundY, setGround } from './ground';
 import { heightAt } from '../data/map';
@@ -229,39 +229,6 @@ export class GameRenderer {
     }
   }
 
-  private ring: Mesh | null = null;
-  private ringFor = '';
-
-  /** The closed fight circle is a glowing ground ring, so its edge is never an invisible wall. */
-  private fightRing(sim: Sim): void {
-    const run = sim.run;
-    const enc = sim.level.encounters[run.index];
-    const on = !!enc && (run.phase === 'fight' || run.phase === 'pause');
-    if (!on) {
-      if (this.ring) this.ring.visible = false;
-      return;
-    }
-    if (!this.ring) {
-      this.ring = new Mesh(new RingGeometry(0.9, 1, 8), new MeshBasicMaterial({ color: 0xff7a3a, transparent: true, opacity: 0.6, depthWrite: false }));
-      this.ring.layers.set(FX_LAYER);
-      this.ring.renderOrder = 2;
-      this.scene.add(this.ring);
-    }
-    if (this.ringFor !== enc.id) {
-      this.ringFor = enc.id;
-      this.ring.geometry.dispose();
-      // Baked in world space so the ring follows hills.
-      const g = new RingGeometry(enc.r - 0.25, enc.r + 0.05, 96);
-      g.rotateX(-Math.PI / 2);
-      g.translate(enc.x, 0, enc.z);
-      const pos = g.getAttribute('position');
-      for (let i = 0; i < pos.count; i++) pos.setY(i, groundY(pos.getX(i), pos.getZ(i)) + 0.07);
-      this.ring.geometry = g;
-    }
-    this.ring.visible = true;
-    (this.ring.material as MeshBasicMaterial).opacity = 0.45 + 0.2 * Math.sin(this.time * 3);
-  }
-
   /** CSS-pixel screen position of a world point (may lie off screen). */
   screenOf(x: number, y: number, z: number): { x: number; y: number } {
     const cam = this.cam.camera;
@@ -329,7 +296,6 @@ export class GameRenderer {
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     this.world.follow?.(px, pz);
-    this.fightRing(sim);
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);

@@ -7,8 +7,7 @@ import { POWER, POWERS, PX, type PowerDef } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { BREAKABLE, hitBreakable } from './breakables';
 import { colliderDistance } from './collide';
-import { ignite, knock, pk, strike } from './combat';
-import { keepInArena } from './director';
+import { hasL, ignite, knock, pk, strike } from './combat';
 import { angleOf, clamp } from './math';
 import { DT, type Cast, type Enemy, type Sim, type SimInput } from './types';
 
@@ -17,6 +16,8 @@ export interface Projectile {
   x: number; z: number; px: number; pz: number; angle: number; speed: number; life: number; damage: number; crit: boolean;
   /** Bodies it still passes through; `extra` is the Durchschlag allowance on top. */
   pierce: number; extra: number; hits: number[]; kind: ShotKind; wucht: boolean;
+  /** Siegessäule blade: always burns. Ring jump: already jumped once. */
+  fire?: boolean; jumped?: boolean;
 }
 export interface Shock {
   x: number; z: number; r: number; max: number; hits: number[];
@@ -37,6 +38,8 @@ export interface Abilities {
   banner: { x: number; z: number; t: number; r: number } | null;
   /** Retourkutsche armed, Stehaufmännchen used, Gegengewicht swing counter. */
   ret: boolean; secondUsed: boolean; swings: number;
+  /** Legendary counters: hits (Kiezbox, Bassarm), melee attacks (Mauer), Rattenmantel cooldown, Weltzeituhr crit armed. */
+  legHits: number; legSwings: number; ratT: number; dcrit: boolean;
   streak: { n: number; t: number };
   jagd: { n: number; t: number };
   /** Enemies the current dodge or Fechtsprung already hit; fire trail timer. */
@@ -52,7 +55,7 @@ export interface Abilities {
 export function createAbilities(): Abilities {
   return {
     powerCd: 0, ultimateCd: 0, frenzy: 0, guard: 0, spin: 0, spinTick: 0, hot: 0, fed: 0, hus: 0, stT: 0, banner: null,
-    ret: false, secondUsed: false, swings: 0, streak: { n: 0, t: 0 }, jagd: { n: 0, t: 0 }, ramHits: [], trailT: 0,
+    ret: false, secondUsed: false, swings: 0, legHits: 0, legSwings: 0, ratT: 0, dcrit: false, streak: { n: 0, t: 0 }, jagd: { n: 0, t: 0 }, ramHits: [], trailT: 0,
     projectiles: [], shocks: [], fields: [], strikes: [], bottles: [], booms: [],
     offers: [], pending: 0, hiddenOffer: false, rerolled: false, quality: {},
   };
@@ -148,7 +151,7 @@ function propsInRadius(s: Sim, x: number, z: number, r: number): void {
   for (const b of s.breakables) if (!b.broken && Math.hypot(b.def.x - x, b.def.z - z) < r + BREAKABLE[b.def.kind].radius * 0.5) hitBreakable(s, b);
 }
 
-/** Where a leap or dash ends: `len` meters along `angle`, inside the map and the fight circle. */
+/** Where a leap or dash ends: `len` meters along `angle`, inside the map. */
 function landing(s: Sim, angle: number, len: number): { x: number; z: number } {
   const p = s.player;
   const b = s.level.playerBox;
@@ -156,7 +159,6 @@ function landing(s: Sim, angle: number, len: number): { x: number; z: number } {
     x: clamp(p.x + Math.sin(angle) * len, b.minX + 1, b.maxX - 1),
     z: clamp(p.z + Math.cos(angle) * len, b.minZ + 1, b.maxZ - 1),
   };
-  keepInArena(s, spot, PLAYER.radius);
   // Never land in a wall or in water: walk the line back until the spot is free.
   for (let k = 1; k > 0.05; k -= 0.1) {
     const x = p.x + (spot.x - p.x) * k;
@@ -353,7 +355,6 @@ export function updateCast(s: Sim): void {
     p.x += p.vx * DT;
     p.z += p.vz * DT;
     s.level.resolve(p, PLAYER.radius);
-    keepInArena(s, p, PLAYER.radius);
     dashHits(s, true);
   } else if (c.id === 'abriss' || c.id === 'stab') {
     const q = Math.min(1, t / c.dur);
@@ -376,7 +377,6 @@ export function updateCast(s: Sim): void {
   if (t >= c.dur) {
     if (c.id === 'abriss' || c.id === 'stab') {
       s.level.resolve(p, PLAYER.radius);
-      keepInArena(s, p, PLAYER.radius);
     }
     p.state = 'move';
     p.stateT = 0;
@@ -442,6 +442,7 @@ export function onDodge(s: Sim): void {
   }
   a.hus = 1.45;
   a.stT = 1.7;
+  if (hasL(s, 'weltuhr')) a.dcrit = true;
   a.ramHits.length = 0;
   a.trailT = 0;
 }
@@ -456,7 +457,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
     if (inp.verband) useConsumable(s, 'verband', inp);
     else if (inp.molotow) useConsumable(s, 'molotow', inp);
   }
-  for (const k of ['powerCd', 'ultimateCd', 'frenzy', 'hus', 'stT', 'fed'] as const) a[k] = Math.max(0, a[k] - DT);
+  for (const k of ['powerCd', 'ultimateCd', 'frenzy', 'hus', 'stT', 'fed', 'ratT'] as const) a[k] = Math.max(0, a[k] - DT);
 
   if (p.state === 'dodge') {
     dashHits(s, false);
@@ -551,6 +552,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
     }
   }
 
+  const jumps: Projectile[] = [];
   for (const q of a.projectiles) {
     q.px = q.x;
     q.pz = q.z;
@@ -577,7 +579,19 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
         if (e.state === 'dead' || q.hits.includes(e.id) || Math.hypot(e.x - q.x, e.z - q.z) >= e.def.radius + 0.18) continue;
         q.hits.push(e.id);
         const W = q.wucht ? WEAPON.wucht : null;
-        strike(s, e, q.damage, { crit: q.crit, knock: knock(q.kind === 'spear' ? 300 : 120) * (W ? W.knock : 1), stun: W?.stun, feel: q.kind === 'spear' || q.crit ? 'heavy' : 'light' });
+        strike(s, e, q.damage, { crit: q.crit, knock: knock(q.kind === 'spear' ? 300 : 120) * (W ? W.knock : 1), stun: W?.stun, feel: q.kind === 'spear' || q.crit ? 'heavy' : 'light', element: q.fire ? 'fire' : q.jumped ? 'shock' : undefined });
+        if (q.fire && !dead(e)) ignite(s, e, q.damage * 0.45 * s.stats.elementPower, 2);
+        // Krähenfeder: shots slow. Ring der Ringbahn: a shot jumps once to the nearest other enemy.
+        if (hasL(s, 'kraehe') && !dead(e)) e.slow = 2;
+        if (hasL(s, 'ring') && !q.jumped && !q.fire) {
+          let nb: Enemy | null = null;
+          let nd = 220 * PX;
+          for (const o of s.enemies) {
+            const dd = Math.hypot(o.x - e.x, o.z - e.z);
+            if (o !== e && o.state !== 'dead' && dd < nd) { nd = dd; nb = o; }
+          }
+          if (nb) jumps.push({ x: e.x, z: e.z, px: e.x, pz: e.z, angle: angleOf(nb.x - e.x, nb.z - e.z), speed: WEAPON.sling.speed, life: 0.6, damage: q.damage * 0.8, crit: false, pierce: 0, extra: 0, hits: [e.id], kind: 'stone', wucht: false, jumped: true });
+        }
         if (q.pierce > 0) q.pierce--;
         else if (q.extra > 0) q.extra--;
         else {
@@ -587,5 +601,6 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
       }
     }
   }
+  if (jumps.length) a.projectiles.push(...jumps);
   if (a.projectiles.length) a.projectiles = a.projectiles.filter((q) => q.life > 0);
 }

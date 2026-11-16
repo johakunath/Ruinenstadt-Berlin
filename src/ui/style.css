@@ -695,3 +695,8 @@ body:has(#title:not([hidden])) #pause-nav, body:has(#dead:not([hidden])) #pause-
   .inv-card-head img { width: 34px; height: 34px; }
   .inv-portrait { height: 150px; }
 }
+
+/* Menus close with a cross top right (Johannes, 2026-11-16); "Weiter" is for tutorial cards only. */
+#options .panel, .panel.trade { position: relative; }
+.inv-panel button.inv-x { min-width: 44px; font-size: 26px; line-height: 1; padding: 0; border: 0; background: none; }
+.panel.trade h2, #options .panel h2 { padding: 0 40px; }

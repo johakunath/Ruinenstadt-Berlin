@@ -8,7 +8,7 @@ import { FAMILIES, PERKS, SHRINES, type PerkFamilyId, type PerkId, type ShrineId
 import type { Input } from '../input/input';
 import { cooldownOf, powerOf, selectPower, type Offer } from '../sim/abilities';
 import { chooseBlessing, heldFamilies, perkOf, rerollBlessings, rerollCost } from '../sim/blessings';
-import { buyHeal, buyOffer, closeTrade, healPrice } from '../sim/runcontent';
+import { buyConsumable, buyHeal, buyOffer, closeTrade, healPrice, tradeStock } from '../sim/runcontent';
 import { heroStats, power } from '../sim/stats';
 import type { Sim } from '../sim/types';
 import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
@@ -118,6 +118,7 @@ export class AbilitiesUi {
       if (!b || !s) return;
       if (b.dataset.buy !== undefined) this.tradeMsg = buyOffer(s, Number(b.dataset.buy)).text;
       else if (b.dataset.heal) this.tradeMsg = buyHeal(s).text;
+      else if (b.dataset.cons) this.tradeMsg = buyConsumable(s, b.dataset.cons as 'verband' | 'molotow').text;
       else if (b.dataset.close) return this.closeTrade();
       this.tradeSig = '';
     });
@@ -196,17 +197,19 @@ export class AbilitiesUi {
   }
 
   private renderTrade(s: Sim): void {
-    const T = s.content.trader;
-    if (!T) return;
+    const stock = tradeStock(s);
+    const shop = s.content.tradeAt >= 0;
+    const cons = s.inventory.consumables ?? { verband: 0, molotow: 0 };
     const now = power(s.stats);
-    const offers = T.offers.map((o, i) => {
+    const offers = stock.map((o, i) => {
       if (!o) return '<div class="trade-sold">Verkauft</div>';
       let delta = 0;
       try { delta = power(heroStats({ ...s.equipment, [o.item.slot]: o.item }, s.statContext)) - now; } catch { delta = 0; }
       return `<div class="trade-offer">${itemCard(o.item, 'Angebot', s.equipment)}<div class="trade-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">Kampfkraft ${delta > 0 ? '+' : ''}${delta}</div><button type="button" data-buy="${i}" class="${s.inventory.scrap >= o.price ? 'primary' : ''}">Kaufen · ${o.price} Schrott</button></div>`;
     }).join('');
-    this.trade.firstElementChild!.innerHTML = `<h2>Händler</h2><p class="sub">„Schrott gegen Ware. Kein Feilschen.“ · Schrott <b>${s.inventory.scrap}</b></p><div class="trade-offers">${offers}</div>`
-      + `<div class="trade-row"><span><b>Verbandskasten</b><br><small>Heilt dich vollständig</small></span><button type="button" data-heal="1">${healPrice(s)} Schrott</button></div><p class="trade-msg">${this.tradeMsg}</p><button type="button" class="primary" data-close="1">Weiter</button>`;
+    const goods = shop ? CONSUMABLES.map((c) => `<div class="trade-row"><span><b>${c.name}</b> <small>${cons[c.id as 'verband' | 'molotow']}/3</small><br><small>${c.description}</small></span><button type="button" data-cons="${c.id}" ${cons[c.id as 'verband' | 'molotow'] >= 3 ? 'disabled' : ''}>${c.scrapCost} Schrott</button></div>`).join('') : '';
+    this.trade.firstElementChild!.innerHTML = `<button type="button" class="x-btn" data-close="1" aria-label="Schließen">×</button><h2>${shop ? (s.level.rests[s.content.tradeAt]?.name ?? 'Späti') : 'Händler'}</h2><p class="sub">${shop ? '„Wat darf’s sein?“' : '„Schrott gegen Ware. Kein Feilschen.“'} · Schrott <b>${s.inventory.scrap}</b></p><div class="trade-offers">${offers}</div>${goods}`
+      + `<div class="trade-row"><span><b>Verbandskasten</b><br><small>Heilt dich vollständig</small></span><button type="button" data-heal="1">${healPrice(s)} Schrott</button></div><p class="trade-msg">${this.tradeMsg}</p>`;
   }
 
   private setAction(id: ActionId, iconHtml: string | null, cd: number, max: number, count: number | null, usable: boolean, key: string): void {
@@ -242,9 +245,9 @@ export class AbilitiesUi {
       this.focus(0);
     }
 
-    const tradeNow = visible && sim.content.tradeOpen && !!sim.content.trader;
+    const tradeNow = visible && sim.content.tradeOpen && tradeStock(sim).length > 0;
     if (tradeNow) {
-      const sig = `${sim.inventory.scrap}|${sim.content.trader!.offers.map((o) => (o ? 1 : 0)).join('')}|${Math.round(sim.player.hp)}|${this.tradeMsg}`;
+      const sig = `${sim.inventory.scrap}|${tradeStock(sim).map((o) => (o ? 1 : 0)).join('')}|${Math.round(sim.player.hp)}|${this.tradeMsg}|${sim.inventory.consumables?.verband}${sim.inventory.consumables?.molotow}`;
       const first = this.trade.hidden;
       this.trade.hidden = false;
       if (sig !== this.tradeSig) {

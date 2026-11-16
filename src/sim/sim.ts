@@ -61,7 +61,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     events: [],
     hitstop: 0,
     consumed: { attack: false, dodge: false, power: false, ultimate: false, verband: false, molotow: false },
-    content: { plan: [], done: [], timer: 0, hidden: [], shrines: [], shrine: {}, trader: null, tradeOpen: false, captive: null, cache: null, zone: null, crate: null, rng: 1 },
+    content: { plan: [], done: [], timer: 0, hidden: [], shrines: [], shrine: {}, trader: null, tradeOpen: false, tradeAt: -1, shops: [], captive: null, cache: null, zone: null, crate: null, rng: 1 },
     level,
     colliders: level.colliders,
     flow: level.expedition ? new FlowField({ minX: 0, maxX: 1, minZ: 0, maxZ: 1 }, []) : new FlowField(level.bounds, level.colliders),

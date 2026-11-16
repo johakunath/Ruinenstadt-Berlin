@@ -8,7 +8,7 @@ Status: open. Review of PRs #5, #7, #9, #10 (2026-11-16). The ports are exact: a
 | 2 | Item level `D.lvl + ceil(wE)` (`js/state.js:22`) | `lootLevel` has no district level | Add a district level to the map definition (Köpenick 0) before the second district |
 | 3 | Neon and GDR item names, implants drop in cyber districts | `lootCtx.flavor` and `district` are never set | Set them from the map definition; implants stay off until a district uses them |
 | 4 | Ingredients (`ZUT`) drop | Data only | With M13 (meals) |
-| 5 | Legendary powers (`hasL`, 14 call sites) | Data and card text only: legendaries advertise powers that do nothing | Own task L1 (gameplay, Fable or Opus high) |
+| 5 | Legendary powers (`hasL`, 14 call sites) | Was data and card text only | Done in PR #18 (L1) |
 | 6 | — | `elementBonus` in `HeroStats` is the elite and boss bonus (2D `eb`) | Rename to `eliteBonus` |
 | 7 | — | `DIFFICULTIES` in `src/data/progression.ts` duplicates `src/data/difficulty.ts` | Delete the unused copy |
 

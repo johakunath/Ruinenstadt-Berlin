@@ -2,6 +2,7 @@
 // the way between encounters, the supply drop, hidden blessings, Litfaßsäule shrines and the trader.
 // 2D scheduled by wave; here every stretch between two encounters ("leg") can carry one event, so a
 // run sees every event type once. Places are 2D pixel distances at 30 px per meter.
+import { CONSUMABLES } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
 import { PX } from '../data/powers';
 import { SHRINES, SURVIVORS, type ShrineId, type SurvivorId } from '../data/progression';
@@ -34,6 +35,10 @@ export interface RunContent {
   trader: { x: number; z: number; t: number; offers: Array<TradeOffer | null>; left: boolean } | null;
   /** The trade screen is open: the game loop pauses the sim. */
   tradeOpen: boolean;
+  /** Who is trading: -1 the wandering trader, else the Späti with this rest index. */
+  tradeAt: number;
+  /** Späti stock per rest index, rolled on the first visit of a run (M13b). */
+  shops: Array<{ offers: Array<TradeOffer | null>; left: boolean } | null>;
   captive: { x: number; z: number; survivor: SurvivorId; free: boolean } | null;
   cache: { x: number; z: number; t: number } | null;
   zone: { x: number; z: number; r: number; p: number; need: number; t: number; sp: number } | null;
@@ -44,6 +49,8 @@ export interface RunContent {
 export const CONTENT = {
   delay: 5, touch: 34 * PX, hiddenTouch: 1.2, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
   trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.5 },
+  /** Späti counter: stand this close to the customer spot; no trade while enemies are this near. */
+  shop: { touch: 1.1, calm: 12, offers: 4 },
   cache: { near: 520 * PX, far: 760 * PX, time: 50, scrap: 25 },
   zone: { near: 240 * PX, far: 420 * PX, radius: 70 * PX, need: 8, time: 45, every: 2.2, scrap: 30 },
   rescue: { near: 320 * PX, far: 520 * PX, touch: 36 * PX },
@@ -64,7 +71,7 @@ export const EVENT_TEXT: Record<RunEventKind | 'crate', { title: string; sub: st
 };
 
 const emptyContent = (): RunContent => ({
-  plan: [], done: [], timer: CONTENT.delay, hidden: [], shrines: [], shrine: {}, trader: null, tradeOpen: false,
+  plan: [], done: [], timer: CONTENT.delay, hidden: [], shrines: [], shrine: {}, trader: null, tradeOpen: false, tradeAt: -1, shops: [],
   captive: null, cache: null, zone: null, crate: null, rng: 1,
 });
 
@@ -316,6 +323,31 @@ export function updateContent(s: Sim): void {
   };
   const ctx = (): ReturnType<typeof lootContext> => lootContext(s);
 
+  // Späti keeper: step up to the counter to trade. Stock is rolled on the first visit.
+  const at = restAt(L.rests, p.x, p.z);
+  for (let i = 0; i < c.shops.length; i++) if (i !== at && c.shops[i]) c.shops[i]!.left = true;
+  if (at >= 0 && L.rests[at]!.desk) {
+    const desk = L.rests[at]!.desk!;
+    let shop = c.shops[at] ?? null;
+    if (!shop) {
+      const lvl = Math.max(il, ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
+      const n = CONTENT.shop.offers + (s.statContext.survivors.kurier ? 1 : 0);
+      const offers: TradeOffer[] = [];
+      for (let i = 0; i < n; i++) {
+        const item = makeItem(rng, ctx(), lvl + (i === n - 1 ? 2 : 0), i === n - 1 && rng.next() < 0.15 ? 3 : i < 2 ? 1 : 2);
+        offers.push({ item, price: price(item) * 5 + 15 });
+      }
+      shop = c.shops[at] = { offers, left: true };
+    }
+    const close = near(desk, CONTENT.shop.touch);
+    if (!close) shop.left = true;
+    else if (shop.left && !c.tradeOpen && !s.enemies.some((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < CONTENT.shop.calm)) {
+      shop.left = false;
+      c.tradeOpen = true;
+      c.tradeAt = at;
+      s.events.push({ type: 'trade' });
+    }
+  }
   if (c.trader) {
     const T = c.trader;
     if (travel) T.t -= DT;
@@ -324,6 +356,7 @@ export function updateContent(s: Sim): void {
     else if (T.left && !c.tradeOpen && s.enemies.every((e) => e.state === 'dead')) {
       T.left = false;
       c.tradeOpen = true;
+      c.tradeAt = -1;
       s.events.push({ type: 'trade' });
     }
     if (T.t <= 0 && !c.tradeOpen) {
@@ -402,14 +435,32 @@ export function updateContent(s: Sim): void {
 }
 
 /** Trade screen actions (2D `tradebox`). Each returns a short German message. */
+/** The stock on the table: the Späti's or the wandering trader's. */
+export function tradeStock(s: Sim): Array<TradeOffer | null> {
+  const c = s.content;
+  return (c.tradeAt >= 0 ? c.shops[c.tradeAt]?.offers : c.trader?.offers) ?? [];
+}
+
+/** Spätis also sell Verband and Molotow (2D `CONS` prices), up to three each. */
+export function buyConsumable(s: Sim, id: 'verband' | 'molotow'): { ok: boolean; text: string } {
+  const cost = CONSUMABLES.find((c) => c.id === id)!.scrapCost;
+  const have = s.inventory.consumables?.[id] ?? 0;
+  if (have >= 3) return { ok: false, text: 'Mehr als drei trägst du nicht.' };
+  if (s.inventory.scrap < cost) return { ok: false, text: `Dir fehlen ${cost - s.inventory.scrap} Schrott.` };
+  s.inventory.scrap -= cost;
+  s.inventory.consumables = { verband: 0, molotow: 0, ...s.inventory.consumables, [id]: have + 1 };
+  return { ok: true, text: 'Gekauft.' };
+}
+
 export function buyOffer(s: Sim, i: number): { ok: boolean; text: string } {
-  const o = s.content.trader?.offers[i];
+  const stock = tradeStock(s);
+  const o = stock[i];
   if (!o) return { ok: false, text: '' };
   if (s.inventory.scrap < o.price) return { ok: false, text: `Dir fehlen ${o.price - s.inventory.scrap} Schrott.` };
   if (s.inventory.bag.length >= BAG_SIZE) return { ok: false, text: 'Rucksack voll.' };
   s.inventory.scrap -= o.price;
   s.inventory.bag.push(o.item);
-  s.content.trader!.offers[i] = null;
+  stock[i] = null;
   return { ok: true, text: 'Gekauft.' };
 }
 

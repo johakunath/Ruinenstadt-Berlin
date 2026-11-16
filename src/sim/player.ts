@@ -2,11 +2,10 @@
 import { finisherOf, weaponAttack, PLAYER, WEAPON, type AttackId } from '../data/combat';
 import { POWER } from '../data/powers';
 import { CONSUMABLE, onDodge, shock, shoot, updateCast } from './abilities';
-import { knock, pk, STATUS } from './combat';
+import { hasL, knock, pk, STATUS } from './combat';
 import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
 import { DT, type Player, type Sim, type SimInput } from './types';
-import { keepInArena } from './director';
 import { dodgeCooldown, STARTER_DAMAGE } from './loadout';
 
 /** What a swing releases when its active frames start: shots, the hammer's rings, the thrown spear. */
@@ -18,6 +17,10 @@ export function releaseSwing(sim: Sim): void {
   const fin = p.finisher;
   const fx = Math.sin(p.facing);
   const fz = Math.cos(p.facing);
+  // Siegessäule: every attack also sends a golden blade (half damage, burns, passes two bodies).
+  if (hasL(sim, 'siegsp')) shoot(sim, { angle: p.facing, damage: a.damage * 0.5, crit: p.critical, speed: WEAPON.sling.speed * sim.stats.reachFactor, life: 0.55, pierce: 2, kind: 'nail', fire: true });
+  // Mauerstück: every fourth melee attack sends an acid wave.
+  if (kind !== 'sling' && hasL(sim, 'mauer') && ++sim.abilities.legSwings % 4 === 0) shock(sim, p.x, p.z, 130 / 30, { mul: 1.2, stun: 0, knock: knock(200), acid: true, kind: 'acid' });
   if (kind === 'sling') {
     const S = WEAPON.sling;
     const speed = S.speed * sim.stats.reachFactor * (fin ? S.finSpeed : 1);
@@ -104,7 +107,10 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   // Gegengewicht: every n-th attack is a Wucht hit (sure crit, double knockback, short stun).
   p.wucht = sim.stats.weight > 0 && ++a.swings % sim.stats.weight === 0;
   p.finisher = fin;
-  p.critical = p.wucht || frenzy || (fin && pk(sim, 'pauke') > 0) || sim.rng.next() < sim.stats.crit;
+  // Weltzeituhr: the first attack after a dodge always crits.
+  const armed = a.dcrit;
+  a.dcrit = false;
+  p.critical = p.wucht || frenzy || armed || (fin && pk(sim, 'pauke') > 0) || sim.rng.next() < sim.stats.crit;
   const mul = (p.critical ? 2 : 1) * (a.fed > 0 ? CONSUMABLE.food.damage : 1) * (a.hus > 0 ? 1 + 0.4 * pk(sim, 'husar') : 1) * (a.ret ? 2 : 1);
   if (a.ret) sim.events.push({ type: 'note', text: 'Retourkutsche', color: '#9aa4b0', x: p.x, z: p.z });
   if (p.wucht) sim.events.push({ type: 'note', text: 'Wucht', color: '#f2a04b', x: p.x, z: p.z });
@@ -185,6 +191,8 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
       endToMove(p);
     }
   } else if (p.state === 'dodge' && p.stateT >= PLAYER.dodge.duration) {
+    // Rittersporn: the ground shakes where a dodge ends.
+    if (hasL(sim, 'ritter')) shock(sim, p.x, p.z, 110 / 30, { mul: 0.7, stun: 0.5, knock: knock(260), kind: 'small' });
     p.dodgeCd = dodgeCooldown(sim);
     p.strikeT = PLAYER.dodge.strikeGrace;
     endToMove(p);
@@ -257,5 +265,4 @@ function integrate(sim: Sim): void {
   const y = sim.level.playerBox;
   p.x = clamp(p.x, y.minX + PLAYER.radius, y.maxX - PLAYER.radius);
   p.z = clamp(p.z, y.minZ + PLAYER.radius, y.maxZ - PLAYER.radius);
-  keepInArena(sim, p, PLAYER.radius);
 }

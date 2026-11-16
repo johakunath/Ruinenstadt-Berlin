@@ -4,7 +4,6 @@ import { ENEMIES, SPAWN, type EnemyKind } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Sim } from './types';
-import { ARENA_ENEMY_SLACK, keepInArena } from './director';
 import { POWER } from '../data/powers';
 import { STATUS } from './combat';
 
@@ -135,7 +134,7 @@ export function updateEnemies(sim: Sim): void {
           mz /= ml;
           const banner=sim.abilities.banner;
           // Standarte and Zersetzung slow by 30% each (2D).
-          const slow=(banner&&Math.hypot(e.x-banner.x,e.z-banner.z)<banner.r?POWER.stand.slow:1)*(e.acid>0&&(sim.statContext.perks.corrode??0)>0?STATUS.corrodeSlow:1);
+          const slow=(banner&&Math.hypot(e.x-banner.x,e.z-banner.z)<banner.r?POWER.stand.slow:1)*(e.acid>0&&(sim.statContext.perks.corrode??0)>0?STATUS.corrodeSlow:1)*((e.slow??0)>0?.6:1);
           vx = mx * def.speed * slow;
           vz = mz * def.speed * slow;
           e.facing = turnToward(e.facing, angleOf(mx, mz), 7 * DT);
@@ -185,7 +184,6 @@ export function updateEnemies(sim: Sim): void {
     e.kz *= damp;
     if (e.state !== 'dead' || Math.abs(e.kx) + Math.abs(e.kz) > 0.05) {
       sim.level.resolve(e, def.radius);
-      keepInArena(sim, e, def.radius, ARENA_ENEMY_SLACK);
     }
     const b = sim.level.bounds;
     e.x = clamp(e.x, b.minX + def.radius, b.maxX - def.radius);
