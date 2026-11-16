@@ -29,6 +29,15 @@ Played the build without the new enemies. Fixed at once (same PR as M12): see th
 | Ground | Clipping in the ground in many places, e.g. Müggelberge | Fixed at the cause: the drawn ground is flat between its 1.5 m grid points, but props, streets, buildings and characters stood on the curved height formula. All of them now use the mesh's own surface (`meshSurface` in `src/render/ground.ts`). Check on hardware; terrace edges may still need a pass (backlog P11) |
 | Difficulty | Still too easy; growing stronger over the map feels rewarding | That build had three enemy types and bosses without attacks. M12 and the bot retune answer it: enemy life ×3.5 and damage ×2.1 over the 20 waves, bosses 2.4 to 4 times the life (`docs/balance.md`). Judge again on the new build |
 | Enemies | Behaviour should differ more; does 2D have more? | M12 brings six types, elites and boss attacks. 2D has more: backlog P12 |
+| After the boss | The "valuable loot still here" dialog comes the moment the boss dies, before anything can be picked up; and the run ends at once | Fixed: the boss falls, the district counts as won, the end screen follows after 6 s with "Weiter erkunden" (stay as long as wanted; Pause › Abschließen ends) and "Nochmal". The loot warning only comes when leaving |
+| New game | A button to start fresh | Fixed: "Ganz neu anfangen" on the title (asks once). Wipes gear, Schrott and checkpoint; the telemetry id stays |
+| Waves | A few more | Fixed: 27 normal waves instead of 20 (nine per zone), same difficulty range |
+| Flicker | It was a yellow house wall | Backlog P2 narrowed: a facade layer on the plaster walls |
+| West bridge | Clipping beside the Lange Brücke | Task M11d (bridge ramps and banks) |
+| Water | Should lie below street level and look like water; wrecked boats at the banks | Task M11d |
+| Streets, bridges | No asphalt look, no sidewalks | Task M11d |
+| Sights | Not recognizable yet | Task M11d (landmarks) and H-tasks on the PC |
+| M11d proposal | Agreed: hand-build the route blocks, generate the filler | Decided 2026-11-17 |
 
 ## 2026-11-15 · Köpenick first look (Johannes, Tab S9)
 
