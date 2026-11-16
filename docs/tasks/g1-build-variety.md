@@ -1,6 +1,6 @@
 # G1 Weapon identity and build variety [Fable 5.2; Johannes picks the direction first]
 
-Status: open, decision needed. Goal (Johannes, 2026-11-16): the four base weapons play clearly differently and blessings change how a run plays, as in Hades. This is the main reason to start again.
+Status: open. Decided (Johannes, 2026-11-16): option C is built next. A and B are ideas only (`docs/backlog.md` › Ideas I1, I2), not decided. Goal (Johannes, 2026-11-16): the four base weapons play clearly differently and blessings change how a run plays, as in Hades. This is the main reason to start again.
 
 ## Where the game stands (read from the code, not playtested)
 
@@ -28,7 +28,7 @@ The verbs differ. What is thin:
 | B | **Weapon variants** | Three variants per weapon that change chain or powers, chosen at run start. 2D already names three per power (`KR` names: Kreissäge, Neonwirbel, Ernteschlacht …) but they only differ in name | Medium | Needs a start screen (M17) |
 | C | **More Umbau cards** | Three per weapon instead of one, offered from wave three, one per run. Each changes the basic attack (as Rundumschlag, Dampfhammer, Schrotladung, Wurfspieße do) | Small, 8 new cards | Low |
 
-Recommendation: C now (cheap, direct), A as the main step after M12 so blessings can answer enemy types, B with the start screen.
+Decision: C. A and B stay ideas.
 
 ## Done when (whichever option)
 Johannes plays two runs with the same weapon and two with different ones and says they played differently; each new rule has a unit test.
