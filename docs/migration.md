@@ -14,7 +14,7 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 | 3b | M11b part 2: relief and irregular banks and quays, ground textures (alternatives first), enterable Späti (safe room) | Claude · Opus high | `docs/maps/koepenick.md` | open |
 | 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Codex (Johannes) | `docs/tasks/m3b-stats-in-sim.md` | done (PR #10) |
 | 5 | M4 Loot in the world, with breakable bins and crates (2D port) | Claude · Opus high | after M3b, M11b | open |
-| 6 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | implemented; PR pending |
+| 6 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | done (PR #12) |
 
 Claude writes the next Codex task file before Codex's queue runs empty.
 

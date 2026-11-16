@@ -1,6 +1,6 @@
 # M5 Inventory [Codex]
 
-Status: implemented; validation and PR pending
+Status: done (PR #12)
 
 ## Goal
 Build the inventory directly from the 2D game. Johannes waived the mockup and authorized M5 ahead of M4 (2026-11-16).
@@ -25,3 +25,4 @@ M4 world drops, M6 saves, M7 weapon-specific moves, M8 powers, M13 camp/stash. T
 - Session inventory survives retries; M6 must persist `inventory` alongside equipment.
 - Open with Inventar, I/Tab or controller Y; D-pad/stick traverses controls, A activates, B closes.
 - No extra Three.js scene, light or render pass; DOM and lazy browser image decoding only.
+- Validation: 189 unit tests, build/type check, six existing smoke tests and five inventory browser tests pass; screenshots in `docs/proof/m5-inventory/`.
