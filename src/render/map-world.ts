@@ -18,6 +18,7 @@ import { BatchSet, boxGeo } from './batch';
 import { applyCutout } from './cutout';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
+import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
   Builder, buildAltbau, buildProp, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
@@ -37,6 +38,7 @@ interface LightSpot {
 }
 
 interface MapMats extends Mats {
+  railSteel: LitMaterial;
   ground: LitMaterial;
   /** Ground scatter atlas (puddles, leaves, trash, rubble). */
   litter: LitMaterial;
@@ -116,6 +118,7 @@ function makeMapMats(materials: Materials): MapMats {
   const uDirt = { value: dirt };
   const m: MapMats = {
     ...base,
+    railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
     asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
@@ -413,6 +416,7 @@ function buildScatter(m: MapDef, lots: Lot[], mats: MapMats, chunkOf: (x: number
 
 /** Street ribbons with round joints; world-space UVs keep the texture seamless. */
 function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  const tramStreets = { ...m, streets: m.streets.filter(s => s.tram) };
   for (const s of m.streets) {
     const mat = s.kind === 'main' ? mats.asphalt : s.kind === 'path' ? mats.path : mats.cobbles;
     const y = s.kind === 'main' ? 0.025 : s.kind === 'path' ? 0.015 : 0.02;
@@ -442,12 +446,30 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         batch.quad(quad, [0, 0, 1, 1]);
         fixWorldUv(batch, 4, 4);
         if (s.tram) {
-          // Double tram track: grooved rails flush with the asphalt (also on the bridge).
-          const yaw = Math.atan2(dx, dz);
-          for (const off of [-2.22, -0.78, 0.78, 2.22]) {
-            const cx = (x0 + x1) / 2 - dz * off;
-            const cz = (z0 + z1) / 2 + dx * off;
-            b.box(mats.iron, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + (onBridge(m, cx, cz) ? 0.065 : y + 0.012), cz), 0.09, 0.03, t1 - t0 + 0.02, [1.5, 1.45, 1.4]);
+          // Embedded grooved rails: worn steel head, inward flange groove and guard lip,
+          // rust at the edges and an asphalt repair seam. No exposed railway sleepers in a street.
+          for (const rail of TRAM_RAILS) for (const band of TRAM_SECTION) {
+            const off = rail.offset + rail.inward * band.offset;
+            const point = (offset: number, t: number): Vector3 => {
+              const a = tramOffsetPoint(s.pts, i - 1, offset);
+              const c = tramOffsetPoint(s.pts, i, offset);
+              const x = a[0] + (c[0] - a[0]) * t;
+              const z = a[1] + (c[1] - a[1]) * t;
+              const surface = onBridge(m, x, z) ? Math.max(y, 0.05) : y;
+              return new Vector3(x, heightAt(m, x, z) + surface + band.height, z);
+            };
+            const half = band.width / 2;
+            const corners: [Vector3, Vector3, Vector3, Vector3] = [
+              point(off + half, t0 / len), point(off - half, t0 / len),
+              point(off - half, t1 / len), point(off + half, t1 / len),
+            ];
+            const material = band.kind === 'seam' ? mats.asphalt : band.kind === 'rust' ? mats.rust
+              : band.kind === 'groove' ? mats.rubber : mats.railSteel;
+            const tint: RGB = band.kind === 'guard' ? [0.5, 0.47, 0.42] : band.kind === 'seam' ? [0.63, 0.59, 0.54]
+              : band.kind === 'head' ? [0.96, 0.98, 1] : [1, 1, 1];
+            const railBatch = b.solid.of(material);
+            railBatch.quad(corners, [0, 0, 1, 1], [tint]);
+            fixWorldUv(railBatch, 4, 4);
           }
         }
         // Curbs mark the walkable street edge (v2, M11b); not on paths and bridges.
@@ -457,6 +479,8 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
             const cx = (x0 + x1) / 2 + side * nx * (1 + 0.12 / (s.width / 2));
             const cz = (z0 + z1) / 2 + side * nz * (1 + 0.12 / (s.width / 2));
             if (isWater(m, cx, cz)) continue;
+            // A crossing side street must not put a raised curb across the tram rails.
+            if (!s.tram && streetDist(tramStreets, cx, cz).d < (t1 - t0) / 2 + 0.12) continue;
             b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + 0.06, cz), 0.24, 0.16, t1 - t0 + 0.02, [0.8, 0.8, 0.78]);
           }
         }

@@ -13,6 +13,7 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 | 3 | M11b Köpenick v2 part 1: concept C, new layout, streets, curbs, L-shaped lots, shops, cars and props, minimap, edge triangles; then playtest notes: ferry boat, ruins, lamps, bus, tram, map edge, fight ring | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #11) |
 | 3b | M11b part 2: relief and irregular banks and quays, ground textures (variant C chosen), enterable Späti as rest stop (one per zone) | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #13) |
 | 3c | T1 Köpenick ground textures (image generation) | Codex | `docs/tasks/t1-ground-textures.md` | done (PR #14) |
+| 3d | Tram rail realism (Johannes' T1 feedback) | Codex | `docs/tasks/tram-rail-refinement.md` | done (PR #14) |
 | 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Codex (Johannes) | `docs/tasks/m3b-stats-in-sim.md` | done (PR #10) |
 | 5 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | done (PR #12) |
 | 6 | M4 Loot in the world, with breakable bins and crates (2D port); decisions prepared by Opus | Claude · Sonnet | `docs/tasks/m4-loot-world.md` | open |
