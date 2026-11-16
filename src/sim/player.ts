@@ -1,5 +1,5 @@
 // Player state machine: move, 3-hit chain, dodge with i-frames, dash strike.
-import { ATTACKS, PLAYER, type AttackId } from '../data/combat';
+import { weaponAttack, PLAYER, type AttackId } from '../data/combat';
 import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
 import { DT, type Player, type Sim, type SimInput } from './types';
@@ -50,17 +50,20 @@ function attackFacing(sim: Sim, inp: SimInput): number {
 
 function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   const p = sim.player;
-  const def = ATTACKS[id];
+  const def = weaponAttack(sim.stats.kind, id);
+  if (sim.statContext.perks.combo && id === 'light1') def.next = 'light3';
+  if (sim.statContext.perks.m_rund && sim.stats.kind === 'blade' && id === 'light3') { def.from = -Math.PI; def.to = Math.PI; def.reach *= 1.2; }
   p.facing = attackFacing(sim, inp);
   p.state = 'attack';
   p.stateT = 0;
   // Keep pose, hitbox, lunge and damage on one immutable swing snapshot.
-  const speed = sim.stats.attackSpeed;
+  const speed = sim.stats.attackSpeed * (sim.abilities.frenzy > 0 ? 1.8 : 1);
   p.attackSpeed = speed;
-  p.critical = sim.rng.next() < sim.stats.crit;
+  p.critical = sim.rng.next() < sim.stats.crit || sim.abilities.frenzy > 0 || !!((sim.stats.kind==='sling'?id==='light4':id==='light3') && sim.statContext.perks.pauke);
   p.attack = { ...def, windup: def.windup / speed, active: def.active / speed, recovery: def.recovery / speed,
     reach: def.reach * sim.stats.reachFactor,
-    damage: def.damage * sim.stats.damage / STARTER_DAMAGE * (p.critical ? 2 : 1) };
+    damage: def.damage * (sim.abilities.retaliate ? 2 : 1) * (1 + .4 * (sim.statContext.perks.husar ?? 0) * (sim.abilities.sprint > 0 ? 1 : 0)) * sim.stats.damage / STARTER_DAMAGE * (p.critical ? 2 : 1) };
+  sim.abilities.retaliate = false;
   p.swing++;
   p.hits.length = 0;
   p.propHits.length = 0;
@@ -93,6 +96,8 @@ function startDodge(sim: Sim, inp: SimInput): void {
   p.dodgeZ = dz;
   p.facing = angleOf(dx, dz);
   p.invuln = Math.max(p.invuln, PLAYER.dodge.iframes);
+  p.hp = Math.min(sim.stats.maxHp, p.hp + sim.stats.maxHp * .03 * (sim.statContext.perks.breath ?? 0));
+  sim.abilities.sprint = 1;
   sim.consumed.dodge = true;
   sim.events.push({ type: 'dodge' });
 }
@@ -157,7 +162,7 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     const len = Math.hypot(inp.moveX, inp.moveZ);
     const scale = len > 1 ? 1 / len : 1;
     // Brief slow after taking a hit instead of a stun: attacks and dodges are never interrupted.
-    const slow = p.hurtT < PLAYER.hitStun ? 0.45 : 1;
+    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? .5 : 1);
     const tx = inp.moveX * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     const tz = inp.moveZ * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     // Linear ramp: full speed (or a full stop) within `accelTime`.

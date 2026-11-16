@@ -22,6 +22,7 @@ export interface Item {
   element?: ElementId;
   set?: SetId;
   mods?: WeaponModId[];
+  power?: 0 | 1;
   implantMode?: 0 | 1 | 2;
 }
 

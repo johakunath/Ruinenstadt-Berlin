@@ -1,3 +1,4 @@
+import { AbilitiesUi } from './ui/abilities';
 import { InventoryUi } from './ui/inventory';
 import { collectItem } from './sim/inventory';
 import type { Item } from './sim/items';
@@ -31,6 +32,8 @@ import { backupSave, clearSave, loadSave, writeSave } from './save';
 import { CloudSave, formatCode, type SyncState } from './sync';
 import { simFromSave, snapshot, type SaveV1 } from './sim/save';
 
+const abilitiesUi = new AbilitiesUi();
+
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
 const opts = readOptions();
@@ -40,6 +43,7 @@ audio.setVolume(opts.volume);
 audio.setMusic(opts.music);
 audio.setEco(opts.profile === 'leistung');
 const input = new Input(canvas);
+abilitiesUi.onChoose = () => input.clear();
 
 // Köpenick (M11) unless ?map=hof asks for the gate 1 courtyard.
 const map = opts.map === 'koepenick' ? (() => {
@@ -334,13 +338,15 @@ function readInput(): SimInput {
   }
   simInput.attack = input.buffer.has('attack');
   simInput.dodge = input.buffer.has('dodge');
+  simInput.power = input.buffer.has('power');
+  simInput.ultimate = input.buffer.has('ultimate');
   return simInput;
 }
 
 function drainEvents(): void {
   for (const ev of sim.events) {
     renderer?.onEvent(ev, sim);
-    audio.onEvent(ev);
+    audio.onEvent(ev, sim);
     telemetry.event(ev);
     switch (ev.type) {
       case 'hit': {
@@ -436,7 +442,9 @@ function frame(now: number): void {
   input.poll(dt, sim.hitstop > 0);
   inventory.pollPad(now);
 
-  const running = phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
+  abilitiesUi.update(sim, phase === 'play' && !ui.optionsOpen && !ui.mapOpen && !inventory.open);
+  if(abilitiesUi.open) input.clear();
+  const running = !abilitiesUi.open && phase !== 'title' && !ui.optionsOpen && !ui.mapOpen && !inventory.open && !held && lootExit !== 'ask';
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -445,6 +453,9 @@ function frame(now: number): void {
       stepSim(sim, readInput());
       if (sim.consumed.attack) input.buffer.consume('attack');
       if (sim.consumed.dodge) input.buffer.consume('dodge');
+      if (sim.consumed.power) input.buffer.consume('power');
+      if (sim.consumed.ultimate) input.buffer.consume('ultimate');
+      if (sim.abilities.offers.length) input.clear();
       drainEvents();
       acc -= DT;
       steps++;

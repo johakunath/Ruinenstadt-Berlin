@@ -1,20 +1,17 @@
 # Backlog (3D)
 
-Collected from playtests and the 2D backlog. Scheduled work lives in `docs/migration.md` (steps M1 to M15, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`.
+Open ideas only. Done: M6 wave checkpoints; prototype controller feel/rumble, PC performance and hero outline (Johannes, 2026-11-16). Scheduled work lives in `docs/migration.md` (steps M1 to M15, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`.
 
 Still to merge from the 2D `BACKLOG.md`: camp as a place (#16, #37), Umschmieden with control (#17), enemy voices (#18), quests (#41), collectibles (#27), line of sight (#28), garden (#33), smith and enchanter (#34), weapon crafting quests (#36), daggers and dual wield (#38), multi-level interiors (#13). Merge each when its migration step starts, not before.
 
 | # | Item | Source | Earliest |
 |---|---|---|---|
-| B1 | Checkpoint after every wave: a reload (tab killed, browser switch) resumes at the last wave instead of restarting the mission. Was a problem in the 2D game too | Gate 1 playtest | M6 |
 | B2 | Landmark view: near a landmark a button appears, the camera pulls out and shows the whole building; press again to return | Gate 1 playtest | After M11 |
 | B3 | Height levels: stairs, ramps, hills to look down from. Needs ground height in the sim (still 2D collision with a height per cell or per area) | Gate 1 playtest | M10, M11 |
-| B4 | Tall buildings vs camera: opaque buildings and large vehicles with an amber outline on genuinely occluded hero silhouette pixels (`src/render/hero-outline.ts`). Trees, small props and enemies excluded. Implemented in PR #14; hardware playtest open | Johannes, 2026-11-16 | M10, M11 |
 | B5 | Easier start for newcomers (gate 1 is hard: about 40 to 45 kills with effort). Tune in the real game, not now | Gate 1 playtest | M14 (balance bot) |
-| B6 | One finisher per weapon (gate 1 finisher stays as the pipe finisher) | Gate 1 playtest | M7 |
+| B6 | Finishers first pass built; animation/feel polish tracked in the combat task | Gate 1 playtest | M7 |
 | B7 | Head lamp or torch for very dark areas, migrated from the 2D game | Gate 1 playtest, 2D game | With the first dark area |
 | B8 | Qualität profile on tablets brings no visible gain and stutters: tablets stay on Leistung, consider hiding Qualität on coarse-pointer devices | Gate 1 playtest | Any time, small |
 | B9 | Balance bot calibrated to Johannes: after the port (M14) the bot plays with his reaction time, dodge rate and damage taken, measured from playtest telemetry, so tuning targets his skill, not a perfect player | Johannes, 2026-11-15 | M14 |
 | B10 | Power curve: never frustrating. Each zone the hero clearly gets stronger through drops, gear and skills, and by the district boss feels much more powerful than at the start. Target: early waves need care, late waves of the same district feel easier relative to the hero's power, bosses stay a real fight. The bot (B9) checks the curve after every balance change | Johannes, 2026-11-15 | M3, M4, M8, M14 |
-| B12 | Köpenick too big and empty: moved into M11b (`docs/migration.md`) | Johannes | M11b |
 | B13 | Späti trader. In 2D the trader appeared as a random event (and in the tunnels). In 3D every Späti has one. Port the 2D trader first, then extend: a trade screen with the inventory on one side and the trader on the other; weapons, equipment, especially strong Aufsätze; blessings (Hades style): swap a blessing, buy a new one or upgrade one, paid in Schrott. The balance bot must learn to trade | Johannes, 2026-11-16 | M13b |

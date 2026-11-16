@@ -299,7 +299,7 @@ export class Ui {
     });
     zone.addEventListener('pointerup', end);
     zone.addEventListener('pointercancel', end);
-    for (const [btn, action] of [['btn-attack', 'attack'], ['btn-dodge', 'dodge']] as const) {
+    for (const [btn, action] of [['btn-attack', 'attack'], ['btn-dodge', 'dodge'], ['btn-power', 'power'], ['btn-ultimate', 'ultimate']] as const) {
       el<HTMLButtonElement>(btn).addEventListener('pointerdown', (e) => {
         e.preventDefault();
         input.press(action, 'touch');

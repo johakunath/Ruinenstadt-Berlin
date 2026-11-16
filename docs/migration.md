@@ -2,31 +2,20 @@
 
 This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo `johakunath/Ruinenstadt` is a read-only reference for data, rules and feel.
 
-## Queue
+## Queue — read this first
 
-"Next task" means: the first row with status `open` for your agent. Owner tags are recommendations; Johannes may swap Codex and Claude.
+Read `CLAUDE.md`, then the linked task and only its source/target files. Completed task details live in `docs/tasks/`; current features in `docs/status.md`. Owner tags are recommendations.
 
-| # | Task | Owner | File | Status |
-|---|---|---|---|---|
-| 1 | M3a Hero stats port | Codex | `docs/tasks/m3a-stats-port.md` | done (PR #9) |
-| 2 | S1 Sound port | Codex | `docs/tasks/s1-sound-port.md` | done (PR #9) |
-| 3 | M11b Köpenick v2 part 1: concept C, new layout, streets, curbs, L-shaped lots, shops, cars and props, minimap, edge triangles; then playtest notes: ferry boat, ruins, lamps, bus, tram, map edge, fight ring | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #11) |
-| 3b | M11b part 2: relief and irregular banks and quays, ground textures (variant C chosen), enterable Späti as rest stop (one per zone) | Claude · Opus high | `docs/maps/koepenick.md` | done (PR #13) |
-| 3c | T1 Köpenick ground textures (image generation) | Codex | `docs/tasks/t1-ground-textures.md` | done (PR #14) |
-| 3d | Tram rail realism (Johannes' T1 feedback) | Codex | `docs/tasks/tram-rail-refinement.md` | done (PR #14) |
-| 3e | Replace proximity transparency with an occluded hero outline; resolve main conflict | Codex | `docs/tasks/hero-outline.md` | done (PR #14) |
-| 4 | M3b Wire stats into sim: weapon damage, life, speed, crit, resist, attack speed; map 2D numbers onto the 3D scale | Codex (Johannes) | `docs/tasks/m3b-stats-in-sim.md` | done (PR #10) |
-| 5 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | done (PR #12) |
-| 6 | M4 Loot in the world, with breakable bins and crates (2D port); decisions prepared by Opus | Claude · Sonnet | `docs/tasks/m4-loot-world.md` | done (PR pending, playtest open) |
+| Task | Owner | Status / start file |
+|---|---|---|
+| S2 + M7/M8/M9 first playable pass | Codex | Implemented, PR pending: `docs/tasks/combat-audio-migration.md` |
+| M7/M8 combat parity and polish | Claude · Opus high | open: follow-ups in `docs/tasks/combat-audio-migration.md`; retain the first pass |
+| M12 enemy roster and boss attacks | Claude | open: roadmap below |
+| M16 run content; then M9 consumable buttons | Codex rules, Claude world | open: roadmap below |
 
-Claude writes the next Codex task file before Codex's queue runs empty.
+Finish: task status + ≤8-line handover, update this queue, update status only for player-visible changes. Draft PR → one review → fixes → ready/CI. Do not re-run prototype acceptance.
 
-### Finishing a task
-
-1. Task file: `Status: done (PR #n)`, a `Handover` of at most 8 lines (what changed, deviations, follow-ups).
-2. This file: set the queue row to `done`, add follow-ups as new rows or backlog items.
-3. `docs/status.md`: only if a player sees a change.
-4. PR as draft until CI is green.
+**Verified by Johannes, 2026-11-16:** prototype controller feel/rumble, PC performance and hero outline work well; done. Test new combat changes normally; these are not open migration blockers.
 
 ## Milestone P1: Köpenick at 2D parity
 
@@ -42,9 +31,9 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Built; Johannes playtest open |
 | Inventory, equip, compare, salvage, sets | M5 | Implemented; M4 collection hookup done |
 | Save, wave checkpoint, difficulty | M6 | Done (PR pending); playtest open |
-| Weapons: Klinge, Hammer, Speer, Werfer, finishers | M7 | Open |
-| Powers, ultimates, blessings with families and duos | M8 | Open |
-| Touch layout for more buttons | M9 | Open |
+| Weapons and finishers | M7 | First pass built; animation/feel/parity polish open (task above) |
+| Powers, ultimates, blessings, families and duos | M8 | First pass built; remaining 2D perk effects/mods/duos open |
+| Touch layout for more buttons | M9 | Power/ultimate built; consumables with M16 |
 | Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Open (placeholders) |
 | Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Open |
 | Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
@@ -54,21 +43,15 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
 | Endless mode after the district boss | M18 | Open |
 | One U-Bahn tunnel with Der Schaffner | M19 | Open |
-| Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 open |
+| Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 built for current roster, future types with M12 |
 
-Not in P1: XP levels, threat levels (Bedrohung), daily fight, online sync, walkable camp, other districts.
+Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, other districts.
 
 ## Steps
 
 | # | Step | Owner | Needs | Done when |
 |---|---|---|---|---|
-| M3a | Stats port | Codex | M2 | Task file |
-| M11b | Köpenick v2: layout about 0.6 of today's distances (new lots, not `mapscale`), narrower streets with clear edges, cars and props on every stretch, more building types and non-rectangular footprints, relief and irregular banks, ground textures (alternatives first), enterable Späti, minimap (mockup first), 2D edge triangles | Claude · Opus high, Johannes picks | M11 | Playtest on the Tab S9: walking feels short, every stretch has something |
 | M11c | World variety (P1 row): lot types, decals, weather per district, area messages. Mockup or look alternatives for weather first | Claude · Opus medium | M11b | Each zone of Köpenick has two lot types the others do not |
-| M3b | Stats in the sim | Claude · Opus high | M3a | Equipped item changes damage and life in a run; sim tests |
-| 5 | M5 Inventory, matching 2D (mockup waived by Johannes, 2026-11-16) | Codex | `docs/tasks/m5-inventory.md` | done (PR #12) |
-| 6 | M4 Loot in the world, with breakable bins and crates (2D port); decisions prepared by Opus | Claude · Sonnet | `docs/tasks/m4-loot-world.md` | done (PR pending, playtest open) |
-| M6 | Versioned save, wave checkpoint (B1), difficulty choice | Claude (format), Codex (UI) | M5 | Reload resumes at the last wave. Done (PR pending); title UI is minimal, Codex may restyle |
 | M7 | Weapons in 2D order: Klinge (pipe moves become its baseline), Hammer, Speer, Werfer; finisher each (B6) | Claude · Opus high | M3b | Klinge and Hammer feel different on a pad |
 | M8 | Powers, ultimates, blessings (Zeitsplitter), families and duos | Claude · Opus high | M7 | One power and one ultimate per weapon; blessing choice after each encounter |
 | M9 | Touch layout for power, ultimate, consumables: mockup, then build | Claude · Opus medium | M8 | |
@@ -124,5 +107,5 @@ Parallel on the PC: H1 custom hero (2 test heroes, pick, rig on current skeleton
 | # | Question | Default |
 |---|---|---|
 | Q5 | Menu art: keep ChatGPT icons and portraits or render 3D items? | Keep as placeholders |
-| Q6 | Online save and telemetry (2D `js/sync.js`) | Decided 2026-11-16: reuse the 2D Google Sheet + Apps Script, no login, anonymous 8 character code, browser save stays primary. Built in M6 (`src/sync.ts`); needs a playtest against the live script. No new database (Supabase free projects pause after 1 week of inactivity and need a manual Resume; Apps Script has no such rule) |
+| Q6 | Online save and telemetry (2D `js/sync.js`) | Decided 2026-11-16: reuse the 2D Google Sheet + Apps Script, no login, anonymous 8 character code, browser save stays primary. Built in M6 (`src/sync.ts`); needs a playtest against the live script. No new database |
 | Q9 | Tool for enemy and boss voices | Synthesis and CC0 in S2; tool in S3 |

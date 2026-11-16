@@ -28,6 +28,8 @@ export interface SimInput {
   /** A buffered press is waiting. The sim reports in `sim.consumed` when it used one. */
   attack: boolean;
   dodge: boolean;
+  power?: boolean;
+  ultimate?: boolean;
 }
 
 export const NO_INPUT: SimInput = { moveX: 0, moveZ: 0, aimX: 0, aimZ: 0, aimAssist: false, attack: false, dodge: false };
@@ -107,6 +109,7 @@ export interface Enemy {
 export type SimEvent =
   | { type: 'swing'; attack: AttackId; weight: HitWeight }
   | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean }
+  | { type: 'ability'; name: string; ultimate: boolean }
   | { type: 'dodge' }
   | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number }
   | { type: 'playerDie' }
@@ -149,6 +152,7 @@ export interface RunState {
 }
 
 export interface Sim {
+  abilities: import('./abilities').Abilities;
   difficulty: DifficultyId;
   inventory: Inventory;
   equipment: Equipment;
@@ -163,7 +167,7 @@ export interface Sim {
   /** Remaining freeze in seconds. While > 0 the world holds still; input is still buffered outside. */
   hitstop: number;
   /** Buffered presses used by the last step. */
-  consumed: { attack: boolean; dodge: boolean };
+  consumed: { attack: boolean; dodge: boolean; power: boolean; ultimate: boolean };
   level: Level;
   /** Same as `level.colliders` (debug view, tests). */
   colliders: Collider[];

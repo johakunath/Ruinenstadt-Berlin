@@ -18,16 +18,24 @@ What is in the game now. Updated 2026-11-16. Next work: `docs/migration.md` › 
 | Telemetry | One anonymous row per run (win, death, quit) to the 2D Google Sheet "Telemetrie": encounter reached, time, kills, damage taken, rest visits, per-encounter time, damage and fps, overall fps, p95, 1 % low, draw calls, profile, device class, input. Version `3d-…` in column v. Switch in Optionen. Delivery from the live game not verified yet |
 | CI | Type check, 226 unit tests, build, Playwright smoke, Pages deploy from `main` |
 
+## Latest migration (2026-11-16)
+
+- S1 effects/music already ported; S2 enemy-specific synthesized cues with distance/pan built for current roster.
+- M7 first pass: distinct class hit shapes, thrower projectiles and finishers; existing pipe clips remain provisional for other weapons.
+- M8 first pass: 2 powers per class + ultimate; eligible 3-card blessings, family weights and supported duos; checkpoint persistence and run reset. Remaining perk/mod/duo effects: `docs/tasks/combat-audio-migration.md`.
+- M9: touch power/ultimate, E/R and pad B/LB; blessing cards support keyboard/pad/touch. Consumables await M16.
+- Prototype PC performance, pad/rumble and hero outline **accepted by Johannes**; no open acceptance item for them.
+
 ## Known weak or unverified
 
 | Point | Detail |
 |---|---|
-| Hardware | Tab S9: over 90 fps on Köpenick before the 60 fps cap (2026-11-15). PC not measured |
-| Feel | Tuned from clip measurements, not by playing; pad and rumble never tried |
-| Progression | Gear now comes from drops and breakable crates and bins (M4); saves, camp/stash and progression balance remain open |
+| Hardware | Tab S9: over 90 fps on Köpenick before the 60 fps cap (2026-11-15). PC prototype performance accepted by Johannes (2026-11-16) |
+| Feel | Prototype pad feel and rumble verified by Johannes (2026-11-16); new M7/M8 moves await playtest |
+| Progression | Gear now comes from drops and breakable crates and bins (M4); M6 saves/checkpoints/difficulty and online sync built (live sync playtest open); camp/stash and balance remain open |
 | Map | v2 and part 2 not playtested yet. T1 adds painted grass, dirt, sidewalk plates, forest floor and scatter, using the 2D art as generation references; code textures remain loading fallbacks. Tram rails have steel heads, inward grooves, guard edges, worn seams and joined bends; crossing curbs leave the corridor clear. The stopped tram is level and aligned to the east-track straight, with sixteen steel wheel contacts on the rail heads. PC/Tab S9 performance integration and playtest remain open (`docs/asset-pipeline.md`) |
 | Art | Landmarks are blockouts, trees simple, CC0 hero (coat skirt clips in wide poses), zombie not the board ghoul, dodge clip squeezed to 0.24 s |
-| Touch | Layout provisional |
+| Touch | Power/ultimate added to the existing layout; consumables follow M16 |
 | Audio | Port mappings, PCM and lifecycle tested; listening review on PC/Tab S9 still open |
 | Tech | Profile switch reloads the page; one shadow map for world and characters renders every frame; no dynamic resolution; `tools/fetch-assets.sh` depends on the itch.io download flow |
 

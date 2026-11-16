@@ -2,9 +2,10 @@
 // All times in seconds, distances in meters, angles in radians relative to the facing direction
 // (negative = the character's right, positive = left).
 import { DEG } from '../sim/math';
+import type { WeaponKindId } from './items';
 
 export type HitWeight = 'light' | 'heavy';
-export type AttackId = 'light1' | 'light2' | 'light3' | 'dash';
+export type AttackId = 'light1' | 'light2' | 'light3' | 'light4' | 'dash';
 
 export interface AttackDef {
   id: AttackId;
@@ -62,6 +63,11 @@ export const ATTACKS: Record<AttackId, AttackDef> = {
     from: -42 * DEG, to: 42 * DEG, width: 8 * DEG, inner: 0.2, reach: 2.6,
     damage: 18, knockback: 10, weight: 'heavy', lunge: 0.9, next: null,
   },
+  light4: {
+    id:'light4', clip:'Sword_Regular_B', clipStart:.1, clipSwing:.2, clipHit:.285, rec:'Sword_Regular_B_Rec',style:'slash',
+    windup:.1,active:.05,recovery:.3,from:-.2,to:.2,width:.1,inner:.2,reach:2.15,
+    damage:16,knockback:9,weight:'heavy',lunge:0,next:null,
+  },
   dash: {
     id: 'dash', clip: 'Sword_Dash', clipStart: 0.18, clipSwing: 0.265, clipHit: 0.345, rec: null, style: 'slash',
     windup: 0.05, active: 0.12, recovery: 0.3,
@@ -111,3 +117,19 @@ export const PLAYER = {
 
 /** Input buffer length in seconds (#35: 150 to 200 ms). */
 export const INPUT_BUFFER = 0.18;
+
+/** M7 first pass: retain the measured pipe clips; port the 2D class roles and finisher ratios.
+ * No new animation claims: spear/thrower poses need custom clips in H1. */
+export function weaponAttack(kind: WeaponKindId, id: AttackId): AttackDef {
+  const a = { ...ATTACKS[id] };
+  const fin = kind === 'sling' ? id === 'light4' : id === 'light3';
+  if (kind === 'hammer') Object.assign(a, { style: 'smash', windup: .19, active: .12, recovery: .5,
+    from: -55 * DEG, to: 55 * DEG, reach: fin ? 2.8 : 2.3, damage: fin ? 12 : 10,
+    weight: 'heavy', knockback: fin ? 18 : 11, lunge: .3 });
+  if (kind === 'spear') Object.assign(a, { from: -12 * DEG, to: 12 * DEG, width: 5 * DEG,
+    reach: fin ? 4.2 : 3.5, damage: fin ? 16 : 10, lunge: fin ? 1.4 : .45 });
+  if (kind === 'sling') { if(id==='light3')a.next='light4'; Object.assign(a, { windup: .1, active: .05, recovery: .3,
+    damage: fin ? 16 : 10, lunge: 0 }); }
+  if (kind === 'blade' && fin) a.damage = 16;
+  return a;
+}

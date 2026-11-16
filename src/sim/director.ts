@@ -1,3 +1,4 @@
+import { offerBlessings } from './abilities';
 // Encounter director for expedition maps (migration Q1): the player walks a route and fights at
 // fixed places. Entering the current encounter's circle closes it; waves spawn on its rim until
 // all are beaten (bosses come with the last wave). Then the circle opens, life is partly restored
@@ -143,6 +144,7 @@ export function updateDirector(sim: Sim): void {
     return;
   }
   // Encounter won.
+  offerBlessings(sim);
   const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * enc.heal));
   p.hp += heal;
   sim.events.push({ type: 'encounterClear', index: run.index, heal });

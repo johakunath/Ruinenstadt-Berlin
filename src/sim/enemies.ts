@@ -131,8 +131,10 @@ export function updateEnemies(sim: Sim): void {
         if (ml > 1e-4) {
           mx /= ml;
           mz /= ml;
-          vx = mx * def.speed;
-          vz = mz * def.speed;
+          const banner=sim.abilities.banner;
+          const slow=banner&&Math.hypot(e.x-banner.x,e.z-banner.z)<3.4?.6:1;
+          vx = mx * def.speed * slow;
+          vz = mz * def.speed * slow;
           e.facing = turnToward(e.facing, angleOf(mx, mz), 7 * DT);
         }
         break;

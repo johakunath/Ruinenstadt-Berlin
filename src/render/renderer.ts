@@ -255,6 +255,8 @@ export class GameRenderer {
     this.world.update(this.time);
     this.world.sync?.(sim.time - DT * (1 - alpha));
     this.hero.update(p, alpha, dt, frozen);
+    const vault = sim.abilities.vault;
+    if(vault) this.hero.root.position.y += Math.sin(Math.PI*(1-vault.left/vault.duration))*1.6;
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();

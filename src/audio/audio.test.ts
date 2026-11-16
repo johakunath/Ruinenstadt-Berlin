@@ -94,3 +94,11 @@ describe('2D audio port', () => {
     audio.dispose(); expect(ctx.close).toHaveBeenCalledOnce(); expect(vi.getTimerCount()).toBe(0);
   });
 });
+
+it('attenuates distant enemy cues and keeps stereo pan bounded', async()=>{
+  const {spatialAudio}=await import('./audio');
+  expect(spatialAudio(0,0)).toEqual({volume:1,pan:0});
+  expect(spatialAudio(8,0).volume).toBeLessThan(1);
+  expect(spatialAudio(50,0)).toEqual({volume:0,pan:1});
+  expect(spatialAudio(-8,0).pan).toBeLessThan(0);
+});

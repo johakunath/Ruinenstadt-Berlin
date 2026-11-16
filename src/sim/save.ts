@@ -15,6 +15,8 @@ export const SAVE_VERSION = 1;
 export interface SaveProfile { inventory: Inventory; equipment: Equipment; statContext: StatContext }
 export interface SaveRun {
   /** Map name; a run only resumes on the map it was saved on. */
+  abilities?: import('./abilities').Abilities;
+  perks?: StatContext['perks'];
   map: string;
   index: number;
   /** Wave that starts next (phase pause) or -1 between encounters (phase travel). */
@@ -36,7 +38,7 @@ export interface SaveRun {
 export interface SaveV1 { v: 1; /** Save time in ms; the cloud sync compares it. */ t: number; difficulty: DifficultyId; profile: SaveProfile; run: SaveRun | null }
 
 export function profileOf(sim: Sim): SaveProfile {
-  return structuredClone({ inventory: sim.inventory, equipment: sim.equipment, statContext: sim.statContext });
+  return structuredClone({ inventory: sim.inventory, equipment: sim.equipment, statContext: { ...sim.statContext, perks: {} } });
 }
 
 export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now()): SaveV1 {
@@ -45,6 +47,7 @@ export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now
   return {
     v: 1, t: now, difficulty: sim.difficulty, profile: profileOf(sim),
     run: !inRun ? null : {
+      abilities: structuredClone(sim.abilities), perks: { ...sim.statContext.perks },
       map, index: r.index, wave: r.phase === 'pause' ? r.wave : -1, hp: sim.player.hp,
       x: sim.player.x, z: sim.player.z, facing: sim.player.facing, rng: sim.rng.state, nextId: sim.nextId,
       itemId: sim.lootCtx.itemId ?? 0, lootWaves: sim.lootWaves, kills: sim.kills,
@@ -84,8 +87,9 @@ export function parseSave(text: string | null): SaveV1 | null {
  */
 export function simFromSave(save: SaveV1, opts: Omit<SimOptions, 'inventory' | 'equipment' | 'statContext' | 'difficulty' | 'startAt'>, useRun: boolean): Sim {
   const run = useRun ? save.run : null;
-  const sim = createSim({ ...opts, ...save.profile, difficulty: save.difficulty, startAt: run?.index ?? 0 });
+  const sim = createSim({ ...opts, ...save.profile, statContext: {...save.profile.statContext, perks: run?.perks ?? {}}, difficulty: save.difficulty, startAt: run?.index ?? 0 });
   if (!run) return sim;
+  if(run.abilities) sim.abilities = structuredClone(run.abilities);
   const L = sim.level;
   sim.player.x = sim.player.px = run.x;
   sim.player.z = sim.player.pz = run.z;

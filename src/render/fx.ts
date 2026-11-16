@@ -1,3 +1,4 @@
+import { AbilityView } from './abilities';
 // Effects: particles (fire, embers, sparks, dust), weapon smear, enemy telegraphs, impact
 // flashes, blob shadows, drifting mist. All of it lives on the FX layer.
 import { groundY } from './ground';
@@ -311,6 +312,7 @@ export class Fx {
   private emberDebt = 0;
   private flameDebt = 0;
   private time = 0;
+  private readonly abilities = new AbilityView();
 
   constructor(
     private readonly fires: Vector3[],
@@ -420,6 +422,8 @@ export class Fx {
   }
 
   update(sim: Sim, alpha: number, dt: number, frozen: boolean, pixelScale: number): void {
+    if (!this.abilities.group.parent) this.group.add(this.abilities.group);
+    this.abilities.update(sim);
     this.time += dt;
     // Fire and embers keep burning through hitstop: only the fight freezes.
     // Only fires near the hero burn (a map has dozens); each gets the same rate as the courtyard barrel.

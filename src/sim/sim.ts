@@ -1,3 +1,4 @@
+import { createAbilities, updateAbilities, onCombatHit, onCombatKill, onIncoming, damageBonus } from './abilities';
 import { createInventory, type Inventory } from './inventory';
 import { createBreakables, sweepBreakables } from './breakables';
 import { killDrops, updateDrops } from './loot';
@@ -45,6 +46,7 @@ export function createSim(opts: SimOptions = {}): Sim {
   const context = statContext(opts.statContext);
   const stats = heroStats(equipment, context);
   const sim: Sim = {
+    abilities: createAbilities(),
     difficulty: opts.difficulty ?? DEFAULT_DIFFICULTY,
     equipment, statContext: context, stats,
     inventory: structuredClone(opts.inventory ?? createInventory()),
@@ -54,7 +56,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     enemies: [],
     events: [],
     hitstop: 0,
-    consumed: { attack: false, dodge: false },
+    consumed: { attack: false, dodge: false, power: false, ultimate: false },
     level,
     colliders: level.colliders,
     flow: level.expedition ? new FlowField({ minX: 0, maxX: 1, minZ: 0, maxZ: 1 }, []) : new FlowField(level.bounds, level.colliders),
@@ -92,6 +94,7 @@ export function createSim(opts: SimOptions = {}): Sim {
 
 /** Advances the world by one fixed step. */
 export function stepSim(sim: Sim, input: SimInput): void {
+  sim.consumed.power = sim.consumed.ultimate = false;
   sim.consumed.attack = false;
   sim.consumed.dodge = false;
   const p = sim.player;
@@ -110,12 +113,13 @@ export function stepSim(sim: Sim, input: SimInput): void {
   }
   // After the hitstop check: the boat stands still while the world is frozen.
   rideFerries(sim);
-  updatePlayer(sim, input);
+  updatePlayer(sim, sim.abilities.vault ? {...input, attack:false, dodge:false,moveX:0,moveZ:0} : input);
   followFlow(sim);
   sim.flow.setTarget(p.x, p.z);
   updateEnemies(sim);
   resolveBodies(sim);
   playerSweep(sim);
+  updateAbilities(sim, input, damageEnemy);
   updateDrops(sim);
   enemyStrikes(sim);
   removeCorpses(sim);
@@ -159,6 +163,13 @@ function playerSweep(sim: Sim): void {
   const t1 = p.stateT;
   const t0 = t1 - DT;
   if (t1 < a.windup || t0 >= a.windup + a.active) return;
+  if (sim.stats.kind === 'sling') {
+    if (t0 < a.windup && t1 >= a.windup) {
+      const fin = a.id === 'light4', spread = sim.statContext.perks.m_schrot ? [-.18, 0, .18] : [0];
+      for (const offset of spread) sim.abilities.projectiles.push({ x:p.x,z:p.z,angle:p.facing+offset,speed:18,life:(fin?.9:.7)*(spread.length>1?.6:1), damage:a.damage*(spread.length>1?.55:1), pierce:(fin?3:0)+(sim.statContext.perks.durch??0),hits:[] });
+    }
+    return;
+  }
   const f0 = Math.max(0, (t0 - a.windup) / a.active);
   const f1 = Math.min(1, (t1 - a.windup) / a.active);
   const a0 = lerp(a.from, a.to, f0);
@@ -169,33 +180,40 @@ function playerSweep(sim: Sim): void {
   p.sweepLo = lo;
   p.sweepHi = hi;
   if (sim.breakables.length > 0) sweepBreakables(sim, lo, hi, a.inner, a.reach);
-  const feel = HIT_FEEL[a.weight];
   for (const e of sim.enemies) {
     if (e.state === 'dead' || p.hits.includes(e.id)) continue;
     if (!sectorHitsCircle(p.x, p.z, p.facing, lo, hi, a.inner, a.reach, e.x, e.z, e.def.radius)) continue;
     p.hits.push(e.id);
+    damageEnemy(sim, e, a.damage, a.weight, a.knockback);
+    onCombatHit(sim, e, a.damage, damageEnemy);
+  }
+}
+
+export function damageEnemy(sim: Sim, e: Enemy, damage: number, weight: 'light' | 'heavy' = 'light', knockback = 5): void {
+  if(e.state === 'dead') return;
+  const p = sim.player, feel = HIT_FEEL[weight];
     let dx = e.x - p.x;
     let dz = e.z - p.z;
     const d = Math.hypot(dx, dz) || 1;
     dx /= d;
     dz /= d;
-    e.hp -= a.damage;
-    e.kx += dx * a.knockback * e.def.knockbackTaken;
-    e.kz += dz * a.knockback * e.def.knockbackTaken;
+    damage = damageBonus(sim, e, damage);
+    e.hp -= damage;
+    e.kx += dx * knockback * e.def.knockbackTaken;
+    e.kz += dz * knockback * e.def.knockbackTaken;
     const killed = e.hp <= 0;
     if (killed) {
       killEnemy(sim, e);
-    } else if (!e.def.poise || a.weight === 'heavy') {
+    } else if (knockback > 0 && (!e.def.poise || weight === 'heavy')) {
       e.state = 'stagger';
       e.stateT = 0;
       e.staggerDur = feel.stagger;
     }
-    sim.hitstop = Math.max(sim.hitstop, feel.hitstop + (killed ? PLAYER.killHitstop : 0));
+    if(knockback>0) sim.hitstop = Math.max(sim.hitstop, feel.hitstop + (killed ? PLAYER.killHitstop : 0));
     sim.events.push({
       type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius,
-      dx, dz, weight: a.weight, killed, damage: a.damage, critical: p.critical,
+      dx, dz, weight: weight, killed, damage, critical: p.critical,
     });
-  }
 }
 
 function killEnemy(sim: Sim, e: Enemy): void {
@@ -204,6 +222,7 @@ function killEnemy(sim: Sim, e: Enemy): void {
   e.hp = 0;
   sim.kills++;
   killDrops(sim, e);
+  onCombatKill(sim, e, damageEnemy);
   if (sim.player.state !== 'dead') sim.player.hp = Math.min(sim.stats.maxHp, sim.player.hp + sim.stats.leech);
 }
 
@@ -216,12 +235,13 @@ function enemyStrikes(sim: Sim): void {
     const def = e.def;
     if (!sectorHitsCircle(e.x, e.z, e.facing, -def.halfAngle, def.halfAngle, 0, def.reach, p.x, p.z, PLAYER.radius)) continue;
     e.struck = true;
-    const damage = Math.min(def.damage * e.dmgMul * (1 - sim.stats.res), sim.stats.maxHp * PLAYER.maxHitShare);
+    let damage = Math.min(def.damage * e.dmgMul * (1 - sim.stats.res), sim.stats.maxHp * PLAYER.maxHitShare);
     let dx = p.x - e.x;
     let dz = p.z - e.z;
     const d = Math.hypot(dx, dz) || 1;
     dx /= d;
     dz /= d;
+    damage = onIncoming(sim, e, damage, damageEnemy);
     p.hp = Math.max(0, p.hp - damage);
     p.hurtT = 0;
     sim.hitstop = Math.max(sim.hitstop, PLAYER.hitByEnemyHitstop);

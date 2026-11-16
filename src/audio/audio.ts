@@ -1,6 +1,6 @@
 // Sound, generated with WebAudio: no audio files. Hits play on the exact sim step of the damage frame.
 import type { HitWeight } from '../data/combat';
-import type { SimEvent } from '../sim/types';
+import type { Sim, SimEvent } from '../sim/types';
 import { SoundEffects, Synth, type SfxId } from './sfx';
 import { Music, type MusicState } from './music';
 
@@ -120,14 +120,30 @@ export class GameAudio {
   hurt(): void { this.play('hurt'); }
 
   /** Called exactly when the loop drains each damage-step event. */
-  onEvent(event: SimEvent): void {
+  onEvent(event: SimEvent, sim?: Sim): void {
+    let volume = 1, pan = 0;
+    if (sim) {
+      const source = 'x' in event ? event : 'id' in event ? sim.enemies.find(e=>e.id===event.id) : undefined;
+      if(source) ({volume,pan}=spatialAudio(source.x-sim.player.x,source.z-sim.player.z));
+    }
     switch (event.type) {
-      case 'swing': this.swing(event.weight); break;
-      case 'hit': this.hit(event.weight, event.killed, event.critical); break;
+      case 'swing': if(sim?.stats.kind==='sling')this.play('sling');else this.swing(event.weight); break;
+      case 'hit': if(sim){ this.play(event.critical?'crit':'hit',0,pan,volume);if(event.killed)this.play('kill',0,pan,volume); }else this.hit(event.weight, event.killed, event.critical); break;
       case 'dodge': this.dodge(); break;
       case 'playerHit': this.hurt(); break;
       case 'playerDie': this.death(); break;
-      case 'enemyWindup': this.growl(); break;
+      case 'enemyWindup': {
+        if(!sim){this.growl();break;}
+        const e=sim.enemies.find(e=>e.id===event.id);
+        if(!e||!this.ctx||volume<=0||this.ctx.currentTime-this.lastGrowl<.25)break;
+        this.lastGrowl=this.ctx.currentTime;
+        this.play(e.def.boss?'growlBoss':e.kind==='runner'?'growlRunner':e.kind==='brute'?'growlBrute':'growlWalker',0,pan,volume);
+        break;
+      }
+      case 'ability': {
+        const cues:Record<string,SfxId>={Kreissäge:'spin',Fechtsprung:'dash',Säbeltanz:'spin',Fallhammer:'boom',Gullydeckel:'wood',Abrissbirne:'boom',Nagelsturm:'sling',Brandsatz:'ignite',Sperrfeuer:'heavy',Spießrute:'heavy',Stabhochsprung:'dash',Standarte:'legend'};
+        this.play(cues[event.name]??'spin');if(event.ultimate)this.play('legend');break;
+      }
       case 'encounterStart': case 'waveStart': this.play('horn'); break;
       case 'encounterClear': this.play('bell'); if (event.heal > 0) this.play('heal'); break;
       case 'zoneClear': this.play('bell'); break;
@@ -172,4 +188,10 @@ export class GameAudio {
     lfo.frequency.value = .13; lg.gain.value = .03; lfo.connect(lg); lg.connect(g.gain);
     s.connect(f); f.connect(g); g.connect(this.master); s.start(); lfo.start();
   }
+}
+
+/** Same distance rolloff as 2D sfx: near full volume, quiet off screen, silent beyond 30 m. */
+export function spatialAudio(dx:number,dz:number):{volume:number;pan:number} {
+  const d=Math.hypot(dx,dz);
+  return {volume:d>=30?0:Math.min(1,1/(1+(d/8)**2)),pan:Math.max(-1,Math.min(1,dx/12))};
 }
