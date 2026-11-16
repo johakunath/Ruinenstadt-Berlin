@@ -95,6 +95,7 @@ export function updateDirector(sim: Sim): void {
     sim.abilities.rewardT! -= DT;
     if (sim.abilities.rewardT! <= 0) offerBlessings(sim);
   }
+  if (run.endless !== undefined && p.state !== 'dead') { updateEndless(sim); return; }
   if (!enc || p.state === 'dead') return;
 
   if (run.phase === 'travel') {
@@ -167,4 +168,64 @@ export function followFlow(sim: Sim): void {
   if (sim.enemies.length === 0) return;
   const c = sim.flowCenter;
   if (Math.hypot(sim.player.x - c.x, sim.player.z - c.z) > WINDOW * 0.4) focusFlow(sim, sim.player.x, sim.player.z);
+}
+
+/**
+ * M18 endless mode (2D `run.endless`): after the district boss the waves keep coming around the hero.
+ * Each wave is larger and tougher than the last fight of the map; every fifth brings a boss, every
+ * second ends with a blessing choice. The best wave is kept in the profile (`camp.endlessBest`).
+ */
+export const ENDLESS = { pause: 4, count: 10, perWave: 2, growth: 1.08, eliteBase: 0.12, elitePerWave: 0.01, eliteMax: 0.45, bossEvery: 5, blessingEvery: 2 } as const;
+const ENDLESS_BOSSES = ['feldwebel', 'waechter', 'rex', 'hauptmann'] as const;
+export function startEndless(sim: Sim): void {
+  sim.run.endless = 0;
+  sim.run.phase = 'pause';
+  sim.run.pauseT = ENDLESS.pause;
+  sim.run.toSpawn = 0;
+  sim.run.bossesToSpawn = [];
+  focusFlow(sim, sim.player.x, sim.player.z);
+}
+/** The wave the endless mode builds from: the map's last regular wave, grown per wave. */
+export function endlessWave(sim: Sim, n: number): { count: number; maxAlive: number; mix: Partial<Record<import('../data/enemies').EnemyKind, number>>; hpMul: number; dmgMul: number; elite: number } {
+  const encs = sim.level.encounters, last = encs[encs.length - 1];
+  const base = last?.waves.filter((w) => w.bosses.length === 0).at(-1) ?? last?.waves[0] ?? { count: 10, maxAlive: 12, mix: { walker: 1 }, hpMul: 1, dmgMul: 1, bosses: [] };
+  const g = ENDLESS.growth ** n;
+  return { count: ENDLESS.count + ENDLESS.perWave * n, maxAlive: Math.min(24, base.maxAlive + Math.floor(n / 2)), mix: base.mix, hpMul: base.hpMul * g, dmgMul: base.dmgMul * Math.sqrt(g), elite: Math.min(ENDLESS.eliteMax, ENDLESS.eliteBase + ENDLESS.elitePerWave * n) };
+}
+function updateEndless(sim: Sim): void {
+  const run = sim.run, n = run.endless!, df = difficultyOf(sim.difficulty), p = sim.player;
+  if (run.phase === 'pause') {
+    if ((sim.abilities.rewardT ?? 0) > 0 || sim.abilities.offers.length > 0) return;
+    run.pauseT -= DT;
+    if (run.pauseT > 0) return;
+    run.phase = 'fight';
+    run.toSpawn = endlessWave(sim, n + 1).count;
+    run.bossesToSpawn = (n + 1) % ENDLESS.bossEvery === 0 ? [ENDLESS_BOSSES[Math.floor((n + 1) / ENDLESS.bossEvery - 1) % ENDLESS_BOSSES.length]!] : [];
+    run.spawnT = 0.4;
+    sim.events.push({ type: 'endlessWave', n: n + 1, done: false });
+    return;
+  }
+  if (run.phase !== 'fight') return;
+  const w = endlessWave(sim, n + 1);
+  run.spawnT -= DT;
+  if (run.spawnT <= 0 && (run.bossesToSpawn.length > 0 || (run.toSpawn > 0 && aliveCount(sim) < w.maxAlive))) {
+    run.spawnT = SPAWN_GAP;
+    const boss = run.bossesToSpawn.shift();
+    const kind = boss ?? pickKind(sim, w.mix);
+    const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, ENEMIES[kind].radius + 0.2) ?? { x: p.x + 12, z: p.z };
+    const e = spawnEnemy(sim, q.x, q.z, kind, w.hpMul * df.hp * (boss ? 0.8 : 1), w.dmgMul * df.dmg);
+    if (!boss) { if (sim.rng.next() < w.elite) makeElite(sim, e); run.toSpawn--; }
+  }
+  followFlow(sim);
+  if (run.toSpawn > 0 || run.bossesToSpawn.length > 0 || aliveCount(sim) > 0) return;
+  run.endless = n + 1;
+  sim.lootWaves++;
+  const camp = sim.inventory.camp ??= { stations: {}, stash: [], freed: [] };
+  camp.endlessBest = Math.max(camp.endlessBest ?? 0, n + 1);
+  const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * 0.15));
+  p.hp += heal;
+  sim.events.push({ type: 'endlessWave', n: n + 1, done: true });
+  if ((n + 1) % ENDLESS.blessingEvery === 0) sim.abilities.rewardT = REWARD_DELAY;
+  run.phase = 'pause';
+  run.pauseT = ENDLESS.pause;
 }

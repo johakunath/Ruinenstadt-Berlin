@@ -2,7 +2,9 @@ import { AbilitiesUi } from './ui/abilities';
 import { InventoryUi } from './ui/inventory';
 import { Menu } from './ui/menu';
 import { CampUi } from './ui/camp';
+import { IntroUi } from './ui/intro';
 import { endExpedition } from './sim/camp';
+import { startEndless } from './sim/director';
 import { INGREDIENTS } from './data/crafting';
 import { isUpgrade } from './sim/items';
 import { collectItem } from './sim/inventory';
@@ -142,6 +144,13 @@ function checkpoint(): number {
   const zone = level.encounters[i]?.zone ?? 0;
   return level.encounters.findIndex((e) => e.zone === zone);
 }
+/** M17 end screen: what the run brought (2D showEnd stats). */
+let runScrap0 = 0, runT0 = 0;
+function endStats(won: boolean): string {
+  const min = Math.max(1, Math.round((sim.time - runT0) / 60)), fights = Math.min(sim.run.index, level?.encounters.length ?? 0), best = sim.inventory.camp?.endlessBest ?? 0;
+  const e = sim.run.endless;
+  return `${e !== undefined ? `<div>Endlos · Welle <b>${e}</b> · Rekord <b>${best}</b></div>` : level ? `<div>Kampf <b>${won ? level.encounters.length : fights}</b> von ${level.encounters.length}</div>` : ''}<div><b>${sim.kills}</b> Gegner besiegt · ${min} min</div><div>Schrott <b>+${Math.max(0, sim.inventory.scrap - runScrap0)}</b></div><p class="hint">Beute und Schrott bleiben. Segen verfallen.</p>`;
+}
 /** Seconds between the last boss's fall and the end screen. */
 const WON_DELAY = 6;
 function showWon(): void {
@@ -151,6 +160,8 @@ function showWon(): void {
   input.enabled = false;
   input.clear();
   ui.showWon(sim.kills);
+  document.getElementById('won-stats')!.innerHTML = endStats(true);
+  (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || sim.run.endless !== undefined;
 }
 /** Stay in the freed district: walk, loot, break things, test the build. */
 function explore(): void {
@@ -201,12 +212,18 @@ let renderer: GameRenderer | null = null;
 
 const telemetry = new Telemetry(opts.telemetry, opts.autostart);
 
+/** Title › Spielen: a new run keeps the hero's gear but drops the old checkpoint. */
+function playNow(): void {
+  sim.difficulty = difficulty;
+  if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
+  start();
+}
+const intro = new IntroUi(() => sim, () => { if (phase === 'title') saveProfile(); });
 const ui = new Ui(opts, {
   onPlay: () => {
-    // A new game keeps the hero's gear but drops the old checkpoint.
-    sim.difficulty = difficulty;
-    if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
-    start();
+    // M17: the intro cards come once, before the first run.
+    if (!intro.seen('intro') && !opts.autostart) { intro.showIntro(() => playNow()); return; }
+    playNow();
   },
   onResume: () => {
     if (!save?.run) return;
@@ -221,6 +238,8 @@ const ui = new Ui(opts, {
     ui.setDifficulty(id);
   },
   onRetry: () => {
+    // Endless mode has no checkpoint: a fall ends it, the next run starts from the beginning.
+    if (sim.run.endless !== undefined) { endExpedition(sim, false); again(); return; }
     sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
@@ -305,6 +324,15 @@ function toCamp(): void {
 }
 input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search') menu.toggle('karte'); };
 document.getElementById('won-explore')!.addEventListener('click', explore);
+// M18: endless waves around the hero after the district boss.
+document.getElementById('won-endless')!.addEventListener('click', () => {
+  document.getElementById('won')!.hidden = true;
+  phase = 'play'; wonFor = -1;
+  input.enabled = true; input.clear();
+  startEndless(sim);
+  ui.banner('Endlos', `Rekord: Welle ${sim.inventory.camp?.endlessBest ?? 0}`);
+});
+document.getElementById('dead-camp')!.addEventListener('click', () => { endExpedition(sim, false); toCamp(); });
 document.getElementById('pause-finish')!.addEventListener('click', () => { menu.close(); showWon(); });
 document.getElementById('version')!.textContent = `Ruinenstadt Berlin · ${VERSION}`;
 // U2: abort the expedition as a loss after a second tap; gear and Schrott stay, the checkpoint goes.
@@ -444,6 +472,7 @@ function start(resumed = false): void {
   input.buffer.clear();
   input.enabled = true;
   ui.showGame();
+  runScrap0 = sim.inventory.scrap; runT0 = sim.time;
   telemetry.begin(sim, { map: map ? map.def.name : 'Hof', profile: opts.profile, scale: opts.mapScale, startAt: sim.run.index, input: input.device });
 }
 
@@ -540,6 +569,7 @@ function drainEvents(): void {
         ui.banner('Legendär!');
         break;
       case 'pickup':
+        if (ev.what === 'item' && persist && !intro.seen('loot')) intro.showTip('loot', () => input.clear());
         if (ev.what === 'item') lootUi.toast(`<span style="color:${rarityColor(ev.rarity, ev.set)}">${ev.name}</span>${ev.upgrade ? ' <span style="color:#8fd16a">▲</span>' : ''}`);
         else if (ev.what === 'heal') lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
         else if (ev.what === 'food') { lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s'); if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z); }
@@ -596,6 +626,11 @@ function drainEvents(): void {
       case 'kodex':
         lootUi.toast(`Neu im Kodex · <span style="color:#ef9f27">${ev.name}</span>`);
         break;
+      case 'endlessWave':
+        if (ev.done) ui.banner(`Welle ${ev.n} geschafft`, ev.n >= (sim.inventory.camp?.endlessBest ?? 0) ? 'Neuer Rekord' : '');
+        else ui.banner(`Endlos · Welle ${ev.n}`, ev.n % 5 === 0 ? 'Endgegner' : '');
+        if (ev.done) saveNow(false);
+        break;
       case 'bagFull':
         lootUi.toast('<span style="color:#c23a2e">Rucksack voll</span> · Beute bleibt liegen');
         break;
@@ -633,12 +668,14 @@ function frame(now: number): void {
   renderer.perf.frame(frameMs);
   input.poll(dt, sim.hitstop > 0);
   menu.pollPad(now);
+  intro.pollPad();
+  if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   camp.pollPad(now);
   if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
 
   abilitiesUi.update(sim, phase === 'play' && !menu.isOpen);
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
-  const running = !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask';
+  const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask';
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -673,8 +710,11 @@ function frame(now: number): void {
     deadFor += dt;
     if (deadFor > 1.4 && deadFor - dt <= 1.4) {
       const zone = level ? level.zones[level.encounters[checkpoint()]?.zone ?? 0] : undefined;
-      ui.retryHint(zone ? `Neustart: ${zone.name}` : '');
+      const endless = sim.run.endless !== undefined;
+      ui.retryHint(endless ? '' : zone ? `Neustart: ${zone.name}` : '');
       ui.showDead(sim.kills);
+      document.getElementById('dead-stats')!.innerHTML = endStats(false);
+      document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Nochmal';
     }
   }
   if (wonFor >= 0 && phase === 'play') {
@@ -737,6 +777,8 @@ function expeditionHud(dt: number): void {
     const dx = searchTarget.x - p.x;
     const dz = searchTarget.z - p.z;
     ui.objective(`Beute · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
+  } else if (sim.run.endless !== undefined) {
+    ui.objective(`Endlos · Welle ${sim.run.endless + (sim.run.phase === 'fight' ? 1 : 0)}`, null);
   } else if (!enc) {
     ui.objective('Köpenick befreit', null);
   } else if (sim.run.phase === 'travel') {

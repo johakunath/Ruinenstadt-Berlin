@@ -779,3 +779,11 @@ body:has(#title:not([hidden])) #run-actions { display: none; }
   .camp-st { padding: 6px 8px; } .row-c { padding: 5px 7px; } .camp-body { grid-template-columns: 1fr; }
 }
 @media (max-width: 599px) and (orientation: portrait) { .camp-cols { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .camp-list { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #3a342c; } }
+/* ---- M17 intro and tutorial cards, end screen stats. */
+#intro { z-index: 60; }
+.panel.intro { flex-direction: column; gap: 12px; text-align: center; text-transform: none; letter-spacing: .02em; }
+.panel.intro .lead { font-size: 16px; line-height: 1.45; margin: 0; }
+.idots { display: flex; justify-content: center; gap: 6px; } .idots i { width: 8px; height: 8px; border-radius: 50%; background: #4c453a; } .idots i.on { background: #ef9f27; }
+.iskip { background: none; border: 0; color: #b5aa98; text-decoration: underline; }
+.end-stats { display: flex; flex-direction: column; gap: 4px; text-transform: none; letter-spacing: .02em; font-size: 14px; margin: 4px 0 8px; }
+.end-stats .hint { font-size: 12px; color: #b5aa98; margin: 4px 0 0; }
