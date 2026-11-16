@@ -42,6 +42,8 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P8 | Contour behind buildings also for enemies (red) and NPCs (green), hero stays amber | Playtest 2026-11-17 | With R1 (cost first) |
 | P9 | Zoom: three levels are in (Z key, mouse wheel). Open: pad (stick click) and touch (pinch or a button) | Playtest 2026-11-17 | U2 |
 | P10 | Pickups: own model per item type (weapon kinds, armor slots, materials, food) instead of one bag | Playtest 2026-11-17 | L2 |
+| P11 | Ground audit after the surface fix: walk every zone on hardware and note remaining clipping (terrace edges and stairs, banks, bridge ramps, building foundations on slopes) | Playtest 2026-11-17 | Next PC session |
+| P12 | Remaining 2D enemy types: Ratte (pack of five), Zünder (runs up, fuse, explodes), Schildträger (blocks from the front, hammer stun opens it), Heuler (stays back, drives the others). District types later with their districts: Kabelghul, Boxenkopf, Uhrwerkläufer, Wurzler, Kernspeier | Playtest 2026-11-17, 2D `mkEnemy` | After the M12 playtest |
 
 ## Ideas (not decided)
 

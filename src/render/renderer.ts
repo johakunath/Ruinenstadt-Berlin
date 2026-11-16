@@ -24,7 +24,7 @@ import { Post } from './post';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
-import { groundY, setGround } from './ground';
+import { groundY, meshSurface, setGround } from './ground';
 import { heightAt } from '../data/map';
 import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
@@ -103,7 +103,7 @@ export class GameRenderer {
       B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 14 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
     );
     const def = opts.map?.def;
-    setGround(def ? (x, z) => heightAt(def, x, z) : () => 0);
+    setGround(def ? meshSurface(def.bounds.minX, def.bounds.minZ, (x, z) => heightAt(def, x, z)) : () => 0);
     this.scene.background = new Color(NIGHT);
     this.scene.fog = new FogExp2(NIGHT, 0.017);
     this.scene.environment = nightEnvironment(renderer);

@@ -9,6 +9,7 @@ import {
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
+import { GROUND_STEP, meshSurface } from './ground';
 import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
@@ -240,8 +241,19 @@ function groundSplat(m: MapDef, x: number, z: number, shore: boolean): [number, 
   return [w[0]!, w[1]!, w[2]!, w[3]!];
 }
 
+const surfaces = new WeakMap<MapDef, (x: number, z: number) => number>();
+/** Height of the drawn ground under (x, z): see `meshSurface`. */
+function surfaceAt(m: MapDef, x: number, z: number): number {
+  let f = surfaces.get(m);
+  if (!f) {
+    f = meshSurface(m.bounds.minX, m.bounds.minZ, (px, pz) => heightAt(m, px, pz));
+    surfaces.set(m, f);
+  }
+  return f(x, z);
+}
+
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
-  const step = 1.5;
+  const step = GROUND_STEP;
   const B = m.bounds;
   const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += CHUNK) {
@@ -395,7 +407,7 @@ function buildScatter(m: MapDef, lots: Lot[], mats: MapMats, chunkOf: (x: number
       if (!kind) continue;
       if (lots.some((l) => l.kind !== 'tree' && Math.hypot(px - l.x, pz - l.z) < Math.max(l.w, l.d) / 2 + 0.4)) continue;
       if (m.landmarks.some((l) => Math.abs(px - l.x) < l.hx + 1 && Math.abs(pz - l.z) < l.hz + 1)) continue;
-      const y = heightAt(m, px, pz);
+      const y = surfaceAt(m, px, pz);
       const b = chunkOf(px, pz);
       if (kind === 'tuft') {
         for (let i = 0; i < 2; i++) {
@@ -435,7 +447,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         if (isWater(m, (x0 + x1) / 2, (z0 + z1) / 2) && !onBridge(m, (x0 + x1) / 2, (z0 + z1) / 2)) continue;
         const nx = -dz * (s.width / 2);
         const nz = dx * (s.width / 2);
-        const v = (x: number, z: number): Vector3 => new Vector3(x, y + heightAt(m, x, z), z);
+        const v = (x: number, z: number): Vector3 => new Vector3(x, y + surfaceAt(m, x, z), z);
         const quad: [Vector3, Vector3, Vector3, Vector3] = [v(x0 - nx, z0 - nz), v(x0 + nx, z0 + nz), v(x1 + nx, z1 + nz), v(x1 - nx, z1 - nz)];
         const b = chunkOf((x0 + x1) / 2, (z0 + z1) / 2);
         const batch = b.solid.of(mat);
@@ -453,7 +465,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
               const x = a[0] + (c[0] - a[0]) * t;
               const z = a[1] + (c[1] - a[1]) * t;
               const surface = onBridge(m, x, z) ? Math.max(y, TRAM_BRIDGE_DECK) : y;
-              return new Vector3(x, heightAt(m, x, z) + surface + band.height, z);
+              return new Vector3(x, surfaceAt(m, x, z) + surface + band.height, z);
             };
             const half = band.width / 2;
             const corners: [Vector3, Vector3, Vector3, Vector3] = [
@@ -478,7 +490,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
             if (isWater(m, cx, cz)) continue;
             // A crossing side street must not put a raised curb across the tram rails.
             if (!s.tram && streetDist(tramStreets, cx, cz).d < (t1 - t0) / 2 + 0.12) continue;
-            b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + 0.06, cz), 0.24, 0.16, t1 - t0 + 0.02, [0.8, 0.8, 0.78]);
+            b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(cx, surfaceAt(m, cx, cz) + 0.06, cz), 0.24, 0.16, t1 - t0 + 0.02, [0.8, 0.8, 0.78]);
           }
         }
       }
@@ -486,7 +498,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         const disc = new CircleGeometry(s.width / 2, 16);
         disc.rotateX(-Math.PI / 2);
         worldUv(disc, bx, bz, 4);
-        chunkOf(bx, bz).solid.of(mat).add(disc, new Matrix4().setPosition(bx, y + 0.001 + heightAt(m, bx, bz), bz));
+        chunkOf(bx, bz).solid.of(mat).add(disc, new Matrix4().setPosition(bx, y + 0.001 + surfaceAt(m, bx, bz), bz));
       }
     }
   }
@@ -862,7 +874,7 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     const rng = new Rng(l.seed);
     const h = rng.range(3.5, 6);
     const lean = rng.range(-0.12, 0.12);
-    const base = heightAt(m, l.x, l.z);
+    const base = surfaceAt(m, l.x, l.z);
     bk.trunks.push(new Matrix4().makeRotationZ(lean).setPosition(l.x, base + h / 2, l.z).multiply(tmpScale.makeScale(1, h, 1)));
     const blobs = 3 + rng.int(2);
     const hue = rng.next();
@@ -1156,7 +1168,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   for (const bt of boats) group.add(bt.group);
   // Buildings stand on the lowest corner of their footprint; the rest sinks into the slope.
   const base = (x: number, z: number, r: number): number =>
-    Math.min(heightAt(m, x, z), heightAt(m, x - r, z - r), heightAt(m, x + r, z - r), heightAt(m, x - r, z + r), heightAt(m, x + r, z + r));
+    Math.min(surfaceAt(m, x, z), surfaceAt(m, x - r, z - r), surfaceAt(m, x + r, z - r), surfaceAt(m, x - r, z + r), surfaceAt(m, x + r, z + r));
   for (const l of lots) {
     const b = chunkOf(l.x, l.z);
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
@@ -1164,7 +1176,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
-      else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
+      else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
       if (l.wing) {
         // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
         const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
@@ -1208,7 +1220,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       rng.next();
       return;
     }
-    const build = (): void => b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    const build = (): void => b.on(surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
     if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
     else build();
   });
@@ -1381,7 +1393,7 @@ function buildBreakables(mm: MapMats, m: MapDef, props: Prop[], defs: BreakableD
     inst.frustumCulled = false;
     ids.forEach((id, index) => {
       const p = props[defs[id]!.prop]!;
-      const mat = new Matrix4().makeRotationY(p.rot).setPosition(p.x, heightAt(m, p.x, p.z), p.z);
+      const mat = new Matrix4().makeRotationY(p.rot).setPosition(p.x, surfaceAt(m, p.x, p.z), p.z);
       base[id] = mat;
       slot[id] = { kind, index };
       inst.setMatrixAt(index, mat);

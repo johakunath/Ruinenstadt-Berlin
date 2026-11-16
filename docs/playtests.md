@@ -26,6 +26,9 @@ Played the build without the new enemies. Fixed at once (same PR as M12): see th
 | Zoom | Three zoom levels, nice to have | Built for keyboard and mouse (Z, wheel); pad and touch: backlog P9 |
 | Pickups | Own look per item type | Backlog P10 |
 | Question | Map building effort in 3D compared with 2D | Answered in M11d |
+| Ground | Clipping in the ground in many places, e.g. Müggelberge | Fixed at the cause: the drawn ground is flat between its 1.5 m grid points, but props, streets, buildings and characters stood on the curved height formula. All of them now use the mesh's own surface (`meshSurface` in `src/render/ground.ts`). Check on hardware; terrace edges may still need a pass (backlog P11) |
+| Difficulty | Still too easy; growing stronger over the map feels rewarding | That build had three enemy types and bosses without attacks. M12 and the bot retune answer it: enemy life ×3.5 and damage ×2.1 over the 20 waves, bosses 2.4 to 4 times the life (`docs/balance.md`). Judge again on the new build |
+| Enemies | Behaviour should differ more; does 2D have more? | M12 brings six types, elites and boss attacks. 2D has more: backlog P12 |
 
 ## 2026-11-15 · Köpenick first look (Johannes, Tab S9)
 
