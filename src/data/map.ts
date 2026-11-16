@@ -885,7 +885,7 @@ function stringLights(m: MapDef, props: Prop[], hit: (x: number, z: number, r: n
  * Light coverage pass: walks every street (not paths, not bridges) and, where no light source,
  * Späti or landmark is within the local `lightCover`, adds one beside the street at a random offset,
  * with a random strength, and sometimes a small cluster around it (a campfire with candles, a work
- * lamp by a barrel). Mostly no-flame kinds, so flames stay special; lamps keep their 22 m gap.
+ * lamp by a barrel). Mostly no-flame kinds, so flames stay special; same kinds keep SAME_KIND_GAP.
  */
 function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
   const lit: Array<[number, number]> = props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => [p.x, p.z]);
