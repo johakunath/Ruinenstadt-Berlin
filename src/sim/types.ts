@@ -1,3 +1,4 @@
+import type { Inventory } from './inventory';
 import type { AttackDef, AttackId, HitWeight } from '../data/combat';
 import type { EnemyDef, EnemyKind } from '../data/enemies';
 import type { Collider } from './collide';
@@ -128,6 +129,7 @@ export interface RunState {
 }
 
 export interface Sim {
+  inventory: Inventory;
   equipment: Equipment;
   statContext: StatContext;
   stats: HeroStats;

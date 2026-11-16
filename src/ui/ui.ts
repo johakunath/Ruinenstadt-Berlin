@@ -84,7 +84,7 @@ export class Ui {
     this.karte.addEventListener('click', (e) => { if (e.target === this.karte) this.toggleMap(false); });
     el<HTMLButtonElement>('again').addEventListener('click', () => handlers.onAgain?.());
     window.addEventListener('keydown', (e) => {
-      if ((e.code === 'KeyM' || e.code === 'Tab') && this.mapSource && el('title').hidden) {
+      if (e.code === 'KeyM' && this.mapSource && el('title').hidden) {
         e.preventDefault();
         this.toggleMap(!this.mapOpen);
       }

@@ -10,6 +10,7 @@ import { Rng } from './math';
 
 export interface Item {
   id: number;
+  locked?: boolean;
   slot: SlotId;
   kind: string;
   base: string;
