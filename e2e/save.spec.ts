@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const SAVE = {
   v: 1, difficulty: 'schwer',
   profile: {
-    inventory: { bag: [], scrap: 42, materials: {}, mods: {} },
+    inventory: { bag: [], scrap: 42, materials: {}, mods: {}, tips: { intro: 1, loot: 1, perk: 1 } },
     equipment: { w: { id: 0, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostiges Rohr', rarity: 0, value: 10, itemLevel: 1, affixes: [] } },
     statContext: { upgrades: {}, perks: {}, camp: {}, survivors: {} },
   },
@@ -61,5 +61,36 @@ test('M13: the camp spends Schrott, keeps the checkpoint and survives a reload',
   await expect(page.locator('#resume')).toBeEnabled({ timeout: 90_000 });
   await page.locator('#resume').click();
   expect(await page.evaluate(() => window.__game!.sim().statContext.upgrades.dmg)).toBe(1);
+  expect(errors).toEqual([]);
+});
+
+test('M17: the intro cards come once before the first run', async ({ page }) => {
+  await page.goto('/?profile=Leistung');
+  await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
+  await page.locator('#play').click();
+  await expect(page.locator('#intro')).toBeVisible();
+  for (let i = 0; i < 3; i++) await page.locator('#intro [data-intro="next"]').click();
+  await expect(page.locator('#intro h2')).toHaveText('Steuerung');
+  await page.locator('#intro [data-intro="done"]').click();
+  await expect(page.locator('#hud')).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.save')!).profile.inventory.tips.intro)).toBe(1);
+});
+
+test('Hauptmenü in the pause menu returns to the title; Weiter resumes there', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript((s) => { if (!localStorage.getItem('ruinenstadt-berlin.save')) localStorage.setItem('ruinenstadt-berlin.save', JSON.stringify(s)); }, SAVE);
+  await page.goto('/?profile=Leistung');
+  await expect(page.locator('#resume')).toBeEnabled({ timeout: 90_000 });
+  await expect(page.locator('#play')).toContainText('Ausrüstung bleibt');
+  await page.locator('#resume').click();
+  await expect(page.locator('#hud')).toBeVisible();
+  await page.locator('#menu-btn').click();
+  await page.locator('[data-t="opt"]').click();
+  await page.locator('#to-title').click();
+  await expect(page.locator('#title')).toBeVisible();
+  await expect(page.locator('#resume')).toContainText('Kampf 2');
+  await page.locator('#resume').click();
+  expect(await page.evaluate(() => window.__game!.sim().run.index)).toBe(1);
   expect(errors).toEqual([]);
 });

@@ -83,7 +83,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     spawnT: opts.empty || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
   };
-  sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...Object.values(equipment)].map((i) => i?.id ?? 0));
+  sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...(sim.inventory.camp?.stash ?? []), ...Object.values(equipment)].map((i) => i?.id ?? 0));
   sim.player.hp = stats.maxHp;
   // 2D run start: Dr. Ahmet brings one more Verband, the Sanitätszelt makes it at least two.
   const cons = sim.inventory.consumables ?? { verband: 0, molotow: 0 };

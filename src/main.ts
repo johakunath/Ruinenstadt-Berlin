@@ -216,6 +216,9 @@ const telemetry = new Telemetry(opts.telemetry, opts.autostart);
 function playNow(): void {
   sim.difficulty = difficulty;
   if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
+  // The run starts from the profile as it is now (camp purchases: garden, Lazarett, Funkmast act in createSim).
+  sim = createSim({ difficulty, seed: (opts.seed += 1), stress: opts.stress, level, spawn: opts.spawn, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
+  renderer?.reset(sim);
   start();
 }
 const intro = new IntroUi(() => sim, () => { if (phase === 'title') saveProfile(); });
@@ -335,6 +338,21 @@ document.getElementById('won-endless')!.addEventListener('click', () => {
 document.getElementById('dead-camp')!.addEventListener('click', () => { endExpedition(sim, false); toCamp(); });
 document.getElementById('pause-finish')!.addEventListener('click', () => { menu.close(); showWon(); });
 document.getElementById('version')!.textContent = `Ruinenstadt Berlin · ${VERSION}`;
+// Hauptmenü (playtest 2026-11-16: the title was only reachable with F5): save, back to the title, Weiter resumes.
+document.getElementById('to-title')!.addEventListener('click', () => {
+  menu.close();
+  // Mid-fight the last checkpoint stays; gear and Schrott are written with the profile.
+  if (sim.run.phase === 'fight' || sim.run.endless !== undefined) saveProfile(); else saveNow(true);
+  telemetry.end('quit');
+  phase = 'title';
+  input.enabled = false; input.clear();
+  lootExit = 'off'; lootWarn.hidden = true; lootChip.hidden = true;
+  sim = freshSim();
+  renderer?.reset(sim);
+  ui.boss(null);
+  ui.setResume(resumeLabel(), difficulty);
+  ui.showTitle();
+});
 // U2: abort the expedition as a loss after a second tap; gear and Schrott stay, the checkpoint goes.
 {
   const b = document.getElementById('run-abort') as HTMLButtonElement;
@@ -350,10 +368,11 @@ document.getElementById('version')!.textContent = `Ruinenstadt Berlin · ${VERSI
   const b = document.getElementById('new-game') as HTMLButtonElement;
   let armed = 0;
   b.addEventListener('click', () => {
-    if (armed && performance.now() - armed < 4000) { b.textContent = 'Ganz neu anfangen'; armed = 0; newGame(); return; }
+    const idle = '<b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small>';
+    if (armed && performance.now() - armed < 4000) { b.innerHTML = idle; armed = 0; newGame(); return; }
     armed = performance.now();
-    b.textContent = 'Wirklich? Alles löschen';
-    setTimeout(() => { if (armed && performance.now() - armed >= 3900) { b.textContent = 'Ganz neu anfangen'; armed = 0; } }, 4000);
+    b.innerHTML = '<b>Wirklich? Alles löschen</b><small>Nochmal tippen</small>';
+    setTimeout(() => { if (armed && performance.now() - armed >= 3900) { b.innerHTML = idle; armed = 0; } }, 4000);
   });
 }
 // Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
@@ -701,6 +720,9 @@ function frame(now: number): void {
 
   if (phase === 'play' && sim.player.state === 'dead') {
     phase = 'dead';
+    // A fall ends the expedition (2D): the meal is eaten, the retry starts without it.
+    endExpedition(sim, false);
+    saveProfile();
     input.enabled = false;
     telemetry.end('dead');
   }

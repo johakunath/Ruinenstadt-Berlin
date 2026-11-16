@@ -42,8 +42,10 @@ test('inventory equips, compares, protects loot, pauses, and closes without buff
   await page.getByRole('button',{name:/^Gewöhnl\. \+/}).click();
   const ids=await page.evaluate(()=>window.__game!.sim().inventory.bag.map(i=>i.id));
   expect(ids).toContain(102); expect(ids).toContain(103); expect(ids).toContain(104); expect(ids).not.toContain(105);
-  // Tab switches menu tabs, focus stays in the menu.
+  // ] switches menu tabs; Tab moves focus and stays in the menu.
   await page.keyboard.press('Tab');
+  expect(await page.evaluate(()=>document.activeElement?.closest('#menu')!==null)).toBe(true);
+  await page.keyboard.press('BracketRight');
   await expect(page.locator('.menu-tabb.on')).not.toHaveText('Inventar');
   expect(await page.evaluate(()=>document.activeElement?.closest('#menu')!==null)).toBe(true);
   await page.keyboard.press('KeyJ');

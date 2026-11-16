@@ -243,6 +243,8 @@ export interface RunState {
   pauseT: number;
   /** M18 endless mode after the district boss: waves survived so far, absent outside it. */
   endless?: number;
+  /** M13: the expedition's camp effects were settled (`endExpedition` runs once). */
+  ended?: boolean;
 }
 
 export interface Sim {
