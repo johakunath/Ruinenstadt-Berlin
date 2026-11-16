@@ -53,11 +53,15 @@ export function focusFlow(sim: Sim, x: number, z: number): void {
 export function startRunAt(sim: Sim, index: number): void {
   sim.run.index = index;
   sim.run.phase = index >= sim.level.encounters.length ? 'won' : 'travel';
+  // A retry mid-map keeps the item level of the waves before it.
+  sim.lootWaves = 0;
+  for (let i = 0; i < index; i++) for (const w of sim.level.encounters[i]!.waves) if (w.bosses.length === 0) sim.lootWaves++;
 }
 
 function startWave(sim: Sim, enc: EncounterDef): void {
   const w = enc.waves[sim.run.wave];
   if (!w) return;
+  if (w.bosses.length === 0) sim.lootWaves++;
   sim.run.toSpawn = w.count;
   sim.run.bossesToSpawn = [...w.bosses];
   sim.run.spawnT = 0.4;

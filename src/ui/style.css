@@ -504,3 +504,46 @@ body:has(.overlay:not([hidden])) #edges {
 @media(max-width:699px) and (orientation:portrait) { .inv-columns { grid-template-columns:1fr; } .inv-character { max-width:360px; width:100%; margin:auto; } .inv-panel header { gap:8px; } .inv-panel header span { font-size:12px; } .inv-grid { gap:8px; } }
 
 body:has(#inventory:not([hidden])) { touch-action:pan-y; }
+
+/* ---- loot (M4) */
+#loot-ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.loot-label,
+.loot-float {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+  will-change: transform;
+}
+.loot-label[data-rarity='0'] { opacity: 0.8; font-size: 11px; }
+.loot-label[data-rarity='3'] { font-size: 14px; font-weight: bold; }
+.loot-float { font-size: 14px; font-weight: bold; }
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 120px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(11, 26, 29, 0.8);
+  border: 1px solid rgba(240, 217, 176, 0.3);
+  border-radius: 4px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  text-shadow: 0 1px 2px #000;
+}
+#loot-chip {
+  position: fixed;
+  right: 16px;
+  top: 64px;
+  padding: 8px 14px;
+  font-size: 14px;
+}

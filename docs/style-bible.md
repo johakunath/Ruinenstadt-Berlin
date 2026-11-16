@@ -217,3 +217,7 @@ B1000 KB in faded blue or cream, rounded cab-over nose and passenger windows.
 One sedan is visibly partly burned: red panels survive around a soot-black,
 opened cabin with missing glass. Wear stays readable at gameplay scale.
 This explicit direction supersedes the initial angular/two-tone vehicle study.
+
+## Prop and pickup detail benchmark
+
+`docs/style/props-loot-benchmark.jpg` (2026-11-16, approved by Johannes) is the quality bar for world props and loot pickups: wear, rust, dents, planks, nails, hit and broken states, crystal pickups with rarity glow. Build props to this level of detail in code; judge in game, and only commission a texture image (Codex) when the code-painted result falls short.

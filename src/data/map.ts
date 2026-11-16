@@ -7,6 +7,8 @@ import type { Collider } from '../sim/collide';
 import type { Bounds } from '../sim/flowfield';
 import { Level, WalkGrid, type EncounterDef, type Point, type ZoneDef } from '../sim/level';
 import { Rng } from '../sim/math';
+import type { BreakableDef } from '../sim/breakables';
+import { restAt, type RestArea } from '../sim/rest';
 import { onFerryPier } from '../sim/ferry';
 import { propCollider, type Prop } from './courtyard';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
@@ -820,7 +822,37 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
   }
   stringLights(m, props, hit, rng);
   fillLight(m, lots, props, hit, rng);
+  supplies(m, props, hit);
   return props;
+}
+
+/**
+ * M4: extra crates and bins along the streets, so there is always something to break between fights.
+ * Own random stream, so the props above stay where they were.
+ */
+function supplies(m: MapDef, props: Prop[], hit: (x: number, z: number, r: number) => boolean): void {
+  const rng = new Rng(m.seed + 91);
+  for (const s of m.streets) {
+    if (s.kind === 'path') continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [ax, az] = s.pts[i - 1] as Pt;
+      const [bx, bz] = s.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 8) continue;
+      const dx = (bx - ax) / len;
+      const dz = (bz - az) / len;
+      const along = Math.atan2(dx, dz);
+      for (let t = rng.range(8, 20); t < len - 4; t += rng.range(26, 44)) {
+        const side = rng.pick([-1, 1]);
+        const off = side * (s.width / 2 + 0.9);
+        const x = ax + dx * t - dz * off;
+        const z = az + dz * t + dx * off;
+        const kind = rng.next() < 0.5 ? 'crates' : 'bins';
+        if (onBridge(m, x, z, 2) || hit(x, z, 0.9) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.7)) continue;
+        props.push({ kind, x, z, rot: along + (side > 0 ? Math.PI / 2 : -Math.PI / 2), size: 1 });
+      }
+    }
+  }
 }
 
 /** Is (x, z) on a lot's footprint (main body or wing), with `pad` meters of margin? */
@@ -972,9 +1004,13 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
 /** The sim side of a map. */
 export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m, lots)): Level {
   const colliders: Collider[] = [];
+  const propColliders = new Map<Prop, Collider>();
   for (const p of props) {
     const c = propCollider(p);
-    if (c) colliders.push(c);
+    if (c) {
+      colliders.push(c);
+      propColliders.set(p, c);
+    }
   }
   for (const l of m.landmarks) {
     if (l.kind === 'spati') colliders.push(...spatiColliders(l));
@@ -988,6 +1024,24 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     colliders.push({ kind: 'box', x: left, z: r.z, hx: (r.gapX - r.gapW / 2 - r.minX) / 2, hz: 4, rot: 0 });
     colliders.push({ kind: 'box', x: right, z: r.z, hx: (r.maxX - r.gapX - r.gapW / 2) / 2, hz: 4, rot: 0 });
   }
+  const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
+  const breakables = breakableDefs(m, props, propColliders, rests);
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z));
-  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest));
+  return new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
+}
+
+/**
+ * Crates and bins become breakable, except inside the inner 60 % of an encounter circle (the fight
+ * must not turn into a prop hunt). Colliders are shared with the level's own list.
+ */
+function breakableDefs(m: MapDef, props: Prop[], propColliders: Map<Prop, Collider>, rests: RestArea[]): BreakableDef[] {
+  const defs: BreakableDef[] = [];
+  if (m.encounters.length === 0) return defs;
+  props.forEach((p, prop) => {
+    if (p.kind !== 'crates' && p.kind !== 'crate' && p.kind !== 'bins') return;
+    if (m.encounters.some((e) => Math.hypot(p.x - e.x, p.z - e.z) < e.r * 0.6)) return;
+    const collider = propColliders.get(p);
+    if (collider) defs.push({ kind: p.kind === 'bins' ? 'bin' : 'crate', x: p.x, z: p.z, prop, inside: restAt(rests, p.x, p.z) >= 0, collider });
+  });
+  return defs;
 }

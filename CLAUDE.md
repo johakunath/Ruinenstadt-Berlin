@@ -27,6 +27,7 @@ The sim reports through `sim.events`; the loop in `src/main.ts` hands them to re
 
 ## Rules
 
+- **First step of any task: look in the 2D repo (`johakunath/Ruinenstadt`, read-only; clone it with `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1`) for existing code, data and rules.** Migrate and reuse as much as possible (numbers, rules, data, drawing code as reference) and develop from there; build new only where 2D has nothing or 3D needs it. Say in the task handover what was reused.
 - Collision is 2D on the ground plane with real shapes (plan 3D6). New attacks get their hit arc and clip timing in `src/data/combat.ts`; measure clips with `node tools/clip-swing.mjs <clip>`.
 - Two render profiles (`src/render/profile.ts`) must keep working. The look is fixed in `src/render/looks.ts` (chosen after gate 1); change it only on Johannes' feedback. New effects state their cost for Leistung.
 - Geometry of the world is built in code and merged per material (`src/render/batch.ts`). Keep draw calls low; things that must not show in the normal/depth pre-pass go on `FX_LAYER`.

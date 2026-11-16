@@ -14,7 +14,7 @@ What is in the game now. Updated 2026-11-16. Next work: `docs/migration.md` › 
 | Feedback | Hit flash, sparks, smear, shake, rumble, telegraphs, ported 2D synth effects and adaptive music (S1); persistent Musik toggle and volume |
 | HUD | Objective with distance and arrow, minimap (tap opens the map), edge triangles to the objective and the last enemies of a wave, wave banner, boss bar, map (M), victory screen |
 | Input | Keyboard and mouse, gamepad, touch stick plus two buttons; Inventar button, I/Tab or controller Y opens inventory (D-pad/stick, A select, B close) |
-| Items | Data, rolls and combat stats connected (M1–M3b). Starter pipe in normal play; dev loadout setter for verification. 25-slot inventory with comparison, equip/unequip, locks, salvage and set descriptions; drops pending (M4) |
+| Items | Data, rolls and combat stats connected (M1–M3b). Starter pipe in normal play; dev loadout setter for verification. 25-slot inventory with comparison, equip/unequip, locks, salvage and set descriptions; drops, pickup and the exit warning in Köpenick (M4) |
 | Telemetry | One anonymous row per run (win, death, quit) to the 2D Google Sheet "Telemetrie": encounter reached, time, kills, damage taken, rest visits, per-encounter time, damage and fps, overall fps, p95, 1 % low, draw calls, profile, device class, input. Version `3d-…` in column v. Switch in Optionen. Delivery from the live game not verified yet |
 | CI | Type check, 192 unit tests, build, Playwright smoke, Pages deploy from `main` |
 
@@ -24,7 +24,7 @@ What is in the game now. Updated 2026-11-16. Next work: `docs/migration.md` › 
 |---|---|
 | Hardware | Tab S9: over 90 fps on Köpenick before the 60 fps cap (2026-11-15). PC not measured |
 | Feel | Tuned from clip measurements, not by playing; pad and rumble never tried |
-| Progression | Starter gear only in normal play until M4 feeds the inventory collection API; saves, camp/stash and progression balance remain open |
+| Progression | Gear now comes from drops and breakable crates and bins (M4); saves, camp/stash and progression balance remain open |
 | Map | v2 and part 2 not playtested yet. Ground textures are code placeholders until Codex task T1 (`docs/asset-pipeline.md`) |
 | Art | Landmarks are blockouts, trees simple, CC0 hero (coat skirt clips in wide poses), zombie not the board ghoul, dodge clip squeezed to 0.24 s |
 | Touch | Layout provisional |
