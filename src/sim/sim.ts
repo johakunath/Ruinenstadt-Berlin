@@ -1,3 +1,4 @@
+import { createInventory, type Inventory } from './inventory';
 // The simulation: one fixed 60 Hz step. No rendering, no DOM, no Three.js; unit tested.
 import { HIT_FEEL, PLAYER } from '../data/combat';
 import { courtyardLevel } from '../data/courtyard';
@@ -15,6 +16,7 @@ import { createPlayer, updatePlayer } from './player';
 import { DT, type Enemy, type Sim, type SimInput } from './types';
 
 export interface SimOptions {
+  inventory?: Inventory;
   equipment?: Equipment;
   statContext?: Partial<StatContext>;
   seed?: number;
@@ -38,6 +40,7 @@ export function createSim(opts: SimOptions = {}): Sim {
   const stats = heroStats(equipment, context);
   const sim: Sim = {
     equipment, statContext: context, stats,
+    inventory: structuredClone(opts.inventory ?? createInventory()),
     tick: 0,
     time: 0,
     player: createPlayer(level, entry),

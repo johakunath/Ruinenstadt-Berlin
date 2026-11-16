@@ -5,9 +5,9 @@ import { ActionBuffer, type Action } from './buffer';
 export type Device = 'keyboard' | 'mouse' | 'gamepad' | 'touch';
 
 const DEADZONE = 0.22;
-/** Standard mapping: A, B, LB dodge; X, Y, RB, RT attack. */
+/** Standard mapping: A, B, LB dodge; X, RB, RT attack; Y inventory. */
 const PAD_DODGE = [0, 1, 4, 6];
-const PAD_ATTACK = [2, 3, 5, 7];
+const PAD_ATTACK = [2, 5, 7];
 const PAD_MENU = 9;
 
 const KEY_ATTACK = new Set(['KeyJ', 'Enter', 'KeyF']);
@@ -29,6 +29,9 @@ export class Input {
   /** Gameplay presses are ignored while a menu is open. */
   enabled = false;
   onMenu: () => void = () => {};
+  onInventory: () => void = () => {};
+
+  clear(): void { this.keys.clear(); this.touchX = this.touchZ = 0; this.buffer.clear(); }
 
   private readonly keys = new Set<string>();
   private touchX = 0;
@@ -43,6 +46,8 @@ export class Input {
         this.onMenu();
         return;
       }
+      if (e.code === 'KeyI' || (e.code === 'Tab' && this.enabled)) { e.preventDefault(); this.onInventory(); return; }
+      if (!this.enabled) return;
       this.keys.add(e.code);
       if (KEY_ATTACK.has(e.code)) this.press('attack', 'keyboard');
       if (KEY_DODGE.has(e.code)) {
@@ -125,6 +130,7 @@ export class Input {
       const edge = (i: number): boolean => (down[i] ?? false) && !(this.padDown[i] ?? false);
       if (PAD_ATTACK.some(edge)) this.press('attack', 'gamepad');
       if (PAD_DODGE.some(edge)) this.press('dodge', 'gamepad');
+      if (edge(3)) this.onInventory();
       if (edge(PAD_MENU)) this.onMenu();
       this.padDown = down;
       break;
