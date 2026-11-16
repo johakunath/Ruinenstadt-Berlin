@@ -52,6 +52,7 @@ test('options pause the fight and persist independent music and volume controls'
   await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');
   await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 90_000 });
   await page.locator('#menu-btn').click();
+  await page.locator('[data-t="opt"]').click();
   await expect(page.locator('#options')).toBeVisible();
   await expect(page.locator('#opt-music')).toBeChecked();
   await page.locator('#opt-music').uncheck();
@@ -62,10 +63,11 @@ test('options pause the fight and persist independent music and volume controls'
   const tick = await page.evaluate(() => window.__game?.sim().tick ?? 0);
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__game?.sim().tick ?? 0)).toBe(tick);
-  await page.locator('#close-options').click();
+  await page.locator('#menu-close').click();
   await page.waitForFunction((t) => (window.__game?.sim().tick ?? 0) > t, tick, { timeout: 60_000 });
   await page.reload();
   await page.locator('#menu-btn').click();
+  await page.locator('[data-t="opt"]').click();
   await expect(page.locator('#opt-music')).not.toBeChecked();
   await expect(page.locator('#opt-volume')).toHaveValue('35');
   await page.locator('#opt-music').check();
@@ -86,21 +88,21 @@ test('Köpenick: the first encounter starts, waves spawn, the map opens and paus
   });
   await page.waitForFunction(() => (window.__game?.sim().enemies.length ?? 0) > 0, null, { timeout: 90_000 });
   expect(await page.evaluate(() => window.__game!.sim().run.phase)).toBe('fight');
-  await expect(page.locator('#obj-text')).toContainText('Welle 1/2');
+  await expect(page.locator('#obj-text')).toContainText('Welle 1/');
   await page.screenshot({ path: testInfo.outputPath('koepenick-fight.png'), timeout: 110_000 });
 
-  await page.locator('#map-btn').click();
-  await expect(page.locator('#karte svg')).toBeVisible();
+  await page.keyboard.press('m');
+  await expect(page.locator('.map-svg svg')).toBeVisible();
   const tick = await page.evaluate(() => window.__game?.sim().tick ?? 0);
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__game?.sim().tick ?? 0)).toBe(tick);
   await page.screenshot({ path: testInfo.outputPath('koepenick-karte.png'), timeout: 110_000 });
-  await page.locator('#x-karte').click();
-  await expect(page.locator('#karte')).toBeHidden();
-  await page.locator('#map-btn').click();
+  await page.locator('#menu-close').click();
+  await expect(page.locator('#menu')).toBeHidden();
+  await page.keyboard.press('m');
   await expect(page.locator('#touch')).toBeHidden();
-  await page.locator('#x-karte').click();
-  await expect(page.locator('#karte')).toBeHidden();
+  await page.locator('#menu-close').click();
+  await expect(page.locator('#menu')).toBeHidden();
   expect(errors).toEqual([]);
 });
 

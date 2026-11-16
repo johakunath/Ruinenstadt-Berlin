@@ -22,7 +22,7 @@ describe('kill drops', () => {
   it('walker chances match the 2D numbers', () => {
     const sim = flat();
     const n = 6000;
-    let mat = 0, item = 0, heal = 0;
+    let mat = 0, item = 0, heal = 0, ing = 0;
     for (let i = 0; i < n; i++) {
       sim.drops.length = 0;
       const e = spawnEnemy(sim, 2, 2, 'walker');
@@ -30,9 +30,11 @@ describe('kill drops', () => {
       for (const d of sim.drops) {
         if (d.content.kind === 'material') mat++;
         else if (d.content.kind === 'item') item++;
+        else if (d.content.kind === 'ingredient') ing++;
         else heal++;
       }
     }
+    expect(ing / n).toBeCloseTo(0.03, 1);
     expect(mat / n).toBeCloseTo(0.22, 1);
     expect(item / n).toBeCloseTo(0.78 * 0.15 * 0.4, 1);
     expect(heal / n).toBeCloseTo(0.78 * 0.94 * 0.06, 1);

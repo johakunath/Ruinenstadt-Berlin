@@ -26,6 +26,8 @@ export interface Options {
   mapScale: number;
   /** Debug: start at this encounter. */
   startAt: number;
+  /** Debug: ?spawn=rex,raptor,walker+flink puts these kinds next to the hero (no other spawns in the courtyard). */
+  spawn: string[];
 }
 
 const KEY = 'ruinenstadt-berlin.options';
@@ -98,6 +100,7 @@ export function readOptions(): Options {
     autostart: q.has('autostart'),
     cam: parseCam(q.get('cam')),
     map: q.get('map') === 'hof' ? 'hof' : 'koepenick',
+    spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
   };

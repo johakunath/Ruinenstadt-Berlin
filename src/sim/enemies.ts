@@ -1,6 +1,7 @@
 // Enemy behavior: chase along the flow field with separation, wind up, strike, recover, stagger, die.
 import { PLAYER } from '../data/combat';
-import { ENEMIES, SPAWN, type EnemyKind } from '../data/enemies';
+import { BOSS, ELITE_MODS, ENEMIES, SPAWN, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
+import { initCooldowns, isRush, jitter, runSpecial, think, tickCooldowns } from './ai';
 import { colliderDistance } from './collide';
 import { angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Sim } from './types';
@@ -30,11 +31,33 @@ export function spawnEnemy(sim: Sim, x: number, z: number, kind: EnemyKind = pic
   const facing = angleOf(sim.player.x - x, sim.player.z - z);
   const e: Enemy = {
     id: sim.nextId++, kind, def, x, z, px: x, pz: z, facing, pfacing: facing,
-    kx: 0, kz: 0, speed: 0, hp, maxHp: hp, dmgMul, state: 'chase', stateT: 0, staggerDur: 0, struck: false, burn: 0, bdps: 0, burnAcc: 0, acid: 0,
+    kx: 0, kz: 0, speed: 0, hp, maxHp: hp, hpMul, dmgMul, state: 'chase', stateT: 0, staggerDur: 0, struck: false, burn: 0, bdps: 0, burnAcc: 0, acid: 0,
+    sp: null, open: 0, rest: 0, buff: 0, cd: [0, 0, 0], gap: 0, cycle: 0, side: 1, orb: 0, rage: false, trailT: 0,
   };
+  e.side = jitter(e.id, 3) < 0.5 ? 1 : -1;
+  e.orb = jitter(e.id, 4) * Math.PI * 2;
+  initCooldowns(e);
   sim.enemies.push(e);
   sim.events.push({ type: 'spawn', id: e.id });
   return e;
+}
+
+/** Turns a body into an elite (2D: ×2.6 life, bigger, Flink is faster). Crows stay plain. */
+export function makeElite(sim: Sim, e: Enemy, mod: EliteMod = sim.rng.pick(ELITE_MODS)): void {
+  if (e.def.boss || e.def.fly) return;
+  e.elite = mod;
+  e.hp = e.maxHp = Math.round(e.maxHp * THREAT.eliteHp);
+  e.def = { ...e.def, radius: e.def.radius * 1.15, speed: e.def.speed * (mod === 'flink' ? THREAT.eliteSpeed : 1) };
+}
+
+/** Two small bodies crawl out of a dying Spaltend elite (2D). */
+export function splitElite(sim: Sim, e: Enemy): void {
+  const S = THREAT.split;
+  for (let i = 0; i < S.count; i++) {
+    const m = spawnEnemy(sim, e.x + sim.rng.range(-0.5, 0.5), e.z + sim.rng.range(-0.5, 0.5), 'walker', e.hpMul * S.hp, e.dmgMul);
+    m.def = { ...m.def, radius: m.def.radius * S.scale, scale: m.def.scale * S.scale };
+    m.mini = true;
+  }
 }
 
 /** A free spot inside the yard, away from the player. Used for the opening group and `?stress=`. */
@@ -96,9 +119,25 @@ export function updateEnemies(sim: Sim): void {
     let vx = 0;
     let vz = 0;
 
+    // Bosses rage below half life: faster, and their specials come quicker (2D).
+    if (def.boss && !e.rage && e.state !== 'dead' && e.hp < e.maxHp * BOSS.rageAt) {
+      e.rage = true;
+      e.def = { ...def, speed: def.speed * BOSS.rageSpeed };
+      sim.events.push({ type: 'bossRage', id: e.id, name: def.name });
+    }
+    if (e.buff > 0) e.buff -= DT;
+    if (e.state !== 'dead') tickCooldowns(e);
+
     switch (e.state) {
       case 'chase': {
-        if (playerAlive && dist <= def.attackRange) {
+        // Punish window: the body stands open.
+        if (e.open > 0) {
+          e.open -= DT;
+          break;
+        }
+        const plan = think(sim, e, dist, toX, toZ);
+        if ((e.state as string) !== 'chase') break;
+        if (playerAlive && plan.melee && dist <= def.attackRange) {
           e.state = 'windup';
           e.stateT = 0;
           e.struck = false;
@@ -106,16 +145,20 @@ export function updateEnemies(sim: Sim): void {
           break;
         }
         if (!playerAlive && dist < 2.5) break;
-        // Walk straight when the way is clear, else follow the field.
-        if (dist < 1.5 || (dist < 7 && sim.flow.clearLine(e.x, e.z, p.x, p.z)) || !sim.flow.sample(e.x, e.z, dir)) {
+        if (plan.mode === 'hold') break;
+        if (plan.mode === 'dir') {
+          dir.x = plan.x;
+          dir.z = plan.z;
+        } else if (def.fly || dist < 1.5 || (dist < 7 && sim.flow.clearLine(e.x, e.z, p.x, p.z)) || !sim.flow.sample(e.x, e.z, dir)) {
+          // Walk straight when the way is clear, else follow the field.
           dir.x = toX / (dist || 1);
           dir.z = toZ / (dist || 1);
         }
         // Separation: steer away from close neighbors so the pack surrounds instead of stacking.
         let sx = 0;
         let sz = 0;
-        for (const o of sim.enemies) {
-          if (o === e || o.state === 'dead') continue;
+        if (!def.fly) for (const o of sim.enemies) {
+          if (o === e || o.state === 'dead' || o.def.fly) continue;
           const ox = e.x - o.x;
           const oz = e.z - o.z;
           const min = def.radius + o.def.radius + SEPARATION_PAD;
@@ -135,12 +178,19 @@ export function updateEnemies(sim: Sim): void {
           const banner=sim.abilities.banner;
           // Standarte and Zersetzung slow by 30% each (2D).
           const slow=(banner&&Math.hypot(e.x-banner.x,e.z-banner.z)<banner.r?POWER.stand.slow:1)*(e.acid>0&&(sim.statContext.perks.corrode??0)>0?STATUS.corrodeSlow:1)*((e.slow??0)>0?.6:1);
-          vx = mx * def.speed * slow;
-          vz = mz * def.speed * slow;
-          e.facing = turnToward(e.facing, angleOf(mx, mz), 7 * DT);
+          const v = def.speed * slow * plan.speed * (e.buff > 0 ? THREAT.buffSpeed : 1);
+          vx = mx * v;
+          vz = mz * v;
+          // Crows and backing spitters keep looking at the hero.
+          e.facing = turnToward(e.facing, plan.mode === 'dir' && !(def.fly && e.rest <= 0) ? angleOf(toX, toZ) : angleOf(mx, mz), 7 * DT);
         }
         break;
       }
+      case 'special':
+        runSpecial(sim, e, dir);
+        vx = dir.x;
+        vz = dir.z;
+        break;
       case 'windup':
         // Track the player early, then commit so a dodge can beat the strike.
         if (e.stateT < def.windup * 0.6) e.facing = turnToward(e.facing, angleOf(toX, toZ), 4 * DT);
@@ -182,8 +232,8 @@ export function updateEnemies(sim: Sim): void {
     const damp = Math.exp(-KNOCK_DAMP * DT);
     e.kx *= damp;
     e.kz *= damp;
-    if (e.state !== 'dead' || Math.abs(e.kx) + Math.abs(e.kz) > 0.05) {
-      sim.level.resolve(e, def.radius);
+    if (!def.fly && (e.state !== 'dead' || Math.abs(e.kx) + Math.abs(e.kz) > 0.05)) {
+      sim.level.resolve(e, e.def.radius);
     }
     const b = sim.level.bounds;
     e.x = clamp(e.x, b.minX + def.radius, b.maxX - def.radius);
@@ -196,10 +246,10 @@ export function resolveBodies(sim: Sim): void {
   const list = sim.enemies;
   for (let i = 0; i < list.length; i++) {
     const a = list[i] as Enemy;
-    if (a.state === 'dead') continue;
+    if (a.state === 'dead' || a.def.fly) continue;
     for (let j = i + 1; j < list.length; j++) {
       const b = list[j] as Enemy;
-      if (b.state === 'dead') continue;
+      if (b.state === 'dead' || b.def.fly) continue;
       const dx = b.x - a.x;
       const dz = b.z - a.z;
       const min = a.def.radius + b.def.radius;
@@ -223,7 +273,8 @@ export function resolveBodies(sim: Sim): void {
   const through = p.state === 'cast' && p.cast !== null && (p.cast.id === 'fecht' || p.cast.id === 'abriss' || p.cast.id === 'stab');
   if (p.state !== 'dodge' && p.state !== 'dead' && !through) {
     for (const e of list) {
-      if (e.state === 'dead') continue;
+      // Flying bodies and rushes pass the hero (a rush hits on contact instead).
+      if (e.state === 'dead' || e.def.fly || isRush(e)) continue;
       const dx = e.x - p.x;
       const dz = e.z - p.z;
       const min = e.def.radius + PLAYER.radius;
@@ -241,6 +292,6 @@ export function resolveBodies(sim: Sim): void {
   }
   // Separation may have pushed a body into a wall or prop: walls win over crowding.
   for (const e of list) {
-    if (e.state !== 'dead') sim.level.resolve(e, e.def.radius);
+    if (e.state !== 'dead' && !e.def.fly) sim.level.resolve(e, e.def.radius);
   }
 }

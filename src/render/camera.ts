@@ -14,6 +14,8 @@ const LOOK_AHEAD_MAX = 1.6;
 const FOLLOW = 7;
 const SPRING_STEP = 1 / 120;
 
+const ZOOMS = [0.78, 1, 1.28];
+
 export class FollowCamera {
   readonly camera = new PerspectiveCamera(FOV, 16 / 9, 1, 120);
   private readonly target = new Vector3();
@@ -23,6 +25,14 @@ export class FollowCamera {
   /** Read by the test: current shake offset at the look-at point. */
   get kickOffset(): number {
     return Math.hypot(this.kick.x, this.kick.z);
+  }
+  /** Zoom level (playtest 2026-11-17): near, normal, far. */
+  private zoom = 1;
+  private zoomNow = 1;
+  /** Steps the zoom by `dir` (+1 farther); 0 cycles. Returns the new level. */
+  stepZoom(dir: number): number {
+    this.zoom = dir === 0 ? (this.zoom + 1) % ZOOMS.length : clamp(this.zoom + dir, 0, ZOOMS.length - 1);
+    return this.zoom;
   }
   private trauma = 0;
   private time = 0;
@@ -100,7 +110,10 @@ export class FollowCamera {
     const lookX = this.target.x + sx;
     const lookZ = this.target.z + sz;
     const lookY = this.target.y + 0.9 + sy;
-    this.camera.position.set(lookX, lookY + Math.sin(this.pitch) * this.distance, lookZ + Math.cos(this.pitch) * this.distance);
+    // Zoom eases toward the chosen level.
+    this.zoomNow += (ZOOMS[this.zoom]! - this.zoomNow) * Math.min(1, dt * 8);
+    const dist = this.distance * this.zoomNow;
+    this.camera.position.set(lookX, lookY + Math.sin(this.pitch) * dist, lookZ + Math.cos(this.pitch) * dist);
     this.camera.lookAt(lookX, lookY, lookZ);
   }
 

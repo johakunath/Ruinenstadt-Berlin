@@ -156,9 +156,20 @@ export class GameAudio {
         const e=sim.enemies.find(e=>e.id===event.id);
         if(!e||!this.ctx||volume<=0||this.ctx.currentTime-this.lastGrowl<.25)break;
         this.lastGrowl=this.ctx.currentTime;
-        this.play(e.def.boss?'growlBoss':e.kind==='runner'?'growlRunner':e.kind==='brute'?'growlBrute':'growlWalker',0,pan,volume);
+        this.play(e.def.boss?'growlBoss':e.kind==='runner'?'growlRunner':e.kind==='brute'?'growlBrute':e.kind==='raptor'?'growlRaptor':e.kind==='spitter'?'growlSpitter':e.kind==='crow'?'growlCrow':'growlWalker',0,pan,volume);
         break;
       }
+      // M12: specials announce themselves by type; marked zones land with a boom.
+      case 'enemySpecial': {
+        const k=event.kind;
+        if(event.phase==='wind')this.play(k==='roar'?'roar':k==='pounce'?'growlRaptor':k==='dive'?'growlCrow':k==='spit'||k==='fan'?'growlSpitter':k==='summon'||k==='charge'||k==='lunge'?'horn':k==='slam'||k==='stomp'||k==='bossSlam'||k==='tail'?'growlBrute':'growlBoss',0,pan,volume);
+        else if(k==='pounce'||k==='dive'||k==='lunge'||k==='charge')this.play('dash',0,pan,volume);
+        else if(k==='roar')this.play('boom',0,pan,volume*.7);
+        break;
+      }
+      case 'enemyShot': this.play('spit',0,pan,volume); break;
+      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play('pop',0,pan,volume); break;
+      case 'bossRage': this.play('roar'); this.play('horn'); break;
       case 'ability': {
         const cues:Record<string,SfxId>={Kreissäge:'spin',Fechtsprung:'dash',Säbeltanz:'spin',Fallhammer:'boom',Gullydeckel:'wood',Abrissbirne:'boom',Nagelsturm:'sling',Brandsatz:'ignite',Sperrfeuer:'heavy',Spießrute:'heavy',Stabhochsprung:'dash',Standarte:'legend'};
         this.play(cues[event.name]??'spin');if(event.ultimate)this.play('legend');break;

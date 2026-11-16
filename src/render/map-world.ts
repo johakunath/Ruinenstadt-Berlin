@@ -9,6 +9,7 @@ import {
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
+import { GROUND_STEP, meshSurface } from './ground';
 import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
@@ -240,8 +241,19 @@ function groundSplat(m: MapDef, x: number, z: number, shore: boolean): [number, 
   return [w[0]!, w[1]!, w[2]!, w[3]!];
 }
 
+const surfaces = new WeakMap<MapDef, (x: number, z: number) => number>();
+/** Height of the drawn ground under (x, z): see `meshSurface`. */
+function surfaceAt(m: MapDef, x: number, z: number): number {
+  let f = surfaces.get(m);
+  if (!f) {
+    f = meshSurface(m.bounds.minX, m.bounds.minZ, (px, pz) => heightAt(m, px, pz));
+    surfaces.set(m, f);
+  }
+  return f(x, z);
+}
+
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
-  const step = 1.5;
+  const step = GROUND_STEP;
   const B = m.bounds;
   const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += CHUNK) {
@@ -395,7 +407,7 @@ function buildScatter(m: MapDef, lots: Lot[], mats: MapMats, chunkOf: (x: number
       if (!kind) continue;
       if (lots.some((l) => l.kind !== 'tree' && Math.hypot(px - l.x, pz - l.z) < Math.max(l.w, l.d) / 2 + 0.4)) continue;
       if (m.landmarks.some((l) => Math.abs(px - l.x) < l.hx + 1 && Math.abs(pz - l.z) < l.hz + 1)) continue;
-      const y = heightAt(m, px, pz);
+      const y = surfaceAt(m, px, pz);
       const b = chunkOf(px, pz);
       if (kind === 'tuft') {
         for (let i = 0; i < 2; i++) {
@@ -435,13 +447,24 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         if (isWater(m, (x0 + x1) / 2, (z0 + z1) / 2) && !onBridge(m, (x0 + x1) / 2, (z0 + z1) / 2)) continue;
         const nx = -dz * (s.width / 2);
         const nz = dx * (s.width / 2);
-        const v = (x: number, z: number): Vector3 => new Vector3(x, y + heightAt(m, x, z), z);
-        const quad: [Vector3, Vector3, Vector3, Vector3] = [v(x0 - nx, z0 - nz), v(x0 + nx, z0 + nz), v(x1 + nx, z1 + nz), v(x1 - nx, z1 - nz)];
+        const v = (x: number, z: number): Vector3 => new Vector3(x, y + surfaceAt(m, x, z), z);
         const b = chunkOf((x0 + x1) / 2, (z0 + z1) / 2);
         const batch = b.solid.of(mat);
-        // quad() takes counter-clockwise corners seen from above; UVs in world meters.
-        batch.quad(quad, [0, 0, 1, 1]);
-        fixWorldUv(batch, 4, 4);
+        // Point on the piece: u along (0..1), w across (-1..1).
+        const at = (u: number, w: number): Vector3 => v(x0 + (x1 - x0) * u + nx * w, z0 + (z1 - z0) * u + nz * w);
+        // On curved ground one flat quad cuts through the slope (playtest 2026-11-17): where its
+        // middle or an edge leaves the ground by more than 1.5 cm, lay it in cells of about a meter.
+        const c00 = at(0, -1), c01 = at(0, 1), c11 = at(1, 1), c10 = at(1, -1);
+        const flatY = (u: number, w: number): number => { const k = (w + 1) / 2; return (c00.y * (1 - k) + c01.y * k) * (1 - u) + (c10.y * (1 - k) + c11.y * k) * u; };
+        const bent = ([[0.5, 0], [0.5, -1], [0.5, 1], [0, 0], [1, 0], [0.25, -0.5], [0.75, 0.5]] as const).some(([u, w]) => Math.abs(at(u, w).y - flatY(u, w)) > 0.015);
+        const nu = bent ? Math.max(1, Math.ceil((t1 - t0) / 1)) : 1;
+        const nw = bent ? Math.max(1, Math.ceil(s.width / 1)) : 1;
+        for (let iu = 0; iu < nu; iu++) for (let iw = 0; iw < nw; iw++) {
+          const u0 = iu / nu, u1 = (iu + 1) / nu, w0 = -1 + (2 * iw) / nw, w1 = -1 + (2 * (iw + 1)) / nw;
+          // quad() takes counter-clockwise corners seen from above; UVs in world meters.
+          batch.quad([at(u0, w0), at(u0, w1), at(u1, w1), at(u1, w0)], [0, 0, 1, 1]);
+          fixWorldUv(batch, 4, 4);
+        }
         if (s.tram) {
           // Embedded grooved rails: worn steel head, inward flange groove and guard lip,
           // rust at the edges and an asphalt repair seam. No exposed railway sleepers in a street.
@@ -453,7 +476,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
               const x = a[0] + (c[0] - a[0]) * t;
               const z = a[1] + (c[1] - a[1]) * t;
               const surface = onBridge(m, x, z) ? Math.max(y, TRAM_BRIDGE_DECK) : y;
-              return new Vector3(x, heightAt(m, x, z) + surface + band.height, z);
+              return new Vector3(x, surfaceAt(m, x, z) + surface + band.height, z);
             };
             const half = band.width / 2;
             const corners: [Vector3, Vector3, Vector3, Vector3] = [
@@ -478,7 +501,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
             if (isWater(m, cx, cz)) continue;
             // A crossing side street must not put a raised curb across the tram rails.
             if (!s.tram && streetDist(tramStreets, cx, cz).d < (t1 - t0) / 2 + 0.12) continue;
-            b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(cx, heightAt(m, cx, cz) + 0.06, cz), 0.24, 0.16, t1 - t0 + 0.02, [0.8, 0.8, 0.78]);
+            b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(cx, surfaceAt(m, cx, cz) + 0.06, cz), 0.24, 0.16, t1 - t0 + 0.02, [0.8, 0.8, 0.78]);
           }
         }
       }
@@ -486,7 +509,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         const disc = new CircleGeometry(s.width / 2, 16);
         disc.rotateX(-Math.PI / 2);
         worldUv(disc, bx, bz, 4);
-        chunkOf(bx, bz).solid.of(mat).add(disc, new Matrix4().setPosition(bx, y + 0.001 + heightAt(m, bx, bz), bz));
+        chunkOf(bx, bz).solid.of(mat).add(disc, new Matrix4().setPosition(bx, y + 0.001 + surfaceAt(m, bx, bz), bz));
       }
     }
   }
@@ -862,7 +885,7 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     const rng = new Rng(l.seed);
     const h = rng.range(3.5, 6);
     const lean = rng.range(-0.12, 0.12);
-    const base = heightAt(m, l.x, l.z);
+    const base = surfaceAt(m, l.x, l.z);
     bk.trunks.push(new Matrix4().makeRotationZ(lean).setPosition(l.x, base + h / 2, l.z).multiply(tmpScale.makeScale(1, h, 1)));
     const blobs = 3 + rng.int(2);
     const hue = rng.next();
@@ -1156,7 +1179,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   for (const bt of boats) group.add(bt.group);
   // Buildings stand on the lowest corner of their footprint; the rest sinks into the slope.
   const base = (x: number, z: number, r: number): number =>
-    Math.min(heightAt(m, x, z), heightAt(m, x - r, z - r), heightAt(m, x + r, z - r), heightAt(m, x - r, z + r), heightAt(m, x + r, z + r));
+    Math.min(surfaceAt(m, x, z), surfaceAt(m, x - r, z - r), surfaceAt(m, x + r, z - r), surfaceAt(m, x - r, z + r), surfaceAt(m, x + r, z + r));
   for (const l of lots) {
     const b = chunkOf(l.x, l.z);
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
@@ -1164,7 +1187,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
-      else if (l.kind === 'tree' && l.jungle) b.on(heightAt(m, l.x, l.z), () => buildPalm(b, l));
+      else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
       if (l.wing) {
         // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
         const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
@@ -1208,7 +1231,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       rng.next();
       return;
     }
-    const build = (): void => b.on(heightAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    const build = (): void => b.on(surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
     if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
     else build();
   });
@@ -1381,7 +1404,7 @@ function buildBreakables(mm: MapMats, m: MapDef, props: Prop[], defs: BreakableD
     inst.frustumCulled = false;
     ids.forEach((id, index) => {
       const p = props[defs[id]!.prop]!;
-      const mat = new Matrix4().makeRotationY(p.rot).setPosition(p.x, heightAt(m, p.x, p.z), p.z);
+      const mat = new Matrix4().makeRotationY(p.rot).setPosition(p.x, surfaceAt(m, p.x, p.z), p.z);
       base[id] = mat;
       slot[id] = { kind, index };
       inst.setMatrixAt(index, mat);

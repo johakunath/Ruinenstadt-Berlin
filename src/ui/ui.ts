@@ -15,15 +15,14 @@ export interface UiHandlers {
   onRetry(): void;
   onResume(): void;
   onDifficulty(id: DifficultyId): void;
-  onOptionsToggle(open: boolean): void;
+  /** Pause button, Optionen on the title: opens the menu. */
+  onMenu(): void;
   onProfile(id: ProfileId): void;
   onVolume(v: number): void;
   onMusic(on: boolean): void;
   onRumble(on: boolean): void;
   onShowPerf(on: boolean): void;
   onTelemetry(on: boolean): void;
-  /** Expedition maps: the in-game map opened or closed (pauses the game). */
-  onMapToggle?(open: boolean): void;
   onAgain?(): void;
 }
 
@@ -32,18 +31,14 @@ export class Ui {
   private readonly kills = el<HTMLElement>('kills');
   private readonly perf = el<HTMLPreElement>('perf');
   private readonly hurt = el<HTMLDivElement>('hurt');
-  private readonly options = el<HTMLDivElement>('options');
   private lastHp = -1;
   private lastMaxHp = -1;
   private lastKills = -1;
   private lastObjective = '';
   private lastArrow = 999;
   private lastBoss = -1;
-  private readonly karte = el<HTMLDivElement>('karte');
-  /** Draws the map SVG for the current progress (set by main for expedition maps). */
-  mapSource: (() => string) | null = null;
 
-  constructor(opts: Options, private readonly handlers: UiHandlers, input: Input) {
+  constructor(opts: Options, handlers: UiHandlers, input: Input) {
     el<HTMLButtonElement>('play').addEventListener('click', () => handlers.onPlay());
     el<HTMLButtonElement>('resume').addEventListener('click', () => handlers.onResume());
     const diffHost = el<HTMLDivElement>('title-diff');
@@ -57,8 +52,8 @@ export class Ui {
       diffHost.append(b);
     }
     el<HTMLButtonElement>('retry').addEventListener('click', () => handlers.onRetry());
-    for (const id of ['open-options', 'menu-btn']) el<HTMLButtonElement>(id).addEventListener('click', () => this.toggleOptions(true));
-    el<HTMLButtonElement>('close-options').addEventListener('click', () => this.toggleOptions(false));
+    for (const id of ['open-options', 'menu-btn']) el<HTMLButtonElement>(id).addEventListener('click', () => handlers.onMenu());
+    el('controls').innerHTML = controlsTable();
 
     const choice = <T extends string>(hostId: string, items: Array<{ id: T; label: string; hint: string }>, current: T, pick: (id: T) => void): void => {
       const host = el<HTMLDivElement>(hostId);
@@ -81,6 +76,11 @@ export class Ui {
     const music = el<HTMLInputElement>('opt-music');
     music.checked = opts.music;
     music.addEventListener('change', () => handlers.onMusic(music.checked));
+    // Fullscreen (playtest 2026-11-17): a switch in the pause menu; phones enter it when the game starts.
+    const full = el<HTMLInputElement>('opt-fullscreen');
+    el('fullscreen-row').hidden = !document.documentElement.requestFullscreen;
+    full.addEventListener('change', () => { void (full.checked ? document.documentElement.requestFullscreen?.() : document.exitFullscreen?.())?.catch(() => undefined); });
+    document.addEventListener('fullscreenchange', () => { full.checked = !!document.fullscreenElement; });
     const rumble = el<HTMLInputElement>('opt-rumble');
     rumble.checked = opts.rumble;
     rumble.addEventListener('change', () => handlers.onRumble(rumble.checked));
@@ -95,34 +95,11 @@ export class Ui {
     tl.checked = opts.telemetry;
     tl.addEventListener('change', () => handlers.onTelemetry(tl.checked));
     this.setupTouch(input);
-    el<HTMLButtonElement>('map-btn').addEventListener('click', () => this.toggleMap(true));
-    el<HTMLButtonElement>('close-karte').addEventListener('click', () => this.toggleMap(false));
-    el<HTMLButtonElement>('x-karte').addEventListener('click', () => this.toggleMap(false));
-    // A tap beside the map panel closes it too.
-    this.karte.addEventListener('click', (e) => { if (e.target === this.karte) this.toggleMap(false); });
     el<HTMLButtonElement>('again').addEventListener('click', () => handlers.onAgain?.());
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyM' && this.mapSource && el('title').hidden) {
-        e.preventDefault();
-        this.toggleMap(!this.mapOpen);
-      }
-    });
   }
 
-  toggleMap(open: boolean): void {
-    if (!this.mapSource) return;
-    if (open) el('karte-svg').innerHTML = this.mapSource();
-    this.karte.hidden = !open;
-    this.handlers.onMapToggle?.(open);
-  }
-
-  get mapOpen(): boolean {
-    return !this.karte.hidden;
-  }
-
-  /** Expedition: map button, objective line. */
+  /** Expedition: objective line. */
   setExpedition(on: boolean): void {
-    el('map-btn').hidden = !on;
     el('objective').hidden = !on;
   }
 
@@ -184,15 +161,6 @@ export class Ui {
     h.hidden = text === '';
   }
 
-  toggleOptions(open: boolean): void {
-    this.options.hidden = !open;
-    this.handlers.onOptionsToggle(open);
-  }
-
-  get optionsOpen(): boolean {
-    return !this.options.hidden;
-  }
-
   loaded(): void {
     el('loading').hidden = true;
     el<HTMLButtonElement>('play').disabled = false;
@@ -215,6 +183,11 @@ export class Ui {
 
   failed(message: string): void {
     el('loading').textContent = message;
+  }
+
+  showTitle(): void {
+    for (const id of ['dead', 'won', 'hud']) el(id).hidden = true;
+    el('title').hidden = false;
   }
 
   showGame(): void {
@@ -308,4 +281,24 @@ export class Ui {
       });
     }
   }
+}
+
+/** U2: one table for every device (2D Steuerung). */
+export const CONTROLS: ReadonlyArray<readonly [string, string, string, string]> = [
+  ['Laufen', 'WASD', 'Linker Stick', 'Daumen links'],
+  ['Schlag', 'Maus links · J', 'X', 'Schlag'],
+  ['Rolle', 'Leertaste', 'A', 'Rolle'],
+  ['Kraft', 'E', 'B', 'Kraft-Knopf'],
+  ['Ultimativ', 'R', 'LB', 'Ultimativ-Knopf'],
+  ['Kraft wechseln', 'X', 'Steuerkreuz ▲', 'Wechsel-Knopf'],
+  ['Verband', 'Q', 'Steuerkreuz ◀', 'Verband'],
+  ['Molotow', 'G', 'Steuerkreuz ▶', 'Molotow'],
+  ['Zoom', 'Z · Mausrad', '–', '–'],
+  ['Pause', 'Esc · P', 'Start', 'Pause-Knopf'],
+  ['Inventar', 'I · Tab', 'Y', 'Pause › Inventar'],
+  ['Karte', 'M', 'Ansicht', 'Minikarte'],
+  ['Reiter', '[ ] · Pfeile wählen', 'LB · RB', 'Antippen'],
+];
+function controlsTable(): string {
+  return `<table class="ctl"><thead><tr><th></th><th>Tastatur</th><th>Controller</th><th>Touch</th></tr></thead><tbody>${CONTROLS.map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table>`;
 }

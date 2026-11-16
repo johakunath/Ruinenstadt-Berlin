@@ -1031,15 +1031,14 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
 }
 
 /**
- * Crates and bins become breakable, except inside the inner 60 % of an encounter circle (the fight
- * must not turn into a prop hunt). Colliders are shared with the level's own list.
+ * Every crate and bin is breakable (playtest 2026-11-17: two crates that look the same must behave
+ * the same). Colliders are shared with the level's own list.
  */
 function breakableDefs(m: MapDef, props: Prop[], propColliders: Map<Prop, Collider>, rests: RestArea[]): BreakableDef[] {
   const defs: BreakableDef[] = [];
   if (m.encounters.length === 0) return defs;
   props.forEach((p, prop) => {
     if (p.kind !== 'crates' && p.kind !== 'crate' && p.kind !== 'bins') return;
-    if (m.encounters.some((e) => Math.hypot(p.x - e.x, p.z - e.z) < e.r * 0.6)) return;
     const collider = propColliders.get(p);
     if (collider) defs.push({ kind: p.kind === 'bins' ? 'bin' : 'crate', x: p.x, z: p.z, prop, inside: restAt(rests, p.x, p.z) >= 0, collider });
   });

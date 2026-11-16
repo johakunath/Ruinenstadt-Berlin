@@ -18,7 +18,7 @@ function fresh(id: LegendaryId, kind: WeaponKindId = 'blade'): Sim {
 function dummy(s: Sim, dx: number, dz: number, hp = 100000, kind: 'walker' | 'feldwebel' = 'walker'): Enemy {
   const e = spawnEnemy(s, s.player.x + dx, s.player.z + dz, kind);
   e.hp = e.maxHp = hp;
-  e.def = { ...e.def, speed: 0, attackRange: 0, knockbackTaken: 0 };
+  e.def = { ...e.def, speed: 0, attackRange: 0, knockbackTaken: 0, res: 'none', ai: 'melee' };
   return e;
 }
 const run = (s: Sim, steps: number, inp: Partial<typeof NO_INPUT> = {}): void => { for (let i = 0; i < steps; i++) { s.hitstop = 0; stepSim(s, { ...NO_INPUT, ...inp }); } };

@@ -1,77 +1,112 @@
+// U1: the inventory tab of the pause menu, laid out as the 2D bag (`js/panels.js` renderInv, detail;
+// `js/items.js` cmpRows, cmpBlock, statLine): doll and stats, bag with salvage chips, detail column.
 import { WEAPON_MODS } from '../data/crafting';
-import { AFFIXES, ATTRIBUTE_STATS, ELEMENTS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, RARITIES, SETS, SLOTS, SLOT_MAIN_STATS, SLOT_NAMES, WEAPON_KINDS, type AttributeKindId, type BaseId, type LegendaryId, type SlotId, type WeaponKindId } from '../data/items';
-import { BAG_SIZE, equipItem, salvageItem, unequipItem } from '../sim/inventory';
-import { avgIl, isUpgrade, scrapValue, shownLevel, type Item } from '../sim/items';
-import { setLoadout } from '../sim/loadout';
-import { heroStats, setCount, type Equipment, type HeroStats } from '../sim/stats';
+import { AFFIXES, ATTRIBUTE_STATS, ELEMENTS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, RARITIES, SETS, SLOTS, SLOT_MAIN_STATS, SLOT_NAMES, WEAPON_KINDS, type AffixId, type AttributeKindId, type BaseId, type LegendaryId, type SlotId, type WeaponKindId } from '../data/items';
+import { POWERS } from '../data/powers';
+import { selectPower } from '../sim/abilities';
+import { BAG_SIZE, bulkCandidates, equipItem, salvageItem, setImplantMode, unequipItem } from '../sim/inventory';
+import { isUpgrade, scrapValue, shownLevel, type Item } from '../sim/items';
+import { heroStats, setCount, weaponDps, type Equipment, type HeroStats } from '../sim/stats';
 import type { Sim } from '../sim/types';
 import { ITEM_ICONS } from './item-icons';
+import { POWER_GLYPHS } from './glyphs';
 
 type Selection = { bag: number } | { slot: SlotId };
 const art = import.meta.glob('../../assets/inventory/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
-const url = (id: string): string => art[`../../assets/inventory/${id}.webp`] ?? '';
-const esc = (s: string): string => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+export const artUrl = (id: string): string => art[`../../assets/inventory/${id}.webp`] ?? '';
+export const esc = (s: string): string => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const color = (i: Item): string => i.set ? '#75d68a' : RARITIES[i.rarity].color;
-const icon = (i: Item): string => ITEM_ICONS[i.base] ? `<img src="${url(ITEM_ICONS[i.base]!)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
-const statRows: Array<[string, keyof HeroStats, number, string]> = [
-  ['Schaden', 'damage', 0, ''], ['Leben', 'maxHp', 0, ''], ['Krit-Chance', 'crit', 1, '%'],
-  ['Lauftempo', 'moveSpeed', 1, ''], ['Angriffstempo', 'attackSpeed', 2, '×'], ['Widerstand', 'res', 1, '%'],
-  ['Leben pro Sekunde', 'regen', 1, ''], ['Leben pro Kill', 'leech', 1, ''], ['Beuteglück', 'luck', 0, ''],
+export const itemIcon = (i: { base: string; slot: SlotId }): string => ITEM_ICONS[i.base] ? `<img src="${artUrl(ITEM_ICONS[i.base]!)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
+const pct = (v: number): number => v * 100;
+/** 2D SROWS: the stat table and "Alle Werte nach Wechsel". inv: lower is better. */
+const STAT_ROWS: Array<[string, (s: HeroStats) => number, number, string, boolean?]> = [
+  ['Schaden', s => s.damage, 0, ''], ['Angriffstempo', s => pct(s.attackSpeed), 0, '%'], ['Krit-Chance', s => pct(s.crit), 0, '%'],
+  ['Leben', s => s.maxHp, 0, ''], ['Widerstand', s => pct(s.res), 0, '%'], ['Lauftempo', s => s.moveSpeed, 1, ''],
+  ['Leben pro Sekunde', s => s.regen, 1, ''], ['Elementarschaden', s => s.elements.length ? pct(s.elementPower) : 0, 0, '%'],
+  ['Leben pro Kill', s => s.leech, 0, ''], ['Beuteglück', s => s.luck, 0, ''], ['Sprint-Abklingzeit', s => s.dashCooldown, 1, ' s', true],
 ];
+const fmt = (v: number, d: number, u: string): string => v.toFixed(d) + u;
 
-/** Same three panels and actions as the 2D bag; no world/render dependencies. */
+/** 2D statLine: the main value of an item in one line. */
+export function statLine(i: Item): string {
+  if (i.slot === 'w') return `${i.value} Schaden · ${WEAPON_KINDS[i.kind as WeaponKindId].name} · ${Math.round(weaponDps(i))} DPS`;
+  if (i.slot === 'a') return `+${i.value} Leben`;
+  const stat = SLOT_MAIN_STATS[i.slot] ?? ATTRIBUTE_STATS[i.kind as AttributeKindId];
+  const a = AFFIXES[stat];
+  return `+${i.value}${i.kind === 'heil' ? '' : a.unit || '%'} ${a.name}`;
+}
+const affixMap = (i: Item | undefined): Partial<Record<AffixId, number>> => {
+  const m: Partial<Record<AffixId, number>> = {};
+  if (i) for (const a of [...(IMPLICITS[i.base as BaseId] ?? []), ...i.affixes]) m[a.id] = (m[a.id] ?? 0) + a.value;
+  return m;
+};
+const affixText = (id: AffixId, v: number): string => { const a = AFFIXES[id]; return `${(v > 0) !== !!a.negative ? '+' : '−'}${+Math.abs(v).toFixed(1)}${a.unit} ${a.name}`; };
+/** 2D cmpRows: same affix on the same row in both cards; `other` gives the change per row. */
+function cmpRows(it: Item | undefined, other: Item | undefined, diff: boolean): string {
+  const A = affixMap(it), B = affixMap(other);
+  const base = (x: Item): number => x.slot === 'w' ? weaponDps(x) : x.value;
+  const dc = (d: number, t: string): string => Math.abs(d) < 1e-9 ? '' : `<b class="${d > 0 ? 'positive' : 'negative'}">${t}</b>`;
+  const sgn = (d: number, dec: boolean): string => `${d > 0 ? '+' : '−'}${dec ? Math.abs(d).toFixed(1) : Math.round(Math.abs(d))}`;
+  const bd = diff && it && other && it.slot === other.slot ? (() => { const d = base(it) - base(other); return dc(d, sgn(d, false) + (it.slot === 'w' ? ' DPS' : '')); })() : '';
+  let h = `<div class="crow cbase"><span>${it ? statLine(it) : 'Nichts angelegt'}</span>${bd}</div>`;
+  for (const id of Object.keys(AFFIXES) as AffixId[]) {
+    if (!(id in A) && !(id in B)) continue;
+    const a = A[id], d = (a ?? 0) - (B[id] ?? 0), neg = !!AFFIXES[id].negative;
+    h += `<div class="crow">${a != null ? `<span class="${(a > 0) !== neg ? '' : 'negative'}">${affixText(id, a)}</span>` : '<span class="cnone">–</span>'}${diff ? dc(neg ? -d : d, sgn(neg ? -d : d, d % 1 !== 0) + AFFIXES[id].unit + (B[id] == null ? ' neu' : '')) : ''}</div>`;
+  }
+  return h;
+}
+/** Set, legendary power, element, mods (2D extraLines). */
+function extraLines(i: Item, eq: Equipment): string {
+  let h = '';
+  if (i.set) { const S = SETS[i.set], n = setCount(eq, i.set); h += `<div class="af set">Set ${S.name} · ${n}/${Object.keys(S.pieces).length} angelegt</div>${([2, 3, 5] as const).map(t => `<div class="af ${n >= t ? 'set' : 'dim'}">(${t}) ${S.bonusDescriptions[t]}</div>`).join('')}`; }
+  const lp = LEGENDARY_POWERS[i.base as LegendaryId];
+  if (i.rarity === 3 && lp) h += `<div class="af legend">${esc(lp.description)}</div>`;
+  if (i.element) h += `<div class="af" style="color:${ELEMENTS[i.element].color}">Element: ${ELEMENTS[i.element].name}</div>`;
+  for (const id of i.mods ?? []) { const m = WEAPON_MODS.find(x => x.id === id); if (m) h += `<div class="af mod">${m.name} · ${m.description}</div>`; }
+  return h;
+}
+
+/** Bag, doll and comparison of the pause menu. Lives in the menu shell (`menu.ts`). */
 export class InventoryUi {
   readonly root = document.createElement('div');
   private selection: Selection | null = null;
   private armed = '';
   private message = '';
-  private previousFocus: HTMLElement | null = null;
   private drag: { selection: Selection; x: number; y: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null = null;
   private suppressClick = false;
-  private padDown: boolean[] = [];
-  private padNext = 0;
 
-  constructor(private readonly sim: () => Sim, private readonly onToggle: (open: boolean) => void) {
+  constructor(private readonly sim: () => Sim) {
     this.root.id = 'inventory';
-    this.root.className = 'overlay';
+    this.root.className = 'inv-tab';
     this.root.hidden = true;
-    this.root.setAttribute('role', 'dialog');
-    this.root.setAttribute('aria-modal', 'true');
-    this.root.setAttribute('aria-label', 'Inventar');
-    document.body.append(this.root);
     this.root.addEventListener('click', e => {
       if (this.suppressClick) { this.suppressClick = false; return; }
       const b = (e.target as Element).closest<HTMLElement>('button');
       if (!b) return;
-      const key = b.dataset.key;
-      if (b.dataset.bag !== undefined) { this.selection = { bag: +b.dataset.bag }; this.armed = ''; }
-      else if (b.dataset.slot) { this.selection = { slot: b.dataset.slot as SlotId }; this.armed = ''; }
-      else this.act(b.dataset.action ?? '', b.dataset.value ?? '');
-      if (this.open) this.render(key);
-    });
-    this.root.addEventListener('keydown', e => {
-      if (e.code === 'Escape') { e.stopPropagation(); this.toggle(false); }
-      if (e.code === 'Tab') {
-        const buttons = this.buttons(), first = buttons[0], last = buttons.at(-1);
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      if (b.dataset.bag !== undefined || b.dataset.slot) {
+        const next: Selection = b.dataset.bag !== undefined ? { bag: +b.dataset.bag } : { slot: b.dataset.slot as SlotId };
+        // Second tap or a double click on the selected bag item equips it (backlog P4).
+        const again = this.selection && JSON.stringify(this.selection) === JSON.stringify(next) && e.detail >= 2;
+        this.selection = next; this.armed = ''; this.message = '';
+        if (again && 'bag' in next) { this.act('equip', ''); this.render(b.dataset.key); return; }
+        this.renderDetail(); return;
       }
+      this.act(b.dataset.action ?? '', b.dataset.value ?? '');
+      if (this.open) this.render(b.dataset.key);
     });
     this.root.addEventListener('pointerdown', e => {
-      const b = (e.target as Element).closest<HTMLElement>('[data-bag],[data-slot]');
+      const b = (e.target as Element).closest<HTMLElement>('button[data-bag],button[data-slot]');
       if (!b || (e.pointerType === 'mouse' && e.button !== 0)) return;
       const selection: Selection = b.dataset.bag !== undefined ? { bag: +b.dataset.bag } : { slot: b.dataset.slot as SlotId };
       if (!this.item(selection)) return;
-      const timer = e.pointerType === 'touch'
-        ? setTimeout(() => { if (this.drag) { this.drag.active = true; b.classList.add('dragging'); } }, 350)
-        : null;
+      const timer = e.pointerType === 'touch' ? setTimeout(() => { if (this.drag) { this.drag.active = true; b.classList.add('dragging'); } }, 350) : null;
       this.drag = { selection, x: e.clientX, y: e.clientY, active: false, timer };
     });
     this.root.addEventListener('pointermove', e => {
       if (!this.drag) return;
       if (!this.drag.active && Math.hypot(e.clientX - this.drag.x, e.clientY - this.drag.y) > 8) {
-        if (e.pointerType === 'touch') this.cancelDrag();
-        else this.drag.active = true;
+        if (e.pointerType === 'touch') this.cancelDrag(); else this.drag.active = true;
       }
       if (this.drag?.active) {
         e.preventDefault();
@@ -86,7 +121,7 @@ export class InventoryUi {
       this.suppressClick = true;
       setTimeout(() => { this.suppressClick = false; }, 400);
       const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-slot],[data-bag]');
-      if (target) this.drop(drag.selection, target);
+      if (target && this.root.contains(target)) this.drop(drag.selection, target);
       this.render(target?.dataset.key);
     });
     window.addEventListener('pointercancel', () => this.cancelDrag());
@@ -94,35 +129,12 @@ export class InventoryUi {
   }
 
   get open(): boolean { return !this.root.hidden; }
-  toggle(open: boolean): void {
-    if (open === this.open) return;
-    this.cancelDrag(); this.armed = ''; this.message = ''; this.selection = null;
-    this.root.hidden = !open;
-    if (open) {
-      this.previousFocus = document.activeElement as HTMLElement;
-      this.render(); this.buttons()[0]?.focus();
-    } else this.previousFocus?.focus();
-    this.onToggle(open);
-  }
-  private buttons(): HTMLButtonElement[] { return [...this.root.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]; }
-  /** D-pad/stick navigates; A selects/activates, B closes, Y opens via Input. */
-  pollPad(now: number): void {
-    const pad = [...(navigator.getGamepads?.() ?? [])].find(p => p?.connected);
-    if (!pad) { this.padDown = []; return; }
-    const down = pad.buttons.map(b => b.pressed), edge = (i: number): boolean => !!down[i] && !this.padDown[i];
-    if (this.open) {
-      if (edge(1)) this.toggle(false);
-      else if (edge(0)) (document.activeElement as HTMLElement)?.click();
-      else if (now >= this.padNext) {
-        const delta = down[12] || down[14] || (pad.axes[1] ?? 0) < -.5 || (pad.axes[0] ?? 0) < -.5 ? -1
-          : down[13] || down[15] || (pad.axes[1] ?? 0) > .5 || (pad.axes[0] ?? 0) > .5 ? 1 : 0;
-        if (delta) {
-          const bs = this.buttons(), i = bs.indexOf(document.activeElement as HTMLButtonElement);
-          bs[(i + delta + bs.length) % bs.length]?.focus(); this.padNext = now + 180;
-        }
-      }
-    }
-    this.padDown = down;
+  /** Shown as the menu tab; focus lands on the first item in the bag. */
+  show(on: boolean): void {
+    this.cancelDrag(); this.armed = ''; this.message = '';
+    if (on && this.selection && !this.item()) this.selection = null;
+    this.root.hidden = !on;
+    if (on) { this.render(); (this.root.querySelector<HTMLElement>('.inv-grid button') ?? this.root.querySelector<HTMLElement>('.inv-doll button'))?.focus(); }
   }
   private item(sel = this.selection): Item | undefined {
     if (!sel) return;
@@ -142,8 +154,7 @@ export class InventoryUi {
         const index = +target.dataset.bag;
         if (sim.inventory.bag[index]?.slot === from.slot) equipItem(sim, index);
         else if (!unequipItem(sim, from.slot)) this.message = from.slot === 'w' ? 'Waffe nur tauschen.' : 'Rucksack voll.';
-      }
-      else {
+      } else {
         const i = +target.dataset.bag;
         if (sim.inventory.bag[i]) [sim.inventory.bag[from.bag], sim.inventory.bag[i]] = [sim.inventory.bag[i]!, item];
         else { sim.inventory.bag.splice(from.bag, 1); sim.inventory.bag.push(item); }
@@ -153,70 +164,101 @@ export class InventoryUi {
   }
   private act(action: string, value: string): void {
     const sim = this.sim(), item = this.item(), sel = this.selection;
-    if (action === 'close') return this.toggle(false);
     if (action === 'equip' && sel && 'bag' in sel) { equipItem(sim, sel.bag); this.selection = { slot: item!.slot }; }
     if (action === 'unequip' && sel && 'slot' in sel) {
       if (unequipItem(sim, sel.slot)) this.selection = { bag: sim.inventory.bag.length - 1 };
       else this.message = 'Rucksack voll.';
     }
     if (action === 'lock' && item) item.locked = !item.locked;
-    if (action === 'mode' && item) {
-      const mode = Number(value);
-      if (mode >= 0 && mode < IMPLANT_MODES.length) {
-        item.implantMode = mode as 0 | 1 | 2;
-        if (sel && 'slot' in sel) setLoadout(sim, sim.equipment);
-      }
+    if (action === 'mode' && item) setImplantMode(sim, item, Number(value));
+    if (action === 'power' && item?.slot === 'w') {
+      if (sim.equipment.w === item) selectPower(sim, Number(value) === 1 ? 1 : 0); else item.power = Number(value) === 1 ? 1 : 0;
     }
     if (action === 'salvage' || action === 'bulk') {
-      const candidates = action === 'salvage' && sel && 'bag' in sel ? [this.item(sel)!] : sim.inventory.bag.filter(i => !i.locked && !i.set && i.rarity < 3 && (value === 'rest' ? !isUpgrade(i, sim.equipment[i.slot]) : i.rarity === Number(value)));
+      const candidates = action === 'salvage' && sel && 'bag' in sel ? [this.item(sel)!] : bulkCandidates(sim, value === 'rest' ? 'rest' : Number(value));
       const key = action + value;
-      if (action === 'bulk' || candidates.some(i => i.set || i.rarity >= 2)) {
+      // "Rest" and rare or set pieces need a second tap (2D allArm).
+      if ((action === 'bulk' && value === 'rest') || candidates.some(i => i.set || i.rarity >= 2)) {
         if (this.armed !== key) { this.armed = key; this.message = 'Sicher? Erneut tippen.'; return; }
       }
       const before = sim.inventory.scrap;
       for (const i of candidates) salvageItem(sim, sim.inventory.bag.indexOf(i));
-      this.selection = null; this.armed = ''; this.message = `+${sim.inventory.scrap - before} Schrott`;
+      this.selection = null; this.armed = '';
+      const got = sim.inventory.scrap - before;
+      this.message = got > 0 ? `+${got} Schrott` : '';
     }
+  }
+  private cell(item: Item | undefined, attrs: string, label: string, slot: boolean): string {
+    const sim = this.sim();
+    if (!item) return slot ? `<button type="button" class="inv-cell empty" ${attrs} aria-label="${esc(label)}: leer"><span>—</span></button>` : `<div class="inv-cell empty" ${attrs} aria-hidden="true"></div>`;
+    return `<button type="button" class="inv-cell" ${attrs} aria-label="${esc(item.name)}" style="--rarity:${color(item)}">${itemIcon(item)}<small>${shownLevel(item)}</small>${item.locked ? '<b class="inv-lock">◆</b>' : ''}${!slot && isUpgrade(item, sim.equipment[item.slot]) ? '<b class="inv-up">▲</b>' : ''}${item.element ? `<i style="background:${ELEMENTS[item.element].color}"></i>` : ''}</button>`;
   }
   render(preferredKey?: string): void {
     const active = document.activeElement as HTMLElement | null;
     const previousKey = preferredKey ?? (active && this.root.contains(active) ? active.dataset.key : undefined);
-    const sim = this.sim(), inv = sim.inventory;
-    const cell = (item: Item | undefined, attrs: string, label: string): string => `<button type="button" class="inv-cell" ${attrs} aria-label="${esc(label)}" ${item ? `style="--rarity:${color(item)}"` : ''}>${item ? `${icon(item)}<small>${shownLevel(item)}</small>${item.locked ? '<b class="inv-lock">◆</b>' : ''}${isUpgrade(item, sim.equipment[item.slot]) && !attrs.includes('data-slot') ? '<b class="inv-up">▲</b>' : ''}${item.element ? `<i style="background:${ELEMENTS[item.element].color}"></i>` : ''}` : '<span>—</span>'}</button>`;
-    const gear = SLOTS.map(slot => `<div class="inv-slot inv-${slot}">${cell(sim.equipment[slot], `data-slot="${slot}" data-key="slot-${slot}"`, SLOT_NAMES[slot])}<span>${SLOT_NAMES[slot]}</span></div>`).join('');
-    this.root.innerHTML = `<div class="inv-panel"><header><h2>Inventar</h2><span>Schrott <b>${inv.scrap}</b> · Item Level <b>${avgIl(sim.equipment)}</b></span><button data-action="close" data-key="close" class="inv-x" aria-label="Schließen">×</button></header><div class="inv-columns"><section class="inv-character"><div class="inv-doll"><img class="inv-portrait" src="${url('survivor')}" alt="Überlebende">${gear}</div><dl class="inv-stats">${statRows.map(([n,k,d,u]) => `<dt>${n}</dt><dd>${((sim.stats[k] as number) * (u === '%' ? 100 : 1)).toFixed(d)}${u}</dd>`).join('')}</dl></section><section class="inv-bag"><h3>Rucksack ${inv.bag.length}/${BAG_SIZE}</h3><div class="inv-bulk">${['Gewöhnl.', 'Magisch', 'Selten', 'Rest'].map((label, i) => `<button data-action="bulk" data-value="${i === 3 ? 'rest' : i}" data-key="bulk-${i}">${label}</button>`).join('')}</div><div class="inv-grid">${Array.from({length: BAG_SIZE}, (_, i) => cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, inv.bag[i]?.name ?? `Rucksackplatz ${i+1}`)).join('')}</div><p class="inv-hint">▲ Höherer Item Level.</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer></div>`;
+    const sim = this.sim(), inv = sim.inventory, s = sim.stats;
+    const gear = SLOTS.map(slot => `<div class="inv-slot inv-${slot}">${this.cell(sim.equipment[slot], `data-slot="${slot}" data-key="slot-${slot}"`, SLOT_NAMES[slot], true)}<span>${SLOT_NAMES[slot]}</span></div>`).join('');
+    const chips = ([['Gewöhnl.', 0], ['Magisch', 1], ['Selten', 2], ['Rest', 'rest']] as const).flatMap(([label, what], i) => {
+      const v = bulkCandidates(sim, what).reduce((a, it) => a + scrapValue(it), 0);
+      if (!v) return [];
+      const armed = what === 'rest' && this.armed === 'bulkrest';
+      return [`<button type="button" class="chip${armed ? ' warn' : ''}" data-action="bulk" data-value="${what}" data-key="bulk-${i}"${typeof what === 'number' ? ` style="color:${RARITIES[what].color}"` : ''}>${armed ? 'Sicher?' : `${label} +${v}`}</button>`];
+    }).join('');
+    this.root.innerHTML = `<div class="inv-columns"><section class="inv-character"><div class="inv-doll"><img class="inv-portrait" src="${artUrl('survivor')}" alt="">${gear}</div><dl class="inv-stats">${STAT_ROWS.filter(r => r[0] !== 'Elementarschaden' || s.elements.length).map(([n, f, d, u]) => `<dt>${n}</dt><dd>${fmt(f(s), d, u)}</dd>`).join('')}</dl></section><section class="inv-bag"><div class="inv-bagh"><h3>Rucksack ${inv.bag.length}/${BAG_SIZE}</h3>${chips ? `<div class="inv-bulk">${chips}</div>` : ''}</div><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => this.cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, `Platz ${i + 1}`, false)).join('')}</div><p class="inv-hint">▲ Höherer Item Level · Doppeltipp legt an</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer>`;
+    this.markSelection();
     this.restoreFocus(previousKey);
   }
+  /** Selection change: only the detail column and the cell marks (U1 step 4). */
+  private renderDetail(): void {
+    const d = this.root.querySelector('.inv-detail');
+    if (!d) return this.render();
+    d.innerHTML = this.detail();
+    const f = this.root.querySelector('footer'); if (f) f.textContent = '';
+    this.markSelection();
+  }
+  private markSelection(): void {
+    const key = this.selection ? ('bag' in this.selection ? `bag-${this.selection.bag}` : `slot-${this.selection.slot}`) : '';
+    this.root.querySelectorAll('.inv-cell').forEach(c => c.classList.toggle('sel', (c as HTMLElement).dataset.key === key));
+  }
   private restoreFocus(previousKey?: string): void {
-    if (!this.open) return;
-    const selectedKey = this.selection ? ('bag' in this.selection ? `bag-${this.selection.bag}` : `slot-${this.selection.slot}`) : undefined;
-    const buttons = this.buttons();
-    const target = buttons.find(b => b.dataset.key === previousKey)
-      ?? buttons.find(b => b.dataset.key === selectedKey)
-      ?? buttons[0];
-    target?.focus();
+    if (!this.open || !previousKey) return;
+    const sel = this.selection ? ('bag' in this.selection ? `bag-${this.selection.bag}` : `slot-${this.selection.slot}`) : undefined;
+    const bs = [...this.root.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+    (bs.find(b => b.dataset.key === previousKey) ?? bs.find(b => b.dataset.key === sel) ?? this.root.querySelector<HTMLElement>('.inv-grid button') ?? bs[0])?.focus();
+  }
+  private head(x: Item | undefined, label: string, slot: SlotId): string {
+    return x ? `<small class="clab">${label}</small><div class="inv-card-head">${itemIcon(x)}<div><h3>${esc(x.name)}</h3><p class="sub">${x.set ? 'Set-Teil' : RARITIES[x.rarity].name} · ${x.slot === 'w' ? WEAPON_KINDS[x.kind as WeaponKindId].name : SLOT_NAMES[x.slot]} · Item Level ${shownLevel(x)}</p></div></div>`
+      : `<small class="clab">${label}</small><div class="inv-card-head"><span></span><div><h3 class="dim">Leer</h3><p class="sub">${SLOT_NAMES[slot]}</p></div></div>`;
+  }
+  /** Kraft chooser on the weapon card (2D krsel), implant mode on the implant (2D im). */
+  private config(x: Item): string {
+    if (x.slot === 'w') {
+      const P = POWERS[x.kind as WeaponKindId], cur = x.power === 1 ? 1 : 0;
+      const glyph = (id: keyof typeof POWER_GLYPHS): string => `<svg viewBox="0 0 48 48" aria-hidden="true">${POWER_GLYPHS[id]}</svg>`;
+      return `<div class="krsel"><small class="clab">Kraft dieser Waffe</small><div class="krrow">${[0, 1].map(i => `<button type="button" class="krb" data-action="power" data-value="${i}" data-key="power-${i}" aria-pressed="${cur === i}">${glyph(P[i]!.id)}<span>${P[i]!.name}</span><small>${P[i]!.cooldown} s</small></button>`).join('')}<div class="krb ult">${glyph(P[2].id)}<span>${P[2].name}</span><small>Ultimativ · ${P[2].cooldown} s</small></div></div><p class="inv-hint">${P[cur]!.description}. Ultimativ: ${P[2].description}</p></div>`;
+    }
+    if (x.slot === 'i') return `<div class="krsel"><small class="clab">Implantat-Modus</small><div class="krrow">${IMPLANT_MODES.map((m, i) => `<button type="button" class="krb" data-action="mode" data-value="${i}" data-key="mode-${i}" aria-pressed="${(x.implantMode ?? 0) === i}"><span>${m.name}</span><small>${m.description}</small></button>`).join('')}</div></div>`;
+    return '';
   }
   private detail(): string {
-    const item = this.item(), sim = this.sim(), sel = this.selection;
-    if (!item || !sel) return '<p class="inv-hint">Teil antippen zum Vergleichen.</p>';
-    const inBag = 'bag' in sel;
-    const equipped = sim.equipment[item.slot];
-    let preview: HeroStats | null = null;
-    if (inBag) preview = heroStats({ ...sim.equipment, [item.slot]: item }, sim.statContext);
-    return `${this.card(item, inBag ? 'Ausgewählt' : 'Angelegt')}<div class="inv-actions">${inBag ? '<button data-action="equip" data-key="equip">Anlegen</button>' : item.slot !== 'w' ? `<button data-action="unequip" data-key="unequip" ${sim.inventory.bag.length >= BAG_SIZE ? 'disabled' : ''}>Ablegen</button>` : ''}<button data-action="lock" data-key="lock" aria-pressed="${!!item.locked}">${item.locked ? 'Entsperren' : 'Sperren'}</button>${inBag ? `<button data-action="salvage" data-key="salvage" ${item.locked ? 'disabled' : ''}>Schrott +${scrapValue(item)}</button>` : ''}</div>${item.slot === 'i' ? IMPLANT_MODES.map((m, i) => `<button data-action="mode" data-value="${i}" data-key="mode-${i}" aria-pressed="${(item.implantMode ?? 0) === i}">${m.name} · ${m.description}</button>`).join('') : ''}${inBag ? (equipped ? this.card(equipped, 'Angelegt') : '<p>Angelegt: Leer</p>') : ''}${preview ? `<dl class="inv-stats inv-deltas">${statRows.flatMap(([n,k,d,u]) => { const diff = (preview[k] as number) - (sim.stats[k] as number); return Math.abs(diff) < .00001 ? [] : [`<dt>${n}</dt><dd class="${diff > 0 ? 'positive' : 'negative'}">${diff > 0 ? '+' : ''}${(diff * (u === '%' ? 100 : 1)).toFixed(d)}${u}</dd>`]; }).join('')}</dl>` : ''}`;
-  }
-  private card(item: Item, label: string): string {
-    return itemCard(item, label, this.sim().equipment);
+    const it = this.item(), sim = this.sim(), sel = this.selection;
+    if (!sel) return '<p class="inv-hint">Teil antippen zum Vergleichen.</p>';
+    if (!it) return `<div class="inv-card"><p class="inv-hint">${SLOT_NAMES['slot' in sel ? sel.slot : 'w']}: leer. Lege ein passendes Teil aus dem Rucksack an.</p></div>`;
+    const eqAll = sim.equipment;
+    const lock = `<button type="button" data-action="lock" data-key="lock" aria-pressed="${!!it.locked}">${it.locked ? 'Entsperren' : 'Sperren'}</button>`;
+    if ('slot' in sel) {
+      const acts = `<div class="inv-actions">${it.slot !== 'w' ? `<button type="button" data-action="unequip" data-key="unequip" ${sim.inventory.bag.length >= BAG_SIZE ? 'disabled' : ''}>Ablegen</button>` : ''}${lock}</div>`;
+      return `<article class="inv-card" style="--rarity:${color(it)}">${this.head(it, 'Angelegt', it.slot)}<div class="crows">${cmpRows(it, undefined, false)}</div>${extraLines(it, eqAll)}${this.config(it)}${acts}</article>`;
+    }
+    const eq = eqAll[it.slot], il0 = eq ? shownLevel(eq) : 0, il1 = shownLevel(it);
+    const a = sim.stats, b = heroStats({ ...eqAll, [it.slot]: it }, sim.statContext);
+    const all = STAT_ROWS.flatMap(([n, f, d, u, inv]) => { const x = fmt(f(a), d, u), y = fmt(f(b), d, u); if (x === y) return []; const good = inv ? f(b) < f(a) : f(b) > f(a); return [`<div class="cmp"><span>${n}</span><span>${x} → <b class="${good ? 'positive' : 'negative'}">${y}</b></span></div>`]; }).join('') || '<p class="inv-hint">Keine Veränderung</p>';
+    const acts = `<div class="inv-actions"><button type="button" class="primary" data-action="equip" data-key="equip">Anlegen</button><button type="button" data-action="salvage" data-key="salvage" ${it.locked ? 'disabled' : ''}>Schrott +${scrapValue(it)}</button>${lock}</div>`;
+    return `<div class="cmp2"><article class="inv-card" style="--rarity:${color(it)}">${this.head(it, 'Ausgewählt', it.slot)}<div class="crows">${cmpRows(it, eq, true)}</div>${extraLines(it, eqAll)}${this.config(it)}<div class="cmp ckp"><span>Item Level</span><span>${eq ? `${il0} → ` : ''}<b class="${il1 > il0 ? 'positive' : il1 < il0 ? 'negative' : ''}">${il1}${il1 > il0 ? ' ▲' : ''}</b></span></div><details class="cdet"><summary>Alle Werte nach Wechsel</summary>${all}</details>${acts}</article><article class="inv-card ceq" style="--rarity:${eq ? color(eq) : '#4c453a'}">${this.head(eq, 'Angelegt', it.slot)}<div class="crows">${cmpRows(eq, it, false)}</div>${eq ? extraLines(eq, eqAll) : ''}</article></div>`;
   }
 }
 
-/** One item as a card: name, type, main value, affixes, element, mods, legendary power, set bonuses. */
+/** One item as a card (trader screen): name, type, main value, affixes, element, mods, legendary power, set bonuses. */
 export function itemCard(item: Item, label: string, equipment: Equipment): string {
-  const main = item.slot === 'w' ? 'Schaden' : item.slot === 't' || item.slot === 'r' || item.slot === 'i' ? AFFIXES[ATTRIBUTE_STATS[item.kind as AttributeKindId]].name : AFFIXES[SLOT_MAIN_STATS[item.slot]!].name;
-  const mainUnit = item.slot === 'w' || item.slot === 'a' || item.kind === 'heil' ? '' : '%';
-  const type = item.slot === 'w' ? WEAPON_KINDS[item.kind as WeaponKindId].name : SLOT_NAMES[item.slot];
-  const powers = LEGENDARY_POWERS[item.base as LegendaryId];
-  const set = item.set ? SETS[item.set] : undefined;
-  const n = item.set ? setCount(equipment, item.set) : 0;
-  return `<article class="inv-card" style="--rarity:${color(item)}"><small>${label}</small><div class="inv-card-head">${icon(item)}<h3>${esc(item.name)}</h3></div><p>${item.set ? 'Set-Teil' : RARITIES[item.rarity].name} · ${type} · Item Level ${shownLevel(item)}</p><b>${item.value}${mainUnit} ${main}</b>${[...(IMPLICITS[item.base as BaseId] ?? []), ...item.affixes].map(a => `<div>${a.value > 0 ? (AFFIXES[a.id].negative ? '−' : '+') : (AFFIXES[a.id].negative ? '+' : '−')}${Math.abs(a.value)}${AFFIXES[a.id].unit} ${AFFIXES[a.id].name}</div>`).join('')}${item.element ? `<p style="color:${ELEMENTS[item.element].color}">${ELEMENTS[item.element].name}</p>` : ''}${(item.mods ?? []).map(id => { const mod = WEAPON_MODS.find(m => m.id === id); return mod ? `<p>${mod.name} · ${mod.description}</p>` : ''; }).join('')}${item.rarity === 3 && powers ? `<p>${esc(powers.description)}</p>` : ''}${set ? `<h4>${set.name} · ${n} angelegt</h4>${([2,3,5] as const).map(t => `<p class="${n >= t ? 'positive' : 'inv-hint'}">(${t}) ${set.bonusDescriptions[t]}</p>`).join('')}` : ''}</article>`;
+  return `<article class="inv-card" style="--rarity:${color(item)}"><small class="clab">${label}</small><div class="inv-card-head">${itemIcon(item)}<div><h3>${esc(item.name)}</h3><p class="sub">${item.set ? 'Set-Teil' : RARITIES[item.rarity].name} · ${item.slot === 'w' ? WEAPON_KINDS[item.kind as WeaponKindId].name : SLOT_NAMES[item.slot]} · Item Level ${shownLevel(item)}</p></div></div><div class="crows">${cmpRows(item, equipment[item.slot], !!equipment[item.slot])}</div>${extraLines(item, equipment)}</article>`;
 }

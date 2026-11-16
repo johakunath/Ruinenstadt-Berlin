@@ -24,6 +24,8 @@ export interface WaveDef {
   dmgMul: number;
   /** Spawned first, one each. */
   bosses: EnemyKind[];
+  /** Chance that a normal spawn is an elite. */
+  elite?: number;
 }
 
 export interface EncounterDef {

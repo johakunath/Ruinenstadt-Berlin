@@ -1,35 +1,36 @@
 # Status
 
-What is in the game now. Updated 2026-11-16. Next work: `docs/migration.md` › Queue.
+What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › Queue.
 
 ## In the game
 
 | Area | State |
 |---|---|
 | Map | Köpenick v2, concept C "Rundweg" (`docs/maps/koepenick.md`): S-Bahnhof → Bahnhofsviertel → Müggelberge → ferry over the Dahme → Johannisthal → Spreepark → Rathaus, about 0.6 of v1. `?mapscale=` stretches it; `?map=hof` loads the gate 1 courtyard |
-| Fights | Open (Johannes, 2026-11-16): no closed circle, the hero can kite, go back for loot or into a Späti; a wave left behind spawns around the hero. 13 encounters, 20 waves, 4 placeholder bosses (Feldwebel, Turmwächter, Rex, Hauptmann) on the zombie body without own attacks. Director: waves on the rim, +30 % life per won encounter, retry at the zone |
+| Fights | Open (Johannes, 2026-11-16): no closed circle, the hero can kite, go back for loot or into a Späti; a wave left behind spawns around the hero. 13 encounters, 27 waves, 4 bosses with own attacks. After the last boss the hero may stay and explore; "Ganz neu anfangen" on the title wipes the save. Director: waves on the rim, elites from the fourth wave, a short breath and then the blessing choice after a won fight, +30 % life per won encounter, retry at the zone |
 | World | Water with irregular natural banks and stone quays in town (Spree, Dahme, Müggelsee and lakes), overgrown ground (grass, dirt, sidewalk plates, leaves blended; puddles, litter, weed tufts), low relief in parks and forests, a Späti rest stop per zone (enter, heal between fights), three bridges, a ferry boat that shuttles across the Dahme, tram tracks and a tram wreck, about half the buildings as ruins, fewer and partly broken lamps plus campfires, a fence and roadblocks at the map edge, a glowing ring around a closed fight, streets with curbs, buses, cars, sidewalk props, garden fences, L-shaped Altbau and houses, shops, trees, landmarks as code blockouts, cover. Heights: Müggelberge, Dino-Hügel (hills), Riesenrad-Plattform, Kirchhügel (terraces with stairs); sim stays 2D |
 | Render | 48 m chunks, moon shadow follows the hero, fixed point-light pool, opaque world with a thin amber hero contour only behind large buildings/vehicles; small props, enemies, lamps and trees excluded. 60 fps cap. Look fixed (painted PBR, ink line, grade). Profiles Qualität and Leistung |
 | Weapons | Klinge, Hammer, Speer, Werfer with own models, clips, arcs and finishers (hammer shock ring, spear lunge, fourth shot pierces). Two powers and an ultimate each, cast with a clip and a release frame; Verband and Molotow |
 | Blessings | Choice of three after every encounter and at three hidden spots: all 50 from 2D with families, duos, two-level cards, one reroll for Schrott. Umbau: three per weapon (one from 2D, two new), one per run from wave three |
 | Späti | Keeper behind the counter: four items, Verband, Molotow, full heal for Schrott. Menus close with a cross top right |
 | Run content | Between fights: ambush, horde, trader, rescue, cache, radio zone, supply drop; three Litfaßsäule shrines (60 s buff); Döner; all saved with the checkpoint |
-| Combat | 3-hit chain, dodge with i-frames, dash strike, swept arcs, hitstop, knockback, stagger, poise, aim assist. Gear scales damage, max HP, movement, attack timing, reach, resistance, regen, leech and dodge cooldown; seeded 2× crits. Enemies: Schlurfer, Hetzer, Brocken |
+| Combat | 3-hit chain, dodge with i-frames, dash strike, swept arcs, hitstop, knockback, stagger, poise, aim assist. Gear scales damage, max HP, movement, attack timing, reach, resistance, regen, leech and dodge cooldown; seeded 2× crits |
+| Enemies | Six types that each want another answer (M12): Schlurfer, Hetzer, Brocken (marks a circle), Speier (keeps distance, spits), Raptor (pounces along a line), Krähe (circles and dives). Elites Flink, Brennend, Spaltend, Gepanzert with a special and a punish window (gold ring, +30 % damage). Element resistances as in 2D. Bosses: Feldwebel (charge, calls men), Turmwächter (barrage, shot ring, slam), Rex (bite, charge, roar rings, tail), Hauptmann (slam, shot ring, calls men); all rage below half life. Small life bars over hurt enemies. Raptor and Rex are CC0 dinosaur models, the crow and the uniforms are built in code |
 | Feedback | Hit flash, sparks, smear, shake, rumble, telegraphs, ported 2D synth effects and adaptive music (S1); persistent Musik toggle and volume |
-| HUD | Objective with distance and arrow, minimap (tap opens the map), edge triangles to the objective and the last enemies of a wave, wave banner, boss bar, map (M), victory screen |
+| HUD | Objective with distance and arrow, minimap (tap opens the map), edge triangles to the objective and the last enemies of a wave, wave banner, boss bar, victory screen, one pause button (pulses when the bag holds an upgrade) |
+| Camp | Lager between expeditions (title, victory screen): seven stations with three levels, workshop upgrades and Drill, five meals from Zutaten that drop from enemies, Verband and Molotow, Aufsätze, a stash of 40 places (M13) |
+| Menu | Pause menu with tabs as in 2D (U1, U2): Inventar (doll, bag, salvage chips, aligned comparison, Kraft chooser), Karte with legend, Segen, Kodex (fills on first kill or find, saved), Optionen with a controls table and Expedition abbrechen |
 | Input | Keyboard and mouse, gamepad, touch stick plus attack and dodge; action bar with power (E / B), switch (X / D-pad up), ultimate (R / LB), Verband (Q / D-pad left), Molotow (G / D-pad right), on touch as a thumb arc; Inventar button, I/Tab or controller Y opens inventory (D-pad/stick, A select, B close) |
 | Items | Legendary powers work (all 18). Data, rolls and combat stats connected (M1–M3b). Starter pipe in normal play; dev loadout setter for verification. 25-slot inventory with comparison, equip/unequip, locks, salvage and set descriptions; drops, pickup and the exit warning in Köpenick (M4) |
 | Telemetry | One anonymous row per run (win, death, quit) to the 2D Google Sheet "Telemetrie": encounter reached, time, kills, damage taken, rest visits, per-encounter time, damage and fps, overall fps, p95, 1 % low, draw calls, profile, device class, input. Version `3d-…` in column v. Switch in Optionen. Delivery from the live game not verified yet |
-| CI | Type check, 353 unit tests, build, Playwright smoke, Pages deploy from `main` |
+| Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
+| CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest migration (2026-11-16)
+## Latest (2026-11-17)
 
-- S1 effects/music already ported; S2 enemy-specific synthesized cues with distance/pan built for current roster.
-- M7 first pass: distinct class hit shapes, thrower projectiles and finishers; existing pipe clips remain provisional for other weapons.
-- M8 first pass: 2 powers per class + ultimate; eligible 3-card blessings, family weights and supported duos; checkpoint persistence and run reset. Remaining perk/mod/duo effects: `docs/tasks/combat-audio-migration.md`.
-- M9: touch power/ultimate, E/R and pad B/LB; blessing cards support keyboard/pad/touch. Consumables await M16.
-- Review and completion (Claude, same day): the first pass is replaced by the full port, see the three rows above and `docs/tasks/combat-audio-migration.md`.
-- Prototype PC performance, pad/rumble and hero outline **accepted by Johannes**; no open acceptance item for them.
+- M12: roster, elites, boss attacks, resistances (`docs/tasks/m12-enemies.md`). M14: balance bot and a first tuning pass (`docs/balance.md`).
+- Playtest fixes: every crate breaks, pause before the blessing choice, enemy life bars, no map and inventory buttons on screen, fullscreen on phones, arrow on the big map (`docs/playtests.md`).
+- 2026-11-16: combat port completed (weapons, powers, all 50 blessings, consumables, run events), legendary powers, open fights, Späti keeper. Prototype PC performance, pad feel and hero outline accepted by Johannes.
 
 ## Known weak or unverified
 
@@ -39,9 +40,9 @@ What is in the game now. Updated 2026-11-16. Next work: `docs/migration.md` › 
 | Feel | Prototype pad feel and rumble verified by Johannes (2026-11-16); new M7/M8 moves await playtest |
 | Progression | Gear now comes from drops and breakable crates and bins (M4); M6 saves/checkpoints/difficulty and online sync built (live sync playtest open); camp/stash and balance remain open |
 | Map | v2 and part 2 not playtested yet. T1 adds painted grass, dirt, sidewalk plates, forest floor and scatter, using the 2D art as generation references; code textures remain loading fallbacks. Tram rails have steel heads, inward grooves, guard edges, worn seams and joined bends; crossing curbs leave the corridor clear. The stopped tram is level and aligned to the east-track straight, with sixteen steel wheel contacts on the rail heads. PC/Tab S9 performance integration and playtest remain open (`docs/asset-pipeline.md`) |
-| Art | Landmarks are blockouts, trees simple, CC0 hero (coat skirt clips in wide poses), zombie not the board ghoul, dodge clip squeezed to 0.24 s |
+| Art | Landmarks are blockouts, trees simple, CC0 hero (coat skirt clips in wide poses), zombie not the board ghoul, bosses are dressed zombies (helmet, tunic, lantern) until H2, dodge clip squeezed to 0.24 s |
 | Touch | Thumb arc with five more buttons built without a mockup round (Johannes asked for the finished result); spacing unverified on the Tab S9 and a phone |
-| New combat | No hardware run yet: weapon feel, power balance, event pacing and the cost of the new effects (pooled, unlit, no lights) need the PC and Tab S9 playtest. Enemy elements, shields and elite modifiers wait for M12 |
+| New combat | No hardware run yet: weapon feel, power balance, event pacing and the cost of the new effects (pooled, unlit, no lights) need the PC and Tab S9 playtest. The M12 roster, elites and bosses are untested on hardware too; the bot only checks numbers, not feel |
 | Audio | Port mappings, PCM and lifecycle tested; listening review on PC/Tab S9 still open |
 | Tech | Profile switch reloads the page; one shadow map for world and characters renders every frame; no dynamic resolution; `tools/fetch-assets.sh` depends on the itch.io download flow |
 

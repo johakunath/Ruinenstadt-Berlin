@@ -7,7 +7,7 @@ import { POWER, POWERS, PX, type PowerDef } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { BREAKABLE, hitBreakable } from './breakables';
 import { colliderDistance } from './collide';
-import { hasL, ignite, knock, pk, strike } from './combat';
+import { hasL, ignite, knock, pk, strike, resist } from './combat';
 import { angleOf, clamp } from './math';
 import { DT, type Cast, type Enemy, type Sim, type SimInput } from './types';
 
@@ -48,6 +48,8 @@ export interface Abilities {
   booms: Array<{ x: number; z: number }>;
   /** Blessing choice on screen (the game pauses), how many more wait, and its kind. */
   offers: Offer[]; pending: number; hiddenOffer: boolean; rerolled: boolean;
+  /** Seconds until the blessing choice of a won encounter opens. */
+  rewardT?: number;
   /** Best card quality taken per blessing (card frame in the build list). */
   quality: Partial<Record<PerkId, number>>;
 }
@@ -472,7 +474,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
   if (p.state !== 'dead') {
     if (a.hot > 0) {
       a.hot -= DT;
-      healPlayer(s, (s.stats.maxHp * CONSUMABLE.heal) / CONSUMABLE.hotTime * DT);
+      healPlayer(s, (s.stats.maxHp * ((s.inventory.camp?.stations.laz ?? 1) >= 3 ? 0.6 : CONSUMABLE.heal)) / CONSUMABLE.hotTime * DT);
     }
     if (a.guard > 0) {
       a.guard -= DT;
@@ -537,7 +539,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
       if (dist > k.r + POWER.shock.band + e.def.radius || dist > k.max + e.def.radius) continue;
       k.hits.push(e.id);
       strike(s, e, d * k.mul, { knock: k.knock, stun: k.stun, feel: 'none', noproc: true, element: k.acid ? 'acid' : undefined });
-      if (k.acid && !dead(e)) e.acid = 3;
+      if (k.acid && !dead(e) && resist(e, 'acid') > 0) e.acid = 3;
     }
   }
   if (a.shocks.length) a.shocks = a.shocks.filter((k) => k.r < k.max);

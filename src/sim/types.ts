@@ -1,10 +1,11 @@
 import type { Inventory } from './inventory';
-import type { MaterialId } from '../data/crafting';
+import type { IngredientId, MaterialId } from '../data/crafting';
 import type { Breakable, BreakableKind } from './breakables';
 import type { Drop } from './loot';
 import type { LootContext } from './items';
 import type { AttackDef, AttackId, HitWeight } from '../data/combat';
-import type { EnemyDef, EnemyKind } from '../data/enemies';
+import type { EliteMod, EnemyDef, EnemyKind } from '../data/enemies';
+import type { Special, SpecialKind, Threats, ZoneKind } from './threats';
 import type { Collider } from './collide';
 import type { FlowField } from './flowfield';
 import type { Level } from './level';
@@ -103,7 +104,8 @@ export interface Player {
   sweepHi: number;
 }
 
-export type EnemyState = 'chase' | 'windup' | 'strike' | 'recover' | 'stagger' | 'dead';
+/** `special`: a telegraphed special attack runs (`Enemy.sp`, `src/sim/ai.ts`). */
+export type EnemyState = 'chase' | 'windup' | 'strike' | 'recover' | 'special' | 'stagger' | 'dead';
 
 export interface Enemy {
   id: number;
@@ -122,8 +124,28 @@ export interface Enemy {
   speed: number;
   hp: number;
   maxHp: number;
-  /** Damage multiplier from the wave tier. */
+  /** Life and damage multipliers from the wave tier (adds and splits inherit them). */
+  hpMul: number;
   dmgMul: number;
+  /** Running special attack, null otherwise. */
+  sp: Special | null;
+  /** Punish window: stands still and takes more damage. */
+  open: number;
+  /** Crows sit dazed after a dive. */
+  rest: number;
+  /** Driven by a roar: faster for this long. */
+  buff: number;
+  /** Cooldowns of up to three specials, a shared pause between them, and a cycle counter. */
+  cd: [number, number, number];
+  gap: number;
+  cycle: number;
+  /** Strafing and orbit direction, orbit angle. */
+  side: 1 | -1;
+  orb: number;
+  /** Bosses below half life. */
+  rage: boolean;
+  /** Fire trail timer (elite Brennend). */
+  trailT: number;
   state: EnemyState;
   stateT: number;
   staggerDur: number;
@@ -138,8 +160,10 @@ export interface Enemy {
   acid: number;
   /** Slowed to 60% (Krähenfeder shots). */
   slow?: number;
-  /** Elite (2D ×2.6 life, better loot); rescue guards carry `guard`. */
-  elite?: boolean;
+  /** Elite modifier (2D ×2.6 life, better loot, a special); rescue guards carry `guard`. */
+  elite?: EliteMod;
+  /** Split off a dying Spaltend elite: small, no loot. */
+  mini?: boolean;
   guard?: boolean;
   /** The last hit was critical (kill effects). */
   lastCrit?: boolean;
@@ -172,6 +196,13 @@ export type SimEvent =
   | { type: 'playerDie' }
   | { type: 'enemyWindup'; id: number }
   | { type: 'enemyStrike'; id: number }
+  /** A special attack starts its wind-up (`wind`) or is released (`go`). */
+  | { type: 'enemySpecial'; id: number; kind: SpecialKind; phase: 'wind' | 'go'; x: number; z: number }
+  /** A marked ground zone goes off. */
+  | { type: 'zoneHit'; kind: ZoneKind; x: number; z: number; r: number; hit: boolean }
+  | { type: 'enemyShot'; x: number; z: number; boss: boolean }
+  | { type: 'bossRage'; id: number; name: string }
+  | { type: 'summon'; id: number; x: number; z: number; count: number }
   | { type: 'spawn'; id: number }
   | { type: 'encounterStart'; index: number }
   | { type: 'waveStart'; index: number; wave: number; waves: number }
@@ -186,9 +217,11 @@ export type SimEvent =
   | { type: 'drop'; id: number; x: number; z: number; rarity: number; set: boolean }
   | { type: 'dropLand'; id: number; x: number; z: number; rarity: number }
   | { type: 'legendary'; x: number; z: number }
-  | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material' | 'food'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId }
+  | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material' | 'food' | 'ingredient'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId; ingredient?: IngredientId }
   | { type: 'scrap'; amount: number; x: number; z: number }
   | { type: 'bagFull' }
+  /** U2: first kill of a kind or first find of a legendary or set base. */
+  | { type: 'kodex'; name: string }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
   | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean };
 
@@ -206,6 +239,8 @@ export interface RunState {
   spawnT: number;
   /** Pause before the next wave. */
   pauseT: number;
+  /** M13: the expedition's camp effects were settled (`endExpedition` runs once). */
+  ended?: boolean;
 }
 
 export interface Sim {
@@ -219,6 +254,8 @@ export interface Sim {
   time: number;
   player: Player;
   enemies: Enemy[];
+  /** What enemies put into the world: marked zones, shots, ground hazards, roar rings (M12). */
+  threats: Threats;
   /** Filled during a step; the game loop drains it after every step. */
   events: SimEvent[];
   /** Remaining freeze in seconds. While > 0 the world holds still; input is still buffered outside. */
