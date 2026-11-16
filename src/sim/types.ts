@@ -220,6 +220,8 @@ export type SimEvent =
   | { type: 'pickup'; id: number; what: 'item' | 'heal' | 'material' | 'food' | 'ingredient'; x: number; z: number; rarity: number; amount: number; name?: string; upgrade?: boolean; set?: boolean; material?: MaterialId; ingredient?: IngredientId }
   | { type: 'scrap'; amount: number; x: number; z: number }
   | { type: 'bagFull' }
+  /** M18: an endless wave starts (n from 1) or is won. */
+  | { type: 'endlessWave'; n: number; done: boolean }
   /** U2: first kill of a kind or first find of a legendary or set base. */
   | { type: 'kodex'; name: string }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
@@ -239,6 +241,8 @@ export interface RunState {
   spawnT: number;
   /** Pause before the next wave. */
   pauseT: number;
+  /** M18 endless mode after the district boss: waves survived so far, absent outside it. */
+  endless?: number;
   /** M13: the expedition's camp effects were settled (`endExpedition` runs once). */
   ended?: boolean;
 }

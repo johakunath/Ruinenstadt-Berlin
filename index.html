@@ -36,8 +36,10 @@
     <div id="won" class="overlay" hidden>
       <div class="panel">
         <h2>Köpenick befreit</h2>
-        <p class="sub">Erledigt: <b id="won-kills">0</b></p>
+        <p class="sub">Der Bezirk atmet wieder.</p>
+        <b id="won-kills" hidden>0</b><div class="end-stats" id="won-stats"></div>
         <button id="won-explore" type="button" class="primary">Weiter erkunden</button>
+        <button id="won-endless" type="button">Endlos kämpfen</button>
         <button id="again" type="button">Nochmal</button>
         <button id="won-camp" type="button">Ins Lager</button>
       </div>
@@ -58,8 +60,8 @@
         <button id="play" type="button" class="primary" disabled>Spielen</button>
         <div id="title-diff" class="choices"></div>
         <button id="open-camp" type="button">Lager</button>
-        <button id="new-game" type="button" title="Ausrüstung, Schrott und Fortschritt löschen">Ganz neu anfangen</button>
         <button id="open-options" type="button">Optionen</button>
+        <button id="new-game" type="button"><b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small></button>
         <p id="loading">Lädt …</p>
         <p class="keys">WASD laufen · Maus oder J schlagen · Leertaste rollen<br />E Kraft · R Ultimativ · Q Verband · G Molotow<br />Controller: X schlagen · A rollen · B Kraft · LB Ultimativ</p>
       </div>
@@ -68,16 +70,18 @@
     <div id="dead" class="overlay" hidden>
       <div class="panel">
         <h2>Gefallen</h2>
-        <p class="sub">Erledigt: <b id="dead-kills">0</b></p>
+        <p class="sub" id="dead-sub">Die Ruinen behalten dich heute Nacht.</p>
+        <b id="dead-kills" hidden>0</b><div class="end-stats" id="dead-stats"></div>
         <button id="retry" type="button" class="primary">Nochmal</button>
         <p class="sub" id="retry-hint" hidden></p>
+        <button id="dead-camp" type="button">Ins Lager</button>
       </div>
     </div>
 
     <div id="options" class="opt-tab" hidden>
       <div class="opt-cols">
       <div class="opt-col">
-        <div id="run-actions" class="choices"><button id="pause-finish" type="button" class="choice" hidden><b>Abschließen</b></button><button id="run-abort" type="button" class="choice"><b>Expedition abbrechen</b></button></div>
+        <div id="run-actions" class="choices"><button id="pause-finish" type="button" class="choice" hidden><b>Abschließen</b></button><button id="to-title" type="button" class="choice"><b>Hauptmenü</b><span>Gespeichert, Weiter möglich</span></button><button id="run-abort" type="button" class="choice"><b>Expedition abbrechen</b><span>Zurück auf Anfang</span></button></div>
         <h3>Grafik</h3>
         <div id="opt-profile" class="choices"></div>
         <label class="row">Musik <input id="opt-music" type="checkbox" /></label>

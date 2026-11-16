@@ -15,6 +15,8 @@ test('scene loads, play starts, the fight runs, no page errors', async ({ page }
   await page.goto('/?map=hof&profile=Leistung&seed=7&debug=perf');
   await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
   await page.locator('#play').click();
+  // M17: a fresh profile sees the intro cards first.
+  await page.locator('#intro .iskip').click();
   await expect(page.locator('#hud')).toBeVisible();
   await expect(page.locator('#title')).toBeHidden();
 

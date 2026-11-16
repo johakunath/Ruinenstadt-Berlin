@@ -52,8 +52,8 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
 | Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Built (2026-11-16, `docs/tasks/m13-camp.md`): seven stations, meals from Zutaten, Lazarett, Aufsätze, Lager; playtest open |
 | Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |
-| Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Open |
-| Endless mode after the district boss | M18 | Open |
+| Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Built (2026-11-16): four intro cards before the first run, tutorial cards for the first loot and blessing, end screens with stats, title buttons that say what they keep, Hauptmenü in the pause menu; Kodex and options in U1/U2 |
+| Endless mode after the district boss | M18 | Built (2026-11-16): "Endlos kämpfen" after the victory; growing waves around the hero, a boss every fifth, a blessing every second, record in the profile |
 | One U-Bahn tunnel with Der Schaffner | M19 | Open |
 | Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 covers the M12 roster (synth cues per type and special); boss voices S3 |
 

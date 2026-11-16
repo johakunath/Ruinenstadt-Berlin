@@ -171,9 +171,10 @@ export class Ui {
   setResume(label: string | null, difficulty: DifficultyId): void {
     const r = el<HTMLButtonElement>('resume');
     r.hidden = label === null;
-    if (label !== null) r.textContent = `Weiter · ${label}`;
+    if (label !== null) r.innerHTML = `<b>Weiter · ${label}</b><small>Dort weiter, wo du warst</small>`;
     el<HTMLButtonElement>('play').classList.toggle('primary', label === null);
-    el('play').textContent = label === null ? 'Spielen' : 'Neu';
+    // Playtest 2026-11-16: "Neu" vs "Ganz neu anfangen" was unclear; each button says what it keeps.
+    el('play').innerHTML = label === null ? '<b>Losziehen</b><small>Neue Expedition durch Köpenick</small>' : '<b>Neue Expedition</b><small>Von vorn, Ausrüstung bleibt</small>';
     this.setDifficulty(difficulty);
   }
 

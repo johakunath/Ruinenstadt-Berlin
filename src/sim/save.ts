@@ -47,7 +47,8 @@ export function profileOf(sim: Sim): SaveProfile {
 
 export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now()): SaveV1 {
   const r = sim.run;
-  const inRun = withRun && sim.level.expedition && (r.phase === 'pause' || r.phase === 'travel') && sim.player.state !== 'dead';
+  // Endless mode has no checkpoint (M18): its pauses are not resumable.
+  const inRun = withRun && sim.level.expedition && r.endless === undefined && (r.phase === 'pause' || r.phase === 'travel') && sim.player.state !== 'dead';
   return {
     v: 1, t: now, difficulty: sim.difficulty, profile: profileOf(sim),
     run: !inRun ? null : {
