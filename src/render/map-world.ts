@@ -448,12 +448,23 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         const nx = -dz * (s.width / 2);
         const nz = dx * (s.width / 2);
         const v = (x: number, z: number): Vector3 => new Vector3(x, y + surfaceAt(m, x, z), z);
-        const quad: [Vector3, Vector3, Vector3, Vector3] = [v(x0 - nx, z0 - nz), v(x0 + nx, z0 + nz), v(x1 + nx, z1 + nz), v(x1 - nx, z1 - nz)];
         const b = chunkOf((x0 + x1) / 2, (z0 + z1) / 2);
         const batch = b.solid.of(mat);
-        // quad() takes counter-clockwise corners seen from above; UVs in world meters.
-        batch.quad(quad, [0, 0, 1, 1]);
-        fixWorldUv(batch, 4, 4);
+        // Point on the piece: u along (0..1), w across (-1..1).
+        const at = (u: number, w: number): Vector3 => v(x0 + (x1 - x0) * u + nx * w, z0 + (z1 - z0) * u + nz * w);
+        // On curved ground one flat quad cuts through the slope (playtest 2026-11-17): where its
+        // middle or an edge leaves the ground by more than 1.5 cm, lay it in cells of about a meter.
+        const c00 = at(0, -1), c01 = at(0, 1), c11 = at(1, 1), c10 = at(1, -1);
+        const flatY = (u: number, w: number): number => { const k = (w + 1) / 2; return (c00.y * (1 - k) + c01.y * k) * (1 - u) + (c10.y * (1 - k) + c11.y * k) * u; };
+        const bent = ([[0.5, 0], [0.5, -1], [0.5, 1], [0, 0], [1, 0], [0.25, -0.5], [0.75, 0.5]] as const).some(([u, w]) => Math.abs(at(u, w).y - flatY(u, w)) > 0.015);
+        const nu = bent ? Math.max(1, Math.ceil((t1 - t0) / 1)) : 1;
+        const nw = bent ? Math.max(1, Math.ceil(s.width / 1)) : 1;
+        for (let iu = 0; iu < nu; iu++) for (let iw = 0; iw < nw; iw++) {
+          const u0 = iu / nu, u1 = (iu + 1) / nu, w0 = -1 + (2 * iw) / nw, w1 = -1 + (2 * (iw + 1)) / nw;
+          // quad() takes counter-clockwise corners seen from above; UVs in world meters.
+          batch.quad([at(u0, w0), at(u0, w1), at(u1, w1), at(u1, w0)], [0, 0, 1, 1]);
+          fixWorldUv(batch, 4, 4);
+        }
         if (s.tram) {
           // Embedded grooved rails: worn steel head, inward flange groove and guard lip,
           // rust at the edges and an asphalt repair seam. No exposed railway sleepers in a street.
