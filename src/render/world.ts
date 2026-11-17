@@ -1,7 +1,7 @@
 // Builds the Köpenick courtyard from `src/data/courtyard.ts`: facades, Späti, props, lights.
 // Everything is code-built geometry with painted textures (plan-3d.md › Style: closing the gap).
 import {
-  BoxGeometry, BufferAttribute, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide,
+  BoxGeometry, BufferAttribute, CircleGeometry, Euler, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide,
   Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
@@ -254,13 +254,92 @@ export function windowAt(b: Builder, run: Run, rng: Rng, s: number, y: number, w
   if (fancy) b.box(st, run.mat(s, y + h + 0.3, 0.14), w + 0.75, 0.14, 0.28);
 }
 
-function balcony(b: Builder, run: Run, s: number, y: number): void {
-  b.box(b.mats.stucco, run.mat(s, y - 0.08, 0.5), 2.0, 0.16, 1.0, [0.7, 0.68, 0.64]);
-  const iron = b.mats.iron;
-  b.box(iron, run.mat(s, y + 0.95, 0.96), 2.0, 0.05, 0.05);
-  b.box(iron, run.mat(s - 0.98, y + 0.95, 0.5), 0.05, 0.05, 0.95);
-  b.box(iron, run.mat(s + 0.98, y + 0.95, 0.5), 0.05, 0.05, 0.95);
-  for (let i = 0; i <= 8; i++) b.box(iron, run.mat(s - 0.96 + i * 0.24, y + 0.47, 0.96), 0.03, 0.95, 0.03);
+/** A part of a local frame `m`: offset (x, y, z), then rotated (rx, ry, rz). */
+export function partOf(m: Matrix4): (x: number, y: number, z: number, rx?: number, ry?: number, rz?: number) => Matrix4 {
+  return (x, y, z, rx = 0, ry = 0, rz = 0) => m.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rx, ry, rz)).setPosition(x, y, z));
+}
+
+/** Laundry or plants on a balcony floor of width `w` and depth `dep` (frame: X along the wall, Z out, y=0 floor). */
+export function balconyLife(b: Builder, f: ReturnType<typeof partOf>, rng: Rng, w: number, dep: number, rail: number): void {
+  const roll = rng.next();
+  if (roll < 0.4) {
+    // Plants: pots on the floor, a flower box on the rail, sometimes ivy spilling over.
+    const geo = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
+    for (let i = 0, n = 1 + rng.int(3); i < n; i++) {
+      const x = rng.range(-w / 2 + 0.3, w / 2 - 0.3), z = rng.range(0.25, dep - 0.3), sz = rng.range(0.5, 0.95), g = rng.range(0.6, 1);
+      b.box(b.mats.brick, f(x, 0.13, z), 0.3, 0.26, 0.3, [1.05, 0.62, 0.42]);
+      for (const ry of [0.4, 2]) b.cards.of(b.mats.fern).add(geo, f(x, 0.2, z, 0, ry + i).multiply(new Matrix4().makeScale(sz, sz, 1)), [0.6 * g, 0.95 * g, 0.45 * g]);
+    }
+    if (rng.next() < 0.5) {
+      const x = rng.range(-w / 4, w / 4);
+      b.box(b.mats.wood, f(x, rail - 0.1, dep + 0.12), Math.min(1.2, w * 0.6), 0.2, 0.22, [0.7, 0.55, 0.42]);
+      for (let i = 0; i < 3; i++) b.cards.of(b.mats.ivy).add(geo, f(x + (i - 1) * 0.35, rail - 0.75, dep + 0.26, rng.range(-0.2, 0.2)).multiply(new Matrix4().makeScale(0.6, rng.range(0.7, 1.1), 1)), [0.8, 1, 0.7]);
+    }
+  } else if (roll < 0.7) {
+    // Laundry on a line between the side rails.
+    const z = dep * rng.range(0.45, 0.7), y = rail + rng.range(0.3, 0.5);
+    b.box(b.mats.iron, f(0, y, z), w - 0.1, 0.015, 0.015);
+    const colors: RGB[] = [[1.25, 1.2, 1.1], [1.1, 0.45, 0.35], [0.5, 0.65, 1.05], [1.2, 1.0, 0.55], [0.85, 0.85, 0.8]];
+    for (let x = -w / 2 + 0.15; x < w / 2 - 0.35; x += rng.range(0.3, 0.75)) {
+      const cw = rng.range(0.28, 0.55), ch = rng.range(0.35, 0.75);
+      b.box(b.mats.burlap, f(x + cw / 2, y - ch / 2, z, rng.range(-0.08, 0.08), 0, rng.range(-0.05, 0.05)), cw, ch, 0.025, rng.pick(colors));
+    }
+  }
+}
+
+/** Iron railing on a balcony frame (y=0 floor); `broken` drops balusters and bends the top rail. */
+function ironRail(b: Builder, f: ReturnType<typeof partOf>, rng: Rng, w: number, dep: number, broken: boolean): void {
+  const iron = b.mats.iron, h = 0.95, z = dep - 0.05;
+  const gap = broken ? rng.range(-w / 2 + 0.3, w / 2 - 0.6) : 99;
+  // Top and bottom rail in front; a broken rail splits at `gap` and the outer piece sags.
+  if (broken) {
+    b.box(iron, f((-w / 2 + gap) / 2, h, z), gap + w / 2, 0.05, 0.05);
+    const rest = w / 2 - gap - 0.5;
+    if (rest > 0.2) b.box(iron, f(w / 2 - rest / 2, h - 0.25, z + 0.06, 0, 0, rng.range(0.3, 0.6)), rest, 0.05, 0.05);
+  } else b.box(iron, f(0, h, z), w, 0.05, 0.05);
+  b.box(iron, f(0, 0.1, z), w, 0.04, 0.04);
+  for (const side of [-1, 1]) {
+    b.box(iron, f(side * (w / 2 - 0.02), h, dep / 2), 0.05, 0.05, dep);
+    for (let k = 1; k <= 3; k++) b.box(iron, f(side * (w / 2 - 0.02), h / 2, (k * dep) / 4), 0.025, h, 0.025);
+  }
+  const n = Math.round(w / 0.2);
+  for (let i = 0; i <= n; i++) {
+    const x = -w / 2 + (i * w) / n;
+    if (broken && (Math.abs(x - gap - 0.25) < 0.3 || rng.next() < 0.2)) continue;
+    b.box(iron, f(x, h / 2, z, 0, 0, broken ? rng.range(-0.12, 0.12) : 0), 0.025, h, 0.025);
+  }
+}
+
+/**
+ * Altbau stone balcony on two corbels with an iron railing, at most ~1.2 m deep. `state` 0 intact
+ * (maybe with plants or laundry), 1 slab cracked and hanging, 2 slab gone with the railing dangling.
+ */
+function balcony(b: Builder, run: Run, rng: Rng, s: number, y: number, w: number, dep: number): void {
+  const st = b.mats.stucco, g = rng.range(0.62, 0.8);
+  const stone: RGB = [g, g * 0.97, g * 0.92];
+  const roll = rng.next();
+  const state = roll < 0.14 ? 1 : roll < 0.24 ? 2 : 0;
+  const wall = partOf(run.mat(s, y, 0));
+  for (const x of [-w / 2 + 0.25, w / 2 - 0.25]) {
+    b.box(st, wall(x, -0.36, 0.2), 0.2, 0.42, 0.4, [g * 0.85, g * 0.83, g * 0.8]);
+    b.box(st, wall(x, -0.22, 0.42), 0.2, 0.16, 0.12, [g * 0.85, g * 0.83, g * 0.8]);
+  }
+  if (state === 2) {
+    // The slab broke off at the wall: a jagged stub and a railing panel dangling from one bracket.
+    for (let x = -w / 2; x < w / 2 - 0.1; x += rng.range(0.25, 0.5)) b.box(st, wall(x + 0.15, -0.09, rng.range(0.1, 0.25), rng.range(-0.1, 0.1)), 0.32, 0.18, rng.range(0.2, 0.5), stone);
+    const side = rng.next() < 0.5 ? -1 : 1;
+    const hang = partOf(run.mat(s + side * (w / 2 - 0.05), y + 0.85, 0.1));
+    const pw = w * rng.range(0.5, 0.8);
+    const f = partOf(hang(0, 0, 0, 0, 0, side * (Math.PI / 2 + rng.range(-0.25, 0.15))));
+    b.box(b.mats.iron, f(-side * pw / 2, 0, 0), pw, 0.05, 0.05);
+    for (let x = 0.1; x < pw; x += 0.22) b.box(b.mats.iron, f(-side * x, 0.42, 0, 0, 0, rng.range(-0.1, 0.1)), 0.025, 0.85, 0.025);
+    return;
+  }
+  const f = partOf(state === 1 ? run.mat(s, y, 0, rng.range(0.3, 0.7), rng.range(-0.2, 0.2)) : run.mat(s, y, 0));
+  b.box(st, f(0, -0.09, dep / 2), w, 0.18, dep, stone);
+  b.box(st, f(0, -0.2, dep / 2 + 0.03), w + 0.08, 0.06, dep + 0.06, [g * 0.8, g * 0.78, g * 0.75]);
+  ironRail(b, f, rng, w, dep, state === 1 || rng.next() < 0.15);
+  if (state === 0) balconyLife(b, f, rng, w, dep, 0.95);
 }
 
 function ivyBlob(b: Builder, run: Run, rng: Rng, cs: number, width: number, height: number, count: number): void {
@@ -279,7 +358,8 @@ function ivyBlob(b: Builder, run: Run, rng: Rng, cs: number, width: number, heig
   }
 }
 
-export function buildAltbau(b: Builder, f: Facade): void {
+/** `opts.balconies: false` leaves the balconies to the caller (Plattenbau loggias). */
+export function buildAltbau(b: Builder, f: Facade, opts: { balconies?: boolean } = {}): void {
   const run = new Run(f);
   const rng = new Rng(f.seed);
   const H = GROUND_H + f.floors * FLOOR_H + PARAPET;
@@ -367,8 +447,21 @@ export function buildAltbau(b: Builder, f: Facade): void {
     for (let k = 0; k < f.floors; k++) {
       const y = GROUND_H + k * FLOOR_H + 0.95;
       windowAt(b, run, rng, s, y, 1.15, 1.95, k === 0 ? LIT : LIT * 0.5, k === 0);
-      if (k === 0 && rng.next() < 0.28) balcony(b, run, s, y - 0.1);
     }
+  }
+
+  // --- balconies: some facades, stacked on chosen window axes, not every floor (own rng: windows stay put)
+  const brng = new Rng(f.seed * 31 + 7);
+  if (opts.balconies !== false && f.floors > 0 && bays >= 2 && brng.next() < 0.55) {
+    const mode = brng.int(3);
+    const off = brng.int(2);
+    const axes: Array<[number, number]> = mode === 1 && bays % 2 === 0 && bays > 2
+      ? [[run.len / 2, spacing + 1.5]]
+      : Array.from({ length: bays }, (_, i) => i).filter((i) => mode === 0 ? i % 2 === off : mode === 1 ? i === (bays - 1) / 2 : brng.next() < 0.35).map((i) => [(i + 0.5) * spacing, 2.0]);
+    const top = f.floors - (f.floors > 1 && brng.next() < 0.6 ? 1 : 0);
+    b.solid.excludeOccluder(() => {
+      for (const [s, w] of axes) for (let k = 0; k < top; k++) if (brng.next() < 0.8) balcony(b, run, brng, s, GROUND_H + k * FLOOR_H + 0.85, w, brng.range(0.9, 1.1));
+    });
   }
 
   // --- doors

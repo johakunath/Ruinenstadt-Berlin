@@ -5,7 +5,7 @@
 import {
   BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
-  SphereGeometry, TorusGeometry, Vector3, type Material, type Texture,
+  SphereGeometry, TorusGeometry, Vector3, Euler, type Material, type Texture,
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
@@ -25,7 +25,7 @@ import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
 import {
-  Builder, buildAltbau, buildProp, type BreakableView, wallFace, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
+  Builder, balconyLife, buildAltbau, buildProp, partOf, type BreakableView, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
 
 type RGB = readonly [number, number, number];
@@ -777,48 +777,285 @@ function blockFacades(l: { x: number; z: number; rot: number; w: number; d: numb
   ];
 }
 
+/** Quads with free per-corner UVs and colours, merged as one geometry (flat normals). */
+class Quads {
+  readonly pos: number[] = [];
+  readonly uv: number[] = [];
+  readonly col: number[] = [];
+  /** Corners counter-clockwise seen from the front; `uv` and `c` per corner. */
+  add(p: Vector3[], uv: number[], c: readonly RGB[]): void {
+    for (const i of [0, 1, 2, 0, 2, 3]) {
+      const v = p[i] as Vector3, k = c[i] ?? c[0] as RGB;
+      this.pos.push(v.x, v.y, v.z);
+      this.uv.push(uv[i * 2] as number, uv[i * 2 + 1] as number);
+      this.col.push(k[0], k[1], k[2]);
+    }
+  }
+  flush(b: ChunkBuilder, mat: Material): void {
+    if (!this.pos.length) return;
+    const g = new BufferGeometry();
+    g.setAttribute('position', new BufferAttribute(new Float32Array(this.pos), 3));
+    g.setAttribute('uv', new BufferAttribute(new Float32Array(this.uv), 2));
+    g.setAttribute('color', new BufferAttribute(new Float32Array(this.col), 3));
+    g.computeVertexNormals();
+    b.geo(mat, g, new Matrix4());
+  }
+}
+
+type Profile = Array<[number, number]>;
+
+/** Height of a polyline profile at `s` (clamped at the ends). */
+function profileAt(p: Profile, s: number): number {
+  if (s <= (p[0] as [number, number])[0]) return (p[0] as [number, number])[1];
+  for (let i = 1; i < p.length; i++) {
+    const [s1, h1] = p[i] as [number, number];
+    if (s <= s1) {
+      const [s0, h0] = p[i - 1] as [number, number];
+      return s1 - s0 < 1e-6 ? h1 : h0 + ((h1 - h0) * (s - s0)) / (s1 - s0);
+    }
+  }
+  return (p[p.length - 1] as [number, number])[1];
+}
+
 /**
- * Burnt-out shell of an Altbau, shop or house: no roof, every bay broken off at its own height, empty
- * window holes, a dark inner face and rubble inside. Same footprint and collider as the intact lot.
+ * Broken top line of a ruin wall: nodes every few metres joined by brick-tooth steps, ragged
+ * diagonals or a V-shaped break. Steps are two points 2 mm apart.
+ */
+function ruinProfile(rng: Rng, len: number, lo: number, hi: number, gable: number, floor: number): Profile {
+  const nodes: Array<[number, number]> = [];
+  for (let s = 0; ; s += rng.range(1.6, 4.2)) {
+    const at = Math.min(s, len);
+    const peak = gable ? gable * Math.max(0, 1 - Math.abs((2 * at) / len - 1)) * rng.range(0.7, 1) : 0;
+    nodes.push([at, Math.max(floor, rng.range(lo, hi) + peak)]);
+    if (at >= len) break;
+  }
+  const p: Profile = [nodes[0] as [number, number]];
+  for (let i = 1; i < nodes.length; i++) {
+    const [sa, ha] = nodes[i - 1] as [number, number], [sb, hb] = nodes[i] as [number, number];
+    const roll = rng.next(), span = sb - sa;
+    if (roll < 0.5 && span > 0.6) {
+      // Brick teeth: courses broken back in steps.
+      const n = Math.max(1, Math.min(8, Math.round(Math.abs(hb - ha) / rng.range(0.28, 0.55))));
+      let h = ha;
+      for (let j = 1; j <= n; j++) {
+        const sj = sa + (span * (j - 0.5 + rng.range(-0.3, 0.3))) / n;
+        const hj = j === n ? hb : ha + ((hb - ha) * j) / n + rng.range(-0.08, 0.08);
+        p.push([sj - 0.001, h], [sj + 0.001, hj]);
+        h = hj;
+      }
+      p.push([sb, hb]);
+    } else if (roll < 0.82 || span < 1.2) {
+      // Ragged diagonal break.
+      const n = Math.max(1, Math.round(span / 0.45));
+      for (let j = 1; j < n; j++) p.push([sa + (span * j) / n, ha + ((hb - ha) * j) / n + rng.range(-0.14, 0.14)]);
+      p.push([sb, hb]);
+    } else {
+      // V-break: a chunk fell out between two standing piers.
+      const ms = sa + span * rng.range(0.35, 0.65), mh = Math.max(floor, Math.min(ha, hb) - rng.range(0.8, 2.6));
+      for (const [s, h] of [[sa + (ms - sa) * 0.5, (ha + mh) / 2 + rng.range(-0.15, 0.15)], [ms, mh], [ms + (sb - ms) * 0.5, (hb + mh) / 2 + rng.range(-0.15, 0.15)], [sb, hb]] as Array<[number, number]>) p.push([s, h]);
+    }
+  }
+  return p;
+}
+
+interface Hole { s0: number; s1: number; y: number; h: number }
+
+/**
+ * Burnt-out shell of an Altbau, shop or house: no roof, walls broken off along jagged brick-tooth,
+ * diagonal and V-shaped lines, some corners collapsed, windows that break the top line, soot above
+ * every opening, charred beam stubs and slab remnants, rubble heaps inside. Same footprint and
+ * collider as the intact lot; everything stays inside the footprint.
  */
 function buildRuin(b: ChunkBuilder, l: Lot): void {
   const rng = new Rng(l.seed + 77);
   const tone = rng.pick(TONES);
   const plaster = b.mm.plaster[tone] as LitMaterial;
-  const H = l.kind === 'house' ? 3.4 + l.floors * 2.9 : GROUND_H + l.floors * FLOOR_H + PARAPET;
+  const house = l.kind === 'house';
+  const H = house ? 3.4 + l.floors * 2.9 : GROUND_H + l.floors * FLOOR_H + PARAPET;
+  const levels = house ? (l.floors ? [3.2] : []) : Array.from({ length: l.floors }, (_, f) => GROUND_H + f * FLOOR_H);
+  const rows: Array<[number, number]> = house ? [[1.1, 1.6], ...(l.floors ? [[4.0, 1.6] as [number, number]] : [])] : [[1.55, 1.75], ...levels.map((y): [number, number] => [y + 0.95, 1.95])];
+  const winW = house ? 1.1 : 1.15;
   const wall = 0.4;
-  const inner: RGB = [0.32, 0.3, 0.3];
-  blockFacades(l).forEach((side, i) => {
-    const run = new Run({ id: 'r', style: 'altbau', ax: side.a[0], az: side.a[1], bx: side.b[0], bz: side.b[1], depth: 1, floors: 0, tone, features: [], seed: l.seed + i });
-    const bays = Math.max(1, Math.round(side.len / 2.7));
-    const bw = side.len / bays;
+  const sides = blockFacades(l);
+  // Collapsed corners (corner i starts side i): low stump, then a ragged diagonal climbing away.
+  const corners: Array<{ low: number; slope: number; r: number } | null> = [0, 1, 2, 3].map(() => (rng.next() < 0.38 ? { low: rng.range(0.3, 1.6), slope: rng.range(0.9, 2.2), r: rng.range(2, 4.5) } : null));
+  if (!corners.some((c) => c !== null)) corners[rng.int(4)] = { low: rng.range(0.5, 1.8), slope: rng.range(1, 2), r: rng.range(2.5, 4) };
+  const ramp = (c: (typeof corners)[number] | undefined, len: number, from0: boolean): Profile | null => {
+    if (!c) return null;
+    const p: Profile = [];
+    for (let d = 0; d <= Math.min(c.r * 2.5, len); d += 0.4) p.push([from0 ? d : len - d, c.low + d * c.slope + (d ? rng.range(-0.12, 0.12) : 0)]);
+    return from0 ? p : p.reverse();
+  };
+  const gableSide = house && l.floors && rng.next() < 0.6 ? (rng.next() < 0.5 ? 1 : 3) : -1;
+  const ridge = Math.min(l.w, l.d) * 0.42;
+  const outer = new Quads(), inner = new Quads(), masonry = new Quads();
+  const brickTint: RGB = [0.72, 0.6, 0.54];
+  const ends: Array<[number, number]> = [];
+  const runs = sides.map((side, i) => new Run({ id: 'r', style: 'altbau', ax: side.a[0], az: side.a[1], bx: side.b[0], bz: side.b[1], depth: 1, floors: 0, tone, features: [], seed: l.seed + i }));
+  const tops = sides.map((side, i) => {
+    const len = side.len;
     // The street front stands highest; back and sides crumble more.
-    const keep: [number, number] = i === 0 ? [0.45, 1] : [0.2, 0.85];
+    const [lo, hi] = i === 0 ? [0.55, 1.02] : [0.25, 0.9];
+    const base = ruinProfile(rng, len, H * lo, H * hi, i === gableSide ? ridge : 0, 1.1);
+    const cuts = [ramp(corners[i], len, true), ramp(corners[(i + 1) % 4], len, false)].filter((p): p is Profile => !!p);
+    const wallTop = (s: number): number => Math.min(profileAt(base, s), ...cuts.map((p) => profileAt(p, s)));
+    // Windows: holes where the wall still stands above them, notches where the break cuts through.
+    const holes: Hole[] = [], notches: Hole[] = [];
+    const bays = Math.max(1, Math.round(len / 2.7));
     for (let k = 0; k < bays; k++) {
-      const s0 = k * bw;
-      const s1 = (k + 1) * bw;
-      const h = Math.max(1.2, H * rng.range(keep[0], keep[1]));
-      wallFace(b, run, plaster, s0, s1, 0, h);
-      b.solid.of(plaster).quad([run.pt(s1, 0, -wall), run.pt(s0, 0, -wall), run.pt(s0, h, -wall), run.pt(s1, h, -wall)], [0, 0, bw / 6, h / 6], [inner]);
-      // Broken top: a slab of masonry, then loose bricks.
-      b.box(b.mm.brick, run.mat((s0 + s1) / 2, h - 0.08, -wall / 2, 0, rng.range(-0.06, 0.06)), bw + 0.02, 0.16, wall + 0.04, [0.7, 0.62, 0.58]);
-      for (let j = 0; j < 2; j++) b.box(b.mm.brick, run.mat(rng.range(s0 + 0.2, s1 - 0.2), h + 0.1, -wall / 2, rng.range(-0.4, 0.4), rng.range(-0.4, 0.4)), rng.range(0.25, 0.6), rng.range(0.15, 0.3), 0.35, [0.75, 0.68, 0.62]);
-      // Empty window holes on every floor that still stands.
-      const mid = (s0 + s1) / 2;
-      const rows = l.kind === 'house' ? [1.1, 4.0] : [1.55, ...Array.from({ length: l.floors }, (_, f) => GROUND_H + f * FLOOR_H + 0.95)];
-      for (const y of rows) if (y + 2 < h) windowAt(b, run, rng, mid, y, 1.15, 1.75, 0, false);
+      const mid = ((k + 0.5) * len) / bays;
+      for (const [y, h] of rows) {
+        if (y < 1.6 && rng.next() < 0.3) continue;
+        const w = { s0: mid - winW / 2, s1: mid + winW / 2, y, h };
+        let lowest = Infinity;
+        for (let s = w.s0 - 0.15; s <= w.s1 + 0.15; s += 0.1) lowest = Math.min(lowest, wallTop(s));
+        if (lowest > y + h + 0.45) holes.push(w);
+        else if (wallTop(mid) > y + 0.45 && w.s0 > 0.5 && w.s1 < len - 0.5) notches.push(w);
+      }
     }
-    b.shadowBox(run.mat(side.len / 2, H * 0.35, -wall / 2), side.len, H * 0.7, wall);
+    const top = (s: number): number => Math.min(wallTop(s), ...notches.filter((w) => s > w.s0 && s < w.s1).map((w) => w.y));
+    const bps = [...new Set([0, len, ...base.map((p) => p[0]), ...cuts.flatMap((p) => p.map((q) => q[0])), ...[...holes, ...notches].flatMap((w) => [w.s0, w.s1])]
+      .filter((s) => s >= 0 && s <= len).map((s) => Math.round(s * 1e4) / 1e4))].sort((x, y) => x - y);
+    return { len, bps, top, holes, notches };
   });
-  // Inside: charred floor, rubble heaps, a fallen beam.
+  tops.forEach(({ len, bps, top, holes, notches }, i) => {
+    const run = runs[i] as Run;
+    const tint = (y: number, soot: number): RGB => {
+      const low = Math.min(1, y / 1.8), k = 0.82 * (1 - soot);
+      return [(0.5 + 0.5 * low - y * 0.012) * k, (0.54 + 0.44 * low - y * 0.012) * k * 0.97, (0.52 + 0.46 * low - y * 0.01) * k * 0.95];
+    };
+    const sootAt = (s: number, y: number): number => Math.max(0, ...[...holes, ...notches].filter((w) => s >= w.s0 - 0.2 && s <= w.s1 + 0.2 && y >= w.y + w.h - 0.01).map((w) => 0.68 * Math.max(0, 1 - (y - w.y - w.h) / 2.4)));
+    const darkIn: RGB = [0.26, 0.24, 0.24];
+    const band = new Map<number, number>(bps.map((s) => [s, rng.range(0.18, 0.6)]));
+    for (let k = 0; k < bps.length - 1; k++) {
+      const sa = bps[k] as number, sb = bps[k + 1] as number;
+      if (sb - sa < 1e-4) continue;
+      const ta = top(sa + 1e-5), tb = top(sb - 1e-5), mid = (sa + sb) / 2;
+      const here = holes.filter((w) => mid > w.s0 && mid < w.s1).sort((p, q) => p.y - q.y);
+      // Vertical pieces of wall between the openings, cut at the dirt line and the soot fade.
+      let y0 = 0;
+      const pieces: Array<[number, number, number]> = []; // y0, y1 (flat) or -1 for the broken top
+      for (const w of here) { pieces.push([y0, w.y, 0]); y0 = w.y + w.h; }
+      const solid = y0;
+      const lowTop = Math.min(ta, tb);
+      const marks = [1.8, ...[...holes, ...notches].filter((w) => mid > w.s0 - 0.2 && mid < w.s1 + 0.2).map((w) => w.y + w.h + 2.4)].filter((y) => y > y0 + 0.05 && y < lowTop - 0.05).sort((p, q) => p - q);
+      for (const y of marks) { pieces.push([y0, y, 0]); y0 = y; }
+      pieces.push([y0, 0, -1]);
+      for (const [a, c, kind] of pieces) {
+        const ya = kind < 0 ? Math.max(a, ta) : c, yb = kind < 0 ? Math.max(a, tb) : c;
+        if (ya - a < 0.005 && yb - a < 0.005) continue;
+        const u0 = (sa + run.f.seed * 1.7) / 6, u1 = (sb + run.f.seed * 1.7) / 6;
+        outer.add([run.pt(sa, a, 0), run.pt(sb, a, 0), run.pt(sb, yb, 0), run.pt(sa, ya, 0)], [u0, a / 6, u1, a / 6, u1, yb / 6, u0, ya / 6],
+          [tint(a, sootAt(sa, a)), tint(a, sootAt(sb, a)), tint(yb, sootAt(sb, yb)), tint(ya, sootAt(sa, ya))]);
+        inner.add([run.pt(sb, a, -wall), run.pt(sa, a, -wall), run.pt(sa, ya, -wall), run.pt(sb, yb, -wall)], [u1, a / 6, u0, a / 6, u0, ya / 6, u1, yb / 6], [darkIn]);
+      }
+      // Broken top: spalled plaster shows a ragged brick band, then the brick core on top.
+      const ba = Math.min(band.get(sa) ?? 0.3, ta - solid), bb = Math.min(band.get(sb) ?? 0.3, tb - solid);
+      if (ba > 0.02 || bb > 0.02) masonry.add([run.pt(sa, ta - ba, 0.012), run.pt(sb, tb - bb, 0.012), run.pt(sb, tb, 0.012), run.pt(sa, ta, 0.012)], [sa / 2, (ta - ba) / 2, sb / 2, (tb - bb) / 2, sb / 2, tb / 2, sa / 2, ta / 2], [[0.62, 0.52, 0.46], [0.62, 0.52, 0.46], [0.42, 0.36, 0.33], [0.42, 0.36, 0.33]]);
+      masonry.add([run.pt(sa, ta, 0), run.pt(sb, tb, 0), run.pt(sb, tb, -wall), run.pt(sa, ta, -wall)], [sa / 2, 0, sb / 2, 0, sb / 2, wall / 2, sa / 2, wall / 2], [brickTint]);
+      // Steps in the top line show the cut brick.
+      const tn = k + 2 < bps.length ? top(sb + 1e-5) : tb;
+      if (Math.abs(tn - tb) > 0.02) {
+        const lo = Math.min(tn, tb), hi = Math.max(tn, tb);
+        masonry.add(tb > tn ? [run.pt(sb, lo, 0), run.pt(sb, lo, -wall), run.pt(sb, hi, -wall), run.pt(sb, hi, 0)] : [run.pt(sb, lo, -wall), run.pt(sb, lo, 0), run.pt(sb, hi, 0), run.pt(sb, hi, -wall)],
+          [0, lo / 2, wall / 2, lo / 2, wall / 2, hi / 2, 0, hi / 2], [brickTint]);
+      }
+    }
+    // Window reveals.
+    for (const w of holes) {
+      const { s0, s1, y, h } = w, t = y + h, rv: RGB = [0.45, 0.4, 0.38];
+      masonry.add([run.pt(s0, y, 0), run.pt(s0, y, -wall), run.pt(s0, t, -wall), run.pt(s0, t, 0)], [0, y / 2, wall / 2, y / 2, wall / 2, t / 2, 0, t / 2], [rv]);
+      masonry.add([run.pt(s1, y, -wall), run.pt(s1, y, 0), run.pt(s1, t, 0), run.pt(s1, t, -wall)], [0, y / 2, wall / 2, y / 2, wall / 2, t / 2, 0, t / 2], [rv]);
+      masonry.add([run.pt(s0, y, 0), run.pt(s1, y, 0), run.pt(s1, y, -wall), run.pt(s0, y, -wall)], [s0 / 2, 0, s1 / 2, 0, s1 / 2, wall / 2, s0 / 2, wall / 2], [rv]);
+      masonry.add([run.pt(s1, t, 0), run.pt(s0, t, 0), run.pt(s0, t, -wall), run.pt(s1, t, -wall)], [s1 / 2, 0, s0 / 2, 0, s0 / 2, wall / 2, s1 / 2, wall / 2], [[0.3, 0.27, 0.26]]);
+      // Stone sill and a sooty lintel keep the Altbau rhythm; some sills broke away.
+      if (!house && rng.next() < 0.7) b.box(b.mm.stucco, run.mat((s0 + s1) / 2, y - 0.06, 0.1, 0, rng.range(-0.04, 0.04)), winW + 0.36, 0.12, 0.22, [0.55, 0.53, 0.5]);
+    }
+    for (const w of notches) if (rng.next() < 0.6) b.box(b.mm.stucco, run.mat((w.s0 + w.s1) / 2, w.y - 0.06, 0.1, 0, rng.range(-0.08, 0.08)), winW + 0.3, 0.12, 0.22, [0.5, 0.48, 0.46]);
+    // Floor cornices where the wall still stands above them: they end at the breaks like slab edges.
+    for (const y of levels) {
+      let from = -1;
+      for (let s = 0; s <= len + 0.01; s += 0.25) {
+        const up = s < len && top(s) > y + 0.35 && !holes.some((w) => y > w.y - 0.1 && y < w.y + w.h + 0.1 && s > w.s0 - 0.1 && s < w.s1 + 0.1);
+        if (up && from < 0) from = s;
+        if (!up && from >= 0) {
+          if (s - from > 0.5) b.box(b.mm.stucco, run.mat((from + s) / 2, y, 0.07), s - from, 0.2, 0.16, [0.6, 0.58, 0.55]);
+          from = -1;
+        }
+      }
+    }
+    ends.push([top(1e-5), top(len - 1e-5)]);
+    let sum = 0;
+    for (let s = 0.25; s < len; s += 0.5) sum += top(s);
+    const avg = sum / Math.max(1, Math.floor(len / 0.5));
+    b.shadowBox(run.mat(len / 2, avg / 2, -wall / 2), len, avg, wall);
+  });
+  // Corner ends: where one wall stands higher than its neighbour, close its end.
+  tops.forEach(({ len }, i) => {
+    const run = runs[i] as Run;
+    const [h0, h1] = ends[i] as [number, number];
+    const prev = (ends[(i + 3) % 4] as [number, number])[1], next = (ends[(i + 1) % 4] as [number, number])[0];
+    if (h0 > prev + 0.02) outer.add([run.pt(0, prev, -wall), run.pt(0, prev, 0), run.pt(0, h0, 0), run.pt(0, h0, -wall)], [0, prev / 6, wall / 6, prev / 6, wall / 6, h0 / 6, 0, h0 / 6], [[0.6, 0.58, 0.55]]);
+    if (h1 > next + 0.02) outer.add([run.pt(len, next, 0), run.pt(len, next, -wall), run.pt(len, h1, -wall), run.pt(len, h1, 0)], [0, next / 6, wall / 6, next / 6, wall / 6, h1 / 6, 0, h1 / 6], [[0.6, 0.58, 0.55]]);
+  });
+  outer.flush(b, plaster);
+  inner.flush(b, plaster);
+  masonry.flush(b, b.mm.brick);
+  // Inside: charred floor, beam stubs and slab remnants at the old floor levels, rubble heaps.
   const m4 = new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0.04, l.z);
+  const local = (x: number, y: number, z: number, ry = 0, rx = 0, rz = 0): Matrix4 => m4.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rx, ry, rz)).setPosition(x, y, z));
   b.box(b.mm.tar, m4, l.w - 0.8, 0.06, l.d - 0.8, [0.35, 0.33, 0.32]);
-  for (let i = 0; i < 6; i++) {
-    const g = rng.range(0.55, 0.85);
-    const p = m4.clone().multiply(new Matrix4().makeRotationY(rng.range(0, 3)).setPosition(rng.range(-l.w / 2 + 1.2, l.w / 2 - 1.2), 0.2, rng.range(-l.d / 2 + 1.2, l.d / 2 - 1.2)));
-    b.box(b.mm.brick, p.multiply(new Matrix4().makeRotationX(rng.range(-0.3, 0.3))), rng.range(1, 2.6), rng.range(0.4, 1.1), rng.range(1, 2.2), [g, g * 0.92, g * 0.88]);
+  const charred: RGB = [0.32, 0.27, 0.23];
+  tops.forEach(({ len, top }, i) => {
+    const run = runs[i] as Run;
+    for (const y of levels) {
+      if (rng.next() < 0.35) continue;
+      // Joist stubs: charred beams sticking out of the inner face, some sagging.
+      const s0 = rng.range(0.6, Math.max(0.7, len - 3)), n = 2 + rng.int(4);
+      for (let k = 0; k < n; k++) {
+        const s = s0 + k * rng.range(0.7, 1.0), reach = rng.range(0.4, 2.2);
+        if (s > len - 0.5 || top(s) < y + 0.3) continue;
+        b.box(b.mm.darkWood, run.mat(s, y - 0.1, -wall - reach / 2 + 0.05, rng.range(-0.05, 0.25 * reach), rng.range(-0.08, 0.08)), 0.18, 0.24, reach, charred);
+      }
+      // A concrete slab remnant cantilevers from the wall with a ragged edge.
+      if (!house && rng.next() < 0.4) {
+        const s = rng.range(1, Math.max(1.1, len - 3)), w = rng.range(1.2, 2.8), dep = rng.range(0.6, 1.6);
+        if (top(s) > y + 0.3 && top(s + w) > y + 0.3) {
+          const sag = rng.range(0, 0.25);
+          b.box(b.mm.concrete, run.mat(s + w / 2, y - 0.12, -wall - dep / 2, sag), w, 0.22, dep, [0.55, 0.52, 0.5]);
+          for (let x = s + 0.2; x < s + w; x += rng.range(0.35, 0.6)) b.box(b.mm.concrete, run.mat(x, y - 0.14, -wall - dep - 0.15, sag + rng.range(0.1, 0.5), rng.range(-0.2, 0.2)), rng.range(0.3, 0.5), 0.18, rng.range(0.2, 0.5), [0.5, 0.48, 0.46]);
+          for (let x = s + 0.3; x < s + w; x += 0.45) b.box(b.mm.rust, run.mat(x, y - 0.2, -wall - dep - 0.3, sag + rng.range(0.3, 0.9)), 0.03, 0.03, 0.5);
+        }
+      }
+    }
+  });
+  // Rubble: big heaps under the collapsed corners, smaller ones along the walls, loose bricks.
+  const hw = l.w / 2, hd = l.d / 2;
+  const heap = (x: number, z: number, r: number, h: number): void => {
+    const g = rng.range(0.55, 0.8);
+    const geo = new IcosahedronGeometry(1, 0);
+    b.geo(b.mm.brick, geo, local(x, -h * 0.25, z, rng.range(0, 6)).multiply(tmpScale.makeScale(r, h, r * rng.range(0.7, 1))), [g, g * 0.9, g * 0.85]);
+    for (let k = 0; k < 4; k++) {
+      const a = rng.range(0, Math.PI * 2), d = r * rng.range(0.4, 1.0);
+      b.box(rng.next() < 0.7 ? b.mm.brick : b.mm.plaster[tone] as LitMaterial, local(x + Math.cos(a) * d, h * 0.35 * rng.next(), z + Math.sin(a) * d, rng.range(0, 3), rng.range(-0.5, 0.5), rng.range(-0.5, 0.5)), rng.range(0.3, 0.8), rng.range(0.15, 0.35), rng.range(0.25, 0.5), [g, g * 0.92, g * 0.88]);
+    }
+  };
+  const corner = [[-1, 1], [1, 1], [1, -1], [-1, -1]] as const;
+  corners.forEach((c, k) => {
+    if (!c) return;
+    const [cx, cz] = corner[k] as readonly [number, number];
+    const r = Math.min(2.2, hw - 0.5, hd - 0.5);
+    heap(cx * (hw - r - 0.3), cz * (hd - r - 0.3), r, rng.range(0.9, 1.6));
+  });
+  for (let i = 0; i < 4; i++) {
+    const r = rng.range(0.8, 1.5), along = rng.next() < 0.5;
+    const x = along ? rng.range(-hw + r + 0.5, hw - r - 0.5) : (rng.next() < 0.5 ? -1 : 1) * (hw - r - 0.45);
+    const z = along ? (rng.next() < 0.5 ? -1 : 1) * (hd - r - 0.45) : rng.range(-hd + r + 0.5, hd - r - 0.5);
+    heap(x, z, r, rng.range(0.4, 0.9));
   }
-  b.box(b.mm.darkWood, m4.clone().multiply(new Matrix4().makeRotationY(rng.range(0, 3)).setPosition(0, 0.9, 0)).multiply(new Matrix4().makeRotationZ(0.35)), Math.min(l.w, l.d) * 0.8, 0.25, 0.25, [0.4, 0.35, 0.3]);
+  // A fallen roof beam leaning against a wall.
+  const beam = Math.min(l.w, l.d) * 0.8;
+  b.box(b.mm.darkWood, local(0, 0.9, 0, rng.range(0, 3), 0, 0.35), beam, 0.25, 0.25, [0.4, 0.35, 0.3]);
 }
 
 /** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
@@ -851,7 +1088,8 @@ export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m:
       id: `lot${l.seed}-${i}`, style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1],
       depth: Math.min(l.w, l.d) / 2, floors: l.floors, tone, features, seed: (l.seed + i * 13) % 997,
     };
-    buildAltbau(b, f);
+    buildAltbau(b, f, { balconies: l.kind !== 'platte' });
+    if (l.kind === 'platte' && (i === 0 || i === 2)) b.solid.excludeOccluder(() => loggias(b, f, l.seed * 3 + i));
     // Organic light at height (Johannes 2026-11-16): some street doors get front steps and a wall
     // lamp that throws a pool onto the sidewalk; warm, cold LED or (rarely) teal.
     const door = i === 0 && !l.inner ? features.find((g) => g.kind === 'door') : undefined;
@@ -881,6 +1119,62 @@ export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m:
     const cm = m4.clone().multiply(new Matrix4().setPosition(rng.range(-l.w / 2 + 1, l.w / 2 - 1), 0.7, rng.range(-l.d / 2 + 1, l.d / 2 - 1)));
     b.box(b.mm.brick, cm, 0.8, 1.4, 0.6, [0.8, 0.75, 0.7]);
   }
+}
+
+/**
+ * Plattenbau loggias: stacks on every second (or third, two axes wide) window axis, one per upper
+ * floor, with side walls or open; washed-out parapet panels, some replaced by sheet metal, boards or
+ * a bare rail, a few slabs gone with the rebar showing. At most 1.2 m deep.
+ */
+function loggias(b: ChunkBuilder, f: Facade, seed: number): void {
+  const run = new Run(f), rng = new Rng(seed);
+  const bays = Math.floor(run.len / 2.7);
+  if (f.floors < 1 || bays < 3) return;
+  const spacing = run.len / bays, pair = rng.next() < 0.45, walls = rng.next() < 0.6, dep = rng.range(1.05, 1.2);
+  const off = rng.int(pair ? 3 : 2);
+  const hue = rng.pick<RGB>([[1.25, 0.8, 0.5], [0.75, 1.05, 0.9], [1.1, 1.0, 0.8], [0.75, 0.85, 1.1]]);
+  const con = b.mm.concrete;
+  for (let i = off; i < bays - (pair ? 1 : 0); i += pair ? 3 : 2) {
+    const s = pair ? (i + 1) * spacing : (i + 0.5) * spacing, w = (pair ? 2 : 1) * spacing - 0.35;
+    for (let k = 0; k < f.floors; k++) {
+      const y = GROUND_H + k * FLOOR_H + 0.85;
+      const fr = partOf(run.mat(s, y, 0));
+      if (walls) for (const x of [-w / 2 - 0.08, w / 2 + 0.08]) b.box(con, fr(x, FLOOR_H / 2 - 0.1, dep / 2), 0.14, FLOOR_H - 0.2, dep, [0.62, 0.6, 0.57]);
+      if (rng.next() < 0.08) {
+        // Slab gone: a ragged stub and bent rebar.
+        b.box(con, fr(0, -0.1, 0.12), w, 0.2, 0.24, [0.5, 0.48, 0.46]);
+        for (let x = -w / 2 + 0.2; x < w / 2; x += 0.3) b.box(b.mm.rust, fr(x, -0.1, 0.4, rng.range(0.2, 1.1), rng.range(-0.3, 0.3)), 0.03, 0.03, rng.range(0.3, 0.6));
+        continue;
+      }
+      b.box(con, fr(0, -0.1, dep / 2), w + (walls ? 0.3 : 0.1), 0.2, dep, [0.66, 0.64, 0.6]);
+      const roll = rng.next(), g = rng.range(0.85, 1.05);
+      if (roll < 0.62) b.box(con, fr(0, 0.55, dep - 0.05, 0, 0, rng.range(-0.01, 0.01)), w, 1.0, 0.1, [hue[0] * g * 0.7, hue[1] * g * 0.7, hue[2] * g * 0.7]);
+      else if (roll < 0.76) b.box(b.mm.rust, fr(0, 0.5, dep - 0.04, rng.range(-0.05, 0.05)), w * rng.range(0.75, 1), 0.95, 0.04);
+      else if (roll < 0.86) for (let x = -w / 2 + 0.12; x < w / 2; x += rng.range(0.2, 0.32)) b.box(b.mm.wood, fr(x, 0.5, dep - 0.04, 0, 0, rng.range(-0.06, 0.06)), 0.18, rng.range(0.8, 1.05), 0.03, [0.75, 0.65, 0.55]);
+      else {
+        b.box(b.mm.iron, fr(0, 1.0, dep - 0.05), w, 0.05, 0.05);
+        for (let x = -w / 2; x <= w / 2; x += 0.5) b.box(b.mm.iron, fr(x, 0.5, dep - 0.05), 0.04, 1.0, 0.04);
+      }
+      if (rng.next() < 0.5) balconyLife(b, fr, rng, w, dep - 0.1, 1.0);
+    }
+  }
+}
+
+/** Small wooden balcony on knee braces under an upper-floor window, sometimes sagging. */
+function woodBalcony(b: ChunkBuilder, run: Run, rng: Rng, s: number, y: number): void {
+  const w = rng.range(1.8, 2.6), dep = rng.range(0.8, 1.1), dw = b.mm.darkWood, g = rng.range(0.7, 1);
+  const f = partOf(run.mat(s, y, 0, rng.next() < 0.25 ? rng.range(0.06, 0.18) : 0, rng.range(-0.04, 0.04)));
+  const tone: RGB = [g, g * 0.92, g * 0.85];
+  b.box(dw, f(0, -0.05, dep / 2), w, 0.1, dep, tone);
+  for (const x of [-w / 2 + 0.12, w / 2 - 0.12]) {
+    b.box(dw, f(x, -0.17, dep / 2), 0.12, 0.15, dep, tone);
+    b.box(dw, f(x, -0.48, 0.36, -0.75), 0.1, 0.1, 0.95, tone);
+    b.box(dw, f(x, 0.5, dep - 0.05), 0.09, 1.0, 0.09, tone);
+  }
+  b.box(dw, f(0, 0.95, dep - 0.05), w, 0.08, 0.1, tone);
+  for (const x of [-w / 2 + 0.05, w / 2 - 0.05]) b.box(dw, f(x, 0.95, dep / 2), 0.08, 0.08, dep, tone);
+  for (let x = -w / 2 + 0.2; x < w / 2 - 0.1; x += 0.15) if (rng.next() > 0.12) b.box(b.mm.wood, f(x, 0.48, dep - 0.06, 0, 0, rng.range(-0.04, 0.04)), 0.08, 0.82, 0.025, [0.8 * g, 0.7 * g, 0.6 * g]);
+  if (rng.next() < 0.5) balconyLife(b, f, rng, w, dep, 0.95);
 }
 
 /** Gable roof prism along X (local), ridge at height h. */
@@ -931,6 +1225,14 @@ function buildHouse(b: ChunkBuilder, l: Lot): void {
   const h = 3.4 + l.floors * 2.9;
   const plaster = b.mm.plaster[tone] as LitMaterial;
   walls(b, l, plaster, h, l.floors ? [1.1, 4.0] : [1.1], l.seed, 0.08);
+  // Now and then a small wooden balcony under an upper window (same axes as `walls`).
+  const brng = new Rng(l.seed * 7 + 5);
+  if (l.floors && brng.next() < 0.35) {
+    const i = brng.pick([0, 0, 1, 2, 3]), side = blockFacades(l)[i] as { a: Pt; b: Pt; len: number };
+    const bays = Math.max(1, Math.floor(side.len / 3));
+    const run = new Run({ id: 'wb', style: 'altbau', ax: side.a[0], az: side.a[1], bx: side.b[0], bz: side.b[1], depth: 1, floors: 0, tone, features: [], seed: l.seed });
+    b.solid.excludeOccluder(() => woodBalcony(b, run, brng, (brng.int(bays) + 0.5) * (side.len / bays), 3.9));
+  }
   const m4 = new Matrix4().makeRotationY(l.rot).setPosition(l.x, h, l.z);
   const ridge = Math.min(l.w, l.d) * 0.42;
   b.geo(b.mm.roof, gableRoof(l.w, l.d, ridge), m4, [rng.range(0.75, 1), 0.85, 0.8]);
