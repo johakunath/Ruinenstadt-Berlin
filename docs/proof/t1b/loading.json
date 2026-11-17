@@ -1,0 +1,24 @@
+[
+  {
+    "profile": "Leistung",
+    "loaded": [
+      "dirt.webp",
+      "grass.webp",
+      "leaves.webp",
+      "litter.webp",
+      "paving.webp"
+    ],
+    "errors": []
+  },
+  {
+    "profile": "Qualität",
+    "loaded": [
+      "dirt.webp",
+      "grass.webp",
+      "leaves.webp",
+      "litter.webp",
+      "paving.webp"
+    ],
+    "errors": []
+  }
+]
