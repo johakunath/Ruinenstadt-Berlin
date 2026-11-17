@@ -106,8 +106,21 @@ export interface Lot {
   ruin?: boolean;
   /** Back wing (Seitenflügel, annex): same facing, centered at (x, z), so the footprint is an L. */
   wing?: { x: number; z: number; w: number; d: number };
+  /** M11d: non-rectangular footprint (chamfer, bays, setbacks, open courtyard); always inside w × d. */
+  shape?: LotShape;
   special?: SpecialKind;
   content?: LotContent;
+}
+
+/**
+ * M11d footprint of a street lot in its own frame (a along the front from left to right, b toward
+ * the street). Everything is cut out of the w × d rectangle, so occupancy and spacing stay as they were.
+ */
+export interface LotShape {
+  /** Front pieces from left to right: up to local a = `to` the front stands `back` meters behind the lot front. The last piece ends at w / 2. */
+  front: Array<{ to: number; back: number }>;
+  /** Chamfered street corner at the left (-1) or right (+1) end of the front, legs `c` meters long. */
+  chamfer?: { side: -1 | 1; c: number };
 }
 
 /** Round hill: flat top of radius `r`, smooth slope `slope` meters wide down to the plain. */
@@ -569,6 +582,9 @@ export function generateLots(m: MapDef): Lot[] {
             const lot: Lot = { kind: kind2, x, z, rot, w, d, floors: L.floors[0] + rng.int(L.floors[1] - L.floors[0] + 1), seed: rng.int(1e6) };
             // Ruinenstadt: about half of the ordinary buildings are burnt-out shells (Johannes, 2026-11-15).
             if (rng.next() < 0.5) lot.ruin = true;
+            // M11d: chamfers, risalits, niches, setbacks and open courtyards, cut out of the same rectangle.
+            const shape = pickLotShape(kind2, w, d, lot.seed, cornerSide(m, s, lot));
+            if (shape) lot.shape = shape;
             if (rng.next() < L.wing) {
               // Wing behind the back facade at one end: local +a along the front, -b away from the street.
               const ww = rng.range(4, Math.min(7, w * 0.5));
@@ -652,9 +668,138 @@ function cornersOk(m: MapDef, x: number, z: number, rot: number, hw: number, hd:
 export function lotColliders(l: Lot): Collider[] {
   if (l.kind === 'special') return [];
   if (l.kind === 'tree') return [{ kind: 'circle', x: l.x, z: l.z, r: l.jungle ? 0.55 : 0.4 }];
-  const out: Collider[] = [{ kind: 'box', x: l.x, z: l.z, hx: l.w / 2, hz: l.d / 2, rot: l.rot }];
+  const out: Collider[] = lotBoxesLocal(l).map((q) => {
+    const [x, z] = lotToWorld(l, q.a, q.b);
+    return { kind: 'box', x, z, hx: q.ha, hz: q.hb, rot: l.rot + q.turn };
+  });
   if (l.wing) out.push({ kind: 'box', x: l.wing.x, z: l.wing.z, hx: l.wing.w / 2, hz: l.wing.d / 2, rot: l.rot });
   return out;
+}
+
+// ---------------------------------------------------------------- footprints (M11d)
+
+/** What the footprint helpers need of a lot (wings and render frames pass plain blocks). */
+export interface LotFrame { x: number; z: number; rot: number; w: number; d: number; shape?: LotShape }
+
+/** Lot frame (a along the front, b toward the street) to world. */
+export function lotToWorld(l: LotFrame, a: number, b: number): Pt {
+  const c = Math.cos(l.rot), s = Math.sin(l.rot);
+  return [l.x + c * a + s * b, l.z - s * a + c * b];
+}
+
+/** Front pieces in the lot frame: from a0 to a1 the front line is at b = f (equal neighbours merged). */
+export function lotPieces(l: LotFrame): Array<{ a0: number; a1: number; f: number }> {
+  const hw = l.w / 2, hd = l.d / 2;
+  const out: Array<{ a0: number; a1: number; f: number }> = [];
+  let a0 = -hw;
+  (l.shape?.front ?? [{ to: hw, back: 0 }]).forEach((p, i, all) => {
+    const a1 = i === all.length - 1 ? hw : p.to, f = hd - p.back, prev = out[out.length - 1];
+    if (a1 - a0 < 1e-6) return;
+    if (prev && Math.abs(prev.f - f) < 1e-6) prev.a1 = a1;
+    else out.push({ a0, a1, f });
+    a0 = a1;
+  });
+  return out;
+}
+
+/**
+ * Footprint outline in the lot frame: the front from left to right (with steps and the chamfer),
+ * then the right side, the back and the left side. Same turning sense as the rectangle facades.
+ */
+export function lotOutlineLocal(l: LotFrame): Pt[] {
+  const hw = l.w / 2, hd = l.d / 2, ps = lotPieces(l), ch = l.shape?.chamfer;
+  const first = ps[0] as { f: number }, last = ps[ps.length - 1] as { f: number };
+  const out: Pt[] = ch?.side === -1 ? [[-hw, first.f - ch.c], [-hw + ch.c, first.f]] : [[-hw, first.f]];
+  ps.forEach((p, i) => {
+    const next = ps[i + 1];
+    if (next) out.push([p.a1, p.f], [p.a1, next.f]);
+  });
+  if (ch?.side === 1) out.push([hw - ch.c, last.f], [hw, last.f - ch.c]);
+  else out.push([hw, last.f]);
+  out.push([hw, -hd], [-hw, -hd]);
+  return out;
+}
+
+/** Footprint outline in world coordinates (main body, without the back wing). */
+export function lotOutline(l: LotFrame): Pt[] {
+  return lotOutlineLocal(l).map(([a, b]) => lotToWorld(l, a, b));
+}
+
+/**
+ * The footprint as boxes in the lot frame (center, half sizes, extra turn): one per front piece,
+ * a chamfered end as two boxes plus one turned 45° whose outer face is the chamfer. Together they
+ * cover the outline exactly, so the hero meets every wall and no air.
+ */
+export function lotBoxesLocal(l: LotFrame): Array<{ a: number; b: number; ha: number; hb: number; turn: number }> {
+  const hd = l.d / 2, ch = l.shape?.chamfer, ps = lotPieces(l);
+  const out: Array<{ a: number; b: number; ha: number; hb: number; turn: number }> = [];
+  const box = (a0: number, a1: number, b0: number, b1: number): void => {
+    if (a1 - a0 > 1e-6 && b1 - b0 > 1e-6) out.push({ a: (a0 + a1) / 2, b: (b0 + b1) / 2, ha: (a1 - a0) / 2, hb: (b1 - b0) / 2, turn: 0 });
+  };
+  ps.forEach((p, i) => {
+    const end = ch && (ch.side === -1 ? i === 0 : i === ps.length - 1) ? ch : undefined;
+    if (!end) return box(p.a0, p.a1, -hd, p.f);
+    const c = end.c;
+    box(p.a0, p.a1, -hd, p.f - c);
+    if (end.side === 1) box(p.a0, p.a1 - c, p.f - c, p.f);
+    else box(p.a0 + c, p.a1, p.f - c, p.f);
+    out.push({ a: end.side === 1 ? p.a1 - 0.75 * c : p.a0 + 0.75 * c, b: p.f - 0.75 * c, ha: (c * Math.SQRT2) / 2, hb: c / (2 * Math.SQRT2), turn: (end.side * Math.PI) / 4 });
+  });
+  return out;
+}
+
+/**
+ * M11d: footprint of a street Altbau or shop, from its own seed (the generator's stream is not
+ * touched). Altbau: open courtyard (two wings joined at the back), a central or two corner risalits
+ * with the rest set back, a deep door niche, a whole front set back, or plain. Lots at a street
+ * corner (`corner` -1 left, +1 right) mostly get the Berlin chamfer.
+ */
+export function pickLotShape(kind: LotKind, w: number, d: number, seed: number, corner: -1 | 0 | 1): LotShape | undefined {
+  if (kind !== 'altbau' && kind !== 'shop') return undefined;
+  const rng = new Rng(seed * 7 + 3), hw = w / 2;
+  const front: LotShape['front'] = [];
+  const roll = kind === 'altbau' ? rng.next() : 1;
+  if (roll < 0.18 && w >= 12) {
+    // Courtyard open to the street: 3.6 to 5.5 m wide, at least 4 m deep, wings at least 3.7 m.
+    const gap = rng.range(3.6, Math.min(5.5, w - 7.4)), mid = rng.range(-1, 1) * Math.max(0, (w - gap) / 2 - 3.7);
+    front.push({ to: mid - gap / 2, back: 0 }, { to: mid + gap / 2, back: Math.max(4, d * rng.range(0.42, 0.6)) }, { to: hw, back: 0 });
+  } else if (roll < 0.42) {
+    const r = rng.range(0.5, 0.85);
+    if (rng.next() < 0.6) {
+      // Central risalit at the front line, the rest of the front set back.
+      const bw = rng.range(3.4, Math.max(3.6, Math.min(5.5, w - 5.4))), mid = rng.range(-0.15, 0.15) * (w - bw);
+      front.push({ to: mid - bw / 2, back: r }, { to: mid + bw / 2, back: 0 }, { to: hw, back: r });
+    } else {
+      // Two corner risalits, the middle set back.
+      const ew = rng.range(2.6, Math.min(3.6, w / 3.2));
+      front.push({ to: -hw + ew, back: 0 }, { to: hw - ew, back: r }, { to: hw, back: 0 });
+    }
+  } else if (roll < 0.62) {
+    // Deep door niche (recessed entrance).
+    const nw = rng.range(2.2, 2.8), at = rng.range(-hw + 2.4, hw - 2.4 - nw);
+    front.push({ to: at, back: 0 }, { to: at + nw, back: rng.range(1.2, 1.8) }, { to: hw, back: 0 });
+  } else if (roll < 0.74) {
+    // The whole front stands back behind a small forecourt.
+    front.push({ to: hw, back: rng.range(0.8, 1.6) });
+  } else front.push({ to: hw, back: 0 });
+  const shape: LotShape = { front };
+  if (corner && rng.next() < 0.85) {
+    // The chamfer wins at a street corner: a front piece too narrow for it gives way to a plain front.
+    const c = kind === 'shop' ? rng.range(1.6, 2.4) : rng.range(2.2, 3.4);
+    const p = lotPieces({ x: 0, z: 0, rot: 0, w, d, shape }), end = (corner < 0 ? p[0] : p[p.length - 1]) as { a0: number; a1: number };
+    if (end.a1 - end.a0 < c + 1.2) shape.front = [{ to: hw, back: 0 }];
+    shape.chamfer = { side: corner, c };
+  }
+  return shape.chamfer || front.length > 1 || (front[0] as { back: number }).back > 0 ? shape : undefined;
+}
+
+/** Which front corner of a street lot (-1 left, +1 right, 0 none) meets another street. */
+function cornerSide(m: MapDef, own: Street, l: LotFrame): -1 | 0 | 1 {
+  for (const side of [-1, 1] as const) {
+    const [x, z] = lotToWorld(l, side * (l.w / 2 + 3), l.d / 2 - 2);
+    if (m.streets.some((o) => o !== own && o.kind !== 'path' && lineDist(o.pts, x, z) < o.width / 2 + 3)) return side;
+  }
+  return 0;
 }
 
 /** M11c lot types keep their street front free (gates, Durchfahrten): no wrecks or rubble in front. */
