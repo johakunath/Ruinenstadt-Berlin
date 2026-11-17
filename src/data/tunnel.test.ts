@@ -43,7 +43,7 @@ describe('M19 S3 tunnel (layout B)', () => {
     const sim = createSim({ level, seed: 4 });
     const boss = sim.enemies.find(e => e.sleep !== undefined)!;
     expect(boss.elite).toBeTruthy();
-    expect(sim.content.hidden).toHaveLength(1);
+    expect(sim.content.hidden[0]).toMatchObject(m.hiddenSpots![0]!);
     for (let i = 0; i < 60; i++) stepSim(sim, NO_INPUT);
     const x0 = boss.x, z0 = boss.z;
     for (let i = 0; i < 600; i++) stepSim(sim, NO_INPUT);

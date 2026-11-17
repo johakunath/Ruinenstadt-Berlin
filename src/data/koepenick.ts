@@ -11,6 +11,7 @@ import { THREAT, type BossKind, type EnemyKind } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { ellipse, type Stair, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street } from './map';
+import type { Prop } from './courtyard';
 
 /**
  * Difficulty of normal wave number `g` (0 … 19 over the whole district) in `zone`. Each zone
@@ -54,6 +55,28 @@ function stairTo(edge: Pt, rot: number, width = 5, len = 5): Stair {
   // The top overlaps the edge by half a meter so the retaining wall opens there.
   const back = len / 2 - 0.5;
   return { x: edge[0] - Math.sin(rot) * back, z: edge[1] - Math.cos(rot) * back, rot, width, len };
+}
+
+/**
+ * M16b: a side passage reads as a lane, not a trail: fence or site fence panels on both sides, open
+ * for the first 4 m (the entrance from the route), closed across the end.
+ */
+function lane(st: Street, kind: 'fence' | 'bauzaun'): Prop[] {
+  const out: Prop[] = [], PANEL = 2.4, off = st.width / 2 + 0.5;
+  let walked = 0;
+  for (let i = 1; i < st.pts.length; i++) {
+    const [ax, az] = st.pts[i - 1]!, [bx, bz] = st.pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+    const rot = Math.atan2(-uz, ux);
+    for (let t = PANEL / 2; t < len; t += PANEL) {
+      if (walked + t < 4) continue;
+      for (const side of [-1, 1]) out.push({ kind, x: ax + ux * t + uz * off * side, z: az + uz * t - ux * off * side, rot, size: PANEL });
+    }
+    walked += len;
+  }
+  const [ex, ez] = st.pts[st.pts.length - 1]!, [px, pz] = st.pts[st.pts.length - 2]!, l = Math.hypot(ex - px, ez - pz);
+  const ux = (ex - px) / l, uz = (ez - pz) / l;
+  out.push({ kind, x: ex + ux * 1.6, z: ez + uz * 1.6, rot: Math.atan2(-ux, -uz), size: st.width + 1.4 });
+  return out;
 }
 
 export function koepenickMap(scale = 1): MapDef {
@@ -143,6 +166,10 @@ export function koepenickMap(scale = 1): MapDef {
     { name: 'Lindenstraße Süd', kind: 'side', width: 5.5, pts: line([[-72, -12], [-76, 14], [-82, 40]]) },
     { name: 'Spreepark', kind: 'path', width: 4, pts: line([[-92, -22], [-104, -50], [-130, -38], [-132, -8], [-112, 12], [-94, 2], [-92, -22]]) },
     { name: 'Kammweg', kind: 'path', width: 4, pts: line([[98, 98], [116, 108], [134, 112]]) },
+    // M16b side passages (variant A, Johannes 2026-11-17): short dead ends beside the route, each with a surprise.
+    { name: 'Hinterhof', kind: 'path', width: 4, pts: line([[-44, -89], [-48, -77], [-56, -70]]) },
+    { name: 'Kietzgasse', kind: 'path', width: 4, pts: line([[68, 8], [80, 0], [94, -8]]) },
+    { name: 'Hangarweg', kind: 'path', width: 4.5, pts: line([[-106, 66], [-124, 76], [-138, 88]]) },
   ];
 
   const areas: Area[] = [
@@ -176,6 +203,12 @@ export function koepenickMap(scale = 1): MapDef {
     { ...L('spati', -66, 9, -90 * DEG, 4, 5.5, 2), name: 'Späti an der Altstadt' },
   ];
 
+  /** A spot `back` meters before the end of a side passage, `side` meters off its centre line. */
+  const endOf = (name: string, back: number, side: number): { x: number; z: number } => {
+    const pts = streets.find(st => st.name === name)!.pts, [ex, ez] = pts[pts.length - 1]!, [px, pz] = pts[pts.length - 2]!, l = Math.hypot(ex - px, ez - pz);
+    const ux = (ex - px) / l, uz = (ez - pz) / l;
+    return { x: ex - ux * back + uz * side, z: ez - uz * back - ux * side };
+  };
   // A stopped tram on the east track, with all axles past the bend on the bridge straight.
   const tramPts = streets.find(street => street.tram)!.pts;
   const tramA = tramPts[tramPts.length - 2]!, tramB = tramPts[tramPts.length - 1]!;
@@ -216,7 +249,16 @@ export function koepenickMap(scale = 1): MapDef {
         stairs: [stairTo(P(17, 17), 90 * DEG), stairTo(P(26, 5), 0)],
       },
     ],
-    fixedProps: [{ kind: 'tram', x: tramA[0] + (tramB[0] - tramA[0]) * tramT + Math.cos(tramRot) * 1.5,
+    // M16b surprises: the hidden blessing in the Hinterhof, a sleeping elite in the Kietzgasse, a cache at the hangar.
+    hiddenSpots: [endOf('Hinterhof', 1.2, 0)],
+    guards: [{ ...endOf('Kietzgasse', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 }],
+    fixedProps: [
+      { kind: 'crates', ...endOf('Hangarweg', 1.2, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Hangarweg', 3, -1.2), rot: 1, size: 1 }, { kind: 'crate', ...endOf('Hangarweg', 3, 1.2), rot: -0.3, size: 1 },
+      { kind: 'workLamp', ...endOf('Hinterhof', 4, 1.3), rot: 2.4, size: 1 }, { kind: 'fireBarrel', ...endOf('Kietzgasse', 5, -1.3), rot: 0, size: 1 }, { kind: 'workLamp', ...endOf('Hangarweg', 5, 1.4), rot: -0.8, size: 1 },
+      ...lane(streets.find(st => st.name === 'Hinterhof')!, 'bauzaun'),
+      ...lane(streets.find(st => st.name === 'Kietzgasse')!, 'fence'),
+      ...lane(streets.find(st => st.name === 'Hangarweg')!, 'bauzaun'),
+      { kind: 'tram', x: tramA[0] + (tramB[0] - tramA[0]) * tramT + Math.cos(tramRot) * 1.5,
       z: tramA[1] + (tramB[1] - tramA[1]) * tramT - Math.sin(tramRot) * 1.5, rot: tramRot, size: 1 }],
     seed: 1906,
   };
