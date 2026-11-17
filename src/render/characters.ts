@@ -312,6 +312,8 @@ export class HeroView {
     }
     const flinch = p.state !== 'dead' && p.hurtT < 0.3 ? 0.75 * (1 - p.hurtT / 0.3) : 0;
     a.mix('Hit_Chest', p.hurtT, flinch);
+    // The mixer skips bones whose clip value did not change (hitstop, held keys): undo last frame's IK first.
+    this.ik.restore();
     a.update(frozen ? 0 : dt);
     this.leftHand(p, t, dt, frozen, flinch, standing);
     this.body.sway(x, z, this.root.rotation.y, dt);

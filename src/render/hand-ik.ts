@@ -124,6 +124,9 @@ export class LeftHandIk {
   /** Wrist target and hand rotation from the last `aim`. */
   private readonly target = new Vector3();
   private readonly turnTo = new Quaternion();
+  /** Clip pose of every bone `pose` turns, kept so `restore` can undo it before the next mixer update. */
+  private readonly saved: Array<{ bone: Object3D; q: Quaternion }> = [];
+  private posed = false;
 
   constructor(root: Object3D, fist?: AnimationClip) {
     const get = (n: string): Object3D => {
@@ -134,6 +137,7 @@ export class LeftHandIk {
     this.upper = get('upperarm_l');
     this.lower = get('lowerarm_l');
     this.hand = get('hand_l');
+    this.track(this.upper, this.lower, this.hand);
     if (!fist) return;
     for (const track of fist.tracks) {
       const [name, prop] = track.name.split('.');
@@ -143,7 +147,23 @@ export class LeftHandIk {
       // The first key: the guard pose the clip starts in.
       const v = track.values;
       this.fingers.push({ bone, fist: new Quaternion(v[0], v[1], v[2], v[3]).normalize() });
+      this.track(bone);
     }
+  }
+
+  private track(...bones: Object3D[]): void {
+    for (const bone of bones) this.saved.push({ bone, q: new Quaternion() });
+  }
+
+  /**
+   * Puts back the clip pose that the last `pose` changed. Call it every frame before the animation
+   * mixer runs: the mixer only writes a bone when its animated value changed (hitstop, held keys), so
+   * without this the solve would stack on its own result frame after frame.
+   */
+  restore(): void {
+    if (!this.posed) return;
+    for (const s of this.saved) s.bone.quaternion.copy(s.q);
+    this.posed = false;
   }
 
   /**
@@ -174,6 +194,8 @@ export class LeftHandIk {
   /** Moves the arm, hand and fingers toward the last `aim` by `weight` (0..1). Out of reach the arm points at it. */
   pose(weight: number): void {
     if (weight <= 0) return;
+    if (!this.posed) for (const s of this.saved) s.q.copy(s.bone.quaternion);
+    this.posed = true;
     this.upper.getWorldPosition(S);
     this.lower.getWorldPosition(E);
     this.hand.getWorldPosition(W);
