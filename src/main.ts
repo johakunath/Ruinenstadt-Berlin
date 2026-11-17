@@ -87,7 +87,7 @@ let wonFor = -1;
 /** Exit warning: 'ask' shows the modal, 'search' leads the hero to the valuable loot left behind. */
 let lootExit: 'off' | 'ask' | 'search' = 'off';
 /** Where the exit warning leads after "Weiterziehen". */
-let afterLoot: 'again' | 'camp' = 'again';
+let afterLoot: 'again' | 'camp' | 'map' = 'again';
 const lootUi = new LootLabels();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
@@ -100,6 +100,7 @@ function finishLootExit(leave: boolean): void {
     lootExit = 'off';
     lootChip.hidden = true;
     if (afterLoot === 'camp') { afterLoot = 'again'; toCamp(); return; }
+    if (afterLoot === 'map') { afterLoot = 'again'; goMap(isTunnel ? 'koepenick' : 'tunnel'); return; }
     again();
   } else {
     // Back into the map to fetch it.
@@ -174,7 +175,11 @@ function showWon(): void {
 /** M19: the tunnel opens once Köpenick is freed; the title on each map leads to the other. */
 const TUNNEL_LINE = 100;
 function goMap(to: 'tunnel' | 'koepenick'): void { saveProfile(); reloadWith({ map: to }); }
-document.getElementById('won-tunnel')!.addEventListener('click', () => goMap(isTunnel ? 'koepenick' : 'tunnel'));
+// Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
+document.getElementById('won-tunnel')!.addEventListener('click', () => {
+  if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
+  goMap(isTunnel ? 'koepenick' : 'tunnel');
+});
 function showTunnelButton(): void {
   const b = document.getElementById('go-tunnel')!;
   b.hidden = !level || (!isTunnel && !sim.inventory.camp?.freed.includes(0));
@@ -878,6 +883,9 @@ window.__game = {
     }
   },
 };
+
+// The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
+showTunnelButton();
 
 GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam,
