@@ -643,6 +643,8 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 .inv-columns > section { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .inv-doll { display: grid; grid-template-columns: 60px minmax(0, 1fr) 60px; gap: 6px; align-items: center; }
 .inv-portrait { width: 100%; height: 250px; object-fit: cover; grid-column: 2; grid-row: 1/5; opacity: .85; border-radius: 40%; }
+canvas.inv-portrait { display: block; opacity: 1; cursor: grab; touch-action: none; }
+canvas.inv-portrait:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
 .inv-slot { text-align: center; font-size: 11px; color: #b5aa98; }
 .inv-h { grid-area: 1/1; } .inv-a { grid-area: 2/1; } .inv-f { grid-area: 3/1; } .inv-r { grid-area: 4/1; }
 .inv-w { grid-area: 1/3; } .inv-g { grid-area: 2/3; } .inv-t { grid-area: 3/3; } .inv-i { grid-area: 4/3; }

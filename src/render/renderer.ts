@@ -1,6 +1,7 @@
 // Ties the scene together: world, characters, effects, camera, post-processing.
 // The sim knows nothing about this file; it reads sim state and events and draws them.
 import { KOEPENICK_WEATHER, Weather } from './weather';
+import { HeroPreview, type PreviewState } from './hero-preview';
 import { heroLook } from '../data/hero-look';
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
@@ -142,6 +143,11 @@ export class GameRenderer {
     game.hero.body.showAll();
     await renderer.compileAsync(game.scene, game.cam.camera);
     return game;
+  }
+
+  /** The turnable hero for the inventory doll, drawn with this renderer (H1 step 5). */
+  heroPreview(read: () => PreviewState): HeroPreview {
+    return new HeroPreview(this.renderer, this.assets, this.materials, read);
   }
 
   resize(): void {

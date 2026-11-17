@@ -168,3 +168,39 @@ test('M19: the S3 tunnel loads, the first fight starts, the map shows the tubes'
   await expect(page.locator('.map-svg svg')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('H1: the inventory doll shows the live hero and turns her on drag and keys', async ({ page }, testInfo) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 90_000 });
+  await page.keyboard.press('i');
+  const doll = page.locator('canvas.inv-portrait');
+  await expect(doll).toBeVisible({ timeout: 30_000 });
+  /** Count of lit pixels and a hash of the picture. */
+  const read = (): Promise<{ lit: number; hash: number }> => doll.evaluate((c: HTMLCanvasElement) => {
+    const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+    let lit = 0;
+    let hash = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i]! + d[i + 1]! + d[i + 2]! > 120) lit++;
+      hash = (hash * 31 + d[i]! + d[i + 1]! * 3 + d[i + 2]! * 7) % 1_000_003;
+    }
+    return { lit, hash };
+  });
+  // Not blank: the hero is drawn over the dark background.
+  await expect.poll(async () => (await read()).lit, { timeout: 60_000 }).toBeGreaterThan(300);
+  const before = await read();
+  const box = (await doll.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await read()).hash, { timeout: 30_000 }).not.toBe(before.hash);
+  // Keys turn her while the doll has focus.
+  await doll.focus();
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(400);
+  await page.keyboard.up('ArrowRight');
+  await page.screenshot({ path: testInfo.outputPath('inventory-doll.png'), timeout: 110_000 });
+  expect(errors).toEqual([]);
+});

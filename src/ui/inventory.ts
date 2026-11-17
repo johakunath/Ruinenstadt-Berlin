@@ -68,8 +68,16 @@ function extraLines(i: Item, eq: Equipment): string {
 }
 
 /** Bag, doll and comparison of the pause menu. Lives in the menu shell (`menu.ts`). */
+/** The turnable hero in the doll (H1 step 5, render/hero-preview.ts); the UI only places its canvas. */
+export interface Portrait {
+  readonly canvas: HTMLCanvasElement;
+  setOpen(on: boolean): void;
+  refresh(): void;
+}
+
 export class InventoryUi {
   readonly root = document.createElement('div');
+  private portrait: Portrait | null = null;
   private selection: Selection | null = null;
   private armed = '';
   private message = '';
@@ -129,11 +137,18 @@ export class InventoryUi {
   }
 
   get open(): boolean { return !this.root.hidden; }
+  /** Replaces the painted portrait with the live hero; its canvas is re-attached on every render. */
+  setPortrait(p: Portrait): void {
+    this.portrait = p;
+    p.setOpen(this.open);
+    if (this.open) this.render();
+  }
   /** Shown as the menu tab; focus lands on the first item in the bag. */
   show(on: boolean): void {
     this.cancelDrag(); this.armed = ''; this.message = '';
     if (on && this.selection && !this.item()) this.selection = null;
     this.root.hidden = !on;
+    this.portrait?.setOpen(on);
     if (on) { this.render(); (this.root.querySelector<HTMLElement>('.inv-grid button') ?? this.root.querySelector<HTMLElement>('.inv-doll button'))?.focus(); }
   }
   private item(sel = this.selection): Item | undefined {
@@ -204,7 +219,11 @@ export class InventoryUi {
       const armed = what === 'rest' && this.armed === 'bulkrest';
       return [`<button type="button" class="chip${armed ? ' warn' : ''}" data-action="bulk" data-value="${what}" data-key="bulk-${i}"${typeof what === 'number' ? ` style="color:${RARITIES[what].color}"` : ''}>${armed ? 'Sicher?' : `${label} +${v}`}</button>`];
     }).join('');
-    this.root.innerHTML = `<div class="inv-columns"><section class="inv-character"><div class="inv-doll"><img class="inv-portrait" src="${artUrl('survivor')}" alt="">${gear}</div><dl class="inv-stats">${STAT_ROWS.filter(r => r[0] !== 'Elementarschaden' || s.elements.length).map(([n, f, d, u]) => `<dt>${n}</dt><dd>${fmt(f(s), d, u)}</dd>`).join('')}</dl></section><section class="inv-bag"><div class="inv-bagh"><h3>Rucksack ${inv.bag.length}/${BAG_SIZE}</h3>${chips ? `<div class="inv-bulk">${chips}</div>` : ''}</div><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => this.cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, `Platz ${i + 1}`, false)).join('')}</div><p class="inv-hint">▲ Höherer Item Level · Doppeltipp legt an</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer>`;
+    this.root.innerHTML = `<div class="inv-columns"><section class="inv-character"><div class="inv-doll">${this.portrait ? '<span class="inv-portrait-slot"></span>' : `<img class="inv-portrait" src="${artUrl('survivor')}" alt="">`}${gear}</div><dl class="inv-stats">${STAT_ROWS.filter(r => r[0] !== 'Elementarschaden' || s.elements.length).map(([n, f, d, u]) => `<dt>${n}</dt><dd>${fmt(f(s), d, u)}</dd>`).join('')}</dl></section><section class="inv-bag"><div class="inv-bagh"><h3>Rucksack ${inv.bag.length}/${BAG_SIZE}</h3>${chips ? `<div class="inv-bulk">${chips}</div>` : ''}</div><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => this.cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, `Platz ${i + 1}`, false)).join('')}</div><p class="inv-hint">▲ Höherer Item Level · Doppeltipp legt an</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer>`;
+    if (this.portrait) {
+      this.root.querySelector('.inv-portrait-slot')?.replaceWith(this.portrait.canvas);
+      this.portrait.refresh();
+    }
     this.markSelection();
     this.restoreFocus(previousKey);
   }
