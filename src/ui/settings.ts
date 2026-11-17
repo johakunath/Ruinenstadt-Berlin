@@ -12,12 +12,14 @@ export interface SettingHooks {
   /** Ton, Musik or Lautstärke changed. */
   audio?(): void;
   perf?(on: boolean): void;
+  /** Akkusparen switched. */
+  eco?(on: boolean): void;
   telemetry?(on: boolean): void;
 }
 export const settingHooks: SettingHooks = {};
 
-type BoolKey = 'sound' | 'music' | 'rumble' | 'showPerf' | 'telemetry';
-const BOOL: BoolKey[] = ['sound', 'music', 'rumble', 'showPerf', 'telemetry'];
+type BoolKey = 'sound' | 'music' | 'rumble' | 'eco' | 'showPerf' | 'telemetry';
+const BOOL: BoolKey[] = ['sound', 'music', 'rumble', 'eco', 'showPerf', 'telemetry'];
 
 export const canFullscreen = (): boolean => typeof document.documentElement.requestFullscreen === 'function';
 export function toggleFullscreen(): void {
@@ -82,6 +84,7 @@ export function bindSettings(): void {
     storeOptions(opts);
     if (key === 'sound' || key === 'music') settingHooks.audio?.();
     if (key === 'showPerf') settingHooks.perf?.(opts.showPerf);
+    if (key === 'eco') settingHooks.eco?.(opts.eco);
     if (key === 'telemetry') settingHooks.telemetry?.(opts.telemetry);
     syncSettings();
   });

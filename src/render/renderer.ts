@@ -167,10 +167,18 @@ export class GameRenderer {
     return new HeroPreview(this.renderer, this.assets, this.materials, read);
   }
 
+  /** Akkusparen: at most 1× pixel ratio (main.ts also caps the frame rate). */
+  private eco = false;
+  setEco(on: boolean): void {
+    if (on === this.eco) return;
+    this.eco = on;
+    this.resize();
+  }
+
   resize(): void {
     const w = Math.max(1, window.innerWidth);
     const h = Math.max(1, window.innerHeight);
-    const dpr = Math.min(window.devicePixelRatio || 1, this.opts.profile.maxDpr);
+    const dpr = Math.min(window.devicePixelRatio || 1, this.eco ? 1 : this.opts.profile.maxDpr);
     this.height = h * dpr;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);

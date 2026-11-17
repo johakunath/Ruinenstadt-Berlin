@@ -36,6 +36,7 @@ export class OptionsScreen {
       ${row('Grafik', 'Qualität für PC, Leistung für Tablet und Handy.', profileSeg(), ' id="opt-profile-row"')}
       ${row('Ton', '', toggle('sound', 'Ton'))}${row('Musik', '', toggle('music', 'Musik'))}${row('Lautstärke', '', volumeRange(), ' id="opt-volume-row"')}
       ${row('Vibration', 'Kurze Stöße bei Treffern.', toggle('rumble', 'Vibration'))}
+      ${row('Akkusparen', '30 Bilder pro Sekunde, schont Akku und Wärme.', toggle('eco', 'Akkusparen'))}
       ${row('Vollbild', 'Blendet die Browserleiste aus.', toggle('fullscreen', 'Vollbild'))}
       ${row('Leistungsanzeige', 'Bildrate unten links.', toggle('showPerf', 'Leistungsanzeige'))}
       <div class="osec">Steuerung</div><div class="ctl">${segment('dev', 'Gerät', DEVICES)}<div class="ctl-gfx"></div></div>

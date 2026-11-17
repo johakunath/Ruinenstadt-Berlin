@@ -306,6 +306,7 @@ const ui = new Ui(opts, {
 // U3: live effects of the settings (start screen and options screen share them, `ui/settings.ts`).
 settingHooks.audio = () => { audio.setVolume(opts.sound ? opts.volume : 0); audio.setMusic(opts.music); };
 settingHooks.perf = (on) => ui.showPerf(on);
+settingHooks.eco = (on) => { FRAME_MS = 1000 / (on ? 30 : 60); renderer?.setEco(on); };
 settingHooks.telemetry = (on) => { telemetry.enabled = on; };
 settingHooks.profile = (id) => {
   // Materials and render targets are built once, so a new profile needs a reload. In a run it goes
@@ -708,7 +709,10 @@ let last = performance.now();
 let acc = 0;
 
 /** 60 fps cap: the sim steps at 60 Hz, so faster frames only heat the tablet (playtest 2026-11-15, 90+ fps on the Tab S9). */
-const FRAME_MS = 1000 / 60;
+/** Frame cap: 60 fps, 30 with Akkusparen. */
+let FRAME_MS = 1000 / (opts.eco ? 30 : 60);
+/** Frames left until the next draw behind a still overlay (trade, blessing, cards). */
+let stillSkip = 0;
 // Deadline keeps the remainder, so 75, 90 and 144 Hz displays still average 60 fps (Codex review).
 let nextAt = 0;
 
@@ -818,7 +822,12 @@ function frame(now: number): void {
   // Heights are above the local ground (hills and terraces).
   lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !menu.isOpen);
 
-  if (!menu.isOpen) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
+  // Behind a still overlay (trade, blessing choice, cards) the world only idles: draw at about 10 fps
+  // instead of full rate (playtest 2026-11-17: the tablet runs hot). The open menu draws nothing.
+  const still = !running && phase === 'play' && (abilitiesUi.open || abilitiesUi.tradeOpen || intro.isOpen);
+  const draw = !menu.isOpen && (!still || --stillSkip <= 0);
+  if (still && draw) stillSkip = Math.max(1, Math.round(100 / FRAME_MS));
+  if (draw) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
@@ -917,6 +926,7 @@ export const ready: Promise<boolean> = GameRenderer.create(canvas, {
 })
   .then((r) => {
     renderer = r;
+    r.setEco(opts.eco);
     r.reset(sim);
     // H1 step 5: the live, turnable hero replaces the painted portrait in the inventory doll.
     const preview = r.heroPreview(() => ({ look: heroLook(sim.equipment), weapon: weaponModel(sim.stats.kind, sim.equipment.w?.base ?? 'rohr'), element: sim.stats.elements[0] }));
