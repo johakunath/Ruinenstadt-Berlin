@@ -63,3 +63,14 @@ Read only: `johakunath/Ruinenstadt` `assets/buildings/koep-*.webp` (asphalt, pav
 | T4 | Props: wood, metal paint, car and bus paint, tram | `paintWood`, `paintMetal`, `paintVan` | per prop | after T3 |
 
 Claude adds a row and a task file whenever step 1 finishes for a new surface.
+
+## Portrait and icon queue (menu art, Codex)
+
+Painted busts for the Kodex (`src/ui/menu.ts`, `ENEMY_PORTRAIT`) and item icons. Same rules as 2D `assets/portraits/`: 2D style bust, square, dark teal backdrop, WebP about 256 × 256, row in `assets/LICENSES.md`. Codex generates and hooks up (map entry in `src/ui/menu.ts` or `src/ui/item-icons.ts`); Claude checks the look in the Kodex at 1280 × 720 and 844 × 390.
+
+| # | Asset | Stand-in now | File | Hookup |
+|---|---|---|---|---|
+| KP1 | Der Feldwebel (boss): bust | Drawn rank chevrons | `assets/portraits/X04.webp` | `ENEMY_PORTRAIT.feldwebel` |
+| KP2 | Der Schaffner (tunnel boss): bust | Drawn conductor cap | `assets/portraits/X05.webp` | `ENEMY_PORTRAIT.schaffner` |
+| KP3 | Elite-Gegner: four busts, Flink, Brennend, Spaltend, Gepanzert (a zombie with the elite's sign, colour as `ELITES[m].color`) | Brocken bust E02 with a coloured ring | `assets/portraits/L01.webp` to `L04.webp` | elite cards in `kodexHtml` |
+| K1 | Klinge icons: Rostige Klinge (rohr), Stahlklinge (stahl), Hackmesser (brech), style of `assets/inventory/I04.webp` | rohr and stahl borrow I51, brech borrows I04 | `assets/inventory/I79.webp` to `I81.webp` | `src/ui/item-icons.ts` |

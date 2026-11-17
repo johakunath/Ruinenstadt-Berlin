@@ -206,7 +206,7 @@ export const IMPLICITS: Readonly<Partial<Record<BaseId, readonly Affix[]>>> = {
 export const SETS: Readonly<Record<SetId, SetDefinition>> = {
   kiez: { name: 'Kiezwache',
     pieces:
-     { w: { name: 'Brechstange der Kiezwache', kind: 'blade', base: 'brech' },
+     { w: { name: 'Hackmesser der Kiezwache', kind: 'blade', base: 'brech' },
        a: { name: 'Weste der Kiezwache', kind: 'armor', base: 'weste' },
        t: { name: 'Abzeichen der Kiezwache', kind: 'krit', base: 'abzeichen' },
        h: { name: 'Helm der Kiezwache', kind: 'head', base: 'kiezhelm' },

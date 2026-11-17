@@ -28,4 +28,5 @@ Never set clip times from numbers alone. Look at the clip first, then measure, t
 - A clip used by the hero only: the enemy filter `ZOMBIE_CLIPS` in `src/render/characters.ts` keeps it off enemy bodies (every clip costs bindings per body).
 - Weapon models: `src/render/weapons.ts`, built along +Y with the grip at the origin. A weapon that points the wrong way in a clip is a clip problem, not a model problem: pick another clip (example: `Sword_Dash` points a spear backward, so the spear dashes with `Melee_Hook`).
 - Screenshots in cloud browsers are software rendered: use `profile=Leistung` and long timeouts; never judge frame rate there.
+- A thrust no clip holds along the facing (the spear on `Punch_Cross` and `Melee_Hook`): `THRUST` in `src/render/weapons.ts` turns the weapon in the hand toward the hit line during `thrust` attacks (C1). Look at it with `clip-sheet` `thrust=light1`.
 - New clips grow `anims.glb` (about 30 KB each). Say the new size in the PR.

@@ -11,7 +11,7 @@ export type AttributeNameTable = Readonly<Record<AttributeKindId, readonly strin
 
 /** 2D NW. */
 export const WEAPON_NAMES: WeaponNameTable = {
-  blade: [ 'Rostiges Rohr', 'Bewehrungsstahl', 'Machete', 'Brechstange' ],
+  blade: [ 'Rostige Klinge', 'Stahlklinge', 'Machete', 'Hackmesser' ],
   hammer: [ 'Vorschlaghammer', 'Pflasterhammer', 'Rohrzange' ],
   sling: [ 'Jagdzwille', 'Nagelwerfer', 'Steinschleuder' ],
   spear: [ 'Rohrspeer', 'Fahnenstange', 'Harpune' ],
@@ -169,6 +169,10 @@ export const RARITY_SUFFIXES: readonly [readonly string[], readonly string[], re
 /** 2D BASES. */
 export const BASES: Readonly<Record<string, BaseId>> = {
   Holzlatte: 'latte',
+  // Klinge items are blades (Johannes, 2026-11-17); the 2D names stay for old saves.
+  'Rostige Klinge': 'rohr',
+  Stahlklinge: 'stahl',
+  Hackmesser: 'brech',
   'Rostiges Rohr': 'rohr',
   Bewehrungsstahl: 'stahl',
   Machete: 'machete',

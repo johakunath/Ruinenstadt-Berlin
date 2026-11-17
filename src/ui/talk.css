@@ -1,0 +1,13 @@
+#talk-btn {
+  position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); z-index: 6;
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 18px;
+  background: rgba(24, 20, 16, .88); color: #f2e6cf; border: 1px solid #f2cc83; border-radius: 22px;
+  font: 600 15px/1 system-ui, sans-serif; letter-spacing: .02em; cursor: pointer; touch-action: none;
+  animation: talk-in .18s ease-out;
+}
+#talk-btn[hidden] { display: none; }
+#talk-btn kbd {
+  display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px;
+  border-radius: 6px; background: #f2cc83; color: #1a1510; font: 700 13px/1 system-ui, sans-serif;
+}
+@keyframes talk-in { from { opacity: 0; transform: translate(-50%, 6px); } }

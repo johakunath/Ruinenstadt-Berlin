@@ -10,7 +10,7 @@ export const STARTER_DAMAGE = 10;
 export const BASE_DASH_COOLDOWN = 1.4;
 
 export function starterEquipment(): Equipment {
-  const weapon: Item = { id: 0, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostiges Rohr', rarity: 0,
+  const weapon: Item = { id: 0, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostige Klinge', rarity: 0,
     value: STARTER_DAMAGE, itemLevel: 1, affixes: [] };
   return { w: weapon };
 }

@@ -4,7 +4,7 @@ import type { Item } from './items';
 import { gearAffixes, heroStats, power, setCount, type Equipment, type StatContext } from './stats';
 
 const context = (change: Partial<StatContext> = {}): StatContext => ({ upgrades: {}, perks: {}, camp: {}, survivors: {}, ...change });
-const item = (change: Partial<Item> = {}): Item => ({ id: 1, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostiges Rohr', rarity: 0, value: 10, itemLevel: 1, affixes: [], ...change });
+const item = (change: Partial<Item> = {}): Item => ({ id: 1, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostige Klinge', rarity: 0, value: 10, itemLevel: 1, affixes: [], ...change });
 const eq = (change: Equipment = {}): Equipment => ({ w: item(), ...change });
 
 describe('ported hero stats', () => {

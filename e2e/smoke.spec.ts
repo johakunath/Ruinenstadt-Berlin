@@ -13,7 +13,9 @@ function watchErrors(page: Page): string[] {
 test('scene loads, play starts, the fight runs, no page errors', async ({ page }, testInfo) => {
   const errors = watchErrors(page);
   await page.goto('/?map=hof&profile=Leistung&seed=7&debug=perf');
+  // U3: the start screen comes up without the game; Spielen loads it.
   await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
+  expect(await page.evaluate(() => window.__game === undefined)).toBe(true);
   await page.locator('#play').click();
   // M17: a fresh profile sees the intro cards first.
   await page.locator('#intro .iskip').click();
@@ -54,25 +56,60 @@ test('options pause the fight and persist independent music and volume controls'
   await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');
   await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 90_000 });
   await page.locator('#menu-btn').click();
-  await page.locator('[data-t="opt"]').click();
-  await expect(page.locator('#options')).toBeVisible();
-  await expect(page.locator('#opt-music')).toBeChecked();
-  await page.locator('#opt-music').uncheck();
-  await page.locator('#opt-volume').fill('35');
+  await page.locator('#menu-opt').click();
+  await expect(page.locator('#optv')).toBeVisible();
+  const music = page.locator('#optv [data-opt="music"]');
+  await expect(music).toHaveAttribute('aria-checked', 'true');
+  await music.click();
+  await expect(music).toHaveAttribute('aria-checked', 'false');
+  await page.locator('#optv [data-opt="volume"]').fill('35');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.options') ?? '{}') as { music: boolean; volume: number });
   expect(stored.music).toBe(false);
   expect(stored.volume).toBe(.35);
   const tick = await page.evaluate(() => window.__game?.sim().tick ?? 0);
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__game?.sim().tick ?? 0)).toBe(tick);
+  await page.locator('#opt-close').click();
+  await expect(page.locator('#optv')).toBeHidden();
   await page.locator('#menu-close').click();
   await page.waitForFunction((t) => (window.__game?.sim().tick ?? 0) > t, tick, { timeout: 60_000 });
   await page.reload();
   await page.locator('#menu-btn').click();
-  await page.locator('[data-t="opt"]').click();
-  await expect(page.locator('#opt-music')).not.toBeChecked();
-  await expect(page.locator('#opt-volume')).toHaveValue('35');
-  await page.locator('#opt-music').check();
+  await page.locator('#menu-opt').click();
+  await expect(music).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('#optv [data-opt="volume"]')).toHaveValue('35');
+  await music.click();
+});
+
+test('U3: start screen stores options without loading the game; fullscreen button and options screen', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=hof&seed=7');
+  await expect(page.locator('#play')).toBeVisible();
+  await expect(page.locator('#fsb')).toBeVisible();
+  // A profile pick on the start screen is stored, the page stays (no reload, no game).
+  await page.evaluate(() => { (window as unknown as { marker: number }).marker = 1; });
+  await page.locator('#title [data-opt="profile"] [data-v="leistung"]').click();
+  await page.locator('#title [data-opt="profile"] [data-v="qualitaet"]').click();
+  await page.locator('#title [data-opt="profile"] [data-v="leistung"]').click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.options') ?? '{}').profile)).toBe('leistung');
+  expect(await page.evaluate(() => (window as unknown as { marker?: number }).marker)).toBe(1);
+  await page.locator('#title [data-opt="sound"]').click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.options') ?? '{}').sound)).toBe(false);
+  // The options screen opens without the game, shows the three controls graphics and syncs the switches.
+  await page.locator('#open-options').click();
+  await expect(page.locator('#optv [data-opt="sound"]')).toHaveAttribute('aria-checked', 'false');
+  for (const d of ['touch', 'key', 'pad']) { await page.locator(`#optv [data-opt="dev"] [data-v="${d}"]`).click(); await expect(page.locator('#optv .cgfx')).toBeVisible(); }
+  await expect(page.locator('#run-actions')).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#optv')).toBeHidden();
+  expect(await page.evaluate(() => window.__game === undefined)).toBe(true);
+  // Spielen loads the game with the stored profile.
+  await page.locator('#play').click();
+  await page.locator('#intro .iskip').click({ timeout: 90_000 });
+  await expect(page.locator('#hud')).toBeVisible();
+  await expect(page.locator('#fsb')).toBeVisible();
+  expect(await page.evaluate(() => window.__game!.phase())).toBe('play');
+  expect(errors).toEqual([]);
 });
 
 test('Köpenick: the first encounter starts, waves spawn, the map opens and pauses', async ({ page }, testInfo) => {
@@ -88,7 +125,9 @@ test('Köpenick: the first encounter starts, waves spawn, the map opens and paus
     s.player.x = s.player.px = e.x;
     s.player.z = s.player.pz = e.z;
   });
-  await page.waitForFunction(() => (window.__game?.sim().enemies.length ?? 0) > 0, null, { timeout: 90_000 });
+  // Sleeping lot guards exist before any fight, so wait for the encounter itself, then for its wave.
+  await page.waitForFunction(() => window.__game?.sim().run.phase === 'fight', null, { timeout: 90_000 });
+  await page.waitForFunction(() => (window.__game?.sim().enemies.some((e) => !e.guard) ?? false), null, { timeout: 90_000 });
   expect(await page.evaluate(() => window.__game!.sim().run.phase)).toBe('fight');
   await expect(page.locator('#obj-text')).toContainText('Welle 1/');
   await page.screenshot({ path: testInfo.outputPath('koepenick-fight.png'), timeout: 110_000 });

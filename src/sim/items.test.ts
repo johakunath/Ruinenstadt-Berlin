@@ -5,7 +5,7 @@ import { Rng } from './math';
 import { avgIl, isUpgrade, lootItem, makeItem, makeSetItem, price, rollRarity, salvage, scrapValue, shownLevel, type Item, type LootContext } from './items';
 
 const context = (overrides: Partial<LootContext> = {}): LootContext => ({ district: 0, luck: 0, wave: 1, ...overrides });
-const piece = (overrides: Partial<Item> = {}): Item => ({ id: 1, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostiges Rohr', rarity: 0, value: 10, itemLevel: 10, affixes: [], ...overrides });
+const piece = (overrides: Partial<Item> = {}): Item => ({ id: 1, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostige Klinge', rarity: 0, value: 10, itemLevel: 10, affixes: [], ...overrides });
 
 /** Controlled draws test thresholds and rounding without relying on a seed's incidental values. */
 class Draws extends Rng {
@@ -59,7 +59,7 @@ describe('item generation', () => {
   it('preserves base values, the district increment and magic suffix before affixes', () => {
     // white roll, weapon slot roll, midpoint multiplier, blade, first name
     const item = makeItem(new Draws([0, 0, .5, 0, 0]), context({ district: 2 }), 4);
-    expect(item).toEqual(piece({ name: 'Rostiges Rohr', value: 18, itemLevel: 10 }));
+    expect(item).toEqual(piece({ name: 'Rostige Klinge', value: 18, itemLevel: 10 }));
     const magic = makeItem(new Rng(2), context(), 1, 1, 'a');
     expect(magic.name).not.toBe(Object.entries(BASES).find(([, base]) => base === magic.base)?.[0]);
   });
