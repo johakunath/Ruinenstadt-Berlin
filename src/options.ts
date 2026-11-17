@@ -22,7 +22,7 @@ export interface Options {
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
   /** Köpenick (default) or the gate 1 courtyard. */
-  map: 'koepenick' | 'hof';
+  map: 'koepenick' | 'hof' | 'tunnel';
   mapScale: number;
   /** Debug: start at this encounter. */
   startAt: number;
@@ -99,7 +99,7 @@ export function readOptions(): Options {
     telemetry: stored.telemetry ?? true,
     autostart: q.has('autostart'),
     cam: parseCam(q.get('cam')),
-    map: q.get('map') === 'hof' ? 'hof' : 'koepenick',
+    map: q.get('map') === 'hof' ? 'hof' : q.get('map') === 'tunnel' ? 'tunnel' : 'koepenick',
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
@@ -107,8 +107,10 @@ export function readOptions(): Options {
 }
 
 /** Reloads with a changed profile (materials and render targets are built once at start). */
-export function reloadWith(change: Partial<Pick<Options, 'profile'>>): void {
+export function reloadWith(change: Partial<Pick<Options, 'profile' | 'map'>>): void {
   const q = new URLSearchParams(location.search);
   if (change.profile) q.set('profile', PROFILES[change.profile].label);
+  // M19: Köpenick and the tunnel are separate page loads (the renderer builds one map).
+  if (change.map) { if (change.map === 'koepenick') q.delete('map'); else q.set('map', change.map); q.delete('autostart'); q.delete('at'); }
   location.search = q.toString();
 }

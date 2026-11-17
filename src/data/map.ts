@@ -150,6 +150,18 @@ export interface MapDef {
   /** L2: district index (Köpenick 0) and item name flavor for the loot of this map. */
   district?: number;
   flavor?: 'neon' | 'gdr';
+  /** M19 U-Bahn tunnel: only these tubes are walkable, everything else is rock (no lots, no streets). */
+  tunnel?: { tubes: Tube[] };
+  /** M16b/M19 side passage surprises: fixed hidden blessings and sleeping guards (a mini-boss). */
+  hiddenSpots?: Point[];
+  guards?: Level['guards'];
+}
+
+/** A walkable tunnel piece along a polyline: track bed, station hall or side passage. */
+export interface Tube { pts: Pt[]; width: number; kind: 'track' | 'station' | 'branch' }
+/** Inside a tunnel tube (always true on open maps). */
+export function inTunnel(m: MapDef, x: number, z: number, pad = 0): boolean {
+  return !m.tunnel || m.tunnel.tubes.some((t) => lineDist(t.pts, x, z) <= t.width / 2 - pad);
 }
 
 // ---------------------------------------------------------------- geometry
@@ -453,6 +465,7 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
 
 /** Generates buildings along streets and trees on free ground. Deterministic per map seed. */
 export function generateLots(m: MapDef): Lot[] {
+  if (m.tunnel) return [];
   const rng = new Rng(m.seed);
   const occ = new Occupancy();
   const lots: Lot[] = [];
@@ -569,6 +582,7 @@ export function lotColliders(l: Lot): Collider[] {
  * Deterministic per map seed; nothing lands on a building, in the water or in a fight's center.
  */
 export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
+  if (m.tunnel) return tunnelProps(m);
   const rng = new Rng(m.seed + 7);
   const props: Prop[] = [];
   // Späti sandbags and lantern first, so everything else keeps clear of them.
@@ -1029,10 +1043,12 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
   const breakables = breakableDefs(m, props, propColliders, rests);
-  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z));
+  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
   if (m.flavor) level.flavor = m.flavor;
+  level.hiddenSpots = m.hiddenSpots ?? [];
+  level.guards = m.guards ?? [];
   return level;
 }
 
@@ -1049,4 +1065,35 @@ function breakableDefs(m: MapDef, props: Prop[], propColliders: Map<Prop, Collid
     if (collider) defs.push({ kind: p.kind === 'bins' ? 'bin' : 'crate', x: p.x, z: p.z, prop, inside: restAt(rests, p.x, p.z) >= 0, collider });
   });
   return defs;
+}
+
+/**
+ * M19 tunnel dressing: work lamps on alternating walls every 13 to 17 m, a fire barrel in stations and
+ * at side passage ends, crates and rubble along the bed. Fixed props (the wreck, the generator) on top.
+ */
+function tunnelProps(m: MapDef): Prop[] {
+  const rng = new Rng(m.seed + 7);
+  const props: Prop[] = [...m.fixedProps];
+  const free = (x: number, z: number, r: number): boolean => inTunnel(m, x, z, r) && !props.some((p) => Math.hypot(p.x - x, p.z - z) < r + 1.5)
+    && !m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.5);
+  for (const t of m.tunnel!.tubes) {
+    let side = 1, acc = 0;
+    for (let i = 1; i < t.pts.length; i++) {
+      const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+      for (let d = 0; d < len; d += 1) {
+        acc += 1;
+        const gap = t.kind === 'branch' ? 9 : 15;
+        if (acc < gap) continue;
+        acc = rng.range(-2, 2);
+        const off = t.width / 2 - 0.8, x = ax + ux * d - uz * off * side, z = az + uz * d + ux * off * side;
+        side = -side;
+        if (free(x, z, 0.3)) props.push({ kind: rng.next() < 0.75 ? 'workLamp' : 'candles', x, z, rot: Math.atan2(uz * side, -ux * side), size: 1 });
+        const cx = ax + ux * (d + 5) + uz * off * 0.6 * side, cz = az + uz * (d + 5) - ux * off * 0.6 * side;
+        if (rng.next() < 0.55 && free(cx, cz, 0.8)) props.push({ kind: rng.pick(['crates', 'crate', 'rubble', 'planks', 'bins'] as const), x: cx, z: cz, rot: rng.range(0, Math.PI * 2), size: rng.range(0.8, 1.3) });
+      }
+    }
+    const end = t.pts[t.pts.length - 1]!;
+    if (t.kind !== 'track' && free(end[0], end[1], 0.6)) props.push({ kind: 'fireBarrel', x: end[0], z: end[1], rot: 0, size: 1 });
+  }
+  return props;
 }

@@ -165,6 +165,8 @@ export interface Enemy {
   /** Split off a dying Spaltend elite: small, no loot. */
   mini?: boolean;
   guard?: boolean;
+  /** Sleeps until the hero comes this close or hurts it (side passage mini-boss). */
+  sleep?: number;
   /** The last hit was critical (kill effects). */
   lastCrit?: boolean;
 }

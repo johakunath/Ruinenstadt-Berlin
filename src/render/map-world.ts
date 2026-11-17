@@ -10,7 +10,7 @@ import {
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
-import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt } from '../data/map';
+import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
@@ -279,7 +279,9 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           const nearWater = y >= -0.5 && (isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6));
           // Damp, dark banks.
           const shore = y < -0.5 ? 0.35 : nearWater ? 0.6 : 1;
-          col.push(t[0] * noise * shore, t[1] * noise * shore, t[2] * noise * shore);
+          // M19 tunnel: ground outside the tubes is rock in the dark (the walls hide most of it).
+          const rock = m.tunnel && !inTunnel(m, x, z, -1.5) ? 0.06 : 1;
+          col.push(t[0] * noise * shore * rock, t[1] * noise * shore * rock, t[2] * noise * shore * rock);
           splat.push(...groundSplat(m, x, z, nearWater && !isQuay(m, x, z)));
         }
       }
@@ -650,6 +652,70 @@ function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilde
         const cx = st.x + uz * side * (st.width / 2 + 0.2);
         const cz = st.z - ux * side * (st.width / 2 + 0.2);
         b.box(b.mm.stucco, new Matrix4().makeRotationY(st.rot).setPosition(cx, t.h / 2, cz), 0.4, t.h + 0.2, st.len, [0.5, 0.5, 0.47]);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- M19 tunnel
+
+/**
+ * Tunnel walls along both edges of every tube (open where another tube joins), thick enough that the
+ * camera sees rock beyond, with a tiled band on station walls; two tracks with sleepers on the track
+ * bed and tiled platforms beside it in stations. Cost: merged boxes per chunk, no extra lights.
+ */
+function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  const H = 4.6;
+  for (const t of m.tunnel!.tubes) {
+    for (let i = 1; i < t.pts.length; i++) {
+      const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.01) continue;
+      const ux = (bx - ax) / len, uz = (bz - az) / len, yaw = Math.atan2(ux, uz);
+      for (const side of [-1, 1]) {
+        // Normal pointing out of the tube on this side.
+        const nx = uz * side, nz = -ux * side;
+        for (let d = 0; d < len; d += 1) {
+          const cx = ax + ux * (d + 0.5), cz = az + uz * (d + 0.5);
+          const ex = cx + nx * t.width / 2, ez = cz + nz * t.width / 2;
+          // Open where the wall would stand inside another tube (a junction).
+          if (inTunnel(m, ex + nx * 0.6, ez + nz * 0.6)) continue;
+          // As thick as fits before the next tube.
+          let thick = 12;
+          while (thick > 1 && (inTunnel(m, ex + nx * thick, ez + nz * thick) || inTunnel(m, ex + nx * thick / 2, ez + nz * thick / 2))) thick /= 2;
+          const b = chunkOf(cx, cz);
+          const mx = ex + nx * thick / 2, mz = ez + nz * thick / 2;
+          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, H / 2, mz), thick, H, 1.04, [0.42, 0.4, 0.38]);
+          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, H + 0.05, mz), thick + 0.4, 0.1, 1.04, [0.08, 0.08, 0.09]);
+          b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, H / 2, mz), thick, H, 1.04);
+          if (t.kind === 'station') {
+            // Tiled band at eye height (cream tiles with a dark stripe), as on the old S-Bahn halls.
+            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.02, 1.6, ez + nz * 0.02), 0.08, 1.8, 1.04, [0.86, 0.82, 0.7]);
+            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.01, 2.25, ez + nz * 0.01), 0.1, 0.18, 1.04, [0.22, 0.32, 0.3]);
+          }
+        }
+      }
+      if (t.kind === 'track') {
+        // Two tracks: rails 1.435 m apart, sleepers every 0.7 m.
+        for (const off of [-2.6, 2.6]) {
+          for (const r of [-0.72, 0.72]) {
+            const x = (ax + bx) / 2 + uz * (off + r), z = (az + bz) / 2 - ux * (off + r);
+            chunkOf(x, z).box(mats.railSteel, new Matrix4().makeRotationY(yaw).setPosition(x, 0.08, z), 0.08, 0.14, len + 0.05, [0.7, 0.68, 0.64]);
+          }
+          for (let d = 0.35; d < len; d += 0.7) {
+            const x = ax + ux * d + uz * off, z = az + uz * d - ux * off;
+            chunkOf(x, z).box(mats.trunk, new Matrix4().makeRotationY(yaw).setPosition(x, 0.03, z), 2.4, 0.06, 0.22, [0.5, 0.42, 0.36]);
+          }
+        }
+      }
+      if (t.kind === 'station') {
+        // Platforms: tiled strips between the track bed and the station wall.
+        for (const side of [-1, 1]) {
+          const inner = 6.5, outer = t.width / 2 - 0.1, w = outer - inner, mid = (inner + outer) / 2;
+          const x = (ax + bx) / 2 + uz * mid * side, z = (az + bz) / 2 - ux * mid * side;
+          chunkOf(x, z).box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(x, 0.04, z), w, 0.08, len, [0.62, 0.6, 0.55]);
+          const ex = (ax + bx) / 2 + uz * (inner + 0.2) * side, ez = (az + bz) / 2 - ux * (inner + 0.2) * side;
+          chunkOf(ex, ez).box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex, 0.05, ez), 0.35, 0.1, len, [0.85, 0.75, 0.3]);
+        }
       }
     }
   }
@@ -1237,6 +1303,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
+  if (m.tunnel) buildTunnel(m, mats, chunkOf);
   if (m.rail) {
     const r = m.rail;
     for (let x = r.minX; x < r.maxX; x += 40) {

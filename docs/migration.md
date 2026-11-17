@@ -12,12 +12,16 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M7/M8 parity, M9 consumable controls, M16 run content | Claude | done (review of PR #17 and completion, same task file); Johannes playtest open |
 | M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
 | M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
-| M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Fable 5.2 | open: `docs/tasks/m11d-map-realism.md` |
+| M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Claude (taken over 2026-11-17) | profiles decided (A Bahnhofstraße, C Vorstadt → Spreepark with tracks), build open: `docs/tasks/m11d-map-realism.md` |
+| M11c World variety: two lot types per zone, weather per zone (variant A) | Claude | decided 2026-11-17, build open: `docs/maps/guidelines.md` › Lot types and weather |
+| M16b Side branches, variant A (lanes beside the route) | Claude | decided 2026-11-17, build open: `docs/maps/guidelines.md` › Side branches |
+| M19 S3 tunnel, layout B, blessing in the first passage | Claude | built, playtest open: `docs/maps/guidelines.md` › U-Bahn tunnels |
 | U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |
 | U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
 | T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (paving image) | open: `docs/tasks/t1b-ground-polish.md` |
 | A2 Audio follow-ups | Sonnet | done (2026-11-16), listening test open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | done (2026-11-16): `docs/tasks/l2-loot-followups.md` |
+| Pad layout as in 2D (Johannes, 2026-11-17) | Claude | done (PR #26) |
 | R1 Hero outline cost | Opus 5.5 high, Johannes measures | open: `docs/tasks/r1-outline-cost.md` |
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
@@ -54,7 +58,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Built (2026-11-16): four intro cards before the first run, tutorial cards for the first loot and blessing, end screens with stats, title buttons that say what they keep, Hauptmenü in the pause menu; Kodex and options in U1/U2 |
 | Endless mode after the district boss | M18 | Built (2026-11-16): "Endlos kämpfen" after the victory; growing waves around the hero, a boss every fifth, a blessing every second, record in the profile |
-| One U-Bahn tunnel with Der Schaffner | M19 | Open |
+| One U-Bahn tunnel with Der Schaffner | M19 | Built (2026-11-17): S3-Tunnel, layout B, blessing first; playtest open |
 | Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 covers the M12 roster (synth cues per type and special); boss voices S3 |
 
 Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, other districts.

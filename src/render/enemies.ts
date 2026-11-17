@@ -37,11 +37,12 @@ const TINTS: Record<EnemyKind, number[]> = {
   waechter: [0x8f8a80],
   rex: [0xffffff],
   hauptmann: [0xb39a86],
+  schaffner: [0xa8a49a],
 };
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
-  spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x5a6f9a, waechter: 0x6a5a4a, hauptmann: 0x44588c,
+  spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x5a6f9a, waechter: 0x6a5a4a, hauptmann: 0x44588c, schaffner: 0x2e3f5c,
 };
 
 /** Proportions by bone scale; children inherit, so a big chest needs a smaller head to match. */
@@ -52,6 +53,7 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   feldwebel: { spine_02: 1.14, Head: 0.9 },
   waechter: { upperarm_l: 1.18, upperarm_r: 1.18, Head: 0.95 },
   hauptmann: { spine_02: 1.12, Head: 0.92 },
+  schaffner: { spine_02: 1.18, Head: 0.9 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
@@ -189,6 +191,20 @@ function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castSha
       ]);
       mount('spine_03', tunic('cloth', 'rust'), 0.08);
       mount('pelvis', [[tf(new CylinderGeometry(0.2, 0.3, 0.62, 10, 1, true), 0, -0.3, 0), 'cloth'], [tf(new TorusGeometry(0.2, 0.015, 4, 14), 0, 0.05, 0, Math.PI / 2), 'rust'], [tf(new BoxGeometry(0.03, 0.14, 0.01), 0.17, -0.04, 0.12), 'brass'], [tf(new BoxGeometry(0.03, 0.11, 0.01), 0.12, -0.03, 0.16), 'brass']]);
+      break;
+    case 'schaffner':
+      // BVG-free conductor of the old S-Bahn: peaked cap with a brass badge, long coat, the signal disc (Kelle).
+      mount('Head', [
+        [tf(new CylinderGeometry(0.14, 0.13, 0.11, 12), 0, 0.06, 0), 'cloth'],
+        [tf(new BoxGeometry(0.2, 0.015, 0.12), 0, 0.005, 0.1), 'cloth'],
+        [tf(new BoxGeometry(0.05, 0.035, 0.01), 0, 0.07, 0.14), 'brass'],
+      ], 0.12);
+      mount('spine_03', tunic('blue', 'rust'), 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.32, 0.66, 10, 1, true), 0, -0.32, 0), 'blue']]);
+      mount('hand_l', [
+        [tf(new CylinderGeometry(0.012, 0.012, 0.22, 6), 0, -0.12, 0), 'rust'],
+        [tf(new CylinderGeometry(0.09, 0.09, 0.015, 14), 0, -0.26, 0, Math.PI / 2), 'red'],
+      ]);
       break;
     case 'hauptmann':
       mount('Head', [...pickelhaube(true), [tf(new ConeGeometry(0.05, 0.2, 6), 0, 0.3, -0.02, -0.25), 'red']], 0.12);

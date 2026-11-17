@@ -47,6 +47,11 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     }
   }
   if (m.rail) out.push(`<rect x="${m.rail.minX}" y="${m.rail.z - 4}" width="${m.rail.maxX - m.rail.minX}" height="8" fill="#2a2724"/><line x1="${m.rail.minX}" y1="${m.rail.z}" x2="${m.rail.maxX}" y2="${m.rail.z}" stroke="#77706a" stroke-width="1.4" stroke-dasharray="3 2"/>`);
+  // M19 tunnel: rock everywhere, the tubes as walkable bands (stations lighter).
+  if (m.tunnel) {
+    out.push(`<rect x="${B.minX}" y="${B.minZ}" width="${B.maxX - B.minX}" height="${B.maxZ - B.minZ}" fill="#141414"/>`);
+    for (const t of m.tunnel.tubes) out.push(`<path d="${path(t.pts)}" fill="none" stroke="${t.kind === 'station' ? '#8a8378' : t.kind === 'branch' ? '#5d564c' : '#4a4640'}" stroke-width="${t.width}" stroke-linejoin="round" stroke-linecap="${t.kind === 'track' ? 'butt' : 'round'}"/>`);
+  }
   for (const s of m.streets) {
     const col = s.kind === 'path' ? '#6a5d45' : '#6f6656';
     out.push(`<path d="${path(s.pts)}" fill="none" stroke="${col}" stroke-width="${s.width}" stroke-linejoin="round" stroke-linecap="round" opacity="${s.kind === 'path' ? 0.7 : 0.9}"/>`);

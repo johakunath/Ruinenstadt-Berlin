@@ -79,7 +79,7 @@ export function randomYardSpot(sim: Sim, minPlayerDist: number): { x: number; z:
 
 export function aliveCount(sim: Sim): number {
   let n = 0;
-  for (const e of sim.enemies) if (e.state !== 'dead') n++;
+  for (const e of sim.enemies) if (e.state !== 'dead' && e.sleep === undefined) n++; // Side passage guards (sleep set) never hold up a wave.
   return n;
 }
 
@@ -130,6 +130,7 @@ export function updateEnemies(sim: Sim): void {
 
     switch (e.state) {
       case 'chase': {
+        if (e.sleep) { if (dist > e.sleep && e.hp >= e.maxHp) break; e.sleep = 0; sim.events.push({ type: 'note', text: '!', color: '#f2d14b', x: e.x, z: e.z }); }
         // Punish window: the body stands open.
         if (e.open > 0) {
           e.open -= DT;

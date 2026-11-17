@@ -15,6 +15,9 @@ Status: open, next task. From the playtests of 2026-11-17 (Johannes: "use Fable 
 | Clipping | Ground cuts through beside the Lange Brücke (west bridge); slopes were fixed in general on 2026-11-17 | Bridge ramps, abutments and banks meet the ground cleanly; walk every bridge and stair (backlog P11) |
 | Sights | Landmarks are blockouts nobody recognizes | Rathaus (brick tower, the Hauptmann statue), Schloss, S-Bahnhof, Müggelturm, Riesenrad, Laurentius church built to be recognized from the game camera; reference photos first |
 
+## Decided (Johannes, 2026-11-17)
+Street profiles from `docs/mockups/m11d-street-profiles.svg`: **A Hauptstraße** (about 21 m) for the Bahnhofstraße, **C Allee with grass track** (about 19 m) from the Köllnische Vorstadt to the Spreepark, also with tram tracks; B Kiezstraße stays available for dense side streets. Owner: Claude (taken over from Fable on Johannes' word, 2026-11-17). Mockups are kept for later districts.
+
 ## Why the map is generated, and what to change
 
 Today the district is authored by hand at the large scale (rivers, streets, areas, landmarks, encounters in `src/data/koepenick.ts`) and generated at the small scale (lots along the streets, props, trees, from a fixed seed). That kept six districts affordable and let the sim, the minimap and the render share one source. The cost shows in the playtest: generated lots look alike and stay rectangular.

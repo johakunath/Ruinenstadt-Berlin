@@ -43,6 +43,10 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P9 | Zoom: three levels are in (Z key, mouse wheel). Open: pad (stick click) and touch (pinch or a button) | Playtest 2026-11-17 | U2 |
 | P10 | Pickups: own model per item type (weapon kinds, armor slots, materials, food) instead of one bag | Playtest 2026-11-17 | L2 |
 | P11 | Ground audit after the surface fix: walk every zone on hardware and note remaining clipping (terrace edges and stairs, banks, bridge ramps, building foundations on slopes) | Playtest 2026-11-17 | Next PC session |
+| P13 | Bot for the new systems: endless waves (M18 numbers are first guesses), camp upgrades and meals in the campaign bot (M14) | Session 2026-11-17 | M14 |
+| P14 | Tunnel follow-ups: the 2D generator charge (hold the platform while waves come out of the tunnel mouth) before Der Schaffner; flooded stretch and bypass of 2D route A; one tunnel per later line | Session 2026-11-17, 2D `js/ubahn.js` | After the M19 playtest |
+| P15 | Camp follow-ups: quests and Erfolge (2D Kommandantur), Umschmieden (2D from Mitte), station keepers as portraits | Session 2026-11-17, M13 | After M13 playtest |
+| P16 | Kodex and intro art: enemy portraits and intro card images (2D used painted `assets/ui` shots) | Session 2026-11-17, M17 | Codex art |
 | P12 | Remaining 2D enemy types: Ratte (pack of five), Zünder (runs up, fuse, explodes), Schildträger (blocks from the front, hammer stun opens it), Heuler (stays back, drives the others). District types later with their districts: Kabelghul, Boxenkopf, Uhrwerkläufer, Wurzler, Kernspeier | Playtest 2026-11-17, 2D `mkEnemy` | After the M12 playtest |
 | P13 | Options from 2D not ported yet: Auto-Angriff, Akkusparen, Vollbild, Spielstand exportieren (2D `js/panels.js:264-271`) | Session audit 2026-11-17 (left out of U2) | With M17 (menus) |
 | P14 | Decision: after a death the retry starts at the zone without blessings (2D rule, set by the PR #18 review fix); a loaded checkpoint keeps them. Keep, or keep blessings on a retry too | Session audit 2026-11-17 | Johannes decides at the next playtest |
