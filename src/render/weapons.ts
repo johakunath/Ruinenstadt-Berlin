@@ -2,8 +2,8 @@
 // stands along +Y with the grip at the origin; `mountWeapon` puts it into the right hand so that the
 // business end follows the hand bone's +Z (what `tools/clip-swing.mjs` measures).
 import {
-  BoxGeometry, ConeGeometry, CylinderGeometry, Group, Mesh, PlaneGeometry, SphereGeometry, TorusGeometry,
-  type BufferGeometry, type Object3D,
+  BoxGeometry, ConeGeometry, CylinderGeometry, Group, Mesh, PlaneGeometry, Quaternion, SphereGeometry, TorusGeometry,
+  Vector3, type BufferGeometry, type Object3D,
 } from 'three';
 import type { ElementId, WeaponKindId } from '../data/items';
 import { HERO_LAYER } from './layers';
@@ -11,6 +11,15 @@ import type { LitMaterial, Materials } from './materials';
 import { paintCloth, paintMetal, paintWood } from './paint';
 
 export type WeaponModel = WeaponKindId | 'pipe';
+
+/**
+ * Left hand on two-handed models (H1): grip height along the shaft, meters up the model's +Y from the
+ * right-hand grip. `src/render/hand-ik.ts` puts `hand_l` there; one-handed models have none.
+ */
+export const LEFT_GRIP: Readonly<Partial<Record<WeaponModel, number>>> = { hammer: 0.48, spear: 0.5 };
+
+const UP = new Vector3(0, 1, 0);
+const gq = new Quaternion();
 
 const ELEMENT_GLOW: Record<ElementId, number> = { fire: 0xff6a2a, acid: 0x97c459, shock: 0x7dd3ff };
 
@@ -159,6 +168,23 @@ export class WeaponRack {
       this.group.add(g);
     }
     g.visible = true;
+  }
+
+  /** True when the shown model is held with both hands. */
+  get twoHanded(): boolean {
+    return this.shown !== null && LEFT_GRIP[this.shown] !== undefined;
+  }
+
+  /**
+   * World position of the left grip and the shaft direction toward the head. Needs current world
+   * matrices. Returns false for one-handed models.
+   */
+  leftGrip(pos: Vector3, shaft: Vector3): boolean {
+    const h = this.shown === null ? undefined : LEFT_GRIP[this.shown];
+    if (h === undefined) return false;
+    this.group.localToWorld(pos.set(0, h, 0));
+    shaft.copy(UP).applyQuaternion(this.group.getWorldQuaternion(gq));
+    return true;
   }
 }
 

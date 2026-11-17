@@ -123,7 +123,7 @@ Textures are WebP at quality 85. Leistung loads no normal maps (`profile.normalM
 - Optional mesh source, not downloaded or checked: Quaternius "Modular Character Outfits - Fantasy" (CC0, 62 parts). Use it only if its joint names equal the contract; add it to `tools/fetch-assets.sh` and `assets/LICENSES.md` first.
 
 ## Left hand on two-handed weapons
-- `weapons.ts`: left grip height along the shaft per model, `hammer` 0.48, `spear` 0.62 (start values); `pipe`, `blade`, `sling` have none.
+- `weapons.ts`: left grip height along the shaft per model, `hammer` 0.48, `spear` 0.50 (start value 0.62, tuned in step 2); `pipe`, `blade`, `sling` have none.
 - `hand-ik.ts`: after `anim.update`, a two-bone solve sets `upperarm_l` and `lowerarm_l` so `hand_l` reaches the grip point on the weapon; the elbow keeps the clip's bend direction; `hand_l` is turned to wrap the shaft; left fingers take a fixed curl.
 - Weight: 1 in idle, run and attack with a two-handed model. It fades to 0 between 90 % and 100 % of arm reach, and is 0 in dodge, death, throw casts and under the hit flinch. Changes ease over 0.08 s.
 - Works on the current `hero.glb`; independent of every other step.
@@ -147,6 +147,27 @@ Textures are WebP at quality 85. Leistung loads no normal maps (`profile.normalM
 | 7 | Measure and close: `docs/status.md`, `assets/LICENSES.md`, queue row | Johannes measures, Opus medium writes | `?debug=perf` before and after on the PC (Qualität) and the Tab S9 (Leistung), numbers in `docs/proof/h1-hero/README.md`; no drop over 1 ms p95 |
 
 Steps 1, 3, 4 need the PC with Blender. Steps 2 and 5 run anywhere.
+
+### Step 2 handover (Opus 5.5, 2026-11-17)
+- Built: `LEFT_GRIP` and `WeaponRack.leftGrip`/`twoHanded` in `weapons.ts`; `hand-ik.ts` (`solveTwoBone`, `gripRotation`, `reachFade`, `LeftHandIk`) with 9 tests; `HeroView.update` runs it after the clips, before the scarf. `clip-sheet` gets `ik=1`, plus `view=left`, `zoom`, `fov`, `aim` (look-at height) and `grip` (try a height); `clip-sheet.mjs` takes `PORT`.
+- The arms are mirrored in the rig, so the left hand uses the right hand's grip frame: shaft along local +Z (thumb toward the head), fist centre at `(0, 0.09, 0.03)`. Hand roll: the wrist sits on the shoulder side of the shaft. Finger curl: the left fingers of `Punch_Cross` at its first key (the same curl the sword clips give the right hand).
+- Grip heights, tuned on strips: hammer 0.48 (lands on the existing upper wrap); spear 0.62 → 0.50 (at 0.62 the guard arm is at 87 % of reach with a raised elbow).
+- Unchanged: `clip-swing.mjs` output for `Sword_Heavy_Combo`, `Punch_Cross`, `Melee_Hook` is byte-identical. The solve writes only `upperarm_l`, `lowerarm_l`, `hand_l` and the left fingers.
+- Proof in `docs/proof/h1-hero/`: `ik-before-*` and `ik-after-*` (side strips as specified, plus close strips: `hammer-heavy-left` at 0.9–1.7 s, `spear-cross-front`, `hammer-run`).
+- Reused from 2D: nothing; 2D draws weapons as sprites with grip and tip pivots, without arms.
+- **Open, needs a decision (Fable).** The clips are one-handed, so the weapon is often out of the left arm's reach and the hand lets go there. Reach ratio is shoulder-to-grip divided by arm length plus fist, measured at grip 0.48. The hand holds up to 0.9 and lets go at 1.0.
+
+  | Clip | Ratio at the grip | Left hand |
+  |---|---|---|
+  | `Sprint_Loop`, `Jog_Fwd_Loop` | 0.50–0.61 | holds throughout |
+  | `Punch_Cross` (spear) | guard and return 0.42–0.70, thrust (0.25–0.55 s) 1.04–1.23 | holds in guard and return, lets go in the thrust |
+  | `Melee_Hook` (spear) | 0.43–0.53 from 0.4 s, 1.1–1.5 before | lets go in the swing |
+  | `Sword_Heavy_Combo` (hammer) | 0.37–0.66 only at 0.9–1.1 s and 1.6–1.7 s; up to 2.1 in the swings | mostly lets go |
+  | `Sword_Idle` (standing) | 1.42–1.48; best of any height 1.26 | never holds |
+  | `Idle_Loop`, `Idle_Shield_Loop`, `Sword_Block` | 0.95–1.08 | at the edge |
+
+  Options: (a) another idle loop for two-handed weapons (none in the packs is in reach); (b) let the solve also turn `clavicle_l` (a few cm, not enough for `Sword_Idle`); (c) two-handed clips made in Blender (H1 says no new clips); (d) accept that the left hand holds only while running and in the spear guard. The spine is out because it would move `hand_r`.
+- Seen once: `src/sim/director.test.ts` timed out at 5.5 s while Blender ran in parallel; it passes on rerun.
 
 ## Not in scope
 A new body or head, new clips or retargeting, weapons as GLB files (they stay code-built), trying on a bag item in the preview, zoom in the preview, hats and the other 12 outfits (follow-up H1b: one task per batch, textures first), enemies (H2).

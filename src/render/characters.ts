@@ -19,6 +19,7 @@ import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Cast, type Player } from '../sim/types';
 import type { ElementId, WeaponKindId } from '../data/items';
 import { WeaponRack, weaponModel } from './weapons';
+import { FIST_CLIP, LeftHandIk } from './hand-ik';
 import type { LitMaterial, Materials } from './materials';
 
 export interface CharacterAssets {
@@ -201,10 +202,14 @@ const ROLL_TO = 0.95;
 /** Death01 starts with a long stagger; skip into it. */
 const DEATH_FROM = 0.35;
 const RUN_CLIP_SPEED = 6.2;
+/** Left-hand IK weight eases over this many seconds. */
+const IK_EASE = 0.08;
 
 const q = new Quaternion();
 const X = new Vector3(1, 0, 0);
 const Z = new Vector3(0, 0, 1);
+const gripPos = new Vector3();
+const gripDir = new Vector3();
 
 /** Clip and the part of it a cast plays: `at` is the clip time when the effect happens. */
 const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; to: number }> = {
@@ -238,6 +243,8 @@ export class HeroView {
   readonly rack: WeaponRack;
   private spinA = 0;
   private readonly anim: Animator;
+  private readonly ik: LeftHandIk;
+  private ikW = 0;
   private readonly scarf: Array<{ bone: Bone; rest: Quaternion; back: number; side: number }> = [];
   private prevX = 0;
   private prevZ = 0;
@@ -250,6 +257,7 @@ export class HeroView {
     this.rack = new WeaponRack(materials);
     this.rack.show('pipe', undefined);
     model.getObjectByName('hand_r')?.add(this.rack.group);
+    this.ik = new LeftHandIk(model, assets.heroClips.get(FIST_CLIP));
     for (const name of ['scarf_01', 'scarf_02', 'scarf_03']) {
       const bone = model.getObjectByName(name) as Bone | undefined;
       if (bone) this.scarf.push({ bone, rest: bone.quaternion.clone(), back: 0, side: 0 });
@@ -295,6 +303,14 @@ export class HeroView {
     const flinch = p.state !== 'dead' && p.hurtT < 0.3 ? 0.75 * (1 - p.hurtT / 0.3) : 0;
     a.mix('Hit_Chest', p.hurtT, flinch);
     a.update(frozen ? 0 : dt);
+    // Left hand on the shaft of two-handed weapons; off while the left arm does its own thing.
+    const throwing = p.state === 'cast' && p.cast !== null && CAST_CLIPS[p.cast.id].clip === 'OverhandThrow';
+    const ikWant = this.rack.twoHanded && p.state !== 'dodge' && p.state !== 'dead' && !throwing && flinch === 0 ? 1 : 0;
+    if (!frozen) this.ikW = ikWant > this.ikW ? Math.min(ikWant, this.ikW + dt / IK_EASE) : Math.max(ikWant, this.ikW - dt / IK_EASE);
+    if (this.ikW > 0) {
+      this.root.updateMatrixWorld(true);
+      if (this.rack.leftGrip(gripPos, gripDir)) this.ik.apply(gripPos, gripDir, this.ikW);
+    }
     this.swayScarf(x, z, dt);
   }
 
