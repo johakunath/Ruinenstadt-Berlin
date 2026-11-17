@@ -696,6 +696,30 @@ function drainEvents(): void {
 }
 
 let held = false;
+
+// M11d landmark reveal (Johannes 2026-11-17): the game pauses, the camera shows the landmark and waits
+// for a tap, click, key or pad button; then it zooms back in and the game goes on. Presses from before
+// the view held (an attack mid-fight) do not count.
+const revealHint = document.getElementById('reveal-hint')!;
+let revealTap = false;
+let revealHeld = 0;
+for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => { revealTap = true; }, { capture: true });
+function revealStep(dt: number): void {
+  const r = renderer?.reveal;
+  const holding = !!r?.holding && phase === 'play';
+  revealHeld = holding ? revealHeld + dt : 0;
+  if (revealHeld > 0 && revealHeld <= dt) { revealTap = false; input.clear(); }
+  revealHint.hidden = !holding;
+  if (!holding) return;
+  document.getElementById('reveal-name')!.textContent = r!.name;
+  const pad = ['attack', 'dodge', 'power', 'ultimate', 'verband', 'molotow'].some((a) => input.buffer.has(a as Parameters<typeof input.buffer.has>[0]));
+  if (revealHeld > 0.35 && (revealTap || pad)) {
+    r!.release();
+    revealHint.hidden = true;
+    input.clear();
+  }
+  revealTap = false;
+}
 let lastArea = '', areaAt0 = 0;
 let hotAt = 0;
 let audioLast = performance.now();
@@ -741,8 +765,7 @@ function frame(now: number): void {
   intro.pollPad();
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
-  // M11d: the sim pauses while the camera shows a landmark; any action skips the swing.
-  if (renderer?.reveal?.active && phase === 'play' && (input.buffer.has('attack') || input.buffer.has('dodge'))) { renderer.reveal.skip(); input.clear(); }
+    revealStep(dt);
   const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active;
   const simStart = performance.now();
   if (running) {

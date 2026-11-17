@@ -25,7 +25,7 @@ The game camera (18.5 m, 44°, FOV 36, from the south) shows about **6 m of heig
 | Roofs from above | Roofs are seen from above when the landmark is south of the hero: roof material and form carry identity (slate vs tile, balustrade on the Schloss, glass vault of the Forum) |
 | Faces | The camera sees south faces well, east and west faces at a grazing angle, north faces never. Put the main cues on the face the route sees; keep the real orientation (K5) and move cues within it if needed |
 | Real proportions anyway | Build towers to real proportions (compressed like the rest, about 0.75): the reveal shot and zoom show them |
-| Reveal shot | `src/render/reveal.ts`: the first time the hero comes within 12 m of a landmark (no enemy within 14 m), the camera swings in front and above for about 4 s; the sim pauses, attack or dodge skips. Add the landmark kind's height to `SHOW` |
+| Reveal shot | `src/render/reveal.ts`: the first time the hero comes within 12 m of a landmark (also mid-fight), the game pauses, the camera swings in front and above and waits with name and "Tippen zum Weiterspielen"; a tap, click, key or pad button zooms back in. Add the kind's height to `SHOW` and its name to `NAMES` |
 
 ## Building
 

@@ -333,7 +333,7 @@ export class GameRenderer {
     const py = groundY(px, pz);
     this.heroX = px;
     this.heroZ = pz;
-    const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead', sim.enemies.filter((e) => e.state !== 'dead')) ?? null;
+    const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead') ?? null;
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py, reveal);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
