@@ -7,7 +7,7 @@ import type { RevealPose } from './reveal';
 
 const PITCH = 44;
 const DISTANCE = 18.5;
-const FOV = 36;
+export const FOV = 36;
 /** The view centers a little north of the hero so more of the facades shows. */
 const FRAME_Z = -1.4;
 const LOOK_AHEAD = 0.22;

@@ -5,9 +5,16 @@
 // game goes on.
 import { Vector3 } from 'three';
 import type { Landmark, LandmarkKind } from '../data/map';
+import { FOV } from './camera';
 
-/** Height of what the reveal should show; kinds without a value are never revealed. */
-const SHOW: Partial<Record<LandmarkKind, number>> = { rathaus: 42, kirche: 38, mueggelturm: 32, riesenrad: 40, sbahnhof: 11, schloss: 17, forum: 12 };
+/**
+ * Top of each kind above its ground (finials, the wheel's top gondola) and half width, as built in
+ * `landmarks.ts`; kinds without a value are never revealed.
+ */
+const SHOW: Partial<Record<LandmarkKind, { top: number; half: number }>> = {
+  rathaus: { top: 44, half: 15 }, kirche: { top: 40.5, half: 9 }, mueggelturm: { top: 33, half: 6.5 }, riesenrad: { top: 38, half: 18 },
+  sbahnhof: { top: 10, half: 15 }, schloss: { top: 17.5, half: 12 }, forum: { top: 15, half: 22 },
+};
 /** German names for the hint while the view holds. */
 const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick' };
 /** Start when the hero is this close to the footprint (also mid-fight: the game pauses). */
@@ -38,17 +45,28 @@ export interface RevealPose {
   look: Vector3;
 }
 
-/** Camera pose `t` seconds after the start of the reveal of `l`, at blend `weight`: in front, a little to the side, from above. */
-export function revealPose(l: Landmark, t: number, weight: number, out: RevealPose): RevealPose {
-  const H = SHOW[l.kind] ?? 12;
-  const size = Math.max(l.hx, l.hz);
-  const dist = Math.max(30, H * 1.45, size * 2.6);
-  const pitch = (26 * Math.PI) / 180;
+const PITCH = (26 * Math.PI) / 180;
+
+/**
+ * Camera pose `t` seconds after the start of the reveal of `l` (standing on ground height `base`), at
+ * blend `weight`: in front, a little to the side, from above, far enough back that the whole height
+ * and width fit the view (vertical FOV `fov` degrees, `aspect` width / height) with a margin.
+ */
+export function revealPose(l: Landmark, t: number, weight: number, out: RevealPose, base = 0, aspect = 16 / 9, fov = FOV): RevealPose {
+  const S = SHOW[l.kind] ?? { top: 12, half: Math.max(l.hx, l.hz) };
+  const h = (S.top / 2) * 1.06;
+  const tv = Math.tan(((fov / 2) * Math.PI) / 180 * 0.9);
+  const th = Math.tan(Math.atan(Math.tan(((fov / 2) * Math.PI) / 180) * aspect) * 0.9);
+  // A vertical half height h at the look point projects inside the view when
+  // h cos(pitch) / (dist − h sin(pitch)) ≤ tan(half FOV); the width needs half / tan(half horizontal FOV).
+  // Capped inside the camera's far plane (120 m): a wide landmark on a portrait screen may then crop at the sides.
+  const dist = Math.min(105, Math.max(24, (h * Math.cos(PITCH)) / tv + h * Math.sin(PITCH), S.half / th + S.half * 0.5));
   // Swing from 38° to 18° off the front axis.
   const side = ((38 - 20 * smooth((t - REVEAL_IN) / DRIFT)) * Math.PI) / 180;
   const yaw = l.rot + side;
-  out.look.set(l.x, H * 0.42, l.z);
-  out.pos.set(l.x + Math.sin(yaw) * Math.cos(pitch) * dist, H * 0.42 + Math.sin(pitch) * dist, l.z + Math.cos(yaw) * Math.cos(pitch) * dist);
+  const y = base + S.top / 2;
+  out.look.set(l.x, y, l.z);
+  out.pos.set(l.x + Math.sin(yaw) * Math.cos(PITCH) * dist, y + Math.sin(PITCH) * dist, l.z + Math.cos(yaw) * Math.cos(PITCH) * dist);
   out.weight = weight;
   return out;
 }
@@ -62,7 +80,8 @@ export class LandmarkReveal {
   private back = -1;
   private readonly pose: RevealPose = { weight: 0, pos: new Vector3(), look: new Vector3() };
 
-  constructor(private readonly landmarks: readonly Landmark[]) {}
+  /** `ground`: height of the ground under a landmark (terraces, hills). */
+  constructor(private readonly landmarks: readonly Landmark[], private readonly ground: (x: number, z: number) => number = () => 0) {}
 
   /** True while a reveal runs (the game pauses the sim). */
   get active(): boolean {
@@ -80,7 +99,7 @@ export class LandmarkReveal {
   }
 
   /** Advances the reveal. Returns the pose or null when the game camera has the view. */
-  update(dt: number, x: number, z: number, alive: boolean): RevealPose | null {
+  update(dt: number, x: number, z: number, alive: boolean, aspect = 16 / 9): RevealPose | null {
     if (!this.current) {
       if (!alive) return null;
       const next = this.landmarks.find((l) => SHOW[l.kind] !== undefined && !this.seen.has(l) && footprintDist(l, x, z) < REVEAL_NEAR);
@@ -100,7 +119,7 @@ export class LandmarkReveal {
         return null;
       }
     }
-    return revealPose(this.current, this.t, weight, this.pose);
+    return revealPose(this.current, this.t, weight, this.pose, this.ground(this.current.x, this.current.z), aspect);
   }
 
   /** Tap or key: zoom back in, then the game goes on. */

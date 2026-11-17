@@ -117,7 +117,7 @@ export class GameRenderer {
       B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 5 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
     );
     const def = opts.map?.def;
-    this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks) : null;
+    this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks, (x, z) => groundY(x, z)) : null;
     setGround(def ? meshSurface(def.bounds.minX, def.bounds.minZ, (x, z) => heightAt(def, x, z)) : () => 0);
     this.scene.background = new Color(NIGHT);
     this.scene.fog = new FogExp2(NIGHT, FOG);
@@ -364,7 +364,7 @@ export class GameRenderer {
     const py = groundY(px, pz);
     this.heroX = px;
     this.heroZ = pz;
-    const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead') ?? null;
+    const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead', this.cam.camera.aspect) ?? null;
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py, reveal);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.

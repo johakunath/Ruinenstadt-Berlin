@@ -47,3 +47,30 @@ describe('landmark reveal (M11d)', () => {
     expect(p!.look.x).toBe(0);
   });
 });
+
+describe('reveal framing (Codex review)', () => {
+  it('fits every landmark from its ground to its top into the view, landscape and portrait', async () => {
+    const { PerspectiveCamera, Vector3 } = await import('three');
+    const { koepenickMap } = await import('../data/koepenick');
+    const { heightAt } = await import('../data/map');
+    const { FOV } = await import('./camera');
+    const { revealPose } = await import('./reveal');
+    const m = koepenickMap();
+    const tops: Record<string, number> = { rathaus: 44, kirche: 40.5, mueggelturm: 33, riesenrad: 38, sbahnhof: 10, schloss: 17.5, forum: 15 };
+    for (const aspect of [16 / 9, 0.56]) {
+      for (const l of m.landmarks.filter((k) => tops[k.kind] !== undefined)) {
+        const base = heightAt(m, l.x, l.z);
+        const p = revealPose(l, 3, 1, { weight: 0, pos: new Vector3(), look: new Vector3() }, base, aspect);
+        const cam = new PerspectiveCamera(FOV, aspect, 1, 120);
+        cam.position.copy(p.pos);
+        cam.lookAt(p.look);
+        cam.updateMatrixWorld();
+        for (const y of [base, base + tops[l.kind]!]) {
+          const v = new Vector3(l.x, y, l.z).project(cam);
+          expect(Math.abs(v.y), `${l.kind} y=${y.toFixed(1)} aspect ${aspect.toFixed(2)}`).toBeLessThan(1);
+          expect(v.z, `${l.kind} beyond far`).toBeLessThan(1);
+        }
+      }
+    }
+  });
+});
