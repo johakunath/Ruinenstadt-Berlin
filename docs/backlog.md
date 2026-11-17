@@ -54,6 +54,8 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P17 | Spreepark dinos: detailed statues (several species, moss, cracks), more detailed enemy dinos, small pack dinos (Kompso), nests with eggs. Refined task: `docs/tasks/m11c-dinos.md` | Playtest 2026-11-17 (split off the M11c session to save tokens) | Next session |
 | P18 | Ambient animals: ducks on ponds, pigeons on plazas (fly off), rats near bins and in the tunnel. Research done (Gobkit CC0 GLBs). Refined task: `docs/tasks/m11c-animals.md` | Playtest 2026-11-17 (split off the M11c session) | Next session |
 | P19 | Painted textures for the lot types and plants (Codex). Task: `docs/tasks/m11c-textures.md`; reconcile its material keys with the merged M11c art first | Session 2026-11-17 | After M11c art merge |
+| P20 | M11c art follow-ups (agents stopped early to save tokens): look at scaffold, clothesline, gravestones, walls, slabs, girders, crane and Rohbau close up; jetty over the real pond; Jägerzaun and long fences; Platte loggias (no Platte district yet); tree and bush tints and jungle frond brightness after the last fix; greenery scatter density (bushes hiding enemies?); cap empty pallet stacks at 4; brick seam on broken wall tops; `?props=` showcase with sizes (`kind:size`) and a free spot; stalls turned so goods face the path | Session 2026-11-17 (M11c) | Next session, PC check |
+| P21 | M11c lot follow-ups: some hidden guards and event spots land inside props (Laube, rubble, hedge) and are not reachable; place them on free cells (`reachable`) or let them climb out; hand-placed lot types for other tight quarters | Session 2026-11-17 (M11c) | With P20 |
 
 ## Ideas (not decided)
 
