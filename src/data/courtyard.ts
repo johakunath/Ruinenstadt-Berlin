@@ -132,7 +132,7 @@ export function propCollider(p: Prop): Collider | null {
     case 'bench':
       return { kind: 'box', x: p.x, z: p.z, hx: 0.85, hz: 0.28, rot: p.rot };
     case 'car':
-      return { kind: 'box', x: p.x, z: p.z, hx: 0.9, hz: 2.05, rot: p.rot };
+      return { kind: 'box', x: p.x, z: p.z, hx: 0.9, hz: 2.2, rot: p.rot };
     case 'lampBroken':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.2 };
     case 'campfire':
