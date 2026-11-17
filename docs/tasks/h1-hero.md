@@ -305,5 +305,20 @@ A new body or head, authored clips or retargeting (importing more clips from the
 - Not measured: the first-swap frame time on the PC and the Tab S9 (step 4's "no frame over 50 ms"). Cloud and swiftshader timings mean nothing.
 - Reused from 2D: `heroKeys` and `drawHero` (armor base → outfit, gloves or bare hands, boots default), and the weste and turnsch art.
 
+## Handover step 5 (Opus 5.5, 2026-11-17)
+- `src/render/hero-preview.ts` (`HeroPreview`):
+  - a second `HeroModel` (shared geometry and materials) with its own `Animator`, weapon rack and left-hand IK, so the hammer shows its two-handed stance
+  - three fixed lights: warm key, cool rim, hemisphere
+  - rendered with the game's `WebGLRenderer` into a half-float target, then `OutputPass` (the game's tone mapping and sRGB) into an 8-bit target, then `readRenderTargetPixels` into a 2D canvas; the renderer's target and `autoClear` are restored afterwards
+  - no second WebGL context; the main canvas is never touched
+  - draws only while the inventory tab is open: on change, or at 20 fps for the idle loop
+  - turning: pointer drag (mouse and touch, `touch-action: none`), right stick X of any pad, arrow keys while the doll has focus
+  - `warm()` compiles its shader variants at load
+- `InventoryUi.setPortrait(Portrait)`: `render()` leaves a placeholder and re-attaches the same canvas, so it survives every `innerHTML` re-render. `show()` opens and closes the preview. The UI holds no Three.js. `GameRenderer.heroPreview(read)` builds the preview; `main.ts` passes look, weapon model and element from the sim.
+- The doll keeps the U1 layout: same grid cell, size and oval, and the canvas takes the `inv-portrait` class.
+- e2e `H1: the inventory doll …`: the doll is not blank, it changes after a mouse drag, and the arrow keys turn it with no page errors.
+- Pictures in `docs/proof/h1-hero/step5/`: `doll-1280x800.png` (start view) and `doll-844x390-turned.png` (after a drag).
+- Not checked: touch and pad on a real device (Tab S9, controller). Playwright drives the mouse only.
+
 ## Questions
-None open.
+- Johannes: look at the doll (step 5 "Johannes looks").
