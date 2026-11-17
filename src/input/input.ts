@@ -37,6 +37,8 @@ export class Input {
   onMap: () => void = () => {};
   /** Switch between the two regular powers. */
   onSwap: () => void = () => {};
+  /** Talk to a trader or Späti keeper in reach (F, D-pad down; E and Y also do it while one is in reach). */
+  onTalk: () => void = () => {};
 
   clear(): void { this.keys.clear(); this.touchX = this.touchZ = 0; this.buffer.clear(); }
 
@@ -62,6 +64,7 @@ export class Input {
       if (e.code === 'KeyQ' || e.code === 'Digit1') this.press('verband', 'keyboard');
       if (e.code === 'KeyG' || e.code === 'Digit2') this.press('molotow', 'keyboard');
       if (e.code === 'KeyX') this.onSwap();
+      if (e.code === 'KeyF') this.onTalk();
       if (KEY_ATTACK.has(e.code)) this.press('attack', 'keyboard');
       if (KEY_DODGE.has(e.code)) {
         e.preventDefault();
@@ -148,6 +151,7 @@ export class Input {
       if (edge(5)) this.press('verband', 'gamepad');
       if (edge(2)) this.press('molotow', 'gamepad');
       if (edge(12) && this.enabled) this.onSwap();
+      if (edge(13) && this.enabled) this.onTalk();
       if (edge(8)) this.onMap();
       if (edge(PAD_MENU)) this.onMenu();
       this.padDown = down;

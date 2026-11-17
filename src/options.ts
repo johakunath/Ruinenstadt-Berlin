@@ -11,8 +11,12 @@ export interface Options {
   stress: number;
   seed: number;
   volume: number;
+  /** Ton: all sound on or off; the volume stays (U3, 2D mute). */
+  sound: boolean;
   music: boolean;
   rumble: boolean;
+  /** Akkusparen (2D eco, playtest 2026-11-17: the tablet runs hot): 30 fps and at most 1× pixel ratio. */
+  eco: boolean;
   /** Performance readout bottom left (options menu or ?debug=perf). */
   showPerf: boolean;
   /** Send anonymous run and performance telemetry (Optionen, default on). */
@@ -33,12 +37,16 @@ export interface Options {
 }
 
 const KEY = 'ruinenstadt-berlin.options';
+/** Session flag set before the in-run profile reload: the next page load resumes the checkpoint (U3). */
+export const RESUME_KEY = 'ruinenstadt-berlin.resume';
 
 interface Stored {
   profile?: ProfileId;
   volume?: number;
+  sound?: boolean;
   music?: boolean;
   rumble?: boolean;
+  eco?: boolean;
   showPerf?: boolean;
   telemetry?: boolean;
 }
@@ -53,7 +61,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, volume: o.volume, music: o.music, rumble: o.rumble, showPerf: o.showPerf, telemetry: o.telemetry };
+    const s: Stored = { profile: o.profile, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -95,8 +103,10 @@ export function readOptions(): Options {
     stress: Math.max(0, Math.min(200, Number(q.get('stress') ?? 0) || 0)),
     seed: Number(q.get('seed') ?? 0) || (Date.now() & 0xffff) + 1,
     volume: stored.volume ?? 0.7,
+    sound: stored.sound ?? true,
     music: stored.music ?? true,
     rumble: stored.rumble ?? true,
+    eco: stored.eco ?? false,
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     telemetry: stored.telemetry ?? true,
     autostart: q.has('autostart'),

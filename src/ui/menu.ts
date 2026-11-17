@@ -1,16 +1,22 @@
-// U1/U2: one pause menu with tabs, as in 2D (`js/panels.js` renderInv): Inventar, Karte, Segen,
-// Kodex, Optionen. Header shows Schrott, Item Level, district and fight, found hidden blessings.
+// U1/U2/U3: one pause menu with tabs, as in 2D (`js/panels.js` renderInv): Inventar, Karte, Segen,
+// Kodex as text tabs with line icons. The Kodex tab is the 2D Kodex card list (playtest 2026-11-17). Header shows Schrott, Item Level, district and fight, found
+// hidden blessings, the cog for the options screen and × to close.
 import { ELITES, ELITE_MODS, ENEMIES, type EnemyKind } from '../data/enemies';
 import { BASES } from '../data/item-names';
 import { ELEMENTS, ENEMY_RESISTANCES, LEGENDARY_POWERS, RARITIES, SETS, SET_COLOR, type LegendaryId, type SetId, type SlotId } from '../data/items';
-import { FAMILIES, PERKS, SURVIVORS, type PerkId } from '../data/progression';
+import { STATIONS } from '../data/camp';
+import { FAMILIES, PERKS, SURVIVORS, type PerkId, type SurvivorId } from '../data/progression';
 import { avgIl } from '../sim/items';
 import type { Sim } from '../sim/types';
 import { perkIcon } from './abilities';
-import { esc, itemIcon, InventoryUi } from './inventory';
+import { esc, itemIcon, InventoryUi, artUrl } from './inventory';
+import { moveFocus } from './focus';
+import { uiIcon } from './ui-icons';
 
-export type TabId = 'inv' | 'karte' | 'segen' | 'kodex' | 'opt';
-const TAB_NAME: Record<TabId, string> = { inv: 'Inventar', karte: 'Karte', segen: 'Segen', kodex: 'Kodex', opt: 'Optionen' };
+export type TabId = 'inv' | 'karte' | 'segen' | 'kodex';
+const TAB_NAME: Record<TabId, string> = { inv: 'Inventar', karte: 'Karte', segen: 'Segen', kodex: 'Kodex' };
+const TAB_ICON: Record<TabId, Parameters<typeof uiIcon>[0]> = { inv: 'bag', karte: 'map', segen: 'segen', kodex: 'kodex' };
+const COG = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.7 7.7 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.7 7.7 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.3.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
 const QUALITY = [['#e8ddd0', 'Gewöhnlich'], ['#7d9bff', 'Selten'], ['#f2d14b', 'Episch'], ['#b48cff', 'Umbau']] as const;
 
 /** 2D KODEX lines, matched to the 3D roster (short German, one line each). */
@@ -27,13 +33,17 @@ const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASE
 
 export interface MenuHost {
   sim(): Sim;
-  /** A run is on (play phase): game tabs. Off: only Kodex and Optionen (title). */
+  /** A run is on (play phase): game tabs. Off: only Kodex. */
   inRun(): boolean;
   /** District and fight line for the header. */
   where(): string;
   /** Map SVG with the hero, or null without an expedition map. */
   mapSvg(): string | null;
   onToggle(open: boolean): void;
+  /** Cog: the options screen (U3, over the menu). */
+  options(): void;
+  /** The options screen is open over the menu: it has the pad and the keys. */
+  blocked(): boolean;
 }
 
 export class Menu {
@@ -47,7 +57,7 @@ export class Menu {
   private padNext = 0;
   private previousFocus: HTMLElement | null = null;
 
-  constructor(private readonly host: MenuHost, readonly inventory: InventoryUi, options: HTMLElement) {
+  constructor(private readonly host: MenuHost, readonly inventory: InventoryUi) {
     this.root.id = 'menu';
     this.root.className = 'overlay';
     this.root.hidden = true;
@@ -61,14 +71,20 @@ export class Menu {
     this.tabsEl.className = 'menu-tabs';
     this.resEl.className = 'menu-res';
     const x = document.createElement('button');
-    x.type = 'button'; x.className = 'menu-x'; x.id = 'menu-close'; x.setAttribute('aria-label', 'Weiter'); x.textContent = '×';
+    x.type = 'button'; x.className = 'tr-x'; x.id = 'menu-close'; x.setAttribute('aria-label', 'Weiter'); x.textContent = '×';
     x.addEventListener('click', () => this.close());
-    head.append(this.tabsEl, this.resEl, x);
+    const cog = document.createElement('button');
+    cog.type = 'button'; cog.className = 'btn sm cog'; cog.id = 'menu-opt'; cog.setAttribute('aria-label', 'Optionen'); cog.innerHTML = COG;
+    cog.addEventListener('click', () => this.host.options());
+    const side = document.createElement('div');
+    side.className = 'menu-side';
+    side.append(this.resEl, cog);
+    head.append(this.tabsEl, side);
+    this.root.append(x);
     const body = document.createElement('div');
     body.className = 'menu-body';
     const mk = (id: TabId, el: HTMLElement = document.createElement('div')): HTMLElement => { el.dataset.tab = id; el.classList.add('menu-tab'); el.hidden = true; body.append(el); return el; };
-    options.hidden = false;
-    this.bodies = { inv: mk('inv', inventory.root), karte: mk('karte'), segen: mk('segen'), kodex: mk('kodex'), opt: mk('opt', options) };
+    this.bodies = { inv: mk('inv', inventory.root), karte: mk('karte'), segen: mk('segen'), kodex: mk('kodex') };
     panel.append(head, body);
     this.root.append(panel);
     document.body.append(this.root);
@@ -93,8 +109,8 @@ export class Menu {
 
   get isOpen(): boolean { return !this.root.hidden; }
   private tabs(): TabId[] {
-    if (!this.host.inRun()) return ['kodex', 'opt'];
-    return ['inv', ...(this.host.mapSvg() !== null ? ['karte' as const] : []), 'segen', 'kodex', 'opt'];
+    if (!this.host.inRun()) return ['kodex'];
+    return ['inv', ...(this.host.mapSvg() !== null ? ['karte' as const] : []), 'segen', 'kodex'];
   }
   /** Opens on a tab; a second call with the open tab closes (keys I, M toggle). */
   toggle(tab: TabId): void { if (this.isOpen && this.tab === tab) this.close(); else this.open(tab); }
@@ -118,7 +134,7 @@ export class Menu {
   select(tab: TabId): void {
     this.tab = tab;
     for (const [id, el] of Object.entries(this.bodies) as Array<[TabId, HTMLElement]>) if (id !== 'inv') el.hidden = id !== tab;
-    this.tabsEl.innerHTML = this.tabs().map(t => `<button type="button" class="menu-tabb${t === tab ? ' on' : ''}" data-t="${t}" aria-pressed="${t === tab}">${TAB_NAME[t]}</button>`).join('');
+    this.tabsEl.innerHTML = this.tabs().map(t => `<button type="button" class="menu-tabb${t === tab ? ' on' : ''}" data-t="${t}" aria-pressed="${t === tab}">${uiIcon(TAB_ICON[t], 17)}<span>${TAB_NAME[t]}</span></button>`).join('');
     this.renderHead();
     this.inventory.show(tab === 'inv');
     this.renderTab();
@@ -127,7 +143,7 @@ export class Menu {
   renderHead(): void {
     const s = this.host.sim(), hid = s.content.hidden;
     this.resEl.innerHTML = this.host.inRun()
-      ? `<span>Schrott <b>${s.inventory.scrap}</b></span><span>Item Level <b>${avgIl(s.equipment)}</b></span><span>${esc(this.host.where())}</span>${hid.length ? `<span>Versteckte Segen ${hid.filter(h => h.got).length}/${hid.length}</span>` : ''}`
+      ? `<span><img class="mico" src="${artUrl('R05')}" alt="" width="24" height="24">Schrott <b>${s.inventory.scrap}</b></span><span>Item Level <b>${avgIl(s.equipment)}</b></span><span>${esc(this.host.where())}</span>${hid.length ? `<span>Versteckte Segen ${hid.filter(h => h.got).length}/${hid.length}</span>` : ''}`
       : '';
   }
   private renderTab(): void {
@@ -155,7 +171,7 @@ export class Menu {
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map(b => b.pressed), prev = this.padDown, edge = (i: number): boolean => !!down[i] && !prev[i];
     this.padDown = down;
-    if (!this.isOpen) return;
+    if (!this.isOpen || this.host.blocked()) return;
     if (edge(1)) { this.close(); return; }
     if (edge(4) || edge(5)) { this.step(edge(5) ? 1 : -1); return; }
     if (edge(0)) { const a = document.activeElement as HTMLElement | null; if (a && this.root.contains(a)) a.click(); else this.focusFirst(); return; }
@@ -166,39 +182,51 @@ export class Menu {
     this.padNext = now + 170;
     this.move(dx, dy);
   }
+  /** The options screen closed over the menu: its last press is not new here. */
+  resetPad(): void { this.padDown = Array.from({ length: 20 }, () => true); }
   private focusFirst(): void { (this.root.querySelector<HTMLElement>('.menu-tab:not([hidden]) button:not(:disabled)') ?? this.tabsEl.querySelector<HTMLElement>('button'))?.focus(); }
   /** Spatial focus move: nearest visible control in the direction, rows and columns alike. */
   move(dx: number, dy: number): void {
-    const cur = document.activeElement as HTMLElement | null;
-    const all = [...this.root.querySelectorAll<HTMLElement>('button:not(:disabled),input,summary')].filter(b => b.offsetParent !== null && !b.closest('[hidden]'));
-    if (!cur || !this.root.contains(cur)) { this.focusFirst(); return; }
-    const r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    let best: HTMLElement | null = null, bestS = Infinity;
-    for (const b of all) {
-      if (b === cur) continue;
-      const q = b.getBoundingClientRect(), bx = q.left + q.width / 2, by = q.top + q.height / 2, vx = bx - cx, vy = by - cy;
-      const along = vx * dx + vy * dy;
-      if (along <= 2) continue;
-      const across = Math.abs(dx ? vy : vx);
-      const score = along + across * 2.5;
-      if (score < bestS) { bestS = score; best = b; }
-    }
-    if (best) { best.focus(); best.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    // The Kodex has no controls (2D: a list to read): up and down scroll it.
+    if (this.tab === 'kodex' && dy && !dx) { const b = this.bodies.kodex; b.scrollBy({ top: dy * b.clientHeight * .6, behavior: 'smooth' }); return; }
+    moveFocus(this.root, dx, dy, () => this.focusFirst());
   }
 }
 
-/** 2D Kodex tab: entries fill on the first kill or find (`sim.inventory.kodex`). */
+/** 2D Kodex portraits (`js/items.js` PORTI): painted busts in `assets/portraits/`. */
+const portraits = import.meta.glob('../../assets/portraits/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const portraitUrl = (id: string): string => portraits[`../../assets/portraits/${id}.webp`] ?? '';
+const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', waechter: 'X03', rex: 'E12', hauptmann: 'X01' };
+const SURVIVOR_PORTRAIT: Record<SurvivorId, string> = { doktor: 'S01', schmied: 'S02', kurier: 'S03', koechin: 'S04', spaeher: 'S05', mechaniker: 'S06' };
+/** Code-painted placeholders for bosses without a painted bust yet (art gap). */
+const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
+  feldwebel: '<path d="M5 8l7-4 7 4M5 13l7-4 7 4M5 18l7-4 7 4"/>',
+  schaffner: '<path d="M3 16h18M5 16c0-5 3-8 7-8s7 3 7 8M9 12h6M12 8V6"/><circle cx="12" cy="19" r="1.5"/>',
+};
+/** 2D `kImg`: portrait, greyed (`dim`) or a black silhouette with "?" (`sil`). */
+const kimg = (inner: string, state: 'on' | 'dim' | 'sil', ring = '', cls = ''): string => state === 'sil'
+  ? `<span class="kimg ksil${cls}">${inner}<b>?</b></span>`
+  : `<span class="kimg${cls}${state === 'dim' ? ' kdim' : ''}"${ring ? ` style="--ring:${ring}"` : ''}>${inner}</span>`;
+const kport = (id: string): string => `<img src="${portraitUrl(id)}" alt="" draggable="false">`;
+const enemyArt = (kind: EnemyKind): string => ENEMY_PORTRAIT[kind] ? kport(ENEMY_PORTRAIT[kind]!) : `<svg class="kgly" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BOSS_GLYPH[kind] ?? ''}</svg>`;
+const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
+
+/** 2D Kodex tab (`js/panels.js` invTab 'kodex'): sections Gegner, Endgegner, Bewohner, Legendäre Funde,
+ * Sets, Elite-Gegner; each entry a card with a 64 px portrait or icon. Entries fill on the first kill or
+ * find (`sim.inventory.kodex`). */
 export function kodexHtml(s: Sim): string {
   const k = s.inventory.kodex ?? { kills: {}, found: {} };
-  const row = (known: boolean, name: string, text: string, side = '', icon = ''): string => `<div class="kx${known ? '' : ' off'}">${icon}<div><b>${known ? esc(name) : '???'}</b><small>${known ? text : 'Noch nicht begegnet'}</small></div>${known && side ? `<span>${side}</span>` : ''}</div>`;
+  const card = (img: string, name: string, nameColor: string, text: string, side = ''): string => `<div class="kx">${img}<div><div class="un"${nameColor ? ` style="color:${nameColor}"` : ''}>${name}</div><div class="ud">${text}</div></div>${side ? `<span class="ud">${side}</span>` : ''}</div>`;
   const weak = (kind: EnemyKind): string => { const r = ENEMIES[kind].res; if (r === 'none') return ''; const t = ENEMY_RESISTANCES[r]; return (Object.keys(t) as Array<keyof typeof t>).filter(e => (t[e] ?? 1) > 1.2).map(e => `<span style="color:${ELEMENTS[e].color}">${ELEMENTS[e].name}</span>`).join(' '); };
-  const enemies = NORMAL.map(e => row(!!k.kills[e], ENEMIES[e].name, ENEMY_TEXT[e] ?? '', weak(e))).join('');
-  const bosses = BOSSES.map(e => row(!!k.kills[e], ENEMIES[e].name, `${ENEMY_TEXT[e] ?? ''} Besiegt: ${k.kills[e] ?? 0}`, weak(e))).join('');
-  const surv = SURVIVORS.filter(v => s.statContext.survivors[v.id]).length;
-  const survivors = SURVIVORS.map(v => `<div class="kx${s.statContext.survivors[v.id] ? '' : ' off'}"><div><b style="${s.statContext.survivors[v.id] ? `color:${v.color}` : ''}">${s.statContext.survivors[v.id] ? esc(v.name) : '???'}</b><small>${esc(v.description)}</small></div><span>${s.statContext.survivors[v.id] ? 'Gerettet' : 'Vermisst'}</span></div>`).join('');
+  const DIM = 'var(--dim)', unk = '???';
+  const enemies = NORMAL.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? '' : DIM, o ? esc(ENEMY_TEXT[e] ?? '') : 'Noch nicht begegnet', o ? weak(e) : ''); }).join('');
+  const bosses = BOSSES.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? 'var(--ember)' : DIM, o ? `${esc(ENEMY_TEXT[e] ?? '')} Besiegt: ${k.kills[e]}` : 'Noch nicht besiegt', o ? weak(e) : ''); }).join('');
+  const has = (id: SurvivorId): boolean => !!s.statContext.survivors[id];
+  const survivors = SURVIVORS.map(v => card(kimg(kport(SURVIVOR_PORTRAIT[v.id]), has(v.id) ? 'on' : 'dim'), has(v.id) ? esc(v.name) : unk, has(v.id) ? 'var(--good)' : DIM, esc(v.description), has(v.id) ? `<span class="ok">${esc(STATIONS.find(st => st.npc === v.id)?.name ?? 'Im Lager')}</span>` : 'Vermisst')).join('');
   const legs = Object.keys(LEGENDARY_POWERS) as LegendaryId[], nLeg = legs.filter(b => k.found[b]).length;
-  const legRows = legs.map(b => { const f = !!k.found[b], slot: SlotId = 'w'; return `<div class="kx${f ? '' : ' off'}"><span class="kico" style="--rarity:${RARITIES[3].color}">${f ? itemIcon({ base: b, slot }) : ''}</span><div><b style="${f ? `color:${RARITIES[3].color}` : ''}">${f ? esc(BASE_NAME[b] ?? b) : '???'}</b><small>${f ? esc(LEGENDARY_POWERS[b].description) : 'Noch nicht gefunden'}</small></div></div>`; }).join('');
-  const sets = (Object.keys(SETS) as SetId[]).map(id => { const S = SETS[id], ps = Object.entries(S.pieces) as Array<[SlotId, { base: string }]>, n = ps.filter(([, p]) => k.found[p.base]).length; return `<div class="kx"><span class="kset">${ps.map(([slot, p]) => `<span class="kico${k.found[p.base] ? '' : ' off'}" style="--rarity:${SET_COLOR}">${itemIcon({ base: p.base, slot })}</span>`).join('')}</span><div><b style="color:${SET_COLOR}">${S.name} · ${n}/${ps.length} gefunden</b><small>(2) ${S.bonusDescriptions[2]} · (3) ${S.bonusDescriptions[3]} · (5) ${S.bonusDescriptions[5]}</small></div></div>`; }).join('');
-  const elites = ELITE_MODS.map(m => row(!!k.kills[`e:${m}`], ELITES[m].name, ELITES[m].hint)).join('');
-  return `<h3>Gegner</h3><div class="cols2">${enemies}</div><h3>Endgegner</h3><div class="cols2">${bosses}</div><h3>Elite-Gegner</h3><div class="cols2">${elites}</div><h3>Bewohner ${surv} von ${SURVIVORS.length}</h3><div class="cols2">${survivors}</div><h3>Legendäre Funde ${nLeg} von ${legs.length}</h3><div class="cols2">${legRows}</div><h3>Sets</h3><div class="cols2">${sets}</div>`;
+  const legRows = legs.map(b => { const f = !!k.found[b]; return card(kimg(itemIcon({ base: b, slot: 'w' }), f ? 'on' : 'dim', '', ' kitem'), f ? esc(BASE_NAME[b] ?? b) : unk, f ? RARITIES[3].color : DIM, f ? esc(LEGENDARY_POWERS[b].description) : 'Noch nicht gefunden'); }).join('');
+  const sets = (Object.keys(SETS) as SetId[]).map(id => { const S = SETS[id], ps = Object.entries(S.pieces) as Array<[SlotId, { base: string }]>, n = ps.filter(([, p]) => k.found[p.base]).length; return card(`<span class="kset">${ps.map(([slot, p]) => kimg(itemIcon({ base: p.base, slot }), k.found[p.base] ? 'on' : 'dim', '', ' kitem')).join('')}</span>`, `${esc(S.name)} · ${n}/${ps.length} gefunden`, SET_COLOR, `(2) ${esc(S.bonusDescriptions[2])} · (3) ${esc(S.bonusDescriptions[3])} · (5) ${esc(S.bonusDescriptions[5])}`); }).join('');
+  const elites = ELITE_MODS.map(m => { const o = !!k.kills[`e:${m}`], c = hex(ELITES[m].color); return card(kimg(kport('E02'), o ? 'on' : 'sil', o ? c : ''), o ? esc(ELITES[m].name) : unk, o ? c : DIM, o ? esc(ELITES[m].hint) : 'Noch nicht begegnet'); }).join('');
+  const surv = SURVIVORS.filter(v => has(v.id)).length;
+  return `<div class="kodex"><div class="lbl">Gegner</div><div class="cols2">${enemies}</div><div class="lbl">Endgegner</div><div class="cols2">${bosses}</div><div class="lbl">Bewohner ${surv} von ${SURVIVORS.length}</div><p class="hint">Befreie Gefangene auf Expeditionen. Sie ziehen ins Lager, helfen dauerhaft und ermöglichen Stufe 2 ihrer Station.</p><div class="cols2">${survivors}</div><div class="lbl">Legendäre Funde ${nLeg} von ${legs.length}</div><div class="cols2">${legRows}</div><div class="lbl">Sets</div><div class="cols2">${sets}</div><div class="lbl">Elite-Gegner</div><div class="cols2">${elites}</div></div>`;
 }

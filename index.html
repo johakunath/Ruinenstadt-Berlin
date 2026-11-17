@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b1a1d" />
+    <meta name="theme-color" content="#17110d" />
     <title>Ruinenstadt Berlin</title>
     <link rel="icon" href="data:," />
   </head>
@@ -54,21 +54,8 @@
       <button id="btn-attack" type="button">Schlag</button>
     </div>
 
-    <div id="title" class="overlay">
-      <div class="panel">
-        <h1>Ruinenstadt<span>Berlin</span></h1>
-        <p class="sub" id="title-sub">Köpenick bei Nacht</p>
-        <button id="resume" type="button" class="primary" hidden disabled>Weiter</button>
-        <button id="play" type="button" class="primary" disabled>Spielen</button>
-        <div id="title-diff" class="choices"></div>
-        <button id="go-tunnel" type="button" hidden><b>S3-Tunnel</b><small>Köpenick → Warschauer Straße</small></button>
-        <button id="open-camp" type="button">Lager</button>
-        <button id="open-options" type="button">Optionen</button>
-        <button id="new-game" type="button"><b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small></button>
-        <p id="loading">Lädt …</p>
-        <p class="keys">WASD laufen · Maus oder J schlagen · Leertaste rollen<br />E Kraft · R Ultimativ · Q Verband · G Molotow<br />Controller: A schlagen · B rollen · Y Kraft · LB Ultimativ · RB Verband · X Molotow</p>
-      </div>
-    </div>
+    <!-- U3 start screen, built by src/ui/start.ts before the game loads. -->
+    <div id="title" class="overlay"></div>
 
     <div id="dead" class="overlay" hidden>
       <div class="panel">
@@ -81,28 +68,9 @@
       </div>
     </div>
 
-    <div id="options" class="opt-tab" hidden>
-      <div class="opt-cols">
-      <div class="opt-col">
-        <div id="run-actions" class="choices"><button id="pause-finish" type="button" class="choice" hidden><b>Abschließen</b></button><button id="to-title" type="button" class="choice"><b>Hauptmenü</b><span>Gespeichert, Weiter möglich</span></button><button id="run-abort" type="button" class="choice"><b>Expedition abbrechen</b><span>Zurück auf Anfang</span></button></div>
-        <h3>Grafik</h3>
-        <div id="opt-profile" class="choices"></div>
-        <label class="row">Musik <input id="opt-music" type="checkbox" /></label>
-        <label class="row">Lautstärke <input id="opt-volume" type="range" min="0" max="100" /></label>
-        <label class="row">Vibration <input id="opt-rumble" type="checkbox" /></label>
-        <label class="row" id="fullscreen-row">Vollbild <input id="opt-fullscreen" type="checkbox" /></label>
-        <label class="row">Leistungsanzeige <input id="opt-perf" type="checkbox" /></label>
-        <label class="row">Spieldaten senden <input id="opt-telemetry" type="checkbox" /></label>
-        <div class="row" id="cloud-row" hidden>
-          <span><b>Online speichern</b><br /><small id="cloud-info"></small></span>
-          <span class="cloud-btns"><button id="cloud-copy" type="button" class="choice">Kopieren</button><button id="cloud-join" type="button" class="choice">Code eingeben</button><button id="cloud-toggle" type="button" class="choice"></button></span>
-        </div>
-      </div>
-      <div class="opt-col"><h3>Steuerung</h3><div id="controls"></div><p class="inv-hint" id="version"></p></div>
-      </div>
-    </div>
-
+    <!-- U3 fullscreen button, top right left of the pause button or the × of a menu. -->
+    <button id="fsb" type="button" aria-label="Vollbild" hidden></button>
     <pre id="perf" hidden></pre>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/boot.ts"></script>
   </body>
 </html>

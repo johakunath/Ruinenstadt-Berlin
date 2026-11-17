@@ -73,7 +73,8 @@ export class HeroPreview {
     const rim = new DirectionalLight(0x9fd6d0, 1.6);
     rim.position.set(-2, 2, -2.5);
     this.scene.add(key, rim, new HemisphereLight(0xdfeeff, 0x3a3020, 1.1));
-    this.scene.background = new Color(0x1d2427);
+    // U3: the dark brown of the 2D menu, so the doll sits in the panel.
+    this.scene.background = new Color(0x1a130e);
     this.camera.position.set(0, 1.0, 4.4);
     this.camera.lookAt(0, 0.93, 0);
     this.bindInput();

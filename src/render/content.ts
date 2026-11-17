@@ -76,6 +76,16 @@ export class ContentView {
   private captive: { root: Group; anim: Animator; ring: Mesh } | null = null;
   /** One Späti keeper, standing behind the counter of the nearest Späti. */
   private keeper: { root: Group; anim: Animator } | null = null;
+  /** Talk spots (playtest 2026-11-17): a ring on the ground where the trade can start; it brightens in reach. */
+  private readonly talkRings = [0, 1].map(() => {
+    const g = new Group();
+    const ring = flat(new RingGeometry(0.9, 1, 48), 0xf2cc83, 0.5);
+    const fill = flat(new CircleGeometry(0.9, 48), 0xf2cc83, 0.08);
+    ring.position.y = fill.position.y = 0.06;
+    g.add(ring, fill);
+    g.visible = false;
+    return { g, ring, fill };
+  });
   private built: RunContent | null = null;
   private time = 0;
 
@@ -122,6 +132,7 @@ export class ContentView {
       this.group.add(g);
     }
     this.group.add(this.people);
+    for (const r of this.talkRings) this.group.add(r.g);
   }
 
   /** Hidden blessings and shrines of this run (positions are fixed for the run). */
@@ -272,6 +283,28 @@ export class ContentView {
       k.root.rotation.y = shop.rot + Math.max(-0.9, Math.min(0.9, d));
       k.anim.update(dt);
     } else if (this.keeper) this.keeper.root.visible = false;
+    // Talk rings, person-sized (Johannes 2026-11-17): around the trader, and the Späti customer spot.
+    // Reach (CONTENT.*.touch) is a little larger than the ring so standing on it always works.
+    const spots: Array<{ x: number; z: number; r: number; on: boolean }> = [];
+    if (c.trader) spots.push({ x: c.trader.x, z: c.trader.z, r: 1, on: c.talk === -1 });
+    let best = -1;
+    let bestD = 45;
+    s.level.rests.forEach((r, i) => {
+      if (!r.desk) return;
+      const d = Math.hypot(r.desk.x - heroX, r.desk.z - heroZ);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    const desk = best >= 0 ? s.level.rests[best]!.desk : undefined;
+    if (desk) spots.push({ x: desk.x, z: desk.z, r: 0.55, on: c.talk === best });
+    this.talkRings.forEach((t, i) => {
+      const o = spots[i];
+      t.g.visible = !!o && !c.tradeOpen;
+      if (!o) return;
+      t.g.position.set(o.x, groundY(o.x, o.z), o.z);
+      t.g.scale.setScalar(o.r);
+      (t.ring.material as MeshBasicMaterial).opacity = o.on ? 0.85 : 0.35 + 0.15 * Math.sin(this.time * 3);
+      (t.fill.material as MeshBasicMaterial).opacity = o.on ? 0.16 : 0.05;
+    });
     if (c.captive) {
       if (!this.captive) {
         const p = this.person('captive');

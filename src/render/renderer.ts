@@ -6,7 +6,7 @@ import { heroLook } from '../data/hero-look';
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
   SphereGeometry, Vector3,
-  WebGLRenderer, type Texture,
+  WebGLRenderer, type Object3D, type Texture,
 } from 'three';
 import { HIT_FEEL } from '../data/combat';
 import { lerp } from '../sim/math';
@@ -15,6 +15,7 @@ import { FollowCamera } from './camera';
 import { LandmarkReveal } from './reveal';
 import { HeroView, loadCharacters, type CharacterAssets } from './characters';
 import { EnemyView } from './enemies';
+import { ENEMY_LAYER } from './layers';
 import { threatShake } from './threats';
 import type { BodyKind } from '../data/enemies';
 import { HitDebug, PerfStats } from './debug';
@@ -91,6 +92,8 @@ export class GameRenderer {
   private readonly content: ContentView;
   private readonly hero: HeroView;
   private readonly views = new Map<number, EnemyView>();
+  /** V1: living enemies nearest the hero, for their contour behind buildings (half height in m). */
+  private outlined: Array<{ root: Object3D; size: number; d: number }> = [];
   /** Spare views per body rig. */
   private readonly pool = new Map<BodyKind, EnemyView[]>();
   private readonly debug: HitDebug | null;
@@ -132,10 +135,21 @@ export class GameRenderer {
     this.scene.add(this.fx.group, this.loot.group, this.content.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
-    // R1: the hero outline tests occluders against a sphere around the hero and her weapon: the spear
-    // tip reaches about 2.5 m from her axis in a thrust (arm 0.7 m, tip 1.8 m from the hand).
+    // R1: the hero outline tests occluders against a sphere around the hero and her weapon. C1: in the
+    // Melee_Hook lunge the hand is 1.4 m ahead and the spear tip 2 m further, low (about 3.45 m from the center).
     const hero = this.hero.root;
-    this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look, (out) => out.set(out.center.set(hero.position.x, hero.position.y + 1.1, hero.position.z), 2.7));
+    // V1: enemies behind buildings get a red contour; spheres around the nearest living ones.
+    this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look, (out) => out.set(out.center.set(hero.position.x, hero.position.y + 1.1, hero.position.z), 3.5), (out) => {
+      let n = 0;
+      for (const v of this.outlined) {
+        if (n >= out.length) break;
+        const r = v.root.position;
+        const o = out[n++]!;
+        o.center.set(r.x, r.y + v.size, r.z);
+        o.radius = v.size * 1.3;
+      }
+      return n;
+    });
     this.resize();
   }
 
@@ -161,10 +175,18 @@ export class GameRenderer {
     return new HeroPreview(this.renderer, this.assets, this.materials, read);
   }
 
+  /** Akkusparen: at most 1× pixel ratio (main.ts also caps the frame rate). */
+  private eco = false;
+  setEco(on: boolean): void {
+    if (on === this.eco) return;
+    this.eco = on;
+    this.resize();
+  }
+
   resize(): void {
     const w = Math.max(1, window.innerWidth);
     const h = Math.max(1, window.innerHeight);
-    const dpr = Math.min(window.devicePixelRatio || 1, this.opts.profile.maxDpr);
+    const dpr = Math.min(window.devicePixelRatio || 1, this.eco ? 1 : this.opts.profile.maxDpr);
     this.height = h * dpr;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
@@ -307,6 +329,7 @@ export class GameRenderer {
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();
     const profile = this.opts.profile;
+    const live: Array<{ root: Object3D; size: number; d: number }> = [];
     for (const e of sim.enemies) {
       seen.add(e.id);
       let view = this.views.get(e.id);
@@ -314,6 +337,7 @@ export class GameRenderer {
         view = this.pool.get(e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows);
         if (!view.root.parent) this.scene.add(view.root);
         view.assign(e);
+        view.root.traverse((o) => { if ((o as Mesh).isMesh) o.layers.enable(ENEMY_LAYER); });
         this.views.set(e.id, view);
       }
       let skip = 0;
@@ -322,7 +346,13 @@ export class GameRenderer {
         skip = d > profile.animThirdRateFrom ? 2 : d > profile.animHalfRateFrom ? 1 : 0;
       }
       view.update(e, alpha, dt, frozen, skip);
+      if (e.state !== 'dead') {
+        const b = e.def.body;
+        live.push({ root: view.root, size: b === 'rex' ? 2.4 : b === 'raptor' ? 1.1 : b === 'crow' ? 0.6 : e.def.scale, d: Math.hypot(e.x - p.x, e.z - p.z) });
+      }
     }
+    live.sort((a, b) => a.d - b.d);
+    this.outlined = live;
     for (const [id, view] of this.views) {
       if (seen.has(id)) continue;
       this.views.delete(id);
@@ -344,7 +374,7 @@ export class GameRenderer {
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);
-    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap);
+    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap, this.hero.thrustTipY());
     this.weather.update(dt, px, pz, this.time);
     this.debug?.update(sim, alpha);
 
