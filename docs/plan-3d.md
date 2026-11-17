@@ -118,7 +118,7 @@ Godot, Rapier, lightmaps, import of 2D saves.
 |---|---|
 | Gate 1 kickoff (setup, scene, look variants) | Fable 5.2 if usage allows, else Opus 5.5 high. Unverified whether Fable is better here; the first session makes many broad decisions at once |
 | Iterations, assets integration, tuning | Opus 5.5 high |
-| After gate 1 | Opus 5.5: high for look shaders and combat tuning, medium for docs, small fixes and routine changes. Fable 5.2 only if a session fails at a broad architectural step |
+| After gate 1 | Opus 5.5: high for look, shaders, combat feel and tuning, medium for docs, small fixes and routine changes. Fable 5.2 (high) for architecture steps, root causes that survived fixes, queue planning and task specs (`CLAUDE.md` › Model routing, 2026-11-17) |
 
 ## Getting started
 

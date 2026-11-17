@@ -36,7 +36,7 @@ Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now 
 - GitHub Actions minutes are limited: CI does not run per commit. Order: PR as draft, work, Codex review, fix, then mark ready (CI runs once on that head), then merge. A merge Johannes asks for does not wait for CI. Superseded runs are cancelled; `main` always runs (deploy).
 - Codex runs the checks a task names (`npm run check`, the e2e test once). No broad tuning or measurement passes; Claude does those.
 - Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule.
-- Model choice: Opus 5.5 high for look, shaders, combat feel and architecture; medium for docs, small fixes and routine changes (plan-3d.md › Model).
+- Model choice: `CLAUDE.md` › Model routing (Fable 5.2 decides and plans, Opus 5.5 builds); repo specifics in plan-3d.md › Model.
 
 ## Lessons (session 2026-11-16/17)
 

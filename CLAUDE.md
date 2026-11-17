@@ -12,6 +12,22 @@
 - Stack: Three.js (WebGL 2), TypeScript strict, Vite, Vitest, Playwright. Versions are pinned exactly in `package.json`. No React, no ECS, no physics engine.
 - Game text is German, short: a few words or one line. Code, comments and docs are English.
 
+## Model routing (Johannes, 17.11.2026)
+
+Fable 5.2 is scarce (lower limit, access may end): spend it where it is clearly better, and write its results into the repo so Opus can build from them later. Claude models only; Codex roles stay as they are.
+
+| Model | Use for | Not for |
+|---|---|---|
+| Fable 5.2, effort `high` | Architecture and primary decisions; root cause of a bug that survived fixes; planning, splitting and ordering queue tasks; specs for complex items; strategy and trade-off questions; reviewing a plan before it is built | Routine coding, UI and visual design, final prose |
+| Opus 5.5, effort `medium`, `high` for hard code or look | Coding, UI, mockups and visual design, final text (docs, task files, PR bodies, German game text), long execution of an approved plan | An open architecture fork that already failed once |
+| Sonnet 5.5 | Small, fully specified changes: mechanical edits, doc touch-ups, small fixes | Judgment across several files |
+| Haiku 5.5 | Read-only searches and lookups in subagents | Edits |
+
+1. **Check before the first step.** Name your model (system prompt; in cloud sessions `get_session` → `session_context.model`) and compare it with the task. Clear mismatch: stop, tell Johannes in one line (task, better model, why) and wait. Borderline: say so in one line and continue.
+2. **Fable sessions** decide and write down: every decision, plan and spec goes into the task file, `docs/migration.md` or `docs/plan-3d.md` before the session ends. Keep notes short; Opus writes the final text. Large, well-specified implementation goes to an Opus subagent (`model: opus`) instead of Fable coding it.
+3. **Opus sessions** that hit an architecture fork, or a bug still open after two fix attempts, stop and recommend a Fable pass (or `/advisor fable` where available).
+4. **Record the model** on every work item you create or refine: the task title tag, e.g. `[Claude · Fable high]`, `[Claude · Opus high]` (`docs/workflow.md`); repo-specific choices in `docs/plan-3d.md` › Model.
+
 ## Architecture
 
 | Folder | Rule |
