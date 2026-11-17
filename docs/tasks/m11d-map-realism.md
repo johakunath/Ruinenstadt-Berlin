@@ -50,4 +50,12 @@ Johannes walks zone 0 and the street reads as a Berlin street.
 
 ## Handover (Opus 5.5, 2026-11-17)
 - Step 2 for the two decided streets: `Street.profile` (`haupt`, `allee`) and `sidewalk`. Bahnhofstraße north of the bridge 14 m (lane dashes beside the tram, parking lines), Spreeufer 12 m with tram on a raised grass track and low curbs. Paved 3 m sidewalks, trees in pits every 9 m (not in fight circles or on the station forecourt), buildings behind the sidewalk. The Dammbrücke part keeps 7.5 m (bridge deck). Screens: `docs/proof/m11d/`.
-- Open: step 0 (water level), 3 (non-rectangular footprints), 4 (closed edge), 5 (hand-built zone 0), 6 (landmarks); other streets stay on the old profile until Johannes picks for them.
+- Open: step 0 (water level), 3 (non-rectangular footprints), 5 (hand-built zone 0), 6 (landmarks); other streets stay on the old profile until Johannes picks for them.
+
+## Handover step 4 (Opus 5.5, 2026-11-17)
+- Closed map edge: `edgeRuns`, `edgeProps`, `edgeBackdrop` in `src/data/map.ts` replace the construction fence and roadblocks. The bound is classified every 0.5 m (water, rail, street running out, else the style of the area 6 m inside); front pieces 4 to 10 m long stand 1.6 to 3.2 m inside (`EDGE_FRONT`, `src/data/courtyard.ts`) and draw only behind their face (`src/render/props-edge.ts`). Other generated props keep 3.8 m off the bound.
+- Beyond the bound (`src/render/map-world.ts`): ground skirt 55 m out on every non-water run, taller blocks (2 rows on the north bound), houses and tree rows, the rail embankment runs on. Nothing beyond the south bound.
+- Tests (`src/data/koepenick.test.ts`): every land point by the bound is inside a front collider, flood fill in the outer 12 m never gets closer than 1.5 m, street ends are barricaded across their width, fronts match their area, colliders start at the face, backdrop outside and dry.
+- 2D had nothing to reuse (its map clamps at the border).
+- Seen in game: the north town row (behind the rail) reads as a city that goes on; forest, jungle and hedge fronts sit at the side of the screen and read as dense growth, close to the normal forest. Köpenick's only street end (Bahnhofstraße) is hidden under the S-Bahnhof. Screens: `docs/proof/m11d/edge-*.jpg` (suburb with a debug camera, barricade at a test spot).
+- Found, not changed: the camera frame (`renderer.ts`, maxZ − 14) lets the hero walk about 7 m below the bottom of the screen along the south bound.

@@ -10,7 +10,7 @@ import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { onFerryPier } from '../sim/ferry';
-import { propCollider, type Prop } from './courtyard';
+import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
 import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, type SpecialKind } from './lots';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
 
@@ -682,7 +682,8 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
     (r > 0.6 && lotFront(lots, x, z, r)) ||
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
     m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
-    m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r);
+    m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r) ||
+    edgeDist(m, x, z) < EDGE_CLEAR + r;
   // Street lamps (Johannes 2026-11-16): evenly spaced along each street, right at the curb, one
   // side on side streets and staggered on both sides of main streets, plus corner lamps where streets
   // meet or bend. Only about a third still work; the rest are dark and bent.
@@ -833,7 +834,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         if (onBridge(m, x, z, 3) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 2.5)) continue;
         // On the street, so only props and other cars can be in the way (lots stand behind the curb).
         if (m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < 5) || m.terraces.some((tr) => polyEdgeDist(tr.poly, x, z) < 3 || onStair(tr, x, z, 3) !== null)) continue;
-        if (isWater(m, x, z) || lotFront(lots, x, z, 2.2) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 3.4) || m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + 2 && Math.abs(z - l.z) < l.hz + 2)) continue;
+        if (isWater(m, x, z) || edgeDist(m, x, z) < EDGE_CLEAR + 2.2 || lotFront(lots, x, z, 2.2) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 3.4) || m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + 2 && Math.abs(z - l.z) < l.hz + 2)) continue;
         if (rng.next() < 0.75) props.push({ kind: 'car', x, z, rot: along + (rng.next() < 0.5 ? Math.PI : 0) + (stray ? rng.range(-0.6, 0.6) : rng.range(-0.05, 0.05)), size: 1 });
       }
       // Benches, bins and crates on the sidewalk where buildings front the street.
@@ -868,30 +869,10 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
-  // No invisible walls (Johannes, 2026-11-15): where land meets the map edge a construction fence
-  // stands 1 m inside it, with concrete roadblocks where a street runs out. Water edges stay open.
-  const B = m.bounds;
-  const EDGE = 1.0;
-  const PANEL = 3.4;
-  for (const [x0, z0, x1, z1] of [[B.minX, B.minZ, B.maxX, B.minZ], [B.maxX, B.minZ, B.maxX, B.maxZ], [B.maxX, B.maxZ, B.minX, B.maxZ], [B.minX, B.maxZ, B.minX, B.minZ]] as Array<[number, number, number, number]>) {
-    const len = Math.hypot(x1 - x0, z1 - z0);
-    const dx = (x1 - x0) / len;
-    const dz = (z1 - z0) / len;
-    // Inward normal of a clockwise rectangle in XZ (+Z south).
-    const nx = -dz;
-    const nz = dx;
-    // Prop local X runs along the edge: (cos rot, -sin rot) = (dx, dz).
-    const rot = Math.atan2(-dz, dx);
-    for (let t = EDGE + PANEL / 2; t < len - EDGE; t += PANEL) {
-      const x = x0 + dx * t + nx * EDGE;
-      const z = z0 + dz * t + nz * EDGE;
-      // Skip only panels fully in the water, so the fence reaches every bank.
-      const wet = (k: number): boolean => isWater(m, x + dx * k, z + dz * k) && !onBridge(m, x + dx * k, z + dz * k);
-      if (wet(0) && wet(-PANEL / 2) && wet(PANEL / 2)) continue;
-      const kind = streetDist(m, x, z).d < 1.5 ? 'barrier' : 'bauzaun';
-      props.push({ kind, x, z, rot, size: PANEL });
-    }
-  }
+  // No invisible walls (Johannes, 2026-11-15) and closed fronts (M11d step 4, 2026-11-17): where land
+  // meets the map edge, building rows, rubble walls, hedges or thickets close it; streets end in a
+  // barricade; water edges stay open (`edgeProps`).
+  props.push(...edgeProps(m));
   for (const p of m.fixedProps) if (!isWater(m, p.x, p.z) || onBridge(m, p.x, p.z)) props.push(p);
   // M11c lot type props (lights keep their same-kind spacing).
   for (const l of lots) for (const p of l.content?.props ?? []) if (!sameKindClash(props, p.kind, p.x, p.z)) props.push(p);
@@ -910,7 +891,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       const c = (a0 + a1) / 2;
       const x = l.x + fx * (l.d / 2 + 1.4) + ux * c;
       const z = l.z + fz * (l.d / 2 + 1.4) + uz * c;
-      if (streetDist(m, x, z).d < 0.4 || isWater(m, x, z) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + L / 2)) continue;
+      if (streetDist(m, x, z).d < 0.4 || isWater(m, x, z) || edgeDist(m, x, z) < EDGE_CLEAR + L / 2 || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + L / 2)) continue;
       props.push({ kind: 'fence', x, z, rot: l.rot, size: L });
     }
   }
@@ -1088,7 +1069,7 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
               const z = placed[1] + Math.cos(a) * d;
               const k = rng.pick(extraKinds);
               if (sameKindClash(props, k, x, z)) continue;
-              if (streetDist(m, x, z).d < 0.3 || isWater(m, x, z) || inFight(x, z) || (k !== 'candles' && hit(x, z, 0.5))) continue;
+              if (streetDist(m, x, z).d < 0.3 || isWater(m, x, z) || inFight(x, z) || edgeDist(m, x, z) < EDGE_CLEAR || (k !== 'candles' && hit(x, z, 0.5))) continue;
               if (lots.some((l) => l.kind !== 'tree' && l.kind !== 'special' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
               add(k, x, z, rng.range(0.5, 0.9));
             }
@@ -1099,7 +1080,7 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
         // off building footprints, water and other props.
         for (const dt of shuffled([0, 1.5, -1.5, 3, -3, 4.5, -4.5])) {
           const [x, z] = spot(dt, rng.pick([-1, 1]), rng.range(0.5, 0.8));
-          if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z)) continue;
+          if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z) || edgeDist(m, x, z) < EDGE_CLEAR) continue;
           if (lots.some((l) => l.kind !== 'tree' && l.kind !== 'special' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
           // Candles keep their gap; a barrel can stand anywhere.
           add(sameKindClash(props, 'candles', x, z) ? 'fireBarrel' : 'candles', x, z, rng.range(0.6, 1.1));
@@ -1108,6 +1089,238 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
       }
     }
   }
+}
+
+// ---------------------------------------------------------------- closed map edge (M11d step 4)
+// Johannes 2026-11-17: the playable area ends at something that looks like the world goes on but is
+// closed. Per area: building backs and fire walls (Brandwände) or rubble walls of collapsed houses in
+// town, tall garden hedges in the suburbs, a dense thicket with fallen trees in forest and parks,
+// overgrowth in the jungle; a barricade where a street runs out; water stays open. Beyond the bound
+// a backdrop (taller building masses, tree rows; render only) keeps the camera from showing a void.
+
+/** How land is closed at the map edge. */
+export type EdgeStyle = 'town' | 'suburb' | 'wild' | 'jungle';
+export type EdgeClass = EdgeStyle | 'street' | 'water' | 'rail';
+
+/** Generated props keep this far from the bound (the edge fronts stand in this band). */
+export const EDGE_CLEAR = 3.8;
+/** Sample step along the bound when classifying it. */
+const EDGE_STEP = 0.5;
+/** Front piece length per style (meters along the edge). */
+const EDGE_SEG: Record<EdgeStyle, [number, number]> = { town: [6, 10], suburb: [4, 7], wild: [4, 7], jungle: [4, 7] };
+const EDGE_KIND: Record<EdgeStyle, Prop['kind']> = { town: 'brandwand', suburb: 'edgeHedge', wild: 'thicket', jungle: 'overgrowth' };
+
+/** One side of the bound, walked clockwise (+Z south): start, direction, inward normal, prop facing. */
+export interface EdgeSide { i: number; x0: number; z0: number; dx: number; dz: number; nx: number; nz: number; len: number; rot: number }
+
+/** North, east, south, west. Prop `rot` = side `rot` puts local X along the side and local +Z inward. */
+export function edgeSides(m: MapDef): EdgeSide[] {
+  const B = m.bounds;
+  const corners: Array<[number, number, number, number]> = [[B.minX, B.minZ, B.maxX, B.minZ], [B.maxX, B.minZ, B.maxX, B.maxZ], [B.maxX, B.maxZ, B.minX, B.maxZ], [B.minX, B.maxZ, B.minX, B.minZ]];
+  return corners.map(([x0, z0, x1, z1], i) => {
+    const len = Math.hypot(x1 - x0, z1 - z0), dx = (x1 - x0) / len, dz = (z1 - z0) / len;
+    return { i, x0, z0, dx, dz, nx: -dz, nz: dx, len, rot: Math.atan2(-dz, dx) };
+  });
+}
+
+/** The point `t` meters along side `s` and `d` meters inside the bound (negative: outside). */
+export function sidePt(s: EdgeSide, t: number, d: number): Pt {
+  return [s.x0 + s.dx * t + s.nx * d, s.z0 + s.dz * t + s.nz * d];
+}
+
+/** Distance from (x, z) to the nearest map bound (negative outside). */
+export function edgeDist(m: MapDef, x: number, z: number): number {
+  const B = m.bounds;
+  return Math.min(x - B.minX, B.maxX - x, z - B.minZ, B.maxZ - z);
+}
+
+/** Closure style of the land at (x, z), from its area: town ground or Altbau frontage, house frontage, jungle, else wild. */
+export function edgeStyleAt(m: MapDef, x: number, z: number): EdgeStyle {
+  const a = areaAt(m, x, z);
+  const g = a?.ground ?? m.defaultGround;
+  if (g === 'jungle' || a?.jungle) return 'jungle';
+  if (g === 'cobbles' || g === 'asphalt' || (a?.frontage != null && a.frontage !== 'house')) return 'town';
+  return a?.frontage === 'house' ? 'suburb' : 'wild';
+}
+
+export interface EdgeRun { side: EdgeSide; t0: number; t1: number; kind: EdgeClass }
+
+const LAND: ReadonlySet<EdgeClass> = new Set<EdgeClass>(['town', 'suburb', 'wild', 'jungle']);
+
+/**
+ * The bound split into runs of one class. Water where the edge strip is wet; the rail embankment
+ * closes itself; a street that runs out across the edge (not one along it) gets 1.2 m extra each
+ * side; land reaches 1.5 m into the water so every bank is closed; land pieces under 3 m join a
+ * neighbour (no flicker where areas meet).
+ */
+export function edgeRuns(m: MapDef): EdgeRun[] {
+  const out: EdgeRun[] = [];
+  for (const s of edgeSides(m)) {
+    const n = Math.ceil(s.len / EDGE_STEP);
+    const lab: EdgeClass[] = [];
+    const dir = { x: 0, z: 0 };
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) * EDGE_STEP;
+      const wet = (d: number): boolean => {
+        const [x, z] = sidePt(s, t, d);
+        return isWater(m, x, z) && !onBridge(m, x, z);
+      };
+      const [fx, fz] = sidePt(s, t, 2);
+      if (wet(0.3) && wet(2.5)) lab.push('water');
+      else if (m.rail && Math.abs(fz - m.rail.z) < 3.5 && fx > m.rail.minX - 1 && fx < m.rail.maxX + 1) lab.push('rail');
+      else if (streetDist(m, fx, fz, dir).d < 0.8 && Math.abs(dir.x * s.dx + dir.z * s.dz) < 0.75) lab.push('street');
+      else {
+        const [ax, az] = sidePt(s, t, 6);
+        lab.push(edgeStyleAt(m, ax, az));
+      }
+    }
+    // Street ends 1.2 m wider on both sides.
+    const pad = Math.round(1.2 / EDGE_STEP);
+    const street = lab.map((c) => c === 'street');
+    street.forEach((on, i) => {
+      if (!on) return;
+      for (let k = Math.max(0, i - pad); k <= Math.min(n - 1, i + pad); k++) if (lab[k] !== 'water') lab[k] = 'street';
+    });
+    // Land 1.5 m into the water.
+    const reach = Math.round(1.5 / EDGE_STEP);
+    const base = [...lab];
+    for (let i = 0; i < n; i++) {
+      if (base[i] !== 'water') continue;
+      for (let k = 1; k <= reach; k++) {
+        const near = [base[i - k], base[i + k]].find((c) => c !== undefined && LAND.has(c));
+        if (near) {
+          lab[i] = near;
+          break;
+        }
+      }
+    }
+    // Runs; short land runs take a land neighbour's style.
+    const runs: Array<{ i0: number; i1: number; kind: EdgeClass }> = [];
+    for (let i = 0; i < n; i++) {
+      const last = runs[runs.length - 1];
+      if (last && last.kind === lab[i]) last.i1 = i;
+      else runs.push({ i0: i, i1: i, kind: lab[i] as EdgeClass });
+    }
+    for (let k = 0; k < runs.length; k++) {
+      const r = runs[k]!;
+      if (!LAND.has(r.kind) || (r.i1 - r.i0 + 1) * EDGE_STEP >= 3) continue;
+      const nb = [runs[k - 1], runs[k + 1]].find((o) => o && LAND.has(o.kind));
+      if (nb) r.kind = nb.kind;
+    }
+    const merged: typeof runs = [];
+    for (const r of runs) {
+      const last = merged[merged.length - 1];
+      if (last && last.kind === r.kind) last.i1 = r.i1;
+      else merged.push({ ...r });
+    }
+    for (const r of merged) out.push({ side: s, t0: r.i0 === 0 ? 0 : r.i0 * EDGE_STEP, t1: r.i1 === n - 1 ? s.len : (r.i1 + 1) * EDGE_STEP, kind: r.kind });
+  }
+  return out;
+}
+
+/**
+ * The edge fronts: pieces laid end to end along every land run (their colliders overlap, see
+ * `EDGE_FRONT`), a barricade with a construction lamp across every street end, fallen trees in front
+ * of thickets now and then. Town pieces on the south bound (between hero and camera) are rubble
+ * walls only, so no tall wall hides the hero. Own random stream.
+ */
+export function edgeProps(m: MapDef, runs: EdgeRun[] = edgeRuns(m)): Prop[] {
+  const rng = new Rng(m.seed + 4021);
+  const props: Prop[] = [];
+  for (const r of runs) {
+    const s = r.side;
+    const len = r.t1 - r.t0;
+    if (r.kind === 'water' || r.kind === 'rail') continue;
+    if (r.kind === 'street') {
+      const t = (r.t0 + r.t1) / 2;
+      const front = EDGE_FRONT.barricade ?? 3;
+      const [x, z] = sidePt(s, t, front);
+      props.push({ kind: 'barricade', x, z, rot: s.rot, size: len });
+      // A construction lamp in front: the street end is lit and reads as closed on purpose.
+      const [lx, lz] = sidePt(s, t + rng.pick([-1, 1]) * Math.max(0, len / 2 - 1.5), front + 1.2);
+      props.push({ kind: 'workLamp', x: lx, z: lz, rot: s.rot, size: 1 });
+      continue;
+    }
+    const [lo, hi] = EDGE_SEG[r.kind];
+    const southBound = s.nz < -0.5;
+    for (let t = r.t0; t < r.t1 - 1e-6; ) {
+      let l = Math.min(rng.range(lo, hi), r.t1 - t);
+      if (r.t1 - t - l < lo) l = r.t1 - t;
+      const kind = r.kind === 'town' && (southBound || rng.next() < 0.33) ? 'rubbleWall' : EDGE_KIND[r.kind];
+      const [x, z] = sidePt(s, t + l / 2, EDGE_FRONT[kind] ?? 2);
+      props.push({ kind, x, z, rot: s.rot, size: l });
+      t += l;
+    }
+    if (r.kind !== 'wild' && r.kind !== 'jungle') continue;
+    // Fallen trees lie along the thicket, touching its collider (no gap between).
+    const front = EDGE_FRONT[EDGE_KIND[r.kind]] ?? 2.4;
+    for (let t = r.t0 + rng.range(6, 20); t < r.t1 - 5; t += rng.range(18, 32)) {
+      const l = rng.range(5.5, 8.5);
+      if (t - l / 2 < r.t0 + 1 || t + l / 2 > r.t1 - 1) continue;
+      const [x, z] = sidePt(s, t, front + 0.45);
+      const ends = [sidePt(s, t - l / 2, front + 0.45), sidePt(s, t + l / 2, front + 0.45), [x, z] as Pt];
+      if (ends.some(([px, pz]) => isWater(m, px, pz) || streetDist(m, px, pz).d < 3 || m.encounters.some((e) => Math.hypot(px - e.x, pz - e.z) < e.r + 3))) continue;
+      if (m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < l) || m.landmarks.some((lm) => Math.abs(x - lm.x) < lm.hx + l / 2 + 1 && Math.abs(z - lm.z) < lm.hz + l / 2 + 1)) continue;
+      props.push({ kind: 'fallenTree', x, z, rot: s.rot + rng.range(-0.1, 0.1), size: l });
+    }
+  }
+  return props;
+}
+
+/** A building mass beyond the bound (render only): `block` = Altbau back, `house` = suburban house. */
+export interface EdgeBlock { kind: 'block' | 'house'; x: number; z: number; rot: number; w: number; d: number; floors: number; seed: number }
+
+/**
+ * Silhouette depth beyond the bound (render only, no colliders): a second row of taller building
+ * masses behind town fronts, houses and trees behind suburban hedges, tree rows behind thickets,
+ * palms behind the jungle. The camera looks north, so the north bound gets one row more and the
+ * south bound none (it is never in view). Trees come as `Lot`s for the normal tree builder.
+ */
+export function edgeBackdrop(m: MapDef, runs: EdgeRun[] = edgeRuns(m)): { blocks: EdgeBlock[]; trees: Lot[] } {
+  const rng = new Rng(m.seed + 4099);
+  const blocks: EdgeBlock[] = [];
+  const trees: Lot[] = [];
+  const tree = (s: EdgeSide, t: number, d: number, w: number, jungle: boolean): void => {
+    const [x, z] = sidePt(s, t, d);
+    if (isWater(m, x, z)) return;
+    trees.push({ kind: 'tree', x, z, rot: 0, w, d: w, floors: 0, seed: rng.int(1e6), ...(jungle ? { jungle: true } : {}) });
+  };
+  for (const r of runs) {
+    const s = r.side;
+    if (s.nz < -0.5 || !LAND.has(r.kind)) continue;
+    const north = s.nz > 0.5;
+    if (r.kind === 'town') {
+      // Behind the 10 m deep front row: rows of 4 to 8 storeys, staggered.
+      const rows: Array<[number, number, number]> = north ? [[10, 3, 5], [24, 4, 7]] : [[10, 3, 5]];
+      for (const [back, f0, f1] of rows) {
+        for (let t = r.t0 + rng.range(-2, 2); t < r.t1; ) {
+          const w = rng.range(9, 16);
+          const d = rng.range(10, 13);
+          const [x, z] = sidePt(s, Math.min(t + w / 2, r.t1 - 1), -(back + d / 2));
+          blocks.push({ kind: 'block', x, z, rot: s.rot, w, d, floors: f0 + rng.int(f1 - f0 + 1), seed: rng.int(1e6) });
+          t += w + rng.range(0, 1.2);
+        }
+      }
+    } else if (r.kind === 'suburb') {
+      for (let t = r.t0 + rng.range(2, 8); t < r.t1 - 4; t += rng.range(14, 22)) {
+        const w = rng.range(7, 10);
+        const d = rng.range(7, 9);
+        const [x, z] = sidePt(s, t, -(4 + d / 2));
+        if (!isWater(m, x, z)) blocks.push({ kind: 'house', x, z, rot: s.rot + Math.PI, w, d, floors: rng.int(2), seed: rng.int(1e6) });
+        tree(s, t + w / 2 + rng.range(2, 4), -rng.range(2.5, 5), rng.range(4.5, 6.5), false);
+        tree(s, t + rng.range(-3, 3), -(10 + d + rng.range(0, 3)), rng.range(5, 7), false);
+      }
+    } else {
+      const jungle = r.kind === 'jungle';
+      const rows = north ? [2.5, 7.5, 12.5, 17.5] : [2.5, 7.5, 12.5];
+      rows.forEach((back, k) => {
+        for (let t = r.t0 + rng.range(0, 3) + (k % 2) * 2.5; t < r.t1; t += rng.range(5, 7)) {
+          tree(s, t + rng.range(-1, 1), -(back + rng.range(-1, 1)), jungle ? rng.range(3, 5) : rng.range(4.5, 7), jungle);
+        }
+      });
+    }
+  }
+  return { blocks, trees };
 }
 
 /** The sim side of a map. */

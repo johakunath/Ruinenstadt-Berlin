@@ -36,7 +36,9 @@ export interface Facade {
 
 export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights'
   // M11c lot types (render: `src/render/props-urban.ts`, `props-market.ts`, `vegetation.ts`).
-  | UrbanPropKind | MarketPropKind | PlantPropKind;
+  | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind;
+/** M11d step 4 closed map edge (render: `src/render/props-edge.ts`, placement: `edgeProps` in `map.ts`). */
+export type EdgePropKind = 'brandwand' | 'rubbleWall' | 'thicket' | 'overgrowth' | 'edgeHedge' | 'barricade' | 'fallenTree';
 export type UrbanPropKind = 'crane' | 'container' | 'scaffold' | 'rohbau' | 'pallets' | 'ticketMachine' | 'boom' | 'bikes' | 'clothesline' | 'gravestone' | 'wall' | 'lowWall' | 'slab' | 'girder';
 export type MarketPropKind = 'stall' | 'stallBroken' | 'spill' | 'shed' | 'gardenBed' | 'gnome' | 'jetty' | 'picket';
 export type PlantPropKind = 'bush' | 'topiary' | 'hedge' | 'flowers' | 'reeds';
@@ -110,9 +112,22 @@ export const COURTYARD = {
   ] as SpawnPoint[],
 };
 
+/**
+ * Closed map edge (M11d step 4): a front prop stands with its visible face on a line `EDGE_FRONT[kind]`
+ * meters inside the map bound, local +Z toward the playfield, local X along the edge, `size` = length.
+ * Everything it draws lies behind that face; its collider runs from the face to `EDGE_BEYOND` past the
+ * bound, so what blocks is exactly what is seen and neighbours (0.1 m overlap) leave no gap.
+ */
+export const EDGE_FRONT: Readonly<Partial<Record<PropKind, number>>> = { brandwand: 1.6, rubbleWall: 3, thicket: 2.4, overgrowth: 2.6, edgeHedge: 1.6, barricade: 3.2 };
+export const EDGE_BEYOND = 1.2;
+
 /** Static footprint of a prop, or null when it does not block movement. */
 export function propCollider(p: Prop): Collider | null {
   switch (p.kind) {
+    case 'brandwand': case 'rubbleWall': case 'thicket': case 'overgrowth': case 'edgeHedge': case 'barricade': {
+      const half = ((EDGE_FRONT[p.kind] ?? 0) + EDGE_BEYOND) / 2;
+      return { kind: 'box', x: p.x - Math.sin(p.rot) * half, z: p.z - Math.cos(p.rot) * half, hx: p.size / 2 + 0.1, hz: half, rot: p.rot };
+    }
     case 'fireBarrel':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.42 };
     case 'lantern':
@@ -171,6 +186,8 @@ export function propCollider(p: Prop): Collider | null {
     case 'shed': return { kind: 'box', x: p.x, z: p.z, hx: 1.4, hz: 1.2, rot: p.rot };
     case 'picket': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.06, rot: p.rot };
     case 'hedge': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.45, rot: p.rot };
+    // A trunk lying along local x; `size` is its length.
+    case 'fallenTree': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.45, rot: p.rot };
     case 'clothesline': case 'spill': case 'gardenBed': case 'gnome': case 'jetty': case 'bush': case 'topiary': case 'flowers': case 'reeds':
       return null;
   }
