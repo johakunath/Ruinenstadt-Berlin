@@ -256,7 +256,10 @@ def skirt_weights(t, x, top, phi=0.0):
     follows the thigh fully from a third of the way down, so a raised knee never pokes through; the
     back follows less."""
     reach = 0.75 + 0.25 * math.cos(phi)
-    leg = reach * math.pow(min(1.0, t / 0.35), 0.8)
+    # The lower part follows the thighs less, so the hem hangs narrower than spread legs (it seems
+    # to fold in) instead of stretching into a bell.
+    fold = 1 - 0.35 * max(0.0, (t - 0.55) / 0.45)
+    leg = reach * math.pow(min(1.0, t / 0.35), 0.8) * fold
     left = min(1.0, max(0.0, 0.5 + x / 0.16))
     w = [('pelvis', (1 - leg) * (0.5 if top else 1.0)), ('thigh_l', leg * left), ('thigh_r', leg * (1 - left))]
     if top:
@@ -289,7 +292,7 @@ def coat(body):
     waist = body.head('spine_01').z - 0.005
     wrist_x = abs(body.head('hand_l').x) - 0.035
     neck_z = body.head('neck_01').z
-    hem = 0.36
+    hem = body.head('calf_l').z - 0.04  # just below the knee
 
     def upper(d, p):
         if d.startswith(('spine', 'clavicle', 'upperarm')):
@@ -331,21 +334,19 @@ def coat(body):
     # --- skirt: two half panels from the front edge to the back seam, welded above the back slit.
     piece = Piece()
     cy = (body.head('thigh_l').y + body.head('thigh_r').y) / 2
-    rows, cols = 9, 13
+    rows, cols = 7, 13
     heights = [waist + 0.03 + (hem - waist - 0.03) * r / (rows - 1) for r in range(rows)]
-    slit_from = 0.78
+    slit_from = 0.6
     panels = []
     for side in (1, -1):  # +1: hero's left (+X), front edge to back
         grid = []
         prev = [0.0] * (cols + 1)
         for r, z in enumerate(heights):
             t = r / (rows - 1)
-            # Closed like the 2D mantel: the left panel wraps over the right one past the centre; only
-            # the last quarter opens a little for walking, and the back has a short slit at the hem.
-            walk = math.pow(max(0.0, (t - 0.75) / 0.25), 1.5)
-            gap = -0.16 + 0.2 * walk if side > 0 else 0.04 * walk
+            # Open at the front from the belt down (Johannes, look 2), a short slit at the back hem.
+            gap = 0.05 + 0.22 * math.pow(t, 1.3)
             slit = 0.0 if t < slit_from else 0.02 + 0.06 * (t - slit_from) / (1 - slit_from)
-            off = 0.034 + 0.045 * t + (0.009 if side > 0 else 0.0)
+            off = 0.03 + 0.03 * t
             row = []
             for c in range(cols + 1):
                 u = c / cols
@@ -401,7 +402,7 @@ def coat(body):
     phi = -0.45
     e = body.extent(zp, phi, cy) or 0.17
     nrm = Vector((math.sin(phi), -math.cos(phi), 0))
-    p = Vector((0, cy, zp)) + nrm * (e + 0.034 + 0.045 * tp + 0.02)
+    p = Vector((0, cy, zp)) + nrm * (e + 0.03 + 0.03 * tp + 0.02)
     tang = Z.cross(nrm).normalized()
     piece.box(p, tang, nrm, Z, (0.065, 0.006, 0.035), skirt_weights(tp, p.x, False, phi), tuple(c * 0.85 for c in COAT))
     piece.box(p + Z * -0.012 + nrm * 0.007, tang, nrm, Z, (0.008, 0.003, 0.008), skirt_weights(tp, p.x, False, phi), BRASS)
@@ -597,15 +598,29 @@ def join(name, objects):
 
 
 def unwrap(obj):
-    """Smart UV project, one layout per piece (step 6 paints over it)."""
-    for o in bpy.context.selected_objects:
-        o.select_set(False)
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01)
-    bpy.ops.object.mode_set(mode='OBJECT')
+    """Box projection, one layout per piece: each face goes to one of six charts (by its main normal
+    axis and sign, 3 x 2 grid), projected over the piece's bounds. Blender's smart UV project packs
+    differently from run to run; this is fixed. Step 6 may unwrap again for painted textures."""
+    mesh = obj.data
+    uv = mesh.uv_layers.new(name='UVMap')
+    lo = Vector((min(v.co[k] for v in mesh.vertices) for k in range(3)))
+    hi = Vector((max(v.co[k] for v in mesh.vertices) for k in range(3)))
+    size = [max(1e-6, hi[k] - lo[k]) for k in range(3)]
+    plane = {0: (1, 2), 1: (0, 2), 2: (0, 1)}
+    for poly in mesh.polygons:
+        n = poly.normal
+        axis = max(range(3), key=lambda k: abs(n[k]))
+        pos = n[axis] >= 0
+        chart = axis * 2 + (1 if pos else 0)
+        cx, cy = chart % 3, chart // 3
+        i, j = plane[axis]
+        for li in poly.loop_indices:
+            co = mesh.vertices[mesh.loops[li].vertex_index].co
+            u = (co[i] - lo[i]) / size[i]
+            v = (co[j] - lo[j]) / size[j]
+            if not pos:
+                u = 1 - u
+            uv.data[li].uv = ((cx + 0.02 + 0.96 * u) / 3, (cy + 0.02 + 0.96 * v) / 2)
 
 
 AO_STRENGTH = 0.7

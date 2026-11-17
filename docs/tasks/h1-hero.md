@@ -271,6 +271,15 @@ A new body or head, authored clips or retargeting (importing more clips from the
 - Still open in step 3: the chest shape. The skirt flares wide in the two-handed stance; waiting for look 2.
 - `director.test.ts` hits its 5 s limit in most full `npm run check` runs on this PC while Blender or Playwright run. It takes about 5 s alone and passes alone.
 
+## Johannes, 2026-11-17 (step 3 look 2)
+- The coat flared into a bell when she spreads her legs. Make everything below the knees fold a little, make the coat a bit narrower or shorter, and open it again at the front.
+- Distinct equipment comes later; no Fable pass for now.
+
+## Handover step 3d (Opus 5.5, 2026-11-17)
+- Coat after look 2: the hem is just below the knee (`calf` head − 4 cm), the flare is narrower (offset 3 to 6 cm instead of 3.4 to 7.9 cm), the front is open from the belt down and the back slit is from 60 %. Fold: below 55 % of the length the skirt follows the thighs up to 35 % less, so the hem hangs narrower than spread legs instead of stretching (`stand-hammer-front.png`, strips).
+- UVs: a fixed box projection (six charts) replaces Blender's smart UV project. Its packing changed between runs, so 3c's rebuild was only byte-stable some of the time. Now 4 of 4 rebuilds are identical.
+- Numbers: file 1,474 KB, 28,790 triangles.
+- Pictures replaced in `docs/proof/h1-hero/step3/`. `run-side.png` is removed because it showed the long coat.
+
 ## Questions
-- Johannes (look 2 of 2): is the closed coat, with its wide skirt in the two-handed stance, right?
-- Equipment variety: run the Fable pass on the proposal above before step 4?
+- Johannes: is the knee-length open coat right (look 2 result)?
