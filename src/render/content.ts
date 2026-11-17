@@ -4,7 +4,7 @@ import {
   AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial,
   OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Object3D,
 } from 'three';
-import { CONTENT, type RunContent } from '../sim/runcontent';
+import type { RunContent } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
 import { heroLook } from '../data/hero-look';
 import { Animator, type CharacterAssets } from './characters';
@@ -283,9 +283,10 @@ export class ContentView {
       k.root.rotation.y = shop.rot + Math.max(-0.9, Math.min(0.9, d));
       k.anim.update(dt);
     } else if (this.keeper) this.keeper.root.visible = false;
-    // Talk rings: the trader's reach around him, the Späti customer spot in front of the counter.
+    // Talk rings, person-sized (Johannes 2026-11-17): around the trader, and the Späti customer spot.
+    // Reach (CONTENT.*.touch) is a little larger than the ring so standing on it always works.
     const spots: Array<{ x: number; z: number; r: number; on: boolean }> = [];
-    if (c.trader) spots.push({ x: c.trader.x, z: c.trader.z, r: CONTENT.trader.touch, on: c.talk === -1 });
+    if (c.trader) spots.push({ x: c.trader.x, z: c.trader.z, r: 1, on: c.talk === -1 });
     let best = -1;
     let bestD = 45;
     s.level.rests.forEach((r, i) => {
@@ -294,7 +295,7 @@ export class ContentView {
       if (d < bestD) { bestD = d; best = i; }
     });
     const desk = best >= 0 ? s.level.rests[best]!.desk : undefined;
-    if (desk) spots.push({ x: desk.x, z: desk.z, r: CONTENT.shop.touch, on: c.talk === best });
+    if (desk) spots.push({ x: desk.x, z: desk.z, r: 0.55, on: c.talk === best });
     this.talkRings.forEach((t, i) => {
       const o = spots[i];
       t.g.visible = !!o && !c.tradeOpen;

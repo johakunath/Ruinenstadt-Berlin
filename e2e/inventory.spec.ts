@@ -125,7 +125,7 @@ test('tablet long press drag equips without horizontal overflow',async({browser}
 
 test('stationary mouse holds select items without starting a drag', async ({page}) => {
   await setup(page);
-  for (const [selector, name] of [['[data-bag="0"]', 'Mantel'], ['[data-bag="1"]', 'Ersatzmantel'], ['[data-slot="w"]', 'Rostiges Rohr']]) {
+  for (const [selector, name] of [['[data-bag="0"]', 'Mantel'], ['[data-bag="1"]', 'Ersatzmantel'], ['[data-slot="w"]', 'Rostige Klinge']]) {
     const cell = page.locator(selector!);
     const box = (await cell.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);

@@ -197,7 +197,7 @@ export class WeaponRack {
   }
 }
 
-/** The model for a weapon item: the starter pipe keeps its own look. */
-export function weaponModel(kind: WeaponKindId, base: string): WeaponModel {
-  return kind === 'blade' && base === 'rohr' ? 'pipe' : kind;
+/** The model for a weapon item. Every Klinge is a blade, also the starter (Johannes, 2026-11-17). */
+export function weaponModel(kind: WeaponKindId, _base: string): WeaponModel {
+  return kind;
 }

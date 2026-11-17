@@ -28,7 +28,7 @@ describe('ported item and progression data', () => {
       [items.AFFIXES, 11], [items.ELEMENTS, 3], [items.ENEMY_RESISTANCES, 24],
       [items.IMPLICITS, 26], [items.SETS, 3], [items.SET_BONUSES, 3],
       [items.LEGENDARY_POWERS, 18], [items.LEGENDARY_ELEMENTS, 7],
-      [items.WEAPON_KINDS, 4], [names.BASES, 91],
+      [items.WEAPON_KINDS, 4], [names.BASES, 94 /* 91 from 2D + three Klinge names */],
       [crafting.MATERIALS, 4], [crafting.INGREDIENTS, 3],
       [crafting.ENEMY_MATERIAL_DROPS, 14], [crafting.ENEMY_INGREDIENT_DROPS, 9],
     ] as const) expect(Object.keys(table)).toHaveLength(count);

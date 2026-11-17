@@ -4,7 +4,7 @@ const SAVE = {
   v: 1, difficulty: 'schwer',
   profile: {
     inventory: { bag: [], scrap: 42, materials: {}, mods: {}, tips: { intro: 1, loot: 1, perk: 1 } },
-    equipment: { w: { id: 0, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostiges Rohr', rarity: 0, value: 10, itemLevel: 1, affixes: [] } },
+    equipment: { w: { id: 0, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostige Klinge', rarity: 0, value: 10, itemLevel: 1, affixes: [] } },
     statContext: { upgrades: {}, perks: {}, camp: {}, survivors: {} },
   },
   run: { map: 'Köpenick', index: 1, wave: -1, hp: 30, x: 0, z: 0, facing: 0, rng: 123, nextId: 50, itemId: 0, lootWaves: 2, kills: 9, broken: [], restSeen: [], drops: [] },

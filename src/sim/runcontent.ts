@@ -51,9 +51,9 @@ export interface RunContent {
 
 export const CONTENT = {
   delay: 5, touch: 34 * PX, hiddenTouch: 1.2, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
-  trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.8 },
+  trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.4 },
   /** Späti counter: stand this close to the customer spot; no trade while enemies are this near. */
-  shop: { touch: 1.5, calm: 12, offers: 4 },
+  shop: { touch: 1, calm: 12, offers: 4 },
   cache: { near: 520 * PX, far: 760 * PX, time: 50, scrap: 25 },
   zone: { near: 240 * PX, far: 420 * PX, radius: 70 * PX, need: 8, time: 45, every: 2.2, scrap: 30 },
   rescue: { near: 320 * PX, far: 520 * PX, touch: 36 * PX },

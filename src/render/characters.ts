@@ -262,7 +262,7 @@ export class HeroView {
     this.root.add(model);
     this.anim = new Animator(model, assets.heroClips);
     this.rack = new WeaponRack(materials);
-    this.rack.show('pipe', undefined);
+    this.rack.show('blade', undefined);
     model.getObjectByName('hand_r')?.add(this.rack.group);
     this.ik = new LeftHandIk(model, assets.heroClips.get(FIST_CLIP));
     this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
