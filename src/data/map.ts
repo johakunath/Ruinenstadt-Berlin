@@ -176,6 +176,8 @@ export interface MapDef {
   piers?: Pier[];
   /** M11c lot types placed by hand where the generator finds no room (Altstadt market, churchyard). */
   specialLots?: Array<{ special: SpecialKind; x: number; z: number; rot: number; w: number; d: number }>;
+  /** M11d step 5: hand-placed buildings on the route; they take their space before the generator fills the rest. */
+  handLots?: Array<Omit<Lot, 'seed' | 'kind'> & { kind: LotKind; seed?: number }>;
 }
 
 /** A walkable tunnel piece along a polyline: track bed, station hall or side passage. */
@@ -539,6 +541,12 @@ export function generateLots(m: MapDef): Lot[] {
     occ.take(h.x, h.z, h.rot, h.w / 2 + 0.6, h.d / 2 + 0.6);
     lots.push({ ...lot, content }, ...content.lots);
     used.set(h.special, (used.get(h.special) ?? 0) + 1);
+  }
+  for (const h of m.handLots ?? []) {
+    const lot: Lot = { ...h, seed: h.seed ?? Math.round(Math.abs(h.x * 131 + h.z * 71)) };
+    occ.take(h.x, h.z, h.rot, h.w / 2 + 0.3, h.d / 2 + 0.3);
+    if (h.wing) occ.take(h.wing.x, h.wing.z, h.rot, h.wing.w / 2 + 0.3, h.wing.d / 2 + 0.3);
+    lots.push(lot);
   }
   const ponds: Pt[][] = [], piers: Pier[] = [];
 
