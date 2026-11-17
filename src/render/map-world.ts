@@ -11,7 +11,7 @@ import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
-import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
+import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
@@ -21,6 +21,7 @@ import { BatchSet, boxGeo } from './batch';
 import { isLargeProp } from './layers';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
+import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
 import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
@@ -422,6 +423,134 @@ function buildScatter(m: MapDef, lots: Lot[], mats: MapMats, chunkOf: (x: number
       const s = kind === 'puddle' ? size * 1.3 : size;
       const mt = new Matrix4().makeRotationY(yaw).scale(new Vector3(s, 1, s)).setPosition(px, y + (sd < 0 ? 0.045 : 0.03), pz);
       b.solid.of(mats.litter).add(decal.get(kind)!, mt);
+    }
+  }
+}
+
+/**
+ * Wild greenery per ground kind (M11c), chances per 4 m cell plus per 2.4 m of wall: every district
+ * reuses it through its areas' `ground`. Jungle bushes become big-leaf undergrowth half the time.
+ */
+const GREENERY: Record<GroundKind, { bush: number; flowers: number; wall: number }> = {
+  cobbles: { bush: 0.025, flowers: 0.02, wall: 0.3 },
+  asphalt: { bush: 0.02, flowers: 0.012, wall: 0.25 },
+  grass: { bush: 0.1, flowers: 0.15, wall: 0.5 },
+  forest: { bush: 0.17, flowers: 0.03, wall: 0.5 },
+  jungle: { bush: 0.3, flowers: 0.05, wall: 0.6 },
+};
+/** Props that get bushes along both sides. */
+const HEDGED: Partial<Record<Prop['kind'], number>> = { fence: 0.3, picket: 0.3, bauzaun: 0.12, wall: 0.4, lowWall: 0.4 };
+
+/**
+ * Bushes, flower patches and reeds (render only, walk-through): on grass, forest and jungle by
+ * `GREENERY`, along building walls, fences and ruins, reeds on natural banks. Deterministic per map
+ * seed; never on streets, sidewalks, water, bridges, stairs, landmarks, buildings or props.
+ */
+function buildGreenery(m: MapDef, lots: Lot[], props: Prop[], chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  if (m.tunnel) return;
+  const rng = new Rng(m.seed + 137);
+  // Blockers in an 8 m hash: rotated boxes (half extents) around buildings and props.
+  type Box = { x: number; z: number; rot: number; hx: number; hz: number };
+  const H = 8;
+  const hash = new Map<string, Box[]>();
+  const block = (o: Box): void => {
+    const r = Math.hypot(o.hx, o.hz);
+    for (let i = Math.floor((o.x - r) / H); i <= Math.floor((o.x + r) / H); i++) {
+      for (let j = Math.floor((o.z - r) / H); j <= Math.floor((o.z + r) / H); j++) {
+        const k = `${i},${j}`;
+        const list = hash.get(k);
+        if (list) list.push(o);
+        else hash.set(k, [o]);
+      }
+    }
+  };
+  const inside = (o: Box, x: number, z: number, pad: number): boolean => {
+    const dx = x - o.x;
+    const dz = z - o.z;
+    const c = Math.cos(o.rot);
+    const s = Math.sin(o.rot);
+    return Math.abs(dx * c - dz * s) < o.hx + pad && Math.abs(dx * s + dz * c) < o.hz + pad;
+  };
+  const walls: Array<{ l: Box; ruin: boolean }> = [];
+  for (const l of lots) {
+    if (l.kind === 'tree') continue;
+    const o = { x: l.x, z: l.z, rot: l.rot, hx: l.w / 2, hz: l.d / 2 };
+    block(o);
+    walls.push({ l: o, ruin: !!l.ruin });
+    if (l.wing) {
+      const w = { x: l.wing.x, z: l.wing.z, rot: l.rot, hx: l.wing.w / 2, hz: l.wing.d / 2 };
+      block(w);
+      walls.push({ l: w, ruin: !!l.ruin });
+    }
+  }
+  for (const p of props) block(HEDGED[p.kind] !== undefined || p.kind === 'hedge' ? { x: p.x, z: p.z, rot: p.rot, hx: p.size / 2, hz: 0.3 } : { x: p.x, z: p.z, rot: p.rot, hx: 0.9, hz: 0.9 });
+  const free = (x: number, z: number, pad: number): boolean => {
+    if (isWater(m, x, z) || onBridge(m, x, z, 1.5) || terraceWall(m, x, z) || m.terraces.some((t) => onStair(t, x, z, 1))) return false;
+    const sd = streetDist(m, x, z);
+    if (sd.d < (sd.street?.sidewalk ?? 0) + 0.3) return false;
+    if (m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + 0.8 && Math.abs(z - l.z) < l.hz + 0.8)) return false;
+    return !(hash.get(`${Math.floor(x / H)},${Math.floor(z / H)}`) ?? []).some((o) => inside(o, x, z, pad));
+  };
+  const place = (kind: 'bush' | 'flowers' | 'reeds' | 'undergrowth', x: number, z: number, size: number): void => {
+    const b = chunkOf(x, z);
+    const p: Prop = { kind: kind === 'undergrowth' ? 'bush' : kind, x, z, rot: rng.range(0, Math.PI * 2), size };
+    b.on(surfaceAt(m, x, z), () => (kind === 'undergrowth' ? buildUndergrowth(b, p, rng) : kind === 'flowers' ? buildFlowers(b, p, rng, false) : buildPlantProp(b, p, rng)));
+  };
+  const ground = (x: number, z: number): GroundKind => areaAt(m, x, z)?.ground ?? m.defaultGround;
+  const bushOf = (g: GroundKind): 'bush' | 'undergrowth' => (g === 'jungle' && rng.next() < 0.5 ? 'undergrowth' : 'bush');
+  // 1. Open ground: a jittered 4 m grid.
+  const B = m.bounds;
+  const G = 4;
+  for (let z = B.minZ + 3; z < B.maxZ - 3; z += G) {
+    for (let x = B.minX + 3; x < B.maxX - 3; x += G) {
+      const px = x + rng.range(-1.8, 1.8);
+      const pz = z + rng.range(-1.8, 1.8);
+      const roll = rng.next();
+      const size = rng.range(0.7, 1.3);
+      const g = ground(px, pz);
+      const o = GREENERY[g];
+      const bank = !isQuay(m, px, pz) && [[1.8, 0], [-1.8, 0], [0, 1.8], [0, -1.8]].some(([dx, dz]) => isWater(m, px + dx!, pz + dz!));
+      const kind = bank ? (roll < 0.5 ? 'reeds' : roll < 0.6 ? 'bush' : null) : roll < o.bush ? bushOf(g) : roll < o.bush + o.flowers ? 'flowers' : null;
+      if (!kind || !free(px, pz, 0.4)) continue;
+      place(kind, px, pz, kind === 'flowers' ? size * 1.2 : size);
+    }
+  }
+  // 2. Along building walls (more on ruins): bushes, on grass sometimes flowers.
+  for (const { l, ruin } of walls) {
+    const c = Math.cos(l.rot);
+    const s = Math.sin(l.rot);
+    for (const [ax, az, len] of [[0, 1, l.hx], [0, -1, l.hx], [1, 0, l.hz], [-1, 0, l.hz]] as const) {
+      // Side normal (ax, az) in lot space; walk along the side.
+      const n = Math.max(1, Math.floor((2 * len) / 2.4));
+      for (let i = 0; i < n; i++) {
+        const t = -len + ((i + rng.range(0.2, 0.8)) / n) * 2 * len;
+        const off = (ax ? l.hx : l.hz) + rng.range(0.45, 0.8);
+        const lx = ax ? ax * off : t;
+        const lz = az ? az * off : t;
+        const x = l.x + lx * c + lz * s;
+        const z = l.z - lx * s + lz * c;
+        const g = ground(x, z);
+        if (rng.next() > GREENERY[g].wall * (ruin ? 1.5 : 1)) continue;
+        if (!free(x, z, 0.2)) continue;
+        place(g === 'grass' && rng.next() < 0.3 ? 'flowers' : bushOf(g), x, z, rng.range(0.6, 1.15));
+      }
+    }
+  }
+  // 3. Along fences and walls, both sides.
+  for (const p of props) {
+    const chance = HEDGED[p.kind];
+    if (chance === undefined) continue;
+    const c = Math.cos(p.rot);
+    const s = Math.sin(p.rot);
+    for (let t = -p.size / 2 + 1; t < p.size / 2; t += 2.5) {
+      for (const side of [-1, 1]) {
+        if (rng.next() > chance) continue;
+        const lz = side * rng.range(0.6, 0.9);
+        const lx = t + rng.range(-0.5, 0.5);
+        const x = p.x + lx * c + lz * s;
+        const z = p.z - lx * s + lz * c;
+        if (free(x, z, 0.1)) place(bushOf(ground(x, z)), x, z, rng.range(0.6, 1.1));
+      }
     }
   }
 }
@@ -1242,81 +1371,127 @@ function buildHouse(b: ChunkBuilder, l: Lot): void {
 
 // ---------------------------------------------------------------- trees
 
+/** Berlin street and park trees (M11c): Linde, Ahorn, Kastanie, Birke, Kiefer and dead trees. */
+type Species = 'linde' | 'ahorn' | 'kastanie' | 'birke' | 'kiefer' | 'dead';
+
+/** Species by place: street pits, forest (pine and birch) or park and garden. */
+function pickSpecies(rng: Rng, ground: GroundKind, street: boolean): Species {
+  const r = rng.next();
+  if (street) return r < 0.5 ? 'linde' : r < 0.74 ? 'ahorn' : r < 0.95 ? 'kastanie' : 'dead';
+  if (ground === 'forest') return r < 0.45 ? 'kiefer' : r < 0.65 ? 'birke' : r < 0.8 ? 'ahorn' : r < 0.9 ? 'linde' : 'dead';
+  return r < 0.28 ? 'linde' : r < 0.5 ? 'ahorn' : r < 0.68 ? 'kastanie' : r < 0.88 ? 'birke' : r < 0.95 ? 'kiefer' : 'dead';
+}
+
+/** Crown shape per species: clump count, ellipsoid radii (x R), clump size (x R), height of the center over the trunk top. */
+const CROWN: Record<Exclude<Species, 'dead'>, { n: [number, number]; rx: number; ry: number; size: [number, number]; lift: number; trunk: [number, number] }> = {
+  linde: { n: [5, 7], rx: 0.5, ry: 0.8, size: [0.5, 0.62], lift: 0.75, trunk: [3.2, 4.6] },
+  ahorn: { n: [5, 7], rx: 0.58, ry: 0.45, size: [0.5, 0.6], lift: 0.55, trunk: [2.8, 4] },
+  kastanie: { n: [6, 8], rx: 0.55, ry: 0.5, size: [0.52, 0.64], lift: 0.55, trunk: [2.6, 3.6] },
+  birke: { n: [5, 7], rx: 0.36, ry: 0.9, size: [0.26, 0.36], lift: 0.6, trunk: [3.8, 5.2] },
+  kiefer: { n: [3, 5], rx: 0.6, ry: 0.22, size: [0.32, 0.45], lift: 0.15, trunk: [6, 8.5] },
+};
+
+/** Crown tints (the foliage texture carries the green; these shift it). Style bible: dark greens, olive, a few autumn ochres. */
+function crownTint(s: Species, rng: Rng): RGB {
+  const g = rng.range(0.85, 1.12);
+  const autumn = rng.next() < 0.12;
+  if (s === 'kiefer') return [0.5 * g, 0.56 * g, 0.5 * g];
+  if (s === 'birke') return autumn ? [1.25 * g, 0.95 * g, 0.4 * g] : [0.88 * g, 0.86 * g, 0.5 * g];
+  if (autumn) return rng.next() < 0.5 ? [1.25 * g, 0.7 * g, 0.32 * g] : [1.1 * g, 0.5 * g, 0.3 * g];
+  if (s === 'kastanie') return [0.56 * g, 0.6 * g, 0.42 * g];
+  if (s === 'ahorn') return [0.78 * g, 0.72 * g, 0.44 * g];
+  return [0.68 * g, 0.68 * g, 0.46 * g];
+}
+
+/** Open tapered cylinder from `a` to `c` (a branch or trunk piece). 2 x `seg` triangles. */
+function limb(b: ChunkBuilder, mat: Material, a: Vector3, c: Vector3, r0: number, r1: number, seg: number, color: RGB): void {
+  const d = c.clone().sub(a);
+  const len = d.length();
+  const k = `${seg}:${r0.toFixed(2)}:${r1.toFixed(2)}`;
+  let g = limbGeos.get(k);
+  if (!g) limbGeos.set(k, (g = new CylinderGeometry(r1, r0, 1, seg, 1, true)));
+  b.geo(mat, g, new Matrix4().compose(a.clone().add(c).multiplyScalar(0.5), new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), d.normalize()), new Vector3(1, len, 1)), color);
+}
+const limbGeos = new Map<string, BufferGeometry>();
+
 interface TreeBucket {
-  trunks: Matrix4[];
   crowns: Array<{ m: Matrix4; c: Color }>;
 }
 
-/** Urzeit palms and tree ferns: a bent trunk with a crown of big fern fronds (alpha cards). */
-function buildPalm(b: ChunkBuilder, l: Lot): void {
-  const rng = new Rng(l.seed);
-  const h = rng.range(4.5, 8);
-  const lean = rng.range(-0.25, 0.25);
-  const trunk = new Matrix4().makeRotationY(l.rot).multiply(new Matrix4().makeRotationZ(lean)).setPosition(l.x, h / 2, l.z);
-  b.geo(b.mm.trunk, new CylinderGeometry(0.14, 0.3, h, 6), trunk, [0.9, 0.8, 0.7]);
-  const top = new Vector3(0, h / 2, 0).applyMatrix4(trunk);
-  const geo = new PlaneGeometry(1, 1);
-  geo.translate(0, 0.5, 0);
-  const n = 7 + rng.int(4);
-  for (let i = 0; i < n; i++) {
-    const yaw = (i / n) * Math.PI * 2 + rng.range(-0.2, 0.2);
-    const len = rng.range(2.6, 4.2);
-    const m = new Matrix4().makeRotationY(yaw).multiply(new Matrix4().makeRotationX(rng.range(0.9, 1.5))).setPosition(top);
-    m.multiply(tmpScale.makeScale(len * 0.55, len, 1));
-    const g = rng.range(0.7, 1.1);
-    b.cards.of(b.mm.frond).add(geo, m, [0.75 * g, 1.05 * g, 0.55 * g]);
-  }
-  // Ferns around the foot.
-  for (let i = 0; i < 3; i++) {
-    const a = rng.range(0, Math.PI * 2);
-    const r = rng.range(0.6, 1.8);
-    const s = rng.range(0.9, 1.6);
-    for (const k of [0, Math.PI / 2]) {
-      const m = new Matrix4().makeRotationY(a + k).setPosition(l.x + Math.cos(a) * r, 0, l.z + Math.sin(a) * r).multiply(tmpScale.makeScale(s * 1.3, s, 1));
-      b.cards.of(b.mm.fern).add(geo, m, [0.7, 0.95, 0.5]);
-    }
-  }
-}
-
-function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number, z: number) => string, group: Group): void {
+/**
+ * Berlin trees: trunk and branches merged per chunk (bark), crown clumps instanced per chunk (one
+ * lumpy 80-triangle blob, per-instance tint) and leaf cards that break up the outline.
+ * About 380-560 triangles per leafy tree (trunk 40-70, 4-8 clumps, 2-3 cards each), 100-150 per dead tree.
+ */
+function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number, z: number) => string, chunkOf: (x: number, z: number) => ChunkBuilder, group: Group): void {
   const buckets = new Map<string, TreeBucket>();
   for (const l of lots) {
     if (l.kind !== 'tree' || l.jungle) continue;
     const k = chunkKey(l.x, l.z);
     let bk = buckets.get(k);
-    if (!bk) buckets.set(k, (bk = { trunks: [], crowns: [] }));
+    if (!bk) buckets.set(k, (bk = { crowns: [] }));
     const rng = new Rng(l.seed);
-    const h = rng.range(3.5, 6);
-    const lean = rng.range(-0.12, 0.12);
+    const ground = areaAt(m, l.x, l.z)?.ground ?? m.defaultGround;
+    const sp = pickSpecies(rng, ground, streetDist(m, l.x, l.z).d < 5);
+    const b = chunkOf(l.x, l.z);
+    const pm = plantMats(mats);
     const base = surfaceAt(m, l.x, l.z);
-    bk.trunks.push(new Matrix4().makeRotationZ(lean).setPosition(l.x, base + h / 2, l.z).multiply(tmpScale.makeScale(1, h, 1)));
-    const blobs = 3 + rng.int(2);
-    const hue = rng.next();
-    for (let i = 0; i < blobs; i++) {
-      const s = l.w * rng.range(0.24, 0.34);
-      const m = new Matrix4().compose(
-        new Vector3(l.x + rng.range(-1.1, 1.1), base + h + rng.range(-0.6, 1.4), l.z + rng.range(-1.1, 1.1)),
-        new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), rng.range(0, 6)),
-        new Vector3(s, s * 0.85, s),
-      );
-      const g = rng.range(0.7, 1.15);
-      // Dark pine green, olive and a few autumn ochres (style bible palette).
-      const c = hue < 0.55 ? new Color(0.12 * g, 0.2 * g, 0.12 * g) : hue < 0.85 ? new Color(0.24 * g, 0.24 * g, 0.1 * g) : new Color(0.42 * g, 0.26 * g, 0.08 * g);
-      bk.crowns.push({ m, c });
+    const R = l.w / 2;
+    const shape = sp === 'dead' ? CROWN.linde : CROWN[sp];
+    const h = rng.range(shape.trunk[0], shape.trunk[1]) * (0.85 + R * 0.06);
+    const lean = rng.range(-0.1, 0.1);
+    const lyaw = rng.range(0, Math.PI * 2);
+    const top = new Vector3(l.x + Math.sin(lyaw) * lean * h, base + h, l.z + Math.cos(lyaw) * lean * h);
+    const foot = new Vector3(l.x, base - 0.1, l.z);
+    const thick = sp === 'birke' ? 0.13 : sp === 'kiefer' ? 0.2 : sp === 'kastanie' ? 0.3 : 0.24;
+    const barkTint: RGB = sp === 'birke' ? [1.75, 1.72, 1.65] : sp === 'kiefer' ? [1.05, 0.72, 0.55] : sp === 'dead' ? [0.85, 0.82, 0.8] : [0.62, 0.56, 0.52];
+    // Trunk in two pieces with a slight kink.
+    const mid = foot.clone().lerp(top, 0.5).add(new Vector3(rng.range(-0.15, 0.15), 0, rng.range(-0.15, 0.15)));
+    limb(b, pm.bark, foot, mid, thick * 1.25, thick * 0.9, 6, barkTint);
+    limb(b, pm.bark, mid, top, thick * 0.9, thick * 0.55, 6, barkTint);
+    // Branches fork from the upper trunk into the crown (bare for dead trees).
+    const nb = sp === 'dead' ? 5 + rng.int(3) : sp === 'kiefer' ? 2 : 3 + rng.int(2);
+    const cy = top.y + R * shape.lift;
+    for (let i = 0; i < nb; i++) {
+      const a = (i / nb) * Math.PI * 2 + rng.range(-0.4, 0.4);
+      const from = foot.clone().lerp(top, rng.range(0.6, 0.95));
+      const reach = R * rng.range(0.45, 0.8) * (sp === 'birke' ? 0.6 : 1);
+      const to = new Vector3(from.x + Math.sin(a) * reach, from.y + rng.range(0.6, 1.4) * (sp === 'dead' ? 1.6 : 1.1) + (sp === 'birke' ? 1 : 0), from.z + Math.cos(a) * reach);
+      limb(b, pm.bark, from, to, thick * 0.5, thick * 0.18, 4, barkTint);
+      if (sp === 'dead') {
+        // Twigs at the branch ends.
+        for (let t = 0; t < 2; t++) {
+          const tw = to.clone().add(new Vector3(Math.sin(a + rng.range(-1, 1)) * R * 0.3, rng.range(0.3, 0.9), Math.cos(a + rng.range(-1, 1)) * R * 0.3));
+          limb(b, pm.bark, to, tw, thick * 0.16, 0.02, 3, barkTint);
+        }
+      }
     }
+    if (sp === 'dead') continue;
+    // Crown: clumps on an ellipsoid around the crown center, the biggest on top.
+    const n = shape.n[0] + rng.int(shape.n[1] - shape.n[0] + 1);
+    const tintC = crownTint(sp, rng);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rng.range(-0.5, 0.5);
+      const first = i === 0;
+      const el = first ? 1.2 : rng.range(-0.5, 0.9);
+      const rr = first ? 0.25 : rng.range(0.7, 1.05);
+      const x = top.x + Math.sin(a) * Math.cos(el) * R * shape.rx * rr;
+      const z = top.z + Math.cos(a) * Math.cos(el) * R * shape.rx * rr;
+      const y = cy + Math.sin(el) * R * shape.ry * rr;
+      const s = R * rng.range(shape.size[0], shape.size[1]) * (first ? 1.15 : 1);
+      const flat = sp === 'kiefer' ? 0.45 : sp === 'birke' ? 1.25 : rng.range(0.8, 0.95);
+      const mt = new Matrix4().compose(new Vector3(x, y, z), new Quaternion().setFromEuler(new Euler(rng.range(-0.3, 0.3), rng.range(0, 6), rng.range(-0.3, 0.3))), new Vector3(s, s * flat, s));
+      const shade = rng.range(0.85, 1.12);
+      bk.crowns.push({ m: mt, c: new Color(tintC[0] * shade, tintC[1] * shade, tintC[2] * shade) });
+      fringe(b, IDENT, x, y, z, s, sp === 'kiefer' ? 1 : 2 + rng.int(2), tintC, rng);
+    }
+    // Birch: drooping leaf curtains under the clumps.
+    if (sp === 'birke') for (let i = 0; i < 3; i++) fringe(b, IDENT, top.x, cy - R * 0.4, top.z, R * 0.45, 1, tintC, rng);
   }
-  const trunkGeo = new CylinderGeometry(0.16, 0.26, 1, 6);
-  const crownGeo = new IcosahedronGeometry(1, 0);
+  const crownGeo = blobGeo(1);
   for (const bk of buckets.values()) {
-    const trunks = new InstancedMesh(trunkGeo, mats.trunk, bk.trunks.length);
-    bk.trunks.forEach((m, i) => trunks.setMatrixAt(i, m));
-    // Always: without trunk shadows the crown shadows float (playtest 2026-11-15). Instanced, cheap.
-    trunks.castShadow = true;
-    trunks.receiveShadow = true;
-    trunks.computeBoundingSphere();
-    group.add(trunks);
     if (bk.crowns.length === 0) continue;
-    const im = new InstancedMesh(crownGeo, mats.crown, bk.crowns.length);
+    const im = new InstancedMesh(crownGeo, plantMats(mats).foliage, bk.crowns.length);
     bk.crowns.forEach((t, i) => {
       im.setMatrixAt(i, t.m);
       im.setColorAt(i, t.c);
@@ -1325,6 +1500,95 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     im.receiveShadow = true;
     im.computeBoundingSphere();
     group.add(im);
+  }
+}
+const IDENT = new Matrix4();
+const VINE = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
+
+/**
+ * Spreepark jungle (Urzeit, M11c): curved palms, tree ferns and giant broadleaf trees with buttress
+ * roots, layered crowns and hanging vines, each with undergrowth at its foot. Merged per chunk.
+ * Palm about 70, tree fern about 60, giant about 330 triangles, plus 20-40 for the undergrowth.
+ */
+function buildPalm(b: ChunkBuilder, l: Lot): void {
+  const rng = new Rng(l.seed);
+  const pm = plantMats(b.mats);
+  const leaf = pm.leaf;
+  const kind = rng.next();
+  const lush: RGB = [0.5, 0.72, 0.4];
+  const frond = (top: Vector3, n: number, len: [number, number], tilt: [number, number], tint: RGB): void => {
+    for (let i = 0; i < n; i++) {
+      const yaw = (i / n) * Math.PI * 2 + rng.range(-0.25, 0.25);
+      const s = rng.range(len[0], len[1]);
+      const g = rng.range(0.75, 1.1);
+      b.cards.of(leaf).add(cardGeo('frond'), mtx(top.x, top.y, top.z, yaw, rng.range(tilt[0], tilt[1]), s * 0.5, s, 1), [tint[0] * g, tint[1] * g, tint[2] * g]);
+    }
+  };
+  if (kind < 0.35) {
+    // Palm: a curved, ringed trunk in four pieces, drooping fronds.
+    const h = rng.range(5, 8.5);
+    const yaw = rng.range(0, Math.PI * 2);
+    const bend = rng.range(0.15, 0.5);
+    let p0 = new Vector3(l.x, -0.1, l.z);
+    for (let i = 0; i < 4; i++) {
+      const t = (i + 1) / 4;
+      const p1 = new Vector3(l.x + Math.sin(yaw) * bend * h * t * t, h * t, l.z + Math.cos(yaw) * bend * h * t * t);
+      limb(b, pm.bark, p0, p1, 0.3 - i * 0.04, 0.26 - i * 0.04, 6, i % 2 ? [0.95, 0.82, 0.62] : [0.8, 0.68, 0.52]);
+      p0 = p1;
+    }
+    b.geo(pm.foliage, blobGeo(0), mtx(p0.x, p0.y, p0.z, 0, 0, 0.45, 0.35, 0.45), [0.6, 0.75, 0.45]);
+    frond(p0, 9 + rng.int(4), [3, 4.5], [1.4, 2.1], [0.55, 0.7, 0.38]);
+    frond(p0, 3, [2, 2.8], [0.5, 0.9], [0.62, 0.78, 0.4]);
+  } else if (kind < 0.6) {
+    // Tree fern: short shaggy trunk, a big rosette of arching fronds.
+    const h = rng.range(1.8, 3.4);
+    const top = new Vector3(l.x + rng.range(-0.3, 0.3), h, l.z + rng.range(-0.3, 0.3));
+    limb(b, pm.bark, new Vector3(l.x, -0.1, l.z), top, 0.32, 0.24, 6, [0.5, 0.42, 0.34]);
+    frond(top, 11 + rng.int(4), [2.4, 3.6], [0.7, 1.25], lush);
+  } else {
+    // Jungle giant: buttress roots, a few heavy limbs, a wide layered crown and hanging vines.
+    const h = rng.range(5, 7.5);
+    const R = l.w * rng.range(0.6, 0.8);
+    const foot = new Vector3(l.x, -0.1, l.z);
+    const top = new Vector3(l.x + rng.range(-0.4, 0.4), h, l.z + rng.range(-0.4, 0.4));
+    const bark: RGB = [0.55, 0.52, 0.42];
+    limb(b, pm.bark, foot, top, 0.55, 0.32, 7, bark);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + rng.range(-0.3, 0.3);
+      const len = rng.range(0.9, 1.5);
+      b.box(pm.bark, mtx(l.x + Math.sin(a) * len * 0.5, 0.45, l.z + Math.cos(a) * len * 0.5, a, 0, 1, 1, 1, 0).multiply(new Matrix4().makeRotationX(-0.55)), 0.12, 1.3, len, bark);
+    }
+    const layers: Array<{ y: number; r: number }> = [{ y: h + R * 0.25, r: R }, { y: h + R * 0.75, r: R * 0.7 }];
+    for (const [li, ly] of layers.entries()) {
+      const n = li === 0 ? 5 + rng.int(2) : 3;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + rng.range(-0.4, 0.4);
+        const x = top.x + Math.sin(a) * ly.r * 0.6;
+        const z = top.z + Math.cos(a) * ly.r * 0.6;
+        const s = ly.r * rng.range(0.45, 0.6);
+        if (li === 0 && i < 3) limb(b, pm.bark, top.clone().setY(h * 0.75), new Vector3(x, ly.y - 0.3, z), 0.2, 0.08, 4, bark);
+        const tint: RGB = [0.5 * rng.range(0.85, 1.1), 0.78 * rng.range(0.9, 1.1), 0.42];
+        b.geo(pm.foliage, blobGeo(0), mtx(x, ly.y, z, rng.range(0, 6), 0, s, s * 0.5, s), tint);
+        fringe(b, IDENT, x, ly.y, z, s, 2, tint, rng);
+        fringe(b, IDENT, x, ly.y, z, s, 1, tint, rng, 'bigLeaf');
+        // Vines (ivy cards) hanging from the outer clumps.
+        if (li === 0 && rng.next() < 0.75) {
+          const vx = top.x + Math.sin(a) * ly.r * 0.95;
+          const vz = top.z + Math.cos(a) * ly.r * 0.95;
+          const drop = rng.range(2.5, ly.y - 1);
+          for (let k = 0; k < 3; k++) {
+            const seg = drop / 3;
+            b.cards.of(b.mats.ivy).add(VINE, mtx(vx, ly.y - seg * (k + 1), vz, a + Math.PI / 2 + rng.range(-0.3, 0.3), 0, rng.range(0.45, 0.7), seg * 1.15, 1), [0.6, 0.8, 0.5]);
+          }
+        }
+      }
+    }
+  }
+  // Undergrowth at the foot: big leaves and ferns.
+  for (let i = 0; i < 2 + rng.int(2); i++) {
+    const a = rng.range(0, Math.PI * 2);
+    const r = rng.range(0.7, 2.2);
+    buildUndergrowth(b, { kind: 'bush', x: l.x + Math.sin(a) * r, z: l.z + Math.cos(a) * r, rot: rng.range(0, 6), size: rng.range(0.7, 1.1) }, rng);
   }
 }
 
@@ -1577,6 +1841,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildStreets(m, mats, chunkOf);
   buildQuays(m, mats, chunkOf);
   buildScatter(m, lots, mats, chunkOf);
+  buildGreenery(m, lots, props, chunkOf);
   const boats: Array<{ lane: FerryLane; group: Group }> = [];
   buildBridges(m, chunkOf, boats);
   for (const bt of boats) group.add(bt.group);
@@ -1651,7 +1916,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       for (const z of [-1.5, 1.5]) cb.box(mats.iron, new Matrix4().setPosition(x + 20, 1.9, r.z + z), 40, 0.15, 0.12);
     }
   }
-  buildTrees(m, lots, mats, chunkKey, group);
+  buildTrees(m, lots, mats, chunkKey, chunkOf, group);
 
   const spots: LightSpot[] = [];
   const caster = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });

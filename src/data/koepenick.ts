@@ -183,7 +183,7 @@ export function koepenickMap(scale = 1): MapDef {
     { id: 'mueggelberge', name: 'Müggelberge', ground: 'forest', frontage: null, trees: 5, specials: ['kleingarten', 'teich'], poly: line([[62, 84], [104, 70], [124, 48], [140, 66], [166, 70], [166, 156], [50, 156], [36, 110]]) },
     { id: 'wendenschloss', name: 'Wendenschloß', ground: 'grass', frontage: 'house', trees: 1.6, specials: ['kleingarten', 'teich'], poly: line([[-26, 60], [40, 64], [62, 84], [36, 110], [50, 156], [-14, 156], [-22, 110]]) },
     { id: 'vorstadt', name: 'Köllnische Vorstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.5, specials: ['truemmer', 'baustelle', 'hinterhof'], poly: line([[-44, -50], [-86, -66], [-88, 30], [-44, 60]]) },
-    { id: 'spreepark', name: 'Spreepark', ground: 'jungle', frontage: null, trees: 3, specials: ['truemmer', 'baustelle'], jungle: true, poly: line([[-160, -110], [-86, -66], [-88, 30], [-160, 32]]) },
+    { id: 'spreepark', name: 'Spreepark', ground: 'jungle', frontage: null, trees: 5, specials: ['truemmer', 'baustelle'], jungle: true, poly: line([[-160, -110], [-86, -66], [-88, 30], [-160, 32]]) },
     { id: 'johannisthal', name: 'Johannisthal', ground: 'grass', frontage: 'house', trees: 1.8, specials: ['truemmer', 'baustelle'], poly: line([[-160, 32], [-88, 30], [-44, 60], [-26, 156], [-160, 156]]) },
     { id: 'friedrichshagen', name: 'Friedrichshagen', ground: 'forest', frontage: null, trees: 2.6, specials: ['hinterhof', 'parkplatz'], poly: line([[104, -156], [166, -156], [166, -70], [104, -60]]) },
   ];
