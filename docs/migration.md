@@ -23,6 +23,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | L2 Loot and item follow-ups | Sonnet | done (2026-11-16): `docs/tasks/l2-loot-followups.md` |
 | Pad layout as in 2D (Johannes, 2026-11-17) | Claude | done (PR #26) |
 | R1 Hero outline cost | Opus 5.5 high, Johannes measures | open: `docs/tasks/r1-outline-cost.md` |
+| H1 Custom hero: real clothing, outfits, inventory preview, left-hand grip | PC · Blender · Opus high (spec: Fable 5.2) | open, specified 2026-11-17 (option A: keep body and skeleton): `docs/tasks/h1-hero.md`, start with step 1 or 2 |
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
 
@@ -84,7 +85,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, oth
 | M14 | Balance bot: port `tools/sim.js`, `tools/balance.mjs`, then calibrate to Johannes (B9, B10) | Codex port, Claude rework | M8 | Bot clear times match playtests |
 | M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`) | Claude, Johannes | P1 | |
 
-Parallel on the PC: H1 custom hero (2 test heroes, pick, rig on current skeleton, 2 outfits, weapons), H2 Köpenick ghoul and other enemies.
+Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`: current body and skeleton stay, real clothing built in Blender, 2 outfits, inventory preview, left-hand grip; no test-hero round), H2 Köpenick ghoul and other enemies.
 
 ## How each area moves
 

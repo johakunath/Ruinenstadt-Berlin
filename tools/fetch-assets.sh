@@ -17,11 +17,11 @@ fetch() { # slug, output zip
   csrf=$(grep -oE 'csrf_token" value="[^"]+' <<<"$page" | head -1 | sed 's/.*value="//')
   # The purchase page lists the upload id of the free Standard zip.
   curl -sS -b "$tmp/jar" -c "$tmp/jar" -X POST --data-urlencode "csrf_token=$csrf" "https://quaternius.itch.io/$slug/download_url" -o "$tmp/url.json"
-  url=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["url"])' "$tmp/url.json")
+  url=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).url)' "$tmp/url.json")
   id=$(curl -sS -b "$tmp/jar" "$url" | grep -oE 'data-upload_id="[0-9]+"' | head -1 | grep -oE '[0-9]+')
   curl -sS -b "$tmp/jar" -X POST --data-urlencode "csrf_token=$csrf" \
     "https://quaternius.itch.io/$slug/file/$id?source=view_game&as_props=1&after_download_lightbox=true" -o "$tmp/file.json"
-  url=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["url"])' "$tmp/file.json")
+  url=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).url)' "$tmp/file.json")
   curl -sS -L "$url" -o "$out"
 }
 
