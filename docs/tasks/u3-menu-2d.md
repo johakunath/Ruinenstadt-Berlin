@@ -12,6 +12,7 @@ Status: open. Playtest Johannes, 2026-11-17: U1/U2 copied the structure, not the
 | Stats | Icon per row and `?` tooltip | Plain rows |
 | Detail | Wide right panel with hint "Tippe ein Teil an…" | Two narrow cards |
 | Options | Own screen from the cog: title "Optionen", sections SPIEL / BILD UND TON / …, one card per setting with sub-line, toggles and segment buttons, ZURÜCK | Tab with checkboxes and a table |
+| Vollbild in the HUD | Button `#fsb` next to the pause button while not in fullscreen, during runs and in camp (`index.html:30`, `js/input.js:64-65`) | Only a switch in Optionen |
 | Steuerung | Segment Touch · Tastatur und Maus · Controller, each an SVG with labelled callouts | One table |
 
 ## Source (2D, read only)
