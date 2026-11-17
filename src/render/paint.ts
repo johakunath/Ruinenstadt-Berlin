@@ -1447,3 +1447,231 @@ export function paintGraffiti(): Texture {
   }
   return toTexture(c, false);
 }
+
+// ---------------------------------------------------------------- market and garden
+
+/** Tile order of `paintMarket` (4 × 4 grid, row-major from the top left). */
+export const MARKET_TILES = { apples: 0, cabbage: 1, potatoes: 2, cans: 3, jars: 4, books: 5, radio: 6, tv: 7, plaid: 8, knit: 9, paper: 10, plain: 11, felt: 12, window: 13, planks: 14, soil: 15 } as const;
+
+/**
+ * Market and allotment atlas: produce seen from above, can and jar labels, book spines, radio and TV fronts,
+ * clothes, newspaper, a plain tintable tile, roofing felt, a Laube window (left intact, right broken),
+ * light planks for tinting and bed soil. Tiles are 256 px; draw stays inside each tile so mips do not bleed much.
+ */
+export function paintMarket(o: PaintOptions): Surface {
+  const T = 256;
+  const rng = new Rng(311);
+  const [c, ctx] = canvas(T * 4, T * 4);
+  const tile = (i: number, draw: () => void): void => {
+    ctx.save();
+    ctx.translate((i % 4) * T, Math.floor(i / 4) * T);
+    ctx.beginPath();
+    ctx.rect(0, 0, T, T);
+    ctx.clip();
+    draw();
+    ctx.restore();
+  };
+  const fill = (col: string): void => { ctx.fillStyle = col; ctx.fillRect(0, 0, T, T); };
+  const blob = (x: number, y: number, rx: number, ry: number, col: string, hi = 0.35, lo = -0.45): void => {
+    const g = ctx.createRadialGradient(x - rx * 0.35, y - ry * 0.35, 1, x, y, Math.max(rx, ry));
+    g.addColorStop(0, shade(col, hi));
+    g.addColorStop(0.6, col);
+    g.addColorStop(1, shade(col, lo));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, rng.range(0, Math.PI), 0, Math.PI * 2);
+    ctx.fill();
+  };
+  const heap = (count: number, r: [number, number], cols: string[], extra?: (x: number, y: number, r: number) => void): void => {
+    fill('#1e1610');
+    for (let i = 0; i < count; i++) {
+      const x = rng.range(0, T);
+      const y = rng.range(0, T);
+      const rr = rng.range(r[0], r[1]);
+      blob(x, y, rr, rr * rng.range(0.8, 1), rng.pick(cols));
+      extra?.(x, y, rr);
+    }
+  };
+  // 0 apples: red and a few green, stalk dots.
+  tile(0, () => heap(70, [22, 28], ['#b42a1c', '#c73a22', '#9c2018', '#8e9a2a', '#c4521e'], (x, y) => { ctx.fillStyle = '#3a2614'; ctx.fillRect(x - 1, y - 2, 3, 4); }));
+  // 1 cabbage: pale green heads with leaf veins.
+  tile(1, () => heap(14, [52, 64], ['#7e9a4a', '#8fae58', '#6d8a3e'], (x, y, r) => {
+    ctx.strokeStyle = 'rgba(230,240,190,0.45)';
+    ctx.lineWidth = 2.5;
+    for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + rng.next(); ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + Math.cos(a + 0.4) * r * 0.5, y + Math.sin(a + 0.4) * r * 0.5, x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9); ctx.stroke(); }
+  }));
+  // 2 potatoes: dusty brown ovals with eyes.
+  tile(2, () => heap(60, [18, 26], ['#a07a48', '#8a6538', '#b38c58'], (x, y) => { ctx.fillStyle = 'rgba(60,40,20,0.7)'; ctx.fillRect(x + rng.range(-8, 8), y + rng.range(-6, 6), 3, 3); }));
+  // 3 cans: label bands (wraps around the cylinder) with bright brand stripes.
+  tile(3, () => {
+    const cols = ['#b8261c', '#e0b23a', '#2d5d8a', '#e8dcc0', '#3f7a3a'];
+    for (let i = 0; i < 4; i++) {
+      const col = cols[i % cols.length] as string;
+      ctx.fillStyle = col; ctx.fillRect(i * 64, 0, 64, T);
+      ctx.fillStyle = shade(col, 0.5); ctx.fillRect(i * 64, 90, 64, 70);
+      ctx.fillStyle = '#16110f'; ctx.fillRect(i * 64 + 12, 112, 40, 8); ctx.fillRect(i * 64 + 18, 128, 28, 6);
+      ctx.fillStyle = shade(col, -0.4); ctx.beginPath(); ctx.arc(i * 64 + 32, 60, 14, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#9aa3a2'; ctx.fillRect(0, 0, T, 16); ctx.fillRect(0, T - 16, T, 16);
+    ctx.fillStyle = 'rgba(30,20,10,0.5)'; ctx.fillRect(0, 16, T, 4); ctx.fillRect(0, T - 20, T, 4);
+    strokes(ctx, rng, T, T, { count: 120, colors: ['#5a3020', '#2a1a10'], len: [6, 30], width: [2, 6], alpha: [0.15, 0.4] });
+  });
+  // 4 jars: amber and red preserves behind glass, tin lid on top, paper label.
+  tile(4, () => {
+    for (let i = 0; i < 4; i++) {
+      const col = ['#c9661c', '#8e1e22', '#d6a02a', '#6d2a4a'][i] as string;
+      const g = ctx.createLinearGradient(i * 64, 0, i * 64 + 64, 0);
+      g.addColorStop(0, shade(col, -0.5)); g.addColorStop(0.3, shade(col, 0.25)); g.addColorStop(0.5, col); g.addColorStop(1, shade(col, -0.55));
+      ctx.fillStyle = g; ctx.fillRect(i * 64, 0, 64, T);
+    }
+    ctx.fillStyle = '#b8b09a'; ctx.fillRect(0, 0, T, 40);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 40, T, 6);
+    ctx.fillStyle = '#e8dcbc'; ctx.fillRect(0, 120, T, 56);
+    ctx.fillStyle = '#4a2a1a'; for (let i = 0; i < 4; i++) ctx.fillRect(i * 64 + 14, 140, 36, 6);
+    ctx.fillStyle = 'rgba(255,250,230,0.35)'; for (let i = 0; i < 4; i++) ctx.fillRect(i * 64 + 14, 50, 6, 200);
+  });
+  // 5 books: spines in muted cloth colors, gold bands.
+  tile(5, () => {
+    let x = 0;
+    while (x < T) {
+      const w = rng.range(14, 30);
+      const col = rng.pick(['#6e2019', '#2d4a5a', '#4d5326', '#8b4a35', '#2a2420', '#7b6a32', '#5a3a5a', '#c9b48a']);
+      ctx.fillStyle = col; ctx.fillRect(x, rng.range(0, 30), w - 2, T);
+      ctx.fillStyle = 'rgba(214,170,80,0.8)'; ctx.fillRect(x + 2, 60, w - 6, 4); ctx.fillRect(x + 2, 190, w - 6, 4);
+      ctx.fillStyle = shade(col, 0.3); ctx.fillRect(x + w / 2 - 2, 90, 3, 70);
+      ctx.fillStyle = '#100c0a'; ctx.fillRect(x + w - 2, 0, 2, T);
+      x += w;
+    }
+  });
+  // 6 radio: walnut case, cloth grille, dial with a scale, two knobs.
+  tile(6, () => {
+    fill('#5a3420');
+    strokes(ctx, rng, T, T, { count: 200, colors: ['#3a2010', '#7a4a2a'], len: [30, 120], width: [1, 4], alpha: [0.2, 0.5], angle: 0, spread: 0.05 });
+    ctx.fillStyle = '#c4a874'; ctx.fillRect(20, 24, 136, 150);
+    ctx.strokeStyle = '#7a6040'; ctx.lineWidth = 3; for (let y = 34; y < 170; y += 10) { ctx.beginPath(); ctx.moveTo(24, y); ctx.lineTo(152, y); ctx.stroke(); }
+    ctx.fillStyle = '#e8d8a8'; ctx.fillRect(170, 30, 66, 90);
+    ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(203, 110, 50, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke();
+    ctx.strokeStyle = '#b8261c'; ctx.beginPath(); ctx.moveTo(203, 110); ctx.lineTo(220, 60); ctx.stroke();
+    for (const x of [186, 222]) blob(x, 190, 16, 16, '#2a2018');
+    ctx.fillStyle = '#c9a050'; ctx.fillRect(20, 210, 216, 8);
+  });
+  // 7 TV: grey plastic bezel, dark curved screen with a dull reflection, a crack.
+  tile(7, () => {
+    fill('#6d6a62');
+    const g = ctx.createRadialGradient(100, 110, 10, 110, 120, 120);
+    g.addColorStop(0, '#4a5a58'); g.addColorStop(1, '#141a1a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(18, 22, 176, 196, 26); ctx.fill();
+    ctx.fillStyle = 'rgba(200,220,210,0.18)'; ctx.beginPath(); ctx.ellipse(70, 70, 40, 18, -0.5, 0, Math.PI * 2); ctx.fill();
+    crack(ctx, rng, 140, 80, 8, 14, 2.2, 2);
+    for (let y = 40; y < 200; y += 26) blob(224, y, 9, 9, '#2a2622');
+  });
+  // 8 plaid flannel.
+  tile(8, () => {
+    fill('#8e2a20');
+    for (let i = 0; i < T; i += 64) { ctx.fillStyle = 'rgba(20,16,30,0.55)'; ctx.fillRect(i, 0, 24, T); ctx.fillRect(0, i, T, 24); ctx.fillStyle = 'rgba(240,210,150,0.35)'; ctx.fillRect(i + 40, 0, 4, T); ctx.fillRect(0, i + 40, T, 4); }
+    strokes(ctx, rng, T, T, { count: 500, colors: ['#3a1a14', '#c86a4a'], len: [4, 14], width: [1, 2], alpha: [0.15, 0.35] });
+  });
+  // 9 knit / denim: mid blue with ribs.
+  tile(9, () => {
+    fill('#3e5a78');
+    ctx.strokeStyle = 'rgba(10,20,40,0.35)'; ctx.lineWidth = 3; for (let x = 0; x < T; x += 8) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 30, T); ctx.stroke(); }
+    strokes(ctx, rng, T, T, { count: 600, colors: ['#8aa0b8', '#1e2c3e'], len: [4, 18], width: [1, 3], alpha: [0.15, 0.4], angle: Math.PI / 2, spread: 0.2 });
+    mottle(ctx, rng, T, T, 6, ['#d8d0b8'], [20, 50], 0.25);
+  });
+  // 10 newspaper: columns of grey text and a headline.
+  tile(10, () => {
+    fill('#d8ceb0');
+    ctx.fillStyle = '#1a1612'; ctx.fillRect(14, 14, 228, 26);
+    ctx.fillStyle = 'rgba(30,26,22,0.6)';
+    for (let col = 0; col < 3; col++) for (let y = 54; y < 240; y += 9) ctx.fillRect(14 + col * 78, y, rng.range(40, 70), 4);
+    ctx.fillStyle = '#5a5246'; ctx.fillRect(96, 60, 70, 60);
+    mottle(ctx, rng, T, T, 8, ['#7a6a48', '#3a3020'], [20, 60], 0.35);
+  });
+  // 11 plain: near-white painted surface for vertex tints (gnome, candles, barrels, frames).
+  tile(11, () => {
+    fill('#e6ded0');
+    strokes(ctx, rng, T, T, { count: 300, colors: ['#ffffff', '#b8ae9c', '#cfc4b0'], len: [10, 50], width: [2, 6], alpha: [0.15, 0.4] });
+    mottle(ctx, rng, T, T, 6, ['#8a7e6a'], [30, 70], 0.25);
+  });
+  // 12 roofing felt: tarred, dark, with battens and a few torn patches.
+  tile(12, () => {
+    fill('#33302c');
+    strokes(ctx, rng, T, T, { count: 500, colors: ['#4a4640', '#1e1c1a', '#5a5248'], len: [10, 50], width: [2, 6], alpha: [0.2, 0.5], angle: 0, spread: 0.1 });
+    for (let x = 32; x < T; x += 64) { ctx.fillStyle = '#4a3a2a'; ctx.fillRect(x, 0, 8, T); ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(x + 8, 0, 3, T); }
+    mottle(ctx, rng, T, T, 5, ['#4d5326', '#6a6a50'], [20, 50], 0.45);
+  });
+  // 13 window: left half intact (cross frame, checked curtains), right half broken (dark, shards).
+  tile(13, () => {
+    for (const h of [0, 1]) {
+      const x0 = h * 128;
+      ctx.fillStyle = '#e8e2d2'; ctx.fillRect(x0, 0, 128, T);
+      ctx.fillStyle = h ? '#0e1210' : '#2a3a38'; ctx.fillRect(x0 + 12, 12, 104, 232);
+      if (!h) {
+        for (const s of [0, 1]) {
+          const cx = x0 + 12 + s * 70;
+          for (let y = 12; y < 244; y += 12) for (let x = 0; x < 34; x += 12) { ctx.fillStyle = ((x + y) / 12) % 2 ? '#c84a3a' : '#f0e6d0'; ctx.fillRect(cx + x, y, 12, 12); }
+        }
+        ctx.fillStyle = 'rgba(255,240,200,0.25)'; ctx.fillRect(x0 + 20, 20, 30, 60);
+      } else {
+        ctx.fillStyle = 'rgba(160,190,190,0.5)';
+        for (const [a, b2, c2] of [[[12, 12], [60, 12], [24, 70]], [[116, 244], [116, 170], [80, 244]], [[116, 12], [116, 60], [90, 12]]] as const) { ctx.beginPath(); ctx.moveTo(x0 + a[0], a[1]); ctx.lineTo(x0 + b2[0], b2[1]); ctx.lineTo(x0 + c2[0], c2[1]); ctx.fill(); }
+        ctx.fillStyle = '#7a5040'; ctx.fillRect(x0 + 20, 150, 30, 94);
+      }
+      ctx.fillStyle = '#e8e2d2'; ctx.fillRect(x0 + 60, 0, 8, T); ctx.fillRect(x0, 120, 128, 8);
+    }
+  });
+  // 14 light planks (vertical boards) for green, white, brown and blue Lauben.
+  tile(14, () => {
+    fill('#dcd6c8');
+    for (let x = 0; x < T; x += 32) { ctx.fillStyle = shade('#dcd6c8', rng.range(-0.15, 0.08)); ctx.fillRect(x, 0, 30, T); ctx.fillStyle = 'rgba(20,16,12,0.7)'; ctx.fillRect(x + 30, 0, 2, T); }
+    strokes(ctx, rng, T, T, { count: 400, colors: ['#8a7e6a', '#ffffff', '#5a4a3a'], len: [20, 90], width: [1, 3], alpha: [0.1, 0.35], angle: Math.PI / 2, spread: 0.05 });
+    mottle(ctx, rng, T, T, 5, ['#4d5326', '#3a2a1c'], [20, 60], 0.35);
+    const g = ctx.createLinearGradient(0, T * 0.7, 0, T); g.addColorStop(0, 'rgba(40,30,20,0)'); g.addColorStop(1, 'rgba(40,30,20,0.5)'); ctx.fillStyle = g; ctx.fillRect(0, 0, T, T);
+  });
+  // 15 soil: dark crumbly earth with furrows.
+  tile(15, () => {
+    fill('#3a2a1c');
+    for (let y = 16; y < T; y += 32) { ctx.fillStyle = 'rgba(15,10,6,0.55)'; ctx.fillRect(0, y, T, 6); ctx.fillStyle = 'rgba(120,90,60,0.35)'; ctx.fillRect(0, y - 6, T, 4); }
+    strokes(ctx, rng, T, T, { count: 500, colors: ['#5a4430', '#1e140c', '#6a5a3a'], len: [3, 10], width: [2, 4], alpha: [0.3, 0.6] });
+  });
+  flatten(ctx, T * 4, T * 4, o.flatten * 0.5);
+  return { map: toTexture(c, false, o.anisotropy) };
+}
+
+/** Market tarps, four bands from the top: red/white stripes, blue, green, ochre. The right half is torn (alpha holes). */
+export function paintStallTarp(o: PaintOptions): Surface {
+  const W = 512;
+  const B = 128;
+  const rng = new Rng(317);
+  const [c, ctx] = canvas(W, B * 4);
+  const bases = ['#a8322a', '#3e5e86', '#4f6e3a', '#c48a2a'];
+  bases.forEach((base, i) => {
+    const y = i * B;
+    ctx.fillStyle = base; ctx.fillRect(0, y, W, B);
+    if (i === 0) for (let x = 32; x < W; x += 64) { ctx.fillStyle = '#e6d6b4'; ctx.fillRect(x, y, 32, B); }
+    if (i === 2) { ctx.fillStyle = 'rgba(20,30,10,0.25)'; for (let x = 0; x < W; x += 48) ctx.fillRect(x, y, 3, B); }
+    const g = ctx.createLinearGradient(0, y, 0, y + B);
+    g.addColorStop(0, 'rgba(255,240,210,0.12)'); g.addColorStop(0.6, 'rgba(30,22,18,0.1)'); g.addColorStop(1, 'rgba(30,22,18,0.5)');
+    ctx.fillStyle = g; ctx.fillRect(0, y, W, B);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, y, W, B); ctx.clip();
+    for (let k = 0; k < 60; k++) { const x = rng.range(0, W); const yy = y + rng.range(0, B); ctx.strokeStyle = rng.pick([shade(base, 0.3), shade(base, -0.4), '#2a2018']); ctx.globalAlpha = rng.range(0.1, 0.3); ctx.lineWidth = rng.range(2, 6); ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + rng.range(-30, 30), yy + rng.range(-8, 8)); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    for (let k = 0; k < 4; k++) { const gx = rng.range(0, W); const gy = y + rng.range(10, B - 10); const r = rng.range(14, 34); const mg = ctx.createRadialGradient(gx, gy, 0, gx, gy, r); mg.addColorStop(0, 'rgba(50,56,30,0.45)'); mg.addColorStop(1, 'rgba(50,56,30,0)'); ctx.fillStyle = mg; ctx.fillRect(gx - r, gy - r, r * 2, r * 2); }
+    // Seam and grommets along the band edge.
+    ctx.fillStyle = 'rgba(20,14,10,0.5)'; ctx.fillRect(0, y + B - 8, W, 3);
+    ctx.fillStyle = '#b8b0a0'; for (let x = 20; x < W; x += 60) { ctx.beginPath(); ctx.arc(x, y + B - 14, 3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    // Tears in the right half: jagged holes with frayed dark edges.
+    ctx.save(); ctx.beginPath(); ctx.rect(W / 2, y + 4, W / 2, B - 8); ctx.clip();
+    for (let k = 0; k < 3; k++) {
+      const cx = W / 2 + rng.range(30, W / 2 - 30);
+      const cy = y + rng.range(25, B - 25);
+      const pts: Array<[number, number]> = [];
+      for (let a = 0; a < 12; a++) { const r = rng.range(8, 30) * (a % 2 ? 0.5 : 1); const ang = (a / 12) * Math.PI * 2; pts.push([cx + Math.cos(ang) * r * 1.6, cy + Math.sin(ang) * r]); }
+      ctx.strokeStyle = 'rgba(25,18,12,0.8)'; ctx.lineWidth = 5; ctx.beginPath(); pts.forEach(([px, py], j) => (j ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.stroke();
+      ctx.globalCompositeOperation = 'destination-out'; ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore();
+  });
+  return { map: toTexture(c, false, o.anisotropy) };
+}

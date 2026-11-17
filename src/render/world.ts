@@ -13,7 +13,7 @@ import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
 import { Materials, type LitMaterial } from './materials';
 import {
-  paintAwning, paintBrick, paintCarPaint, paintCloth, paintCobbles, paintConcrete, paintCorrugated, paintGraffiti, paintLattice, paintTarp, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster,
+  paintAwning, paintBrick, paintCarPaint, paintCloth, paintCobbles, paintConcrete, paintCorrugated, paintGraffiti, paintLattice, paintTarp, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster, paintMarket, paintStallTarp,
   paintShopWindow, paintSign, paintStucco, paintVan, paintWindows, paintWood, type PaintOptions,
 } from './paint';
 import { buildBin, buildCrate } from './breakable-parts';
@@ -131,6 +131,10 @@ export interface Mats {
   coals: LitMaterial;
   ivy: LitMaterial;
   fern: LitMaterial;
+  /** Market and allotment atlas (`MARKET_TILES`), tinted per vertex. */
+  market: LitMaterial;
+  /** Stall tarps in four colors, right half torn (alpha-tested, double-sided). */
+  stallTarp: LitMaterial;
   dark: MeshBasicMaterial;
   // M11c urban props (`props-urban.ts`, cars): light bases, the vertex tint gives the color.
   carPaint: LitMaterial;
@@ -184,6 +188,8 @@ export function makeMats(m: Materials): Mats {
     coals: m.surface({ color: 0x2a0d05, emissive: 0xff6a1a, emissiveIntensity: 2.5, roughness: 1 }),
     ivy: m.surface({ map: ivyTex, alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
     fern: m.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
+    market: m.surface({ map: paintMarket(o).map, roughness: 0.8, vertexColors: true }),
+    stallTarp: m.surface({ map: paintStallTarp(o).map, alphaTest: 0.5, doubleSided: true, roughness: 0.9, vertexColors: true }),
     dark: new MeshBasicMaterial({ color: 0x06090a }),
     carPaint: m.surface({ map: paintCarPaint(o).map, roughness: 0.55, metalness: 0.1, vertexColors: true }),
     carGlass: m.surface({ color: 0x4d6266, emissive: 0x0c1416, roughness: 0.18, metalness: 0.05, vertexColors: true }),
