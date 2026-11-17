@@ -110,7 +110,8 @@ export class GameRenderer {
     const B = opts.map?.def.bounds;
     this.cam = new FollowCamera(
       opts.cam,
-      B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 14 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
+      // The south edge front stands about 2 m inside the bound: the frame stops 5 m short so the hero stays on screen above the HUD (M11d step 4).
+      B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 5 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
     );
     const def = opts.map?.def;
     this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks) : null;
