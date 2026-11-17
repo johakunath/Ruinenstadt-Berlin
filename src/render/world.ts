@@ -14,7 +14,7 @@ import { BatchSet, boxGeo } from './batch';
 import { Materials, type LitMaterial } from './materials';
 import {
   paintAwning, paintBrick, paintCloth, paintCobbles, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster,
-  paintShopWindow, paintSign, paintStucco, paintVan, paintWindows, paintWood, type PaintOptions,
+  paintMarket, paintShopWindow, paintSign, paintStucco, paintTarp, paintVan, paintWindows, paintWood, type PaintOptions,
 } from './paint';
 import { buildBin, buildCrate } from './breakable-parts';
 import { buildUrbanProp } from './props-urban';
@@ -131,6 +131,10 @@ export interface Mats {
   coals: LitMaterial;
   ivy: LitMaterial;
   fern: LitMaterial;
+  /** Market and allotment atlas (`MARKET_TILES`), tinted per vertex. */
+  market: LitMaterial;
+  /** Stall tarps in four colors, right half torn (alpha-tested, double-sided). */
+  tarp: LitMaterial;
   dark: MeshBasicMaterial;
 }
 
@@ -173,6 +177,8 @@ export function makeMats(m: Materials): Mats {
     coals: m.surface({ color: 0x2a0d05, emissive: 0xff6a1a, emissiveIntensity: 2.5, roughness: 1 }),
     ivy: m.surface({ map: ivyTex, alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
     fern: m.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
+    market: m.surface({ map: paintMarket(o).map, roughness: 0.8, vertexColors: true }),
+    tarp: m.surface({ map: paintTarp(o).map, alphaTest: 0.5, doubleSided: true, roughness: 0.9, vertexColors: true }),
     dark: new MeshBasicMaterial({ color: 0x06090a }),
   };
 }
