@@ -85,7 +85,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, oth
 | M14 | Balance bot: port `tools/sim.js`, `tools/balance.mjs`, then calibrate to Johannes (B9, B10) | Codex port, Claude rework | M8 | Bot clear times match playtests |
 | M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`) | Claude, Johannes | P1 | |
 
-Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`: current body and skeleton stay, real clothing built in Blender, 2 outfits, inventory preview, left-hand grip; no test-hero round), H2 Köpenick ghoul and other enemies.
+Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`): steps 1–5 done 2026-11-17 (Blender pipeline, left-hand grip, coat and vest outfits, boots, sneakers, gloves, scarf, equipment swap, turnable inventory doll); step 6 painted textures (Codex) and step 7 measurement (Johannes) open. H2 Köpenick ghoul and other enemies.
 
 ## How each area moves
 

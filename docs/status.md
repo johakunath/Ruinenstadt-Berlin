@@ -36,6 +36,8 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-17)
 
+- H1 hero: own clothing from Blender (coat, vest, boots, sneakers, gloves, scarf) that follows the equipped items, left hand on two-handed weapons, the hammer's two-handed stance, a turnable hero in the inventory (`docs/tasks/h1-hero.md`).
+- R1: the hero contour behind buildings renders only when something stands in front of her, scissored to her area (`docs/tasks/r1-outline-cost.md`).
 - M12: roster, elites, boss attacks, resistances (`docs/tasks/m12-enemies.md`). M14: balance bot and a first tuning pass (`docs/balance.md`).
 - Playtest fixes: every crate breaks, pause before the blessing choice, enemy life bars, no map and inventory buttons on screen, fullscreen on phones, arrow on the big map (`docs/playtests.md`).
 - 2026-11-16: combat port completed (weapons, powers, all 50 blessings, consumables, run events), legendary powers, open fights, Späti keeper. Prototype PC performance, pad feel and hero outline accepted by Johannes.
@@ -44,7 +46,7 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 
 | Point | Detail |
 |---|---|
-| Hardware | Tab S9: over 90 fps on Köpenick before the 60 fps cap (2026-11-15). PC prototype performance accepted by Johannes (2026-11-16) |
+| Hardware | Tab S9: over 90 fps on Köpenick before the 60 fps cap (2026-11-15). PC prototype performance accepted by Johannes (2026-11-16). Not measured yet: the new hero (H1 step 7, first equip swap, inventory doll) and the R1 contour savings |
 | Feel | Prototype pad feel and rumble verified by Johannes (2026-11-16); new M7/M8 moves await playtest |
 | Progression | Gear now comes from drops and breakable crates and bins (M4); M6 saves/checkpoints/difficulty and online sync built (live sync playtest open); camp/stash and balance remain open |
 | Map | v2 and part 2 not playtested yet. T1 adds painted grass, dirt, sidewalk plates, forest floor and scatter, using the 2D art as generation references; code textures remain loading fallbacks. Tram rails have steel heads, inward grooves, guard edges, worn seams and joined bends; crossing curbs leave the corridor clear. The stopped tram is level and aligned to the east-track straight, with sixteen steel wheel contacts on the rail heads. PC/Tab S9 performance integration and playtest remain open (`docs/asset-pipeline.md`) |

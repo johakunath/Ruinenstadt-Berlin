@@ -93,12 +93,14 @@ Raw CC0 packs look clean and generic. They will **not** match the style bible as
 
 Goal: red scarf, long brown leather coat, harness, pouches, heavy boots; swappable clothing and weapons; animation at least as good as now. Full spec, contract and budget: `docs/tasks/h1-hero.md`.
 
+Status 2026-11-17: steps 1–5 built (PRs #36–#41). Pieces: `a_mantel` (knee-length open coat), `a_weste`, `f_stiefel`, `f_turnsch`, `g_handsch`, scarf; `src/data/hero-look.ts` maps equipment to pieces, `HeroModel` swaps them, `HeroPreview` turns the hero in the inventory. Open: painted textures (step 6, Codex), measurement (step 7).
+
 | Step | Tool | Note |
 |---|---|---|
 | Base body and rig | Quaternius `Superhero_Female_FullBody` on the UAL skeleton (CC0), unchanged | The skeleton is copied from the source file and never passes through Blender |
-| Clothing | Modular meshes built by Blender scripts, bound to the skeleton by joint name (coat, scarf, boots, gloves, district pieces) | Swap = show or hide meshes; a visible piece hides the body region under it |
+| Clothing | Modular meshes built by Blender scripts (`tools/blender/hero_clothes.py`), bound to the skeleton by joint name (coat, vest, scarf, boots, sneakers, gloves; district pieces later) | Swap = show or hide meshes; a visible piece hides the body region under it. Vertex colours with baked occlusion until painted textures |
 | Weapons | Code-built models on `hand_r` (`src/render/weapons.ts`); left hand by IK | Same as the item system |
-| Animation | The 39 UAL clips in `anims.glb` (`Pistol_Idle_Loop` added for the hammer stance, H1 2b) | Extra joints (scarf, coat) move by springs in code |
+| Animation | The 39 UAL clips in `anims.glb` (`Pistol_Idle_Loop` added for the hammer stance, H1 2b) | Extra joints (scarf, coat back panels) move by springs in `HeroModel.sway` |
 | Production | Claude on the PC, headless `blender -b --python tools/blender/...`; scripts committed, no `.blend` in git | Verified on the PC with Blender 5.3 (2026-11-17). Not verified: Blender in the cloud environment |
 
 ## Gates
