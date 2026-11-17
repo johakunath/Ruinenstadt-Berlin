@@ -19,7 +19,7 @@ import { PLAYER, type AttackDef } from '../data/combat';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Cast, type Player } from '../sim/types';
 import type { ElementId, WeaponKindId } from '../data/items';
-import { TWO_HAND_STAND, WeaponRack, weaponModel, type WeaponModel } from './weapons';
+import { THRUST, TWO_HAND_STAND, WeaponRack, thrustWeight, weaponModel, type WeaponModel } from './weapons';
 import { FIST_CLIP, LeftHandIk, easeGrip } from './hand-ik';
 import type { LitMaterial, Materials } from './materials';
 
@@ -208,6 +208,9 @@ const STANCE_EASE = 0.15;
 
 const gripPos = new Vector3();
 const gripDir = new Vector3();
+const thrustDir = new Vector3();
+/** Thrust grip (C1): seconds to let go after the attack ended or was cancelled. */
+const THRUST_LET_GO = 0.15;
 
 /** Clip and the part of it a cast plays: `at` is the clip time when the effect happens. */
 const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; to: number }> = {
@@ -253,6 +256,10 @@ export class HeroView {
   private ikW = 0;
   /** 0..1: how far the left hand is in the two-handed standing pose (grip height, wrist roll, stretch). */
   private stance = 0;
+  /** Thrust grip weight (C1) of the last frame; decays after the attack so a cancel never snaps. */
+  private thrustW = 0;
+  private thrustYaw = 0;
+  private thrustReach = 3;
   /** Body, clothing pieces and spring chains. */
   readonly body: HeroModel;
 
@@ -315,8 +322,44 @@ export class HeroView {
     // The mixer skips bones whose clip value did not change (hitstop, held keys): undo last frame's IK first.
     this.ik.restore();
     a.update(frozen ? 0 : dt);
+    this.thrust(p, t, dt, frozen, model);
     this.leftHand(p, t, dt, frozen, flinch, standing);
     this.body.sway(x, z, this.root.rotation.y, dt);
+  }
+
+  /** World height of the weapon tip during a thrust (smear height), NaN otherwise. */
+  thrustTipY(): number {
+    return this.rack.thrustTipY();
+  }
+
+  /**
+   * Thrust grip (C1): during `thrust` attacks the weapon turns in the hand to point along the attack
+   * direction (facing plus the arc, `thrustWeight` over clip time). Out of the attack the weight decays,
+   * and a chained thrust picks up from where the last one left off.
+   */
+  private thrust(p: Player, t: number, dt: number, frozen: boolean, model: WeaponModel): void {
+    const k = THRUST[model];
+    const a = p.state === 'attack' ? p.attack : null;
+    let w = frozen ? this.thrustW : Math.max(0, this.thrustW - dt / THRUST_LET_GO);
+    if (k && a && a.style === 'thrust') {
+      w = Math.max(w, thrustWeight(a, attackClipTime(a, t, p.attackSpeed)));
+      this.thrustYaw = a.from + (a.to - a.from) * Math.min(1, Math.max(0, (t - a.windup) / a.active));
+      this.thrustReach = a.reach;
+    }
+    this.thrustW = k ? w : 0;
+    if (this.thrustW <= 0) { this.rack.aimThrust(0, thrustDir); return; }
+    // From the hand toward the point at full reach on the hit line (facing plus the arc, the smear's
+    // leading edge), a few degrees below level: the tip converges on the smear although the hand is off-axis.
+    this.root.updateMatrixWorld(true);
+    const f = this.root.rotation.y + this.thrustYaw;
+    const pitch = k?.pitch ?? 0;
+    const hand = this.rack.group.parent;
+    if (hand) hand.getWorldPosition(thrustDir); else thrustDir.copy(this.root.position);
+    const dx = this.root.position.x + Math.sin(f) * this.thrustReach - thrustDir.x;
+    const dz = this.root.position.z + Math.cos(f) * this.thrustReach - thrustDir.z;
+    const flat = Math.hypot(dx, dz) || 1;
+    thrustDir.set((dx / flat) * Math.cos(pitch), -Math.sin(pitch), (dz / flat) * Math.cos(pitch));
+    this.rack.aimThrust(this.thrustW, thrustDir);
   }
 
   /**

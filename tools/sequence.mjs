@@ -6,7 +6,7 @@ const [query = '', outDir = '.', first = '{}', frames = '12', per = '2', setup =
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 640, height: 480 }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
-await page.goto('http://localhost:5173/?' + query, { waitUntil: 'load' });
+await page.goto(`http://localhost:${process.env.PORT ?? 5173}/?` + query, { waitUntil: 'load' });
 await page.waitForFunction(() => document.getElementById('loading')?.hidden === true, null, { timeout: 90000 });
 await page.evaluate(() => { window.__game.start(); window.__game.hold(true); });
 if (setup) await page.evaluate(setup);
