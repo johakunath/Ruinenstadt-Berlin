@@ -281,5 +281,8 @@ A new body or head, authored clips or retargeting (importing more clips from the
 - Numbers: file 1,474 KB, 28,790 triangles.
 - Pictures replaced in `docs/proof/h1-hero/step3/`. `run-side.png` is removed because it showed the long coat.
 
+## Johannes, 2026-11-17 (step 3 approved)
+- The knee-length open coat "looks great": step 3's look is approved. Left in step 3, not blocking: the chest still shows the body's shape. Next: step 4 (swap and second look), after PR #39 merges.
+
 ## Questions
-- Johannes: is the knee-length open coat right (look 2 result)?
+None open.
