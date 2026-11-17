@@ -38,7 +38,7 @@ export const SPECIAL_SIZE: Record<SpecialKind, { w: [number, number]; d: [number
   kirchhof: { w: [19, 22], d: [16, 18], max: 2 },
 };
 /** Chance per street slot to try a lot type (Johannes: two in five lots; many tries do not fit, so higher). */
-export const SPECIAL_SHARE = 0.75;
+export const SPECIAL_SHARE = 0.7;
 export const SPECIAL_NAME: Record<SpecialKind, string> = {
   hinterhof: 'Hinterhof', parkplatz: 'Parkplatz', kleingarten: 'Kleingärten', teich: 'Teich', truemmer: 'Trümmerfeld', baustelle: 'Baustelle', markt: 'Markt', kirchhof: 'Kirchhof',
 };

@@ -657,6 +657,15 @@ export function lotColliders(l: Lot): Collider[] {
   return out;
 }
 
+/** M11c lot types keep their street front free (gates, Durchfahrten): no wrecks or rubble in front. */
+function lotFront(lots: Lot[], x: number, z: number, r: number): boolean {
+  return lots.some((l) => {
+    if (l.kind !== 'special') return false;
+    const dx = x - l.x, dz = z - l.z, a = dx * Math.cos(l.rot) - dz * Math.sin(l.rot), b = dx * Math.sin(l.rot) + dz * Math.cos(l.rot);
+    return Math.abs(a) < l.w / 2 + r + 1 && b > -l.d / 2 - r - 1 && b < l.d / 2 + r + 3.5;
+  });
+}
+
 /**
  * Street lanterns, fire barrels and cover at every encounter, wrecks and rubble on the streets.
  * Deterministic per map seed; nothing lands on a building, in the water or in a fight's center.
@@ -670,6 +679,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
   const hit = (x: number, z: number, r: number): boolean =>
     isWater(m, x, z) ||
     lots.some((l) => Math.abs(x - l.x) < l.w / 2 + r + 1 && Math.abs(z - l.z) < Math.max(l.w, l.d) / 2 + r + 1 && (l.kind !== 'tree' || Math.hypot(x - l.x, z - l.z) < r + 1)) ||
+    (r > 0.6 && lotFront(lots, x, z, r)) ||
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
     m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
     m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r);
@@ -823,7 +833,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         if (onBridge(m, x, z, 3) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 2.5)) continue;
         // On the street, so only props and other cars can be in the way (lots stand behind the curb).
         if (m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < 5) || m.terraces.some((tr) => polyEdgeDist(tr.poly, x, z) < 3 || onStair(tr, x, z, 3) !== null)) continue;
-        if (isWater(m, x, z) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 3.4) || m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + 2 && Math.abs(z - l.z) < l.hz + 2)) continue;
+        if (isWater(m, x, z) || lotFront(lots, x, z, 2.2) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 3.4) || m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + 2 && Math.abs(z - l.z) < l.hz + 2)) continue;
         if (rng.next() < 0.75) props.push({ kind: 'car', x, z, rot: along + (rng.next() < 0.5 ? Math.PI : 0) + (stray ? rng.range(-0.6, 0.6) : rng.range(-0.05, 0.05)), size: 1 });
       }
       // Benches, bins and crates on the sidewalk where buildings front the street.
@@ -1053,7 +1063,7 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
           return [ax + ux * (t + dt) - uz * off, az + uz * (t + dt) + ux * off];
         };
         const tries: Array<[number, number, number]> = [];
-        for (let k = 0; k < 14; k++) tries.push([rng.range(-6, 6), rng.pick([-1, 1]), rng.range(0.9, 4.2)]);
+        for (let k = 0; k < 24; k++) tries.push([rng.range(-6, 6), rng.pick([-1, 1]), rng.range(0.9, 4.2)]);
         let placed: [number, number] | null = null;
         let kind: Prop['kind'] = 'candles';
         for (const [dt, side, extra] of tries) {
@@ -1079,7 +1089,7 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
               const k = rng.pick(extraKinds);
               if (sameKindClash(props, k, x, z)) continue;
               if (streetDist(m, x, z).d < 0.3 || isWater(m, x, z) || inFight(x, z) || (k !== 'candles' && hit(x, z, 0.5))) continue;
-              if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
+              if (lots.some((l) => l.kind !== 'tree' && l.kind !== 'special' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
               add(k, x, z, rng.range(0.5, 0.9));
             }
           }
@@ -1090,7 +1100,7 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
         for (const dt of shuffled([0, 1.5, -1.5, 3, -3, 4.5, -4.5])) {
           const [x, z] = spot(dt, rng.pick([-1, 1]), rng.range(0.5, 0.8));
           if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z)) continue;
-          if (lots.some((l) => l.kind !== 'tree' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
+          if (lots.some((l) => l.kind !== 'tree' && l.kind !== 'special' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
           // Candles keep their gap; a barrel can stand anywhere.
           add(sameKindClash(props, 'candles', x, z) ? 'fireBarrel' : 'candles', x, z, rng.range(0.6, 1.1));
           break;
