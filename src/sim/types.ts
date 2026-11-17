@@ -167,6 +167,8 @@ export interface Enemy {
   guard?: boolean;
   /** Sleeps until the hero comes this close or hurts it (side passage mini-boss). */
   sleep?: number;
+  /** M11c: how a sleeping guard waits: playing dead on the ground or unseen in a doorway/under rubble. */
+  pose?: 'lying' | 'hidden';
   /** Index into `level.guards` for side passage guards (saved as defeated). */
   guardIndex?: number;
   /** The last hit was critical (kill effects). */

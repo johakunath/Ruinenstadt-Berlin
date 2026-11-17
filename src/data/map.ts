@@ -11,6 +11,7 @@ import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { onFerryPier } from '../sim/ferry';
 import { propCollider, type Prop } from './courtyard';
+import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, type SpecialKind } from './lots';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
 
 export type Pt = readonly [number, number];
@@ -67,6 +68,8 @@ export interface Area {
   trees: number;
   /** Jungle style trees (Urzeit) instead of Berlin forest. */
   jungle?: boolean;
+  /** M11c: lot types that replace about two in five street lots here (`src/data/lots.ts`). */
+  specials?: SpecialKind[];
 }
 
 export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati';
@@ -87,7 +90,8 @@ export interface Landmark {
 }
 
 export interface Lot {
-  kind: LotKind | 'tree';
+  /** `special`: an M11c lot type, a walkable place whose buildings, props and guards are in `content`. */
+  kind: LotKind | 'tree' | 'special';
   x: number;
   z: number;
   /** Facing angle of the street front. */
@@ -102,6 +106,8 @@ export interface Lot {
   ruin?: boolean;
   /** Back wing (Seitenflügel, annex): same facing, centered at (x, z), so the footprint is an L. */
   wing?: { x: number; z: number; w: number; d: number };
+  special?: SpecialKind;
+  content?: LotContent;
 }
 
 /** Round hill: flat top of radius `r`, smooth slope `slope` meters wide down to the plain. */
@@ -164,6 +170,10 @@ export interface MapDef {
   /** M16b/M19 side passage surprises: fixed hidden blessings and sleeping guards (a mini-boss). */
   hiddenSpots?: Point[];
   guards?: Level['guards'];
+  /** M11c pond jetties: walkable over water. */
+  piers?: Pier[];
+  /** M11c lot types placed by hand where the generator finds no room (Altstadt market, churchyard). */
+  specialLots?: Array<{ special: SpecialKind; x: number; z: number; rot: number; w: number; d: number }>;
 }
 
 /** A walkable tunnel piece along a polyline: track bed, station hall or side passage. */
@@ -472,12 +482,26 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
   return x < m.bounds.minX + 2 || x > m.bounds.maxX - 2 || z < m.bounds.minZ + 2 || z > m.bounds.maxZ - 2;
 }
 
+const pondsOf = new WeakMap<MapDef, Pt[][]>();
+
 /** Generates buildings along streets and trees on free ground. Deterministic per map seed. */
 export function generateLots(m: MapDef): Lot[] {
   if (m.tunnel) return [];
   const rng = new Rng(m.seed);
   const occ = new Occupancy();
   const lots: Lot[] = [];
+  // M11c: special lots per type (capped) and the last one per street side, so neighbours differ.
+  const used = new Map<SpecialKind, number>();
+  // A second run on the same map starts from the authored water again (same result every time).
+  const prev = pondsOf.get(m);
+  if (prev) m.lakes = m.lakes.filter((p) => !prev.includes(p));
+  for (const h of m.specialLots ?? []) {
+    const lot = { kind: 'special' as const, ...h, floors: 0, seed: rng.int(1e6) }, content = lotContent(lot);
+    occ.take(h.x, h.z, h.rot, h.w / 2 + 0.6, h.d / 2 + 0.6);
+    lots.push({ ...lot, content }, ...content.lots);
+    used.set(h.special, (used.get(h.special) ?? 0) + 1);
+  }
+  const ponds: Pt[][] = [], piers: Pier[] = [];
 
   // 1. Building fronts along streets, both sides.
   for (const s of m.streets) {
@@ -490,11 +514,37 @@ export function generateLots(m: MapDef): Lot[] {
       const dz = (bz - az) / len;
       for (const side of [-1, 1]) {
         let t = rng.range(2, 6);
+        let last: SpecialKind | null = null;
         while (t < len - 4) {
           const cx = ax + dx * t;
           const cz = az + dz * t;
           const area = areaAt(m, cx, cz);
           const kind = area?.frontage;
+          // M11c: two in five slots become a lot type of this area (never the same type twice in a row).
+          if (area?.specials && rng.next() < SPECIAL_SHARE) {
+            const pick = area.specials.filter((k) => k !== last && (used.get(k) ?? 0) < SPECIAL_SIZE[k].max).sort((p, q) => (used.get(p) ?? 0) - (used.get(q) ?? 0) || rng.next() - 0.5)[0];
+            const S = pick && SPECIAL_SIZE[pick];
+            // Full size first, then smaller (short street pieces and close side streets); may overhang the piece end.
+            const w0 = pick && rng.range(S!.w[0], S!.w[1]), d0 = pick && rng.range(S!.d[0], S!.d[1]);
+            for (const k of pick ? (pick === 'hinterhof' ? [1, 0.93] : pick === 'markt' || pick === 'kirchhof' ? [1, 0.85, 0.72, 0.62, 0.54] : [1, 0.85, 0.72]) : []) {
+              const w = w0! * k, d = d0! * k;
+              const nx = -dz * side, nz = dx * side, off = s.width / 2 + Math.max(1.2, s.sidewalk ?? 0) + d / 2;
+              const x = cx + dx * (w / 2) + nx * off, z = cz + dz * (w / 2) + nz * off, rot = Math.atan2(-nx, -nz);
+              if (t + w * 0.5 < len && areaAt(m, x, z) === area && streetDist(m, x, z).d > d / 2 - 0.5 && cornersOk(m, x, z, rot, w / 2, d / 2) && occ.free(x, z, rot, w / 2 + 0.6, d / 2 + 0.6)) {
+                const lot = { kind: 'special' as const, special: pick!, x, z, rot, w, d, floors: 0, seed: rng.int(1e6) };
+                const content = lotContent(lot);
+                occ.take(x, z, rot, w / 2 + 0.6, d / 2 + 0.6);
+                lots.push({ ...lot, content }, ...content.lots);
+                if (content.pond) ponds.push(content.pond);
+                if (content.pier) piers.push(content.pier);
+                used.set(pick!, (used.get(pick!) ?? 0) + 1);
+                last = pick!;
+                t += w + rng.range(1, 3);
+                break;
+              }
+            }
+            if (last === pick && pick) continue;
+          }
           if (!kind) {
             t += 6;
             continue;
@@ -543,6 +593,11 @@ export function generateLots(m: MapDef): Lot[] {
       }
     }
   }
+
+  // M11c ponds are lake water from here on (trees, scatter, walk grid); registered once per map.
+  m.lakes.push(...ponds);
+  m.piers = piers;
+  pondsOf.set(m, ponds);
 
   // 2. M11d: trees in pits along profile sidewalks, both sides, off bridges, water and crossings.
   for (const s of m.streets) {
@@ -595,6 +650,7 @@ function cornersOk(m: MapDef, x: number, z: number, rot: number, hw: number, hd:
 }
 
 export function lotColliders(l: Lot): Collider[] {
+  if (l.kind === 'special') return [];
   if (l.kind === 'tree') return [{ kind: 'circle', x: l.x, z: l.z, r: l.jungle ? 0.55 : 0.4 }];
   const out: Collider[] = [{ kind: 'box', x: l.x, z: l.z, hx: l.w / 2, hz: l.d / 2, rot: l.rot }];
   if (l.wing) out.push({ kind: 'box', x: l.wing.x, z: l.wing.z, hx: l.wing.w / 2, hz: l.wing.d / 2, rot: l.rot });
@@ -827,6 +883,8 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
     }
   }
   for (const p of m.fixedProps) if (!isWater(m, p.x, p.z) || onBridge(m, p.x, p.z)) props.push(p);
+  // M11c lot type props (lights keep their same-kind spacing).
+  for (const l of lots) for (const p of l.content?.props ?? []) if (!sameKindClash(props, p.kind, p.x, p.z)) props.push(p);
   for (const l of lots) {
     if (l.kind !== 'house' || rng.next() < 0.25) continue;
     // Front fence 1.4 m in front of the facade, with a gate gap; local +b is towards the street.
@@ -1067,12 +1125,15 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
   const breakables = breakableDefs(m, props, propColliders, rests);
-  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3));
+  const onPier = (x: number, z: number): boolean => (m.piers ?? []).some((p) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2; });
+  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
   if (m.flavor) level.flavor = m.flavor;
   level.hiddenSpots = m.hiddenSpots ?? [];
-  level.guards = m.guards ?? [];
+  level.guards = [...(m.guards ?? []), ...lots.flatMap((l) => l.content?.guards ?? [])];
+  level.spots = { rescue: [], trader: [], cache: [] };
+  for (const l of lots) for (const k of ['rescue', 'trader', 'cache'] as const) { const p = l.content?.spots[k]; if (p) level.spots[k].push({ x: p[0], z: p[1] }); }
   return level;
 }
 

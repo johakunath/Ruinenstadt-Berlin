@@ -13,7 +13,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
 | M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
 | M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Claude (taken over 2026-11-17) | step 2 built (profiles A Bahnhofstraße, C Spreeufer with tracks); water level, footprints, map edge, landmarks open: `docs/tasks/m11d-map-realism.md` |
-| M11c World variety: two lot types per zone, weather per zone (variant A) | Claude | weather and area messages built 2026-11-17; the eight lot types are open: `docs/maps/guidelines.md` › Lot types and weather |
+| M11c World variety: two lot types per zone, weather per zone (variant A) | Claude | weather and area messages built 2026-11-17; the eight lot types built 2026-11-17 (data, guards, event spots; art by sub-agents): `docs/maps/guidelines.md` › Lot types and weather |
 | M16b Side branches, variant A (lanes beside the route) | Claude | built 2026-11-17 (Hinterhof: blessing, Kietzgasse: sleeping elite, Hangarweg: cache), playtest open |
 | M19 S3 tunnel, layout B, blessing in the first passage | Claude | built, playtest open: `docs/maps/guidelines.md` › U-Bahn tunnels |
 | U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |

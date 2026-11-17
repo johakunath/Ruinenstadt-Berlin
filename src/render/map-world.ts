@@ -10,6 +10,7 @@ import {
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
+import { buildLotGround } from './lot-ground';
 import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
@@ -1282,6 +1283,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     Math.min(surfaceAt(m, x, z), surfaceAt(m, x - r, z - r), surfaceAt(m, x + r, z - r), surfaceAt(m, x - r, z + r), surfaceAt(m, x + r, z + r));
   for (const l of lots) {
     const b = chunkOf(l.x, l.z);
+    // M11c lot types: only their ground cover; their buildings, trees and props come as ordinary lots and props.
+    if (l.kind === 'special') { buildLotGround(l, b.solid, { ...mats, cobbles: b.mats.cobbles }, (x, z) => surfaceAt(m, x, z)); continue; }
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
     const build = (): void => {
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));

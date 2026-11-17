@@ -103,6 +103,8 @@ export function createSim(opts: SimOptions = {}): Sim {
       e.guardIndex = i;
       if (g.elite) makeElite(sim, e);
       e.sleep = g.wake;
+      if (g.pose) e.pose = g.pose;
+      if (g.facing !== undefined) e.facing = e.pfacing = g.facing;
     });
   }
   sim.flow.setTarget(sim.player.x, sim.player.z);
