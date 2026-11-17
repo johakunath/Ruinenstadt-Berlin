@@ -240,3 +240,16 @@ describe('M16b side passages (variant A)', () => {
     for (const e of m.encounters) for (const g of m.guards!) expect(Math.hypot(e.x - g.x, e.z - g.z)).toBeGreaterThan(e.r + 8);
   });
 });
+
+describe('M11d street profiles', () => {
+  it('the Bahnhofstraße (A) and the Spreeufer (C) get trees in pits on their sidewalks and keep buildings behind them', () => {
+    const m = koepenickMap(1), lots = generateLots(m);
+    // The Bahnhofstraße is mostly fight circles and the station forecourt (kept free), so fewer pits fit.
+    for (const [name, min] of [['Bahnhofstraße', 2], ['Spreeufer', 6]] as const) {
+      const st = m.streets.find(s => s.name === name)!;
+      const pits = lots.filter(l => l.kind === 'tree' && Math.abs(lineDist(st.pts, l.x, l.z) - (st.width / 2 + 1.4)) < 0.3);
+      expect(pits.length, name).toBeGreaterThanOrEqual(min);
+      for (const l of lots) if (l.kind !== 'tree') expect(lineDist(st.pts, l.x, l.z), `${name} ${l.kind}`).toBeGreaterThan(st.width / 2 + st.sidewalk! - 0.5);
+    }
+  });
+});
