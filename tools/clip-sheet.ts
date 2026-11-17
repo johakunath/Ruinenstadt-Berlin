@@ -66,6 +66,7 @@ cam.lookAt(0, view === 'top' ? 0 : Number(q.get('aim') ?? 0.95), view === 'top' 
 renderer.setScissorTest(true);
 for (let i = 0; i < n; i++) {
   action.time = Math.min(clip.duration - 1e-4, from + ((to - from) * i) / Math.max(1, n - 1));
+  ik?.restore();
   mixer.update(0);
   if (ik) {
     model.updateMatrixWorld(true);
