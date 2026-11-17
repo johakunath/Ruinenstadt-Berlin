@@ -291,6 +291,8 @@ function applyShrines(s: Sim): void {
 export function talkTo(s: Sim): boolean {
   const c = s.content;
   if (c.talk == null || c.tradeOpen) return false;
+  // The partner may have left since the last step (the trader's time ran out).
+  if (c.talk === -1 ? !c.trader : !c.shops[c.talk]) { c.talk = null; return false; }
   c.tradeOpen = true;
   c.tradeAt = c.talk;
   c.talk = null;
@@ -376,6 +378,7 @@ export function updateContent(s: Sim): void {
     if (T.t <= 0 && !c.tradeOpen) {
       done('trader', 'lost', T);
       c.trader = null;
+      if (c.talk === -1) c.talk = null;
     }
   }
   if (c.captive) {

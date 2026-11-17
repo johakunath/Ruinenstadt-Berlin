@@ -146,6 +146,10 @@ describe('events', () => {
     s.content.done[2] = true;
     run(s, 61 * 60);
     expect(s.content.trader).toBeNull();
+    // A talk press after the trader left opens nothing (Codex review, PR #43).
+    s.content.talk = -1;
+    expect(talkTo(s)).toBe(false);
+    expect(s.content.tradeOpen).toBe(false);
   });
   it('Kurier Jonas: a fourth offer', () => {
     const s = make(3, { survivors: { kurier: true } });
