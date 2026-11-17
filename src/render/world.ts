@@ -13,11 +13,11 @@ import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
 import { Materials, type LitMaterial } from './materials';
 import {
-  paintAwning, paintBrick, paintCloth, paintCobbles, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster,
+  paintAwning, paintBrick, paintCarPaint, paintCloth, paintCobbles, paintConcrete, paintCorrugated, paintGraffiti, paintLattice, paintTarp, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster,
   paintShopWindow, paintSign, paintStucco, paintVan, paintWindows, paintWood, type PaintOptions,
 } from './paint';
 import { buildBin, buildCrate } from './breakable-parts';
-import { buildUrbanProp } from './props-urban';
+import { buildCar, buildUrbanProp } from './props-urban';
 import { buildMarketProp } from './props-market';
 import { buildPlantProp } from './vegetation';
 
@@ -132,6 +132,16 @@ export interface Mats {
   ivy: LitMaterial;
   fern: LitMaterial;
   dark: MeshBasicMaterial;
+  // M11c urban props (`props-urban.ts`, cars): light bases, the vertex tint gives the color.
+  carPaint: LitMaterial;
+  carGlass: LitMaterial;
+  enamel: LitMaterial;
+  corrugated: LitMaterial;
+  concrete: LitMaterial;
+  linen: LitMaterial;
+  lattice: LitMaterial;
+  tarp: LitMaterial;
+  graffiti: LitMaterial;
 }
 
 export function makeMats(m: Materials): Mats {
@@ -149,6 +159,7 @@ export function makeMats(m: Materials): Mats {
   const wood = paintWood(o);
   const rust = paintMetal('#7b4a2e', o, 31, 1.4);
   const ivyTex = paintIvy();
+  const corr = paintCorrugated(o);
   return {
     plaster,
     brick: m.surface({ map: brick.map, normalMap: brick.normalMap, roughness: 0.9, vertexColors: true }),
@@ -174,6 +185,15 @@ export function makeMats(m: Materials): Mats {
     ivy: m.surface({ map: ivyTex, alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
     fern: m.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
     dark: new MeshBasicMaterial({ color: 0x06090a }),
+    carPaint: m.surface({ map: paintCarPaint(o).map, roughness: 0.55, metalness: 0.1, vertexColors: true }),
+    carGlass: m.surface({ color: 0x4d6266, emissive: 0x0c1416, roughness: 0.18, metalness: 0.05, vertexColors: true }),
+    enamel: m.surface({ map: paintMetal('#e2ddd0', o, 61, 0.8).map, roughness: 0.65, metalness: 0.2, vertexColors: true }),
+    corrugated: m.surface({ map: corr.map, normalMap: corr.normalMap, roughness: 0.7, metalness: 0.2, vertexColors: true }),
+    concrete: m.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
+    linen: m.surface({ map: paintCloth('#e4e0d4', o, 57).map, roughness: 0.95, doubleSided: true, vertexColors: true }),
+    lattice: m.surface({ map: paintLattice(), alphaTest: 0.5, doubleSided: true, roughness: 0.7, metalness: 0.2, vertexColors: true }),
+    tarp: m.surface({ map: paintTarp(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
+    graffiti: m.surface({ map: paintGraffiti(), alphaTest: 0.5, roughness: 0.8, vertexColors: true }),
   };
 }
 
@@ -647,23 +667,9 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       }
       break;
     }
-    case 'car': {
-      // Abandoned saloon (generic boxy East German shape): body, cabin, dark windows, flat tires.
-      const tint = rng.pick([[1.7, 0.75, 0.6], [0.8, 1.05, 1.5], [1.6, 1.45, 1.1], [0.9, 1.3, 0.85], [1.3, 1.3, 1.3]] as Array<[number, number, number]>);
-      const tilt = at(p, 0, 0, 0, rng.range(-0.03, 0.03), 0, rng.range(-0.04, 0.04));
-      const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
-      b.box(m.iron, part(0, 0.62, 0), 1.7, 0.62, 4.0, tint);
-      b.box(m.iron, part(0, 1.18, -0.25), 1.48, 0.52, 2.0, [tint[0] * 0.9, tint[1] * 0.9, tint[2] * 0.9]);
-      b.box(m.rubber, part(0, 1.2, -0.25), 1.52, 0.36, 1.7, [0.35, 0.4, 0.42]);
-      b.box(m.rubber, part(0, 0.36, 2.02), 1.6, 0.18, 0.1);
-      b.box(m.rubber, part(0, 0.36, -2.02), 1.6, 0.18, 0.1);
-      const wheel = new CylinderGeometry(0.3, 0.3, 0.2, 10);
-      for (const [x, z] of [[0.78, 1.3], [-0.78, 1.3], [0.78, -1.3], [-0.78, -1.3]] as Array<[number, number]>) {
-        b.geo(m.rubber, wheel, part(x, 0.26, z).multiply(new Matrix4().makeRotationZ(Math.PI / 2)));
-      }
-      b.shadowBox(part(0, 0.8, 0), 1.7, 1.4, 4.0);
+    case 'car':
+      buildCar(b, p, rng);
       break;
-    }
     case 'lampBroken': {
       // Dead street lamp: bent mast, smashed head, no light.
       b.geo(m.iron, new CylinderGeometry(0.16, 0.2, 0.55, 8), at(p, 0, 0.275, 0));

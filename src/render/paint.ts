@@ -1273,3 +1273,177 @@ export function paintTextSign(text: string, bg: string, fg: string): EmissiveSur
   ectx.fillRect(W * 0.58, 0, W * 0.09, H);
   return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
 }
+
+// ---------------------------------------------------------------- M11c urban props
+
+/** Faded car enamel: near-white base (vertex tint gives the color), chalky fade, dirt runs, rust blooms. */
+export function paintCarPaint(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(83);
+  const [c, ctx] = canvas(S, S);
+  const base = '#e6e1d4';
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, S, S);
+  mottle(ctx, rng, S, S, 30, ['#f4f0e6', '#c9c3b2', '#d8d2c0'], [40, 140], 0.45);
+  strokes(ctx, rng, S, S, { count: 500, colors: ['#f6f2ea', '#bdb6a4'], len: [20, 70], width: [3, 10], alpha: [0.08, 0.2], angle: 0, spread: 0.2 });
+  // Grey primer patches with a hard sanded edge.
+  for (let i = 0; i < 5; i++) {
+    const x = rng.range(0, S), y = rng.range(0, S), r = rng.range(18, 46);
+    wrapped(S, S, x, y, r * 1.4, (px, py) => {
+      ctx.fillStyle = 'rgba(120,122,116,0.85)';
+      ctx.beginPath();
+      for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2, rr = r * rng.range(0.7, 1.2); if (k) ctx.lineTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr * 0.7); else ctx.moveTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr * 0.7); }
+      ctx.closePath();
+      ctx.fill();
+    });
+  }
+  // Rust in clusters of ragged blooms (edges, seams), streaks running down, fine chips everywhere.
+  for (let k = 0; k < 9; k++) {
+    const cx = rng.range(0, S), cy = rng.range(0, S), spread = rng.range(15, 55);
+    for (let i = 0; i < 4 + rng.int(10); i++) {
+      const x = cx + rng.range(-1, 1) * spread, y = cy + rng.range(-0.6, 0.6) * spread, r = rng.range(2, 13);
+      wrapped(S, S, x, y, r * 5, (px, py) => {
+        ctx.fillStyle = 'rgba(110,58,28,0.28)';
+        ctx.fillRect(px - r * 0.2, py, r * 0.4 + 1, r * rng.range(2, 6));
+        for (const [col, f] of [['#9a5a2e', 1], ['#6e3618', 0.7], ['#3e1d0e', 0.35]] as Array<[string, number]>) {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          for (let q = 0; q < 9; q++) { const a = (q / 9) * Math.PI * 2, rr = r * f * rng.range(0.5, 1.25); if (q) ctx.lineTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr * 0.7); else ctx.moveTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr * 0.7); }
+          ctx.closePath();
+          ctx.fill();
+        }
+      });
+    }
+  }
+  for (let i = 0; i < 400; i++) { ctx.fillStyle = rng.next() < 0.5 ? 'rgba(90,48,24,0.7)' : 'rgba(255,250,240,0.35)'; ctx.fillRect(rng.range(0, S), rng.range(0, S), rng.range(1, 3), rng.range(1, 2)); }
+  strokes(ctx, rng, S, S, { count: 260, colors: ['#3a2c20', '#f2ece0'], len: [3, 12], width: [1, 2], alpha: [0.15, 0.4] });
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Corrugated container steel: vertical ribs with light/dark flanks, rust running from the top, dents. */
+export function paintCorrugated(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(91);
+  const [c, ctx] = canvas(S, S);
+  const [, hctx] = canvas(S, S);
+  ctx.fillStyle = '#e2ddd0';
+  ctx.fillRect(0, 0, S, S);
+  const rib = S / 8;
+  for (let x = 0; x < S; x += rib) {
+    // Flat face, light flank, outer face, dark flank.
+    const gr = ctx.createLinearGradient(x, 0, x + rib, 0);
+    for (const [t, c] of [[0, 'rgba(30,26,22,0.18)'], [0.38, 'rgba(30,26,22,0.05)'], [0.46, 'rgba(255,255,250,0.4)'], [0.55, 'rgba(255,255,250,0.15)'], [0.86, 'rgba(255,255,250,0.05)'], [0.95, 'rgba(30,26,22,0.45)'], [1, 'rgba(30,26,22,0.18)']] as Array<[number, string]>) gr.addColorStop(t, c);
+    ctx.fillStyle = gr; ctx.fillRect(x, 0, rib, S);
+    hctx.fillStyle = '#000'; hctx.fillRect(x, 0, rib * 0.42, S);
+    hctx.fillStyle = '#808080'; hctx.fillRect(x + rib * 0.42, 0, rib * 0.08, S); hctx.fillRect(x + rib * 0.92, 0, rib * 0.08, S);
+    hctx.fillStyle = '#fff'; hctx.fillRect(x + rib * 0.5, 0, rib * 0.42, S);
+  }
+  mottle(ctx, rng, S, S, 24, ['#f2eee4', '#b8b09c'], [40, 140], 0.35);
+  for (let i = 0; i < 16; i++) {
+    const x = rng.range(0, S), y = rng.range(0, S);
+    const g = ctx.createLinearGradient(x, y, x, y + rng.range(60, 220));
+    g.addColorStop(0, 'rgba(120,60,28,0.45)');
+    g.addColorStop(1, 'rgba(120,60,28,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, rng.range(3, 12), 220);
+    ctx.fillStyle = '#6e3a1e';
+    ctx.beginPath();
+    ctx.ellipse(x + 3, y, rng.range(3, 12), rng.range(2, 7), 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  strokes(ctx, rng, S, S, { count: 160, colors: ['#2e2218', '#f4efe2'], len: [3, 10], width: [1, 2], alpha: [0.1, 0.3] });
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy), normalMap: o.normalMaps ? normalFromHeight(hctx, S, S, 2.5) : undefined };
+}
+
+/** One bay of a crane lattice (alpha tested): two chords and a zig-zag of diagonals, light paint for tinting. */
+export function paintLattice(): Texture {
+  const S = 128;
+  const rng = new Rng(97);
+  const [c, ctx] = canvas(S, S);
+  ctx.lineCap = 'square';
+  const bar = (x0: number, y0: number, x1: number, y1: number, w: number): void => {
+    ctx.strokeStyle = '#2a2218'; ctx.lineWidth = w + 3;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.strokeStyle = '#ece6d4'; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  };
+  bar(0, 64, S, 64, 5);
+  bar(4, 0, S - 4, S, 6);
+  bar(S - 4, 0, 4, S, 6);
+  bar(7, -2, 7, S + 2, 12);
+  bar(S - 7, -2, S - 7, S + 2, 12);
+  // Rust at the joints.
+  for (const [x, y] of [[7, 0], [S - 7, 0], [7, S], [S - 7, S], [7, 64], [S - 7, 64], [64, 64]] as Array<[number, number]>) {
+    ctx.fillStyle = `rgba(${120 + rng.int(30)},60,30,0.85)`;
+    ctx.fillRect(x - 5, y - 4, 10, 6 + rng.int(10));
+  }
+  const t = toTexture(c, true);
+  return t;
+}
+
+/** Torn construction tarp: light woven plastic with holes and a ragged lower edge (alpha tested). */
+export function paintTarp(): Texture {
+  const S = 256;
+  const rng = new Rng(101);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#e8e6de';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(S, 0);
+  for (let x = S; x >= 0; x -= 16) ctx.lineTo(x, S * rng.range(0.6, 1) - (x > S * 0.3 && x < S * 0.55 ? S * 0.35 : 0));
+  ctx.closePath();
+  ctx.fill();
+  strokes(ctx, rng, S, S, { count: 500, colors: ['#ffffff', '#a8a69c'], len: [8, 30], width: [1, 2], alpha: [0.15, 0.4], angle: Math.PI / 2, spread: 0.1 });
+  mottle(ctx, rng, S, S, 10, ['#5a5040'], [20, 70], 0.4);
+  ctx.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 7; i++) {
+    const x = rng.range(20, S - 20), y = rng.range(20, S * 0.7);
+    ctx.beginPath();
+    for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2, r = rng.range(4, 18); if (k) ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); else ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  // Eyelets along the top.
+  ctx.fillStyle = '#3a3428';
+  for (let x = 12; x < S; x += 40) { ctx.beginPath(); ctx.arc(x, 6, 3, 0, Math.PI * 2); ctx.fill(); }
+  return toTexture(c, false);
+}
+
+/** Spray-paint tags and throw-ups on a transparent sheet, four cells (2 × 2) to pick from. */
+export function paintGraffiti(): Texture {
+  const S = 512;
+  const rng = new Rng(107);
+  const [c, ctx] = canvas(S, S);
+  const cols = ['#d84a3a', '#3a8ad8', '#e8e0c8', '#2a2a2a', '#d8b040', '#6ac06a', '#c060b0'];
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let cell = 0; cell < 4; cell++) {
+    const ox = (cell % 2) * 256, oy = Math.floor(cell / 2) * 256;
+    const fill = rng.pick(cols), line = rng.pick(cols.filter((k) => k !== fill));
+    const letters = 3 + rng.int(3);
+    // Bubble letters: fat strokes outlined, then a thin tag on top.
+    for (const [w, col] of [[44, line], [30, fill]] as Array<[number, string]>) {
+      const r2 = new Rng(cell * 13 + 3);
+      ctx.strokeStyle = col;
+      ctx.lineWidth = w;
+      for (let i = 0; i < letters; i++) {
+        const x = ox + 40 + (i * 180) / letters, y = oy + 128;
+        ctx.beginPath();
+        ctx.moveTo(x + r2.range(-10, 10), y + r2.range(-50, -30));
+        ctx.lineTo(x + r2.range(-14, 14), y + r2.range(-5, 5));
+        ctx.lineTo(x + r2.range(10, 30), y + r2.range(30, 50));
+        ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = rng.pick(cols);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    let x = ox + 30, y = oy + 200;
+    ctx.moveTo(x, y);
+    for (let i = 0; i < 14; i++) { x += rng.range(8, 16); y = oy + 200 + rng.range(-22, 22); ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  return toTexture(c, false);
+}
