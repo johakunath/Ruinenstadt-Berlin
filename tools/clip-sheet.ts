@@ -5,10 +5,12 @@
 // stance=1 adds the two-handed standing pose (grip height, wrist roll, stretch; TWO_HAND_STAND).
 // pack=UAL1_Standard plays a clip straight from a source pack in assets-src/ (look before importing).
 // Framing: view=left, zoom=2 (bigger panels), fov=20, aim=1.2 (look-at height), grip=0.4 (try a height).
+// look=weste,turnsch,handsch: clothing for these item bases (hero-look.ts); default: no items.
 import { AnimationMixer, Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer, type AnimationClip, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { heroLook } from '../src/data/hero-look';
 import { loadCharacters } from '../src/render/characters';
+import { HeroModel } from '../src/render/hero-model';
 import { FIST_CLIP, LeftHandIk } from '../src/render/hand-ik';
 import { LOOK } from '../src/render/looks';
 import { Materials } from '../src/render/materials';
@@ -31,7 +33,11 @@ scene.add(new HemisphereLight(0xdfeeff, 0x3a3020, 2.2));
 const sun = new DirectionalLight(0xfff0d8, 2.5);
 sun.position.set(2, 5, 3);
 scene.add(sun, new GridHelper(8, 16, 0x5a6a70, 0x3a4a50));
-const model = cloneSkinned(assets.hero);
+// look=weste,turnsch,handsch: armor, boots and glove bases (as equipped items); default: no items.
+const [la, lf, lg] = (q.get('look') ?? '').split(',');
+const body = new HeroModel(assets.hero);
+body.setLook(heroLook({ ...(la ? { a: { base: la } } : {}), ...(lf ? { f: { base: lf } } : {}), ...(lg ? { g: { base: lg } } : {}) }));
+const model = body.model;
 scene.add(model);
 // grip=0.4: try another left grip height (tuning LEFT_GRIP).
 if (q.get('grip')) (LEFT_GRIP as Partial<Record<WeaponModel, number>>)[(q.get('weapon') ?? 'pipe') as WeaponModel] = Number(q.get('grip'));

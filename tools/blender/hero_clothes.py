@@ -421,15 +421,15 @@ def coat(body):
     return join('a_mantel', [top, trousers, loose])
 
 
-def boots(body):
-    """f_stiefel: heavy boots. The inflated feet and lower calves are closed at the top and voxel
-    remeshed, which melts the toes into one boot shape; weights come from the nearest body point."""
-    shaft = 0.36
+def footwear(body, name, shaft, offset, cuff_drop, color_of):
+    """Shoes from the inflated feet and lower calves, closed at the top and voxel remeshed (the toes
+    melt into one shape), reopened at `shaft`, flat sole, a folded cuff; weights from the nearest body
+    point. color_of(position) -> linear colour."""
 
     def keep(d, p):
         return d.startswith(('foot', 'ball')) or (d.startswith('calf') and p.z < shaft)
 
-    obj, _ = shell(body, 'f_stiefel', keep, lambda d, p: 0.014, relax=3)
+    obj, _ = shell(body, name, keep, lambda d, p: offset, relax=3)
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bmesh.ops.holes_fill(bm, edges=[e for e in bm.edges if e.is_boundary], sides=0)
@@ -437,7 +437,7 @@ def boots(body):
     bm.free()
     rem = obj.modifiers.new('remesh', 'REMESH')
     rem.mode = 'VOXEL'
-    rem.voxel_size = 0.007
+    rem.voxel_size = 0.007 if offset > 0.01 else 0.006
     smooth = obj.modifiers.new('smooth', 'SMOOTH')
     smooth.factor = 0.6
     smooth.iterations = 6
@@ -446,7 +446,6 @@ def boots(body):
     apply_modifiers(obj)
     bm = bmesh.new()
     bm.from_mesh(obj.data)
-    # Reopen the shaft, flatten the sole, fold a cuff over the shaft top.
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(v.co.z > shaft - 0.008 for v in f.verts)], context='FACES')
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     for v in bm.verts:
@@ -455,14 +454,34 @@ def boots(body):
     for v in (g for g in ret['geom'] if isinstance(g, bmesh.types.BMVert)):
         calf = body.head('calf_l' if v.co.x > 0 else 'calf_r')
         out = Vector((v.co.x - calf.x, v.co.y - calf.y, 0)).normalized()
-        v.co += out * 0.012 - Vector((0, 0, 0.035))
+        v.co += out * (offset * 0.85) - Vector((0, 0, cuff_drop))
     for f in bm.faces:
         f.smooth = True
     bm.to_mesh(obj.data)
     bm.free()
     rebind_weights(obj, body)
-    _paint(obj, lambda i, co: tuple(c * ((0.55 if co.z < 0.02 else 0.85) + 0.3 * noise(co, 6.0)) for c in BOOTS))
+    _paint(obj, lambda i, co: color_of(co))
     return obj
+
+
+def boots(body):
+    """f_stiefel: heavy leather boots to mid-calf, dark sole."""
+    return footwear(body, 'f_stiefel', 0.36, 0.014, 0.035,
+                    lambda co: tuple(c * ((0.55 if co.z < 0.02 else 0.85) + 0.3 * noise(co, 6.0)) for c in BOOTS))
+
+
+SNEAKER = lin('#c9bea4')
+SOLE = lin('#e2dccb')
+
+
+def sneakers(body):
+    """f_turnsch: worn off-white high-tops (2D turnsch) with a light rubber sole."""
+    def color(co):
+        if co.z < 0.028:
+            return tuple(c * (0.85 + 0.15 * noise(co, 9.0)) for c in SOLE)
+        return tuple(c * (0.7 + 0.35 * noise(co, 6.0)) for c in SNEAKER)
+
+    return footwear(body, 'f_turnsch', 0.15, 0.009, 0.02, color)
 
 
 def gloves(body):
@@ -583,6 +602,91 @@ def scarf(body, coat_obj):
     return piece.to_object('scarf')
 
 
+VEST = lin('#5d6b3a')
+CARGO = lin('#4a3b2c')
+
+
+def ring(piece, center_of, n, weights_of, color_of, height, smooth=False):
+    """A band around something: center_of(phi) -> (point on the band's middle line, outward
+    direction); `height` meters tall along Z."""
+    verts = []
+    for k in range(n):
+        phi = 2 * math.pi * k / n
+        p, out = center_of(phi)
+        w = weights_of(p)
+        col = color_of(p, k)
+        verts.append((piece.vert(p + Vector((0, 0, height / 2)), w, col), piece.vert(p - Vector((0, 0, height / 2)), w, col)))
+    for k in range(n):
+        a, b = verts[k], verts[(k + 1) % n]
+        piece.face(a[0], a[1], b[1], b[0], smooth=smooth)
+
+
+def vest(body):
+    """a_weste: short padded olive vest without sleeves (2D weste), chest straps, a belt with pouches
+    and brown cargo trousers with a thigh strap. Arms stay bare."""
+    waist = body.head('spine_01').z - 0.005
+    cy = (body.head('thigh_l').y + body.head('thigh_r').y) / 2
+
+    def upper(d, p):
+        return d.startswith(('spine', 'clavicle')) and p.z > waist - 0.09
+
+    top, _ = shell(body, 'vest_top', upper, lambda d, p: 0.022, relax=30)
+
+    def quilt(i, co):
+        band = int((co.z - waist) / 0.045) % 2
+        return tuple(c * ((0.8 if band else 1.0) * (0.85 + 0.25 * noise(co, 4.0))) for c in VEST)
+
+    _paint(top, quilt)
+    trousers, _ = shell(body, 'trousers', lambda d, p: d.startswith(('pelvis', 'thigh', 'calf')), lambda d, p: 0.007 if d != 'pelvis' else 0.01, relax=4)
+    _paint(trousers, lambda i, co: tuple(c * (0.8 + 0.3 * noise(co, 5.0)) for c in CARGO))
+
+    piece = Piece()
+    leather = lambda p, k: tuple(c * (0.8 + 0.35 * noise(p + Vector((0, 0, k)), 4.0)) for c in LEATHER)
+
+    def around(z, extra):
+        def center(phi):
+            d = Vector((math.sin(phi), -math.cos(phi), 0))
+            e = body.extent(z, phi, cy) or 0.14
+            return Vector((0, cy, z)) + d * (e + extra), d
+        return center
+
+    for z in (waist + 0.13, waist + 0.25):
+        ring(piece, around(z, 0.03), 24, lambda p: [('spine_02', 0.6), ('spine_03', 0.4)] if p.z > waist + 0.2 else [('spine_02', 0.6), ('spine_01', 0.4)], leather, 0.03)
+        e = body.extent(z, 0.35, cy) or 0.12
+        d = Vector((math.sin(0.35), -math.cos(0.35), 0))
+        X, Y, Z = Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))
+        piece.box(Vector((0, cy, z)) + d * (e + 0.036), Z.cross(d).normalized(), d, Z, (0.016, 0.005, 0.017), [('spine_02', 1.0)], BRASS)
+    belt_z = waist - 0.02
+    ring(piece, around(belt_z, 0.035), 28, lambda p: [('pelvis', 0.5), ('spine_01', 0.5)], leather, 0.045)
+    X, Y, Z = Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))
+    for phi in (-0.55, 0.0, 0.55):
+        e = body.extent(belt_z - 0.04, phi, cy) or 0.13
+        d = Vector((math.sin(phi), -math.cos(phi), 0))
+        p = Vector((0, cy, belt_z - 0.035)) + d * (e + 0.055)
+        piece.box(p, Z.cross(d).normalized(), d, Z, (0.032, 0.018, 0.035), [('pelvis', 1.0)], tuple(c * 1.15 for c in LEATHER))
+        piece.box(p + d * 0.019 + Z * 0.012, Z.cross(d).normalized(), d, Z, (0.006, 0.003, 0.006), [('pelvis', 1.0)], BRASS)
+    # Thigh straps with a buckle, like the 2D cargo trousers.
+    for side in ('l', 'r'):
+        hip, knee = body.head(f'thigh_{side}'), body.head(f'calf_{side}')
+        c0 = hip.lerp(knee, 0.45)
+        axis = (knee - hip).normalized()
+
+        def center(phi, c0=c0):
+            d = Vector((math.sin(phi), -math.cos(phi), 0))
+            # Distance to the trousers along d from the thigh axis, by a ray from outside.
+            hit, _, _, dist = body.bvh.ray_cast(c0 + d * 0.3, -d, 0.3)
+            r = 0.3 - dist if hit is not None else 0.08
+            return c0 + d * (r + 0.014), d
+
+        ring(piece, center, 16, lambda p, s=side: [(f'thigh_{s}', 1.0)], leather, 0.028)
+        out = Vector((1 if side == 'l' else -1, 0, 0))
+        hit, _, _, dist = body.bvh.ray_cast(c0 + out * 0.3, -out, 0.3)
+        r = 0.3 - dist if hit is not None else 0.08
+        piece.box(c0 + out * (r + 0.02), Y, out, Z, (0.014, 0.004, 0.016), [(f'thigh_{side}', 1.0)], BRASS)
+    loose = piece.to_object('vest_loose')
+    return join('a_weste', [top, trousers, loose])
+
+
 def join(name, objects):
     """Joins objects into one (vertex groups merged by name, colour attributes kept)."""
     for o in bpy.context.selected_objects:
@@ -640,16 +744,15 @@ def _hemisphere(n):
 
 
 def bake_ao(pieces, body):
-    """Ambient occlusion by ray casts against the body and every piece (fixed directions, so the
-    result is the same every run), multiplied into each piece's `Col`."""
-    verts, polys = list(body.co), list(body.tris)
+    """Ambient occlusion by ray casts against the body and the piece itself (pieces from other looks
+    never shade it; fixed directions, so the result is the same every run), multiplied into `Col`."""
+    dirs = _hemisphere(AO_RAYS)
     for obj in pieces:
+        verts, polys = list(body.co), list(body.tris)
         base = len(verts)
         verts += [v.co.copy() for v in obj.data.vertices]
         polys += [tuple(base + i for i in p.vertices) for p in obj.data.polygons]
-    tree = BVHTree.FromPolygons(verts, polys, epsilon=0.0)
-    dirs = _hemisphere(AO_RAYS)
-    for obj in pieces:
+        tree = BVHTree.FromPolygons(verts, polys, epsilon=0.0)
         col = obj.data.color_attributes['Col']
         for v in obj.data.vertices:
             n = v.normal
@@ -670,7 +773,7 @@ def bake_ao(pieces, body):
 def build(armature, body_obj):
     body = Body(body_obj, armature)
     mantel = coat(body)
-    pieces = [mantel, boots(body), gloves(body), scarf(body, mantel)]
+    pieces = [mantel, vest(body), boots(body), sneakers(body), gloves(body), scarf(body, mantel)]
     # The shells carry the body's UVs, which mean nothing on clothing (and joining them with built
     # parts leaves undefined UVs): drop them, unwrap each piece for step 6's painted textures, and
     # bake ambient occlusion into the vertex colours as placeholder shading.

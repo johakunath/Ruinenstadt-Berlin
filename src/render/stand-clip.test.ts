@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { coatSwing, standClip } from './characters';
+import { standClip } from './characters';
+import { coatSwing } from './hero-model';
 
 describe('standClip', () => {
   it('gives the hammer its two-handed pose and keeps the spear and one-handed models on Sword_Idle', () => {
