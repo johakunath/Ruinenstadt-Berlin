@@ -29,6 +29,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
 | V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Opus high (layout rule: mockup first) | open: `docs/tasks/v1-visibility.md` |
 | U3 Menus, options and Steuerung graphics exactly as 2D (playtest 2026-11-17) | Claude · Opus medium | open: `docs/tasks/u3-menu-2d.md` |
+| K1 Klinge icons: three own blade icons for Rostige Klinge (rohr), Stahlklinge (stahl), Hackmesser (brech) in the style of `assets/inventory/I04.webp`; until then rohr/stahl borrow I51, brech borrows I04 (Johannes, 2026-11-17) | Codex | open: `src/ui/item-icons.ts`, `assets/inventory/` |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 
