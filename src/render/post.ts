@@ -3,7 +3,7 @@
 // GTAO and the ink outline share one normal/depth pre-pass.
 import {
   DepthTexture, HalfFloatType, MeshNormalMaterial, NearestFilter, NoBlending, Vector2, WebGLRenderTarget,
-  type Camera, type PerspectiveCamera, type Scene, type WebGLRenderer,
+  type Camera, type PerspectiveCamera, type Scene, type Sphere, type WebGLRenderer,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
@@ -129,6 +129,7 @@ export class Post {
     private readonly camera: PerspectiveCamera,
     private readonly profile: Profile,
     look: Look,
+    heroBounds?: (out: Sphere) => Sphere,
   ) {
     const target = new WebGLRenderTarget(4, 4, { type: HalfFloatType, samples: profile.msaa });
     this.composer = new EffectComposer(renderer, target);
@@ -155,7 +156,7 @@ export class Post {
       u.far!.value = camera.far;
       this.composer.addPass(this.ink);
     }
-    this.heroOutline = new HeroOutline(scene, camera);
+    this.heroOutline = new HeroOutline(scene, camera, heroBounds);
     this.composer.addPass(this.heroOutline);
     this.bloom = new UnrealBloomPass(new Vector2(4, 4), 0.42 * profile.bloomStrength * look.bloom, 0.5, 1.0);
     this.composer.addPass(this.bloom);

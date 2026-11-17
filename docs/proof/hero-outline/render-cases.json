@@ -42,6 +42,18 @@
     "expected": false
   },
   {
+    "name": "hammer behind building",
+    "scale": 1,
+    "changedPixels": 178,
+    "expected": true
+  },
+  {
+    "name": "spear behind building",
+    "scale": 1,
+    "changedPixels": 182,
+    "expected": true
+  },
+  {
     "name": "behind building",
     "scale": 0.75,
     "changedPixels": 530,
@@ -82,5 +94,17 @@
     "scale": 0.75,
     "changedPixels": 0,
     "expected": false
+  },
+  {
+    "name": "hammer behind building",
+    "scale": 0.75,
+    "changedPixels": 248,
+    "expected": true
+  },
+  {
+    "name": "spear behind building",
+    "scale": 0.75,
+    "changedPixels": 270,
+    "expected": true
   }
 ]

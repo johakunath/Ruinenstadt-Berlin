@@ -124,7 +124,10 @@ export class GameRenderer {
     this.scene.add(this.fx.group, this.loot.group, this.content.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
-    this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look);
+    // R1: the hero outline tests occluders against a sphere around the hero and her weapon: the spear
+    // tip reaches about 2.5 m from her axis in a thrust (arm 0.7 m, tip 1.8 m from the hand).
+    const hero = this.hero.root;
+    this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look, (out) => out.set(out.center.set(hero.position.x, hero.position.y + 1.1, hero.position.z), 2.7));
     this.resize();
   }
 

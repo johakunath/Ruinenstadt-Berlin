@@ -10,6 +10,7 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 | Fights | Open (Johannes, 2026-11-16): no closed circle, the hero can kite, go back for loot or into a Späti; a wave left behind spawns around the hero. 13 encounters, 27 waves, 4 bosses with own attacks. After the last boss the hero may stay and explore; "Ganz neu anfangen" on the title wipes the save. Director: waves on the rim, elites from the fourth wave, a short breath and then the blessing choice after a won fight, +30 % life per won encounter, retry at the zone |
 | World | Water with irregular natural banks and stone quays in town (Spree, Dahme, Müggelsee and lakes), overgrown ground (grass, dirt, sidewalk plates, leaves blended; puddles, litter, weed tufts), low relief in parks and forests, a Späti rest stop per zone (enter, heal between fights), three bridges, a ferry boat that shuttles across the Dahme, tram tracks and a tram wreck, about half the buildings as ruins, fewer and partly broken lamps plus campfires, a fence and roadblocks at the map edge, a glowing ring around a closed fight, streets with curbs, buses, cars, sidewalk props, garden fences, L-shaped Altbau and houses, shops, trees, landmarks as code blockouts, cover. Heights: Müggelberge, Dino-Hügel (hills), Riesenrad-Plattform, Kirchhügel (terraces with stairs); sim stays 2D |
 | Render | 48 m chunks, moon shadow follows the hero, fixed point-light pool, opaque world with a thin amber hero contour only behind large buildings/vehicles; small props, enemies, lamps and trees excluded. 60 fps cap. Look fixed (painted PBR, ink line, grade). Profiles Qualität and Leistung |
+| Hero | Own clothing built in Blender (H1, 2026-11-17): knee-length open coat, padded vest, boots, sneakers, gloves, wrapped scarf; the armor, boot and glove slots pick them (2D rule), bare hands without gloves. The coat's back swings clear of the legs; the left hand holds two-handed weapons. Turnable in the inventory doll (drag, right stick, arrow keys) |
 | Weapons | Klinge, Hammer, Speer, Werfer with own models, clips, arcs and finishers (hammer shock ring, spear lunge, fourth shot pierces). Two powers and an ultimate each, cast with a clip and a release frame; Verband and Molotow |
 | Blessings | Choice of three after every encounter and at three hidden spots: all 50 from 2D with families, duos, two-level cards, one reroll for Schrott. Umbau: three per weapon (one from 2D, two new), one per run from wave three |
 | Späti | Keeper behind the counter: four items, Verband, Molotow, full heal for Schrott. Menus close with a cross top right |
@@ -35,6 +36,8 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-17)
 
+- H1 hero: own clothing from Blender (coat, vest, boots, sneakers, gloves, scarf) that follows the equipped items, left hand on two-handed weapons, the hammer's two-handed stance, a turnable hero in the inventory (`docs/tasks/h1-hero.md`).
+- R1: the hero contour behind buildings renders only when something stands in front of her, scissored to her area (`docs/tasks/r1-outline-cost.md`).
 - M12: roster, elites, boss attacks, resistances (`docs/tasks/m12-enemies.md`). M14: balance bot and a first tuning pass (`docs/balance.md`).
 - Playtest fixes: every crate breaks, pause before the blessing choice, enemy life bars, no map and inventory buttons on screen, fullscreen on phones, arrow on the big map (`docs/playtests.md`).
 - 2026-11-16: combat port completed (weapons, powers, all 50 blessings, consumables, run events), legendary powers, open fights, Späti keeper. Prototype PC performance, pad feel and hero outline accepted by Johannes.
@@ -43,11 +46,11 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 
 | Point | Detail |
 |---|---|
-| Hardware | Tab S9: over 90 fps on Köpenick before the 60 fps cap (2026-11-15). PC prototype performance accepted by Johannes (2026-11-16) |
+| Hardware | Tab S9: over 90 fps on Köpenick before the 60 fps cap (2026-11-15). PC prototype performance accepted by Johannes (2026-11-16). Not measured yet: the new hero (H1 step 7, first equip swap, inventory doll) and the R1 contour savings |
 | Feel | Prototype pad feel and rumble verified by Johannes (2026-11-16); new M7/M8 moves await playtest |
 | Progression | Gear now comes from drops and breakable crates and bins (M4); M6 saves/checkpoints/difficulty and online sync built (live sync playtest open); camp/stash and balance remain open |
 | Map | v2 and part 2 not playtested yet. T1 adds painted grass, dirt, sidewalk plates, forest floor and scatter, using the 2D art as generation references; code textures remain loading fallbacks. Tram rails have steel heads, inward grooves, guard edges, worn seams and joined bends; crossing curbs leave the corridor clear. The stopped tram is level and aligned to the east-track straight, with sixteen steel wheel contacts on the rail heads. PC/Tab S9 performance integration and playtest remain open (`docs/asset-pipeline.md`) |
-| Art | Landmarks are blockouts, trees simple, CC0 hero (coat skirt clips in wide poses), zombie not the board ghoul, bosses are dressed zombies (helmet, tunic, lantern) until H2, dodge clip squeezed to 0.24 s |
+| Art | Landmarks are blockouts, trees simple, hero clothing in vertex colours until painted textures (H1 step 6), zombie not the board ghoul, bosses are dressed zombies (helmet, tunic, lantern) until H2, dodge clip squeezed to 0.24 s |
 | Touch | Thumb arc with five more buttons built without a mockup round (Johannes asked for the finished result); spacing unverified on the Tab S9 and a phone |
 | New combat | No hardware run yet: weapon feel, power balance, event pacing and the cost of the new effects (pooled, unlit, no lights) need the PC and Tab S9 playtest. The M12 roster, elites and bosses are untested on hardware too; the bot only checks numbers, not feel |
 | Audio | Port mappings, PCM and lifecycle tested; listening review on PC/Tab S9 still open |
