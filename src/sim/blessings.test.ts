@@ -62,7 +62,7 @@ describe('blessing choice (2D offerPerks)', () => {
     expect(count({}, 'd_sturm')).toBe(0);
     expect(count({ spd: 1, leech: 1 }, 'd_sturm')).toBeGreaterThan(20);
     expect([...heldFamilies(fresh('blade', { spd: 1, d_sturm: 1 }))]).toEqual(['sprint']);
-  });
+  }, 20_000); // 300 to 600 seeded offers: about 4 s locally, slower on CI runners
   it('some cards give two levels; a choice applies them, records the card and rejects stale picks', () => {
     let two = 0;
     for (let seed = 1; seed <= 200; seed++) {
@@ -93,7 +93,7 @@ describe('blessing choice (2D offerPerks)', () => {
     expect(mods(6, { m_beben: 1 })).toHaveLength(0);
     // Every weapon has three.
     for (const k of ['blade', 'hammer', 'spear', 'sling'] as const) expect(PERKS.filter((p) => p.weapon === k)).toHaveLength(3);
-  });
+  }, 20_000); // 300 to 600 seeded offers: about 4 s locally, slower on CI runners
   it('one reroll per choice costs Schrott; a second choice queues', () => {
     const s = fresh();
     offerBlessings(s);

@@ -10,7 +10,7 @@ import {
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
-import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel } from '../data/map';
+import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
@@ -477,7 +477,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
               const c = tramOffsetPoint(s.pts, i, offset);
               const x = a[0] + (c[0] - a[0]) * t;
               const z = a[1] + (c[1] - a[1]) * t;
-              const surface = onBridge(m, x, z) ? Math.max(y, TRAM_BRIDGE_DECK) : y;
+              const surface = (onBridge(m, x, z) ? Math.max(y, TRAM_BRIDGE_DECK) : y) + (s.profile === 'allee' ? 0.07 : 0);
               return new Vector3(x, surfaceAt(m, x, z) + surface + band.height, z);
             };
             const half = band.width / 2;
@@ -494,6 +494,7 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
             fixWorldUv(railBatch, 4, 4);
           }
         }
+        if (s.profile && !onBridge(m, (x0 + x1) / 2, (z0 + z1) / 2, 1)) buildProfile(m, s, mats, b, x0, z0, x1, z1, dx, dz, y, p);
         // Curbs mark the walkable street edge (v2, M11b); not on paths and bridges.
         if (s.kind !== 'path' && !onBridge(m, x0, z0, 1) && !onBridge(m, x1, z1, 1)) {
           const yaw = Math.atan2(dx, dz);
@@ -514,6 +515,39 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         chunkOf(bx, bz).solid.of(mat).add(disc, new Matrix4().setPosition(bx, y + 0.001 + surfaceAt(m, bx, bz), bz));
       }
     }
+  }
+}
+
+/**
+ * M11d street profile on one piece (Johannes, 2026-11-17): `haupt` gets dashed lane lines beside the
+ * tram and a solid parking line; `allee` a raised grass track with low curbs. Both get paved sidewalks
+ * and tree pits (`TREE_PIT`, the trees themselves are lots). Merged quads and boxes, no extra draws.
+ */
+function buildProfile(m: MapDef, s: Street, mats: MapMats, b: ChunkBuilder, x0: number, z0: number, x1: number, z1: number, dx: number, dz: number, y: number, piece: number): void {
+  const len = Math.hypot(x1 - x0, z1 - z0), yaw = Math.atan2(dx, dz), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  const across = (off: number): [number, number] => [cx - dz * off, cz + dx * off];
+  const paint = (off: number, w: number, l: number, along = 0): void => {
+    const [x, z] = across(off);
+    b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(x + dx * along, surfaceAt(m, x, z) + y + 0.006, z + dz * along), w, 0.01, l, [0.92, 0.9, 0.84]);
+  };
+  if (s.profile === 'haupt') {
+    // Dashed lines (3 m dash, 3 m gap) at the edge of the tram zone, solid lines at the parking lanes.
+    if (piece % 2 === 0) for (const side of [-1, 1]) paint(side * 3.1, 0.12, Math.min(3, len));
+    for (const side of [-1, 1]) paint(side * (s.width / 2 - 2.2), 0.1, len + 0.02);
+  } else {
+    const [mx, mz] = across(0);
+    b.box(mats.mossy, new Matrix4().makeRotationY(yaw).setPosition(mx, surfaceAt(m, mx, mz) + y + 0.035, mz), 5.2, 0.07, len + 0.02, [0.3, 0.4, 0.22]);
+    for (const side of [-1, 1]) {
+      const [ex, ez] = across(side * 2.7);
+      b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(ex, surfaceAt(m, ex, ez) + y + 0.06, ez), 0.18, 0.1, len + 0.02, [0.78, 0.78, 0.76]);
+    }
+  }
+  const sw = s.sidewalk ?? 0;
+  if (sw <= 0) return;
+  for (const side of [-1, 1]) {
+    const [px, pz] = across(side * (s.width / 2 + 0.12 + sw / 2));
+    if (isWater(m, px, pz)) continue;
+    b.box(mats.cobbles, new Matrix4().makeRotationY(yaw).setPosition(px, surfaceAt(m, px, pz) + 0.04, pz), sw, 0.04, len + 0.02, [0.74, 0.72, 0.68]);
   }
 }
 

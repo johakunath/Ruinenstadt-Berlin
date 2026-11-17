@@ -42,7 +42,16 @@ export interface Street {
   kind: StreetKind;
   /** Double tram track down the middle. */
   tram?: boolean;
+  /**
+   * M11d street profile (Johannes, 2026-11-17, `docs/mockups/m11d-street-profiles.svg`): `haupt` =
+   * two lanes, tram in the middle, parking both sides; `allee` = grass track in the middle, one lane
+   * each side. Both get paved sidewalks of `sidewalk` meters with trees in pits.
+   */
+  profile?: 'haupt' | 'allee';
+  sidewalk?: number;
 }
+/** Tree pits on profile sidewalks: spacing and distance from the curb. */
+export const TREE_PIT = { gap: 9, fromCurb: 1.4 } as const;
 
 export type GroundKind = 'cobbles' | 'asphalt' | 'grass' | 'forest' | 'jungle';
 export type LotKind = 'altbau' | 'house' | 'platte' | 'shop';
@@ -498,7 +507,7 @@ export function generateLots(m: MapDef): Lot[] {
           // Normal pointing away from the street on this side; the front faces the street.
           const nx = -dz * side;
           const nz = dx * side;
-          const off = s.width / 2 + L.setback + d / 2;
+          const off = s.width / 2 + Math.max(L.setback, s.sidewalk ?? 0) + d / 2;
           const x = cx + dx * (w / 2) + nx * off;
           const z = cz + dz * (w / 2) + nz * off;
           // Houses sit slightly askew; Altbau follows the street line.
@@ -535,7 +544,22 @@ export function generateLots(m: MapDef): Lot[] {
     }
   }
 
-  // 2. Trees on free ground, by area density.
+  // 2. M11d: trees in pits along profile sidewalks, both sides, off bridges, water and crossings.
+  for (const s of m.streets) {
+    if (!s.profile || !s.sidewalk) continue;
+    for (let i = 1; i < s.pts.length; i++) {
+      const [ax, az] = s.pts[i - 1] as Pt, [bx, bz] = s.pts[i] as Pt, len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;
+      for (let t = TREE_PIT.gap / 2; t < len; t += TREE_PIT.gap) for (const side of [-1, 1]) {
+        const off = s.width / 2 + TREE_PIT.fromCurb, x = ax + dx * t - dz * off * side, z = az + dz * t + dx * off * side;
+        if (isWater(m, x, z) || onBridge(m, x, z, 2) || reserved(m, x, z, 1) || m.streets.some((o) => o !== s && lineDist(o.pts, x, z) < o.width / 2 + 1.5)) continue;
+        if (!occ.free(x, z, 0, 0.8, 0.8)) continue;
+        occ.take(x, z, 0, 0.8, 0.8);
+        lots.push({ kind: 'tree', x, z, rot: rng.range(0, Math.PI * 2), w: rng.range(4, 5.5), d: 4.5, floors: 0, seed: rng.int(1e6) });
+      }
+    }
+  }
+
+  // 3. Trees on free ground, by area density.
   const step = 4.5;
   const B = m.bounds;
   for (let z = B.minZ + 3; z < B.maxZ - 3; z += step) {

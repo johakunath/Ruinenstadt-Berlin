@@ -47,3 +47,7 @@ Roughly: the first 3D district costs two to three times a 2D one, later ones abo
 
 ## Done when
 Johannes walks zone 0 and the street reads as a Berlin street.
+
+## Handover (Opus 5.5, 2026-11-17)
+- Step 2 for the two decided streets: `Street.profile` (`haupt`, `allee`) and `sidewalk`. Bahnhofstraße north of the bridge 14 m (lane dashes beside the tram, parking lines), Spreeufer 12 m with tram on a raised grass track and low curbs. Paved 3 m sidewalks, trees in pits every 9 m (not in fight circles or on the station forecourt), buildings behind the sidewalk. The Dammbrücke part keeps 7.5 m (bridge deck). Screens: `docs/proof/m11d/`.
+- Open: step 0 (water level), 3 (non-rectangular footprints), 4 (closed edge), 5 (hand-built zone 0), 6 (landmarks); other streets stay on the old profile until Johannes picks for them.

@@ -147,7 +147,10 @@ export function koepenickMap(scale = 1): MapDef {
   ];
 
   const streets: Street[] = [
-    { name: 'Bahnhofstraße', kind: 'main', width: 7.5, tram: true, pts: line([[10, -150], [9, -100], [7, -60], [6, -46], [4, -22]]) },
+    // The bridge part keeps the old width (the Dammbrücke deck); the stopped tram stands on it (first tram street).
+    { name: 'Dammbrücke', kind: 'main', width: 7.5, tram: true, pts: line([[7, -60], [6, -46], [4, -22]]) },
+    // M11d profile A (Johannes, 2026-11-17): the Bahnhofstraße as a Berlin main street, 14 m with tram, parking and 3 m sidewalks.
+    { name: 'Bahnhofstraße', kind: 'main', width: 14, tram: true, profile: 'haupt', sidewalk: 3, pts: line([[10, -150], [9, -100], [7, -60]]) },
     { name: 'Alt-Köpenick', kind: 'side', width: 6.5, pts: line([[4, -22], [2, 10], [0, 28]]) },
     { name: 'Grünstraße', kind: 'side', width: 5.5, pts: line([[-12, -4], [14, 0], [44, 0]]) },
     { name: 'Lange Brücke', kind: 'side', width: 7, pts: line([[-52, -4], [-12, -4]]) },
@@ -162,7 +165,8 @@ export function koepenickMap(scale = 1): MapDef {
     // The loop south and west (placeholder names: course not checked against real streets).
     { name: 'Waldweg', kind: 'side', width: 5, pts: line([[134, 112], [112, 124], [84, 130], [56, 126], [30, 116], [4, 104]]) },
     { name: 'Heideweg', kind: 'side', width: 5.5, pts: line([[-30, 104], [-54, 104], [-78, 86], [-100, 62], [-108, 36], [-112, 12]]) },
-    { name: 'Spreeufer', kind: 'main', width: 7, pts: line([[-52, -4], [-72, -12], [-92, -22], [-108, -30]]) },
+    // M11d profile C (Johannes, 2026-11-17): an Allee with a grass tram track from the Köllnische Vorstadt to the Spreepark.
+    { name: 'Spreeufer', kind: 'main', width: 12, tram: true, profile: 'allee', sidewalk: 3, pts: line([[-52, -4], [-72, -12], [-92, -22], [-108, -30]]) },
     { name: 'Lindenstraße Süd', kind: 'side', width: 5.5, pts: line([[-72, -12], [-76, 14], [-82, 40]]) },
     { name: 'Spreepark', kind: 'path', width: 4, pts: line([[-92, -22], [-104, -50], [-130, -38], [-132, -8], [-112, 12], [-94, 2], [-92, -22]]) },
     { name: 'Kammweg', kind: 'path', width: 4, pts: line([[98, 98], [116, 108], [134, 112]]) },
