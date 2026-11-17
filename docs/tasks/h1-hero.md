@@ -127,6 +127,7 @@ Textures are WebP at quality 85. Leistung loads no normal maps (`profile.normalM
 - `hand-ik.ts`: after `anim.update`, a two-bone solve sets `upperarm_l` and `lowerarm_l` so `hand_l` reaches the grip point on the weapon; the elbow keeps the clip's bend direction; `hand_l` is turned to wrap the shaft; left fingers take a fixed curl.
 - Weight: 1 in idle, run and attack with a two-handed model. It fades to 0 between 90 % and 100 % of arm reach, and is 0 in dodge, death, throw casts and under the hit flinch. Changes ease over 0.08 s.
 - Works on the current `hero.glb`; independent of every other step.
+- Reach limits, the two-handed idle clip and the release rule: Decision: left hand reach (below the step 2 handover).
 
 ## Inventory preview
 - `HeroPreview` owns a second `HeroModel` (shared geometry and materials), a small scene with three fixed lights and a camera on the full body.
@@ -140,6 +141,7 @@ Textures are WebP at quality 85. Leistung loads no normal maps (`profile.normalM
 |---|---|---|---|
 | 1 | Pipeline proof: `build-hero.mjs` and `hero_build.py` send the body through Blender unchanged and rebind it to the source skeleton; `hero-contract.test.ts` | PC · Blender · Opus high | Largest vertex shift under 0.1 mm; joints equal the contract; `clip-sheet.mjs` strips of `Sword_Idle`, `Sprint_Loop`, `Roll`, `Sword_Heavy_Combo`, `OverhandThrow`, `Death01` differ from today in under 0.5 % of pixels; `npm run check` |
 | 2 | Left-hand IK (own PR, can run before step 1) | Claude · Opus high | Unit test for the solve; strips of `Sword_Heavy_Combo` with hammer and `Punch_Cross` with spear before and after in `docs/proof/h1-hero/`; `clip-swing.mjs` numbers unchanged. **Johannes looks**: hammer and spear in the game |
+| 2b | Two-handed standing idle and clean release in attacks (spec: Decision: left hand reach) | Claude · Opus high | Left hand holds through the whole idle loop with hammer and spear (weight 1.00 in the `clip-sheet` log); no left-arm jump in a 60 Hz capture of both attack chains; `clip-swing.mjs` output for `Sword_Heavy_Combo`, `Punch_Cross`, `Melee_Hook` byte-identical and `src/data/combat.ts` untouched; `npm run check`. **Johannes looks**: standing, starting to run and the first hit from standing, hammer and spear |
 | 3 | Hero v1: `a_mantel`, `f_stiefel`, `g_handsch`, new scarf, body regions, coat spring joints, baked placeholder textures, skin normal map | PC · Blender · Opus high | Budget and contract tests pass; old and new side by side: `render_glb.py` pictures plus game screenshots at `?cam=5,30` and the default camera on both profiles. **Johannes looks and approves or gives feedback** (at most two rounds) |
 | 4 | Swap: `hero-look.ts`, `HeroModel`, `HeroPose.look`, second look `a_weste`, `f_turnsch`, bare hands | Claude · Opus high (Blender part on the PC) | Tests for `heroLook` (every armor, glove and boot base resolves to an existing node); equipping changes the hero in the game with no frame over 50 ms on the first swap; screenshots of both looks |
 | 5 | Inventory preview | Claude · Opus high | Turns by touch, mouse, pad and keys at 844 × 390, 1280 × 800 and 1280 × 720; e2e test: the canvas is not blank and changes after a drag. **Johannes looks** |
@@ -169,8 +171,44 @@ Steps 1, 3, 4 need the PC with Blender. Steps 2 and 5 run anywhere.
   Options: (a) another idle loop for two-handed weapons (none in the packs is in reach); (b) let the solve also turn `clavicle_l` (a few cm, not enough for `Sword_Idle`); (c) two-handed clips made in Blender (H1 says no new clips); (d) accept that the left hand holds only while running and in the spear guard. The spine is out because it would move `hand_r`.
 - Seen once: `src/sim/director.test.ts` timed out at 5.5 s while Blender ran in parallel; it passes on rerun.
 
+### Decision: left hand reach (Fable 5.2, 2026-11-17)
+Notes; Opus writes final prose.
+
+**Decision**
+- **Standing idle:** two-handed models get their own idle clip from the UAL pack, `Idle_FoldArms_Loop` (UAL2, not imported yet): upright, weapon leaning over the right shoulder, both hands on the shaft at the chest. Idle has no hit arc, so a different clip there breaks nothing; the weapon rule in the contract (IK never moves `hand_r`) stays as it is.
+- **Attacks:** clips, `combat.ts` and arcs stay. The swing itself stays one-handed; the left hand holds where the clip allows and lets go without a jump.
+- **Rejected:** clavicle in the solve, a grip that slides during swings, spine or full-body IK, two-handed clips authored in Blender.
+
+**Why** (throwaway probe: all 86 pack clips on the hero skeleton at 30 Hz; ratio = the value `LeftHandIk.apply` fades on, arm 0.49 m, holds up to 0.9)
+
+| Finding | Number |
+|---|---|
+| Swings, best grip anywhere on the shaft (hammer 0.14–0.85, spear −0.45–1.1) | `Sword_Heavy_Combo` swings 1.2–1.7, `Punch_Cross` thrust 1.06–1.26, `Melee_Hook` swing 1.2–1.5: no grip height reaches |
+| Clavicle | About 5 cm = 0.1 of the ratio. Not enough for any swing; only the 0.95–1.1 idles would gain, and those are replaced |
+| `Idle_FoldArms_Loop` | 0.36–0.37 at grip 0.20–0.22 (0.91–0.93 at 0.48): holds 100 %, both weapons |
+| `Idle_Lantern_Loop` (UAL2) | 0.37–0.39 at 0.48: shaft level across the chest, arms out. Too stiff as idle, reads as a two-handed block |
+| Other clips that hold | `Idle_Rail_Loop` 0.64–0.66 (bent forward, head down), `Crouch_Idle_Loop`, `Push_Loop`: wrong poses. No attack clip in the packs holds through its swing |
+| What the player sees | Default camera (18.5 m, FOV 36°): hero about 160 px tall at 1080p, about 60 px on a 390 px phone; the left hand is 3 to 8 px. Active frames last 0.09–0.13 s. Idle, run and guard are held long enough to read; the swing is not |
+| Blender clips | The skeleton must not pass through Blender (contract), nobody keyframes combat by hand here, and every changed attack clip needs new `combat.ts` timing, arcs and smear. Cost and risk are out of proportion to 3 to 8 px |
+| Cost of a pack clip | About 21 KB in `anims.glb` per idle loop; hero only |
+
+Pictures (probe renders, `Idle_FoldArms_Loop` at grip 0.22): `docs/proof/h1-hero/idle-2h-candidates-hammer.png`, `-spear.png`. Panels: now (`Sword_Idle`, hand off) · `Idle_FoldArms_Loop` · `Idle_Lantern_Loop`.
+
+**Work item 2b: two-handed idle and clean release [Claude · Opus high]** (this PR or the next; no Blender)
+- `tools/build-assets.mjs` `CLIPS`: add `Idle_FoldArms_Loop` (and `Idle_Lantern_Loop` if the optional point below is taken); rebuild `anims.glb`; fix clip counts where a test or doc states 38.
+- One function picks the standing clip from weapon model and guard (used by `HeroView.update` and later by the inventory preview, step 5): two-handed → `Idle_FoldArms_Loop`, else `Sword_Idle`.
+- Grip height per state: idle about 0.22 (tune 0.22–0.32 on strips, both weapons), everything else stays 0.48 / 0.50. Ease the height over about 0.15 s so the hand slides instead of jumping when she starts to run.
+- Clean release: ease the final weight (state × reach fade) in time, grab about 0.12 s, release about 0.06 s. During wind-up and active frames of an attack the hand never grabs anew; it only keeps holding or lets go. Known spots: `Sword_Heavy_Combo` 0.85–0.90 s (ratio 1.42 → 0.52) and 1.10–1.15 s (0.51 → 1.26).
+- Optional, only if it reads well on a strip: standing guard with a two-handed model uses `Idle_Lantern_Loop` instead of `Idle_Shield_Loop` (1.09–1.11, never holds).
+- Proof: strips before and after for idle, run start and both attack chains in `docs/proof/h1-hero/`. Done-when: Steps row 2b.
+
+**Johannes decides the stance (look choice).** Show him the game with hammer and spear, plus the two candidate pictures: the calm upright carry (`Idle_FoldArms_Loop`) against today's fighting stance with one hand. If he wants the fighting stance kept with both hands on the weapon, build the fallback instead:
+- **Fallback 2c: carry pose in code [Claude · Opus high].** Body stays on `Sword_Idle`. In standing idle only, the weapon is placed relative to `spine_03` (grip point and shaft direction per model, about 6 numbers), the right arm gets the same two-bone solve plus the hand rotation, then the existing left solve runs. Weight is 0 in attack, cast, dodge and death and eases out in at most 0.08 s, so it is 0 before the first active frame (shortest wind-up from standing 0.09 s; the dash strike follows a dodge). Same done-when as 2b. More code and one or two look rounds; not started unless Johannes asks.
+
+**Not done here:** real two-handed attack clips. Own task, only if Johannes misses them after seeing 2b: needs a clip source on the UAL skeleton (not checked) and new timing, arcs and smear for hammer and spear.
+
 ## Not in scope
-A new body or head, new clips or retargeting, weapons as GLB files (they stay code-built), trying on a bag item in the preview, zoom in the preview, hats and the other 12 outfits (follow-up H1b: one task per batch, textures first), enemies (H2).
+A new body or head, authored clips or retargeting (importing more clips from the UAL packs is allowed, see Decision: left hand reach), two-handed attack clips, weapons as GLB files (they stay code-built), trying on a bag item in the preview, zoom in the preview, hats and the other 12 outfits (follow-up H1b: one task per batch, textures first), enemies (H2).
 
 ## Handover (Fable 5.2, 2026-11-17)
 - Setup on the PC: Node 24.14.1, npm 11.11.0, Blender 5.3.0 (path above), `npm ci`, source packs fetched, `npm run assets` rebuilt. `zombie.glb` and `anims.glb` are byte-identical; `hero.glb` differs by 4 bytes with identical geometry, textures and joints, so the committed file stays.
