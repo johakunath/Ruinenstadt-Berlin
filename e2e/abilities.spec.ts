@@ -17,8 +17,12 @@ test('powers, ultimate and blessing choice work through the real UI',async({page
   await expect(page.locator('.pcard')).toHaveCount(3);
   await expect(page.locator('.pcard.ra .prar')).toHaveText('Selten · zwei Stufen');
   await page.waitForTimeout(400);
-  await page.keyboard.press('Digit1');
-  await expect(page.locator('#blessings')).toBeHidden();
+  // The cards ignore input for 350 ms after they open (no accidental picks). On a slow CI runner
+  // a frame can take seconds, so press until the choice is taken instead of exactly once.
+  await expect(async () => {
+    await page.keyboard.press('Digit1');
+    await expect(page.locator('#blessings')).toBeHidden({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
   expect(await page.evaluate(()=>window.__game!.sim().statContext.perks.dmg)).toBe(1);
   // Keyboard consumables: Q heals over time when hurt, G throws the bottle.
   await page.evaluate(()=>{const s=window.__game!.sim();s.player.hp=20;});
