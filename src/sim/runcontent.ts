@@ -38,6 +38,8 @@ export interface RunContent {
   tradeOpen: boolean;
   /** Who is trading: -1 the wandering trader, else the Späti with this rest index. */
   tradeAt: number;
+  /** Who the hero can talk to now (playtest 2026-11-17: trading starts on a press, not by walking in): -1 the trader, a rest index for a Späti, null nobody. */
+  talk?: number | null;
   /** Späti stock per rest index, rolled on the first visit of a run (M13b). */
   shops: Array<{ offers: Array<TradeOffer | null>; left: boolean } | null>;
   captive: { x: number; z: number; survivor: SurvivorId; free: boolean } | null;
@@ -49,9 +51,9 @@ export interface RunContent {
 
 export const CONTENT = {
   delay: 5, touch: 34 * PX, hiddenTouch: 1.2, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
-  trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.5 },
+  trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.8 },
   /** Späti counter: stand this close to the customer spot; no trade while enemies are this near. */
-  shop: { touch: 1.1, calm: 12, offers: 4 },
+  shop: { touch: 1.5, calm: 12, offers: 4 },
   cache: { near: 520 * PX, far: 760 * PX, time: 50, scrap: 25 },
   zone: { near: 240 * PX, far: 420 * PX, radius: 70 * PX, need: 8, time: 45, every: 2.2, scrap: 30 },
   rescue: { near: 320 * PX, far: 520 * PX, touch: 36 * PX },
@@ -285,6 +287,17 @@ function applyShrines(s: Sim): void {
   setLoadout(s, s.equipment, { ...s.statContext, shrines: { as: (c.shrine.as ?? 0) > 0, res: (c.shrine.res ?? 0) > 0, spd: (c.shrine.spd ?? 0) > 0 } });
 }
 
+/** Opens the trade screen with whoever stands within reach (`content.talk`). Called on the talk press. */
+export function talkTo(s: Sim): boolean {
+  const c = s.content;
+  if (c.talk == null || c.tradeOpen) return false;
+  c.tradeOpen = true;
+  c.tradeAt = c.talk;
+  c.talk = null;
+  s.events.push({ type: 'trade' });
+  return true;
+}
+
 export function updateContent(s: Sim): void {
   const c = s.content;
   const p = s.player;
@@ -335,7 +348,8 @@ export function updateContent(s: Sim): void {
   };
   const ctx = (): ReturnType<typeof lootContext> => lootContext(s);
 
-  // Späti keeper: step up to the counter to trade. Stock is rolled on the first visit.
+  // Späti keeper: step up to the counter, then press to trade. Stock is rolled on the first visit.
+  c.talk = null;
   const at = restAt(L.rests, p.x, p.z);
   for (let i = 0; i < c.shops.length; i++) if (i !== at && c.shops[i]) c.shops[i]!.left = true;
   if (at >= 0 && L.rests[at]!.desk) {
@@ -352,25 +366,13 @@ export function updateContent(s: Sim): void {
       shop = c.shops[at] = { offers, left: true };
     }
     const close = near(desk, CONTENT.shop.touch);
-    if (!close) shop.left = true;
-    else if (shop.left && !c.tradeOpen && !s.enemies.some((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < CONTENT.shop.calm)) {
-      shop.left = false;
-      c.tradeOpen = true;
-      c.tradeAt = at;
-      s.events.push({ type: 'trade' });
-    }
+    if (close && !c.tradeOpen && !s.enemies.some((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < CONTENT.shop.calm)) c.talk = at;
   }
   if (c.trader) {
     const T = c.trader;
     if (travel) T.t -= DT;
     const close = near(T, CONTENT.trader.touch);
-    if (!close) T.left = true;
-    else if (T.left && !c.tradeOpen && s.enemies.every((e) => e.state === 'dead')) {
-      T.left = false;
-      c.tradeOpen = true;
-      c.tradeAt = -1;
-      s.events.push({ type: 'trade' });
-    }
+    if (close && !c.tradeOpen && s.enemies.every((e) => e.state === 'dead')) c.talk = -1;
     if (T.t <= 0 && !c.tradeOpen) {
       done('trader', 'lost', T);
       c.trader = null;

@@ -4,7 +4,7 @@ import { generateLots, generateProps, mapLevel } from '../data/map';
 import { SURVIVORS } from '../data/progression';
 import { spawnEnemy } from './enemies';
 import { reachable } from './reach';
-import { buyHeal, buyOffer, closeTrade, CONTENT, contentMarks, healPrice, type RunEventKind } from './runcontent';
+import { buyHeal, buyOffer, closeTrade, CONTENT, contentMarks, healPrice, talkTo, type RunEventKind } from './runcontent';
 import { parseSave, simFromSave, snapshot } from './save';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Sim } from './types';
@@ -110,7 +110,7 @@ describe('events', () => {
     expect(h.enemies.length).toBeGreaterThanOrEqual(8);
     expect(h.enemies.every((e) => e.kind === 'runner')).toBe(true);
   });
-  it('trader: opens on touch, sells for Schrott, heals, leaves after a minute', () => {
+  it('trader: opens on a talk press within reach, sells for Schrott, heals, leaves after a minute', () => {
     const s = make();
     onLeg(s, 'trader');
     run(s, 2);
@@ -118,8 +118,13 @@ describe('events', () => {
     expect(T.offers).toHaveLength(3);
     expect(T.offers.every((o) => o!.item.rarity >= 2)).toBe(true);
     expect(contentMarks(s)[0]?.kind).toBe('trader');
+    expect(talkTo(s)).toBe(false);
     walkTo(s, T);
     run(s, 1);
+    // Walking up only offers the talk (playtest 2026-11-17: no more accidental trade screens).
+    expect(s.content.tradeOpen).toBe(false);
+    expect(s.content.talk).toBe(-1);
+    expect(talkTo(s)).toBe(true);
     expect(s.content.tradeOpen).toBe(true);
     expect(buyOffer(s, 0).ok).toBe(false);
     s.inventory.scrap = 10000;
@@ -223,6 +228,8 @@ describe('events', () => {
     run(s, 1);
     // The customer spot is free ground: the hero is not pushed away from it.
     expect(Math.hypot(s.player.x - rest.desk!.x, s.player.z - rest.desk!.z)).toBeLessThan(0.05);
+    expect(s.content.tradeOpen).toBe(false);
+    expect(talkTo(s)).toBe(true);
     expect(s.content.tradeOpen).toBe(true);
     expect(s.content.tradeAt).toBe(0);
     expect(tradeStock(s)).toHaveLength(4);
@@ -241,7 +248,7 @@ describe('events', () => {
     run(s, 2);
     walkTo(s, rest.desk!);
     run(s, 1);
-    expect(s.content.tradeOpen).toBe(true);
+    expect(talkTo(s)).toBe(true);
     expect(tradeStock(s)[1]).toBeNull();
     // Not with enemies at the door.
     closeTrade(s);
@@ -251,7 +258,8 @@ describe('events', () => {
     walkTo(s, rest.desk!);
     s.player.invuln = 99;
     run(s, 1);
-    expect(s.content.tradeOpen).toBe(false);
+    expect(s.content.talk).toBeNull();
+    expect(talkTo(s)).toBe(false);
   });
   it('no event starts during a fight or while a choice is open', () => {
     const s = make();

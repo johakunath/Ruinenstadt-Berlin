@@ -38,7 +38,8 @@ import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
 import { PERKS, SHRINES } from './data/progression';
-import { contentMarks, EVENT_TEXT } from './sim/runcontent';
+import { contentMarks, EVENT_TEXT, talkTo } from './sim/runcontent';
+import { TalkPrompt } from './ui/talk';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
 import { backupSave, clearSave, loadSave, writeSave } from './save';
 import { CloudSave, formatCode, type SyncState } from './sync';
@@ -56,6 +57,12 @@ audio.setMusic(opts.music);
 audio.setEco(opts.profile === 'leistung');
 const input = new Input(canvas);
 const abilitiesUi = new AbilitiesUi(input);
+/** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
+function talk(): void {
+  if (phase === 'play' && !menu.isOpen && talkTo(sim)) { input.clear(); drainEvents(); }
+}
+const talkPrompt = new TalkPrompt(() => talk());
+input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
 abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
@@ -747,6 +754,8 @@ function frame(now: number): void {
     acc += dt;
     let steps = 0;
     while (acc >= DT && steps < 5) {
+      // E and Y (power) talk instead while a trader is in reach: no enemies are near then.
+      if (sim.content.talk != null && input.buffer.has('power')) { input.buffer.consume('power'); talk(); break; }
       stepSim(sim, readInput());
       if (sim.consumed.attack) input.buffer.consume('attack');
       if (sim.consumed.dodge) input.buffer.consume('dodge');
@@ -764,6 +773,7 @@ function frame(now: number): void {
     if (steps === 5) acc = 0;
   }
   renderer.perf.simMs = performance.now() - simStart;
+  talkPrompt.update(sim.content.talk, running && phase === 'play', input.device);
   // Paused screens (trade, camp, menu) can still raise events, e.g. the coin of a purchase (A2).
   if (!running && sim.events.length) drainEvents();
 
