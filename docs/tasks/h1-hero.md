@@ -237,7 +237,7 @@ A new body or head, authored clips or retargeting (importing more clips from the
 - Built: `tools/blender/hero_clothes.py` with `a_mantel` (coat body and sleeves with turned-up cuffs, trousers, skirt to mid-calf: open below the belt, slit at the back, torn hem; stand collar, belt with buckle, pouch on the right hip, flap pocket, two rows of buttons), `f_stiefel` (inflated feet and lower calves, voxel remeshed so the toes melt into one boot, flat sole, folded cuff) and `g_handsch` (gloves from the hand faces, decimated to the budget). Tight parts are body shells with the body's weights. The skirt, collar, belt and pocket are built in code, weighted pelvis to thighs as before. The boots take the weights of the nearest body point.
 - `tools/build-hero.mjs`: the body is split into `body_head`, `body_torso`, `body_arms`, `body_hands`, `body_legs`, `body_feet`. The six nodes share the body's vertex buffers, so the split costs no file size, and each triangle goes to the region of its vertices' dominant joints. Pieces become their own skinned nodes with vertex colours (`COLOR_0`; the work format gained `color`). `scarf` and `hair` are their own nodes. The painted body (`dress`), the old coat skirt and the gear are gone. `src/data/hero-contract.ts`: `HERO_REGIONS`, `regionOf`, `HERO_PIECES` (hides) and `HERO_DEFAULT_LOOK`.
 - Game: `wearDefaultLook` in `characters.ts` shows the three pieces and hides torso, arms, legs, feet and hands, until step 4's `HeroModel.setLook`.
-- Numbers: file 1,213 KB, 28,546 triangles, byte-stable rebuild (faces sorted and triangulated with a fixed rule; pieces carry no UVs until step 6); default look 8 draw calls and about 18,800 triangles (budget 9 and 32,000). Pieces: coat 5,742, boots 2,210, gloves 2,360 triangles. The contract test checks the visible default look, every region node and every piece node. Build time about 10 s.
+- Numbers (3a; 3b: 1,326 KB, 28,894 triangles): file 1,213 KB, 28,546 triangles, byte-stable rebuild (faces sorted and triangulated with a fixed rule; pieces carry no UVs until step 6); default look 8 draw calls and about 18,800 triangles (budget 9 and 32,000). Pieces: coat 5,742, boots 2,210, gloves 2,360 triangles. The contract test checks the visible default look, every region node and every piece node. Build time about 10 s.
 - Pictures in `docs/proof/h1-hero/step3/`: `before-blender-body.png` and `after-blender-body.png`; `close-Qualität.png`, `close-Leistung.png` (`?cam=5,30`) and `default-Qualität.png` (default camera), each old on the left and new on the right; `strip-*.png` for sprint, hammer combo and roll.
 - Reused from 2D: the `mantel` design in `assets/raw/codex/07-player-rig-v2/outfits-a.png`: belted trench to mid-calf with a flap pocket, buttons, a collar and a torn hem. The colours come from the old painted dress.
 - Open in step 3:
@@ -249,5 +249,21 @@ A new body or head, authored clips or retargeting (importing more clips from the
   - `Eyes` and `Eyebrows` stay their own nodes instead of joining `body_head`
 - `tools/screenshot.mjs` takes `PORT` like `clip-sheet.mjs`.
 
+## Johannes, 2026-11-17 (step 3 look 1)
+- Continue in this direction; the coat colour is close to the 2D mantel.
+- The first comparison showed almost no difference: legs and boots showed through the open coat, the scarf tail ran through the back, and only the belt changed. Fixed in step 3b below.
+- **Equipment needs more visible differences (colours, textures) so collecting is fun.** That goes beyond one coat look and changes H1's scope, so it needs a Fable pass before step 4. Proposal, cheapest first, following style bible v0.52 (starter gear rust and brown; every new item one strong signature colour):
+  1. Step 4: a palette per item base for every piece, using a tint or a vertex-colour remap on the same mesh, so each armor, boot and glove base looks different at once. No new meshes, no draw calls.
+  2. Step 6: Codex textures per item base (pattern, wear, emblem), not one per mesh.
+  3. H1b: more meshes for the 14 2D outfits, emblematic sets first.
+
+## Handover step 3b (Opus 5.5, 2026-11-17)
+- Coat closed like the 2D mantel: the left panel wraps over the right past the centre, a small walking opening in the last quarter, a short back slit at the hem. The collar is gone; the scarf covers the neck, as in 2D. Skirt weights: the front follows the thigh fully from a third of the way down, so a raised knee no longer pokes through (sprint, hammer combo, roll strips).
+- New scarf from Blender (`hero_clothes.scarf`): two lumpy wraps, a knot on the left front, a short front tail and the long back tail on `scarf_01..03` (bones still made in `build-hero.mjs`). The tail is pushed outside the coat's back. 688 triangles. The code-built ring and tail are gone.
+- Skin normal map kept from the pack (`slimMaterials` keeps it for the body, JPEG 1024, +102 KB); `fromGltf` passes normal maps, Leistung drops them as before.
+- Pictures, replaced in `docs/proof/h1-hero/step3/`: `close-*.png` (facing the camera, old left, new right), `after-blender-*.png`, `strip-*.png`.
+- Still open in step 3: the coat spring joints, UV layouts with baked placeholder shading, and the chest shape. Waiting for look 2 before more look work.
+
 ## Questions
-- Johannes: does the coat match the 2D mantel well enough to build on (look round 1 of 2)?
+- Johannes (look 2 of 2): is the closed coat, with its wide skirt in the two-handed stance, right?
+- Equipment variety: run the Fable pass on the proposal above before step 4?

@@ -49,11 +49,12 @@ export class Materials {
     });
   }
 
-  /** Converts a loaded glTF material, keeping its texture, color and vertex colors. */
+  /** Converts a loaded glTF material, keeping its texture, normal map (Qualität only), color and vertex colors. */
   fromGltf(src: Material): LitMaterial {
     const s = src as MeshStandardMaterial;
     return this.surface({
       map: s.map,
+      normalMap: s.normalMap,
       color: s.color,
       roughness: s.roughness,
       vertexColors: s.vertexColors,

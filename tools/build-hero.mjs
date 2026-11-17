@@ -159,7 +159,7 @@ function addPieces(doc, skin, work, sourceNames) {
   const scene = doc.getRoot().listScenes()[0];
   for (const w of work) {
     if (sourceNames.has(w.name)) continue;
-    const mat = doc.createMaterial(w.name).setRoughnessFactor(PIECE_ROUGHNESS[w.name] ?? 0.8).setMetallicFactor(0).setDoubleSided(w.name.startsWith('a_'));
+    const mat = doc.createMaterial(w.name).setRoughnessFactor(PIECE_ROUGHNESS[w.name] ?? 0.8).setMetallicFactor(0).setDoubleSided(w.name.startsWith('a_') || w.name === 'scarf');
     const p = doc.createPrimitive().setMaterial(mat)
       .setAttribute('POSITION', acc('VEC3', w.position))
       .setAttribute('NORMAL', acc('VEC3', w.normal))
@@ -172,7 +172,7 @@ function addPieces(doc, skin, work, sourceNames) {
   }
 }
 
-const PIECE_ROUGHNESS = { a_mantel: 0.8, f_stiefel: 0.65, g_handsch: 0.6 };
+const PIECE_ROUGHNESS = { a_mantel: 0.8, f_stiefel: 0.65, g_handsch: 0.6, scarf: 0.9 };
 
 /** Joint names and order of the finished skin against src/data/hero-contract.ts. */
 function checkContract(skin) {
@@ -186,14 +186,13 @@ function checkContract(skin) {
 async function buildHero() {
   const doc = await readGltf(BODY);
   stripAttributes(doc);
-  await slimMaterials(doc, 1024);
+  await slimMaterials(doc, 1024, undefined, /Superhero/i); // skin normal map (Qualität only)
   const root = doc.getRoot();
   const skin = root.listSkins()[0];
   const work = readWork();
   rebind(doc, skin, work);
   const bodyNode = root.listNodes().find((n) => n.getName() === 'Superhero_Female');
   const sourceNames = new Set(root.listNodes().filter((n) => n.getMesh()).map((n) => n.getName()));
-  const SCARF = '#d22c1e';
 
   // --- scarf: a ring around the neck plus a tail on two extra bones that the game animates.
   const neck = jointPos(skin, 'neck_01');
@@ -231,59 +230,6 @@ async function buildHero() {
   });
   ibm.setArray(next);
   const J2 = jointIndex(skin);
-
-  const scarfMat = doc.createMaterial('scarf').setRoughnessFactor(0.9).setMetallicFactor(0).setDoubleSided(true);
-  const scarf = new Builder(J2);
-  const red = srgb(SCARF);
-  const ringR = 0.088;
-  const tube = 0.042;
-  const segs = 16;
-  const sides = 8;
-  const torus = [];
-  for (let a = 0; a <= segs; a++) {
-    const phi = (Math.PI * 2 * a) / segs;
-    const row = [];
-    // The ring sits lower at the front, like a wrapped scarf.
-    const cy = neck[1] - 0.012 - 0.03 * Math.cos(phi);
-    for (let b = 0; b <= sides; b++) {
-      const th = (Math.PI * 2 * b) / sides;
-      const rr = ringR + Math.cos(th) * tube;
-      const nx = Math.sin(phi) * Math.cos(th);
-      const nz = Math.cos(phi) * Math.cos(th);
-      const shade = 0.75 + 0.45 * hash(a, b, 4);
-      row.push(
-        scarf.vertex([Math.sin(phi) * rr, cy + Math.sin(th) * tube * 0.85, neck[2] + 0.03 + Math.cos(phi) * rr], [nx, Math.sin(th), nz], red.map((v) => v * shade), [
-          ['neck_01', 0.45],
-          ['spine_03', 0.55],
-        ]),
-      );
-    }
-    torus.push(row);
-  }
-  for (let a = 0; a < segs; a++) for (let b = 0; b < sides; b++) scarf.quad(torus[a][b], torus[a + 1][b], torus[a + 1][b + 1], torus[a][b + 1]);
-  // Tail: a strip hanging down the back, one bone per segment pair.
-  const tailW = 0.055;
-  const strip = [];
-  const tailRows = 7;
-  for (let r = 0; r < tailRows; r++) {
-    const t = r / (tailRows - 1);
-    const y = tailRoot[1] + 0.02 - t * segLen * 3;
-    const z = tailRoot[2] - 0.03 * t * 3;
-    const bone = Math.min(2, Math.floor(t * 3));
-    const frac = t * 3 - bone;
-    const w = [[`scarf_0${bone + 1}`, 1 - frac * 0.5]];
-    if (bone < 2) w.push([`scarf_0${bone + 2}`, frac * 0.5]);
-    else w[0][1] = 1;
-    const fray = r === tailRows - 1 ? 0.02 : 0;
-    const shade = 0.75 + 0.45 * hash(r, 2, 6);
-    const half = tailW * (1 - 0.25 * t);
-    strip.push([
-      scarf.vertex([tailRoot[0] - half, y + fray, z], [0, 0, -1], red.map((v) => v * shade), w),
-      scarf.vertex([tailRoot[0] + half, y - fray, z], [0, 0, -1], red.map((v) => v * shade * 0.9), w),
-    ]);
-  }
-  for (let r = 0; r < tailRows - 1; r++) scarf.quad(strip[r][0], strip[r][1], strip[r + 1][1], strip[r + 1][0]);
-  newPrimitive(doc, ownNode(doc, skin, bodyNode, 'scarf'), scarfMat, scarf);
 
   // --- hair from the hair pack, re-bound to this skeleton by joint name.
   const hairDoc = await readGltf(`${SRC}/hair/Hair_Long.gltf`);

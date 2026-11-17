@@ -251,8 +251,12 @@ class Piece:
         return obj
 
 
-def skirt_weights(t, x, top):
-    leg = 0.85 * math.pow(t, 0.8)
+def skirt_weights(t, x, top, phi=0.0):
+    """Skirt weights by height t (0 belt, 1 hem), side x and angle phi (0 front, pi back): the front
+    follows the thigh fully from a third of the way down, so a raised knee never pokes through; the
+    back follows less."""
+    reach = 0.75 + 0.25 * math.cos(phi)
+    leg = reach * math.pow(min(1.0, t / 0.35), 0.8)
     left = min(1.0, max(0.0, 0.5 + x / 0.16))
     w = [('pelvis', (1 - leg) * (0.5 if top else 1.0)), ('thigh_l', leg * left), ('thigh_r', leg * (1 - left))]
     if top:
@@ -261,7 +265,8 @@ def skirt_weights(t, x, top):
 
 
 def coat(body):
-    """a_mantel: long belted leather coat (body, sleeves, skirt, collar, belt, pocket) and trousers."""
+    """a_mantel: long belted leather coat (body, sleeves, skirt, belt, pocket) and trousers. No collar:
+    the scarf covers the neck, as in the 2D art."""
     waist = body.head('spine_01').z - 0.005
     wrist_x = abs(body.head('hand_l').x) - 0.035
     neck_z = body.head('neck_01').z
@@ -309,16 +314,19 @@ def coat(body):
     cy = (body.head('thigh_l').y + body.head('thigh_r').y) / 2
     rows, cols = 9, 13
     heights = [waist + 0.03 + (hem - waist - 0.03) * r / (rows - 1) for r in range(rows)]
-    slit_from = 0.55
+    slit_from = 0.78
     panels = []
     for side in (1, -1):  # +1: hero's left (+X), front edge to back
         grid = []
         prev = [0.0] * (cols + 1)
         for r, z in enumerate(heights):
             t = r / (rows - 1)
-            gap = 0.04 + 0.30 * math.pow(t, 1.5)
-            slit = 0.0 if t < slit_from else 0.03 + 0.12 * (t - slit_from) / (1 - slit_from)
-            off = 0.028 + 0.05 * t
+            # Closed like the 2D mantel: the left panel wraps over the right one past the centre; only
+            # the last quarter opens a little for walking, and the back has a short slit at the hem.
+            walk = math.pow(max(0.0, (t - 0.75) / 0.25), 1.5)
+            gap = -0.16 + 0.2 * walk if side > 0 else 0.04 * walk
+            slit = 0.0 if t < slit_from else 0.02 + 0.06 * (t - slit_from) / (1 - slit_from)
+            off = 0.034 + 0.045 * t + (0.009 if side > 0 else 0.0)
             row = []
             for c in range(cols + 1):
                 u = c / cols
@@ -332,7 +340,7 @@ def coat(body):
                 co = Vector((math.sin(phi) * rad, cy - math.cos(phi) * rad, z + y_jag))
                 shade = (0.75 + 0.35 * noise(co, 2.0)) * (1 - 0.22 * t)
                 col = COAT_DARK if (r == rows - 1 and noise(co, 9.0) > 0.6) else COAT
-                row.append(piece.vert(co, skirt_weights(t, co.x, r == 0), tuple(k * shade for k in col)))
+                row.append(piece.vert(co, skirt_weights(t, co.x, r == 0, phi), tuple(k * shade for k in col)))
             grid.append(row)
         for r in range(rows - 1):
             for c in range(cols):
@@ -373,28 +381,10 @@ def coat(body):
     phi = -0.45
     e = body.extent(zp, phi, cy) or 0.17
     nrm = Vector((math.sin(phi), -math.cos(phi), 0))
-    p = Vector((0, cy, zp)) + nrm * (e + 0.028 + 0.05 * tp + 0.02)
+    p = Vector((0, cy, zp)) + nrm * (e + 0.034 + 0.045 * tp + 0.02)
     tang = Z.cross(nrm).normalized()
-    piece.box(p, tang, nrm, Z, (0.065, 0.006, 0.035), skirt_weights(tp, p.x, False), tuple(c * 0.85 for c in COAT))
-    piece.box(p + Z * -0.012 + nrm * 0.007, tang, nrm, Z, (0.008, 0.003, 0.008), skirt_weights(tp, p.x, False), BRASS)
-
-    # --- collar: a flared stand collar, open at the front.
-    cn = Vector((0, body.head('neck_01').y + 0.005, neck_z - 0.035))
-    rows_c = [(0.0, 0.0), (0.03, 0.012), (0.055, 0.04)]
-    m = 18
-    collar = []
-    for (dz, dr) in rows_c:
-        row = []
-        for k in range(m + 1):
-            phi = 0.45 + (2 * math.pi - 0.9) * k / m
-            d = Vector((math.sin(phi), -math.cos(phi), 0))
-            base = 0.075 + 0.012 * abs(math.cos(phi))
-            co = cn + d * (base + dr) + Vector((0, 0, dz))
-            row.append(piece.vert(co, [('spine_03', 0.7), ('neck_01', 0.3)], tuple(c * (0.85 + 0.2 * noise(co, 3.0)) for c in COAT)))
-        collar.append(row)
-    for r in range(len(rows_c) - 1):
-        for k in range(m):
-            piece.face(collar[r][k], collar[r][k + 1], collar[r + 1][k + 1], collar[r + 1][k])
+    piece.box(p, tang, nrm, Z, (0.065, 0.006, 0.035), skirt_weights(tp, p.x, False, phi), tuple(c * 0.85 for c in COAT))
+    piece.box(p + Z * -0.012 + nrm * 0.007, tang, nrm, Z, (0.008, 0.003, 0.008), skirt_weights(tp, p.x, False, phi), BRASS)
 
     # --- buttons: two columns down the chest, on the coat surface.
     tree = BVHTree.FromObject(top, bpy.context.evaluated_depsgraph_get())
@@ -464,6 +454,114 @@ def gloves(body):
     return obj
 
 
+SCARF = lin('#d22c1e')
+SCARF_DARK = lin('#7e1610')
+
+
+def scarf(body, coat_obj):
+    """scarf: two lumpy wraps around the neck, a knot on the left front, a short front tail and a long
+    back tail on the scarf bones that the game sways (bone positions as created in build-hero.mjs)."""
+    piece = Piece()
+    neck = body.head('neck_01')
+    wrap_w = [('neck_01', 0.45), ('spine_03', 0.55)]
+
+    def shade(co, k):
+        return tuple(c * k * (0.85 + 0.25 * noise(co, 7.0)) for c in SCARF)
+
+    # Wraps: tubes along a closed path, sitting lower at the front, with lumpy folds.
+    for ring, (dz, rad, tube_z, tube_r) in enumerate(((0.0, 0.094, 0.04, 0.038), (-0.05, 0.108, 0.036, 0.04))):
+        segs, sides = 18, 7
+        grid = []
+        for a in range(segs):
+            phi = 2 * math.pi * a / segs
+            front = math.cos(phi)  # 1 at the front (-Y)
+            lump = 1 + 0.18 * math.sin(phi * 3 + ring * 1.7) + 0.08 * math.sin(phi * 7 + ring)
+            c = Vector((math.sin(phi) * rad * lump, neck.y + 0.012 - front * rad * lump, neck.z - 0.012 + dz - 0.03 * front))
+            out = Vector((math.sin(phi), -front, 0)).normalized()
+            row = []
+            for b in range(sides):
+                th = 2 * math.pi * b / sides
+                co = c + out * (math.cos(th) * tube_r * lump) + Vector((0, 0, math.sin(th) * tube_z))
+                k = 0.7 + 0.35 * max(0.0, math.sin(th)) + 0.15 * math.cos(th)
+                row.append(piece.vert(co, wrap_w, shade(co, k)))
+            grid.append(row)
+        for a in range(segs):
+            for b in range(sides):
+                p, q = grid[a], grid[(a + 1) % segs]
+                piece.face(p[b], q[b], q[(b + 1) % sides], p[(b + 1) % sides])
+
+    def knot(center, size):
+        segs, rings = 8, 5
+        rows = []
+        for r in range(rings + 1):
+            th = math.pi * r / rings
+            row = []
+            for a in range(segs):
+                phi = 2 * math.pi * a / segs
+                d = Vector((math.sin(th) * math.cos(phi), math.sin(th) * math.sin(phi), math.cos(th)))
+                co = center + Vector((d.x * size[0], d.y * size[1], d.z * size[2]))
+                row.append(piece.vert(co, wrap_w, shade(co, 0.75 + 0.3 * max(0.0, -d.y))))
+            rows.append(row)
+        for r in range(rings):
+            for a in range(segs):
+                piece.face(rows[r][a], rows[r][(a + 1) % segs], rows[r + 1][(a + 1) % segs], rows[r + 1][a])
+
+    kc = Vector((0.06, neck.y - 0.1, neck.z - 0.07))
+    knot(kc, (0.035, 0.03, 0.03))
+
+    def ribbon(points, widths, weights_of, normal_of, tatter):
+        """A strip along points; the last row is torn into a zig-zag."""
+        rows = []
+        n = len(points)
+        for i, (p, w) in enumerate(zip(points, widths)):
+            t = i / (n - 1)
+            side = normal_of(t)
+            row = []
+            cols = 4
+            for c in range(cols + 1):
+                u = c / cols - 0.5
+                co = p + side * (u * w)
+                if i == n - 1:
+                    co.z -= tatter * (0.5 + 0.5 * math.sin(c * 2.7 + 1.3))
+                k = 0.8 + 0.3 * noise(co, 5.0) - 0.15 * abs(u)
+                col = SCARF_DARK if i == n - 1 and c % 2 else SCARF
+                row.append(piece.vert(co, weights_of(t), tuple(x * k for x in col)))
+            rows.append(row)
+        for i in range(n - 1):
+            for c in range(len(rows[i]) - 1):
+                piece.face(rows[i][c], rows[i][c + 1], rows[i + 1][c + 1], rows[i + 1][c])
+
+    # Short front tail from the knot, over the chest.
+    pts = [kc + Vector((0.01 * i, -0.012 * i, -0.06 * i)) for i in range(5)]
+    ribbon(pts, [0.07, 0.075, 0.07, 0.065, 0.06], lambda t: [('spine_03', 1.0)], lambda t: Vector((1, -0.15, 0)).normalized(), 0.03)
+
+    # Long back tail: follows scarf_01..03 (root 0.085 behind the neck, 0.2 m per bone).
+    root = Vector((0.05, neck.y + 0.085, neck.z - 0.005))
+    coat_tree = BVHTree.FromObject(coat_obj, bpy.context.evaluated_depsgraph_get())
+    pts, widths = [], []
+    for i in range(10):
+        t = i / 9
+        pt = root + Vector((0.01 * math.sin(t * 5), 0.03 * 3 * t, 0.02 - 0.6 * t))
+        # Lie on the coat's back, never inside it (back is +Y): the outermost surface from behind.
+        for dx in (-0.055, 0.0, 0.055):
+            hit, _, _, _ = coat_tree.ray_cast(Vector((pt.x + dx, pt.y + 1.0, pt.z)), Vector((0, -1, 0)), 2.0)
+            if hit is not None and pt.y < hit.y + 0.022:
+                pt.y = hit.y + 0.022
+        pts.append(pt)
+        widths.append(0.11 * (1 - 0.3 * t))
+
+    def tail_weights(t):
+        bone = min(2, int(t * 3))
+        frac = t * 3 - bone
+        w = [(f'scarf_0{bone + 1}', 1 - frac * 0.5)]
+        if bone < 2:
+            w.append((f'scarf_0{bone + 2}', frac * 0.5))
+        return w
+
+    ribbon(pts, widths, tail_weights, lambda t: Vector((1, 0, 0)), 0.05)
+    return piece.to_object('scarf')
+
+
 def join(name, objects):
     """Joins objects into one (vertex groups merged by name, colour attributes kept)."""
     for o in bpy.context.selected_objects:
@@ -480,7 +578,8 @@ def join(name, objects):
 
 def build(armature, body_obj):
     body = Body(body_obj, armature)
-    pieces = [coat(body), boots(body), gloves(body)]
+    mantel = coat(body)
+    pieces = [mantel, boots(body), gloves(body), scarf(body, mantel)]
     # The shells carry the body's UVs, which mean nothing on clothing (and joining them with built
     # parts leaves undefined UVs): no UVs until step 6 unwraps the pieces for painted textures.
     for obj in pieces:
