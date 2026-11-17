@@ -1,5 +1,6 @@
 // Ties the scene together: world, characters, effects, camera, post-processing.
 // The sim knows nothing about this file; it reads sim state and events and draws them.
+import { KOEPENICK_WEATHER, Weather } from './weather';
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
   SphereGeometry, Vector3,
@@ -77,6 +78,7 @@ export class GameRenderer {
   private readonly cam: FollowCamera;
   private readonly post: Post;
   private readonly fx: Fx;
+  private readonly weather: Weather;
   private readonly loot = new LootView();
   private readonly content: ContentView;
   private readonly hero: HeroView;
@@ -113,6 +115,8 @@ export class GameRenderer {
     this.scene.add(this.hero.root, this.heroLight);
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
+    // M11c: weather per zone (Köpenick only; the tunnel stays dry).
+    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : {}, opts.profile.embers / 140);
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.content = new ContentView(assets, materials);
     this.scene.add(this.fx.group, this.loot.group, this.content.group);
@@ -314,6 +318,7 @@ export class GameRenderer {
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);
     this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap);
+    this.weather.update(dt, px, pz, this.time);
     this.debug?.update(sim, alpha);
 
     this.renderer.info.reset();

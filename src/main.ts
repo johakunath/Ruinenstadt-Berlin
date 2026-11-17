@@ -25,7 +25,7 @@ import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
 import { tunnelMap } from './data/tunnel';
-import { generateLots, generateProps, mapLevel } from './data/map';
+import { areaAt, generateLots, generateProps, mapLevel } from './data/map';
 import { mapSvg } from './data/map-svg';
 import { EdgeMarkers, Minimap } from './ui/minimap';
 import { ENEMIES } from './data/enemies';
@@ -689,6 +689,7 @@ function drainEvents(): void {
 }
 
 let held = false;
+let lastArea = '', areaAt0 = 0;
 let hotAt = 0;
 let audioLast = performance.now();
 const menuBtn = document.getElementById('menu-btn')!;
@@ -718,6 +719,12 @@ function frame(now: number): void {
   if (!renderer) return;
   renderer.perf.frame(frameMs);
   input.poll(dt, sim.hitstop > 0);
+  // M11c: the area name when the hero walks into another area (2D area message).
+  if (map && phase === 'play' && now > areaAt0) {
+    areaAt0 = now + 400;
+    const a = areaAt(map.def, sim.player.x, sim.player.z);
+    if (a && a.id !== lastArea) { if (lastArea !== '') lootUi.toast(`<span style="color:#ef9f27">${a.name}</span>`, 2.5); lastArea = a.id; }
+  }
   menu.pollPad(now);
   camp.pollPad(now);
   if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
