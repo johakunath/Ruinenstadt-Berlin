@@ -61,9 +61,14 @@ export function stripAttributes(doc) {
 }
 
 /** Base color only, resized and re-encoded. Normal and roughness maps are dropped (small on screen). */
-export async function slimMaterials(doc, size, recolor) {
+export async function slimMaterials(doc, size, recolor, keepNormals) {
   for (const mat of doc.getRoot().listMaterials()) {
-    mat.setNormalTexture(null).setOcclusionTexture(null).setMetallicRoughnessTexture(null).setEmissiveTexture(null);
+    const normal = mat.getNormalTexture();
+    if (normal && keepNormals?.test(mat.getName())) {
+      // JPEG at high quality: a PNG normal map would add 1.4 MB for detail seen mostly on the face.
+      normal.setImage(await sharp(Buffer.from(normal.getImage())).resize(size, size).jpeg({ quality: 90 }).toBuffer()).setMimeType('image/jpeg');
+    } else mat.setNormalTexture(null);
+    mat.setOcclusionTexture(null).setMetallicRoughnessTexture(null).setEmissiveTexture(null);
     mat.setMetallicFactor(0).setRoughnessFactor(0.8);
     const tex = mat.getBaseColorTexture();
     if (!tex) continue;
@@ -231,8 +236,9 @@ export function sectionAt(prim, dom, y, band = 0.035) {
   return { cz: (minZ + maxZ) / 2, rx: maxX, rz: (maxZ - minZ) / 2 };
 }
 
-export async function finish(doc, name) {
-  await doc.transform(prune(), dedup());
+/** `keepAttributes`: keep vertex attributes no material uses yet (the hero's piece UVs, painted in step 6). */
+export async function finish(doc, name, { keepAttributes = false } = {}) {
+  await doc.transform(prune({ keepAttributes }), dedup());
   // One buffer for the binary container.
   const buffers = doc.getRoot().listBuffers();
   for (const acc of doc.getRoot().listAccessors()) acc.setBuffer(buffers[0]);
