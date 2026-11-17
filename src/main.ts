@@ -40,6 +40,7 @@ import { contentMarks, EVENT_TEXT } from './sim/runcontent';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
 import { backupSave, clearSave, loadSave, writeSave } from './save';
 import { CloudSave, formatCode, type SyncState } from './sync';
+import type { Prop } from './data/courtyard';
 import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
 
 
@@ -61,6 +62,10 @@ const map = opts.map !== 'hof' ? (() => {
   const def = opts.map === 'tunnel' ? tunnelMap() : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
+  // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
+  const show = new URLSearchParams(location.search).get('props');
+  if (show) show.split(',').flatMap((k) => { const [kind, n] = k.split('*'); return Array.from({ length: Number(n) || 1 }, () => kind as Prop['kind']); })
+    .forEach((kind, i) => props.push({ kind, x: def.start.x + 5 + (i % 6) * 5, z: def.start.z - 4 + Math.floor(i / 6) * 6, rot: i * 0.7, size: 1 }));
   return { def, lots, props, level: mapLevel(def, lots, props) };
 })() : null;
 const isTunnel = map?.def.tunnel !== undefined;

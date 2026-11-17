@@ -6,5 +6,5 @@ export const HERO_LAYER = 2;
 export const OCCLUDER_LAYER = 3;
 
 export function isLargeProp(kind: PropKind): boolean {
-  return kind === 'tram' || kind === 'bus' || kind === 'van' || kind === 'car';
+  return kind === 'tram' || kind === 'bus' || kind === 'van' || kind === 'car' || kind === 'rohbau' || kind === 'container';
 }

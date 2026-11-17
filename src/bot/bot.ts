@@ -273,7 +273,8 @@ export class Bot {
     let nd = Infinity;
     let crowd = 0;
     for (const e of s.enemies) {
-      if (e.state === 'dead') continue;
+      // Sleeping guards (side passages, M11c lot types) are left alone until they wake up.
+      if (e.state === 'dead' || e.sleep) continue;
       const d = Math.hypot(e.x - p.x, e.z - p.z);
       if (d < 5) crowd++;
       // Prefer what is open, then what is closest.

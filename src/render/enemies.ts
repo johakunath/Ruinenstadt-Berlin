@@ -24,6 +24,8 @@ const DEATH_FROM = 0.35;
 const SCRATCH_HIT = 0.55;
 const SCRATCH_SWIPE = 0.16;
 const WALK_CLIP_SPEED = 1.15;
+/** Seconds a lying guard takes to get up. */
+const RISE_TIME = 0.7;
 
 /** Skin tints per kind (one is picked per body). */
 const TINTS: Record<EnemyKind, number[]> = {
@@ -285,6 +287,8 @@ export class EnemyView {
   private skip = 0;
   private pending = 0;
   private flash = 0;
+  /** M11c lying guards: time the get-up started (-1 still lying, -2 none). */
+  private riseAt = -2;
   private status = 0;
   private time = Math.random() * 10;
   private readonly inner = new Group();
@@ -407,6 +411,7 @@ export class EnemyView {
       for (const m of this.glow) m.emissive.set(e.def.boss ? 0xff5a2a : e.kind === 'spitter' ? 0x97ff5a : 0xd8ff7a);
     }
     this.root.visible = true;
+    this.riseAt = -2;
   }
 
   hit(): void {
@@ -435,6 +440,8 @@ export class EnemyView {
       }
     }
     const t = e.stateT + (frozen ? 0 : alpha * DT);
+    // M11c: hidden guards stay unseen until they wake (doorway, rubble).
+    this.root.visible = !(e.sleep && e.pose === 'hidden');
     if (this.body === 'crow') this.poseCrow(e, t);
     else if (this.body === 'zombie') this.poseZombie(e, t);
     else this.poseDino(e, t, DINO[this.body]);
@@ -457,6 +464,15 @@ export class EnemyView {
 
   private poseZombie(e: Enemy, t: number): void {
     const a = this.anim!;
+    // M11c: playing dead on the ground, then getting up (Death01 backwards) when the hero comes close.
+    if (e.pose === 'lying' && e.state !== 'dead') {
+      const end = a.duration('Death01');
+      if (e.sleep) { this.riseAt = -1; a.pose('Death01', end, 0.01); return; }
+      if (this.riseAt === -1) this.riseAt = this.time;
+      const k = (this.time - this.riseAt) / RISE_TIME;
+      if (this.riseAt >= 0 && k < 1) { a.pose('Death01', DEATH_FROM + (end - DEATH_FROM) * (1 - k), 0.04); return; }
+      this.riseAt = -2;
+    }
     const def = e.def;
     const lean = this.inner.rotation;
     let pitch = 0;

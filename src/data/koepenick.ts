@@ -177,15 +177,15 @@ export function koepenickMap(scale = 1): MapDef {
   ];
 
   const areas: Area[] = [
-    { id: 'bahnhof', name: 'Bahnhofsviertel', ground: 'asphalt', frontage: 'altbau', trees: 0.4, poly: line([[-100, -156], [104, -156], [104, -58], [-40, -56], [-100, -72]]) },
-    { id: 'altstadt', name: 'Altstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.2, poly: line([[-20, -36], [48, -38], [54, -10], [46, 32], [-18, 34]]) },
-    { id: 'kietz', name: 'Kietz', ground: 'grass', frontage: 'house', trees: 1.2, poly: line([[44, -34], [104, -24], [112, 22], [124, 48], [104, 70], [62, 84], [40, 64], [46, 32], [54, -10]]) },
-    { id: 'mueggelberge', name: 'Müggelberge', ground: 'forest', frontage: null, trees: 5, poly: line([[62, 84], [104, 70], [124, 48], [140, 66], [166, 70], [166, 156], [50, 156], [36, 110]]) },
-    { id: 'wendenschloss', name: 'Wendenschloß', ground: 'grass', frontage: 'house', trees: 1.6, poly: line([[-26, 60], [40, 64], [62, 84], [36, 110], [50, 156], [-14, 156], [-22, 110]]) },
-    { id: 'vorstadt', name: 'Köllnische Vorstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.5, poly: line([[-44, -50], [-86, -66], [-88, 30], [-44, 60]]) },
-    { id: 'spreepark', name: 'Spreepark', ground: 'jungle', frontage: null, trees: 3, jungle: true, poly: line([[-160, -110], [-86, -66], [-88, 30], [-160, 32]]) },
-    { id: 'johannisthal', name: 'Johannisthal', ground: 'grass', frontage: 'house', trees: 1.8, poly: line([[-160, 32], [-88, 30], [-44, 60], [-26, 156], [-160, 156]]) },
-    { id: 'friedrichshagen', name: 'Friedrichshagen', ground: 'forest', frontage: null, trees: 2.6, poly: line([[104, -156], [166, -156], [166, -70], [104, -60]]) },
+    { id: 'bahnhof', name: 'Bahnhofsviertel', ground: 'asphalt', frontage: 'altbau', trees: 0.4, specials: ['hinterhof', 'parkplatz'], poly: line([[-100, -156], [104, -156], [104, -58], [-40, -56], [-100, -72]]) },
+    { id: 'altstadt', name: 'Altstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.2, specials: ['markt', 'kirchhof'], poly: line([[-20, -36], [48, -38], [54, -10], [46, 32], [-18, 34]]) },
+    { id: 'kietz', name: 'Kietz', ground: 'grass', frontage: 'house', trees: 1.2, specials: ['kleingarten', 'teich'], poly: line([[44, -34], [104, -24], [112, 22], [124, 48], [104, 70], [62, 84], [40, 64], [46, 32], [54, -10]]) },
+    { id: 'mueggelberge', name: 'Müggelberge', ground: 'forest', frontage: null, trees: 5, specials: ['kleingarten', 'teich'], poly: line([[62, 84], [104, 70], [124, 48], [140, 66], [166, 70], [166, 156], [50, 156], [36, 110]]) },
+    { id: 'wendenschloss', name: 'Wendenschloß', ground: 'grass', frontage: 'house', trees: 1.6, specials: ['kleingarten', 'teich'], poly: line([[-26, 60], [40, 64], [62, 84], [36, 110], [50, 156], [-14, 156], [-22, 110]]) },
+    { id: 'vorstadt', name: 'Köllnische Vorstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.5, specials: ['truemmer', 'baustelle', 'hinterhof'], poly: line([[-44, -50], [-86, -66], [-88, 30], [-44, 60]]) },
+    { id: 'spreepark', name: 'Spreepark', ground: 'jungle', frontage: null, trees: 5, specials: ['truemmer', 'baustelle'], jungle: true, poly: line([[-160, -110], [-86, -66], [-88, 30], [-160, 32]]) },
+    { id: 'johannisthal', name: 'Johannisthal', ground: 'grass', frontage: 'house', trees: 1.8, specials: ['truemmer', 'baustelle'], poly: line([[-160, 32], [-88, 30], [-44, 60], [-26, 156], [-160, 156]]) },
+    { id: 'friedrichshagen', name: 'Friedrichshagen', ground: 'forest', frontage: null, trees: 2.6, specials: ['hinterhof', 'parkplatz'], poly: line([[104, -156], [166, -156], [166, -70], [104, -60]]) },
   ];
 
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear });
@@ -232,6 +232,11 @@ export function koepenickMap(scale = 1): MapDef {
     defaultGround: 'forest',
     landmarks,
     encounters,
+    // M11c: the Altstadt is too tight for generated lot types; market by the Dammbrücke, churchyard beside St. Laurentius.
+    specialLots: [
+      { special: 'markt', x: -10.5 * s, z: -20 * s, rot: 90 * DEG, w: 14, d: 11 },
+      { special: 'kirchhof', x: 39 * s, z: 16 * s, rot: 180 * DEG, w: 13, d: 17 },
+    ],
     zones,
     rail: { z: -142 * s, minX: -156 * s, maxX: 162 * s, gapX: 10 * s, gapW: 9 },
     hills: [

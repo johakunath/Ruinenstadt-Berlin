@@ -58,7 +58,8 @@ describe('Köpenick map', () => {
     });
 
     it(`places buildings off streets and out of the water (scale ${scale})`, () => {
-      const houses = lots.filter((l) => l.kind !== 'tree');
+      // M11c lot types are open places (a pond may sit in the middle), checked on their own below.
+      const houses = lots.filter((l) => l.kind !== 'tree' && l.kind !== 'special');
       // 40 since the four Späti rest stops took their lots (M11b part 2).
       expect(houses.length).toBeGreaterThanOrEqual(38);
       for (const l of houses) {
@@ -67,6 +68,17 @@ describe('Köpenick map', () => {
       }
     });
   }
+
+  it('M11c: lot types stand off streets, about two in five street lots, Parkplatz once', () => {
+    const m = koepenickMap(1);
+    const lots = generateLots(m);
+    const sub = new Set(lots.flatMap((l) => l.content?.lots ?? []));
+    const sp = lots.filter((l) => l.kind === 'special'), reg = lots.filter((l) => l.kind !== 'tree' && l.kind !== 'special' && !sub.has(l));
+    expect(sp.length / (sp.length + reg.length)).toBeGreaterThan(0.3);
+    expect(sp.length / (sp.length + reg.length)).toBeLessThan(0.5);
+    expect(sp.filter((l) => l.special === 'parkplatz').length).toBeLessThanOrEqual(1);
+    for (const l of sp) expect(streetDist(m, l.x, l.z).d).toBeGreaterThan(0);
+  });
 
   it('v2: L-shaped lots keep their wing off streets and out of the water, shops exist', () => {
     const m = koepenickMap(1);
@@ -84,7 +96,8 @@ describe('Köpenick map', () => {
     const m = koepenickMap(1);
     const lots = generateLots(m).filter((l) => l.kind !== 'tree');
     const props = generateProps(m, lots);
-    expect(props.filter((p) => p.kind === 'car').length).toBeGreaterThan(30);
+    // M11c lot type fronts stay free of wrecks, so a few street cars fewer than before.
+    expect(props.filter((p) => p.kind === 'car').length).toBeGreaterThan(25);
     const things = [...lots, ...props];
     let empty = 0;
     let n = 0;

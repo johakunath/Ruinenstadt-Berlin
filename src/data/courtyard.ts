@@ -34,7 +34,12 @@ export interface Facade {
   seed: number;
 }
 
-export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights';
+export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights'
+  // M11c lot types (render: `src/render/props-urban.ts`, `props-market.ts`, `vegetation.ts`).
+  | UrbanPropKind | MarketPropKind | PlantPropKind;
+export type UrbanPropKind = 'crane' | 'container' | 'scaffold' | 'rohbau' | 'pallets' | 'ticketMachine' | 'boom' | 'bikes' | 'clothesline' | 'gravestone' | 'wall' | 'lowWall' | 'slab' | 'girder';
+export type MarketPropKind = 'stall' | 'stallBroken' | 'spill' | 'shed' | 'gardenBed' | 'gnome' | 'jetty' | 'picket';
+export type PlantPropKind = 'bush' | 'topiary' | 'hedge' | 'flowers' | 'reeds';
 
 export interface Prop {
   kind: PropKind;
@@ -127,7 +132,7 @@ export function propCollider(p: Prop): Collider | null {
     case 'bench':
       return { kind: 'box', x: p.x, z: p.z, hx: 0.85, hz: 0.28, rot: p.rot };
     case 'car':
-      return { kind: 'box', x: p.x, z: p.z, hx: 0.9, hz: 2.05, rot: p.rot };
+      return { kind: 'box', x: p.x, z: p.z, hx: 0.9, hz: 2.2, rot: p.rot };
     case 'lampBroken':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.2 };
     case 'campfire':
@@ -148,6 +153,25 @@ export function propCollider(p: Prop): Collider | null {
     case 'candles':
     case 'stringLights':
     case 'planks':
+      return null;
+    // M11c lot types. Box half extents: hx along the prop's width (local x), hz along its depth.
+    case 'crane': return { kind: 'box', x: p.x, z: p.z, hx: 1.3, hz: 1.3, rot: p.rot };
+    case 'container': return { kind: 'box', x: p.x, z: p.z, hx: 1.25, hz: 3.05, rot: p.rot };
+    case 'scaffold': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.7, rot: p.rot };
+    case 'rohbau': return { kind: 'box', x: p.x, z: p.z, hx: 4 * p.size, hz: 3 * p.size, rot: p.rot };
+    case 'pallets': return { kind: 'box', x: p.x, z: p.z, hx: 0.6, hz: 0.5, rot: p.rot };
+    case 'ticketMachine': return { kind: 'circle', x: p.x, z: p.z, r: 0.35 };
+    case 'boom': return { kind: 'circle', x: p.x, z: p.z, r: 0.2 };
+    case 'bikes': return { kind: 'box', x: p.x, z: p.z, hx: 1.1, hz: 0.35, rot: p.rot };
+    case 'gravestone': return { kind: 'box', x: p.x, z: p.z, hx: 0.35, hz: 0.15, rot: p.rot };
+    case 'wall': case 'lowWall': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.2, rot: p.rot };
+    case 'slab': return { kind: 'box', x: p.x, z: p.z, hx: 1.5 * p.size, hz: 0.9 * p.size, rot: p.rot };
+    case 'girder': return { kind: 'box', x: p.x, z: p.z, hx: 0.25, hz: 2.2 * p.size, rot: p.rot };
+    case 'stall': case 'stallBroken': return { kind: 'box', x: p.x, z: p.z, hx: 1.6, hz: 1.1, rot: p.rot };
+    case 'shed': return { kind: 'box', x: p.x, z: p.z, hx: 1.4, hz: 1.2, rot: p.rot };
+    case 'picket': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.06, rot: p.rot };
+    case 'hedge': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.45, rot: p.rot };
+    case 'clothesline': case 'spill': case 'gardenBed': case 'gnome': case 'jetty': case 'bush': case 'topiary': case 'flowers': case 'reeds':
       return null;
   }
 }

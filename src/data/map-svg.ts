@@ -60,12 +60,14 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     const deg = (-b.rot * 180) / Math.PI;
     out.push(`<rect x="${-b.width / 2}" y="${-b.len / 2}" width="${b.width}" height="${b.len}" fill="#a99876" stroke="#14282b" stroke-width="0.6" transform="translate(${b.x} ${b.z}) rotate(${deg})"/>`);
   }
+  // M11c lot types under their own buildings and trees (later in the list); the pond shows through.
+  const SPECIAL_COLOR: Record<string, string> = { hinterhof: '#6f6656', parkplatz: '#4a4d52', kleingarten: '#4d6a3a', teich: '#3d5a2c80', truemmer: '#5a5048', baustelle: '#6a5a44', markt: '#7a6e5c', kirchhof: '#3a4a30' };
   for (const l of lots) {
     if (l.kind === 'tree') {
       if (o.trees) out.push(`<circle cx="${l.x.toFixed(1)}" cy="${l.z.toFixed(1)}" r="${(l.w * 0.45).toFixed(1)}" fill="${l.jungle ? '#4f7a35' : '#1f3324'}" opacity="0.9"/>`);
       continue;
     }
-    const col = l.kind === 'altbau' ? '#9c7a5c' : l.kind === 'platte' ? '#8a8a80' : l.kind === 'shop' ? '#b08a4a' : '#8c6a50';
+    const col = l.special ? SPECIAL_COLOR[l.special] : l.kind === 'altbau' ? '#9c7a5c' : l.kind === 'platte' ? '#8a8a80' : l.kind === 'shop' ? '#b08a4a' : '#8c6a50';
     const deg = (-l.rot * 180) / Math.PI;
     if (l.wing) out.push(`<rect x="${(-l.wing.w / 2).toFixed(1)}" y="${(-l.wing.d / 2).toFixed(1)}" width="${l.wing.w.toFixed(1)}" height="${l.wing.d.toFixed(1)}" fill="${col}" stroke="#14282b" stroke-width="0.5" transform="translate(${l.wing.x.toFixed(1)} ${l.wing.z.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`);
     out.push(`<rect x="${(-l.w / 2).toFixed(1)}" y="${(-l.d / 2).toFixed(1)}" width="${l.w.toFixed(1)}" height="${l.d.toFixed(1)}" fill="${col}" stroke="#14282b" stroke-width="0.5" transform="translate(${l.x.toFixed(1)} ${l.z.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`);

@@ -58,7 +58,7 @@ describe('large object occlusion geometry', () => {
     expect(batches.occluderMesh()).toBeNull();
   });
   it('classifies vehicles without opting crates, trees, lamps or loot into the effect', () => {
-    for (const kind of ['tram', 'bus', 'van', 'car'] as const) expect(isLargeProp(kind)).toBe(true);
+    for (const kind of ['tram', 'bus', 'van', 'car', 'rohbau', 'container'] as const) expect(isLargeProp(kind)).toBe(true);
     for (const kind of ['crates', 'bins', 'lantern', 'lampBroken', 'bench', 'fence', 'rubble'] as const) expect(isLargeProp(kind)).toBe(false);
   });
   it('keeps nested small attachments out while retaining the surrounding building geometry', () => {

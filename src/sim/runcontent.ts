@@ -193,6 +193,11 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
   const T = tier(s);
   const clearOf = (x: number, z: number): boolean => !inFight(L, x, z, 3) && restAt(L.rests, x, z) < 0;
   const spot = (near: number, far: number, room: number): { x: number; z: number } | null => freeSpot(L, rng, p.x, p.z, near, far, room, clearOf);
+  /** M11c: a fitting lot type (market for the trader, back yard for the captive) if one is near enough. */
+  const lotSpot = (k: 'rescue' | 'trader' | 'cache', near: number, far: number, room: number): { x: number; z: number } | null => {
+    const ok = L.spots[k].filter((q) => { const d = Math.hypot(q.x - p.x, q.z - p.z); return d > near * 0.6 && d < far * 1.8 && clearOf(q.x, q.z) && reachable(L, q.x, q.z); });
+    return ok.length ? { ...rng.pick(ok) } : spot(near, far, room);
+  };
   let at: { x: number; z: number } | null = { x: p.x, z: p.z };
   switch (kind) {
     case 'ambush': {
@@ -222,7 +227,7 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
       break;
     }
     case 'trader': {
-      at = spot(CONTENT.trader.near, CONTENT.trader.far, 1.2);
+      at = lotSpot('trader', CONTENT.trader.near, CONTENT.trader.far, 1.2);
       if (!at) break;
       const il = Math.max(lootLevel(s), ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
       const ctx = lootContext(s);
@@ -241,14 +246,14 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
         startEvent(s, 'cache', rng);
         return;
       }
-      at = spot(CONTENT.rescue.near, CONTENT.rescue.far, 2);
+      at = lotSpot('rescue', CONTENT.rescue.near, CONTENT.rescue.far, 2);
       if (!at) break;
       c.captive = { ...at, survivor: rng.pick(free), free: false };
       spawnGuards(s, rng);
       break;
     }
     case 'cache':
-      at = spot(CONTENT.cache.near, CONTENT.cache.far, 1);
+      at = lotSpot('cache', CONTENT.cache.near, CONTENT.cache.far, 1);
       if (at) c.cache = { ...at, t: CONTENT.cache.time };
       break;
     case 'zone':
