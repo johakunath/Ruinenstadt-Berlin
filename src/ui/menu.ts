@@ -1,5 +1,6 @@
-// U1/U2: one pause menu with tabs, as in 2D (`js/panels.js` renderInv): Inventar, Karte, Segen,
-// Kodex, Optionen. Header shows Schrott, Item Level, district and fight, found hidden blessings.
+// U1/U2/U3: one pause menu with tabs, as in 2D (`js/panels.js` renderInv): Inventar, Karte, Segen,
+// Kodex as text tabs with line icons. Header shows Schrott, Item Level, district and fight, found
+// hidden blessings, the cog for the options screen and × to close.
 import { ELITES, ELITE_MODS, ENEMIES, type EnemyKind } from '../data/enemies';
 import { BASES } from '../data/item-names';
 import { ELEMENTS, ENEMY_RESISTANCES, LEGENDARY_POWERS, RARITIES, SETS, SET_COLOR, type LegendaryId, type SetId, type SlotId } from '../data/items';
@@ -7,10 +8,14 @@ import { FAMILIES, PERKS, SURVIVORS, type PerkId } from '../data/progression';
 import { avgIl } from '../sim/items';
 import type { Sim } from '../sim/types';
 import { perkIcon } from './abilities';
-import { esc, itemIcon, InventoryUi } from './inventory';
+import { esc, itemIcon, InventoryUi, artUrl } from './inventory';
+import { moveFocus } from './focus';
+import { uiIcon } from './ui-icons';
 
-export type TabId = 'inv' | 'karte' | 'segen' | 'kodex' | 'opt';
-const TAB_NAME: Record<TabId, string> = { inv: 'Inventar', karte: 'Karte', segen: 'Segen', kodex: 'Kodex', opt: 'Optionen' };
+export type TabId = 'inv' | 'karte' | 'segen' | 'kodex';
+const TAB_NAME: Record<TabId, string> = { inv: 'Inventar', karte: 'Karte', segen: 'Segen', kodex: 'Kodex' };
+const TAB_ICON: Record<TabId, Parameters<typeof uiIcon>[0]> = { inv: 'bag', karte: 'map', segen: 'segen', kodex: 'kodex' };
+const COG = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.7 7.7 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.7 7.7 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.3.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
 const QUALITY = [['#e8ddd0', 'Gewöhnlich'], ['#7d9bff', 'Selten'], ['#f2d14b', 'Episch'], ['#b48cff', 'Umbau']] as const;
 
 /** 2D KODEX lines, matched to the 3D roster (short German, one line each). */
@@ -27,13 +32,17 @@ const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASE
 
 export interface MenuHost {
   sim(): Sim;
-  /** A run is on (play phase): game tabs. Off: only Kodex and Optionen (title). */
+  /** A run is on (play phase): game tabs. Off: only Kodex. */
   inRun(): boolean;
   /** District and fight line for the header. */
   where(): string;
   /** Map SVG with the hero, or null without an expedition map. */
   mapSvg(): string | null;
   onToggle(open: boolean): void;
+  /** Cog: the options screen (U3, over the menu). */
+  options(): void;
+  /** The options screen is open over the menu: it has the pad and the keys. */
+  blocked(): boolean;
 }
 
 export class Menu {
@@ -47,7 +56,7 @@ export class Menu {
   private padNext = 0;
   private previousFocus: HTMLElement | null = null;
 
-  constructor(private readonly host: MenuHost, readonly inventory: InventoryUi, options: HTMLElement) {
+  constructor(private readonly host: MenuHost, readonly inventory: InventoryUi) {
     this.root.id = 'menu';
     this.root.className = 'overlay';
     this.root.hidden = true;
@@ -61,14 +70,20 @@ export class Menu {
     this.tabsEl.className = 'menu-tabs';
     this.resEl.className = 'menu-res';
     const x = document.createElement('button');
-    x.type = 'button'; x.className = 'menu-x'; x.id = 'menu-close'; x.setAttribute('aria-label', 'Weiter'); x.textContent = '×';
+    x.type = 'button'; x.className = 'tr-x'; x.id = 'menu-close'; x.setAttribute('aria-label', 'Weiter'); x.textContent = '×';
     x.addEventListener('click', () => this.close());
-    head.append(this.tabsEl, this.resEl, x);
+    const cog = document.createElement('button');
+    cog.type = 'button'; cog.className = 'btn sm cog'; cog.id = 'menu-opt'; cog.setAttribute('aria-label', 'Optionen'); cog.innerHTML = COG;
+    cog.addEventListener('click', () => this.host.options());
+    const side = document.createElement('div');
+    side.className = 'menu-side';
+    side.append(this.resEl, cog);
+    head.append(this.tabsEl, side);
+    this.root.append(x);
     const body = document.createElement('div');
     body.className = 'menu-body';
     const mk = (id: TabId, el: HTMLElement = document.createElement('div')): HTMLElement => { el.dataset.tab = id; el.classList.add('menu-tab'); el.hidden = true; body.append(el); return el; };
-    options.hidden = false;
-    this.bodies = { inv: mk('inv', inventory.root), karte: mk('karte'), segen: mk('segen'), kodex: mk('kodex'), opt: mk('opt', options) };
+    this.bodies = { inv: mk('inv', inventory.root), karte: mk('karte'), segen: mk('segen'), kodex: mk('kodex') };
     panel.append(head, body);
     this.root.append(panel);
     document.body.append(this.root);
@@ -93,8 +108,8 @@ export class Menu {
 
   get isOpen(): boolean { return !this.root.hidden; }
   private tabs(): TabId[] {
-    if (!this.host.inRun()) return ['kodex', 'opt'];
-    return ['inv', ...(this.host.mapSvg() !== null ? ['karte' as const] : []), 'segen', 'kodex', 'opt'];
+    if (!this.host.inRun()) return ['kodex'];
+    return ['inv', ...(this.host.mapSvg() !== null ? ['karte' as const] : []), 'segen', 'kodex'];
   }
   /** Opens on a tab; a second call with the open tab closes (keys I, M toggle). */
   toggle(tab: TabId): void { if (this.isOpen && this.tab === tab) this.close(); else this.open(tab); }
@@ -118,7 +133,7 @@ export class Menu {
   select(tab: TabId): void {
     this.tab = tab;
     for (const [id, el] of Object.entries(this.bodies) as Array<[TabId, HTMLElement]>) if (id !== 'inv') el.hidden = id !== tab;
-    this.tabsEl.innerHTML = this.tabs().map(t => `<button type="button" class="menu-tabb${t === tab ? ' on' : ''}" data-t="${t}" aria-pressed="${t === tab}">${TAB_NAME[t]}</button>`).join('');
+    this.tabsEl.innerHTML = this.tabs().map(t => `<button type="button" class="menu-tabb${t === tab ? ' on' : ''}" data-t="${t}" aria-pressed="${t === tab}">${uiIcon(TAB_ICON[t], 17)}<span>${TAB_NAME[t]}</span></button>`).join('');
     this.renderHead();
     this.inventory.show(tab === 'inv');
     this.renderTab();
@@ -127,7 +142,7 @@ export class Menu {
   renderHead(): void {
     const s = this.host.sim(), hid = s.content.hidden;
     this.resEl.innerHTML = this.host.inRun()
-      ? `<span>Schrott <b>${s.inventory.scrap}</b></span><span>Item Level <b>${avgIl(s.equipment)}</b></span><span>${esc(this.host.where())}</span>${hid.length ? `<span>Versteckte Segen ${hid.filter(h => h.got).length}/${hid.length}</span>` : ''}`
+      ? `<span><img class="mico" src="${artUrl('R05')}" alt="" width="24" height="24">Schrott <b>${s.inventory.scrap}</b></span><span>Item Level <b>${avgIl(s.equipment)}</b></span><span>${esc(this.host.where())}</span>${hid.length ? `<span>Versteckte Segen ${hid.filter(h => h.got).length}/${hid.length}</span>` : ''}`
       : '';
   }
   private renderTab(): void {
@@ -155,7 +170,7 @@ export class Menu {
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map(b => b.pressed), prev = this.padDown, edge = (i: number): boolean => !!down[i] && !prev[i];
     this.padDown = down;
-    if (!this.isOpen) return;
+    if (!this.isOpen || this.host.blocked()) return;
     if (edge(1)) { this.close(); return; }
     if (edge(4) || edge(5)) { this.step(edge(5) ? 1 : -1); return; }
     if (edge(0)) { const a = document.activeElement as HTMLElement | null; if (a && this.root.contains(a)) a.click(); else this.focusFirst(); return; }
@@ -166,25 +181,11 @@ export class Menu {
     this.padNext = now + 170;
     this.move(dx, dy);
   }
+  /** The options screen closed over the menu: its last press is not new here. */
+  resetPad(): void { this.padDown = Array.from({ length: 20 }, () => true); }
   private focusFirst(): void { (this.root.querySelector<HTMLElement>('.menu-tab:not([hidden]) button:not(:disabled)') ?? this.tabsEl.querySelector<HTMLElement>('button'))?.focus(); }
   /** Spatial focus move: nearest visible control in the direction, rows and columns alike. */
-  move(dx: number, dy: number): void {
-    const cur = document.activeElement as HTMLElement | null;
-    const all = [...this.root.querySelectorAll<HTMLElement>('button:not(:disabled),input,summary')].filter(b => b.offsetParent !== null && !b.closest('[hidden]'));
-    if (!cur || !this.root.contains(cur)) { this.focusFirst(); return; }
-    const r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    let best: HTMLElement | null = null, bestS = Infinity;
-    for (const b of all) {
-      if (b === cur) continue;
-      const q = b.getBoundingClientRect(), bx = q.left + q.width / 2, by = q.top + q.height / 2, vx = bx - cx, vy = by - cy;
-      const along = vx * dx + vy * dy;
-      if (along <= 2) continue;
-      const across = Math.abs(dx ? vy : vx);
-      const score = along + across * 2.5;
-      if (score < bestS) { bestS = score; best = b; }
-    }
-    if (best) { best.focus(); best.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
-  }
+  move(dx: number, dy: number): void { moveFocus(this.root, dx, dy, () => this.focusFirst()); }
 }
 
 /** 2D Kodex tab: entries fill on the first kill or find (`sim.inventory.kodex`). */

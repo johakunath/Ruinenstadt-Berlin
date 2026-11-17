@@ -10,6 +10,7 @@ import { heroStats, setCount, weaponDps, type Equipment, type HeroStats } from '
 import type { Sim } from '../sim/types';
 import { ITEM_ICONS } from './item-icons';
 import { POWER_GLYPHS } from './glyphs';
+import { uiIcon, type UiIcon } from './ui-icons';
 
 type Selection = { bag: number } | { slot: SlotId };
 const art = import.meta.glob('../../assets/inventory/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
@@ -18,6 +19,22 @@ export const esc = (s: string): string => s.replace(/[&<>"']/g, c => ({ '&': '&a
 const color = (i: Item): string => i.set ? '#75d68a' : RARITIES[i.rarity].color;
 export const itemIcon = (i: { base: string; slot: SlotId }): string => ITEM_ICONS[i.base] ? `<img src="${artUrl(ITEM_ICONS[i.base]!)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
 const pct = (v: number): number => v * 100;
+/** 2D SINFO: icon and a one-line tooltip per stat row (hover on desktop, tap on touch). */
+const STAT_INFO: Record<string, [UiIcon, string]> = {
+  'Schaden': ['dmg', 'Grundschaden jedes Treffers, bevor Krit und Elemente dazukommen.'],
+  'Angriffstempo': ['rate', 'Wie schnell du zuschlägst, 100 % ist normal.'],
+  'Krit-Chance': ['crit', 'Chance, dass ein Treffer doppelten Schaden macht.'],
+  'Leben': ['hp', 'Wie viel Schaden du aushältst, bevor du fällst.'],
+  'Widerstand': ['res', 'Dieser Anteil jedes erlittenen Treffers wird abgezogen.'],
+  'Lauftempo': ['spd', 'Deine Laufgeschwindigkeit in Metern pro Sekunde.'],
+  'Leben pro Sekunde': ['regen', 'So viel Leben heilst du jede Sekunde von selbst.'],
+  'Elementarschaden': ['el', 'Bonus für Feuer-, Säure- und Stromschaden deiner Waffe.'],
+  'Leben pro Kill': ['leech', 'So viel Leben bekommst du für jeden besiegten Gegner.'],
+  'Beuteglück': ['luck', 'Erhöht die Chance auf seltenere Beute.'],
+  'Sprint-Abklingzeit': ['dash', 'So lange dauert es, bis du wieder rollen kannst.'],
+  'Elemente': ['el', 'Elemente deiner Ausrüstung. Gegner sind gegen manche schwach, gegen manche immun.'],
+};
+const statName = (n: string): string => { const q = STAT_INFO[n]; return q ? `<span class="sn" data-tip="${esc(q[1])}" tabindex="0">${uiIcon(q[0], 15)}${n}<i class="tq">?</i></span>` : `<span>${n}</span>`; };
 /** 2D SROWS: the stat table and "Alle Werte nach Wechsel". inv: lower is better. */
 const STAT_ROWS: Array<[string, (s: HeroStats) => number, number, string, boolean?]> = [
   ['Schaden', s => s.damage, 0, ''], ['Angriffstempo', s => pct(s.attackSpeed), 0, '%'], ['Krit-Chance', s => pct(s.crit), 0, '%'],
@@ -90,6 +107,10 @@ export class InventoryUi {
     this.root.hidden = true;
     this.root.addEventListener('click', e => {
       if (this.suppressClick) { this.suppressClick = false; return; }
+      // Stat tooltips open on a tap (2D tipon); a second tap or a tap elsewhere closes them.
+      const tip = (e.target as Element).closest<HTMLElement>('.sn');
+      this.root.querySelectorAll('.sn.tipon').forEach(t => { if (t !== tip) t.classList.remove('tipon'); });
+      if (tip) { tip.classList.toggle('tipon'); return; }
       const b = (e.target as Element).closest<HTMLElement>('button');
       if (!b) return;
       if (b.dataset.bag !== undefined || b.dataset.slot) {
@@ -205,7 +226,7 @@ export class InventoryUi {
   }
   private cell(item: Item | undefined, attrs: string, label: string, slot: boolean): string {
     const sim = this.sim();
-    if (!item) return slot ? `<button type="button" class="inv-cell empty" ${attrs} aria-label="${esc(label)}: leer"><span>—</span></button>` : `<div class="inv-cell empty" ${attrs} aria-hidden="true"></div>`;
+    if (!item) return slot ? `<button type="button" class="inv-cell empty" ${attrs} aria-label="${esc(label)}: leer"></button>` : `<div class="inv-cell empty" ${attrs} aria-hidden="true"></div>`;
     return `<button type="button" class="inv-cell" ${attrs} aria-label="${esc(item.name)}" style="--rarity:${color(item)}">${itemIcon(item)}<small>${shownLevel(item)}</small>${item.locked ? '<b class="inv-lock">◆</b>' : ''}${!slot && isUpgrade(item, sim.equipment[item.slot]) ? '<b class="inv-up">▲</b>' : ''}${item.element ? `<i style="background:${ELEMENTS[item.element].color}"></i>` : ''}</button>`;
   }
   render(preferredKey?: string): void {
@@ -219,7 +240,7 @@ export class InventoryUi {
       const armed = what === 'rest' && this.armed === 'bulkrest';
       return [`<button type="button" class="chip${armed ? ' warn' : ''}" data-action="bulk" data-value="${what}" data-key="bulk-${i}"${typeof what === 'number' ? ` style="color:${RARITIES[what].color}"` : ''}>${armed ? 'Sicher?' : `${label} +${v}`}</button>`];
     }).join('');
-    this.root.innerHTML = `<div class="inv-columns"><section class="inv-character"><div class="inv-doll">${this.portrait ? '<span class="inv-portrait-slot"></span>' : `<img class="inv-portrait" src="${artUrl('survivor')}" alt="">`}${gear}</div><dl class="inv-stats">${STAT_ROWS.filter(r => r[0] !== 'Elementarschaden' || s.elements.length).map(([n, f, d, u]) => `<dt>${n}</dt><dd>${fmt(f(s), d, u)}</dd>`).join('')}</dl></section><section class="inv-bag"><div class="inv-bagh"><h3>Rucksack ${inv.bag.length}/${BAG_SIZE}</h3>${chips ? `<div class="inv-bulk">${chips}</div>` : ''}</div><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => this.cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, `Platz ${i + 1}`, false)).join('')}</div><p class="inv-hint">▲ Höherer Item Level · Doppeltipp legt an</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer>`;
+    this.root.innerHTML = `<div class="inv-columns"><section class="inv-character"><div class="inv-doll">${this.portrait ? '<span class="inv-portrait-slot"></span>' : `<img class="inv-portrait" src="${artUrl('survivor')}" alt="">`}${gear}</div><div class="inv-stats">${STAT_ROWS.filter(r => r[1](s) !== 0 && (r[0] !== 'Elementarschaden' || s.elements.length)).map(([n, f, d, u]) => `${statName(n)}<b>${fmt(f(s), d, u)}</b>`).join('')}${s.elements.length ? `${statName('Elemente')}<b>${s.elements.map(e => `<i style="color:${ELEMENTS[e].color};font-style:normal">${ELEMENTS[e].name}</i>`).join(', ')}</b>` : ''}</div></section><section class="inv-bag"><div class="inv-bagh"><div class="lbl">Rucksack ${inv.bag.length}/${BAG_SIZE}</div>${chips ? `<div class="inv-bulk">${chips}</div>` : ''}</div><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => this.cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, `Platz ${i + 1}`, false)).join('')}</div><p class="inv-hint">▲ Höherer Item Level. Doppeltipp legt an.</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer>`;
     if (this.portrait) {
       this.root.querySelector('.inv-portrait-slot')?.replaceWith(this.portrait.canvas);
       this.portrait.refresh();
@@ -261,7 +282,7 @@ export class InventoryUi {
   }
   private detail(): string {
     const it = this.item(), sim = this.sim(), sel = this.selection;
-    if (!sel) return '<p class="inv-hint">Teil antippen zum Vergleichen.</p>';
+    if (!sel) return '<div class="inv-card inv-empty"><p class="inv-hint">Tippe ein Teil an, um es mit deiner Ausrüstung zu vergleichen.</p></div>';
     if (!it) return `<div class="inv-card"><p class="inv-hint">${SLOT_NAMES['slot' in sel ? sel.slot : 'w']}: leer. Lege ein passendes Teil aus dem Rucksack an.</p></div>`;
     const eqAll = sim.equipment;
     const lock = `<button type="button" data-action="lock" data-key="lock" aria-pressed="${!!it.locked}">${it.locked ? 'Entsperren' : 'Sperren'}</button>`;

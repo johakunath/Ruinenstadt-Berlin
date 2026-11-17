@@ -20,7 +20,7 @@ test('M6: Weiter resumes the saved checkpoint, Neu keeps gear and drops the run'
   await expect(page.locator('#resume')).toBeEnabled({ timeout: 90_000 });
   await expect(page.locator('#title-diff .on')).toHaveText(/Schwer/);
   await page.locator('#resume').click();
-  await expect(page.locator('#hud')).toBeVisible();
+  await expect(page.locator('#hud')).toBeVisible({ timeout: 90_000 });
   const s = await page.evaluate(() => { const g = window.__game!.sim(); return { index: g.run.index, d: g.difficulty, scrap: g.inventory.scrap, kills: g.kills, hp: Math.round(g.player.hp) }; });
   expect(s).toEqual({ index: 1, d: 'schwer', scrap: 42, kills: 9, hp: 30 });
   expect(errors).toEqual([]);
@@ -29,6 +29,7 @@ test('M6: Weiter resumes the saved checkpoint, Neu keeps gear and drops the run'
   await page.goto('/?profile=Leistung');
   await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
   await page.locator('#play').click();
+  await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 90_000 });
   const n = await page.evaluate(() => { const g = window.__game!.sim(); return { index: g.run.index, scrap: g.inventory.scrap, d: g.difficulty }; });
   expect(n).toEqual({ index: 0, scrap: 42, d: 'schwer' });
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.save')!).run)).toBeNull();
@@ -60,6 +61,7 @@ test('M13: the camp spends Schrott, keeps the checkpoint and survives a reload',
   await page.reload();
   await expect(page.locator('#resume')).toBeEnabled({ timeout: 90_000 });
   await page.locator('#resume').click();
+  await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 90_000 });
   expect(await page.evaluate(() => window.__game!.sim().statContext.upgrades.dmg)).toBe(1);
   expect(errors).toEqual([]);
 });
@@ -68,7 +70,7 @@ test('M17: the intro cards come once before the first run', async ({ page }) => 
   await page.goto('/?profile=Leistung');
   await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
   await page.locator('#play').click();
-  await expect(page.locator('#intro')).toBeVisible();
+  await expect(page.locator('#intro')).toBeVisible({ timeout: 90_000 });
   for (let i = 0; i < 3; i++) await page.locator('#intro [data-intro="next"]').click();
   await expect(page.locator('#intro h2')).toHaveText('Steuerung');
   await page.locator('#intro [data-intro="done"]').click();
@@ -84,13 +86,31 @@ test('Hauptmenü in the pause menu returns to the title; Weiter resumes there', 
   await expect(page.locator('#resume')).toBeEnabled({ timeout: 90_000 });
   await expect(page.locator('#play')).toContainText('Ausrüstung bleibt');
   await page.locator('#resume').click();
-  await expect(page.locator('#hud')).toBeVisible();
+  await expect(page.locator('#hud')).toBeVisible({ timeout: 90_000 });
   await page.locator('#menu-btn').click();
-  await page.locator('[data-t="opt"]').click();
+  await page.locator('#menu-opt').click();
   await page.locator('#to-title').click();
+  await expect(page.locator('#optv')).toBeHidden();
   await expect(page.locator('#title')).toBeVisible();
   await expect(page.locator('#resume')).toContainText('Kampf 2');
   await page.locator('#resume').click();
   expect(await page.evaluate(() => window.__game!.sim().run.index)).toBe(1);
+  expect(errors).toEqual([]);
+});
+
+test('U3: a profile change in a run reloads straight back into the run', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript((s) => { if (!localStorage.getItem('ruinenstadt-berlin.save')) localStorage.setItem('ruinenstadt-berlin.save', JSON.stringify(s)); }, SAVE);
+  await page.goto('/?profile=Leistung');
+  await page.locator('#resume').click();
+  await expect(page.locator('#hud')).toBeVisible({ timeout: 90_000 });
+  await page.locator('#menu-btn').click();
+  await page.locator('#menu-opt').click();
+  await page.locator('#optv [data-opt="profile"] [data-v="qualitaet"]').click();
+  await page.waitForURL(/profile=Qualit/);
+  await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 150_000 });
+  expect(await page.evaluate(() => window.__game!.sim().run.index)).toBe(1);
+  await expect(page.locator('#title')).toBeHidden();
   expect(errors).toEqual([]);
 });

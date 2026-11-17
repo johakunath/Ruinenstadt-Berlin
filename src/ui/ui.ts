@@ -1,8 +1,9 @@
-// DOM overlay: title, HUD, options, touch controls, perf readout. Text is German and short.
+// DOM overlay: HUD, touch controls, end screens, perf readout. Text is German and short. The title is
+// the start screen (`start.ts`), the options are their own screen (`options-screen.ts`, U3).
 import type { Input } from '../input/input';
 import type { Options } from '../options';
-import { DEFAULT_DIFFICULTY, DIFFICULTIES, type DifficultyId } from '../data/difficulty';
-import { PROFILES, type ProfileId } from '../render/profile';
+import type { DifficultyId } from '../data/difficulty';
+import { startScreen } from './start';
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -15,14 +16,8 @@ export interface UiHandlers {
   onRetry(): void;
   onResume(): void;
   onDifficulty(id: DifficultyId): void;
-  /** Pause button, Optionen on the title: opens the menu. */
+  /** Pause button: opens the menu. */
   onMenu(): void;
-  onProfile(id: ProfileId): void;
-  onVolume(v: number): void;
-  onMusic(on: boolean): void;
-  onRumble(on: boolean): void;
-  onShowPerf(on: boolean): void;
-  onTelemetry(on: boolean): void;
   onAgain?(): void;
 }
 
@@ -41,61 +36,17 @@ export class Ui {
   constructor(opts: Options, handlers: UiHandlers, input: Input) {
     el<HTMLButtonElement>('play').addEventListener('click', () => handlers.onPlay());
     el<HTMLButtonElement>('resume').addEventListener('click', () => handlers.onResume());
-    const diffHost = el<HTMLDivElement>('title-diff');
-    for (const d of DIFFICULTIES) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.id = d.id;
-      b.className = 'choice' + (d.id === DEFAULT_DIFFICULTY ? ' on' : '');
-      b.innerHTML = `<b>${d.label}</b><span>${d.hint}</span>`;
-      b.addEventListener('click', () => handlers.onDifficulty(d.id));
-      diffHost.append(b);
-    }
+    startScreen().onDifficulty = (id) => handlers.onDifficulty(id);
     el<HTMLButtonElement>('retry').addEventListener('click', () => handlers.onRetry());
-    for (const id of ['open-options', 'menu-btn']) el<HTMLButtonElement>(id).addEventListener('click', () => handlers.onMenu());
-    el('controls').innerHTML = controlsTable();
-
-    const choice = <T extends string>(hostId: string, items: Array<{ id: T; label: string; hint: string }>, current: T, pick: (id: T) => void): void => {
-      const host = el<HTMLDivElement>(hostId);
-      for (const item of items) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'choice' + (item.id === current ? ' on' : '');
-        b.innerHTML = `<b>${item.label}</b><span>${item.hint}</span>`;
-        b.addEventListener('click', () => pick(item.id));
-        host.append(b);
-      }
-    };
-    choice('opt-profile', [
-      { id: 'qualitaet' as ProfileId, label: PROFILES.qualitaet.label, hint: 'PC, alle Effekte' },
-      { id: 'leistung' as ProfileId, label: PROFILES.leistung.label, hint: 'Tablet, flüssig' },
-    ], opts.profile, (id) => handlers.onProfile(id));
-    const volume = el<HTMLInputElement>('opt-volume');
-    volume.value = String(Math.round(opts.volume * 100));
-    volume.addEventListener('input', () => handlers.onVolume(Number(volume.value) / 100));
-    const music = el<HTMLInputElement>('opt-music');
-    music.checked = opts.music;
-    music.addEventListener('change', () => handlers.onMusic(music.checked));
-    // Fullscreen (playtest 2026-11-17): a switch in the pause menu; phones enter it when the game starts.
-    const full = el<HTMLInputElement>('opt-fullscreen');
-    el('fullscreen-row').hidden = !document.documentElement.requestFullscreen;
-    full.addEventListener('change', () => { void (full.checked ? document.documentElement.requestFullscreen?.() : document.exitFullscreen?.())?.catch(() => undefined); });
-    document.addEventListener('fullscreenchange', () => { full.checked = !!document.fullscreenElement; });
-    const rumble = el<HTMLInputElement>('opt-rumble');
-    rumble.checked = opts.rumble;
-    rumble.addEventListener('change', () => handlers.onRumble(rumble.checked));
-    const perf = el<HTMLInputElement>('opt-perf');
-    perf.checked = opts.showPerf;
-    perf.addEventListener('change', () => {
-      this.perf.hidden = !perf.checked;
-      handlers.onShowPerf(perf.checked);
-    });
+    el<HTMLButtonElement>('menu-btn').addEventListener('click', () => handlers.onMenu());
     this.perf.hidden = !opts.showPerf;
-    const tl = el<HTMLInputElement>('opt-telemetry');
-    tl.checked = opts.telemetry;
-    tl.addEventListener('change', () => handlers.onTelemetry(tl.checked));
     this.setupTouch(input);
     el<HTMLButtonElement>('again').addEventListener('click', () => handlers.onAgain?.());
+  }
+
+  /** Leistungsanzeige switched in the options. */
+  showPerf(on: boolean): void {
+    this.perf.hidden = !on;
   }
 
   /** Expedition: objective line. */
@@ -162,33 +113,27 @@ export class Ui {
   }
 
   loaded(): void {
-    el('loading').hidden = true;
-    el<HTMLButtonElement>('play').disabled = false;
-    el<HTMLButtonElement>('resume').disabled = false;
+    startScreen().loading(false);
   }
 
   /** Title: `label` shows Weiter (a wave checkpoint exists); the difficulty of that run is fixed. */
   setResume(label: string | null, difficulty: DifficultyId): void {
-    const r = el<HTMLButtonElement>('resume');
-    r.hidden = label === null;
-    if (label !== null) r.innerHTML = `<b>Weiter · ${label}</b><small>Dort weiter, wo du warst</small>`;
-    el<HTMLButtonElement>('play').classList.toggle('primary', label === null);
-    // Playtest 2026-11-16: "Neu" vs "Ganz neu anfangen" was unclear; each button says what it keeps.
-    el('play').innerHTML = label === null ? '<b>Losziehen</b><small>Neue Expedition durch Köpenick</small>' : '<b>Neue Expedition</b><small>Von vorn, Ausrüstung bleibt</small>';
-    this.setDifficulty(difficulty);
+    startScreen().setResume(label, difficulty);
   }
 
   setDifficulty(id: DifficultyId): void {
-    for (const b of el('title-diff').querySelectorAll<HTMLButtonElement>('button')) b.classList.toggle('on', b.dataset.id === id);
+    startScreen().setDifficulty(id);
   }
 
   failed(message: string): void {
-    el('loading').textContent = message;
+    startScreen().loading(true, message);
   }
 
   showTitle(): void {
     for (const id of ['dead', 'won', 'hud']) el(id).hidden = true;
     el('title').hidden = false;
+    startScreen().resetPad();
+    el('play').focus({ preventScroll: true });
   }
 
   showGame(): void {
@@ -282,24 +227,4 @@ export class Ui {
       });
     }
   }
-}
-
-/** U2: one table for every device (2D Steuerung). */
-export const CONTROLS: ReadonlyArray<readonly [string, string, string, string]> = [
-  ['Laufen', 'WASD', 'Linker Stick', 'Daumen links'],
-  ['Schlag', 'Maus links · J', 'A · RT', 'Schlag'],
-  ['Rolle', 'Leertaste', 'B · LT', 'Rolle'],
-  ['Kraft', 'E', 'Y', 'Kraft-Knopf'],
-  ['Ultimativ', 'R', 'LB', 'Ultimativ-Knopf'],
-  ['Kraft wechseln', 'X', 'Steuerkreuz ▲', 'Wechsel-Knopf'],
-  ['Verband', 'Q', 'RB', 'Verband'],
-  ['Molotow', 'G', 'X', 'Molotow'],
-  ['Zoom', 'Z · Mausrad', '–', '–'],
-  ['Pause', 'Esc · P', 'Start', 'Pause-Knopf'],
-  ['Inventar', 'I · Tab', 'Start', 'Pause › Inventar'],
-  ['Karte', 'M', 'Ansicht', 'Minikarte'],
-  ['Reiter', '[ ] · Pfeile wählen', 'LB · RB', 'Antippen'],
-];
-function controlsTable(): string {
-  return `<table class="ctl"><thead><tr><th></th><th>Tastatur</th><th>Controller</th><th>Touch</th></tr></thead><tbody>${CONTROLS.map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table>`;
 }
