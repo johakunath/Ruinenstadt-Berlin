@@ -11,12 +11,15 @@ import { INGREDIENTS } from './data/crafting';
 import { isUpgrade } from './sim/items';
 import { collectItem } from './sim/inventory';
 import type { Item } from './sim/items';
-// Game loop: fixed 60 Hz sim steps, interpolated rendering, input polled every frame.
-import './ui/style.css';
+// Game loop: fixed 60 Hz sim steps, interpolated rendering, input polled every frame. Loaded by
+// boot.ts from the start screen (U3); `ready` resolves once the renderer is up.
 import { GameAudio } from './audio/audio';
 import { HIT_FEEL } from './data/combat';
 import { Input } from './input/input';
-import { readOptions, reloadWith, storeOptions } from './options';
+import { reloadWith, RESUME_KEY } from './options';
+import { opts, settingHooks } from './ui/settings';
+import { optionsScreen } from './ui/options-screen';
+import { startScreen } from './ui/start';
 import { LOOK } from './render/looks';
 import { PROFILES } from './render/profile';
 import { GameRenderer } from './render/renderer';
@@ -39,7 +42,7 @@ import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
 import { PERKS, SHRINES } from './data/progression';
 import { contentMarks, EVENT_TEXT } from './sim/runcontent';
-import { DEFAULT_DIFFICULTY, type DifficultyId } from './data/difficulty';
+import type { DifficultyId } from './data/difficulty';
 import { backupSave, clearSave, loadSave, writeSave } from './save';
 import { CloudSave, formatCode, type SyncState } from './sync';
 import type { Prop } from './data/courtyard';
@@ -48,10 +51,9 @@ import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
 
-const opts = readOptions();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const audio = new GameAudio();
-audio.setVolume(opts.volume);
+audio.setVolume(opts.sound ? opts.volume : 0);
 audio.setMusic(opts.music);
 audio.setEco(opts.profile === 'leistung');
 const input = new Input(canvas);
@@ -80,7 +82,8 @@ const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScal
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 if (save?.run && (save.run.map !== mapName || !level)) save = { ...save, run: null };
-let difficulty: DifficultyId = save?.difficulty ?? DEFAULT_DIFFICULTY;
+// The start screen may have changed it before the game loaded; a waiting checkpoint keeps its own.
+let difficulty: DifficultyId = save?.run ? save.difficulty : startScreen().difficulty;
 // Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
 const cloud = new CloudSave(persist && !navigator.webdriver && !/^(localhost|127\.|0\.0\.0\.0|$)/.test(location.hostname));
 function freshSim(): Sim {
@@ -212,7 +215,7 @@ function again(): void {
   start();
 }
 /** Everything back to the start: gear, Schrott, checkpoint. The telemetry id stays. */
-function newGame(): void {
+export function newGame(): void {
   if (!renderer) return;
   clearSave();
   save = null;
@@ -224,6 +227,7 @@ function newGame(): void {
 }
 /** U2 Expedition abbrechen: the run ends as a loss, back to the title; gear and Schrott stay. */
 function abortRun(): void {
+  optionsScreen().close();
   menu.close();
   telemetry.end('quit');
   endExpedition(sim, false);
@@ -290,33 +294,21 @@ const ui = new Ui(opts, {
     again();
   },
   onMenu: () => input.onMenu(),
-  onProfile: (id) => {
-    opts.profile = id;
-    storeOptions(opts);
-    reloadWith({ profile: id });
-  },
-  onVolume: (v) => {
-    opts.volume = v;
-    audio.setVolume(v);
-    storeOptions(opts);
-  },
-  onMusic: (on) => {
-    opts.music = on; audio.setMusic(on); storeOptions(opts);
-  },
-  onRumble: (on) => {
-    opts.rumble = on;
-    storeOptions(opts);
-  },
-  onShowPerf: (on) => {
-    opts.showPerf = on;
-    storeOptions(opts);
-  },
-  onTelemetry: (on) => {
-    opts.telemetry = on;
-    telemetry.enabled = on;
-    storeOptions(opts);
-  },
 }, input);
+
+// U3: live effects of the settings (start screen and options screen share them, `ui/settings.ts`).
+settingHooks.audio = () => { audio.setVolume(opts.sound ? opts.volume : 0); audio.setMusic(opts.music); };
+settingHooks.perf = (on) => ui.showPerf(on);
+settingHooks.telemetry = (on) => { telemetry.enabled = on; };
+settingHooks.profile = (id) => {
+  // Materials and render targets are built once, so a new profile needs a reload. In a run it goes
+  // straight back in: the checkpoint is written (mid-fight the last one stays, as with Hauptmenü).
+  if (phase === 'play' && persist) {
+    if (sim.run.phase === 'fight' || sim.run.endless !== undefined) saveProfile(); else saveNow(true);
+    try { sessionStorage.setItem(RESUME_KEY, '1'); } catch { /* lands on the title */ }
+  }
+  reloadWith({ profile: id });
+};
 
 const inventory = new InventoryUi(() => sim);
 // U1: one pause menu with tabs (2D layout). The sim does not step while it is open.
@@ -335,7 +327,10 @@ const menu = new Menu({
     input.enabled = phase === 'play' && !open;
     input.clear();
   },
-}, inventory, document.getElementById('options')!);
+  options: () => optionsScreen().open(),
+  blocked: () => optionsScreen().isOpen,
+}, inventory);
+optionsScreen().onClose = () => menu.resetPad();
 input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
 // M13: the camp between expeditions, from the title and the victory screen.
 const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); });
@@ -356,7 +351,7 @@ function toCamp(): void {
   ui.showTitle(); showTunnelButton();
   camp.open();
 }
-input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search') menu.toggle('karte'); };
+input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen) menu.toggle('karte'); };
 document.getElementById('won-explore')!.addEventListener('click', explore);
 // M18: endless waves around the hero after the district boss.
 document.getElementById('won-endless')!.addEventListener('click', () => {
@@ -367,10 +362,11 @@ document.getElementById('won-endless')!.addEventListener('click', () => {
   ui.banner('Endlos', `Rekord: Welle ${sim.inventory.camp?.endlessBest ?? 0}`);
 });
 document.getElementById('dead-camp')!.addEventListener('click', () => { endExpedition(sim, false); toCamp(); });
-document.getElementById('pause-finish')!.addEventListener('click', () => { menu.close(); showWon(); });
+document.getElementById('pause-finish')!.addEventListener('click', () => { optionsScreen().close(); menu.close(); showWon(); });
 document.getElementById('version')!.textContent = `Ruinenstadt Berlin · ${VERSION}`;
 // Hauptmenü (playtest 2026-11-16: the title was only reachable with F5): save, back to the title, Weiter resumes.
 document.getElementById('to-title')!.addEventListener('click', () => {
+  optionsScreen().close();
   menu.close();
   // Mid-fight the last checkpoint stays; gear and Schrott are written with the profile.
   if (sim.run.phase === 'fight' || sim.run.endless !== undefined) saveProfile(); else saveNow(true);
@@ -389,8 +385,8 @@ document.getElementById('to-title')!.addEventListener('click', () => {
   const b = document.getElementById('run-abort') as HTMLButtonElement;
   let armed = 0;
   b.addEventListener('click', () => {
-    if (!armed || performance.now() - armed > 4000) { armed = performance.now(); b.innerHTML = '<b>Wirklich abbrechen?</b>'; return; }
-    armed = 0; b.innerHTML = '<b>Expedition abbrechen</b>';
+    if (!armed || performance.now() - armed > 4000) { armed = performance.now(); b.textContent = 'Sicher? Erneut tippen'; return; }
+    armed = 0; b.textContent = 'Abbrechen';
     abortRun();
   });
 }
@@ -410,9 +406,10 @@ document.getElementById('to-title')!.addEventListener('click', () => {
 window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
 input.onMenu = () => {
-  if (menu.isOpen) menu.close();
+  if (optionsScreen().isOpen) optionsScreen().close();
+  else if (menu.isOpen) menu.close();
   else if (phase === 'play') menu.open('inv');
-  else if (phase === 'title') menu.open('opt');
+  else if (phase === 'title' && startScreen().active()) optionsScreen().open();
 };
 
 const minimap = map ? new Minimap(map.def, map.lots, () => { if (phase === 'play') menu.open('karte'); }) : null;
@@ -739,6 +736,9 @@ function frame(now: number): void {
   // The tutorial card blocks the blessing pad; it is polled after, so its closing press is not a pick (Codex review).
   abilitiesUi.update(sim, phase === 'play' && !menu.isOpen, intro.isOpen);
   intro.pollPad();
+  // After the others: a press that opens one of them is then not seen as new there (U3).
+  startScreen().pollPad(now);
+  optionsScreen().pollPad(now);
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
   const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask';
@@ -901,7 +901,7 @@ window.__game = {
 // The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
 showTunnelButton();
 
-GameRenderer.create(canvas, {
+export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
 })
@@ -914,9 +914,11 @@ GameRenderer.create(canvas, {
     window.addEventListener('resize', () => r.resize());
     ui.loaded();
     if (opts.autostart) start();
+    return true;
   })
   .catch((err: unknown) => {
     console.error(err);
     ui.failed('Start fehlgeschlagen. WebGL 2 nötig.');
+    return false;
   });
 requestAnimationFrame(frame);

@@ -26,6 +26,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | H1 Custom hero: real clothing, outfits, inventory preview, left-hand grip | PC · Blender · Opus high (spec: Fable 5.2) | steps 1–5 done 2026-11-17 (PRs #36–#41): left-hand IK, coat, vest, boots, sneakers, gloves, scarf, equipment swap, turnable doll; open: step 6 textures (Codex), step 7 measurement (Johannes), equipment variety (later): `docs/tasks/h1-hero.md` |
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
+| U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 

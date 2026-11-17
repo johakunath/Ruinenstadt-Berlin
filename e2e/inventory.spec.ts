@@ -158,7 +158,7 @@ test('equip, unequip and salvage keep keyboard focus in the menu', async ({page}
   await expect(page.locator('#inventory button[data-bag="24"]')).toHaveCount(0);
 });
 
-test('phone landscape: doll, bag and comparison fit; tabs Segen, Kodex, Optionen render',async({browser},info)=>{
+test('phone landscape: doll, bag and comparison fit; tabs Segen, Kodex and the options screen render',async({browser},info)=>{
   const context=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true});
   const page=await context.newPage(); await setup(page);
   await page.locator('[data-bag="0"]').tap();
@@ -168,10 +168,14 @@ test('phone landscape: doll, bag and comparison fit; tabs Segen, Kodex, Optionen
   const name=await page.locator('.inv-detail h3').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
   expect(name).toBe(16);
   await page.screenshot({path:info.outputPath('menu-844x390-inventar.png')});
-  for (const [tab,check] of [['segen','.menu-tab[data-tab="segen"]'],['kodex','.cols2'],['opt','#controls table']] as const) {
+  for (const [tab,check] of [['segen','.menu-tab[data-tab="segen"]'],['kodex','.cols2']] as const) {
     await page.locator(`[data-t="${tab}"]`).tap(); await expect(page.locator(check).first()).toBeVisible();
     await page.screenshot({path:info.outputPath(`menu-844x390-${tab}.png`)});
   }
+  // U3: the cog opens the options screen over the menu; × goes back to the menu.
+  await page.locator('#menu-opt').tap(); await expect(page.locator('#optv .cgfx')).toBeVisible();
+  await page.screenshot({path:info.outputPath('menu-844x390-optionen.png')});
+  await page.locator('#opt-close').tap(); await expect(page.locator('#optv')).toBeHidden(); await expect(page.locator('#menu')).toBeVisible();
   await context.close();
 });
 
