@@ -82,7 +82,7 @@ test('phone touch selection, equipping, scroll and overflow',async({browser},inf
   await context.close();
 });
 
-test('controller Y opens, A activates and B closes',async({page})=>{
+test('controller Start opens, A activates and B closes',async({page})=>{
   await setup(page); await page.keyboard.press('Escape');
   await page.evaluate(()=>{
     const p={connected:true,axes:[0,0,0,0],buttons:Array.from({length:16},()=>({pressed:false,value:0}))};
@@ -95,7 +95,7 @@ test('controller Y opens, A activates and B closes',async({page})=>{
     await page.evaluate(n=>{const p=(window as unknown as {testPad:Gamepad}).testPad; Object.assign(p.buttons[n]!,{pressed:false,value:0});},i);
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   };
-  await press(3); await expect(page.locator('#inventory')).toBeVisible();
+  await press(9); await expect(page.locator('#inventory')).toBeVisible();
   await page.locator('[data-bag="0"]').focus(); await press(0);
   await expect(page.locator('[data-action="equip"]')).toBeVisible();
   await page.locator('[data-action="equip"]').focus(); await press(0);

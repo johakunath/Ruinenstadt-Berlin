@@ -5,9 +5,12 @@ import { ActionBuffer, type Action } from './buffer';
 export type Device = 'keyboard' | 'mouse' | 'gamepad' | 'touch';
 
 const DEADZONE = 0.22;
-/** Standard mapping: A/LT dodge, X/RB/RT attack, B power, LB ultimate, Y inventory, D-pad left Verband, right Molotow, up switches the power. */
-const PAD_DODGE = [0, 6];
-const PAD_ATTACK = [2, 5, 7];
+/**
+ * Standard mapping as in 2D (`js/input.js` padPoll, Johannes 2026-11-17): A/RT attack, B/LT dodge,
+ * Y power, LB ultimate, RB Verband, X Molotow, Start pause, View map. D-pad up switches the power.
+ */
+const PAD_DODGE = [1, 6];
+const PAD_ATTACK = [0, 7];
 const PAD_MENU = 9;
 
 const KEY_ATTACK = new Set(['KeyJ', 'Enter', 'KeyF']);
@@ -140,12 +143,11 @@ export class Input {
       const edge = (i: number): boolean => (down[i] ?? false) && !(this.padDown[i] ?? false);
       if (PAD_ATTACK.some(edge)) this.press('attack', 'gamepad');
       if (PAD_DODGE.some(edge)) this.press('dodge', 'gamepad');
-      if (edge(1)) this.press('power', 'gamepad');
+      if (edge(3)) this.press('power', 'gamepad');
       if (edge(4)) this.press('ultimate', 'gamepad');
-      if (edge(14)) this.press('verband', 'gamepad');
-      if (edge(15)) this.press('molotow', 'gamepad');
+      if (edge(5)) this.press('verband', 'gamepad');
+      if (edge(2)) this.press('molotow', 'gamepad');
       if (edge(12) && this.enabled) this.onSwap();
-      if (edge(3)) this.onInventory();
       if (edge(8)) this.onMap();
       if (edge(PAD_MENU)) this.onMenu();
       this.padDown = down;

@@ -287,16 +287,16 @@ export class Ui {
 /** U2: one table for every device (2D Steuerung). */
 export const CONTROLS: ReadonlyArray<readonly [string, string, string, string]> = [
   ['Laufen', 'WASD', 'Linker Stick', 'Daumen links'],
-  ['Schlag', 'Maus links · J', 'X', 'Schlag'],
-  ['Rolle', 'Leertaste', 'A', 'Rolle'],
-  ['Kraft', 'E', 'B', 'Kraft-Knopf'],
+  ['Schlag', 'Maus links · J', 'A · RT', 'Schlag'],
+  ['Rolle', 'Leertaste', 'B · LT', 'Rolle'],
+  ['Kraft', 'E', 'Y', 'Kraft-Knopf'],
   ['Ultimativ', 'R', 'LB', 'Ultimativ-Knopf'],
   ['Kraft wechseln', 'X', 'Steuerkreuz ▲', 'Wechsel-Knopf'],
-  ['Verband', 'Q', 'Steuerkreuz ◀', 'Verband'],
-  ['Molotow', 'G', 'Steuerkreuz ▶', 'Molotow'],
+  ['Verband', 'Q', 'RB', 'Verband'],
+  ['Molotow', 'G', 'X', 'Molotow'],
   ['Zoom', 'Z · Mausrad', '–', '–'],
   ['Pause', 'Esc · P', 'Start', 'Pause-Knopf'],
-  ['Inventar', 'I · Tab', 'Y', 'Pause › Inventar'],
+  ['Inventar', 'I · Tab', 'Start', 'Pause › Inventar'],
   ['Karte', 'M', 'Ansicht', 'Minikarte'],
   ['Reiter', '[ ] · Pfeile wählen', 'LB · RB', 'Antippen'],
 ];
