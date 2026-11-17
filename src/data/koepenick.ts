@@ -234,6 +234,17 @@ export function koepenickMap(scale = 1): MapDef {
     landmarks,
     encounters,
     // M11c: the Altstadt is too tight for generated lot types; market by the Dammbrücke, churchyard beside St. Laurentius.
+    // M11d step 5: the route blocks of zone 0 are authored (Johannes 2026-11-17: hand-build the route,
+    // generate the filler). Corner blocks with chamfers at Bahnhofstraße / Mahlsdorfer Straße, a row with
+    // a courtyard and risalits on the Mahlsdorfer Straße, one burnt-out corner as a landmark of the square.
+    handLots: [
+      { kind: 'altbau', x: -5.7 * s, z: -126.3 * s, rot: 90 * DEG, w: 10.5, d: 10, floors: 2, shape: { front: [{ to: 1.2, back: 0 }, { to: 5.25, back: 0.7 }], chamfer: { side: -1, c: 3 } } },
+      { kind: 'altbau', x: 24.25 * s, z: -126.3 * s, rot: -90 * DEG, w: 10.5, d: 8.5, floors: 2, ruin: true, shape: { front: [{ to: 5.25, back: 0 }], chamfer: { side: 1, c: 3 } } },
+      { kind: 'altbau', x: -24 * s, z: -125.8 * s, rot: 0, w: 12, d: 10, floors: 1, shape: { front: [{ to: -2.2, back: 0 }, { to: 2.2, back: 5 }, { to: 6, back: 0 }] } },
+      { kind: 'altbau', x: -37 * s, z: -125.8 * s, rot: 0, w: 12, d: 10, floors: 2, ruin: true, shape: { front: [{ to: -3, back: 0 }, { to: 3, back: 0.8 }, { to: 6, back: 0 }] } },
+      { kind: 'shop', x: -21.5 * s, z: -107.45 * s, rot: 180 * DEG, w: 8, d: 8.5, floors: 0 },
+      { kind: 'altbau', x: -60 * s, z: -107.2 * s, rot: 180 * DEG, w: 11, d: 9, floors: 1, shape: { front: [{ to: -1.5, back: 0 }, { to: 1.5, back: 1.4 }, { to: 5.5, back: 0 }] } },
+    ],
     specialLots: [
       { special: 'markt', x: -10.5 * s, z: -20 * s, rot: 90 * DEG, w: 14, d: 11 },
       { special: 'kirchhof', x: 39 * s, z: 16 * s, rot: 180 * DEG, w: 13, d: 17 },
