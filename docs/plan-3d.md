@@ -24,6 +24,7 @@ The ceiling of the Canvas 2D renderer is the main limit on the look: lights, sha
 | 3D12 | Fable 5.2 builds the first version (gate 1) as the foundation for everything after | Strong at 3D; the first session sets the architecture |
 | 3D13 | Look fixed after the gate 1 playtest: painted PBR shading, thin ink line, saturated grade, highlight shoulder, FXAA (Johannes, 2026-11-15). Feedback adjusts it, no more variant rounds | Supersedes the variant part of 3D9 |
 | 3D14 | Continue in 3D (Johannes, 2026-11-15). The custom hero and enemies are PC tasks, not gates. Migration order: `docs/migration.md` | Gate 1 convinced on feel and performance |
+| 3D15 | The hero stays on the Quaternius body and the UAL skeleton; detail comes from real clothing meshes and textures built by Blender scripts (Johannes, 2026-11-17). No MPFB body, no Mixamo retargeting, no test-hero round. Spec: `docs/tasks/h1-hero.md` | The body is 12,800 of 18,600 triangles and looks good; the painted-on clothes are the weak part. Same skeleton means no animation risk. Supersedes the hero part of 3D7 |
 
 ## Build setup: why TypeScript + Vite
 
@@ -88,17 +89,17 @@ Raw CC0 packs look clean and generic. They will **not** match the style bible as
 - Color grading per district (Köpenick: warm lanterns against teal-green shadows), fog, embers.
 - Gate 1 shows 2 to 3 look variants as in-engine screenshots (e.g. painterly PBR, toon ramp with outline, mixed) for Johannes to choose.
 
-## Hero pipeline (gate 2)
+## Hero pipeline (H1, decided 2026-11-17, 3D15)
 
-Goal: realistic proportions, red scarf, long brown leather coat, harness, pouches, heavy boots; swappable clothing and weapons; decent animation.
+Goal: red scarf, long brown leather coat, harness, pouches, heavy boots; swappable clothing and weapons; animation at least as good as now. Full spec, contract and budget: `docs/tasks/h1-hero.md`.
 
 | Step | Tool | Note |
 |---|---|---|
-| Base body and rig | MakeHuman/MPFB in Blender (CC0 output) or an AI 3D generator (Meshy, Tripo, Rodin; paid, mixed topology) | Choose from 2 test heroes in gate 2 |
-| Clothing | Modular meshes skinned to the same skeleton (coat, scarf, harness, boots, district pieces) | Swap = show or hide meshes |
-| Weapons | Separate GLB attached to a hand bone | Same as the item system |
-| Animation | Mixamo clips retargeted to the hero rig, blended in Three.js | Idle, run, attack combo, dodge, hit, death |
-| Production | Codex or Claude on the PC with Blender, scripted where possible | Not verified yet: whether Blender runs headless in the cloud environment |
+| Base body and rig | Quaternius `Superhero_Female_FullBody` on the UAL skeleton (CC0), unchanged | The skeleton is copied from the source file and never passes through Blender |
+| Clothing | Modular meshes built by Blender scripts, bound to the skeleton by joint name (coat, scarf, boots, gloves, district pieces) | Swap = show or hide meshes; a visible piece hides the body region under it |
+| Weapons | Code-built models on `hand_r` (`src/render/weapons.ts`); left hand by IK | Same as the item system |
+| Animation | The 38 UAL clips in `anims.glb`, unchanged | Extra joints (scarf, coat) move by springs in code |
+| Production | Claude on the PC, headless `blender -b --python tools/blender/...`; scripts committed, no `.blend` in git | Verified on the PC with Blender 5.3 (2026-11-17). Not verified: Blender in the cloud environment |
 
 ## Gates
 

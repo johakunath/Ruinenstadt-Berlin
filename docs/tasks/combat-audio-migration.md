@@ -56,7 +56,7 @@ Source (2D, read only): `js/data.js` (`PERKS`, `FAM`, `KR`, `KIND`, `CONS`), `js
 
 - Playtest on pad and Tab S9: weapon feel, cast times, touch arc spacing, event pacing; then balance (M14).
 - M16b moves hidden blessings and some events into side branches; M13b replaces the event trader's screen and offer.
-- Hero body: the left hand does not hold two-handed weapons (H1 rig).
+- Hero body: the left hand does not hold two-handed weapons. Fix: IK in render, `docs/tasks/h1-hero.md` step 2 (UAL has no two-handed clips).
 
 ## Checks
 
