@@ -300,6 +300,7 @@ A new body or head, authored clips or retargeting (importing more clips from the
   - `f_turnsch`: off-white high-tops with a light sole.
   - The boot builder is shared (`footwear`). Ambient occlusion is now baked per piece against the body only, so pieces from other looks never shade each other.
 - `tools/clip-sheet.ts`: `look=weste,turnsch,handsch`.
+- NPCs built from the hero (traders, captives, Späti keepers; `ContentView.person`) use a `HeroModel` with the vest look, so only that look's pieces draw and they never read as copies of the hero (Codex review on #40).
 - Numbers: file 1,808 KB, 34,334 triangles in the file. The contract test checks all 8 looks against the budget (≤ 9 draw calls, ≤ 32,000 visible triangles).
 - Pictures in `docs/proof/h1-hero/step4/`: `looks-Qualität.png` and `looks-Leistung.png` (left: no items, i.e. coat, boots and bare hands; right: vest, sneakers and gloves), plus vest strips.
 - Not measured: the first-swap frame time on the PC and the Tab S9 (step 4's "no frame over 50 ms"). Cloud and swiftshader timings mean nothing.

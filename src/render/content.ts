@@ -4,14 +4,17 @@ import {
   AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial,
   OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Object3D,
 } from 'three';
-import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { RunContent } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
+import { heroLook } from '../data/hero-look';
 import { Animator, type CharacterAssets } from './characters';
+import { HeroModel } from './hero-model';
 import { groundY } from './ground';
 import { FX_LAYER } from './layers';
 import type { Materials } from './materials';
 import { paintGlow, paintWood } from './paint';
+
+const NPC_LOOK = heroLook({ a: { base: 'weste' } });
 
 const glowSprite = (inner: string, outer: string, size: number): Sprite => {
   const s = new Sprite(new SpriteMaterial({ map: paintGlow(inner, outer), blending: AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
@@ -163,7 +166,11 @@ export class ContentView {
 
   private person(tint: 'trader' | 'captive' | 'keeper'): { root: Group; anim: Animator } {
     const root = new Group();
-    const model = cloneSkinned(this.assets.hero);
+    // Traders, captives and keepers wear the vest (the hero starts in the coat), so they never read
+    // as copies of her; only that look's pieces draw.
+    const body = new HeroModel(this.assets.hero);
+    body.setLook(NPC_LOOK);
+    const model = body.model;
     root.add(model);
     const anim = new Animator(model, new Map([...this.assets.heroClips].filter(([n]) => n === 'Idle_Loop' || n === 'Interact')));
     anim.loop('Idle_Loop', 0);
