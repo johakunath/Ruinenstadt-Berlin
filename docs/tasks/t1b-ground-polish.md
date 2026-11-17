@@ -1,6 +1,6 @@
 # T1b Ground textures: repetition, memory, loading [Sonnet 5.5 code, Codex image]
 
-Status: open. Review of PR #14 (2026-11-16). Nothing here was measured on hardware.
+Status: image pass built. Texture performance and rail follow-up remain open. Findings are from the review of PR #14 (2026-11-16).
 
 ## Findings
 | # | Finding | Where |
@@ -24,3 +24,11 @@ Status: open. Review of PR #14 (2026-11-16). Nothing here was measured on hardwa
 
 ## Not in scope
 KTX2 compression, new ground kinds, other districts.
+
+## Image handover
+
+- Reused the palette and wear from the 2D shared pavement and Köpenick sidewalk art as image references. The runtime 2D tiles were 256–258 px and had fewer slabs than the 3D tile.
+- Regenerated paving from the T1 grid and 2D references. The 5 m tile has 100 intact plates and dark joints, with weathering spread evenly across the slab faces.
+- Edited the T1 leaf floor to lower contrast while keeping the same average luminance. Both albedos are opaque sRGB WebP at 1024 px.
+- [Repeat tests and in-game comparisons](../proof/t1b/README.md).
+- The 512 px export, atlas edge bleed, loading and rail comparison remain open under steps 2–4.

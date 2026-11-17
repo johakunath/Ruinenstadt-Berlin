@@ -18,7 +18,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M19 S3 tunnel, layout B, blessing in the first passage | Claude | built, playtest open: `docs/maps/guidelines.md` › U-Bahn tunnels |
 | U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |
 | U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
-| T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (paving image) | open: `docs/tasks/t1b-ground-polish.md` |
+| T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (images) | paving and leaf image pass built; texture performance and rail follow-up open: `docs/tasks/t1b-ground-polish.md` |
 | A2 Audio follow-ups | Sonnet | done (2026-11-16), listening test open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | done (2026-11-16): `docs/tasks/l2-loot-followups.md` |
 | Pad layout as in 2D (Johannes, 2026-11-17) | Claude | done (PR #26) |
