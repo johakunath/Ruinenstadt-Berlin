@@ -236,8 +236,9 @@ export function sectionAt(prim, dom, y, band = 0.035) {
   return { cz: (minZ + maxZ) / 2, rx: maxX, rz: (maxZ - minZ) / 2 };
 }
 
-export async function finish(doc, name) {
-  await doc.transform(prune(), dedup());
+/** `keepAttributes`: keep vertex attributes no material uses yet (the hero's piece UVs, painted in step 6). */
+export async function finish(doc, name, { keepAttributes = false } = {}) {
+  await doc.transform(prune({ keepAttributes }), dedup());
   // One buffer for the binary container.
   const buffers = doc.getRoot().listBuffers();
   for (const acc of doc.getRoot().listAccessors()) acc.setBuffer(buffers[0]);

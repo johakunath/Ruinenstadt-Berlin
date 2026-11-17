@@ -163,6 +163,7 @@ function addPieces(doc, skin, work, sourceNames) {
     const p = doc.createPrimitive().setMaterial(mat)
       .setAttribute('POSITION', acc('VEC3', w.position))
       .setAttribute('NORMAL', acc('VEC3', w.normal))
+      .setAttribute('TEXCOORD_0', acc('VEC2', w.uv))
       .setAttribute('JOINTS_0', acc('VEC4', skinJoints(w, J)))
       .setAttribute('WEIGHTS_0', acc('VEC4', w.weights))
       .setIndices(acc('SCALAR', w.count > 65535 ? w.indices : new Uint16Array(w.indices)));
@@ -251,7 +252,7 @@ async function buildHero() {
   splitBody(doc, bodyNode, skin);
   addPieces(doc, skin, work, sourceNames);
   checkContract(skin);
-  await finish(doc, 'hero.glb');
+  await finish(doc, 'hero.glb', { keepAttributes: true });
 }
 
 /**

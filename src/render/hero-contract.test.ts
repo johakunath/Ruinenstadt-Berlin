@@ -52,6 +52,12 @@ describe('hero.glb contract', () => {
     for (const n of ['hair', 'scarf', ...Object.keys(HERO_PIECES)]) expect(names.has(n), n).toBe(true);
   });
 
+  it('gives every clothing piece UVs for its painted texture (step 6)', () => {
+    for (const n of skinned.filter((n) => n.name! in HERO_PIECES || n.name === 'scarf')) {
+      for (const p of hero.meshes[n.mesh!]!.primitives) expect(p.attributes.TEXCOORD_0, n.name).toBeDefined();
+    }
+  });
+
   it('keeps the default look inside the triangle and draw call budget', () => {
     const hidden = new Set(HERO_DEFAULT_LOOK.flatMap((p) => HERO_PIECES[p] ?? []).map((r) => `body_${r}`));
     const visible = skinned.filter((n) => !hidden.has(n.name!) && (!(n.name! in HERO_PIECES) || HERO_DEFAULT_LOOK.includes(n.name!)));
