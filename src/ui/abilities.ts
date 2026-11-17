@@ -35,7 +35,7 @@ interface Action { el: HTMLButtonElement; cd: HTMLElement; key: HTMLElement; ico
 type ActionId = 'power' | 'ultimate' | 'verband' | 'molotow' | 'swap';
 const KEYS: Record<'keyboard' | 'gamepad', Record<ActionId, string>> = {
   keyboard: { power: 'E', ultimate: 'R', verband: 'Q', molotow: 'G', swap: 'X' },
-  gamepad: { power: 'B', ultimate: 'LB', verband: '◀', molotow: '▶', swap: '▲' },
+  gamepad: { power: 'Y', ultimate: 'LB', verband: 'RB', molotow: 'X', swap: '▲' },
 };
 
 export class AbilitiesUi {

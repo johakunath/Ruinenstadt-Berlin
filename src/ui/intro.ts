@@ -9,7 +9,7 @@ const PAGES: ReadonlyArray<readonly [string, string]> = [
 ];
 const controls = (): string => matchMedia('(pointer: coarse)').matches
   ? 'Am besten quer halten.<br><b>Links</b>: Daumen ziehen, du läufst.<br><b>Rechts</b>: Schlag, Rolle, Kraft.'
-  : '<b>WASD</b> laufen, <b>Maus</b> zielt.<br><b>Linksklick</b> Schlag · <b>Leertaste</b> Rolle · <b>E</b> Kraft.<br>Controller: <b>X</b> Schlag · <b>A</b> Rolle · <b>B</b> Kraft.';
+  : '<b>WASD</b> laufen, <b>Maus</b> zielt.<br><b>Linksklick</b> Schlag · <b>Leertaste</b> Rolle · <b>E</b> Kraft.<br>Controller: <b>A</b> Schlag · <b>B</b> Rolle · <b>Y</b> Kraft.';
 export const TUTORIALS = {
   loot: ['Neue Ausrüstung', 'Liegt jetzt im Rucksack. <b>Pause</b> öffnet das Inventar: Teil antippen, <b>Anlegen</b>. ▲ heißt stärker.'],
   perk: ['Segen', 'Nach jedem Kampf wählst du 1 von 3. Gilt nur für diese Expedition. Gleiche Familien kommen öfter, zwei Familien öffnen einen Doppelsegen.'],
