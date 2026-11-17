@@ -3,6 +3,8 @@ import { generateLots, generateProps, inTunnel, mapLevel } from './map';
 import { tunnelMap, tunnelZ } from './tunnel';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT } from '../sim/types';
+import { killEnemy } from '../sim/combat';
+import { parseSave, simFromSave, snapshot } from '../sim/save';
 
 const m = tunnelMap();
 const lots = generateLots(m), props = generateProps(m, lots), level = mapLevel(m, lots, props);
@@ -52,5 +54,15 @@ describe('M19 S3 tunnel (layout B)', () => {
     sim.player.x = sim.player.px = boss.x; sim.player.z = sim.player.pz = boss.z + 5;
     stepSim(sim, NO_INPUT);
     expect(boss.sleep).toBe(0);
+  });
+  it('a beaten mini-boss stays beaten after a checkpoint resume (Codex review)', () => {
+    const sim = createSim({ level, seed: 4 });
+    killEnemy(sim, sim.enemies.find(e => e.sleep !== undefined)!);
+    const save = parseSave(JSON.stringify(snapshot(sim, m.name, true)))!;
+    expect(save.run!.guardsDown).toEqual([0]);
+    const back = simFromSave(save, { seed: 1, stress: 0, level }, true);
+    expect(back.enemies.filter(e => e.guardIndex !== undefined)).toHaveLength(0);
+    const fresh = simFromSave(save, { seed: 1, stress: 0, level }, false);
+    expect(fresh.enemies.filter(e => e.guardIndex !== undefined)).toHaveLength(1);
   });
 });

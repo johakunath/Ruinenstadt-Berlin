@@ -167,6 +167,8 @@ export interface Enemy {
   guard?: boolean;
   /** Sleeps until the hero comes this close or hurts it (side passage mini-boss). */
   sleep?: number;
+  /** Index into `level.guards` for side passage guards (saved as defeated). */
+  guardIndex?: number;
   /** The last hit was critical (kill effects). */
   lastCrit?: boolean;
 }
