@@ -14,7 +14,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
 | M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Claude (taken over 2026-11-17) | profiles decided (A Bahnhofstraße, C Vorstadt → Spreepark with tracks), build open: `docs/tasks/m11d-map-realism.md` |
 | M11c World variety: two lot types per zone, weather per zone (variant A) | Claude | decided 2026-11-17, build open: `docs/maps/guidelines.md` › Lot types and weather |
-| M16b Side branches, variant A (lanes beside the route) | Claude | decided 2026-11-17, build open: `docs/maps/guidelines.md` › Side branches |
+| M16b Side branches, variant A (lanes beside the route) | Claude | built 2026-11-17 (Hinterhof: blessing, Kietzgasse: sleeping elite, Hangarweg: cache), playtest open |
 | M19 S3 tunnel, layout B, blessing in the first passage | Claude | built, playtest open: `docs/maps/guidelines.md` › U-Bahn tunnels |
 | U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |
 | U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
@@ -52,7 +52,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Built: six types, four elite modifiers, four bosses with own specials, resistances; playtest open. Own models for the humanoid bosses stay with H2 |
 | Balance bot | M14 | Built: plays whole campaigns in Node; first tuning pass done, calibration open |
 | Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Built: one event per stretch between fights, every type once per run; places are seeded, M16b moves them into side branches |
-| Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Open |
+| Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Built (2026-11-17, variant A): three fenced lanes in Köpenick, one in each zone |
 | World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
 | Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Built (2026-11-16, `docs/tasks/m13-camp.md`): seven stations, meals from Zutaten, Lazarett, Aufsätze, Lager; playtest open |
 | Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |

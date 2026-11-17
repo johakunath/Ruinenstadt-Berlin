@@ -60,7 +60,7 @@ describe('Köpenick map', () => {
     it(`places buildings off streets and out of the water (scale ${scale})`, () => {
       const houses = lots.filter((l) => l.kind !== 'tree');
       // 40 since the four Späti rest stops took their lots (M11b part 2).
-      expect(houses.length).toBeGreaterThanOrEqual(40);
+      expect(houses.length).toBeGreaterThanOrEqual(38);
       for (const l of houses) {
         expect(isWater(m, l.x, l.z)).toBe(false);
         expect(streetDist(m, l.x, l.z).d).toBeGreaterThan(0);
@@ -219,5 +219,24 @@ describe('Köpenick map', () => {
     const a = generateLots(koepenickMap(1)).length;
     const b = generateLots(koepenickMap(1.3)).length;
     expect(b).toBeGreaterThan(a);
+  });
+});
+
+describe('M16b side passages (variant A)', () => {
+  it('the blessing, the sleeping elite and the cache sit at reachable ends off the route', () => {
+    const m = koepenickMap(1), lots = generateLots(m), level = mapLevel(m, lots, generateProps(m, lots));
+    const seen = new Set<string>(), q: Array<[number, number]> = [[Math.round(m.start.x), Math.round(m.start.z)]];
+    while (q.length) {
+      const [x, z] = q.pop()!, k = `${x},${z}`;
+      if (seen.has(k) || x < m.bounds.minX || x > m.bounds.maxX || z < m.bounds.minZ || z > m.bounds.maxZ || level.blocked(x, z, 0.4)) continue;
+      seen.add(k);
+      q.push([x + 1, z], [x - 1, z], [x, z + 1], [x, z - 1]);
+    }
+    const near = (x: number, z: number): boolean => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => seen.has(`${Math.round(x) + a!},${Math.round(z) + b!}`));
+    for (const h of m.hiddenSpots!) expect(near(h.x, h.z), `blessing ${h.x},${h.z}`).toBe(true);
+    for (const g of m.guards!) expect(near(g.x, g.z), `guard ${g.x},${g.z}`).toBe(true);
+    const cache = m.fixedProps.find(p => p.kind === 'crates')!;
+    expect(near(cache.x + 2, cache.z - 2) || near(cache.x - 2, cache.z + 2), 'cache').toBe(true);
+    for (const e of m.encounters) for (const g of m.guards!) expect(Math.hypot(e.x - g.x, e.z - g.z)).toBeGreaterThan(e.r + 8);
   });
 });

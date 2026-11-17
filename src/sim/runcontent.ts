@@ -137,7 +137,7 @@ export function createContent(s: Sim, seed: number): RunContent {
   // Fixed spots first (M19/M16b: the end of a side passage); then random ones up to three.
   for (const h of L.hiddenSpots) c.hidden.push({ x: h.x, z: h.z, got: false });
   // Hidden blessings (2D `hidSpots`): three, far from the start and from each other, in corners off the route.
-  for (let i = L.hiddenSpots.length > 0 ? 3 : 0; i < 3; i++) {
+  for (let i = L.hiddenSpots.length; i < 3; i++) {
     const spot = sample(
       (x, z) => Math.hypot(x - L.start.x, z - L.start.z) > CONTENT.hiddenApart && !c.hidden.some((h) => Math.hypot(h.x - x, h.z - z) < CONTENT.hiddenApart * 2)
         && routeDist(L, x, z) > 9 && routeDist(L, x, z) < 34 && reachable(L, x + 0.8, z) && reachable(L, x - 0.8, z) && reachable(L, x, z + 0.8) && reachable(L, x, z - 0.8),

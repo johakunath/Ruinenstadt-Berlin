@@ -12,6 +12,8 @@ import { NO_INPUT, type Sim } from './types';
 const def = koepenickMap(1);
 const lots = generateLots(def);
 const level = mapLevel(def, lots, generateProps(def, lots));
+// Side passage guards (M16b) are tested in tunnel.test.ts; events here run on an empty map.
+level.guards = [];
 const make = (seed = 3, statContext = {}): Sim => createSim({ level, seed, statContext });
 const run = (s: Sim, steps: number): void => { for (let i = 0; i < steps; i++) { s.hitstop = 0; stepSim(s, NO_INPUT); } };
 /** Puts the hero on the leg toward encounter `leg` with that event planned and due. */

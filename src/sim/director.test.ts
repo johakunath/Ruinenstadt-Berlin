@@ -8,6 +8,7 @@ import { DT, NO_INPUT, type Sim, type SimEvent } from './types';
 
 const map = koepenickMap(1);
 const level = mapLevel(map, generateLots(map));
+level.guards = []; // Side passage guards (M16b) sleep apart from the route; tested in tunnel.test.ts.
 
 function teleport(sim: Sim, x: number, z: number): void {
   const p = sim.player;

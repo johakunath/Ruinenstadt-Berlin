@@ -37,7 +37,7 @@ describe('difficulty', () => {
       const enc = sim.level.encounters[0]!;
       sim.player.x = enc.x; sim.player.z = enc.z;
       for (let i = 0; i < 120; i++) stepSim(sim, NO_INPUT);
-      const e = sim.enemies[0]!;
+      const e = sim.enemies.find((x) => x.sleep === undefined)!; // a wave enemy, not a side passage guard
       return e.maxHp / (e.def.hp * 1);
     };
     expect(hp('leicht')).toBeLessThan(hp('normal'));
