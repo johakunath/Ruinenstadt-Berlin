@@ -5,6 +5,7 @@
 import { AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, FogExp2, LineBasicMaterial, LineSegments, Points, PointsMaterial, type Scene } from 'three';
 import { areaAt, type MapDef } from '../data/map';
 import { FX_LAYER } from './world';
+import { groundY } from './ground';
 
 export type WeatherKind = 'rain' | 'fog' | 'ash' | 'clear';
 /** Which weather an area has (area ids of `MapDef.areas`); missing ids are clear. */
@@ -82,6 +83,8 @@ export class Weather {
       L.obj.visible = L.level > 0.01;
       (L.obj.material as PointsMaterial).opacity = L.max * L.level;
       if (!L.obj.visible) continue;
+      // Heights are relative to the ground under the hero (the Müggelberge summit is 7 m up; Codex review).
+      L.obj.position.y = groundY(hx, hz);
       this.step(key, L, dt, hx, hz, time);
       L.obj.geometry.attributes.position!.needsUpdate = true;
     }
