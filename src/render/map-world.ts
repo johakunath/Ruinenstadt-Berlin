@@ -13,10 +13,10 @@ import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
 import { buildLandmark } from './landmarks';
 import {
-  BED_Y, WATER_Y, areaAt, heightAt, inPoly, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
-  type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
+  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
+  type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
 } from '../data/map';
-import type { Prop } from '../data/courtyard';
+import { EDGE_FRONT, propCollider, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
@@ -562,7 +562,12 @@ function buildGreenery(m: MapDef, lots: Lot[], props: Prop[], chunkOf: (x: numbe
       walls.push({ l: o, ruin: !!l.ruin });
     }
   }
-  for (const p of props) block(HEDGED[p.kind] !== undefined || p.kind === 'hedge' ? { x: p.x, z: p.z, rot: p.rot, hx: p.size / 2, hz: 0.3 } : { x: p.x, z: p.z, rot: p.rot, hx: 0.9, hz: 0.9 });
+  for (const p of props) {
+    // Closed edge fronts block their whole footprint (it is drawn behind the front face).
+    const c = EDGE_FRONT[p.kind] !== undefined || p.kind === 'fallenTree' ? propCollider(p) : null;
+    if (c?.kind === 'box') block({ x: c.x, z: c.z, rot: c.rot, hx: c.hx, hz: c.hz });
+    else block(HEDGED[p.kind] !== undefined || p.kind === 'hedge' ? { x: p.x, z: p.z, rot: p.rot, hx: p.size / 2, hz: 0.3 } : { x: p.x, z: p.z, rot: p.rot, hx: 0.9, hz: 0.9 });
+  }
   const free = (x: number, z: number, pad: number): boolean => {
     if (isWater(m, x, z) || onBridge(m, x, z, 1.5) || terraceWall(m, x, z) || m.terraces.some((t) => onStair(t, x, z, 1))) return false;
     const sd = streetDist(m, x, z);
@@ -1618,6 +1623,108 @@ function buildHouse(b: ChunkBuilder, l: Lot): void {
   b.shadowBox(new Matrix4().makeRotationY(l.rot).setPosition(l.x, h / 2, l.z), l.w, h, l.d);
 }
 
+// ---------------------------------------------------------------- beyond the closed edge (M11d step 4)
+
+/**
+ * A building mass in the row behind the edge (render only, in the fog): plaster body, a window grid
+ * on the face toward the map (2 triangles per window, few lit), cornice, tar roof with chimneys or a
+ * gable roof; a quarter burnt out and roofless. About 150-250 triangles.
+ */
+function buildBackdropBlock(b: ChunkBuilder, k: EdgeBlock): void {
+  const rng = new Rng(k.seed);
+  const H = GROUND_H + k.floors * FLOOR_H + PARAPET;
+  const plaster = b.mm.plaster[rng.pick(TONES)] as LitMaterial;
+  const burnt = rng.next() < 0.25;
+  const tint: RGB = burnt ? [0.35, 0.34, 0.33] : [0.7, 0.7, 0.68];
+  const F = new Matrix4().makeRotationY(k.rot).setPosition(k.x, 0, k.z);
+  const part = (x: number, y: number, z: number): Matrix4 => F.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+  b.box(plaster, part(0, H / 2, 0), k.w, H, k.d, tint);
+  // Face toward the map: local +Z.
+  const c = Math.cos(k.rot), sn = Math.sin(k.rot);
+  const pt = (x: number, y: number): Vector3 => new Vector3(k.x + c * x + sn * (k.d / 2 + 0.02), y, k.z - sn * x + c * (k.d / 2 + 0.02));
+  const bays = Math.max(1, Math.floor(k.w / 2.7));
+  for (let i = 0; i < bays; i++) {
+    const x = -k.w / 2 + (i + 0.5) * (k.w / bays);
+    for (let f = -1; f < k.floors; f++) {
+      const y = f < 0 ? 1.55 : GROUND_H + f * FLOOR_H + 0.95;
+      const h = f < 0 ? 1.75 : 1.95;
+      const lit = !burnt && rng.next() < 0.05;
+      const cell = lit ? rng.int(4) : 4 + rng.int(4);
+      const cu = (cell % 4) / 4, cv = cell < 4 ? 0.5 : 0;
+      b.solid.of(b.mm.windows).quad([pt(x - 0.57, y), pt(x + 0.57, y), pt(x + 0.57, y + h), pt(x - 0.57, y + h)], [cu, cv, cu + 0.25, cv + 0.5], burnt ? [[0.4, 0.4, 0.4]] : [[1, 1, 1]]);
+    }
+  }
+  b.box(b.mm.stucco, part(0, GROUND_H, k.d / 2 + 0.08), k.w, 0.3, 0.2, [0.6, 0.6, 0.58]);
+  b.box(b.mm.stucco, part(0, H - 0.3, k.d / 2 + 0.12), k.w, 0.4, 0.3, [0.6, 0.6, 0.58]);
+  if (!burnt) {
+    if (rng.next() < 0.4) {
+      const ridge = Math.min(k.w, k.d) * 0.32;
+      b.geo(b.mm.roof, gableRoof(k.w, k.d, ridge), part(0, H, 0), [rng.range(0.55, 0.75), 0.6, 0.58]);
+      b.geo(plaster, gableEnds(k.w, k.d, ridge), part(0, H, 0), tint);
+    } else b.box(b.mm.tar, part(0, H + 0.03, 0), k.w - 0.1, 0.1, k.d - 0.1, [0.5, 0.5, 0.5]);
+    for (let i = 0; i < 2 + rng.int(2); i++) b.box(b.mm.brick, part(rng.range(-k.w / 2 + 1, k.w / 2 - 1), H + 0.8, rng.range(-k.d / 2 + 1, k.d / 2 - 1)), 0.8, 1.6, 0.6, [0.6, 0.55, 0.5]);
+  }
+  b.shadowBox(part(0, H / 2, 0), k.w, H, k.d);
+}
+
+/**
+ * Ground beyond the bound along every edge run that is not water, 55 m out, so the camera sees
+ * land under the backdrop instead of the water plane. The north and south strips also run past the
+ * corners. Same ground material and blend as the map (one draw call per side). It starts 0.75 m
+ * inside the bound, 3 cm under the map ground, so no crack shows at the seam.
+ */
+function buildEdgeSkirt(m: MapDef, mats: MapMats, runs: EdgeRun[], group: Group): void {
+  const RINGS = [0.75, 0, -3, -8, -16, -30, -55];
+  const sides = new Map<number, EdgeRun[]>();
+  for (const r of runs) if (r.kind !== 'water') sides.set(r.side.i, [...(sides.get(r.side.i) ?? []), r]);
+  for (const list of sides.values()) {
+    const pos: number[] = [], col: number[] = [], uv: number[] = [], splat: number[] = [], idx: number[] = [];
+    for (const r of list) {
+      const s = r.side;
+      const ns = s.i % 2 === 0;
+      const t0 = ns && r.t0 === 0 ? -55 : r.t0;
+      const t1 = ns && r.t1 >= s.len - 1e-6 ? s.len + 55 : r.t1;
+      const ts: number[] = [];
+      for (let t = t0; t < t1; t += 3) ts.push(t);
+      ts.push(t1);
+      const first = pos.length / 3;
+      for (const t of ts) {
+        const tc = Math.max(0, Math.min(s.len, t));
+        const [ix, iz] = sidePt(s, tc, 1.5);
+        const h0 = heightAt(m, ...sidePt(s, tc, 0)) - 0.03;
+        const sp = groundSplat(m, ix, iz, false);
+        const tint = GROUND_TINT[areaAt(m, ix, iz)?.ground ?? m.defaultGround];
+        for (const d of RINGS) {
+          const [x, z] = sidePt(s, t, d);
+          const fade = d >= 0 ? 1 : Math.max(0, 1 + d / 12);
+          pos.push(x, h0 * fade - 0.03 + (d < 0 ? d * 0.004 : 0), z);
+          const k = (0.82 + 0.3 * (0.5 + 0.5 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2))) * (d >= 0 ? 1 : Math.max(0.55, 1 + d / 60));
+          col.push(tint[0] * k, tint[1] * k, tint[2] * k);
+          uv.push(x / 5, z / 5);
+          splat.push(...sp);
+        }
+      }
+      const R = RINGS.length;
+      for (let i = 0; i < ts.length - 1; i++) for (let j = 0; j < R - 1; j++) {
+        const a = first + i * R + j, b2 = a + R;
+        // Sides run clockwise with the map on the left, so this winding faces up.
+        idx.push(a, b2, a + 1, b2, b2 + 1, a + 1);
+      }
+    }
+    if (!idx.length) continue;
+    const g = new BufferGeometry();
+    g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
+    g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
+    g.setAttribute('splat', new BufferAttribute(new Float32Array(splat), 4));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    const mesh = new Mesh(g, mats.ground);
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+}
+
 // ---------------------------------------------------------------- trees
 
 /** Berlin street and park trees (M11c): Linde, Ahorn, Kastanie, Birke, Kiefer and dead trees. */
@@ -2014,13 +2121,27 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   if (m.tunnel) buildTunnel(m, mats, chunkOf);
   if (m.rail) {
     const r = m.rail;
-    for (let x = r.minX; x < r.maxX; x += 40) {
+    // The embankment runs on out of the map (closed edge, M11d step 4).
+    for (let x = r.minX - 40; x < r.maxX + 40; x += 40) {
       const cb = chunkOf(x + 20, r.z);
       cb.box(mats.stucco, new Matrix4().setPosition(x + 20, 0.9, r.z), 40, 1.8, 8, [0.45, 0.42, 0.4]);
       for (const z of [-1.5, 1.5]) cb.box(mats.iron, new Matrix4().setPosition(x + 20, 1.9, r.z + z), 40, 0.15, 0.12);
     }
   }
-  buildTrees(m, lots, mats, chunkKey, chunkOf, group);
+  // M11d step 4: beyond the closed edge, building masses and tree rows (render only) on a ground skirt.
+  const edge = m.tunnel ? null : edgeRuns(m);
+  const backdrop = edge ? edgeBackdrop(m, edge) : { blocks: [], trees: [] };
+  if (edge) buildEdgeSkirt(m, mats, edge, group);
+  for (const k of backdrop.blocks) {
+    const b = chunkOf(k.x, k.z);
+    if (k.kind === 'house') b.on(0, () => buildHouse(b, { kind: 'house', x: k.x, z: k.z, rot: k.rot, w: k.w, d: k.d, floors: k.floors, seed: k.seed }));
+    else buildBackdropBlock(b, k);
+  }
+  for (const l of backdrop.trees) if (l.jungle) {
+    const b = chunkOf(l.x, l.z);
+    b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
+  }
+  buildTrees(m, [...lots, ...backdrop.trees], mats, chunkKey, chunkOf, group);
 
   const spots: LightSpot[] = [];
   const caster = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
