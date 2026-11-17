@@ -721,15 +721,29 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .sgb .perk-icon { width: 46px; height: 46px; }
 .sgf { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; } .sgfam { width: 7px; height: 7px; border-radius: 50%; display: block; }
 .sgd { display: flex; gap: 2px; } .sgd i { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--ember); } .sgd i.f { background: var(--ember); }
-/* Kodex (2D). */
-.cols2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }
-.kx { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; font-size: 16px; }
-.kx > div { flex: 1; min-width: 0; } .kx b { display: block; font-weight: 600; } .kx small { color: var(--dim); font-size: 15px; }
-.kx.off b { color: #7d7468; }
-.kx > span:last-child:not(.kico):not(.kset) { font-size: 14px; color: var(--dim); text-align: right; }
-.kico { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border: 1px solid var(--rarity); border-radius: 4px; background: #120d0a; }
-.kico img { width: 30px; height: 30px; object-fit: contain; } .kico.off { opacity: .25; filter: grayscale(1); }
-.kset { display: flex; gap: 2px; }
+/* Kodex: the 2D card list (`css/style.css` .box gap 14, .lbl, .cols2, .upg.kx, .kimg, .ksil, .kset). */
+.kodex { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.kodex .lbl { text-align: center; }
+.kodex .hint { font-size: 16px; margin: 0; }
+.kodex .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kx { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; padding: 12px 14px; }
+.kx .un { font-size: 20px; font-weight: 600; line-height: 1.2; }
+.kx .ud { font-size: 16px; color: var(--dim); line-height: 1.25; }
+.kx .ok { color: var(--good); }
+.kimg { width: 64px; height: 64px; flex: none; border-radius: 4px; background: radial-gradient(circle at 50% 60%, #3a2c22, #120d0a 72%); border: 1px solid var(--ring, var(--edge)); display: grid; place-items: center; overflow: hidden; color: var(--ember); }
+.kimg[style] { box-shadow: inset 0 0 0 1px var(--ring), 0 0 8px color-mix(in srgb, var(--ring) 45%, transparent); }
+.kimg > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kimg > .kgly { width: 44px; height: 44px; }
+.kdim > img, .kdim > .kgly { opacity: .25; filter: grayscale(1); }
+.ksil { position: relative; }
+.ksil > img, .ksil > .kgly { filter: brightness(0) opacity(.5); }
+.ksil > b { position: absolute; inset: 0; display: grid; place-items: center; font: 30px/1 var(--f-display); color: var(--dim); }
+/* Item icons (legendary, sets) sit inside the frame as in 2D (.kico .ico 56 of 64). */
+.kitem > img { width: 56px; height: 56px; object-fit: contain; }
+.kitem > span { font-size: 12px; color: var(--dim); }
+.kset { display: grid; grid-template-columns: repeat(3, auto); gap: 4px; }
+.kset .kimg { width: 44px; height: 44px; }
+.kset .kimg > img { width: 38px; height: 38px; }
 /* Karte tab. */
 .mapw { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 12px; height: 100%; }
 .map-svg { min-height: 0; display: grid; place-items: center; }
@@ -771,13 +785,12 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
   .mapw { grid-template-columns: minmax(0, 1fr) 140px; }
   .leg { font-size: 14px; }
   .map-svg svg { max-height: calc(100dvh - 60px); }
-  .kx { font-size: 14px; padding: 5px 8px; } .kx small { font-size: 13px; }
 }
 @media (max-width: 699px) and (orientation: portrait) {
   .inv-tab { overflow-y: auto; }
   .inv-columns { grid-template-columns: 1fr; flex: none; }
   .inv-columns > section { overflow: visible; }
-  .segen, .mapw { grid-template-columns: 1fr; }
+  .segen, .mapw, .kodex .cols2 { grid-template-columns: 1fr; }
 }
 /* ---- M13 camp: station list and the 2D station window. */
 #camp { z-index: 45; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left)); }
