@@ -9,7 +9,8 @@
 #                 position, normal, uv, joints, weights, indices}]}, every array entry being
 #                 {"offset": bytes, "length": elements} into meshes.bin
 #   meshes.bin   little-endian: position/normal float32 x3, uv float32 x2, joints uint16 x4
-#                (index into `groups`), weights float32 x4 (sum 1), indices uint32
+#                (index into `groups`), weights float32 x4 (sum 1), indices uint32, optional
+#                color float32 x3 (linear, from a point-domain colour attribute `Col`)
 # Space: glTF (meters, +Y up, front +Z), relative to the armature, bind pose.
 import json
 import os
@@ -61,6 +62,9 @@ def mesh_arrays(obj, armature):
     rot = space.to_3x3().normalized()
     normals = mesh.corner_normals
     names = [g.name for g in obj.vertex_groups]
+    col = mesh.color_attributes.get('Col')
+    if col is not None and col.domain != 'POINT':
+        raise ValueError(f'{obj.name}: colour attribute Col must be on points')
 
     variants = [[] for _ in mesh.vertices]  # per vertex: [(normal, uv, corners)]
     corner_variant = [0] * len(mesh.loops)
@@ -79,7 +83,7 @@ def mesh_arrays(obj, armature):
 
     first = []  # output index of each vertex's first variant
     used_groups = {}
-    out = {'position': [], 'normal': [], 'uv': [], 'joints': [], 'weights': []}
+    out = {'position': [], 'normal': [], 'uv': [], 'joints': [], 'weights': [], 'color': []}
     for vertex, vs in zip(mesh.vertices, variants):
         first.append(len(out['position']) // 3)
         if not vs:
@@ -95,6 +99,8 @@ def mesh_arrays(obj, armature):
             out['uv'] += [t[0], 1.0 - t[1]]  # glTF V runs down
             out['joints'] += joints
             out['weights'] += weights
+            if col is not None:
+                out['color'] += col.data[vertex.index].color[:3]
     indices = []
     for tri in mesh.loop_triangles:
         for corner in tri.loops:
@@ -131,6 +137,7 @@ def export_meshes(objects, armature, out_dir):
             'joints': put('H', a['joints']),
             'weights': put('f', a['weights']),
             'indices': put('I', a['indices']),
+            **({'color': put('f', a['color'])} if a['color'] else {}),
         })
         print(f"hero_lib: {obj.name}: {entries[-1]['count']} vertices, {entries[-1]['triangles']} triangles, {len(a['groups'])} joints")
     with open(os.path.join(out_dir, 'meshes.bin'), 'wb') as f:

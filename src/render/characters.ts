@@ -2,6 +2,7 @@
 // sim state into poses. One-shot clips (attack, dodge, hit, death) are driven by sim time, so
 // the pose always matches the hitbox and freezes with hitstop; loops run on their own clock.
 import { groundY } from './ground';
+import { HERO_DEFAULT_LOOK, HERO_PIECES } from '../data/hero-contract';
 import { HERO_LAYER } from './layers';
 import {
   AnimationClip, AnimationMixer, Bone, Group, LoopRepeat, Mesh, Quaternion,
@@ -69,10 +70,23 @@ function prepare(scene: Object3D, materials: Materials): void {
   });
 }
 
+/**
+ * Shows the default clothing and hides the body regions under it (H1 step 3). Step 4 replaces this
+ * with `HeroModel.setLook` driven by the equipment.
+ */
+function wearDefaultLook(hero: Object3D): void {
+  const hidden = new Set(HERO_DEFAULT_LOOK.flatMap((p) => HERO_PIECES[p] ?? []).map((r) => `body_${r}`));
+  hero.traverse((o) => {
+    if (o.name in HERO_PIECES) o.visible = HERO_DEFAULT_LOOK.includes(o.name);
+    else if (hidden.has(o.name)) o.visible = false;
+  });
+}
+
 export async function loadCharacters(materials: Materials): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF];
   for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf]) prepare(g.scene, materials);
+  wearDefaultLook(heroGltf.scene);
   const named = (g: GLTF): Map<string, AnimationClip> => new Map(g.animations.map((c) => [c.name, c]));
   const hipLen = (root: Object3D): number => root.getObjectByName('pelvis')?.position.length() ?? 1;
   const src = hipLen(animGltf.scene);

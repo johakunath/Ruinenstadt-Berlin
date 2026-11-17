@@ -3,7 +3,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { HERO_BUDGET, HERO_CORE_JOINTS, HERO_EXTRA_JOINTS } from '../data/hero-contract';
+import { HERO_BUDGET, HERO_CORE_JOINTS, HERO_DEFAULT_LOOK, HERO_EXTRA_JOINTS, HERO_PIECES, HERO_REGIONS } from '../data/hero-contract';
 
 interface Gltf {
   nodes: { name?: string; mesh?: number; skin?: number }[];
@@ -38,16 +38,27 @@ describe('hero.glb contract', () => {
     expect(names.length).toBeLessThanOrEqual(HERO_BUDGET.joints);
   });
 
-  it('keeps every mesh skinned and inside the triangle and draw call budget', () => {
+  it('keeps every mesh skinned with at most four joints per vertex', () => {
     expect(skinned.length).toBe(hero.nodes.filter((n) => n.mesh !== undefined).length);
-    const prims = skinned.flatMap((n) => hero.meshes[n.mesh!]!.primitives);
-    const triangles = prims.reduce((s, p) => s + hero.accessors[p.indices!]!.count / 3, 0);
-    expect(prims.length).toBeLessThanOrEqual(HERO_BUDGET.skinnedDrawCalls);
-    expect(triangles).toBeLessThanOrEqual(HERO_BUDGET.triangles);
-    for (const p of prims) {
+    for (const p of skinned.flatMap((n) => hero.meshes[n.mesh!]!.primitives)) {
       expect(Object.keys(p.attributes)).toEqual(expect.arrayContaining(['POSITION', 'NORMAL', 'JOINTS_0', 'WEIGHTS_0']));
       expect(p.attributes.JOINTS_1).toBeUndefined();
     }
+  });
+
+  it('has every body region, fixed part and piece as a named node', () => {
+    const names = new Set(skinned.map((n) => n.name));
+    for (const r of HERO_REGIONS) expect(names.has(`body_${r}`), `body_${r}`).toBe(true);
+    for (const n of ['hair', 'scarf', ...Object.keys(HERO_PIECES)]) expect(names.has(n), n).toBe(true);
+  });
+
+  it('keeps the default look inside the triangle and draw call budget', () => {
+    const hidden = new Set(HERO_DEFAULT_LOOK.flatMap((p) => HERO_PIECES[p] ?? []).map((r) => `body_${r}`));
+    const visible = skinned.filter((n) => !hidden.has(n.name!) && (!(n.name! in HERO_PIECES) || HERO_DEFAULT_LOOK.includes(n.name!)));
+    const prims = visible.flatMap((n) => hero.meshes[n.mesh!]!.primitives);
+    const triangles = prims.reduce((s, p) => s + hero.accessors[p.indices!]!.count / 3, 0);
+    expect(prims.length).toBeLessThanOrEqual(HERO_BUDGET.skinnedDrawCalls);
+    expect(triangles).toBeLessThanOrEqual(HERO_BUDGET.triangles);
   });
 
   it('stays under the file size budget', () => {

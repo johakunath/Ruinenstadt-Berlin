@@ -4,15 +4,17 @@
 //    with UVs and weights by joint name to assets-src/hero/work/ (not committed).
 // 2. This script keeps the skeleton and inverse bind matrices of the source glTF (they never pass
 //    through Blender, whose glTF import and export re-orient bones), binds Blender's meshes to it by
-//    joint name, checks the bone-name contract and dresses the hero in code (coat skirt, belt,
-//    scarf on three extra joints, hair from the hair pack).
+//    joint name, splits the body into region nodes (`body_*`, hidden under clothing), adds the
+//    clothing pieces as their own skinned nodes, checks the bone-name contract and adds the scarf
+//    on three extra joints and hair from the hair pack.
 //
 // Blender: $BLENDER, else `blender` on PATH, else the default Windows install path.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { HERO_CORE_JOINTS, HERO_EXTRA_JOINTS } from '../src/data/hero-contract.ts';
+import { HERO_REGIONS, regionOf } from '../src/data/hero-contract.ts';
 import {
-  Builder, SRC, dominantJoints, dress, finish, jointIndex, jointPos, newPrimitive, readGltf, sectionAt, slimMaterials, srgb, hash, stripAttributes,
+  Builder, SRC, dominantJoints, finish, jointIndex, jointPos, newPrimitive, readGltf, slimMaterials, srgb, hash, stripAttributes,
 } from './character-lib.mjs';
 
 const BODY = `${SRC}/body/Superhero_Female_FullBody.gltf`;
@@ -58,6 +60,7 @@ function readWork() {
     joints: view(Uint16Array, m.joints),
     weights: view(Float32Array, m.weights),
     indices: view(Uint32Array, m.indices),
+    color: m.color ? view(Float32Array, m.color) : null,
   }));
 }
 
@@ -94,12 +97,7 @@ function rebind(doc, skin, work) {
     const w = work.find((m) => m.name === node.getName());
     if (!w) throw new Error(`Blender delivered no mesh ${node.getName()}`);
     const prim = mesh.listPrimitives()[0];
-    const map = w.groups.map((g) => {
-      if (!J.has(g)) throw new Error(`${w.name}: vertex group ${g} is not a joint of the source skin`);
-      return J.get(g);
-    });
-    const joints = new Uint8Array(w.joints.length);
-    for (let i = 0; i < joints.length; i++) joints[i] = w.weights[i] > 0 ? map[w.joints[i]] : 0;
+    const joints = skinJoints(w, J);
     const shift = maxShift(prim.getAttribute('POSITION').getArray(), w.position);
     worst = Math.max(worst, shift);
     console.log(`  ${w.name}: ${w.count} vertices, ${w.triangles} triangles, largest shift ${(shift * 1000).toFixed(6)} mm`);
@@ -114,6 +112,67 @@ function rebind(doc, skin, work) {
   console.log(`hero: largest vertex shift through Blender ${(worst * 1000).toFixed(6)} mm (limit ${MAX_SHIFT * 1000} mm)`);
   if (worst > MAX_SHIFT) throw new Error('hero: the body moved in Blender');
 }
+
+/** Blender's per-mesh joint indices mapped onto the skin by name. */
+function skinJoints(w, J) {
+  const map = w.groups.map((g) => {
+    if (!J.has(g)) throw new Error(`${w.name}: vertex group ${g} is not a joint of the source skin`);
+    return J.get(g);
+  });
+  const joints = new Uint8Array(w.joints.length);
+  for (let i = 0; i < joints.length; i++) joints[i] = w.weights[i] > 0 ? map[w.joints[i]] : 0;
+  return joints;
+}
+
+/**
+ * Splits the body into one node per region (`body_head` …) that share its vertex buffers: a
+ * triangle goes to the region most of its vertices' dominant joints belong to.
+ */
+function splitBody(doc, bodyNode, skin) {
+  const prim = bodyNode.getMesh().listPrimitives()[0];
+  const dom = dominantJoints(prim, skin);
+  const idx = prim.getIndices().getArray();
+  const lists = new Map(HERO_REGIONS.map((r) => [r, []]));
+  for (let t = 0; t < idx.length; t += 3) {
+    const rs = [idx[t], idx[t + 1], idx[t + 2]].map((v) => regionOf(dom[v]));
+    const r = rs[1] === rs[2] ? rs[1] : rs[0];
+    lists.get(r).push(idx[t], idx[t + 1], idx[t + 2]);
+  }
+  const buffer = doc.getRoot().listBuffers()[0];
+  const parent = bodyNode.getParentNode();
+  for (const [region, list] of lists) {
+    const p = doc.createPrimitive().setMaterial(prim.getMaterial()).setIndices(doc.createAccessor().setType('SCALAR').setArray(new Uint16Array(list)).setBuffer(buffer));
+    for (const sem of prim.listSemantics()) p.setAttribute(sem, prim.getAttribute(sem));
+    const node = doc.createNode(`body_${region}`).setMesh(doc.createMesh(`body_${region}`).addPrimitive(p)).setSkin(skin);
+    if (parent) parent.addChild(node);
+    else doc.getRoot().listScenes()[0].addChild(node);
+    console.log(`  body_${region}: ${list.length / 3} triangles`);
+  }
+  bodyNode.dispose();
+}
+
+/** Clothing pieces from Blender: one skinned node each, vertex colours, own material. */
+function addPieces(doc, skin, work, sourceNames) {
+  const J = jointIndex(skin);
+  const buffer = doc.getRoot().listBuffers()[0];
+  const acc = (type, array) => doc.createAccessor().setType(type).setArray(array).setBuffer(buffer);
+  const scene = doc.getRoot().listScenes()[0];
+  for (const w of work) {
+    if (sourceNames.has(w.name)) continue;
+    const mat = doc.createMaterial(w.name).setRoughnessFactor(PIECE_ROUGHNESS[w.name] ?? 0.8).setMetallicFactor(0).setDoubleSided(w.name.startsWith('a_'));
+    const p = doc.createPrimitive().setMaterial(mat)
+      .setAttribute('POSITION', acc('VEC3', w.position))
+      .setAttribute('NORMAL', acc('VEC3', w.normal))
+      .setAttribute('JOINTS_0', acc('VEC4', skinJoints(w, J)))
+      .setAttribute('WEIGHTS_0', acc('VEC4', w.weights))
+      .setIndices(acc('SCALAR', w.count > 65535 ? w.indices : new Uint16Array(w.indices)));
+    if (w.color) p.setAttribute('COLOR_0', acc('VEC3', w.color));
+    scene.addChild(doc.createNode(w.name).setMesh(doc.createMesh(w.name).addPrimitive(p)).setSkin(skin));
+    console.log(`  ${w.name}: ${w.count} vertices, ${w.triangles} triangles`);
+  }
+}
+
+const PIECE_ROUGHNESS = { a_mantel: 0.8, f_stiefel: 0.65, g_handsch: 0.6 };
 
 /** Joint names and order of the finished skin against src/data/hero-contract.ts. */
 function checkContract(skin) {
@@ -130,106 +189,11 @@ async function buildHero() {
   await slimMaterials(doc, 1024);
   const root = doc.getRoot();
   const skin = root.listSkins()[0];
-  rebind(doc, skin, readWork());
-  const J = jointIndex(skin);
+  const work = readWork();
+  rebind(doc, skin, work);
   const bodyNode = root.listNodes().find((n) => n.getName() === 'Superhero_Female');
-  const mesh = bodyNode.getMesh();
-  const body = mesh.listPrimitives()[0];
-  const dom = dominantJoints(body, skin);
-
-  const COAT = '#8a5c33';
-  const TROUSERS = '#3d3a36';
-  const BOOTS = '#2a1f17';
-  const SHIRT = '#b3a283';
-  const WRAP = '#c2b08e';
-  const LEATHER = '#4a2f1a';
-  const BRASS = '#c9973a';
+  const sourceNames = new Set(root.listNodes().filter((n) => n.getMesh()).map((n) => n.getName()));
   const SCARF = '#d22c1e';
-
-  // Section radii must be sampled before the cloth grows.
-  const waistY = jointPos(skin, 'spine_01')[1] - 0.01;
-  const hemY = 0.4;
-  const rows = 7;
-  const sections = [];
-  for (let r = 0; r < rows; r++) sections.push(sectionAt(body, dom, waistY + ((hemY - waistY) * r) / (rows - 1)));
-
-  dress(doc, mesh, body, skin, (joint, x, y, z) => {
-    if (/^(Head|neck)/.test(joint) || /index|middle|ring|pinky|thumb/.test(joint)) return { color: null, grow: 0 };
-    if (/^hand/.test(joint)) return { color: LEATHER, grow: 0.004 };
-    if (/^(foot|ball)/.test(joint) || (/^calf/.test(joint) && y < 0.36)) return { color: BOOTS, grow: 0.014 };
-    if (/^(pelvis|thigh|calf)/.test(joint)) return { color: TROUSERS, grow: 0.007 };
-    if (/^lowerarm/.test(joint) && Math.abs(x) > 0.52) return { color: WRAP, grow: 0.006 };
-    // Open collar: a strip of shirt on the upper chest.
-    if (/^(spine_03|clavicle)/.test(joint) && z > 0.03 && Math.abs(x) < 0.06) return { color: SHIRT, grow: 0.008 };
-    return { color: COAT, grow: /arm/.test(joint) ? 0.012 : 0.018 };
-  });
-
-  // --- coat skirt: an open-front tube from the waist to a torn hem, weighted to pelvis and thighs.
-  const coatMat = doc.createMaterial('coat').setRoughnessFactor(0.8).setMetallicFactor(0).setDoubleSided(true);
-  const coat = new Builder(J);
-  const cols = 22;
-  const gap = 0.42; // half opening angle at the front
-  const coatColor = srgb(COAT);
-  let prevRx = 0;
-  let prevRz = 0;
-  const ring = [];
-  for (let r = 0; r < rows; r++) {
-    const t = r / (rows - 1);
-    const s = sections[r];
-    const off = 0.03 + 0.07 * t;
-    const rx = Math.max(prevRx + 0.006, s.rx + off);
-    const rz = Math.max(prevRz + 0.006, s.rz + off);
-    prevRx = rx;
-    prevRz = rz;
-    const row = [];
-    for (let c = 0; c <= cols; c++) {
-      const phi = gap + ((Math.PI * 2 - gap * 2) * c) / cols;
-      const sx = Math.sin(phi);
-      const cz = Math.cos(phi);
-      const x = sx * rx;
-      let y = waistY + (hemY - waistY) * t;
-      if (r === rows - 1) y += (hash(c, 3, 7) - 0.3) * 0.09; // torn hem
-      const z = s.cz + cz * rz;
-      const left = Math.min(1, Math.max(0, 0.5 + x / 0.16));
-      const leg = 0.78 * Math.pow(t, 0.8);
-      const shade = (0.72 + 0.4 * hash(c, r, 1)) * (1 - 0.25 * t);
-      row.push(
-        coat.vertex([x, y, z], [sx, 0.15, cz], coatColor.map((v) => v * shade), [
-          ['pelvis', (1 - leg) * (r === 0 ? 0.5 : 1)],
-          ['spine_01', r === 0 ? 0.5 : 0],
-          ['thigh_l', leg * left],
-          ['thigh_r', leg * (1 - left)],
-        ]),
-      );
-    }
-    ring.push(row);
-  }
-  for (let r = 0; r < rows - 1; r++) for (let c = 0; c < cols; c++) coat.quad(ring[r][c], ring[r + 1][c], ring[r + 1][c + 1], ring[r][c + 1]);
-  newPrimitive(doc, mesh, coatMat, coat);
-
-  // --- belt, buckle, pouches.
-  const gearMat = doc.createMaterial('gear').setRoughnessFactor(0.6).setMetallicFactor(0);
-  const gear = new Builder(J);
-  const belt = sections[0];
-  const beltW = [['pelvis', 0.5], ['spine_01', 0.5]];
-  const beltRing = [[], []];
-  for (let c = 0; c <= 24; c++) {
-    const phi = (Math.PI * 2 * c) / 24;
-    const sx = Math.sin(phi);
-    const cz = Math.cos(phi);
-    for (let k = 0; k < 2; k++) {
-      beltRing[k].push(
-        gear.vertex([sx * (belt.rx + 0.04), waistY + 0.03 - k * 0.055, belt.cz + cz * (belt.rz + 0.04)], [sx, 0, cz], srgb(LEATHER).map((v) => v * (0.8 + 0.4 * hash(c, k, 9))), beltW),
-      );
-    }
-  }
-  for (let c = 0; c < 24; c++) gear.quad(beltRing[0][c], beltRing[1][c], beltRing[1][c + 1], beltRing[0][c + 1]);
-  gear.box([0, waistY, belt.cz + belt.rz + 0.045], [0.03, 0.028, 0.008], srgb(BRASS), beltW);
-  for (const side of [-1, 1]) {
-    gear.box([side * (belt.rx + 0.06), waistY - 0.07, belt.cz - 0.01], [0.028, 0.06, 0.05], srgb('#5d3e22'), [['pelvis', 1]]);
-    gear.box([side * (belt.rx + 0.09), waistY - 0.05, belt.cz - 0.01], [0.006, 0.012, 0.012], srgb(BRASS), [['pelvis', 1]]);
-  }
-  newPrimitive(doc, mesh, gearMat, gear);
 
   // --- scarf: a ring around the neck plus a tail on two extra bones that the game animates.
   const neck = jointPos(skin, 'neck_01');
@@ -319,7 +283,7 @@ async function buildHero() {
     ]);
   }
   for (let r = 0; r < tailRows - 1; r++) scarf.quad(strip[r][0], strip[r][1], strip[r + 1][1], strip[r + 1][0]);
-  newPrimitive(doc, mesh, scarfMat, scarf);
+  newPrimitive(doc, ownNode(doc, skin, bodyNode, 'scarf'), scarfMat, scarf);
 
   // --- hair from the hair pack, re-bound to this skeleton by joint name.
   const hairDoc = await readGltf(`${SRC}/hair/Hair_Long.gltf`);
@@ -337,7 +301,7 @@ async function buildHero() {
     const v = 0.75 + 0.6 * hash(Math.round(hpos[i * 3] * 60), Math.round(hpos[i * 3 + 1] * 25), Math.round(hpos[i * 3 + 2] * 60));
     hairColors.push(hairColor[0] * v, hairColor[1] * v, hairColor[2] * v);
   }
-  newPrimitive(doc, mesh, hairMat, {
+  newPrimitive(doc, ownNode(doc, skin, bodyNode, 'hair'), hairMat, {
     indices: Array.from(hp.getIndices().getArray()),
     positions: Array.from(hpos),
     normals: Array.from(hp.getAttribute('NORMAL').getArray()),
@@ -351,8 +315,20 @@ async function buildHero() {
     if (/Hair/i.test(mat.getName())) mat.setBaseColorTexture(null).setBaseColorFactor([...hairColor, 1]);
     if (/Superhero/i.test(mat.getName())) mat.setName('skin');
   }
+  splitBody(doc, bodyNode, skin);
+  addPieces(doc, skin, work, sourceNames);
   checkContract(skin);
   await finish(doc, 'hero.glb');
+}
+
+/** A new skinned node next to the body with an empty mesh; returns the mesh. */
+function ownNode(doc, skin, bodyNode, name) {
+  const mesh = doc.createMesh(name);
+  const node = doc.createNode(name).setMesh(mesh).setSkin(skin);
+  const parent = bodyNode.getParentNode();
+  if (parent) parent.addChild(node);
+  else doc.getRoot().listScenes()[0].addChild(node);
+  return mesh;
 }
 
 /** Rotates a vector by a unit quaternion [x, y, z, w]. */
