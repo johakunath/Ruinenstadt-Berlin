@@ -1,4 +1,4 @@
-import { AnimationClip, Bone, Quaternion, QuaternionKeyframeTrack, Vector3 } from 'three';
+import { AnimationClip, AnimationMixer, Bone, Quaternion, QuaternionKeyframeTrack, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { GRAB_TIME, LeftHandIk, PALM, RELEASE_TIME, STANCE_STRETCH, easeGrip, gripRotation, reachFade, solveTwoBone } from './hand-ik';
 
@@ -171,6 +171,54 @@ describe('LeftHandIk', () => {
     const after = hand.getWorldQuaternion(new Quaternion());
     near(new Vector3(0, 0, 1).applyQuaternion(after), shaft, 1e-4);
     expect(after.angleTo(before)).toBeCloseTo(0.35, 3);
+  });
+
+  /** A clip that holds the arm still (constant keys), like a held idle key or hitstop's update(0). */
+  function heldClip(root: Bone): AnimationClip {
+    const tracks = ['upperarm_l', 'lowerarm_l', 'hand_l', 'index_01_l'].map((n) => {
+      const q = (root.getObjectByName(n) as Bone).quaternion;
+      return new QuaternionKeyframeTrack(`${n}.quaternion`, [0, 1], [q.x, q.y, q.z, q.w, q.x, q.y, q.z, q.w]);
+    });
+    return new AnimationClip('held', 1, tracks);
+  }
+
+  it('restores the clip pose before the mixer, so a partial grip does not stack frame after frame', () => {
+    const run = (restore: boolean): Vector3[] => {
+      const { root, hand } = rig();
+      const ik = new LeftHandIk(root, fist);
+      const mixer = new AnimationMixer(root);
+      mixer.clipAction(heldClip(root)).play();
+      const out: Vector3[] = [];
+      for (let i = 0; i < 6; i++) {
+        if (restore) ik.restore();
+        mixer.update(0);
+        root.updateMatrixWorld(true);
+        ik.aim(new Vector3(0.05, 1.15, 0.35), new Vector3(0, 1, 0));
+        ik.pose(0.5);
+        out.push(hand.getWorldPosition(new Vector3()));
+      }
+      return out;
+    };
+    const fixed = run(true);
+    for (const w of fixed) near(w, fixed[0] as Vector3, 1e-6);
+    // Without restore the mixer leaves the held bones alone and the hand creeps toward the grip.
+    const stacked = run(false);
+    expect((stacked[5] as Vector3).distanceTo(stacked[0] as Vector3)).toBeGreaterThan(0.01);
+  });
+
+  it('gives the clip its arm and fingers back once the grip is off', () => {
+    const { root, hand, index } = rig();
+    const clipHand = hand.quaternion.clone(), clipIndex = index.quaternion.clone();
+    const ik = new LeftHandIk(root, fist);
+    const mixer = new AnimationMixer(root);
+    mixer.clipAction(heldClip(root)).play();
+    mixer.update(0);
+    root.updateMatrixWorld(true);
+    ik.apply(new Vector3(0.05, 1.15, 0.35), new Vector3(0, 1, 0), 1);
+    ik.restore();
+    mixer.update(0);
+    expect(hand.quaternion.angleTo(clipHand)).toBeLessThan(1e-6);
+    expect(index.quaternion.angleTo(clipIndex)).toBeLessThan(1e-6);
   });
 
   it('posing at weight 0 changes nothing', () => {
