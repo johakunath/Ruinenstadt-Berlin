@@ -1,6 +1,6 @@
 # H1 Custom hero: real clothing, outfits, inventory preview [PC · Blender · Opus high; spec Fable high]
 
-Status: open. Decided and specified 2026-11-17 (Fable 5.2 high, confirmed by Johannes). Nothing is built yet. Notes are short on purpose; Opus writes final prose while building.
+Status: steps 1–5 built and merged 2026-11-17 (PRs #36–#41). Open: step 6 painted textures (Codex), step 7 measurement (Johannes), the chest shape, and more distinct equipment (Johannes: later). Decided and specified 2026-11-17 (Fable 5.2 high, confirmed by Johannes).
 
 ## Goal
 The hero keeps her body, face, skeleton and all clips (39 since step 2b), and gets real clothing instead of paint on the skin. Clothing and equipment change her look, she can be turned in the inventory tab, and the left hand holds two-handed weapons.

@@ -22,8 +22,8 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | A2 Audio follow-ups | Sonnet | done (2026-11-16), listening test open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | done (2026-11-16): `docs/tasks/l2-loot-followups.md` |
 | Pad layout as in 2D (Johannes, 2026-11-17) | Claude | done (PR #26) |
-| R1 Hero outline cost | Opus 5.5 high, Johannes measures | open: `docs/tasks/r1-outline-cost.md` |
-| H1 Custom hero: real clothing, outfits, inventory preview, left-hand grip | PC · Blender · Opus high (spec: Fable 5.2) | open, specified 2026-11-17 (option A: keep body and skeleton): `docs/tasks/h1-hero.md`, start with step 1 or 2 |
+| R1 Hero outline cost | Opus 5.5 high, Johannes measures | built 2026-11-17 (skip when nothing is in front, scissor, no full-screen copy); measurement open: `docs/tasks/r1-outline-cost.md` |
+| H1 Custom hero: real clothing, outfits, inventory preview, left-hand grip | PC · Blender · Opus high (spec: Fable 5.2) | steps 1–5 done 2026-11-17 (PRs #36–#41): left-hand IK, coat, vest, boots, sneakers, gloves, scarf, equipment swap, turnable doll; open: step 6 textures (Codex), step 7 measurement (Johannes), equipment variety (later): `docs/tasks/h1-hero.md` |
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
 

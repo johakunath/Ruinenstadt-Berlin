@@ -1,6 +1,6 @@
 // Collects static geometry per material and merges it into one mesh each, so the whole
 // courtyard costs a handful of draw calls.
-import { BoxGeometry, BufferAttribute, BufferGeometry, Matrix4, Vector3, type Material, Mesh, MeshBasicMaterial } from 'three';
+import { Box3, BoxGeometry, BufferAttribute, BufferGeometry, Matrix4, Vector3, type Material, Mesh, MeshBasicMaterial } from 'three';
 import { OCCLUDER_LAYER } from './layers';
 
 type RGB = readonly [number, number, number];
@@ -21,9 +21,13 @@ export class Batch {
 
   get indexCount(): number { return this.indices.length; }
 
-  captureOccluderFrom(first: number): void {
+  /** Captures the triangles added since `first`; `box` grows by their vertices (world space). */
+  captureOccluderFrom(first: number, box?: Box3): void {
     for (let i = first; i < this.indices.length; i++) {
-      if (!this.excludedOccluderIndices.has(i)) this.occluderIndices.push(this.indices[i]!);
+      if (this.excludedOccluderIndices.has(i)) continue;
+      const k = this.indices[i]!;
+      this.occluderIndices.push(k);
+      box?.expandByPoint(v.set(this.positions[k * 3]!, this.positions[k * 3 + 1]!, this.positions[k * 3 + 2]!));
     }
     this.excludedOccluderIndices.clear();
   }
@@ -118,9 +122,14 @@ export class BatchSet {
     this.capturing = true;
     try { build(); } finally {
       this.capturing = false;
-      for (const [material, batch] of this.map) batch.captureOccluderFrom(starts.get(material) ?? 0);
+      const box = new Box3();
+      for (const [material, batch] of this.map) batch.captureOccluderFrom(starts.get(material) ?? 0, box);
+      if (!box.isEmpty()) this.occluderBoxes.push(box);
     }
   }
+
+  /** World bounds of each captured object: the hero outline tests these before drawing anything. */
+  private readonly occluderBoxes: Box3[] = [];
 
   /** Small attachments remain visible but cannot inherit an enclosing building capture. */
   excludeOccluder(build: () => void): void {
@@ -142,6 +151,7 @@ export class BatchSet {
     const mesh = new Mesh(geometry, OCCLUDER_PLACEHOLDER);
     mesh.name = 'large-occluder-depth';
     mesh.layers.set(OCCLUDER_LAYER);
+    mesh.userData.boxes = [...this.occluderBoxes];
     return mesh;
   }
 
