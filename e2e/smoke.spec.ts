@@ -125,7 +125,9 @@ test('Köpenick: the first encounter starts, waves spawn, the map opens and paus
     s.player.x = s.player.px = e.x;
     s.player.z = s.player.pz = e.z;
   });
-  await page.waitForFunction(() => (window.__game?.sim().enemies.length ?? 0) > 0, null, { timeout: 90_000 });
+  // Sleeping lot guards exist before any fight, so wait for the encounter itself, then for its wave.
+  await page.waitForFunction(() => window.__game?.sim().run.phase === 'fight', null, { timeout: 90_000 });
+  await page.waitForFunction(() => (window.__game?.sim().enemies.some((e) => !e.guard) ?? false), null, { timeout: 90_000 });
   expect(await page.evaluate(() => window.__game!.sim().run.phase)).toBe('fight');
   await expect(page.locator('#obj-text')).toContainText('Welle 1/');
   await page.screenshot({ path: testInfo.outputPath('koepenick-fight.png'), timeout: 110_000 });
