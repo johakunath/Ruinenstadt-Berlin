@@ -1,8 +1,12 @@
 // Dev tool page: renders one clip as a strip of poses with a weapon in the hand, to pick clips and
 // place attack timing (src/data/combat.ts). Never part of the game build.
 // /tools/clip-sheet.html?clip=Punch_Cross&weapon=spear&from=0&to=1&n=8&view=side|left|front|top&ik=1
-// ik=1: left hand on the grip of two-handed weapons at full weight, as in the game (hand-ik.ts).
-import { AnimationMixer, Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
+// ik=1: left hand on the grip of two-handed weapons at full weight, as in the game (hand-ik.ts);
+// stance=1 adds the two-handed standing pose (grip height, wrist roll, stretch; TWO_HAND_STAND).
+// pack=UAL1_Standard plays a clip straight from a source pack in assets-src/ (look before importing).
+// Framing: view=left, zoom=2 (bigger panels), fov=20, aim=1.2 (look-at height), grip=0.4 (try a height).
+import { AnimationMixer, Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer, type AnimationClip, type Object3D } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { loadCharacters } from '../src/render/characters';
 import { FIST_CLIP, LeftHandIk } from '../src/render/hand-ik';
@@ -35,10 +39,21 @@ const rack = new WeaponRack(materials);
 rack.show((q.get('weapon') ?? 'pipe') as WeaponModel, (q.get('el') as 'fire' | null) ?? undefined);
 model.getObjectByName('hand_r')?.add(rack.group);
 const ik = q.get('ik') === '1' ? new LeftHandIk(model, assets.heroClips.get(FIST_CLIP)) : null;
+const stance = Number(q.get('stance') ?? 0);
 const gripPos = new Vector3(), gripDir = new Vector3();
 const mixer = new AnimationMixer(model);
 const name = q.get('clip') ?? 'Sword_Regular_A';
-const clip = assets.heroClips.get(name);
+// Clip from a source pack, hip track fitted like `fitClip` in characters.ts.
+async function packClip(pack: string): Promise<AnimationClip | undefined> {
+  const gltf = await new GLTFLoader().loadAsync(`/assets-src/${pack}.glb`);
+  const c = gltf.animations.find((a) => a.name === name)?.clone();
+  if (!c) return undefined;
+  const hip = (o: Object3D): number => o.getObjectByName('pelvis')?.position.length() ?? 1;
+  const k = hip(assets.hero) / hip(gltf.scene);
+  for (const t of c.tracks) if (t.name.endsWith('.position')) for (let i = 0; i < t.values.length; i++) t.values[i] = (t.values[i] as number) * k;
+  return c;
+}
+const clip = q.get('pack') ? await packClip(q.get('pack') as string) : assets.heroClips.get(name);
 if (!clip) throw new Error(`No clip ${name}: ${[...assets.heroClips.keys()].join(', ')}`);
 const action = mixer.clipAction(clip);
 action.play();
@@ -54,7 +69,7 @@ for (let i = 0; i < n; i++) {
   mixer.update(0);
   if (ik) {
     model.updateMatrixWorld(true);
-    if (rack.leftGrip(gripPos, gripDir)) console.log(`ik ${action.time.toFixed(2)} s: weight ${ik.apply(gripPos, gripDir, 1).toFixed(2)}`);
+    if (rack.leftGrip(gripPos, gripDir, stance)) console.log(`ik ${action.time.toFixed(2)} s: weight ${ik.apply(gripPos, gripDir, 1, stance).toFixed(2)}`);
   }
   renderer.setViewport(i * W, 0, W, H);
   renderer.setScissor(i * W, 0, W, H);

@@ -1,6 +1,6 @@
 import { AnimationClip, Bone, Quaternion, QuaternionKeyframeTrack, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { LeftHandIk, PALM, gripRotation, reachFade, solveTwoBone } from './hand-ik';
+import { GRAB_TIME, LeftHandIk, PALM, RELEASE_TIME, STANCE_STRETCH, easeGrip, gripRotation, reachFade, solveTwoBone } from './hand-ik';
 
 const near = (a: Vector3, b: Vector3, eps = 1e-5): void => expect(a.distanceTo(b)).toBeLessThan(eps);
 
@@ -65,6 +65,27 @@ describe('gripRotation', () => {
   });
 });
 
+describe('easeGrip', () => {
+  const dt = 1 / 60;
+
+  it('grabs and lets go over their times, never faster than one frame step', () => {
+    let w = 0;
+    let frames = 0;
+    while (w < 1) { const n = easeGrip(w, 1, false, dt); expect(n - w).toBeLessThanOrEqual(dt / GRAB_TIME + 1e-9); w = n; frames++; }
+    expect(frames).toBe(Math.ceil(GRAB_TIME / dt - 1e-9));
+    frames = 0;
+    // The shaft leaves reach at once (reach fade 1 → 0): the hand still eases off.
+    while (w > 0) { const n = easeGrip(w, 0, false, dt); expect(w - n).toBeLessThanOrEqual(dt / RELEASE_TIME + 1e-9); w = n; frames++; }
+    expect(frames).toBe(Math.ceil(RELEASE_TIME / dt - 1e-9));
+  });
+
+  it('does not grab anew during wind-up and active frames, but may keep holding or let go', () => {
+    expect(easeGrip(0.2, 1, true, dt)).toBe(0.2);
+    expect(easeGrip(1, 1, true, dt)).toBe(1);
+    expect(easeGrip(1, 0.5, true, dt)).toBeLessThan(1);
+  });
+});
+
 describe('reachFade', () => {
   it('is 1 below 90 % of reach, 0 at full reach, linear between', () => {
     expect(reachFade(0.5)).toBe(1);
@@ -72,6 +93,12 @@ describe('reachFade', () => {
     expect(reachFade(0.95)).toBeCloseTo(0.5, 6);
     expect(reachFade(1)).toBe(0);
     expect(reachFade(1.3)).toBe(0);
+  });
+
+  it('moves out with the standing stretch', () => {
+    expect(reachFade(1, STANCE_STRETCH)).toBe(1);
+    expect(reachFade(1 + STANCE_STRETCH)).toBe(0);
+    expect(reachFade(1 + STANCE_STRETCH, STANCE_STRETCH)).toBe(0);
   });
 });
 
@@ -131,5 +158,28 @@ describe('LeftHandIk', () => {
     const half = hand.getWorldPosition(new Vector3());
     expect(half.distanceTo(rest)).toBeGreaterThan(0.05);
     expect(hand.localToWorld(PALM.clone()).distanceTo(grip)).toBeGreaterThan(0.05);
+  });
+
+  it('keeps the clip wrist roll in the standing stance (smallest turn onto the shaft)', () => {
+    const { root, hand } = rig();
+    const ik = new LeftHandIk(root, fist);
+    const before = hand.getWorldQuaternion(new Quaternion());
+    // Shaft tilted 20° away from the hand's own +Z: the hand turns about 20°, no roll around the shaft.
+    const shaft = new Vector3(0, Math.sin(0.35), Math.cos(0.35));
+    expect(ik.apply(new Vector3(0.55, 1.35, 0.1), shaft, 1, 1)).toBe(1);
+    root.updateMatrixWorld(true);
+    const after = hand.getWorldQuaternion(new Quaternion());
+    near(new Vector3(0, 0, 1).applyQuaternion(after), shaft, 1e-4);
+    expect(after.angleTo(before)).toBeCloseTo(0.35, 3);
+  });
+
+  it('posing at weight 0 changes nothing', () => {
+    const { root, hand } = rig();
+    const ik = new LeftHandIk(root, fist);
+    const before = hand.matrixWorld.clone();
+    ik.aim(new Vector3(0.05, 1.15, 0.35), new Vector3(0, 1, 0));
+    ik.pose(0);
+    root.updateMatrixWorld(true);
+    expect(hand.matrixWorld.equals(before)).toBe(true);
   });
 });

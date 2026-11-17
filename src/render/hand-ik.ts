@@ -8,6 +8,8 @@ import { Matrix4, Quaternion, Vector3, type AnimationClip, type Object3D } from 
 export const PALM = new Vector3(0, 0.09, 0.03);
 /** The weight fades to 0 between these fractions of full arm reach. */
 export const REACH_FADE = [0.9, 1] as const;
+/** At stance 1 the fade window moves out by this much: the arm may stretch straight for the last centimetres. */
+export const STANCE_STRETCH = 0.3;
 /** Clip whose left fingers form the fist (equal to the right hand's grip in the sword clips). */
 export const FIST_CLIP = 'Punch_Cross';
 
@@ -66,10 +68,10 @@ export function gripRotation(shaft: Vector3, toShoulder: Vector3, out: Quaternio
   return out.setFromRotationMatrix(m.makeBasis(x, y, z));
 }
 
-/** Reach fade: 1 below 90 % of full reach, 0 at full reach. */
-export function reachFade(ratio: number): number {
+/** Reach fade: 1 below 90 % of full reach, 0 at full reach; `stretch` moves the window out. */
+export function reachFade(ratio: number, stretch = 0): number {
   const [a, b] = REACH_FADE;
-  return Math.min(1, Math.max(0, (b - ratio) / (b - a)));
+  return Math.min(1, Math.max(0, (b + stretch - ratio) / (b - a)));
 }
 
 const S = new Vector3();
@@ -99,12 +101,29 @@ function setWorldQuaternion(bone: Object3D, world: Quaternion): void {
   bone.updateMatrixWorld(true);
 }
 
-/** The left-arm solve for one skinned hero. */
+/** Seconds to grab the shaft and to let go of it. */
+export const GRAB_TIME = 0.12;
+export const RELEASE_TIME = 0.06;
+
+/**
+ * Eases the left-hand weight toward `want` (state × reach fade): grabs over `GRAB_TIME`, lets go over
+ * `RELEASE_TIME`, never jumps. `swinging` (an attack's wind-up and active frames) blocks a new grab.
+ */
+export function easeGrip(w: number, want: number, swinging: boolean, dt: number): number {
+  if (want > w && !swinging) return Math.min(want, w + dt / GRAB_TIME);
+  if (want < w) return Math.max(want, w - dt / RELEASE_TIME);
+  return w;
+}
+
+/** The left-arm solve for one skinned hero: `aim` once per frame after the clips, then `pose`. */
 export class LeftHandIk {
   private readonly upper: Object3D;
   private readonly lower: Object3D;
   private readonly hand: Object3D;
   private readonly fingers: Array<{ bone: Object3D; fist: Quaternion }> = [];
+  /** Wrist target and hand rotation from the last `aim`. */
+  private readonly target = new Vector3();
+  private readonly turnTo = new Quaternion();
 
   constructor(root: Object3D, fist?: AnimationClip) {
     const get = (n: string): Object3D => {
@@ -128,33 +147,53 @@ export class LeftHandIk {
   }
 
   /**
-   * Puts the left hand on the grip. `grip` is the world point on the shaft, `shaft` the world direction
-   * from the grip toward the weapon's head. World matrices must be current (the caller updates them
-   * after the clips). Returns the weight actually used after the reach fade.
+   * Finds where the hand goes this frame. `grip` is the world point on the shaft, `shaft` the world
+   * direction from the grip toward the weapon's head. World matrices must be current (the caller
+   * updates them after the clips). `stance` (0..1) is the two-handed standing pose: the hand keeps the
+   * clip's wrist roll instead of turning the wrist to the shoulder side (no twist where the clip already
+   * holds), and the arm may stretch. Returns the reach fade (0..1); the caller eases its weight with it.
    */
-  apply(grip: Vector3, shaft: Vector3, weight: number): number {
-    if (weight <= 0) return 0;
+  aim(grip: Vector3, shaft: Vector3, stance = 0): number {
     this.upper.getWorldPosition(S);
     this.lower.getWorldPosition(E);
     this.hand.getWorldPosition(W);
     this.hand.getWorldQuaternion(qHand);
     gripRotation(shaft, T.subVectors(S, grip), qGrip);
+    if (stance > 0) {
+      // Smallest turn that lays the clip's hand along the shaft.
+      qa.setFromUnitVectors(v1.set(0, 0, 1).applyQuaternion(qHand), v2.copy(shaft).normalize()).multiply(qHand);
+      qGrip.slerp(qa, stance);
+    }
+    this.turnTo.copy(qGrip);
     // Wrist target: the grip minus the fist offset in the turned hand.
     T.copy(PALM).applyQuaternion(qGrip);
-    T.subVectors(grip, T);
-    const reach = S.distanceTo(T) / (S.distanceTo(E) + E.distanceTo(W));
-    const w = weight * reachFade(reach);
-    if (w <= 0) return 0;
-    T.lerpVectors(W, T, w);
+    this.target.subVectors(grip, T);
+    return reachFade(S.distanceTo(this.target) / (S.distanceTo(E) + E.distanceTo(W)), STANCE_STRETCH * stance);
+  }
+
+  /** Moves the arm, hand and fingers toward the last `aim` by `weight` (0..1). Out of reach the arm points at it. */
+  pose(weight: number): void {
+    if (weight <= 0) return;
+    this.upper.getWorldPosition(S);
+    this.lower.getWorldPosition(E);
+    this.hand.getWorldPosition(W);
+    this.hand.getWorldQuaternion(qHand);
+    T.lerpVectors(W, this.target, weight);
     // Straight clip arm: bend the elbow down and back, away from the body.
     POLE.set(0, -1, 0);
     solveTwoBone(S, E, W, T, POLE, E2, W2);
     turn(this.upper, v1.subVectors(E, S), v2.subVectors(E2, S));
     this.hand.getWorldPosition(W);
     turn(this.lower, v1.subVectors(W, E2), v2.subVectors(W2, E2));
-    setWorldQuaternion(this.hand, qHand.slerp(qGrip, w));
-    for (const f of this.fingers) f.bone.quaternion.slerp(f.fist, w);
+    setWorldQuaternion(this.hand, qHand.slerp(this.turnTo, weight));
+    for (const f of this.fingers) f.bone.quaternion.slerp(f.fist, weight);
     if (this.fingers.length) this.hand.updateMatrixWorld(true);
+  }
+
+  /** `aim` and `pose` in one call at full weight times the reach fade (tools, tests). Returns the weight used. */
+  apply(grip: Vector3, shaft: Vector3, weight: number, stance = 0): number {
+    const w = weight * this.aim(grip, shaft, stance);
+    this.pose(w);
     return w;
   }
 }

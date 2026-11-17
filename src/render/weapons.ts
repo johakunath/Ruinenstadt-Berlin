@@ -18,6 +18,14 @@ export type WeaponModel = WeaponKindId | 'pipe';
  */
 export const LEFT_GRIP: Readonly<Partial<Record<WeaponModel, number>>> = { hammer: 0.48, spear: 0.5 };
 
+/**
+ * Two-handed standing pose (H1 2b): a pack clip whose left hand already sits at the handle, and the
+ * left grip height there. The spear keeps the one-handed `Sword_Idle` (Johannes, 2026-11-17).
+ */
+export const TWO_HAND_STAND: Readonly<Partial<Record<WeaponModel, { clip: string; grip: number }>>> = {
+  hammer: { clip: 'Pistol_Idle_Loop', grip: -0.08 },
+};
+
 const UP = new Vector3(0, 1, 0);
 const gq = new Quaternion();
 
@@ -177,12 +185,13 @@ export class WeaponRack {
 
   /**
    * World position of the left grip and the shaft direction toward the head. Needs current world
-   * matrices. Returns false for one-handed models.
+   * matrices. `stance` (0..1) slides the grip to the standing pose's height. False for one-handed models.
    */
-  leftGrip(pos: Vector3, shaft: Vector3): boolean {
+  leftGrip(pos: Vector3, shaft: Vector3, stance = 0): boolean {
     const h = this.shown === null ? undefined : LEFT_GRIP[this.shown];
     if (h === undefined) return false;
-    this.group.localToWorld(pos.set(0, h, 0));
+    const stand = this.shown === null ? undefined : TWO_HAND_STAND[this.shown];
+    this.group.localToWorld(pos.set(0, stand ? h + (stand.grip - h) * stance : h, 0));
     shaft.copy(UP).applyQuaternion(this.group.getWorldQuaternion(gq));
     return true;
   }

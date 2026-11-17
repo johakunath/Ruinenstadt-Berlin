@@ -98,7 +98,7 @@ Goal: red scarf, long brown leather coat, harness, pouches, heavy boots; swappab
 | Base body and rig | Quaternius `Superhero_Female_FullBody` on the UAL skeleton (CC0), unchanged | The skeleton is copied from the source file and never passes through Blender |
 | Clothing | Modular meshes built by Blender scripts, bound to the skeleton by joint name (coat, scarf, boots, gloves, district pieces) | Swap = show or hide meshes; a visible piece hides the body region under it |
 | Weapons | Code-built models on `hand_r` (`src/render/weapons.ts`); left hand by IK | Same as the item system |
-| Animation | The 38 UAL clips in `anims.glb`, unchanged | Extra joints (scarf, coat) move by springs in code |
+| Animation | The 39 UAL clips in `anims.glb` (`Pistol_Idle_Loop` added for the hammer stance, H1 2b) | Extra joints (scarf, coat) move by springs in code |
 | Production | Claude on the PC, headless `blender -b --python tools/blender/...`; scripts committed, no `.blend` in git | Verified on the PC with Blender 5.3 (2026-11-17). Not verified: Blender in the cloud environment |
 
 ## Gates

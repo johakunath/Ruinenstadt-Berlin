@@ -3,7 +3,7 @@
 Status: open. Decided and specified 2026-11-17 (Fable 5.2 high, confirmed by Johannes). Nothing is built yet. Notes are short on purpose; Opus writes final prose while building.
 
 ## Goal
-The hero keeps her body, face, skeleton and all 38 clips, and gets real clothing instead of paint on the skin. Clothing and equipment change her look, she can be turned in the inventory tab, and the left hand holds two-handed weapons.
+The hero keeps her body, face, skeleton and all clips (39 since step 2b), and gets real clothing instead of paint on the skin. Clothing and equipment change her look, she can be turned in the inventory tab, and the left hand holds two-handed weapons.
 
 ## Decision: option A (Johannes, 2026-11-17)
 Stay on Quaternius `Superhero_Female_FullBody` and the UAL skeleton. Build modular clothing in Blender, skinned to that skeleton. No new body, no retargeting, no "2 test heroes" round.
@@ -206,6 +206,13 @@ Pictures (probe renders, `Idle_FoldArms_Loop` at grip 0.22): `docs/proof/h1-hero
 - **Fallback 2c: carry pose in code [Claude · Opus high].** Body stays on `Sword_Idle`. In standing idle only, the weapon is placed relative to `spine_03` (grip point and shaft direction per model, about 6 numbers), the right arm gets the same two-bone solve plus the hand rotation, then the existing left solve runs. Weight is 0 in attack, cast, dodge and death and eases out in at most 0.08 s, so it is 0 before the first active frame (shortest wind-up from standing 0.09 s; the dash strike follows a dodge). Same done-when as 2b. More code and one or two look rounds; not started unless Johannes asks.
 
 **Johannes, 2026-11-17 (after the pictures):** the upright carry is rejected (left arm too twisted). The spear keeps today's standing pose with one hand (`Sword_Idle`). For the hammer, the candidate is `Pistol_Idle_Loop` (UAL1). Its left hand already sits at the handle, so the IK only moves it 7 cm, to grip 0.08 below the right hand. The arm stays untwisted when the solve keeps the clip's wrist roll (trial `keepRoll`) and may stretch the nearly straight arm (clip at 0.91 of reach). Pictures: `docs/proof/h1-hero/hammer-stance-pistol-*.png`. Waiting for his verdict; 2b changes accordingly.
+
+### Step 2b handover (Opus 5.5, 2026-11-17)
+- Built: `Pistol_Idle_Loop` in `CLIPS` (`anims.glb` 39 clips, +16 KB; `hero.glb` and `zombie.glb` unchanged). `TWO_HAND_STAND` in `weapons.ts` (hammer: that clip, left grip −0.08, just below the right hand); `standClip()` in `characters.ts` (for the step 5 preview too). The spear keeps `Sword_Idle`.
+- `hand-ik.ts`: `aim` (target and reach fade) and `pose` (weight) are separate now. A stance factor (0..1, eased over 0.15 s) slides the grip height, keeps the clip's wrist roll (no twist) and moves the reach fade out by 0.3. That lets the nearly straight arm of the pistol pose stretch the last 7 cm. `easeGrip`: grab 0.12 s, release 0.06 s, no new grab during an attack's wind-up and active frames. Tests: 15 in `hand-ik.test.ts`, plus `stand-clip.test.ts`.
+- Checked: the hammer standing loop holds at weight 1.00 in every `clip-sheet` frame (`2b-hammer-stand.png`). `clip-swing.mjs` output is byte-identical and `combat.ts` is untouched. In-game 60 Hz captures of both attack chains from standing show no arm jump (`2b-hammer-game-chain.png`, `2b-spear-game-chain.png`; one frame per sim step in the first 12 steps). `npm run check`: `director.test.ts` and `koepenick.test.ts` hit the 5 s timeout while the PC was busy, then passed on rerun.
+- `clip-sheet`: `stance=1`, `pack=UAL1_Standard` (plays a clip from `assets-src/` before importing it).
+- Not done: Johannes' look in the game (standing, starting to run, first hit, hammer and spear). The optional two-handed guard (`Idle_Lantern_Loop`) and fallback 2c were not built.
 
 **Not done here:** real two-handed attack clips. Own task, only if Johannes misses them after seeing 2b: needs a clip source on the UAL skeleton (not checked) and new timing, arcs and smear for hammer and spear.
 

@@ -18,8 +18,8 @@ import { PLAYER, type AttackDef } from '../data/combat';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Cast, type Player } from '../sim/types';
 import type { ElementId, WeaponKindId } from '../data/items';
-import { WeaponRack, weaponModel } from './weapons';
-import { FIST_CLIP, LeftHandIk } from './hand-ik';
+import { TWO_HAND_STAND, WeaponRack, weaponModel, type WeaponModel } from './weapons';
+import { FIST_CLIP, LeftHandIk, easeGrip } from './hand-ik';
 import type { LitMaterial, Materials } from './materials';
 
 export interface CharacterAssets {
@@ -202,8 +202,8 @@ const ROLL_TO = 0.95;
 /** Death01 starts with a long stagger; skip into it. */
 const DEATH_FROM = 0.35;
 const RUN_CLIP_SPEED = 6.2;
-/** Left-hand IK weight eases over this many seconds. */
-const IK_EASE = 0.08;
+/** Left hand (H1): seconds to slide between the standing pose and the rest. */
+const STANCE_EASE = 0.15;
 
 const q = new Quaternion();
 const X = new Vector3(1, 0, 0);
@@ -228,6 +228,12 @@ const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; t
   gully: { clip: 'Sword_Block', from: 0, at: 0, to: 0 },
 };
 
+/** Standing clip for a weapon model: two-handed models with their own pose, else the one-handed guard. */
+export function standClip(model: WeaponModel, guard: boolean): string {
+  if (guard) return 'Idle_Shield_Loop';
+  return TWO_HAND_STAND[model]?.clip ?? 'Sword_Idle';
+}
+
 /** Extra state the hero view needs beyond the player (weapon, power timers). */
 export interface HeroPose {
   kind: WeaponKindId;
@@ -245,6 +251,8 @@ export class HeroView {
   private readonly anim: Animator;
   private readonly ik: LeftHandIk;
   private ikW = 0;
+  /** 0..1: how far the left hand is in the two-handed standing pose (grip height, wrist roll, stretch). */
+  private stance = 0;
   private readonly scarf: Array<{ bone: Bone; rest: Quaternion; back: number; side: number }> = [];
   private prevX = 0;
   private prevZ = 0;
@@ -270,7 +278,9 @@ export class HeroView {
     const z = lerp(p.pz, p.z, alpha);
     this.root.position.set(x, groundY(x, z) + pose.leap, z);
     this.root.rotation.y = lerpAngle(p.pfacing, p.facing, alpha);
-    this.rack.show(weaponModel(pose.kind, pose.base), pose.element);
+    const model = weaponModel(pose.kind, pose.base);
+    this.rack.show(model, pose.element);
+    let standing = false;
     const t = p.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;
     // Kreissäge: the whole body turns, blade held out.
@@ -298,20 +308,44 @@ export class HeroView {
     } else {
       const speed = Math.hypot(p.vx, p.vz);
       if (speed > 0.8) a.loop(pose.guard > 0 ? 'Jog_Fwd_Loop' : 'Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED) * (pose.guard > 0 ? 1.6 : 1));
-      else a.loop(pose.guard > 0 ? 'Idle_Shield_Loop' : 'Sword_Idle', 0.16);
+      else {
+        const clip = standClip(model, pose.guard > 0);
+        standing = clip === TWO_HAND_STAND[model]?.clip;
+        a.loop(clip, 0.16);
+      }
     }
     const flinch = p.state !== 'dead' && p.hurtT < 0.3 ? 0.75 * (1 - p.hurtT / 0.3) : 0;
     a.mix('Hit_Chest', p.hurtT, flinch);
     a.update(frozen ? 0 : dt);
-    // Left hand on the shaft of two-handed weapons; off while the left arm does its own thing.
-    const throwing = p.state === 'cast' && p.cast !== null && CAST_CLIPS[p.cast.id].clip === 'OverhandThrow';
-    const ikWant = this.rack.twoHanded && p.state !== 'dodge' && p.state !== 'dead' && !throwing && flinch === 0 ? 1 : 0;
-    if (!frozen) this.ikW = ikWant > this.ikW ? Math.min(ikWant, this.ikW + dt / IK_EASE) : Math.max(ikWant, this.ikW - dt / IK_EASE);
-    if (this.ikW > 0) {
-      this.root.updateMatrixWorld(true);
-      if (this.rack.leftGrip(gripPos, gripDir)) this.ik.apply(gripPos, gripDir, this.ikW);
-    }
+    this.leftHand(p, t, dt, frozen, flinch, standing);
     this.swayScarf(x, z, dt);
+  }
+
+  /**
+   * Left hand on the shaft of two-handed weapons; off while the left arm does its own thing or the
+   * shaft is out of reach. The weight eases in time (grab, release), so reach changes never jump, and
+   * the hand never grabs anew during an attack's wind-up and active frames.
+   */
+  private leftHand(p: Player, t: number, dt: number, frozen: boolean, flinch: number, standing: boolean): void {
+    if (!this.rack.twoHanded) {
+      this.ikW = 0;
+      this.stance = standing ? 1 : 0;
+      return;
+    }
+    if (!frozen) {
+      const s = standing ? 1 : 0;
+      this.stance = s > this.stance ? Math.min(s, this.stance + dt / STANCE_EASE) : Math.max(s, this.stance - dt / STANCE_EASE);
+    }
+    this.root.updateMatrixWorld(true);
+    if (!this.rack.leftGrip(gripPos, gripDir, this.stance)) return;
+    const throwing = p.state === 'cast' && p.cast !== null && CAST_CLIPS[p.cast.id].clip === 'OverhandThrow';
+    const free = p.state !== 'dodge' && p.state !== 'dead' && !throwing && flinch === 0;
+    // Aim every frame, also while letting go, so the hand follows the shaft on its way off.
+    const reach = this.ik.aim(gripPos, gripDir, this.stance);
+    const want = free ? reach : 0;
+    const swinging = p.state === 'attack' && p.attack !== null && t < p.attack.windup + p.attack.active;
+    if (!frozen) this.ikW = easeGrip(this.ikW, want, swinging, dt);
+    this.ik.pose(this.ikW);
   }
 
   /** The scarf tail trails behind movement on a soft spring. */
