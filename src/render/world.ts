@@ -17,6 +17,9 @@ import {
   paintShopWindow, paintSign, paintStucco, paintVan, paintWindows, paintWood, type PaintOptions,
 } from './paint';
 import { buildBin, buildCrate } from './breakable-parts';
+import { buildUrbanProp } from './props-urban';
+import { buildMarketProp } from './props-market';
+import { buildPlantProp } from './vegetation';
 
 export const GROUND_H = 4.3;
 export const FLOOR_H = 3.5;
@@ -478,7 +481,7 @@ function buildYardWall(b: Builder, f: Facade): void {
 
 // ---------------------------------------------------------------- props
 
-function at(p: Prop, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0): Matrix4 {
+export function at(p: Prop, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0): Matrix4 {
   const m = new Matrix4().makeRotationY(p.rot).setPosition(p.x, 0, p.z);
   const local = new Matrix4().makeRotationY(ry);
   if (rx) local.multiply(new Matrix4().makeRotationX(rx));
@@ -792,6 +795,9 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       for (const x of [-0.7, 0.7]) b.box(m.iron, at(p, x, 0.23, 0), 0.07, 0.46, 0.45);
       break;
     }
+    default:
+      // M11c lot type props live in their own files.
+      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng)) buildPlantProp(b, p, rng);
   }
 }
 
