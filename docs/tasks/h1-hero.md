@@ -158,5 +158,12 @@ A new body or head, new clips or retargeting, weapons as GLB files (they stay co
 - Reused from 2D: the item-to-look rule (`heroKeys`), the piece lists and the short and long outfit split.
 - Not checked: the Quaternius outfit kit, the IK grip heights, the frame cost on the Tab S9.
 
+## Handover step 1 (Opus 5.5, 2026-11-17)
+- Built: `tools/blender/hero_lib.py` (import; export in a small work format, `assets-src/hero/work/meshes.json` + `.bin`, top 4 normalized weights by vertex group name, glTF axes), `tools/blender/hero_build.py` (step 1: source body in, meshes out unchanged; saves `hero.blend` in the work folder), `tools/build-hero.mjs` (`npm run assets:hero`: finds Blender, runs it, `rebind` swaps each source mesh's vertices, normals, UVs, weights and indices for Blender's by mesh and joint name, keeps the source nodes, skin and inverse bind matrices, checks the shift and the joint contract, then runs the unchanged dressing code), `tools/character-lib.mjs` (helpers shared with `build-assets.mjs`, which now builds zombie and clips only), `src/data/hero-contract.ts` (joint lists and budget, also imported by the build), `src/render/hero-contract.test.ts`, `tools/image-diff.mjs`.
+- Results: largest vertex shift 0.00062 mm (limit 0.1). Joints equal the contract (65 core + 3 scarf). Vertex order, joints, weights, UVs and triangles are identical; normals differ by at most 0.0025 (Blender stores custom normals as 16-bit). Strips in `docs/proof/h1-hero/step1/` (`before-*` from the old file, `after-*` from the rebuild) differ in 0.006 to 0.009 % of pixels; only 0.001 % of `Sword_Heavy_Combo` differs by more than 8/255. The rebuild is byte-stable; `zombie.glb` and `anims.glb` stay byte-identical. Build time about 5 s.
+- The committed `hero.glb` is the rebuilt one (1,037 KB, 18,606 triangles, 8 primitives).
+- For step 3: keep `merge_vertices=False` on import so body faces keep their glTF vertex order. `rebind` matches Blender objects to source mesh nodes by name and replaces their geometry; new pieces need a path that adds nodes. `hero_lib.mesh_arrays` already splits vertices per normal and UV for modeled meshes.
+- Reused: hair rebinding by joint name from `build-assets.mjs`; the 2D repo has nothing for this step.
+
 ## Questions
 None open.
