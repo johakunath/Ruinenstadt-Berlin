@@ -179,7 +179,8 @@ class Smear {
     for (const { kind, def: a } of allWeaponAttacks()) {
       if (a.style === 'throw') continue;
       const thrust = a.style === 'thrust';
-      this.geos.set(`${kind}:${a.id}`, { geo: sectorGeometry(a.reach * (thrust ? 0.18 : 0.42), a.reach, a.from - (thrust ? a.width : 0), a.to + (thrust ? a.width : 0), 28), reach: a.reach });
+      // C1: the thrust's leading edge runs from → to like the spear (`HeroView.thrust`), so the lance stays on the tip.
+      this.geos.set(`${kind}:${a.id}`, { geo: sectorGeometry(a.reach * (thrust ? 0.18 : 0.42), a.reach, a.from, a.to, 28), reach: a.reach });
     }
     this.geos.set('round', { geo: sectorGeometry(1.1, 2.6, -Math.PI, Math.PI, 56), reach: 2.6 });
     // Fegestoß (spear Umbau): a wide sweep in either direction.
@@ -220,7 +221,7 @@ class Smear {
     this.mesh.visible = false;
   }
 
-  update(p: Player, alpha: number, dt: number, frozen: boolean, kind: WeaponKindId, frenzy: boolean): void {
+  update(p: Player, alpha: number, dt: number, frozen: boolean, kind: WeaponKindId, frenzy: boolean, tipY = NaN): void {
     const a: AttackDef | null = p.state === 'attack' && p.attack?.style !== 'throw' ? p.attack : null;
     // Säbeltanz swings red, crits and finishers white-hot.
     (this.material.uniforms.tint!.value as Color).setRGB(1, frenzy ? 0.25 : p.critical ? 0.86 : 0.72, frenzy ? 0.2 : p.critical ? 0.6 : 0.4);
@@ -235,7 +236,9 @@ class Smear {
         this.mesh.scale.setScalar(a.reach / g.reach);
         const sx = lerp(p.px, p.x, alpha);
         const sz = lerp(p.pz, p.z, alpha);
-        this.mesh.position.set(sx, groundY(sx, sz) + (a.style === 'smash' ? 0.12 : a.style === 'thrust' ? 1.2 : 1.05), sz);
+        // A thrust lance runs at the height of the weapon tip (C1: the low Melee_Hook lunge, the chest-high jab).
+        const thrustY = Number.isFinite(tipY) ? tipY : groundY(sx, sz) + 1.2;
+        this.mesh.position.set(sx, a.style === 'thrust' ? thrustY : groundY(sx, sz) + (a.style === 'smash' ? 0.12 : 1.05), sz);
         this.mesh.rotation.set(0, lerpAngle(p.pfacing, p.facing, alpha), 0);
         // Slashes lean with the swing direction; the smash fans out flat on the ground.
         this.mesh.rotateZ(a.style === 'slash' && a.to - a.from < 6 ? Math.sign(a.to - a.from) * 0.2 : 0);
@@ -462,7 +465,7 @@ export class Fx {
     }
   }
 
-  update(sim: Sim, alpha: number, dt: number, frozen: boolean, pixelScale: number, heroY = 0): void {
+  update(sim: Sim, alpha: number, dt: number, frozen: boolean, pixelScale: number, heroY = 0, tipY = NaN): void {
     const hx = lerp(sim.player.px, sim.player.x, alpha);
     const hz = lerp(sim.player.pz, sim.player.z, alpha);
     this.abilities.update(sim, alpha, dt, hx, heroY, hz);
@@ -499,7 +502,7 @@ export class Fx {
     }
     this.glow.update(dt, this.time, pixelScale);
     this.dust.update(dt, this.time, pixelScale);
-    this.smear.update(sim.player, alpha, dt, frozen, sim.stats.kind, sim.abilities.frenzy > 0);
+    this.smear.update(sim.player, alpha, dt, frozen, sim.stats.kind, sim.abilities.frenzy > 0, tipY);
     this.telegraphs.update(sim, alpha);
     for (const f of this.flashes) {
       if (!f.sprite.visible) continue;

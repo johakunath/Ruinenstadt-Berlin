@@ -26,8 +26,37 @@ export const TWO_HAND_STAND: Readonly<Partial<Record<WeaponModel, { clip: string
   hammer: { clip: 'Pistol_Idle_Loop', grip: -0.08 },
 };
 
+/**
+ * Thrust grip (C1): no pack clip holds a weapon along the facing (`Punch_Cross` and `Melee_Hook` point
+ * the hand bone's +Z to the hero's left), so during `thrust` attacks the rack turns the model in the
+ * right hand until the shaft points along the attack direction. `slide`: meters the shaft slides forward
+ * through the hand (tip toward the hit reach); `grip`: left-hand height on the shaft (model +Y, behind
+ * the right hand: rear hand of a two-handed jab); `pitch`: shaft angle below level; `tip`: tip height on +Y.
+ */
+export const THRUST: Readonly<Partial<Record<WeaponModel, { slide: number; grip: number; pitch: number; tip: number }>>> = {
+  spear: { slide: 0.2, grip: -0.5, pitch: 4 * (Math.PI / 180), tip: 1.81 },
+};
+
+/**
+ * Thrust weight (0..1) at clip time `ct` of a thrust attack: rises over the wind-up
+ * (`clipStart` → `clipSwing`), holds through the active frames and `THRUST_HOLD` s after, then lets go
+ * over `THRUST_RELEASE` s of clip while the clip carries the hand back to the guard.
+ */
+export const THRUST_HOLD = 0.12;
+export const THRUST_RELEASE = 0.3;
+export function thrustWeight(a: { clipStart: number; clipSwing: number; clipHit: number }, ct: number): number {
+  const s = (x: number): number => { const k = Math.min(1, Math.max(0, x)); return k * k * (3 - 2 * k); };
+  if (ct <= a.clipSwing) return s((ct - a.clipStart) / Math.max(1e-3, a.clipSwing - a.clipStart));
+  return 1 - s((ct - a.clipHit - THRUST_HOLD) / THRUST_RELEASE);
+}
+
 const UP = new Vector3(0, 1, 0);
 const gq = new Quaternion();
+const gq2 = new Quaternion();
+const gq3 = new Quaternion();
+const gv = new Vector3();
+const BASE_POS = new Vector3(0, 0.09, 0.03);
+const BASE_ROT = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 2);
 
 const ELEMENT_GLOW: Record<ElementId, number> = { fire: 0xff6a2a, acid: 0x97c459, shock: 0x7dd3ff };
 
@@ -151,12 +180,35 @@ export class WeaponRack {
   private readonly models = new Map<WeaponModel, Group>();
   private readonly kit: Kit;
   private shown: WeaponModel | null = null;
+  /** Thrust weight of the current frame (`aimThrust`). */
+  private thrustW = 0;
 
   constructor(materials: Materials) {
     this.kit = kit(materials);
     // Grip offset in the hand bone's frame (checked with `?cam=5,30` close-ups).
-    this.group.position.set(0, 0.09, 0.03);
-    this.group.rotation.set(Math.PI / 2, 0, 0);
+    this.group.position.copy(BASE_POS);
+    this.group.quaternion.copy(BASE_ROT);
+  }
+
+  /**
+   * Thrust grip (C1): turns the shown model by `weight` (0..1) from the clip's hand toward world
+   * direction `dir` (unit) and slides it forward through the hand. Call every frame after the clips,
+   * before `leftGrip`; weight 0 restores the plain hand mount. Needs current world matrices of the hand.
+   */
+  aimThrust(weight: number, dir: Vector3): void {
+    const t = this.shown === null ? undefined : THRUST[this.shown];
+    this.group.position.copy(BASE_POS);
+    this.group.quaternion.copy(BASE_ROT);
+    this.thrustW = t ? weight : 0;
+    if (!t || weight <= 0 || !this.group.parent) return;
+    const parent = this.group.parent.getWorldQuaternion(gq2);
+    const now = gq3.copy(parent).multiply(BASE_ROT);
+    // Smallest turn that lays the shaft along `dir`, then back into the hand's frame.
+    gq.setFromUnitVectors(gv.copy(UP).applyQuaternion(now), dir).multiply(now);
+    now.slerp(gq, weight);
+    this.group.quaternion.copy(parent.invert().multiply(now));
+    this.group.position.addScaledVector(gv.copy(UP).applyQuaternion(this.group.quaternion), t.slide * weight);
+    this.group.updateMatrixWorld(true);
   }
 
   /** Shows the model for the equipped weapon; models are built on first use. */
@@ -178,6 +230,13 @@ export class WeaponRack {
     g.visible = true;
   }
 
+  /** World height of the shown model's tip while a thrust turns it (C1), else NaN. Needs current world matrices. */
+  thrustTipY(): number {
+    const t = this.shown === null ? undefined : THRUST[this.shown];
+    if (this.thrustW <= 0 || !t) return NaN;
+    return this.group.localToWorld(gv.set(0, t.tip, 0)).y;
+  }
+
   /** True when the shown model is held with both hands. */
   get twoHanded(): boolean {
     return this.shown !== null && LEFT_GRIP[this.shown] !== undefined;
@@ -191,7 +250,10 @@ export class WeaponRack {
     const h = this.shown === null ? undefined : LEFT_GRIP[this.shown];
     if (h === undefined) return false;
     const stand = this.shown === null ? undefined : TWO_HAND_STAND[this.shown];
-    this.group.localToWorld(pos.set(0, stand ? h + (stand.grip - h) * stance : h, 0));
+    const thrust = this.shown === null ? undefined : THRUST[this.shown];
+    let y = stand ? h + (stand.grip - h) * stance : h;
+    if (thrust) y += (thrust.grip - y) * this.thrustW;
+    this.group.localToWorld(pos.set(0, y, 0));
     shaft.copy(UP).applyQuaternion(this.group.getWorldQuaternion(gq));
     return true;
   }

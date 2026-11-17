@@ -5,6 +5,7 @@
 // stance=1 adds the two-handed standing pose (grip height, wrist roll, stretch; TWO_HAND_STAND).
 // pack=UAL1_Standard plays a clip straight from a source pack in assets-src/ (look before importing).
 // Framing: view=left, zoom=2 (bigger panels), fov=20, aim=1.2 (look-at height), grip=0.4 (try a height).
+// thrust=light1: the thrust grip of that attack of the shown weapon (C1, THRUST in weapons.ts), weighted by clip time.
 // look=weste,turnsch,handsch: clothing for these item bases (hero-look.ts); default: no items.
 import { AnimationMixer, Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer, type AnimationClip, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -15,7 +16,9 @@ import { FIST_CLIP, LeftHandIk } from '../src/render/hand-ik';
 import { LOOK } from '../src/render/looks';
 import { Materials } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
-import { LEFT_GRIP, WeaponRack, type WeaponModel } from '../src/render/weapons';
+import { LEFT_GRIP, THRUST, WeaponRack, thrustWeight, type WeaponModel } from '../src/render/weapons';
+import { weaponAttack, type AttackId } from '../src/data/combat';
+import type { WeaponKindId } from '../src/data/items';
 
 const q = new URLSearchParams(location.search);
 const n = Number(q.get('n') ?? 8);
@@ -46,7 +49,9 @@ rack.show((q.get('weapon') ?? 'pipe') as WeaponModel, (q.get('el') as 'fire' | n
 model.getObjectByName('hand_r')?.add(rack.group);
 const ik = q.get('ik') === '1' ? new LeftHandIk(model, assets.heroClips.get(FIST_CLIP)) : null;
 const stance = Number(q.get('stance') ?? 0);
-const gripPos = new Vector3(), gripDir = new Vector3();
+const gripPos = new Vector3(), gripDir = new Vector3(), thrustDir = new Vector3();
+const weapon = (q.get('weapon') ?? 'pipe') as WeaponModel;
+const thrustDef = q.get('thrust') && weapon !== 'pipe' ? weaponAttack(weapon as WeaponKindId, q.get('thrust') as AttackId) : null;
 const mixer = new AnimationMixer(model);
 const name = q.get('clip') ?? 'Sword_Regular_A';
 // Clip from a source pack, hip track fitted like `fitClip` in characters.ts.
@@ -74,8 +79,17 @@ for (let i = 0; i < n; i++) {
   action.time = Math.min(clip.duration - 1e-4, from + ((to - from) * i) / Math.max(1, n - 1));
   ik?.restore();
   mixer.update(0);
+  model.updateMatrixWorld(true);
+  if (thrustDef) {
+    const w = thrustWeight(thrustDef, action.time);
+    const pitch = THRUST[weapon]?.pitch ?? 0;
+    // The model faces +Z; the arc runs from → to over the active frames.
+    const k = Math.min(1, Math.max(0, (action.time - thrustDef.clipSwing) / (thrustDef.clipHit - thrustDef.clipSwing)));
+    const yaw = thrustDef.from + (thrustDef.to - thrustDef.from) * k;
+    rack.aimThrust(w, thrustDir.set(Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)));
+    console.log(`ik ${action.time.toFixed(2)} s: thrust ${w.toFixed(2)}`);
+  }
   if (ik) {
-    model.updateMatrixWorld(true);
     if (rack.leftGrip(gripPos, gripDir, stance)) console.log(`ik ${action.time.toFixed(2)} s: weight ${ik.apply(gripPos, gripDir, 1, stance).toFixed(2)}`);
   }
   renderer.setViewport(i * W, 0, W, H);

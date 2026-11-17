@@ -124,10 +124,10 @@ export class GameRenderer {
     this.scene.add(this.fx.group, this.loot.group, this.content.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
-    // R1: the hero outline tests occluders against a sphere around the hero and her weapon: the spear
-    // tip reaches about 2.5 m from her axis in a thrust (arm 0.7 m, tip 1.8 m from the hand).
+    // R1: the hero outline tests occluders against a sphere around the hero and her weapon. C1: in the
+    // Melee_Hook lunge the hand is 1.4 m ahead and the spear tip 2 m further, low (about 3.45 m from the center).
     const hero = this.hero.root;
-    this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look, (out) => out.set(out.center.set(hero.position.x, hero.position.y + 1.1, hero.position.z), 2.7));
+    this.post = new Post(renderer, this.scene, this.cam.camera, opts.profile, opts.look, (out) => out.set(out.center.set(hero.position.x, hero.position.y + 1.1, hero.position.z), 3.5));
     this.resize();
   }
 
@@ -332,7 +332,7 @@ export class GameRenderer {
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);
-    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap);
+    this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap, this.hero.thrustTipY());
     this.weather.update(dt, px, pz, this.time);
     this.debug?.update(sim, alpha);
 

@@ -17,6 +17,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M16b Side branches, variant A (lanes beside the route) | Claude | built 2026-11-17 (Hinterhof: blessing, Kietzgasse: sleeping elite, Hangarweg: cache), playtest open |
 | M19 S3 tunnel, layout B, blessing in the first passage | Claude | built, playtest open: `docs/maps/guidelines.md` › U-Bahn tunnels |
 | U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |
+| C1 Spear light attacks thrust forward, not sideways (playtest 2026-11-17) | Claude · Opus high | done (2026-11-17), playtest open: `docs/tasks/c1-spear-light.md` |
 | U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
 | T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (paving image) | open: `docs/tasks/t1b-ground-polish.md` |
 | A2 Audio follow-ups | Sonnet | done (2026-11-16), listening test open: `docs/tasks/a2-audio-followups.md` |
