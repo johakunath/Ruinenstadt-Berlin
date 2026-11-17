@@ -307,7 +307,30 @@ function smooth01(t: number): number {
   return c * c * (3 - 2 * c);
 }
 
-function reliefSample(m: MapDef, x: number, z: number): number {
+/** M11d: water surface and riverbed below the street level (quays 1.7 m high, Johannes 2026-11-17). */
+export const WATER_Y = -1.7;
+export const BED_Y = -2.7;
+/** Natural banks fall this far over `BANK_RUN` meters toward the water. */
+const BANK_DROP = 1.1;
+const BANK_RUN = 4.5;
+
+/**
+ * Negative height where a natural (non-quay) bank slopes down to the water; 0 elsewhere. `d` is the
+ * distance to the nearest water cell of the relief grid (meters, cell centers), so the bank costs a
+ * few array lookups per cell at load instead of dozens of water tests.
+ */
+function bankSlope(m: MapDef, x: number, z: number, d: number): number {
+  const edge = Math.max(0.4, d - RELIEF_CELL / 2);
+  if (edge >= BANK_RUN || isQuay(m, x, z)) return 0;
+  for (const b of m.bridges) if (Math.hypot(x - b.x, z - b.z) < b.len / 2 + 6) return 0;
+  for (const l of m.landmarks) if (Math.hypot(x - l.x, z - l.z) < Math.max(l.hx, l.hz) + l.clear + 2) return 0;
+  const f = smooth01((streetDist(m, x, z).d - 2) / 4);
+  return -BANK_DROP * f * (1 - edge / BANK_RUN) ** 2;
+}
+
+/** `water`: distance to the nearest water cell (relief grid), so relief stays flat near water without water tests. */
+function reliefSample(m: MapDef, x: number, z: number, water: number): number {
+  if (water <= 5) return 0;
   const amp = RELIEF_AMP[areaAt(m, x, z)?.ground ?? m.defaultGround];
   if (amp === 0) return 0;
   let f = smooth01((streetDist(m, x, z).d - 3) / 10);
@@ -315,7 +338,6 @@ function reliefSample(m: MapDef, x: number, z: number): number {
   for (const t of m.terraces) f = Math.min(f, inPoly(t.poly, x, z) ? 0 : smooth01((polyEdgeDist(t.poly, x, z) - 2) / 6));
   for (const l of m.landmarks) f = Math.min(f, smooth01((Math.hypot(x - l.x, z - l.z) - Math.max(l.hx, l.hz) - l.clear) / 6));
   if (f === 0) return 0;
-  for (const [dx, dz] of [[0, 0], [5, 0], [-5, 0], [0, 5], [0, -5]] as const) if (isWater(m, x + dx, z + dz)) return 0;
   return amp * f * (0.5 + 0.5 * wobble(x + 40, z - 17, 0.45));
 }
 
@@ -327,7 +349,22 @@ export function reliefAt(m: MapDef, x: number, z: number): number {
     const nx = Math.ceil((B.maxX - B.minX) / RELIEF_CELL) + 1;
     const nz = Math.ceil((B.maxZ - B.minZ) / RELIEF_CELL) + 1;
     const v = new Float32Array(nx * nz);
-    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = reliefSample(m, B.minX + i * RELIEF_CELL, B.minZ + j * RELIEF_CELL);
+    const wet = new Uint8Array(nx * nz);
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) wet[j * nx + i] = isWater(m, B.minX + i * RELIEF_CELL, B.minZ + j * RELIEF_CELL) ? 1 : 0;
+    const reach = Math.ceil(Math.max(BANK_RUN, 6) / RELIEF_CELL);
+    for (let j = 0; j < nz; j++) {
+      for (let i = 0; i < nx; i++) {
+        const x = B.minX + i * RELIEF_CELL, z = B.minZ + j * RELIEF_CELL;
+        let d = Infinity;
+        if (!wet[j * nx + i]) {
+          for (let b = Math.max(0, j - reach); b <= Math.min(nz - 1, j + reach); b++) {
+            for (let a = Math.max(0, i - reach); a <= Math.min(nx - 1, i + reach); a++) if (wet[b * nx + a]) d = Math.min(d, Math.hypot(a - i, b - j) * RELIEF_CELL);
+          }
+        }
+        const bank = d < Infinity ? bankSlope(m, x, z, d) : 0;
+        v[j * nx + i] = bank < 0 ? bank : reliefSample(m, x, z, wet[j * nx + i] ? 0 : d);
+      }
+    }
     g = { nx, nz, v };
     reliefGrids.set(m, g);
   }

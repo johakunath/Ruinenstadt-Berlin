@@ -12,7 +12,7 @@ import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
 import { buildLandmark } from './landmarks';
-import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
+import { BED_Y, WATER_Y, areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
@@ -25,7 +25,7 @@ import { loadGroundTexture } from './ground-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
-import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, type PaintOptions } from './paint';
+import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, paintWaterNormal, type PaintOptions } from './paint';
 import {
   Builder, balconyLife, buildAltbau, buildProp, partOf, type BreakableView, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
@@ -143,7 +143,8 @@ export function makeMapMats(materials: Materials): MapMats {
     tar: materials.surface({ map: paintAsphalt(o).map, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
     concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
     mossy: materials.surface({ map: paintConcrete(o, '#6f7a5c').map, roughness: 0.9, vertexColors: true }),
-    water: materials.surface({ color: 0x1a5560, emissive: 0x0a2228, roughness: 0.04, metalness: 0.55 }),
+    // M11d: rippled, reflective water; the normal map scrolls in `update` (Qualität only: one extra texture read on water pixels).
+    water: materials.surface({ color: 0x1a5560, emissive: 0x0a2228, roughness: 0.08, metalness: 0.55, normalMap: o.normalMaps ? (() => { const t = paintWaterNormal(); t.repeat.set(70, 70); return t; })() : null }),
     trunk: materials.surface({ color: 0x3a2c22, roughness: 0.95 }),
     crown: materials.surface({ color: 0xffffff, roughness: 0.85 }),
     glass: materials.surface({ color: 0x1a2a2c, emissive: 0x5a8a7a, emissiveIntensity: 0.25, roughness: 0.15, metalness: 0.3 }),
@@ -273,7 +274,8 @@ function surfaceAt(m: MapDef, x: number, z: number): number {
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   const step = GROUND_STEP;
   const B = m.bounds;
-  const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : heightAt(m, x, z));
+  // Under bridges the bed runs on, so decks span the water on their piers (M11d: no ground sheet beside the deck).
+  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += CHUNK) {
     for (let cx = B.minX; cx < B.maxX; cx += CHUNK) {
       const n = Math.ceil(Math.min(CHUNK, B.maxX - cx) / step);
@@ -288,15 +290,15 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           const x = cx + i * step;
           const z = cz + j * step;
           const y = height(x, z);
-          wet.push(y < -0.5);
+          wet.push(y < BED_Y + 0.5);
           pos.push(x, y, z);
           uv.push(x / 5, z / 5);
           const a = areaAt(m, x, z);
           const t = GROUND_TINT[a?.ground ?? m.defaultGround];
           const noise = 0.82 + 0.3 * (0.5 + 0.5 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2) * Math.cos(z * 0.19 + Math.sin(x * 0.13) * 1.6));
-          const nearWater = y >= -0.5 && (isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6));
+          const nearWater = y >= BED_Y + 0.5 && (isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6));
           // Damp, dark banks.
-          const shore = y < -0.5 ? 0.35 : nearWater ? 0.6 : 1;
+          const shore = y < BED_Y + 0.5 ? 0.35 : y < -0.3 ? 0.55 : nearWater ? 0.6 : 1;
           // M19 tunnel: ground outside the tubes is rock in the dark (the walls hide most of it).
           const rock = m.tunnel && !inTunnel(m, x, z, -1.5) ? 0.06 : 1;
           col.push(t[0] * noise * shore * rock, t[1] * noise * shore * rock, t[2] * noise * shore * rock);
@@ -330,7 +332,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   }
   const water = new Mesh(new PlaneGeometry(B.maxX - B.minX + 200, B.maxZ - B.minZ + 200), mats.water);
   water.rotation.x = -Math.PI / 2;
-  water.position.set((B.minX + B.maxX) / 2, -0.45, (B.minZ + B.maxZ) / 2);
+  water.position.set((B.minX + B.maxX) / 2, WATER_Y, (B.minZ + B.maxZ) / 2);
   water.receiveShadow = true;
   group.add(water);
 }
@@ -371,8 +373,68 @@ function buildQuays(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =>
         const yaw = Math.atan2(dx, dz);
         const at = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(x - wx * o, y, z - wz * o);
         const b = chunkOf(x, z);
-        b.box(mats.cobbles, at(0.6, -0.78), 1.8, 1.68, piece, [0.5, 0.48, 0.45]);
+        // M11d: the wall runs from the bed to the coping, 1.7 m above the water; a dark wet band at the waterline.
+        b.box(mats.cobbles, at(0.6, (BED_Y + 0.06) / 2), 1.8, 0.06 - BED_Y, piece, [0.5, 0.48, 0.45]);
+        b.box(mats.cobbles, at(-0.31, WATER_Y + 0.25), 0.04, 0.5, piece, [0.22, 0.25, 0.22]);
         b.box(mats.cobbles, at(-0.05, 0.08), 0.5, 0.12, piece, [0.85, 0.82, 0.76]);
+      }
+    }
+  }
+}
+
+/**
+ * M11d: wrecked and moored boats along the banks (rowing boats, small motor boats, a half-sunk one,
+ * a capsized hull). Seeded; never near bridges, the ferry lane or the map edge. Render only: the
+ * water already blocks.
+ */
+function buildBoats(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  const rng = new Rng(m.seed * 13 + 5);
+  const edges: Array<{ pts: readonly Pt[]; off: number }> = [];
+  for (const r of m.rivers) for (const side of [-1, 1]) edges.push({ pts: r.pts, off: (side * r.width) / 2 });
+  for (const lake of m.lakes) edges.push({ pts: [...lake, lake[0] as Pt], off: 0 });
+  const placed: Array<[number, number]> = [];
+  const B = m.bounds;
+  const COLORS: RGB[] = [[1.2, 1.18, 1.1], [0.45, 0.6, 1.0], [1.1, 0.45, 0.35], [0.5, 0.85, 0.6], [1.15, 0.95, 0.4]];
+  for (const e of edges) {
+    for (let i = 1; i < e.pts.length; i++) {
+      const [ax, az] = e.pts[i - 1] as Pt, [bx, bz] = e.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.1) continue;
+      const dx = (bx - ax) / len, dz = (bz - az) / len;
+      for (let t = 2; t < len - 2; t += 2) {
+        if (rng.next() > 0.07) continue;
+        const ex = ax + dx * t - dz * e.off, ez = az + dz * t + dx * e.off;
+        // Into the water by 2.2 m on whichever side is wet.
+        let wx = -dz, wz = dx;
+        if (!isWater(m, ex + wx * 2.2, ez + wz * 2.2)) { wx = dz; wz = -dx; }
+        const x = ex + wx * 2.2, z = ez + wz * 2.2;
+        if (!isWater(m, x, z) || !isWater(m, x + dx * 2.6, z + dz * 2.6) || !isWater(m, x - dx * 2.6, z - dz * 2.6)) continue;
+        if (x < B.minX + 4 || x > B.maxX - 4 || z < B.minZ + 4 || z > B.maxZ - 4) continue;
+        if (m.bridges.some((br) => Math.hypot(x - br.x, z - br.z) < br.len / 2 + 5)) continue;
+        if (placed.some(([px, pz]) => Math.hypot(x - px, z - pz) < 16)) continue;
+        placed.push([x, z]);
+        const kind = rng.int(4), c = COLORS[rng.int(COLORS.length)]!;
+        const yaw = Math.atan2(dx, dz) + rng.range(-0.25, 0.25);
+        const sunk = kind === 2, capsized = kind === 3;
+        const roll = capsized ? Math.PI : sunk ? rng.range(0.2, 0.35) : rng.range(-0.06, 0.06);
+        const y = WATER_Y + (capsized ? 0.15 : sunk ? -0.35 : 0.05);
+        const base = new Matrix4().makeRotationY(yaw).multiply(new Matrix4().makeRotationX(sunk ? 0.18 : 0)).multiply(new Matrix4().makeRotationZ(roll)).setPosition(x, y, z);
+        const f = (px: number, py: number, pz: number, ry = 0): Matrix4 => base.clone().multiply(new Matrix4().makeRotationY(ry).setPosition(px, py, pz));
+        const L = kind === 1 ? 5.2 : 3.8, W = kind === 1 ? 1.9 : 1.4;
+        const b = chunkOf(x, z);
+        // Hull: sides and stern as boxes, a pointed bow, plank seats; motor boats get a small cabin.
+        b.box(mats.carPaint, f(0, 0.05, -0.3), W, 0.6, L - 1.2, c);
+        b.box(mats.carPaint, f(0, 0.05, L / 2 - 0.9, Math.PI / 4), W / Math.SQRT2, 0.6, W / Math.SQRT2, c);
+        b.box(mats.darkWood, f(0, 0.32, -0.3), W - 0.2, 0.05, L - 1.4, [0.7, 0.6, 0.5]);
+        b.box(mats.carPaint, f(0, -0.2, -0.2), W - 0.2, 0.2, L - 1.0, [0.35, 0.3, 0.28]);
+        if (kind === 1) {
+          b.box(mats.carPaint, f(0, 0.75, 0.2), W - 0.4, 0.8, 1.6, [1.2, 1.18, 1.1]);
+          b.box(mats.carGlass, f(0, 0.9, 1.02), W - 0.5, 0.35, 0.04);
+          b.box(mats.iron, f(0, 0.3, -L / 2 + 0.55), 0.35, 0.7, 0.35);
+        } else if (!capsized) {
+          for (const sz of [-0.9, 0.5]) b.box(mats.wood, f(0, 0.4, sz), W - 0.15, 0.06, 0.28);
+          b.box(mats.wood, f(0.5, 0.45, -0.2, 0.3), 0.06, 0.04, 2.4, [0.8, 0.7, 0.55]);
+        }
       }
     }
   }
@@ -717,7 +779,8 @@ function worldUv(g: BufferGeometry, ox: number, oz: number, scale: number): void
 function buildFerryBoat(mats: MapMats, width: number): Group {
   const b = new ChunkBuilder(mats);
   const L = FERRY.boat;
-  b.box(mats.rust, new Matrix4().setPosition(0, -0.6, 0), width + 0.4, 1.0, L - 0.6, [0.75, 0.6, 0.5]);
+  // Hull down past the waterline (M11d: the water lies 1.7 m below the deck).
+  b.box(mats.rust, new Matrix4().setPosition(0, -1.2, 0), width + 0.4, 2.2, L - 0.6, [0.75, 0.6, 0.5]);
   b.box(mats.rust, new Matrix4().setPosition(0, -0.35, 0), width + 0.6, 0.25, L, [0.9, 0.85, 0.8]);
   b.box(mats.wood, new Matrix4().setPosition(0, -0.06, 0), width, 0.12, L, [1.25, 1.12, 0.95]);
   for (const side of [-1, 1]) {
@@ -730,7 +793,7 @@ function buildFerryBoat(mats: MapMats, width: number): Group {
   // Small wheelhouse hanging over the side, out of the walkway.
   b.box(mats.stucco, new Matrix4().setPosition(width / 2 + 1.1, 1.0, 1.2), 1.8, 2.0, 2.4, [1.05, 1.0, 0.95]);
   b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, 2.08, 1.2), 2.2, 0.16, 2.8, [0.6, 0.45, 0.35]);
-  b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, -0.55, 1.2), 2.0, 1.0, 2.8, [0.75, 0.6, 0.5]);
+  b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, -1.1, 1.2), 2.0, 2.1, 2.8, [0.75, 0.6, 0.5]);
   const g = new Group();
   for (const mesh of b.solid.meshes()) {
     mesh.castShadow = true;
@@ -753,7 +816,7 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
         const c = end * (br.len / 2 - pl / 2);
         b.box(mats.wood, local(0, -0.1, c), br.width, 0.2, pl, [1.15, 1.05, 0.9]);
         for (const side of [-1, 1]) {
-          for (const z of [c - pl / 2 + 0.3, c + pl / 2 - 0.3]) b.box(mats.wood, local(side * (br.width / 2 - 0.2), -0.9, z), 0.3, 1.6, 0.3, [0.55, 0.5, 0.45]);
+          for (const z of [c - pl / 2 + 0.3, c + pl / 2 - 0.3]) b.box(mats.wood, local(side * (br.width / 2 - 0.2), (BED_Y - 0.1) / 2, z), 0.3, -BED_Y - 0.1, 0.3, [0.55, 0.5, 0.45]);
           b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.5, c), 0.06, 0.06, pl);
           b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.25, c - pl / 2 + 0.2), 0.06, 0.5, 0.06);
         }
@@ -761,14 +824,17 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
       boats.push({ lane: br, group: buildFerryBoat(mats, br.width) });
       continue;
     }
-    // Deck (top flush with the ground), stone sides, iron railing, two lamps.
+    // Deck (top flush with the ground) on a stone body, piers down to the bed, abutments closing both
+    // banks under the bridge heads (M11d: no ground sheet or gap beside the deck), railing, lamps.
     b.box(mats.cobbles, local(0, -0.2, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
+    b.box(mats.stucco, local(0, -0.85, 0), br.width + 0.8, 0.8, br.len, [0.5, 0.5, 0.47]);
+    for (const end of [-1, 1]) b.box(mats.stucco, local(0, (BED_Y + 0.05) / 2, end * (br.len / 2 - 1.2)), br.width + 1.4, 0.05 - BED_Y, 2.4, [0.48, 0.47, 0.44]);
     for (const side of [-1, 1]) {
       b.box(mats.stucco, local(side * (br.width / 2 + 0.2), 0.05, 0), 0.4, 0.6, br.len, [0.55, 0.55, 0.52]);
       b.box(mats.iron, local(side * (br.width / 2 + 0.2), 1.05, 0), 0.08, 0.08, br.len);
       for (let z = -br.len / 2 + 0.6; z < br.len / 2; z += 1.2) b.box(mats.iron, local(side * (br.width / 2 + 0.2), 0.7, z), 0.05, 0.7, 0.05);
       // Arch piers in the water.
-      for (const z of [-br.len / 4, br.len / 4]) b.box(mats.stucco, local(side * (br.width / 2 - 0.6), -1.1, z), 1.2, 1.8, 1.6, [0.45, 0.45, 0.42]);
+      for (const z of [-br.len / 4, br.len / 4]) b.box(mats.stucco, local(side * (br.width / 2 - 0.6), (BED_Y - 1.25) / 2, z), 1.2, -1.25 - BED_Y, 1.6, [0.45, 0.45, 0.42]);
     }
     if (br.len > 15) {
       for (const [side, z] of [[-1, -br.len / 4], [1, br.len / 4]] as Array<[number, number]>) {
@@ -1710,6 +1776,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildGround(m, mats, group);
   buildStreets(m, mats, chunkOf);
   buildQuays(m, mats, chunkOf);
+  buildBoats(m, mats, chunkOf);
   buildScatter(m, lots, mats, chunkOf);
   buildGreenery(m, lots, props, chunkOf);
   const boats: Array<{ lane: FerryLane; group: Group }> = [];
@@ -1882,6 +1949,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     lights: [],
     fires,
     update(time: number): void {
+      mats.water.normalMap?.offset.set(time * 0.012, time * 0.007);
       for (const slot of pool) {
         const s = slot.spot;
         slot.weight = Math.min(1, slot.weight + (s ? 0.05 : -0.08));

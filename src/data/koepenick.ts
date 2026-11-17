@@ -197,7 +197,7 @@ export function koepenickMap(scale = 1): MapDef {
     L('schloss', -31, 24, 90 * DEG, 11.5, 5.5, 0),
     L('kirche', 26, 18, 0, 5, 9, 2),
     L('mueggelturm', 147, 124, 0, 6, 5, 6),
-    L('riesenrad', -137, -51, 30 * DEG, 9, 4.5, 10),
+    L('riesenrad', -137, -51, 30 * DEG, 6.5, 3.5, 10),
     { ...L('dino', -96, -4, 200 * DEG, 2, 3.5, 1), variant: 0 },
     { ...L('dino', -140, -14, 120 * DEG, 2, 3, 1), variant: 1 },
     { ...L('dino', -126, 36, 300 * DEG, 2.5, 3, 1), variant: 2 },

@@ -593,8 +593,9 @@ function riesenrad(b: ChunkBuilder, l: Landmark): void {
   b.geo(M.iron, cached('hub', () => new CylinderGeometry(1.0, 1.0, 5.2, 12)), F(0, hub, 0, 0, Math.PI / 2));
   // Four splayed legs to the hub (two A-frames) and ties between the feet.
   for (const z of [-1, 1]) {
-    for (const x of [-1, 1]) beam(b, M.enamel, F, new Vector3(x * 8.4, 0, z * 3.6), new Vector3(x * 0.6, hub, z * 1.9), 0.75, 0.6, RED);
-    beam(b, M.enamel, F, new Vector3(-8.4, 0.3, z * 3.6), new Vector3(8.4, 0.3, z * 3.6), 0.4, 0.4, RED);
+    // Feet inside the footprint (the platform stairs stay free), so the A-frames are a little steeper than the real ones.
+    for (const x of [-1, 1]) beam(b, M.enamel, F, new Vector3(x * (l.hx - 0.4), 0, z * (l.hz - 0.4)), new Vector3(x * 0.6, hub, z * 1.9), 0.75, 0.6, RED);
+    beam(b, M.enamel, F, new Vector3(-(l.hx - 0.4), 0.3, z * (l.hz - 0.4)), new Vector3(l.hx - 0.4, 0.3, z * (l.hz - 0.4)), 0.4, 0.4, RED);
   }
   // Gondolas in faded colors; two lie broken on the ground, a few are missing.
   const COLORS: RGB[] = [[0.35, 0.55, 0.95], [1.1, 0.9, 0.3], [0.95, 0.35, 0.3], [0.4, 0.8, 0.5], [0.3, 0.75, 0.8]];
@@ -611,7 +612,7 @@ function riesenrad(b: ChunkBuilder, l: Landmark): void {
     b.box(M.carGlass, sub(gm, 0, -1.05, 0), 1.27, 0.42, 1.27);
     b.box(M.carPaint, sub(gm, 0, -0.68, 0), 1.45, 0.12, 1.45, [1.15, 1.12, 1.05]);
   }
-  for (const [x, z, ry, rz, i] of [[5.6, 2.6, 0.5, 1.2, 1], [-6.2, -2.4, -0.4, -0.35, 3]] as const) {
+  for (const [x, z, ry, rz, i] of [[4.4, 2.2, 0.5, 1.2, 1], [-4.6, -2.0, -0.4, -0.35, 3]] as const) {
     const gm = F(x, 0.62, z, ry, 0, rz);
     b.box(M.carPaint, gm, 1.25, 1.0, 1.25, COLORS[i]);
     b.box(M.carPaint, sub(gm, 0, 0.58, 0), 1.45, 0.12, 1.45, [1.15, 1.12, 1.05]);
@@ -619,9 +620,9 @@ function riesenrad(b: ChunkBuilder, l: Landmark): void {
   // Boarding platform with steps and the ticket booth.
   b.box(M.concrete, F(0, 0.5, 0), 6.5, 1.0, 3.6, [0.62, 0.6, 0.56]);
   for (let k = 0; k < 3; k++) b.box(M.concrete, F(0, 0.17 + k * 0.33, 2.2 + (2 - k) * 0.35), 3, 0.34, 0.35, [0.66, 0.64, 0.6]);
-  b.box(M.wood, F(4.6, 1.15, 2.6), 1.6, 2.3, 1.4, [0.9, 0.5, 0.42]);
-  b.box(M.carPaint, F(4.6, 2.42, 2.6), 1.9, 0.18, 1.7, [1.1, 0.9, 0.3]);
-  b.light(worldPt(l, 4.6, 2.6, 4), 0xff8a50, 12, 12, 0.5, 4);
+  b.box(M.wood, F(3.6, 1.15, -2.2), 1.6, 2.3, 1.4, [0.9, 0.5, 0.42]);
+  b.box(M.carPaint, F(3.6, 2.42, -2.2), 1.9, 0.18, 1.7, [1.1, 0.9, 0.3]);
+  b.light(worldPt(l, 3.6, 2.6, 4), 0xff8a50, 12, 12, 0.5, 4);
   b.shadowBox(F(0, hub, 0), R * 2, R * 2, 1.6);
 }
 
@@ -699,16 +700,74 @@ function dino(b: ChunkBuilder, l: Landmark): void {
   }
 }
 
-/** Forum Köpenick (1997): a postmodern mall in two parts, glass front, flickering sign. */
+/**
+ * Forum Köpenick (1997): two granite-clad blocks with square green-framed windows, joined by a mall
+ * street under a glass barrel vault (half of it shattered), a footbridge and a tree inside.
+ */
 function forum(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
   const F = frameOf(l);
-  const w = l.hx * 2, d = l.hz * 2;
-  b.box(M.concrete, F(0, 5, 0), w, 10, d);
-  b.box(M.glass, F(0, 3, d / 2 + 0.1), w - 4, 5.4, 0.2);
-  b.geo(M.forumSign, new PlaneGeometry(12, 2.25), F(0, 8.4, d / 2 + 0.12));
-  b.light(worldPt(l, 0, 6, d / 2 + 3), 0xff9a4a, 14, 14, 0.6, 5);
-  b.shadowBox(F(0, 5, 0), w, 10, d);
+  const rng = new Rng(1997);
+  const GRANITE: RGB = [1.08, 0.8, 0.72];
+  const GREEN: RGB = [0.35, 0.62, 0.5];
+  const H = 10.5, gap = 5, hw = l.hx, hd = l.hz;
+  for (const side of [-1, 1]) {
+    const x0 = side * gap, x1 = side * hw, cx = (x0 + x1) / 2, w = Math.abs(x1 - x0);
+    b.box(M.concrete, F(cx, H / 2, 0), w, H, hd * 2, GRANITE);
+    b.box(M.concrete, F(cx, H + 0.25, 0), w + 0.3, 0.5, hd * 2 + 0.3, [0.85, 0.7, 0.64]);
+    b.box(M.tar, F(cx, H + 0.52, 0), w - 0.6, 0.06, hd * 2 - 0.6, [0.5, 0.5, 0.5]);
+    for (const [x, z] of [[cx - w / 4, -hd / 2], [cx + w / 5, hd / 3]] as const) b.box(M.iron, F(x, H + 1.1, z), 2.4, 1.1, 1.6, [1.1, 1.1, 1.1]);
+    // Street front: dead shop windows on the ground floor, a band, square windows above.
+    const fm = F(cx, 0, hd);
+    b.box(M.concrete, sub(fm, 0, 4.1, 0.12), w, 0.5, 0.25, [0.8, 0.66, 0.6]);
+    const n = Math.floor(w / 3.4);
+    for (let k = 0; k < n; k++) {
+      const x = (k + 0.5 - n / 2) * (w / n);
+      b.geo(M.shop, new PlaneGeometry(w / n - 0.6, 2.6), sub(fm, x, 1.6, 0.05));
+      for (const y of [5.6, 8.3]) pane(b, sub(fm, x, y, 0), 1.4, 1.4, rng, 0.08, { mat: M.enamel, color: GREEN });
+    }
+    // Long sides and back: pilaster grid and windows.
+    for (const [mx, mz, ry, len] of [[x1, 0, side * Math.PI / 2, hd * 2], [cx, -hd, Math.PI, w]] as const) {
+      const m = F(mx, 0, mz, ry);
+      const k = Math.floor(len / 4);
+      for (let i = 0; i <= k; i++) b.box(M.concrete, sub(m, (i / k - 0.5) * len, H / 2, 0.1), 0.5, H, 0.2, [0.92, 0.72, 0.66]);
+      for (let i = 0; i < k; i++) for (const y of [5.6, 8.3]) pane(b, sub(m, ((i + 0.5) / k - 0.5) * len, y, 0), 1.4, 1.4, rng, 0.05, { mat: M.enamel, color: GREEN });
+    }
+    b.shadowBox(F(cx, H / 2, 0), w, H, hd * 2);
+  }
+  // The mall street: glass barrel vault on steel ribs, about half the panes gone.
+  const R = gap, spring = H - 1.2;
+  const ribs = Math.round((hd * 2) / 2.4);
+  for (let i = 0; i <= ribs; i++) {
+    const z = (i / ribs - 0.5) * hd * 2;
+    b.geo(M.iron, cached('rib', () => new TorusGeometry(R, 0.09, 4, 16, Math.PI)), F(0, spring, z), [0.9, 1, 0.95]);
+  }
+  for (const a of [0.2, 0.55, 0.9, 1.25, 1.6, 1.95, 2.3, 2.65, 2.95]) {
+    b.box(M.iron, F(Math.cos(a) * R, spring + Math.sin(a) * R, 0, 0, 0, a), 0.08, 0.08, hd * 2, [0.9, 1, 0.95]);
+  }
+  for (let i = 0; i < ribs; i++) {
+    const z = ((i + 0.5) / ribs - 0.5) * hd * 2;
+    for (let k = 0; k < 8; k++) {
+      if (rng.next() < 0.48) continue;
+      const a = ((k + 0.5) / 8) * Math.PI;
+      b.box(M.glass, F(Math.cos(a) * R, spring + Math.sin(a) * R, z, 0, 0, a + Math.PI / 2), (Math.PI * R) / 8 - 0.06, 0.04, (hd * 2) / ribs - 0.06, [1.4, 1.6, 1.6]);
+    }
+  }
+  // Inside: granite floor, a footbridge between the blocks, a tree in a round planter, shards.
+  b.box(M.cobbles, F(0, 0.04, 0), gap * 2, 0.08, hd * 2, [0.85, 0.82, 0.8]);
+  b.box(M.concrete, F(0, 4.6, -2), gap * 2, 0.35, 2.6, [0.8, 0.8, 0.8]);
+  for (const s of [-1, 1]) b.box(M.iron, F(0, 5.3, -2 + s * 1.25), gap * 2, 0.06, 0.06);
+  b.geo(M.iron, cached('planter', () => new CylinderGeometry(1.2, 1.2, 0.9, 12)), F(0, 0.45, 4), [0.6, 0.55, 0.5]);
+  b.box(M.darkWood, F(0, 3, 4), 0.3, 5.2, 0.3);
+  b.geo(M.mossy, cached('mallTree', () => new SphereGeometry(2.4, 10, 8)), F(0, 6.8, 4).multiply(new Matrix4().makeScale(1, 0.8, 1)), [0.5, 0.85, 0.42]);
+  for (let i = 0; i < 14; i++) b.box(M.glass, F(rng.range(-4, 4), 0.1, rng.range(-hd + 1, hd - 1), rng.range(0, 3), 0, 0), rng.range(0.3, 0.8), 0.03, rng.range(0.3, 0.7), [1.6, 1.8, 1.8]);
+  // Entrance: open glass portal under the vault, the flickering FORUM sign above it.
+  const em = F(0, 0, hd);
+  for (const x of [-gap + 0.3, gap - 0.3]) b.box(M.iron, sub(em, x, spring / 2, 0), 0.3, spring, 0.3, [0.9, 1, 0.95]);
+  b.box(M.iron, sub(em, 0, spring, 0), gap * 2, 0.4, 0.4, [0.9, 1, 0.95]);
+  b.geo(M.forumSign, new PlaneGeometry(7, 1.3), sub(em, 0, spring - 1.2, 0.25));
+  b.light(worldPt(l, 0, 5, hd + 3), 0xff9a4a, 14, 14, 0.6, 5);
+  b.light(worldPt(l, 0, 3, 2), 0x9ad8ff, 8, 10, 0.3, 3);
 }
 
 export function buildLandmark(b: ChunkBuilder, l: Landmark): void {

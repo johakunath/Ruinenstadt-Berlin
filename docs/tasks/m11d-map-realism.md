@@ -58,4 +58,10 @@ Johannes walks zone 0 and the street reads as a Berlin street.
 - Camera finding: at 18.5 m / 44° the view shows about 6 m of height at the hero, so tower tops and the wheel never show in normal play. Cues sit low (portal, statue, arches, signs, roofs from above). Proposal for Johannes: a short camera pull-back when a landmark first comes into view.
 - Check tool: `node tools/landmark-sheet.mjs out.png "kind=rathaus&views=quarter,front,game,top"`. Proof: `docs/proof/m11d/landmarks-day.jpg`, `landmarks-dinos.jpg`.
 - Cost: merged per material per chunk; five new materials (slate, clock, S roundel, station lettering, Ratskeller), a few draw calls where they are in view. Not measured on the PC.
-- Open: Forum still a blockout; Johannes reviews each landmark on the phone.
+- Open: Johannes reviews each landmark on the phone.
+
+## Handover step 0, Forum, reveal (Opus 5.5, 2026-11-17)
+- Water 1.7 m below the street (`WATER_Y`, bed `BED_Y` in `src/data/map.ts`); quays reach the bed with a wet band; natural banks slope down over 4.5 m (relief grid, water mask, faster load than before); bridges get a stone body, piers to the bed and abutments, the ground under them is bed (Lange Brücke clipping gone); ferry hull and piers reach the water; about a dozen seeded boat wrecks (`buildBoats`). Water normal map scrolls in Qualität (one texture read on water pixels), Leistung unchanged.
+- Forum rebuilt from photos: two granite blocks, mall street under a half-shattered glass vault, footbridge, tree.
+- Reveal shot (Johannes' wish): `src/render/reveal.ts`, first time within 12 m of a landmark, about 4 s from the front and above, sim paused, attack or dodge skips; off for `?autostart`, `?at`, `?cam` and automated browsers unless `?reveal`.
+- Guide for the next districts: `docs/maps/landmarks.md` (also in the map-building skill); Codex texture row T5 in `docs/asset-pipeline.md`.

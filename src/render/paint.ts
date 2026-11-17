@@ -2012,3 +2012,26 @@ export function paintLettering(text: string, bg: string, fg: string, glow: numbe
   }
   return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
 }
+
+/** M11d water: soft ripples as a tiling normal map (scrolled in `World.update`). */
+export function paintWaterNormal(): Texture {
+  const S = 256;
+  const rng = new Rng(131);
+  const [, ctx] = canvas(S, S);
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, S, S);
+  // Overlapping soft blobs, wrapped at the edges so the map tiles.
+  for (let i = 0; i < 260; i++) {
+    const x = rng.range(0, S), y = rng.range(0, S), r = rng.range(6, 26), v = rng.next() < 0.5 ? 255 : 0;
+    for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) {
+      const g = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+      g.addColorStop(0, `rgba(${v},${v},${v},0.16)`);
+      g.addColorStop(1, `rgba(${v},${v},${v},0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+    }
+  }
+  const t = normalFromHeight(ctx, S, S, 1.6);
+  t.wrapS = t.wrapT = RepeatWrapping;
+  return t;
+}

@@ -741,7 +741,9 @@ function frame(now: number): void {
   intro.pollPad();
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
-  const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask';
+  // M11d: the sim pauses while the camera shows a landmark; any action skips the swing.
+  if (renderer?.reveal?.active && phase === 'play' && (input.buffer.has('attack') || input.buffer.has('dodge'))) { renderer.reveal.skip(); input.clear(); }
+  const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active;
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -808,7 +810,8 @@ function frame(now: number): void {
   // Heights are above the local ground (hills and terraces).
   lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !menu.isOpen);
 
-  if (!menu.isOpen) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
+  // The reveal swing runs on real time while the sim waits for it.
+  if (!menu.isOpen) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, renderer.reveal?.active ? 0.1 : 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
@@ -902,7 +905,7 @@ window.__game = {
 showTunnelButton();
 
 GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam,
+  profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
 })
   .then((r) => {

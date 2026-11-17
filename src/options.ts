@@ -19,6 +19,8 @@ export interface Options {
   telemetry: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
+  /** M11d landmark reveal shot: on in normal play, off for debug starts and automated browsers unless ?reveal. */
+  reveal: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
   /** Köpenick (default) or the gate 1 courtyard. */
@@ -98,6 +100,7 @@ export function readOptions(): Options {
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     telemetry: stored.telemetry ?? true,
     autostart: q.has('autostart'),
+    reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),
     map: q.get('map') === 'hof' ? 'hof' : q.get('map') === 'tunnel' ? 'tunnel' : 'koepenick',
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
