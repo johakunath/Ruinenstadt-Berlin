@@ -2,14 +2,14 @@
 // sim state into poses. One-shot clips (attack, dodge, hit, death) are driven by sim time, so
 // the pose always matches the hitbox and freezes with hitstop; loops run on their own clock.
 import { groundY } from './ground';
-import { HERO_DEFAULT_LOOK, HERO_PIECES } from '../data/hero-contract';
+import type { HeroLook } from '../data/hero-look';
+import { HeroModel } from './hero-model';
 import { HERO_LAYER } from './layers';
 import {
-  AnimationClip, AnimationMixer, Bone, Group, LoopRepeat, Mesh, Quaternion,
+  AnimationClip, AnimationMixer, Group, LoopRepeat, Mesh,
   Vector3, type AnimationAction, type Object3D,
 } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import animsUrl from '../../assets/characters/anims.glb?url';
 import heroUrl from '../../assets/characters/hero.glb?url';
 import zombieUrl from '../../assets/characters/zombie.glb?url';
@@ -70,23 +70,10 @@ function prepare(scene: Object3D, materials: Materials): void {
   });
 }
 
-/**
- * Shows the default clothing and hides the body regions under it (H1 step 3). Step 4 replaces this
- * with `HeroModel.setLook` driven by the equipment.
- */
-function wearDefaultLook(hero: Object3D): void {
-  const hidden = new Set(HERO_DEFAULT_LOOK.flatMap((p) => HERO_PIECES[p] ?? []).map((r) => `body_${r}`));
-  hero.traverse((o) => {
-    if (o.name in HERO_PIECES) o.visible = HERO_DEFAULT_LOOK.includes(o.name);
-    else if (hidden.has(o.name)) o.visible = false;
-  });
-}
-
 export async function loadCharacters(materials: Materials): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF];
   for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf]) prepare(g.scene, materials);
-  wearDefaultLook(heroGltf.scene);
   const named = (g: GLTF): Map<string, AnimationClip> => new Map(g.animations.map((c) => [c.name, c]));
   const hipLen = (root: Object3D): number => root.getObjectByName('pelvis')?.position.length() ?? 1;
   const src = hipLen(animGltf.scene);
@@ -219,21 +206,6 @@ const RUN_CLIP_SPEED = 6.2;
 /** Left hand (H1): seconds to slide between the standing pose and the rest. */
 const STANCE_EASE = 0.15;
 
-const q = new Quaternion();
-const X = new Vector3(1, 0, 0);
-const Z = new Vector3(0, 0, 1);
-const legA = new Vector3();
-const legB = new Vector3();
-const qFrame = new Quaternion();
-
-/**
- * Back swing (radians) of a coat back panel for a thigh along `leg` (thigh to knee, in the panel's
- * rest frame: Y up, Z forward). The panel follows a leg that swings back and never one that swings
- * forward, so the back of the coat neither lets a leg through nor stretches between the legs.
- */
-export function coatSwing(leg: Vector3): number {
-  return Math.max(0, Math.atan2(-leg.z, -leg.y));
-}
 const gripPos = new Vector3();
 const gripDir = new Vector3();
 
@@ -268,6 +240,8 @@ export interface HeroPose {
   spin: number;
   guard: number;
   leap: number;
+  /** Clothing for the equipped items (`heroLook`). */
+  look: HeroLook;
 }
 
 export class HeroView {
@@ -279,29 +253,18 @@ export class HeroView {
   private ikW = 0;
   /** 0..1: how far the left hand is in the two-handed standing pose (grip height, wrist roll, stretch). */
   private stance = 0;
-  private readonly scarf: Array<{ bone: Bone; rest: Quaternion; back: number; side: number }> = [];
-  /** Coat back panel chains (`coat_b{l,r}_01` and `_02`), with the thigh and knee each one follows. */
-  private readonly coat: Array<{ bone: Object3D; low: Object3D; rest: Quaternion; thigh: Object3D; calf: Object3D; a: number; b: number }> = [];
-  private prevX = 0;
-  private prevZ = 0;
-  private time = 0;
+  /** Body, clothing pieces and spring chains. */
+  readonly body: HeroModel;
 
   constructor(assets: CharacterAssets, materials: Materials) {
-    const model = cloneSkinned(assets.hero);
+    this.body = new HeroModel(assets.hero);
+    const model = this.body.model;
     this.root.add(model);
     this.anim = new Animator(model, assets.heroClips);
     this.rack = new WeaponRack(materials);
     this.rack.show('pipe', undefined);
     model.getObjectByName('hand_r')?.add(this.rack.group);
     this.ik = new LeftHandIk(model, assets.heroClips.get(FIST_CLIP));
-    for (const name of ['scarf_01', 'scarf_02', 'scarf_03']) {
-      const bone = model.getObjectByName(name) as Bone | undefined;
-      if (bone) this.scarf.push({ bone, rest: bone.quaternion.clone(), back: 0, side: 0 });
-    }
-    for (const side of ['l', 'r']) {
-      const [bone, low, thigh, calf] = [`coat_b${side}_01`, `coat_b${side}_02`, `thigh_${side}`, `calf_${side}`].map((n) => model.getObjectByName(n));
-      if (bone && low && thigh && calf) this.coat.push({ bone, low, rest: bone.quaternion.clone(), thigh, calf, a: 0, b: 0 });
-    }
     this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
   }
 
@@ -312,6 +275,7 @@ export class HeroView {
     this.root.rotation.y = lerpAngle(p.pfacing, p.facing, alpha);
     const model = weaponModel(pose.kind, pose.base);
     this.rack.show(model, pose.element);
+    this.body.setLook(pose.look);
     let standing = false;
     const t = p.stateT + (frozen ? 0 : alpha * DT);
     const a = this.anim;
@@ -352,7 +316,7 @@ export class HeroView {
     this.ik.restore();
     a.update(frozen ? 0 : dt);
     this.leftHand(p, t, dt, frozen, flinch, standing);
-    this.swayScarf(x, z, dt);
+    this.body.sway(x, z, this.root.rotation.y, dt);
   }
 
   /**
@@ -380,50 +344,5 @@ export class HeroView {
     const swinging = p.state === 'attack' && p.attack !== null && t < p.attack.windup + p.attack.active;
     if (!frozen) this.ikW = easeGrip(this.ikW, want, swinging, dt);
     this.ik.pose(this.ikW);
-  }
-
-  /** The scarf tail trails behind movement on a soft spring. */
-  private swayScarf(x: number, z: number, dt: number): void {
-    if (dt <= 0) return;
-    this.time += dt;
-    const vx = (x - this.prevX) / dt;
-    const vz = (z - this.prevZ) / dt;
-    this.prevX = x;
-    this.prevZ = z;
-    const yaw = this.root.rotation.y;
-    // Velocity in the hero's frame: forward and to the left.
-    const fwd = Math.min(9, Math.max(-9, vx * Math.sin(yaw) + vz * Math.cos(yaw)));
-    const left = Math.min(9, Math.max(-9, vx * Math.cos(yaw) - vz * Math.sin(yaw)));
-    const k = 1 - Math.exp(-dt * 9);
-    this.scarf.forEach((s, i) => {
-      const flutter = Math.sin(this.time * (7 + i * 2.3) + i) * (0.05 + Math.abs(fwd) * 0.012) * (i + 1);
-      const back = fwd * (0.1 + i * 0.03) + flutter + (i === 0 ? 0.12 : 0.05);
-      const side = -left * 0.07 + Math.sin(this.time * 3.1 + i * 1.7) * 0.05;
-      s.back += (back - s.back) * k * (1 - i * 0.2);
-      s.side += (side - s.side) * k * (1 - i * 0.2);
-      s.bone.quaternion.copy(s.rest).multiply(q.setFromAxisAngle(X, -s.back)).multiply(q.setFromAxisAngle(Z, s.side));
-    });
-    this.swayCoat(fwd, dt);
-  }
-
-  /**
-   * The back of the coat swings out of the way of a leg that goes back (`coatSwing`, plus a little
-   * margin), trails a bit with speed, and the lower panel lags behind on a softer spring.
-   */
-  private swayCoat(fwd: number, dt: number): void {
-    if (this.coat.length === 0) return;
-    this.root.updateMatrixWorld(true);
-    for (const c of this.coat) {
-      // The leg in the panel's rest frame (follows the pelvis, so a leaning body does not count).
-      c.bone.parent!.getWorldQuaternion(qFrame).multiply(c.rest).invert();
-      const leg = legB.subVectors(c.calf.getWorldPosition(legB), c.thigh.getWorldPosition(legA)).applyQuaternion(qFrame);
-      const swing = coatSwing(leg);
-      const want = (swing > 0 ? swing + 0.08 : 0) + Math.max(0, fwd) * 0.02;
-      c.a += (want - c.a) * (1 - Math.exp(-dt * 18));
-      // The lower panel adds a quarter of the upper one's swing on a softer spring: cloth lag.
-      c.b += (Math.max(0, fwd) * 0.03 + c.a * 0.25 - c.b) * (1 - Math.exp(-dt * 8));
-      c.bone.quaternion.copy(c.rest).multiply(q.setFromAxisAngle(X, c.a));
-      c.low.quaternion.setFromAxisAngle(X, c.b);
-    }
   }
 }

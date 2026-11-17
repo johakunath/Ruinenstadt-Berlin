@@ -40,13 +40,3 @@ export function regionOf(joint: string): BodyRegion {
   if (/^(pelvis|thigh|calf)/.test(joint)) return 'legs';
   return 'torso';
 }
-
-/** Clothing pieces in hero.glb and the body regions each hides (step 4 moves this to hero-look.ts). */
-export const HERO_PIECES: Readonly<Record<string, readonly BodyRegion[]>> = {
-  a_mantel: ['torso', 'arms', 'legs'],
-  f_stiefel: ['feet'],
-  g_handsch: ['hands'],
-};
-
-/** The look shown until equipment drives it (step 4): long coat, boots, gloves. */
-export const HERO_DEFAULT_LOOK: readonly string[] = ['a_mantel', 'f_stiefel', 'g_handsch'];

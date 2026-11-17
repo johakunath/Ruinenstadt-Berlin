@@ -1,6 +1,7 @@
 // Ties the scene together: world, characters, effects, camera, post-processing.
 // The sim knows nothing about this file; it reads sim state and events and draws them.
 import { KOEPENICK_WEATHER, Weather } from './weather';
+import { heroLook } from '../data/hero-look';
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
   SphereGeometry, Vector3,
@@ -135,7 +136,12 @@ export class GameRenderer {
     const materials = new Materials(opts.look, opts.profile);
     const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables) : buildWorld(materials);
     const assets = await loadCharacters(materials);
-    return new GameRenderer(renderer, world, assets, materials, opts);
+    const game = new GameRenderer(renderer, world, assets, materials, opts);
+    // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
+    // the first frame applies the real look.
+    game.hero.body.showAll();
+    await renderer.compileAsync(game.scene, game.cam.camera);
+    return game;
   }
 
   resize(): void {
@@ -279,7 +285,7 @@ export class GameRenderer {
     this.world.sync?.(sim.time - DT * (1 - alpha));
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
-    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap });
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();

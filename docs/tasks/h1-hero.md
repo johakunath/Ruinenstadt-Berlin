@@ -282,7 +282,29 @@ A new body or head, authored clips or retargeting (importing more clips from the
 - Pictures replaced in `docs/proof/h1-hero/step3/`. `run-side.png` is removed because it showed the long coat.
 
 ## Johannes, 2026-11-17 (step 3 approved)
-- The knee-length open coat "looks great": step 3's look is approved. Left in step 3, not blocking: the chest still shows the body's shape. Next: step 4 (swap and second look), after PR #39 merges.
+- The knee-length open coat "looks great": step 3's look is approved. Left in step 3, not blocking: the chest still shows the body's shape. Next: step 4 (swap and second look), after PR #39 merges. Built on a stacked branch.
+
+## Handover step 4 (Opus 5.5, 2026-11-17)
+- `src/data/hero-look.ts`: `PIECES` (node and hidden regions), `heroLook`, `lookNodes`, `hiddenRegions`, `sameLook`. It uses the 2D rule:
+  - outfit from the armor base; no armor → `mantel`; short 2D outfits (`leder`, `weste`, `blaumann`) → `weste`; every other base → `mantel`
+  - boots `turnsch` → sneakers; anything else or nothing → `stiefel`
+  - any glove item → `handsch`; none → bare hands
+  The piece table moved here from `hero-contract.ts`. The test resolves every base in the item tables to nodes that exist in hero.glb.
+- `src/render/hero-model.ts` (`HeroModel`):
+  - clones hero.glb and maps pieces and regions by node name
+  - `setLook` only toggles `visible`; `showAll` is used for the load-time compile
+  - `sway` runs the scarf and coat spring chains, moved out of `HeroView`; the coat chains run only while the coat is shown
+  `HeroView` uses it; `HeroPose.look` comes from `heroLook(sim.equipment)` in `renderer.ts`. `GameRenderer.create` shows every piece for one `compileAsync`, so equipping never compiles a shader. All pieces share two programs (vertex colours, single- and double-sided).
+- Blender: `a_weste` and `f_turnsch`, after the 2D art.
+  - `a_weste`: padded olive vest without sleeves (quilted bands in the vertex colours), two chest straps with buckles, a belt with three pouches, brown cargo trousers with a thigh strap and buckle. Arms stay bare.
+  - `f_turnsch`: off-white high-tops with a light sole.
+  - The boot builder is shared (`footwear`). Ambient occlusion is now baked per piece against the body only, so pieces from other looks never shade each other.
+- `tools/clip-sheet.ts`: `look=weste,turnsch,handsch`.
+- NPCs built from the hero (traders, captives, Späti keepers; `ContentView.person`) use a `HeroModel` with the vest look, so only that look's pieces draw and they never read as copies of the hero (Codex review on #40).
+- Numbers: file 1,808 KB, 34,334 triangles in the file. The contract test checks all 8 looks against the budget (≤ 9 draw calls, ≤ 32,000 visible triangles).
+- Pictures in `docs/proof/h1-hero/step4/`: `looks-Qualität.png` and `looks-Leistung.png` (left: no items, i.e. coat, boots and bare hands; right: vest, sneakers and gloves), plus vest strips.
+- Not measured: the first-swap frame time on the PC and the Tab S9 (step 4's "no frame over 50 ms"). Cloud and swiftshader timings mean nothing.
+- Reused from 2D: `heroKeys` and `drawHero` (armor base → outfit, gloves or bare hands, boots default), and the weste and turnsch art.
 
 ## Questions
 None open.

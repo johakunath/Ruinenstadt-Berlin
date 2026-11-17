@@ -3,7 +3,8 @@
 import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { HERO_BUDGET, HERO_CORE_JOINTS, HERO_DEFAULT_LOOK, HERO_EXTRA_JOINTS, HERO_PIECES, HERO_REGIONS } from '../data/hero-contract';
+import { HERO_BUDGET, HERO_CORE_JOINTS, HERO_EXTRA_JOINTS, HERO_REGIONS } from '../data/hero-contract';
+import { PIECES, hiddenRegions, lookNodes, type HeroLook } from '../data/hero-look';
 
 interface Gltf {
   nodes: { name?: string; mesh?: number; skin?: number }[];
@@ -49,22 +50,27 @@ describe('hero.glb contract', () => {
   it('has every body region, fixed part and piece as a named node', () => {
     const names = new Set(skinned.map((n) => n.name));
     for (const r of HERO_REGIONS) expect(names.has(`body_${r}`), `body_${r}`).toBe(true);
-    for (const n of ['hair', 'scarf', ...Object.keys(HERO_PIECES)]) expect(names.has(n), n).toBe(true);
+    for (const n of ['hair', 'scarf', ...Object.values(PIECES).map((p) => p.node)]) expect(names.has(n), n).toBe(true);
   });
 
   it('gives every clothing piece UVs for its painted texture (step 6)', () => {
-    for (const n of skinned.filter((n) => n.name! in HERO_PIECES || n.name === 'scarf')) {
+    for (const n of skinned.filter((n) => Object.values(PIECES).some((p) => p.node === n.name) || n.name === 'scarf')) {
       for (const p of hero.meshes[n.mesh!]!.primitives) expect(p.attributes.TEXCOORD_0, n.name).toBeDefined();
     }
   });
 
-  it('keeps the default look inside the triangle and draw call budget', () => {
-    const hidden = new Set(HERO_DEFAULT_LOOK.flatMap((p) => HERO_PIECES[p] ?? []).map((r) => `body_${r}`));
-    const visible = skinned.filter((n) => !hidden.has(n.name!) && (!(n.name! in HERO_PIECES) || HERO_DEFAULT_LOOK.includes(n.name!)));
-    const prims = visible.flatMap((n) => hero.meshes[n.mesh!]!.primitives);
-    const triangles = prims.reduce((s, p) => s + hero.accessors[p.indices!]!.count / 3, 0);
-    expect(prims.length).toBeLessThanOrEqual(HERO_BUDGET.skinnedDrawCalls);
-    expect(triangles).toBeLessThanOrEqual(HERO_BUDGET.triangles);
+  it('keeps every look inside the triangle and draw call budget', () => {
+    const pieceNodes = new Set(Object.values(PIECES).map((p) => p.node));
+    for (const outfit of ['mantel', 'weste']) for (const boots of ['stiefel', 'turnsch']) for (const gloves of ['handsch', null]) {
+      const look: HeroLook = { outfit, boots, gloves, hat: null };
+      const shown = new Set(lookNodes(look));
+      const hidden = new Set([...hiddenRegions(look)].map((r) => `body_${r}`));
+      const visible = skinned.filter((n) => !hidden.has(n.name!) && (!pieceNodes.has(n.name!) || shown.has(n.name!)));
+      const prims = visible.flatMap((n) => hero.meshes[n.mesh!]!.primitives);
+      const triangles = prims.reduce((s, p) => s + hero.accessors[p.indices!]!.count / 3, 0);
+      expect(prims.length, `${outfit} ${boots} ${gloves}`).toBeLessThanOrEqual(HERO_BUDGET.skinnedDrawCalls);
+      expect(triangles, `${outfit} ${boots} ${gloves}`).toBeLessThanOrEqual(HERO_BUDGET.triangles);
+    }
   });
 
   it('stays under the file size budget', () => {
