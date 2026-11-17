@@ -155,3 +155,16 @@ test('equipment changes combat and HUD health, and survives a retry', async ({ p
   expect(retry).toEqual({ maxHp: 200, hp: 200, damage: 20, speed: 2 });
   expect(errors).toEqual([]);
 });
+
+test('M19: the S3 tunnel loads, the first fight starts, the map shows the tubes', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=tunnel&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Tunnelmund');
+  expect(await page.evaluate(() => window.__game!.sim().enemies.filter(e => e.sleep !== undefined).length)).toBe(1);
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; });
+  await page.waitForFunction(() => window.__game!.sim().run.phase === 'fight', null, { timeout: 90_000 });
+  await page.keyboard.press('m');
+  await expect(page.locator('.map-svg svg')).toBeVisible();
+  expect(errors).toEqual([]);
+});

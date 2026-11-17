@@ -118,6 +118,9 @@ export class Level {
   /** L2: district index for loot (2D `D.lvl`: item level +3 per district) and item name flavor. Köpenick 0. */
   district = 0;
   flavor?: 'neon' | 'gdr';
+  /** M16b/M19 side passages: fixed hidden blessing spots (replace the random ones) and sleeping guards. */
+  hiddenSpots: Point[] = [];
+  guards: Array<{ x: number; z: number; kind: import('../data/enemies').EnemyKind; elite: boolean; wake: number; hp: number }> = [];
 
   private cells(c: Collider, fn: (cell: number) => void): void {
     const e = c.kind === 'circle' ? c.r : Math.hypot(c.hx, c.hz);

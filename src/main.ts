@@ -24,6 +24,7 @@ import { createSim, stepSim } from './sim/sim';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
+import { tunnelMap } from './data/tunnel';
 import { generateLots, generateProps, mapLevel } from './data/map';
 import { mapSvg } from './data/map-svg';
 import { EdgeMarkers, Minimap } from './ui/minimap';
@@ -55,13 +56,16 @@ const abilitiesUi = new AbilitiesUi(input);
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
 abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
-// Köpenick (M11) unless ?map=hof asks for the gate 1 courtyard.
-const map = opts.map === 'koepenick' ? (() => {
-  const def = koepenickMap(opts.mapScale);
+// Köpenick (M11), the S3 tunnel (M19, ?map=tunnel) or the gate 1 courtyard (?map=hof).
+const map = opts.map !== 'hof' ? (() => {
+  const def = opts.map === 'tunnel' ? tunnelMap() : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   return { def, lots, props, level: mapLevel(def, lots, props) };
 })() : null;
+const isTunnel = map?.def.tunnel !== undefined;
+/** What a won run is called: the district freed or the line cleared. */
+const winText = isTunnel ? 'S3 frei' : 'Köpenick befreit';
 const level: Level | undefined = map?.level;
 
 // M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
@@ -83,7 +87,7 @@ let wonFor = -1;
 /** Exit warning: 'ask' shows the modal, 'search' leads the hero to the valuable loot left behind. */
 let lootExit: 'off' | 'ask' | 'search' = 'off';
 /** Where the exit warning leads after "Weiterziehen". */
-let afterLoot: 'again' | 'camp' = 'again';
+let afterLoot: 'again' | 'camp' | 'map' = 'again';
 const lootUi = new LootLabels();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
@@ -96,6 +100,7 @@ function finishLootExit(leave: boolean): void {
     lootExit = 'off';
     lootChip.hidden = true;
     if (afterLoot === 'camp') { afterLoot = 'again'; toCamp(); return; }
+    if (afterLoot === 'map') { afterLoot = 'again'; goMap(isTunnel ? 'koepenick' : 'tunnel'); return; }
     again();
   } else {
     // Back into the map to fetch it.
@@ -161,8 +166,26 @@ function showWon(): void {
   input.clear();
   ui.showWon(sim.kills);
   document.getElementById('won-stats')!.innerHTML = endStats(true);
-  (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || sim.run.endless !== undefined;
+  (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined;
+  document.getElementById('won-title')!.textContent = winText;
+  const t = document.getElementById('won-tunnel')!;
+  t.hidden = !level;
+  t.innerHTML = isTunnel ? '<b>Zurück nach Köpenick</b><small>Der Bahnsteig hat wieder Strom</small>' : '<b>In den S3-Tunnel</b><small>Richtung Warschauer Straße</small>';
 }
+/** M19: the tunnel opens once Köpenick is freed; the title on each map leads to the other. */
+const TUNNEL_LINE = 100;
+function goMap(to: 'tunnel' | 'koepenick'): void { saveProfile(); reloadWith({ map: to }); }
+// Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
+document.getElementById('won-tunnel')!.addEventListener('click', () => {
+  if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
+  goMap(isTunnel ? 'koepenick' : 'tunnel');
+});
+function showTunnelButton(): void {
+  const b = document.getElementById('go-tunnel')!;
+  b.hidden = !level || (!isTunnel && !sim.inventory.camp?.freed.includes(0));
+  if (isTunnel) b.innerHTML = '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>';
+}
+document.getElementById('go-tunnel')!.addEventListener('click', () => goMap(isTunnel ? 'koepenick' : 'tunnel'));
 /** Stay in the freed district: walk, loot, break things, test the build. */
 function explore(): void {
   document.getElementById('won')!.hidden = true;
@@ -205,7 +228,8 @@ function abortRun(): void {
   sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
   renderer?.reset(sim);
   ui.setResume(resumeLabel(), difficulty);
-  ui.showTitle();
+showTunnelButton();
+  ui.showTitle(); showTunnelButton();
 }
 let deadFor = 0;
 let renderer: GameRenderer | null = null;
@@ -322,7 +346,7 @@ function toCamp(): void {
   sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
   renderer?.reset(sim);
   ui.setResume(resumeLabel(), difficulty);
-  ui.showTitle();
+  ui.showTitle(); showTunnelButton();
   camp.open();
 }
 input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search') menu.toggle('karte'); };
@@ -351,7 +375,7 @@ document.getElementById('to-title')!.addEventListener('click', () => {
   renderer?.reset(sim);
   ui.boss(null);
   ui.setResume(resumeLabel(), difficulty);
-  ui.showTitle();
+  ui.showTitle(); showTunnelButton();
 });
 // U2: abort the expedition as a loss after a second tap; gear and Schrott stay, the checkpoint goes.
 {
@@ -400,6 +424,7 @@ if (map) {
     const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
     return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
   };
+  if (isTunnel) document.getElementById('title-sub')!.textContent = 'S3-Tunnel · Richtung Warschauer Straße';
 } else {
   const sub = document.getElementById('title-sub');
   if (sub) sub.textContent = 'Köpenick · Hinterhof bei Nacht';
@@ -578,10 +603,10 @@ function drainEvents(): void {
       case 'victory':
         // Playtest 2026-11-17: no dialog over the falling boss. The run counts as won now; the
         // end screen follows after a while and offers to stay. The loot warning comes when leaving.
-        endExpedition(sim, true);
+        endExpedition(sim, true, isTunnel ? TUNNEL_LINE : 0);
         saveNow(false);
         telemetry.end('win');
-        ui.banner('Köpenick befreit');
+        ui.banner(winText);
         wonFor = 0;
         break;
       case 'scrap':
@@ -812,7 +837,7 @@ function expeditionHud(dt: number): void {
   } else if (sim.run.endless !== undefined) {
     ui.objective(`Endlos · Welle ${sim.run.endless + (sim.run.phase === 'fight' ? 1 : 0)}`, null);
   } else if (!enc) {
-    ui.objective('Köpenick befreit', null);
+    ui.objective(winText, null);
   } else if (sim.run.phase === 'travel') {
     const dx = enc.x - p.x;
     const dz = enc.z - p.z;
@@ -858,6 +883,9 @@ window.__game = {
     }
   },
 };
+
+// The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
+showTunnelButton();
 
 GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam,

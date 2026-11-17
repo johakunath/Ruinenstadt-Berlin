@@ -38,6 +38,8 @@ export interface SaveRun {
   restSeen: boolean[];
   /** Ground loot, landed and still. */
   drops: Drop[];
+  /** Side passage guards already defeated in this run (indexes into `level.guards`). */
+  guardsDown?: number[];
 }
 export interface SaveV1 { v: 1; /** Save time in ms; the cloud sync compares it. */ t: number; difficulty: DifficultyId; profile: SaveProfile; run: SaveRun | null }
 
@@ -60,6 +62,7 @@ export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now
       itemId: sim.lootCtx.itemId ?? 0, lootWaves: sim.lootWaves, kills: sim.kills,
       broken: sim.breakables.filter((b) => b.broken).map((b) => b.id), restSeen: [...sim.rest.seen],
       drops: sim.drops.map((d) => structuredClone({ ...d, vx: 0, vz: 0, h: 0, vh: 0, landed: true })),
+      guardsDown: sim.level.guards.map((_, i) => i).filter((i) => !sim.enemies.some((e) => e.guardIndex === i && e.state !== 'dead')),
     },
   };
 }
@@ -117,6 +120,8 @@ export function simFromSave(save: SaveV1, opts: Omit<SimOptions, 'inventory' | '
   sim.kills = run.kills;
   sim.rest.seen = [...run.restSeen];
   sim.drops = structuredClone(run.drops);
+  // A side passage guard beaten before the checkpoint stays beaten (Codex review).
+  if (run.guardsDown?.length) sim.enemies = sim.enemies.filter((e) => e.guardIndex === undefined || !run.guardsDown!.includes(e.guardIndex));
   for (const id of run.broken) { const b = sim.breakables[id]; if (b) hitBreakableState(sim, b); }
   focusFlow(sim, run.x, run.z);
   if (run.wave >= 0) {

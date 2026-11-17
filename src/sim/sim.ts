@@ -97,6 +97,13 @@ export function createSim(opts: SimOptions = {}): Sim {
   if (level.expedition) {
     startRunAt(sim, startAt);
     focusFlow(sim, sim.player.x, sim.player.z);
+    // Side passage guards (M19): asleep until the hero comes near.
+    level.guards.forEach((g, i) => {
+      const e = spawnEnemy(sim, g.x, g.z, g.kind, g.hp, 1.3);
+      e.guardIndex = i;
+      if (g.elite) makeElite(sim, e);
+      e.sleep = g.wake;
+    });
   }
   sim.flow.setTarget(sim.player.x, sim.player.z);
   if (opts.spawn?.length) {

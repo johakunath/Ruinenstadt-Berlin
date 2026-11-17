@@ -38,6 +38,17 @@ Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now 
 - Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule.
 - Model choice: Opus 5.5 high for look, shaders, combat feel and architecture; medium for docs, small fixes and routine changes (plan-3d.md › Model).
 
+## Lessons (session 2026-11-16/17)
+
+| Lesson | Practice |
+|---|---|
+| A red `main` run blocks the deploy | Pages deploys only after `check` passes on `main`. After every merge, look at the `main` run; a failing smoke test there means players do not get the release (PR #20 was stuck this way) |
+| Codex review | Comment `@codex review` on the draft PR; findings arrive as review threads. Fix, answer on the thread, resolve, then mark ready and merge. One review per PR |
+| Small releases | Several small PRs (one topic each) merged faster than one large one; work for the next release continues on a local branch while a PR is in review |
+| Parallel sessions | Another session may work in the same repo. Check open PRs and branches before starting a task; take over only what Johannes assigns |
+| Visual decisions | SVG mockups with example values or real map data go to the chat first (Johannes' standing rule); they are kept in `docs/mockups/` |
+| Browser tests and load | Unit tests can time out while the browser suite runs in parallel; rerun the file alone before calling it a failure |
+
 ## Maps
 
 Every district map follows `docs/maps/guidelines.md`: concept mockups, geography check against OpenStreetMap, map SVG from the data before the 3D build, the shared layout rules and the map invariant tests. Rules that change while building a map go into that file, dated.

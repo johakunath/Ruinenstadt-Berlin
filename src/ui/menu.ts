@@ -19,10 +19,10 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   brute: 'Markiert einen Kreis und schlägt zu. Raus aus dem Kreis.', spitter: 'Hält Abstand und spuckt. Immun gegen Säure.',
   raptor: 'Zeigt eine Linie, dann springt er. Seitlich ausweichen.', crow: 'Kreist und stößt herab. Fliegt über alles.',
   feldwebel: 'Stürmt los und ruft Männer.', waechter: 'Feuert Salven und Ringe. Nah ran.',
-  rex: 'Biss, Ansturm, Brüllringe, Schwanz.', hauptmann: 'Der Hauptmann von Köpenick. Schlägt, schießt, ruft.',
+  rex: 'Biss, Ansturm, Brüllringe, Schwanz.', schaffner: 'Rast über die Gleise wie ein Zug, pfeift Fahrgäste herbei.', hauptmann: 'Der Hauptmann von Köpenick. Schlägt, schießt, ruft.',
 };
 const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow'];
-const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann'];
+const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
 export interface MenuHost {

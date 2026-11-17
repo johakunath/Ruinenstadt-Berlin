@@ -5,7 +5,7 @@
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
-export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann';
+export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner';
 export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | BossKind;
 /** Which model and clip set draws the body (`src/render/creatures.ts`). */
 export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow';
@@ -103,6 +103,13 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     kind: 'hauptmann', name: 'Hauptmann von Köpenick', body: 'zombie', ai: 'hauptmann', res: 'hauptmann', radius: 0.8, scale: 1.6, hp: 4400, speed: 2.9,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 75 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
+  },
+  // M19 tunnel boss (2D: Der Schaffner at the generator). Charges along the tracks like a train and
+  // whistles up passengers: the Feldwebel's pattern (charge, call men), tunnel life +25 %.
+  schaffner: {
+    kind: 'schaffner', name: 'Der Schaffner', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.75, scale: 1.55, hp: 2800, speed: 2.7,
+    attackRange: 2.2, windup: 0.65, active: 0.14, recovery: 0.75,
+    reach: 2.7, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
 };
 
