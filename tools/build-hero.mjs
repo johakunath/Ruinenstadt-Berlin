@@ -37,7 +37,7 @@ function runBlender() {
   const args = ['-b', '--factory-startup', '--python', 'tools/blender/hero_build.py', '--', BODY, WORK];
   const run = spawnSync(blender, args, { encoding: 'utf8', maxBuffer: 64 << 20 });
   const log = `${run.stdout ?? ''}${run.stderr ?? ''}`;
-  for (const line of log.split(/\r?\n/)) if (/^hero_(lib|build):|Traceback|Error:/.test(line)) console.log(`  ${line}`);
+  for (const line of log.split(/\r?\n/)) if (/^hero_(lib|build|clothes):|Traceback|Error:/.test(line)) console.log(`  ${line}`);
   if (run.status !== 0 || !fs.existsSync(`${WORK}/meshes.json`)) {
     throw new Error(`Blender failed (${run.status ?? run.error}):\n${log.split(/\r?\n/).slice(-30).join('\n')}`);
   }
@@ -197,37 +197,24 @@ async function buildHero() {
   // --- scarf: a ring around the neck plus a tail on two extra bones that the game animates.
   const neck = jointPos(skin, 'neck_01');
   const spine3 = skin.listJoints().find((n) => n.getName() === 'spine_03');
-  const s3 = jointPos(skin, 'spine_03');
   const tailRoot = [0.05, neck[1] - 0.005, neck[2] - 0.085];
   const segLen = 0.2;
-  const scarfBones = [];
-  // The skeleton is Z-up below `root`, so the first scarf bone undoes its parent's rotation:
-  // scarf bones are world-aligned in the bind pose (local X = sideways, Y = up, Z = forward).
-  const q = spine3.getWorldRotation();
-  const inv = [-q[0], -q[1], -q[2], q[3]];
-  let parent = spine3;
-  let parentPos = s3;
-  for (let i = 0; i < 3; i++) {
-    const pos = [tailRoot[0], tailRoot[1] - segLen * i, tailRoot[2] - 0.03 * i];
-    const delta = [pos[0] - parentPos[0], pos[1] - parentPos[1], pos[2] - parentPos[2]];
-    const bone = doc.createNode(`scarf_0${i + 1}`);
-    if (i === 0) bone.setTranslation(rotate(inv, delta)).setRotation(inv);
-    else bone.setTranslation(delta);
-    parent.addChild(bone);
-    skin.addJoint(bone);
-    scarfBones.push(bone);
-    parent = bone;
-    parentPos = pos;
+  const ibmBones = [];
+  ibmBones.push(...addChain(doc, skin, spine3, [0, 1, 2].map((i) => [`scarf_0${i + 1}`, [tailRoot[0], tailRoot[1] - segLen * i, tailRoot[2] - 0.03 * i]])));
+  // Coat back panels (H1 step 3): two chains on the pelvis, swung by HeroView. Heights and depth
+  // match COAT_CHAIN in tools/blender/hero_clothes.py, which weights the skirt's back to them.
+  const pelvis = skin.listJoints().find((n) => n.getName() === 'pelvis');
+  const pz = jointPos(skin, 'pelvis')[2];
+  const h1 = jointPos(skin, 'spine_01')[1] - 0.06;
+  for (const [side, x] of [['l', 0.08], ['r', -0.08]]) {
+    ibmBones.push(...addChain(doc, skin, pelvis, [[`coat_b${side}_01`, [x, h1, pz - 0.15]], [`coat_b${side}_02`, [x * 1.1, 0.66, pz - 0.19]]]));
   }
   // Inverse bind matrices for the new joints.
   const ibm = skin.getInverseBindMatrices();
   const old = ibm.getArray();
-  const next = new Float32Array(old.length + 16 * scarfBones.length);
+  const next = new Float32Array(old.length + 16 * ibmBones.length);
   next.set(old);
-  scarfBones.forEach((bone, i) => {
-    const m = bone.getWorldMatrix();
-    next.set(invertRigid(m), old.length + i * 16);
-  });
+  ibmBones.forEach((bone, i) => next.set(invertRigid(bone.getWorldMatrix()), old.length + i * 16));
   ibm.setArray(next);
   const J2 = jointIndex(skin);
 
@@ -265,6 +252,30 @@ async function buildHero() {
   addPieces(doc, skin, work, sourceNames);
   checkContract(skin);
   await finish(doc, 'hero.glb');
+}
+
+/**
+ * Appends a chain of joints under `parent` at the given model-space positions. The first undoes its
+ * parent's world rotation, so the chain is world-aligned in the bind pose (local X = sideways,
+ * Y = up, Z = forward; the skeleton is Z-up below \`root\`). Returns the new joints.
+ */
+function addChain(doc, skin, parent, links) {
+  const q = parent.getWorldRotation();
+  const inv = [-q[0], -q[1], -q[2], q[3]];
+  let parentPos = parent.getWorldTranslation();
+  const bones = [];
+  links.forEach(([name, pos], i) => {
+    const delta = [pos[0] - parentPos[0], pos[1] - parentPos[1], pos[2] - parentPos[2]];
+    const bone = doc.createNode(name);
+    if (i === 0) bone.setTranslation(rotate(inv, delta)).setRotation(inv);
+    else bone.setTranslation(delta);
+    parent.addChild(bone);
+    skin.addJoint(bone);
+    bones.push(bone);
+    parent = bone;
+    parentPos = pos;
+  });
+  return bones;
 }
 
 /** A new skinned node next to the body with an empty mesh; returns the mesh. */

@@ -222,6 +222,18 @@ const STANCE_EASE = 0.15;
 const q = new Quaternion();
 const X = new Vector3(1, 0, 0);
 const Z = new Vector3(0, 0, 1);
+const legA = new Vector3();
+const legB = new Vector3();
+const qFrame = new Quaternion();
+
+/**
+ * Back swing (radians) of a coat back panel for a thigh along `leg` (thigh to knee, in the panel's
+ * rest frame: Y up, Z forward). The panel follows a leg that swings back and never one that swings
+ * forward, so the back of the coat neither lets a leg through nor stretches between the legs.
+ */
+export function coatSwing(leg: Vector3): number {
+  return Math.max(0, Math.atan2(-leg.z, -leg.y));
+}
 const gripPos = new Vector3();
 const gripDir = new Vector3();
 
@@ -268,6 +280,8 @@ export class HeroView {
   /** 0..1: how far the left hand is in the two-handed standing pose (grip height, wrist roll, stretch). */
   private stance = 0;
   private readonly scarf: Array<{ bone: Bone; rest: Quaternion; back: number; side: number }> = [];
+  /** Coat back panel chains (`coat_b{l,r}_01` and `_02`), with the thigh and knee each one follows. */
+  private readonly coat: Array<{ bone: Object3D; low: Object3D; rest: Quaternion; thigh: Object3D; calf: Object3D; a: number; b: number }> = [];
   private prevX = 0;
   private prevZ = 0;
   private time = 0;
@@ -283,6 +297,10 @@ export class HeroView {
     for (const name of ['scarf_01', 'scarf_02', 'scarf_03']) {
       const bone = model.getObjectByName(name) as Bone | undefined;
       if (bone) this.scarf.push({ bone, rest: bone.quaternion.clone(), back: 0, side: 0 });
+    }
+    for (const side of ['l', 'r']) {
+      const [bone, low, thigh, calf] = [`coat_b${side}_01`, `coat_b${side}_02`, `thigh_${side}`, `calf_${side}`].map((n) => model.getObjectByName(n));
+      if (bone && low && thigh && calf) this.coat.push({ bone, low, rest: bone.quaternion.clone(), thigh, calf, a: 0, b: 0 });
     }
     this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
   }
@@ -383,5 +401,27 @@ export class HeroView {
       s.side += (side - s.side) * k * (1 - i * 0.2);
       s.bone.quaternion.copy(s.rest).multiply(q.setFromAxisAngle(X, -s.back)).multiply(q.setFromAxisAngle(Z, s.side));
     });
+    this.swayCoat(fwd, dt);
+  }
+
+  /**
+   * The back of the coat swings out of the way of a leg that goes back (`coatSwing`, plus a little
+   * margin), trails a bit with speed, and the lower panel lags behind on a softer spring.
+   */
+  private swayCoat(fwd: number, dt: number): void {
+    if (this.coat.length === 0) return;
+    this.root.updateMatrixWorld(true);
+    for (const c of this.coat) {
+      // The leg in the panel's rest frame (follows the pelvis, so a leaning body does not count).
+      c.bone.parent!.getWorldQuaternion(qFrame).multiply(c.rest).invert();
+      const leg = legB.subVectors(c.calf.getWorldPosition(legB), c.thigh.getWorldPosition(legA)).applyQuaternion(qFrame);
+      const swing = coatSwing(leg);
+      const want = (swing > 0 ? swing + 0.08 : 0) + Math.max(0, fwd) * 0.02;
+      c.a += (want - c.a) * (1 - Math.exp(-dt * 18));
+      // The lower panel adds a quarter of the upper one's swing on a softer spring: cloth lag.
+      c.b += (Math.max(0, fwd) * 0.03 + c.a * 0.25 - c.b) * (1 - Math.exp(-dt * 8));
+      c.bone.quaternion.copy(c.rest).multiply(q.setFromAxisAngle(X, c.a));
+      c.low.quaternion.setFromAxisAngle(X, c.b);
+    }
   }
 }

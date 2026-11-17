@@ -264,6 +264,13 @@ A new body or head, authored clips or retargeting (importing more clips from the
 - Pictures, replaced in `docs/proof/h1-hero/step3/`: `close-*.png` (facing the camera, old left, new right), `after-blender-*.png`, `strip-*.png`.
 - Still open in step 3: the coat spring joints, UV layouts with baked placeholder shading, and the chest shape. Waiting for look 2 before more look work.
 
+## Handover step 3c (Opus 5.5, 2026-11-17)
+- Coat spring joints: `build-hero.mjs` makes `coat_bl_01/_02` and `coat_br_01/_02` on the pelvis with `addChain`, which the scarf chain uses too. The joints are world-aligned in the bind pose, `_01` just below the belt and `_02` at 0.66 m. That makes 72 joints, the budget. `hero_clothes.with_back_chain` moves the back of the skirt onto them, fading out toward the sides. `HeroView.swayCoat` turns each `_01` by `coatSwing`: the backward swing of that side's thigh, measured in the panel's rest frame, plus 0.08 rad of margin and a little trail with speed. A forward swing is ignored. `_02` lags on a softer spring. Test in `stand-clip.test.ts`. `run-side.png` shows a side run in the game: the back of the coat clears the trailing leg.
+- UVs and placeholder shading: every piece gets a smart UV project, exported as `TEXCOORD_0` for step 6. Ambient occlusion comes from 24 fixed ray casts per vertex against the body and all pieces (reach 0.15 m, strength 0.7) and is multiplied into the vertex colours. Cycles' vertex bake was not reproducible between runs, even on one thread, so it is not used.
+- Numbers: file 1,455 KB, 28,894 triangles, byte-stable. Coat 5,670, boots 2,210, gloves 2,360, scarf 688 triangles.
+- Still open in step 3: the chest shape. The skirt flares wide in the two-handed stance; waiting for look 2.
+- `director.test.ts` hits its 5 s limit in most full `npm run check` runs on this PC while Blender or Playwright run. It takes about 5 s alone and passes alone.
+
 ## Questions
 - Johannes (look 2 of 2): is the closed coat, with its wide skirt in the two-handed stance, right?
 - Equipment variety: run the Fable pass on the proposal above before step 4?

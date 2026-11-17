@@ -264,6 +264,25 @@ def skirt_weights(t, x, top, phi=0.0):
     return w
 
 
+# Coat back panel chains, made in build-hero.mjs on the pelvis: _01 just below the belt, _02 at
+# COAT_CHAIN_LOW meters. The back of the skirt moves with them; HeroView swings them.
+COAT_CHAIN_LOW = 0.66
+
+
+def with_back_chain(weights, t, x, z, phi, h1):
+    """Moves the back of the skirt (fading out toward the sides) onto the coat chains."""
+    back = min(1.0, max(0.0, (-math.cos(phi) - 0.2) / 0.6)) * min(1.0, t / 0.25)
+    if back <= 0:
+        return weights
+    low = min(1.0, max(0.0, (COAT_CHAIN_LOW + 0.08 - z) / 0.16))
+    left = min(1.0, max(0.0, 0.5 + x / 0.06))
+    out = [(n, w * (1 - back)) for n, w in weights]
+    for side, k in (('l', left), ('r', 1 - left)):
+        out.append((f'coat_b{side}_01', back * k * (1 - low)))
+        out.append((f'coat_b{side}_02', back * k * low))
+    return out
+
+
 def coat(body):
     """a_mantel: long belted leather coat (body, sleeves, skirt, belt, pocket) and trousers. No collar:
     the scarf covers the neck, as in the 2D art."""
@@ -340,7 +359,8 @@ def coat(body):
                 co = Vector((math.sin(phi) * rad, cy - math.cos(phi) * rad, z + y_jag))
                 shade = (0.75 + 0.35 * noise(co, 2.0)) * (1 - 0.22 * t)
                 col = COAT_DARK if (r == rows - 1 and noise(co, 9.0) > 0.6) else COAT
-                row.append(piece.vert(co, skirt_weights(t, co.x, r == 0, phi), tuple(k * shade for k in col)))
+                w = with_back_chain(skirt_weights(t, co.x, r == 0, phi), t, co.x, co.z, phi, waist)
+                row.append(piece.vert(co, w, tuple(k * shade for k in col)))
             grid.append(row)
         for r in range(rows - 1):
             for c in range(cols):
@@ -576,15 +596,75 @@ def join(name, objects):
     return out
 
 
+def unwrap(obj):
+    """Smart UV project, one layout per piece (step 6 paints over it)."""
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+AO_STRENGTH = 0.7
+AO_RAYS = 24
+AO_REACH = 0.15
+
+
+def _hemisphere(n):
+    """Fixed, evenly spread directions on the upper unit hemisphere (Fibonacci spiral)."""
+    out = []
+    golden = math.pi * (3 - math.sqrt(5))
+    for i in range(n):
+        z = 1 - (i + 0.5) / n
+        r = math.sqrt(1 - z * z)
+        out.append(Vector((math.cos(golden * i) * r, math.sin(golden * i) * r, z)))
+    return out
+
+
+def bake_ao(pieces, body):
+    """Ambient occlusion by ray casts against the body and every piece (fixed directions, so the
+    result is the same every run), multiplied into each piece's `Col`."""
+    verts, polys = list(body.co), list(body.tris)
+    for obj in pieces:
+        base = len(verts)
+        verts += [v.co.copy() for v in obj.data.vertices]
+        polys += [tuple(base + i for i in p.vertices) for p in obj.data.polygons]
+    tree = BVHTree.FromPolygons(verts, polys, epsilon=0.0)
+    dirs = _hemisphere(AO_RAYS)
+    for obj in pieces:
+        col = obj.data.color_attributes['Col']
+        for v in obj.data.vertices:
+            n = v.normal
+            t = n.orthogonal().normalized()
+            b = n.cross(t)
+            origin = v.co + n * 0.003
+            hits = 0
+            for d in dirs:
+                ray = t * d.x + b * d.y + n * d.z
+                if tree.ray_cast(origin, ray, AO_REACH)[0] is not None:
+                    hits += 1
+            k = 1 - AO_STRENGTH * hits / AO_RAYS
+            r, g, bl, _ = col.data[v.index].color
+            col.data[v.index].color = (r * k, g * k, bl * k, 1.0)
+        print(f'hero_clothes: {obj.name}: ambient occlusion baked')
+
+
 def build(armature, body_obj):
     body = Body(body_obj, armature)
     mantel = coat(body)
     pieces = [mantel, boots(body), gloves(body), scarf(body, mantel)]
     # The shells carry the body's UVs, which mean nothing on clothing (and joining them with built
-    # parts leaves undefined UVs): no UVs until step 6 unwraps the pieces for painted textures.
+    # parts leaves undefined UVs): drop them, unwrap each piece for step 6's painted textures, and
+    # bake ambient occlusion into the vertex colours as placeholder shading.
     for obj in pieces:
         while obj.data.uv_layers:
             obj.data.uv_layers.remove(obj.data.uv_layers[0])
+        unwrap(obj)
+    bake_ao(pieces, body)
+    for obj in pieces:
         # Stable output: bmesh ops (extrude) emit new faces in pointer order, which changes between
         # runs; sort faces by their vertices and triangulate with a fixed rule.
         bm = bmesh.new()
