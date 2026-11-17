@@ -3,28 +3,29 @@
 // grouped in chunks so the camera frustum culls what is off screen. Lamps are light *spots*; a
 // fixed pool of point lights follows the hero (constant light count, no shader recompiles).
 import {
-  BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight,
+  BufferAttribute, BufferGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
-  SphereGeometry, TorusGeometry, Vector3, Euler, type Material, type Texture,
+  SphereGeometry, Vector3, Euler, type Material, type Texture,
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
+import { buildLandmark } from './landmarks';
 import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
-import { BatchSet, boxGeo } from './batch';
+import { BatchSet } from './batch';
 import { isLargeProp } from './layers';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
-import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
+import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, type PaintOptions } from './paint';
 import {
   Builder, balconyLife, buildAltbau, buildProp, partOf, type BreakableView, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
@@ -42,7 +43,7 @@ interface LightSpot {
   phase: number;
 }
 
-interface MapMats extends Mats {
+export interface MapMats extends Mats {
   railSteel: LitMaterial;
   ground: LitMaterial;
   /** Ground scatter atlas (puddles, leaves, trash, rubble). */
@@ -61,10 +62,16 @@ interface MapMats extends Mats {
   forumSign: LitMaterial;
   spatiSign: LitMaterial;
   frond: LitMaterial;
+  // M11d landmarks.
+  slate: LitMaterial;
+  clock: LitMaterial;
+  sRoundel: LitMaterial;
+  stationName: LitMaterial;
+  ratskeller: LitMaterial;
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
-class ChunkBuilder extends Builder {
+export class ChunkBuilder extends Builder {
   readonly spots: LightSpot[] = [];
   readonly glows = new BatchSet();
   private readonly glowMats = new Map<number, Material>();
@@ -116,7 +123,11 @@ class ChunkBuilder extends Builder {
   }
 }
 
-function makeMapMats(materials: Materials): MapMats {
+function emissive(materials: Materials, t: { map: Texture; emissiveMap: Texture }, color: number, intensity: number): LitMaterial {
+  return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
+}
+
+export function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
@@ -146,6 +157,11 @@ function makeMapMats(materials: Materials): MapMats {
       return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffa050, emissiveIntensity: 1.4, roughness: 0.6 });
     })(),
     frond: materials.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
+    slate: materials.surface({ map: paintSlate(o).map, roughness: 0.55, metalness: 0.15, vertexColors: true }),
+    clock: emissive(materials, paintClock(), 0xffe0a0, 1.1),
+    sRoundel: emissive(materials, paintSRoundel(), 0x40ff90, 1.3),
+    stationName: emissive(materials, paintLettering('BERLIN-KÖPENICK', '#d8cdb0', '#0d6a3a', 0.7, 0.62), 0x40e080, 0.55),
+    ratskeller: emissive(materials, paintLettering('RATSKELLER', '#1e2a22', '#d9b25a', 1, 0.3), 0xffc060, 1.1),
   };
   loadGroundTexture('dirt', o.anisotropy, texture => {
     uDirt.value = m.path.map = texture;
@@ -1603,13 +1619,6 @@ function lp(l: Landmark, x: number, y: number, z: number): Vector3 {
   return new Vector3(x, y, z).applyMatrix4(new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0, l.z));
 }
 
-function steppedGable(b: ChunkBuilder, l: Landmark, x: number, y: number, z: number, w: number, ry = 0): void {
-  for (let i = 0; i < 4; i++) {
-    const sw = w * (1 - i * 0.24);
-    b.box(b.mm.brick, lm(l, x, y + i * 1.1 + 0.55, z, ry), sw, 1.1, 0.7, [0.95, 0.75, 0.68]);
-  }
-}
-
 /**
  * Späti rest stop (M11b part 2): brick shop with a rolled-up shutter, sign and lit shop windows; inside
  * shelves full of goods, glowing fridges, counter with till, mattress and a workbench with a radio.
@@ -1681,145 +1690,6 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
   }
   up.box(M.tar, lm(l, 0, H + 0.12, 0), w + 0.4, 0.24, d + 0.4, [0.6, 0.6, 0.6]);
   up.box(M.rust, lm(l, 2.5, H + 0.6, -1.5), 1.2, 0.7, 0.9, [0.8, 0.8, 0.8]);
-}
-
-function buildLandmark(b: ChunkBuilder, l: Landmark): void {
-  const M = b.mm;
-  const frame = { x: l.x, z: l.z, rot: l.rot };
-  switch (l.kind) {
-    case 'rathaus': {
-      // Red brick, neo-gothic: two storeys, stepped gables, tall corner tower with spire and clock.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      const h = 12;
-      walls(b, { ...frame, w, d }, M.brick, h, [1.4, 5.2, 8.6], 1906, 0.35, 2.6);
-      b.box(M.stucco, lm(l, 0, h + 0.2, 0), w + 0.4, 0.4, d + 0.4, [0.8, 0.7, 0.6]);
-      b.geo(M.roof, gableRoof(d, w, 6), lm(l, 0, h + 0.4, 0, Math.PI / 2), [0.55, 0.6, 0.62]);
-      for (const x of [-w / 4, w / 4]) steppedGable(b, l, x, h, d / 2, 6);
-      steppedGable(b, l, 0, h, d / 2, 8);
-      // Tower at the front left corner.
-      const tx = -w / 2 + 3;
-      const tz = d / 2 - 3;
-      b.box(M.brick, lm(l, tx, 12.5, tz), 6.4, 25, 6.4, [0.95, 0.72, 0.64]);
-      b.shadowBox(lm(l, tx, 12.5, tz), 6.4, 25, 6.4);
-      b.box(M.stucco, lm(l, tx, 25.2, tz), 7, 0.5, 7, [0.8, 0.7, 0.6]);
-      b.geo(M.roof, new ConeGeometry(4.4, 11, 4), lm(l, tx, 31, tz, Math.PI / 4), [0.45, 0.55, 0.55]);
-      for (const ry of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
-        const cm = lm(l, tx, 21, tz, ry).multiply(new Matrix4().setPosition(0, 0, 3.25));
-        b.geo(M.lampGlass, new CircleGeometry(1.3, 20), cm);
-      }
-      // Arched portal and lamps on the front.
-      b.box(M.stucco, lm(l, 2, 2, d / 2 + 0.2), 4.2, 4, 0.5, [0.85, 0.75, 0.65]);
-      b.box(M.dark, lm(l, 2, 1.7, d / 2 + 0.3), 2.6, 3.2, 0.5);
-      for (const x of [-1, 5]) b.light(lp(l, x, 3.2, d / 2 + 1.2), 0xffb060, 16, 11, 0.1, 3.5);
-      b.shadowBox(lm(l, 0, h / 2, 0), w, h, d);
-      break;
-    }
-    case 'schloss': {
-      // Baroque palace: three storeys of ochre plaster, red hip roof, a projecting center with pediment.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      const h = 12;
-      const plaster = M.plaster.ochre as LitMaterial;
-      walls(b, { ...frame, w, d }, plaster, h, [1.4, 5.0, 8.6], 1690, 0.2, 2.4);
-      b.box(M.stucco, lm(l, 0, h, 0), w + 0.5, 0.5, d + 0.5);
-      b.geo(M.roof, gableRoof(d, w, 5.5), lm(l, 0, h + 0.25, 0, Math.PI / 2));
-      b.geo(plaster, gableEnds(d, w, 5.5), lm(l, 0, h + 0.25, 0, Math.PI / 2));
-      b.box(plaster, lm(l, 0, h / 2 + 0.5, d / 2 + 0.6), 5, h + 1, 1.2);
-      b.box(M.stucco, lm(l, 0, h + 1.6, d / 2 + 0.6), 5.6, 2.4, 1.3, [0.95, 0.9, 0.82]);
-      b.light(lp(l, 0, 3, d / 2 + 2.5), 0xffc070, 12, 10, 0.05, 3);
-      b.shadowBox(lm(l, 0, h / 2, 0), w, h, d);
-      break;
-    }
-    case 'kirche': {
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      walls(b, { ...frame, w, d }, M.brick, 9, [3.5], 1841, 0.4, 3);
-      b.geo(M.roof, gableRoof(d, w, 5), lm(l, 0, 9, 0, Math.PI / 2), [0.6, 0.65, 0.6]);
-      b.geo(M.brick, gableEnds(d, w, 5), lm(l, 0, 9, 0, Math.PI / 2));
-      b.box(M.brick, lm(l, 0, 9, d / 2 + 2), 4.5, 18, 4.5, [0.9, 0.7, 0.62]);
-      b.geo(M.roof, new ConeGeometry(3.2, 9, 8), lm(l, 0, 22.5, d / 2 + 2), [0.4, 0.55, 0.5]);
-      b.shadowBox(lm(l, 0, 9, d / 2 + 2), 4.5, 18, 4.5);
-      break;
-    }
-    case 'sbahnhof': {
-      // Brick station hall on the embankment, platform canopy, green S sign.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      walls(b, { ...frame, w, d }, M.brick, 7, [1.4, 4.2], 1882, 0.5, 3);
-      b.box(M.tar, lm(l, 0, 7.2, 0), w + 1, 0.4, d + 1, [0.5, 0.5, 0.5]);
-      for (let x = -w / 2 - 20; x <= w / 2 + 20; x += 6) {
-        b.box(M.iron, lm(l, x, 2.4, -d / 2 - 3), 0.25, 4.8, 0.25);
-      }
-      b.box(M.rust, lm(l, 0, 4.9, -d / 2 - 3), w + 44, 0.25, 6);
-      b.geo(M.greenSign, new CylinderGeometry(1.5, 1.5, 0.3, 24), lm(l, 0, 8.6, d / 2 + 0.3).multiply(new Matrix4().makeRotationX(Math.PI / 2)));
-      b.light(lp(l, 0, 6, d / 2 + 2), 0x9dffb0, 14, 12, 0, 4);
-      b.box(M.door, lm(l, 0, 1.5, d / 2 + 0.05), 4, 3, 0.2);
-      b.shadowBox(lm(l, 0, 3.5, 0), w, 7, d);
-      break;
-    }
-    case 'forum': {
-      // Shopping center: concrete box with a dead glass front and a flickering sign.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      b.box(M.concrete, lm(l, 0, 5, 0), w, 10, d);
-      b.box(M.glass, lm(l, 0, 3, d / 2 + 0.1), w - 4, 5.4, 0.2);
-      b.geo(M.forumSign, new PlaneGeometry(12, 2.25), lm(l, 0, 8.4, d / 2 + 0.12));
-      b.light(lp(l, 0, 6, d / 2 + 3), 0xff9a4a, 14, 14, 0.6, 5);
-      b.shadowBox(lm(l, 0, 5, 0), w, 10, d);
-      break;
-    }
-    case 'mueggelturm': {
-      // GDR viewing tower: slim concrete shaft, glazed top box, flat roof.
-      b.box(M.concrete, lm(l, 0, 14, 0), 4.2, 28, 4.2);
-      b.box(M.concrete, lm(l, 0, 29.5, 0), 7.5, 3, 7.5);
-      b.box(M.windows, lm(l, 0, 29.6, 0), 7.6, 1.6, 7.6);
-      b.box(M.concrete, lm(l, 0, 31.2, 0), 8.5, 0.4, 8.5);
-      b.box(M.concrete, lm(l, 0, 1.8, 6), 12, 3.6, 6);
-      b.light(lp(l, 0, 3, 10), 0xffb060, 14, 12, 0.2, 4);
-      b.shadowBox(lm(l, 0, 14, 0), 4.2, 28, 4.2);
-      break;
-    }
-    case 'riesenrad': {
-      // The Spreepark wheel: rusty rim, spokes, gondolas, A-frame legs.
-      const R = 17;
-      const hub = R + 3;
-      const rim = new TorusGeometry(R, 0.35, 6, 48);
-      b.geo(M.rust, rim, lm(l, 0, hub, -0.6));
-      b.geo(M.rust, rim, lm(l, 0, hub, 0.6));
-      for (let i = 0; i < 16; i++) {
-        const a = (i / 16) * Math.PI * 2;
-        const sm = lm(l, 0, hub, 0).multiply(new Matrix4().makeRotationZ(a)).multiply(new Matrix4().setPosition(0, R / 2, 0));
-        b.box(M.rust, sm, 0.15, R, 0.15);
-        const gx = Math.sin(a) * R;
-        const gy = hub + Math.cos(a) * R;
-        b.box(M.vanSide, lm(l, gx, gy - 1.3, 0), 1.5, 1.6, 1.6);
-      }
-      for (const z of [-2.5, 2.5]) {
-        for (const x of [-1, 1]) {
-          const leg = lm(l, x * 4.5, hub / 2, z).multiply(new Matrix4().makeRotationZ(x * -0.22));
-          b.box(M.rust, leg, 0.6, hub + 1, 0.6);
-        }
-      }
-      b.light(lp(l, 0, 4, 4), 0xff8a50, 12, 12, 0.5, 4);
-      b.shadowBox(lm(l, 0, hub, 0), R * 2, R * 2, 1.2);
-      break;
-    }
-    case 'dino': {
-      // Toppled amusement park dinosaur: mossy concrete body, long neck and tail.
-      const s = 1.6;
-      const body = new SphereGeometry(1, 12, 8);
-      b.geo(M.mossy, body, lm(l, 0, 2.2 * s, 0).multiply(tmpScale.makeScale(1.6 * s, 1.2 * s, 2.6 * s)));
-      b.geo(M.mossy, new CylinderGeometry(0.45 * s, 0.8 * s, 4 * s, 10), lm(l, 0, 4.3 * s, 2.8 * s).multiply(new Matrix4().makeRotationX(0.7)));
-      b.geo(M.mossy, boxGeo(1 * s, 0.9 * s, 1.8 * s, 0.5), lm(l, 0, 5.8 * s, 4.6 * s));
-      b.geo(M.mossy, new ConeGeometry(0.9 * s, 5 * s, 10), lm(l, 0, 1.6 * s, -4.4 * s).multiply(new Matrix4().makeRotationX(-1.35)));
-      for (const [x, z] of [[-1, 1.2], [1, 1.2], [-1, -1.2], [1, -1.2]]) {
-        b.geo(M.mossy, new CylinderGeometry(0.4 * s, 0.5 * s, 2 * s, 8), lm(l, (x as number) * 0.9 * s, 1 * s, (z as number) * s));
-      }
-      b.shadowBox(lm(l, 0, 2.5 * s, 0), 3 * s, 4 * s, 7 * s);
-      break;
-    }
-  }
 }
 
 // ---------------------------------------------------------------- assembly

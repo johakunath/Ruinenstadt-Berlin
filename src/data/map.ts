@@ -87,6 +87,8 @@ export interface Landmark {
   clear: number;
   /** Shown when the hero enters (Späti rest stops). */
   name?: string;
+  /** Which figure of a kind (the three Spreepark dinosaurs). */
+  variant?: number;
 }
 
 export interface Lot {
