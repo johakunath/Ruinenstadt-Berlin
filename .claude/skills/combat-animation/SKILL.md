@@ -13,7 +13,7 @@ Never set clip times from numbers alone. Look at the clip first, then measure, t
 |---|---|---|
 | 1 | Get the source packs (not committed) | `bash tools/fetch-assets.sh` → `assets-src/UAL1_Standard.glb`, `UAL2_Standard.glb` (86 clips, CC0) |
 | 2 | List what exists before inventing a pose | clip names: `CLIPS` in `tools/build-assets.mjs`; all names: read the `animations` array of the two GLBs |
-| 3 | Add wanted clips to `CLIPS`, rebuild | `npm run assets` (check `hero.glb` and `zombie.glb` did not change: `git status`) |
+| 3 | Look at a pack clip before importing it: `node tools/clip-sheet.mjs out.png "clip=Pistol_Idle_Loop&pack=UAL1_Standard&weapon=hammer"`. Then add wanted clips to `CLIPS`, rebuild | `npm run assets` (check `hero.glb` and `zombie.glb` did not change: `git status`) |
 | 4 | Look at the clip with the weapon in the hand | `npm run dev`, then `node tools/clip-sheet.mjs out.png "clip=Punch_Cross&weapon=spear&from=0.1&to=0.6&n=8&view=side"` and open `out.png`. `view=front` and `view=top` show the sweep direction |
 | 5 | Measure where the weapon points | `node tools/clip-swing.mjs <clip> 0.0333`: yaw (left of forward) and pitch per frame, hand position |
 | 6 | Write the attack | `src/data/combat.ts` › `WEAPON_ATTACKS`: `clipStart` (pose when the wind-up begins), `clipSwing` (first active frame), `clipHit` (last active frame); the arc `from`/`to` follows the measured yaw; `style` picks the smear |

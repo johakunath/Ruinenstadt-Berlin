@@ -12,7 +12,9 @@ import { SRC, dress, finish, hash, io, readGltf, slimMaterials, stripAttributes 
 const CLIPS = {
   'UAL1_Standard.glb': ['Idle_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Roll', 'Hit_Chest', 'Death01', 'Sword_Idle',
     // M7/M8/M16: spear thrusts, casts, leaps, interactions.
-    'Punch_Jab', 'Punch_Cross', 'Sword_Attack', 'Spell_Simple_Shoot', 'Jump_Start', 'Jump_Loop', 'Jump_Land', 'Interact'],
+    'Punch_Jab', 'Punch_Cross', 'Sword_Attack', 'Spell_Simple_Shoot', 'Jump_Start', 'Jump_Loop', 'Jump_Land', 'Interact',
+    // H1: hammer standing pose (both hands on the handle, left hand by IK).
+    'Pistol_Idle_Loop'],
   'UAL2_Standard.glb': [
     'Sword_Regular_A', 'Sword_Regular_A_Rec', 'Sword_Regular_B', 'Sword_Regular_B_Rec', 'Sword_Regular_C', 'Sword_Dash',
     'Zombie_Idle_Loop', 'Zombie_Walk_Fwd_Loop', 'Zombie_Scratch', 'Hit_Knockback',
