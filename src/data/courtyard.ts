@@ -39,7 +39,7 @@ export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' 
   | UrbanPropKind | MarketPropKind | PlantPropKind;
 export type UrbanPropKind = 'crane' | 'container' | 'scaffold' | 'rohbau' | 'pallets' | 'ticketMachine' | 'boom' | 'bikes' | 'clothesline' | 'gravestone' | 'wall' | 'lowWall' | 'slab' | 'girder';
 export type MarketPropKind = 'stall' | 'stallBroken' | 'spill' | 'shed' | 'gardenBed' | 'gnome' | 'jetty' | 'picket';
-export type PlantPropKind = 'bush' | 'hedge' | 'flowers' | 'reeds';
+export type PlantPropKind = 'bush' | 'topiary' | 'hedge' | 'flowers' | 'reeds';
 
 export interface Prop {
   kind: PropKind;
@@ -171,7 +171,7 @@ export function propCollider(p: Prop): Collider | null {
     case 'shed': return { kind: 'box', x: p.x, z: p.z, hx: 1.4, hz: 1.2, rot: p.rot };
     case 'picket': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.06, rot: p.rot };
     case 'hedge': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.45, rot: p.rot };
-    case 'clothesline': case 'spill': case 'gardenBed': case 'gnome': case 'jetty': case 'bush': case 'flowers': case 'reeds':
+    case 'clothesline': case 'spill': case 'gardenBed': case 'gnome': case 'jetty': case 'bush': case 'topiary': case 'flowers': case 'reeds':
       return null;
   }
 }

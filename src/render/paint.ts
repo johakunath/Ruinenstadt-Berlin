@@ -1273,3 +1273,227 @@ export function paintTextSign(text: string, bg: string, fg: string): EmissiveSur
   ectx.fillRect(W * 0.58, 0, W * 0.09, H);
   return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
 }
+
+// ---------------------------------------------------------------- plants (M11c)
+
+/**
+ * Plant card atlas, 4 x 2 cells of 256 px, alpha tested. Row 0: leaf cluster, pinnate frond, big
+ * leaves (jungle undergrowth), reeds with cattails. Row 1: flower patches (poppies, yellow, white,
+ * purple). Light, fairly neutral greens: vertex tints shift species and season. Cell order: `PLANT_CELL`.
+ */
+export const PLANT_CELL = { leaves: 0, frond: 1, bigLeaf: 2, reeds: 3, poppy: 4, yellow: 5, white: 6, purple: 7 } as const;
+export function paintPlants(): Texture {
+  const S = 256;
+  const rng = new Rng(171);
+  const [c, ctx] = canvas(S * 4, S * 2);
+  const greens = ['#7a9a3a', '#5f8232', '#9aae48', '#4d6c2c', '#86a040', '#b4b452'];
+  const cell = (i: number, draw: () => void): void => {
+    ctx.save();
+    ctx.translate((i % 4) * S, Math.floor(i / 4) * S);
+    ctx.beginPath();
+    ctx.rect(2, 2, S - 4, S - 4);
+    ctx.clip();
+    draw();
+    ctx.restore();
+  };
+  const leaf = (x: number, y: number, r: number, a: number, col: string, w = 0.5): void => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.5, r * w, r * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+  // Leaf cluster: lumpy round mass of small leaves, darker inside, ragged outline.
+  cell(PLANT_CELL.leaves, () => {
+    for (let i = 0; i < 420; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      const rr = Math.sqrt(rng.next()) * (98 + 18 * Math.sin(a * 5 + 1));
+      const x = S / 2 + Math.cos(a) * rr;
+      const y = S / 2 + Math.sin(a) * rr * 0.92;
+      const t = i / 420;
+      leaf(x, y, rng.range(10, 18), a + Math.PI / 2 + rng.range(-0.8, 0.8), shade(rng.pick(greens), -0.55 + t * 0.7 + rng.range(-0.12, 0.12)));
+    }
+  });
+  // Pinnate frond (palm, tree fern, fern): rib from the bottom, leaflets tapering to the tip.
+  cell(PLANT_CELL.frond, () => {
+    ctx.lineCap = 'round';
+    {
+      const x0 = S / 2;
+      for (let i = 0; i < 34; i++) {
+        const t = i / 34;
+        const y = S - 8 - t * (S - 20);
+        const len = (1 - t) ** 0.7 * 92 * (0.3 + 0.7 * Math.min(1, t * 5));
+        for (const s of [-1, 1]) {
+          ctx.strokeStyle = shade(rng.pick(greens), rng.range(-0.35, 0.05));
+          ctx.lineWidth = rng.range(5, 8) * (1 - t * 0.5);
+          ctx.beginPath();
+          ctx.moveTo(x0 + Math.sin(t * 3) * 6, y);
+          ctx.quadraticCurveTo(x0 + s * len * 0.5, y - 6, x0 + s * len, y + 10 + rng.range(-4, 6));
+          ctx.stroke();
+        }
+      }
+      ctx.strokeStyle = '#4a5a24';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x0, S - 4);
+      ctx.quadraticCurveTo(x0 + 8, S / 2, x0, 10);
+      ctx.stroke();
+    }
+  });
+  // Big leaves (elephant ear, butterbur): five broad hearts on stems fanning from the bottom.
+  cell(PLANT_CELL.bigLeaf, () => {
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + (i - 2.5) * 0.42 + rng.range(-0.1, 0.1);
+      const r = rng.range(70, 95);
+      const x = S / 2 + Math.cos(a) * (r * 0.95);
+      const y = S - 6 + Math.sin(a) * (r * 1.1);
+      ctx.strokeStyle = '#5a6a2a';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(S / 2, S - 4);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a + Math.PI / 2);
+      ctx.fillStyle = shade(rng.pick(greens), rng.range(-0.3, 0.05));
+      ctx.beginPath();
+      ctx.moveTo(0, 6);
+      ctx.bezierCurveTo(-r * 0.75, -r * 0.05, -r * 0.45, -r * 0.85, 0, -r * 0.95);
+      ctx.bezierCurveTo(r * 0.45, -r * 0.85, r * 0.75, -r * 0.05, 0, 6);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(230,240,170,0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 4);
+      ctx.lineTo(0, -r * 0.85);
+      for (let v = 1; v < 5; v++) for (const s of [-1, 1]) {
+        ctx.moveTo(0, -r * 0.18 * v);
+        ctx.lineTo(s * r * 0.36, -r * 0.18 * v - r * 0.14);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+  // Reeds: thin blades and a few brown cattails.
+  cell(PLANT_CELL.reeds, () => {
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 70; i++) {
+      const x = S / 2 + rng.range(-70, 70);
+      const h = rng.range(140, 245);
+      const bend = rng.range(-30, 30);
+      ctx.strokeStyle = shade(rng.pick(['#8a9a48', '#6f8238', '#a8a454', '#94884a']), rng.range(-0.3, 0.1));
+      ctx.lineWidth = rng.range(2.5, 5);
+      ctx.beginPath();
+      ctx.moveTo(x, S - 2);
+      ctx.quadraticCurveTo(x + bend * 0.2, S - h * 0.6, x + bend, S - h);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 7; i++) {
+      const x = S / 2 + rng.range(-60, 60);
+      const top = rng.range(18, 70);
+      ctx.strokeStyle = '#6a7036';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x, S - 2);
+      ctx.lineTo(x + rng.range(-4, 4), top - 8);
+      ctx.stroke();
+      ctx.fillStyle = shade('#5a3a1e', rng.range(-0.2, 0.15));
+      ctx.beginPath();
+      ctx.ellipse(x, top + 20, 7, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+  // Flower patches: a tuft of grass with heads spread over the upper part of the card.
+  const meadow = (heads: (x: number, y: number, r: number) => void, n: number): void => {
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 60; i++) {
+      const x = S / 2 + rng.range(-110, 110) * Math.sqrt(rng.next());
+      const h = rng.range(50, 170);
+      ctx.strokeStyle = shade(rng.pick(greens), rng.range(-0.4, 0));
+      ctx.lineWidth = rng.range(2.5, 5);
+      ctx.beginPath();
+      ctx.moveTo(x, S - 2);
+      ctx.quadraticCurveTo(x, S - h * 0.6, x + rng.range(-24, 24), S - h);
+      ctx.stroke();
+    }
+    for (let i = 0; i < n; i++) {
+      const x = S / 2 + rng.range(-105, 105);
+      const y = rng.range(26, S - 60);
+      ctx.strokeStyle = '#4f6a2a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + rng.range(-8, 8), S - 2);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      heads(x, y, rng.range(0.8, 1.2));
+    }
+  };
+  const blossom = (x: number, y: number, r: number, petals: number, col: string, eye: string, er: number): void => {
+    for (let k = 0; k < petals; k++) leaf(x, y, r, (k / petals) * Math.PI * 2, shade(col, rng.range(-0.15, 0.1)), 0.42);
+    ctx.fillStyle = eye;
+    ctx.beginPath();
+    ctx.arc(x, y, er, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  cell(PLANT_CELL.poppy, () => meadow((x, y, s) => blossom(x, y, 15 * s, 4, '#d8261a', '#1a1010', 4 * s), 30));
+  cell(PLANT_CELL.yellow, () => meadow((x, y, s) => {
+    for (let k = 0; k < 4; k++) blossom(x + rng.range(-9, 9), y + rng.range(-9, 9), 7 * s, 5, '#f2c41e', '#c07a10', 2.5);
+  }, 26));
+  cell(PLANT_CELL.white, () => meadow((x, y, s) => blossom(x, y, 12 * s, 10, '#f4f0e4', '#e8b420', 4.5 * s), 34));
+  cell(PLANT_CELL.purple, () => meadow((x, y, s) => {
+    // Lupine and lavender spikes: stacked buds narrowing to the top.
+    for (let k = 0; k < 9; k++) {
+      ctx.fillStyle = shade(rng.pick(['#8a4ac0', '#a45ad0', '#6a3aa0', '#c070c8']), rng.range(-0.15, 0.15));
+      ctx.beginPath();
+      ctx.ellipse(x + rng.range(-2, 2), y + 26 - k * 6 * s, (7 - k * 0.55) * s, 4 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }, 24));
+  return toTexture(c, false);
+}
+
+/** Dense foliage surface (bush cores, hedges, tree crowns): mottled leaves, tiling, no alpha. */
+export function paintFoliage(): Texture {
+  const S = 256;
+  const rng = new Rng(181);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#3c5428';
+  ctx.fillRect(0, 0, S, S);
+  const greens = ['#6f8e36', '#56762e', '#8aa040', '#41602a', '#a0a848', '#2f4620'];
+  for (let i = 0; i < 900; i++) {
+    const x = rng.range(0, S);
+    const y = rng.range(0, S);
+    const r = rng.range(6, 13);
+    const a = rng.range(0, Math.PI * 2);
+    const col = shade(rng.pick(greens), rng.range(-0.25, 0.15));
+    wrapped(S, S, x, y, r, (px, py) => {
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(a);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.5, r, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+  mottle(ctx, rng, S, S, 14, ['#1c2a12', '#c0c060'], [30, 60], 0.18);
+  return toTexture(c);
+}
+
+/** Bark: vertical furrows on grey-brown, tiling. Birch and pine come from vertex tints. */
+export function paintBark(): Texture {
+  const W = 128;
+  const H = 256;
+  const rng = new Rng(191);
+  const [c, ctx] = canvas(W, H);
+  ctx.fillStyle = '#7a6a5a';
+  ctx.fillRect(0, 0, W, H);
+  strokes(ctx, rng, W, H, { count: 260, colors: ['#4a3c30', '#9a8a78', '#5e4e40', '#2e241c'], len: [20, 70], width: [2, 6], alpha: [0.4, 0.9], angle: Math.PI / 2, spread: 0.15 });
+  mottle(ctx, rng, W, H, 10, ['#5a7040', '#2a2018'], [10, 30], 0.25);
+  return toTexture(c);
+}
