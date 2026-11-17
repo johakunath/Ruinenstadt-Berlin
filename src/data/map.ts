@@ -481,6 +481,29 @@ export function landmarkCollider(l: Landmark): Collider {
   return { kind: 'box', x: l.x, z: l.z, hx: l.hx, hz: l.hz, rot: l.rot };
 }
 
+/**
+ * Extra blocking boxes for figures whose low parts reach past the main footprint (Codex review of
+ * M11d): the Spreepark dinosaurs' necks, heads and tails. Local frame of the landmark as drawn in
+ * `src/render/landmarks.ts` (x along the front, z out of it): center, half extents, turn.
+ */
+export const DINO_PARTS: ReadonlyArray<ReadonlyArray<{ x: number; z: number; hx: number; hz: number; rot: number }>> = [
+  // Sauropod on its back: neck and head toward +z, tail toward -z.
+  [{ x: 1.3, z: 5.15, hx: 0.75, hz: 2.7, rot: 0.5 }, { x: 3.1, z: 8.1, hx: 0.6, hz: 0.9, rot: 0.4 }, { x: -1.7, z: -5.3, hx: 0.65, hz: 2.9, rot: Math.atan2(-3.4, -4.6) }],
+  // Triceratops on its side: head with frill and horns, legs sideways, short tail.
+  [{ x: 0.5, z: 4.6, hx: 1.6, hz: 1.4, rot: 0 }, { x: 1.7, z: 0, hx: 0.8, hz: 1.9, rot: 0 }, { x: -0.6, z: -3.9, hx: 0.5, hz: 1.2, rot: Math.atan2(-1.2, -2.4) }],
+  // Broken T-Rex: toppled body, tail, the torn-off head.
+  [{ x: 2.2, z: 0.6, hx: 1.3, hz: 2.6, rot: 0 }, { x: 0.9, z: -4, hx: 0.6, hz: 2.1, rot: Math.atan2(-1.4, -4.2) }, { x: -2.2, z: 3, hx: 0.7, hz: 1.1, rot: 0.7 }],
+];
+
+/** Every blocking box of a landmark: the footprint plus the parts of figures that reach past it. */
+export function landmarkColliders(l: Landmark): Collider[] {
+  const out: Collider[] = [landmarkCollider(l)];
+  if (l.kind !== 'dino') return out;
+  const c = Math.cos(l.rot), sn = Math.sin(l.rot);
+  for (const p of DINO_PARTS[l.variant ?? 0] ?? []) out.push({ kind: 'box', x: l.x + c * p.x + sn * p.z, z: l.z - sn * p.x + c * p.z, hx: p.hx, hz: p.hz, rot: l.rot + p.rot });
+  return out;
+}
+
 // ---------------------------------------------------------------- lots
 
 // v2 (M11b): smaller, lower and denser than v1. `gap` is the space to the next lot along the street,
@@ -1528,7 +1551,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   for (const l of m.landmarks) {
     if (l.kind === 'spati') colliders.push(...spatiColliders(l));
-    else if (l.hx > 0) colliders.push(landmarkCollider(l));
+    else if (l.hx > 0) colliders.push(...landmarkColliders(l));
   }
   for (const l of lots) colliders.push(...lotColliders(l));
   if (m.rail) {

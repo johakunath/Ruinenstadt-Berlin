@@ -3,7 +3,7 @@ import { colliderDistance } from '../sim/collide';
 import { koepenickMap } from './koepenick';
 import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
 import { PLAYER } from './combat';
-import { EDGE_CLEAR, edgeBackdrop, edgeDist, edgeRuns, edgeStyleAt, generateLots, generateProps, isWater, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, sidePt, streetDist } from './map';
+import { EDGE_CLEAR, edgeBackdrop, edgeDist, edgeRuns, edgeStyleAt, generateLots, generateProps, isWater, landmarkColliders, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, sidePt, streetDist } from './map';
 
 describe('Köpenick map', () => {
   for (const scale of [1, 1.3]) {
@@ -413,4 +413,23 @@ describe('M11d closed map edge (step 4)', () => {
       }
     });
   }
+});
+
+describe('M11d dinosaurs (Codex review)', () => {
+  it('block at their necks, heads and tails, not only at the body', () => {
+    const m = koepenickMap(1);
+    // Points on the drawn figures (local frame, src/render/landmarks.ts): head, neck middle, tail middle, body.
+    const probes = [
+      [[3.1, 8.1], [1.2, 5], [-1.8, -5.4], [0, 0]],
+      [[0.5, 4.6], [2.3, 1.4], [-0.6, -3.8], [0, 0]],
+      [[-2.2, 3], [2.2, 0.6], [0.8, -4], [0, -1.6]],
+    ];
+    for (const l of m.landmarks.filter((k) => k.kind === 'dino')) {
+      const cs = landmarkColliders(l), c = Math.cos(l.rot), sn = Math.sin(l.rot);
+      for (const [x, z] of probes[l.variant ?? 0]!) {
+        const wx = l.x + c * x! + sn * z!, wz = l.z - sn * x! + c * z!;
+        expect(cs.some((k) => colliderDistance(k, wx, wz) < 0), `dino ${l.variant} at ${x},${z}`).toBe(true);
+      }
+    }
+  });
 });
