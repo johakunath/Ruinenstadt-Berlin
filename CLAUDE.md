@@ -61,7 +61,8 @@ Every hit on an enemy goes through `strike` and every hit on the hero through `h
 | `npm run dev` | Dev server |
 | `npm run check` | Type check, unit tests, build |
 | `npm run e2e` | Playwright smoke test against the built game (`npm run build` first) |
-| `npm run assets` | Rebuild `assets/characters/*.glb` from `assets-src/` (`tools/fetch-assets.sh` downloads it) |
+| `npm run assets` | Rebuild `assets/characters/zombie.glb` and `anims.glb` from `assets-src/` (`tools/fetch-assets.sh` downloads it) |
+| `npm run assets:hero` | Rebuild `assets/characters/hero.glb` through headless Blender (`$BLENDER`, PATH or the Windows default path; `docs/tasks/h1-hero.md`) |
 
 URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero).
 

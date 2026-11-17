@@ -1,0 +1,28 @@
+// Hero skeleton and budget contract (H1, docs/tasks/h1-hero.md). Read by tools/build-hero.mjs and
+// src/render/hero-contract.test.ts. Plain data, erasable TypeScript only (Node runs it directly).
+
+const SIDES = ['l', 'r'] as const;
+const FINGERS = ['index', 'middle', 'pinky', 'ring', 'thumb'] as const;
+
+/** Joints 0 to 64: the UAL skeleton of the source body, in skin order. Clips target only these. */
+export const HERO_CORE_JOINTS: readonly string[] = [
+  'root', 'pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head',
+  ...SIDES.flatMap((s) => [
+    `clavicle_${s}`, `upperarm_${s}`, `lowerarm_${s}`, `hand_${s}`,
+    ...FINGERS.flatMap((f) => [`${f}_01_${s}`, `${f}_02_${s}`, `${f}_03_${s}`, `${f}_04_leaf_${s}`]),
+  ]),
+  ...SIDES.flatMap((s) => [`thigh_${s}`, `calf_${s}`, `foot_${s}`, `ball_${s}`, `ball_leaf_${s}`]),
+];
+
+/** Joints appended after the core in this order (any may be absent), never targeted by a clip. */
+export const HERO_EXTRA_JOINTS: readonly string[] = [
+  'scarf_01', 'scarf_02', 'scarf_03', 'coat_bl_01', 'coat_bl_02', 'coat_br_01', 'coat_br_02',
+];
+
+/** Limits for any look; both profiles use the same meshes. */
+export const HERO_BUDGET = {
+  triangles: 32_000,
+  skinnedDrawCalls: 9,
+  joints: 72,
+  fileBytes: 3_000_000,
+} as const;
