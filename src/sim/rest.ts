@@ -46,6 +46,6 @@ export function updateRest(sim: Sim): void {
     if (i >= 0) sim.events.push({ type: 'restEnter', index: i, first: !sim.rest.seen[i] });
     if (i >= 0) sim.rest.seen[i] = true;
   }
-  if (i < 0 || sim.run.phase === 'fight' || sim.run.phase === 'pause') return;
+  if (i < 0 || sim.run.phase === 'fight' || sim.run.phase === 'pause' || sim.run.phase === 'hold') return;
   p.hp = Math.min(sim.stats.maxHp, p.hp + sim.stats.maxHp * REST.healPerSec * DT);
 }

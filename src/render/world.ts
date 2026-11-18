@@ -62,6 +62,8 @@ export interface World {
   sync?(simTime: number): void;
   /** Breakable props (M4), drawn instanced so one can vanish. */
   breakables?: BreakableView;
+  /** M20 tunnel: gratings, the generator hold ring and the end platform's power. */
+  tunnel?: import('./tunnel-view').TunnelView;
 }
 
 /**

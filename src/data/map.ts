@@ -180,8 +180,8 @@ export interface MapDef {
   /** L2: district index (Köpenick 0) and item name flavor for the loot of this map. */
   district?: number;
   flavor?: 'neon' | 'gdr';
-  /** M19 U-Bahn tunnel: only these tubes are walkable, everything else is rock (no lots, no streets). */
-  tunnel?: { tubes: Tube[] };
+  /** M19 U-Bahn tunnel: only these tubes are walkable, everything else is rock (no lots, no streets). M20: line, gratings, collapse, flood, trader, generator, signs. */
+  tunnel?: TunnelDef;
   /** M16b/M19 side passage surprises: fixed hidden blessings and sleeping guards (a mini-boss). */
   hiddenSpots?: Point[];
   guards?: Level['guards'];
@@ -193,11 +193,43 @@ export interface MapDef {
   handLots?: Array<Omit<Lot, 'seed' | 'kind'> & { kind: LotKind; seed?: number }>;
 }
 
-/** A walkable tunnel piece along a polyline: track bed, station hall or side passage. */
-export interface Tube { pts: Pt[]; width: number; kind: 'track' | 'station' | 'branch' }
-/** Inside a tunnel tube (always true on open maps). */
+/** A walkable tunnel piece along a polyline: track bed, station hall, side passage or the M20 maintenance bypass. */
+export interface Tube { pts: Pt[]; width: number; kind: 'track' | 'station' | 'branch' | 'bypass' }
+
+/** M20 tunnel grating across the track bed (2D `addGate`): closed until encounter `after` is won. */
+export interface TunnelGate { x: number; z: number; rot: number; half: number; after: number }
+
+/** M20 U-Bahn tunnel of one line (`src/data/tunnel.ts`). */
+export interface TunnelDef {
+  tubes: Tube[];
+  /** Index into `LINES` (0 = S3). */
+  line: number;
+  /** Line color (stripe in the station tiles). */
+  color: string;
+  gates: TunnelGate[];
+  /** Collapse (2D RUBX): rubble closes the track bed within `width / 2` of this line; a 'bypass' tube leads around. */
+  rubble: { pts: Pt[]; width: number } | null;
+  /** Flooded stretch (2D FLOOD): shallow water over the track bed, speed factor `slow` (flat ends). */
+  flood: { pts: Pt[]; width: number; slow: number } | null;
+  /** The trader on the start platform (2D `TUN.npc`). */
+  trader: Point;
+  /** The generator on the end platform (collider, render); the hold ring is the last encounter's `hold`. */
+  generator: { x: number; z: number; rot: number };
+  /** Blue name plates on the station walls that face the camera. */
+  signs: Array<{ x: number; z: number; rot: number; text: string }>;
+}
+/** Generator body (half sizes). */
+export const GENERATOR = { hx: 1.3, hz: 0.8 } as const;
+
+/** Inside a tunnel tube (always true on open maps). Rubble is inside: use `tunnelWalk` for walking. */
 export function inTunnel(m: MapDef, x: number, z: number, pad = 0): boolean {
   return !m.tunnel || m.tunnel.tubes.some((t) => lineDist(t.pts, x, z) <= t.width / 2 - pad);
+}
+/** Walkable in a tunnel: inside a tube and not in the collapse (always true on open maps). */
+export function tunnelWalk(m: MapDef, x: number, z: number, pad = 0): boolean {
+  if (!inTunnel(m, x, z, pad)) return false;
+  const r = m.tunnel?.rubble;
+  return !r || lineDist(r.pts, x, z) > r.width / 2 + pad;
 }
 
 // ---------------------------------------------------------------- geometry
@@ -1564,11 +1596,19 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
   const breakables = breakableDefs(m, props, propColliders, rests);
   const onPier = (x: number, z: number): boolean => (m.piers ?? []).some((p) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2; });
-  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3));
+  const T = m.tunnel;
+  const gates = (T?.gates ?? []).map((g) => ({ ...g, collider: { kind: 'box' as const, x: g.x, z: g.z, hx: g.half, hz: 0.3, rot: g.rot } }));
+  if (T) colliders.push({ kind: 'box', x: T.generator.x, z: T.generator.z, hx: GENERATOR.hx, hz: GENERATOR.hz, rot: T.generator.rot }, ...gates.map((g) => g.collider));
+  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !tunnelWalk(m, x, z, 0.3));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
   if (m.flavor) level.flavor = m.flavor;
   level.hiddenSpots = m.hiddenSpots ?? [];
+  if (T) {
+    level.gates = gates;
+    level.traderSpot = { ...T.trader };
+    if (T.flood) level.wade = { pts: T.flood.pts.map(([x, z]) => ({ x, z })), half: T.flood.width / 2, factor: T.flood.slow };
+  }
   level.guards = [...(m.guards ?? []), ...lots.flatMap((l) => l.content?.guards ?? [])];
   level.spots = { rescue: [], trader: [], cache: [] };
   for (const l of lots) for (const k of ['rescue', 'trader', 'cache'] as const) { const p = l.content?.spots[k]; if (p) level.spots[k].push({ x: p[0], z: p[1] }); }
@@ -1597,22 +1637,28 @@ function breakableDefs(m: MapDef, props: Prop[], propColliders: Map<Prop, Collid
 function tunnelProps(m: MapDef): Prop[] {
   const rng = new Rng(m.seed + 7);
   const props: Prop[] = [...m.fixedProps];
-  const free = (x: number, z: number, r: number): boolean => inTunnel(m, x, z, r) && !props.some((p) => Math.hypot(p.x - x, p.z - z) < r + 1.5)
-    && !m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.5);
+  const T = m.tunnel!;
+  // M20: nothing in the collapse, on a grating line, at the trader or the generator.
+  const keep = [T.trader, T.generator];
+  const free = (x: number, z: number, r: number): boolean => tunnelWalk(m, x, z, r) && !props.some((p) => Math.hypot(p.x - x, p.z - z) < r + 1.5)
+    && !m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.5)
+    && !T.gates.some((g) => Math.abs((x - g.x) * Math.sin(g.rot) + (z - g.z) * Math.cos(g.rot)) < r + 1.2 && Math.hypot(x - g.x, z - g.z) < g.half + 2)
+    && !keep.some((k) => Math.hypot(x - k.x, z - k.z) < r + 2.2);
   for (const t of m.tunnel!.tubes) {
     let side = 1, acc = 0;
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
       for (let d = 0; d < len; d += 1) {
         acc += 1;
-        const gap = t.kind === 'branch' ? 9 : 15;
+        const gap = t.kind === 'branch' || t.kind === 'bypass' ? 9 : 15;
         if (acc < gap) continue;
         acc = rng.range(-2, 2);
         const off = t.width / 2 - 0.8, x = ax + ux * d - uz * off * side, z = az + uz * d + ux * off * side;
         side = -side;
         if (free(x, z, 0.3)) props.push({ kind: rng.next() < 0.75 ? 'workLamp' : 'candles', x, z, rot: Math.atan2(uz * side, -ux * side), size: 1 });
         const cx = ax + ux * (d + 5) + uz * off * 0.6 * side, cz = az + uz * (d + 5) - ux * off * 0.6 * side;
-        if (rng.next() < 0.55 && free(cx, cz, 0.8)) props.push({ kind: rng.pick(['crates', 'crate', 'rubble', 'planks', 'bins'] as const), x: cx, z: cz, rot: rng.range(0, Math.PI * 2), size: rng.range(0.8, 1.3) });
+        // The 4 m bypass stays clear of crates.
+        if (rng.next() < 0.55 && t.kind !== 'bypass' && free(cx, cz, 0.8)) props.push({ kind: rng.pick(['crates', 'crate', 'rubble', 'planks', 'bins'] as const), x: cx, z: cz, rot: rng.range(0, Math.PI * 2), size: rng.range(0.8, 1.3) });
       }
     }
     const end = t.pts[t.pts.length - 1]!;

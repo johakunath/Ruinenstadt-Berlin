@@ -40,6 +40,44 @@ export interface EncounterDef {
   waves: WaveDef[];
   /** Share of max life restored when the encounter is won. */
   heal: number;
+  /**
+   * M20 generator hold (2D GEN): instead of the first wave, the hero charges for `need` seconds while
+   * standing within `r` of the center; one enemy of the first wave's mix comes out of `mouth` about
+   * every `every` seconds (an elite at half charge). Full: a `power` event, then the other waves.
+   */
+  hold?: { r: number; need: number; every: number; mouth: Point };
+}
+
+/** M20 tunnel grating across the track bed: closed (its collider in the level) until encounter `after` is won. */
+export interface GateDef {
+  x: number;
+  z: number;
+  /** Facing along the track (the bars run across it). */
+  rot: number;
+  /** Half the width it closes. */
+  half: number;
+  after: number;
+  collider: Collider;
+}
+
+/** A band along a polyline (flooded track bed); flat ends, so it stops where it is drawn. */
+export interface Ribbon {
+  pts: Point[];
+  half: number;
+}
+
+/** Inside a ribbon: within `half` of a segment, not past the first or last point. */
+export function inRibbon(r: Ribbon, x: number, z: number): boolean {
+  const n = r.pts.length;
+  for (let i = 1; i < n; i++) {
+    const a = r.pts[i - 1]!, b = r.pts[i]!;
+    const dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz || 1;
+    let t = ((x - a.x) * dx + (z - a.z) * dz) / l2;
+    if ((t < 0 && i === 1) || (t > 1 && i === n - 1)) continue;
+    t = Math.max(0, Math.min(1, t));
+    if (Math.hypot(x - a.x - dx * t, z - a.z - dz * t) <= r.half) return true;
+  }
+  return false;
 }
 
 export interface ZoneDef {
@@ -121,6 +159,16 @@ export class Level {
   /** M16b/M19 side passages: fixed hidden blessing spots (replace the random ones) and sleeping guards. */
   hiddenSpots: Point[] = [];
   guards: Array<{ x: number; z: number; kind: import('../data/enemies').EnemyKind; elite: boolean; wake: number; hp: number; pose?: 'lying' | 'hidden'; facing?: number }> = [];
+  /** M20 tunnel: gratings between the sections, the flooded stretch (speed factor) and the trader on the start platform. */
+  gates: GateDef[] = [];
+  wade: (Ribbon & { factor: number }) | null = null;
+  traderSpot: Point | null = null;
+
+  /** Walking speed factor at (x, z): 1 on dry ground, `wade.factor` in the flooded stretch (2D `P.wet`). */
+  speedAt(x: number, z: number): number {
+    return this.wade && inRibbon(this.wade, x, z) ? this.wade.factor : 1;
+  }
+
   /** M11c lot types: preferred places for run events (captive, trader, cache). */
   spots: Record<'rescue' | 'trader' | 'cache', Point[]> = { rescue: [], trader: [], cache: [] };
 
