@@ -483,7 +483,7 @@ body:has(.overlay:not([hidden])) #edges {
   pointer-events: none;
   text-shadow: 0 1px 2px #000;
 }
-#loot-chip {
+#loot-chip, #exit-chip {
   position: fixed;
   right: 16px;
   top: 64px;
@@ -603,7 +603,7 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 
 /* ---- phone and tablet HUD (playtest 2026-11-16): one pause button; the minimap sits top right as in 2D and opens the map. */
 #minimap { left: auto; right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
-#loot-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
+#loot-chip, #exit-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
 /* Every device (playtest 2026-11-17): map and inventory open from the pause menu or by key (M, I/Tab, pad Y). */
 #menu-btn { margin-left: auto; }
 @media (max-height: 500px) {

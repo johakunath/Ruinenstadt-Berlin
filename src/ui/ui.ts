@@ -18,7 +18,6 @@ export interface UiHandlers {
   onDifficulty(id: DifficultyId): void;
   /** Pause button: opens the menu. */
   onMenu(): void;
-  onAgain?(): void;
 }
 
 export class Ui {
@@ -41,7 +40,6 @@ export class Ui {
     el<HTMLButtonElement>('menu-btn').addEventListener('click', () => handlers.onMenu());
     this.perf.hidden = !opts.showPerf;
     this.setupTouch(input);
-    el<HTMLButtonElement>('again').addEventListener('click', () => handlers.onAgain?.());
   }
 
   /** Leistungsanzeige switched in the options. */

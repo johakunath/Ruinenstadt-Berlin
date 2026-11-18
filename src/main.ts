@@ -132,6 +132,8 @@ let afterLoot: 'again' | 'camp' | 'map' = 'again';
 const lootUi = new LootLabels();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
+const exitChip = document.getElementById('exit-chip') as HTMLButtonElement;
+exitChip.addEventListener('click', () => showWon());
 
 function finishLootExit(leave: boolean): void {
   lootWarn.hidden = true;
@@ -213,6 +215,12 @@ function showWon(): void {
   t.hidden = !level || !link;
   if (link) t.innerHTML = link.html;
   showCampButtons();
+  // Playtest 2026-11-18: the way on is the red button: the camp once it is open, else the next map;
+  // Weiter erkunden comes after it, Nochmal is gone.
+  const camp = document.getElementById('won-camp')!;
+  camp.classList.toggle('primary', !camp.hidden);
+  t.classList.toggle('primary', camp.hidden && !t.hidden);
+  exitChip.hidden = true;
 }
 /** `camp.freed` id of this map's victory: districts by index, a cleared line as LINE_FREED + line. */
 const FREED_ID = isTunnel ? LINE_FREED + line : MAP_FREED[mapId];
@@ -239,6 +247,8 @@ for (const id of ['go-tunnel', 'go-xhain']) document.getElementById(id)!.addEven
 function explore(): void {
   document.getElementById('won')!.hidden = true;
   document.getElementById('pause-finish')!.hidden = false;
+  // Playtest 2026-11-18: a visible way out while exploring (the loot chip takes its place while searching).
+  exitChip.hidden = lootExit === 'search';
   phase = 'play';
   wonFor = -1;
   input.enabled = true;
@@ -323,17 +333,6 @@ const ui = new Ui(opts, {
     sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
-  },
-  onAgain: () => {
-    // Valuable loot still on the ground: ask once before the map is left.
-    if (importantDrops(sim).length > 0 && lootExit !== 'ask') {
-      lootExit = 'ask';
-      document.getElementById('won')!.hidden = true;
-      lootWarn.hidden = false;
-      document.getElementById('loot-find')?.focus();
-      return;
-    }
-    again();
   },
   onMenu: () => input.onMenu(),
 }, input);
@@ -587,6 +586,7 @@ document.getElementById('cloud-join')!.addEventListener('click', () => {
 function start(resumed = false): void {
   audio.start();
   document.getElementById('pause-finish')!.hidden = true;
+  exitChip.hidden = true;
   // Phones and tablets play in fullscreen (needs the tap that started the game; refused quietly elsewhere).
   if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement && !navigator.webdriver) void document.documentElement.requestFullscreen?.()?.catch(() => undefined);
   phase = 'play';
@@ -926,7 +926,7 @@ function frame(now: number): void {
       ui.retryHint(endless ? '' : zone ? `Neustart: ${zone.name}` : '');
       ui.showDead(sim.kills);
       document.getElementById('dead-stats')!.innerHTML = endStats(false);
-      document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Nochmal';
+      document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Ab Kontrollpunkt';
     }
   }
   if (wonFor >= 0 && phase === 'play') {
@@ -939,7 +939,7 @@ function frame(now: number): void {
       lootExit = 'off';
       lootChip.hidden = true;
     } else {
-      lootChip.hidden = false;
+      lootChip.hidden = false; exitChip.hidden = true;
       document.getElementById('loot-n')!.textContent = String(left);
       document.getElementById('loot-pad')!.hidden = input.device !== 'gamepad';
     }
