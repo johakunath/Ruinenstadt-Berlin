@@ -880,8 +880,9 @@ html, body { font-family: var(--f-ui); background: var(--ash); }
 #fsb { position: fixed; top: var(--gut-t); right: var(--gut-r); z-index: 70; }
 #fsb svg { width: 22px; height: 22px; display: block; }
 body:has(#hud:not([hidden])) #fsb, body:has(#menu:not([hidden])) #fsb, body:has(#optv:not([hidden])) #fsb, body:has(#camp:not([hidden])) #fsb, body:has(#trade:not([hidden])) #fsb { right: calc(var(--gut-r) + 52px); }
-/* The camp head keeps clear of the two corner buttons. */
-@media (max-width: 1240px) { .camp-panel .menu-head { padding-right: 104px; } }
+/* The camp head keeps clear of the two corner buttons and of the panel edge (playtest 2026-11-18: on a wide
+   tablet outside fullscreen the 1240 px query missed, and the title sat on the border). */
+.camp-panel > .menu-head { padding: 12px 104px 8px 16px; }
 
 /* ---- U3 options screen (2D #optv): own overlay, centered column, × top right. */
 #optv { z-index: 50; display: block; padding: 0; overflow-y: auto; overscroll-behavior: contain; background: #140e0a; }
@@ -1004,3 +1005,9 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 .net-card button.primary { background: #8b3a2b; border-color: #c2453a; } .net-card button:disabled { opacity: .4; }
 .net-card button:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
 .lbadge { display: inline-block; padding: 0 6px; color: #fff; font-size: 12px; margin-right: 4px; }
+/* Schwarzmarkt (playtest 2026-11-18): grids left, the tapped item's card right (below on narrow screens). */
+.camp-body > .stash-cols { grid-column: 1 / -1; }
+.stash-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: 12px; align-items: start; }
+.stash-card { display: flex; flex-direction: column; gap: 8px; }
+.inv-cell.sel { outline: 2px solid #ef9f27; outline-offset: 1px; }
+@media (max-width: 699px), (max-height: 500px) { .stash-cols { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); } }

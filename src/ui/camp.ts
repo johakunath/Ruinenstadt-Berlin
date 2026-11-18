@@ -10,7 +10,7 @@ import { RARITIES } from '../data/items';
 import { BAG_SIZE } from '../sim/inventory';
 import type { Item } from '../sim/items';
 import type { Sim } from '../sim/types';
-import { esc, itemIcon } from './inventory';
+import { esc, itemCard, itemIcon, resIcon } from './inventory';
 
 const MAT_IDS: MaterialId[] = ['metall', 'stoff', 'kabel', 'chemie'];
 const ING_IDS: IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
@@ -23,6 +23,8 @@ export class CampUi {
   /** M20: opened from a station's ring in the walkable camp: only that station, no list. */
   private single = false;
   private msg: Result | null = null;
+  /** Schwarzmarkt: the item whose card is shown. */
+  private pick: { from: 'bag' | 'stash'; i: number } | null = null;
   private previous: HTMLElement | null = null;
   private padDown: boolean[] = [];
   private padNext = 0;
@@ -39,7 +41,10 @@ export class CampUi {
       if (!b) return;
       const d = b.dataset, s = this.sim();
       if (d.close !== undefined) { this.close(); return; }
-      if (d.st) { this.sel = d.st as StationId; this.msg = null; this.render(); this.root.querySelector<HTMLElement>(`[data-st="${d.st}"]`)?.focus(); return; }
+      // Schwarzmarkt (playtest 2026-11-18): a tap shows the item's card, a second button moves it.
+      if (d.pb !== undefined || d.pf !== undefined) { const pick = { from: d.pb !== undefined ? 'bag' as const : 'stash' as const, i: +(d.pb ?? d.pf!) }; this.pick = this.pick?.from === pick.from && this.pick.i === pick.i ? null : pick; this.render(); return; }
+      if (d.ts !== undefined || d.fs !== undefined) this.pick = null;
+      if (d.st) { this.sel = d.st as StationId; this.pick = null; this.msg = null; this.render(); this.root.querySelector<HTMLElement>(`[data-st="${d.st}"]`)?.focus(); return; }
       this.msg = d.up ? buyUpgrade(s, d.up as CampUpgradeId) : d.lv ? buildStation(s, d.lv as StationId) : d.drill ? buyDrill(s) : d.meal ? cookMeal(s, d.meal as never)
         : d.cons ? craftConsumable(s, d.cons as never) : d.mb ? buildMod(s, d.mb as WeaponModId) : d.mi ? installMod(s, d.mi as WeaponModId) : d.mo ? removeMod(s, d.mo as WeaponModId)
         : d.ts !== undefined ? toStash(s, +d.ts) : d.fs !== undefined ? fromStash(s, +d.fs) : null;
@@ -82,12 +87,12 @@ export class CampUi {
   }
   render(): void {
     const s = this.sim(), st = STATIONS.find(t => t.id === this.sel)!, built = stationBuilt(s, st.id), l = siteLevel(s, st.id), n = nextLevel(s, st.id), here = npcHere(s, st);
-    const mats = MAT_IDS.map(k => `<span style="color:${MATERIALS[k].color}">${MATERIALS[k].name} <b>${s.inventory.materials[k] ?? 0}</b></span>`).join('');
-    const ings = ING_IDS.map(k => `<span style="color:${INGREDIENTS[k].color}">${INGREDIENTS[k].name} <b>${s.inventory.ingredients?.[k] ?? 0}</b></span>`).join('');
+    const mats = MAT_IDS.map(k => `<span style="color:${MATERIALS[k].color}">${resIcon(k)}${MATERIALS[k].name} <b>${s.inventory.materials[k] ?? 0}</b></span>`).join('');
+    const ings = ING_IDS.map(k => `<span style="color:${INGREDIENTS[k].color}">${resIcon(k)}${INGREDIENTS[k].name} <b>${s.inventory.ingredients?.[k] ?? 0}</b></span>`).join('');
     const list = STATIONS.map(t => `<button type="button" class="stl${t.id === this.sel ? ' on' : ''}" data-st="${t.id}"><b>${t.name}</b>${pips(siteLevel(s, t.id), 3)}</button>`).join('');
     const cost = (c: Partial<Record<MaterialId | 'scrap', number>>): string => (Object.entries(c) as Array<[MaterialId | 'scrap', number]>).map(([k, v]) => `<span class="${(k === 'scrap' ? s.inventory.scrap : s.inventory.materials[k] ?? 0) >= v ? '' : 'negative'}">${v} ${k === 'scrap' ? 'Schrott' : MATERIALS[k].name}</span>`).join(' · ');
     const next = !n ? '<p class="inv-hint">Voll ausgebaut.</p>' : `<h3>${built ? `Ausbau auf Stufe ${n.level}` : 'Bauplatz'}</h3><div class="row-c"><div><b>${n.text}</b><small>${cost(n.cost)}</small>${n.needs.length ? `<small class="warn">Erst: ${n.needs.join(', ')}</small>` : ''}</div><button type="button" class="${n.ok ? 'primary' : ''}" data-lv="${st.id}" ${n.needs.length ? 'disabled' : ''}>${built ? 'Ausbauen' : 'Bauen'}</button></div>`;
-    this.root.innerHTML = `<div class="camp-panel${this.single ? ' single' : ''}"><header class="menu-head"><h2>${this.single ? st.name : 'Lager'}</h2><div class="menu-res"><span>Schrott <b>${s.inventory.scrap}</b></span>${mats}${ings}</div><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header><div class="camp-cols${this.single ? ' single' : ''}"><nav class="camp-list"${this.single ? ' hidden' : ''}>${list}</nav><section class="camp-st"><div class="sthead"><div><h2>${st.name}</h2><p class="inv-hint">${here ? `${npcName(st)} · ${st.line}` : `Noch niemand hier. ${npcName(st)} ist irgendwo da draußen gefangen.`}</p><p>${built ? `${pips(l, 3)} Stufe ${l} von 3 · <span class="inv-hint">${st.levels.slice(0, l).map(L => L.text).join(' · ')}</span>` : '<span class="inv-hint">Noch Schutt. Erst bauen, dann nutzen.</span>'}</p></div></div><div class="camp-body">${built ? this.body(s) : ''}</div>${next}<p class="camp-msg ${this.msg?.ok ? 'positive' : 'negative'}" aria-live="polite">${esc(this.msg?.text ?? '')}</p></section></div></div>`;
+    this.root.innerHTML = `<div class="camp-panel${this.single ? ' single' : ''}"><header class="menu-head"><h2>${this.single ? st.name : 'Lager'}</h2><div class="menu-res"><span>${resIcon('scrap')}Schrott <b>${s.inventory.scrap}</b></span>${mats}${ings}</div><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header><div class="camp-cols${this.single ? ' single' : ''}"><nav class="camp-list"${this.single ? ' hidden' : ''}>${list}</nav><section class="camp-st"><div class="sthead"><div><h2>${st.name}</h2><p class="inv-hint">${here ? `${npcName(st)} · ${st.line}` : `Noch niemand hier. ${npcName(st)} ist irgendwo da draußen gefangen.`}</p><p>${built ? `${pips(l, 3)} Stufe ${l} von 3 · <span class="inv-hint">${st.levels.slice(0, l).map(L => L.text).join(' · ')}</span>` : '<span class="inv-hint">Noch Schutt. Erst bauen, dann nutzen.</span>'}</p></div></div><div class="camp-body">${built ? this.body(s) : ''}</div>${next}<p class="camp-msg ${this.msg?.ok ? 'positive' : 'negative'}" aria-live="polite">${esc(this.msg?.text ?? '')}</p></section></div></div>`;
   }
   private upRows(s: Sim, ids: CampUpgradeId[]): string {
     return ids.map(id => {
@@ -120,7 +125,10 @@ export class CampUi {
     return `<h3>Aufsätze · ${esc(w?.name ?? 'keine Waffe')} ${on.length}/${slots}</h3>${rows}`;
   }
   private stash(s: Sim): string {
-    const c = campOf(s), cell = (it: Item | undefined, attr: string): string => it ? `<button type="button" class="inv-cell" ${attr} aria-label="${esc(it.name)}" style="--rarity:${it.set ? '#75d68a' : RARITIES[it.rarity].color}">${itemIcon(it)}<small>${it.itemLevel}</small></button>` : '<div class="inv-cell empty"></div>';
-    return `<h3>Rucksack ${s.inventory.bag.length}/${BAG_SIZE} · antippen legt ins Lager</h3><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => cell(s.inventory.bag[i], `data-ts="${i}"`)).join('')}</div><h3>Lager ${c.stash.length}/${stashMax(s)} · antippen nimmt mit</h3><div class="inv-grid">${Array.from({ length: Math.max(stashMax(s), c.stash.length) }, (_, i) => cell(c.stash[i], `data-fs="${i}"`)).join('')}</div>`;
+    const c = campOf(s), p = this.pick;
+    const cell = (it: Item | undefined, attr: string, on: boolean): string => it ? `<button type="button" class="inv-cell${on ? ' sel' : ''}" ${attr} aria-label="${esc(it.name)}" style="--rarity:${it.set ? '#75d68a' : RARITIES[it.rarity].color}">${itemIcon(it)}<small>${it.itemLevel}</small></button>` : '<div class="inv-cell empty"></div>';
+    const picked = p ? (p.from === 'bag' ? s.inventory.bag[p.i] : c.stash[p.i]) : undefined;
+    const card = picked ? `<div class="stash-card">${itemCard(picked, p!.from === 'bag' ? 'Rucksack' : 'Lager', s.equipment)}<button type="button" class="primary" ${p!.from === 'bag' ? `data-ts="${p!.i}"` : `data-fs="${p!.i}"`}>${p!.from === 'bag' ? 'Ins Lager legen' : 'Mitnehmen'}</button></div>` : '<p class="inv-hint">Antippen zeigt das Teil.</p>';
+    return `<div class="stash-cols"><div><h3>Rucksack ${s.inventory.bag.length}/${BAG_SIZE}</h3><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => cell(s.inventory.bag[i], `data-pb="${i}"`, p?.from === 'bag' && p.i === i)).join('')}</div><h3>Lager ${c.stash.length}/${stashMax(s)}</h3><div class="inv-grid">${Array.from({ length: Math.max(stashMax(s), c.stash.length) }, (_, i) => cell(c.stash[i], `data-pf="${i}"`, p?.from === 'stash' && p.i === i)).join('')}</div></div>${card}</div>`;
   }
 }

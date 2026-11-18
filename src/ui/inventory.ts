@@ -15,6 +15,9 @@ import { uiIcon, type UiIcon } from './ui-icons';
 type Selection = { bag: number } | { slot: SlotId };
 const art = import.meta.glob('../../assets/inventory/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 export const artUrl = (id: string): string => art[`../../assets/inventory/${id}.webp`] ?? '';
+/** Resource icons from 2D (`ICOI`: R01 to R05, Z01 to Z03), playtest 2026-11-18. */
+export const RES_ICON = { scrap: 'R05', stoff: 'R01', metall: 'R02', chemie: 'R03', kabel: 'R04', fleisch: 'Z01', gemuese: 'Z02', gewuerz: 'Z03' } as const;
+export const resIcon = (k: keyof typeof RES_ICON): string => `<img class="mico" src="${artUrl(RES_ICON[k])}" alt="" width="24" height="24">`;
 export const esc = (s: string): string => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const color = (i: Item): string => i.set ? '#75d68a' : RARITIES[i.rarity].color;
 export const itemIcon = (i: { base: string; slot: SlotId }): string => ITEM_ICONS[i.base] ? `<img src="${artUrl(ITEM_ICONS[i.base]!)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
