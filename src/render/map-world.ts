@@ -28,6 +28,8 @@ import { BatchSet } from './batch';
 import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
+import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexEdge, dressAlexLots } from './alex-world';
+import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
 import { buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isLargeProp } from './layers';
@@ -82,6 +84,10 @@ export interface MapMats extends Mats {
   sRoundel: LitMaterial;
   stationName: LitMaterial;
   ratskeller: LitMaterial;
+  /** M15 Alexanderplatz sign atlas (`alex-paint.ts`), only on that map. */
+  alex?: LitMaterial;
+  /** M15 Alexanderplatz painted banners and Pioneer poster (2D art, alpha-tested), only on that map. */
+  posters?: LitMaterial;
   /** M15 Mitte materials (`mitte-world.ts`), only on that map. */
   mitte?: MitteMats;
 }
@@ -144,8 +150,8 @@ export class ChunkBuilder extends Builder {
     const lp = pos.clone().setY(pos.y + this.lift);
     lp.x += ux * reach * 0.5;
     lp.z += uz * reach * 0.5;
-    // M15 Mitte: lanterns take the night's lamp colour (`Wet.lamp`).
-    if (wet && color === 0xffb060) color = wet.lamp;
+    // M15 Mitte: lanterns take one of the night's lamp colours (`Wet.lamp`, fixed per position).
+    if (wet && color === 0xffb060) color = wet.lamp[Math.abs(Math.round(pos.x * 7.3 + pos.z * 13.1)) % wet.lamp.length]!;
     this.spots.push({ pos: lp, color, intensity, distance, flicker, phase: Math.random() * 6 });
     if (wet && wet.streak > 0) {
       // Wet street: the light's reflection runs from its foot toward the camera (south), as long as the
@@ -1568,7 +1574,8 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
 /** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
 export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
   const rng = new Rng(l.seed);
-  const tone = rng.pick(TONES);
+  const pick = rng.pick(TONES);
+  const tone = pick;
   const sides = blockFacades(l);
   const main = streetDist(m, l.x + Math.sin(l.rot) * l.d, l.z + Math.cos(l.rot) * l.d).street?.kind === 'main';
   // M11d: the street piece that carries the shop or the main door (the longest one at the lot front);
@@ -2197,6 +2204,12 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const mats = makeMapMats(materials);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
+  if (m.id === 'alex') {
+    mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
+    const posters = materials.surface({ map: paintPosterFallback(), alphaTest: 0.5, doubleSided: true, roughness: 0.85 });
+    mats.posters = posters;
+    loadPosters(materials.profile.anisotropy, (t) => { posters.map = t; posters.needsUpdate = true; });
+  }
   if (m.id === 'mitte') mats.mitte = mitteMats(materials);
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
   const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
@@ -2238,6 +2251,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
     const build = (): void => {
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
+      // M15 Alexanderplatz: intact Plattenbau gets its panel facade; ruins keep the shared burnt-out shell.
+      else if (l.kind === 'platte' && m.id === 'alex' && !l.ruin) b.on(y0, () => buildAlexPlatte(b, l, (f, seed) => loggias(b, f, seed)));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
       else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
@@ -2280,8 +2295,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     }
     // Xhain landmarks are built and cut in `buildXhainWorld`.
     const cut = XHAIN_KINDS.has(l.kind) ? undefined : landmarkCut.get(l);
-    // M15 Mitte landmarks live in `mitte-world.ts`.
-    const build = (): void => b.on(y0, () => (MITTE_KINDS.has(l.kind) ? buildMitteLandmark(b, l) : buildLandmark(b, l)));
+    // M15 Alexanderplatz and Mitte landmarks live in `alex-world.ts` and `mitte-world.ts`.
+    const build = (): void => b.on(y0, () => (ALEX_KINDS.has(l.kind) ? buildAlexLandmark(b, l) : MITTE_KINDS.has(l.kind) ? buildMitteLandmark(b, l) : buildLandmark(b, l)));
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
   const rng = new Rng(m.seed);
@@ -2303,6 +2318,14 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildTerraces(m, chunkOf);
   // M15 Xhain: the Wall, the viaducts and the Xhain landmarks (`xhain-world.ts`).
   buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
+  // M15 Alexanderplatz: the brick Stadtbahn with open arches (Xhain draws only its U1 Hochbahn).
+  if (m.id === 'alex') {
+    for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') buildStadtbahn(chunkOf, mats, v);
+    buildArches(chunkOf, mats, m);
+    dressAlexLots(chunkOf, lots, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
+    dressAlexEdge(chunkOf, props, (x, z) => surfaceAt(m, x, z));
+    buildStrausberger(chunkOf, m);
+  }
   // M15 Mitte: neon street dressing (`mitte-world.ts`).
   if (mats.mitte) buildMitteWorld(m, lots, mats.mitte, mats, wet, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
   if (m.tunnel) {

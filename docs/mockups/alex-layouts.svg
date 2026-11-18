@@ -1,0 +1,292 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1256 629" font-family="Inter, Arial, sans-serif"><rect width="100%" height="100%" fill="#0e1517"/>
+<text x="20" y="30" fill="#f0d9b0" font-size="20" font-weight="700">Alexanderplatz · drei Layouts (Lage nach OpenStreetMap, gestaucht)</text>
+<text x="20" y="50" fill="#b5aa98" font-size="12">Nummern = Kämpfe je Zone · B = Zonenboss · ★ = Volkseigener Koloss an der Weltzeituhr · Rahmen gelb = Späti · braun gestrichelt = Stadtbahn-Viadukt · gelb gestrichelt = Route</text>
+<g transform="translate(20,118)">
+<text x="0" y="-30" fill="#ef9f27" font-size="17" font-weight="700">A · Spreeinsel-Runde</text>
+<text x="0" y="-11" fill="#b5aa98" font-size="12">West: Rathausforum → Museumsinsel → Nikolaiviertel → Alex</text>
+<svg x="0" y="0" width="390" height="363" viewBox="-165 -150 320 298">
+<rect x="-165" y="-150" width="320" height="298" fill="#33302a"/>
+<polygon points="-70,-75 95,-75 110,10 0,40 -70,30" fill="#e7982b" fill-opacity=".16" stroke="#e7982b" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-165,-110 -80,-95 -75,140 -165,140" fill="#5fb8a8" fill-opacity=".16" stroke="#5fb8a8" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-55,80 30,40 150,15 150,148 -55,148" fill="#c8574a" fill-opacity=".16" stroke="#c8574a" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="75,-150 150,-150 150,10 75,-5" fill="#f2c868" fill-opacity=".16" stroke="#f2c868" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-60,-50 55,-50 60,40 -55,40" fill="#47603a" fill-opacity=".8"/>
+<polygon points="-150,-80 -90,-75 -92,-35 -150,-40" fill="#47603a" fill-opacity=".8"/>
+<polyline points="-55,-150 -72,-90 -82,-30 -78,40 -60,100 -30,150" fill="none" stroke="#1d4a55" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-72,-100 -140,-85 -158,-10 -145,95 -66,118" fill="none" stroke="#1d4a55" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="110,-150 80,-90 30,-55 -40,-30 -165,-20" fill="none" stroke="#5e584c" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="120,10 40,42 -20,58 -60,92 -120,96 -120,148" fill="none" stroke="#5e584c" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-40,-30 -38,148" fill="none" stroke="#5e584c" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-40,118 40,105 110,70 155,62" fill="none" stroke="#5e584c" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="150,-60 110,-30 120,10 130,148" fill="none" stroke="#5e584c" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="-95.0" y="-34.5" width="30" height="15" fill="#8a8272" transform="rotate(5 -80 -27)"/>
+<rect x="-77.0" y="89.5" width="30" height="11" fill="#8a8272" transform="rotate(30 -62 95)"/>
+<rect x="-157.0" y="-21.0" width="20" height="12" fill="#8a8272" transform="rotate(5 -147 -15)"/>
+<polygon points="70,-95 140,-95 145,5 85,0 70,-40" fill="#6a6252"/>
+<polyline points="-165,-125 -75,-105 10,-80 60,-66 110,-42 155,-10" fill="none" stroke="#7a3a26" stroke-width="9" stroke-linejoin="round"/><polyline points="-165,-125 -75,-105 10,-80 60,-66 110,-42 155,-10" fill="none" stroke="#d6b436" stroke-width="1.4" stroke-dasharray="5 4"/>
+<rect x="-135.0" y="-69.0" width="34" height="14" fill="#d4c4a0" stroke="#14100c" stroke-width=".8"/>
+<rect x="-135.0" y="-23.0" width="30" height="30" fill="#a89a7c" stroke="#14100c" stroke-width=".8"/>
+<rect x="-131.0" y="39.0" width="26" height="46" fill="#c87a4a" stroke="#14100c" stroke-width=".8"/>
+<rect x="-20.0" y="65.0" width="40" height="26" fill="#a84a36" stroke="#14100c" stroke-width=".8"/>
+<rect x="-15.0" y="-35.0" width="10" height="20" fill="#8a5a40" stroke="#14100c" stroke-width=".8"/>
+<rect x="104.0" y="-129.0" width="22" height="22" fill="#d8d4c8" stroke="#14100c" stroke-width=".8"/>
+<polyline points="55,-62 55,-30 22,25 -35,10 -60,-45 -90,-30 -125,-55 -125,-100 -130,-70 -140,22 -140,90 -115,118 -95,85 -62,95 -40,110 -15,125 50,122 120,80 118,25 105,-40" fill="none" stroke="#ffd27a" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"/>
+<circle cx="80" cy="-52" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="86" y="-56" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Weltzeituhr</text>
+<circle cx="30" cy="-5" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="36" y="-9" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Fernsehturm</text>
+<circle cx="-118" cy="-8" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-112" y="-12" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Dom</text>
+<circle cx="-118" cy="62" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-112" y="58" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Palast d. Republik</text>
+<circle cx="0" cy="78" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="6" y="74" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Rotes Rathaus</text>
+<circle cx="-10" cy="-25" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-4" y="-29" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Marienkirche</text>
+<circle cx="-20" cy="18" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-14" y="14" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Neptunbrunnen</text>
+<circle cx="-118" cy="-62" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-112" y="-66" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Altes Museum</text>
+<circle cx="-15" cy="128" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-9" y="124" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Nikolaikirche</text>
+<circle cx="100" cy="-78" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="106" y="-82" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Brunnen</text>
+<circle cx="115" cy="-118" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="121" y="-122" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Hotel</text>
+<circle cx="55" cy="-30" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="55" y="-26.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">1</text>
+<circle cx="22" cy="25" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="22" y="28.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">2</text>
+<circle cx="-35" cy="10" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-35" y="13.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">3</text>
+<circle cx="-60" cy="-45" r="15" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="2" />
+<text x="-60" y="-41.5" fill="#e7982b" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B1</text>
+<circle cx="-125" cy="-100" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-125" y="-96.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">4</text>
+<circle cx="-140" cy="22" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-140" y="25.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">5</text>
+<circle cx="-115" cy="118" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-115" y="121.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">6</text>
+<circle cx="-95" cy="85" r="15" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="2" />
+<text x="-95" y="88.5" fill="#5fb8a8" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B2</text>
+<circle cx="-15" cy="125" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-15" y="128.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">7</text>
+<circle cx="50" cy="122" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="50" y="125.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">8</text>
+<circle cx="120" cy="80" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="120" y="83.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">9</text>
+<circle cx="118" cy="25" r="15" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="2" />
+<text x="118" y="28.5" fill="#c8574a" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B3</text>
+<circle cx="105" cy="-40" r="15" fill="#f2c868" fill-opacity=".22" stroke="#f2c868" stroke-width="2" />
+<text x="105" y="-36.5" fill="#f2c868" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">★</text>
+<rect x="65" y="-4" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<rect x="-153" y="-44" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<rect x="75" y="134" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<polygon points="55,-71 63,-57 47,-57" fill="#7bd06a" stroke="#14100c" stroke-width="1"/><text x="55" y="-47" fill="#7bd06a" font-size="8" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2">START</text>
+<text x="149" y="-138" fill="#b5aa98" font-size="9" text-anchor="end" paint-order="stroke" stroke="#14100c" stroke-width="2">N ↑ · 320×298 m</text>
+<line x1="-157" y1="140" x2="-107" y2="140" stroke="#ead9c0" stroke-width="1.5"/><text x="-157" y="136" fill="#ead9c0" font-size="8">50 m</text>
+</svg>
+<text x="0" y="381.1875" fill="#f0d9b0" font-size="11.5">Wasser, Brücken, viele Wahrzeichen dicht beieinander</text>
+<text x="0" y="397.1875" fill="#b5aa98" font-size="11.5">Spree + Kupfergraben, 3 Brücken, Viadukt mit Bögen</text>
+<text x="0" y="413.1875" fill="#b5aa98" font-size="11.5">Zonen: Rathausforum · Museumsinsel · Nikolaiviertel</text>
+<text x="0" y="429.1875" fill="#b5aa98" font-size="11.5">Schwäche: wenig DDR-Moderne, ähnelt Köpenick</text>
+<text x="0" y="445.1875" fill="#b5aa98" font-size="11.5">Route ≈ 960 m (Köpenick 840) · 9 Kämpfe, 3 Bosse + Koloss</text>
+</g>
+<g transform="translate(432,118)">
+<text x="0" y="-30" fill="#ef9f27" font-size="17" font-weight="700">B · Magistrale</text>
+<text x="0" y="-11" fill="#b5aa98" font-size="12">Ost: Rathausforum → Spreeufer → Karl-Marx-Allee → Alex</text>
+<svg x="0" y="0" width="390" height="309" viewBox="-165 -150 360 285">
+<rect x="-165" y="-150" width="360" height="285" fill="#33302a"/>
+<polygon points="-165,-75 -60,-75 -55,10 -20,90 -165,95" fill="#e7982b" fill-opacity=".16" stroke="#e7982b" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-20,60 40,40 195,40 195,110 -30,110" fill="#5fb8a8" fill-opacity=".16" stroke="#5fb8a8" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-5,-95 195,-95 195,40 40,30 -15,-10" fill="#c8574a" fill-opacity=".16" stroke="#c8574a" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-60,-150 30,-150 10,-30 -40,-20 -60,-75" fill="#f2c868" fill-opacity=".16" stroke="#f2c868" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-150,-45 -80,-45 -75,55 -150,55" fill="#47603a" fill-opacity=".8"/>
+<polygon points="140,-12 160,-12 160,22 140,22" fill="#47603a" fill-opacity=".8"/>
+<polyline points="-165,112 -60,118 40,100 120,112 195,108" fill="none" stroke="#1d4a55" stroke-width="24" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-30,-150 -45,-60 -110,-60 -165,-62" fill="none" stroke="#5e584c" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-20,-40 30,-28 100,-12 150,4 195,12" fill="none" stroke="#5e584c" stroke-width="28" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-20,-40 5,30 30,80 40,135" fill="none" stroke="#5e584c" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-165,85 -60,80 20,62" fill="none" stroke="#5e584c" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="30,80 110,82 195,80" fill="none" stroke="#5e584c" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="150,4 152,80" fill="none" stroke="#5e584c" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-150,-75 -150,95" fill="none" stroke="#5e584c" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="31.0" y="91.0" width="14" height="34" fill="#8a8272" transform="rotate(8 38 108)"/>
+<polygon points="-60,-130 10,-130 15,-30 -40,-25 -60,-70" fill="#6a6252"/>
+<polyline points="-165,-80 -95,-68 -60,-35 -25,15 15,60 45,100 55,135" fill="none" stroke="#7a3a26" stroke-width="9" stroke-linejoin="round"/><polyline points="-165,-80 -95,-68 -60,-35 -25,15 15,60 45,100 55,135" fill="none" stroke="#d6b436" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="5,-48 150,-12" fill="none" stroke="#7b6a32" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+<polyline points="-5,-20 140,18" fill="none" stroke="#7b6a32" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+<rect x="4.0" y="-81.0" width="22" height="22" fill="#4a5a5e" stroke="#14100c" stroke-width=".8"/>
+<rect x="9.0" y="-17.0" width="22" height="10" fill="#c8c2a8" stroke="#14100c" stroke-width=".8"/>
+<rect x="60.0" y="-51.0" width="30" height="12" fill="#d8c8a0" stroke="#14100c" stroke-width=".8"/>
+<rect x="60.0" y="2.0" width="24" height="12" fill="#c8c2a8" stroke="#14100c" stroke-width=".8"/>
+<rect x="143.0" y="-37.0" width="14" height="14" fill="#efe2c0" stroke="#14100c" stroke-width=".8"/>
+<rect x="145.0" y="33.0" width="14" height="14" fill="#efe2c0" stroke="#14100c" stroke-width=".8"/>
+<rect x="165.0" y="-28.0" width="26" height="12" fill="#e6d6b0" stroke="#14100c" stroke-width=".8"/>
+<rect x="165.0" y="28.0" width="26" height="12" fill="#e6d6b0" stroke="#14100c" stroke-width=".8"/>
+<rect x="-120.0" y="58.0" width="40" height="24" fill="#a84a36" stroke="#14100c" stroke-width=".8"/>
+<rect x="-140.0" y="-40.0" width="10" height="20" fill="#8a5a40" stroke="#14100c" stroke-width=".8"/>
+<rect x="-36.0" y="-129.0" width="22" height="22" fill="#d8d4c8" stroke="#14100c" stroke-width=".8"/>
+<rect x="30.0" y="130.0" width="30" height="10" fill="#8a4430" stroke="#14100c" stroke-width=".8"/>
+<polyline points="-95,-50 -85,-30 -125,25 -65,50 -20,88 20,80 70,90 118,60 180,62 152,5 110,-35 78,18 40,-45 10,-90 -35,-55" fill="none" stroke="#ffd27a" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"/>
+<circle cx="-35" cy="-55" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-29" y="-59" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Weltzeituhr</text>
+<circle cx="-108" cy="-5" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-102" y="-9" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Fernsehturm</text>
+<circle cx="130" cy="28" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="136" y="24" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Strausb. Pl.</text>
+<circle cx="75" cy="-45" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="81" y="-49" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Kino International</text>
+<circle cx="15" cy="-70" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="21" y="-74" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Haus d. Lehrers</text>
+<circle cx="-100" cy="70" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-94" y="66" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Rotes Rathaus</text>
+<circle cx="-135" cy="-30" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-129" y="-34" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Marienkirche</text>
+<circle cx="-130" cy="35" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-124" y="31" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Neptunbrunnen</text>
+<circle cx="72" cy="8" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="78" y="4" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Café Moskau</text>
+<circle cx="20" cy="-12" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="26" y="-16" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Kongresshalle</text>
+<circle cx="-25" cy="-118" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-19" y="-122" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Hotel Stadt Berlin</text>
+<circle cx="45" cy="128" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="51" y="124" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Märk. Museum</text>
+<circle cx="-85" cy="-30" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-85" y="-26.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">1</text>
+<circle cx="-125" cy="25" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-125" y="28.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">2</text>
+<circle cx="-65" cy="50" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-65" y="53.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">3</text>
+<circle cx="-20" cy="88" r="15" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="2" />
+<text x="-20" y="91.5" fill="#e7982b" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B1</text>
+<circle cx="70" cy="90" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="70" y="93.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">4</text>
+<circle cx="118" cy="60" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="118" y="63.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">5</text>
+<circle cx="180" cy="62" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="180" y="65.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">6</text>
+<circle cx="152" cy="5" r="15" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="2" />
+<text x="152" y="8.5" fill="#5fb8a8" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B2</text>
+<circle cx="110" cy="-35" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="110" y="-31.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">7</text>
+<circle cx="78" cy="18" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="78" y="21.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">8</text>
+<circle cx="40" cy="-45" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="40" y="-41.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">9</text>
+<circle cx="10" cy="-90" r="15" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="2" />
+<text x="10" y="-86.5" fill="#c8574a" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B3</text>
+<circle cx="-35" cy="-55" r="15" fill="#f2c868" fill-opacity=".22" stroke="#f2c868" stroke-width="2" />
+<text x="-35" y="-51.5" fill="#f2c868" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">★</text>
+<rect x="-60" y="21" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<rect x="90" y="96" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<rect x="105" y="21" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<polygon points="-95,-59 -87,-45 -103,-45" fill="#7bd06a" stroke="#14100c" stroke-width="1"/><text x="-95" y="-35" fill="#7bd06a" font-size="8" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2">START</text>
+<text x="189" y="-138" fill="#b5aa98" font-size="9" text-anchor="end" paint-order="stroke" stroke="#14100c" stroke-width="2">N ↑ · 360×285 m</text>
+<line x1="-157" y1="127" x2="-107" y2="127" stroke="#ead9c0" stroke-width="1.5"/><text x="-157" y="123" fill="#ead9c0" font-size="8">50 m</text>
+</svg>
+<text x="0" y="326.75" fill="#f0d9b0" font-size="11.5">DDR pur: Platte, Pavillons, Zuckerbäcker, Uhrwerk</text>
+<text x="0" y="342.75" fill="#b5aa98" font-size="11.5">KMA als breite Magistrale, Mittelgrün, rote Banner</text>
+<text x="0" y="358.75" fill="#b5aa98" font-size="11.5">Zonen: Rathausforum · Spreeufer · Karl-Marx-Allee</text>
+<text x="0" y="374.75" fill="#b5aa98" font-size="11.5">Ohne Dom/Insel; Viadukt teilt West/Ost (Bögen = Tore)</text>
+<text x="0" y="390.75" fill="#b5aa98" font-size="11.5">Route ≈ 790 m (Köpenick 840) · 9 Kämpfe, 3 Bosse + Koloss</text>
+</g>
+<g transform="translate(844,118)">
+<text x="0" y="-30" fill="#ef9f27" font-size="17" font-weight="700">C · Großer Ring um den Turm</text>
+<text x="0" y="-11" fill="#b5aa98" font-size="12">Alles, enger: Insel → Nikolaiviertel → Jannowitz → KMA → Alex</text>
+<svg x="0" y="0" width="390" height="300" viewBox="-195 -150 390 300">
+<rect x="-195" y="-150" width="390" height="300" fill="#33302a"/>
+<polygon points="-195,-150 -115,-150 -100,40 -110,90 -195,90" fill="#e7982b" fill-opacity=".16" stroke="#e7982b" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-110,80 -90,60 150,60 150,150 -110,150" fill="#5fb8a8" fill-opacity=".16" stroke="#5fb8a8" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="95,-110 195,-110 195,60 110,60 90,-10" fill="#c8574a" fill-opacity=".16" stroke="#c8574a" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="10,-150 95,-150 95,-10 30,-20 10,-70" fill="#f2c868" fill-opacity=".16" stroke="#f2c868" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="-90,-55 30,-50 40,50 -85,55" fill="#47603a" fill-opacity=".8"/>
+<polygon points="-180,-100 -130,-95 -130,-55 -180,-58" fill="#47603a" fill-opacity=".8"/>
+<polyline points="-120,-150 -112,-60 -105,20 -90,85 -40,122 40,128 120,116 195,122" fill="none" stroke="#1d4a55" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-115,-108 -178,-80 -188,10 -160,92 -95,96" fill="none" stroke="#1d4a55" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="60,-150 40,-80 -20,-62 -195,-48" fill="none" stroke="#5e584c" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="80,-35 140,-40 195,-38" fill="none" stroke="#5e584c" stroke-width="26" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-40,75 -10,90 80,95 150,80 195,82" fill="none" stroke="#5e584c" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-100,72 -40,75 30,30 80,-35" fill="none" stroke="#5e584c" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="130,-150 120,-40 130,40 135,150" fill="none" stroke="#5e584c" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="-150,-110 -150,96" fill="none" stroke="#5e584c" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="-123.0" y="-56.5" width="30" height="13" fill="#8a8272" transform="rotate(5 -108 -50)"/>
+<rect x="-111.0" y="66.5" width="26" height="11" fill="#8a8272" transform="rotate(40 -98 72)"/>
+<rect x="123.0" y="105.0" width="14" height="30" fill="#8a8272" transform="rotate(5 130 120)"/>
+<polygon points="20,-120 95,-120 95,-15 35,-20 20,-70" fill="#6a6252"/>
+<polyline points="-195,-120 -120,-100 -40,-80 30,-66 80,-50 105,-10 118,50 128,100 130,150" fill="none" stroke="#7a3a26" stroke-width="9" stroke-linejoin="round"/><polyline points="-195,-120 -120,-100 -40,-80 30,-66 80,-50 105,-10 118,50 128,100 130,150" fill="none" stroke="#d6b436" stroke-width="1.4" stroke-dasharray="5 4"/>
+<polyline points="95,-48 195,-48" fill="none" stroke="#7b6a32" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+<polyline points="95,-28 195,-28" fill="none" stroke="#7b6a32" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+<rect x="-170.0" y="-81.0" width="30" height="12" fill="#d4c4a0" stroke="#14100c" stroke-width=".8"/>
+<rect x="-166.0" y="-34.0" width="28" height="28" fill="#a89a7c" stroke="#14100c" stroke-width=".8"/>
+<rect x="-162.0" y="25.0" width="24" height="40" fill="#c87a4a" stroke="#14100c" stroke-width=".8"/>
+<rect x="-48.0" y="69.0" width="36" height="22" fill="#a84a36" stroke="#14100c" stroke-width=".8"/>
+<rect x="-60.0" y="-39.0" width="10" height="18" fill="#8a5a40" stroke="#14100c" stroke-width=".8"/>
+<rect x="105.0" y="-85.0" width="20" height="20" fill="#4a5a5e" stroke="#14100c" stroke-width=".8"/>
+<rect x="152.0" y="-65.0" width="26" height="10" fill="#d8c8a0" stroke="#14100c" stroke-width=".8"/>
+<rect x="45.0" y="-145.0" width="20" height="20" fill="#d8d4c8" stroke="#14100c" stroke-width=".8"/>
+<polyline points="-160,-135 -160,-110 -140,-60 -165,15 -165,75 -120,55 -98,72 -60,110 10,108 75,110 150,95 165,35 155,-10 170,-60 115,-100 65,-45" fill="none" stroke="#ffd27a" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"/>
+<circle cx="65" cy="-45" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="71" y="-49" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Weltzeituhr</text>
+<circle cx="-15" cy="5" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-9" y="1" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Fernsehturm</text>
+<circle cx="-152" cy="-20" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-146" y="-24" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Dom</text>
+<circle cx="-150" cy="45" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-144" y="41" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Palast</text>
+<circle cx="-30" cy="80" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="-24" y="76" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Rotes Rathaus</text>
+<circle cx="150" cy="-72" r="4.5" fill="#f2c868" stroke="#14100c" stroke-width="1"/>
+<text x="156" y="-76" fill="#f6ead2" font-size="8.5" font-weight="700" paint-order="stroke" stroke="#14100c" stroke-width="2">Kino</text>
+<circle cx="115" cy="-75" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="121" y="-79" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Haus d. Lehrers</text>
+<circle cx="-55" cy="-30" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-49" y="-34" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Marienkirche</text>
+<circle cx="-60" cy="110" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-54" y="106" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Nikolaikirche</text>
+<circle cx="55" cy="-135" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="61" y="-139" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Hotel</text>
+<circle cx="-60" cy="35" r="2.6" fill="#ead9c0" stroke="#14100c" stroke-width=".8"/>
+<text x="-54" y="31" fill="#f6ead2" font-size="7" font-weight="500" paint-order="stroke" stroke="#14100c" stroke-width="2">Neptunbrunnen</text>
+<circle cx="-160" cy="-110" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-160" y="-106.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">1</text>
+<circle cx="-165" cy="15" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-165" y="18.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">2</text>
+<circle cx="-165" cy="75" r="13" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-165" y="78.5" fill="#e7982b" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">3</text>
+<circle cx="-120" cy="55" r="15" fill="#e7982b" fill-opacity=".22" stroke="#e7982b" stroke-width="2" />
+<text x="-120" y="58.5" fill="#e7982b" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B1</text>
+<circle cx="-60" cy="110" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="-60" y="113.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">4</text>
+<circle cx="10" cy="108" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="10" y="111.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">5</text>
+<circle cx="75" cy="110" r="13" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="75" y="113.5" fill="#5fb8a8" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">6</text>
+<circle cx="150" cy="95" r="15" fill="#5fb8a8" fill-opacity=".22" stroke="#5fb8a8" stroke-width="2" />
+<text x="150" y="98.5" fill="#5fb8a8" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B2</text>
+<circle cx="165" cy="35" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="165" y="38.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">7</text>
+<circle cx="170" cy="-60" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="170" y="-56.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">8</text>
+<circle cx="115" cy="-100" r="13" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="115" y="-96.5" fill="#c8574a" font-size="10" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">9</text>
+<circle cx="155" cy="-10" r="15" fill="#c8574a" fill-opacity=".22" stroke="#c8574a" stroke-width="2" />
+<text x="155" y="-6.5" fill="#c8574a" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">B3</text>
+<circle cx="65" cy="-45" r="15" fill="#f2c868" fill-opacity=".22" stroke="#f2c868" stroke-width="2" />
+<text x="65" y="-41.5" fill="#f2c868" font-size="11" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2.4">★</text>
+<rect x="-145" y="-134" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<rect x="35" y="86" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<rect x="170" y="6" width="10" height="8" fill="#14100c" stroke="#f2c230" stroke-width="1.6"/>
+<polygon points="-160,-144 -152,-130 -168,-130" fill="#7bd06a" stroke="#14100c" stroke-width="1"/><text x="-160" y="-120" fill="#7bd06a" font-size="8" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#14100c" stroke-width="2">START</text>
+<text x="189" y="-138" fill="#b5aa98" font-size="9" text-anchor="end" paint-order="stroke" stroke="#14100c" stroke-width="2">N ↑ · 390×300 m</text>
+<line x1="-187" y1="142" x2="-137" y2="142" stroke="#ead9c0" stroke-width="1.5"/><text x="-187" y="138" fill="#ead9c0" font-size="8">50 m</text>
+</svg>
+<text x="0" y="318.0" fill="#f0d9b0" font-size="11.5">Turm in der Mitte, von jedem Kampf aus sichtbar</text>
+<text x="0" y="334.0" fill="#b5aa98" font-size="11.5">Wahrzeichen aus A und B, jede Zone dafür kleiner</text>
+<text x="0" y="350.0" fill="#b5aa98" font-size="11.5">Zonen: Museumsinsel · Nikolaiviertel · Karl-Marx-Allee</text>
+<text x="0" y="366.0" fill="#b5aa98" font-size="11.5">Schwäche: größte Karte (Tab S9), KMA nur kurz</text>
+<text x="0" y="382.0" fill="#b5aa98" font-size="11.5">Route ≈ 860 m (Köpenick 840) · 9 Kämpfe, 3 Bosse + Koloss</text>
+</g>
+<text x="20" y="607" fill="#b5aa98" font-size="11.5">Fernsehturm in allen drei sichtbar, Tür verschlossen (Finale ist eigener Bezirk). Maße bei Skala 1; Köpenick v2: 318×304 m.</text>
+</svg>

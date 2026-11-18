@@ -236,7 +236,10 @@ export function mitteMap(scale = 1): MapDef {
     }
   };
   verge(streets.find((st) => st.name === 'Straße des 17. Juni')!.pts, 11, 4, 8.2, ['candles', 'fireBarrel', 'candles', 'workLamp']);
-  for (const [x, z, kind] of [[0, -116, 'workLamp'], [-1, -134, 'fireBarrel'], [-15, -126, 'candles'], [-69, 161.5, 'fireBarrel'], [-82, 178.5, 'workLamp'], [63, 166, 'fireBarrel'], [-100, -92, 'candles']] as Array<[number, number, Prop['kind']]>) lights.push({ kind, x: x * s, z: z * s, rot: 0, size: 1 });
+  for (const [x, z, kind] of [[0, -116, 'workLamp'], [-1, -134, 'fireBarrel'], [-15, -126, 'candles'], [-69, 161.5, 'fireBarrel'], [-82, 178.5, 'workLamp'], [63, 166, 'fireBarrel'], [-100, -92, 'candles'],
+    // Curb lanterns where the street lamps leave gaps (Friedrichstraße, Unter den Linden, Ebertstraße, 17. Juni, Dorotheenstraße, canal).
+    [156.5, 25, 'lantern'], [143.5, -22, 'lantern'], [84, 84, 'lantern'], [86.5, 46, 'lantern'], [134, -53, 'lantern'], [-3.5, 35, 'lantern'],
+    [-24, -55.5, 'lantern'], [36, -106.5, 'lantern'], [-80, 167, 'lantern'], [-6, 168.5, 'lantern']] as Array<[number, number, Prop['kind']]>) lights.push({ kind, x: x * s, z: z * s, rot: 0, size: 1 });
   // The beer garden: tables, string lights over them and lanterns along the shore.
   const beer: Prop[] = [
     { kind: 'stringLights', x: -137 * s, z: 27 * s, rot: 0, size: 1 },

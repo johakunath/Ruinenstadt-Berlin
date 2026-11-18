@@ -11,15 +11,20 @@ import { FOV } from './camera';
  * Top of each kind above its ground (finials, the wheel's top gondola) and half width, as built in
  * `landmarks.ts`; kinds without a value are never revealed.
  */
-const SHOW: Partial<Record<LandmarkKind, { top: number; half: number }>> = {
+/** `near`: start distance when the route passes further off than `REVEAL_NEAR` (the Fernsehturm inside the Alexanderplatz loop). */
+const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: number }>> = {
   rathaus: { top: 44, half: 15 }, kirche: { top: 40.5, half: 9 }, mueggelturm: { top: 33, half: 6.5 }, riesenrad: { top: 38, half: 18 },
   sbahnhof: { top: 10, half: 15 }, schloss: { top: 17.5, half: 12 }, forum: { top: 15, half: 22 },
+  // M15 Alexanderplatz.
+  weltzeituhr: { top: 10.5, half: 4.5 }, fernsehturm: { top: 92, half: 15, near: 32 }, dom: { top: 32, half: 13 }, palast: { top: 16, half: 18 },
+  rotesrathaus: { top: 45, half: 20 }, nikolaikirche: { top: 27, half: 10 }, hausdeslehrers: { top: 36, half: 11 }, kino: { top: 13, half: 15 },
   // M15 Mitte: the seven sights of the route (Kollhoff-Tower shows the Bahntower beside it).
   tor: { top: 23, half: 20 }, reichstag: { top: 33, half: 21 }, kanzleramt: { top: 27, half: 14 }, siegessaeule: { top: 49, half: 6 },
   sony: { top: 39, half: 30 }, kollhoff: { top: 70, half: 12 }, philharmonie: { top: 23, half: 16 },
 };
 /** German names for the hint while the view holds. */
-const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick' };
+const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
+  weltzeituhr: 'Weltzeituhr', fernsehturm: 'Fernsehturm', dom: 'Berliner Dom', palast: 'Palast der Republik', rotesrathaus: 'Rotes Rathaus', nikolaikirche: 'Nikolaikirche', hausdeslehrers: 'Haus des Lehrers', kino: 'Kino International' };
 /** Start when the hero is this close to the footprint (also mid-fight: the game pauses). */
 export const REVEAL_NEAR = 12;
 export const REVEAL_IN = 1.0;
@@ -105,7 +110,7 @@ export class LandmarkReveal {
   update(dt: number, x: number, z: number, alive: boolean, aspect = 16 / 9): RevealPose | null {
     if (!this.current) {
       if (!alive) return null;
-      const next = this.landmarks.find((l) => SHOW[l.kind] !== undefined && !this.seen.has(l) && footprintDist(l, x, z) < REVEAL_NEAR);
+      const next = this.landmarks.find((l) => SHOW[l.kind] !== undefined && !this.seen.has(l) && footprintDist(l, x, z) < (SHOW[l.kind]?.near ?? REVEAL_NEAR));
       if (!next) return null;
       this.seen.add(next);
       this.current = next;

@@ -28,3 +28,20 @@ describe('M15 Xhain weather', () => {
     for (const a of xhainMap(1).areas) expect(XHAIN_WEATHER[a.id], a.id).toBeDefined();
   });
 });
+
+describe('M15 Alexanderplatz weather (frozen in autumn)', () => {
+  it('has a weather for every area: leaves in the zones, clear on the plaza; fog stays light by day', async () => {
+    const { alexMap } = await import('../data/alexanderplatz');
+    const { ALEX_WEATHER } = await import('./weather');
+    const m = alexMap(1);
+    for (const a of m.areas) expect(ALEX_WEATHER[a.id], a.id).toBeDefined();
+    const scene = new Scene(); scene.fog = new FogExp2(0, 0.0075);
+    const w = new Weather(scene, m, ALEX_WEATHER, 0.5, 0.0075 / 0.017);
+    const e = m.encounters.find((q) => q.id === 'lustgarten')!;
+    for (let i = 0; i < 300; i++) w.update(1 / 30, e.x, e.z, i / 30);
+    expect(w.current).toBe('leaves');
+    expect((scene.fog as FogExp2).density).toBeLessThan(0.008);
+    const f = m.encounters.find((q) => q.id === 'weltzeituhr')!;
+    expect(w.kindAt(f.x, f.z)).toBe('clear');
+  });
+});

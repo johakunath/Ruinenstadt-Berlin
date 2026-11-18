@@ -31,8 +31,8 @@ export interface Wet {
   streakAlpha: number;
   /** Roughness scale of the street materials (lower is glossier: they mirror the sky environment). */
   gloss: number;
-  /** Light colour of the street lanterns (warm `0xffb060` on other maps). */
-  lamp: number;
+  /** Light colours of the street lanterns (warm `0xffb060` on other maps), picked per lantern; repeat a colour to weight it. */
+  lamp: number[];
   /** Neon colours: warm shop and club signs, cold signs (Regierungsviertel, towers). */
   neon: { warm: number[]; cold: number[] };
   /** Neon brightness and the share of street fronts that carry a sign. */
@@ -100,55 +100,32 @@ export const ALEX_SKIES: Record<'a' | 'b' | 'c', Sky> = {
 };
 
 /**
- * Mitte 2089, three neon nights (step 3, Johannes picks). Shared: rain-wet streets with a reflection streak
- * under every light, neon signs and poles below 5 m, tinted rain. They differ in sky, lantern colour and palette.
+ * Mitte 2089 neon night (Johannes 2026-11-18, from the three variants of step 3: mainly A "Neonregen", a bit
+ * less saturated, some of B's blue, occasional red from C). Rain-wet streets with a reflection streak under
+ * every light, neon signs and poles below 5 m, tinted rain. Most lanterns amber, some cold blue LED, a few
+ * sodium red; neon mostly magenta, amber and cyan with blue and red accents.
  */
-export const MITTE_SKIES: Record<'a' | 'b' | 'c', Sky> = {
-  // A Neonregen (the board `docs/style/potsdamer-platz.png`): violet sky, magenta and cyan neon, amber lanterns.
-  a: {
-    id: 'mitte-a',
-    background: 0x1e1430,
-    fog: 0x2a1a3a,
-    fogDensity: 0.02,
-    env: { top: [0.25, 0.12, 0.32], horizon: [0.08, 0.04, 0.1], lamps: 1.2, intensity: 0.75 },
-    hemi: { sky: 0x8a6ab0, ground: 0x2a1a24, intensity: 0.9 },
-    sun: { color: 0xb8a8ff, intensity: 1.5, from: [-11, 24, 12] },
-    lamps: 1,
-    look: { saturation: 1.4, split: 0.15, contrast: 1.08, bloom: 1, exposure: 1.18 },
-    wet: { streak: 1, streakAlpha: 0.6, gloss: 0.45, lamp: 0xffb060, neon: { warm: [0xff4fa3, 0xe19142, 0xff4fa3], cold: [0x43d1cf, 0x43d1cf, 0xff4fa3] }, glow: 1, density: 0.8, rain: 0xc8b0e0, rainNeon: 0.3 },
-  },
-  // B Kaltes LED: blue-black night, cold blue LED lanterns (2D `#6a8cff`), cyan neon, magenta rare; denser haze.
-  b: {
-    id: 'mitte-b',
-    background: 0x07101e,
-    fog: 0x0c1828,
-    fogDensity: 0.024,
-    env: { top: [0.1, 0.2, 0.38], horizon: [0.03, 0.06, 0.12], lamps: 0.8, intensity: 0.7 },
-    hemi: { sky: 0x5a7ab8, ground: 0x141822, intensity: 0.7 },
-    sun: { color: 0x9ab8ff, intensity: 1.7, from: [-11, 24, 12] },
-    lamps: 1.1,
-    look: { saturation: 1.12, split: 0.75, contrast: 1.12, bloom: 0.85, exposure: 1.08 },
-    wet: { streak: 1.3, streakAlpha: 0.55, gloss: 0.35, lamp: 0x6a8cff, neon: { warm: [0x43d1cf, 0xff4fa3, 0x43d1cf], cold: [0x43d1cf, 0x6a8cff, 0x43d1cf] }, glow: 0.9, density: 0.45, rain: 0xa8c8ff, rainNeon: 0.12 },
-  },
-  // C Glut im Smog: sodium-orange lanterns in warm smog, magenta and amber neon, few cold accents.
-  c: {
-    id: 'mitte-c',
-    background: 0x1a0f12,
-    fog: 0x2a1a18,
-    fogDensity: 0.026,
-    env: { top: [0.22, 0.12, 0.1], horizon: [0.1, 0.05, 0.04], lamps: 1.4, intensity: 0.6 },
-    hemi: { sky: 0x9a6a5a, ground: 0x24180f, intensity: 0.65 },
-    sun: { color: 0xd8a890, intensity: 1.2, from: [-11, 24, 12] },
-    lamps: 1.15,
-    look: { saturation: 1.3, split: 0.3, contrast: 1.16, bloom: 0.9, exposure: 1.08 },
-    wet: { streak: 0.7, streakAlpha: 0.45, gloss: 0.6, lamp: 0xff9440, neon: { warm: [0xff4fa3, 0xe19142, 0xff4fa3], cold: [0xff4fa3, 0x43d1cf, 0xe19142] }, glow: 1.1, density: 0.6, rain: 0xe0b090, rainNeon: 0.2 },
+export const MITTE_SKY: Sky = {
+  id: 'mitte',
+  background: 0x18132c,
+  fog: 0x221a35,
+  fogDensity: 0.021,
+  env: { top: [0.21, 0.14, 0.34], horizon: [0.07, 0.045, 0.105], lamps: 1.1, intensity: 0.74 },
+  hemi: { sky: 0x7c6fb2, ground: 0x241a26, intensity: 0.85 },
+  sun: { color: 0xafadff, intensity: 1.55, from: [-11, 24, 12] },
+  lamps: 1,
+  look: { saturation: 1.28, split: 0.3, contrast: 1.1, bloom: 0.95, exposure: 1.15 },
+  wet: {
+    streak: 1.05, streakAlpha: 0.58, gloss: 0.42,
+    lamp: [0xffb060, 0xffb060, 0xffb060, 0xffb060, 0xffb060, 0xffb060, 0xffb060, 0x6a8cff, 0x6a8cff, 0xff6a3a],
+    neon: { warm: [0xff4fa3, 0xe19142, 0xff4fa3, 0xff4fa3, 0xe19142, 0xff3b30], cold: [0x43d1cf, 0x43d1cf, 0x6a8cff, 0x43d1cf, 0xff4fa3] },
+    glow: 0.95, density: 0.75, rain: 0xc0b8e8, rainNeon: 0.25,
   },
 };
 
-/** The sky of a map by `?sky=` (default A until Johannes picks): Alexanderplatz by day, Mitte's neon nights, every other map night. */
+/** The sky of a map: Alexanderplatz by `?sky=` (default A until Johannes picks), Mitte's neon night, every other map night. */
 export function skyFor(mapId: string | undefined, variant: string | null): Sky {
-  const v = variant === 'b' || variant === 'c' ? variant : 'a';
-  if (mapId === 'mitte') return MITTE_SKIES[v];
+  if (mapId === 'mitte') return MITTE_SKY;
   if (mapId !== 'alex') return NIGHT_SKY;
-  return ALEX_SKIES[v];
+  return ALEX_SKIES[(variant === 'b' || variant === 'c' ? variant : 'a')];
 }
