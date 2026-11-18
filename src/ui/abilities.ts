@@ -14,6 +14,7 @@ import { buyConsumable, buyHeal, buyOffer, closeTrade, healPrice, tradeStock } f
 import type { Sim } from '../sim/types';
 import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
 import { itemCard } from './inventory';
+import { SLOT_NAMES } from '../data/items';
 
 const QUALITY_COLOR = ['#e8ddd0', '#7d9bff', '#f2d14b', '#b48cff'] as const;
 const VERBAND = '<path d="M9 21h30v8H9z" fill="#ead9c0"/><path d="M20 10h8v28h-8z" fill="#ead9c0"/><path d="M21 18h6v12h-6zM16 22h16v4H16z" fill="#c23a2e"/>';
@@ -51,6 +52,9 @@ export class AbilitiesUi {
   private signature = '';
   private tradeSig = '';
   private tradeMsg = '';
+  /** P5: offer whose worn counterpart is shown (hover, focus or a first tap); -1 none. */
+  private tradeSel = -1;
+  private tradePointer = 'mouse';
   private buffSig = '';
   private sim: Sim | null = null;
   private padDown: boolean[] = [];
@@ -116,11 +120,27 @@ export class AbilitiesUi {
       } else if (['Digit1', 'Digit2', 'Digit3'].includes(e.code)) this.pick(Number(e.code.slice(-1)) - 1);
       else if (e.code === 'KeyN') this.reroll();
     }, { capture: true });
+    this.trade.addEventListener('pointerdown', (e) => { this.tradePointer = e.pointerType; }, { capture: true });
+    // Mouse hover and pad or key focus show the worn item at once (P5).
+    const point = (e: Event): void => {
+      const o = (e.target as Element).closest<HTMLElement>('[data-offer]');
+      // A tap focuses the button before its click: on touch only the click counts, or the first tap would buy.
+      const show = e.type === 'focusin' ? this.tradePointer !== 'touch' : (e as PointerEvent).pointerType === 'mouse';
+      if (o && this.sim && show) this.showWorn(this.sim, Number(o.dataset.offer));
+    };
+    this.trade.addEventListener('pointerover', point);
+    this.trade.addEventListener('focusin', point);
     this.trade.addEventListener('click', (e) => {
       const b = (e.target as Element).closest<HTMLElement>('button');
       const s = this.sim;
       if (!b || !s) return;
-      if (b.dataset.buy !== undefined) this.tradeMsg = buyOffer(s, Number(b.dataset.buy)).text;
+      if (b.dataset.buy !== undefined) {
+        // P5: on touch the first tap shows the comparison, the second buys.
+        const i = Number(b.dataset.buy);
+        if (this.tradePointer === 'touch' && this.tradeSel !== i) { this.showWorn(s, i); return; }
+        this.tradeMsg = buyOffer(s, i).text;
+        this.tradeSel = -1;
+      }
       else if (b.dataset.heal) this.tradeMsg = buyHeal(s).text;
       else if (b.dataset.cons) this.tradeMsg = buyConsumable(s, b.dataset.cons as 'verband' | 'molotow').text;
       else if (b.dataset.up) this.tradeMsg = buySpatiUpgrade(s, b.dataset.up as 'dmg' | 'hp').text;
@@ -149,6 +169,22 @@ export class AbilitiesUi {
   private reroll(): void {
     if (this.sim && rerollBlessings(this.sim)) this.signature = '';
   }
+  /** P5: the worn item of offer `i`'s slot beside the offers; the offer is marked. */
+  private showWorn(s: Sim, i: number): void {
+    const o = tradeStock(s)[i];
+    if (!o || i === this.tradeSel) return;
+    this.tradeSel = i;
+    const worn = s.equipment[o.item.slot];
+    const box = this.trade.querySelector('.trade-worn');
+    if (box) box.innerHTML = worn ? itemCard(worn, 'Angelegt', s.equipment, false) : `<p class="inv-hint">${SLOT_NAMES[o.item.slot]}: nichts angelegt</p>`;
+    for (const el of this.trade.querySelectorAll<HTMLElement>('[data-offer]')) {
+      const on = Number(el.dataset.offer) === i;
+      el.classList.toggle('sel', on);
+      const b = el.querySelector<HTMLButtonElement>('[data-buy]');
+      if (b) b.textContent = on && this.tradePointer === 'touch' ? 'Nochmal tippen: kaufen' : b.dataset.label!;
+    }
+  }
+
   private closeTrade(): void {
     if (this.sim) closeTrade(this.sim);
     this.trade.hidden = true;
@@ -202,6 +238,9 @@ export class AbilitiesUi {
   }
 
   private renderTrade(s: Sim): void {
+    this.tradeSel = -1;
+    // The next pointerdown sets it again before any focus; pad and keys then count as focus.
+    this.tradePointer = 'mouse';
     const stock = tradeStock(s);
     const shop = s.content.tradeAt >= 0;
     const cons = s.inventory.consumables ?? { verband: 0, molotow: 0 };
@@ -210,7 +249,8 @@ export class AbilitiesUi {
       // Playtest 2026-11-18: compare the item level with the worn piece, not the Kampfkraft.
       const worn = s.equipment[o.item.slot];
       const delta = o.item.itemLevel - (worn?.itemLevel ?? 0);
-      return `<div class="trade-offer">${itemCard(o.item, 'Angebot', s.equipment)}<div class="trade-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">Stufe ${o.item.itemLevel}${worn ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}</div><button type="button" data-buy="${i}" class="${s.inventory.scrap >= o.price ? 'primary' : ''}">Kaufen · ${o.price} Schrott</button></div>`;
+      const label = `Kaufen · ${o.price} Schrott`;
+      return `<div class="trade-offer" data-offer="${i}">${itemCard(o.item, 'Angebot', s.equipment)}<div class="trade-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">Stufe ${o.item.itemLevel}${worn ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}</div><button type="button" data-buy="${i}" data-label="${label}" class="${s.inventory.scrap >= o.price ? 'primary' : ''}">${label}</button></div>`;
     }).join('');
     // Playtest 2026-11-18: Schärfen and Panzerung at the Späti, up to SPATI_UPGRADE.max (they stay).
     const ups = shop ? SPATI_UPGRADE.ids.map((id) => {

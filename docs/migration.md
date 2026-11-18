@@ -4,103 +4,24 @@ This repo is the game; only it is developed (Johannes, 2026-11-15). The 2D repo 
 
 ## Queue — read this first
 
-Read `CLAUDE.md`, then the linked task and only its source/target files. Completed task details live in `docs/tasks/`; current features in `docs/status.md`. Owner tags are recommendations.
+Open work only. Read `CLAUDE.md`, then the linked task and only its source and target files. Built features waiting for Johannes' playtest are listed once in `docs/tasks/pt-hardware-checks.md` › Playtest; finished task details stay in `docs/tasks/`, current features in `docs/status.md`. Owner tags are recommendations.
 
 | Task | Owner | Status / start file |
 |---|---|---|
-| S2 + M7/M8/M9 first playable pass | Codex | done (first pass, PR #17): `docs/tasks/combat-audio-migration.md` |
-| M7/M8 parity, M9 consumable controls, M16 run content | Claude | done (review of PR #17 and completion, same task file); Johannes playtest open |
-| M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
-| M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
+| M15 Mitte step 8: U2 tunnel from Alexanderplatz to U Potsdamer Platz, title and victory links, network stop `map: 'mitte'`, bot `--map=mitte`, tier calibration | Claude · Opus medium | open: `docs/tasks/m15-mitte.md` |
+| M15 Alexanderplatz step 4 photo check for the landmarks built without a downloaded photo | Claude · Opus high | open: `docs/tasks/m15-alexanderplatz.md` |
+| P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
+| M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |
+| Textures (Codex): T1b rail follow-up and texture performance, T6 Xhain, T7 tunnel walls, Mitte step 9, Alexanderplatz step 8, H1 step 6 hero textures | Codex | open: `docs/asset-pipeline.md` › Texture queue, task files linked there |
+| Backlog ready to build: P17 Spreepark dinos, P18 ambient animals, P24 worn landmarks | Claude · Opus high | open: `docs/backlog.md` |
+| Next district Charlottenburg (Q8), concept first | Claude · Fable high (concept), Opus high (build) | not started: `docs/maps/guidelines.md` |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
-| M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Claude (taken over 2026-11-17) | step 2 built (profiles A Bahnhofstraße, C Spreeufer with tracks); all steps built 2026-11-17 (0 water, 3 footprints and ruins, 4 closed edge, 5 hand-built zone 0, 6 landmarks with reveal shot); Johannes playtest open: `docs/tasks/m11d-map-realism.md` |
-| M11c World variety: two lot types per zone, weather per zone (variant A) | Claude | weather and area messages built 2026-11-17; the eight lot types built 2026-11-17 (data, guards, event spots; art by sub-agents): `docs/maps/guidelines.md` › Lot types and weather |
-| M16b Side branches, variant A (lanes beside the route) | Claude | built 2026-11-17 (Hinterhof: blessing, Kietzgasse: sleeping elite, Hangarweg: cache), playtest open |
-| M19 S3 tunnel, layout B, blessing in the first passage | Claude | built, playtest open: `docs/maps/guidelines.md` › U-Bahn tunnels |
-| U1 Pause menu with tabs, inventory as in 2D (phone playtest 2026-11-16) | Opus 5.5 medium or Sonnet | done, playtest open: `docs/tasks/u1-pause-menu.md` |
-| C1 Spear light attacks thrust forward, not sideways (playtest 2026-11-17) | Claude · Opus high | done (2026-11-17), playtest open: `docs/tasks/c1-spear-light.md` |
-| U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
-| T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (images) | paving and leaf image pass built; texture performance and rail follow-up open: `docs/tasks/t1b-ground-polish.md` |
-| T2 Street textures | Codex | built: `docs/tasks/t2-street-textures.md`; profile performance and playtest open |
-| A2 Audio follow-ups | Sonnet | done (2026-11-16), listening test open: `docs/tasks/a2-audio-followups.md` |
-| L2 Loot and item follow-ups | Sonnet | done (2026-11-16): `docs/tasks/l2-loot-followups.md` |
-| Pad layout as in 2D (Johannes, 2026-11-17) | Claude | done (PR #26) |
-| R1 Hero outline cost | Opus 5.5 high, Johannes measures | built 2026-11-17 (skip when nothing is in front, scissor, no full-screen copy); measurement open: `docs/tasks/r1-outline-cost.md` |
-| H1 Custom hero: real clothing, outfits, inventory preview, left-hand grip | PC · Blender · Opus high (spec: Fable 5.2) | steps 1–5 done 2026-11-17 (PRs #36–#41): left-hand IK, coat, vest, boots, sneakers, gloves, scarf, equipment swap, turnable doll; open: step 6 textures (Codex), step 7 measurement (Johannes), equipment variety (later): `docs/tasks/h1-hero.md` |
-| L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
-| G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
-| M15 Xhain, district 2: concept B "Über die Mauer" (Johannes, 2026-11-18), rats, Grenzer, Brandmeister, Rattenmutter, Spreehexe | Claude · Opus high | built 2026-11-18 (PR #46, with the V1 B cutaway of PR #50), playtest open: `docs/maps/xhain.md` › Handover, `docs/tasks/m12b-xhain-enemies.md`; textures T6 (Codex), difficulty calibration and hardware checks 10 to 13 open |
-| M15 Mitte / Potsdamer Platz, district 4: layout B2 "Vom Reichstag zum Bass" (Johannes, 2026-11-18), Kabelghule, Boxenköpfe, Türsteher, Wachdrohne, Bassprediger | Claude · Opus high (boss spec: Fable high) | steps 0 to 4 (concept, data, blockout, neon night look, landmarks from photos) and step 7 for the Potsdamer Platz done 2026-11-18; step 5 spec done 2026-11-18 (`docs/tasks/m12c-mitte-enemies.md`, Opus xhigh by Johannes' call); step 6 enemies and bosses built 2026-11-18 (Kabelghul, Boxenkopf, Drohne, Türsteher, Wachdrohne, Dirigent, Bassprediger, rain rule; playtest open); step 7 other zones built 2026-11-18 (variant A, sandstone ministries); next step 8 flow and balance: `docs/tasks/m15-mitte.md`, `docs/maps/mitte.md` |
-| V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Fable high (B engine decision and spec), Opus high (build) | A built as Blockrand in Xhain; B built 2026-11-18 as a cutaway of flagged objects (engine B3, cut by index range: Hinterhof lots, Thomaskirche, Bethanien; PR #50); Johannes picks the yard cut height and playtests: `docs/tasks/v1-visibility.md` |
-| M15 Alexanderplatz, district 3: layout C "Großer Ring" (Johannes, 2026-11-18), afternoon light, Weltzeituhr wakes up as final boss | Claude · Opus high | map done (PR #49): data, tests, afternoon light A, 17 landmarks, Plattenbau rows, propaganda dressing, two lot types, autumn leaves, reachable through the U8 after Xhain; enemies and bosses built 2026-11-18 (step 7: Uhrwerkläufer, Wurzler, Kernspeier, Brigadeghul, Wurzel-Mutter, Großer Uhrwerkläufer, Volkseigener Koloss, the Weltzeituhr wakes up); playtest, `ALEX_TIER` calibration, textures T7 and hardware checks 17 to 19, 22 and 23 open: `docs/tasks/m15-alexanderplatz.md` |
-| U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
-| K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
-| P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; per-pass analysis and ranked measures (playtest 2026-11-17) | Claude · Fable high (analysis), Opus high (build), Johannes measures | steps 1 and 2 built (2026-11-18: 32 m chunks, shadow map at 30 Hz on Leistung, test switch `?shadows=boxes`), measurement open: `docs/tasks/p1-heat.md` |
-| PT Hardware and quality checks for Johannes (running list; every session adds what must be checked on real devices) | Johannes; all sessions add rows | open: `docs/tasks/pt-hardware-checks.md` |
-| P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements: `docs/tasks/p1b-proxy-passes.md` |
-| M20 Tunnels between the maps (2D route A content, line generator) and the walkable camp at S+U Warschauer Straße (layout A+C, flow F1, build sites; Johannes 2026-11-18) | Claude · Opus high | built 2026-11-18, playtest open: `docs/tasks/m20-tunnels-camp.md` |
-| T7 U-Bahn tunnel wall textures: three concrete variants and a station tile band (playtest 2026-11-18) | Codex | open: `docs/asset-pipeline.md` › Texture queue |
-| KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
 
-Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
+Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.
 
-Finish: task status + ≤8-line handover, update this queue, update status only for player-visible changes. Draft PR → one review → fixes → ready/CI. Do not re-run prototype acceptance.
+## Parity with 2D (milestone P1)
 
-**Verified by Johannes, 2026-11-16:** prototype controller feel/rumble, PC performance and hero outline work well; done. Test new combat changes normally; these are not open migration blockers.
-
-## Milestone P1: Köpenick at 2D parity
-
-Goal: play Köpenick with every 2D feature that matters, then work only here. Characters (H1, H2) are not required; CC0 bodies stay until then.
-
-| Feature | Step | State |
-|---|---|---|
-| Map, route, encounters, waves, heights | M10, M11, M11b | v2 built; playtest open |
-| Minimap, 2D edge triangles | M11b | Done |
-| Späti rest stops, relief, irregular banks and quays, ground variant C | M11b part 2 | Done; generated ground textures in T1 (Codex) |
-| Item data and rolls | M1, M2 | Done |
-| Gear stats in combat | M3a, M3b | M3a done (PR #9); M3b done (PR #10) |
-| Drops, glow, pickup, exit warning; breakable bins and crates with pickups (2D: crates, BSR bins) | M4 | Built; Johannes playtest open |
-| Inventory, equip, compare, salvage, sets | M5 | Implemented; M4 collection hookup done |
-| Save, wave checkpoint, difficulty | M6 | Done (PR #16); playtest open |
-| Weapons and finishers | M7 | Built: own clips, models, arcs and finishers per weapon; playtest and balance open |
-| Powers, ultimates, blessings, families and duos | M8 | Built: all 12 powers, all 50 blessings with 2D offer rules, weapon mods; playtest open |
-| Touch layout for more buttons | M9 | Built: thumb arc with power, switch, ultimate, Verband, Molotow; spacing after the Tab S9 playtest |
-| Enemy roster and Köpenick mix, elites, 4 bosses with attacks | M12 | Built: six types, four elite modifiers, four bosses with own specials, resistances; playtest open. Own models for the humanoid bosses stay with H2 |
-| Balance bot | M14 | Built: plays whole campaigns in Node; first tuning pass done, calibration open |
-| Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Built: one event per stretch between fights, every type once per run; places are seeded, M16b moves them into side branches |
-| Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Built (2026-11-17, variant A): three fenced lanes in Köpenick, one in each zone |
-| World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
-| Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Built (2026-11-16, `docs/tasks/m13-camp.md`): seven stations, meals from Zutaten, Lazarett, Aufsätze, Lager; playtest open |
-| Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |
-| Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Built (2026-11-16): four intro cards before the first run, tutorial cards for the first loot and blessing, end screens with stats, title buttons that say what they keep, Hauptmenü in the pause menu; Kodex and options in U1/U2 |
-| Endless mode after the district boss | M18 | Built (2026-11-16): "Endlos kämpfen" after the victory; growing waves around the hero, a boss every fifth, a blessing every second, record in the profile |
-| One U-Bahn tunnel with Der Schaffner | M19 | Built (2026-11-17): S3-Tunnel, layout B, blessing first; playtest open |
-| Sound: 2D port, enemy sounds | S1, S2 | S1 done (PR #9); S2 covers the M12 roster (synth cues per type and special); boss voices S3 |
-
-Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, other districts.
-
-## Steps
-
-| # | Step | Owner | Needs | Done when |
-|---|---|---|---|---|
-| M11c | World variety (P1 row): lot types, decals, weather per district, area messages. Mockup or look alternatives for weather first | Claude · Opus medium | M11b | Each zone of Köpenick has two lot types the others do not |
-| M7 | Weapons in 2D order: Klinge (pipe moves become its baseline), Hammer, Speer, Werfer; finisher each (B6) | Claude · Opus high | M3b | Klinge and Hammer feel different on a pad |
-| M8 | Powers, ultimates, blessings (Zeitsplitter), families and duos | Claude · Opus high | M7 | One power and one ultimate per weapon; blessing choice after each encounter |
-| M9 | Touch layout for power, ultimate, consumables: mockup, then build | Claude · Opus medium | M8 | |
-| M12 | Köpenick roster from 2D roles (ghoul, brute, spitter, Raser, crow, dinos), elites, bosses Feldwebel, Turmwächter, Rex, Hauptmann with own attacks | Sim Claude, models PC | M3b | Each type needs a different answer |
-| M16 | Run content (row in P1). Consumable and event rules port first as a Codex task | Codex (rules), Claude (world) | M4 | All 2D event types occur in a run |
-| M16b | Side branches: 2 to 3 per district, 20 to 40 m off the route, each ends in a surprise from M16 (ambush, mini-boss elite, cache crate, hidden blessing). Map rule in `docs/maps/guidelines.md` | Claude · Opus high | M16, M12 | Johannes finds them without the minimap and wants to take them |
-| M13 | Camp as a menu between runs; port station table (`STN` area in 2D `js/data.js`) | Claude, Codex (UI) | M6 | Upgrades and meals change the next run |
-| M13b | Späti trader (B13): first port the 2D trader (`openTrade`, `tradeLvl`, offers in 2D `js/combat.js`), then the 3D trade screen (mockup first) and the larger offer; the balance bot learns trading | Codex port, Claude screen and rules | M5, M8, M11b | Johannes trades in every Späti and finds something worth the Schrott |
-| M17 | Menus: start, intro/tutorial cards, end screen, Kodex, options | Codex after mockup | M5 | |
-| M18 | Endless mode | Claude | M12 | |
-| M19 | U-Bahn tunnel: linear with short side branches (chest or mini-boss), Der Schaffner | Claude · Opus high | M12 | Reachable after Köpenick |
-| S2 | Enemy sounds per type, distance volume | Claude · Opus medium | S1 | Each type recognizable by ear |
-| S3 | Boss voices (tool: Q9) | Claude, Johannes | M12 | |
-| M14 | Balance bot: port `tools/sim.js`, `tools/balance.mjs`, then calibrate to Johannes (B9, B10) | Codex port, Claude rework | M8 | Bot clear times match playtests |
-| M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`). Xhain built 2026-11-18 (`docs/maps/xhain.md`); Alexanderplatz in PR #49; Mitte planned (`docs/tasks/m15-mitte.md`) | Claude, Johannes | P1 | |
-
-Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`): steps 1–5 done 2026-11-17 (Blender pipeline, left-hand grip, coat and vest outfits, boots, sneakers, gloves, scarf, equipment swap, turnable inventory doll); step 6 painted textures (Codex) and step 7 measurement (Johannes) open. H2 Köpenick ghoul and other enemies.
+Reached 2026-11-18 for Köpenick: map, loot, inventory, save, weapons, powers, blessings, enemies, bosses, run content, side branches, camp, Späti trader, menus, endless mode, tunnels and sound are built; their playtests are in `docs/tasks/pt-hardware-checks.md` › Playtest. Still open from P1: own models for the humanoid bosses and the ghoul (H2), boss voices (S3, tool Q9), a trade screen of its own and trader balance (M13b). Not in P1: XP levels, threat levels (Bedrohung), daily fight.
 
 ## How each area moves
 

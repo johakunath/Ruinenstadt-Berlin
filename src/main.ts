@@ -26,6 +26,8 @@ import { GameRenderer } from './render/renderer';
 import { setLoadout } from './sim/loadout';
 import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
+import { autoAttackTarget } from './sim/player';
+import { deathSummary, logHit, type DeathSummary, type HitLog } from './sim/death';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
@@ -86,10 +88,21 @@ const map = opts.map !== 'hof' ? (() => {
   const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
-  // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
+  // Dev showcase (`?props=crane,stall:1.5*4`, kind[:size][*count]): rows of six props near the start on the
+  // nearest free ground (no building, car or container within the block), all facing south (rot 0) so fronts compare.
   const show = new URLSearchParams(location.search).get('props');
-  if (show) show.split(',').flatMap((k) => { const [kind, n] = k.split('*'); return Array.from({ length: Number(n) || 1 }, () => kind as Prop['kind']); })
-    .forEach((kind, i) => props.push({ kind, x: def.start.x + 5 + (i % 6) * 5, z: def.start.z - 4 + Math.floor(i / 6) * 6, rot: i * 0.7, size: 1 }));
+  if (show) {
+    const items = show.split(',').flatMap((k) => { const [head = '', n] = k.split('*'); const [kind, size] = head.split(':'); return Array.from({ length: Number(n) || 1 }, () => ({ kind: kind as Prop['kind'], size: Number(size) || 1 })); });
+    const cols = Math.min(6, items.length), rows = Math.ceil(items.length / 6), span = (cols - 1) * 5 + 6, deep = (rows - 1) * 6 + 6;
+    const busy = (x0: number, z0: number): boolean => lots.some((l) => Math.abs(l.x - x0 - span / 2) < span / 2 + Math.max(l.w, l.d) / 2 && Math.abs(l.z - z0 - deep / 2) < deep / 2 + Math.max(l.w, l.d) / 2)
+      || props.some((p) => (p.kind === 'car' || p.kind === 'crane' || p.kind === 'container') && p.x > x0 - 3 && p.x < x0 + span && p.z > z0 - 3 && p.z < z0 + deep);
+    let ox = def.start.x + 5, oz = def.start.z - 4;
+    search: for (let r = 0; r < 30; r += 3) for (let a = 0; a < 16; a++) {
+      const x = def.start.x + 3 + Math.cos(a * Math.PI / 8) * r, z = def.start.z - 3 + Math.sin(a * Math.PI / 8) * r;
+      if (!busy(x, z)) { ox = x; oz = z; break search; }
+    }
+    items.forEach((it, i) => props.push({ kind: it.kind, x: ox + (i % 6) * 5, z: oz + Math.floor(i / 6) * 6, rot: 0, size: it.size }));
+  }
   return { def, lots, props, level: mapLevel(def, lots, props) };
 })() : null;
 const isTunnel = map?.def.tunnel !== undefined;
@@ -195,6 +208,12 @@ function checkpoint(): number {
 }
 /** M17 end screen: what the run brought (2D showEnd stats). */
 let runScrap0 = 0, runT0 = 0;
+/** Hits of the last seconds and the summary of the last death (death screen, telemetry). */
+const hitLog: HitLog[] = [];
+/** The running fight, for the reward line (P7). */
+const fight = { t: 0, kills: 0, dmg: 0 };
+let lastDeath: DeathSummary | null = null;
+const deathLine = (d: DeathSummary | null): string => d ? `<div class="death-by">Tod durch <b>${d.by}</b></div>${d.recent.length > 1 || d.recent[0]?.by !== d.by ? `<div class="death-recent">Zuletzt: ${d.recent.map((r) => `${r.by} ${Math.round(r.share * 100)} %`).join(' · ')}</div>` : ''}` : '';
 function endStats(won: boolean): string {
   const min = Math.max(1, Math.round((sim.time - runT0) / 60)), fights = Math.min(sim.run.index, level?.encounters.length ?? 0), best = sim.inventory.camp?.endlessBest ?? 0;
   const e = sim.run.endless;
@@ -493,6 +512,7 @@ document.getElementById('to-title')!.addEventListener('click', () => {
 // Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
 window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
+input.onZoom = (dir) => { if (phase === 'play') renderer?.zoom(dir); };
 input.onMenu = () => {
   if (optionsScreen().isOpen) optionsScreen().close();
   else if (menu.isOpen) menu.close();
@@ -619,6 +639,9 @@ function start(resumed = false): void {
     const p = sim.player;
     p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z;
   }
+  hitLog.length = 0;
+  // A checkpoint can resume mid-encounter (no encounterStart then): count the fight from here.
+  fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0;
   telemetry.begin(sim, { map: map ? map.def.name : 'Hof', profile: opts.profile, scale: opts.mapScale, startAt: sim.run.index, input: input.device });
 }
 
@@ -654,6 +677,16 @@ function readInput(): SimInput {
   simInput.ultimate = input.buffer.has('ultimate');
   simInput.verband = input.buffer.has('verband');
   simInput.molotow = input.buffer.has('molotow');
+  // Auto-Angriff (2D autoAtk): press for the player and aim at the target, unless they pressed anything
+  // themselves this step (a power or throw keeps the player's own aim).
+  if (opts.autoAttack && input.enabled && !simInput.attack && !simInput.dodge && !simInput.power && !simInput.ultimate && !simInput.verband && !simInput.molotow) {
+    const t = autoAttackTarget(sim);
+    if (t) {
+      const len = Math.hypot(t.x - p.x, t.z - p.z);
+      simInput.attack = true;
+      if (len > 0.05) { simInput.aimX = (t.x - p.x) / len; simInput.aimZ = (t.z - p.z) / len; simInput.aimAssist = false; }
+    }
+  }
   return simInput;
 }
 
@@ -662,6 +695,8 @@ function drainEvents(): void {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev, sim);
     telemetry.event(ev);
+    if (ev.type === 'playerHit') { logHit(hitLog, ev.by, ev.damage, sim.time); fight.dmg += ev.damage; }
+    else if (ev.type === 'encounterStart') { fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0; }
     // M20 tunnel: gratings opening, the generator and its power (2D messages).
     tunnelNotice(ev, map?.def, { banner: (t, s) => ui.banner(t, s), toast: (h, s) => lootUi.toast(h, s) });
     switch (ev.type) {
@@ -685,9 +720,13 @@ function drainEvents(): void {
         else ui.banner(ev.waves > 1 ? `Welle ${ev.wave + 1}/${ev.waves}` : enc.name, ev.waves > 1 ? enc.name : '');
         break;
       }
-      case 'encounterClear':
-        ui.banner('Geschafft', ev.heal > 0 ? `+${ev.heal} Leben` : '');
+      case 'encounterClear': {
+        // P7 reward moment: what the fight took, a nod for no hit, the heal.
+        const secs = Math.round(sim.time - fight.t), kills = sim.kills - fight.kills;
+        const line = [`${secs} s`, `${kills} besiegt`, fight.dmg === 0 ? 'ohne Treffer' : '', ev.heal > 0 ? `+${ev.heal} Leben` : ''].filter(Boolean).join(' · ');
+        ui.banner(fight.dmg === 0 ? 'Makellos' : 'Geschafft', line);
         break;
+      }
       case 'zoneClear': {
         const zone = level?.zones[ev.zone];
         if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
@@ -922,6 +961,8 @@ function frame(now: number): void {
     endExpedition(sim, false);
     saveProfile();
     input.enabled = false;
+    lastDeath = deathSummary(hitLog, sim.time, sim.stats.maxHp);
+    telemetry.died(lastDeath);
     telemetry.end('dead');
   }
   // Telemetry gets the real frame time; `dt` is clamped for the sim and would hide slow frames.
@@ -933,7 +974,7 @@ function frame(now: number): void {
       const endless = sim.run.endless !== undefined;
       ui.retryHint(endless ? '' : zone ? `Neustart: ${zone.name}` : '');
       ui.showDead(sim.kills);
-      document.getElementById('dead-stats')!.innerHTML = endStats(false);
+      document.getElementById('dead-stats')!.innerHTML = deathLine(lastDeath) + endStats(false);
       document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Ab Kontrollpunkt';
     }
   }

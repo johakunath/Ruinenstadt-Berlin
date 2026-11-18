@@ -12,7 +12,8 @@ import { equipItem, salvageItem } from '../sim/inventory';
 import type { Item } from '../sim/items';
 import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
-import { profileOf } from '../sim/save';
+import { profileOf, type SaveProfile } from '../sim/save';
+import { endExpedition } from '../sim/camp';
 import { createSim, stepSim } from '../sim/sim';
 import { heroStats, power } from '../sim/stats';
 import { DT, type Enemy, type Sim, type SimInput } from '../sim/types';
@@ -516,6 +517,8 @@ export interface CampaignReport {
   stuckAt: string;
   power: number;
   weapon: string;
+  /** Gear, inventory and camp at the end, for the next district of a chain (after the camp step of a won run). */
+  profile: SaveProfile;
 }
 
 export interface CampaignOptions {
@@ -530,20 +533,25 @@ export interface CampaignOptions {
   startAt?: number;
   /** Stop after this encounter index is won (tests). */
   until?: number;
+  /** Start with this gear and inventory instead of a fresh hero (district chains). */
+  carry?: SaveProfile;
+  /** District id for the camp's freed list. */
+  district?: number;
 }
 
 /** One fresh campaign through the map: retries at the zone start after a death, like the game. */
 export function runCampaign(o: CampaignOptions): CampaignReport {
   const level = o.level;
   let seed = o.seed ?? 1;
-  let sim = createSim({ level, seed, difficulty: o.difficulty ?? 'normal', startAt: o.startAt ?? 0 });
+  const c0 = o.carry ? structuredClone(o.carry) : undefined;
+  let sim = createSim({ level, seed, difficulty: o.difficulty ?? 'normal', startAt: o.startAt ?? 0, ...(c0 ? { equipment: c0.equipment, statContext: c0.statContext, inventory: c0.inventory } : {}) });
   let bot = new Bot(sim, o.skill ?? SKILL_DEFAULT, seed);
   const maxDeaths = o.maxDeaths ?? 12;
   const maxTime = o.maxTime ?? 3 * 3600;
   const reports: EncounterReport[] = level.encounters.map((e) => ({ name: e.name, boss: e.waves.some((w) => w.bosses.length > 0), time: 0, damage: 0, low: 1, deaths: 0, power: 0 }));
   let time = 0, deaths = 0, kills = 0;
   let fightStart = -1, fightDamage = 0, fightLow = 1, fightIndex = -1;
-  let idleT = 0, lastIndex = -1;
+  let idleT = 0, lastIndex = -1, quietT = 0;
   let won = false;
   while (time < maxTime) {
     bot.manage();
@@ -556,7 +564,8 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
         fightDamage = 0;
         fightLow = p.hp / sim.stats.maxHp;
         fightIndex = ev.index;
-      } else if (ev.type === 'playerHit') fightDamage += ev.damage;
+      } else if (ev.type === 'playerHit') { fightDamage += ev.damage; quietT = 0; }
+      else if (ev.type === 'hit' || ev.type === 'spawn') quietT = 0;
       else if (ev.type === 'encounterClear') {
         const r = reports[ev.index]!;
         r.time = sim.time - fightStart;
@@ -574,6 +583,9 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
       lastIndex = sim.run.index;
       idleT = 0;
     } else if ((idleT += DT) > 600) break;
+    // A fight where nobody hits anybody for three minutes is stuck (an enemy out of reach), not hard.
+    if (sim.run.phase === 'travel' || p.state === 'dead') quietT = 0;
+    else if ((quietT += DT) > 180) break;
     if (p.state === 'dead' && p.stateT > 1.5) {
       deaths++;
       kills += sim.kills;
@@ -589,5 +601,6 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   }
   kills += sim.kills;
   const at = Math.min(sim.run.index, level.encounters.length - 1);
-  return { won, time, deaths, kills, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
+  endExpedition(sim, won, o.district ?? 0);
+  return { profile: profileOf(sim), won, time, deaths, kills, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }

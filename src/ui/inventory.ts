@@ -302,6 +302,6 @@ export class InventoryUi {
 }
 
 /** One item as a card (trader screen): name, type, main value, affixes, element, mods, legendary power, set bonuses. */
-export function itemCard(item: Item, label: string, equipment: Equipment): string {
-  return `<article class="inv-card" style="--rarity:${color(item)}"><small class="clab">${label}</small><div class="inv-card-head">${itemIcon(item)}<div><h3>${esc(item.name)}</h3><p class="sub">${item.set ? 'Set-Teil' : RARITIES[item.rarity].name} · ${item.slot === 'w' ? WEAPON_KINDS[item.kind as WeaponKindId].name : SLOT_NAMES[item.slot]} · Item Level ${shownLevel(item)}</p></div></div><div class="crows">${cmpRows(item, equipment[item.slot], !!equipment[item.slot])}</div>${extraLines(item, equipment)}</article>`;
+export function itemCard(item: Item, label: string, equipment: Equipment, compare = true): string {
+  return `<article class="inv-card" style="--rarity:${color(item)}"><small class="clab">${label}</small><div class="inv-card-head">${itemIcon(item)}<div><h3>${esc(item.name)}</h3><p class="sub">${item.set ? 'Set-Teil' : RARITIES[item.rarity].name} · ${item.slot === 'w' ? WEAPON_KINDS[item.kind as WeaponKindId].name : SLOT_NAMES[item.slot]} · Item Level ${shownLevel(item)}</p></div></div><div class="crows">${compare ? cmpRows(item, equipment[item.slot], !!equipment[item.slot]) : cmpRows(item, undefined, false)}</div>${extraLines(item, equipment)}</article>`;
 }

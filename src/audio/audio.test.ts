@@ -54,7 +54,7 @@ describe('2D audio port', () => {
       [{ type: 'swing', attack: 'light3', weight: 'heavy' }, ['heavy']],
       [hit, ['hit', 'kill']], [{ ...hit, critical: true }, ['crit', 'kill']], [{ ...hit, killed: false }, ['hit']],
       [{ type: 'dodge' }, ['dash']],
-      [{ type: 'playerHit', x: 0, z: 0, dx: 1, dz: 0, damage: 1 }, ['hurt']],
+      [{ type: 'playerHit', x: 0, z: 0, dx: 1, dz: 0, damage: 1, by: '' }, ['hurt']],
       [{ type: 'encounterStart', index: 0 }, ['horn']], [{ type: 'waveStart', index: 0, wave: 0, waves: 1 }, ['horn']],
       [{ type: 'encounterClear', index: 0, heal: 30 }, ['bell', 'heal']], [{ type: 'encounterClear', index: 0, heal: 0 }, ['bell']],
       [{ type: 'zoneClear', zone: 0 }, ['bell']], [{ type: 'victory' }, ['win']],

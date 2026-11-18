@@ -303,6 +303,8 @@ export const THREAT = {
   stomp: { radius: 70 * PX, damage: 1.3, open: 1.6 },
   flame: { range: 140 * PX, wind: 0.9, radius: 95 * PX, damage: 1.2, floor: 0.2, open: 1, trailEvery: 0.45, trailRadius: 20 * PX, trailTime: 3.5, trailDamage: 0.45 },
   split: { count: 2, hp: 0.4, scale: 0.7 },
+  /** M11c lying guards: seconds to get up after waking; no move or strike meanwhile (backlog P22). */
+  rise: 0.7,
   hazard: { tick: 0.5 },
   /** M15 Wurzler roots (2D `wurz`): marked under the hero, then held unless dodging; immune for a while after. */
   roots: { range: 320 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.95, radius: 1.5, damage: 0.6, hold: 0.8, immune: 2.5, open: 0.9, near: 120 * PX, nearSpeed: 0.7 },

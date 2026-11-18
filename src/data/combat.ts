@@ -110,6 +110,9 @@ export const PLAYER = {
   /** Soft lock-on for gamepad and touch. */
   aimAssistCone: 25 * DEG,
   aimAssistRange: 4.5,
+  /** Auto-Angriff (2D `autoAtk`): swings when an awake enemy is this far past the first swing's reach; the Werfer within `autoRangeSling` (2D 360 px). */
+  autoMargin: 0.4,
+  autoRangeSling: 12,
   /** Extra kill hitstop and shake. */
   killHitstop: 0.03,
   hitByEnemyHitstop: 0.06,

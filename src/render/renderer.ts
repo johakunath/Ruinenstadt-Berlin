@@ -295,6 +295,10 @@ export class GameRenderer {
           this.cam.shake(0, 0, 0.14);
         }
         break;
+      case 'encounterClear':
+        // P7 reward moment: a warm gold burst around the hero (one-off particles, no extra light).
+        this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1.2), sim.player.z, 6, 4.2, 1.2, 70, 7);
+        break;
       case 'secondWind':
         this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 60, 8);
         break;
