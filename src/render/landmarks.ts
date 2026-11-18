@@ -8,11 +8,11 @@ import type { Landmark } from '../data/map';
 import { Rng } from '../sim/math';
 import type { ChunkBuilder } from './map-world';
 
-type RGB = readonly [number, number, number];
-type Frame = (x: number, y: number, z: number, ry?: number, rx?: number, rz?: number) => Matrix4;
+export type RGB = readonly [number, number, number];
+export type Frame = (x: number, y: number, z: number, ry?: number, rx?: number, rz?: number) => Matrix4;
 
 /** Local frame of a landmark: x right along the main front, z out of the front, y up. */
-function frameOf(l: Landmark): Frame {
+export function frameOf(l: Landmark): Frame {
   const base = new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0, l.z);
   return (x, y, z, ry = 0, rx = 0, rz = 0) => base.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rx, ry, rz, 'YXZ')).setPosition(x, y, z));
 }
@@ -22,28 +22,28 @@ function worldPt(l: Landmark, x: number, y: number, z: number): Vector3 {
 }
 
 /** Sub-frame: `m` then offset (x, y, z) and rotation. */
-function sub(m: Matrix4, x: number, y: number, z: number, ry = 0, rx = 0, rz = 0): Matrix4 {
+export function sub(m: Matrix4, x: number, y: number, z: number, ry = 0, rx = 0, rz = 0): Matrix4 {
   return m.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rx, ry, rz, 'YXZ')).setPosition(x, y, z));
 }
 
 const cache = new Map<string, BufferGeometry>();
-function cached(key: string, make: () => BufferGeometry): BufferGeometry {
+export function cached(key: string, make: () => BufferGeometry): BufferGeometry {
   let g = cache.get(key);
   if (!g) cache.set(key, (g = make()));
   return g;
 }
 
 // Face masks for `frustum`.
-const FRONT = 1, RIGHT = 2, BACK = 4, LEFT = 8, TOP = 16;
-const SLOPES = FRONT | BACK;
-const ENDS = LEFT | RIGHT;
-const ALL = FRONT | RIGHT | BACK | LEFT | TOP;
+export const FRONT = 1, RIGHT = 2, BACK = 4, LEFT = 8, TOP = 16;
+export const SLOPES = FRONT | BACK;
+export const ENDS = LEFT | RIGHT;
+export const ALL = FRONT | RIGHT | BACK | LEFT | TOP;
 
 /**
  * A frustum from a w × d base (y = 0) to a tw × td top (y = h). Hip roof: tw = w − d, td = 0; gable
  * (ridge along x): tw = w, td = 0; pyramid: 0, 0; mansard: smaller rectangle plus TOP.
  */
-function frustum(w: number, d: number, h: number, tw: number, td: number, faces = ALL): BufferGeometry {
+export function frustum(w: number, d: number, h: number, tw: number, td: number, faces = ALL): BufferGeometry {
   return cached(`f${w.toFixed(2)},${d.toFixed(2)},${h.toFixed(2)},${tw.toFixed(2)},${td.toFixed(2)},${faces}`, () => {
     const A = [-w / 2, 0, d / 2], B = [w / 2, 0, d / 2], C = [w / 2, 0, -d / 2], D = [-w / 2, 0, -d / 2];
     const a = [-tw / 2, h, td / 2], b = [tw / 2, h, td / 2], c = [tw / 2, h, -td / 2], dd = [-tw / 2, h, -td / 2];
@@ -91,7 +91,7 @@ function beam(b: ChunkBuilder, mat: Material, F: Frame, a: Vector3, c: Vector3, 
 }
 
 /** A window pane centered on `m` (wall plane, z out) from the shared window atlas, with a light trim. */
-function pane(b: ChunkBuilder, m: Matrix4, w: number, h: number, rng: Rng, lit: number, trim?: { mat: Material; color: RGB }): void {
+export function pane(b: ChunkBuilder, m: Matrix4, w: number, h: number, rng: Rng, lit: number, trim?: { mat: Material; color: RGB }): void {
   const cell = rng.next() < lit ? rng.int(4) : 4 + rng.int(4);
   const cu = (cell % 4) / 4;
   const cv = cell < 4 ? 0.5 : 0;
@@ -105,14 +105,14 @@ function pane(b: ChunkBuilder, m: Matrix4, w: number, h: number, rng: Rng, lit: 
 }
 
 /** Round (`round`) or pointed head over an opening of width w whose top edge is at `m` (z out). */
-function archHead(b: ChunkBuilder, mat: Material, m: Matrix4, w: number, pointed: boolean, z = 0.045, color?: RGB): void {
+export function archHead(b: ChunkBuilder, mat: Material, m: Matrix4, w: number, pointed: boolean, z = 0.045, color?: RGB): void {
   // Pointed: a two-segment half circle is a triangle with apex height w / 2, stretched to a lancet.
   const g = cached(`${pointed ? 'pt' : 'semi'}${w.toFixed(2)}`, () => new CircleGeometry(w / 2, pointed ? 2 : 12, 0, Math.PI));
   b.geo(mat, g, pointed ? sub(m, 0, 0, z).multiply(new Matrix4().makeScale(1, 1.35, 1)) : sub(m, 0, 0, z), color);
 }
 
 /** An arched window: pane plus a dark head. */
-function archWindow(b: ChunkBuilder, m: Matrix4, w: number, h: number, rng: Rng, lit: number, pointed: boolean, rim?: { mat: Material; color: RGB }): void {
+export function archWindow(b: ChunkBuilder, m: Matrix4, w: number, h: number, rng: Rng, lit: number, pointed: boolean, rim?: { mat: Material; color: RGB }): void {
   if (rim) {
     b.box(rim.mat, sub(m, 0, -0.05, 0), w + 0.36, h + 0.1, 0.05, rim.color);
     archHead(b, rim.mat, sub(m, 0, h / 2, 0), w + 0.36, pointed, 0.03, rim.color);

@@ -28,6 +28,7 @@ import { BatchSet } from './batch';
 import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
+import { buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
 import { isLargeProp } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { Materials, type LitMaterial } from './materials';
@@ -80,6 +81,8 @@ export interface MapMats extends Mats {
   sRoundel: LitMaterial;
   stationName: LitMaterial;
   ratskeller: LitMaterial;
+  /** M15 Mitte materials (`mitte-world.ts`), only on that map. */
+  mitte?: MitteMats;
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
@@ -2156,6 +2159,7 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
 
 export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean; cut?: 'off' | number } = {}): World {
   const mats = makeMapMats(materials);
+  if (m.id === 'mitte') mats.mitte = mitteMats(materials);
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
   const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
   const cutaway = new Cutaway(plan.zones);
@@ -2238,7 +2242,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     }
     // Xhain landmarks are built and cut in `buildXhainWorld`.
     const cut = XHAIN_KINDS.has(l.kind) ? undefined : landmarkCut.get(l);
-    const build = (): void => b.on(y0, () => buildLandmark(b, l));
+    // M15 Mitte landmarks live in `mitte-world.ts`.
+    const build = (): void => b.on(y0, () => (MITTE_KINDS.has(l.kind) ? buildMitteLandmark(b, l) : buildLandmark(b, l)));
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
   const rng = new Rng(m.seed);
@@ -2260,6 +2265,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildTerraces(m, chunkOf);
   // M15 Xhain: the Wall, the viaducts and the Xhain landmarks (`xhain-world.ts`).
   buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
+  // M15 Mitte: neon street dressing (`mitte-world.ts`).
+  if (m.id === 'mitte') buildMitteWorld(m, chunkOf);
   if (m.tunnel) {
     buildTunnel(m, mats, chunkOf);
     buildTunnelExtras(m, mats, materials, chunkOf);

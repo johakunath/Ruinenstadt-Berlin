@@ -14,6 +14,9 @@ import { FOV } from './camera';
 const SHOW: Partial<Record<LandmarkKind, { top: number; half: number }>> = {
   rathaus: { top: 44, half: 15 }, kirche: { top: 40.5, half: 9 }, mueggelturm: { top: 33, half: 6.5 }, riesenrad: { top: 38, half: 18 },
   sbahnhof: { top: 10, half: 15 }, schloss: { top: 17.5, half: 12 }, forum: { top: 15, half: 22 },
+  // M15 Mitte: the seven sights of the route (Kollhoff-Tower shows the Bahntower beside it).
+  tor: { top: 23, half: 20 }, reichstag: { top: 33, half: 21 }, kanzleramt: { top: 27, half: 14 }, siegessaeule: { top: 46, half: 6 },
+  sony: { top: 39, half: 30 }, kollhoff: { top: 70, half: 12 }, philharmonie: { top: 22, half: 16 },
 };
 /** German names for the hint while the view holds. */
 const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick' };
@@ -95,7 +98,7 @@ export class LandmarkReveal {
 
   /** Name of the landmark on show (for the hint). */
   get name(): string {
-    return this.current ? (NAMES[this.current.kind] ?? '') : '';
+    return this.current ? (NAMES[this.current.kind] ?? this.current.name ?? '') : '';
   }
 
   /** Advances the reveal. Returns the pose or null when the game camera has the view. */

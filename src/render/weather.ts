@@ -25,6 +25,15 @@ export const XHAIN_WEATHER: Readonly<Record<string, WeatherKind>> = {
   kotti: 'rain', goerli: 'rain', reichenberger: 'rain',
   wrangelkiez: 'clear',
 };
+/**
+ * Mitte 2089 (M15): rain over the city (2D `wet` rule), a calm misty Tiergarten with fireflies around the
+ * Großer Stern and the Neuer See. Step 3 of `docs/tasks/m15-mitte.md` tunes the rain per zone.
+ */
+export const MITTE_WEATHER: Readonly<Record<string, WeatherKind>> = {
+  friedrichstadt: 'rain', leipzigerplatz: 'rain', pariserplatz: 'rain', regierung: 'rain', republik: 'rain',
+  potsdamer: 'rain', kulturforum: 'rain', tilla: 'rain',
+  tiergarten: 'fog', stern: 'fog', biergarten: 'fog',
+};
 /** Fog density per weather (scene default 0.017). */
 const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, clear: 0.014 };
 const W = 36, D = 30, H = 14;
