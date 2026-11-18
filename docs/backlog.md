@@ -72,4 +72,9 @@ Pure ideas for later (Johannes, 2026-11-16). Nothing here is planned or decided;
 | I2 | Weapon variants: three per weapon, chosen at run start, each changes the chain or the powers. 2D already has three names per power (Kreissäge, Neonwirbel, Ernteschlacht) | A reason to pick a weapon on purpose | G1 option B | idea |
 | Q1 | Three quality levels: Qualität (PC), Ausgewogen (today's Leistung: tablet, notebook), a new lowest Leistung (cheap or no shadows, lower resolution, less decoration). Contents after Johannes' hardware checks: `docs/tasks/q1-quality-levels.md` | Johannes, 2026-11-18 | After the checks in `docs/tasks/pt-hardware-checks.md` |
 | I3 | Der Kabelbaum: a cable-wrapped tree as a Tiergarten boss, root lines along the ground that hold the hero (Wurzler rule) | Lost to Der Dirigent for the Neuer See (M12c) | idea |
+| I4 | Mitte lot type Kontrollpunkt: container lock with a barrier, sandbags and a guard booth (cache), Friedrichstadt | Variant B of `docs/mockups/m15-mitte-lots.svg`, not picked (2026-11-18) | idea |
+| I5 | Mitte lot type Ladenpassage: covered arcade under a broken glass roof, looted shops, dead escalator, sleeping elite (Friedrichstadt-Passagen) | Variant B, not picked | idea |
+| I6 | Mitte lot type Aktenhof: yard behind a ministry with heaps of files, toppled cabinets and desks, wet paper, cache | Variant B, not picked | idea |
+| I7 | Tiergarten lot type Windbruch: fallen trunks as a barricade, deer stand with crows, fireflies, cache | Variant B, not picked | idea |
+| I8 | Regierungsviertel facade F-B: concrete ribs and shattered glass (Bundesbau look) as a second frontage next to the sandstone ministry | Variant F-B, not picked | idea |
 | PT | Running list of hardware and quality checks for Johannes; every session adds its rows: `docs/tasks/pt-hardware-checks.md` | Johannes, 2026-11-18 | Running |
