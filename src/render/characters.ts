@@ -6,8 +6,8 @@ import type { HeroLook } from '../data/hero-look';
 import { HeroModel } from './hero-model';
 import { HERO_LAYER } from './layers';
 import {
-  AnimationClip, AnimationMixer, Group, LoopRepeat, Mesh,
-  Vector3, type AnimationAction, type Object3D,
+  AnimationClip, AnimationMixer, Group, LoopRepeat, Mesh, SRGBColorSpace, TextureLoader,
+  Vector3, type AnimationAction, type BufferGeometry, type Object3D,
 } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import animsUrl from '../../assets/characters/anims.glb?url';
@@ -43,6 +43,33 @@ const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
 // The last four carry the specials: slam, lunge, throw, command.
 const ZOMBIE_CLIPS = /^(Zombie_|Hit_|Death01$|Idle_Loop$|Sword_Heavy_Combo$|Shield_Dash$|OverhandThrow$|Spell_Simple_Shoot$)/;
 
+// Neutral albedo swatches multiply the GLB's vertex colours and baked occlusion. UVs use glTF's
+// top-left origin, and the same materials are shared by the world model and inventory preview.
+const CLOTHING_MAPS = {
+  a_mantel: new URL('../../assets/textures/hero/coat.webp', import.meta.url).href,
+  a_weste: new URL('../../assets/textures/hero/vest.webp', import.meta.url).href,
+  f_stiefel: new URL('../../assets/textures/hero/boots.webp', import.meta.url).href,
+  f_turnsch: new URL('../../assets/textures/hero/sneakers.webp', import.meta.url).href,
+  g_handsch: new URL('../../assets/textures/hero/gloves.webp', import.meta.url).href,
+  scarf: new URL('../../assets/textures/hero/scarf.webp', import.meta.url).href,
+};
+
+async function loadClothing(anisotropy: number) {
+  const loader = new TextureLoader();
+  return Promise.all(Object.entries(CLOTHING_MAPS).map(async ([name, url]) => {
+    try {
+      const texture = await loader.loadAsync(url);
+      texture.colorSpace = SRGBColorSpace;
+      texture.flipY = false;
+      texture.anisotropy = anisotropy;
+      return { name, texture };
+    } catch {
+      // The original vertex-colour material is also the fallback for a missing image.
+      return { name, texture: null };
+    }
+  }));
+}
+
 /** Fits a clip to a body: scales the hip track to its leg length, optionally drops finger tracks. */
 function fitClip(clip: AnimationClip, hipScale: number, dropFingers: boolean): AnimationClip {
   const out = clip.clone();
@@ -76,9 +103,19 @@ function prepare(scene: Object3D, materials: Materials): void {
 
 export async function loadCharacters(materials: Materials, mechs = false): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
+  const clothingLoad = loadClothing(materials.profile.anisotropy);
   const mechLoad = mechs ? Promise.all([mechUrl, mechBigUrl].map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF]> : null;
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF];
   for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf]) prepare(g.scene, materials);
+  for (const { name, texture } of await clothingLoad) {
+    if (!texture) continue;
+    const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
+    if (piece?.isMesh) {
+      // The source GLB can deduplicate materials across differently textured pieces.
+      piece.material = piece.material.clone();
+      piece.material.map = texture;
+    } else texture.dispose();
+  }
   const named = (g: GLTF): Map<string, AnimationClip> => new Map(g.animations.map((c) => [c.name, c]));
   const hipLen = (root: Object3D): number => root.getObjectByName('pelvis')?.position.length() ?? 1;
   const src = hipLen(animGltf.scene);
