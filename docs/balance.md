@@ -84,4 +84,4 @@ Damage taken is the winning try, as a share of max life (healing during the figh
 Read:
 - Köpenick is the only real challenge. With carried gear every later district is far too easy: no deaths, fights cost under 15 % life, bosses fall in seconds. Power keeps growing (×3 to ×4 per district), the district tiers were set against fresh gear.
 - Fix direction (decide in the balance session, P33): scale each district's tier to the power a hero brings (about 200 to 500 into Xhain, 600 into Alexanderplatz, 700 to 900 into Mitte), and slow the power growth itself (item level per district, fewer upgrades), so B10 holds over the chain.
-- Run 1 stopped in Xhain after one boss and 180 sim minutes with 0 deaths: the bot got stuck there (route or a fight that never ends), not a balance result. Reproduce with seed 1 before the next balance session.
+- Run 1 stopped in Xhain after one boss and 180 sim minutes with 0 deaths: a Ratte spawned into a Hinterhof pocket boxed in by props, so the fight never ended. Fixed in PR 55 (wave and pack spawns only on reachable ground; the bot also stops a fight with no hit for three minutes). The same seed now wins Xhain in 11 min.

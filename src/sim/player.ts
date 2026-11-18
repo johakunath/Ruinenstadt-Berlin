@@ -77,7 +77,8 @@ export function autoAttackTarget(sim: Sim): Enemy | null {
   let best: Enemy | null = null;
   let bd = range;
   for (const e of sim.enemies) {
-    if (e.state === 'dead' || e.sleep) continue;
+    // Sleeping guards and a boss still waking (untouchable) are not swung at.
+    if (e.state === 'dead' || e.sleep || (e.wake ?? 0) > 0) continue;
     const d = Math.hypot(e.x - p.x, e.z - p.z) - e.def.radius;
     if (d < bd) { bd = d; best = e; }
   }

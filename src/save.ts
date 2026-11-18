@@ -28,7 +28,7 @@ export function saveCode(s: SaveV1): string {
 
 /** Spielstand laden (2D `importSave`): a pasted code back to a save; null for a cut-off, foreign or damaged code. */
 export function parseSaveCode(text: string): SaveV1 | null {
-  const m = /RB1:([A-Za-z0-9+/=\s]+?)\s*END/.exec(text);
+  const m = /RB1:([A-Za-z0-9+/=\s]+)\nEND\s*$/.exec(text.trim());
   if (!m) return null;
   try {
     const bin = atob(m[1]!.replace(/\s+/g, ''));

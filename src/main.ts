@@ -626,6 +626,8 @@ function start(resumed = false): void {
   ui.showGame();
   runScrap0 = sim.inventory.scrap; runT0 = sim.time;
   hitLog.length = 0;
+  // A checkpoint can resume mid-encounter (no encounterStart then): count the fight from here.
+  fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0;
   telemetry.begin(sim, { map: map ? map.def.name : 'Hof', profile: opts.profile, scale: opts.mapScale, startAt: sim.run.index, input: input.device });
 }
 
@@ -656,8 +658,14 @@ function readInput(): SimInput {
     simInput.aimZ = input.stickZ;
   }
   simInput.attack = input.buffer.has('attack');
-  // Auto-Angriff (2D autoAtk): press for the player and aim at the target, unless they pressed themselves.
-  if (opts.autoAttack && input.enabled && !simInput.attack) {
+  simInput.dodge = input.buffer.has('dodge');
+  simInput.power = input.buffer.has('power');
+  simInput.ultimate = input.buffer.has('ultimate');
+  simInput.verband = input.buffer.has('verband');
+  simInput.molotow = input.buffer.has('molotow');
+  // Auto-Angriff (2D autoAtk): press for the player and aim at the target, unless they pressed anything
+  // themselves this step (a power or throw keeps the player's own aim).
+  if (opts.autoAttack && input.enabled && !simInput.attack && !simInput.dodge && !simInput.power && !simInput.ultimate && !simInput.verband && !simInput.molotow) {
     const t = autoAttackTarget(sim);
     if (t) {
       const len = Math.hypot(t.x - p.x, t.z - p.z);
@@ -665,11 +673,6 @@ function readInput(): SimInput {
       if (len > 0.05) { simInput.aimX = (t.x - p.x) / len; simInput.aimZ = (t.z - p.z) / len; simInput.aimAssist = false; }
     }
   }
-  simInput.dodge = input.buffer.has('dodge');
-  simInput.power = input.buffer.has('power');
-  simInput.ultimate = input.buffer.has('ultimate');
-  simInput.verband = input.buffer.has('verband');
-  simInput.molotow = input.buffer.has('molotow');
   return simInput;
 }
 

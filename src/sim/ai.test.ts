@@ -1255,5 +1255,7 @@ describe('Auto-Angriff (2D autoAtk)', () => {
     s.stats.kind = 'sling';
     far.x = s.player.x + 1.5; near.x = s.player.x - 10;
     expect(autoAttackTarget(s)).toBe(far);
+    far.wake = 2;
+    expect(autoAttackTarget(s)).toBe(near);
   });
 });

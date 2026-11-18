@@ -123,7 +123,9 @@ export class AbilitiesUi {
     // Mouse hover and pad or key focus show the worn item at once (P5).
     const point = (e: Event): void => {
       const o = (e.target as Element).closest<HTMLElement>('[data-offer]');
-      if (o && this.sim && (e.type === 'focusin' || (e as PointerEvent).pointerType === 'mouse')) this.showWorn(this.sim, Number(o.dataset.offer));
+      // A tap focuses the button before its click: on touch only the click counts, or the first tap would buy.
+      const show = e.type === 'focusin' ? this.tradePointer !== 'touch' : (e as PointerEvent).pointerType === 'mouse';
+      if (o && this.sim && show) this.showWorn(this.sim, Number(o.dataset.offer));
     };
     this.trade.addEventListener('pointerover', point);
     this.trade.addEventListener('focusin', point);
@@ -235,6 +237,8 @@ export class AbilitiesUi {
 
   private renderTrade(s: Sim): void {
     this.tradeSel = -1;
+    // The next pointerdown sets it again before any focus; pad and keys then count as focus.
+    this.tradePointer = 'mouse';
     const stock = tradeStock(s);
     const shop = s.content.tradeAt >= 0;
     const cons = s.inventory.consumables ?? { verband: 0, molotow: 0 };

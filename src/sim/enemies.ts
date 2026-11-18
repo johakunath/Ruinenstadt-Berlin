@@ -3,6 +3,7 @@ import { PLAYER } from '../data/combat';
 import { BOSS, ELITE_MODS, ENEMIES, SPAWN, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
 import { initCooldowns, isRush, jitter, passive, runSpecial, think, tickCooldowns } from './ai';
 import { colliderDistance } from './collide';
+import { reachable } from './reach';
 import { angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Sim } from './types';
 import { POWER } from '../data/powers';
@@ -63,7 +64,7 @@ export function spawnPack(sim: Sim, x: number, z: number, kind: EnemyKind, hpMul
     for (let tries = 0; tries < 6; tries++) {
       qx = x + sim.rng.range(-0.8, 0.8);
       qz = z + sim.rng.range(-0.8, 0.8);
-      if (!sim.level.blocked(qx, qz, r) && !sim.level.near(qx, qz, r + 0.5).some((c) => colliderDistance(c, qx, qz) < r)) break;
+      if (!sim.level.blocked(qx, qz, r) && !sim.level.near(qx, qz, r + 0.5).some((c) => colliderDistance(c, qx, qz) < r) && (!sim.level.expedition || reachable(sim.level, qx, qz))) break;
       qx = x;
       qz = z;
     }
