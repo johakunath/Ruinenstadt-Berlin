@@ -143,7 +143,8 @@ describe('encounter director', () => {
     expect(rats).toHaveLength(10);
     expect(sim.run.toSpawn).toBe(0);
     expect(rats.some((e) => e.elite)).toBe(false);
-  });
+    // Builds its own Köpenick level (about 3.5 s alone, over the 5 s default on a loaded CI runner).
+  }, 20000);
 
   it('keeps bodies out of the water', () => {
     const sim = createSim({ level });

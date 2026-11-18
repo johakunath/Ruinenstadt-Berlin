@@ -55,8 +55,11 @@ export interface World {
   /** Fire barrel mouths (for flames and embers). */
   fires: Vector3[];
   update(time: number): void;
-  /** Big maps: moon shadow and pooled lights follow the hero. */
-  follow?(x: number, z: number): void;
+  /**
+   * Big maps: moon shadow and pooled lights follow the hero. The moon only moves when `shadow` is
+   * true (the shadow map is re-rendered this frame), so a stale map never meets a moved light.
+   */
+  follow?(x: number, z: number, shadow: boolean): void;
   /** Moving map parts (ferry boat) at the interpolated sim time. */
   sync?(simTime: number): void;
   /** Breakable props (M4), drawn instanced so one can vanish. */
@@ -213,8 +216,8 @@ export class Builder {
   readonly lights: FlickerLight[] = [];
   readonly fires: Vector3[] = [];
   readonly extras: Object3D[] = [];
-  /** Building bodies and big props, as invisible shadow casters. */
-  readonly shadowBoxes: Array<{ m: Matrix4 }> = [];
+  /** Building bodies and big props, as invisible shadow casters; `cut` = clipped like their building (V1 B). */
+  readonly shadowBoxes: Array<{ m: Matrix4; cut?: { part: number; y: number } }> = [];
   protected readonly glowTex = paintGlow('rgba(255,190,110,0.55)', 'rgba(255,170,90,0)');
 
   constructor(readonly mats: Mats) {}

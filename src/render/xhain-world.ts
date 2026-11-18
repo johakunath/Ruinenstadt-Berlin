@@ -21,6 +21,7 @@ import {
 } from 'three';
 import { areaAt, hochbahnPillars, inPoly, lineDist, onBridge, type Bridge, type Landmark, type LandmarkKind, type Lot, type MapDef, type Pt, type RailYard, type Terrace, type Viaduct, type Wall } from '../data/map';
 import { Rng } from '../sim/math';
+import { rectPoly, type CutPart } from '../data/cut';
 import { Materials, type LitMaterial } from './materials';
 import { paintGlow, paintMetal, type PaintOptions } from './paint';
 import { buildProp, FLOOR_H, GROUND_H, PARAPET, Run } from './world';
@@ -29,7 +30,7 @@ import { blockFacades, buildAltbauLot, gableEnds, gableRoof, lm, lp, steppedGabl
 type RGB = readonly [number, number, number];
 const k3 = (c: RGB, k: number): RGB => [c[0] * k, c[1] * k, c[2] * k];
 
-const XHAIN_KINDS = new Set<LandmarkKind>(['warschauer', 'ostbahnhof', 'oberbaum', 'wachturm', 'thomaskirche', 'bethanien', 'rauchhaus', 'nkz', 'u1station', 'goerlitzer']);
+export const XHAIN_KINDS = new Set<LandmarkKind>(['warschauer', 'ostbahnhof', 'oberbaum', 'wachturm', 'thomaskirche', 'bethanien', 'rauchhaus', 'nkz', 'u1station', 'goerlitzer']);
 /** Kreuzberg areas: graffiti and squat banners (East Berlin stays clean, 1981). */
 const WEST_AREAS = new Set(['so36', 'mariannenplatz', 'kotti', 'goerli', 'wrangelkiez']);
 
@@ -1174,6 +1175,28 @@ function buildThomaskirche(c: Ctx, b: ChunkBuilder, l: Landmark): void {
   b.shadowBox(lm(l, 0, NH + 6, -3.5), 9, 12, 9);
 }
 
+/**
+ * V1 B cutaway lids (landmark frame: x, z centre, w along x, d along z) of the flagged landmarks, next to
+ * their builders. Thomaskirche: nave, transept, two towers and the apse as a half disc.
+ */
+const CAPS: Partial<Record<LandmarkKind, Array<{ x: number; z: number; w: number; d: number }>>> = {
+  thomaskirche: [{ x: 0, z: 2.5, w: 9, d: 10 }, { x: 0, z: -3.5, w: 16, d: 6 }, { x: -5.6, z: 9.5, w: 3.8, d: 4 }, { x: 5.6, z: 9.5, w: 3.8, d: 4 }],
+  bethanien: [{ x: 0, z: 0, w: 12, d: 20 }],
+};
+
+/** Cap polygons of a flagged landmark (world ground plane); unlisted kinds get their footprint. */
+export function landmarkCaps(l: Landmark): Pt[][] {
+  const rect = (x: number, z: number, w: number, d: number): Pt[] => { const p = lp(l, x, 0, z); return rectPoly({ x: p.x, z: p.z, rot: l.rot, hw: w / 2, hd: d / 2 }); };
+  const out = (CAPS[l.kind] ?? [{ x: 0, z: 0, w: l.hx * 2, d: l.hz * 2 }]).map((c) => rect(c.x, c.z, c.w, c.d));
+  if (l.kind === 'thomaskirche') {
+    // Apse: half disc of radius 3.6 behind the transept (local -z).
+    const apse: Pt[] = [];
+    for (let i = 0; i <= 8; i++) { const a = Math.PI / 2 + (i / 8) * Math.PI, p = lp(l, 3.6 * Math.sin(a), 0, -6.5 + 3.6 * Math.cos(a)); apse.push([p.x, p.z]); }
+    out.push(apse);
+  }
+  return out;
+}
+
 /** Bethanien: long yellow-brick hospital, slate roof, two slim towers flanking the entrance on the visible (south) side. */
 function buildBethanien(c: Ctx, b: ChunkBuilder, l: Landmark): void {
   const M = c.mm, X = c.X, W = l.hx * 2, D = l.hz * 2, H = 11.5, SLATE: RGB = [0.48, 0.52, 0.6], SAND: RGB = [1.15, 1.02, 0.82];
@@ -1391,7 +1414,7 @@ function buildXLandmark(c: Ctx, b: ChunkBuilder, l: Landmark): void {
  * Graffiti on the ground floor of about half the Kreuzberg fronts and squat banners on about one in
  * six intact Altbau fronts (1981: the Instandbesetzer). East Berlin lots stay clean. Cards only.
  */
-function dressLots(c: Ctx, lots: Lot[]): void {
+function dressLots(c: Ctx, lots: Lot[], lotCut: (l: Lot) => { id: number; y: number } | undefined): void {
   for (const l of lots) {
     if (l.kind === 'tree' || l.kind === 'special' || l.kind === 'house') continue;
     const area = areaAt(c.m, l.x, l.z);
@@ -1400,7 +1423,10 @@ function dressLots(c: Ctx, lots: Lot[]): void {
     const s = blockFacades(l)[0]!;
     const run = new Run({ id: 'xd', style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1], depth: 1, floors: 0, tone: 'cream', features: [], seed: 1 });
     const y0 = c.ground(l.x, l.z);
-    b.on(y0, () => {
+    // V1 B cutaway: the dressing of a cut lot belongs to its part, so it goes with the facade.
+    const cut = lotCut(l);
+    const dress = (fn: () => void): void => (cut ? b.cut(cut.id, cut.y, () => b.on(y0, fn)) : b.on(y0, fn));
+    dress(() => {
       if (rng.next() < 0.6) for (let k = 0; k < 1 + rng.int(3); k++) tag(b, run.mat(rng.range(1, s.len - 1), rng.range(0.5, 2.3), 0.07), rng.range(1.1, 2.4), rng);
       if (!l.ruin && l.kind === 'altbau' && l.floors > 0 && rng.next() < 0.18) {
         const y = GROUND_H + rng.int(l.floors) * FLOOR_H + 0.25;
@@ -1413,7 +1439,7 @@ function dressLots(c: Ctx, lots: Lot[]): void {
 // ---------------------------------------------------------------- entry
 
 /** M15 hook from `buildMapWorld`: Wall, viaducts, Xhain landmarks and Kreuzberg dressing. */
-export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number): void {
+export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, cutOf: (l: Landmark) => CutPart | undefined = () => undefined, lotCut: (l: Lot) => { id: number; y: number } | undefined = () => undefined): void {
   const land = m.landmarks.filter((l) => XHAIN_KINDS.has(l.kind));
   if (!m.walls?.length && !m.viaducts?.length && !m.railYards?.length && !land.length) return;
   const decks = m.terraces.filter((t) => t.bridge);
@@ -1428,8 +1454,9 @@ export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm
   for (const l of land) {
     const b = chunkOf(l.x, l.z);
     const y0 = l.walkUnder || l.kind === 'oberbaum' ? 0 : base(l.x, l.z, Math.max(l.hx, l.hz));
-    b.solid.captureOccluder(() => b.on(y0, () => buildXLandmark(c, b, l)));
+    const cut = cutOf(l), build = (): void => b.on(y0, () => buildXLandmark(c, b, l));
+    b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, landmarkCaps(l)) : build);
     if (l.kind === 'goerlitzer') buildGoerliYard(c, l);
   }
-  if (m.id === 'xhain') dressLots(c, lots);
+  if (m.id === 'xhain') dressLots(c, lots, lotCut);
 }
