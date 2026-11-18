@@ -336,7 +336,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       // the enamel name board with the S roundel (the cue the camera sees).
       b.box(M.brick, F(-l.hx + 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
       b.box(M.brick, F(l.hx - 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
-      b.geo(M.glass, cached(`sbVault${l.hx},${d}`, () => new CylinderGeometry(l.hx, l.hx, d, 10, 1, true, -Math.PI / 2, Math.PI)), F(0, 9.9, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [0.85, 1.1, 1.05]);
+      b.geo(M.glass, cached(`sbVault${l.hx},${d}`, () => new CylinderGeometry(l.hx, l.hx, d, 10, 1, true, -Math.PI / 2, Math.PI)), F(0, 9.9, 0).multiply(new Matrix4().makeScale(1, 0.45, 1)).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [0.85, 1.1, 1.05]);
       for (const s of [-1, 1]) {
         const m = F(s * (l.hx + 0.35), 4.2, 0, (s * Math.PI) / 2);
         atlasPlane(b, m, 6.5, 0.8, l.kind === 'sbahnalex' ? 'alex' : 'hackescher');
@@ -430,9 +430,11 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
       const t0 = k / n, t1 = (k + 1) / n, cx = ax + (bx - ax) * (t0 + t1) / 2, cz = az + (bz - az) * (t0 + t1) / 2, seg = len / n;
       const b = chunkOf(cx, cz), m = new Matrix4().makeRotationY(ry).setPosition(cx, 0, cz);
       const at = (x: number, y: number, z: number): Matrix4 => m.clone().multiply(new Matrix4().setPosition(x, y, z));
-      // Bricked-up arch (the wall the collider stands for), the deck and its parapets.
-      b.box(mats.brick, at(0, v.h / 2 - 0.4, 0), v.width, v.h - 0.8, seg, BRICK);
-      b.box(mats.brick, at(0, v.h - 0.1, 0), v.width + 0.6, 0.8, seg, [0.85, 0.62, 0.55]);
+      // Bricked-up arch (the wall the collider stands for) and the deck: as tall as a house, so an occluder.
+      b.solid.captureOccluder(() => {
+        b.box(mats.brick, at(0, v.h / 2 - 0.4, 0), v.width, v.h - 0.8, seg, BRICK);
+        b.box(mats.brick, at(0, v.h - 0.1, 0), v.width + 0.6, 0.8, seg, [0.85, 0.62, 0.55]);
+      });
       for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, seg, BRICK);
       for (const s of [-1, 1]) b.box(mats.railSteel, at(s * 1.6, v.h + 0.4, 0), 0.12, 0.15, seg);
       // Ivy over the bricks on every second bay (the district grew wild), posters pasted on the others.
@@ -457,10 +459,13 @@ export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, mat
     const cx = (a[0] + c[0]) / 2, cz = (a[1] + c[1]) / 2, len = Math.hypot(c[0] - a[0], c[1] - a[1]), ry = Math.atan2(c[0] - a[0], c[1] - a[1]);
     const b = chunkOf(cx, cz), mm = new Matrix4().makeRotationY(ry).setPosition(cx, 0, cz);
     const at = (x: number, y: number, z: number): Matrix4 => mm.clone().multiply(new Matrix4().setPosition(x, y, z));
-    b.box(mats.brick, at(0, v.h - 0.6, 0), v.width + 0.6, 1.8, len + 0.2, [0.85, 0.62, 0.55]);
-    for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, len, BRICK);
-    // A painted iron beam over the street: GDR blue with a yellow stripe.
-    for (const s of [-1, 1]) b.box(mats.iron, at(s * (v.width / 2 + 0.05), v.h - 1.1, 0), 0.12, 0.8, len, s < 0 ? BLUE : YELLOW);
+    // The deck over the street hides the hero walking under it: it joins the hero-contour occluders (Codex review).
+    b.solid.captureOccluder(() => {
+      b.box(mats.brick, at(0, v.h - 0.6, 0), v.width + 0.6, 1.8, len + 0.2, [0.85, 0.62, 0.55]);
+      for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, len, BRICK);
+      // A painted iron beam over the street: GDR blue with a yellow stripe.
+      for (const s of [-1, 1]) b.box(mats.iron, at(s * (v.width / 2 + 0.05), v.h - 1.1, 0), 0.12, 0.8, len, s < 0 ? BLUE : YELLOW);
+    });
   }
 }
 
