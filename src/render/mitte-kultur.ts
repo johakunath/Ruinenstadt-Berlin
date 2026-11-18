@@ -781,7 +781,7 @@ function checkpoint(c: MCtx, l: Landmark): void {
   plate(b, A, R.sektor, F(0, 3.55, -1.46), 2.7, 0.92);
   // Striped barrier, its boom raised (open), so it stays inside the footprint.
   b.box(M.enamel, F(1.4, 0.5, 1.35), 0.24, 1.0, 0.24, [0.35, 0.35, 0.35]);
-  const boom = F(1.4, 1.0, 1.35, 0, 0, Math.PI / 2 + 0.3);
+  const boom = F(1.4, 1.0, 1.35, 0, 0, Math.PI / 2 + 0.18);
   for (let i = 0; i < 7; i++) b.box(M.enamel, sub(boom, 0.2 + i * 0.4, 0, 0), 0.4, 0.09, 0.09, i % 2 ? [1.3, 1.28, 1.22] : [1.0, 0.22, 0.18]);
   b.light(lp(l, bx, 1.6, 1.5), 0xffd29a, 7, 8, 0.05, 2.6);
   b.shadowBox(F(bx, BH / 2, bz), BW, BH, BD);

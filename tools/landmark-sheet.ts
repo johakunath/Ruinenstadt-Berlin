@@ -39,7 +39,7 @@ for (const m of b.solid.meshes()) scene.add(m);
 await new Promise((r) => setTimeout(r, 1500));
 const size = Math.max(l.hx, l.hz, 6);
 const tall = ({ rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnhof: 10, schloss: 18, forum: 10, dino: 5, spati: 4,
-  tor: 23, reichstag: 30, bundesbau: 18, kanzleramt: 26, siegessaeule: 46, sony: 36, stage: 5, bahntower: 70, kollhoff: 68, verkehrsturm: 9, klinik: 4,
+  tor: 23, reichstag: 30, bundesbau: 18, kanzleramt: 26, siegessaeule: 50, sony: 36, stage: 5, bahntower: 70, kollhoff: 68, verkehrsturm: 9, klinik: 4,
   philharmonie: 22, matthaeus: 28, stabi: 17, nng: 8, checkpoint: 4, ubahn: 3, mauerstuecke: 4, lafayette: 26 } as Record<string, number>)[kind] ?? 12;
 const cam = new PerspectiveCamera(36, W / H, 0.5, 600);
 renderer.setScissorTest(true);
