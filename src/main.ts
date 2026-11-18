@@ -701,6 +701,30 @@ function drainEvents(): void {
 }
 
 let held = false;
+
+// M11d landmark reveal (Johannes 2026-11-17): the game pauses, the camera shows the landmark and waits
+// for a tap, click, key or pad button; then it zooms back in and the game goes on. Presses from before
+// the view held (an attack mid-fight) do not count.
+const revealHint = document.getElementById('reveal-hint')!;
+let revealTap = false;
+let revealHeld = 0;
+for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => { revealTap = true; }, { capture: true });
+function revealStep(dt: number): void {
+  const r = renderer?.reveal;
+  const holding = !!r?.holding && phase === 'play';
+  revealHeld = holding ? revealHeld + dt : 0;
+  if (revealHeld > 0 && revealHeld <= dt) { revealTap = false; input.clear(); }
+  revealHint.hidden = !holding;
+  if (!holding) return;
+  document.getElementById('reveal-name')!.textContent = r!.name;
+  const pad = ['attack', 'dodge', 'power', 'ultimate', 'verband', 'molotow'].some((a) => input.buffer.has(a as Parameters<typeof input.buffer.has>[0]));
+  if (revealHeld > 0.35 && (revealTap || pad)) {
+    r!.release();
+    revealHint.hidden = true;
+    input.clear();
+  }
+  revealTap = false;
+}
 let lastArea = '', areaAt0 = 0;
 let hotAt = 0;
 let audioLast = performance.now();
@@ -752,7 +776,8 @@ function frame(now: number): void {
   optionsScreen().pollPad(now);
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
-  const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask';
+    revealStep(dt);
+  const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active;
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -824,10 +849,11 @@ function frame(now: number): void {
 
   // Behind a still overlay (trade, blessing choice, cards) the world only idles: draw at about 10 fps
   // instead of full rate (playtest 2026-11-17: the tablet runs hot). The open menu draws nothing.
+  // The reveal swing runs on real time while the sim waits for it.
   const still = !running && phase === 'play' && (abilitiesUi.open || abilitiesUi.tradeOpen || intro.isOpen);
   const draw = !menu.isOpen && (!still || --stillSkip <= 0);
   if (still && draw) stillSkip = Math.max(1, Math.round(100 / FRAME_MS));
-  if (draw) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, 1 / 30));
+  if (draw) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, renderer.reveal?.active ? 0.1 : 1 / 30));
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
@@ -921,7 +947,7 @@ window.__game = {
 showTunnelButton();
 
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam,
+  profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
 })
   .then((r) => {

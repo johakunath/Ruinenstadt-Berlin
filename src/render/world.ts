@@ -19,6 +19,7 @@ import {
 import { buildBin, buildCrate } from './breakable-parts';
 import { buildCar, buildUrbanProp } from './props-urban';
 import { buildMarketProp } from './props-market';
+import { buildEdgeProp } from './props-edge';
 import { buildPlantProp } from './vegetation';
 
 export const GROUND_H = 4.3;
@@ -503,7 +504,8 @@ export function buildAltbau(b: Builder, f: Facade, opts: { balconies?: boolean }
 
   if (shop) buildSpati(b, run, shop.from, shop.to);
 
-  // --- drain pipe and ivy
+  // --- drain pipe and ivy (not on the short steps of a shaped footprint)
+  if (run.len < 2.4) return;
   b.geo(b.mats.rust, new CylinderGeometry(0.07, 0.07, H, 8), run.mat(0.5, H / 2, 0.1));
   const blobs = 4 + rng.int(3);
   for (let i = 0; i < blobs; i++) {
@@ -902,7 +904,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
     }
     default:
       // M11c lot type props live in their own files.
-      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng)) buildPlantProp(b, p, rng);
+      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng)) buildPlantProp(b, p, rng);
   }
 }
 

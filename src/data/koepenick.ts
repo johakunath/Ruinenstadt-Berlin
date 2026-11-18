@@ -193,13 +193,14 @@ export function koepenickMap(scale = 1): MapDef {
     L('sbahnhof', 10, -140, 0, 15, 7, 6),
     L('forum', 52, -126, 0, 22, 11, 3),
     L('rathaus', 24, -18, 270 * DEG, 13, 15, 3),
-    L('schloss', -31, 24, 90 * DEG, 6, 9, 0),
+    // M11d: sizes from reference photos (Schloss front along the island, tower plus pavilion, wheel legs).
+    L('schloss', -31, 24, 90 * DEG, 11.5, 5.5, 0),
     L('kirche', 26, 18, 0, 5, 9, 2),
-    L('mueggelturm', 146, 124, 0, 3, 3, 6),
-    L('riesenrad', -137, -51, 30 * DEG, 2.5, 6, 6),
-    L('dino', -96, -4, 200 * DEG, 0, 0, 4),
-    L('dino', -140, -14, 120 * DEG, 0, 0, 4),
-    L('dino', -126, 36, 300 * DEG, 0, 0, 4),
+    L('mueggelturm', 147, 124, 0, 6, 5, 6),
+    L('riesenrad', -137, -51, 30 * DEG, 6.5, 3.5, 10),
+    { ...L('dino', -96, -4, 200 * DEG, 2, 3.5, 1), variant: 0 },
+    { ...L('dino', -140, -14, 120 * DEG, 2, 3, 1), variant: 1 },
+    { ...L('dino', -126, 36, 300 * DEG, 2.5, 3, 1), variant: 2 },
     // Späti rest stops, one per zone beside the route (front to the street; hx/hz are world extents).
     { ...L('spati', -12, -98, 0, 5.5, 4, 2), name: 'Späti am Bahnhof' },
     { ...L('spati', 58, -10, -90 * DEG, 4, 5.5, 2), name: 'Späti am Kietz' },
@@ -233,6 +234,17 @@ export function koepenickMap(scale = 1): MapDef {
     landmarks,
     encounters,
     // M11c: the Altstadt is too tight for generated lot types; market by the Dammbrücke, churchyard beside St. Laurentius.
+    // M11d step 5: the route blocks of zone 0 are authored (Johannes 2026-11-17: hand-build the route,
+    // generate the filler). Corner blocks with chamfers at Bahnhofstraße / Mahlsdorfer Straße, a row with
+    // a courtyard and risalits on the Mahlsdorfer Straße, one burnt-out corner as a landmark of the square.
+    handLots: [
+      { kind: 'altbau', x: -5.7 * s, z: -126.3 * s, rot: 90 * DEG, w: 10.5, d: 10, floors: 2, shape: { front: [{ to: 1.2, back: 0 }, { to: 5.25, back: 0.7 }], chamfer: { side: -1, c: 3 } } },
+      { kind: 'altbau', x: 24.25 * s, z: -126.3 * s, rot: -90 * DEG, w: 10.5, d: 8.5, floors: 2, ruin: true, shape: { front: [{ to: 5.25, back: 0 }], chamfer: { side: 1, c: 3 } } },
+      { kind: 'altbau', x: -24 * s, z: -125.8 * s, rot: 0, w: 12, d: 10, floors: 1, shape: { front: [{ to: -2.2, back: 0 }, { to: 2.2, back: 5 }, { to: 6, back: 0 }] } },
+      { kind: 'altbau', x: -37 * s, z: -125.8 * s, rot: 0, w: 12, d: 10, floors: 2, ruin: true, shape: { front: [{ to: -3, back: 0 }, { to: 3, back: 0.8 }, { to: 6, back: 0 }] } },
+      { kind: 'shop', x: -21.5 * s, z: -107.45 * s, rot: 180 * DEG, w: 8, d: 8.5, floors: 0 },
+      { kind: 'altbau', x: -60 * s, z: -107.2 * s, rot: 180 * DEG, w: 11, d: 9, floors: 1, shape: { front: [{ to: -1.5, back: 0 }, { to: 1.5, back: 1.4 }, { to: 5.5, back: 0 }] } },
+    ],
     specialLots: [
       { special: 'markt', x: -10.5 * s, z: -20 * s, rot: 90 * DEG, w: 14, d: 11 },
       { special: 'kirchhof', x: 39 * s, z: 16 * s, rot: 180 * DEG, w: 13, d: 17 },

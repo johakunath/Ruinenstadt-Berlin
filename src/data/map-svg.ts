@@ -1,7 +1,7 @@
 // Draws a map as SVG from the same data the game uses: the in-game map (Karte) and the design
 // review image (`MAP_SVG=docs/maps/koepenick.svg npx vitest run src/data/map-svg.test.ts`).
 import type { EncounterDef } from '../sim/level';
-import type { GroundKind, Lot, MapDef, Pt } from './map';
+import { lotOutline, type GroundKind, type Lot, type MapDef, type Pt } from './map';
 
 const GROUND: Record<GroundKind, string> = {
   cobbles: '#4a4238',
@@ -70,7 +70,9 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     const col = l.special ? SPECIAL_COLOR[l.special] : l.kind === 'altbau' ? '#9c7a5c' : l.kind === 'platte' ? '#8a8a80' : l.kind === 'shop' ? '#b08a4a' : '#8c6a50';
     const deg = (-l.rot * 180) / Math.PI;
     if (l.wing) out.push(`<rect x="${(-l.wing.w / 2).toFixed(1)}" y="${(-l.wing.d / 2).toFixed(1)}" width="${l.wing.w.toFixed(1)}" height="${l.wing.d.toFixed(1)}" fill="${col}" stroke="#14282b" stroke-width="0.5" transform="translate(${l.wing.x.toFixed(1)} ${l.wing.z.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`);
-    out.push(`<rect x="${(-l.w / 2).toFixed(1)}" y="${(-l.d / 2).toFixed(1)}" width="${l.w.toFixed(1)}" height="${l.d.toFixed(1)}" fill="${col}" stroke="#14282b" stroke-width="0.5" transform="translate(${l.x.toFixed(1)} ${l.z.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`);
+    // M11d shaped footprints (chamfers, risalits, courtyards) as their outline.
+    if (l.shape) out.push(`<polygon points="${lotOutline(l).map(([x, z]) => `${x.toFixed(1)},${z.toFixed(1)}`).join(' ')}" fill="${col}" stroke="#14282b" stroke-width="0.5"/>`);
+    else out.push(`<rect x="${(-l.w / 2).toFixed(1)}" y="${(-l.d / 2).toFixed(1)}" width="${l.w.toFixed(1)}" height="${l.d.toFixed(1)}" fill="${col}" stroke="#14282b" stroke-width="0.5" transform="translate(${l.x.toFixed(1)} ${l.z.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`);
   }
   for (const l of m.landmarks) {
     const deg = (-l.rot * 180) / Math.PI;
