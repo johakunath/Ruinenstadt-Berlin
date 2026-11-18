@@ -814,6 +814,8 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .stl.on { border-color: #ef9f27; background: #2e2a1e; }
 .camp-st { overflow-y: auto; padding: 10px 14px; overscroll-behavior: contain; }
 .camp-st h3 { margin: 12px 0 6px; font-size: 13px; color: #b5aa98; letter-spacing: .06em; }
+.sthead { display: flex; align-items: center; gap: 12px; }
+.st-portrait { flex: none; border: 1px solid var(--edge); border-radius: 4px; object-fit: cover; }
 .sthead p { margin: 4px 0; }
 .camp-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }
 .camp-body h3, .camp-body .inv-grid, .camp-body .inv-hint { grid-column: 1 / -1; }
@@ -826,12 +828,18 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
   .camp-cols { grid-template-columns: 150px minmax(0, 1fr); }
   .camp-panel button { min-height: 38px; padding: 4px 8px; font-size: 12px; }
   .camp-st { padding: 6px 8px; } .row-c { padding: 5px 7px; } .camp-body { grid-template-columns: 1fr; }
+  .st-portrait { width: 56px; height: 56px; }
 }
 @media (max-width: 599px) and (orientation: portrait) { .camp-cols { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .camp-list { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #3a342c; } }
 /* ---- M17 intro and tutorial cards, end screen stats. */
 #intro { z-index: 60; }
 .panel.intro { flex-direction: column; gap: 12px; text-align: center; text-transform: none; letter-spacing: .02em; }
 .panel.intro .lead { font-size: 16px; line-height: 1.45; margin: 0; }
+.intro-art { width: 100%; height: clamp(90px, 32dvh, 200px); flex: none; object-fit: cover; border: 1px solid var(--edge); border-radius: 4px; }
+@media (max-height: 500px) {
+  .panel.intro { gap: 7px; }
+  .intro-art { height: clamp(72px, 29dvh, 125px); }
+}
 .idots { display: flex; justify-content: center; gap: 6px; } .idots i { width: 8px; height: 8px; border-radius: 50%; background: #4c453a; } .idots i.on { background: #ef9f27; }
 .iskip { background: none; border: 0; color: #b5aa98; text-decoration: underline; }
 .end-stats { display: flex; flex-direction: column; gap: 4px; text-transform: none; letter-spacing: .02em; font-size: 14px; margin: 4px 0 8px; }

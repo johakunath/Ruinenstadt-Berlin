@@ -11,6 +11,7 @@ import { BAG_SIZE } from '../sim/inventory';
 import type { Item } from '../sim/items';
 import type { Sim } from '../sim/types';
 import { esc, itemIcon } from './inventory';
+import { KEEPER_PORTRAIT, portraitUrl } from './portraits';
 
 const MAT_IDS: MaterialId[] = ['metall', 'stoff', 'kabel', 'chemie'];
 const ING_IDS: IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
@@ -82,12 +83,13 @@ export class CampUi {
   }
   render(): void {
     const s = this.sim(), st = STATIONS.find(t => t.id === this.sel)!, built = stationBuilt(s, st.id), l = siteLevel(s, st.id), n = nextLevel(s, st.id), here = npcHere(s, st);
+    const keeper = built && here ? portraitUrl(KEEPER_PORTRAIT[st.npc]) : '';
     const mats = MAT_IDS.map(k => `<span style="color:${MATERIALS[k].color}">${MATERIALS[k].name} <b>${s.inventory.materials[k] ?? 0}</b></span>`).join('');
     const ings = ING_IDS.map(k => `<span style="color:${INGREDIENTS[k].color}">${INGREDIENTS[k].name} <b>${s.inventory.ingredients?.[k] ?? 0}</b></span>`).join('');
     const list = STATIONS.map(t => `<button type="button" class="stl${t.id === this.sel ? ' on' : ''}" data-st="${t.id}"><b>${t.name}</b>${pips(siteLevel(s, t.id), 3)}</button>`).join('');
     const cost = (c: Partial<Record<MaterialId | 'scrap', number>>): string => (Object.entries(c) as Array<[MaterialId | 'scrap', number]>).map(([k, v]) => `<span class="${(k === 'scrap' ? s.inventory.scrap : s.inventory.materials[k] ?? 0) >= v ? '' : 'negative'}">${v} ${k === 'scrap' ? 'Schrott' : MATERIALS[k].name}</span>`).join(' · ');
     const next = !n ? '<p class="inv-hint">Voll ausgebaut.</p>' : `<h3>${built ? `Ausbau auf Stufe ${n.level}` : 'Bauplatz'}</h3><div class="row-c"><div><b>${n.text}</b><small>${cost(n.cost)}</small>${n.needs.length ? `<small class="warn">Erst: ${n.needs.join(', ')}</small>` : ''}</div><button type="button" class="${n.ok ? 'primary' : ''}" data-lv="${st.id}" ${n.needs.length ? 'disabled' : ''}>${built ? 'Ausbauen' : 'Bauen'}</button></div>`;
-    this.root.innerHTML = `<div class="camp-panel${this.single ? ' single' : ''}"><header class="menu-head"><h2>${this.single ? st.name : 'Lager'}</h2><div class="menu-res"><span>Schrott <b>${s.inventory.scrap}</b></span>${mats}${ings}</div><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header><div class="camp-cols${this.single ? ' single' : ''}"><nav class="camp-list"${this.single ? ' hidden' : ''}>${list}</nav><section class="camp-st"><div class="sthead"><div><h2>${st.name}</h2><p class="inv-hint">${here ? `${npcName(st)} · ${st.line}` : `Noch niemand hier. ${npcName(st)} ist irgendwo da draußen gefangen.`}</p><p>${built ? `${pips(l, 3)} Stufe ${l} von 3 · <span class="inv-hint">${st.levels.slice(0, l).map(L => L.text).join(' · ')}</span>` : '<span class="inv-hint">Noch Schutt. Erst bauen, dann nutzen.</span>'}</p></div></div><div class="camp-body">${built ? this.body(s) : ''}</div>${next}<p class="camp-msg ${this.msg?.ok ? 'positive' : 'negative'}" aria-live="polite">${esc(this.msg?.text ?? '')}</p></section></div></div>`;
+    this.root.innerHTML = `<div class="camp-panel${this.single ? ' single' : ''}"><header class="menu-head"><h2>${this.single ? st.name : 'Lager'}</h2><div class="menu-res"><span>Schrott <b>${s.inventory.scrap}</b></span>${mats}${ings}</div><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header><div class="camp-cols${this.single ? ' single' : ''}"><nav class="camp-list"${this.single ? ' hidden' : ''}>${list}</nav><section class="camp-st"><div class="sthead">${keeper ? `<img class="st-portrait" src="${keeper}" alt="" width="72" height="72" draggable="false">` : ''}<div><h2>${st.name}</h2><p class="inv-hint">${here ? `${npcName(st)} · ${st.line}` : `Noch niemand hier. ${npcName(st)} ist irgendwo da draußen gefangen.`}</p><p>${built ? `${pips(l, 3)} Stufe ${l} von 3 · <span class="inv-hint">${st.levels.slice(0, l).map(L => L.text).join(' · ')}</span>` : '<span class="inv-hint">Noch Schutt. Erst bauen, dann nutzen.</span>'}</p></div></div><div class="camp-body">${built ? this.body(s) : ''}</div>${next}<p class="camp-msg ${this.msg?.ok ? 'positive' : 'negative'}" aria-live="polite">${esc(this.msg?.text ?? '')}</p></section></div></div>`;
   }
   private upRows(s: Sim, ids: CampUpgradeId[]): string {
     return ids.map(id => {

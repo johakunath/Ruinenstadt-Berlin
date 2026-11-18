@@ -12,6 +12,7 @@ import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
 import { loadGroundTexture } from './ground-textures';
+import { swapPaintedMap } from './surface-textures';
 import { Materials, type LitMaterial } from './materials';
 import {
   paintAwning, paintBrick, paintCarPaint, paintCloth, paintCobbles, paintConcrete, paintCorrugated, paintGraffiti, paintLattice, paintTarp, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster, paintMarket, paintStallTarp,
@@ -34,6 +35,13 @@ const GATE_H = 3.7;
 const SHOP_H = 3.45;
 
 type RGB = readonly [number, number, number];
+
+// Linear tints against the neutral enamel keep the former bus and tram colors.
+const TRANSIT_PAINT = {
+  cream: [0.87, 0.62, 0.41],
+  ochre: [0.78, 0.40, 0.09],
+  oxblood: [0.35, 0.08, 0.04],
+} as const satisfies Record<string, RGB>;
 
 export interface FlickerLight {
   light: PointLight;
@@ -160,7 +168,7 @@ export interface Mats {
   graffiti: LitMaterial;
 }
 
-export function makeMats(m: Materials): Mats {
+export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
   const o: PaintOptions = { flatten: m.look.flatten, normalMaps: m.profile.normalMaps, anisotropy: m.profile.anisotropy };
   const plaster: Record<string, LitMaterial> = {};
   for (const tone of ['cream', 'ochre', 'oxblood']) {
@@ -181,7 +189,7 @@ export function makeMats(m: Materials): Mats {
   const rust = paintMetal('#7b4a2e', o, 31, 1.4);
   const ivyTex = paintIvy();
   const corr = paintCorrugated(o);
-  return {
+  const mats: Mats = {
     plaster,
     brick: m.surface({ map: brick.map, normalMap: brick.normalMap, roughness: 0.9, vertexColors: true }),
     stucco: m.surface({ map: paintStucco(o).map, roughness: 0.85, vertexColors: true }),
@@ -218,6 +226,26 @@ export function makeMats(m: Materials): Mats {
     tarp: m.surface({ map: paintTarp(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
     graffiti: m.surface({ map: paintGraffiti(), alphaTest: 0.5, roughness: 0.8, vertexColors: true }),
   };
+  const sources: Array<readonly [string, LitMaterial[], boolean?]> = [
+    [new URL('../../assets/textures/common/plaster-cream.webp', import.meta.url).href, [mats.plaster['cream']!]],
+    [new URL('../../assets/textures/common/plaster-ochre.webp', import.meta.url).href, [mats.plaster['ochre']!]],
+    [new URL('../../assets/textures/common/plaster-oxblood.webp', import.meta.url).href, [mats.plaster['oxblood']!]],
+    [new URL('../../assets/textures/common/shopfront.webp', import.meta.url).href, [mats.shop], false],
+    [new URL('../../assets/textures/common/wood.webp', import.meta.url).href, [mats.wood, mats.darkWood]],
+    [new URL('../../assets/textures/common/painted-metal.webp', import.meta.url).href, [mats.rust]],
+    [new URL('../../assets/textures/common/car-enamel.webp', import.meta.url).href, [mats.carPaint]],
+    [new URL('../../assets/textures/common/van-side.webp', import.meta.url).href, [mats.vanSide], false],
+    [new URL('../../assets/textures/common/van-front.webp', import.meta.url).href, [mats.vanFront], false],
+    [new URL('../../assets/textures/common/van-roof.webp', import.meta.url).href, [mats.vanRoof], false],
+  ];
+  // Alexanderplatz and the tunnels supply their own versions of these surfaces.
+  if (district !== 'alex') sources.push(
+    [new URL('../../assets/textures/common/brick.webp', import.meta.url).href, [mats.brick]],
+    [new URL('../../assets/textures/common/stucco.webp', import.meta.url).href, [mats.stucco]],
+  );
+  if (!district) sources.push([new URL('../../assets/textures/common/concrete.webp', import.meta.url).href, [mats.concrete]]);
+  for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat);
+  return mats;
 }
 
 export const UNIT_BOX = new BoxGeometry(1, 1, 1);
@@ -816,12 +844,11 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       const W = 2.5;
       const tilt = at(p, 0, 0, 0, 0.012, 0, rng.range(-0.03, 0.03));
       const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
-      // Painted body (plaster materials take colour; iron would stay near black at night).
-      const paint = m.plaster[rng.pick(['cream', 'ochre', 'oxblood'])] as Material;
-      const tint: [number, number, number] = [1, 1, 1];
+      const paint = m.carPaint;
+      const tint = TRANSIT_PAINT[rng.pick(['cream', 'ochre', 'oxblood'] as const)];
       b.box(paint, part(0, 0.95, 0), W, 1.1, L, tint);
       b.box(paint, part(0, 2.75, 0), W, 0.3, L, tint);
-      b.box(paint, part(0, 3.0, 0), W - 0.1, 0.2, L - 0.3, [0.8, 0.8, 0.8]);
+      b.box(paint, part(0, 3.0, 0), W - 0.1, 0.2, L - 0.3, [tint[0] * 0.8, tint[1] * 0.8, tint[2] * 0.8]);
       // Window band (dark glass, some panes missing) and pillars.
       b.box(m.rubber, part(0, 2.05, 0), W - 0.08, 1.1, L - 0.1, [0.45, 0.55, 0.6]);
       for (let z = -L / 2 + 0.2; z <= L / 2 - 0.2; z += 1.35) for (const sx of [-1, 1]) b.box(paint, part(sx * (W / 2 - 0.02), 2.05, z), 0.08, 1.1, 0.14, tint);
@@ -840,15 +867,15 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       const W = 2.25;
       const base = at(p, 0, TRAM_BRIDGE_DECK + TRAM_HEAD_HEIGHT, 0);
       const part = (x: number, y: number, z: number): Matrix4 => base.clone().multiply(new Matrix4().makeTranslation(x, y, z));
-      const creamM = m.plaster['cream'] as Material;
-      const redM = m.plaster['oxblood'] as Material;
+      const paint = m.carPaint;
+      const cream = TRANSIT_PAINT.cream;
       for (const c of [-1, 1]) {
         const z0 = c * (L / 4 + 0.1);
-        b.box(redM, part(0, 1.0, z0), W, 1.2, L / 2 - 0.2);
-        b.box(creamM, part(0, 2.85, z0), W, 0.35, L / 2 - 0.2);
+        b.box(paint, part(0, 1.0, z0), W, 1.2, L / 2 - 0.2, TRANSIT_PAINT.oxblood);
+        b.box(paint, part(0, 2.85, z0), W, 0.35, L / 2 - 0.2, cream);
         b.box(m.rubber, part(0, 2.05, z0), W - 0.06, 1.25, L / 2 - 0.3, [0.42, 0.52, 0.56]);
-        for (let z = z0 - L / 4 + 0.3; z <= z0 + L / 4 - 0.3; z += 1.2) for (const sx of [-1, 1]) b.box(creamM, part(sx * (W / 2 - 0.02), 2.05, z), 0.08, 1.25, 0.12);
-        b.box(creamM, part(0, 3.1, z0), W - 0.3, 0.16, L / 2 - 0.6, [0.8, 0.8, 0.78]);
+        for (let z = z0 - L / 4 + 0.3; z <= z0 + L / 4 - 0.3; z += 1.2) for (const sx of [-1, 1]) b.box(paint, part(sx * (W / 2 - 0.02), 2.05, z), 0.08, 1.25, 0.12, cream);
+        b.box(paint, part(0, 3.1, z0), W - 0.3, 0.16, L / 2 - 0.6, [cream[0] * 0.8, cream[1] * 0.8, cream[2] * 0.78]);
       }
       const wheel = new CylinderGeometry(TRAM_WHEEL_RADIUS, TRAM_WHEEL_RADIUS, 0.1, 12);
       const flange = new CylinderGeometry(TRAM_WHEEL_RADIUS + 0.025, TRAM_WHEEL_RADIUS + 0.025, 0.025, 12);
