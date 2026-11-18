@@ -2,10 +2,11 @@
 // fog with fireflies, Spreepark ash with embers, Rathaus/Altstadt clear moonlight. Particles live in a
 // box that follows the hero and fade over two seconds when the zone changes. Cost: three point or line
 // draws on the FX layer (no lights, no shadows), scene fog density eased per weather.
-import { AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, FogExp2, LineBasicMaterial, LineSegments, Points, PointsMaterial, type Scene } from 'three';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, Color, FogExp2, LineBasicMaterial, LineSegments, Points, PointsMaterial, type Scene } from 'three';
 import { areaAt, type MapDef } from '../data/map';
 import { FX_LAYER } from './world';
 import { groundY } from './ground';
+import type { Wet } from './sky';
 
 export type WeatherKind = 'rain' | 'fog' | 'ash' | 'clear';
 /** Which weather an area has (area ids of `MapDef.areas`); missing ids are clear. */
@@ -51,18 +52,23 @@ function dot(): CanvasTexture | null {
 interface Layer { obj: Points | LineSegments; pos: Float32Array; vel: Float32Array; level: number; max: number }
 
 export class Weather {
-  private readonly layers: Record<'rain' | 'fireflies' | 'ash' | 'embers', Layer>;
+  private readonly layers: Record<'rain' | 'fireflies' | 'ash' | 'embers' | 'splash', Layer>;
   private kind: WeatherKind = 'clear';
   private seed = 1;
   private readonly tex = dot();
 
-  constructor(private readonly scene: Scene, private readonly map: MapDef | undefined, private readonly table: Readonly<Record<string, WeatherKind>>, scale: number) {
+  /**
+   * `wet` (Mitte): denser rain, part of the streaks tinted by the neon, and splashes on the ground (one more
+   * point draw on the FX layer, only while it rains there).
+   */
+  constructor(private readonly scene: Scene, private readonly map: MapDef | undefined, private readonly table: Readonly<Record<string, WeatherKind>>, scale: number, private readonly fogScale = 1, wet?: Wet) {
     const n = (k: number): number => Math.max(8, Math.round(k * scale));
     this.layers = {
-      rain: this.lines(n(700), 0x9fc8e0, 0.32),
+      rain: this.lines(n(wet ? 950 : 700), wet ? 0xffffff : 0x9fc8e0, wet ? 0.42 : 0.32, wet),
       fireflies: this.points(n(90), 0xf2e27a, 0.3, true),
       ash: this.points(n(520), 0xc8c2ba, 0.14, false),
       embers: this.points(n(140), 0xff7a2a, 0.22, true),
+      splash: this.points(wet ? n(220) : 0, wet?.rain ?? 0xffffff, 0.16, true),
     };
   }
   private rnd(): number { this.seed = (this.seed * 16807) % 2147483647; return this.seed / 2147483647; }
@@ -72,10 +78,19 @@ export class Weather {
     return { pos, vel };
   }
   private add(obj: Points | LineSegments): void { obj.layers.set(FX_LAYER); obj.frustumCulled = false; obj.visible = false; this.scene.add(obj); }
-  private lines(count: number, color: number, opacity: number): Layer {
+  private lines(count: number, color: number, opacity: number, wet?: Wet): Layer {
     const { pos, vel } = this.fill(count, 2);
     const g = new BufferGeometry(); g.setAttribute('position', new BufferAttribute(pos, 3));
-    const obj = new LineSegments(g, new LineBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, fog: true }));
+    if (wet) {
+      // Rain colour, a share of the streaks in the neon colours (they catch the signs).
+      const neon = [...wet.neon.warm, ...wet.neon.cold], col = new Float32Array(count * 6), c = new Color();
+      for (let i = 0; i < count; i++) {
+        c.setHex(this.rnd() < wet.rainNeon ? neon[Math.floor(this.rnd() * neon.length)]! : wet.rain);
+        col.set([c.r * 0.5, c.g * 0.5, c.b * 0.5, c.r, c.g, c.b], i * 6);
+      }
+      g.setAttribute('color', new BufferAttribute(col, 3));
+    }
+    const obj = new LineSegments(g, new LineBasicMaterial({ color, vertexColors: !!wet, transparent: true, opacity: 0, depthWrite: false, fog: true }));
     this.add(obj);
     return { obj, pos, vel, level: 0, max: opacity };
   }
@@ -95,7 +110,7 @@ export class Weather {
   }
   update(dt: number, hx: number, hz: number, time: number): void {
     this.kind = this.kindAt(hx, hz);
-    const want = { rain: this.kind === 'rain', fireflies: this.kind === 'fog', ash: this.kind === 'ash', embers: this.kind === 'ash' };
+    const want = { rain: this.kind === 'rain', fireflies: this.kind === 'fog', ash: this.kind === 'ash', embers: this.kind === 'ash', splash: this.kind === 'rain' };
     for (const key of Object.keys(this.layers) as Array<keyof typeof this.layers>) {
       const L = this.layers[key];
       L.level = Math.max(0, Math.min(1, L.level + (want[key] ? dt : -dt) / 2));
@@ -108,7 +123,7 @@ export class Weather {
       L.obj.geometry.attributes.position!.needsUpdate = true;
     }
     const fog = this.scene.fog as FogExp2 | null;
-    if (fog) fog.density += (FOG[this.kind] - fog.density) * Math.min(1, dt * 0.6);
+    if (fog) fog.density += (FOG[this.kind] * this.fogScale - fog.density) * Math.min(1, dt * 0.6);
   }
   /** Moves particles and wraps them inside the box around the hero. */
   private step(key: keyof Weather['layers'], L: Layer, dt: number, hx: number, hz: number, t: number): void {
@@ -128,6 +143,16 @@ export class Weather {
       return;
     }
     const n = p.length / 3;
+    if (key === 'splash') {
+      // Each splash lives about 0.15 s a hand's height over the ground, then lands somewhere else near the hero.
+      for (let k = 0; k < n; k++) {
+        const i = k * 3, v = L.vel;
+        v[i]! -= dt;
+        if (v[i]! < 0) { v[i] = 0.1 + this.rnd() * 0.12; p[i] = hx + (this.rnd() - 0.5) * W * 0.8; p[i + 2] = hz + (this.rnd() - 0.5) * D * 0.8; }
+        p[i + 1] = 0.04 + (0.22 - v[i]!) * 0.5;
+      }
+      return;
+    }
     for (let k = 0; k < n; k++) {
       const i = k * 3, v = L.vel;
       if (key === 'fireflies') {

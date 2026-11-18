@@ -5,13 +5,20 @@
 // from photos (`mitte-north.ts`, `mitte-south.ts`, `mitte-kultur.ts`); `buildMitteLandmark` asks those first.
 //
 // Cost: merged per material into the chunk batches of `map-world.ts`. New materials (one draw call each in
-// the chunks that use them): sandstone, curtain glass, gold panels. No lights in the blockout.
-import { ConeGeometry, CylinderGeometry, Matrix4, SphereGeometry, type BufferGeometry } from 'three';
-import { OPEN_PARTS, type Landmark, type LandmarkKind, type MapDef } from '../data/map';
+// the chunks that use them): sandstone, curtain glass, gold panels, the neon sign atlas (unlit, every colour
+// in one material through vertex colours). Step 3 dressing (`buildMitteWorld`): about 1-2k triangles per
+// chunk of shopping street, one pooled light spot per sign or pole (the pool size never changes) and its
+// ground glow and wet reflection streak in the existing glow batches.
+import { Color, ConeGeometry, CylinderGeometry, Matrix4, MeshBasicMaterial, SphereGeometry, Vector3, type BufferGeometry } from 'three';
+import { areaAt, OPEN_PARTS, type Landmark, type LandmarkKind, type Lot, type MapDef } from '../data/map';
+import { Rng } from '../sim/math';
+import { footprintDist } from './reveal';
 import { Materials, type LitMaterial } from './materials';
 import type { PaintOptions } from './paint';
-import { paintCurtain, paintGoldPanels, paintSandstone } from './mitte-paint';
-import { lm, type ChunkBuilder, type MapMats } from './map-world';
+import { bladeCell, NEON_BLADES, NEON_WORDS, neonCell, paintCurtain, paintGoldPanels, paintNeonAtlas, paintSandstone } from './mitte-paint';
+import { blockFacades, lm, type ChunkBuilder, type MapMats } from './map-world';
+import type { Wet } from './sky';
+import { Run } from './world';
 import { buildNorth } from './mitte-north';
 import { buildSouth } from './mitte-south';
 import { buildKultur } from './mitte-kultur';
@@ -33,6 +40,8 @@ export interface MitteMats {
   curtain: LitMaterial;
   /** Gold aluminium panels (Philharmonie `#d8a838`, Staatsbibliothek). */
   gold: LitMaterial;
+  /** Neon sign atlas (`paintNeonAtlas`), unlit; the vertex colour is the neon colour (above 1 blooms). */
+  neon: MeshBasicMaterial;
 }
 
 export function mitteMats(materials: Materials): MitteMats {
@@ -43,6 +52,7 @@ export function mitteMats(materials: Materials): MitteMats {
     sandstone: materials.surface({ map: paintSandstone(o).map, roughness: 0.9, vertexColors: true }),
     curtain: materials.surface({ map: cw.map, emissiveMap: cw.emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.7, roughness: 0.2, metalness: 0.5, vertexColors: true }),
     gold: materials.surface({ map: paintGoldPanels(o).map, roughness: 0.45, metalness: 0.55, vertexColors: true }),
+    neon: new MeshBasicMaterial({ map: paintNeonAtlas(), vertexColors: true }),
   };
 }
 
@@ -188,5 +198,91 @@ export function buildMitteLandmark(b: ChunkBuilder, l: Landmark): void {
   massing(c, l);
 }
 
-/** Map-wide Mitte dressing (step 3: neon below 5 m, cables, puddles). Nothing yet in the blockout. */
-export function buildMitteWorld(_m: MapDef, _chunkOf: (x: number, z: number) => ChunkBuilder): void {}
+// ---------------------------------------------------------------- neon street dressing (step 3)
+
+/** Neon mood per area: warm shopping and club streets, cold government quarter (fewer signs); others none. */
+const NEON_AREAS: Readonly<Record<string, { mood: 'warm' | 'mixed' | 'cold'; density: number }>> = {
+  friedrichstadt: { mood: 'warm', density: 1 }, potsdamer: { mood: 'mixed', density: 1.2 }, leipzigerplatz: { mood: 'mixed', density: 1 },
+  tilla: { mood: 'mixed', density: 0.6 }, kulturforum: { mood: 'cold', density: 0.4 }, regierung: { mood: 'cold', density: 0.35 },
+};
+
+const rgb = (hex: number, k: number): RGB => { const c = new Color(hex); return [c.r * k, c.g * k, c.b * k]; };
+
+/**
+ * Neon below 5 m (camera rule): a fascia sign over the ground floor or a blade sign sticking out of the
+ * front, on the street front of intact lots in the neon areas; neon poles along the streets there. Each
+ * sign or pole is one pooled light, so its colour pools and streaks on the wet street.
+ */
+export function buildMitteWorld(m: MapDef, lots: readonly Lot[], N: MitteMats, M: MapMats, wet: Wet | undefined, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, lotCut: (l: Lot) => { id: number; y: number } | undefined = () => undefined): void {
+  if (!wet) return;
+  const pick = (rng: Rng, mood: 'warm' | 'mixed' | 'cold'): number => rng.pick(mood === 'warm' ? wet.neon.warm : mood === 'cold' ? wet.neon.cold : rng.next() < 0.5 ? wet.neon.warm : wet.neon.cold);
+  const glow = 2.2 * wet.glow;
+  for (const l of lots) {
+    if (l.kind === 'tree' || l.kind === 'special' || l.kind === 'house') continue;
+    const area = areaAt(m, l.x, l.z), na = area && NEON_AREAS[area.id];
+    if (!na) continue;
+    // Burnt-out shells carry a sign half as often (the generators run the ground floors).
+    const rng = new Rng(l.seed * 17 + 2089);
+    if (rng.next() > wet.density * na.density * (l.ruin ? 0.5 : 1)) continue;
+    const s = blockFacades(l)[0]!;
+    if (s.len < 4) continue;
+    const run = new Run({ id: 'nd', style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1], depth: 1, floors: 0, tone: 'cream', features: [], seed: 1 });
+    // Fronts facing east or west get blade signs (their faces turn to the camera), the others fascias.
+    const o = run.pt(0, 0, 0), nrm = run.pt(0, 0, 1).sub(o), side = Math.abs(nrm.x) > Math.abs(nrm.z);
+    const b = chunkOf(l.x, l.z), y0 = ground(l.x, l.z), col = pick(rng, na.mood), tint = rgb(col, glow), cut = lotCut(l);
+    const dress = (fn: () => void): void => (cut ? b.cut(cut.id, cut.y, () => b.on(y0, fn)) : b.on(y0, fn));
+    dress(() => { for (let k = 0; k < (s.len > 11 ? 2 : 1); k++) {
+      const at = s.len > 11 ? (k === 0 ? rng.range(1.6, s.len / 2 - 1.6) : rng.range(s.len / 2 + 1.6, s.len - 1.6)) : rng.range(1.6, s.len - 1.6);
+      if (!side) {
+        // Fascia over the shop: 3 × 0.75 m at 3.4 m, a dark box behind it.
+        const w = Math.min(3.2, s.len - 1), y = 3.4, uv = neonCell(rng.int(NEON_WORDS.length));
+        b.box(M.iron, run.mat(at, y + 0.375, 0.08), w + 0.2, 0.95, 0.14, [0.12, 0.12, 0.14]);
+        b.solid.of(N.neon).quad([run.pt(at - w / 2, y, 0.16), run.pt(at + w / 2, y, 0.16), run.pt(at + w / 2, y + 0.75, 0.16), run.pt(at - w / 2, y + 0.75, 0.16)], uv, [tint]);
+        b.light(run.pt(at, y + 0.2, 1.1), col, 7, 7, rng.next() < 0.2 ? 0.4 : 0.03, 2.4);
+      } else {
+        // Blade sign: 0.6 × 2.2 m from 2.7 m, sticking out 0.9 m, lettered on both faces.
+        const y = 2.7, h = 2.2, uv = bladeCell(rng.int(NEON_BLADES.length));
+        b.box(M.iron, run.mat(at, y + h / 2, 0.55), 0.12, h + 0.15, 0.9, [0.12, 0.12, 0.14]);
+        for (const side of [-1, 1]) {
+          const x = at + side * 0.07, n0 = side > 0 ? 0.12 : 0.98, n1 = side > 0 ? 0.98 : 0.12;
+          b.solid.of(N.neon).quad([run.pt(x, y, n0), run.pt(x, y, n1), run.pt(x, y + h, n1), run.pt(x, y + h, n0)], uv, [tint]);
+        }
+        b.light(run.pt(at, y + 0.6, 1.3), col, 7, 7, rng.next() < 0.2 ? 0.4 : 0.03, 2.2);
+      }
+    } });
+  }
+  // Neon poles along the streets of the neon areas, about every 26 m on alternating sides, clear of landmarks and buildings.
+  const rng = new Rng(m.seed + 515);
+  const inLot = (x: number, z: number): boolean => lots.some((l) => {
+    if (l.kind === 'tree') return false;
+    const dx = x - l.x, dz = z - l.z, c = Math.cos(l.rot), sn = Math.sin(l.rot);
+    return Math.abs(dx * c - dz * sn) < l.w / 2 + 0.8 && Math.abs(dx * sn + dz * c) < l.d / 2 + 0.8;
+  });
+  for (const st of m.streets) {
+    if (st.kind === 'path') continue;
+    let side = 1, carry = rng.range(0, 26);
+    for (let i = 1; i < st.pts.length; i++) {
+      const [ax, az] = st.pts[i - 1]!, [bx, bz] = st.pts[i]!, len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;
+      let t = carry;
+      for (; t < len; t += 26) {
+        side = -side;
+        const off = st.width / 2 + (st.sidewalk ?? 0) * 0.3 + 0.7, x = ax + dx * t - dz * off * side, z = az + dz * t + dx * off * side;
+        const area = areaAt(m, x, z), na = area && NEON_AREAS[area.id];
+        if (!na || rng.next() > 0.85 * na.density || m.landmarks.some((l) => footprintDist(l, x, z) < 2.5) || inLot(x, z)) continue;
+        // The sign faces the camera (south) on every street, so it never shows edge-on.
+        const col = pick(rng, na.mood), tint = rgb(col, glow), b = chunkOf(x, z), uv = bladeCell(rng.int(NEON_BLADES.length));
+        const P = (u: number, y: number, n: number): Vector3 => new Vector3(x + u, y, z + n);
+        b.on(ground(x, z), () => {
+          b.geo(M.iron, cached('np', () => new CylinderGeometry(0.06, 0.08, 4.4, 6)), new Matrix4().makeTranslation(x, 2.2, z), [0.35, 0.35, 0.38]);
+          b.box(M.iron, new Matrix4().makeTranslation(x, 3.6, z), 0.56, 1.75, 0.1, [0.12, 0.12, 0.14]);
+          b.solid.of(N.neon).quad([P(-0.25, 2.78, 0.06), P(0.25, 2.78, 0.06), P(0.25, 4.42, 0.06), P(-0.25, 4.42, 0.06)], uv, [tint]);
+          b.solid.of(N.neon).quad([P(0.25, 2.78, -0.06), P(-0.25, 2.78, -0.06), P(-0.25, 4.42, -0.06), P(0.25, 4.42, -0.06)], uv, [tint]);
+          // A plain tube down the pole (the white atlas cell).
+          b.solid.of(N.neon).quad([P(-0.025, 0.6, 0.09), P(0.025, 0.6, 0.09), P(0.025, 2.7, 0.09), P(-0.025, 2.7, 0.09)], neonCell(-1), [rgb(col, glow * 0.8)]);
+          b.light(new Vector3(x, 3.4, z + 0.4), col, 8, 8, rng.next() < 0.15 ? 0.4 : 0.03, 2.6);
+        });
+      }
+      carry = t - len;
+    }
+  }
+}

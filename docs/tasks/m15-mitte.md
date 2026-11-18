@@ -9,7 +9,7 @@ Layout B2 "Vom Reichstag zum Bass" (Johannes, 2026-11-18). Concept, decisions M1
 | 0 | Concept, geography check, 2D inventory, plan | | Opus | done 2026-11-18 |
 | 1 | Data `src/data/mitte.ts` from the anchors below, invariant tests `src/data/mitte.test.ts` at scale 1 and 1.3 (as `xhain.test.ts`), map SVG `docs/maps/mitte.svg` shown in chat. Stand-in bosses `MITTE_BOSS_STANDIN`; `flavor: 'neon'`, district 3 | 0 | Opus high | done 2026-11-18 |
 | 2 | Playable blockout `?map=mitte`: wiring (`options.ts`, `ui/maps.ts`, `main.ts`, bot `mapLevelOf`), landmark massing, Spree and Landwehrkanal, Großer Stern roundabout, Neuer See | 1 | Opus high | done 2026-11-18 (before PR #49 merged; merge main after it) |
-| 3 | Neon night look: three variants in game (`?look=a|b|c` or via `sky.ts`), Johannes picks. Wet ground (reflection streaks under every light, puddle mirrors), neon signs and poles below 5 m, rain with splashes and coloured streaks, cyan and magenta light colours, zone tints. State the Leistung cost | 2 | Opus high, variants first | open |
+| 3 | Neon night look: three variants in game (`?look=a|b|c` or via `sky.ts`), Johannes picks. Wet ground (reflection streaks under every light, puddle mirrors), neon signs and poles below 5 m, rain with splashes and coloured streaks, cyan and magenta light colours, zone tints. State the Leistung cost | 2 | Opus high, variants first | variants built 2026-11-18 (`?sky=a|b|c`); waiting for Johannes' pick (hardware check 19) |
 | 4 | Landmarks from photos (`docs/maps/landmarks.md`): north (Brandenburger Tor walk-through, Pariser Platz fronts, Reichstag, Jakob-Kaiser-Haus, Lüders-Haus, Paul-Löbe-Haus, Kanzleramt, Haus der Kulturen, Siegessäule) and south (Sony Center forum with tent and `cut`, Bahntower, Kollhoff, Verkehrsturm, Leipziger Platz, Mall of Berlin, Galeries Lafayette, Philharmonie, St. Matthäus, Staatsbibliothek, Neue Nationalgalerie, stage, clinic, Mauerstücke, Checkpoint Charlie, beer garden) | 2 | Opus high | open (two sessions: north, south) |
 | 5 | Enemy and boss spec: Kabelghul, Boxenkopf, Kabelbrocken skin, drones, Der Türsteher, Die Wachdrohne, the Neuer See mini-boss, Der Bassprediger; wave mix and tier; rain rule; Kodex lines | 0 (can run now, parallel to 1 to 4) | Fable high (new bosses); Opus high if Fable is not available | open |
 | 6 | Enemy and boss build (sim, bodies, sounds, Kodex) | 5 | Opus high | open |
@@ -97,4 +97,21 @@ Bosses: Türsteher → `feldwebel`, Wachdrohne → `grenzer`, mini-boss → `bra
 - Reveal shots for the seven main sights (Tor, Reichstag, Kanzleramt, Siegessäule, Sony Center, Kollhoff-Tower, Philharmonie); the hint shows `Landmark.name` when the kind has no German name in `NAMES`. Landmark sheet: Mitte kinds work (`kind=tor`).
 - Shared with PR #49: the helper exports of `landmarks.ts` are the same hunks as in #49 (merge cleanly); `main.ts`, `options.ts`, `ui/maps.ts`, `bot/run.ts`, `renderer.ts`, `map-world.ts`, `reveal.ts` and `tools/landmark-sheet.ts` will conflict on single lines (both add a map), resolve by keeping both.
 - Reused from 2D: the colours of `js/mitte.js` for every landmark (Reichstag `#b8ac94`, Tor `#d8c8a0`, Quadriga `#4a6a58`, Siegessäule granite `#5a2a24` and gold, Kollhoff brick, Philharmonie gold, Sony magenta tent); the rain rule waits for step 5.
+
+## Handover 2026-11-18 (step 3, variants) [Claude · Opus high]
+
+Three neon nights, compared with `?map=mitte&sky=a|b|c` (default A until Johannes picks). Proof: `docs/proof/m15-mitte/look-variants.jpg` (Leipziger Straße and Friedrichstraße, camera pulled back to `cam=26,46`).
+
+| Variant | Sky and grade | Lanterns | Neon | Rain |
+|---|---|---|---|---|
+| A Neonregen (the board) | violet sky and fog, saturation 1.4, exposure 1.18, little teal split | amber (as on the board) | magenta, amber, cyan; signs on 80 % of the street fronts | lilac, 30 % neon streaks |
+| B Kaltes LED | blue-black, denser blue haze, strong teal split | cold blue LED (2D `#6a8cff`) | cyan, rare magenta; 45 % | pale blue, 12 % neon |
+| C Glut im Smog | brown-red smog, thickest fog, high contrast | sodium orange | magenta and amber; 60 % | warm, 20 % neon |
+
+- Mechanism: `src/render/sky.ts` from PR #49 (identical file plus `Wet` and `MITTE_SKIES`; renderer, `map-world.ts` and `weather.ts` hunks copied from #49 so the merge is small). `Sky.wet` drives everything Mitte-specific; other maps leave it out and are unchanged.
+- Wet street (`map-world.ts`, `ChunkBuilder.light`): every light gets a reflection streak from its foot toward the camera (length from its height, broken by ripple bands) in the glow batches; street, ground, path and litter materials get glossier (`Wet.gloss`) and mirror the sky environment; warm lanterns take `Wet.lamp`.
+- Neon below 5 m (`mitte-world.ts` `buildMitteWorld`): fascia signs over the ground floor on south fronts, blade signs on east and west fronts (their faces turn to the camera), neon poles with a blade sign every 26 m along the streets of the neon areas (Friedrichstadt and Potsdamer Platz warm or mixed, Regierungsviertel and Kulturforum cold and sparse, Tiergarten none). One unlit atlas material (`paintNeonAtlas`: 15 words, 8 blades, a white tube cell), colour by vertex colour; each sign or pole is one pooled light, so its colour pools and streaks on the street.
+- Rain (`weather.ts`): with `wet` 950 instead of 700 streaks, part of them in the neon colours, plus ground splashes (one more point draw on the FX layer while it rains).
+- Cost on Leistung (cloud readout, default camera, A against the same sky without `wet`): +14 draw calls / +1.9k triangles on the Leipziger Straße, +22 / +1.4k on the Friedrichstraße, +16 / +0.4k at the Sony Center. fps and heat: hardware check 20.
+- Open: zone tints beyond the neon mood (step 7 with the lot types), cables across the streets and holo barriers (step 7), the Potsdamer Platz core still has few generated fronts for signs (step 7).
 

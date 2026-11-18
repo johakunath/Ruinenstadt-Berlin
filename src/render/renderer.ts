@@ -30,6 +30,7 @@ import { ShadowClock } from './shadow-rate';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
+import { NIGHT_SKY, type Sky } from './sky';
 import type { TunnelState } from './tunnel-view';
 import { bridgeAwareSurface, groundY, setGround } from './ground';
 import { COURTYARD } from '../data/courtyard';
@@ -43,6 +44,8 @@ import { CampStationsView } from './camp-stations';
 export interface RendererOptions {
   profile: Profile;
   look: Look;
+  /** Time of day (`sky.ts`); night when left out. Its grade must already be merged into `look`. */
+  sky?: Sky;
   debugHit: boolean;
   debugFlow: boolean;
   /** `?shadows=boxes`: map chunk meshes cast no shadow, only caster boxes, instanced props and characters. */
@@ -71,11 +74,8 @@ function tunnelState(sim: Sim, time: number): TunnelState {
   };
 }
 
-const NIGHT = 0x0b1a1d;
-const FOG = 0.017;
-
-/** Small night-sky environment for reflections on metal, glass and puddles: teal above, warm lamps low down. */
-function nightEnvironment(renderer: WebGLRenderer): Texture {
+/** Small sky environment for reflections on metal, glass and puddles: the sky gradient above, warm lamps low down. */
+function skyEnvironment(renderer: WebGLRenderer, look: Sky): Texture {
   const env = new Scene();
   const sky = new SphereGeometry(50, 24, 12);
   const colors: number[] = [];
@@ -83,13 +83,14 @@ function nightEnvironment(renderer: WebGLRenderer): Texture {
   for (let i = 0; i < pos.count; i++) {
     const h = pos.getY(i) / 50;
     const t = Math.max(0, h);
-    colors.push(0.03 + 0.1 * t, 0.07 + 0.2 * t, 0.08 + 0.22 * t);
+    const [hr, hg, hb] = look.env.horizon, [tr, tg, tb] = look.env.top;
+    colors.push(hr + (tr - hr) * t, hg + (tg - hg) * t, hb + (tb - hb) * t);
   }
   sky.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3));
   env.add(new Mesh(sky, new MeshBasicMaterial({ vertexColors: true, side: BackSide })));
   const lamp = new SphereGeometry(4, 8, 6);
   for (const [x, y, z, c] of [[-30, 6, -30, 0xffa040], [35, 8, -20, 0xff9a3a], [20, 5, 38, 0xffb060], [-40, 30, 20, 0x9fd6dc]] as Array<[number, number, number, number]>) {
-    const m = new Mesh(lamp, new MeshBasicMaterial({ color: new Color(c).multiplyScalar(c === 0x9fd6dc ? 2 : 2.2) }));
+    const m = new Mesh(lamp, new MeshBasicMaterial({ color: new Color(c).multiplyScalar(c === 0x9fd6dc ? 2 : 2.2 * look.env.lamps) }));
     m.position.set(x, y, z);
     env.add(m);
   }
@@ -108,6 +109,7 @@ export class GameRenderer {
   /** M11d: camera swing to a landmark the first time the hero comes near (null in the courtyard). */
   readonly reveal: LandmarkReveal | null;
   private readonly post: Post;
+  private readonly sky: Sky;
   private readonly fx: Fx;
   private readonly weather: Weather;
   private readonly loot = new LootView();
@@ -146,17 +148,18 @@ export class GameRenderer {
     const def = opts.map?.def;
     this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks, (x, z) => groundY(x, z)) : null;
     setGround(def ? bridgeAwareSurface(def) : () => 0);
-    this.scene.background = new Color(NIGHT);
-    this.scene.fog = new FogExp2(NIGHT, FOG);
-    this.scene.environment = nightEnvironment(renderer);
-    this.scene.environmentIntensity = 0.55;
+    this.sky = opts.sky ?? NIGHT_SKY;
+    this.scene.background = new Color(this.sky.background);
+    this.scene.fog = new FogExp2(this.sky.fog, this.sky.fogDensity);
+    this.scene.environment = skyEnvironment(renderer, this.sky);
+    this.scene.environmentIntensity = this.sky.env.intensity;
     this.scene.add(world.group);
     this.hero = new HeroView(assets, materials);
     this.scene.add(this.hero.root, this.heroLight);
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     // M11c: weather per zone (Köpenick only; the tunnel stays dry).
-    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : def?.id === 'xhain' ? XHAIN_WEATHER : def?.id === 'mitte' ? MITTE_WEATHER : {}, opts.profile.embers / 140);
+    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : def?.id === 'xhain' ? XHAIN_WEATHER : def?.id === 'mitte' ? MITTE_WEATHER : {}, opts.profile.embers / 140, this.sky.fogDensity / NIGHT_SKY.fogDensity, this.sky.wet);
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.content = new ContentView(assets, materials);
     // M20: the walkable camp's stations (build sites, levels, keepers) and their rings.
@@ -193,7 +196,7 @@ export class GameRenderer {
     renderer.shadowMap.autoUpdate = false;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
-    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut }) : buildWorld(materials);
+    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
     const assets = await loadCharacters(materials);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
@@ -417,7 +420,7 @@ export class GameRenderer {
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
     if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows);
     else this.world.follow?.(px, pz, shadows);
-    (this.scene.fog as FogExp2).density = FOG * (1 - 0.7 * (reveal?.weight ?? 0));
+    (this.scene.fog as FogExp2).density = this.sky.fogDensity * (1 - 0.7 * (reveal?.weight ?? 0));
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);

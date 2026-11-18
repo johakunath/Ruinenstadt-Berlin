@@ -95,3 +95,80 @@ export function paintGoldPanels(o: PaintOptions): { map: Texture } {
   flatten(g, S, S, o.flatten * 0.5);
   return { map: toTexture(c, true, o.anisotropy) };
 }
+
+/** Words of the neon sign atlas (2D `js/mitte.js` signs plus a few street words). Horizontal fascia signs. */
+export const NEON_WORDS = ['BASS', 'CLUB', '24H', 'KLINIK', 'TECHNO', 'KIOSK', 'SUB', 'NEON', 'RAVE', 'BAR', 'SPÄTI', 'IMBISS', 'HOTEL', 'KABEL', 'DISKO'] as const;
+/** Vertical blade signs (letters stacked). */
+export const NEON_BLADES = ['BASS', 'CLUB', 'RAVE', 'NEON', 'SUB', '24H', 'BAR', 'HOTEL'] as const;
+
+/**
+ * Neon sign atlas, 1024 × 1024, white tubes on black (the vertex colour gives the neon colour, so one
+ * material draws every colour). Left half: 2 × 8 horizontal cells of 256 × 128 (`NEON_WORDS`, the last
+ * cell is solid white for plain tubes). Right half: 4 × 2 vertical cells of 128 × 512 (`NEON_BLADES`).
+ * A few letters are dead or dim, as on a city that runs on generators.
+ */
+export function paintNeonAtlas(): Texture {
+  const S = 1024, rng = new Rng(2089);
+  const [c, g] = canvas(S, S);
+  g.fillStyle = '#050407';
+  g.fillRect(0, 0, S, S);
+  const tube = (text: string, x: number, y: number, size: number, dim: boolean): void => {
+    g.font = `bold ${size}px Arial, sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(255,255,255,0.9)';
+    g.shadowBlur = size * 0.35;
+    g.lineWidth = Math.max(5, size * 0.14);
+    g.strokeStyle = dim ? 'rgba(255,255,255,0.3)' : '#ffffff';
+    g.strokeText(text, x, y);
+    g.shadowBlur = 0;
+    g.fillStyle = dim ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.92)';
+    g.fillText(text, x, y);
+  };
+  // Each cell glows as a whole (the plate catches its own light), so a sign still reads bright when the
+  // game camera shrinks it to a few pixels.
+  const plate = (x: number, y: number, w: number, h: number): void => {
+    const grd = g.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, Math.max(w, h) * 0.6);
+    grd.addColorStop(0, 'rgba(255,255,255,0.32)');
+    grd.addColorStop(1, 'rgba(255,255,255,0.1)');
+    g.fillStyle = grd;
+    g.fillRect(x, y, w, h);
+  };
+  NEON_WORDS.forEach((w, i) => {
+    const x = (i % 2) * 256, y = Math.floor(i / 2) * 128;
+    g.save(); g.beginPath(); g.rect(x, y, 256, 128); g.clip();
+    // Plate glow, frame tube around the word, then the letters.
+    plate(x, y, 256, 128);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 8; g.strokeRect(x + 10, y + 12, 236, 104);
+    const size = Math.min(78, 210 / Math.max(2.2, w.length * 0.62));
+    const dead = rng.next() < 0.3 ? rng.int(w.length) : -1;
+    if (dead < 0) tube(w, x + 128, y + 66, size, false);
+    else for (let k = 0; k < w.length; k++) {
+      const cw = (size * 0.66), x0 = x + 128 - (w.length * cw) / 2 + cw * (k + 0.5);
+      tube(w[k]!, x0, y + 66, size, k === dead);
+    }
+    g.restore();
+  });
+  g.fillStyle = '#ffffff';
+  g.fillRect(256 + 8, 7 * 128 + 8, 240, 112);
+  NEON_BLADES.forEach((w, i) => {
+    const x = 512 + (i % 4) * 128, y = Math.floor(i / 4) * 512;
+    g.save(); g.beginPath(); g.rect(x, y, 128, 512); g.clip();
+    plate(x, y, 128, 512);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 8; g.strokeRect(x + 10, y + 10, 108, 492);
+    const step = Math.min(96, 470 / w.length);
+    for (let k = 0; k < w.length; k++) tube(w[k]!, x + 64, y + 256 - (step * w.length) / 2 + step * (k + 0.5), Math.min(84, step * 0.9), rng.next() < 0.08);
+    g.restore();
+  });
+  return toTexture(c, false, 4);
+}
+
+/** UV rect [u0, v0, u1, v1] of a horizontal word cell, the white tube cell (`-1`) or a blade cell. */
+export function neonCell(word: number): [number, number, number, number] {
+  const i = word < 0 ? 15 : word, x = (i % 2) * 256, y = Math.floor(i / 2) * 128;
+  return [x / 1024, 1 - (y + 128) / 1024, (x + 256) / 1024, 1 - y / 1024];
+}
+export function bladeCell(i: number): [number, number, number, number] {
+  const x = 512 + (i % 4) * 128, y = Math.floor(i / 4) * 512;
+  return [x / 1024, 1 - (y + 512) / 1024, (x + 128) / 1024, 1 - y / 1024];
+}
