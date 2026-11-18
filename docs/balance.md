@@ -57,3 +57,7 @@ Damage taken is the winning try, as a share of max life (healing during the figh
 - Normal fights cost 20 to 30 % of life in every zone and fall slightly toward zone 3: the hero outgrows them a little, as B10 wants. If the playtest still reads as too easy, raise zone 3 pressure first (more alive at once, more elites) rather than more life.
 - The first fight costs almost nothing. That is the gentle start B5 asked for; check that it is not dull.
 - Power grows about eightfold over one district. With six districts planned this needs a decision before M15 (2D finding: Mitte wall, late snowball).
+
+## Xhain first run (M15, 2026-11-18)
+
+`node tools/balance.mjs 3 normal johannes 1 --map=xhain`, fresh gear (the bot does not carry Köpenick gear yet): 2 of 3 campaigns won, 4.0 deaths and 17.3 min per campaign; all deaths at the Spreehexe (one run, spear build, 127 % damage taken there). The other twelve fights: no deaths, 18 to 77 % damage taken. Read: from fresh gear Xhain plays like Köpenick with a harder final boss, so a hero who arrives with Köpenick gear (power about 400) will find the first zone easy. Calibrate after Johannes' playtest: a bot start with carried gear, then `XHAIN_TIER` in `src/data/xhain.ts` or the Spreehexe's life.

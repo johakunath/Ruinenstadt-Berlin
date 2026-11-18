@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
 import { strike } from './combat';
-import { makeElite, spawnEnemy } from './enemies';
+import { makeElite, spawnEnemy, spawnPack } from './enemies';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
 
@@ -310,5 +310,183 @@ describe('bosses (2D patterns)', () => {
     s.threats.zones.push({ x: s.player.x, z: s.player.z, r: 3, t: 0.01, max: 1, damage: 9999, floor: 0.9, kind: 'slam', src: 0, free: true });
     run(s, 0.1, {}, false);
     expect(s.player.hp).toBeGreaterThanOrEqual(s.stats.maxHp * 0.55 - 1);
+  });
+});
+
+describe('Xhain roster (M12b)', () => {
+  const fight = (kind: EnemyKind, seconds: number, apart = 0): { s: Sim; e: Enemy; evs: SimEvent[] } => {
+    const s = fresh();
+    const e = put(s, kind, 0, 6);
+    e.hp = e.maxHp = 1e6;
+    const evs: SimEvent[] = [];
+    for (let t = 0; t < seconds; t += 3) {
+      if (apart && e.state !== 'special') { e.state = 'chase'; e.x = e.px = s.player.x; e.z = e.pz = s.player.z + apart; }
+      evs.push(...run(s, 3));
+    }
+    return { s, e, evs };
+  };
+  const notes = (evs: SimEvent[]): string[] => evs.filter((q) => q.type === 'note').map((q) => (q as { text: string }).text);
+
+  it('the Ratte is the 2D rat: small, fast, weak, a pack of five, never elite', () => {
+    const r = ENEMIES.rat, w = ENEMIES.walker;
+    expect(r.hp / w.hp).toBeCloseTo(6 / 20, 1);
+    expect(r.damage).toBeLessThan(w.damage / 2);
+    expect(r.speed).toBeGreaterThan(w.speed * 1.5);
+    expect(r.radius).toBeLessThan(w.radius * 0.7);
+    expect(r.res).toBe('rat');
+    expect(r.pack).toBe(5);
+    const s = fresh();
+    const lead = spawnPack(s, s.player.x, s.player.z + 6, 'rat');
+    expect(s.enemies.filter((q) => q.kind === 'rat')).toHaveLength(5);
+    for (const q of s.enemies) expect(Math.hypot(q.x - lead.x, q.z - lead.z)).toBeLessThan(1.2);
+    makeElite(s, lead, 'flink');
+    expect(lead.elite).toBeUndefined();
+    spawnPack(s, s.player.x + 6, s.player.z, 'walker');
+    expect(s.enemies).toHaveLength(6);
+  });
+
+  it('a rat zig-zags while it closes in, then bites', () => {
+    const s = fresh();
+    const e = put(s, 'rat', 0, 9);
+    let side = 0;
+    const evs: SimEvent[] = [];
+    for (let i = 0; i < 180; i++) {
+      evs.push(...run(s, 1 / 60));
+      if (Math.hypot(e.x - s.player.x, e.z - s.player.z) > 2) side = Math.max(side, Math.abs(e.x - s.player.x));
+    }
+    expect(side).toBeGreaterThan(0.15);
+    expect(has(evs, 'playerHit')).toBe(true);
+  });
+
+  it('Der Grenzer fires a Feuerstoß and five-shot volleys, calls two Hetzer with „Alarm!“ and keeps his distance', () => {
+    const { s, evs } = fight('grenzer', 30, 8);
+    expect(specials(evs)).toEqual(expect.arrayContaining(['barrage', 'volley', 'summon']));
+    expect(notes(evs)).toContain('„Alarm!“');
+    expect(s.enemies.filter((q) => q.kind === 'runner').length).toBeGreaterThanOrEqual(BOSS.grenzer.adds);
+    // One volley: exactly five shots.
+    const v = fresh();
+    const g = put(v, 'grenzer', 0, 8);
+    g.cd = [99, 0, 99];
+    g.def = { ...g.def, speed: 0 };
+    stepSim(v, NO_INPUT);
+    expect(g.sp?.kind).toBe('volley');
+    run(v, BOSS.grenzer.volleyWind + 0.05);
+    expect(v.threats.shots).toHaveLength(BOSS.grenzer.shots);
+    // Too close: he backs off.
+    const b = fresh();
+    const q = put(b, 'grenzer', 0, 3.5);
+    q.cd = [99, 99, 99];
+    run(b, 1);
+    expect(Math.hypot(q.x - b.player.x, q.z - b.player.z)).toBeGreaterThan(3.8);
+  });
+
+  it('Der Brandmeister throws Molotovs that leave fire, fires a ring and bursts into flame up close', () => {
+    const s = fresh();
+    const e = put(s, 'brandmeister', 0, 7);
+    e.cd = [0, 99, 99];
+    e.def = { ...e.def, speed: 0 };
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('molotov');
+    expect(s.threats.zones).toHaveLength(BOSS.brandmeister.bottles);
+    run(s, BOSS.brandmeister.wind + BOSS.brandmeister.bottles * BOSS.brandmeister.step + 0.1);
+    expect(s.threats.hazards.filter((h) => h.kind === 'fire')).toHaveLength(BOSS.brandmeister.bottles);
+    expect(specials(fight('brandmeister', 24, 9).evs)).toEqual(expect.arrayContaining(['molotov', 'ring', 'flame']));
+    // The flame burst only up close.
+    const f = fresh();
+    const b = put(f, 'brandmeister', 0, 6);
+    b.cd = [99, 99, 0];
+    b.def = { ...b.def, speed: 0 };
+    run(f, 0.2);
+    expect(b.state).toBe('chase');
+    b.x = b.px = f.player.x;
+    b.z = b.pz = f.player.z + 2.4;
+    run(f, 0.05);
+    expect(b.sp?.kind).toBe('flame');
+  });
+
+  it('Die Rattenmutter calls five rats, leaves acid where she walks and slams', () => {
+    const s = fresh();
+    const e = put(s, 'rattenmutter', 0, 9);
+    e.hp = e.maxHp = 1e6;
+    e.cd = [99, 99, 0];
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('summon');
+    run(s, BOSS.summon.wind + 0.1);
+    expect(s.enemies.filter((q) => q.kind === 'rat')).toHaveLength(BOSS.rattenmutter.adds);
+    run(s, 3);
+    expect(s.threats.hazards.some((h) => h.kind === 'acid')).toBe(true);
+    expect(specials(fight('rattenmutter', 24).evs)).toEqual(expect.arrayContaining(['summon', 'bossSlam']));
+    // Rage: the next pack comes after 2.6 s of real time, not 3.8.
+    const r = fresh();
+    const m = put(r, 'rattenmutter', 0, 9);
+    m.hp = m.maxHp * 0.4;
+    m.cd = [99, 99, 0];
+    const evs = run(r, 0.2);
+    expect(has(evs, 'bossRage')).toBe(true);
+    const w = specials(run(r, BOSS.rattenmutter.summon[1] - 0.3));
+    expect(w).not.toContain('summon');
+    expect(specials(run(r, 0.5))).toContain('summon');
+  });
+
+  it('Die Spreehexe marks acid pools under the hero, sends two Spreewellen and in rage washes up three rats', () => {
+    const s = fresh();
+    const e = put(s, 'spreehexe', 0, 6);
+    e.hp = e.maxHp = 1e6;
+    e.cd = [99, 99, 99];
+    run(s, 1.5 + BOSS.spreehexe.poolWind + 0.1);
+    expect(s.threats.hazards.some((h) => h.kind === 'acid')).toBe(true);
+    const w = fresh();
+    const x = put(w, 'spreehexe', 0, 6);
+    x.cd = [99, 99, 0];
+    stepSim(w, NO_INPUT);
+    expect(x.sp?.kind).toBe('roar');
+    run(w, BOSS.roar.wind + 0.05);
+    expect(w.threats.waves).toHaveLength(2);
+    expect(w.enemies.filter((q) => q.kind === 'rat')).toHaveLength(0);
+    // In rage every wave brings rats.
+    const r = fresh();
+    const h = put(r, 'spreehexe', 0, 6);
+    h.hp = h.maxHp * 0.4;
+    h.cd = [99, 99, 0];
+    run(r, BOSS.roar.wind + 0.1);
+    expect(r.enemies.filter((q) => q.kind === 'rat')).toHaveLength(BOSS.spreehexe.rageAdds);
+    expect(specials(fight('spreehexe', 30).evs)).toEqual(expect.arrayContaining(['roar', 'ring', 'bossSlam']));
+  });
+
+  it('every Xhain boss rages below half life; the Spreehexe is the strongest', () => {
+    const xhain = ['grenzer', 'brandmeister', 'rattenmutter', 'spreehexe'] as const;
+    for (const kind of xhain) {
+      const s = fresh();
+      const e = put(s, kind, 0, 9);
+      e.hp = e.maxHp * 0.45;
+      expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(1);
+      expect(e.def.speed).toBeCloseTo(ENEMIES[kind].speed * BOSS.rageSpeed);
+    }
+    const hp = xhain.map((k) => ENEMIES[k].hp);
+    expect([...hp].sort((a, b) => a - b)).toEqual(hp);
+    expect(ENEMIES.spreehexe.hp).toBe(ENEMIES.hauptmann.hp);
+    expect(ENEMIES.spreehexe.damage).toBe(ENEMIES.hauptmann.damage);
+  });
+
+  it('no Xhain boss takes more than 45 % of max life in one hit, even at ten times the damage', () => {
+    for (const kind of ['grenzer', 'brandmeister', 'rattenmutter', 'spreehexe'] as const) {
+      const s = fresh();
+      const e = spawnEnemy(s, s.player.x, s.player.z + 3, kind, 1, 10);
+      e.hp = e.maxHp = 1e6;
+      let hits = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        s.hitstop = 0;
+        const before = s.player.hp;
+        stepSim(s, NO_INPUT);
+        for (const q of s.events) if (q.type === 'playerHit') {
+          hits++;
+          expect(q.damage, kind).toBeLessThanOrEqual(s.stats.maxHp * 0.45 + 1e-6);
+          expect(before - s.player.hp, kind).toBeLessThan(s.stats.maxHp * 0.46);
+        }
+        s.events.length = 0;
+        s.player.hp = s.stats.maxHp;
+      }
+      expect(hits, kind).toBeGreaterThan(0);
+    }
   });
 });

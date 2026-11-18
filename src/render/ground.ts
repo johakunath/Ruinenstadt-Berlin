@@ -1,5 +1,6 @@
 // Ground height for the renderer (backlog B3). Maps set it at start; the courtyard is flat.
 // Characters, effects and the camera stand on it; the sim itself stays on the 2D plane.
+import { heightAt, inPoly, onStair, type MapDef } from '../data/map';
 let fn: (x: number, z: number) => number = () => 0;
 
 export function setGround(f: (x: number, z: number) => number): void {
@@ -44,4 +45,16 @@ export function meshSurface(minX: number, minZ: number, height: (x: number, z: n
     const d = at(i + 1, j + 1);
     return d + (c - d) * (1 - fx) + (b - d) * (1 - fz);
   };
+}
+
+/**
+ * The drawn ground for characters and props. M15 bridge decks (Warschauer Brücke) are their own mesh
+ * with hard edges, so on a deck or its stairs the exact deck height applies; the terrain grid would
+ * blend deck and ground samples near the edges (Codex review, PR #46).
+ */
+export function bridgeAwareSurface(def: MapDef): (x: number, z: number) => number {
+  const mesh = meshSurface(def.bounds.minX, def.bounds.minZ, (x, z) => heightAt(def, x, z));
+  const decks = def.terraces.filter((t) => t.bridge);
+  if (decks.length === 0) return mesh;
+  return (x, z) => (decks.some((t) => inPoly(t.poly, x, z) || onStair(t, x, z) !== null) ? heightAt(def, x, z) : mesh(x, z));
 }

@@ -2,7 +2,7 @@
 // Everything is code-built geometry with painted textures (plan-3d.md › Style: closing the gap).
 import {
   BoxGeometry, BufferAttribute, CircleGeometry, Euler, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide,
-  Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, SphereGeometry, Vector3,
+  Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
 import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
@@ -57,8 +57,11 @@ export interface World {
   /** Fire barrel mouths (for flames and embers). */
   fires: Vector3[];
   update(time: number): void;
-  /** Big maps: moon shadow and pooled lights follow the hero. */
-  follow?(x: number, z: number): void;
+  /**
+   * Big maps: moon shadow and pooled lights follow the hero. The moon only moves when `shadow` is
+   * true (the shadow map is re-rendered this frame), so a stale map never meets a moved light.
+   */
+  follow?(x: number, z: number, shadow: boolean): void;
   /** Moving map parts (ferry boat) at the interpolated sim time. */
   sync?(simTime: number): void;
   /** Breakable props (M4), drawn instanced so one can vanish. */
@@ -220,8 +223,8 @@ export class Builder {
   readonly lights: FlickerLight[] = [];
   readonly fires: Vector3[] = [];
   readonly extras: Object3D[] = [];
-  /** Building bodies and big props, as invisible shadow casters. */
-  readonly shadowBoxes: Array<{ m: Matrix4 }> = [];
+  /** Building bodies and big props, as invisible shadow casters; `cut` = clipped like their building (V1 B). */
+  readonly shadowBoxes: Array<{ m: Matrix4; cut?: { part: number; y: number } }> = [];
   protected readonly glowTex = paintGlow('rgba(255,190,110,0.55)', 'rgba(255,170,90,0)');
 
   constructor(readonly mats: Mats) {}
@@ -467,11 +470,11 @@ export function buildAltbau(b: Builder, f: Facade, opts: { balconies?: boolean }
   }
   if (at < run.len) b.box(b.mats.stucco, run.mat((at + run.len) / 2, 0.45, 0.04), run.len - at, 0.9, 0.12, [0.5, 0.52, 0.5]);
   b.box(b.mats.stucco, run.mat(run.len / 2, GROUND_H, 0.1), run.len, 0.32, 0.24, [0.85, 0.82, 0.78]);
-  for (let k = 1; k < f.floors; k++) b.box(b.mats.stucco, run.mat(run.len / 2, GROUND_H + k * FLOOR_H, 0.06), run.len, 0.18, 0.14);
+  if (!f.blank) for (let k = 1; k < f.floors; k++) b.box(b.mats.stucco, run.mat(run.len / 2, GROUND_H + k * FLOOR_H, 0.06), run.len, 0.18, 0.14);
   b.box(b.mats.stucco, run.mat(run.len / 2, H - 0.3, 0.16), run.len, 0.45, 0.36);
 
-  // --- windows
-  const bays = Math.floor(run.len / 2.7);
+  // --- windows (a Brandwand has none)
+  const bays = f.blank ? 0 : Math.floor(run.len / 2.7);
   const spacing = run.len / bays;
   for (let i = 0; i < bays; i++) {
     const s = (i + 0.5) * spacing;
@@ -485,7 +488,7 @@ export function buildAltbau(b: Builder, f: Facade, opts: { balconies?: boolean }
 
   // --- balconies: some facades, stacked on chosen window axes, not every floor (own rng: windows stay put)
   const brng = new Rng(f.seed * 31 + 7);
-  if (opts.balconies !== false && f.floors > 0 && bays >= 2 && brng.next() < 0.55) {
+  if (!f.blank && opts.balconies !== false && f.floors > 0 && bays >= 2 && brng.next() < 0.55) {
     const mode = brng.int(3);
     const off = brng.int(2);
     const axes: Array<[number, number]> = mode === 1 && bays % 2 === 0 && bays > 2
@@ -887,6 +890,21 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       b.box(m.awning, at(p, 0, 1.15, 0), 1.4, 0.4, 0.05);
       b.box(m.iron, at(p, 0, 0.95, 0.04), 0.06, 0.4, 0.06);
       b.shadowBox(at(p, 0, 0.45, 0), L, 0.9, 0.7);
+      break;
+    }
+    case 'tankTrap': {
+      // M15 Panzersperre (Czech hedgehog): three crossed steel angles standing on three ends, ~1.5 m.
+      // The triad is turned so its (1, 1, 1) diagonal points up; each angle is two thin plates.
+      const tilt = new Matrix4().makeRotationFromQuaternion(new Quaternion().setFromUnitVectors(new Vector3(1, 1, 1).normalize(), new Vector3(0, 1, 0)));
+      const L = 1.9;
+      const hub = at(p, 0, (L / 2) / Math.sqrt(3) - 0.05, 0).multiply(tilt);
+      const col: RGB = [0.5, 0.45, 0.42];
+      for (const [rx, rz] of [[0, 0], [Math.PI / 2, 0], [0, Math.PI / 2]] as const) {
+        const beam = hub.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rx, 0, rz)));
+        b.box(m.rust, beam.clone().multiply(new Matrix4().setPosition(0, 0, 0.06)), 0.03, L, 0.15, col);
+        b.box(m.rust, beam.clone().multiply(new Matrix4().setPosition(0.06, 0, 0)), 0.15, L, 0.03, col);
+      }
+      b.shadowBox(at(p, 0, 0.55, 0), 1.2, 1.1, 1.2);
       break;
     }
     case 'bollard': {

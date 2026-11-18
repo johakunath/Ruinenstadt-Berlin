@@ -7,6 +7,18 @@ type RGB = readonly [number, number, number];
 const WHITE: RGB = [1, 1, 1];
 const v = new Vector3();
 const n = new Vector3();
+/** Vertices this close to a cut plane count as on it (no slivers). */
+const CUT_EPS = 1e-4;
+
+/**
+ * V1 B cutaway: an index range of a merged mesh that belongs to a cut part. Upper ranges show while
+ * the part is uncut, cap ranges while it is cut; hidden ranges are degenerate triangles. `shown` holds
+ * the indices to write back (`src/render/cutaway.ts`).
+ */
+export interface CutRange { part: number; start: number; count: number; cap: boolean; shown: Uint16Array | Uint32Array }
+/** Per-capture box of the contour mask that is clamped to `y` while `part` is cut; `top` is its full max y. */
+export interface BoxCut { box: number; part: number; y: number; top: number }
+type Range = Omit<CutRange, 'shown'>;
 
 export class Batch {
   /** Added to every y while building (things standing on raised ground). */
@@ -18,14 +30,25 @@ export class Batch {
   private indices: number[] = [];
   private occluderIndices: number[] = [];
   private excludedOccluderIndices = new Set<number>();
+  /** Cut ranges in index positions; and the same for the captured occluder triangles. */
+  private readonly cuts: Range[] = [];
+  private readonly occluderCuts: Range[] = [];
 
   get indexCount(): number { return this.indices.length; }
 
   /** Captures the triangles added since `first`; `box` grows by their vertices (world space). */
   captureOccluderFrom(first: number, box?: Box3): void {
+    const upper = this.cuts.filter((c) => !c.cap && c.start >= first);
     for (let i = first; i < this.indices.length; i++) {
       if (this.excludedOccluderIndices.has(i)) continue;
       const k = this.indices[i]!;
+      // Upper triangles of a cut part stay one contiguous range in the mask too.
+      const cut = upper.find((c) => i >= c.start && i < c.start + c.count);
+      if (cut) {
+        const last = this.occluderCuts[this.occluderCuts.length - 1];
+        if (last && last.part === cut.part && last.start + last.count === this.occluderIndices.length) last.count++;
+        else this.occluderCuts.push({ part: cut.part, start: this.occluderIndices.length, count: 1, cap: false });
+      }
       this.occluderIndices.push(k);
       box?.expandByPoint(v.set(this.positions[k * 3]!, this.positions[k * 3 + 1]!, this.positions[k * 3 + 2]!));
     }
@@ -37,7 +60,8 @@ export class Batch {
   }
 
   /** Position-only copy of explicitly classified triangles; beauty batching remains unchanged. */
-  appendOccluder(positions: number[], indices: number[]): void {
+  appendOccluder(positions: number[], indices: number[], cuts: Range[] = []): void {
+    for (const c of this.occluderCuts) cuts.push({ ...c, start: c.start + indices.length });
     const remap = new Map<number, number>();
     for (const old of this.occluderIndices) {
       let next = remap.get(old);
@@ -48,6 +72,64 @@ export class Batch {
       }
       indices.push(next);
     }
+  }
+
+  /**
+   * Clips the triangles from index position `first` at world height `y`: lower triangles first, then
+   * the upper ones as one range of `part`. Crossing edges get new vertices (position, normal, uv and
+   * colour interpolated); winding is kept, vertices within CUT_EPS of the plane are not split.
+   */
+  clipFrom(first: number, part: number, y: number): void {
+    const P = this.positions, I = this.indices;
+    if (first >= I.length) return;
+    const side = (k: number): number => { const d = P[k * 3 + 1]! - y; return d > CUT_EPS ? 1 : d < -CUT_EPS ? -1 : 0; };
+    const edges = new Map<number, number>();
+    const cross = (p: number, q: number): number => {
+      if (p > q) [p, q] = [q, p];
+      const key = p * 67108864 + q;
+      let k = edges.get(key);
+      if (k !== undefined) return k;
+      const t = (y - P[p * 3 + 1]!) / (P[q * 3 + 1]! - P[p * 3 + 1]!);
+      k = P.length / 3;
+      const mix = (a: number[], dim: number): void => { for (let j = 0; j < dim; j++) a.push(a[p * dim + j]! + (a[q * dim + j]! - a[p * dim + j]!) * t); };
+      mix(P, 3);
+      P[k * 3 + 1] = y;
+      mix(this.normals, 3);
+      n.fromArray(this.normals, k * 3).normalize().toArray(this.normals, k * 3);
+      mix(this.uvs, 2);
+      mix(this.colors, 3);
+      edges.set(key, k);
+      return k;
+    };
+    const lower: number[] = [], upper: number[] = [], lowerEx: boolean[] = [], upperEx: boolean[] = [];
+    const fan = (poly: number[], out: number[], ex: boolean[], excluded: boolean): void => {
+      for (let j = 1; j + 1 < poly.length; j++) { out.push(poly[0]!, poly[j]!, poly[j + 1]!); ex.push(excluded); }
+    };
+    for (let i = first; i + 2 < I.length; i += 3) {
+      const tri = [I[i]!, I[i + 1]!, I[i + 2]!], s = tri.map(side), excluded = this.excludedOccluderIndices.has(i);
+      if (!s.includes(1)) { fan(tri, lower, lowerEx, excluded); continue; }
+      if (!s.includes(-1)) { fan(tri, upper, upperEx, excluded); continue; }
+      const lo: number[] = [], up: number[] = [];
+      for (let j = 0; j < 3; j++) {
+        const p = tri[j]!, q = tri[(j + 1) % 3]!, sp = s[j]!, sq = s[(j + 1) % 3]!;
+        if (sp <= 0) lo.push(p);
+        if (sp >= 0) up.push(p);
+        if (sp * sq < 0) { const k = cross(p, q); lo.push(k); up.push(k); }
+      }
+      fan(lo, lower, lowerEx, excluded);
+      fan(up, upper, upperEx, excluded);
+    }
+    I.length = first;
+    for (const k of [...this.excludedOccluderIndices]) if (k >= first) this.excludedOccluderIndices.delete(k);
+    [...lowerEx, ...upperEx].forEach((ex, t) => { if (ex) for (let j = 0; j < 3; j++) this.excludedOccluderIndices.add(first + t * 3 + j); });
+    for (const k of lower) I.push(k);
+    if (upper.length) this.cuts.push({ part, start: I.length, count: upper.length, cap: false });
+    for (const k of upper) I.push(k);
+  }
+
+  /** The triangles from `first` on are the cap of `part`: shown only while it is cut. */
+  capFrom(first: number, part: number): void {
+    if (this.indices.length > first) this.cuts.push({ part, start: first, count: this.indices.length - first, cap: true });
   }
 
   get empty(): boolean {
@@ -101,11 +183,22 @@ export class Batch {
     g.setAttribute('normal', new BufferAttribute(new Float32Array(this.normals), 3));
     g.setAttribute('uv', new BufferAttribute(new Float32Array(this.uvs), 2));
     g.setAttribute('color', new BufferAttribute(new Float32Array(this.colors), 3));
-    g.setIndex(this.positions.length / 3 > 65535 ? new BufferAttribute(new Uint32Array(this.indices), 1) : new BufferAttribute(new Uint16Array(this.indices), 1));
+    const index = this.positions.length / 3 > 65535 ? new Uint32Array(this.indices) : new Uint16Array(this.indices);
+    g.setIndex(new BufferAttribute(index, 1));
+    g.userData.cuts = cutRanges(index, this.cuts);
     g.computeBoundingSphere();
     g.computeBoundingBox();
     return g;
   }
+}
+
+/** Index ranges with their shown indices; cap ranges start hidden (degenerate). */
+function cutRanges(index: Uint16Array | Uint32Array, cuts: readonly Range[]): CutRange[] {
+  return cuts.map((c) => {
+    const shown = index.slice(c.start, c.start + c.count);
+    if (c.cap) index.fill(shown[0]!, c.start, c.start + c.count);
+    return { ...c, shown };
+  });
 }
 
 /** Batches keyed by material. */
@@ -118,13 +211,49 @@ export class BatchSet {
   /** Classify geometry by the object being built, never by its shared material. */
   captureOccluder(build: () => void): void {
     if (this.capturing) { build(); return; }
-    const starts = new Map([...this.map].map(([material, batch]) => [material, batch.indexCount]));
+    const starts = this.starts();
     this.capturing = true;
+    this.captureCuts.length = 0;
     try { build(); } finally {
       this.capturing = false;
       const box = new Box3();
       for (const [material, batch] of this.map) batch.captureOccluderFrom(starts.get(material) ?? 0, box);
-      if (!box.isEmpty()) this.occluderBoxes.push(box);
+      if (!box.isEmpty()) {
+        for (const c of this.captureCuts) this.boxCuts.push({ box: this.occluderBoxes.length, part: c.part, y: c.y, top: box.max.y });
+        this.occluderBoxes.push(box);
+      }
+    }
+  }
+
+  private starts(): Map<Material, number> {
+    return new Map([...this.map].map(([material, batch]) => [material, batch.indexCount]));
+  }
+
+  /** Cuts inside the running capture, and the mask boxes they clamp. */
+  private readonly captureCuts: Array<{ part: number; y: number }> = [];
+  private readonly boxCuts: BoxCut[] = [];
+  private cutting = false;
+
+  /**
+   * V1 B cutaway: what `build` adds is clipped at world height `y`; the upper triangles of each batch
+   * become one index range of `part` (`geometry.userData.cuts`), what `caps` adds shows only while the
+   * part is cut. Call it inside `captureOccluder`, so the contour mask gets the final triangles.
+   */
+  cut(part: number, y: number, build: () => void, caps?: () => void): void {
+    if (this.cutting) { build(); return; }
+    let starts = this.starts();
+    this.cutting = true;
+    try { build(); } finally { this.cutting = false; }
+    for (const [material, batch] of this.map) batch.clipFrom(starts.get(material) ?? 0, part, y);
+    if (this.capturing) this.captureCuts.push({ part, y });
+    if (!caps) return;
+    starts = this.starts();
+    caps();
+    for (const [material, batch] of this.map) {
+      const first = starts.get(material) ?? 0;
+      batch.capFrom(first, part);
+      // Caps are no occluders: the hero is never under one.
+      if (this.capturing) batch.excludeOccluderFrom(first);
     }
   }
 
@@ -141,17 +270,21 @@ export class BatchSet {
   }
 
   occluderMesh(): Mesh | null {
-    const positions: number[] = [], indices: number[] = [];
-    for (const batch of this.map.values()) batch.appendOccluder(positions, indices);
+    const positions: number[] = [], indices: number[] = [], cuts: Range[] = [];
+    for (const batch of this.map.values()) batch.appendOccluder(positions, indices, cuts);
     if (!indices.length) return null;
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
-    geometry.setIndex(indices);
+    const index = positions.length / 3 > 65535 ? new Uint32Array(indices) : new Uint16Array(indices);
+    geometry.setIndex(new BufferAttribute(index, 1));
+    geometry.userData.cuts = cutRanges(index, cuts);
     geometry.computeBoundingSphere();
     const mesh = new Mesh(geometry, OCCLUDER_PLACEHOLDER);
     mesh.name = 'large-occluder-depth';
     mesh.layers.set(OCCLUDER_LAYER);
     mesh.userData.boxes = [...this.occluderBoxes];
+    // Boxes are copied by reference: the cutaway clamps the same Box3 objects the outline tests.
+    mesh.userData.boxCuts = [...this.boxCuts];
     return mesh;
   }
 

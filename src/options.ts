@@ -1,6 +1,8 @@
 // Start options from the URL and from the options menu (stored in localStorage).
 //   ?profile=Qualität|Leistung   ?debug=hit,perf,flow   ?stress=40   ?seed=7
-//   ?map=hof (gate 1 courtyard)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
+//   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
+//   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
+//   ?cut=off (no V1 B cutaway)   ?cut=4.3 (yard cut height in meters, look test)
 import { PROFILES, type ProfileId } from './render/profile';
 
 export interface Options {
@@ -27,8 +29,12 @@ export interface Options {
   reveal: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
+  /** ?shadows=boxes: map chunk meshes cast no shadow (A/B test on the tablet; default off). */
+  boxShadows: boolean;
+  /** ?cut=off disables the V1 B cutaway; ?cut=<meters> overrides the Hinterhof cut height. */
+  cut?: 'off' | number;
   /** Köpenick (default) or the gate 1 courtyard. */
-  map: 'koepenick' | 'hof' | 'tunnel';
+  map: 'koepenick' | 'hof' | 'tunnel' | 'xhain';
   mapScale: number;
   /** Debug: start at this encounter. */
   startAt: number;
@@ -112,18 +118,26 @@ export function readOptions(): Options {
     autostart: q.has('autostart'),
     reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),
-    map: q.get('map') === 'hof' ? 'hof' : q.get('map') === 'tunnel' ? 'tunnel' : 'koepenick',
+    boxShadows: q.get('shadows') === 'boxes',
+    cut: parseCut(q.get('cut')),
+    map: (['hof', 'tunnel', 'xhain'] as const).find((k) => k === q.get('map')) ?? 'koepenick',
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
   };
 }
 
+function parseCut(v: string | null): Options['cut'] {
+  if (v === 'off') return 'off';
+  const h = Number(v);
+  return v !== null && v !== '' && Number.isFinite(h) && h >= 0 ? h : undefined;
+}
+
 /** Reloads with a changed profile (materials and render targets are built once at start). */
 export function reloadWith(change: Partial<Pick<Options, 'profile' | 'map'>>): void {
   const q = new URLSearchParams(location.search);
   if (change.profile) q.set('profile', PROFILES[change.profile].label);
-  // M19: Köpenick and the tunnel are separate page loads (the renderer builds one map).
+  // M19/M15: Köpenick, the tunnel and Xhain are separate page loads (the renderer builds one map).
   if (change.map) { if (change.map === 'koepenick') q.delete('map'); else q.set('map', change.map); q.delete('autostart'); q.delete('at'); }
   location.search = q.toString();
 }

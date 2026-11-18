@@ -29,12 +29,14 @@ export interface Facade {
   depth: number;
   /** Upper floors above the ground floor (altbau only). */
   floors: number;
+  /** M15: a fire wall (Brandwand) between Blockrand neighbours: no windows, doors or balconies. */
+  blank?: boolean;
   tone: PlasterTone;
   features: FacadeFeature[];
   seed: number;
 }
 
-export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights'
+export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights' | 'tankTrap'
   // M11c lot types (render: `src/render/props-urban.ts`, `props-market.ts`, `vegetation.ts`).
   | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind;
 /** M11d step 4 closed map edge (render: `src/render/props-edge.ts`, placement: `edgeProps` in `map.ts`). */
@@ -159,6 +161,8 @@ export function propCollider(p: Prop): Collider | null {
     case 'bauzaun':
     case 'barrier':
       return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2 + 0.05, hz: 0.3, rot: p.rot };
+    case 'tankTrap':
+      return { kind: 'circle', x: p.x, z: p.z, r: 0.75 };
     case 'bollard':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.14 };
     case 'fence':

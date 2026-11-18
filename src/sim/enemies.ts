@@ -1,7 +1,7 @@
 // Enemy behavior: chase along the flow field with separation, wind up, strike, recover, stagger, die.
 import { PLAYER } from '../data/combat';
 import { BOSS, ELITE_MODS, ENEMIES, SPAWN, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
-import { initCooldowns, isRush, jitter, runSpecial, think, tickCooldowns } from './ai';
+import { initCooldowns, isRush, jitter, passive, runSpecial, think, tickCooldowns } from './ai';
 import { colliderDistance } from './collide';
 import { angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Sim } from './types';
@@ -42,9 +42,30 @@ export function spawnEnemy(sim: Sim, x: number, z: number, kind: EnemyKind = pic
   return e;
 }
 
-/** Turns a body into an elite (2D: ×2.6 life, bigger, Flink is faster). Crows stay plain. */
+/**
+ * M12b: spawns `kind` and, for a pack kind (rats), the rest of its pack next to it (2D `spawnOne`:
+ * one rat plus four within 24 px). Returns the first body; the others share its multipliers.
+ */
+export function spawnPack(sim: Sim, x: number, z: number, kind: EnemyKind, hpMul = 1, dmgMul = 1): Enemy {
+  const lead = spawnEnemy(sim, x, z, kind, hpMul, dmgMul);
+  const n = ENEMIES[kind].pack ?? 1, r = ENEMIES[kind].radius;
+  for (let i = 1; i < n; i++) {
+    let qx = x, qz = z;
+    for (let tries = 0; tries < 6; tries++) {
+      qx = x + sim.rng.range(-0.8, 0.8);
+      qz = z + sim.rng.range(-0.8, 0.8);
+      if (!sim.level.blocked(qx, qz, r) && !sim.level.near(qx, qz, r + 0.5).some((c) => colliderDistance(c, qx, qz) < r)) break;
+      qx = x;
+      qz = z;
+    }
+    spawnEnemy(sim, qx, qz, kind, hpMul, dmgMul);
+  }
+  return lead;
+}
+
+/** Turns a body into an elite (2D: ×2.6 life, bigger, Flink is faster). Crows and rats stay plain (2D). */
 export function makeElite(sim: Sim, e: Enemy, mod: EliteMod = sim.rng.pick(ELITE_MODS)): void {
-  if (e.def.boss || e.def.fly) return;
+  if (e.def.boss || e.def.fly || e.def.pack) return;
   e.elite = mod;
   e.hp = e.maxHp = Math.round(e.maxHp * THREAT.eliteHp);
   e.def = { ...e.def, radius: e.def.radius * 1.15, speed: e.def.speed * (mod === 'flink' ? THREAT.eliteSpeed : 1) };
@@ -126,7 +147,10 @@ export function updateEnemies(sim: Sim): void {
       sim.events.push({ type: 'bossRage', id: e.id, name: def.name });
     }
     if (e.buff > 0) e.buff -= DT;
-    if (e.state !== 'dead') tickCooldowns(e);
+    if (e.state !== 'dead') {
+      tickCooldowns(e);
+      if (def.boss) passive(sim, e);
+    }
 
     switch (e.state) {
       case 'chase': {
@@ -154,6 +178,11 @@ export function updateEnemies(sim: Sim): void {
           // Walk straight when the way is clear, else follow the field.
           dir.x = toX / (dist || 1);
           dir.z = toZ / (dist || 1);
+        }
+        if (plan.turn) {
+          const c = Math.cos(plan.turn), sn = Math.sin(plan.turn), x0 = dir.x;
+          dir.x = x0 * c + dir.z * sn;
+          dir.z = dir.z * c - x0 * sn;
         }
         // Separation: steer away from close neighbors so the pack surrounds instead of stacking.
         let sx = 0;

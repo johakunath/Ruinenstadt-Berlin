@@ -18,6 +18,12 @@ export const FX = {
  growlSpitter:[{w:2,f:150,fe:240,a:.03,d:.3,vd:.1,vs:22,v:.16},{w:3,f:700,fe:1300,d:.28,q:4,v:.1}],
  roar:[{w:2,f:120,fe:42,a:.06,s:.3,d:.7,vd:.1,vs:14,v:.3},{w:3,f:300,fe:120,s:.2,d:.7,v:.2}],
  growlBoss:[{w:2,f:90,fe:45,a:.05,s:.12,d:.5,v:.25},{w:4,f:240,m:KNOCK,d:.35,v:.18}],
+ // M12b (S2 approach, variations of the cues above): rat squeak, Xhain boss voices.
+ growlRat:[{w:2,f:1500,fe:2400,a:.005,d:.09,vd:.05,vs:34,v:.1},{w:3,f:3600,fe:2400,d:.06,q:4,v:.06}],
+ growlGrenzer:[{w:2,f:140,fe:90,a:.02,s:.08,d:.3,v:.22},{w:3,f:900,fe:500,d:.2,q:2,v:.12}],
+ growlBrand:[{w:2,f:100,fe:50,a:.04,s:.1,d:.45,v:.22},{w:3,nt:1,f:280,fe:1300,a:.03,d:.35,v:.22}],
+ growlMutter:[{w:2,f:110,fe:70,a:.04,s:.1,d:.45,vd:.1,vs:20,v:.22},{w:2,f:1300,fe:2100,dl:.05,d:.12,vd:.05,vs:30,v:.1}],
+ growlHexe:[{w:2,f:330,fe:220,a:.08,s:.2,d:.5,vd:.15,vs:7,v:.18},{w:3,f:1200,fe:700,d:.4,q:5,v:.1}],
  swing:[{w:3,f:380,fe:1700,a:.05,s:.01,d:.09,q:1.6,v:.5}],
  heavy:[{w:3,f:220,fe:950,a:.07,s:.02,d:.16,q:1.4,v:.6},{w:2,f:95,fe:42,dl:.07,d:.22,v:.5}],
  sling:[{w:3,f:1800,fe:4200,a:.012,d:.07,q:2,v:.5},{w:4,f:430,m:[[1,1,1],[2.01,.6,.4]],d:.05,v:.25}],

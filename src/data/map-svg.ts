@@ -56,6 +56,13 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     const col = s.kind === 'path' ? '#6a5d45' : '#6f6656';
     out.push(`<path d="${path(s.pts)}" fill="none" stroke="${col}" stroke-width="${s.width}" stroke-linejoin="round" stroke-linecap="round" opacity="${s.kind === 'path' ? 0.7 : 0.9}"/>`);
   }
+  // M15: track fields (grey band, rails), viaducts (brick Stadtbahn, green U1 Hochbahn) and the Wall.
+  for (const r of m.railYards ?? []) out.push(`<path d="${path(r.pts)}" fill="none" stroke="#3a3632" stroke-width="${r.width}" stroke-linejoin="round"/><path d="${path(r.pts)}" fill="none" stroke="#8a8070" stroke-width="${r.width - 4}" stroke-dasharray="0.6 2.4" stroke-linejoin="round" opacity="0.5"/>`);
+  for (const v of m.viaducts ?? []) out.push(v.kind === 'stadtbahn'
+    ? `<path d="${path(v.pts)}" fill="none" stroke="#6b3626" stroke-width="${v.width}" stroke-linejoin="round"/><path d="${path(v.pts)}" fill="none" stroke="#a06a50" stroke-width="1.2" stroke-dasharray="3 2"/>`
+    : `<path d="${path(v.pts)}" fill="none" stroke="#3f8a5a" stroke-width="3" stroke-dasharray="6 3" stroke-linejoin="round"/>`);
+  for (const wl of m.walls ?? []) out.push(`<path d="${path(wl.pts)}" fill="none" stroke="#e8e2d4" stroke-width="1.6" stroke-linejoin="round"/>`);
+  for (const t of m.terraces) if (t.bridge) out.push(`<polygon points="${poly(t.poly)}" fill="#a99876" stroke="#14282b" stroke-width="0.6"/>`);
   for (const b of m.bridges) {
     const deg = (-b.rot * 180) / Math.PI;
     out.push(`<rect x="${-b.width / 2}" y="${-b.len / 2}" width="${b.width}" height="${b.len}" fill="#a99876" stroke="#14282b" stroke-width="0.6" transform="translate(${b.x} ${b.z}) rotate(${deg})"/>`);
@@ -87,6 +94,11 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     }
     if (l.kind === 'riesenrad') {
       out.push(`<circle cx="${l.x}" cy="${l.z}" r="9" fill="none" stroke="#f0b27a" stroke-width="1.2"/>`);
+      continue;
+    }
+    if (l.hx === 0) continue;
+    if (l.walkUnder) {
+      out.push(`<rect x="${l.x - l.hx}" y="${l.z - l.hz}" width="${l.hx * 2}" height="${l.hz * 2}" fill="none" stroke="#7fd09a" stroke-width="0.8"/>`);
       continue;
     }
     out.push(`<rect x="${-l.hx}" y="${-l.hz}" width="${l.hx * 2}" height="${l.hz * 2}" fill="#f0b27a" stroke="#14282b" stroke-width="0.6" transform="translate(${l.x} ${l.z}) rotate(${deg})"/>`);

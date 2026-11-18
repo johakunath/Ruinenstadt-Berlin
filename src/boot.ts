@@ -11,6 +11,7 @@ import { isDifficulty } from './data/difficulty';
 import { reloadWith, RESUME_KEY } from './options';
 import { optionsScreen } from './ui/options-screen';
 import { bindSettings, initFullscreenButton, opts } from './ui/settings';
+import { MAP_NAME, MAP_SUB, showTitleLinks, type MapId } from './ui/maps';
 import { startScreen } from './ui/start';
 
 const SAVE_KEY = 'ruinenstadt-berlin.save';
@@ -20,9 +21,7 @@ const options = optionsScreen();
 bindSettings();
 initFullscreenButton();
 const title = start.root;
-const sub = document.getElementById('title-sub')!;
-if (opts.map === 'tunnel') sub.textContent = 'S3-Tunnel · Richtung Warschauer Straße';
-else if (opts.map === 'hof') sub.textContent = 'Köpenick · Hinterhof bei Nacht';
+document.getElementById('title-sub')!.textContent = MAP_SUB[opts.map];
 
 // The few save facts the screen needs, read without the sim (main.ts reads the real save on load).
 // Debug starts (?at, ?stress, ?mapscale, ?spawn) never read the save, as in main.ts.
@@ -31,11 +30,10 @@ const peek = ((): { difficulty?: unknown; run?: { map?: string; index?: number }
   if (!persist) return null;
   try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
 })();
-const mapName = opts.map === 'tunnel' ? 'S3-Tunnel' : opts.map === 'hof' ? 'Hof' : 'Köpenick';
+const mapName = MAP_NAME[opts.map];
 const run = opts.map !== 'hof' && peek?.run?.map === mapName ? peek.run : null;
 start.setResume(run ? `Kampf ${(run.index ?? 0) + 1}` : null, isDifficulty(peek?.difficulty) ? peek.difficulty : start.difficulty);
-document.getElementById('go-tunnel')!.hidden = opts.map === 'hof' || (opts.map !== 'tunnel' && !peek?.profile?.inventory?.camp?.freed?.includes(0));
-if (opts.map === 'tunnel') document.getElementById('go-tunnel')!.innerHTML = '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>';
+showTitleLinks(opts.map, peek?.profile?.inventory?.camp?.freed ?? []);
 
 type Game = typeof import('./main');
 let game: Promise<Game | null> | null = null;
@@ -66,9 +64,9 @@ title.addEventListener('click', e => {
   if (b.id === 'play' || b.id === 'resume' || b.id === 'open-camp') {
     e.stopImmediatePropagation();
     void loadGame().then(m => { if (m) b.click(); });
-  } else if (b.id === 'go-tunnel') {
+  } else if (b.id === 'go-tunnel' || b.id === 'go-xhain') {
     e.stopImmediatePropagation();
-    reloadWith({ map: opts.map === 'tunnel' ? 'koepenick' : 'tunnel' });
+    reloadWith({ map: (b.dataset.to as MapId | undefined) ?? 'koepenick' });
   } else if (b.id === 'new-game') {
     e.stopImmediatePropagation();
     // Asks once: the second tap within a few seconds wipes the save (main.ts newGame).
