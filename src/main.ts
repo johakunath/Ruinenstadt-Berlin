@@ -86,10 +86,21 @@ const map = opts.map !== 'hof' ? (() => {
   const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
-  // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
+  // Dev showcase (`?props=crane,stall:1.5*4`, kind[:size][*count]): rows of six props near the start on the
+  // nearest free ground (no building, car or container within the block), all facing south (rot 0) so fronts compare.
   const show = new URLSearchParams(location.search).get('props');
-  if (show) show.split(',').flatMap((k) => { const [kind, n] = k.split('*'); return Array.from({ length: Number(n) || 1 }, () => kind as Prop['kind']); })
-    .forEach((kind, i) => props.push({ kind, x: def.start.x + 5 + (i % 6) * 5, z: def.start.z - 4 + Math.floor(i / 6) * 6, rot: i * 0.7, size: 1 }));
+  if (show) {
+    const items = show.split(',').flatMap((k) => { const [head = '', n] = k.split('*'); const [kind, size] = head.split(':'); return Array.from({ length: Number(n) || 1 }, () => ({ kind: kind as Prop['kind'], size: Number(size) || 1 })); });
+    const cols = Math.min(6, items.length), rows = Math.ceil(items.length / 6), span = (cols - 1) * 5 + 6, deep = (rows - 1) * 6 + 6;
+    const busy = (x0: number, z0: number): boolean => lots.some((l) => Math.abs(l.x - x0 - span / 2) < span / 2 + Math.max(l.w, l.d) / 2 && Math.abs(l.z - z0 - deep / 2) < deep / 2 + Math.max(l.w, l.d) / 2)
+      || props.some((p) => (p.kind === 'car' || p.kind === 'crane' || p.kind === 'container') && p.x > x0 - 3 && p.x < x0 + span && p.z > z0 - 3 && p.z < z0 + deep);
+    let ox = def.start.x + 5, oz = def.start.z - 4;
+    search: for (let r = 0; r < 30; r += 3) for (let a = 0; a < 16; a++) {
+      const x = def.start.x + 3 + Math.cos(a * Math.PI / 8) * r, z = def.start.z - 3 + Math.sin(a * Math.PI / 8) * r;
+      if (!busy(x, z)) { ox = x; oz = z; break search; }
+    }
+    items.forEach((it, i) => props.push({ kind: it.kind, x: ox + (i % 6) * 5, z: oz + Math.floor(i / 6) * 6, rot: 0, size: it.size }));
+  }
   return { def, lots, props, level: mapLevel(def, lots, props) };
 })() : null;
 const isTunnel = map?.def.tunnel !== undefined;

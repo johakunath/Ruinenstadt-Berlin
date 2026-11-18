@@ -84,6 +84,16 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
     const [x, z] = P(a, b);
     out.guards.push({ x, z, kind, pose, elite: o.elite ?? false, hp: o.hp ?? 1, wake: o.wake ?? 4.5, facing: rng.range(0, 6.28) });
   };
+  /** Drops props and trees added since the given indices whose centre lies within `half` of the local segment (a0, b0)–(a1, b1). No random draws. */
+  const clearLane = (fromProp: number, fromLot: number, a0: number, b0: number, a1: number, b1: number, half: number): void => {
+    const near = (x: number, z: number): boolean => {
+      const dx = x - l.x, dz = z - l.z, a = c * dx - s * dz, b = s * dx + c * dz;
+      const ux = a1 - a0, uz = b1 - b0, k = Math.max(0, Math.min(1, ((a - a0) * ux + (b - b0) * uz) / (ux * ux + uz * uz || 1)));
+      return Math.hypot(a - a0 - ux * k, b - b0 - uz * k) < half;
+    };
+    out.props = [...out.props.slice(0, fromProp), ...out.props.slice(fromProp).filter((p) => p.kind === 'clothesline' || !near(p.x, p.z))];
+    out.lots = [...out.lots.slice(0, fromLot), ...out.lots.slice(fromLot).filter((q) => !near(q.x, q.z))];
+  };
   const side = rng.pick([-1, 1]);
   switch (l.special) {
     case 'hinterhof': {
@@ -105,11 +115,14 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       run('wall', -W, -D + 0.2, W, -D + 0.2, [[side > 0 ? W + rx - 2.7 : W + rx - 2.7, W + rx + 2.7]], 0.02);
       run('wall', -W + 0.2, -D, -W + 0.2, qb0, [], 0.02); run('wall', W - 0.2, -D, W - 0.2, qb0, [], 0.02);
       // First yard: bins, bikes, a clothesline, a fire barrel, crates.
+      const firstProp = out.props.length, firstLot = out.lots.length;
       const y1 = (qb1 + fb) / 2, ya = -side * (W - 1.2);
       prop('bins', ya, y1 + 2, Math.PI / 2 * side, 1, 0.12); prop('bikes', -side * 2, fb - 0.8, Math.PI, 1, 0.3);
       prop('clothesline', rng.range(-3, 3), y1 - 0.5, rng.range(-0.5, 0.5), rng.range(6, 9), 0.1);
       prop('fireBarrel', side * rng.range(0, 4), y1 - 2.4); prop('crates', -side * (W - 2.5), qb1 + 1.2, rng.range(0, 1));
       prop('rubble', side * (W - 7), qb1 + 1.5, 0, rng.range(0.6, 1)); tree(side * rng.range(-2, 2), y1 + rng.range(-1, 1), 4);
+      // Keep a lane from the Durchfahrt to the Quergebäude passage (P21: the second yard was cut off).
+      clearLane(firstProp, firstLot, gx, fb, qx, qb1, 1.6);
       // Second yard: a lost corner with the Remise, crates (loot) and a clothesline.
       const y2 = (-D + 4.5 + qb0) / 2;
       prop('crate', -rx * 0.4, y2 + rng.range(-1, 1), rng.range(0, 1)); prop('crate', -rx * 0.4 + 1.1, y2 - 0.8, rng.range(0, 1));
@@ -228,7 +241,7 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       for (const b of [D - 3.4, -D + 3.4]) for (let a = -W + 2.6; a < W - 2; a += rng.range(3.8, 4.6)) slots.push([a, b]);
       const broken = rng.int(slots.length);
       slots.forEach(([a, b], i) => {
-        const r = (b > 0 ? Math.PI : 0) + rng.range(-0.35, 0.35);
+        const r = (b > 0 ? Math.PI : 0) + rng.range(-0.15, 0.15);
         if (i === broken) { prop('stallBroken', a, b, r, 1, 0.4); prop('spill', a + rng.range(-1, 1), b + (b > 0 ? -2 : 2), rng.range(0, 6), 1.2, 1); }
         else if (rng.next() < 0.88) prop('stall', a + rng.range(-0.5, 0.5), b + rng.range(-0.6, 0.6), r, 1, 0.12);
       });

@@ -10,6 +10,7 @@ import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { onFerryPier } from '../sim/ferry';
+import { snapReachable } from '../sim/reach';
 import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
 import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, type SpecialKind } from './lots';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
@@ -1813,9 +1814,12 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     level.traderSpot = { ...T.trader };
     if (T.flood) level.wade = { pts: T.flood.pts.map(([x, z]) => ({ x, z })), half: T.flood.width / 2, factor: T.flood.slow };
   }
-  level.guards = [...(m.guards ?? []), ...lots.flatMap((l) => l.content?.guards ?? [])];
+  // Lot guards and event spots are sampled before or between props; move the ones a prop covers to the
+  // nearest free ground (P21, P23). No random draws, so lots and props stay as they are.
+  const snap = <T extends { x: number; z: number }>(p: T): T => { const q = snapReachable(level, p.x, p.z); return q ? { ...p, x: q.x, z: q.z } : p; };
+  level.guards = [...(m.guards ?? []), ...lots.flatMap((l) => (l.content?.guards ?? []).map(snap))];
   level.spots = { rescue: [], trader: [], cache: [] };
-  for (const l of lots) for (const k of ['rescue', 'trader', 'cache'] as const) { const p = l.content?.spots[k]; if (p) level.spots[k].push({ x: p[0], z: p[1] }); }
+  for (const l of lots) for (const k of ['rescue', 'trader', 'cache'] as const) { const p = l.content?.spots[k]; if (p) level.spots[k].push(snap({ x: p[0], z: p[1] })); }
   return level;
 }
 

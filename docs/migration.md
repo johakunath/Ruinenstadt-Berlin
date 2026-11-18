@@ -68,7 +68,7 @@ Goal: play Köpenick with every 2D feature that matters, then work only here. Ch
 | Balance bot | M14 | Built: plays whole campaigns in Node; first tuning pass done, calibration open |
 | Run content: Verband, Molotow, healing drops, events (trader, rescue, ambush, cache, horde, zone), hidden blessings, shrines | M16 | Built: one event per stretch between fights, every type once per run; places are seeded, M16b moves them into side branches |
 | Side branches off the route: short dead ends with a surprise (mini-boss, ambush, valuable crate, collectible blessing) | M16b | Built (2026-11-17, variant A): three fenced lanes in Köpenick, one in each zone |
-| World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Open |
+| World variety from 2D: lot types (Hinterhof, Markt, park with pond, Kleingärten, Trümmerfeld, Baustelle with crane, Parkplatz), graffiti, puddles, weather (fireflies, rain, ash, embers, fog), area name messages | M11c | Built (2026-11-17): eight lot types, weather and area messages; art follow-ups in backlog P17 to P20 |
 | Camp as menu: upgrades, buildings, stations, survivors, meals, smith (mods), trader | M13 | Built (2026-11-16, `docs/tasks/m13-camp.md`): seven stations, meals from Zutaten, Lazarett, Aufsätze, Lager; playtest open |
 | Späti trader: 2D trader port, then trade screen and bigger offer (backlog B13) | M13b | Built (2026-11-16): keeper behind the counter in every Späti, four items, Verband, Molotow, full heal; stock per Späti and run. Own trade screen design and balance open |
 | Menus: start, intro and tutorial cards, end screen, Kodex, options | M17 | Built (2026-11-16): four intro cards before the first run, tutorial cards for the first loot and blessing, end screens with stats, title buttons that say what they keep, Hauptmenü in the pause menu; Kodex and options in U1/U2 |
@@ -97,7 +97,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, oth
 | S2 | Enemy sounds per type, distance volume | Claude · Opus medium | S1 | Each type recognizable by ear |
 | S3 | Boss voices (tool: Q9) | Claude, Johannes | M12 | |
 | M14 | Balance bot: port `tools/sim.js`, `tools/balance.mjs`, then calibrate to Johannes (B9, B10) | Codex port, Claude rework | M8 | Bot clear times match playtests |
-| M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`). Xhain built 2026-11-18 (`docs/maps/xhain.md`); Alexanderplatz in PR #49; Mitte planned (`docs/tasks/m15-mitte.md`) | Claude, Johannes | P1 | |
+| M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`). Xhain, Alexanderplatz and Mitte built 2026-11-18 (rows in the Queue); Charlottenburg and the Fernsehturm finale not started (Q8) | Claude, Johannes | P1 | |
 
 Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`): steps 1–5 done 2026-11-17 (Blender pipeline, left-hand grip, coat and vest outfits, boots, sneakers, gloves, scarf, equipment swap, turnable inventory doll); step 6 painted textures (Codex) and step 7 measurement (Johannes) open. H2 Köpenick ghoul and other enemies.
 
