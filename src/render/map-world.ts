@@ -134,16 +134,17 @@ export function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
+  const asphalt = paintAsphalt(o).map;
   const uDirt = { value: dirt };
   const m: MapMats = {
     ...base,
     railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
-    asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
+    asphalt: materials.surface({ map: asphalt, roughness: 0.85, vertexColors: true }),
     path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
     roof: materials.surface({ map: paintRoofTiles(o).map, roughness: 0.8, vertexColors: true }),
-    tar: materials.surface({ map: paintAsphalt(o).map, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
+    tar: materials.surface({ map: asphalt, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
     concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
     mossy: materials.surface({ map: paintConcrete(o, '#6f7a5c').map, roughness: 0.9, vertexColors: true }),
     // M11d: rippled, reflective water; the normal map scrolls in `update` (Qualität only: one extra texture read on water pixels).
@@ -174,6 +175,10 @@ export function makeMapMats(materials: Materials): MapMats {
   loadGroundTexture('litter', o.anisotropy, texture => {
     m.litter.map?.dispose();
     m.litter.map = texture;
+  });
+  loadGroundTexture('asphalt', o.anisotropy, texture => {
+    m.asphalt.map = m.tar.map = texture;
+    asphalt.dispose();
   });
   return m;
 }
