@@ -49,7 +49,7 @@ Why B3: the same index buffer is drawn by every pass, so beauty, normal/depth pr
 - Built as specified: `src/data/cut.ts`, `BatchSet.cut` and clipping in `src/render/batch.ts`, `src/render/cutaway.ts`, `ChunkBuilder.cut`, caps, `?cut=off`, `?cut=<m>`. Tests: `cut.test.ts`, `batch-cut.test.ts`, `cutaway.test.ts`. `npm run check` and the smoke test pass.
 - Xhain: 12 zones (10 Hinterhöfe, Thomaskirche, Bethanien), 40 cut parts. Köpenick: its Hinterhöfe. Cost at a courtyard spot: draw calls equal with and without (530), about 2 % more triangles from clip splits and caps.
 - Proof: `docs/proof/v1b/`. Uncut, the camera sits inside St. Thomas; cut, the square behind it is free. In the yard the 1.2 m cut shows hero and ground; at 4.3 m (`hinterhof-cut-4.3.png`) the stub still hides her.
-- **Johannes decides:** yard cut height 1.2 m (built) or 4.3 m as in the mockup (`CUT.yard`); whether the near-black caps read as roofs or as holes (`CAP_TINT` in `map-world.ts`).
+- **Johannes decides:** yard cut height 1.2 m (built) or 4.3 m as in the mockup (`CUT.yard`); whether the near-black caps read as cut buildings or as holes (`CAP_TINT` in `map-world.ts`). Check 6 in `docs/tasks/pt-hardware-checks.md`.
 - Known: the church's shadow caster is one footprint box, so its stub throws a rectangular shadow. Yard `wall` props are not cut. Oberbaum towers not flagged (`Landmark.cut` in `src/data/xhain.ts`).
 - Reused from 2D: the trigger idea of `js/render.js` (objects in front of the player react, parts of one landmark together); not its alpha fade.
 - Next use of the engine: any lot or landmark, via `Landmark.cut` or a new zone rule in `cutPlan`.

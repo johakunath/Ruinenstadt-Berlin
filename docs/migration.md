@@ -32,6 +32,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
 | K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
 | P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; per-pass analysis and ranked measures (playtest 2026-11-17) | Claude · Fable high (analysis), Opus high (build), Johannes measures | steps 1 and 2 built (2026-11-18: 32 m chunks, shadow map at 30 Hz on Leistung, test switch `?shadows=boxes`), measurement open: `docs/tasks/p1-heat.md` |
+| PT Hardware and quality checks for Johannes (running list; every session adds what must be checked on real devices) | Johannes; all sessions add rows | open: `docs/tasks/pt-hardware-checks.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements: `docs/tasks/p1b-proxy-passes.md` |
 | KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
 

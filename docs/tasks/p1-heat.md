@@ -41,15 +41,8 @@ Two findings set the ranking. The world is drawn three times per frame, and the 
 | Smaller shadow frustum | 5-storey rows throw shadows 9.5 m sideways; 60 m is needed |
 | Cutaway (V1 B) cost | None per frame: no draw calls, shaders or lights; one index upload when the hero enters or leaves a zone; fewer triangles while cut |
 
-### Johannes measures (PC and Tab S9, `?debug=perf`)
-| # | Test | Tells us |
-|---|---|---|
-| 1 | Tab S9, Leistung, Xhain Oranienstraße, 10 min: temperature and fps, `main` against this PR | Whether measures 1 and 2 are felt |
-| 2 | Same with Akkusparen on | If the heat goes away, pixel load dominates (do row 8); if not, draw calls and geometry (do P1b first) |
-| 3 | `?shadows=boxes` against default: look and temperature | Whether row 4 becomes the Leistung default |
-| 4 | Run and dodge on Leistung: hero shadow late or jumping? Ground shadows swimming while walking? | Row 2 look check |
-| 5 | Enter a Hinterhof, walk behind St. Thomas: a hitch at the moment of the cut? | Cutaway upload cost |
-| 6 | PC, Qualität: fps as before? | No regression |
+### Johannes measures
+Checks 1 to 5 and 7 in `docs/tasks/pt-hardware-checks.md` (one list for all sessions). A third, lowest quality level is planned as `docs/tasks/q1-quality-levels.md`; rows 4 and 8 of the ranking are its candidates, row 3 (P1b) is for every level.
 
 ## Older candidates (row 8 above; measure one at a time)
 | Candidate | Expected gain | Risk |
