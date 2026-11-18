@@ -210,8 +210,8 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
     }
     case 'roar': {
       const R = BOSS.roar;
-      const o = roarOf(e);
-      for (let i = 0; i < o.n; i++) sim.threats.waves.push({ x: e.x, z: e.z, r: -i * o.gap, max: o.max, speed: R.speed, damage: damageOf(e, o.damage), floor: o.floor, width: R.width, hit: false });
+      const ro = roarOf(e);
+      for (let i = 0; i < ro.n; i++) sim.threats.waves.push({ x: e.x, z: e.z, r: -i * ro.gap, max: ro.max, speed: R.speed, damage: damageOf(e, ro.damage), floor: ro.floor, width: R.width, hit: false });
       if (e.kind === 'dirigent') sim.events.push({ type: 'note', text: 'Fortissimo!', color: '#ff4fa3', x: e.x, z: e.z });
       for (const o of sim.enemies) if (o !== e && o.state !== 'dead' && Math.hypot(o.x - e.x, o.z - e.z) < R.buffRange) o.buff = R.buff;
       if (e.kind === 'rex' && ++e.cycle % BOSS.rex.raptorsEvery === 0) summon(sim, e, 'raptor', 2);
