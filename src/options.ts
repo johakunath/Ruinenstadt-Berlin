@@ -1,6 +1,6 @@
 // Start options from the URL and from the options menu (stored in localStorage).
 //   ?profile=Qualität|Leistung   ?debug=hit,perf,flow   ?stress=40   ?seed=7
-//   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15), lager (walkable camp, M20)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
+//   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15), alex (M15 Alexanderplatz), lager (walkable camp, M20)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
 //   ?map=tunnel&line=1 (a tunnel line, S3 default)
 //   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
 //   ?cut=off (no V1 B cutaway)   ?cut=4.3 (yard cut height in meters, look test)
@@ -36,7 +36,7 @@ export interface Options {
   boxShadows: boolean;
   /** ?cut=off disables the V1 B cutaway; ?cut=<meters> overrides the Hinterhof cut height. */
   cut?: 'off' | number;
-  /** Köpenick (default), the gate 1 courtyard, a tunnel, Xhain or the walkable camp (M20). */
+  /** Köpenick (default), the gate 1 courtyard, a tunnel, Xhain, Alexanderplatz or the walkable camp (M20). */
   map: MapId;
   /** M20: tunnel line (0 = S3). */
   line: number;
@@ -47,7 +47,7 @@ export interface Options {
   spawn: string[];
 }
 
-const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'lager'];
+const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'alex', 'lager'];
 const KEY = 'ruinenstadt-berlin.options';
 /** M20: session flag for the next page load: start straight into this (the camp's departure board). */
 export const GO_KEY = 'ruinenstadt-berlin.go';

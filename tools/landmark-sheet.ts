@@ -1,9 +1,12 @@
-// Dev tool page: one Köpenick landmark in daylight from several views, for art checks against the
+// Dev tool page: one Köpenick, Xhain or Alexanderplatz landmark in daylight from several views, for art checks against the
 // reference photos (M11d). Never part of the game build.
 //   /tools/landmark-sheet.html?kind=rathaus                three-quarter, front, game camera, top
 //   &views=quarter,game  &variant=1 (dinos)  &w=480&h=400
 import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { koepenickMap } from '../src/data/koepenick';
+import { alexMap } from '../src/data/alexanderplatz';
+import { ALEX_KINDS, buildAlexLandmark } from '../src/render/alex-world';
+import { paintAlexAtlas } from '../src/render/alex-paint';
 import type { LandmarkKind } from '../src/data/map';
 import { buildLandmark } from '../src/render/landmarks';
 import { LOOK } from '../src/render/looks';
@@ -16,14 +19,16 @@ const kind = (q.get('kind') ?? 'rathaus') as LandmarkKind;
 const variant = Number(q.get('variant') ?? 0);
 const views = (q.get('views') ?? 'quarter,front,game,top').split(',');
 const W = Number(q.get('w') ?? 480), H = Number(q.get('h') ?? 420);
-const def = koepenickMap().landmarks.find((l) => l.kind === kind && (l.variant ?? 0) === variant)!;
+const def = [...koepenickMap().landmarks, ...alexMap().landmarks].find((l) => l.kind === kind && (l.variant ?? 0) === variant)!;
 const l = { ...def, x: 0, z: 0, rot: 0 };
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(W * views.length, H, false);
 const materials = new Materials(LOOK, PROFILES.qualitaet);
-const b = new ChunkBuilder(makeMapMats(materials));
-buildLandmark(b, l);
+const mm = makeMapMats(materials);
+if (ALEX_KINDS.has(kind)) { const t = paintAlexAtlas(); mm.alex = materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe0a0, emissiveIntensity: 0.8, roughness: 0.6 }); }
+const b = new ChunkBuilder(mm);
+if (ALEX_KINDS.has(kind)) buildAlexLandmark(b, l); else buildLandmark(b, l);
 const scene = new Scene();
 scene.background = new Color(0x9fb4c0);
 scene.add(new HemisphereLight(0xe8f0ff, 0x5a5040, 2.0));
@@ -34,7 +39,9 @@ for (const m of b.solid.meshes()) scene.add(m);
 // Let the async ground/paint textures arrive.
 await new Promise((r) => setTimeout(r, 1500));
 const size = Math.max(l.hx, l.hz, 6);
-const tall = { rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnhof: 10, schloss: 18, forum: 10, dino: 5, spati: 4 }[kind];
+const tall = ({ rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnhof: 10, schloss: 18, forum: 10, dino: 5, spati: 4,
+  weltzeituhr: 11, dom: 32, rotesrathaus: 42, fernsehturm: 30, marienkirche: 32, neptunbrunnen: 6, nikolaikirche: 28, brunnen: 7, hotelstadtberlin: 50,
+  sbahnalex: 12, sbahnhackescher: 12, hausdeslehrers: 36, kongresshalle: 9, kino: 13, cafemoskau: 14, altesmuseum: 12, palast: 16 } as Record<string, number>)[kind] ?? 12;
 const cam = new PerspectiveCamera(36, W / H, 0.5, 600);
 renderer.setScissorTest(true);
 views.forEach((v, i) => {

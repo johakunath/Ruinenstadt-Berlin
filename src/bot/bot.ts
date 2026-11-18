@@ -555,5 +555,5 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   }
   kills += sim.kills;
   const at = Math.min(sim.run.index, level.encounters.length - 1);
-  return { won, time, deaths, kills, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase})`, power: power(sim.stats), weapon: sim.stats.kind };
+  return { won, time, deaths, kills, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }

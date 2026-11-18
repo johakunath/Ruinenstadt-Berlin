@@ -4,7 +4,7 @@
 import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, stopName, STOPS } from '../data/lines';
 import { keyNav } from './focus';
 
-export type NetGo = { map: 'koepenick' | 'xhain' } | { map: 'tunnel'; line: number };
+export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' } | { map: 'tunnel'; line: number };
 
 export class NetBoard {
   readonly root = document.createElement('div');
@@ -75,11 +75,12 @@ export class NetBoard {
     this.root.querySelector<HTMLElement>('[data-ride]')?.focus();
   }
 
-  private stopOpen(i: number): boolean { return !!STOPS[i]?.map && (i !== 1 || campOpen(this.freed)); }
+  /** A district opens with the line that leads to it (the camp at Xhain with the S3, M15: the Alex with the U8). */
+  private stopOpen(i: number): boolean { return !!STOPS[i]?.map && (i === 0 || (i === 1 ? campOpen(this.freed) : this.freed.includes(LINE_FREED + i - 1) || this.freed.includes(i))); }
   private ride(): void {
     const s = this.sel;
     if (!s) return;
-    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
+    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain' || m === 'alex') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
     if (linePlayable(s.line, this.freed)) this.go({ map: 'tunnel', line: s.line });
   }
 

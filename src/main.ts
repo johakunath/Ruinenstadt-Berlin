@@ -37,6 +37,8 @@ import { tunnelNotice, tunnelObjective } from './ui/tunnel-notice';
 import { STATIONS } from './data/camp';
 import { siteLevel } from './sim/camp';
 import { xhainMap } from './data/xhain';
+import { alexMap } from './data/alexanderplatz';
+import { skyFor } from './render/sky';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, showTitleLinks, wonLink, type MapId } from './ui/maps';
 import { areaAt, generateLots, generateProps, mapLevel } from './data/map';
 import { mapSvg } from './data/map-svg';
@@ -79,7 +81,7 @@ abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
 // Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : koepenickMap(opts.mapScale);
+  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
@@ -138,7 +140,7 @@ function finishLootExit(leave: boolean): void {
     lootExit = 'off';
     lootChip.hidden = true;
     if (afterLoot === 'camp') { afterLoot = 'again'; toCamp(); return; }
-    if (afterLoot === 'map') { afterLoot = 'again'; goMap(wonLink(mapId)?.to ?? 'koepenick'); return; }
+    if (afterLoot === 'map') { afterLoot = 'again'; const link = wonLink(mapId, line); goMap(link?.to ?? 'koepenick', link?.line ?? 0); return; }
     again();
   } else {
     // Back into the map to fetch it.
@@ -206,7 +208,7 @@ function showWon(): void {
   document.getElementById('won-stats')!.innerHTML = endStats(true);
   (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined;
   document.getElementById('won-title')!.textContent = winText;
-  const t = document.getElementById('won-tunnel')!, link = wonLink(mapId);
+  const t = document.getElementById('won-tunnel')!, link = wonLink(mapId, line);
   t.hidden = !level || !link;
   if (link) t.innerHTML = link.html;
   showCampButtons();
@@ -223,7 +225,8 @@ function showCampButtons(): void {
 // Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
 document.getElementById('won-tunnel')!.addEventListener('click', () => {
   if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
-  goMap(wonLink(mapId)?.to ?? 'koepenick');
+  const link = wonLink(mapId, line);
+  goMap(link?.to ?? 'koepenick', link?.line ?? 0);
 });
 /** M19/M15: the title's map buttons (tunnel after Köpenick, Xhain after the tunnel). */
 function showTunnelButton(): void {
@@ -595,7 +598,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : MAP_NAME[mapId]) : 'Neustart');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : MAP_NAME[mapId]) : 'Neustart');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -1029,8 +1032,10 @@ window.__game = {
 // The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
 showTunnelButton();
 
+// M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants).
+const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: LOOK, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
+  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
 })
   .then((r) => {

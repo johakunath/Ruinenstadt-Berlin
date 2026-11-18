@@ -3,7 +3,7 @@
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Texture } from 'three';
 import { Rng } from '../sim/math';
 
-type Ctx = CanvasRenderingContext2D;
+export type Ctx = CanvasRenderingContext2D;
 
 export const PALETTE = {
   cream: '#f0b27a',

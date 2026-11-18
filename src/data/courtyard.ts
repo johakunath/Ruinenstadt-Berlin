@@ -38,7 +38,9 @@ export interface Facade {
 
 export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights' | 'tankTrap'
   // M11c lot types (render: `src/render/props-urban.ts`, `props-market.ts`, `vegetation.ts`).
-  | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind;
+  | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind | GdrPropKind;
+/** M15 Alexanderplatz props (render: `src/render/props-gdr.ts`). */
+export type GdrPropKind = 'greenhouse' | 'sunflowers' | 'climber' | 'flagpole';
 /** M11d step 4 closed map edge (render: `src/render/props-edge.ts`, placement: `edgeProps` in `map.ts`). */
 export type EdgePropKind = 'brandwand' | 'rubbleWall' | 'thicket' | 'overgrowth' | 'edgeHedge' | 'barricade' | 'fallenTree';
 export type UrbanPropKind = 'crane' | 'container' | 'scaffold' | 'rohbau' | 'pallets' | 'ticketMachine' | 'boom' | 'bikes' | 'clothesline' | 'gravestone' | 'wall' | 'lowWall' | 'slab' | 'girder';
@@ -132,6 +134,15 @@ export function propCollider(p: Prop): Collider | null {
     }
     case 'fireBarrel':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.42 };
+    // M15 Alexanderplatz: glass house 8 × 4.6 m (scaled), sunflower clump, rocket climbing frame, flag pole.
+    case 'greenhouse':
+      return { kind: 'box', x: p.x, z: p.z, hx: 2.3 * p.size, hz: 4 * p.size, rot: p.rot };
+    case 'sunflowers':
+      return { kind: 'circle', x: p.x, z: p.z, r: 0.45 * p.size };
+    case 'climber':
+      return { kind: 'circle', x: p.x, z: p.z, r: 1.25 };
+    case 'flagpole':
+      return { kind: 'circle', x: p.x, z: p.z, r: 0.14 };
     case 'lantern':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.2 };
     case 'van':

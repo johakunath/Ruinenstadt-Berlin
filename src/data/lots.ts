@@ -8,7 +8,9 @@ import type { EnemyKind } from './enemies';
 import type { Lot, Pt } from './map';
 import { Rng } from '../sim/math';
 
-export type SpecialKind = 'hinterhof' | 'parkplatz' | 'kleingarten' | 'teich' | 'truemmer' | 'baustelle' | 'markt' | 'kirchhof';
+export type SpecialKind = 'hinterhof' | 'parkplatz' | 'kleingarten' | 'teich' | 'truemmer' | 'baustelle' | 'markt' | 'kirchhof'
+  // M15 Alexanderplatz (GDR clockwork gardens): a greenhouse garden and a Plattenbau courtyard.
+  | 'glashaus' | 'plattenhof';
 /** Sleeping guards: `lying` play dead on the ground, `hidden` wait unseen in a doorway or under rubble. */
 export interface LotGuard { x: number; z: number; kind: EnemyKind; elite: boolean; wake: number; hp: number; pose: 'lying' | 'hidden'; facing: number }
 /** A walkable plank path over water (pond jetty): center, facing along its length. */
@@ -36,11 +38,14 @@ export const SPECIAL_SIZE: Record<SpecialKind, { w: [number, number]; d: [number
   baustelle: { w: [19, 22], d: [16, 18], max: 3 },
   markt: { w: [17, 20], d: [13, 15], max: 3 },
   kirchhof: { w: [19, 22], d: [16, 18], max: 2 },
+  glashaus: { w: [18, 22], d: [15, 18], max: 3 },
+  plattenhof: { w: [19, 23], d: [16, 19], max: 3 },
 };
 /** Chance per street slot to try a lot type (Johannes: two in five lots; many tries do not fit, so higher). */
 export const SPECIAL_SHARE = 0.7;
 export const SPECIAL_NAME: Record<SpecialKind, string> = {
   hinterhof: 'Hinterhof', parkplatz: 'Parkplatz', kleingarten: 'Kleingärten', teich: 'Teich', truemmer: 'Trümmerfeld', baustelle: 'Baustelle', markt: 'Markt', kirchhof: 'Kirchhof',
+  glashaus: 'Gewächshausgarten', plattenhof: 'Plattenbauhof',
 };
 
 export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
@@ -243,6 +248,39 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       prop('candles', rng.range(-W / 2, 0), rng.range(-2, 2)); prop('bush', -W + 1.6, -D + 1.6, 0, 1.2);
       for (let i = 0; i < 3; i++) { const [a, b] = rng.pick(graves); guard('walker', a + 0.4, b - 1.1, 'lying', { wake: 3.8 }); }
       out.spots.rescue = P(W - 4, 0);
+      break;
+    }
+    case 'glashaus': {
+      // GDR clockwork gardens: one or two glass houses on brick bases, beds in rows, sunflowers that grew
+      // wild, a garden shed and a water barrel. The gardener trades here; a Kernspeier waits in the flowers.
+      out.ground = 'dirt';
+      const two = W > 9.5;
+      const houses = two ? [-W / 2 + 0.2, W / 2 - 0.2] : [rng.range(-1.5, 1.5)];
+      for (const a of houses) prop('greenhouse', a, -D / 2 + 0.6, Math.PI / 2 + rng.range(-0.05, 0.05), two ? 0.95 : 1.1, 0.05);
+      for (let a = -W + 2; a < W - 1.5; a += rng.range(2.2, 2.8)) prop('gardenBed', a, D - 3.6 + rng.range(-0.4, 0.4), Math.PI / 2, 1, 0.1);
+      for (let i = 0; i < 5; i++) prop('sunflowers', rng.range(-W + 1.5, W - 1.5), rng.pick([D - 1.4, 0.8, -D + 1.2]) + rng.range(-0.5, 0.5), rng.range(0, 6), rng.range(0.8, 1.2), 1);
+      prop('shed', side * (W - 1.8), D - 6.2, side > 0 ? -Math.PI / 2 : Math.PI / 2, 1, 0.2);
+      prop('fireBarrel', -side * (W - 1.4), 1.2); prop('crates', side * (W - 2.2), 0.6, rng.range(0, 2), 1, 0.4);
+      run('picket', -W + 0.3, D - 0.3, W - 0.3, D - 0.3, [[W - 2, W + 2]]);
+      out.spots.trader = P(0, 1.6); out.spots.cache = P(-side * (W - 2), -D + 1.4);
+      guard('spitter', rng.range(-W + 3, W - 3), D - 1.6, 'hidden', { elite: rng.next() < 0.4, hp: 1.6, wake: 4 });
+      break;
+    }
+    case 'plattenhof': {
+      // The yard between two Plattenbau slabs: the rocket climbing frame, a sandbox, benches, clotheslines,
+      // bins and a parked car; the dead lie between the swings.
+      out.ground = 'asphalt';
+      building('shop', -W + 0.2, -W + 6.2, -D, -D + 5, 0);
+      prop('climber', side * rng.range(1.5, 3.5), rng.range(-1.5, 1.5), rng.range(0, 6), 1, 0.05);
+      run('lowWall', -side * 5, -D / 2 - 1.5, -side * 1.5, -D / 2 - 1.5, [], 0.02);
+      run('lowWall', -side * 5, -D / 2 + 2, -side * 1.5, -D / 2 + 2, [], 0.02);
+      prop('bench', -side * 3.2, D - 3, Math.PI, 1, 0.1); prop('bench', side * (W - 2.5), -1, side > 0 ? -Math.PI / 2 : Math.PI / 2, 1, 0.1);
+      prop('clothesline', rng.range(-2, 2), -D + 2.4, rng.range(-0.3, 0.3), rng.range(6, 9), 0.1);
+      prop('bins', W - 2, D - 1.6, Math.PI, 1, 0.12); prop('bikes', -W + 2.4, D - 1.8, Math.PI, 1, 0.3);
+      prop('car', side * (W - 2.6), D - 4.4, rng.range(-0.3, 0.3), 1, 0.1);
+      tree(-side * (W - 3), 1.5, 5); tree(side * 1, -D + 4.5, 4.5);
+      out.spots.rescue = P(-side * 3, 0); out.spots.cache = P(-W + 3.2, -D + 2.6);
+      for (let i = 0; i < 3; i++) guard(i === 0 ? 'brute' : 'walker', rng.range(-W + 3, W - 3), rng.range(-D + 3, D - 4), 'lying', { wake: 4.2, elite: i === 0 && rng.next() < 0.5, hp: i === 0 ? 1.8 : 1 });
       break;
     }
   }

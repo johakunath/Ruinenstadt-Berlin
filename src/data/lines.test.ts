@@ -13,10 +13,12 @@ describe('M20 S+U network (2D js/ubahn.js)', () => {
     expect(campOpen([0])).toBe(false);
     expect(campOpen([0, LINE_FREED])).toBe(true);
   });
-  it('a line is ridden once its start is freed and its end has a map: only the S3 today', () => {
+  it('a line is ridden once its start is freed and its end has a map: the S3 and the U8 to the Alex (M15)', () => {
     expect(linePlayable(0, [])).toBe(false);
     expect(linePlayable(0, [0])).toBe(true);
-    expect(linePlayable(1, [0, 1, LINE_FREED])).toBe(false);
+    expect(linePlayable(1, [0, LINE_FREED])).toBe(false);
+    expect(linePlayable(1, [0, 1, LINE_FREED])).toBe(true);
+    expect(linePlayable(2, [0, 1, 2, LINE_FREED, LINE_FREED + 1])).toBe(false);
     expect(stopName(1)).toBe('Warschauer Straße');
   });
 });
