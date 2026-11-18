@@ -230,7 +230,8 @@ export function xhainMap(scale = 1): MapDef {
     L('thomaskirche', -114, -34, 0, 8, 11, 2, { cut: {} }),
     L('rauchhaus', -236, -30, 90 * DEG, 5.5, 8, 2),
     L('bethanien', -238, -2, 90 * DEG, 6, 10, 2, { cut: {} }),
-    L('nkz', -276, 76, 0, 20, 7, 3),
+    // Front to the north, towards the Kottbusser Tor.
+    L('nkz', -276, 76, Math.PI, 20, 7, 3),
     L('goerlitzer', -160, 84, Math.atan2(GU[0], GU[1]), 12, 6, 2),
     // U1 stations on the viaduct (walk under).
     L('u1station', -246, 60, (Math.atan2(54, 4) * 1), 18, 4, 0, { walkUnder: true, name: 'Kottbusser Tor' }),

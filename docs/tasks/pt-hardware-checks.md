@@ -17,3 +17,7 @@ Cloud browsers have no real GPU: counts of draw calls and triangles are valid th
 | 7 | Qualität: fps as before on the PC? | Köpenick and Xhain, `?debug=perf` | PC | PR #50 | |
 | 8 | Hero contour cost (R1) | `?stress=40`, hero behind a building, `?debug=perf` | PC, Tab S9 | `docs/tasks/r1-outline-cost.md` | |
 | 9 | New hero: first equip swap, inventory doll, fps (H1 step 7) | Equip and unequip clothing in a fight | PC, Tab S9 | `docs/tasks/h1-hero.md` | |
+| 10 | Xhain: Oberbaumbrücke towers (22 m, spires) read from the route? Not confirmed in cloud shots (dark, fog) | Walk the final approach on the Oberbaumstraße | PC | `docs/maps/xhain.md` | |
+| 11 | Xhain fps and heat on the track field and the Warschauer Brücke (most geometry: tracks, catenary, wagons, deck) and at the East Side Gallery | Start of Xhain, `?debug=perf`, both profiles | Tab S9, PC | `docs/maps/xhain.md` | |
+| 12 | Xhain difficulty after Köpenick gear: first zone too easy? Spreehexe too hard? | Play Xhain with the gear from Köpenick | PC | `docs/balance.md` › Xhain | |
+| 13 | Blockrand look on the Reichenberger Straße: wider use or keep it to a few streets? | `?map=xhain`, walk Reichenberger and Oranienstraße | PC | `docs/maps/guidelines.md` › Blockrand | |

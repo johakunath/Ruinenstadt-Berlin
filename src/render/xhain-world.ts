@@ -1364,6 +1364,8 @@ function buildGoerliYard(c: Ctx, l: Landmark): void {
     for (let z = l.hz; z < end; z += 4) {
       if (rng.next() < 0.08) continue;
       const p = at(tx, z + 2), b = c.chunkOf(p.x, p.z);
+      // The old tracks stay in the park: they end where the grass ends (no rails across a street).
+      if (areaAt(c.m, p.x, p.z)?.id !== 'goerli') continue;
       for (const r of [-0.72, 0.72]) {
         const q = at(tx + r, z + 2);
         b.box(M.railSteel, piece(q.x, q.z, q.y + 0.05, rng.range(-0.01, 0.01)), 0.07, 0.08, 4, [0.55, 0.42, 0.34]);
@@ -1387,6 +1389,7 @@ function buildGoerliYard(c: Ctx, l: Landmark): void {
     for (let z = l.hz + 2; z < l.hz + 32; z += 3) {
       if (rng.next() < 0.3) continue;
       const p = at(px, z + 1.5), b = c.chunkOf(p.x, p.z);
+      if (areaAt(c.m, p.x, p.z)?.id !== 'goerli') continue;
       b.box(M.concrete, piece(p.x, p.z, p.y + 0.12 - rng.range(0, 0.1), rng.range(-0.04, 0.04)), 1.1, 0.32, rng.range(2.2, 2.9), [1.05, 1.03, 0.98]);
     }
   }

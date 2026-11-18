@@ -1,12 +1,13 @@
 # Status
 
-What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › Queue.
+What is in the game now. Updated 2026-11-18. Next work: `docs/migration.md` › Queue.
 
 ## In the game
 
 | Area | State |
 |---|---|
 | Map | Köpenick v2, concept C "Rundweg" (`docs/maps/koepenick.md`): S-Bahnhof → Bahnhofsviertel → Müggelberge → ferry over the Dahme → Johannisthal → Spreepark → Rathaus, about 0.6 of v1. `?mapscale=` stretches it; `?map=hof` loads the gate 1 courtyard |
+| Xhain (M15) | Second district, 1981, the Wall stands (`docs/maps/xhain.md`, `?map=xhain`, opens after the S3 tunnel): start on the Warschauer Brücke over the Stadtbahn track field → East Side Gallery → Ostbahnhof → Schillingbrücke and death strip (Der Grenzer) → breach at the Bethaniendamm by St. Thomas → Mariannenplatz, Rauch-Haus → Oranienplatz (Der Brandmeister) → Kotti, under the U1 → Görlitzer Park (Die Rattenmutter) → Schlesisches Tor → Oberbaumbrücke (Die Spreehexe). 27 waves, rats in packs; closed 5-storey Altbau rows on two test streets (Blockrand); four Spätis, three side passages |
 | Fights | Open (Johannes, 2026-11-16): no closed circle, the hero can kite, go back for loot or into a Späti; a wave left behind spawns around the hero. 13 encounters, 27 waves, 4 bosses with own attacks. After the last boss the hero may stay and explore; "Ganz neu anfangen" on the title wipes the save. Director: waves on the rim, elites from the fourth wave, a short breath and then the blessing choice after a won fight, +30 % life per won encounter, retry at the zone |
 | World | Water 1.7 m below the street with sloping natural banks, stone quays in town and boat wrecks (Spree, Dahme, Müggelsee and lakes), overgrown ground (grass, dirt, sidewalk plates, leaves blended; puddles, litter, weed tufts), low relief in parks and forests, a Späti rest stop per zone (enter, heal between fights), three bridges, a ferry boat that shuttles across the Dahme, tram tracks and a tram wreck, about half the buildings as ruins, fewer and partly broken lamps plus campfires, a closed map edge (Brandwand rows, rubble walls, thickets, hedges, barricades, backdrop beyond the bound), a glowing ring around a closed fight, streets with curbs, buses, cars, sidewalk props, garden fences, L-shaped Altbau and houses, shaped fronts (chamfered corners, risalits, open courtyards, door niches) and stepped ruin outlines, hand-built blocks on the zone 0 route, shops, trees, landmarks built from reference photos (M11d: Rathaus with corner tower, show gables and the Hauptmann statue, Schloss, St. Laurentius, S-Bahnhof with three arches and S sign, Müggelturm with pavilion, Spreepark Riesenrad, three fallen dinosaurs), cover. Heights: Müggelberge, Dino-Hügel (hills), Riesenrad-Plattform, Kirchhügel (terraces with stairs); sim stays 2D |
 | Render | 32 m chunks, moon shadow follows the hero (re-rendered at most 30 times a second on Leistung), fixed point-light pool, opaque world with a thin amber hero contour only behind large buildings/vehicles; small props, enemies, lamps and trees excluded. Cutaway (V1 B): Hinterhof buildings on the camera side and flagged landmarks (Thomaskirche, Bethanien) are cut off with a dark cap while the hero is in their zone. 60 fps cap. Look fixed (painted PBR, ink line, grade). Profiles Qualität and Leistung |
@@ -34,7 +35,9 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-17)
+## Latest (2026-11-18)
+
+- M15 Xhain: the second district with the Wall, East Side Gallery, track field and Warschauer Brücke, U1 Hochbahn, Oberbaumbrücke and nine landmarks; rats and four new bosses (`docs/maps/xhain.md`, `docs/tasks/m12b-xhain-enemies.md`). Blockrand test streets; buildings in front of courtyards and the St. Thomas and Bethanien towers are cut while the hero is behind them (V1 B).
 
 - U3: menus look like 2D (font, tabs, stat tooltips, options screen with controls graphics), a light start screen that loads the game only on play, and a fullscreen button top right (`docs/tasks/u3-menu-2d.md`).
 - H1 hero: own clothing from Blender (coat, vest, boots, sneakers, gloves, scarf) that follows the equipped items, left hand on two-handed weapons, the hammer's two-handed stance, a turnable hero in the inventory (`docs/tasks/h1-hero.md`).
