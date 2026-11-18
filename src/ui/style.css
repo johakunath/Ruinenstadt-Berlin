@@ -803,6 +803,7 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .camp-panel .menu-x { margin-left: auto; font-size: 26px; line-height: 1; padding: 0; border: 0; background: none; }
 .camp-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 200px minmax(0, 1fr); }
 .camp-cols.single { grid-template-columns: minmax(0, 1fr); }
+.camp-panel.single { width: min(760px, 100%); height: auto; max-height: 100%; }
 .camp-list { display: flex; flex-direction: column; gap: 4px; padding: 8px; overflow-y: auto; border-right: 1px solid #3a342c; }
 .camp-panel .stl { display: flex; justify-content: space-between; align-items: center; gap: 6px; text-align: left; }
 .stl.on { border-color: #ef9f27; background: #2e2a1e; }
