@@ -383,7 +383,7 @@ export class GameRenderer {
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);
-    if (this.campView && this.campLayout) this.campView.update(campStates(sim), this.time, campPlaceAt(this.campLayout, px, pz)?.id ?? null);
+    if (this.campView && this.campLayout) this.campView.update(campStates(sim), this.time, campPlaceAt(this.campLayout, px, pz)?.id ?? null, px, pz);
     this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap, this.hero.thrustTipY());
     this.weather.update(dt, px, pz, this.time);
     this.debug?.update(sim, alpha);
