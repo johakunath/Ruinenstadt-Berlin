@@ -163,7 +163,8 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   e.kz += dz * kb * e.def.knockbackTaken;
 
   const feel = o.feel ?? 'light';
-  if (feel !== 'none' && kb > 0 && (!e.def.poise || feel === 'heavy')) stun(e, HIT_FEEL[feel].stagger / (e.def.boss ? 0.15 : 1));
+  // Bosses never stagger from a hit (playtest 2026-11-18: the Hauptmann tumbled on every heavy blow); stuns still work, shortened.
+  if (feel !== 'none' && kb > 0 && !e.def.boss && (!e.def.poise || feel === 'heavy')) stun(e, HIT_FEEL[feel].stagger);
   if (o.stun) stun(e, o.stun);
   if (crit && pk(s, 'stun')) stun(e, STATUS.critStun);
   if (!o.noproc) {
@@ -304,7 +305,7 @@ export function incomingDamage(s: Sim, raw: number): number {
 /** An enemy's melee hit on the hero. Returns false when it did not land. */
 export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz: number): boolean {
   const p = s.player;
-  if (p.state === 'dead' || p.invuln > 0) return false;
+  if (p.state === 'dead' || p.invuln > 0 || s.god) return false;
   // Panzerplatte: one hit in five is blocked outright.
   if (hasL(s, 'panzer') && s.rng.next() < 0.2) {
     p.invuln = 0.3;

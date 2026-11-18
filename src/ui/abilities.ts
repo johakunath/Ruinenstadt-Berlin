@@ -9,7 +9,6 @@ import type { Input } from '../input/input';
 import { cooldownOf, powerOf, selectPower, type Offer } from '../sim/abilities';
 import { chooseBlessing, heldFamilies, perkOf, rerollBlessings, rerollCost } from '../sim/blessings';
 import { buyConsumable, buyHeal, buyOffer, closeTrade, healPrice, tradeStock } from '../sim/runcontent';
-import { heroStats, power } from '../sim/stats';
 import type { Sim } from '../sim/types';
 import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
 import { itemCard } from './inventory';
@@ -203,12 +202,12 @@ export class AbilitiesUi {
     const stock = tradeStock(s);
     const shop = s.content.tradeAt >= 0;
     const cons = s.inventory.consumables ?? { verband: 0, molotow: 0 };
-    const now = power(s.stats);
     const offers = stock.map((o, i) => {
       if (!o) return '<div class="trade-sold">Verkauft</div>';
-      let delta = 0;
-      try { delta = power(heroStats({ ...s.equipment, [o.item.slot]: o.item }, s.statContext)) - now; } catch { delta = 0; }
-      return `<div class="trade-offer">${itemCard(o.item, 'Angebot', s.equipment)}<div class="trade-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">Kampfkraft ${delta > 0 ? '+' : ''}${delta}</div><button type="button" data-buy="${i}" class="${s.inventory.scrap >= o.price ? 'primary' : ''}">Kaufen · ${o.price} Schrott</button></div>`;
+      // Playtest 2026-11-18: compare the item level with the worn piece, not the Kampfkraft.
+      const worn = s.equipment[o.item.slot];
+      const delta = o.item.itemLevel - (worn?.itemLevel ?? 0);
+      return `<div class="trade-offer">${itemCard(o.item, 'Angebot', s.equipment)}<div class="trade-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">Stufe ${o.item.itemLevel}${worn ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}</div><button type="button" data-buy="${i}" class="${s.inventory.scrap >= o.price ? 'primary' : ''}">Kaufen · ${o.price} Schrott</button></div>`;
     }).join('');
     const goods = shop ? CONSUMABLES.map((c) => `<div class="trade-row"><span><b>${c.name}</b> <small>${cons[c.id as 'verband' | 'molotow']}/3</small><br><small>${c.description}</small></span><button type="button" data-cons="${c.id}" ${cons[c.id as 'verband' | 'molotow'] >= 3 ? 'disabled' : ''}>${c.scrapCost} Schrott</button></div>`).join('') : '';
     this.trade.firstElementChild!.innerHTML = `<button type="button" class="x-btn" data-close="1" aria-label="Schließen">×</button><h2>${shop ? (s.level.rests[s.content.tradeAt]?.name ?? 'Späti') : 'Händler'}</h2><p class="sub">${shop ? '„Wat darf’s sein?“' : '„Schrott gegen Ware. Kein Feilschen.“'} · Schrott <b>${s.inventory.scrap}</b></p><div class="trade-offers">${offers}</div>${goods}`

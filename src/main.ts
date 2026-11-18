@@ -605,6 +605,12 @@ function start(resumed = false): void {
   input.enabled = true;
   ui.showGame();
   runScrap0 = sim.inventory.scrap; runT0 = sim.time;
+  // Debug: ?tp=x,z beams the hero to a reported spot, ?god keeps her alive while looking.
+  sim.god = opts.god;
+  if (opts.tp && !resumed) {
+    const p = sim.player;
+    p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z;
+  }
   telemetry.begin(sim, { map: map ? map.def.name : 'Hof', profile: opts.profile, scale: opts.mapScale, startAt: sim.run.index, input: input.device });
 }
 
