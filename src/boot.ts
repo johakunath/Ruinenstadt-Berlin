@@ -9,7 +9,7 @@ import '@fontsource/pirata-one/latin-400.css';
 import './ui/style.css';
 import { isDifficulty } from './data/difficulty';
 import { GO_KEY, reloadWith, RESUME_KEY } from './options';
-import { campOpen, LINES } from './data/lines';
+import { campOpen, LINES, stopName } from './data/lines';
 import { optionsScreen } from './ui/options-screen';
 import { bindSettings, initFullscreenButton, opts } from './ui/settings';
 import { startScreen } from './ui/start';
@@ -22,7 +22,7 @@ bindSettings();
 initFullscreenButton();
 const title = start.root;
 const sub = document.getElementById('title-sub')!;
-if (opts.map === 'tunnel') sub.textContent = `${LINES[opts.line]?.id ?? 'S3'}-Tunnel · Richtung Warschauer Straße`;
+if (opts.map === 'tunnel') sub.textContent = `${LINES[opts.line]?.id ?? 'S3'}-Tunnel · Richtung ${stopName(opts.line + 1)}`;
 else if (opts.map === 'hof') sub.textContent = 'Köpenick · Hinterhof bei Nacht';
 
 // The few save facts the screen needs, read without the sim (main.ts reads the real save on load).

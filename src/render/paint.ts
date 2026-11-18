@@ -2013,6 +2013,40 @@ export function paintLettering(text: string, bg: string, fg: string, glow: numbe
   return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
 }
 
+/**
+ * M20 station name plate (2D `signTex`): BVG-blue enamel with a white rim and white lettering, a little
+ * chipped. 512 × 96 for a 2.8 × 0.52 m plate; the emissive map lifts the letters in the dark tunnel.
+ */
+export function paintStationSign(text: string): EmissiveSurface {
+  const W = 512, H = 96;
+  const [c, ctx] = canvas(W, H);
+  const [e, ectx] = canvas(W, H);
+  ctx.fillStyle = '#ead9c0';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#1d3a8a';
+  ctx.fillRect(4, 4, W - 8, H - 8);
+  ctx.strokeStyle = '#f2f2ee';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(11, 11, W - 22, H - 22);
+  ectx.fillStyle = '#101418';
+  ectx.fillRect(0, 0, W, H);
+  for (const [k, color] of [[ctx, '#ffffff'], [ectx, '#d8d8d8']] as Array<[Ctx, string]>) {
+    k.fillStyle = color;
+    k.font = 'bold 54px Arial, Helvetica, sans-serif';
+    k.textAlign = 'center';
+    k.textBaseline = 'middle';
+    k.fillText(text, W / 2, H / 2 + 3, W - 48);
+  }
+  // Chipped enamel: dark flecks along the rim.
+  const rng = new Rng(text.length * 97 + 13);
+  ctx.fillStyle = 'rgba(24,18,14,0.75)';
+  for (let i = 0; i < 26; i++) {
+    const edge = rng.next() < 0.5, x = edge ? rng.range(0, W) : rng.next() < 0.5 ? rng.range(0, 14) : rng.range(W - 14, W), y = edge ? (rng.next() < 0.5 ? rng.range(0, 12) : rng.range(H - 12, H)) : rng.range(0, H);
+    ctx.fillRect(x, y, rng.range(2, 9), rng.range(2, 6));
+  }
+  return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
+}
+
 /** M11d water: soft ripples as a tiling normal map (scrolled in `World.update`). */
 export function paintWaterNormal(): Texture {
   const S = 256;

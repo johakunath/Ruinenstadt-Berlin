@@ -29,6 +29,7 @@ import { Post } from './post';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
+import type { TunnelState } from './tunnel-view';
 import { groundY, meshSurface, setGround } from './ground';
 import { heightAt } from '../data/map';
 import { COURTYARD } from '../data/courtyard';
@@ -50,6 +51,20 @@ export interface RendererOptions {
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
   map?: { def: MapDef; lots: Lot[]; props: Prop[]; breakables?: BreakableDef[] };
+}
+
+/** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
+function tunnelState(sim: Sim, time: number): TunnelState {
+  const encs = sim.level.encounters, hi = encs.findIndex((e) => e.hold), r = sim.run, h = r.hold;
+  const at = r.index === hi;
+  return {
+    time,
+    gateT: sim.gateT,
+    hold: at && r.phase === 'hold' && h ? { k: h.p / h.need, inside: h.inside } : null,
+    invite: at && r.phase === 'travel',
+    // `wave` still counts the last fight while walking up; it is 1 only after the charge.
+    power: hi >= 0 && (r.index > hi || (at && (r.phase === 'pause' || r.phase === 'fight') && r.wave >= 1)) ? (h?.on ?? -1e3) : null,
+  };
 }
 
 const NIGHT = 0x0b1a1d;
@@ -286,6 +301,16 @@ export class GameRenderer {
       case 'dodge':
         this.fx.puff(sim.player.x, sim.player.z, 7);
         break;
+      case 'gateOpen':
+        // M20: the grating drops into its slot (2D `openGate`: orange burst, crash, shake).
+        this.fx.burst(ev.x, y(ev.x, ev.z, 1.2), ev.z, 6, 3.6, 0.6, 40, 6);
+        this.fx.debris(ev.x, groundY(ev.x, ev.z) + 0.4, ev.z, 'crate', 10);
+        this.cam.shake(0, 0, 0.16);
+        break;
+      case 'power':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 1.4), ev.z, 6, 5.5, 2, 60, 7);
+        this.cam.shake(0, 0, 0.1);
+        break;
       case 'breakableHit':
         this.world.breakables?.hit(ev.id);
         this.fx.debris(ev.x, groundY(ev.x, ev.z) + 0.6, ev.z, ev.kind, 5);
@@ -331,6 +356,7 @@ export class GameRenderer {
     const p = sim.player;
     this.world.update(this.time);
     this.world.sync?.(sim.time - DT * (1 - alpha));
+    if (this.world.tunnel) this.world.tunnel.update(tunnelState(sim, sim.time - DT * (1 - alpha)), dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
     this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });

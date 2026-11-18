@@ -25,6 +25,7 @@ import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet } from './batch';
 import { isLargeProp } from './layers';
+import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
@@ -921,6 +922,9 @@ function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilde
  */
 function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
   const H = 4.6;
+  // M20: a thin divider between two tubes (the bypass beside the collapse) stays low, so the camera sees over it.
+  const LOW = 1.4;
+  const stripe = lineTint(m.tunnel!.color);
   for (const t of m.tunnel!.tubes) {
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
@@ -934,18 +938,19 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           const ex = cx + nx * t.width / 2, ez = cz + nz * t.width / 2;
           // Open where the wall would stand inside another tube (a junction).
           if (inTunnel(m, ex + nx * 0.6, ez + nz * 0.6)) continue;
-          // As thick as fits before the next tube.
-          let thick = 12;
-          while (thick > 1 && (inTunnel(m, ex + nx * thick, ez + nz * thick) || inTunnel(m, ex + nx * thick / 2, ez + nz * thick / 2))) thick /= 2;
+          // As thick as fits before the next tube (M20: marched in half meters, so a parallel bypass is found).
+          let thick = 0.5;
+          while (thick < 12 && !inTunnel(m, ex + nx * (thick + 0.5), ez + nz * (thick + 0.5))) thick += 0.5;
+          const h = thick < 2.5 ? LOW : H;
           const b = chunkOf(cx, cz);
           const mx = ex + nx * thick / 2, mz = ez + nz * thick / 2;
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, H / 2, mz), thick, H, 1.04, [0.42, 0.4, 0.38]);
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, H + 0.05, mz), thick + 0.4, 0.1, 1.04, [0.08, 0.08, 0.09]);
-          b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, H / 2, mz), thick, H, 1.04);
+          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04, [0.42, 0.4, 0.38]);
+          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h + 0.05, mz), thick + 0.4, 0.1, 1.04, h < H ? [0.3, 0.29, 0.27] : [0.08, 0.08, 0.09]);
+          b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04);
           if (t.kind === 'station') {
-            // Tiled band at eye height (cream tiles with a dark stripe), as on the old S-Bahn halls.
+            // Tiled band at eye height (cream tiles), as on the old S-Bahn halls; M20: a stripe in the line color.
             b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.02, 1.6, ez + nz * 0.02), 0.08, 1.8, 1.04, [0.86, 0.82, 0.7]);
-            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.01, 2.25, ez + nz * 0.01), 0.1, 0.18, 1.04, [0.22, 0.32, 0.3]);
+            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.01, 2.25, ez + nz * 0.01), 0.1, 0.24, 1.04, stripe);
           }
         }
       }
@@ -2121,7 +2126,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
-  if (m.tunnel) buildTunnel(m, mats, chunkOf);
+  if (m.tunnel) {
+    buildTunnel(m, mats, chunkOf);
+    buildTunnelExtras(m, mats, materials, chunkOf);
+  }
   if (m.camp) buildCampWorld(m, mats, makeCampMats(materials, { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy }), chunkOf);
   if (m.rail) {
     const r = m.rail;
@@ -2201,6 +2209,13 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   moon.shadow.normalBias = 0.04;
   group.add(moon, moon.target);
 
+  // M20: gratings, hold ring and the end platform's lamps; its ceiling spots join the pool dark.
+  const tunnel = m.tunnel ? buildTunnelView(m, mats, materials) : undefined;
+  if (tunnel) {
+    group.add(tunnel.group);
+    spots.push(...tunnel.spots);
+  }
+
   const poolSize = Math.max(1, materials.profile.maxPointLights - 1);
   const pool = Array.from({ length: poolSize }, () => {
     const light = new PointLight(0xffffff, 0, 10, 1.6);
@@ -2215,7 +2230,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const pick = (): void => {
     const near = spots
       .map((s) => ({ s, d: (s.pos.x - hx) ** 2 + (s.pos.z - hz) ** 2 }))
-      .filter((e) => e.d < 45 * 45)
+      .filter((e) => e.d < 45 * 45 && e.s.intensity > 0)
       .sort((a, c) => a.d - c.d)
       .slice(0, poolSize)
       .map((e) => e.s);
@@ -2238,6 +2253,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     group,
     moon,
     breakables: breakableView,
+    ...(tunnel ? { tunnel } : {}),
     lights: [],
     fires,
     update(time: number): void {

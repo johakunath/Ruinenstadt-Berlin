@@ -82,6 +82,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     kills: 0,
     spawnT: opts.empty || level.camp || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
+    gateT: level.gates.map(() => Infinity),
   };
   sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...(sim.inventory.camp?.stash ?? []), ...Object.values(equipment)].map((i) => i?.id ?? 0));
   sim.player.hp = stats.maxHp;

@@ -31,8 +31,9 @@ import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
 import { tunnelMap } from './data/tunnel';
 import { campMap, campPlaceAt } from './data/camp-map';
-import { campOpen, LINE_FREED, LINES } from './data/lines';
+import { campOpen, LINE_FREED, LINES, stopName } from './data/lines';
 import { NetBoard, type NetGo } from './ui/netboard';
+import { tunnelNotice, tunnelObjective } from './ui/tunnel-notice';
 import { STATIONS } from './data/camp';
 import { siteLevel } from './sim/camp';
 import { areaAt, generateLots, generateProps, mapLevel } from './data/map';
@@ -76,7 +77,7 @@ abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
 // Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap() : koepenickMap(opts.mapScale);
+  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
@@ -504,7 +505,7 @@ if (map) {
     const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
     return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
   };
-  if (isTunnel) document.getElementById('title-sub')!.textContent = 'S3-Tunnel · Richtung Warschauer Straße';
+  if (isTunnel) document.getElementById('title-sub')!.textContent = `${map.def.name} · Richtung ${stopName(line + 1)}`;
 } else {
   const sub = document.getElementById('title-sub');
   if (sub) sub.textContent = 'Köpenick · Hinterhof bei Nacht';
@@ -641,6 +642,8 @@ function drainEvents(): void {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev, sim);
     telemetry.event(ev);
+    // M20 tunnel: gratings opening, the generator and its power (2D messages).
+    tunnelNotice(ev, map?.def, { banner: (t, s) => ui.banner(t, s), toast: (h, s) => lootUi.toast(h, s) });
     switch (ev.type) {
       case 'hit': {
         const feel = HIT_FEEL[ev.weight];
@@ -978,6 +981,8 @@ function expeditionHud(dt: number): void {
     const dz = enc.z - p.z;
     // The camera looks north: world X is screen right, world -Z is screen up.
     ui.objective(`${enc.name} · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
+  } else if (tunnelObjective(sim)) {
+    ui.objective(tunnelObjective(sim)!, null);
   } else {
     ui.objective(enc.waves.length > 1 ? `${enc.name} · Welle ${Math.min(sim.run.wave + 1, enc.waves.length)}/${enc.waves.length}` : enc.name, null);
   }

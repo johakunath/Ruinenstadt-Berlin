@@ -6,13 +6,14 @@ import { offerBlessings } from './blessings';
 // circle, the hero may kite, fall back to a pickup or a Späti; enemies follow, and a wave that is
 // left behind spawns around the hero.
 import { difficultyOf } from '../data/difficulty';
-import { ENEMIES } from '../data/enemies';
+import { ENEMIES, type EnemyKind } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { aliveCount, makeElite, pickKind, spawnEnemy } from './enemies';
 import { freeSpot } from './reach';
 import { FlowField, type Bounds } from './flowfield';
 import type { EncounterDef } from './level';
-import { DT, type Sim } from './types';
+import { spawnDrop } from './loot';
+import { DT, type Enemy, type Sim } from './types';
 
 /** The player triggers an encounter this far inside its circle. */
 const TRIGGER_INSET = 3;
@@ -45,6 +46,8 @@ export function focusFlow(sim: Sim, x: number, z: number): void {
 /** Starts the run at encounter `index` (a retry after death starts at its zone). */
 export function startRunAt(sim: Sim, index: number): void {
   sim.run.index = index;
+  // M20: gratings behind fights already won stand open (a retry or a checkpoint resume).
+  for (let i = 0; i < index; i++) openGates(sim, i, true);
   sim.run.phase = index >= sim.level.encounters.length ? 'won' : 'travel';
   // A retry mid-map keeps the item level of the waves before it.
   sim.lootWaves = 0;
@@ -61,12 +64,41 @@ function startWave(sim: Sim, enc: EncounterDef): void {
   sim.events.push({ type: 'waveStart', index: sim.run.index, wave: sim.run.wave, waves: enc.waves.length });
 }
 
+/**
+ * M20 tunnel (2D `openGate`): the gratings behind encounter `index` open. Collider out of the level,
+ * a heal drop at the grating and a `gateOpen` event (burst, sound, "Gitter offen"). `quiet`: a resume.
+ */
+export function openGates(sim: Sim, index: number, quiet = false): void {
+  sim.level.gates.forEach((g, i) => {
+    if (g.after !== index || sim.gateT[i] !== Infinity) return;
+    sim.level.remove(g.collider);
+    sim.gateT[i] = quiet ? -1e3 : sim.time;
+    if (quiet) return;
+    spawnDrop(sim, g.x, g.z, { kind: 'heal' });
+    sim.events.push({ type: 'gateOpen', index: i, x: g.x, z: g.z });
+  });
+}
+
+/** A closed grating lies between two points (spawns never appear behind one). */
+export function gateBetween(sim: Sim, ax: number, az: number, bx: number, bz: number): boolean {
+  return sim.level.gates.some((g, i) => {
+    if (sim.gateT[i] !== Infinity) return false;
+    // Signed distance of both points along the track direction from the grating line.
+    const ux = Math.sin(g.rot), uz = Math.cos(g.rot);
+    const da = (ax - g.x) * ux + (az - g.z) * uz, db = (bx - g.x) * ux + (bz - g.z) * uz;
+    if (da * db > 0) return false;
+    const t = da / (da - db || 1);
+    const cx = ax + (bx - ax) * t - g.x, cz = az + (bz - az) * t - g.z;
+    return Math.abs(cx * uz - cz * ux) <= g.half + 1;
+  });
+}
+
 /** A free spot on the rim, away from the player, preferably out of the camera's view. */
 function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: number } {
   const p = sim.player;
   // The hero left the place: the wave comes to them, from out of view.
   if (Math.hypot(p.x - enc.x, p.z - enc.z) > enc.r + AWAY) {
-    const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, radius + 0.2);
+    const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, radius + 0.2, (x, z) => !gateBetween(sim, p.x, p.z, x, z));
     if (q) return q;
   }
   let best = { x: enc.x, z: enc.z };
@@ -100,11 +132,24 @@ export function updateDirector(sim: Sim): void {
 
   if (run.phase === 'travel') {
     if (Math.hypot(p.x - enc.x, p.z - enc.z) > enc.r - TRIGGER_INSET) return;
-    run.phase = 'fight';
     run.wave = 0;
     focusFlow(sim, enc.x, enc.z);
+    if (enc.hold) {
+      // M20 generator: the first wave is the stream that comes while the hero holds the ring.
+      run.phase = 'hold';
+      run.hold = { p: 0, need: enc.hold.need, inside: false, sp: 1, elite: false };
+      if (enc.waves[0]!.bosses.length === 0) sim.lootWaves++;
+      sim.events.push({ type: 'encounterStart', index: run.index }, { type: 'holdStart', index: run.index, x: enc.x, z: enc.z });
+      return;
+    }
+    run.phase = 'fight';
     sim.events.push({ type: 'encounterStart', index: run.index });
     startWave(sim, enc);
+    return;
+  }
+
+  if (run.phase === 'hold') {
+    updateHold(sim, enc);
     return;
   }
 
@@ -147,6 +192,10 @@ export function updateDirector(sim: Sim): void {
   }
   // Encounter won: the blessing choice follows after a short breath.
   sim.abilities.rewardT = REWARD_DELAY;
+  if (sim.level.gates.length) {
+    openGates(sim, run.index);
+    focusFlow(sim, p.x, p.z);
+  }
   const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * enc.heal));
   p.hp += heal;
   sim.events.push({ type: 'encounterClear', index: run.index, heal });
@@ -160,6 +209,42 @@ export function updateDirector(sim: Sim): void {
     run.phase = 'travel';
     sim.events.push({ type: 'checkpoint' });
   }
+}
+
+/** M20: after the charge, a breath before the last waves (the "Strom!" banner stays readable). */
+export const POWER_PAUSE = 2.5;
+
+/**
+ * M20 generator hold (2D `tunUpdate` GEN): charge only while the hero stands in the ring; spawns come
+ * out of the tunnel mouth only then too, an elite brute at half charge. Full: `power`, then wave 1.
+ */
+function updateHold(sim: Sim, enc: EncounterDef): void {
+  const H = enc.hold!, h = sim.run.hold!, p = sim.player, w = enc.waves[0]!;
+  h.inside = Math.hypot(p.x - enc.x, p.z - enc.z) <= H.r;
+  if (!h.inside) return;
+  h.p = Math.min(H.need, h.p + DT);
+  h.sp -= DT;
+  if (h.sp <= 0) {
+    h.sp = H.every * sim.rng.range(0.8, 1.2);
+    const df = difficultyOf(sim.difficulty);
+    const out = (kind: EnemyKind): Enemy => {
+      const q = freeSpot(sim.level, sim.rng, H.mouth.x, H.mouth.z, 0, 3, ENEMIES[kind].radius + 0.2) ?? H.mouth;
+      return spawnEnemy(sim, q.x, q.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+    };
+    if (!h.elite && h.p >= H.need / 2) {
+      h.elite = true;
+      makeElite(sim, out('brute'));
+    } else if (aliveCount(sim) < w.maxAlive) {
+      const e = out(pickKind(sim, w.mix));
+      if (w.elite && sim.rng.next() < w.elite) makeElite(sim, e);
+    }
+  }
+  if (h.p < H.need) return;
+  h.on = sim.time;
+  sim.events.push({ type: 'power', index: sim.run.index, x: enc.x, z: enc.z });
+  sim.run.wave = 1;
+  sim.run.phase = 'pause';
+  sim.run.pauseT = POWER_PAUSE;
 }
 
 /** The flow window follows the player, in fights too (they are open). */
