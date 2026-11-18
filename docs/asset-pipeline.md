@@ -85,3 +85,4 @@ Painted busts for the Kodex (`src/ui/menu.ts`, `ENEMY_PORTRAIT`) and item icons.
 - OpenAI image generation used the 2D weapon icons and Kodex busts as style references. The pipe, Steel Blade and boss uniforms follow the 3D models.
 - K1 uses I88–I90. I79–I81 already belong to the helmet, gloves and boots from the existing sets.
 - The inventory uses 128 px alpha WebP and the Kodex uses 256 px WebP. Kodex discovery still gates each portrait, and the elite ring keeps its gameplay colour.
+- At 1280 × 720 and 844 × 390, Playwright decoded all nine assets and verified the silhouettes before discovery. Desktop captures: [inventory](proof/shared-menu-art/inventory.jpg), [bosses](proof/shared-menu-art/bosses.jpg), [elites](proof/shared-menu-art/elites.jpg).
