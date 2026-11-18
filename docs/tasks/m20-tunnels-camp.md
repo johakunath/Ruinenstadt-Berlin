@@ -28,7 +28,31 @@ Status: built (2026-11-18), playtest open.
 | Flow: Lager buttons (title, victory, death) only after the S3; the S3 victory leads out at Warschauer Straße; a visit to the camp keeps another map's checkpoint | `src/main.ts` (`showCampButtons`, `store`), `src/boot.ts` |
 | Tunnel: 2D content and line generator | `src/data/tunnel.ts` and the files in its section below |
 
+### Tunnel (2D route A content)
+| Part | Where |
+|---|---|
+| `tunnelMap(line)`: line 0 keeps layout B; other lines get a seeded curve, mirrored passages and a seeded order of collapse, flood and wreck | `src/data/tunnel.ts` |
+| Gratings after each fight (open on the win: heal drop, "Gitter offen"), no wave spawns behind a closed one | `Level.gates`, `src/sim/director.ts`, `src/render/tunnel-view.ts` |
+| Trader on the start platform for the whole run; tunnels plan no events on the way (2D) | `Level.traderSpot`, `src/sim/runcontent.ts` |
+| Collapse with a 4 m maintenance bypass; flooded stretch, walkers at 0.7 speed (2D `P.wet`) | `src/data/tunnel.ts`, `Level.speedAt` |
+| Generator hold: 8.5 m ring, 35 s (2D 55 s), spawns from the mouth, elite at half, "Strom!", then Der Schaffner; end platform lights come on inside the fixed pool | `EncounterDef.hold`, `src/ui/tunnel-notice.ts` |
+| Station signs and the line color stripe | `src/render/map-world.ts`, `src/render/paint.ts` |
+
+Tests: `src/data/tunnel-m20.test.ts` (every line valid and winnable, gratings block), `src/ui/tunnel-notice.test.ts`. Screens: `docs/proof/m20-tunnel/`.
+
+### Stations
+Build site (rubble, tape, work lamp, "Bauplatz" sign) and three levels each, taken from 2D `js/camp-art.js`; keepers with their own outfit from level 2, shown within 15 m; one decal atlas (`paintCampAtlas`). Screens: `docs/proof/m20-camp/` (`final-layout-level3.png` is the final layout).
+
+### Cost (cloud readout, Leistung, all stations at level 3, keepers there)
+Hall 363 to 389 calls, 250k triangles; yard 333 to 399 calls, 214k to 282k triangles. Over the guideline (about 200 calls, 200k triangles) like Köpenick's heavy spots; keepers are about 40k triangles each with the shadow pass. Measure on the Tab S9 first; candidates: fewer keepers at once, merging each station's static meshes across stations, simpler keeper bodies.
+
 Tests: `src/data/camp-map.test.ts` (peaceful, every ring reached on foot, stairs, closed walls), `src/data/lines.test.ts`, `src/sim/camp.test.ts` (build sites), `e2e/save.spec.ts` (M20 flow and lock).
+
+## Open
+- Playtest by Johannes; Tab S9 measurement of the camp (see Cost).
+- Tunnel lines other than the S3 are checked by tests only (`?map=tunnel&line=k` shows them).
+- The flooded stretch reads weakly in screenshots; the grating yellow looks slightly lime under the teal light.
+- A save during the generator hold resumes before it.
 
 ## Not in scope
 Quests and Erfolge, station NPC dialogue, painted textures for the camp (Codex), a walkable route between tunnel and camp without a page load, other lines' districts.

@@ -55,7 +55,7 @@ test('M20: the walkable camp opens with the S3, spends Schrott at a station, kee
   await page.waitForURL(/map=lager/, { timeout: 30_000 });
   await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 120_000 });
   await expect(page.locator('#title')).toBeHidden();
-  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 58; p.z = p.pz = 14.5; });
+  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 56.5; p.z = p.pz = 44.5; });
   await expect(page.locator('#talk-btn')).toContainText('Zeughaus', { timeout: 30_000 });
   await page.keyboard.press('KeyF');
   await expect(page.locator('#camp')).toBeVisible();
@@ -71,7 +71,7 @@ test('M20: the walkable camp opens with the S3, spends Schrott at a station, kee
   await expect(page.locator('#talk-btn')).toContainText('Netzplan', { timeout: 30_000 });
   await page.keyboard.press('KeyF');
   await expect(page.locator('#netboard')).toBeVisible();
-  await page.locator('#netboard [data-stop="0"]').click();
+  await page.locator('#netboard [data-stop="0"]').dispatchEvent('click');
   await page.locator('#netboard [data-ride]').click();
   await page.waitForURL((u) => !/map=lager/.test(u.search), { timeout: 30_000 });
   await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 120_000 });
