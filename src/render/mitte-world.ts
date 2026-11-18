@@ -19,7 +19,8 @@ import { bladeCell, NEON_BLADES, NEON_WORDS, neonCell, paintCurtain, paintGoldPa
 import { blockFacades, lm, lp, walls, type ChunkBuilder, type MapMats } from './map-world';
 import { frustum } from './landmarks';
 import type { Wet } from './sky';
-import { Run } from './world';
+import { buildProp, GROUND_H, FLOOR_H, PARAPET, Run } from './world';
+import type { Prop } from '../data/courtyard';
 import { buildNorth } from './mitte-north';
 import { buildSouth } from './mitte-south';
 import { buildKultur } from './mitte-kultur';
@@ -28,7 +29,7 @@ export type RGB = readonly [number, number, number];
 
 export const MITTE_KINDS = new Set<LandmarkKind>([
   'ubahn', 'tor', 'mauerstuecke', 'lafayette', 'reichstag', 'bundesbau', 'kanzleramt', 'siegessaeule', 'sony', 'stage', 'bahntower',
-  'kollhoff', 'verkehrsturm', 'klinik', 'philharmonie', 'matthaeus', 'stabi', 'nng', 'checkpoint', 'pariser',
+  'kollhoff', 'verkehrsturm', 'klinik', 'philharmonie', 'matthaeus', 'stabi', 'nng', 'checkpoint', 'pariser', 'glasbau',
 ]);
 
 /** Mitte materials, made once per map build (`mitteMats`) and hung on `MapMats.mitte`. */
@@ -224,12 +225,70 @@ function pariser(c: MCtx, l: Landmark): void {
   }
 }
 
+// ---------------------------------------------------------------- glass offices (step 7)
+
+/** A lot or landmark as a frame for `lm` (only x, z and rot are read). */
+const frameAs = (x: number, z: number, rot: number): Landmark => ({ kind: 'glasbau', x, z, rot, hx: 0, hz: 0, clear: 0 });
+
+/** An LED strip round a footprint at height y (four quads in the white tube cell of the neon atlas). */
+function ledRing(c: MCtx, f: Landmark, y: number, W: number, D: number, tint: RGB): void {
+  const q = (ax: number, az: number, bx: number, bz: number): void => {
+    const p = (x: number, yy: number, z: number): Vector3 => lp(f, x, yy, z);
+    c.b.solid.of(c.N.neon).quad([p(ax, y, az), p(bx, y, bz), p(bx, y + 0.14, bz), p(ax, y + 0.14, az)], neonCell(-1), [tint]);
+  };
+  const w = W / 2 + 0.06, d = D / 2 + 0.06;
+  q(-w, d, w, d); q(w, d, w, -d); q(w, -d, -w, -d); q(-w, -d, -w, d);
+}
+
+/**
+ * Glass office block (photos of the Potsdamer Platz towers: dark curtain glass over a recessed, lit lobby
+ * on columns, a light floor slab over it; 2089: a few offices lit by generators, LED strips at the slab).
+ * `H` is the full height; the lobby is one Altbau ground floor (4.3 m) so cut heights and occluders agree.
+ */
+function glassBlock(c: MCtx, f: Landmark, W: number, D: number, H: number, rng: Rng, tint: RGB = MC.glass): void {
+  const { b, M, N } = c, led = rng.pick([MC.cyan, MC.magenta, MC.cyan]), L = GROUND_H;
+  b.box(M.shop, lm(f, 0, L / 2, 0), W - 1.2, L, D - 1.2, [0.9, 0.9, 1], 1 / 4);
+  for (const x of [-1, 1]) for (const z of [-1, 1]) b.box(M.concrete, lm(f, x * (W / 2 - 0.35), L / 2, z * (D / 2 - 0.35)), 0.6, L, 0.6, [0.78, 0.78, 0.8]);
+  b.box(M.concrete, lm(f, 0, L + 0.17, 0), W + 0.3, 0.34, D + 0.3, [0.8, 0.8, 0.82]);
+  ledRing(c, f, L - 0.18, W + 0.3, D + 0.3, rgb(led === MC.cyan ? 0x43d1cf : 0xff4fa3, 1.8));
+  if (H > L + 1) {
+    b.box(N.curtain, lm(f, 0, L + 0.34 + (H - L - 0.34) / 2, 0), W, H - L - 0.34, D, tint, 1 / 13);
+    b.box(M.tar, lm(f, 0, H + 0.05, 0), W - 0.2, 0.1, D - 0.2, [0.4, 0.4, 0.42]);
+    b.box(M.concrete, lm(f, rng.range(-W / 4, W / 4), H + 0.8, rng.range(-D / 4, D / 4)), Math.min(4, W / 3), 1.5, Math.min(3, D / 3), [0.6, 0.6, 0.62]);
+  } else b.box(M.tar, lm(f, 0, L + 0.39, 0), W, 0.1, D, [0.4, 0.4, 0.42]);
+  b.light(lp(f, rng.range(-W / 4, W / 4), 3.2, D / 2 + 1.4), 0xffb060, 9, 8, 0.04, 2.6);
+}
+
+/** The two hand-placed towers: Beisheim Center (stepped, darker) and the Atrium Tower (glass crown, mast). */
+function glasbau(c: MCtx, l: Landmark): void {
+  const rng = new Rng(7700 + (l.variant ?? 0)), W = l.hx * 2, D = l.hz * 2;
+  if ((l.variant ?? 0) === 0) {
+    glassBlock(c, l, W, D, 27, rng, [0.72, 0.78, 0.9]);
+    c.b.box(c.N.curtain, lm(l, 0, 27 + 3.5, -1), W - 4, 7, D - 3.5, [0.72, 0.78, 0.9], 1 / 13);
+    c.b.box(c.M.tar, lm(l, 0, 34.05, -1), W - 4.2, 0.1, D - 3.7, [0.4, 0.4, 0.42]);
+  } else {
+    glassBlock(c, l, W, D, 38, rng);
+    c.b.geo(c.N.curtain, frustum(W, D, 4, W - 5, D - 5), lm(l, 0, 38, 0), [0.6, 1.05, 0.95]);
+    cylinder(c, l, c.M.iron, 0, 42, 0, 0.12, 6, [0.5, 0.5, 0.5], 6);
+    c.b.light(lp(l, 0, 47.5, 0), 0xff3b30, 4, 6, 0.6, 1);
+  }
+}
+
+/** M15 Mitte step 7: intact Potsdamer Platz lots render as glass offices (same footprint and height as the Altbau). */
+export function buildGlassLot(b: ChunkBuilder, l: Lot): void {
+  const N = b.mm.mitte;
+  if (!N) return;
+  const H = l.floors > 0 ? GROUND_H + l.floors * FLOOR_H + PARAPET : GROUND_H + 0.4;
+  glassBlock({ b, M: b.mm, N }, frameAs(l.x, l.z, l.rot), l.w, l.d, H, new Rng(l.seed + 31));
+}
+
 /** Builds one Mitte landmark (inside `b.on` at its ground height). */
 export function buildMitteLandmark(b: ChunkBuilder, l: Landmark): void {
   const N = b.mm.mitte;
   if (!N) return;
   const c: MCtx = { b, M: b.mm, N };
   if (l.kind === 'pariser') return pariser(c, l);
+  if (l.kind === 'glasbau') return glasbau(c, l);
   if (buildNorth(c, l) || buildSouth(c, l) || buildKultur(c, l)) return;
   massing(c, l);
 }
@@ -244,13 +303,70 @@ const NEON_AREAS: Readonly<Record<string, { mood: 'warm' | 'mixed' | 'cold'; den
 
 const rgb = (hex: number, k: number): RGB => { const c = new Color(hex); return [c.r * k, c.g * k, c.b * k]; };
 
+/** A neon pole: 4.4 m mast, a blade sign at the top facing the camera (south) so it never shows edge-on, a tube down the mast and one pooled light. */
+function neonPole(b: ChunkBuilder, N: MitteMats, M: MapMats, x: number, z: number, y0: number, col: number, glow: number, rng: Rng): void {
+  const tint = rgb(col, glow), uv = bladeCell(rng.int(NEON_BLADES.length)), P = (u: number, y: number, n: number): Vector3 => new Vector3(x + u, y, z + n);
+  b.on(y0, () => {
+    b.geo(M.iron, cached('np', () => new CylinderGeometry(0.06, 0.08, 4.4, 6)), new Matrix4().makeTranslation(x, 2.2, z), [0.35, 0.35, 0.38]);
+    b.box(M.iron, new Matrix4().makeTranslation(x, 3.6, z), 0.56, 1.75, 0.1, [0.12, 0.12, 0.14]);
+    b.solid.of(N.neon).quad([P(-0.25, 2.78, 0.06), P(0.25, 2.78, 0.06), P(0.25, 4.42, 0.06), P(-0.25, 4.42, 0.06)], uv, [tint]);
+    b.solid.of(N.neon).quad([P(0.25, 2.78, -0.06), P(-0.25, 2.78, -0.06), P(-0.25, 4.42, -0.06), P(0.25, 4.42, -0.06)], uv, [tint]);
+    b.solid.of(N.neon).quad([P(-0.025, 0.6, 0.09), P(0.025, 0.6, 0.09), P(0.025, 2.7, 0.09), P(-0.025, 2.7, 0.09)], neonCell(-1), [rgb(col, glow * 0.8)]);
+    b.light(new Vector3(x, 3.4, z + 0.4), col, 8, 8, rng.next() < 0.15 ? 0.4 : 0.03, 2.6);
+  });
+}
+
+/**
+ * Step 7 dressing of the Potsdamer Platz lot types: the Nachtmarkt gets neon poles at its corners and a
+ * sagging cable of lit bulbs over the lane; the Containerdorf a second tier on about half of its
+ * containers (render only: the ground row is the collider) and two neon poles at the street.
+ */
+function dressSpecials(m: MapDef, lots: readonly Lot[], props: readonly Prop[], N: MitteMats, M: MapMats, wet: Wet, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number): void {
+  const glow = 2.2 * wet.glow, neon = [...wet.neon.warm, ...wet.neon.cold];
+  for (const l of lots) {
+    if (l.special !== 'nachtmarkt' && l.special !== 'containerdorf') continue;
+    const rng = new Rng(l.seed + 909), c = Math.cos(l.rot), s = Math.sin(l.rot), W = l.w / 2, D = l.d / 2;
+    const P = (a: number, bb: number): [number, number] => [l.x + c * a + s * bb, l.z - s * a + c * bb];
+    for (const a of l.special === 'nachtmarkt' ? [-W + 0.8, W - 0.8] : [-W + 0.8, W - 0.8]) {
+      const [x, z] = P(a, D - 0.6);
+      neonPole(chunkOf(x, z), N, M, x, z, ground(x, z), rng.pick(neon), glow, rng);
+    }
+    const b = chunkOf(l.x, l.z), y0 = ground(l.x, l.z);
+    if (l.special === 'nachtmarkt') {
+      // Cable over the lane (a, 0) from one side to the other at about 4.6 m, bulbs every 1.6 m.
+      b.on(y0, () => {
+        const n = Math.max(6, Math.round(l.w / 1.6));
+        for (let i = 0; i <= n; i++) {
+          const u = i / n, a = -W + 0.6 + u * (l.w - 1.2), y = 4.8 - 0.9 * 4 * u * (1 - u), [x, z] = P(a, 0);
+          const col = rgb(neon[i % neon.length]!, glow), q = (dx: number, dy: number): Vector3 => new Vector3(x + dx, y + dy, z + 0.05);
+          b.solid.of(N.neon).quad([q(-0.07, -0.07), q(0.07, -0.07), q(0.07, 0.07), q(-0.07, 0.07)], neonCell(-1), [col]);
+          if (i < n) {
+            const u2 = (i + 1) / n, a2 = -W + 0.6 + u2 * (l.w - 1.2), y2 = 4.8 - 0.9 * 4 * u2 * (1 - u2), [x2, z2] = P(a2, 0);
+            const len = Math.hypot(x2 - x, z2 - z, y2 - y), m4 = new Matrix4().lookAt(new Vector3(x, y, z), new Vector3(x2, y2, z2), new Vector3(0, 1, 0)).setPosition((x + x2) / 2, (y + y2) / 2, (z + z2) / 2);
+            b.box(M.iron, m4, 0.02, 0.02, len, [0.3, 0.3, 0.3]);
+          }
+        }
+        const [lx, lz] = P(0, 0);
+        b.light(new Vector3(lx, 4, lz), rng.pick(neon), 12, 10, 0.05, 4);
+      });
+    } else for (const p of props) {
+      if (p.kind !== 'container' || rng.next() < 0.5) continue;
+      const dx = p.x - l.x, dz = p.z - l.z;
+      if (Math.abs(dx * c - dz * s) > W || Math.abs(dx * s + dz * c) > D) continue;
+      b.on(ground(p.x, p.z) + 2.6, () => buildProp(b, { ...p, rot: p.rot + rng.range(-0.06, 0.06) }, rng));
+    }
+  }
+  void m;
+}
+
 /**
  * Neon below 5 m (camera rule): a fascia sign over the ground floor or a blade sign sticking out of the
  * front, on the street front of intact lots in the neon areas; neon poles along the streets there. Each
  * sign or pole is one pooled light, so its colour pools and streaks on the wet street.
  */
-export function buildMitteWorld(m: MapDef, lots: readonly Lot[], N: MitteMats, M: MapMats, wet: Wet | undefined, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, lotCut: (l: Lot) => { id: number; y: number } | undefined = () => undefined): void {
+export function buildMitteWorld(m: MapDef, lots: readonly Lot[], props: readonly Prop[], N: MitteMats, M: MapMats, wet: Wet | undefined, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, lotCut: (l: Lot) => { id: number; y: number } | undefined = () => undefined): void {
   if (!wet) return;
+  dressSpecials(m, lots, props, N, M, wet, chunkOf, ground);
   const pick = (rng: Rng, mood: 'warm' | 'mixed' | 'cold'): number => rng.pick(mood === 'warm' ? wet.neon.warm : mood === 'cold' ? wet.neon.cold : rng.next() < 0.5 ? wet.neon.warm : wet.neon.cold);
   const glow = 2.2 * wet.glow;
   for (const l of lots) {
@@ -305,18 +421,7 @@ export function buildMitteWorld(m: MapDef, lots: readonly Lot[], N: MitteMats, M
         const off = st.width / 2 + (st.sidewalk ?? 0) * 0.3 + 0.7, x = ax + dx * t - dz * off * side, z = az + dz * t + dx * off * side;
         const area = areaAt(m, x, z), na = area && NEON_AREAS[area.id];
         if (!na || rng.next() > 0.85 * na.density || m.landmarks.some((l) => footprintDist(l, x, z) < 2.5) || inLot(x, z)) continue;
-        // The sign faces the camera (south) on every street, so it never shows edge-on.
-        const col = pick(rng, na.mood), tint = rgb(col, glow), b = chunkOf(x, z), uv = bladeCell(rng.int(NEON_BLADES.length));
-        const P = (u: number, y: number, n: number): Vector3 => new Vector3(x + u, y, z + n);
-        b.on(ground(x, z), () => {
-          b.geo(M.iron, cached('np', () => new CylinderGeometry(0.06, 0.08, 4.4, 6)), new Matrix4().makeTranslation(x, 2.2, z), [0.35, 0.35, 0.38]);
-          b.box(M.iron, new Matrix4().makeTranslation(x, 3.6, z), 0.56, 1.75, 0.1, [0.12, 0.12, 0.14]);
-          b.solid.of(N.neon).quad([P(-0.25, 2.78, 0.06), P(0.25, 2.78, 0.06), P(0.25, 4.42, 0.06), P(-0.25, 4.42, 0.06)], uv, [tint]);
-          b.solid.of(N.neon).quad([P(0.25, 2.78, -0.06), P(-0.25, 2.78, -0.06), P(-0.25, 4.42, -0.06), P(0.25, 4.42, -0.06)], uv, [tint]);
-          // A plain tube down the pole (the white atlas cell).
-          b.solid.of(N.neon).quad([P(-0.025, 0.6, 0.09), P(0.025, 0.6, 0.09), P(0.025, 2.7, 0.09), P(-0.025, 2.7, 0.09)], neonCell(-1), [rgb(col, glow * 0.8)]);
-          b.light(new Vector3(x, 3.4, z + 0.4), col, 8, 8, rng.next() < 0.15 ? 0.4 : 0.03, 2.6);
-        });
+        neonPole(chunkOf(x, z), N, M, x, z, ground(x, z), pick(rng, na.mood), glow, rng);
       }
       carry = t - len;
     }

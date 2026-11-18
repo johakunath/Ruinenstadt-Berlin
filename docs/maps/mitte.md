@@ -10,6 +10,8 @@ District 4, 2089: neon future, rain, implants, Kabelghule, the club cult; boss D
 | M2 | Tiergarten about half of the first B and calm: a green intermezzo. The Großer Stern is a real roundabout with the Siegessäule on its island; the Neuer See keeps the beer garden (Café am Neuen See, the zone's rest stop) and a mini-boss |
 | M3 | Regierungsviertel and above all Potsdamer Platz bigger and denser, closer to the cyberpunk theme: Potsdamer Platz takes the mockup A pieces (Kulturforum, Landwehrkanal, Tilla-Durieux-Park, Mauerstücke, implant clinic) |
 | M4 | Zone bosses are new figures, one per zone, built from existing attack blocks after a spec: Der Türsteher (Tor), Die Wachdrohne (Regierungsviertel), a smaller mini-boss at the Neuer See. Final: Der Bassprediger (2D) in the Sony Center |
+| M5 | Night look (step 3): mainly variant A „Neonregen“, a bit less saturated, with some of B's blue and occasional red from C (`MITTE_SKY`) |
+| M6 | Potsdamer Platz fill (step 7): Claude picks within the cyberpunk brief. Glass offices with lit lobbies, a Nachtmarkt, container villages, two glass towers (Beisheim Center, Atrium Tower) |
 
 ## Route (B2, scale 1: about 330 × 396 m, route about 1 km between fights)
 

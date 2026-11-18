@@ -146,10 +146,10 @@ export function mitteMap(scale = 1): MapDef {
     { name: 'Tiergartenstraße', kind: 'side', width: 8, pts: line([[-152, 46], [-94, 42], [-60, 44]]) },
     { name: 'Bellevuestraße', kind: 'side', width: 8, pts: line([[-60, 44], [-26, 60], [0, 100]]) },
     // Zone 3, Potsdamer Platz, Kulturforum and the canal.
-    { name: 'Potsdamer Straße', kind: 'main', width: 12, pts: line([[0, 102], [-40, 125], [-88, 170]]) },
-    { name: 'Stresemannstraße', kind: 'side', width: 9, pts: line([[8, 106], [45, 150], [58, 175]]) },
-    { name: 'Alte Potsdamer Straße', kind: 'side', width: 7, pts: line([[-4, 104], [-12, 132]]) },
-    { name: 'Linkstraße', kind: 'side', width: 7, pts: line([[4, 108], [4, 140], [4, 172]]) },
+    { name: 'Potsdamer Straße', kind: 'main', width: 12, block: true, pts: line([[0, 102], [-40, 125], [-88, 170]]) },
+    { name: 'Stresemannstraße', kind: 'side', width: 9, block: true, pts: line([[8, 106], [45, 150], [58, 175]]) },
+    { name: 'Alte Potsdamer Straße', kind: 'side', width: 7, block: true, pts: line([[-4, 104], [-12, 132]]) },
+    { name: 'Linkstraße', kind: 'side', width: 7, block: true, pts: line([[4, 108], [4, 140], [4, 172]]) },
     { name: 'Reichpietschufer', kind: 'side', width: 7, pts: line([[-152, 174], [-88, 174], [60, 174]]) },
     { name: 'Matthäikirchplatz', kind: 'path', width: 5, pts: line([[-100, 46], [-114, 80], [-118, 100]]) },
     // M16b side passages: Checkpoint Charlie (cache), a Hinterhof off the Friedrichstraße (hidden blessing),
@@ -171,7 +171,7 @@ export function mitteMap(scale = 1): MapDef {
     { id: 'friedrichstadt', name: 'Friedrichstadt', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['markt', 'hinterhof'], poly: line([[-4, -114], [185, -114], [185, 140], [66, 140], [60, 112], [42, 80], [-4, 80]]) },
     { id: 'tiergarten', name: 'Tiergarten', ground: 'forest', frontage: null, trees: 1.1, poly: line([[-162, -98], [-16, -98], [-16, 40], [-162, 40]]) },
     { id: 'kulturforum', name: 'Kulturforum', ground: 'cobbles', frontage: null, trees: 0.4, poly: line([[-162, 40], [-95, 40], [-95, 118], [-45, 118], [-45, 200], [-162, 200]]) },
-    { id: 'potsdamer', name: 'Potsdamer Platz', ground: 'asphalt', frontage: 'altbau', trees: 0.15, specials: ['baustelle', 'truemmer'], poly: line([[-95, 40], [-4, 40], [-4, 80], [42, 80], [60, 112], [66, 140], [185, 140], [185, 200], [-45, 200], [-45, 118], [-95, 118]]) },
+    { id: 'potsdamer', name: 'Potsdamer Platz', ground: 'asphalt', frontage: 'altbau', trees: 0.15, specials: ['nachtmarkt', 'containerdorf', 'baustelle'], poly: line([[-95, 40], [-4, 40], [-4, 80], [42, 80], [60, 112], [66, 140], [185, 140], [185, 200], [-45, 200], [-45, 118], [-95, 118]]) },
   ];
 
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3, extra: Partial<Landmark> = {}): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear, ...extra });
@@ -200,6 +200,9 @@ export function mitteMap(scale = 1): MapDef {
     // Zone 3. The Sony Center: a ring of blocks with gaps around the forum (`SONY_PARTS`), the stage in the forum.
     L('sony', -62, 85, 0, 29, 29, 1, { name: 'Sony Center' }),
     L('stage', -62, 69.5, 0, 6, 2.5, 0, { name: 'Soundsystem' }),
+    // Step 7: two glass towers fill the Potsdamer Platz core (north of the Leipziger Platz, at the canal).
+    L('glasbau', 11, 76, 0, 9, 6, 1.5, { name: 'Beisheim Center', variant: 0 }),
+    L('glasbau', 28, 156, 0, 6, 6, 1.5, { name: 'Atrium Tower', variant: 1 }),
     L('bahntower', -24, 96, 0, 7, 7, 2, { name: 'Bahntower' }),
     L('kollhoff', -20, 128, 0, 5, 6, 1.5, { name: 'Kollhoff-Tower' }),
     L('verkehrsturm', 6, 95, 0, 1.2, 1.2, 1, { name: 'Verkehrsturm' }),
@@ -240,7 +243,10 @@ export function mitteMap(scale = 1): MapDef {
   for (const [x, z, kind] of [[0, -116, 'workLamp'], [-1, -134, 'fireBarrel'], [-15, -126, 'candles'], [-69, 161.5, 'fireBarrel'], [-82, 178.5, 'workLamp'], [63, 166, 'fireBarrel'], [-100, -92, 'candles'],
     // Curb lanterns where the street lamps leave gaps (Friedrichstraße, Unter den Linden, Ebertstraße, 17. Juni, Dorotheenstraße, canal).
     [156.5, 25, 'lantern'], [143.5, -22, 'lantern'], [84, 84, 'lantern'], [86.5, 46, 'lantern'], [134, -53, 'lantern'], [-3.5, 35, 'lantern'],
-    [-24, -55.5, 'lantern'], [36, -106.5, 'lantern'], [-80, 167, 'lantern'], [-6, 168.5, 'lantern']] as Array<[number, number, Prop['kind']]>) lights.push({ kind, x: x * s, z: z * s, rot: 0, size: 1 });
+    [-24, -55.5, 'lantern'], [36, -106.5, 'lantern'], [-80, 167, 'lantern'], [-6, 168.5, 'lantern'], [121, 3.5, 'lantern']] as Array<[number, number, Prop['kind']]>) lights.push({ kind, x: x * s, z: z * s, rot: 0, size: 1 });
+  // Work lamps at the curb, street centre (scaled) plus a curb offset (widths do not scale), aimed at the street:
+  // they fill gaps in the lantern rows without pushing lanterns away (lanterns keep their own spacing).
+  for (const [x, z, dx, dz] of [[82, 91.6, 0, 7.45], [-10, 28, -6.45, 0], [150, 88.6, 5.45, 7.45], [-10, -95, 6.45, 0]] as Array<[number, number, number, number]>) lights.push({ kind: 'workLamp', x: x * s + dx, z: z * s + dz, rot: Math.atan2(-dx, -dz), size: 1 });
   // The beer garden: tables, string lights over them and lanterns along the shore.
   const beer: Prop[] = [
     { kind: 'stringLights', x: -137 * s, z: 27 * s, rot: 0, size: 1 },
@@ -270,6 +276,9 @@ export function mitteMap(scale = 1): MapDef {
     flavor: 'neon',
     strictLots: true,
     hiddenSpots: [endOf('Hinterhof', 1.2, 0)],
+    // Step 7: a container village on the route between the Potsdamer Brücke and the Tilla-Durieux-Park.
+    specialLots: [{ special: 'containerdorf', x: -44 * s, z: 160 * s, rot: 0, w: 18, d: 14 }],
+    specialMax: { nachtmarkt: 2, containerdorf: 3, baustelle: 1 },
     guards: [{ ...endOf('Arkadenhof', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 }],
     fixedProps: [
       { kind: 'crates', ...endOf('Checkpoint Charlie', 1.5, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Checkpoint Charlie', 3.5, -1.4), rot: 1, size: 1 },

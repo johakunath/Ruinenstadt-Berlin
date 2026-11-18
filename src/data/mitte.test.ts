@@ -149,6 +149,16 @@ describe('Mitte map (M15, layout B2)', () => {
     }
   });
 
+  it('step 7: the Potsdamer Platz gets Nachtmarkt, Containerdorf (one on the route) and two glass towers', () => {
+    for (const scale of [1, 1.3]) {
+      const m = mitteMap(scale), lots = generateLots(m), of = (k: string): number => lots.filter((l) => l.special === k).length;
+      expect(of('nachtmarkt'), `${scale}`).toBeGreaterThanOrEqual(1);
+      expect(of('containerdorf'), `${scale}`).toBeGreaterThanOrEqual(1);
+      expect(lots.some((l) => l.special === 'containerdorf' && Math.hypot(l.x + 44 * scale, l.z - 160 * scale) < 1), `${scale}`).toBe(true);
+      expect(m.landmarks.filter((l) => l.kind === 'glasbau').length).toBe(2);
+    }
+  });
+
   it('street lamps at the curb, about a third lit; no same-kind twins', () => {
     const m = mitteMap(1);
     const props = generateProps(m, generateLots(m));

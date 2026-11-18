@@ -30,7 +30,7 @@ import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexEdge, dressAlexLots } from './alex-world';
 import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
-import { buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
+import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isLargeProp } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
@@ -2253,6 +2253,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
       // M15 Alexanderplatz: intact Plattenbau gets its panel facade; ruins keep the shared burnt-out shell.
       else if (l.kind === 'platte' && m.id === 'alex' && !l.ruin) b.on(y0, () => buildAlexPlatte(b, l, (f, seed) => loggias(b, f, seed)));
+      // M15 Mitte step 7: the Potsdamer Platz builds in glass (same footprint and height as the Altbau).
+      else if (mats.mitte && !l.shape && (l.kind === 'altbau' || l.kind === 'shop') && areaAt(m, l.x, l.z)?.id === 'potsdamer') b.on(y0, () => buildGlassLot(b, l));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
       else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
@@ -2327,7 +2329,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     buildStrausberger(chunkOf, m);
   }
   // M15 Mitte: neon street dressing (`mitte-world.ts`).
-  if (mats.mitte) buildMitteWorld(m, lots, mats.mitte, mats, wet, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
+  if (mats.mitte) buildMitteWorld(m, lots, props, mats.mitte, mats, wet, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
   if (m.tunnel) {
     buildTunnel(m, mats, chunkOf);
     buildTunnelExtras(m, mats, materials, chunkOf);

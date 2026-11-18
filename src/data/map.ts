@@ -88,7 +88,7 @@ export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'muegg
   | 'weltzeituhr' | 'brunnen' | 'hotelstadtberlin' | 'sbahnalex' | 'sbahnhackescher' | 'hausdeslehrers' | 'kongresshalle' | 'kino' | 'cafemoskau'
   // M15 Mitte (2089): Friedrichstadt, Regierungsviertel, Tiergarten, Kulturforum and the Potsdamer Platz.
   | 'ubahn' | 'tor' | 'mauerstuecke' | 'lafayette' | 'reichstag' | 'bundesbau' | 'kanzleramt' | 'siegessaeule' | 'sony' | 'stage' | 'bahntower' | 'kollhoff'
-  | 'verkehrsturm' | 'klinik' | 'philharmonie' | 'matthaeus' | 'stabi' | 'nng' | 'checkpoint' | 'pariser';
+  | 'verkehrsturm' | 'klinik' | 'philharmonie' | 'matthaeus' | 'stabi' | 'nng' | 'checkpoint' | 'pariser' | 'glasbau';
 
 export interface Landmark {
   kind: LandmarkKind;
