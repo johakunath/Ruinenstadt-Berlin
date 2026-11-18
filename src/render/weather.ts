@@ -15,6 +15,16 @@ export const KOEPENICK_WEATHER: Readonly<Record<string, WeatherKind>> = {
   spreepark: 'ash', johannisthal: 'ash', vorstadt: 'ash',
   altstadt: 'clear',
 };
+/**
+ * Xhain 1981 (M15): fog over the Spree banks and the death strip, ash and embers over the burning squats
+ * of SO36, rain at the Kotti and in the Görli, a clear night in the Wrangelkiez. Same particle layers.
+ */
+export const XHAIN_WEATHER: Readonly<Record<string, WeatherKind>> = {
+  osthafen: 'fog', andreasviertel: 'fog', todesstreifen: 'fog',
+  so36: 'ash', mariannenplatz: 'ash',
+  kotti: 'rain', goerli: 'rain',
+  wrangelkiez: 'clear',
+};
 /** Fog density per weather (scene default 0.017). */
 const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, clear: 0.014 };
 const W = 36, D = 30, H = 14;
