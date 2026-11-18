@@ -124,3 +124,9 @@ No free root or sunflower creature fits. Wurzler and Brigadeghul build on the zo
 - Tests: rows never tall on the camera side, at least six tall slabs, both lot types at scale 1 and 1.3.
 - Reused: Xhain Blockrand, Köpenick loggias, `lane`, lot type framework; 2D `aBanners`, `glashaus` and `sonnen` lots, `zuckerB` colours.
 - Next: step 6 enemy and boss spec (Opus), step 7 build.
+
+## Handover 2026-11-18 (posters, Johannes: "the communist posters back")
+
+- The 2D game's painted GDR art (Codex task 11, v0.69): torn red banner, blue banner, Pioneer poster, packed into `assets/textures/alex/posters.webp` (768 × 384, alpha; row in `assets/LICENSES.md`). Material `MapMats.posters` (alpha-tested, two-sided, this map only), code-painted fallback until the image is decoded (`paintPosterFallback`, `loadPosters` in `alex-paint.ts`).
+- Where: Allee flag poles (red or blue), banners down Plattenbau and Altbau fronts, the Pioneer poster as the gable mural, pasted Pioneer posters at eye height on about half of the intact fronts and on every second viaduct bay. Proof `docs/proof/m15-alex/posters.jpg`.
+- No Blender needed for step 7: `tools/build-creatures.mjs` converts the Quaternius packs in Node (FBXLoader, glTF export); Wurzler, Kernspeier and the Weltzeituhr boss are built in code.

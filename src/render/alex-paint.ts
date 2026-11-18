@@ -2,6 +2,7 @@
 // emblem surface of the district in one texture, so they share one material and one draw call per chunk.
 // Pioneer palette (`docs/style-bible.md` › GDR / Pioneer direction): cobalt `#2463a5`, yellow `#f3ce43`,
 // emblem red `#b93432`, cream `#eadfc6`; hammer and sickle as a real crossed hammer and curved sickle.
+import { SRGBColorSpace, TextureLoader, type CanvasTexture, type Texture } from 'three';
 import { canvas, toTexture, type Ctx, type EmissiveSurface } from './paint';
 
 export const ATLAS_W = 2048, ATLAS_H = 1536;
@@ -233,4 +234,44 @@ export function paintAlexAtlas(): EmissiveSurface {
   grid('bronze', '#c88a50', '#6a3c20', '#e8e2d4', 0.08, '#f0b060');
   grid('foyer', '#7a8e96', '#2e3a40', '#3a3c3c', 0.12, '#c89a60');
   return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
+}
+
+// ---------------------------------------------------------------- painted posters (2D art)
+
+/**
+ * The 2D game's painted GDR pieces (Codex task 11, Pioneer direction), packed into
+ * `assets/textures/alex/posters.webp`: the torn red and the blue banner, the Pioneer poster. Alpha-tested.
+ */
+export const POSTER_W = 768, POSTER_H = 384;
+export const POSTERS = { red: [0, 0, 192, 384], blue: [192, 0, 192, 384], pioneer: [384, 0, 384, 384] } as const satisfies Record<string, readonly [number, number, number, number]>;
+export type PosterKey = keyof typeof POSTERS;
+/** Content size of each piece inside its cell (w, h in pixels), for planes with the right aspect. */
+export const POSTER_ASPECT: Record<PosterKey, number> = { red: 165 / 302, blue: 156 / 302, pioneer: 227 / 242 };
+
+export function posterUv(key: PosterKey): [number, number, number, number] {
+  const [x, y, w, h] = POSTERS[key], a = POSTER_ASPECT[key], cw = Math.min(w, h * a), ch = cw / a, ox = (w - cw) / 2, oy = (h - ch) / 2;
+  return [(x + ox) / POSTER_W, 1 - (y + oy + ch) / POSTER_H, (x + ox + cw) / POSTER_W, 1 - (y + oy) / POSTER_H];
+}
+
+/** Code-painted stand-in until the image is decoded (and if it fails): flat banners and a sunburst. */
+export function paintPosterFallback(): CanvasTexture {
+  const [c, k] = canvas(POSTER_W, POSTER_H);
+  for (const [key, col] of [['red', RED], ['blue', BLUE]] as Array<[PosterKey, string]>) {
+    const [x, y, w, h] = POSTERS[key];
+    k.fillStyle = col; k.fillRect(x + 20, y + 10, w - 40, h - 30);
+    k.fillStyle = key === 'blue' ? RED : YELLOW;
+    if (key === 'blue') { k.beginPath(); k.arc(x + w / 2, y + h * 0.35, w * 0.3, 0, Math.PI * 2); k.fill(); }
+    hammerSickle(k, x + w / 2, y + h * 0.35, w * 0.45, YELLOW);
+  }
+  const [x, y, w, h] = POSTERS.pioneer;
+  k.fillStyle = YELLOW; k.fillRect(x + 30, y + 10, w - 60, h - 20);
+  k.fillStyle = BLUE; k.fillRect(x + 30, y + h * 0.55, w - 60, h * 0.45 - 10);
+  k.fillStyle = RED; k.beginPath(); k.arc(x + w * 0.72, y + h * 0.2, w * 0.12, 0, Math.PI * 2); k.fill();
+  return toTexture(c, false);
+}
+
+const POSTERS_URL = new URL('../../assets/textures/alex/posters.webp', import.meta.url).href;
+/** Swaps in the painted poster atlas once decoded; a failure keeps the fallback. */
+export function loadPosters(anisotropy: number, swap: (t: Texture) => void): void {
+  const pending = new TextureLoader().load(POSTERS_URL, (t) => { t.colorSpace = SRGBColorSpace; t.anisotropy = anisotropy; swap(t); }, undefined, () => pending.dispose());
 }

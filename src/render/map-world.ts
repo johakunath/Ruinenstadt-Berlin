@@ -29,7 +29,7 @@ import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexLots } from './alex-world';
-import { paintAlexAtlas } from './alex-paint';
+import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
 import { NIGHT_SKY, type Sky } from './sky';
 import { isLargeProp } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
@@ -85,6 +85,8 @@ export interface MapMats extends Mats {
   ratskeller: LitMaterial;
   /** M15 Alexanderplatz sign atlas (`alex-paint.ts`), only on that map. */
   alex?: LitMaterial;
+  /** M15 Alexanderplatz painted banners and Pioneer poster (2D art, alpha-tested), only on that map. */
+  posters?: LitMaterial;
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
@@ -2166,7 +2168,12 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const sky = opts.sky ?? NIGHT_SKY;
   glowScale = sky.lamps;
   const mats = makeMapMats(materials);
-  if (m.id === 'alex') mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
+  if (m.id === 'alex') {
+    mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
+    const posters = materials.surface({ map: paintPosterFallback(), alphaTest: 0.5, doubleSided: true, roughness: 0.85 });
+    mats.posters = posters;
+    loadPosters(materials.profile.anisotropy, (t) => { posters.map = t; posters.needsUpdate = true; });
+  }
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
   const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
   const cutaway = new Cutaway(plan.zones);

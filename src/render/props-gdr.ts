@@ -4,7 +4,7 @@ import { CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometr
 import type { GdrPropKind, Prop } from '../data/courtyard';
 import type { Rng } from '../sim/math';
 import { at, type Builder } from './world';
-import { atlasUv } from './alex-paint';
+import { POSTER_ASPECT, posterUv, type PosterKey } from './alex-paint';
 import type { LitMaterial } from './materials';
 
 type RGB = readonly [number, number, number];
@@ -70,18 +70,17 @@ function flagpole(b: Builder, p: Prop): void {
   const m = b.mats, H = 7.5;
   b.geo(m.iron, new CylinderGeometry(0.05, 0.08, H, 8), at(p, 0, H / 2, 0), [0.8, 0.8, 0.8]);
   b.geo(m.iron, new SphereGeometry(0.1, 8, 6), at(p, 0, H + 0.05, 0), [1.4, 1.15, 0.6]);
-  b.box(m.iron, at(p, 0.45, H - 0.3, 0), 0.9, 0.04, 0.04, [0.8, 0.8, 0.8]);
-  const alex = (b as Builder & { mm?: { alex?: LitMaterial } }).mm?.alex;
-  const banner = at(p, 0.5, H - 2.2, 0.03, 0, 0, 0);
-  if (alex) {
-    const [u0, v0, u1, v1] = atlasUv('banner');
-    const g = new PlaneGeometry(0.85, 3.6), uv = g.getAttribute('uv');
+  b.box(m.iron, at(p, 0.95, H - 0.22, 0), 1.9, 0.04, 0.04, [0.8, 0.8, 0.8]);
+  // The 2D game's painted banner (red or blue, from the pole's turn), alpha-tested and two-sided.
+  const posters = (b as Builder & { mm?: { posters?: LitMaterial } }).mm?.posters;
+  const key: PosterKey = Math.round(p.rot * 10) % 2 ? 'red' : 'blue', bh = 3.2, bw = bh * POSTER_ASPECT[key];
+  const banner = at(p, 0.1 + bw / 2, H - 0.25 - bh / 2, 0.03, 0, 0, 0);
+  if (posters) {
+    const [u0, v0, u1, v1] = posterUv(key);
+    const g = new PlaneGeometry(bw, bh), uv = g.getAttribute('uv');
     for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
-    b.geo(alex, g, banner);
-    b.geo(alex, g, banner.clone().multiply(new Matrix4().makeRotationY(Math.PI)));
-  } else b.box(m.stucco, banner, 0.85, 3.6, 0.02, [1.3, 0.42, 0.38]);
-  b.box(m.stucco, at(p, 0.32, H - 0.6, 0.02), 0.5, 0.18, 0.02, [0.45, 0.62, 1.1]);
-  b.box(m.stucco, at(p, 0.32, H - 0.78, 0.02), 0.5, 0.18, 0.02, [1.35, 1.1, 0.4]);
+    b.geo(posters, g, banner);
+  } else b.box(m.stucco, banner, bw, bh, 0.02, [1.3, 0.42, 0.38]);
   b.geo(m.stucco, new CircleGeometry(0.3, 10), at(p, 0, 0.02, 0, -Math.PI / 2), [0.7, 0.7, 0.68]);
 }
 

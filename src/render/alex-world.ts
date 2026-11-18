@@ -9,7 +9,7 @@ import type { Facade } from '../data/courtyard';
 import type { ChunkBuilder, MapMats } from './map-world';
 import { Rng } from '../sim/math';
 import { archWindow, cached, ENDS, frameOf, frustum, pane, SLOPES, sub, type Frame, type RGB } from './landmarks';
-import { atlasUv, type AtlasKey } from './alex-paint';
+import { atlasUv, POSTER_ASPECT, posterUv, type AtlasKey, type PosterKey } from './alex-paint';
 
 export const ALEX_KINDS = new Set<Landmark['kind']>([
   'altesmuseum', 'dom', 'palast', 'fernsehturm', 'marienkirche', 'neptunbrunnen', 'rotesrathaus', 'nikolaikirche',
@@ -33,6 +33,19 @@ function atlasPlane(b: ChunkBuilder, m: Matrix4, w: number, h: number, key: Atla
     return p;
   });
   b.geo(mat, g, m, color);
+}
+
+/** A painted banner or the Pioneer poster (2D art) of height h, its width from the image; z out. */
+export function posterPlane(b: { mm: MapMats; geo: ChunkBuilder['geo'] }, m: Matrix4, h: number, key: PosterKey): void {
+  const mat = b.mm.posters;
+  if (!mat) return;
+  const w = h * POSTER_ASPECT[key], [u0, v0, u1, v1] = posterUv(key);
+  const g = cached(`pp${h},${key}`, () => {
+    const p = new PlaneGeometry(w, h), uv = p.getAttribute('uv');
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
+    return p;
+  });
+  b.geo(mat, g, m);
 }
 
 /** An open cylinder band (radius r, height h, `seg` sides) wrapped with the atlas region `key`. */
@@ -409,8 +422,9 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
       b.box(mats.brick, at(0, v.h - 0.1, 0), v.width + 0.6, 0.8, seg, [0.85, 0.62, 0.55]);
       for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, seg, BRICK);
       for (const s of [-1, 1]) b.box(mats.railSteel, at(s * 1.6, v.h + 0.4, 0), 0.12, 0.15, seg);
-      // Ivy over the bricks on every second bay (the district grew wild).
+      // Ivy over the bricks on every second bay (the district grew wild), posters pasted on the others.
       if (k % 2 === 0) b.box(mats.ivy, at(v.width / 2 + 0.05, v.h / 2, 0), 0.1, v.h * 0.7, seg * 0.6, GREEN);
+      if (k % 2 === 1) for (const s of [-1, 1]) posterPlane(b, at(s * (v.width / 2 + 0.06), 2.1, 0).multiply(new Matrix4().makeRotationY((s * Math.PI) / 2)), 1.5, 'pioneer');
     }
   }
 }
@@ -458,16 +472,23 @@ export function dressAlexLots(chunkOf: (x: number, z: number) => ChunkBuilder, l
         return;
       }
       if (l.kind === 'platte') {
-        if (l.floors >= 4 && rng.next() < 0.45) atlasPlane(b, fr.mat(fs.len * rng.range(0.15, 0.85), Math.min(H - 2.4, 7.8), 0.06), 1.3, 4.2, 'banner');
+        // The painted banners of the 2D game hang down the front, red and blue.
+        if (l.floors >= 4 && rng.next() < 0.55) for (let k = 0; k < (fs.len > 22 ? 2 : 1); k++) posterPlane(b, fr.mat(fs.len * (k ? rng.range(0.6, 0.85) : rng.range(0.15, 0.4)), Math.min(H - 2.6, 8), 0.08), 4.4, rng.pick<PosterKey>(['red', 'blue']));
         // Pioneer mosaic on a gable end.
         const gable = sides.findIndex((s) => s.face === 1 || s.face === 3);
         if (gable >= 0 && l.floors >= 3 && rng.next() < 0.5) {
-          const gs = sides[gable]!, gr = runOf(gable), mh = Math.min(H - 4.6, gs.len * 1.5);
-          atlasPlane(b, gr.mat(gs.len / 2, GROUND_H + 0.3 + mh / 2, 0.05), gs.len - 1.2, mh, 'mural');
+          const gs = sides[gable]!, gr = runOf(gable), mh = Math.min(H - 4.6, (gs.len - 1.2) / POSTER_ASPECT.pioneer);
+          posterPlane(b, gr.mat(gs.len / 2, GROUND_H + 0.3 + mh / 2, 0.06), mh, 'pioneer');
         }
         return;
       }
-      if (l.kind === 'altbau' && l.floors >= 2 && rng.next() < 0.22) atlasPlane(b, fr.mat(fs.len * rng.range(0.3, 0.7), GROUND_H + FLOOR_H, 0.06), 1.1, 3.4, 'banner');
+      if (l.kind === 'altbau' && l.floors >= 2 && rng.next() < 0.3) posterPlane(b, fr.mat(fs.len * rng.range(0.3, 0.7), GROUND_H + FLOOR_H, 0.08), 3.6, rng.pick<PosterKey>(['red', 'blue']));
+    });
+    // Pioneer posters pasted at eye height, the cue the game camera sees (`docs/maps/landmarks.md`): one,
+    // sometimes a torn pair, on about half of the fronts.
+    if (rng.next() < 0.5) dress(() => {
+      const n = rng.next() < 0.3 ? 2 : 1, s0 = rng.range(1.3, Math.max(1.4, fs.len - 2.8));
+      for (let k = 0; k < n; k++) posterPlane(b, fr.mat(s0 + k * 1.3, 1.85 + k * 0.08, 0.09 + k * 0.01, 0, rng.range(-0.06, 0.06)), 1.5, 'pioneer');
     });
   }
 }
