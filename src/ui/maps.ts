@@ -1,15 +1,16 @@
 // Which map a page shows and where its title and victory buttons lead (M19 tunnel, M15 Xhain).
 // Each map is its own page load (`?map=`); the chain follows the story: Köpenick freed opens the
 // S3 tunnel, the tunnel ends at Warschauer Straße where Xhain starts.
-export type MapId = 'koepenick' | 'tunnel' | 'xhain' | 'hof';
+export type MapId = 'koepenick' | 'tunnel' | 'xhain' | 'alex' | 'hof';
 
 /** `MapDef.name` of each map (a saved run belongs to the map with this name). */
-export const MAP_NAME: Record<MapId, string> = { koepenick: 'Köpenick', tunnel: 'S3-Tunnel', xhain: 'Xhain', hof: 'Hof' };
+export const MAP_NAME: Record<MapId, string> = { koepenick: 'Köpenick', tunnel: 'S3-Tunnel', xhain: 'Xhain', alex: 'Alexanderplatz', hof: 'Hof' };
 /** Line under the title. */
 export const MAP_SUB: Record<MapId, string> = {
   koepenick: 'Köpenick bei Nacht',
   tunnel: 'S3-Tunnel · Richtung Warschauer Straße',
   xhain: 'Xhain · 1981',
+  alex: 'Alexanderplatz · 1989',
   hof: 'Köpenick · Hinterhof bei Nacht',
 };
 /** Small line of the Losziehen button. */
@@ -17,12 +18,13 @@ export const MAP_PLAY: Record<MapId, string> = {
   koepenick: 'Neue Expedition durch Köpenick',
   tunnel: 'Durch den S3-Tunnel',
   xhain: 'Neue Expedition durch Xhain',
+  alex: 'Neue Expedition zum Alex',
   hof: 'Hinterhof',
 };
 /** What a won run is called. */
-export const MAP_WON: Record<MapId, string> = { koepenick: 'Köpenick befreit', tunnel: 'S3 frei', xhain: 'Xhain befreit', hof: 'Hof frei' };
+export const MAP_WON: Record<MapId, string> = { koepenick: 'Köpenick befreit', tunnel: 'S3 frei', xhain: 'Xhain befreit', alex: 'Alex befreit', hof: 'Hof frei' };
 /** `camp.freed` id of a won map: districts by index, U-Bahn lines from 100. */
-export const MAP_FREED: Record<MapId, number> = { koepenick: 0, tunnel: 100, xhain: 1, hof: 0 };
+export const MAP_FREED: Record<MapId, number> = { koepenick: 0, tunnel: 100, xhain: 1, alex: 2, hof: 0 };
 
 export interface MapLink { id: 'go-tunnel' | 'go-xhain'; to: MapId; html: string }
 
@@ -36,7 +38,7 @@ export function titleLinks(map: MapId, freed: readonly number[]): MapLink[] {
   } else if (map === 'tunnel') {
     out.push({ id: 'go-tunnel', to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' });
     if (freed.includes(100)) out.push(xhain);
-  } else if (map === 'xhain') {
+  } else if (map === 'xhain' || map === 'alex') {
     out.push({ id: 'go-tunnel', to: 'koepenick', html: '<b>Köpenick</b><small>Ausrüstung bleibt</small>' });
   }
   return out;
@@ -46,7 +48,7 @@ export function titleLinks(map: MapId, freed: readonly number[]): MapLink[] {
 export function wonLink(map: MapId): { to: MapId; html: string } | null {
   if (map === 'koepenick') return { to: 'tunnel', html: '<b>In den S3-Tunnel</b><small>Richtung Warschauer Straße</small>' };
   if (map === 'tunnel') return { to: 'xhain', html: '<b>Weiter nach Xhain</b><small>Ausstieg Warschauer Straße</small>' };
-  if (map === 'xhain') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
+  if (map === 'xhain' || map === 'alex') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
   return null;
 }
 

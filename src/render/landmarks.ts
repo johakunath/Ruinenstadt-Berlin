@@ -7,6 +7,7 @@ import { BufferAttribute, BufferGeometry, CircleGeometry, ConeGeometry, Cylinder
 import type { Landmark } from '../data/map';
 import { Rng } from '../sim/math';
 import type { ChunkBuilder } from './map-world';
+import { ALEX_KINDS, buildAlexLandmark } from './alex-world';
 
 type RGB = readonly [number, number, number];
 type Frame = (x: number, y: number, z: number, ry?: number, rx?: number, rz?: number) => Matrix4;
@@ -771,6 +772,8 @@ function forum(b: ChunkBuilder, l: Landmark): void {
 }
 
 export function buildLandmark(b: ChunkBuilder, l: Landmark): void {
+  // M15 Alexanderplatz blockout massing (`alex-world.ts`) until the photo-built models (step 4).
+  if (ALEX_KINDS.has(l.kind)) return buildAlexLandmark(b, l);
   switch (l.kind) {
     case 'rathaus': return rathaus(b, l);
     case 'schloss': return schloss(b, l);

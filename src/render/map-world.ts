@@ -26,6 +26,7 @@ import { BatchSet } from './batch';
 import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
+import { buildArches, buildStadtbahn } from './alex-world';
 import { isLargeProp } from './layers';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
@@ -2219,6 +2220,11 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildTerraces(m, chunkOf);
   // M15 Xhain: the Wall, the viaducts and the Xhain landmarks (`xhain-world.ts`).
   buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
+  // M15 Alexanderplatz: the brick Stadtbahn with open arches (Xhain draws only its U1 Hochbahn).
+  if (m.id === 'alex') {
+    for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') buildStadtbahn(chunkOf, mats, v);
+    buildArches(chunkOf, mats, m);
+  }
   if (m.tunnel) buildTunnel(m, mats, chunkOf);
   if (m.rail) {
     const r = m.rail;

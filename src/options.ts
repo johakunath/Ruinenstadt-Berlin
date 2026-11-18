@@ -1,6 +1,6 @@
 // Start options from the URL and from the options menu (stored in localStorage).
 //   ?profile=Qualität|Leistung   ?debug=hit,perf,flow   ?stress=40   ?seed=7
-//   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
+//   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15), alex (M15 blockout)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
 //   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
 //   ?cut=off (no V1 B cutaway)   ?cut=4.3 (yard cut height in meters, look test)
 import { PROFILES, type ProfileId } from './render/profile';
@@ -34,7 +34,7 @@ export interface Options {
   /** ?cut=off disables the V1 B cutaway; ?cut=<meters> overrides the Hinterhof cut height. */
   cut?: 'off' | number;
   /** Köpenick (default) or the gate 1 courtyard. */
-  map: 'koepenick' | 'hof' | 'tunnel' | 'xhain';
+  map: 'koepenick' | 'hof' | 'tunnel' | 'xhain' | 'alex';
   mapScale: number;
   /** Debug: start at this encounter. */
   startAt: number;
@@ -120,7 +120,7 @@ export function readOptions(): Options {
     cam: parseCam(q.get('cam')),
     boxShadows: q.get('shadows') === 'boxes',
     cut: parseCut(q.get('cut')),
-    map: (['hof', 'tunnel', 'xhain'] as const).find((k) => k === q.get('map')) ?? 'koepenick',
+    map: (['hof', 'tunnel', 'xhain', 'alex'] as const).find((k) => k === q.get('map')) ?? 'koepenick',
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),

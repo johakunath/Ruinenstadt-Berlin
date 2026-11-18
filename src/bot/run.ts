@@ -2,6 +2,7 @@
 import type { DifficultyId } from '../data/difficulty';
 import { koepenickMap } from '../data/koepenick';
 import { xhainMap } from '../data/xhain';
+import { alexMap } from '../data/alexanderplatz';
 import { generateLots, generateProps, mapLevel } from '../data/map';
 import type { Level } from '../sim/level';
 import { runCampaign, SKILL_DEFAULT, SKILL_GOOD, SKILL_WEAK, type BotSkill, type CampaignReport } from './bot';
@@ -9,10 +10,10 @@ import { runCampaign, SKILL_DEFAULT, SKILL_GOOD, SKILL_WEAK, type BotSkill, type
 export const SKILLS: Record<string, BotSkill> = { johannes: SKILL_DEFAULT, good: SKILL_GOOD, weak: SKILL_WEAK };
 
 const cached = new Map<string, Level>();
-export function mapLevelOf(map: 'koepenick' | 'xhain' = 'koepenick'): Level {
+export function mapLevelOf(map: 'koepenick' | 'xhain' | 'alex' = 'koepenick'): Level {
   let level = cached.get(map);
   if (!level) {
-    const def = map === 'xhain' ? xhainMap(1) : koepenickMap(1);
+    const def = map === 'xhain' ? xhainMap(1) : map === 'alex' ? alexMap(1) : koepenickMap(1);
     const lots = generateLots(def);
     level = mapLevel(def, lots, generateProps(def, lots));
     cached.set(map, level);
@@ -21,7 +22,7 @@ export function mapLevelOf(map: 'koepenick' | 'xhain' = 'koepenick'): Level {
 }
 export const koepenickLevel = (): Level => mapLevelOf('koepenick');
 
-export interface BalanceArgs { map?: 'koepenick' | 'xhain'; runs: number; difficulty: DifficultyId; skill: BotSkill; seed: number; startAt?: number; until?: number }
+export interface BalanceArgs { map?: 'koepenick' | 'xhain' | 'alex'; runs: number; difficulty: DifficultyId; skill: BotSkill; seed: number; startAt?: number; until?: number }
 
 export function balance(a: BalanceArgs, onRun?: (i: number, r: CampaignReport) => void): CampaignReport[] {
   const out: CampaignReport[] = [];

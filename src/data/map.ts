@@ -81,7 +81,10 @@ export interface Area {
 
 export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati'
   // M15 Xhain (1981): stations, the Oberbaumbrücke towers, a GDR watchtower, squats and churches.
-  | 'warschauer' | 'ostbahnhof' | 'oberbaum' | 'wachturm' | 'thomaskirche' | 'bethanien' | 'rauchhaus' | 'nkz' | 'u1station' | 'goerlitzer';
+  | 'warschauer' | 'ostbahnhof' | 'oberbaum' | 'wachturm' | 'thomaskirche' | 'bethanien' | 'rauchhaus' | 'nkz' | 'u1station' | 'goerlitzer'
+  // M15 Alexanderplatz (1989): Museumsinsel, forum, Nikolaiviertel, the Alex and the Karl-Marx-Allee.
+  | 'altesmuseum' | 'dom' | 'palast' | 'fernsehturm' | 'marienkirche' | 'neptunbrunnen' | 'rotesrathaus' | 'nikolaikirche'
+  | 'weltzeituhr' | 'brunnen' | 'hotelstadtberlin' | 'sbahnalex' | 'sbahnhackescher' | 'hausdeslehrers' | 'kongresshalle' | 'kino' | 'cafemoskau';
 
 export interface Landmark {
   kind: LandmarkKind;

@@ -31,6 +31,7 @@ import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
 import { tunnelMap } from './data/tunnel';
 import { xhainMap } from './data/xhain';
+import { alexMap } from './data/alexanderplatz';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, showTitleLinks, wonLink, type MapId } from './ui/maps';
 import { areaAt, generateLots, generateProps, mapLevel } from './data/map';
 import { mapSvg } from './data/map-svg';
@@ -72,7 +73,7 @@ abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
 // Köpenick (M11), the S3 tunnel (M19, ?map=tunnel), Xhain (M15, ?map=xhain) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'tunnel' ? tunnelMap() : opts.map === 'xhain' ? xhainMap(opts.mapScale) : koepenickMap(opts.mapScale);
+  const def = opts.map === 'tunnel' ? tunnelMap() : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
@@ -527,7 +528,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : MAP_NAME[mapId]) : 'Neustart');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : MAP_NAME[mapId]) : 'Neustart');
   }
   input.buffer.clear();
   input.enabled = true;

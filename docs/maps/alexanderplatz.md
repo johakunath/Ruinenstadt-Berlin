@@ -8,7 +8,8 @@ District 3: 1989, frozen in autumn; the GDR kept going and grew wild (clockwork,
 |---|---|
 | 1 Concept | Three layouts in [`../mockups/alex-layouts.svg`](../mockups/alex-layouts.svg) (2026-11-18). Johannes picked **C Großer Ring** (2026-11-18). Plan and decisions: `docs/tasks/m15-alexanderplatz.md` |
 | 2 Geography check | Done for the landmarks below |
-| 3+ | Not started |
+| 3 Data | `src/data/alexanderplatz.ts`, map image from the data: [`alexanderplatz.svg`](alexanderplatz.svg) (2026-11-18). Blockout playable with `?map=alex` |
+| 4+ | See `docs/tasks/m15-alexanderplatz.md` |
 
 ## Decisions (Johannes, 2026-11-18)
 

@@ -128,3 +128,4 @@ Headless numbers are not representative. On Leistung keep a typical view under a
 | 2026-11-18 | Cutaway of flagged objects (V1 B, engine B3): Hinterhof lots, Thomaskirche, Bethanien |
 | 2026-11-15 | Köpenick v2 (M11b, playtest): tighter size, loop route, narrower streets with curbs, lower and L-shaped buildings, shops, cars and props on every stretch (test) |
 | 2026-11-17 | Landmarks: photo research by the building model (not cheap subagents), cues below 5 m (camera rule), reveal shot, collider covers all standing parts (`docs/maps/landmarks.md`). Water 1.7 m below street level, natural banks slope, quays reach the bed (M11d step 0) |
+| 2026-11-18 | Alexanderplatz: a brick Stadtbahn is a row of solid viaduct runs with open arches where streets pass (`MapDef.viaducts`, one run per closed stretch); wide streets (Allee 22 m) get fires down the middle strip, and a light that would stand in a fight circle moves to its rim |
