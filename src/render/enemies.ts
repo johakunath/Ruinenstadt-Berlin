@@ -30,8 +30,10 @@ const SCRATCH_SWIPE = 0.16;
 const WALK_CLIP_SPEED = 1.15;
 /** Seconds a lying guard takes to get up. */
 const RISE_TIME = 0.7;
-/** M12c Türsteher grab: Zombie_Scratch with both arms forward, held while the hero is caught. */
-const GRAB_HOLD = 0.42;
+/** M12c Türsteher grab: Zombie_Scratch at the end of the swipe, hunched with both hands in front (clutching), held while the hero is caught. */
+const GRAB_HOLD = 0.68;
+/** M12c shove: Shield_Dash with the arms out in front (from the clip sheet), reached when the circle goes off. */
+const SHOVE_PUSH = 0.25;
 
 /** Skin tints per kind (one is picked per body). */
 const TINTS: Record<EnemyKind, number[]> = {
@@ -173,16 +175,26 @@ function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMat
 const cable = (pts: Array<[number, number, number]>, r = 0.014): BufferGeometry =>
   new TubeGeometry(new CatmullRomCurve3(pts.map(([x, y, z]) => new Vector3(x, y, z))), 10, r, 4, false);
 
-/** 2D `D.cyber` (and the Kabelghul): `n` pink cables from the back of the skull down to the shoulders, two implant dots. */
+/** 2D `D.cyber` (and the Kabelghul): `n` pink cables from the skull base out and down to the shoulder blades (mounted on the neck). */
 function cables(n: number, spread: number, r = 0.014): Part[] {
   const out: Part[] = [];
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) - 0.5 : 0;
-    out.push([cable([[t * 0.12, 0.13, -0.07], [t * spread * 0.9, 0.12, -0.2], [t * spread * 1.3, -0.05, -0.22], [t * spread * 1.6, -0.24, -0.14]], r), 'neon']);
+    out.push([cable([[t * 0.08, 0.07, -0.05], [t * spread * 0.8, 0.02, -0.17], [t * spread * 1.3, -0.13, -0.21], [t * spread * 1.7, -0.32, -0.15]], r), 'neon']);
   }
-  out.push([tf(new SphereGeometry(0.02, 6, 4), 0.075, 0.05, 0.08), 'neon'], [tf(new SphereGeometry(0.016, 6, 4), 0.09, 0.0, 0.06), 'neon']);
   return out;
 }
+/** Board E13 / Potsdamer Platz: thick cables that arch up off the back and plug into the skull, readable from the camera. */
+function arches(n: number, r: number): Part[] {
+  const out: Part[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = n > 1 ? i / (n - 1) - 0.5 : 0;
+    out.push([cable([[t * 0.1, 0.07, -0.05], [t * 0.3, 0.22, -0.2], [t * 0.42, 0.12, -0.36], [t * 0.36, -0.12, -0.3], [t * 0.3, -0.32, -0.18]], r), 'neon']);
+  }
+  return out;
+}
+/** Two lit implant dots on the temple and the cheek (mounted on the head). */
+const implants = (): Part[] => [[tf(new SphereGeometry(0.022, 6, 4), 0.08, 0.06, 0.07), 'neon'], [tf(new SphereGeometry(0.017, 6, 4), 0.09, 0.0, 0.07), 'neon']];
 
 /** A speaker box head (Boxenkopf, Bassprediger), built on the neck: box, two cones with pulsing rings, a cyan eye strip. */
 function speakerHead(w: number, h: number, d: number): Part[] {
@@ -191,9 +203,12 @@ function speakerHead(w: number, h: number, d: number): Part[] {
     cones.push([tf(new CylinderGeometry(r * 0.35, r, 0.06, 14), 0, y, d / 2 + 0.01, Math.PI / 2), 'cone']);
     cones.push([tf(new TorusGeometry(r * 1.02, 0.018, 4, 18), 0, y, d / 2 + 0.03), 'pulse']);
   }
+  // Lit edges round the top, so the box reads from the camera on every side.
+  const rim = (x: number, z: number, lx: number, lz: number): Part => [tf(new BoxGeometry(lx, 0.025, lz), x, h + 0.02, z), 'pulse'];
   return [
     [tf(new BoxGeometry(w, h, d), 0, h / 2, 0), 'speaker'],
     [tf(new BoxGeometry(w * 1.04, 0.03, d * 1.04), 0, h, 0), 'cone'],
+    rim(0, d / 2, w, 0.025), rim(0, -d / 2, w, 0.025), rim(w / 2, 0, 0.025, d), rim(-w / 2, 0, 0.025, d),
     [tf(new BoxGeometry(w * 0.4, 0.025, 0.012), -w * 0.2, h * 0.94, d / 2 + 0.006), 'cyan'],
     ...cones,
   ];
@@ -356,12 +371,13 @@ function gearFor(kind: EnemyKind | 'cyber', model: Object3D, materials: Material
       break;
     case 'cyber':
       // Neon maps (2D `D.cyber`): three pink cables and two implant dots on the plain bodies.
-      mount('Head', cables(3, 0.16), 0.02);
+      mount('neck_01', cables(3, 0.16));
+      mount('Head', implants());
       break;
     case 'kabel':
       // Kabelghul (2D art, board E13): four lit cables from the skull to the back, implants on the temple.
-      mount('Head', cables(4, 0.2, 0.016), 0.02);
-      mount('spine_03', [[tf(new BoxGeometry(0.16, 0.05, 0.05), 0, 0.06, -0.15), 'cone'], [tf(new SphereGeometry(0.025, 6, 4), 0.05, 0.06, -0.18), 'neon']], 0.05);
+      mount('neck_01', [...arches(4, 0.026), ...cables(2, 0.2, 0.018)]);
+      mount('Head', implants());
       break;
     case 'bass':
       // Boxenkopf (2D art, board E14): a speaker for a head, purple rags with a yellow hazard band.
@@ -370,11 +386,13 @@ function gearFor(kind: EnemyKind | 'cyber', model: Object3D, materials: Material
       break;
     case 'tuersteher':
       // Kabelbrocken in a bomber jacket with orange lining, dark glasses, the guest list on a clipboard.
-      mount('Head', [...cables(4, 0.22, 0.018), [tf(new BoxGeometry(0.2, 0.04, 0.05), 0, 0.03, 0.13), 'dark']], 0.02);
+      mount('neck_01', [...cables(4, 0.24, 0.02), [tf(new TorusGeometry(0.11, 0.03, 5, 12).scale(1.2, 1, 1.05), 0, -0.04, 0, Math.PI / 2), 'lining']]);
+      mount('Head', [...implants(), [tf(new BoxGeometry(0.2, 0.04, 0.05), 0, 0.03, 0.13), 'dark']]);
+      // The jacket fits the Brocken chest (spine ×1.3): a wider shell than the uniform tunic.
       mount('spine_03', [
-        ...tunic('jacket', 'lining'),
-        [tf(new TorusGeometry(0.13, 0.04, 5, 12).scale(1.2, 1, 1), 0, 0.1, 0, Math.PI / 2), 'lining'],
-        [tf(new BoxGeometry(0.44, 0.06, 0.32), 0, -0.36, 0), 'jacket'],
+        [tf(new CylinderGeometry(0.24, 0.2, 0.46, 12, 1, true).scale(1.2, 1, 0.9), 0, -0.12, 0.01), 'jacket'],
+        [tf(new BoxGeometry(0.03, 0.42, 0.02), 0, -0.12, 0.225), 'lining'],
+        [tf(new BoxGeometry(0.5, 0.06, 0.36), 0, -0.34, 0), 'jacket'],
       ], 0.08);
       mount('hand_l', [
         [tf(new BoxGeometry(0.22, 0.3, 0.018), 0, -0.14, 0.05, 0, 0.3), 'rust'],
@@ -384,22 +402,24 @@ function gearFor(kind: EnemyKind | 'cyber', model: Object3D, materials: Material
       break;
     case 'dirigent':
       // Torn tailcoat, white shirt front and bow tie, a rebar baton, a speaker on his back.
-      mount('Head', cables(2, 0.14), 0.02);
+      mount('neck_01', [
+        ...cables(2, 0.14),
+        [tf(new ConeGeometry(0.035, 0.07, 4), -0.035, -0.06, 0.1, 0, 0, Math.PI / 2), 'red'],
+        [tf(new ConeGeometry(0.035, 0.07, 4), 0.035, -0.06, 0.1, 0, 0, -Math.PI / 2), 'red'],
+      ]);
       mount('spine_03', [
         ...tunic('dark', 'dark'),
-        [tf(new BoxGeometry(0.12, 0.3, 0.02), 0, -0.04, 0.2), 'paper'],
-        [tf(new ConeGeometry(0.035, 0.07, 4), -0.035, 0.1, 0.2, 0, 0, Math.PI / 2), 'red'],
-        [tf(new ConeGeometry(0.035, 0.07, 4), 0.035, 0.1, 0.2, 0, 0, -Math.PI / 2), 'red'],
+        [tf(new BoxGeometry(0.12, 0.3, 0.02), 0, 0.06, 0.2), 'paper'],
         [tf(new BoxGeometry(0.3, 0.36, 0.2), 0, 0.0, -0.26), 'speaker'],
         [tf(new CylinderGeometry(0.04, 0.1, 0.04, 12), 0, 0.0, -0.38, Math.PI / 2), 'cone'],
         [tf(new TorusGeometry(0.1, 0.015, 4, 14), 0, 0.0, -0.4), 'pulse'],
       ], 0.08);
-      mount('pelvis', [[tf(new CylinderGeometry(0.2, 0.26, 0.6, 10, 1, true, Math.PI * 0.62, Math.PI * 0.76), 0, -0.28, 0), 'dark']]);
+      mount('pelvis', [[tf(new CylinderGeometry(0.21, 0.28, 0.66, 10, 1, true, Math.PI * 0.52, Math.PI * 0.96), 0, -0.3, 0), 'dark']]);
       mount('hand_r', [[tf(new CylinderGeometry(0.012, 0.009, 0.5, 5), 0, -0.04, 0.2, Math.PI / 2 - 0.3), 'rust']]);
       break;
     case 'bassprediger':
       // 2D art: speaker head, five pink cables, cyan eyes; from the bust (X09): preacher's collar, a mixer on the chest.
-      mount('neck_01', [...speakerHead(0.46, 0.56, 0.38), ...[0, 1, 2, 3, 4].map((i): Part => [cable([[-0.16 + i * 0.08, 0.5, -0.19], [-0.24 + i * 0.12, 0.4, -0.34], [-0.26 + i * 0.13, 0.05, -0.32], [-0.3 + i * 0.15, -0.3, -0.2]], 0.02), 'neon'])], 0.02);
+      mount('neck_01', [...speakerHead(0.46, 0.56, 0.38), ...[0, 1, 2, 3, 4].map((i): Part => [cable([[-0.16 + i * 0.08, 0.3, -0.19], [-0.22 + i * 0.11, 0.18, -0.3], [-0.26 + i * 0.13, -0.05, -0.3], [-0.3 + i * 0.15, -0.3, -0.2]], 0.02), 'neon'])], 0.02);
       mount('spine_03', [
         ...tunic('violet', 'paper'),
         [tf(new BoxGeometry(0.34, 0.2, 0.08), 0, -0.14, 0.22, -0.2), 'speaker'],
@@ -734,7 +754,7 @@ export class EnemyView {
       this.glow.length = 0;
       this.glow.push(d.eyes);
       for (const m of this.mats) m.emissive.setScalar(0);
-      this.inner.position.y = big ? BOSS.wachdrohne.height : 1.8;
+      this.inner.position.y = (big ? BOSS.wachdrohne.height : 1.8) / (this.root.scale.y || 1);
     }
     if (this.body === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
@@ -874,7 +894,13 @@ export class EnemyView {
             if (going) a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05);
             else { a.pose('Zombie_Scratch', lerp(0.05, 0.35, w), 0.12); pitch = 0.3 * w; }
             break;
-          case 'lunge': case 'charge': case 'pounce': case 'leap': case 'shove':
+          case 'shove':
+            // Coils with the arms spread, then pushes: the arms are out in front when the circle goes off.
+            if (going) a.pose('Shield_Dash', lerp(SHOVE_PUSH, 0.3, g), 0.05);
+            else if (w < 0.7) a.pose('Zombie_Scratch', lerp(0.05, 0.3, w / 0.7), 0.12);
+            else a.pose('Shield_Dash', lerp(0, SHOVE_PUSH, (w - 0.7) / 0.3), 0.04);
+            break;
+          case 'lunge': case 'charge': case 'pounce': case 'leap':
             if (going) a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05);
             else {
               a.pose('Zombie_Scratch', lerp(0.05, 0.35, w), 0.12);
@@ -1081,6 +1107,8 @@ export class EnemyView {
       default:
         break;
     }
+    // Heights are world meters; the root carries the body scale.
+    y /= this.root.scale.y || 1;
     m.position.y += (y - m.position.y) * ease;
     d.tilt.rotation.x += (pitch - d.tilt.rotation.x) * 0.2;
     d.tilt.rotation.z += (roll - d.tilt.rotation.z) * 0.25;

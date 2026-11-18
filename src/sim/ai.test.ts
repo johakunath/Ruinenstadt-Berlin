@@ -565,6 +565,13 @@ describe('Mitte roster (M12c)', () => {
     const sp = createSim({ empty: true, spawn: ['bass', 'bass', 'bass', 'kabel'] });
     expect(alive(sp, 'bass')).toBe(2);
     expect(alive(sp, 'kabel')).toBe(1);
+    // Sleeping side-passage guards do not use up a boss's adds.
+    const z = fresh();
+    for (let i = 0; i < 10; i++) put(z, 'walker', 20 + i, 20).sleep = 6;
+    const t = put(z, 'tuersteher', 0, 7);
+    t.cd = [99, 99, 0];
+    run(z, BOSS.summon.wind + 0.6);
+    expect(alive(z, 'kabel')).toBe(BOSS.tuersteher.adds);
     // The Dirigent's Orchester with one Boxenkopf alive calls only one more.
     const d = fresh();
     put(d, 'bass', 4, 4);

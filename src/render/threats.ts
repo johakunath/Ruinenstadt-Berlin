@@ -47,6 +47,8 @@ export class ThreatView {
   private readonly open: Mesh[] = [];
   private readonly spots: Array<{ rim: Mesh; fill: Mesh; beam: Mesh }> = [];
   private readonly pulses: Mesh[] = [];
+  /** M12c: the pink ring round a hero the Türsteher holds; it closes as the hold runs out. */
+  private readonly held: Mesh;
   private readonly globs: InstancedMesh;
   private readonly bossShots: InstancedMesh;
   private readonly hazards: InstancedMesh;
@@ -97,7 +99,7 @@ export class ThreatView {
       // The beam from the lens to the spot: an open cone, tip at the top.
       const cone = new ConeGeometry(1, 1, 20, 1, true);
       cone.translate(0, -0.5, 0);
-      const beam = fx(new Mesh(cone, add(0x9ff0ea, 0.07)), 4);
+      const beam = fx(new Mesh(cone, add(0x9ff0ea, 0.045)), 4);
       beam.visible = false;
       this.group.add(rim, fill, beam);
       this.spots.push({ rim, fill, beam });
@@ -107,6 +109,8 @@ export class ThreatView {
       this.group.add(m);
       this.pulses.push(m);
     }
+    this.held = fx(flat(new Mesh(new RingGeometry(0.8, 1, 40), add(0xff4fa3, 0.9))), 3);
+    this.group.add(this.held);
     const inst = (r: number, color: number): InstancedMesh => {
       const m = fx(new InstancedMesh(new SphereGeometry(r, 8, 6), new MeshBasicMaterial({ color, fog: false }), SHOTS), 5);
       m.count = 0;
@@ -204,6 +208,16 @@ export class ThreatView {
     for (let i = nl; i < LINES; i++) this.lines[i]!.visible = false;
     for (let i = no; i < OPEN; i++) this.open[i]!.visible = false;
     for (let i = np; i < PULSES; i++) this.pulses[i]!.visible = false;
+
+    // M12c: held by the Türsteher.
+    const hp = s.player;
+    this.held.visible = hp.root > 0 && hp.state !== 'dead';
+    if (this.held.visible) {
+      const x = lerp(hp.px, hp.x, alpha), z = lerp(hp.pz, hp.z, alpha);
+      this.held.position.set(x, groundY(x, z) + 0.1, z);
+      this.held.scale.setScalar(0.55 + 0.6 * hp.root);
+      (this.held.material as MeshBasicMaterial).opacity = 0.6 + 0.3 * Math.sin(this.time * 18);
+    }
 
     // M12c searchlights: white-cyan, brighter while the hero stands in it, red when it locks.
     this.spots.forEach((m, i) => {

@@ -264,7 +264,8 @@ const RING_SHOTS: Partial<Record<EnemyKind, number>> = { hauptmann: BOSS.hauptma
 
 function summon(sim: Sim, e: Enemy, kind: EnemyKind, count: number): void {
   let alive = 0;
-  for (const o of sim.enemies) if (o.state !== 'dead' && !o.def.boss) alive++;
+  // Sleeping side-passage guards (lot types) are not adds: on a map full of them no boss could call (M12c fix).
+  for (const o of sim.enemies) if (o.state !== 'dead' && !o.def.boss && o.sleep === undefined) alive++;
   // M12c: kinds with a cap (Boxenkopf) never go past it.
   const cap = ENEMIES[kind].cap;
   const n = Math.min(count, BOSS.summon.maxAdds - alive, cap === undefined ? Infinity : cap - aliveOf(sim, kind));

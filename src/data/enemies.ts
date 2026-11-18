@@ -117,7 +117,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // New for 3D (2D only as the power „Drohnenschwarm“): the Krähe's brain on a drone body; dazed it sinks and sparks.
   drone: {
-    kind: 'drone', name: 'Drohne', body: 'drone', ai: 'crow', res: 'crow', radius: 0.3, scale: 1, hp: 14, speed: 5,
+    kind: 'drone', name: 'Drohne', body: 'drone', ai: 'crow', res: 'crow', radius: 0.3, scale: 1.3, hp: 14, speed: 5,
     attackRange: 0, windup: 0.35, active: 0.1, recovery: 0.5,
     reach: 1.2, halfAngle: 40 * DEG, damage: 10, knockbackTaken: 1.4, poise: false, weight: 0, fly: true,
   },
