@@ -46,14 +46,37 @@ From the mockup; refine in step 1 against the real directions in `docs/maps/alex
 
 Bridges: Liebknechtbrücke to the island (north), Rathausbrücke from the island to the Nikolaiviertel, Jannowitzbrücke under the viaduct. Späti: Hackescher Markt, Spreeufer, Karl-Marx-Allee.
 
-## Bosses (proposal for step 6)
+## Step 6 spec: enemies and bosses (2026-11-18, Opus; Fable only if Johannes dislikes a boss)
 
-| Zone | Boss | Idea |
-|---|---|---|
-| 1 Museumsinsel | Wurzel-Mutter | Giant Wurzler grown out of the Palast glass house; root fields with warning, sunflower adds |
-| 2 Nikolaiviertel | Großer Uhrwerkläufer | Huge shield bearer, clock-face shield turns to face the hero, punish window when it rewinds |
-| 3 Karl-Marx-Allee | Volkseigener Koloss (2D boss) | Walking Plattenbau slab, hammer arm and compass arm |
-| Final | Die Weltzeituhr | Idle landmark until the hero enters its circle on the last objective; wake-up of about 3 s (gears start, city panel ring spins up, the column lifts off its base on clockwork legs, roar ring), invulnerable while waking. Fights with the turning panel ring and orbit sculpture. Defeated: sinks back onto its base and stops; drops its Zahnrad (story) |
+Source: 2D `mkEnemy` (`uhr`, `wurz`, `kern`), `update.js` (Wurzler root field, Kernspeier fan, Koloss v8), `RES`, `MIX[2]`, Kodex lines. 3D scale as in M12: life ×1.2 to 1.5 of 2D, speed 2D px/s ÷ 32. Every hit on the hero goes through `threatHit`/`hurtPlayer` (45 % cap holds). Bodies: `docs/tasks/m15-alexanderplatz.md` › Enemy model research.
+
+### Ordinary types
+
+| Kind | Name | Body | Life, speed, radius | Special | Answer | Resist (fire, acid, shock) |
+|---|---|---|---|---|---|---|
+| `uhrwerk` | Uhrwerkläufer | Mech Leela, brass and cobalt, clock-face shield (code) | 85, 1.1, 0.7 | Shield in front: hits inside ±70° of its facing deal 20 %; it turns at 90°/s. Slow heavy swing (wind-up 0.9 s, reach 2.4 m, 22). A hammer finisher, a stun or any shock hit opens the guard for 2.2 s (punish window, "Deckung offen") | Get behind it, or open it with hammer or shock | 1, 0.5, 1.7 |
+| `wurzler` | Wurzler | Zombie with root arms, apron and a sunflower head (code) | 55, 1.7, 0.4 | Root field every 4.5 to 6 s within 10 m: a circle of 1.5 m under the hero, 0.95 s warning, then roots: 60 % of its hit and held 0.8 s (no walking; a dodge breaks free; 2.5 s immunity). Stands still while casting, open 0.9 s after. Slower (×0.7) within 3.8 m | Keep moving, dodge out of the circle, hit it after the cast | 1.8, 0.4, 1 |
+| `kernspeier` | Kernspeier | Clay pot with a toothed sunflower, hops (code) | 26, 1.8, 0.34 | Keeps 5 to 8 m like the Speier. Plants itself 0.7 s (mouth wide open), then a fan of three seeds (±15°, 70 % hit each); open 0.9 s after | Close in while it plants, or side-step the fan | 1.6, 0.4, 1 |
+| Brigadeghul | (walker) | The Schlurfer in a blue Blaumann, cap and red armband on this map (render only) | as walker | – | – | as walker |
+
+Wave mix (`alexWaveTier`): walker 6, runner, brute fewer than Xhain; `uhrwerk` from the 2nd wave (2D weight 0.1), `wurzler` from the 3rd (0.08), `kernspeier` replaces most spitters (0.09); crows over the island stay. Elites as everywhere from the 4th wave; `uhrwerk` never `gepanzert` (it already blocks).
+
+### Bosses
+
+| Zone | Boss | Body | Life | Pattern (cooldown s) | Rage below 50 % |
+|---|---|---|---|---|---|
+| 0 Museumsinsel | Die Wurzel-Mutter | Wurzler ×2.2 grown out of the Palast glass house, a crown of sunflowers | 1900 | Three root fields (one under the hero, two beside) 4.2; two Kernspeier 9; root slam ring when the hero is within 3 m 3.6 | four fields, three adds |
+| 1 Nikolaiviertel | Der Große Uhrwerkläufer | Mech Mike ×1.8 with the shield | 2900 | Shield as the Uhrwerkläufer (front 35 %); charge along a marked line (0.75 s warning, 12 m/s, 0.6 s) 4.2, then wound down 1.4 s (back open, +30 %); every third cycle it winds its key 2 s: front closed, sparks ring | cooldowns ×1.35 |
+| 2 Karl-Marx-Allee | Der Volkseigene Koloss (2D v8) | Walking Plattenbau slab on clockwork legs (Mech Mike leg rig, slab body in code), hammer arm and compass arm | 3900 | Cycle 4.4: odd cycles three slab drops (circles of 1.9 m, one on the hero, 0.9 to 1.4 s); even cycles the ring on its back spins 2.4 s and sprays gears in a two-arm spiral (one pair every 0.16 s); every third cycle two Uhrwerkläufer; hammer slam within 3 m | cycle 3.2 |
+| 3 Alexanderplatz | Die Weltzeituhr | The landmark itself: drum on four clockwork legs (code), the orbit sculpture on top | 5400 | Wake-up: the hero enters the final circle, 3 s (gears start, the panel ring spins up, the column lifts off its base, roar ring), untouchable; the landmark hides and the boss stands at its place. Zeitzonen: three of the 24 hour sectors of a ring (3 to 9 m) light up 1.1 s, then strike 4.0; Orbit: the planet balls fly out as a spiral of shots 2.2 s, every second cycle; Zeiger: every third cycle the minute hand sweeps a full circle at 7 m radius, a red line turning slowly then fast (dodge through it); Stillstand: at 75, 50 and 25 % life it stops time for 2 s (hero ×0.5 speed) and two Uhrwerkläufer drop in. Defeated: sinks back onto its base and stands still; its Zahnrad drops | cycles ×1.35, a fourth sector |
+
+Names in the Kodex and on the boss bar as above. Kodex lines (German, short): Uhrwerkläufer „Zifferblatt vorn. Von hinten treffen, Strom bringt das Werk aus dem Takt.“; Wurzler „Wurzeln halten fest. In Bewegung bleiben.“; Kernspeier „Spuckt Kerne im Fächer. Ran, solange er pflanzt.“; Wurzel-Mutter „Wuchs aus dem Glashaus des Palasts.“; Großer Uhrwerkläufer „Nach dem Ansturm läuft er ab.“; Koloss „Ein Stück Platte auf Uhrwerkbeinen.“; Weltzeituhr „Sie stand still. Bis du kamst.“
+
+### Step 7 build order
+
+1. Data and sim: kinds, resistances, the shield rule in `strike` (front arc, guard open), root hold in `hurtPlayer`/sim player state, Kernspeier fan in `threats.ts`; unit tests per rule; `alexWaveTier` mix; bosses replace `ALEX_BOSS_STANDIN`.
+2. Bodies: Mech pack (Leela, Mike) through `tools/build-creatures.mjs` with vertex colours, new `BodyKind`s; Wurzler and Kernspeier in code; the Weltzeituhr boss shares the landmark geometry (the landmark mesh hides while it is awake).
+3. Wake-up sequence, boss bar, Kodex, voices, balance bot run on `alexMap`.
 
 ## Day map light rules (proposal for step 3)
 
