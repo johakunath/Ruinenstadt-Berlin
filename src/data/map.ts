@@ -150,6 +150,8 @@ export interface Terrace {
   poly: Pt[];
   h: number;
   stairs: Stair[];
+  /** Ground height its stairs start from (a terrace on a terrace, M20 camp); 0 when left out. */
+  base?: number;
 }
 
 export interface MapDef {
@@ -407,7 +409,7 @@ export function heightAt(m: MapDef, x: number, z: number): number {
   for (const t of m.terraces) {
     if (inPoly(t.poly, x, z)) h = Math.max(h, t.h);
     const s = onStair(t, x, z);
-    if (s) h = Math.max(h, t.h * Math.max(0, Math.min(1, stairLocal(s, x, z).along)));
+    if (s) { const b = t.base ?? 0; h = Math.max(h, b + (t.h - b) * Math.max(0, Math.min(1, stairLocal(s, x, z).along))); }
   }
   return h + reliefAt(m, x, z);
 }
@@ -432,7 +434,7 @@ export function terraceWall(m: MapDef, x: number, z: number): boolean {
       const side = Math.abs(l.across) - s.width / 2;
       if (side <= 0) return false;
       // Side walls where the stair is more than knee high.
-      if (side < 0.45 && l.along * t.h > 0.5) return true;
+      if (side < 0.45 && l.along * (t.h - (t.base ?? 0)) > 0.5) return true;
     }
     if (polyEdgeDist(t.poly, x, z) < 0.45) return true;
   }

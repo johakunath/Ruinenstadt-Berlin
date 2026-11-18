@@ -891,12 +891,13 @@ function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilde
     }
     for (const st of t.stairs) {
       const b = chunkOf(st.x, st.z);
-      const steps = Math.max(3, Math.round(t.h / 0.3));
+      const base = t.base ?? 0;
+      const steps = Math.max(3, Math.round((t.h - base) / 0.3));
       const ux = Math.sin(st.rot);
       const uz = Math.cos(st.rot);
       for (let k = 0; k < steps; k++) {
         const f = (k + 0.5) / steps;
-        const top = (t.h * (k + 1)) / steps;
+        const top = base + ((t.h - base) * (k + 1)) / steps;
         const cx = st.x + ux * (f - 0.5) * st.len;
         const cz = st.z + uz * (f - 0.5) * st.len;
         b.box(b.mm.stucco, new Matrix4().makeRotationY(st.rot).setPosition(cx, top / 2, cz), st.width, top, st.len / steps + 0.02, [0.6, 0.58, 0.54]);

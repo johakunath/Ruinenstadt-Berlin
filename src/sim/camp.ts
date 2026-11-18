@@ -19,9 +19,12 @@ export const stationLevel = (s: Sim, id: StationId): number => Math.max(1, campO
  * Schwarzmarkt (stash) and the Lazarett work; the other four are rubble until built for Schrott and
  * material. Saves from before M20 count a station as built when its workshop was already used.
  */
+/** District that opens level 3 of every station (index into `STOPS`, 2 = Alexanderplatz). */
+export const LEVEL3_DISTRICT = 2;
 export const OPEN_STATIONS: readonly StationId[] = ['kom', 'markt', 'laz'];
 export const SITE_COST: Readonly<Partial<Record<StationId, Partial<Record<MaterialId | 'scrap', number>>>>> = {
-  zeug: { scrap: 120, metall: 3 }, imbiss: { scrap: 100, stoff: 2 }, hack: { scrap: 150, kabel: 2 }, exer: { scrap: 150, stoff: 2 },
+  // Cheap on purpose (Johannes, 2026-11-18): all stations open quickly, the levels take longer.
+  zeug: { scrap: 60, metall: 2 }, imbiss: { scrap: 50, stoff: 1 }, hack: { scrap: 80, kabel: 1 }, exer: { scrap: 70, stoff: 1 },
 };
 export function stationBuilt(s: Sim, id: StationId): boolean {
   if (OPEN_STATIONS.includes(id) || (campOf(s).stations[id] ?? 0) >= 1) return true;
@@ -78,7 +81,8 @@ export function nextLevel(s: Sim, id: StationId): { level: number; text: string;
   if (!L) return null;
   const needs: string[] = [];
   if (!npcHere(s, st)) needs.push(`${npcName(st)} befreien`);
-  if (l + 1 >= 3 && !campOf(s).freed.includes(0)) needs.push('Köpenick befreien');
+  // Level 3 waits for the next planned district (2D LVREQ: Alexanderplatz); the camp itself opens after Köpenick.
+  if (l + 1 >= 3 && !campOf(s).freed.includes(LEVEL3_DISTRICT)) needs.push('Alexanderplatz befreien');
   const cost = L.cost ?? {};
   const missing = (Object.entries(cost) as Array<[MaterialId | 'scrap', number]>).filter(([k, v]) => have(s, k) < v).map(([k, v]) => `${v - have(s, k)} ${k === 'scrap' ? 'Schrott' : MATERIALS[k].name}`);
   return { level: l + 1, text: L.text, cost, needs, missing, ok: !needs.length && !missing.length };

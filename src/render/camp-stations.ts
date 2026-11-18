@@ -17,7 +17,7 @@ type RGB = readonly [number, number, number];
 
 /** Station frame: local x across the front, local z toward the ring (facing), y up from its floor. */
 function frame(s: StationSpot): (x: number, y: number, z: number, ry?: number) => Matrix4 {
-  const y0 = s.inside ? 0 : YARD_H;
+  const y0 = s.y ?? (s.inside ? 0 : YARD_H);
   return (x, y, z, ry = 0) => new Matrix4().makeRotationY(s.rot).setPosition(s.x, y0, s.z).multiply(new Matrix4().makeRotationY(ry).setPosition(x, y, z));
 }
 
@@ -49,7 +49,7 @@ export class CampStationsView {
     this.mats = makeMats(materials);
     for (const place of layout.places) {
       const station = layout.stations.find((s) => s.id === place.id);
-      const y = !station || station.inside ? 0.06 : YARD_H + 0.06;
+      const y = (station?.y ?? (!station || station.inside ? 0 : YARD_H)) + 0.06;
       const color = place.id === 'abfahrt' ? 0x7dd3ff : 0xef9f27;
       const mat = new MeshBasicMaterial({ color, transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false });
       const mesh = new Mesh(new RingGeometry(place.r - 0.12, place.r, 40), mat);

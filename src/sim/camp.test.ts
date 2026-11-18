@@ -49,15 +49,17 @@ describe('M13 camp', () => {
     expect(buyUpgrade(s, 'dmg').ok).toBe(false);
     expect(s.stats.damage).toBeGreaterThan(createSim({ seed: 5 }).stats.damage);
   });
-  it('level 2 needs the survivor, level 3 needs Köpenick freed', () => {
+  it('level 2 needs the survivor, level 3 needs Alexanderplatz freed', () => {
     const s = rich();
     expect(nextLevel(s, 'zeug')!.needs).toEqual(['Mira befreien']);
     s.statContext.survivors.schmied = true;
     expect(buildStation(s, 'zeug').ok).toBe(true);
     expect(s.statContext.camp.lampe).toBe(true);
     expect(upgradeMax(s, 'dmg')).toBe(8);
-    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Köpenick befreien']);
+    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Alexanderplatz befreien']);
     endExpedition(s, true);
+    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Alexanderplatz befreien']);
+    s.run.ended = false; endExpedition(s, true, 2);
     expect(buildStation(s, 'zeug').ok).toBe(true);
     expect(stationLevel(s, 'zeug')).toBe(3);
     expect(nextLevel(s, 'zeug')).toBeNull();
@@ -65,7 +67,7 @@ describe('M13 camp', () => {
   it('Ilse runs the Kommandantur; the Hackerspace level 3 sets the watchtower', () => {
     const s = rich();
     expect(nextLevel(s, 'kom')!.needs).toEqual([]);
-    s.statContext.survivors.mechaniker = true; endExpedition(s, true);
+    s.statContext.survivors.mechaniker = true; endExpedition(s, true, 2);
     buildStation(s, 'hack'); buildStation(s, 'hack');
     expect(s.statContext.camp.turm && s.statContext.camp.presse).toBe(true);
   });

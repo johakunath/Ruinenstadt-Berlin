@@ -6,8 +6,8 @@
 // Stations themselves change with their level and live in `camp-stations.ts`.
 // Cost: merged boxes per material and chunk (the camp is two chunks wide), five painted textures,
 // a fixed number of light spots for the shared pool; no new lights at runtime.
-import { CylinderGeometry, Matrix4, Vector3, type Material } from 'three';
-import { CAMP_LAYOUT, YARD_H } from '../data/camp-map';
+import { Matrix4, Vector3, type Material } from 'three';
+import { CAMP_LAYOUT, RAMP_H, YARD_H } from '../data/camp-map';
 import type { MapDef } from '../data/map';
 import { Rng } from '../sim/math';
 import type { Materials, LitMaterial } from './materials';
@@ -229,7 +229,7 @@ export function buildCampWorld(m: MapDef, mats: MapMats, cm: CampMats, chunkOf: 
       box(mats.iron, w.x, 2.42, w.z, sx, 0.1, 0.14, [0.2, 0.2, 0.2]);
     }
   }
-  // Room floors: white tiles in the old toilets, the bakery's checker.
+  // Room floors: white tiles in the old toilets, the bakery's checker (now the Hackerspace).
   box(cm.whiteTile, 7.5, 0.025, 36.75, 13, 0.05, 12.5, [0.95, 0.95, 0.92], 1 / 1.5);
   box(cm.checker, 21, 0.025, 35.75, 12, 0.05, 10.5, [0.95, 0.95, 0.92], 1 / 2);
   // Outer room walls: the west wall is tall (side), the walls toward the camera stay knee high and broken (2D cutaway).
@@ -264,80 +264,88 @@ export function buildCampWorld(m: MapDef, mats: MapMats, cm: CampMats, chunkOf: 
   box(mats.iron, 34.6, 3.6, 24, 0.08, 0.7, 6.4, [0.2, 0.2, 0.25]);
   at(34.7, 24).box(cm.exitSign, M(34.7, 3.6, 24, Math.PI / 2), 6.2, 0.55, 0.04, undefined, 1 / 6.2);
 
-  // --- the yard: cutting wall in the north with buttresses and graffiti, houses above, a parapet toward the camera
-  for (let x = 43.5; x < 80; x += 6) {
-    const w = Math.min(6, 80 - x);
-    box(mats.brick, x + w / 2, YARD_H + 3, 1.6, w, 6, 3.2, [0.7, 0.62, 0.58], 0.35);
-    box(mats.concrete, x + 0.4, YARD_H + 3, 3.3, 0.8, 6, 0.6, [0.5, 0.48, 0.45]);
-    at(x + w / 2, 1.6).shadowBox(M(x + w / 2, YARD_H + 3, 1.6), w, 6, 3.2);
-    if (rng.next() < 0.75) box(mats.graffiti, x + w / 2 + 0.4, YARD_H + 1.6, 3.22, w - 1.6, 2.2, 0.02, [1, 1, 1], 1 / 4);
+  // --- the yard: the railway viaduct along the north (its brick arches face the camera, an S-Bahn
+  // stands on its deck), the cutting wall in the east, houses beyond, a low parapet toward the camera.
+  const V = c.viaduct, vTop = YARD_H + V.h, vBack = -6, x0 = 34, x1 = 80;
+  const brick = (x: number, y: number, z: number, sx: number, sy: number, sz: number, tint: RGB = [0.62, 0.5, 0.44]): void => box(mats.brick, x, y, z, sx, sy, sz, tint, 0.35);
+  // Piers between the arches, full height.
+  const cuts = [x0, ...V.arches.flat(), x1];
+  for (let i = 0; i < cuts.length; i += 2) {
+    const a = cuts[i]!, b = cuts[i + 1]!;
+    if (b - a < 0.05) continue;
+    brick((a + b) / 2, YARD_H + V.h / 2, (V.z + vBack) / 2, b - a, V.h, V.z - vBack);
+    box(mats.concrete, (a + b) / 2, YARD_H + 0.6, V.z + 0.15, b - a, 1.2, 0.3, [0.45, 0.43, 0.4]);
+    at((a + b) / 2, 0).shadowBox(M((a + b) / 2, YARD_H + V.h / 2, (V.z + vBack) / 2), b - a, V.h, V.z - vBack);
   }
-  // Iron fence on the wall top and house fronts beyond (skyline above the cutting).
-  for (let x = 44; x < 80; x += 1.5) box(mats.iron, x, YARD_H + 6.6, 0.4, 0.05, 1.2, 0.05, [0.3, 0.3, 0.3]);
-  box(mats.iron, 62, YARD_H + 7.15, 0.4, 36, 0.06, 0.06, [0.3, 0.3, 0.3]);
-  let hx = 40;
-  while (hx < 84) {
-    const w = rng.range(9, 15), h = rng.range(12, 19);
-    const tone = rng.pick(['cream', 'ochre', 'oxblood'] as const);
-    box(mats.plaster[tone] ?? mats.stucco, hx + w / 2, h / 2, -6, w, h, 8, [0.42, 0.4, 0.38]);
-    // Lit windows here and there (about one in ten).
-    for (let fy = 6; fy < h - 1.5; fy += 3) for (let fx = hx + 1.5; fx < hx + w - 1; fx += 2.4) {
-      const lit = rng.next() < 0.1;
-      box(lit ? mats.lampGlass : mats.dark, fx, fy, -1.98, 1, 1.5, 0.04, lit ? [1.4, 1, 0.5] : undefined);
+  // Arches: an opening 5 m high with a stepped (segmental) top, the wall above, a back wall inside.
+  const open = 5;
+  for (const [a, b] of V.arches) {
+    const mid = (a + b) / 2, span = b - a, depth = V.z - vBack;
+    brick(mid, YARD_H + open + (V.h - open) / 2, (V.z + vBack) / 2, span, V.h - open, depth);
+    for (const [h, f] of [[open - 0.7, 0.16], [open - 0.3, 0.3]] as const) for (const sd of [-1, 1]) brick(mid + sd * (span / 2 - (span * f) / 2), YARD_H + h + (open - h) / 2, V.z - 0.4, span * f, open - h, 0.8, [0.58, 0.46, 0.4]);
+    // Keystone ring of lighter bricks on the face.
+    box(mats.brick, mid, YARD_H + open + 0.25, V.z + 0.06, span + 0.4, 0.5, 0.12, [0.8, 0.66, 0.55], 0.35);
+    // The Imbiss arch is open and lit inside; the others are dark storerooms with a boarded front.
+    const lit = c.stations.some((t) => t.x > a && t.x < b && Math.abs(t.z - V.z) < 4);
+    if (lit) { brick(mid, YARD_H + open / 2, 2.2, span, open, 0.6, [0.42, 0.34, 0.3]); box(cm.creamTile, mid, YARD_H + 1, 2.55, span - 0.4, 2, 0.06); }
+    else { box(mats.dark, mid, YARD_H + open / 2, V.z - 1.2, span, open, 0.4); for (let x = a + 0.6; x < b - 0.4; x += 1.1) box(mats.wood, x, YARD_H + 1.3 + (x % 2) * 0.2, V.z - 0.2, 0.9, 2.4 + (x % 3) * 0.3, 0.08, [0.45, 0.36, 0.28]); }
+    if (!lit) brick(mid, YARD_H + open / 2, (V.z - 1.4 + vBack) / 2, span, open, V.z - 1.4 - vBack, [0.4, 0.33, 0.3]);
+  }
+  // Deck: a parapet on the face, railings, two lamps and a stopped S-Bahn (ochre and dark red).
+  box(mats.concrete, (x0 + x1) / 2, vTop + 0.2, (V.z + vBack) / 2, x1 - x0 + 8, 0.4, V.z - vBack, [0.45, 0.43, 0.4]);
+  box(mats.brick, (x0 + x1) / 2, vTop + 0.75, V.z - 0.25, x1 - x0 + 8, 0.7, 0.5, [0.55, 0.45, 0.4], 0.35);
+  box(mats.concrete, (x0 + x1) / 2, vTop + 1.15, V.z - 0.25, x1 - x0 + 8, 0.12, 0.62, [0.5, 0.48, 0.45]);
+  for (const [cx, len] of [[47, 17.6], [65, 17.6]] as const) {
+    const b = at(cx, 0);
+    b.box(mats.carPaint, M(cx, vTop + 1.6, 0), len, 1.4, 2.9, [0.55, 0.12, 0.1]);
+    b.box(mats.carPaint, M(cx, vTop + 2.85, 0), len, 1.1, 2.9, [0.86, 0.6, 0.22]);
+    b.box(mats.concrete, M(cx, vTop + 3.5, 0), len - 0.2, 0.2, 2.7, [0.35, 0.33, 0.3]);
+    for (let k = 0; k < 7; k++) box(k % 3 === 1 ? mats.lampGlass : mats.dark, cx - len / 2 + 1.4 + k * 2.5, vTop + 2.85, 1.46, 1.5, 0.75, 0.04, k % 3 === 1 ? [1.2, 0.8, 0.4] : undefined);
+  }
+  // Wall lamps on the piers light the arches and the yard in front (the deck sits above the camera's view).
+  for (const x of [45, 55, 67]) {
+    const b = at(x, V.z);
+    b.box(mats.iron, M(x, YARD_H + 5.5, V.z + 0.35), 0.12, 0.12, 0.7, [0.3, 0.3, 0.3]);
+    b.box(mats.lampGlass, M(x, YARD_H + 5.38, V.z + 0.7), 0.4, 0.16, 0.3, [1.6, 1.2, 0.5]);
+    b.light(new Vector3(x, YARD_H + 5, V.z + 1.2), 0xffb060, 28, 15, 0.02, 6.5, { yaw: 0, stretch: 1.4, reach: 3, halo: 0.45 });
+  }
+  // Houses beyond the viaduct and the cutting (skyline), a few windows lit.
+  const houses = (from: number, to: number, place: (u: number, w: number, h: number) => [number, number, number, number]): void => {
+    let u = from;
+    while (u < to) {
+      const w = rng.range(9, 15), h = rng.range(14, 21), [hx, hz, sx, sz] = place(u, w, h);
+      box(mats.plaster[rng.pick(['cream', 'ochre', 'oxblood'] as const)] ?? mats.stucco, hx, h / 2, hz, sx, h, sz, [0.42, 0.4, 0.38]);
+      u += w + rng.range(0, 1.5);
     }
-    hx += w + rng.range(0, 1.5);
+  };
+  houses(30, 86, (u, w) => [u + w / 2, -14, w, 8]);
+  houses(4, 50, (u, w) => [85, u + w / 2, 8, w]);
+  // East: the cutting wall with buttresses and graffiti.
+  for (let z = 6; z < 50; z += 6) {
+    brick(76, YARD_H + 3, z + 3, 4, 6, 6, [0.66, 0.56, 0.5]);
+    box(mats.concrete, 73.8, YARD_H + 3, z + 0.4, 0.6, 6, 0.8, [0.5, 0.48, 0.45]);
+    if (rng.next() < 0.8) box(mats.graffiti, 73.98, YARD_H + 1.6, z + 3.3, 0.02, 2.2, 4.6, [1, 1, 1], 1 / 4);
   }
-  for (let x = 43.5; x < 66; x += 1.2) box(mats.concrete, x + 0.6, YARD_H + 0.45, 47.2, 1.2, 0.9 + (rng.next() < 0.2 ? -0.4 : 0), 0.5, [0.45, 0.43, 0.4]);
+  // Parapet toward the camera, knee high and broken.
+  for (let x = 43.5; x < 74; x += 1.2) box(mats.concrete, x + 0.6, YARD_H + 0.45, 47.2, 1.2, 0.9 + (rng.next() < 0.2 ? -0.4 : 0), 0.5, [0.45, 0.43, 0.4]);
   // Yard floor: ballast and trodden earth instead of the map ground.
-  box(cm.ballast, 54.75, YARD_H + 0.012, 25.5, 22.5, 0.02, 43, [0.72, 0.68, 0.62], 1 / 4);
-  box(cm.ballast, 68.3, YARD_H + 0.012, 22, 5.6, 0.02, 10, [0.6, 0.58, 0.55], 1 / 4);
-  // Old S-Bahn tracks across the yard: the freight car stands on the northern one.
-  for (const [z, x1] of [[8.5, 76], [16.5, 66]] as const) {
-    box(cm.ballast, (43.5 + x1) / 2, YARD_H + 0.03, z, x1 - 43.5, 0.05, 3.2, [0.85, 0.85, 0.85], 1 / 3);
-    for (let x = 44; x < x1; x += 0.7) box(mats.trunk, x, YARD_H + 0.07, z, 0.22, 0.06, 2.5, [0.5, 0.42, 0.36]);
-    for (const r of [-0.72, 0.72]) box(mats.railSteel, (43.5 + x1) / 2, YARD_H + 0.14, z + r, x1 - 43.5, 0.12, 0.08, [0.55, 0.45, 0.38]);
-  }
-
-  // --- Warschauer Brücke: brick arches on the east, the deck overhead with railings and lamps
-  const B = c.bridge, bx = (B.x0 + B.x1) / 2, top = YARD_H + B.h;
-  const arches: Array<[number, number]> = [[5, 14.5], [16.5, 27.5], [30, 40]];
-  const piers: Array<[number, number]> = [[-12, 5], [14.5, 16.5], [27.5, 30], [40, 56]];
-  for (const [z0, z1] of piers) {
-    const z = (z0 + z1) / 2;
-    box(mats.brick, bx + 0.5, YARD_H + (B.h - 1) / 2, z, B.x1 - B.x0 - 1, B.h - 1, z1 - z0, [0.62, 0.5, 0.44], 0.35);
-    at(bx, z).shadowBox(M(bx + 0.5, YARD_H + (B.h - 1) / 2, z), B.x1 - B.x0 - 1, B.h - 1, z1 - z0);
-  }
-  for (const [z0, z1] of arches) {
-    const z = (z0 + z1) / 2, span = z1 - z0;
-    // A segmental arch in three steps; the back of the arch is dark (except the Hackerspace one).
-    for (const [y, f] of [[B.h - 1.6, 1], [B.h - 2.3, 0.75], [B.h - 2.8, 0.42]] as const) {
-      for (const s of [-1, 1]) box(mats.brick, bx + 0.5, YARD_H + y + (B.h - 1 - y) / 2, z + s * (span / 2 - (span * (1 - f)) / 4), B.x1 - B.x0 - 1, B.h - 1 - y, (span * (1 - f)) / 2 + 0.01, [0.6, 0.48, 0.42], 0.35);
-    }
-    box(mats.brick, bx + 0.5, YARD_H + B.h - 1.3, z, B.x1 - B.x0 - 1, 0.6, span, [0.6, 0.48, 0.42], 0.35);
-    if (z0 !== 16.5) box(mats.dark, 72.5, YARD_H + (B.h - 1.6) / 2, z, 7, B.h - 1.6, span - 0.2);
-    else box(mats.brick, 74.5, YARD_H + (B.h - 1.6) / 2, z, 3, B.h - 1.6, span, [0.36, 0.3, 0.27], 0.35);
-  }
-  // Deck: slab, steel girders on its face, railings and two working lamps.
-  const deck = at(bx, 24);
-  deck.solid.captureOccluder(() => {
-    for (let z = -16; z < 60; z += 12) {
-      deck.box(mats.concrete, M(bx, top + 0.6, z + 6), B.x1 - B.x0 + 2, 1.2, 12, [0.5, 0.48, 0.46]);
-      deck.box(mats.iron, M(B.x0 - 0.9, top + 0.3, z + 6), 0.3, 1.2, 12, [0.32, 0.36, 0.34]);
-    }
-  });
-  for (let z = -14; z < 58; z += 1.6) box(mats.iron, B.x0 - 0.8, top + 1.7, z, 0.05, 1, 0.05, [0.3, 0.3, 0.3]);
-  box(mats.iron, B.x0 - 0.8, top + 2.2, 22, 0.06, 0.06, 72, [0.3, 0.3, 0.3]);
-  for (const z of [10, 36]) {
-    const b = at(B.x0, z);
-    b.geo(mats.iron, new CylinderGeometry(0.06, 0.09, 4.2, 6), M(B.x0 - 0.5, top + 3.3, z), [0.3, 0.3, 0.3]);
-    b.box(mats.lampGlass, M(B.x0 - 0.9, top + 5.3, z), 0.5, 0.18, 0.3, [1.6, 1.2, 0.5]);
-    b.light(new Vector3(B.x0 - 1.4, top + 4.8, z), 0xffb060, 30, 16, 0.02, 6, { halo: 0.5 });
-  }
+  box(cm.ballast, 58.75, YARD_H + 0.012, 26.5, 30.5, 0.02, 41, [0.72, 0.68, 0.62], 1 / 4);
+  box(cm.ballast, 50, YARD_H + 0.012, 4.5, 8, 0.02, 4, [0.6, 0.58, 0.55], 1 / 4);
+  // The loading ramp: a concrete top with a yellow edge (its walls and stairs come from the terrace).
+  box(mats.concrete, 62, RAMP_H + 0.02, 10.8, 10, 0.04, 9.6, [0.55, 0.53, 0.5]);
+  box(mats.concrete, 62, RAMP_H + 0.05, 15.4, 10, 0.06, 0.3, [0.95, 0.62, 0.15]);
+  // The old S-Bahn track in the south: the freight car stands on it.
+  const tz = 40;
+  box(cm.ballast, 58.75, YARD_H + 0.03, tz, 30.5, 0.05, 3.2, [0.85, 0.85, 0.85], 1 / 3);
+  for (let x = 44; x < 74; x += 0.7) box(mats.trunk, x, YARD_H + 0.07, tz, 0.22, 0.06, 2.5, [0.5, 0.42, 0.36]);
+  for (const r of [-0.72, 0.72]) box(mats.railSteel, 58.75, YARD_H + 0.14, tz + r, 30.5, 0.12, 0.08, [0.55, 0.45, 0.38]);
+  // Buffer stop at the west end of the track.
+  box(mats.rust, 44.4, YARD_H + 0.7, tz, 0.5, 1, 2.6, [0.75, 0.3, 0.2]);
 
   // --- fixed light spots for the stations (the pool picks the nearest; their glow decals carry the rest)
   const COLOR: Record<string, number> = { zeug: 0xff8a3c, hack: 0x5fd8c8, laz: 0xd8ecff, imbiss: 0xffb060, kom: 0xffb060, markt: 0xffc890, exer: 0xff8a3c };
   for (const s of c.stations) {
-    const y0 = s.inside ? 0 : YARD_H;
+    const y0 = s.y ?? (s.inside ? 0 : YARD_H);
     const fx = s.x + Math.sin(s.rot) * (s.d / 2 + 1.2), fz = s.z + Math.cos(s.rot) * (s.d / 2 + 1.2);
     at(fx, fz).light(new Vector3(fx, y0 + 2.6, fz), COLOR[s.id] ?? 0xffb060, s.inside ? 20 : 26, 10, s.id === 'zeug' || s.id === 'exer' ? 0.6 : 0.03, 4.5, { halo: 0.3 });
   }
