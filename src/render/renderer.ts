@@ -30,8 +30,7 @@ import { ShadowClock } from './shadow-rate';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
-import { groundY, meshSurface, setGround } from './ground';
-import { heightAt } from '../data/map';
+import { bridgeAwareSurface, groundY, setGround } from './ground';
 import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
 import type { Prop } from '../data/courtyard';
@@ -126,7 +125,7 @@ export class GameRenderer {
     );
     const def = opts.map?.def;
     this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks, (x, z) => groundY(x, z)) : null;
-    setGround(def ? meshSurface(def.bounds.minX, def.bounds.minZ, (x, z) => heightAt(def, x, z)) : () => 0);
+    setGround(def ? bridgeAwareSurface(def) : () => 0);
     this.scene.background = new Color(NIGHT);
     this.scene.fog = new FogExp2(NIGHT, FOG);
     this.scene.environment = nightEnvironment(renderer);
@@ -397,3 +396,4 @@ export class GameRenderer {
     this.perf.triangles = this.renderer.info.render.triangles;
   }
 }
+

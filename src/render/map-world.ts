@@ -2209,7 +2209,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       rng.next();
       return;
     }
-    const build = (): void => b.on(surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    // Props on an M15 bridge deck stand on the deck itself (the terrain grid blends near its edges).
+    const onDeck = m.terraces.some((t) => t.bridge && inPoly(t.poly, p.x, p.z));
+    const build = (): void => b.on(onDeck ? heightAt(m, p.x, p.z) : surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
     if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
     else build();
   });
