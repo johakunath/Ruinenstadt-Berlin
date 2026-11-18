@@ -13,7 +13,7 @@ import { ELITES, ENEMIES, SPAWN, type EliteMod, type EnemyKind } from '../data/e
 import { sectorHitsCircle } from './collide';
 import { ferryPos, onFerryBoat } from './ferry';
 import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
-import { makeElite, randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, updateEnemies, updateSpawner } from './enemies';
+import { makeElite, randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, spawnPack, updateEnemies, updateSpawner } from './enemies';
 import { FlowField } from './flowfield';
 import type { Level } from './level';
 import { lerp, Rng } from './math';
@@ -113,7 +113,7 @@ export function createSim(opts: SimOptions = {}): Sim {
       const [kind, mod] = spec.split('+') as [EnemyKind, EliteMod | undefined];
       if (!(kind in ENEMIES)) return;
       const a = (i / opts.spawn!.length) * Math.PI * 2;
-      const e = spawnEnemy(sim, sim.player.x + Math.sin(a) * 7, sim.player.z + Math.cos(a) * 7, kind);
+      const e = spawnPack(sim, sim.player.x + Math.sin(a) * 7, sim.player.z + Math.cos(a) * 7, kind);
       if (mod) makeElite(sim, e, mod in ELITES ? mod : undefined);
     });
   } else if (!opts.empty && (!level.expedition || sim.stress > 0)) {

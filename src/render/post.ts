@@ -194,7 +194,12 @@ export class Post {
     this.ink?.uniforms.texel!.value.set(px / Math.round(w * s), px / Math.round(h * s));
   }
 
-  render(dt: number): void {
+  /**
+   * `shadows`: re-render the sun shadow map this frame. `shadowMap.autoUpdate` stays off; the request
+   * is set right before the beauty pass so the shadow render uses the main camera's layers, never
+   * those of the contour or normal/depth passes (three filters casters by the rendering camera).
+   */
+  render(dt: number, shadows: boolean): void {
     this.heroOutline.prepare(this.renderer);
     if (this.gbuffer) {
       // Normal and depth of solid geometry only: no cards, glows or effects (FX layer).
@@ -216,6 +221,9 @@ export class Post {
       this.scene.background = background;
       r.setRenderTarget(null);
     }
+    // The RenderPass is the composer's first scene render and consumes the request; the full-screen
+    // passes after it find `needsUpdate` false again.
+    this.renderer.shadowMap.needsUpdate = shadows;
     this.composer.render(dt);
   }
 }

@@ -7,6 +7,8 @@ const urls = {
   paving: new URL('../../assets/textures/koepenick/paving.webp', import.meta.url).href,
   leaves: new URL('../../assets/textures/koepenick/leaves.webp', import.meta.url).href,
   litter: new URL('../../assets/textures/koepenick/litter.webp', import.meta.url).href,
+  asphalt: new URL('../../assets/textures/koepenick/asphalt.webp', import.meta.url).href,
+  cobbles: new URL('../../assets/textures/common/cobbles.webp', import.meta.url).href,
 };
 
 /** Leave the painted fallback installed until the image is decoded; failures keep it in place. */

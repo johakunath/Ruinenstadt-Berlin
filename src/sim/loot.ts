@@ -29,8 +29,8 @@ export const LOOT = {
 
 export const INGREDIENT_IDS: readonly IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
 /** 2D EZUT by role: ghoul and brute meat, spitter vegetables, the rest spices. */
-const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel' };
-const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese' };
+const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel', rat: 'stoff' };
+const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese', rat: 'fleisch' };
 export const MATERIAL_IDS: readonly MaterialId[] = ['stoff', 'metall', 'chemie', 'kabel'];
 
 export type DropContent =
@@ -133,15 +133,23 @@ export function creditScrap(sim: Sim, amount: number, x: number, z: number, from
 }
 
 // 2D drop chances and Schrott by role (ghoul, raser, brute, spitter, crow).
-const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15 };
-const SCRAP: Partial<Record<EnemyKind, number>> = { walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, crow: 1, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70, schaffner: 60 };
+const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15, rat: 0.03 };
+const SCRAP: Partial<Record<EnemyKind, number>> = {
+  walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, crow: 1, rat: 0, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70, schaffner: 60,
+  grenzer: 40, brandmeister: 40, rattenmutter: 40, spreehexe: 70,
+};
+/** 2D: rats drop material and ingredients rarely (8 % and 1 % instead of 22 % and 3 %). */
+const MAT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.08 };
+const ZUT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.01 };
+/** District bosses: three items and a legendary (2D `big`). */
+const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spreehexe: true };
 
 /** 2D `kill()`: bosses drop first, then one of material, item or heal. Scrap is credited at once. */
 export function killDrops(sim: Sim, e: Enemy): void {
   const kind = e.kind;
   if (e.mini) return;
   const boss = !!ENEMIES[kind].boss;
-  const big = kind === 'hauptmann';
+  const big = !!DISTRICT_BOSS[kind];
   const il = lootLevel(sim);
   const c = lootContext(sim);
   const mat = 1 + 0.5 * pk(sim, 'mat');
@@ -159,9 +167,9 @@ export function killDrops(sim: Sim, e: Enemy): void {
     spawnDrop(sim, e.x, e.z, { kind: 'heal' }, 0, 0.7);
   }
   // 2D v0.78 ingredients: bosses three, elites 30 %, others 3 %; Oma Gerda doubles, Spreewaldgurken +50 %.
-  const zc = (boss ? 1 : e.elite ? 0.3 : 0.03) * (sim.statContext.survivors.koechin ? 2 : 1) * (sim.statContext.meal === 'gurke' ? 1.5 : 1);
+  const zc = (boss ? 1 : e.elite ? 0.3 : ZUT_CHANCE[kind] ?? 0.03) * (sim.statContext.survivors.koechin ? 2 : 1) * (sim.statContext.meal === 'gurke' ? 1.5 : 1);
   if (sim.rng.next() < zc) for (let i = 0; i < (boss ? 3 : 1); i++) spawnDrop(sim, e.x, e.z, { kind: 'ingredient', id: i ? sim.rng.pick(INGREDIENT_IDS) : ENEMY_INGREDIENT[kind] ?? 'gewuerz' }, spread(sim, 0.6), spread(sim, 0.6));
-  if (sim.rng.next() < (boss ? 1 : e.elite ? 0.8 : 0.22) * mat) {
+  if (sim.rng.next() < (boss ? 1 : e.elite ? 0.8 : MAT_CHANCE[kind] ?? 0.22) * mat) {
     const n = boss ? 5 : e.elite ? 2 : 1;
     // 2D EMAT: the first material follows the enemy's role (ghoul Stoff, brute Metall, spitter Chemie, raser and crow Kabel).
     for (let i = 0; i < n; i++) spawnDrop(sim, e.x, e.z, { kind: 'material', id: i === 0 ? ENEMY_MATERIAL[kind] ?? sim.rng.pick(MATERIAL_IDS) : sim.rng.pick(MATERIAL_IDS) });

@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 520" font-family="Inter, Arial, sans-serif">
+<rect width="1440" height="520" fill="#0e1517"/>
+<defs>
+  <style>
+    .t{font-size:12px;fill:#cfc4b2}.s{font-size:11px;fill:#9a9080}
+    .ray{stroke:#43d1cf;stroke-width:1.6;stroke-dasharray:5 3;fill:none}
+    .blk{stroke:#e04a3a;stroke-width:2;fill:none}
+    .alt{fill:#9c7a5c;stroke:#14282b;stroke-width:1}.low{fill:#7a6048;stroke:#14282b;stroke-width:1}
+    .cut{fill:none;stroke:#cfc4b2;stroke-width:1.2;stroke-dasharray:4 3}
+    .gnd{fill:#3a3530}.str{fill:#5a5248}.yard{fill:#4d5a3a}
+    .hid{fill:#e04a3a;opacity:.28}
+  </style>
+  <!-- window rows for a 5-storey facade (local, 60 px wide, 95 px high) -->
+  <g id="win"><rect x="8" y="10" width="8" height="10" fill="#2a2420"/><rect x="26" y="10" width="8" height="10" fill="#2a2420"/><rect x="44" y="10" width="8" height="10" fill="#2a2420"/></g>
+  <g id="tall"><rect class="alt" x="0" y="0" width="60" height="95"/><use href="#win" y="0"/><use href="#win" y="17.5"/><use href="#win" y="35"/><use href="#win" y="52.5"/><rect x="6" y="74" width="48" height="16" fill="#3a2e26"/></g>
+  <g id="cam"><circle r="6" fill="#43d1cf"/><text x="-14" y="-10" font-size="11" fill="#43d1cf">Kamera</text></g>
+  <g id="hero"><circle cy="-6" r="3.2" fill="#f2d14b"/><rect x="-2.5" y="-3" width="5" height="9" fill="#f2d14b"/></g>
+</defs>
+<text x="20" y="30" fill="#f0d9b0" font-size="20" font-weight="700">Altbau 5 Geschosse, geschlossen, mit Hinterhöfen: wie sieht man durch?</text>
+<text x="20" y="52" fill="#b5aa98" font-size="13">Schnitt von Süden (links) nach Norden (rechts), 5 px = 1 m. Kamera 13 m hoch, 13 m hinter dem Helden (44°). Altbau 5 Geschosse = 19 m. Rot: verdeckter Boden.</text>
+
+<!-- ================= A ================= -->
+<g transform="translate(20,80)">
+<text x="0" y="0" fill="#ef9f27" font-size="17" font-weight="700">A · Hohe Nordseite, Berliner Lücken</text>
+<text x="0" y="20" fill="#b5aa98" font-size="12">Wie Hades, Bastion: das Level ist so gebaut, dass nichts verdeckt</text>
+<g transform="translate(0,-60)">
+  <rect class="gnd" x="0" y="250" width="440" height="14"/>
+  <!-- south row: low shops / ruins -->
+  <rect class="low" x="20" y="228.5" width="60" height="21.5"/><text class="s" x="22" y="222">Laden, Ruine</text>
+  <!-- street -->
+  <rect class="str" x="95" y="246" width="85" height="4"/>
+  <use href="#hero" x="137" y="244"/>
+  <!-- north row tall -->
+  <use href="#tall" x="195" y="155"/><text class="s" x="196" y="148">5 Geschosse</text>
+  <!-- yard behind a Baulücke -->
+  <rect class="yard" x="270" y="246" width="70" height="4"/><text class="s" x="272" y="240">Hinterhof</text>
+  <rect class="cut" x="270" y="155" width="70" height="95"/><text class="s" x="276" y="172">Baulücke</text>
+  <text class="s" x="276" y="186">Brandwand</text>
+  <use href="#tall" x="345" y="155"/>
+  <use href="#cam" x="66" y="185"/>
+  <path class="ray" d="M66 185 L137 240"/><path class="ray" d="M66 185 L305 246" opacity=".5"/>
+</g>
+<text class="t" x="0" y="235">Straßen O-W: hohe Häuser nur auf der Nordseite,</text>
+<text class="t" x="0" y="251">Südseite Läden, Ruinen, Baulücken (die Hälfte ist eh Ruine).</text>
+<text class="t" x="0" y="267">Begehbare Höfe liegen hinter einer Lücke mit Brandwand.</text>
+<text class="t" x="0" y="283">Straßen N-S: hoch auf beiden Seiten.</text>
+<text x="0" y="307" fill="#f0d9b0" font-size="12.5" font-weight="700">+ Welt bleibt undurchsichtig, kein Effekt, sehr berlinerisch</text>
+<text x="0" y="325" fill="#b58a5a" font-size="12">− Geschlossene Blöcke nur von Norden aus; Höfe nur an Lücken</text>
+</g>
+
+<!-- ================= B ================= -->
+<g transform="translate(495,80)">
+<text x="0" y="0" fill="#ef9f27" font-size="17" font-weight="700">B · Schnitt über dem Erdgeschoss am Helden</text>
+<text x="0" y="20" fill="#b5aa98" font-size="12">Wie Diablo IV, Baldur's Gate 3, Divinity: Häuser vor dem Helden oben abgeschnitten</text>
+<g transform="translate(0,-60)">
+  <rect class="gnd" x="0" y="250" width="440" height="14"/>
+  <!-- south row cut -->
+  <rect class="alt" x="20" y="228.5" width="60" height="21.5"/><rect x="20" y="226" width="60" height="3" fill="#14100d"/>
+  <rect class="cut" x="20" y="155" width="60" height="73"/><text class="s" x="24" y="150">wird ausgeblendet</text>
+  <rect class="str" x="95" y="246" width="85" height="4"/>
+  <use href="#hero" x="137" y="244"/>
+  <use href="#tall" x="195" y="155"/>
+  <rect class="yard" x="270" y="246" width="70" height="4"/><text class="s" x="272" y="240">Hinterhof</text>
+  <rect class="hid" x="270" y="242" width="70" height="8"/>
+  <use href="#tall" x="345" y="155"/>
+  <use href="#cam" x="66" y="185"/>
+  <path class="ray" d="M66 185 L137 240"/>
+</g>
+<text class="t" x="0" y="235">Alle Häuser voll hoch. Was zwischen Kamera und Held</text>
+<text class="t" x="0" y="251">steht, wird oberhalb des Erdgeschosses hart abgeschnitten,</text>
+<text class="t" x="0" y="267">mit dunkler Kante (kein Durchsichtig-Werden). Betritt der Held</text>
+<text class="t" x="0" y="283">einen Hof, wird das Haus davor geschnitten.</text>
+<text x="0" y="307" fill="#f0d9b0" font-size="12.5" font-weight="700">+ Überall geschlossene 5-Geschosser, Höfe überall möglich</text>
+<text x="0" y="325" fill="#b58a5a" font-size="12">− Effekt nahe am Helden: deine Regel 2026-11-16 (Blase sah</text>
+<text x="0" y="341" fill="#b58a5a" font-size="12">  komisch aus) müsste fallen. Shader-Arbeit, Kosten messen</text>
+</g>
+
+<!-- ================= C ================= -->
+<g transform="translate(970,80)">
+<text x="0" y="0" fill="#ef9f27" font-size="17" font-weight="700">C · Überall 5 Geschosse, nur Umrisse</text>
+<text x="0" y="20" fill="#b5aa98" font-size="12">Heutige Regel, auf hohe Häuser übertragen: zum Vergleich</text>
+<g transform="translate(0,-60)">
+  <rect class="gnd" x="0" y="250" width="440" height="14"/>
+  <use href="#tall" x="20" y="155"/>
+  <rect class="str" x="95" y="246" width="85" height="4"/>
+  <rect class="hid" x="95" y="242" width="85" height="8"/>
+  <circle cx="137" cy="238" r="7" fill="none" stroke="#ef9f27" stroke-width="1.6"/>
+  <use href="#tall" x="195" y="155"/>
+  <rect class="yard" x="270" y="246" width="70" height="4"/>
+  <rect class="hid" x="270" y="242" width="70" height="8"/>
+  <use href="#tall" x="345" y="155"/>
+  <use href="#cam" x="66" y="185"/>
+  <path class="blk" d="M66 185 L137 240"/>
+  <text class="s" x="2" y="148" fill="#e04a3a">Kamera steckt im Haus</text>
+</g>
+<text class="t" x="0" y="235">Die Straße auf der Kameraseite ist ganz verdeckt,</text>
+<text class="t" x="0" y="251">Held und Gegner nur als Umriss (V1). Kamera müsste</text>
+<text class="t" x="0" y="267">viel steiler und weiter weg, dann wirkt alles flach.</text>
+<text x="0" y="307" fill="#f0d9b0" font-size="12.5" font-weight="700">+ Nichts Neues zu bauen</text>
+<text x="0" y="325" fill="#b58a5a" font-size="12">− Unspielbar in O-W-Straßen</text>
+</g>
+
+<text x="20" y="440" fill="#f0d9b0" font-size="14" font-weight="700">Vorschlag</text>
+<text x="20" y="462" fill="#cfc4b2" font-size="13">A zuerst in einer Straße (Oranienstraße, Nordseite 5 Geschosse, Südseite Läden und Ruinen, zwei Höfe hinter Baulücken mit Brandwand). Passt zu „No invisible walls“ und zur undurchsichtigen Welt.</text>
+<text x="20" y="482" fill="#cfc4b2" font-size="13">B nur, wenn dir A zu leer wirkt: dann als zweiter Test in derselben Straße, mit Messung auf dem Tab S9.</text>
+</svg>

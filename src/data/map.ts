@@ -50,6 +50,13 @@ export interface Street {
    */
   profile?: 'haupt' | 'allee';
   sidewalk?: number;
+  /**
+   * M15 Berliner Blockrand (Johannes 2026-11-18, variant A of `docs/mockups/m15-altbau-visibility.svg`):
+   * closed rows of 5-storey Altbau wall to wall, but only where they do not stand between the camera and
+   * the street (the north side of east–west streets, both sides of north–south ones). The camera side
+   * gets shops and ruins. Tall rows open in Baulücken (a Trümmerfeld between two fire walls).
+   */
+  block?: boolean;
 }
 /** Tree pits on profile sidewalks: spacing and distance from the curb. */
 export const TREE_PIT = { gap: 9, fromCurb: 1.4 } as const;
@@ -72,7 +79,9 @@ export interface Area {
   specials?: SpecialKind[];
 }
 
-export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati';
+export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati'
+  // M15 Xhain (1981): stations, the Oberbaumbrücke towers, a GDR watchtower, squats and churches.
+  | 'warschauer' | 'ostbahnhof' | 'oberbaum' | 'wachturm' | 'thomaskirche' | 'bethanien' | 'rauchhaus' | 'nkz' | 'u1station' | 'goerlitzer';
 
 export interface Landmark {
   kind: LandmarkKind;
@@ -85,8 +94,12 @@ export interface Landmark {
   hz: number;
   /** Extra free space kept around it (no generated lots). */
   clear: number;
+  /** Elevated (a station on the viaduct): keeps lots away but has no collider at street level. */
+  walkUnder?: boolean;
   /** Shown when the hero enters (Späti rest stops). */
   name?: string;
+  /** V1 B cutaway (`src/data/cut.ts`): cut off above `h` while the hero is behind it (north, within `reach`). */
+  cut?: { h?: number; reach?: number };
   /** Which figure of a kind (the three Spreepark dinosaurs). */
   variant?: number;
 }
@@ -108,6 +121,8 @@ export interface Lot {
   ruin?: boolean;
   /** Back wing (Seitenflügel, annex): same facing, centered at (x, z), so the footprint is an L. */
   wing?: { x: number; z: number; w: number; d: number };
+  /** M15: part of a closed Blockrand row (side walls are windowless fire walls). */
+  block?: boolean;
   /** M11d: non-rectangular footprint (chamfer, bays, setbacks, open courtyard); always inside w × d. */
   shape?: LotShape;
   special?: SpecialKind;
@@ -149,6 +164,8 @@ export interface Terrace {
   poly: Pt[];
   h: number;
   stairs: Stair[];
+  /** M15: a street bridge over a track field (render: deck on piers with railings, the ground stays below). */
+  bridge?: boolean;
 }
 
 export interface MapDef {
@@ -189,8 +206,77 @@ export interface MapDef {
   piers?: Pier[];
   /** M11c lot types placed by hand where the generator finds no room (Altstadt market, churchyard). */
   specialLots?: Array<{ special: SpecialKind; x: number; z: number; rot: number; w: number; d: number }>;
+  /** M15: per-map caps for lot types (Kreuzberg is a district of back yards). */
+  specialMax?: Partial<Record<SpecialKind, number>>;
+  /** M15: the Berlin Wall (1981) as polylines; each piece blocks. Gaps are separate polylines. */
+  walls?: Wall[];
+  /** M15: ground-level track fields (fenced, blocked; terraces may bridge them). */
+  railYards?: RailYard[];
+  /** M15: elevated railways. The brick Stadtbahn blocks along its length; the U1 Hochbahn only at its pillars. */
+  viaducts?: Viaduct[];
   /** M11d step 5: hand-placed buildings on the route; they take their space before the generator fills the rest. */
   handLots?: Array<Omit<Lot, 'seed' | 'kind'> & { kind: LotKind; seed?: number }>;
+}
+
+/** A fenced track field at ground level: `tracks` parallel tracks across `width`. */
+export interface RailYard { name: string; pts: Pt[]; width: number; tracks: number }
+/** Inside a track field (`pad` widens it). */
+export function inRailYard(m: MapDef, x: number, z: number, pad = 0): boolean {
+  return (m.railYards ?? []).some((r) => lineDist(r.pts, x, z) < r.width / 2 + pad);
+}
+
+/** A run of Berlin Wall elements (3.6 m concrete with the pipe on top), 0.6 m thick. */
+export interface Wall { name: string; pts: Pt[] }
+export const WALL = { height: 3.6, thick: 0.6 } as const;
+
+export interface Viaduct {
+  name: string;
+  kind: 'stadtbahn' | 'hochbahn';
+  pts: Pt[];
+  /** Deck width. */
+  width: number;
+  /** Deck height above the street. */
+  h: number;
+}
+/** U1 pillar spacing along the deck (pairs, one each side of the median). */
+export const HOCHBAHN_PILLAR = { step: 15, r: 0.35, across: 1.6 } as const;
+
+/** Collider centres of the U1 pillars along a viaduct (both sides of the centre line). */
+export function hochbahnPillars(v: Viaduct): Pt[] {
+  const out: Pt[] = [];
+  let acc = HOCHBAHN_PILLAR.step / 2;
+  for (let i = 1; i < v.pts.length; i++) {
+    const [ax, az] = v.pts[i - 1]!, [bx, bz] = v.pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+    for (; acc < len; acc += HOCHBAHN_PILLAR.step) for (const side of [-1, 1]) out.push([ax + ux * acc - uz * HOCHBAHN_PILLAR.across * side, az + uz * acc + ux * HOCHBAHN_PILLAR.across * side]);
+    acc -= len;
+  }
+  return out;
+}
+
+/** Boxes along a polyline (one per segment), for walls and solid viaducts. */
+function lineBoxes(pts: readonly Pt[], half: number): Collider[] {
+  const out: Collider[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, az] = pts[i - 1]!, [bx, bz] = pts[i]!, len = Math.hypot(bx - ax, bz - az);
+    out.push({ kind: 'box', x: (ax + bx) / 2, z: (az + bz) / 2, hx: half, hz: len / 2, rot: Math.atan2(bx - ax, bz - az) });
+  }
+  return out;
+}
+
+/** Wall and solid viaduct colliders of a map. */
+export function barrierColliders(m: MapDef): Collider[] {
+  return [
+    ...(m.walls ?? []).flatMap((w) => lineBoxes(w.pts, WALL.thick / 2)),
+    ...(m.viaducts ?? []).flatMap((v) => (v.kind === 'stadtbahn' ? lineBoxes(v.pts, v.width / 2) : hochbahnPillars(v).map(([x, z]): Collider => ({ kind: 'circle', x, z, r: HOCHBAHN_PILLAR.r })))),
+  ];
+}
+
+/** Distance to the nearest wall or solid viaduct edge (Infinity without any). */
+export function barrierDist(m: MapDef, x: number, z: number): number {
+  let d = Infinity;
+  for (const w of m.walls ?? []) d = Math.min(d, lineDist(w.pts, x, z) - WALL.thick / 2);
+  for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') d = Math.min(d, lineDist(v.pts, x, z) - v.width / 2);
+  return d;
 }
 
 /** A walkable tunnel piece along a polyline: track bed, station hall or side passage. */
@@ -555,11 +641,64 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
   for (const e of m.encounters) if (Math.hypot(x - e.x, z - e.z) < e.r + pad) return true;
   for (const l of m.landmarks) if (Math.abs(x - l.x) < l.hx + l.clear + pad && Math.abs(z - l.z) < l.hz + l.clear + pad) return true;
   if (m.rail && Math.abs(z - m.rail.z) < 6 + pad && x > m.rail.minX && x < m.rail.maxX) return true;
+  if (barrierDist(m, x, z) < pad + 1 || inRailYard(m, x, z, pad + 1)) return true;
   for (const t of m.terraces) if (polyEdgeDist(t.poly, x, z) < pad + 1 || onStair(t, x, z, pad + 1.5)) return true;
   return x < m.bounds.minX + 2 || x > m.bounds.maxX - 2 || z < m.bounds.minZ + 2 || z > m.bounds.maxZ - 2;
 }
 
 const pondsOf = new WeakMap<MapDef, Pt[][]>();
+
+/** M15 Blockrand: tall rows face south or sideways, the camera side stays low (see `Street.block`). */
+export const BLOCK = { w: [12, 19] as [number, number], d: [12, 14] as [number, number], tallFloors: 4, gap: 0.12, baulucke: 0.14, ruinTall: 0.3, ruinLow: 0.55 } as const;
+
+/** Is a lot whose front faces the street with outward normal (nx, nz) on the camera side of it? */
+export function cameraSide(nz: number): boolean {
+  return nz > 0.5;
+}
+
+/**
+ * One slot of a Blockrand street side: a tall Altbau wall to wall with the previous one, a low shop or
+ * ruin on the camera side, or (on tall rows) a Baulücke: a Trümmerfeld between two fire walls. Returns
+ * the next position along the street piece.
+ */
+function blockSlot(m: MapDef, s: Street, rng: Rng, occ: Occupancy, lots: Lot[], area: Area, ax: number, az: number, dx: number, dz: number, side: number, t: number, len: number): number {
+  const nx = -dz * side, nz = dx * side, low = cameraSide(nz);
+  const front = s.width / 2 + Math.max(1.6, s.sidewalk ?? 0);
+  const place = (w: number, d: number): { x: number; z: number; rot: number; ok: boolean } => {
+    const x = ax + dx * (t + w / 2) + nx * (front + d / 2), z = az + dz * (t + w / 2) + nz * (front + d / 2), rot = Math.atan2(-nx, -nz);
+    return { x, z, rot, ok: t + w < len + 1 && areaAt(m, x, z) === area && streetDist(m, x, z).d > d / 2 - 0.5 && cornersOk(m, x, z, rot, w / 2, d / 2) && occ.free(x, z, rot, w / 2 - 1.05, d / 2 - 0.5) };
+    // The occupancy raster is 2 m: neighbours wall to wall share edge cells, so the check is shrunk by a cell's half.
+  };
+  if (!low && rng.next() < BLOCK.baulucke && lots.some((l) => l.block)) {
+    const w = rng.range(11, 14), d = rng.range(13, 15), p = place(w, d);
+    if (p.ok) {
+      const lot = { kind: 'special' as const, special: 'truemmer' as const, x: p.x, z: p.z, rot: p.rot, w, d, floors: 0, seed: rng.int(1e6) };
+      const content = lotContent(lot);
+      occ.take(p.x, p.z, p.rot, w / 2 + 0.05, d / 2 + 0.05);
+      lots.push({ ...lot, content }, ...content.lots);
+      return t + w + BLOCK.gap;
+    }
+  }
+  const w = low ? rng.range(7, 12) : rng.range(BLOCK.w[0], BLOCK.w[1]);
+  const d = low ? rng.range(8, 11) : rng.range(BLOCK.d[0], BLOCK.d[1]);
+  const p = place(w, d);
+  if (!p.ok) return t + rng.range(1.5, 3);
+  const kind: LotKind = low && rng.next() < 0.6 ? 'shop' : 'altbau';
+  const lot: Lot = { kind, x: p.x, z: p.z, rot: p.rot, w, d, floors: low ? (kind === 'shop' ? 0 : rng.int(2)) : BLOCK.tallFloors - (rng.next() < 0.2 ? 1 : 0), seed: rng.int(1e6), block: true };
+  if (rng.next() < (low ? BLOCK.ruinLow : BLOCK.ruinTall)) lot.ruin = true;
+  if (!low && rng.next() < 0.7) {
+    // Seitenflügel: a back wing two floors lower, as deep as the yard allows.
+    const ww = rng.range(4.5, 6.5), wd = rng.range(7, 11), a = rng.pick([-1, 1]) * (w / 2 - ww / 2), b = -(d / 2 + wd / 2) + 0.05;
+    const wx = p.x + Math.cos(p.rot) * a + Math.sin(p.rot) * b, wz = p.z - Math.sin(p.rot) * a + Math.cos(p.rot) * b;
+    if (cornersOk(m, wx, wz, p.rot, ww / 2, wd / 2) && areaAt(m, wx, wz) === area && occ.free(wx, wz, p.rot, ww / 2 + 0.3, wd / 2)) {
+      occ.take(wx, wz, p.rot, ww / 2 + 0.3, wd / 2 + 0.3);
+      lot.wing = { x: wx, z: wz, w: ww, d: wd };
+    }
+  }
+  occ.take(p.x, p.z, p.rot, w / 2 + 0.05, d / 2 + 0.05);
+  lots.push(lot);
+  return t + w + BLOCK.gap;
+}
 
 /** Generates buildings along streets and trees on free ground. Deterministic per map seed. */
 export function generateLots(m: MapDef): Lot[] {
@@ -605,7 +744,7 @@ export function generateLots(m: MapDef): Lot[] {
           const kind = area?.frontage;
           // M11c: two in five slots become a lot type of this area (never the same type twice in a row).
           if (area?.specials && rng.next() < SPECIAL_SHARE) {
-            const pick = area.specials.filter((k) => k !== last && (used.get(k) ?? 0) < SPECIAL_SIZE[k].max).sort((p, q) => (used.get(p) ?? 0) - (used.get(q) ?? 0) || rng.next() - 0.5)[0];
+            const pick = area.specials.filter((k) => k !== last && (used.get(k) ?? 0) < (m.specialMax?.[k] ?? SPECIAL_SIZE[k].max)).sort((p, q) => (used.get(p) ?? 0) - (used.get(q) ?? 0) || rng.next() - 0.5)[0];
             const S = pick && SPECIAL_SIZE[pick];
             // Full size first, then smaller (short street pieces and close side streets); may overhang the piece end.
             const w0 = pick && rng.range(S!.w[0], S!.w[1]), d0 = pick && rng.range(S!.d[0], S!.d[1]);
@@ -630,6 +769,10 @@ export function generateLots(m: MapDef): Lot[] {
           }
           if (!kind) {
             t += 6;
+            continue;
+          }
+          if (s.block && kind === 'altbau') {
+            t = blockSlot(m, s, rng, occ, lots, area!, ax, az, dx, dz, side, t, len);
             continue;
           }
           // Altbau streets get single-storey shops (Läden, Spätis) between the blocks.
@@ -898,6 +1041,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
     m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
     m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r) ||
+    barrierDist(m, x, z) < r + 0.6 || inRailYard(m, x, z, r + 0.4) ||
     edgeDist(m, x, z) < EDGE_CLEAR + r;
   // Street lamps (Johannes 2026-11-16): evenly spaced along each street, right at the curb, one
   // side on side streets and staggered on both sides of main streets, plus corner lamps where streets
@@ -1012,7 +1156,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       for (let t = rng.range(10, 30); t < len - 6; t += rng.range(30, 60)) {
         const x = ax + ((bx - ax) / len) * t + rng.range(-2, 2);
         const z = az + ((bz - az) / len) * t + rng.range(-2, 2);
-        if (onBridge(m, x, z, 2) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 3)) continue;
+        if (onBridge(m, x, z, 2) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 3) || m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < 6)) continue;
         const roll = rng.next();
         const van = roll < 0.35;
         const bus = roll > 0.8 && s.width >= 7;
@@ -1551,9 +1695,10 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   for (const l of m.landmarks) {
     if (l.kind === 'spati') colliders.push(...spatiColliders(l));
-    else if (l.hx > 0) colliders.push(...landmarkColliders(l));
+    else if (l.hx > 0 && !l.walkUnder) colliders.push(...landmarkColliders(l));
   }
   for (const l of lots) colliders.push(...lotColliders(l));
+  colliders.push(...barrierColliders(m));
   if (m.rail) {
     const r = m.rail;
     const left = (r.gapX - r.gapW / 2 + r.minX) / 2;
@@ -1564,7 +1709,8 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
   const breakables = breakableDefs(m, props, propColliders, rests);
   const onPier = (x: number, z: number): boolean => (m.piers ?? []).some((p) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2; });
-  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3));
+  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3)
+    || (inRailYard(m, x, z) && !m.terraces.some((t) => inPoly(t.poly, x, z) || onStair(t, x, z) !== null)));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
   if (m.flavor) level.flavor = m.flavor;

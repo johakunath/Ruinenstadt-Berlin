@@ -20,6 +20,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | C1 Spear light attacks thrust forward, not sideways (playtest 2026-11-17) | Claude · Opus high | done (2026-11-17), playtest open: `docs/tasks/c1-spear-light.md` |
 | U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
 | T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (images) | paving and leaf image pass built; texture performance and rail follow-up open: `docs/tasks/t1b-ground-polish.md` |
+| T2 Street textures | Codex | built: `docs/tasks/t2-street-textures.md`; profile performance and playtest open |
 | A2 Audio follow-ups | Sonnet | done (2026-11-16), listening test open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | done (2026-11-16): `docs/tasks/l2-loot-followups.md` |
 | Pad layout as in 2D (Johannes, 2026-11-17) | Claude | done (PR #26) |
@@ -27,12 +28,15 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | H1 Custom hero: real clothing, outfits, inventory preview, left-hand grip | PC · Blender · Opus high (spec: Fable 5.2) | steps 1–5 done 2026-11-17 (PRs #36–#41): left-hand IK, coat, vest, boots, sneakers, gloves, scarf, equipment swap, turnable doll; open: step 6 textures (Codex), step 7 measurement (Johannes), equipment variety (later): `docs/tasks/h1-hero.md` |
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
-| M15 Alexanderplatz, district 3: layout C "Großer Ring" (Johannes, 2026-11-18), afternoon light, Weltzeituhr wakes up as final boss | Claude · Opus high; boss spec Fable high | concept, geography check and model research done (PR #49); data and build wait for Xhain (PR #46) in `main`: `docs/tasks/m15-alexanderplatz.md` |
-| V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Opus high (layout rule: mockup first) | open: `docs/tasks/v1-visibility.md` |
+| M15 Xhain, district 2: concept B "Über die Mauer" (Johannes, 2026-11-18), rats, Grenzer, Brandmeister, Rattenmutter, Spreehexe | Claude · Opus high | built 2026-11-18 (PR #46, with the V1 B cutaway of PR #50), playtest open: `docs/maps/xhain.md` › Handover, `docs/tasks/m12b-xhain-enemies.md`; textures T6 (Codex), difficulty calibration and hardware checks 10 to 13 open |
+| V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Fable high (B engine decision and spec), Opus high (build) | A built as Blockrand in Xhain; B built 2026-11-18 as a cutaway of flagged objects (engine B3, cut by index range: Hinterhof lots, Thomaskirche, Bethanien; PR #50); Johannes picks the yard cut height and playtests: `docs/tasks/v1-visibility.md` |
+| M15 Alexanderplatz, district 3: layout C "Großer Ring" (Johannes, 2026-11-18), afternoon light, Weltzeituhr wakes up as final boss | Claude · Opus high | concept, geography check and model research done (PR #49); step 1 data in progress (Xhain merged): `docs/tasks/m15-alexanderplatz.md` |
 | U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
-| K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
-| P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; next candidates to measure (playtest 2026-11-17) | Claude · Opus high, Johannes measures | step 1 built, measurement open: `docs/tasks/p1-heat.md` |
-| KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
+| K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
+| P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; per-pass analysis and ranked measures (playtest 2026-11-17) | Claude · Fable high (analysis), Opus high (build), Johannes measures | steps 1 and 2 built (2026-11-18: 32 m chunks, shadow map at 30 Hz on Leistung, test switch `?shadows=boxes`), measurement open: `docs/tasks/p1-heat.md` |
+| PT Hardware and quality checks for Johannes (running list; every session adds what must be checked on real devices) | Johannes; all sessions add rows | open: `docs/tasks/pt-hardware-checks.md` |
+| P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements: `docs/tasks/p1b-proxy-passes.md` |
+| KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 
@@ -90,7 +94,7 @@ Not in P1: XP levels, threat levels (Bedrohung), daily fight, walkable camp, oth
 | S2 | Enemy sounds per type, distance volume | Claude · Opus medium | S1 | Each type recognizable by ear |
 | S3 | Boss voices (tool: Q9) | Claude, Johannes | M12 | |
 | M14 | Balance bot: port `tools/sim.js`, `tools/balance.mjs`, then calibrate to Johannes (B9, B10) | Codex port, Claude rework | M8 | Bot clear times match playtests |
-| M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`) | Claude, Johannes | P1 | |
+| M15 | Next districts, one at a time, concept first (`docs/maps/guidelines.md`). Xhain built 2026-11-18 (`docs/maps/xhain.md`); next Alexanderplatz | Claude, Johannes | P1 | |
 
 Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`): steps 1–5 done 2026-11-17 (Blender pipeline, left-hand grip, coat and vest outfits, boots, sneakers, gloves, scarf, equipment swap, turnable inventory doll); step 6 painted textures (Codex) and step 7 measurement (Johannes) open. H2 Köpenick ghoul and other enemies.
 
