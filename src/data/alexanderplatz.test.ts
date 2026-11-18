@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
-import { alexMap, ALEX_BOSS_STANDIN } from './alexanderplatz';
+import { alexMap, ALEX_BOSSES } from './alexanderplatz';
 import { EDGE_FRONT, propCollider } from './courtyard';
 import { barrierDist, inRailYard, generateLots, generateProps, isWater, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, streetDist, type MapDef } from './map';
 import type { Level } from '../sim/level';
 import { createSim, stepSim } from '../sim/sim';
+import { killEnemy } from '../sim/combat';
+import { alexWaveTier, ALEX_TIER } from './alexanderplatz';
 import { NO_INPUT, type SimEvent } from '../sim/types';
 
 /** Cells (1 m) the hero can reach from the start. */
@@ -31,7 +33,7 @@ describe('Alexanderplatz map (M15, layout C)', () => {
     it(`has 27 normal waves and four bosses (scale ${scale})`, () => {
       const waves = m.encounters.flatMap((e) => e.waves);
       expect(waves.filter((w) => w.bosses.length === 0)).toHaveLength(27);
-      expect(waves.flatMap((w) => w.bosses)).toEqual([ALEX_BOSS_STANDIN.insel, ALEX_BOSS_STANDIN.spree, ALEX_BOSS_STANDIN.allee, ALEX_BOSS_STANDIN.uhr]);
+      expect(waves.flatMap((w) => w.bosses)).toEqual([ALEX_BOSSES.insel, ALEX_BOSSES.spree, ALEX_BOSSES.allee, ALEX_BOSSES.uhr]);
       const perZone = [0, 1, 2].map((z) => m.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves).filter((w) => w.bosses.length === 0).length);
       expect(perZone).toEqual([9, 9, 9]);
       expect(m.district).toBe(2);
@@ -246,6 +248,44 @@ describe('Alexanderplatz map (M15, layout C)', () => {
     expect(log.filter((e) => e.type === 'waveStart')).toHaveLength(31);
     expect(log.filter((e) => e.type === 'zoneClear').map((e) => (e as { zone: number }).zone)).toEqual([0, 1, 2, 3]);
     expect(log.at(-1)?.type).toBe('victory');
+  });
+
+  it('wave mix (2D MIX[2]): Uhrwerkläufer from the second wave, Wurzler from the third, Kernspeier instead of most spitters', () => {
+    const waves = alexMap(1).encounters.flatMap((e) => e.waves).filter((w) => w.bosses.length === 0);
+    expect(waves[0]!.mix.uhrwerk ?? 0).toBe(0);
+    expect(waves[1]!.mix.uhrwerk).toBeGreaterThan(0);
+    expect(waves[1]!.mix.wurzler ?? 0).toBe(0);
+    expect(waves[2]!.mix.wurzler).toBeGreaterThan(0);
+    const late = alexWaveTier(ALEX_TIER.to, [], 2).mix;
+    expect(late.kernspeier!).toBeGreaterThan(late.spitter! * 2);
+    expect(late.runner!).toBeLessThan(1 + ALEX_TIER.to * 0.25);
+    for (const w of waves) expect(w.mix.walker).toBe(6);
+  });
+
+  it('the Weltzeituhr wakes on its own base: its collider leaves while it fights and comes back when it dies', () => {
+    const m = alexMap(1), level = mapLevel(m, generateLots(m));
+    level.guards = [];
+    const fin = m.encounters.findIndex((e) => e.id === 'weltzeituhr');
+    const enc = m.encounters[fin]!;
+    const clock = m.landmarks.find((l) => l.kind === 'weltzeituhr')!;
+    expect(enc.bossAt).toEqual({ x: clock.x, z: clock.z });
+    expect(level.blocked(clock.x, clock.z, 0.3) || level.near(clock.x, clock.z, 0.5).some((c) => colliderDistance(c, clock.x, clock.z) <= 0)).toBe(true);
+    const sim = createSim({ level, startAt: fin });
+    const p = sim.player;
+    p.x = p.px = enc.x;
+    p.z = p.pz = enc.z;
+    p.invuln = 1e9;
+    let boss = sim.enemies.find((e) => e.kind === 'weltzeituhr');
+    for (let i = 0; i < 60 && !boss; i++) { stepSim(sim, NO_INPUT); sim.events.length = 0; boss = sim.enemies.find((e) => e.kind === 'weltzeituhr'); }
+    expect(boss).toBeDefined();
+    expect(Math.hypot(boss!.x - clock.x, boss!.z - clock.z)).toBeLessThan(0.3);
+    expect(boss!.stand!.length).toBeGreaterThan(0);
+    expect(sim.level.near(clock.x, clock.z, 0.5).some((c) => colliderDistance(c, clock.x, clock.z) <= 0)).toBe(false);
+    // Nothing else comes out while it wakes.
+    for (let i = 0; i < 60 * 2.5; i++) { stepSim(sim, NO_INPUT); sim.events.length = 0; }
+    expect(sim.enemies.filter((e) => e.state !== 'dead')).toHaveLength(1);
+    killEnemy(sim, boss!);
+    expect(sim.level.near(clock.x, clock.z, 0.5).some((c) => colliderDistance(c, clock.x, clock.z) <= 0)).toBe(true);
   });
 
   it('rows (M15 Blockrand): Plattenbau slabs and Altbau stand tall only away from the camera; pavilions on the camera side', () => {

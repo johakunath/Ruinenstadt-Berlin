@@ -2,6 +2,9 @@
 // scale, gear built in code), the raptor and the Rex (Quaternius dinosaurs, repainted in
 // tools/build-creatures.mjs), a crow built from a few boxes with a procedural wing beat and (M12b)
 // a rat from six small meshes (shared geometry) with a run cycle from sim time.
+// M15 Alexanderplatz: the Quaternius mechs (Uhrwerkläufer, Großer Uhrwerkläufer) with a clock-face
+// shield, the code-built Kernspeier and Koloss, the Weltzeituhr (the landmark's own rig on four legs),
+// Wurzler gear and the Brigadeghul's Blaumann (`enemies-alex.ts`, `clock.ts`).
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
   BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, Mesh, SphereGeometry, Sphere, TorusGeometry, Vector3,
@@ -16,6 +19,12 @@ import { Animator, type CharacterAssets } from './characters';
 import { groundY } from './ground';
 import type { LitMaterial, Materials } from './materials';
 import { WeaponRack } from './weapons';
+import {
+  alexKit, assemble as assembleAlex, buildClockLegs, buildKern, buildKoloss, CLOCK_LEG, domeParts, emblemParts, keyParts, reachLeg, shieldParts, tf as tfAlex, zombieAlexGear,
+  type ClockLeg, type Kern, type Koloss, type Part as AlexPart,
+} from './enemies-alex';
+import { clockMats, makeClockRig, type ClockRig } from './clock';
+import { CLOCK } from './alex-world';
 
 const FLASH_TIME = 0.1;
 const WHITE = new Color(0xffffff);
@@ -46,14 +55,21 @@ const TINTS: Record<EnemyKind, number[]> = {
   brandmeister: [0xc4a08a],
   rattenmutter: [0x9c9a7e],
   spreehexe: [0xc8ccb8],
+  uhrwerk: [0xffffff], wurzler: [0x9aa878, 0xa8a070], kernspeier: [0xffffff],
+  wurzelmutter: [0x8e9a6a], uhrwerkgross: [0xffffff], volkskoloss: [0xffffff], weltzeituhr: [0xffffff],
 };
+/** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
+type GearKey = EnemyKind | 'brigade';
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
   spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x5a6f9a, waechter: 0x6a5a4a, hauptmann: 0x44588c, schaffner: 0x2e3f5c,
   // M12b Xhain 1981: GDR border grey-green, riot red-orange, sewer brown-green, squat black.
   grenzer: 0x6f7a5e, brandmeister: 0xb8482a, rattenmutter: 0x5e5a3a, spreehexe: 0x2e2834,
+  // M15 Alexanderplatz 1989: garden rags, the Brigadeghul's blue Blaumann.
+  wurzler: 0x6a5634, wurzelmutter: 0x5a4a2a,
 };
+const CLOTH_BRIGADE = 0x34528e;
 
 /** Proportions by bone scale; children inherit, so a big chest needs a smaller head to match. */
 const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
@@ -68,12 +84,14 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   brandmeister: { spine_02: 1.22, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.86 },
   rattenmutter: { spine_01: 1.15, spine_03: 1.12, Head: 0.95 },
   spreehexe: { upperarm_l: 0.92, upperarm_r: 0.92, Head: 0.96 },
+  wurzler: { upperarm_l: 1.1, upperarm_r: 1.1 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.9 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
 const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   runner: [0.86, 1], brute: [1.12, 1], feldwebel: [1.1, 1], waechter: [0.9, 1.1], hauptmann: [1.1, 1],
   grenzer: [1, 1.04], brandmeister: [1.12, 1], rattenmutter: [1.15, 0.85], spreehexe: [0.86, 1.16],
+  wurzelmutter: [1.1, 1],
 };
 /** Bent forward all the time (the Rattenmutter's hunch). */
 const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2 };
@@ -164,7 +182,7 @@ function tunic(coat: keyof GearKit, trim: keyof GearKit): Part[] {
   ];
 }
 
-function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castShadow: boolean): Object3D[] {
+function gearFor(kind: GearKey, model: Object3D, materials: Materials, castShadow: boolean): Object3D[] {
   const k = gearKit(materials);
   const out: Object3D[] = [];
   const bone = (n: string): Object3D | undefined => model.getObjectByName(n);
@@ -181,7 +199,22 @@ function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castSha
     b.attach(g);
     out.push(g);
   };
+  /** M15: the same, with the Alexanderplatz kit. */
+  const mountAlex = (name: string, parts: AlexPart[], dy = 0, dz = 0): void => {
+    const b = bone(name);
+    if (!b) return;
+    const g = assembleAlex(alexKit(materials), parts, castShadow);
+    b.getWorldPosition(p);
+    model.worldToLocal(p);
+    g.position.set(p.x, p.y + dy, p.z + dz);
+    model.add(g);
+    b.attach(g);
+    out.push(g);
+  };
   switch (kind) {
+    case 'wurzler': case 'wurzelmutter': case 'brigade':
+      zombieAlexGear(kind, mountAlex);
+      break;
     case 'brute':
       // Boiler plate bolted over one shoulder, a rusted collar.
       mount('spine_03', [
@@ -401,6 +434,17 @@ const DINO: Record<'raptor' | 'rex', DinoClips> = {
   rex: { hit: 0.52, swipe: 0.16, walk: 2.4, run: 7 },
 };
 
+/**
+ * Mech clips (Quaternius Animated Mech Pack): the strike clip per body, where it lands and how far the
+ * walk clip carries the body per second (looked at with `tools/enemy-sheet.mjs`, see the task handover).
+ */
+const MECH = {
+  // Leela's Kick: the leg is out from 0.55 to 0.67 of the clip; Mike's Punch: the fist is out from 0.5 to 0.62.
+  mech: { strike: 'Kick', hit: 0.55, swipe: 0.12, walk: 1.1, run: 3 },
+  mechBig: { strike: 'Punch', hit: 0.5, swipe: 0.12, walk: 1.5, run: 4 },
+} as const;
+const smooth = (a: number, b: number, v: number): number => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+
 /** Eye position from the head joint, in Rex meters (the raptor scales it down). */
 const EYE = { x: 0.24, y: 0.1, z: 0.4 };
 
@@ -420,17 +464,50 @@ export class EnemyView {
   private readonly anim: Animator | null = null;
   private readonly crow: Crow | null = null;
   private readonly rat: Rat | null = null;
+  private readonly kern: Kern | null = null;
+  private readonly koloss: Koloss | null = null;
+  private readonly clock: { rig: ClockRig; legs: ClockLeg[]; legGroup: Object3D } | null = null;
+  /** Mech gear that moves: the shield (swings aside when the guard opens), the Großer Uhrwerkläufer's key. */
+  private shield: Object3D | null = null;
+  private key: Object3D | null = null;
+  /** Skeleton the clips belong to (a mech falls back to the zombie when the mech pack is not loaded). */
+  private readonly skin: 'zombie' | 'raptor' | 'rex' | 'mech' | 'mechBig' | null = null;
+  private spinDrum = 0;
+  private spinOrbit = 0;
+  private spinRing = 0;
   private readonly mats: LitMaterial[] = [];
   private readonly cloth: LitMaterial[] = [];
   private readonly glow: LitMaterial[] = [];
   private readonly seed = Math.random();
-  private readonly gear = new Map<EnemyKind, Object3D[]>();
+  private readonly gear = new Map<GearKey, Object3D[]>();
   private readonly bones = new Map<string, Object3D>();
   private readonly model: Object3D | null = null;
   private rack: WeaponRack | null = null;
 
-  constructor(assets: CharacterAssets, private readonly materials: Materials, readonly body: BodyKind, private readonly castShadow: boolean) {
+  /** `gdr`: Alexanderplatz (walkers wear the Brigadeghul's Blaumann); `clockRig`: the map's maker of Weltzeituhr rigs. */
+  constructor(assets: CharacterAssets, private readonly materials: Materials, readonly body: BodyKind, private readonly castShadow: boolean, private readonly opts: { gdr?: boolean; clockRig?: () => ClockRig } = {}) {
     this.root.add(this.inner);
+    if (body === 'kern') {
+      this.kern = buildKern(materials, castShadow);
+      this.inner.add(this.kern.model);
+      this.collect(this.kern.model);
+      return;
+    }
+    if (body === 'koloss') {
+      this.koloss = buildKoloss(materials, castShadow);
+      this.inner.add(this.koloss.model);
+      this.collect(this.koloss.model);
+      return;
+    }
+    if (body === 'clock') {
+      const rig = opts.clockRig?.() ?? makeClockRig(clockMats(materials));
+      const legs = buildClockLegs(materials, CLOCK.drum, castShadow);
+      rig.body.add(legs.group);
+      this.inner.add(rig.group);
+      this.clock = { rig, legs: legs.legs, legGroup: legs.group };
+      this.collect(rig.group);
+      return;
+    }
     if (body === 'crow') {
       this.crow = buildCrow(materials, castShadow);
       this.inner.add(this.crow.model);
@@ -445,9 +522,12 @@ export class EnemyView {
       this.glow.push(this.rat.eyes);
       return;
     }
-    const src = body === 'zombie' ? assets.zombie : body === 'raptor' ? assets.raptor : assets.rex;
-    // (crow and rat returned above)
-    const clips: Map<string, AnimationClip> = body === 'zombie' ? assets.zombieClips : body === 'raptor' ? assets.raptorClips : assets.rexClips;
+    const mech = body === 'mech' || body === 'mechBig' ? assets.mech : undefined;
+    const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
+    this.skin = skin;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big : skin === 'zombie' ? assets.zombie : skin === 'raptor' ? assets.raptor : assets.rex;
+    // (crow, rat and the code-built bodies returned above)
+    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips : skin === 'zombie' ? assets.zombieClips : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
     this.model = model;
     this.inner.add(model);
@@ -462,8 +542,8 @@ export class EnemyView {
           mat = srcMat.clone();
           own.set(srcMat, mat);
           if (srcMat.name === 'eyes') {
-            mat.emissive.set(body === 'zombie' ? 0xd8ff7a : 0xffc04a);
-            mat.emissiveIntensity = body === 'zombie' ? 2.2 : 3;
+            mat.emissive.set(skin === 'zombie' ? 0xd8ff7a : 0xffc04a);
+            mat.emissiveIntensity = skin === 'zombie' ? 2.2 : 3;
             this.glow.push(mat);
           } else {
             (srcMat.name === 'cloth' ? this.cloth : this.mats).push(mat);
@@ -474,12 +554,16 @@ export class EnemyView {
       };
       mesh.material = Array.isArray(mesh.material) ? (mesh.material as LitMaterial[]).map(one) : one(mesh.material as LitMaterial);
       mesh.castShadow = castShadow;
-      if (body === 'zombie') {
+      if (skin === 'zombie') {
         mesh.frustumCulled = true;
         mesh.boundingSphere = new Sphere(new Vector3(0, 0.9, 0), 1.7);
       } else mesh.frustumCulled = false;
     });
-    if (body !== 'zombie') {
+    if (skin === 'mech' || skin === 'mechBig') {
+      this.mechGear(model, skin);
+      return;
+    }
+    if (skin !== 'zombie') {
       // The pack's dinosaurs have no eye geometry: two embers on the skull.
       model.updateMatrixWorld(true);
       const head = model.getObjectByName('Head');
@@ -497,13 +581,71 @@ export class EnemyView {
         }
       }
     }
-    if (body === 'zombie') {
+    if (skin === 'zombie') {
       model.updateMatrixWorld(true);
       for (const names of Object.values(SHAPE)) for (const n of Object.keys(names)) {
         const b = model.getObjectByName(n);
         if (b) this.bones.set(n, b);
       }
     }
+  }
+
+  /**
+   * Code-built bodies: their materials flash and glow like a skinned body's. The kit and the map's
+   * materials are shared (the Weltzeituhr rig uses the map's own), so each body gets its own copies.
+   */
+  private collect(o: Object3D): void {
+    const own = new Map<LitMaterial, LitMaterial>();
+    o.traverse((q) => {
+      const mesh = q as Mesh;
+      if (!mesh.isMesh) return;
+      const src = mesh.material as LitMaterial;
+      // Unlit parts (the drum's dark underside) neither flash nor glow.
+      if (!src.emissive) return;
+      let m = own.get(src);
+      if (!m) {
+        m = src.clone();
+        own.set(src, m);
+        // Glowing parts (lamps, painted panels with their own glow) keep their light; the rest flash white when hit.
+        if (m.emissiveMap || (m.emissiveIntensity > 1 && m.emissive.getHex() !== 0)) this.glow.push(m);
+        else this.mats.push(m);
+      }
+      mesh.material = m;
+    });
+  }
+
+  /** The clock-face shield on the chest, a dome and chimney (Uhrwerkläufer) or the wind-up key (Großer), the emblem plate, a glowing lens. */
+  private mechGear(model: Object3D, skin: 'mech' | 'mechBig'): void {
+    const k = alexKit(this.materials);
+    model.updateMatrixWorld(true);
+    const p = new Vector3();
+    const at = (name: string, parts: AlexPart[], x: number, y: number, z: number): Object3D | null => {
+      const b = model.getObjectByName(name);
+      if (!b) return null;
+      const g = assembleAlex(k, parts, this.castShadow);
+      b.getWorldPosition(p);
+      model.worldToLocal(p);
+      g.position.set(p.x + x, p.y + y, p.z + z);
+      model.add(g);
+      b.attach(g);
+      return g;
+    };
+    const big = skin === 'mechBig';
+    // The shield hangs from its top edge so it can swing down when the guard opens.
+    const r = big ? 0.85 : 0.42;
+    // Mike punches with the right: his shield sits on the left of the chest.
+    const shield = at('Chest', shieldParts(r).map(([g, m]): AlexPart => [tfAlex(g, 0, -r, 0), m]), big ? 0.45 : 0, big ? 0.55 : 0.32, big ? 0.85 : 0.5);
+    this.shield = shield;
+    if (big) {
+      this.key = at('Chest', keyParts(1.1), 0, 0.2, -0.75);
+      at('Chest', emblemParts(0.45).map(([g, m]): AlexPart => [tfAlex(g, 0, 0, 0, 0, 0, 0), m]), 0.75, 0.45, 0.45);
+      at('Head', [[tfAlex(new SphereGeometry(0.09, 8, 6), 0.16, 0.1, 0.42), 'lens'], [tfAlex(new SphereGeometry(0.09, 8, 6), -0.16, 0.1, 0.42), 'lens']], 0, 0, 0);
+    } else {
+      at('Head', domeParts(0.34), 0, 0.46, 0);
+      at('Chest', emblemParts(0.22).map(([g, m]): AlexPart => [tfAlex(g, 0, 0, 0, 0, Math.PI), m]), 0, 0.05, -0.42);
+      at('Head', [[tfAlex(new SphereGeometry(0.11, 10, 8), 0, 0.15, 0.45), 'lens']], 0, 0, 0);
+    }
+    this.glow.push(k.lens);
   }
 
   assign(e: Enemy): void {
@@ -522,16 +664,17 @@ export class EnemyView {
       if (m.name === 'skin') m.color.set(tint);
       m.emissive.setScalar(0);
     }
-    for (const m of this.cloth) m.color.set(CLOTH[e.kind] ?? 0xffffff);
-    if (this.body === 'zombie' && this.model) {
+    const key: GearKey = this.opts.gdr && e.kind === 'walker' ? 'brigade' : e.kind;
+    for (const m of this.cloth) m.color.set(key === 'brigade' ? CLOTH_BRIGADE : CLOTH[e.kind] ?? 0xffffff);
+    if (this.skin === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
       for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) this.bones.get(n)?.scale.setScalar(v);
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
-      let gear = this.gear.get(e.kind);
+      let gear = this.gear.get(key);
       if (!gear) {
-        gear = gearFor(e.kind, this.model, this.materials, this.castShadow);
-        this.gear.set(e.kind, gear);
+        gear = gearFor(key, this.model, this.materials, this.castShadow);
+        this.gear.set(key, gear);
       }
       for (const g of gear) g.visible = true;
       // Officers carry a saber.
@@ -542,7 +685,12 @@ export class EnemyView {
         this.model.getObjectByName('hand_r')?.add(this.rack.group);
       }
       if (this.rack) this.rack.group.visible = armed;
-      for (const m of this.glow) m.emissive.set(e.def.boss ? 0xff5a2a : e.kind === 'spitter' ? 0x97ff5a : 0xd8ff7a);
+      for (const m of this.glow) m.emissive.set(e.def.boss ? 0xff5a2a : e.kind === 'spitter' || e.kind === 'wurzler' ? 0x97ff5a : 0xd8ff7a);
+    }
+    if (this.clock) {
+      this.clock.rig.body.position.y = 0;
+      this.clock.legGroup.scale.setScalar(0.01);
+      this.spinDrum = this.spinOrbit = 0;
     }
     this.root.visible = true;
     this.riseAt = -2;
@@ -576,14 +724,19 @@ export class EnemyView {
     const t = e.stateT + (frozen ? 0 : alpha * DT);
     // M11c: hidden guards stay unseen until they wake (doorway, rubble).
     this.root.visible = !(e.sleep && e.pose === 'hidden');
+    const dt2 = frozen ? 0 : dt;
     if (this.body === 'crow') this.poseCrow(e, t);
     else if (this.body === 'rat') this.poseRat(e, t);
-    else if (this.body === 'zombie') this.poseZombie(e, t);
-    else this.poseDino(e, t, DINO[this.body]);
-    if (e.state === 'dead') {
-      // Sink into the ground before the body is removed.
+    else if (this.kern) this.poseKern(e, t);
+    else if (this.koloss) this.poseKoloss(e, t, dt2);
+    else if (this.clock) this.poseClock(e, t, dt2, alpha);
+    else if (this.skin === 'zombie') this.poseZombie(e, t);
+    else if (this.skin === 'mech' || this.skin === 'mechBig') this.poseMech(e, t, MECH[this.skin], dt2);
+    else this.poseDino(e, t, DINO[this.skin as 'raptor' | 'rex']);
+    if (e.state === 'dead' && !this.clock) {
+      // Sink into the ground before the body is removed (the Weltzeituhr settles on its base instead).
       const sink = Math.max(0, t - (SPAWN.corpseTime - 0.8)) / 0.8;
-      this.root.position.y -= sink * (this.body === 'rex' ? 1.6 : this.body === 'rat' ? 0.3 : 0.55);
+      this.root.position.y -= sink * (this.body === 'rex' || this.body === 'koloss' || this.body === 'mechBig' ? 1.6 : this.body === 'rat' ? 0.3 : 0.55);
     }
     if (!this.anim) return;
     // Distance LOD: far enemies update their skeleton every 2nd or 3rd frame with the summed time.
@@ -782,6 +935,177 @@ export class EnemyView {
     r.back.rotation.x = -legs;
     r.tail.rotation.y = Math.sin(this.time * 6 + this.seed * 4) * 0.45;
     r.tail.rotation.x = -0.15 + 0.1 * Math.sin(ph * 0.5);
+  }
+
+  /** Mechs: walk and run clips by speed, the strike clip posed from sim time, the shield swings aside while the guard is open. */
+  private poseMech(e: Enemy, t: number, k: (typeof MECH)['mech' | 'mechBig'], dt: number): void {
+    const a = this.anim!;
+    const def = e.def;
+    const lean = this.inner.rotation;
+    let pitch = 0;
+    const hitT = a.duration(k.strike) * k.hit, swipe = a.duration(k.strike) * k.swipe;
+    switch (e.state) {
+      case 'chase':
+        if (e.speed > k.run * 0.6) a.loop('Run', 0.15, Math.min(2, e.speed / k.run));
+        else if (e.speed > 0.15) a.loop('Walk', 0.2, Math.min(2.4, Math.max(0.6, e.speed / k.walk)));
+        else a.loop('Idle', 0.25);
+        if (e.open > 0) pitch = 0.18;
+        break;
+      case 'windup':
+        a.pose(k.strike, lerp(0, hitT, Math.min(1, t / def.windup)), 0.12);
+        break;
+      case 'strike':
+        a.pose(k.strike, hitT + swipe * Math.min(1, t / def.active), 0.03);
+        break;
+      case 'recover':
+        a.pose(k.strike, lerp(hitT + swipe, a.duration(k.strike), Math.min(1, t / def.recovery)), 0.05);
+        break;
+      case 'special': {
+        const sp = e.sp;
+        if (!sp) break;
+        const w = Math.min(1, t / sp.wind), going = t >= sp.wind;
+        if (sp.kind === 'charge') {
+          if (going) a.loop('Run', 0.06, 2.2);
+          else { a.loop('Idle', 0.15); pitch = 0.25 * w; }
+        } else if (sp.kind === 'key') a.loop('Yes', 0.15, 1.4);
+        else a.loop('Idle', 0.15);
+        break;
+      }
+      case 'stagger':
+        a.pose('HitRecieve_1', (t / Math.max(0.01, e.staggerDur)) * a.duration('HitRecieve_1'), 0.04);
+        break;
+      case 'dead':
+        a.pose('Death', t * 1.2, 0.06);
+        break;
+    }
+    lean.x += (pitch - lean.x) * 0.3;
+    // Guard open: the dial swings down and out of the way; a little sway otherwise.
+    if (this.shield) {
+      const open = e.state !== 'dead' && (e.guardOpen ?? 0) > 0;
+      this.shield.rotation.x += ((open ? 1.25 : 0.05 * Math.sin(this.time * 2)) - this.shield.rotation.x) * 0.2;
+    }
+    if (this.key) this.key.rotation.z += dt * (e.state === 'special' && e.sp?.kind === 'key' ? 9 : 1.2);
+  }
+
+  /** Kernspeier: hops when it moves; plants (squashes, head back, mouth open), then snaps the head forward. */
+  private poseKern(e: Enemy, t: number): void {
+    const c = this.kern!;
+    let hop = 0, squash = 1, head = 0.1, mouth = 1, roll = 0, lean = 0;
+    switch (e.state) {
+      case 'chase':
+        if (e.speed > 0.2) { hop = Math.abs(Math.sin(this.time * 9 + this.seed * 5)) * 0.14; lean = 0.15; }
+        head = 0.1 + 0.08 * Math.sin(this.time * 2.3 + this.seed * 4);
+        if (e.open > 0) head = 0.65;
+        break;
+      case 'windup':
+        head = -0.3 * Math.min(1, t / e.def.windup);
+        break;
+      case 'strike':
+        head = 0.5;
+        break;
+      case 'special': {
+        const sp = e.sp;
+        if (!sp) break;
+        const w = Math.min(1, t / sp.wind);
+        if (t < sp.wind) { squash = 1 - 0.12 * w; head = -0.6 * w; mouth = 1 + 0.6 * w; }
+        else { head = 0.45; mouth = 1.2; }
+        break;
+      }
+      case 'stagger':
+        roll = Math.sin(t * 28) * 0.25;
+        break;
+      case 'dead':
+        roll = Math.min(Math.PI / 2, t * 4);
+        head = 0.8;
+        break;
+      default:
+        break;
+    }
+    c.model.position.y += (hop - c.model.position.y) * 0.5;
+    c.pot.scale.set(1 + (1 - squash) * 0.6, squash, 1 + (1 - squash) * 0.6);
+    c.stem.rotation.x += (lean - c.stem.rotation.x) * 0.3;
+    c.head.rotation.x += (head - c.head.rotation.x) * 0.35;
+    c.mouth.scale.setScalar(mouth);
+    this.inner.rotation.z += (roll - this.inner.rotation.z) * 0.3;
+  }
+
+  /** Koloss: the slab walks on two clockwork legs; the hammer arm rises and slams, the ring spins while it sprays. */
+  private poseKoloss(e: Enemy, t: number, dt: number): void {
+    const K = this.koloss!;
+    const moving = e.state === 'chase' && e.speed > 0.15;
+    const ph = this.time * (1.6 + e.speed * 1.6);
+    K.legs.forEach((l, i) => {
+      const q = ph + i * Math.PI;
+      l.hip.rotation.x += ((moving ? -Math.sin(q) * 0.42 : 0) - l.hip.rotation.x) * 0.25;
+      l.knee.rotation.x += ((moving ? Math.max(0, Math.sin(q - 1)) * 0.8 : 0) - l.knee.rotation.x) * 0.25;
+    });
+    K.slab.position.y = 1.9 + (moving ? Math.abs(Math.cos(ph)) * 0.08 : 0.02 * Math.sin(this.time * 1.5));
+    let hammer = 0.1 * Math.sin(this.time * 1.2), compass = -0.1 + 0.08 * Math.sin(this.time * 0.9 + 1), tilt = 0;
+    if (e.state === 'special' && e.sp) {
+      const sp = e.sp, w = Math.min(1, t / sp.wind), g = Math.min(1, Math.max(0, (t - sp.wind) / sp.go));
+      if (sp.kind === 'bossSlam') hammer = t < sp.wind ? -2.6 * w * w : lerp(-2.6, 0.35, Math.min(1, g * 3));
+      else if (sp.kind === 'slabs') compass = -2.4 * (t < sp.wind ? w : 1 - g);
+    } else if (e.state === 'dead') tilt = Math.min(0.5, t * 0.6);
+    K.hammer.rotation.x += (hammer - K.hammer.rotation.x) * 0.35;
+    K.compass.rotation.x += (compass - K.compass.rotation.x) * 0.25;
+    this.spinRing += dt * ((e.spin ?? 0) > 0 ? 9 : 0.5);
+    K.ring.rotation.z = this.spinRing;
+    this.inner.rotation.x += (tilt - this.inner.rotation.x) * 0.2;
+  }
+
+  /**
+   * Weltzeituhr: while it wakes the drum and orbit spin up, the body lifts off its base and the four legs
+   * unfold to the ground; it then walks on them. Defeated, it walks back onto its base and settles,
+   * exactly the landmark's rest pose (the landmark takes over when the body is removed).
+   */
+  private poseClock(e: Enemy, t: number, dt: number, alpha: number): void {
+    const C = this.clock!, L = CLOCK_LEG;
+    const wake = e.def.wake ?? 0;
+    let lift = L.lift, legs = 1, drum = 0.25, orbit = 0.6;
+    if ((e.wake ?? 0) > 0) {
+      const k = 1 - (e.wake ?? 0) / Math.max(0.01, wake);
+      lift = smooth(0.25, 0.85, k) * L.lift;
+      legs = Math.max(0.01, smooth(0.1, 0.6, k));
+      drum = 4 * k;
+      orbit = 6 * k;
+    } else if (e.state === 'dead') {
+      const k = smooth(0, 1.8, t);
+      lift = (1 - k) * L.lift;
+      legs = Math.max(0.01, 1 - smooth(0.6, 1.8, t));
+      drum = 2 * (1 - k);
+      orbit = 3 * (1 - k);
+      // Back onto its base (the landmark's place).
+      if (e.home) {
+        const x = lerp(lerp(e.px, e.x, alpha), e.home.x, k), z = lerp(lerp(e.pz, e.z, alpha), e.home.z, k);
+        this.root.position.set(x, groundY(x, z), z);
+        this.root.rotation.y = lerpAngle(this.root.rotation.y, 0, k);
+      }
+    } else if (e.state === 'special' && e.sp) {
+      drum = e.sp.kind === 'sectors' ? 3 : e.sp.kind === 'hand' ? 1.5 : 0.8;
+    }
+    if ((e.spin ?? 0) > 0) orbit = 7;
+    this.spinDrum += dt * drum;
+    this.spinOrbit += dt * orbit;
+    // Settled: drum and orbit turn back to the landmark's angles.
+    if (e.state === 'dead') {
+      const back = smooth(1, 2.2, t);
+      C.rig.drum.rotation.y = this.spinDrum * (1 - back);
+      C.rig.orbit.rotation.y = this.spinOrbit * (1 - back);
+    } else {
+      C.rig.drum.rotation.y = this.spinDrum;
+      C.rig.orbit.rotation.y = this.spinOrbit;
+    }
+    const moving = e.state === 'chase' && e.speed > 0.15 && (e.wake ?? 0) <= 0;
+    const ph = this.time * (1.8 + e.speed * 2);
+    C.rig.body.position.y = lift + (moving ? 0.06 * Math.sin(ph * 2) : 0);
+    C.legGroup.scale.setScalar(legs);
+    C.legs.forEach((l, i) => {
+      const q = ph + (i % 2) * Math.PI;
+      const up = moving ? Math.max(0, Math.sin(q)) * 0.6 : 0;
+      l.hip.rotation.y = l.angle + (moving ? Math.cos(q) * 0.18 : 0);
+      // The foot target in the leg's plane, on the ground below the lifted body (the group scales with `legs`).
+      reachLeg(l, (-(CLOCK.drum + C.rig.body.position.y) + up) / legs, (L.foot - L.hip) / Math.max(0.3, legs));
+    });
   }
 
   private poseCrow(e: Enemy, t: number): void {

@@ -9,6 +9,8 @@ import { Music, type MusicState } from './music';
 const VOICE: Partial<Record<EnemyKind, SfxId>> = {
   runner: 'growlRunner', brute: 'growlBrute', raptor: 'growlRaptor', spitter: 'growlSpitter', crow: 'growlCrow', rat: 'growlRat',
   grenzer: 'growlGrenzer', brandmeister: 'growlBrand', rattenmutter: 'growlMutter', spreehexe: 'growlHexe',
+  // M15 Alexanderplatz: clockwork ticks and a steam hiss, a wooden creak, a seed pop, the big clock's chime.
+  uhrwerk: 'growlUhr', uhrwerkgross: 'growlUhr', wurzler: 'growlWurz', wurzelmutter: 'growlWurz', kernspeier: 'growlKern', volkskoloss: 'growlKoloss', weltzeituhr: 'growlZeit',
 };
 
 export class GameAudio {
@@ -176,14 +178,15 @@ export class GameAudio {
       // M12: specials announce themselves by type; marked zones land with a boom.
       case 'enemySpecial': {
         const k=event.kind;
-        if(event.phase==='wind')this.play(k==='roar'?'roar':k==='pounce'?'growlRaptor':k==='dive'?'growlCrow':k==='spit'||k==='fan'?'growlSpitter':k==='summon'||k==='charge'||k==='lunge'?'horn':k==='slam'||k==='stomp'||k==='bossSlam'||k==='tail'?'growlBrute':k==='molotov'?'swing':'growlBoss',0,pan,volume);
+        // M15: roots creak (2D 'wood'), the seed fan spits, the hour sectors and the hand ring the clock's bell, slabs grind.
+        if(event.phase==='wind')this.play(k==='roar'?'roar':k==='pounce'?'growlRaptor':k==='dive'?'growlCrow':k==='spit'||k==='fan'||k==='seeds'?'growlSpitter':k==='summon'||k==='charge'||k==='lunge'?'horn':k==='slam'||k==='stomp'||k==='bossSlam'||k==='tail'?'growlBrute':k==='molotov'?'swing':k==='roots'||k==='rootRing'?'wood':k==='sectors'||k==='hand'?'growlZeit':k==='key'?'growlUhr':k==='slabs'||k==='ring'?'growlKoloss':'growlBoss',0,pan,volume);
         else if(k==='pounce'||k==='dive'||k==='lunge'||k==='charge')this.play('dash',0,pan,volume);
         else if(k==='volley')this.play('sling',0,pan,volume);
         else if(k==='roar')this.play('boom',0,pan,volume*.7);
         break;
       }
       case 'enemyShot': this.play('spit',0,pan,volume); break;
-      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play('pop',0,pan,volume); break;
+      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':event.kind==='root'?'wood':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play('pop',0,pan,volume); break;
       case 'bossRage': this.play('roar'); this.play('horn'); break;
       case 'ability': {
         const cues:Record<string,SfxId>={Kreissäge:'spin',Fechtsprung:'dash',Säbeltanz:'spin',Fallhammer:'boom',Gullydeckel:'wood',Abrissbirne:'boom',Nagelsturm:'sling',Brandsatz:'ignite',Sperrfeuer:'heavy',Spießrute:'heavy',Stabhochsprung:'dash',Standarte:'legend'};

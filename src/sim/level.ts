@@ -46,6 +46,8 @@ export interface EncounterDef {
    * every `every` seconds (an elite at half charge). Full: a `power` event, then the other waves.
    */
   hold?: { r: number; need: number; every: number; mouth: Point };
+  /** M15: the boss stands here instead of coming from the rim (the Weltzeituhr on its base). */
+  bossAt?: Point;
 }
 
 /** M20 tunnel grating across the track bed: closed (its collider in the level) until encounter `after` is won. */

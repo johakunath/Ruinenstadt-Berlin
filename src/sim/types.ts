@@ -102,6 +102,11 @@ export interface Player {
   sweeping: boolean;
   sweepLo: number;
   sweepHi: number;
+  /** M15 Wurzler roots: seconds the hero cannot walk (a dodge breaks free), and immunity after. */
+  root: number;
+  rootI: number;
+  /** M15 Stillstand of the Weltzeituhr: the hero walks at half speed for this long. */
+  slowT: number;
 }
 
 /** `special`: a telegraphed special attack runs (`Enemy.sp`, `src/sim/ai.ts`). */
@@ -173,6 +178,21 @@ export interface Enemy {
   guardIndex?: number;
   /** The last hit was critical (kill effects). */
   lastCrit?: boolean;
+  /** M15 shield bearers: the guard stands open this long (a stun or shock opened it). */
+  guardOpen?: number;
+  /** Seconds until the next "geblockt" note may show. */
+  noteT?: number;
+  /** M15: still waking up (untouchable, does nothing): the Weltzeituhr on its base. */
+  wake?: number;
+  /** M15: a ring spins and sprays for this long (Koloss gears, Weltzeituhr orbit); `sprayT` times the shots. */
+  spin?: number;
+  sprayT?: number;
+  /** M15 Weltzeituhr: Stillstand thresholds already passed. */
+  still?: number;
+  /** Map colliders it stands in while awake (the Weltzeituhr's base); they come back when it dies. */
+  stand?: Collider[];
+  /** Where it stood before it woke (the Weltzeituhr's base): render walks it back there when it dies. */
+  home?: { x: number; z: number };
 }
 
 export type SimEvent =

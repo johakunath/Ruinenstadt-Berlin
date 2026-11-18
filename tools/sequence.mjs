@@ -7,7 +7,8 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 const page = await browser.newPage({ viewport: { width: 640, height: 480 }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
 await page.goto(`http://localhost:${process.env.PORT ?? 5173}/?` + query, { waitUntil: 'load' });
-await page.waitForFunction(() => document.getElementById('loading')?.hidden === true, null, { timeout: 90000 });
+// The loading screen can be hidden before main.ts has run (autostart): wait for the hook too.
+await page.waitForFunction(() => document.getElementById('loading')?.hidden === true && !!window.__game, null, { timeout: 180000 });
 await page.evaluate(() => { window.__game.start(); window.__game.hold(true); });
 if (setup) await page.evaluate(setup);
 await page.waitForTimeout(1500);
