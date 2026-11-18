@@ -20,6 +20,10 @@ interface EncounterLog {
   clear: number | null;
   dmg: number;
   fps: number;
+  /** Frame time (ms) 95 % of the fight's frames stay under, most draw calls and most enemies alive at once. */
+  p95?: number;
+  calls?: number;
+  alive?: number;
 }
 
 export interface RunRecord {
@@ -51,6 +55,8 @@ export interface RunRecord {
   dmg: number;
   rests: number;
   enc: EncounterLog[];
+  /** Death summary: killing hit and the worst sources of the last seconds (share of max life). */
+  death?: { by: string; recent: Array<{ by: string; share: number; hits: number }> };
 }
 
 /** Frame time histogram in 1 ms buckets up to 200 ms. */
@@ -103,6 +109,8 @@ export class Telemetry {
   private frames = new FrameStats();
   private encFrames = new FrameStats();
   private maxCalls = 0;
+  private encCalls = 0;
+  private encAlive = 0;
   private maxTris = 0;
   private busy = false;
 
@@ -147,6 +155,10 @@ export class Telemetry {
     this.encFrames.add(dt);
     this.maxCalls = Math.max(this.maxCalls, perf.calls);
     this.maxTris = Math.max(this.maxTris, perf.triangles);
+    this.encCalls = Math.max(this.encCalls, perf.calls);
+    let alive = 0;
+    for (const e of sim.enemies) if (e.state !== 'dead') alive++;
+    this.encAlive = Math.max(this.encAlive, alive);
     r.kills = sim.kills;
     r.wave = Math.max(r.wave, sim.run.index);
   }
@@ -160,16 +172,29 @@ export class Telemetry {
       if (e && e.clear === null) e.dmg += ev.damage;
     } else if (ev.type === 'encounterStart') {
       this.encFrames = new FrameStats();
+      this.encCalls = this.encAlive = 0;
       r.enc.push({ i: ev.index, start: Math.round(r.t), clear: null, dmg: 0, fps: 0 });
     } else if (ev.type === 'encounterClear') {
       const e = r.enc.find((x) => x.i === ev.index && x.clear === null);
       if (e) {
         e.clear = Math.round(r.t);
-        e.fps = Math.round(this.encFrames.fps);
+        this.closeEnc(e);
       }
     } else if (ev.type === 'restEnter') {
       r.rests++;
     }
+  }
+
+  private closeEnc(e: EncounterLog): void {
+    e.fps = Math.round(this.encFrames.fps);
+    e.p95 = this.encFrames.quantile(0.95);
+    e.calls = this.encCalls;
+    e.alive = this.encAlive;
+  }
+
+  /** The hero fell: what did it (called before `end('dead')`). */
+  died(d: { by: string; recent: Array<{ by: string; share: number; hits: number }> } | null): void {
+    if (this.run && d) this.run.death = { by: d.by, recent: d.recent.map((x) => ({ ...x, share: Math.round(x.share * 100) / 100 })) };
   }
 
   end(end: RunEnd): void {
@@ -186,7 +211,7 @@ export class Telemetry {
     r.calls = this.maxCalls;
     r.tris = this.maxTris;
     const e = r.enc[r.enc.length - 1];
-    if (e && e.clear === null) e.fps = Math.round(this.encFrames.fps);
+    if (e && e.clear === null) this.closeEnc(e);
     const q = store<RunRecord[]>(QUEUE) ?? [];
     q.push(r);
     store(QUEUE, q.slice(-200));

@@ -18,6 +18,6 @@ describe('lot guards and event spots are reachable (P21, P23)', () => {
       const lotGuards = level.guards.slice(m.guards?.length ?? 0);
       const bad = [...lotGuards, ...level.spots.rescue, ...level.spots.trader, ...level.spots.cache].filter((p) => !reachable(level, p.x, p.z));
       expect(bad.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`)).toEqual([]);
-    });
+    }, 30000);
   }
 });

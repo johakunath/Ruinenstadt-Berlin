@@ -302,7 +302,7 @@ export function incomingDamage(s: Sim, raw: number): number {
 }
 
 /** An enemy's melee hit on the hero. Returns false when it did not land. */
-export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz: number): boolean {
+export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz: number, by?: string): boolean {
   const p = s.player;
   if (p.state === 'dead' || p.invuln > 0) return false;
   // Panzerplatte: one hit in five is blocked outright.
@@ -316,7 +316,7 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
   p.hurtT = 0;
   if (pk(s, 'retour')) s.abilities.ret = true;
   s.hitstop = Math.max(s.hitstop, PLAYER.hitByEnemyHitstop);
-  s.events.push({ type: 'playerHit', x: p.x, z: p.z, dx, dz, damage });
+  s.events.push({ type: 'playerHit', x: p.x, z: p.z, dx, dz, damage, by: by ?? e?.def.name ?? 'Gefahr' });
   if (p.hp <= 0) {
     if ((pk(s, 'second') || hasL(s, 'herz')) && !s.abilities.secondUsed) {
       s.abilities.secondUsed = true;

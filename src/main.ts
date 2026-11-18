@@ -27,6 +27,7 @@ import { setLoadout } from './sim/loadout';
 import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
 import { autoAttackTarget } from './sim/player';
+import { deathSummary, logHit, type DeathSummary, type HitLog } from './sim/death';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
@@ -204,6 +205,12 @@ function checkpoint(): number {
 }
 /** M17 end screen: what the run brought (2D showEnd stats). */
 let runScrap0 = 0, runT0 = 0;
+/** Hits of the last seconds and the summary of the last death (death screen, telemetry). */
+const hitLog: HitLog[] = [];
+/** The running fight, for the reward line (P7). */
+const fight = { t: 0, kills: 0, dmg: 0 };
+let lastDeath: DeathSummary | null = null;
+const deathLine = (d: DeathSummary | null): string => d ? `<div class="death-by">Tod durch <b>${d.by}</b></div>${d.recent.length > 1 || d.recent[0]?.by !== d.by ? `<div class="death-recent">Zuletzt: ${d.recent.map((r) => `${r.by} ${Math.round(r.share * 100)} %`).join(' · ')}</div>` : ''}` : '';
 function endStats(won: boolean): string {
   const min = Math.max(1, Math.round((sim.time - runT0) / 60)), fights = Math.min(sim.run.index, level?.encounters.length ?? 0), best = sim.inventory.camp?.endlessBest ?? 0;
   const e = sim.run.endless;
@@ -618,6 +625,7 @@ function start(resumed = false): void {
   input.enabled = true;
   ui.showGame();
   runScrap0 = sim.inventory.scrap; runT0 = sim.time;
+  hitLog.length = 0;
   telemetry.begin(sim, { map: map ? map.def.name : 'Hof', profile: opts.profile, scale: opts.mapScale, startAt: sim.run.index, input: input.device });
 }
 
@@ -670,6 +678,8 @@ function drainEvents(): void {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev, sim);
     telemetry.event(ev);
+    if (ev.type === 'playerHit') { logHit(hitLog, ev.by, ev.damage, sim.time); fight.dmg += ev.damage; }
+    else if (ev.type === 'encounterStart') { fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0; }
     // M20 tunnel: gratings opening, the generator and its power (2D messages).
     tunnelNotice(ev, map?.def, { banner: (t, s) => ui.banner(t, s), toast: (h, s) => lootUi.toast(h, s) });
     switch (ev.type) {
@@ -693,9 +703,13 @@ function drainEvents(): void {
         else ui.banner(ev.waves > 1 ? `Welle ${ev.wave + 1}/${ev.waves}` : enc.name, ev.waves > 1 ? enc.name : '');
         break;
       }
-      case 'encounterClear':
-        ui.banner('Geschafft', ev.heal > 0 ? `+${ev.heal} Leben` : '');
+      case 'encounterClear': {
+        // P7 reward moment: what the fight took, a nod for no hit, the heal.
+        const secs = Math.round(sim.time - fight.t), kills = sim.kills - fight.kills;
+        const line = [`${secs} s`, `${kills} besiegt`, fight.dmg === 0 ? 'ohne Treffer' : '', ev.heal > 0 ? `+${ev.heal} Leben` : ''].filter(Boolean).join(' · ');
+        ui.banner(fight.dmg === 0 ? 'Makellos' : 'Geschafft', line);
         break;
+      }
       case 'zoneClear': {
         const zone = level?.zones[ev.zone];
         if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
@@ -930,6 +944,8 @@ function frame(now: number): void {
     endExpedition(sim, false);
     saveProfile();
     input.enabled = false;
+    lastDeath = deathSummary(hitLog, sim.time, sim.stats.maxHp);
+    telemetry.died(lastDeath);
     telemetry.end('dead');
   }
   // Telemetry gets the real frame time; `dt` is clamped for the sim and would hide slow frames.
@@ -941,7 +957,7 @@ function frame(now: number): void {
       const endless = sim.run.endless !== undefined;
       ui.retryHint(endless ? '' : zone ? `Neustart: ${zone.name}` : '');
       ui.showDead(sim.kills);
-      document.getElementById('dead-stats')!.innerHTML = endStats(false);
+      document.getElementById('dead-stats')!.innerHTML = deathLine(lastDeath) + endStats(false);
       document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Nochmal';
     }
   }

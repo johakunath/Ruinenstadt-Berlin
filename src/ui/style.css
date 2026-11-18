@@ -1007,3 +1007,6 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 .net-card button.primary { background: #8b3a2b; border-color: #c2453a; } .net-card button:disabled { opacity: .4; }
 .net-card button:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
 .lbadge { display: inline-block; padding: 0 6px; color: #fff; font-size: 12px; margin-right: 4px; }
+
+.death-by { font-size: 17px; margin-bottom: 2px; }
+.death-recent { font-size: 13px; opacity: 0.8; margin-bottom: 8px; }
