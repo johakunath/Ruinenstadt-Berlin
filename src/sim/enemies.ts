@@ -208,7 +208,8 @@ export function updateEnemies(sim: Sim): void {
           const banner=sim.abilities.banner;
           // Standarte and Zersetzung slow by 30% each (2D).
           const slow=(banner&&Math.hypot(e.x-banner.x,e.z-banner.z)<banner.r?POWER.stand.slow:1)*(e.acid>0&&(sim.statContext.perks.corrode??0)>0?STATUS.corrodeSlow:1)*((e.slow??0)>0?.6:1);
-          const v = def.speed * slow * plan.speed * (e.buff > 0 ? THREAT.buffSpeed : 1);
+          // M20: walkers wade through the flooded tunnel stretch like the hero; flyers do not.
+          const v = def.speed * slow * plan.speed * (e.buff > 0 ? THREAT.buffSpeed : 1) * (def.fly ? 1 : sim.level.speedAt(e.x, e.z));
           vx = mx * v;
           vz = mz * v;
           // Crows and backing spitters keep looking at the hero.

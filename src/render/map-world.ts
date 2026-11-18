@@ -12,6 +12,8 @@ import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
+import { buildCampWorld, makeCampMats } from './camp-world';
+import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
 import {
   BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
@@ -27,6 +29,7 @@ import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { isLargeProp } from './layers';
+import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
@@ -363,7 +366,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           // Damp, dark banks.
           const shore = y < BED_Y + 0.5 ? 0.35 : y < -0.3 ? 0.55 : nearWater ? 0.6 : 1;
           // M19 tunnel: ground outside the tubes is rock in the dark (the walls hide most of it).
-          const rock = m.tunnel && !inTunnel(m, x, z, -1.5) ? 0.06 : 1;
+          const rock = (m.tunnel && !inTunnel(m, x, z, -1.5)) || (m.camp && !onCampFloor(m.camp, x, z) && !onCampFloor(m.camp, x + 1.5, z) && !onCampFloor(m.camp, x - 1.5, z) && !onCampFloor(m.camp, x, z + 1.5) && !onCampFloor(m.camp, x, z - 1.5)) ? 0.06 : 1;
           col.push(t[0] * noise * shore * rock, t[1] * noise * shore * rock, t[2] * noise * shore * rock);
           splat.push(...groundSplat(m, x, z, nearWater && !isQuay(m, x, z)));
         }
@@ -588,7 +591,7 @@ const HEDGED: Partial<Record<Prop['kind'], number>> = { fence: 0.3, picket: 0.3,
  * seed; never on streets, sidewalks, water, bridges, stairs, landmarks, buildings or props.
  */
 function buildGreenery(m: MapDef, lots: Lot[], props: Prop[], chunkOf: (x: number, z: number) => ChunkBuilder): void {
-  if (m.tunnel) return;
+  if (m.tunnel || m.camp) return;
   const rng = new Rng(m.seed + 137);
   // Blockers in an 8 m hash: rotated boxes (half extents) around buildings and props.
   type Box = { x: number; z: number; rot: number; hx: number; hz: number };
@@ -950,12 +953,13 @@ function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilde
     }
     for (const st of t.stairs) {
       const b = chunkOf(st.x, st.z);
-      const steps = Math.max(3, Math.round(t.h / 0.3));
+      const base = t.base ?? 0;
+      const steps = Math.max(3, Math.round((t.h - base) / 0.3));
       const ux = Math.sin(st.rot);
       const uz = Math.cos(st.rot);
       for (let k = 0; k < steps; k++) {
         const f = (k + 0.5) / steps;
-        const top = (t.h * (k + 1)) / steps;
+        const top = base + ((t.h - base) * (k + 1)) / steps;
         const cx = st.x + ux * (f - 0.5) * st.len;
         const cz = st.z + uz * (f - 0.5) * st.len;
         b.box(b.mm.stucco, new Matrix4().makeRotationY(st.rot).setPosition(cx, top / 2, cz), st.width, top, st.len / steps + 0.02, [0.6, 0.58, 0.54]);
@@ -979,6 +983,11 @@ function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilde
  */
 function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
   const H = 4.6;
+  // M20: a thin divider between two tubes (the bypass beside the collapse) stays low, so the camera sees over it.
+  const LOW = 1.4;
+  const stripe = lineTint(m.tunnel!.color);
+  /** Meters of wall built so far per tube kind and side: places ribs, niches and lamps along the run. */
+  const wallRun = new Map<string, number>();
   for (const t of m.tunnel!.tubes) {
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
@@ -987,23 +996,55 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
       for (const side of [-1, 1]) {
         // Normal pointing out of the tube on this side.
         const nx = uz * side, nz = -ux * side;
+        const key = `${t.kind}${side}`;
         for (let d = 0; d < len; d += 1) {
           const cx = ax + ux * (d + 0.5), cz = az + uz * (d + 0.5);
           const ex = cx + nx * t.width / 2, ez = cz + nz * t.width / 2;
           // Open where the wall would stand inside another tube (a junction).
           if (inTunnel(m, ex + nx * 0.6, ez + nz * 0.6)) continue;
-          // As thick as fits before the next tube.
-          let thick = 12;
-          while (thick > 1 && (inTunnel(m, ex + nx * thick, ez + nz * thick) || inTunnel(m, ex + nx * thick / 2, ez + nz * thick / 2))) thick /= 2;
+          // As thick as fits before the next tube (M20: marched in half meters, so a parallel bypass is found).
+          let thick = 0.5;
+          while (thick < 12 && !inTunnel(m, ex + nx * (thick + 0.5), ez + nz * (thick + 0.5))) thick += 0.5;
+          const h = thick < 2.5 ? LOW : H;
           const b = chunkOf(cx, cz);
-          const mx = ex + nx * thick / 2, mz = ez + nz * thick / 2;
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, H / 2, mz), thick, H, 1.04, [0.42, 0.4, 0.38]);
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, H + 0.05, mz), thick + 0.4, 0.1, 1.04, [0.08, 0.08, 0.09]);
-          b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, H / 2, mz), thick, H, 1.04);
+          // Playtest 2026-11-18: uneven walls. The face swells by up to 0.3 m (two slow waves along the
+          // tube), the tint drifts, damp darkens the foot; ribs, refuge niches, a cable tray and wall lamps
+          // break the run. Cost: boxes in the existing tunnel materials, merged per chunk; lamps feed the fixed pool.
+          const run = (wallRun.get(key) ?? 0) + 1;
+          wallRun.set(key, run);
+          const u = run + side * 37 + t.width * 3;
+          const bump = h < H ? 0 : 0.15 + 0.1 * Math.sin(u * 0.43) + 0.05 * Math.sin(u * 1.9 + 1.3);
+          const tone = 0.86 + 0.14 * Math.sin(u * 0.21) + 0.06 * Math.sin(u * 1.37);
+          const mx = ex + nx * (thick - bump) / 2, mz = ez + nz * (thick - bump) / 2;
+          const fx = ex - nx * bump, fz = ez - nz * bump;
+          const onFace = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(fx - nx * o, y, fz - nz * o);
+          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick + bump, h, 1.04, [0.42 * tone, 0.4 * tone, 0.38 * tone]);
+          if (h === H && t.kind !== 'station') {
+            b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, 1.04, [0.2, 0.21, 0.19]);
+            if (run % 8 === 0) b.box(mats.concrete, onFace(0.15, H / 2), 0.3, H, 0.55, [0.5 * tone, 0.48 * tone, 0.45 * tone]);
+            else if (run % 29 === 14) {
+              // Refuge niche: a dark recess with a light frame.
+              b.box(mats.dark, onFace(0.015, 1.05), 0.02, 2.1, 1.0);
+              b.box(mats.concrete, onFace(0.03, 2.18), 0.05, 0.12, 1.2, [0.6, 0.58, 0.54]);
+            }
+            // Cable tray on brackets along the wall.
+            b.box(mats.iron, onFace(0.1, 2.05), 0.16, 0.05, 1.04, [0.24, 0.24, 0.22]);
+            b.box(mats.rubber, onFace(0.1, 2.12), 0.12, 0.09, 1.04, [0.12, 0.12, 0.12]);
+            if (run % 2 === 0) b.box(mats.iron, onFace(0.08, 2.0), 0.16, 0.12, 0.05, [0.3, 0.3, 0.28]);
+            // U-Bahn tunnel lamp: a caged bulkhead light on the wall, every 12 m, alternating sides and shades.
+            if ((t.kind === 'track' || t.kind === 'bypass') && (run + (side > 0 ? 6 : 0)) % 12 === 0) {
+              const cold = ((run / 12) | 0) % 3 === 1;
+              b.box(mats.iron, onFace(0.08, 2.75), 0.16, 0.3, 0.42, [0.2, 0.2, 0.2]);
+              b.box(mats.lampGlass, onFace(0.17, 2.75), 0.04, 0.2, 0.32, cold ? [1.2, 1.5, 1.8] : [1.7, 1.25, 0.55]);
+              b.light(new Vector3(fx - nx * 0.5, 2.6, fz - nz * 0.5), cold ? 0xd8ecff : 0xffb060, 18, 10, 0.02, 4.5, { yaw: Math.atan2(-nx, -nz), stretch: 1.3, reach: 1.6, halo: 0.3 });
+            }
+          }
+          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h + 0.05, mz), thick + 0.4, 0.1, 1.04, h < H ? [0.3, 0.29, 0.27] : [0.08, 0.08, 0.09]);
+          b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04);
           if (t.kind === 'station') {
-            // Tiled band at eye height (cream tiles with a dark stripe), as on the old S-Bahn halls.
+            // Tiled band at eye height (cream tiles), as on the old S-Bahn halls; M20: a stripe in the line color.
             b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.02, 1.6, ez + nz * 0.02), 0.08, 1.8, 1.04, [0.86, 0.82, 0.7]);
-            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.01, 2.25, ez + nz * 0.01), 0.1, 0.18, 1.04, [0.22, 0.32, 0.3]);
+            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.01, 2.25, ez + nz * 0.01), 0.1, 0.24, 1.04, stripe);
           }
         }
       }
@@ -2219,7 +2260,11 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildTerraces(m, chunkOf);
   // M15 Xhain: the Wall, the viaducts and the Xhain landmarks (`xhain-world.ts`).
   buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
-  if (m.tunnel) buildTunnel(m, mats, chunkOf);
+  if (m.tunnel) {
+    buildTunnel(m, mats, chunkOf);
+    buildTunnelExtras(m, mats, materials, chunkOf);
+  }
+  if (m.camp) buildCampWorld(m, mats, makeCampMats(materials, { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy }), chunkOf);
   if (m.rail) {
     const r = m.rail;
     // The embankment runs on out of the map (closed edge, M11d step 4).
@@ -2230,7 +2275,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     }
   }
   // M11d step 4: beyond the closed edge, building masses and tree rows (render only) on a ground skirt.
-  const edge = m.tunnel ? null : edgeRuns(m);
+  const edge = m.tunnel || m.camp ? null : edgeRuns(m);
   const backdrop = edge ? edgeBackdrop(m, edge) : { blocks: [], trees: [] };
   if (edge) buildEdgeSkirt(m, mats, edge, group);
   for (const k of backdrop.blocks) {
@@ -2310,6 +2355,13 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   moon.shadow.normalBias = 0.04;
   group.add(moon, moon.target);
 
+  // M20: gratings, hold ring and the end platform's lamps; its ceiling spots join the pool dark.
+  const tunnel = m.tunnel ? buildTunnelView(m, mats, materials) : undefined;
+  if (tunnel) {
+    group.add(tunnel.group);
+    spots.push(...tunnel.spots);
+  }
+
   const poolSize = Math.max(1, materials.profile.maxPointLights - 1);
   const pool = Array.from({ length: poolSize }, () => {
     const light = new PointLight(0xffffff, 0, 10, 1.6);
@@ -2324,7 +2376,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const pick = (): void => {
     const near = spots
       .map((s) => ({ s, d: (s.pos.x - hx) ** 2 + (s.pos.z - hz) ** 2 }))
-      .filter((e) => e.d < 45 * 45)
+      .filter((e) => e.d < 45 * 45 && e.s.intensity > 0)
       .sort((a, c) => a.d - c.d)
       .slice(0, poolSize)
       .map((e) => e.s);
@@ -2347,6 +2399,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     group,
     moon,
     breakables: breakableView,
+    ...(tunnel ? { tunnel } : {}),
     lights: [],
     fires,
     update(time: number): void {

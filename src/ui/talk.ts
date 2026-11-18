@@ -18,6 +18,16 @@ export class TalkPrompt {
     document.body.appendChild(this.el);
   }
 
+  /** M20 camp: a free label (station name and what it does), null hides. */
+  say(text: string | null, visible: boolean, device: Device): void {
+    const show = visible && text !== null;
+    if (show !== this.shown) { this.shown = show; this.el.hidden = !show; }
+    if (!show) return;
+    const key = KEY[device];
+    const label = `${key ? `<kbd>${key}</kbd>` : ''}${text}`;
+    if (label !== this.label) { this.label = label; this.el.innerHTML = label; }
+  }
+
   /** `who`: -1 trader, a rest index for a Späti, null nobody in reach. */
   update(who: number | null | undefined, visible: boolean, device: Device): void {
     const show = visible && who != null;

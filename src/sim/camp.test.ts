@@ -1,9 +1,44 @@
 import { describe, expect, it } from 'vitest';
 import { createSim } from './sim';
-import { buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
+import { OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
 import { parseSave, simFromSave, snapshot } from './save';
 
-const rich = () => { const s = createSim({ seed: 5 }); s.inventory.scrap = 5000; s.inventory.materials = { metall: 40, stoff: 40, kabel: 40, chemie: 40 }; return s; };
+const rich = (built = true) => { const s = createSim({ seed: 5 }); s.inventory.scrap = 5000; s.inventory.materials = { metall: 40, stoff: 40, kabel: 40, chemie: 40 }; if (built) s.inventory.camp = { stations: { zeug: 1, hack: 1, imbiss: 1, exer: 1 }, stash: [], freed: [] }; return s; };
+
+describe('M20 build sites', () => {
+  it('three stations work on arrival, the other four are build sites', () => {
+    const s = rich(false);
+    expect(OPEN_STATIONS.every((id) => stationBuilt(s, id))).toBe(true);
+    for (const id of ['zeug', 'imbiss', 'hack', 'exer'] as const) { expect(stationBuilt(s, id)).toBe(false); expect(siteLevel(s, id)).toBe(0); }
+    expect(buyUpgrade(s, 'dmg').ok).toBe(false);
+    expect(cookMeal(s, 'suppe').text).toBe('Erst den Imbiss bauen.');
+    expect(buyDrill(s).ok).toBe(false);
+  });
+  it('a build site costs Schrott and material and opens level 1', () => {
+    const s = rich(false);
+    const scrap = s.inventory.scrap, metall = s.inventory.materials.metall!;
+    expect(nextLevel(s, 'zeug')).toMatchObject({ level: 1, ok: true });
+    expect(buildStation(s, 'zeug')).toEqual({ ok: true, text: 'Zeughaus gebaut' });
+    expect(s.inventory.scrap).toBe(scrap - SITE_COST.zeug!.scrap!);
+    expect(s.inventory.materials.metall).toBe(metall - SITE_COST.zeug!.metall!);
+    expect(siteLevel(s, 'zeug')).toBe(1);
+    expect(buyUpgrade(s, 'dmg').ok).toBe(true);
+    expect(nextLevel(s, 'zeug')!.level).toBe(2);
+  });
+  it('too little Schrott keeps the site', () => {
+    const s = rich(false);
+    s.inventory.scrap = 50;
+    expect(buildStation(s, 'hack').ok).toBe(false);
+    expect(stationBuilt(s, 'hack')).toBe(false);
+  });
+  it('old saves keep a station whose workshop was used', () => {
+    const s = rich(false);
+    s.statContext.upgrades.hp = 2;
+    s.statContext.drill = 1;
+    expect(stationBuilt(s, 'hack') && stationBuilt(s, 'exer')).toBe(true);
+    expect(stationBuilt(s, 'zeug')).toBe(false);
+  });
+});
 
 describe('M13 camp', () => {
   it('upgrades cost 2D prices and stop at the station cap', () => {
@@ -14,15 +49,17 @@ describe('M13 camp', () => {
     expect(buyUpgrade(s, 'dmg').ok).toBe(false);
     expect(s.stats.damage).toBeGreaterThan(createSim({ seed: 5 }).stats.damage);
   });
-  it('level 2 needs the survivor, level 3 needs Köpenick freed', () => {
+  it('level 2 needs the survivor, level 3 needs Alexanderplatz freed', () => {
     const s = rich();
     expect(nextLevel(s, 'zeug')!.needs).toEqual(['Mira befreien']);
     s.statContext.survivors.schmied = true;
     expect(buildStation(s, 'zeug').ok).toBe(true);
     expect(s.statContext.camp.lampe).toBe(true);
     expect(upgradeMax(s, 'dmg')).toBe(8);
-    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Köpenick befreien']);
+    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Alexanderplatz befreien']);
     endExpedition(s, true);
+    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Alexanderplatz befreien']);
+    s.run.ended = false; endExpedition(s, true, 2);
     expect(buildStation(s, 'zeug').ok).toBe(true);
     expect(stationLevel(s, 'zeug')).toBe(3);
     expect(nextLevel(s, 'zeug')).toBeNull();
@@ -30,7 +67,7 @@ describe('M13 camp', () => {
   it('Ilse runs the Kommandantur; the Hackerspace level 3 sets the watchtower', () => {
     const s = rich();
     expect(nextLevel(s, 'kom')!.needs).toEqual([]);
-    s.statContext.survivors.mechaniker = true; endExpedition(s, true);
+    s.statContext.survivors.mechaniker = true; endExpedition(s, true, 2);
     buildStation(s, 'hack'); buildStation(s, 'hack');
     expect(s.statContext.camp.turm && s.statContext.camp.presse).toBe(true);
   });

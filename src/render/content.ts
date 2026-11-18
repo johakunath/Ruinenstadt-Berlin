@@ -16,6 +16,21 @@ import { paintGlow, paintWood } from './paint';
 
 const NPC_LOOK = heroLook({ a: { base: 'weste' } });
 
+/**
+ * A person on the hero rig in the vest (the hero starts in the coat), so NPCs never read as copies of
+ * her; only that look's pieces draw. Idle loop running; `attach` hangs props on a bone.
+ */
+export function npcPerson(assets: CharacterAssets): { root: Group; anim: Animator; attach: (bone: string, o: Object3D) => void } {
+  const root = new Group();
+  const body = new HeroModel(assets.hero);
+  body.setLook(NPC_LOOK);
+  const model = body.model;
+  root.add(model);
+  const anim = new Animator(model, new Map([...assets.heroClips].filter(([n]) => n === 'Idle_Loop' || n === 'Interact')));
+  anim.loop('Idle_Loop', 0);
+  return { root, anim, attach: (bone, o) => { model.getObjectByName(bone)?.add(o); } };
+}
+
 const glowSprite = (inner: string, outer: string, size: number): Sprite => {
   const s = new Sprite(new SpriteMaterial({ map: paintGlow(inner, outer), blending: AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
   s.scale.set(size, size, 1);
@@ -176,16 +191,7 @@ export class ContentView {
   }
 
   private person(tint: 'trader' | 'captive' | 'keeper'): { root: Group; anim: Animator } {
-    const root = new Group();
-    // Traders, captives and keepers wear the vest (the hero starts in the coat), so they never read
-    // as copies of her; only that look's pieces draw.
-    const body = new HeroModel(this.assets.hero);
-    body.setLook(NPC_LOOK);
-    const model = body.model;
-    root.add(model);
-    const anim = new Animator(model, new Map([...this.assets.heroClips].filter(([n]) => n === 'Idle_Loop' || n === 'Interact')));
-    anim.loop('Idle_Loop', 0);
-    const attach = (bone: string, o: Object3D): void => { model.getObjectByName(bone)?.add(o); };
+    const { root, anim, attach } = npcPerson(this.assets);
     if (tint === 'trader') {
       // Wide hat, a big pack and a green lantern: readable from far away.
       const felt = this.materials.surface({ color: 0x6b4a30, roughness: 0.95 });

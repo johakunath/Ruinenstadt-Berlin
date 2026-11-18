@@ -21,3 +21,6 @@ Cloud browsers have no real GPU: counts of draw calls and triangles are valid th
 | 11 | Xhain fps and heat on the track field and the Warschauer Brücke (most geometry: tracks, catenary, wagons, deck) and at the East Side Gallery | Start of Xhain, `?debug=perf`, both profiles | Tab S9, PC | `docs/maps/xhain.md` | |
 | 12 | Xhain difficulty after Köpenick gear: first zone too easy? Spreehexe too hard? | Play Xhain with the gear from Köpenick | PC | `docs/balance.md` › Xhain | |
 | 13 | Blockrand look on the Reichenberger Straße: wider use or keep it to a few streets? | `?map=xhain`, walk Reichenberger and Oranienstraße | PC | `docs/maps/guidelines.md` › Blockrand | |
+| 14 | Camp cost: cloud readout on Leistung 333 to 399 draw calls, 214k to 282k triangles with all stations at level 3 (keepers about 40k each, shown within 15 m); fps and heat | `?map=lager` after the S3, walk hall, stairs and yard, `?debug=perf` | Tab S9, PC | `docs/tasks/m20-tunnels-camp.md` › Cost | |
+| 15 | Tunnel: flooded stretch look, grating yellow under the teal light, new wall lamps every 12 m (light pool on Leistung) | S3 tunnel, walk to the Zugwrack | PC, Tab S9 | `docs/tasks/m20-tunnels-camp.md` › Open | |
+| 16 | Camp rings: footprint-sized and dim; found without the prompt? | Walk to each station in `?map=lager` | PC, Tab S9 | `docs/style-bible.md` › NPC rings | |

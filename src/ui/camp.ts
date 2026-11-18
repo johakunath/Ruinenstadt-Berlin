@@ -5,7 +5,7 @@ import { CONSUMABLES, INGREDIENTS, MATERIALS, MEALS, WEAPON_MODS, type Ingredien
 import { CAMP_UPGRADES, type CampUpgradeId } from '../data/progression';
 import { DRILL } from '../data/progression';
 import { CONSUMABLE } from '../sim/abilities';
-import { buildMod, buildStation, buyDrill, buyUpgrade, campOf, cookMeal, craftConsumable, drillCost, fromStash, installMod, modScrap, modSlots, nextLevel, npcHere, npcName, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax, type Result } from '../sim/camp';
+import { siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, campOf, cookMeal, craftConsumable, drillCost, fromStash, installMod, modScrap, modSlots, nextLevel, npcHere, npcName, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax, type Result } from '../sim/camp';
 import { RARITIES } from '../data/items';
 import { BAG_SIZE } from '../sim/inventory';
 import type { Item } from '../sim/items';
@@ -20,6 +20,8 @@ const pips = (l: number, max: number, cap = max): string => `<span class="pips">
 export class CampUi {
   readonly root = document.createElement('div');
   private sel: StationId = 'zeug';
+  /** M20: opened from a station's ring in the walkable camp: only that station, no list. */
+  private single = false;
   private msg: Result | null = null;
   private previous: HTMLElement | null = null;
   private padDown: boolean[] = [];
@@ -48,10 +50,12 @@ export class CampUi {
     this.root.addEventListener('keydown', e => { if (e.code === 'Escape') { e.stopPropagation(); this.close(); } });
   }
   get isOpen(): boolean { return !this.root.hidden; }
-  open(): void {
+  open(station?: StationId): void {
     this.previous = document.activeElement as HTMLElement;
+    this.single = station !== undefined;
+    if (station) this.sel = station;
     this.msg = null; this.root.hidden = false; this.render();
-    this.root.querySelector<HTMLElement>(`[data-st="${this.sel}"]`)?.focus();
+    (this.root.querySelector<HTMLElement>(this.single ? '.camp-st button:not(:disabled)' : `[data-st="${this.sel}"]`) ?? this.root.querySelector<HTMLElement>('[data-close]'))?.focus();
   }
   close(): void { if (!this.isOpen) return; this.root.hidden = true; this.previous?.focus?.(); this.onClose(); }
   /** Pad: D-pad/stick moves (nearest button in that direction), A presses, B closes. */
@@ -77,13 +81,13 @@ export class CampUi {
     best?.focus(); best?.scrollIntoView({ block: 'nearest' });
   }
   render(): void {
-    const s = this.sim(), st = STATIONS.find(t => t.id === this.sel)!, l = stationLevel(s, st.id), n = nextLevel(s, st.id), here = npcHere(s, st);
+    const s = this.sim(), st = STATIONS.find(t => t.id === this.sel)!, built = stationBuilt(s, st.id), l = siteLevel(s, st.id), n = nextLevel(s, st.id), here = npcHere(s, st);
     const mats = MAT_IDS.map(k => `<span style="color:${MATERIALS[k].color}">${MATERIALS[k].name} <b>${s.inventory.materials[k] ?? 0}</b></span>`).join('');
     const ings = ING_IDS.map(k => `<span style="color:${INGREDIENTS[k].color}">${INGREDIENTS[k].name} <b>${s.inventory.ingredients?.[k] ?? 0}</b></span>`).join('');
-    const list = STATIONS.map(t => `<button type="button" class="stl${t.id === this.sel ? ' on' : ''}" data-st="${t.id}"><b>${t.name}</b>${pips(stationLevel(s, t.id), 3)}</button>`).join('');
+    const list = STATIONS.map(t => `<button type="button" class="stl${t.id === this.sel ? ' on' : ''}" data-st="${t.id}"><b>${t.name}</b>${pips(siteLevel(s, t.id), 3)}</button>`).join('');
     const cost = (c: Partial<Record<MaterialId | 'scrap', number>>): string => (Object.entries(c) as Array<[MaterialId | 'scrap', number]>).map(([k, v]) => `<span class="${(k === 'scrap' ? s.inventory.scrap : s.inventory.materials[k] ?? 0) >= v ? '' : 'negative'}">${v} ${k === 'scrap' ? 'Schrott' : MATERIALS[k].name}</span>`).join(' · ');
-    const next = !n ? '<p class="inv-hint">Voll ausgebaut.</p>' : `<h3>Ausbau auf Stufe ${n.level}</h3><div class="row-c"><div><b>${n.text}</b><small>${cost(n.cost)}</small>${n.needs.length ? `<small class="warn">Erst: ${n.needs.join(', ')}</small>` : ''}</div><button type="button" class="${n.ok ? 'primary' : ''}" data-lv="${st.id}" ${n.needs.length ? 'disabled' : ''}>Ausbauen</button></div>`;
-    this.root.innerHTML = `<div class="camp-panel"><header class="menu-head"><h2>Lager</h2><div class="menu-res"><span>Schrott <b>${s.inventory.scrap}</b></span>${mats}${ings}</div><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header><div class="camp-cols"><nav class="camp-list">${list}</nav><section class="camp-st"><div class="sthead"><div><h2>${st.name}</h2><p class="inv-hint">${here ? `${npcName(st)} · ${st.line}` : `Noch niemand hier. ${npcName(st)} ist irgendwo da draußen gefangen.`}</p><p>${pips(l, 3)} Stufe ${l} von 3 · <span class="inv-hint">${st.levels.slice(0, l).map(L => L.text).join(' · ')}</span></p></div></div><div class="camp-body">${this.body(s)}</div>${next}<p class="camp-msg ${this.msg?.ok ? 'positive' : 'negative'}" aria-live="polite">${esc(this.msg?.text ?? '')}</p></section></div></div>`;
+    const next = !n ? '<p class="inv-hint">Voll ausgebaut.</p>' : `<h3>${built ? `Ausbau auf Stufe ${n.level}` : 'Bauplatz'}</h3><div class="row-c"><div><b>${n.text}</b><small>${cost(n.cost)}</small>${n.needs.length ? `<small class="warn">Erst: ${n.needs.join(', ')}</small>` : ''}</div><button type="button" class="${n.ok ? 'primary' : ''}" data-lv="${st.id}" ${n.needs.length ? 'disabled' : ''}>${built ? 'Ausbauen' : 'Bauen'}</button></div>`;
+    this.root.innerHTML = `<div class="camp-panel${this.single ? ' single' : ''}"><header class="menu-head"><h2>${this.single ? st.name : 'Lager'}</h2><div class="menu-res"><span>Schrott <b>${s.inventory.scrap}</b></span>${mats}${ings}</div><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header><div class="camp-cols${this.single ? ' single' : ''}"><nav class="camp-list"${this.single ? ' hidden' : ''}>${list}</nav><section class="camp-st"><div class="sthead"><div><h2>${st.name}</h2><p class="inv-hint">${here ? `${npcName(st)} · ${st.line}` : `Noch niemand hier. ${npcName(st)} ist irgendwo da draußen gefangen.`}</p><p>${built ? `${pips(l, 3)} Stufe ${l} von 3 · <span class="inv-hint">${st.levels.slice(0, l).map(L => L.text).join(' · ')}</span>` : '<span class="inv-hint">Noch Schutt. Erst bauen, dann nutzen.</span>'}</p></div></div><div class="camp-body">${built ? this.body(s) : ''}</div>${next}<p class="camp-msg ${this.msg?.ok ? 'positive' : 'negative'}" aria-live="polite">${esc(this.msg?.text ?? '')}</p></section></div></div>`;
   }
   private upRows(s: Sim, ids: CampUpgradeId[]): string {
     return ids.map(id => {
@@ -102,7 +106,7 @@ export class CampUi {
         return `<div class="row-c"><div><b class="${on ? 'positive' : ''}">${m.name}${on ? ' · gekocht' : ''}</b><small>${m.description}${lock ? ' · ab Stufe 2' : ''}</small><small>${Object.entries(m.costs).map(([k, v]) => `<span class="${(s.inventory.ingredients?.[k as IngredientId] ?? 0) >= v || on ? '' : 'negative'}">${v} ${INGREDIENTS[k as IngredientId].name}</span>`).join(' · ')}</small></div><button type="button" class="${!on && ok && !lock ? 'primary' : ''}" data-meal="${m.id}" ${lock ? 'disabled' : ''}>${on ? 'Abbestellen' : 'Kochen'}</button></div>`;
       }).join('') + '<p class="inv-hint">Ein Essen hält eine Expedition lang. Zutaten fallen von Gegnern.</p>';
       case 'laz': return CONSUMABLES.map(c => { const n = s.inventory.consumables?.[c.id] ?? 0; return `<div class="row-c"><div><b>${c.name}</b><small>${c.id === 'verband' && stationLevel(s, 'laz') >= 3 ? 'Heilt 60% Leben über 3 Sekunden' : c.description} · ${n}/${CONSUMABLE.max} dabei</small></div>${n >= CONSUMABLE.max ? '<small>Voll</small>' : `<button type="button" class="${s.inventory.scrap >= c.scrapCost ? 'primary' : ''}" data-cons="${c.id}">${c.scrapCost} Schrott</button>`}</div>`; }).join('');
-      case 'kom': { const c = campOf(s); return `<div class="row-c"><div><b>Befreite Bezirke</b><small>${[[0, 'Köpenick'], [1, 'Xhain']].filter(([id]) => c.freed.includes(id as number)).map(([, n]) => n).join(', ') || 'Noch keiner'}</small></div></div><p class="inv-hint">Ilse hält Funkkontakt. Ein befreiter Bezirk öffnet Stufe 3 aller Stationen.</p>`; }
+      case 'kom': { const c = campOf(s); return `<div class="row-c"><div><b>Befreit</b><small>${([[0, 'Köpenick'], [100, 'S3-Tunnel'], [1, 'Xhain']] as const).filter(([id]) => c.freed.includes(id)).map(([, n]) => n).join(' · ') || 'Noch nichts'}</small></div></div><p class="inv-hint">Ilse hält Funkkontakt. Alexanderplatz befreit öffnet Stufe 3 aller Stationen.</p>`; }
       case 'markt': return this.stash(s);
     }
   }
