@@ -251,7 +251,7 @@ function mats(c: MCtx): SouthMats {
     paintAtlas(eg, true);
     s = {
       signs: c.N.materials.surface({ map: toTexture(mc, false, 4), emissiveMap: toTexture(ec, false, 4), emissive: 0xffffff, emissiveIntensity: 1, roughness: 0.5 }),
-      membrane: c.N.materials.surface({ color: 0xece8e4, emissive: 0xff4fa3, emissiveIntensity: 0.16, roughness: 0.75, doubleSided: true, vertexColors: true }),
+      membrane: c.N.materials.surface({ color: 0xe8eaee, emissive: 0xff4fa3, emissiveIntensity: 0.08, roughness: 0.75, doubleSided: true, vertexColors: true }),
     };
     southMats.set(c.N.materials, s);
   }
@@ -399,28 +399,46 @@ function sony(c: MCtx, l: Landmark): void {
     }
     if (d !== 0 && rng.next() < 0.8) b.box(M.iron, sub(F, rng.range(-3, 3), h + 0.9, 2.5), 2.4, 1.8, 1.6, [1.2, 1.2, 1.25]);
   }
+  // Upper floors bridge the gaps behind the forum (90° … 270°): the ring reads closed; the walkable
+  // passages stay free below 7.5 m and the camera-side gaps (30°, 330°) stay open.
+  for (const [g, top] of [[90, 15.5], [150, 19], [210, 19], [270, 15.5]] as const) sonyBridge(c, l, (g * Math.PI) / 180, top);
   sonyRoof(c, l);
   // Forum floor (walk-over, no occluder): light paving, dark granite band, the 2D magenta ring, radial
   // stripes, the oval fountain (rim 0.25 m), dark still water.
   b.solid.excludeOccluder(() => {
     b.geo(M.concrete, flat('sony-floor', () => new CircleGeometry(19.6, 48)), lm(l, 0, 0.03, 0), [1.0, 0.99, 1.0]);
-    b.geo(M.concrete, flat('sony-band', () => new RingGeometry(8.4, 9.2, 48)), lm(l, 0, 0.045, 0), [0.42, 0.42, 0.45]);
+    b.geo(M.concrete, flat('sony-band', () => new RingGeometry(7.4, 8.2, 48)), lm(l, 0, 0.045, 0), [0.42, 0.42, 0.45]);
     b.geo(M.concrete, flat('sony-band2', () => new RingGeometry(18.6, 19.6, 48)), lm(l, 0, 0.045, 0), [0.42, 0.42, 0.45]);
     b.geo(S.signs, lit('sony-ring', 'magenta', () => new RingGeometry(13.5, 13.8, 64).rotateX(-Math.PI / 2)), lm(l, 0, 0.05, 0));
     for (let k = 0; k < 16; k++) b.box(M.concrete, lm(l, 0, 0.04, 0, (k / 16) * Math.PI * 2).multiply(new Matrix4().makeTranslation(0, 0, 14)), 0.5, 0.02, 9, [0.5, 0.5, 0.53]);
     const oval = new Matrix4().makeScale(1.3, 1, 1);
-    b.geo(c.N.sandstone, cached('ms-basin', () => new CylinderGeometry(5.4, 5.6, 0.25, 32)), lm(l, 0, 0.125, 0).multiply(oval), [0.62, 0.62, 0.64]);
-    b.geo(M.water, cached('ms-pool', () => new CircleGeometry(5.05, 32).rotateX(-Math.PI / 2)), lm(l, 0, 0.255, 0).multiply(oval));
+    b.geo(c.N.sandstone, cached('ms-basin', () => new CylinderGeometry(4.3, 4.5, 0.25, 32)), lm(l, 0, 0.125, 0).multiply(oval), [0.62, 0.62, 0.64]);
+    b.geo(M.water, cached('ms-pool', () => new CircleGeometry(3.95, 32).rotateX(-Math.PI / 2)), lm(l, 0, 0.255, 0).multiply(oval));
     cyl(c, M.iron, lm(l, 0, 0.3, 0), 0.25, 0.18, 0.12, 8, STEEL);
   });
   b.light(lp(l, 0, 9, 0), 0xff4fa3, 16, 24, 0.04, 9);
   b.light(lp(l, 0, 3.4, 31), 0xffb060, 12, 12, 0.08, 5);
 }
 
+/** Upper floors over a gap at angle g: an annular sector from 7.5 m reaching 20° into both blocks. */
+function sonyBridge(c: MCtx, l: Landmark, g: number, top: number): void {
+  const { b, M, N } = c, F = lm(l, 0, 0, 0, g), Y = 7.5;
+  const arc = (r: number): P2[] => [-1, -0.5, 0, 0.5, 1].map((k) => [Math.sin(k * 0.35) * r, Math.cos(k * 0.35) * r] as P2);
+  const outer = arc(RO - 0.4), front = arc(RI).reverse(), ring = [...outer, ...front];
+  faces(c, N.curtain, F, ring, Y, top, GLASS, 1 / 6, 1 / 12, true);
+  b.geo(M.tar, capGeo('sony-bridge', ring), sub(F, 0, top, 0), [0.55, 0.55, 0.57]);
+  b.geo(M.concrete, capGeo('sony-bridge', ring), sub(F, 0, Y, 0, 0, 0, Math.PI).multiply(new Matrix4().makeScale(-1, 1, 1)), [0.5, 0.5, 0.52]);
+  for (const s of segs(F, front)) {
+    for (let y = Y + 3.1, k = 0; y < top - 0.8; y += 3.1, k++) b.box(M.enamel, sub(s.m, 0, y, 0.2), s.len + 0.06, 0.22, 0.42, k % 2 ? RED : WHITE);
+    neon(c, g < Math.PI ? 'cyan' : 'magenta', sub(s.m, 0, Y + 0.05, 0.05), s.len, 0.1, 0.1);
+  }
+  for (const s of segs(F, outer)) neon(c, 'amber', sub(s.m, 0, Y + 0.05, 0.05), s.len, 0.1, 0.1);
+}
+
 /** Glass office block (or the dark cinema block at 180°) on the forum ring. */
 function sonyBlock(c: MCtx, F: Matrix4, front: readonly P2[], outer: readonly P2[], h: number, d: number, rng: Rng): void {
   const { b, M, N } = c, cinema = d === 180, led: Neon = d === 120 || d === 300 ? 'cyan' : 'magenta', G = 4.4;
-  const skin = cinema ? M.corrugated : N.curtain, tint: RGB = cinema ? [0.4, 0.4, 0.44] : GLASS, us = cinema ? 0.5 : 1 / 6, vs = cinema ? 0.5 : 1 / 12;
+  const skin = cinema ? M.corrugated : N.curtain, tint: RGB = cinema ? [0.3, 0.31, 0.36] : GLASS, us = cinema ? 0.5 : 1 / 6, vs = cinema ? 0.5 : 1 / 12;
   faces(c, skin, F, [...outer, front[0]!], 0, h, tint, us, vs);
   faces(c, skin, F, [front[4]!, outer[0]!], 0, h, tint, us, vs);
   faces(c, skin, F, front, G, h, tint, us, vs);
