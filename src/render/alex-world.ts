@@ -254,7 +254,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       const H = 11, tz = l.hz - 3;
       b.box(M.brick, F(0, H / 2, -2), w, H, d - 4, BRICK);
       for (const f of faces(F, w, d - 4, -2)) if (f.len > w) windowRow(b, f.m, f.len - 6, 5.2, 1.4, 6, 3.6, rng, 0.06, true);
-      b.geo(M.roof, frustum(w + 0.6, d - 3.6, 5, w + 0.6, 0, SLOPES | ENDS), F(0, H, -2, Math.PI / 2), [1.0, 0.75, 0.62]);
+      b.geo(M.roof, frustum(d - 3.6, w + 0.6, 5, d - 3.6, 0, SLOPES | ENDS), F(0, H, -2, Math.PI / 2), [1.0, 0.75, 0.62]);
       // The tower: fieldstone below, the copper top with its lantern above the camera.
       b.box(M.stucco, F(0, 9, tz), 6.4, 18, 6, [1.0, 0.9, 0.72]);
       archWindow(b, F(0, 0, tz + 3.01), 1.6, 3.2, rng, 0, false);
@@ -290,7 +290,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       const H = 10, tz = l.hz - 2.5;
       b.box(M.brick, F(0, H / 2, -1), w, H, d - 2, BRICK);
       for (const f of faces(F, w, d - 2, -1)) if (f.len > w) windowRow(b, f.m, f.len - 6, 4.6, 1.2, 5, 3.4, rng, 0.06, true);
-      b.geo(M.roof, frustum(w + 0.5, d - 1.6, 4.4, w + 0.5, 0, SLOPES | ENDS), F(0, H, -1, Math.PI / 2), [1.0, 0.75, 0.62]);
+      b.geo(M.roof, frustum(d - 1.6, w + 0.5, 4.4, d - 1.6, 0, SLOPES | ENDS), F(0, H, -1, Math.PI / 2), [1.0, 0.75, 0.62]);
       b.box(M.brick, F(0, 7, tz), w, 14, 5, BRICK);
       b.box(M.stucco, F(0, 0.8, tz), w + 0.2, 1.6, 5.2, [0.85, 0.82, 0.76]);
       b.box(M.door, F(0, 1.5, tz + 2.51), 1.8, 3, 0.05);
@@ -319,13 +319,15 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
     case 'hotelstadtberlin': {
       // Interhotel Stadt Berlin: a white slab with vertical window strips on a wide low base; tall, but on the
       // north edge where it never stands between the camera and the hero.
-      b.box(M.concrete, F(0, 3, 3), w + 6, 6, d + 4, CREAM);
-      windowRow(b, F(0, 0, 3 + (d + 4) / 2), w + 4, 3, 2.6, 2.4, 3.2, rng, 0.2);
-      b.box(M.concrete, F(0, 26, 0), w, 52, d, [1.2, 1.18, 1.12]);
-      glassFace(b, F(0, 0, l.hz + 0.02), w - 1, 6, 44, 'curtain', 5.5);
+      // The base fills the collider footprint (Codex review: it stood 5 m beyond it); the slab is set back on it.
+      const sd = d - 5, sz = -1.5, sf = sz + sd / 2;
+      b.box(M.concrete, F(0, 3, 0), w, 6, d, CREAM);
+      windowRow(b, F(0, 0, l.hz), w - 2, 3, 2.6, 2.4, 3.2, rng, 0.2);
+      b.box(M.concrete, F(0, 26, sz), w - 4, 52, sd, [1.2, 1.18, 1.12]);
+      glassFace(b, F(0, 0, sf + 0.02), w - 5, 6, 44, 'curtain', 5.5);
       // Two banners as tall as the slab, the cheerful state on the skyline.
-      for (const x of [-l.hx * 0.55, l.hx * 0.55]) posterPlane(b, F(x, 30, l.hz + 0.08), 40, x < 0 ? 'red' : 'blue');
-      atlasPlane(b, F(0, 7.2, l.hz + 3 + (d + 4) / 2 - d / 2 + 0.05), Math.min(w + 2, 14), 1.8, 'slogan2');
+      for (const x of [-l.hx * 0.5, l.hx * 0.5]) posterPlane(b, F(x, 30, sf + 0.08), 40, x < 0 ? 'red' : 'blue');
+      atlasPlane(b, F(0, 4.6, l.hz + 0.05), Math.min(w - 2, 14), 1.8, 'slogan2');
       return;
     }
     case 'sbahnalex':
