@@ -1,7 +1,7 @@
 // Enemy bodies (M12). Five rigs: the CC0 zombie body in dressed variants (proportions by bone
 // scale, gear built in code), the raptor and the Rex (Quaternius dinosaurs, repainted in
 // tools/build-creatures.mjs), a crow built from a few boxes with a procedural wing beat and (M12b)
-// a rat from four merged meshes with a run cycle from sim time.
+// a rat from six small meshes (shared geometry) with a run cycle from sim time.
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
   BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, Mesh, SphereGeometry, Sphere, TorusGeometry, Vector3,

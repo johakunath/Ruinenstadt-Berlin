@@ -6,7 +6,7 @@ import { offerBlessings } from './blessings';
 // circle, the hero may kite, fall back to a pickup or a Späti; enemies follow, and a wave that is
 // left behind spawns around the hero.
 import { difficultyOf } from '../data/difficulty';
-import { ENEMIES } from '../data/enemies';
+import { ENEMIES, type BossKind } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { aliveCount, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { freeSpot } from './reach';
@@ -180,7 +180,11 @@ export function followFlow(sim: Sim): void {
  * second ends with a blessing choice. The best wave is kept in the profile (`camp.endlessBest`).
  */
 export const ENDLESS = { pause: 4, count: 10, perWave: 2, growth: 1.08, eliteBase: 0.12, elitePerWave: 0.01, eliteMax: 0.45, bossEvery: 5, blessingEvery: 2 } as const;
-const ENDLESS_BOSSES = ['feldwebel', 'waechter', 'rex', 'hauptmann'] as const;
+/** The district's own bosses come back in endless mode, in the order of the map. */
+function endlessBosses(sim: Sim): BossKind[] {
+  const own = sim.level.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) as BossKind[];
+  return own.length > 0 ? own : ['feldwebel', 'waechter', 'rex', 'hauptmann'];
+}
 export function startEndless(sim: Sim): void {
   sim.run.endless = 0;
   sim.run.phase = 'pause';
@@ -204,7 +208,7 @@ function updateEndless(sim: Sim): void {
     if (run.pauseT > 0) return;
     run.phase = 'fight';
     run.toSpawn = endlessWave(sim, n + 1).count;
-    run.bossesToSpawn = (n + 1) % ENDLESS.bossEvery === 0 ? [ENDLESS_BOSSES[Math.floor((n + 1) / ENDLESS.bossEvery - 1) % ENDLESS_BOSSES.length]!] : [];
+    run.bossesToSpawn = (n + 1) % ENDLESS.bossEvery === 0 ? [endlessBosses(sim)[Math.floor((n + 1) / ENDLESS.bossEvery - 1) % endlessBosses(sim).length]!] : [];
     run.spawnT = 0.4;
     sim.events.push({ type: 'endlessWave', n: n + 1, done: false });
     return;

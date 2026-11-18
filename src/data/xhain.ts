@@ -67,7 +67,7 @@ export function xhainMap(scale = 1): MapDef {
   const encounters: EncounterDef[] = [
     // Zone 0: Friedrichshain behind the Wall (9 waves), the Grenzer in the death strip.
     enc('warschauer', 'Warschauer Brücke', 0, 24, -42, 13, 3),
-    enc('eastside', 'Mühlenstraße', 0, -36, -66, 12, 3),
+    enc('eastside', 'East Side Gallery', 0, -36, -66, 12, 3),
     enc('ostbahnhof', 'Ostbahnhof', 0, -98, -138, 14, 3),
     boss('todesstreifen', 'Todesstreifen', 0, -192, -90, 14, 'grenzer', 3),
     // Zone 1: the squats at the Mariannenplatz (9 waves), the Brandmeister on the Oranienplatz.
@@ -160,7 +160,7 @@ export function xhainMap(scale = 1): MapDef {
   const walls: Wall[] = [
     { name: 'Grenzübergang Oberbaumbrücke', pts: [cpWest, cpEast] },
     { name: 'Hinterlandmauer Osthafen', pts: [cpEast, north[0]!] },
-    { name: 'Hinterlandmauer Mühlenstraße', pts: [cpWest, north[2]!, north[3]!, north[4]!, north[5]!] },
+    { name: 'East Side Gallery', pts: [cpWest, north[2]!, north[3]!, north[4]!, north[5]!] },
     { name: 'Hinterlandmauer Schillingbrücke', pts: [[sbNorth[0] - 8, sbNorth[1] - 3], ...bankWall(7, 8)] },
     { name: 'Mauer Bethaniendamm', pts: line([[-120, -90], [-136, -72], [-170, -68], [-199, -68]]) },
     { name: 'Mauer Bethaniendamm West', pts: line([[-211, -68], [-250, -66], [-306, -62]]) },
@@ -182,9 +182,9 @@ export function xhainMap(scale = 1): MapDef {
     // Before SO36: the first area that contains a point wins.
     { id: 'mariannenplatz', name: 'Mariannenplatz', ground: 'grass', frontage: null, trees: 1.4, poly: line([[-222, -36], [-182, -36], [-180, 4], [-222, 4]]) },
     { id: 'so36', name: 'SO36', ground: 'cobbles', frontage: 'altbau', trees: 0.4, specials: ['hinterhof', 'kirchhof'], poly: line([[-320, -62], [-136, -72], [-120, -60], [-120, 30], [-320, 36]]) },
-    { id: 'kotti', name: 'Kottbusser Tor', ground: 'asphalt', frontage: 'altbau', trees: 0.3, specials: ['markt', 'truemmer'], poly: line([[-320, 36], [-120, 30], [-104, 70], [-160, 70], [-204, 74], [-320, 76]]) },
+    { id: 'kotti', name: 'Kottbusser Tor', ground: 'asphalt', frontage: 'altbau', trees: 0.3, specials: ['markt', 'truemmer', 'hinterhof'], poly: line([[-320, 36], [-120, 30], [-104, 70], [-160, 70], [-204, 74], [-320, 76]]) },
     { id: 'goerli', name: 'Görlitzer Park', ground: 'grass', frontage: null, trees: 1.2, specials: ['markt', 'truemmer'], poly: line([[-204, 74], [-160, 70], [-104, 70], [-80, 110], [-80, 135], [-204, 135]]) },
-    { id: 'wrangelkiez', name: 'Wrangelkiez', ground: 'cobbles', frontage: 'altbau', trees: 0.5, poly: line([[-120, -60], [-122, -88], [-80, -56], [-40, -26], [-6, 0], [20, 40], [40, 135], [-80, 135], [-104, 70], [-120, 30]]) },
+    { id: 'wrangelkiez', name: 'Wrangelkiez', ground: 'cobbles', frontage: 'altbau', trees: 0.5, specials: ['hinterhof'], poly: line([[-120, -60], [-122, -88], [-80, -56], [-40, -26], [-6, 0], [20, 40], [40, 135], [-80, 135], [-104, 70], [-120, 30]]) },
   ];
 
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3, extra: Partial<Landmark> = {}): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear, ...extra });
@@ -259,6 +259,8 @@ export function xhainMap(scale = 1): MapDef {
     hills: [{ name: 'Görli-Hügel', x: -130 * s, z: 118 * s, r: 6, slope: 12 * s, h: 2.5 }],
     terraces: [],
     district: 1,
+    // Johannes 2026-11-18: Kreuzberg is back yards; up to ten Hinterhöfe instead of five.
+    specialMax: { hinterhof: 10 },
     walls,
     viaducts,
     hiddenSpots: [endOf('Hinterhof', 1.2, 0)],

@@ -178,6 +178,8 @@ export interface MapDef {
   piers?: Pier[];
   /** M11c lot types placed by hand where the generator finds no room (Altstadt market, churchyard). */
   specialLots?: Array<{ special: SpecialKind; x: number; z: number; rot: number; w: number; d: number }>;
+  /** M15: per-map caps for lot types (Kreuzberg is a district of back yards). */
+  specialMax?: Partial<Record<SpecialKind, number>>;
   /** M15: the Berlin Wall (1981) as polylines; each piece blocks. Gaps are separate polylines. */
   walls?: Wall[];
   /** M15: elevated railways. The brick Stadtbahn blocks along its length; the U1 Hochbahn only at its pillars. */
@@ -585,7 +587,7 @@ export function generateLots(m: MapDef): Lot[] {
           const kind = area?.frontage;
           // M11c: two in five slots become a lot type of this area (never the same type twice in a row).
           if (area?.specials && rng.next() < SPECIAL_SHARE) {
-            const pick = area.specials.filter((k) => k !== last && (used.get(k) ?? 0) < SPECIAL_SIZE[k].max).sort((p, q) => (used.get(p) ?? 0) - (used.get(q) ?? 0) || rng.next() - 0.5)[0];
+            const pick = area.specials.filter((k) => k !== last && (used.get(k) ?? 0) < (m.specialMax?.[k] ?? SPECIAL_SIZE[k].max)).sort((p, q) => (used.get(p) ?? 0) - (used.get(q) ?? 0) || rng.next() - 0.5)[0];
             const S = pick && SPECIAL_SIZE[pick];
             // Full size first, then smaller (short street pieces and close side streets); may overhang the piece end.
             const w0 = pick && rng.range(S!.w[0], S!.w[1]), d0 = pick && rng.range(S!.d[0], S!.d[1]);
