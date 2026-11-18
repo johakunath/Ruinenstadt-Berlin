@@ -1896,6 +1896,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
   const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
   const cutaway = new Cutaway(plan.zones);
+  /** Cut lots with their world cut height: later facade dressing (Xhain graffiti, banners) joins the same part. */
+  const lotCutAt = new Map<Lot, { id: number; y: number }>();
   const lotCut = new Map<number, CutPart>(), landmarkCut = new Map<Landmark, CutPart>();
   for (const p of plan.parts) {
     if (p.kind === 'lot') lotCut.set(p.index, p);
@@ -1943,7 +1945,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     };
     const cut = lotCut.get(li);
     if (l.kind === 'tree') build();
-    else if (cut) b.solid.captureOccluder(() => b.cut(cut.id, y0 + cut.h, build, lotCaps(l)));
+    else if (cut) {
+      lotCutAt.set(l, { id: cut.id, y: y0 + cut.h });
+      b.solid.captureOccluder(() => b.cut(cut.id, y0 + cut.h, build, lotCaps(l)));
+    }
     else b.solid.captureOccluder(build);
   });
   // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
@@ -1988,7 +1993,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
   // M15 Xhain: the Wall, the viaducts and the Xhain landmarks (`xhain-world.ts`).
-  buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l));
+  buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
   if (m.tunnel) buildTunnel(m, mats, chunkOf);
   if (m.rail) {
     const r = m.rail;

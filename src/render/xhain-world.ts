@@ -1414,7 +1414,7 @@ function buildXLandmark(c: Ctx, b: ChunkBuilder, l: Landmark): void {
  * Graffiti on the ground floor of about half the Kreuzberg fronts and squat banners on about one in
  * six intact Altbau fronts (1981: the Instandbesetzer). East Berlin lots stay clean. Cards only.
  */
-function dressLots(c: Ctx, lots: Lot[]): void {
+function dressLots(c: Ctx, lots: Lot[], lotCut: (l: Lot) => { id: number; y: number } | undefined): void {
   for (const l of lots) {
     if (l.kind === 'tree' || l.kind === 'special' || l.kind === 'house') continue;
     const area = areaAt(c.m, l.x, l.z);
@@ -1423,7 +1423,10 @@ function dressLots(c: Ctx, lots: Lot[]): void {
     const s = blockFacades(l)[0]!;
     const run = new Run({ id: 'xd', style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1], depth: 1, floors: 0, tone: 'cream', features: [], seed: 1 });
     const y0 = c.ground(l.x, l.z);
-    b.on(y0, () => {
+    // V1 B cutaway: the dressing of a cut lot belongs to its part, so it goes with the facade.
+    const cut = lotCut(l);
+    const dress = (fn: () => void): void => (cut ? b.cut(cut.id, cut.y, () => b.on(y0, fn)) : b.on(y0, fn));
+    dress(() => {
       if (rng.next() < 0.6) for (let k = 0; k < 1 + rng.int(3); k++) tag(b, run.mat(rng.range(1, s.len - 1), rng.range(0.5, 2.3), 0.07), rng.range(1.1, 2.4), rng);
       if (!l.ruin && l.kind === 'altbau' && l.floors > 0 && rng.next() < 0.18) {
         const y = GROUND_H + rng.int(l.floors) * FLOOR_H + 0.25;
@@ -1436,7 +1439,7 @@ function dressLots(c: Ctx, lots: Lot[]): void {
 // ---------------------------------------------------------------- entry
 
 /** M15 hook from `buildMapWorld`: Wall, viaducts, Xhain landmarks and Kreuzberg dressing. */
-export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, cutOf: (l: Landmark) => CutPart | undefined = () => undefined): void {
+export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, cutOf: (l: Landmark) => CutPart | undefined = () => undefined, lotCut: (l: Lot) => { id: number; y: number } | undefined = () => undefined): void {
   const land = m.landmarks.filter((l) => XHAIN_KINDS.has(l.kind));
   if (!m.walls?.length && !m.viaducts?.length && !m.railYards?.length && !land.length) return;
   const decks = m.terraces.filter((t) => t.bridge);
@@ -1455,5 +1458,5 @@ export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, landmarkCaps(l)) : build);
     if (l.kind === 'goerlitzer') buildGoerliYard(c, l);
   }
-  if (m.id === 'xhain') dressLots(c, lots);
+  if (m.id === 'xhain') dressLots(c, lots, lotCut);
 }
