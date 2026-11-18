@@ -1,6 +1,6 @@
 // Start options from the URL and from the options menu (stored in localStorage).
 //   ?profile=Qualität|Leistung   ?debug=hit,perf,flow   ?stress=40   ?seed=7
-//   ?map=hof (gate 1 courtyard)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
+//   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
 import { PROFILES, type ProfileId } from './render/profile';
 
 export interface Options {
@@ -26,7 +26,7 @@ export interface Options {
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
   /** Köpenick (default) or the gate 1 courtyard. */
-  map: 'koepenick' | 'hof' | 'tunnel';
+  map: 'koepenick' | 'hof' | 'tunnel' | 'xhain';
   mapScale: number;
   /** Debug: start at this encounter. */
   startAt: number;
@@ -109,7 +109,7 @@ export function readOptions(): Options {
     telemetry: stored.telemetry ?? true,
     autostart: q.has('autostart'),
     cam: parseCam(q.get('cam')),
-    map: q.get('map') === 'hof' ? 'hof' : q.get('map') === 'tunnel' ? 'tunnel' : 'koepenick',
+    map: (['hof', 'tunnel', 'xhain'] as const).find((k) => k === q.get('map')) ?? 'koepenick',
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
@@ -120,7 +120,7 @@ export function readOptions(): Options {
 export function reloadWith(change: Partial<Pick<Options, 'profile' | 'map'>>): void {
   const q = new URLSearchParams(location.search);
   if (change.profile) q.set('profile', PROFILES[change.profile].label);
-  // M19: Köpenick and the tunnel are separate page loads (the renderer builds one map).
+  // M19/M15: Köpenick, the tunnel and Xhain are separate page loads (the renderer builds one map).
   if (change.map) { if (change.map === 'koepenick') q.delete('map'); else q.set('map', change.map); q.delete('autostart'); q.delete('at'); }
   location.search = q.toString();
 }

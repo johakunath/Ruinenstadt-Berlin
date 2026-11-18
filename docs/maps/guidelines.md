@@ -121,4 +121,5 @@ Headless numbers are not representative. On Leistung keep a typical view under a
 | 2026-11-16 | Street lamps evenly spaced at the curb with corner lamps, about 30 % lit; same kinds keep a distance (Johannes) |
 | 2026-11-16 | Organic light (Johannes): varying gap (6 to 13 m), clusters, strengths, colors, directional pools, halos, light at several heights (door lamps, string lights), front steps |
 | 2026-11-17 | M11d street profiles A/B/C, M11c lot types and weather per zone, M16b side branches A, M19 tunnel rules (Johannes) |
+| 2026-11-18 | Xhain (M15, concept B): the Wall (`MapDef.walls`) and viaducts (`MapDef.viaducts`) are data with colliders and keep lots and props off; the brick Stadtbahn is a visible map edge, the U1 blocks only at its pillars. Where the light fill pass finds no free sidewalk (under a viaduct, beside a tram) the map hand-places lights. Wrecks keep off zone entries. Elevated stations are `walkUnder` landmarks (lots kept off, no collider) |
 | 2026-11-15 | Köpenick v2 (M11b, playtest): tighter size, loop route, narrower streets with curbs, lower and L-shaped buildings, shops, cars and props on every stretch (test) |

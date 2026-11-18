@@ -3,6 +3,8 @@ import { colliderDistance } from '../sim/collide';
 import { xhainMap } from './xhain';
 import { generateLots, generateProps, isWater, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, streetDist, type MapDef } from './map';
 import type { Level } from '../sim/level';
+import { createSim, stepSim } from '../sim/sim';
+import { NO_INPUT, type SimEvent } from '../sim/types';
 
 /** Cells (1 m) the hero can reach from the start. */
 function reach(m: MapDef, level: Level): Set<string> {
@@ -206,5 +208,27 @@ describe('Xhain map (M15, concept B)', () => {
 
   it('bigger scale means more lots', () => {
     expect(generateLots(xhainMap(1.3)).length).toBeGreaterThan(generateLots(xhainMap(1)).length);
+  });
+
+  it('a scripted run clears all 31 waves, the four bosses and ends in victory', () => {
+    const m = xhainMap(1), level = mapLevel(m, generateLots(m));
+    level.guards = [];
+    const sim = createSim({ level }), log: SimEvent[] = [];
+    while (sim.run.phase !== 'won') {
+      const enc = sim.level.encounters[sim.run.index]!;
+      const p = sim.player;
+      p.x = p.px = enc.x;
+      p.z = p.pz = enc.z;
+      p.invuln = 1e9;
+      for (let i = 0; i < 60 * 120 && sim.run.index < sim.level.encounters.length && sim.level.encounters[sim.run.index] === enc; i++) {
+        stepSim(sim, NO_INPUT);
+        for (const e of sim.enemies) if (e.state !== 'dead' && e.stateT > 0.3) { e.state = 'dead'; e.stateT = 0; e.hp = 0; }
+        log.push(...sim.events);
+        sim.events.length = 0;
+      }
+    }
+    expect(log.filter((e) => e.type === 'waveStart')).toHaveLength(31);
+    expect(log.filter((e) => e.type === 'zoneClear').map((e) => (e as { zone: number }).zone)).toEqual([0, 1, 2, 3]);
+    expect(log.at(-1)?.type).toBe('victory');
   });
 });

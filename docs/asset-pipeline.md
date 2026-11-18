@@ -61,6 +61,7 @@ Read only: `johakunath/Ruinenstadt` `assets/buildings/koep-*.webp` (asphalt, pav
 | T2 | Street surfaces: cobbles, asphalt | `paintCobbles`, `paintAsphalt` | 5 m | after T1 |
 | T3 | Facades and roofs: plaster tones, brick, stucco, roof tiles, concrete, shop front | `paintPlaster`, `paintBrick`, `paintStucco`, `paintRoofTiles`, `paintConcrete` | 3 to 4 m | after T2 |
 | T4 | Props: wood, metal paint, car and bus paint, tram | `paintWood`, `paintMetal`, `paintVan` | per prop | after T3 |
+| T5 | Xhain (M15, 1981): Wall panel concrete with sparse graffiti (Kreuzberg side), death strip raked sand, red-brown viaduct brick (Stadtbahn, Oberbaumbrücke), yellow brick (Bethanien, St. Thomas), green riveted steel (U1) | code placeholders in `src/render/xhain-world.ts` | 3 to 5 m | `docs/maps/xhain.md` |
 
 Claude adds a row and a task file whenever step 1 finishes for a new surface.
 
