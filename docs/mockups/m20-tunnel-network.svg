@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 860" font-family="Inter, Arial, sans-serif">
+  <rect width="1260" height="860" fill="#0e1517"/>
+  <text x="24" y="34" fill="#f0d9b0" font-size="20" font-weight="700">M20 Tunnel zwischen den Karten · Netzplan, Ablauf, Abschnitte (Beispielwerte)</text>
+  <text x="24" y="56" fill="#b5aa98" font-size="13">Netzplan und Linien 1:1 aus 2D `js/ubahn.js` (LINES, STN, NETP, NETL). In 3D spielbar: Köpenick, S3, Lager. Rest „kommt bald“.</text>
+
+  <!-- ===== Netzplan (2D coords, scale 1.25) ===== -->
+  <g transform="translate(24,80)">
+    <text fill="#ef9f27" font-size="16" font-weight="700">Netzplan (Abfahrt im Lager)</text>
+    <g transform="translate(0,14) scale(1.25)">
+      <rect width="400" height="250" rx="6" fill="#14282b"/>
+      <text x="12" y="20" fill="#ead9c0" font-size="11" font-weight="700">S+U Netz · Ruinenstadt</text>
+      <polyline points="340,190 300,190 250,140" fill="none" stroke="#2a8a3a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="250,140 250,125 215,90" fill="none" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 4"/>
+      <polyline points="215,90 190,90 165,115" fill="none" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 4"/>
+      <polyline points="165,115 165,160 190,185" fill="none" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 4"/>
+      <polyline points="190,185 110,185 45,120" fill="none" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 4"/>
+      <polyline points="45,120 45,40 310,40 330,60" fill="none" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 4"/>
+      <rect x="291" y="196" width="20" height="12" rx="6" fill="#2a8a3a"/><text x="301" y="205" fill="#fff" font-size="8" text-anchor="middle" font-weight="700">S3</text>
+      <rect x="255" y="114" width="20" height="12" rx="2" fill="#3a4a4e"/><text x="265" y="123" fill="#a8b8b4" font-size="8" text-anchor="middle">U8</text>
+      <rect x="183" y="70" width="20" height="12" rx="2" fill="#3a4a4e"/><text x="193" y="79" fill="#a8b8b4" font-size="8" text-anchor="middle">U2</text>
+      <g>
+        <rect x="328" y="181" width="24" height="18" rx="9" fill="#3B6D11" stroke="#ead9c0" stroke-width="2"/><path d="M336 190l3 3 5-6" stroke="#ead9c0" stroke-width="2" fill="none"/>
+        <text x="340" y="215" fill="#ead9c0" font-size="9" text-anchor="middle" font-weight="700">Köpenick</text><text x="340" y="226" fill="#a8957d" font-size="7" text-anchor="middle">S Köpenick</text>
+      </g>
+      <g>
+        <circle cx="250" cy="140" r="16" fill="none" stroke="#EF9F27" stroke-width="2"/>
+        <rect x="238" y="131" width="24" height="18" rx="9" fill="#993C1D" stroke="#EF9F27" stroke-width="3"/>
+        <text x="280" y="160" fill="#ead9c0" font-size="9" font-weight="700">Lager</text><text x="280" y="171" fill="#a8957d" font-size="7">S+U Warschauer Str.</text>
+      </g>
+      <g fill="#2a211b" stroke="#4a5a5e" stroke-width="2"><rect x="203" y="81" width="24" height="18" rx="9"/><rect x="153" y="106" width="24" height="18" rx="9"/><rect x="178" y="176" width="24" height="18" rx="9"/><rect x="33" y="111" width="24" height="18" rx="9"/><rect x="318" y="51" width="24" height="18" rx="9"/></g>
+      <g fill="#6a6058" font-size="8" text-anchor="middle"><text x="232" y="113">Alexanderplatz</text><text x="138" y="112">Mitte</text><text x="190" y="206">Tempelhof</text><text x="45" y="146">Spandau</text><text x="330" y="84">Marzahn</text></g>
+      <g transform="translate(12,240)" font-size="8" fill="#a8b8b4"><line x1="0" y1="-3" x2="14" y2="-3" stroke="#2a8a3a" stroke-width="5"/><text x="18">frei</text><line x1="46" y1="-3" x2="60" y2="-3" stroke="#da421e" stroke-width="5" stroke-dasharray="5 3"/><text x="64">Tunnel offen</text><line x1="124" y1="-3" x2="138" y2="-3" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 3"/><text x="142">kommt bald</text></g>
+    </g>
+    <text y="350" fill="#b5aa98" font-size="12">Tippen auf Bezirk: Expedition dort. Tippen auf Linie: Tunnel fahren.</text>
+    <text y="368" fill="#b5aa98" font-size="12">Bezirke ohne 3D-Karte bleiben gesperrt (8 Namen aus Q8 statt 7 aus 2D: Xhain = Lager).</text>
+  </g>
+
+  <!-- ===== Ablauf ===== -->
+  <g transform="translate(560,80)">
+    <text fill="#ef9f27" font-size="16" font-weight="700">Ablauf: zwei Varianten</text>
+    <g transform="translate(0,24)">
+      <text fill="#f0d9b0" font-size="13" font-weight="700">F1 · wie 2D: Lager wird mit S3 erreicht</text>
+      <g transform="translate(0,14)" font-size="11">
+        <rect width="120" height="36" rx="4" fill="#3B6D11"/><text x="60" y="22" fill="#fff" text-anchor="middle">Köpenick befreit</text>
+        <path d="M120 18h28" stroke="#ef9f27" stroke-width="2" marker-end="url(#a)"/>
+        <rect x="150" width="120" height="36" rx="4" fill="#2a8a3a"/><text x="210" y="22" fill="#fff" text-anchor="middle">S3-Tunnel</text>
+        <path d="M270 18h28" stroke="#ef9f27" stroke-width="2"/>
+        <rect x="300" width="150" height="36" rx="4" fill="#993C1D"/><text x="375" y="16" fill="#fff" text-anchor="middle">Ausstieg Warschauer Str.</text><text x="375" y="30" fill="#f0d9b0" text-anchor="middle">= Lager begehbar</text>
+        <path d="M450 18h28" stroke="#ef9f27" stroke-width="2"/>
+        <rect x="480" width="160" height="36" rx="4" fill="#14282b" stroke="#7dd3ff"/><text x="560" y="22" fill="#7dd3ff" text-anchor="middle">Zug → Netzplan</text>
+        <text y="56" fill="#b5aa98">Vor dem ersten S3-Sieg bleibt das Lager das heutige Menü (Titel „Lager“). Danach führt „Lager“ in die Station.</text>
+      </g>
+    </g>
+    <g transform="translate(0,124)">
+      <text fill="#f0d9b0" font-size="13" font-weight="700">F2 · Lager von Anfang an begehbar</text>
+      <g transform="translate(0,14)" font-size="11">
+        <rect width="150" height="36" rx="4" fill="#993C1D"/><text x="75" y="22" fill="#fff" text-anchor="middle">Lager (Start)</text>
+        <path d="M150 18h28" stroke="#ef9f27" stroke-width="2"/>
+        <rect x="180" width="160" height="36" rx="4" fill="#14282b" stroke="#7dd3ff"/><text x="260" y="22" fill="#7dd3ff" text-anchor="middle">Zug → Netzplan</text>
+        <path d="M340 18h28" stroke="#ef9f27" stroke-width="2"/>
+        <rect x="370" width="130" height="36" rx="4" fill="#3B6D11"/><text x="435" y="22" fill="#fff" text-anchor="middle">Köpenick / S3</text>
+        <path d="M500 18h28" stroke="#ef9f27" stroke-width="2"/>
+        <rect x="530" width="110" height="36" rx="4" fill="#993C1D"/><text x="585" y="22" fill="#fff" text-anchor="middle">zurück ins Lager</text>
+        <text y="56" fill="#b5aa98">Ein Ort für alles von Anfang an. Bricht die 2D-Geschichte (Lager erst nach dem Tunnel), aber</text>
+        <text y="72" fill="#b5aa98">das heutige 3D-Lager ist schon ab Start offen.</text>
+      </g>
+    </g>
+    <text y="260" fill="#f0d9b0" font-size="12" font-weight="700">Beide: Ende eines Bezirks oder Tunnels → „Ins Lager“ lädt die Station, Ausrüstung bleibt.</text>
+  </g>
+  <defs><marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6z" fill="#ef9f27"/></marker></defs>
+
+  <!-- ===== Abschnitte ===== -->
+  <g transform="translate(24,480)">
+    <text fill="#ef9f27" font-size="16" font-weight="700">Tunnel: Layout B bleibt, Inhalte aus 2D Route A kommen dazu · gleicher Generator für jede Linie</text>
+    <text y="18" fill="#b5aa98" font-size="12">Grau: Gleisbett · Gelb: Bahnsteig · Rot: Kampf · Grün: Nebengang · Orange Balken: Gitter (öffnet nach dem Kampf, 2D) · Blau: Wasser</text>
+    <g transform="translate(0,34)">
+      <path d="M10 110 C 160 40, 300 170, 460 100 S 760 50, 900 110 S 1120 150, 1200 100" fill="none" stroke="#3b4447" stroke-width="36" stroke-linecap="round"/>
+      <rect x="0" y="80" width="64" height="56" fill="#d8b64e" opacity=".45"/>
+      <rect x="560" y="64" width="90" height="56" fill="#d8b64e" opacity=".45"/>
+      <rect x="1140" y="72" width="70" height="56" fill="#d8b64e" opacity=".45"/>
+      <path d="M730 86 C 780 74, 830 72, 880 88" stroke="#2f6a86" stroke-width="30" fill="none" opacity=".75"/>
+      <g fill="#6b5a48"><circle cx="370" cy="118" r="9"/><circle cx="386" cy="126" r="7"/><circle cx="356" cy="128" r="8"/><circle cx="378" cy="104" r="6"/></g>
+      <path d="M330 150 Q 375 190 420 140" stroke="#3b4447" stroke-width="12" fill="none"/>
+      <g fill="#c23a2e"><circle cx="200" cy="96" r="12"/><circle cx="300" cy="128" r="12"/><circle cx="605" cy="92" r="15"/><circle cx="800" cy="80" r="12"/><circle cx="980" cy="118" r="12"/></g>
+      <circle cx="1175" cy="100" r="16" fill="#2f6aa8"/><circle cx="1175" cy="100" r="30" fill="none" stroke="#f2d14b" stroke-width="3" stroke-dasharray="6 5"/>
+      <g fill="#ed9e25"><rect x="248" y="78" width="6" height="44"/><rect x="452" y="78" width="6" height="44"/><rect x="690" y="64" width="6" height="44"/><rect x="900" y="88" width="6" height="44"/><rect x="1080" y="96" width="6" height="44"/></g>
+      <path d="M140 76 L 150 30" stroke="#3b4447" stroke-width="10"/><circle cx="150" cy="28" r="7" fill="#8fd16a"/>
+      <path d="M520 128 L 530 176" stroke="#3b4447" stroke-width="10"/><circle cx="530" cy="178" r="7" fill="#8fd16a"/>
+      <path d="M1000 96 L 1010 44" stroke="#3b4447" stroke-width="10"/><circle cx="1010" cy="40" r="7" fill="#8fd16a"/>
+      <rect x="950" y="104" width="64" height="16" rx="3" fill="#ed9e25" opacity=".85" transform="rotate(8 980 112)"/>
+      <circle cx="40" cy="96" r="6" fill="#9fdf7a"/>
+      <g font-size="11" fill="#f0d9b0" text-anchor="middle">
+        <text x="32" y="160">Bahnsteig A</text><text x="32" y="174" fill="#9fdf7a">Händler (2D)</text>
+        <text x="150" y="18">Segen</text>
+        <text x="200" y="66">Tunnelmund</text>
+        <text x="375" y="226" fill="#b5aa98">Einsturz · Wartungsgang (2D)</text>
+        <text x="300" y="166">Kabelschacht</text>
+        <text x="605" y="146">Geisterbahnhof · Schrein</text>
+        <text x="530" y="200">Kiste</text>
+        <text x="805" y="56" fill="#7dd3ff">Geflutete Strecke (2D): langsamer</text>
+        <text x="980" y="152">Zugwrack</text>
+        <text x="1010" y="26">Elite schläft</text>
+        <text x="1210" y="152" text-anchor="end">Generator anwerfen (2D):</text><text x="1210" y="166" text-anchor="end">im Ring halten, dann Der Schaffner</text>
+      </g>
+    </g>
+    <g transform="translate(0,282)" font-size="12" fill="#b5aa98">
+      <text>Neu aus 2D: Gitter zwischen Abschnitten, Händler am Start, Einsturz mit Umgehung, geflutete Strecke, Generator halten, Stationsschilder mit Liniennamen.</text>
+      <text y="18">Jede Linie: eigene Kurve (Seed), eigene Farbe und Geisterbahnhof (2D LINES), Reihenfolge der Sonderstrecken gemischt. Heute spielbar nur S3; die anderen öffnen mit ihrem Bezirk.</text>
+    </g>
+  </g>
+</svg>
