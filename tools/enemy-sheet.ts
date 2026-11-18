@@ -5,6 +5,7 @@
 //   /tools/enemy-sheet.html?kind=raptor&special=pounce&n=8     strip through a special
 //   &size=0.35 zooms the camera (small bodies such as the rat)
 //   &elite=flink  &view=game|side|front  &open=1
+//   &wake=strip (the Weltzeituhr waking up across the strip), &wake=0 (awake)
 import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
 import { loadCharacters } from '../src/render/characters';
@@ -27,7 +28,7 @@ const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(W * n, H, false);
 canvas.style.width = `${W * n}px`;
 const materials = new Materials(LOOK, PROFILES.qualitaet);
-const assets = await loadCharacters(materials);
+const assets = await loadCharacters(materials, true);
 const scene = new Scene();
 scene.background = new Color(0x26343a);
 scene.add(new HemisphereLight(0xdfeeff, 0x3a3020, 2.2));
@@ -58,6 +59,8 @@ for (let i = 0; i < n; i++) {
     e.speed = state === 'chase' ? Number(q.get('speed') ?? 0) : 0;
   }
   if (q.get('open')) e.open = 1;
+  if (q.get('wake') === 'strip') e.wake = (def.wake ?? 0) * (1 - f);
+  else if (q.get('wake') !== null) e.wake = Number(q.get('wake'));
   const v = new EnemyView(assets, materials, def.body, false);
   v.assign(e);
   scene.add(v.root);

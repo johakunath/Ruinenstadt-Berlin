@@ -30,6 +30,7 @@ import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexEdge, dressAlexLots } from './alex-world';
 import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
+import { makeClockRig } from './clock';
 import { NIGHT_SKY, type Sky } from './sky';
 import { isLargeProp } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
@@ -191,7 +192,7 @@ function lotCaps(l: Lot): Pt[][] {
   return l.ruin ? [] : lotBodies(l).map(({ rect }) => rectPoly(rect));
 }
 
-function emissive(materials: Materials, t: { map: Texture; emissiveMap: Texture }, color: number, intensity: number): LitMaterial {
+export function emissive(materials: Materials, t: { map: Texture; emissiveMap: Texture }, color: number, intensity: number): LitMaterial {
   return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
 }
 
@@ -2237,9 +2238,18 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   });
   // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
   const spatis: Array<{ rest: RestArea; upper: Group }> = [];
+  // M15: the Weltzeituhr stands as its own object (`clock.ts`): the final boss wakes up out of it.
+  let clock: Group | undefined;
   for (const l of m.landmarks) {
     const b = chunkOf(l.x, l.z);
     const y0 = base(l.x, l.z, Math.max(l.hx, l.hz));
+    if (l.kind === 'weltzeituhr') {
+      const rig = makeClockRig(mats);
+      rig.group.position.set(l.x, y0, l.z);
+      rig.group.rotation.y = l.rot;
+      group.add(rig.group);
+      clock = rig.group;
+    }
     if (l.kind === 'spati') {
       const up = new ChunkBuilder(mats);
       up.solid.captureOccluder(() => b.on(y0, () => buildSpati(b, up, l)));
@@ -2428,6 +2438,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   return {
     group,
     moon,
+    ...(clock ? { clock, clockRig: () => makeClockRig(mats) } : {}),
     breakables: breakableView,
     ...(tunnel ? { tunnel } : {}),
     lights: [],

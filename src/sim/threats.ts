@@ -1,13 +1,17 @@
 // What enemies put into the world (M12; 2D `teles`, `eproj`, `hazards`, damaging `rings`):
 // marked ground zones that go off after a delay, shots, burning or acid ground, and roar rings
 // that hurt unless the hero rolls through. All of it hurts the hero through `hurtPlayer`.
+// M15: root zones hold the hero (`Player.root`), hour sectors of a ring (the Weltzeituhr's Zeitzonen),
+// and the minute hand: a line that sweeps round its centre and hurts unless the hero rolls through.
 import { PLAYER } from '../data/combat';
 import { THREAT } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { hurtPlayer } from './combat';
+import { angleDiff, angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
 
-export type SpecialKind = 'spit' | 'fan' | 'pounce' | 'lunge' | 'dive' | 'slam' | 'stomp' | 'flame' | 'charge' | 'summon' | 'ring' | 'roar' | 'barrage' | 'tail' | 'bossSlam' | 'volley' | 'molotov';
+export type SpecialKind = 'spit' | 'fan' | 'pounce' | 'lunge' | 'dive' | 'slam' | 'stomp' | 'flame' | 'charge' | 'summon' | 'ring' | 'roar' | 'barrage' | 'tail' | 'bossSlam' | 'volley' | 'molotov'
+  | 'roots' | 'seeds' | 'rootRing' | 'key' | 'slabs' | 'sectors' | 'hand';
 
 /** A running special: `wind` seconds of telegraph, then `go` seconds of action, then `open` seconds of standing open. */
 export interface Special {
@@ -25,7 +29,7 @@ export interface Special {
   hit: boolean;
 }
 
-export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail' | 'acid';
+export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail' | 'acid' | 'root' | 'slab' | 'hour';
 /** A marked circle: fills for `max` seconds, then hits the hero inside it. */
 export interface Zone {
   x: number; z: number; r: number; t: number; max: number; damage: number; floor: number; kind: ZoneKind; src: number;
@@ -33,14 +37,39 @@ export interface Zone {
   free?: boolean;
   /** M12b: ground it leaves where it lands (a Molotov's fire, the Spreehexe's acid pool). */
   leave?: { r: number; t: number; damage: number; kind: Hazard['kind'] };
+  /** M15 Wurzler: a hero caught inside is held this long (no walking; a dodge breaks free). */
+  root?: number;
+  /** M15 hour sector: only the part of the circle from `r0` out and within `half` of angle `a` counts. */
+  sector?: { r0: number; a: number; half: number };
 }
 export interface EnemyShot { x: number; z: number; px: number; pz: number; vx: number; vz: number; r: number; damage: number; life: number; boss: boolean }
 export interface Hazard { x: number; z: number; r: number; t: number; max: number; damage: number; tick: number; kind: 'fire' | 'acid' }
 /** An expanding ring; `r` may start negative (a second ring that follows the first). */
 export interface Wave { x: number; z: number; r: number; max: number; speed: number; damage: number; floor: number; width: number; hit: boolean }
 
-export interface Threats { zones: Zone[]; shots: EnemyShot[]; hazards: Hazard[]; waves: Wave[] }
-export const createThreats = (): Threats => ({ zones: [], shots: [], hazards: [], waves: [] });
+/**
+ * M15 minute hand: a line from (x, z) out to `r` that turns from angle `a`; for `wind` s it only shows,
+ * then it sweeps for `dur` s with the turn rate rising from `w0` to `w1` rad/s. Hits once, unless rolled through.
+ */
+export interface Sweep { x: number; z: number; r: number; r0: number; a: number; t: number; wind: number; dur: number; w0: number; w1: number; damage: number; floor: number; width: number; hit: boolean; src: number }
+
+export interface Threats { zones: Zone[]; shots: EnemyShot[]; hazards: Hazard[]; waves: Wave[]; sweeps: Sweep[] }
+export const createThreats = (): Threats => ({ zones: [], shots: [], hazards: [], waves: [], sweeps: [] });
+
+/** The hero (center `x`, `z`) is inside zone `z` (a circle, or its hour sector). */
+export function inZone(z: Zone, x: number, zz: number, pad: number): boolean {
+  const d = Math.hypot(x - z.x, zz - z.z);
+  if (d >= z.r + pad) return false;
+  if (!z.sector) return true;
+  if (d < z.sector.r0 - pad) return false;
+  return Math.abs(angleDiff(z.sector.a, angleOf(x - z.x, zz - z.z))) < z.sector.half + pad / Math.max(d, 1);
+}
+
+/** Angle of a sweep's line at its own time `t` (counted from the end of its wind-up). */
+export function sweepAngle(w: Sweep, t: number): number {
+  const k = Math.max(0, Math.min(t, w.dur));
+  return w.a + w.w0 * k + ((w.w1 - w.w0) * k * k) / (2 * w.dur);
+}
 
 const HAZARD_CAP = 60;
 
@@ -95,11 +124,22 @@ export function updateThreats(sim: Sim): void {
     let hit = false;
     if (z.leave) addHazard(sim, { x: z.x, z: z.z, ...z.leave });
     // A zone with no damage only marks where its ground lands (the acid pool hurts by ticking).
-    if ((z.damage > 0 || z.floor > 0) && Math.hypot(p.x - z.x, p.z - z.z) < z.r + PLAYER.radius * 0.5) {
+    const inside = inZone(z, p.x, p.z, PLAYER.radius * 0.5);
+    if ((z.damage > 0 || z.floor > 0) && inside) {
       const a = away(sim, z.x, z.z);
       hit = threatHit(sim, null, z.damage, z.floor, a.dx, a.dz);
     }
-    sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x, z: z.z, r: z.r, hit });
+    // Roots hold whoever stands in them, hurt or not, unless the hero is mid-roll or still immune (2D).
+    if (z.root && inside && p.state !== 'dead' && p.state !== 'dodge' && p.invuln <= 0 && p.rootI <= 0) {
+      p.root = z.root;
+      p.rootI = THREAT.roots.immune;
+      sim.events.push({ type: 'note', text: 'Festgehalten', color: '#97c459', x: p.x, z: p.z });
+    }
+    // An hour sector reports its own middle, so the burst fills the slice and not the whole ring.
+    if (z.sector) {
+      const m = (z.sector.r0 + z.r) / 2;
+      sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x + Math.sin(z.sector.a) * m, z: z.z + Math.cos(z.sector.a) * m, r: (z.r - z.sector.r0) * 0.3, hit });
+    } else sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x, z: z.z, r: z.r, hit });
   }
 
   for (let i = T.shots.length - 1; i >= 0; i--) {
@@ -132,6 +172,30 @@ export function updateThreats(sim: Sim): void {
       const a = away(sim, h.x, h.z);
       if (threatHit(sim, null, h.damage, 0, a.dx, a.dz)) h.tick = THREAT.hazard.tick;
     }
+  }
+
+  for (let i = T.sweeps.length - 1; i >= 0; i--) {
+    const w = T.sweeps[i]!;
+    const t0 = w.t - w.wind;
+    w.t += DT;
+    const t1 = w.t - w.wind;
+    // The hand stops with its source (killed or stunned out of it).
+    if (t1 >= w.dur || !sim.enemies.some((e) => e.id === w.src && e.state === 'special')) {
+      T.sweeps.splice(i, 1);
+      continue;
+    }
+    if (w.hit || t1 <= 0) continue;
+    const d = Math.hypot(p.x - w.x, p.z - w.z);
+    if (d > w.r + PLAYER.radius || d < w.r0) continue;
+    const a0 = sweepAngle(w, t0), a1 = sweepAngle(w, t1);
+    // The line passed over the hero this step (or lies on them): the angle from a0 forward to the hero is within the swept arc plus the line's width.
+    const pad = (w.width + PLAYER.radius) / Math.max(d, 0.5);
+    let ahead = angleOf(p.x - w.x, p.z - w.z) - a0;
+    ahead -= Math.floor(ahead / (Math.PI * 2)) * Math.PI * 2;
+    if (ahead > Math.PI * 2 - pad) ahead -= Math.PI * 2;
+    if (ahead < -pad || ahead > a1 - a0 + pad) continue;
+    const a = away(sim, w.x, w.z);
+    if (threatHit(sim, null, w.damage, w.floor, a.dx, a.dz)) w.hit = true;
   }
 
   for (let i = T.waves.length - 1; i >= 0; i--) {

@@ -1037,6 +1037,7 @@ const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
+  mechs: opts.spawn.some((k) => /^(uhrwerk|volkskoloss|weltzeituhr)/.test(k)),
 })
   .then((r) => {
     renderer = r;

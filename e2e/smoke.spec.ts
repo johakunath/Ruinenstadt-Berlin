@@ -232,6 +232,17 @@ test('M15: Alexanderplatz loads at S Hackescher Markt in afternoon light, the fi
   expect(errors).toEqual([]);
 });
 
+test('M15 step 7: the Weltzeituhr wakes up on its base in the final fight and fights on its legs', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=alex&profile=Leistung&seed=7&at=12&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[s.run.index]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; s.player.invuln = 1e9; });
+  await page.waitForFunction(() => window.__game!.sim().enemies.some((e) => e.kind === 'weltzeituhr' && (e.wake ?? 0) > 0), null, { timeout: 90_000 });
+  await page.waitForFunction(() => window.__game!.sim().enemies.some((e) => e.kind === 'weltzeituhr' && (e.wake ?? 0) <= 0 && e.state !== 'dead'), null, { timeout: 90_000 });
+  await expect(page.locator('#bossbar')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('H1: the inventory doll shows the live hero and turns her on drag and keys', async ({ page }, testInfo) => {
   const errors = watchErrors(page);
   await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');

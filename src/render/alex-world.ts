@@ -105,6 +105,46 @@ function figure(b: ChunkBuilder, m: Matrix4, s: number, color: RGB, pose = 0): v
   b.geo(M.iron, c(0.055, 0.06, 0.65), sub(m, -0.3 * s, (1.2 + pose * 0.45) * s, 0, 0, 0, -0.15 - pose * 2.4).multiply(new Matrix4().makeScale(s, s, s)), color);
 }
 
+/** Height of the Weltzeituhr's column top (the drum sits on it) and of the orbit sculpture's centre. */
+export const CLOCK = { drum: 2.75, radius: 2.95, orbit: 7.75 } as const;
+
+/**
+ * The Weltzeituhr above its floor, around the origin, in three parts that move on their own when it
+ * wakes up: the column (with its two clocks, the emblem, ivy and cable boxes), the 24-sided drum (city
+ * panels, the red hour band, brass teeth) and the mast with the orbit sculpture. Urania-Weltzeituhr
+ * (Erich John, 1969), 10 m; the Stillstand turned it clockwork.
+ */
+export function buildClockParts(column: ChunkBuilder, drum: ChunkBuilder, orbit: ChunkBuilder): void {
+  const l: Landmark = { kind: 'weltzeituhr', x: 0, z: 0, rot: 0, hx: 0, hz: 0, clear: 0 };
+  const M = column.mm, F = frameOf(l);
+  const cyl = (b: ChunkBuilder, rt: number, rb: number, h: number, y: number, mat: Material, color: RGB): void => b.geo(mat, cached(`c${rt},${rb},${h},16`, () => new CylinderGeometry(rt, rb, h, 16)), F(0, y + h / 2, 0), color);
+  const ball = (b: ChunkBuilder, r: number, y: number, mat: Material, color: RGB, x = 0, z = 0): void => b.geo(mat, cached(`s${r}`, () => new SphereGeometry(r, 18, 12)), F(x, y, z), color);
+  cyl(column, 0.45, 0.48, CLOCK.drum, 0, M.concrete, [0.95, 0.93, 0.88]);
+  for (const s of [-1, 1]) column.geo(M.clock, cached('wzClock', () => new CircleGeometry(0.24, 16)), F(s * 0.47, 2.15, 0, (s * Math.PI) / 2));
+  // The ivy up the column (the cable boxes at its foot stay on the base, `buildAlexLandmark`).
+  column.box(M.ivy, F(0, 1.2, 0.47), 0.6, 2.2, 0.02, GREEN);
+  // Hammer and sickle on the column, at eye height, facing the plaza.
+  atlasPlane(column, F(0, 1.55, 0.49), 0.5, 0.5, 'emblem');
+  const y0 = CLOCK.drum, R = CLOCK.radius;
+  drum.geo(M.stucco, cached('wzCap', () => new CylinderGeometry(R, R, 0.12, 24)), F(0, y0 + 0.06, 0), ALU);
+  drum.geo(M.stucco, cached('wzCap', () => new CylinderGeometry(R, R, 0.12, 24)), F(0, y0 + 2.72, 0), ALU);
+  atlasBand(drum, F(0, y0 + 0.55, 0), R, 0.9, 24, 'cities');
+  atlasBand(drum, F(0, y0 + 1.37, 0, Math.PI / 24), R + 0.03, 0.74, 24, 'hours');
+  atlasBand(drum, F(0, y0 + 2.2, 0, Math.PI / 12), R, 0.9, 24, 'cities');
+  drum.geo(M.dark, cached('wzBot', () => new CircleGeometry(R - 0.05, 24)), F(0, y0 + 0.01, 0).multiply(new Matrix4().makeRotationX(Math.PI / 2)));
+  for (let k = 0; k < 24; k++) drum.box(M.iron, F(Math.sin((k * Math.PI) / 12) * (R - 0.15), y0 - 0.12, Math.cos((k * Math.PI) / 12) * (R - 0.15), (k * Math.PI) / 12), 0.28, 0.22, 0.32, BRASS);
+  // Mast and orbit sculpture.
+  cyl(orbit, 0.13, 0.16, 2.4, y0 + 2.78, M.iron, [0.6, 0.6, 0.62]);
+  const c = CLOCK.orbit;
+  ball(orbit, 0.38, c, M.stucco, [1.35, 1.35, 1.38]);
+  orbit.box(M.iron, F(0, c, 0, 0.3), 4.6, 0.07, 0.07, [0.5, 0.5, 0.52]);
+  for (let k = 0; k < 5; k++) orbit.geo(M.iron, cached('wzRing', () => new TorusGeometry(2.25, 0.035, 5, 48)), F(0, c, 0, k * 0.63).multiply(new Matrix4().makeRotationX(Math.PI / 2 + 0.35 * Math.sin(k * 1.7))), [0.7, 0.7, 0.72]);
+  for (let k = 0; k < 9; k++) {
+    const a = k * 0.7 + 0.3, r = 2.25, t = Math.sin(k * 2.3) * 0.9;
+    ball(orbit, 0.12 + (k % 3) * 0.05, c + t, M.stucco, k % 4 === 0 ? BRASS : [1.35, 1.35, 1.38], Math.sin(a) * Math.sqrt(r * r - t * t), Math.cos(a) * Math.sqrt(r * r - t * t));
+  }
+}
+
 /** Landmark models from reference photos (step 4). Heights compressed about like the footprints. */
 export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm, F = frameOf(l), w = l.hx * 2, d = l.hz * 2, rng = new Rng(Math.round(l.x * 31 + l.z * 17));
@@ -112,45 +152,18 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
   const ball = (r: number, y: number, mat: Material = M.concrete, color: RGB = GREY, x = 0, z = 0, sy = 1): void => b.geo(mat, cached(`s${r}`, () => new SphereGeometry(r, 18, 12)), F(x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), color);
   const dome = (r: number, y: number, mat: Material, color: RGB, x = 0, z = 0, sy = 1.15): void => b.geo(mat, cached(`d${r}`, () => new SphereGeometry(r, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2)), F(x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), color);
   switch (l.kind) {
-    case 'weltzeituhr': {
-      // Urania-Weltzeituhr (Erich John, 1969), 10 m: compass-rose mosaic, column with two small clocks,
-      // a 24-sided drum (city panels above and below the red hour band with gold numerals), the mast and
-      // the orbit sculpture. The Stillstand turned it clockwork: brass gear teeth under the drum, cable
-      // boxes at its foot, ivy up the column. It wakes up as the final boss (step 7).
+    case 'weltzeituhr':
+      // Only the compass-rose floor is part of the chunk; the clock itself is `buildClockParts`, its own
+      // object (`src/render/clock.ts`), so the final boss can wake up and walk off it (step 7).
       b.geo(M.stucco, cached('wzRose', () => new CircleGeometry(4.2, 32)), F(0, 0.03, 0, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [1.1, 0.75, 0.72]);
       b.geo(M.stucco, cached('wzRose2', () => new CircleGeometry(3.3, 32)), F(0, 0.04, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [0.95, 0.93, 0.88]);
       for (let k = 0; k < 8; k++) b.box(M.stucco, F(0, 0.05, 0, (k * Math.PI) / 4), 0.22, 0.02, k % 2 ? 4.4 : 6.4, k % 2 ? [0.7, 0.5, 0.5] : [0.55, 0.55, 0.6]);
-      cyl(0.45, 0.48, 2.75, 0, M.concrete, [0.95, 0.93, 0.88]);
-      for (const s of [-1, 1]) b.geo(M.clock, cached('wzClock', () => new CircleGeometry(0.24, 16)), F(s * 0.47, 2.15, 0, (s * Math.PI) / 2));
-      // Clockwork foot: two cable boxes and the ivy.
+      // Clockwork foot: two cable boxes and their cables, left on the base when the clock walks off.
       for (const s of [-1, 1]) {
         b.box(M.iron, F(s * 1.1, 0.45, -0.6), 0.6, 0.9, 0.4, s < 0 ? YELLOW : [0.8, 0.85, 0.8]);
         b.box(M.rubber, F(s * 0.6, 0.06, -0.55), 1.1, 0.08, 0.1, [0.4, 0.4, 0.4]);
       }
-      b.box(M.ivy, F(0, 1.2, 0.47), 0.6, 2.2, 0.02, GREEN);
-      // Hammer and sickle on the column, at eye height, facing the plaza.
-      atlasPlane(b, F(0, 1.55, 0.49), 0.5, 0.5, 'emblem');
-      // The drum.
-      const y0 = 2.75, R = 2.95;
-      b.geo(M.stucco, cached('wzCap', () => new CylinderGeometry(R, R, 0.12, 24)), F(0, y0 + 0.06, 0), ALU);
-      b.geo(M.stucco, cached('wzCap', () => new CylinderGeometry(R, R, 0.12, 24)), F(0, y0 + 2.72, 0), ALU);
-      atlasBand(b, F(0, y0 + 0.55, 0), R, 0.9, 24, 'cities');
-      atlasBand(b, F(0, y0 + 1.37, 0, Math.PI / 24), R + 0.03, 0.74, 24, 'hours');
-      atlasBand(b, F(0, y0 + 2.2, 0, Math.PI / 12), R, 0.9, 24, 'cities');
-      b.geo(M.dark, cached('wzBot', () => new CircleGeometry(R - 0.05, 24)), F(0, y0 + 0.01, 0).multiply(new Matrix4().makeRotationX(Math.PI / 2)));
-      for (let k = 0; k < 24; k++) b.box(M.iron, F(Math.sin((k * Math.PI) / 12) * (R - 0.15), y0 - 0.12, Math.cos((k * Math.PI) / 12) * (R - 0.15), (k * Math.PI) / 12), 0.28, 0.22, 0.32, BRASS);
-      // Mast and orbit sculpture (spins when it wakes).
-      cyl(0.13, 0.16, 2.4, y0 + 2.78, M.iron, [0.6, 0.6, 0.62]);
-      const c = y0 + 5.0;
-      ball(0.38, c, M.stucco, [1.35, 1.35, 1.38]);
-      b.box(M.iron, F(0, c, 0, 0.3), 4.6, 0.07, 0.07, [0.5, 0.5, 0.52]);
-      for (let k = 0; k < 5; k++) b.geo(M.iron, cached('wzRing', () => new TorusGeometry(2.25, 0.035, 5, 48)), F(0, c, 0, k * 0.63).multiply(new Matrix4().makeRotationX(Math.PI / 2 + 0.35 * Math.sin(k * 1.7))), [0.7, 0.7, 0.72]);
-      for (let k = 0; k < 9; k++) {
-        const a = k * 0.7 + 0.3, r = 2.25, t = Math.sin(k * 2.3) * 0.9;
-        ball(0.12 + (k % 3) * 0.05, c + t, M.stucco, k % 4 === 0 ? BRASS : [1.35, 1.35, 1.38], Math.sin(a) * Math.sqrt(r * r - t * t), Math.cos(a) * Math.sqrt(r * r - t * t));
-      }
       return;
-    }
     case 'dom': {
       // Berliner Dom: sandstone front of paired columns, a central arched portal with a mosaic lunette over
       // a broad stair, corner towers and the big verdigris dome with lantern. Front faces west, the Lustgarten.
