@@ -86,7 +86,7 @@ the updated Pioneer board includes the wear pass.
 | Nature | Overgrowth everywhere (ivy, ferns, sunflowers). Reclaimed and unsettling, not cosy |
 | Player | One survivor: dark brown hair and **red scarf**, baseline long brown leather coat and heavy boots. **2026-11-13:** emblematic district sets may replace the whole outfit with elaborate cult robes, banquet finery or revue couture; do not keep every set in generic brown starter gear or transit-worker costume |
 | Readability | Characters, enemies, paths and pickups must read at gameplay scale on the Tab S9. Applies to every asset |
-| NPC rings (Johannes, 2026-11-18) | Where the hero talks to a person or uses a station: a small disc about the size of a character's footprint (radius about 0.65 m), directly in front of the person, dim fill and at most a very faint rim. No big bright rings in the middle of a room |
+| NPC rings (Johannes, 2026-11-18) | Where the hero talks to a person or uses a station: a small disc about the size of a character's footprint (radius about 0.65 m), directly in front of the person, dim fill and a clear thin rim (playtest 2026-11-18: the faint rim was too hard to see). No big bright rings in the middle of a room |
 | Item colour (v0.52) | The first item sets (B01 to B10, H03 to H07) are starter gear and stay rust, brown and ochre. **Everything new is brighter and more saturated**: each item gets one strong signature colour (enamel red, BVG yellow, cobalt blue, bottle green, violet, cyan, magenta, gold) on a clean light base, so items and outfits tell apart at 48 px and on the 60 px player. Rarer items get more colour, legendaries a glow. Rust and dirt stay as a light overlay, not as the main colour |
 
 ## Palettes

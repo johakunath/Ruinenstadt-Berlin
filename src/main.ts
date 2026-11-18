@@ -430,6 +430,7 @@ function startCamp(): void {
   ui.setExpedition(false);
   ui.banner('S+U Warschauer Straße', 'Lager');
   audio.start();
+  if (opts.tp) { const p = sim.player; p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z; }
 }
 
 input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen) menu.toggle('karte'); };
@@ -503,11 +504,13 @@ if (map) {
   mapSource = () => {
     const p = sim.player;
     // Live marks (U2 legend): unused Litfaßsäulen and the enemies alive.
+    // Marks scale with the map (playtest 2026-11-18: in the 86 m camp the hero arrow covered a room).
+    const k = Math.min(1, Math.max(map.def.bounds.maxX - map.def.bounds.minX, map.def.bounds.maxZ - map.def.bounds.minZ) / 420);
     const marks = sim.content.shrines.filter(h => !h.used).map(h => `<circle cx="${h.x.toFixed(1)}" cy="${h.z.toFixed(1)}" r="3.2" fill="#7dd3ff" stroke="#14282b" stroke-width="0.8"/>`).join('')
       + sim.enemies.filter(e => e.state !== 'dead').map(e => `<circle cx="${e.x.toFixed(1)}" cy="${e.z.toFixed(1)}" r="${e.def.boss ? 3.5 : 1.8}" fill="#c23a2e"/>`).join('');
     const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false }).replace('</svg>', `${marks}</svg>`);
     // The hero: the same arrow as on the minimap, in a ring so it is found at a glance (playtest 2026-11-17).
-    const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
+    const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)}) scale(${k.toFixed(2)})`;
     return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
   };
   document.getElementById('title-sub')!.textContent = isTunnel && line > 0 ? `${map.def.name} · Richtung ${stopName(line + 1)}` : MAP_SUB[mapId];

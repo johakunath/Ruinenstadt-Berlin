@@ -1787,7 +1787,11 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   for (const l of lots) colliders.push(...lotColliders(l));
   for (const w of m.camp?.walls ?? []) colliders.push({ kind: 'box', x: w.x, z: w.z, hx: w.hx, hz: w.hz, rot: 0 });
-  for (const t of m.camp?.stations ?? []) colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot });
+  for (const t of m.camp?.stations ?? []) {
+    if (!t.solid) { colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot }); continue; }
+    const c = Math.cos(t.rot), sn = Math.sin(t.rot);
+    for (const [lx, lz, hx, hz] of t.solid) colliders.push({ kind: 'box', x: t.x + lx * c + lz * sn, z: t.z - lx * sn + lz * c, hx, hz, rot: t.rot });
+  }
   for (const f of m.camp?.decor ?? []) colliders.push({ kind: 'box', x: f.x, z: f.z, hx: f.w / 2, hz: f.d / 2, rot: 0 });
   colliders.push(...barrierColliders(m));
   if (m.rail) {

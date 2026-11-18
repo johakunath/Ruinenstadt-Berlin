@@ -164,7 +164,10 @@ export class Menu {
     const s = this.host.sim(), el = this.bodies[this.tab];
     if (this.tab === 'segen') el.innerHTML = this.segen(s);
     if (this.tab === 'kodex') el.innerHTML = kodexHtml(s);
-    if (this.tab === 'karte') el.innerHTML = `<div class="mapw"><div class="map-svg">${this.host.mapSvg() ?? ''}</div><div class="leg"><div><i style="background:#fff"></i>Du</div><div><i style="background:#f0b27a"></i>Wahrzeichen</div><div><i style="background:#f2d14b"></i>Späti</div><div><i style="background:#7dd3ff"></i>Litfaßsäule</div><div><i style="background:#c23a2e"></i>Gegner</div><div><i style="background:#43d1cf"></i>Start</div>${s.content.hidden.length ? `<p class="inv-hint">Versteckte Segen ${s.content.hidden.filter(h => h.got).length} von ${s.content.hidden.length}</p>` : ''}</div></div>`;
+    const svg = this.host.mapSvg() ?? '';
+    // The camp map has its own legend (stations, rings, the train).
+    if (this.tab === 'karte' && svg.includes('Zug · Abfahrt')) el.innerHTML = `<div class="mapw"><div class="map-svg">${svg}</div><div class="leg"><div><i style="background:#fff"></i>Du</div><div><i style="background:#8c6a50"></i>Station</div><div><i style="background:#f2d14b"></i>Hier sprechen</div><div><i style="background:#c8a24a"></i>Zug</div></div></div>`;
+    else if (this.tab === 'karte') el.innerHTML = `<div class="mapw"><div class="map-svg">${svg}</div><div class="leg"><div><i style="background:#fff"></i>Du</div><div><i style="background:#f0b27a"></i>Wahrzeichen</div><div><i style="background:#f2d14b"></i>Späti</div><div><i style="background:#7dd3ff"></i>Litfaßsäule</div><div><i style="background:#c23a2e"></i>Gegner</div><div><i style="background:#43d1cf"></i>Start</div>${s.content.hidden.length ? `<p class="inv-hint">Versteckte Segen ${s.content.hidden.filter(h => h.got).length} von ${s.content.hidden.length}</p>` : ''}</div></div>`;
   }
   /** 2D segenTab: icon grid of this run's blessings, tap shows the details. */
   private segen(s: Sim): string {
