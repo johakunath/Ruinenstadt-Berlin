@@ -235,18 +235,24 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       b.box(M.brick, F(0, H / 2, -2), w, H, d - 4, BRICK);
       for (const f of faces(F, w, d - 4, -2)) if (f.len > w) windowRow(b, f.m, f.len - 6, 5.2, 1.4, 6, 3.6, rng, 0.06, true);
       b.geo(M.roof, frustum(w + 0.6, d - 3.6, 5, w + 0.6, 0, SLOPES | ENDS), F(0, H, -2, Math.PI / 2), [1.0, 0.75, 0.62]);
-      b.box(M.brick, F(0, 9, tz), 6.4, 18, 6, BRICK);
+      // The tower: fieldstone below, the copper top with its lantern above the camera.
+      b.box(M.stucco, F(0, 9, tz), 6.4, 18, 6, [1.0, 0.9, 0.72]);
       archWindow(b, F(0, 0, tz + 3.01), 1.6, 3.2, rng, 0, false);
       b.box(M.door, F(0, 1.4, tz + 3.02), 1.6, 2.8, 0.05);
-      b.box(M.stucco, F(0, 19.5, tz), 5.6, 3, 5.2, [1.0, 0.95, 0.85]);
+      b.box(M.stucco, F(0, 18.3, tz), 6.8, 0.6, 6.4, CREAM);
+      b.box(M.stucco, F(0, 20.8, tz), 5.2, 4.4, 5.2, COPPER);
       b.geo(M.stucco, cached('mkSpire', () => new CylinderGeometry(0.15, 3.7, 11, 4)), F(0, 26.5, tz, Math.PI / 4), COPPER);
       return;
     }
     case 'neptunbrunnen': {
       // Neptunbrunnen (Begas 1891): a red granite basin, Neptune on a rock with four tritons, the four
       // river women on the rim. Bronze turns green-black.
-      cyl(l.hx, l.hx + 0.2, 0.7, 0, M.stucco, [1.0, 0.7, 0.65], 0, 0, 28);
-      b.geo(M.water, cached('nbWater', () => new CylinderGeometry(l.hx - 0.5, l.hx - 0.5, 0.1, 28)), F(0, 0.6, 0));
+      // Four-lobed basin of red granite.
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 2, x = Math.sin(a) * l.hx * 0.42, z = Math.cos(a) * l.hx * 0.42;
+        cyl(l.hx * 0.58, l.hx * 0.58 + 0.15, 0.7, 0, M.stucco, [1.0, 0.62, 0.58], x, z, 20);
+        b.geo(M.water, cached('nbWater', () => new CylinderGeometry(l.hx * 0.58 - 0.4, l.hx * 0.58 - 0.4, 0.1, 20)), F(x, 0.62, z));
+      }
       cyl(1.6, 2.1, 1.6, 0.6, M.stucco, [0.7, 0.65, 0.6], 0, 0, 7);
       cyl(0.75, 0.95, 0.9, 2.2, M.iron, BRONZE);
       figure(b, F(0, 3.1, 0), 1.25, [0.6, 0.85, 0.7], 1);
@@ -265,7 +271,8 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       b.box(M.brick, F(0, H / 2, -1), w, H, d - 2, BRICK);
       for (const f of faces(F, w, d - 2, -1)) if (f.len > w) windowRow(b, f.m, f.len - 6, 4.6, 1.2, 5, 3.4, rng, 0.06, true);
       b.geo(M.roof, frustum(w + 0.5, d - 1.6, 4.4, w + 0.5, 0, SLOPES | ENDS), F(0, H, -1, Math.PI / 2), [1.0, 0.75, 0.62]);
-      b.box(M.stucco, F(0, 7, tz), w, 14, 5, [1.0, 0.95, 0.85]);
+      b.box(M.brick, F(0, 7, tz), w, 14, 5, BRICK);
+      b.box(M.stucco, F(0, 0.8, tz), w + 0.2, 1.6, 5.2, [0.85, 0.82, 0.76]);
       b.box(M.door, F(0, 1.5, tz + 2.51), 1.8, 3, 0.05);
       archWindow(b, F(0, 0, tz + 2.51), 1.4, 2.6, rng, 0, true);
       for (const x of [-1.7, 1.7]) {
@@ -275,14 +282,17 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       return;
     }
     case 'brunnen': {
-      // Brunnen der Völkerfreundschaft (1970): a spiral of enamelled copper bowls stepping up round a
-      // centre, water falling from bowl to bowl, on a mosaic floor in a round basin.
-      cyl(l.hx, l.hx, 0.5, 0, M.stucco, [0.9, 0.88, 0.84], 0, 0, 28);
-      b.geo(M.water, cached('bvWater', () => new CylinderGeometry(l.hx - 0.4, l.hx - 0.4, 0.1, 28)), F(0, 0.42, 0));
-      cyl(0.5, 0.7, 3, 0.4, M.stucco, [1.05, 0.7, 0.5]);
-      for (let k = 0; k < 17; k++) {
-        const a = k * 0.78, r = 2.6 - k * 0.1, y = 0.7 + k * 0.32, br = 1.1 - k * 0.035;
-        b.geo(M.stucco, cached(`bvBowl${k}`, () => new CylinderGeometry(br, br * 0.55, 0.35, 14)), F(Math.sin(a) * r, y, Math.cos(a) * r), k % 3 === 0 ? BLUE : [1.15, 0.72, 0.48]);
+      // Brunnen der Völkerfreundschaft (Walter Womacka, 1970): copper funnel bowls (square, opening upward)
+      // on posts at many heights in a spiral, water falling from bowl to bowl; the basin wall is clad in
+      // coloured enamel mosaic.
+      cyl(l.hx, l.hx, 0.9, 0, M.stucco, [0.9, 0.88, 0.84], 0, 0, 28);
+      const mos: RGB[] = [BLUE, YELLOW, RED, [0.5, 0.8, 0.6], CREAM];
+      for (let k = 0; k < 28; k++) { const a = (k / 28) * Math.PI * 2; b.box(M.stucco, F(Math.sin(a) * (l.hx + 0.02), 0.45, Math.cos(a) * (l.hx + 0.02), a), (Math.PI * 2 * l.hx) / 28 + 0.05, 0.75, 0.06, mos[k % mos.length]); }
+      b.geo(M.water, cached('bvWater', () => new CylinderGeometry(l.hx - 0.4, l.hx - 0.4, 0.1, 28)), F(0, 0.82, 0));
+      for (let k = 0; k < 11; k++) {
+        const a = k * 1.15, r = 0.6 + (k % 4) * 1.15, y = 1.4 + k * 0.42, bw = 2.2 - (k % 3) * 0.4, x = Math.sin(a) * r, z = Math.cos(a) * r;
+        cyl(0.16, 0.2, y - 0.9, 0.9, M.stucco, [0.75, 0.55, 0.42], x, z, 8);
+        b.geo(M.stucco, cached(`bvFun${bw}`, () => new CylinderGeometry(bw * 0.72, 0.18, 0.75, 4, 1)), F(x, y + 0.37, z, Math.PI / 4 + a), [1.15, 0.72, 0.48]);
       }
       return;
     }
@@ -330,14 +340,14 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       return;
     }
     case 'kino': {
-      // Kino International: glass foyer on the ground floor, the closed upper hall with its relief bands,
-      // and INTERNATIONAL on the roof edge facing the Allee.
-      glassBox(b, F, w - 4, d - 2, 0, 4.4, 'foyer', 1, 4.4);
-      for (const x of [-l.hx + 3, 0, l.hx - 3]) b.box(M.concrete, F(x, 2.2, l.hz - 0.4), 0.5, 4.4, 0.5, CREAM);
-      b.box(M.concrete, F(0, 7.4, 0), w, 6, d, CREAM);
-      for (let x = -l.hx + 2; x < l.hx - 1; x += 3) b.box(M.concrete, F(x, 7.4, l.hz + 0.05), 1.6, 5, 0.1, [1.0, 0.95, 0.85]);
-      atlasPlane(b, F(0, 11.4, l.hz - 0.5), w * 0.7, 1.8, 'kino');
-      b.box(M.iron, F(0, 10.6, l.hz - 0.6), w * 0.72, 0.15, 0.15, [0.4, 0.4, 0.4]);
+      // Kino International (1963): a recessed dark ground floor, the big glazed foyer above it, and the
+      // cream band with KINO INTERNATIONAL over the glass, facing the Allee.
+      b.box(M.concrete, F(0, 2, -0.8), w - 2, 4, d - 2.4, [0.45, 0.48, 0.5]);
+      glassFace(b, F(0, 0, l.hz - 2), w - 2, 0.6, 3.2, 'foyer', 3.2);
+      b.box(M.concrete, F(0, 4.2, 0), w, 0.4, d, CREAM);
+      glassBox(b, F, w, d, 4.4, 4.6, 'curtain', 0, 4.6);
+      b.box(M.concrete, F(0, 10.4, 0), w, 3.2, d, [1.15, 1.1, 1.0]);
+      atlasPlane(b, F(0, 10.4, l.hz + 0.03), w * 0.8, 1.3, 'kino');
       return;
     }
     case 'cafemoskau': {
