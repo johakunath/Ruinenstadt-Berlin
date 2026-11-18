@@ -99,7 +99,7 @@ const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScal
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 /** A checkpoint of another map waits while this one is played (M20: a visit to the camp must not drop it). */
-const foreignRun = save?.run && (save.run.map !== mapName || !level) ? save.run : null;
+let foreignRun = save?.run && (save.run.map !== mapName || !level) ? save.run : null;
 if (foreignRun) save = { ...save!, run: null };
 /** Writes the save; with no run of this map, another map's waiting checkpoint stays in it. */
 function store(s: SaveV1): void {
@@ -254,6 +254,8 @@ export function newGame(): void {
   if (!renderer) return;
   clearSave();
   save = null;
+  // A wiped save keeps no other map's checkpoint either (Codex review).
+  foreignRun = null;
   sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, difficulty });
   renderer?.reset(sim);
   ui.setResume(null, difficulty);
