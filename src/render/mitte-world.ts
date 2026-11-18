@@ -103,7 +103,7 @@ function massing(c: MCtx, l: Landmark): void {
     }
     case 'sony': {
       // Six ring blocks (gaps at 30°, 90° … 330°, `OPEN_PARTS.sony`) and the tent roof high above the forum.
-      for (const p of OPEN_PARTS.sony ?? []) c.b.box(N.curtain, lm(l, p.x, 11, p.z, p.rot), p.hx * 2, 22, p.hz * 2, MC.glass);
+      for (const p of OPEN_PARTS.sony ?? []) c.b.box(N.curtain, lm(l, p.x, 11, p.z).multiply(new Matrix4().makeRotationY(p.rot)), p.hx * 2, 22, p.hz * 2, MC.glass);
       c.b.geo(M.tarp, cached('sony-tent', () => new ConeGeometry(27, 7, 12, 1, true)), lm(l, 0, 31.5, 0), MC.magenta);
       cylinder(c, l, M.iron, 0, 22, 0, 0.5, 13, MC.steel, 6);
       return;
