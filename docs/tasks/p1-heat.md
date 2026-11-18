@@ -17,15 +17,17 @@ Counted per pass at GL level with `node tools/passes.mjs "<query>" [x,z ...]` (c
 | Hero and enemy contour masks | 18 | 20k | about 3 % |
 | Frame | 431 to 544 | 0.68 M to 1.01 M | |
 
+After rows 1 and 2 of the ranking (same spots): 422 to 578 calls and 0.56 M to 0.77 M triangles on a frame with a shadow render, 249 to 342 calls and 0.35 M to 0.51 M on the frames without (every second frame at 60 fps on Leistung).
+
 Two findings set the ranking. The world is drawn three times per frame, and the shadow pass is the largest. The camera (44°, FOV 36°) never sees farther than about 31 m (40 m at far zoom) because the ground ends the view, but geometry was merged per 48 m chunk, so whole chunks were processed for a visible area of about 45 × 25 m.
 
 ### Ranked measures
 | # | Measure | Expected effect | Cost and risk | Status |
 |---|---|---|---|---|
-| 1 | Chunks 48 → 32 m | Triangles −17 to −24 %, draw calls unchanged (measured) | One constant, same picture | built |
+| 1 | Chunks 48 → 32 m (ground 31.5 m, a multiple of its 1.5 m grid) | Measured: triangles −17 to −24 %, draw calls −2 to +7 % (shadow pass +11 %, beauty and pre-pass down) | Two constants, same picture | built |
 | 2 | Shadow map at most 30 times a second on Leistung (`Profile.shadowInterval`) | Every second frame at 60 fps skips the shadow pass: about −19 % of calls and triangles on average | Small. The light moves only with a new shadow map, so shadows do not swim; the hero's shadow is up to one frame late | built, Johannes checks the look |
-| 3 | P1b proxy passes: one vertex buffer per chunk, materials as index ranges; pre-pass and shadow pass draw the chunk in one call each | Draw calls about −50 % (to roughly 220 to 250), triangles unchanged | Medium to large refactor of `src/render/batch.ts` and the chunk loop; +index memory (32-bit). Own task | open, queue row P1b |
-| 4 | Shadow casters on Leistung: only the caster boxes, not the merged chunk meshes (`?shadows=boxes`) | Removes most of the shadow pass: about −30 % of calls and triangles | Look: small props, fences and lamp posts lose their shadow. Needs Johannes' eye on the tablet; becomes a profile field if accepted | test switch built |
+| 3 | P1b proxy passes: one vertex buffer per chunk, materials as index ranges; pre-pass and shadow pass draw the chunk in one call each | Draw calls about −50 % (to roughly 220 to 250), triangles unchanged | Medium to large refactor of `src/render/batch.ts` and the chunk loop; +index memory (32-bit). Own task | open: `docs/tasks/p1b-proxy-passes.md` |
+| 4 | Shadow casters on Leistung: only the caster boxes, not the merged chunk meshes (`?shadows=boxes`) | Measured at one spot: shadow pass 236 → 66 calls, 263k → 170k triangles (frame −29 % calls, −12 % triangles; trees and other instanced things still cast) | Look: small props, fences and lamp posts lose their shadow. Needs Johannes' eye on the tablet; becomes a profile field if accepted | test switch built |
 | 5 | Material audit: 35 to 45 materials per chunk, half of the beauty draws have under 200 triangles; merge materials that differ only in tint or use a small painted texture | Beauty and pre-pass calls about −30 % | Medium to high, touches many builders. After P1b | open |
 | 6 | Hero: about 15 draws in each of four passes; merge clothing meshes per material when equipping | −30 to −40 calls | Medium (H1 follow-up) | open |
 | 7 | Chunks 24 m | Triangles a further −8 to −12 % | Today +4 to +6 % calls (shadow pass); free after P1b | after P1b |
