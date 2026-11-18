@@ -107,10 +107,13 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `inventory/I85.webp` | Ruinenstadt 2D `assets/icons/I85.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I86.webp` | Ruinenstadt 2D `assets/icons/I86.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I87.webp` | Ruinenstadt 2D `assets/icons/I87.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
+| `inventory/I88.webp` | OpenAI image generation, painted inventory icon | Codex for Johannes | Own work | Rostige Klinge, rusted elbow pipe with a wrapped grip |
+| `inventory/I89.webp` | OpenAI image generation, painted inventory icon | Codex for Johannes | Own work | Stahlklinge, leaf-spring blade with a wrench guard |
+| `inventory/I90.webp` | OpenAI image generation, painted inventory icon | Codex for Johannes | Own work | Hackmesser, weathered butcher’s cleaver |
 | `inventory/R05.webp` | Ruinenstadt 2D `assets/icons/R05.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Schrott icon in the menu header (U3) |
 | `inventory/survivor.webp` | Ruinenstadt 2D `assets/hero/H01a-H01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged inventory portrait placeholder |
 | `portraits/E01.webp` | Ruinenstadt 2D `assets/portraits/E01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Schlurfer |
-| `portraits/E02.webp` | Ruinenstadt 2D `assets/portraits/E02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Brocken and the Elite-Gegner rows |
+| `portraits/E02.webp` | Ruinenstadt 2D `assets/portraits/E02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Brocken |
 | `portraits/E03.webp` | Ruinenstadt 2D `assets/portraits/E03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Speier |
 | `portraits/E05.webp` | Ruinenstadt 2D `assets/portraits/E05.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Krähe |
 | `portraits/E09.webp` | Ruinenstadt 2D `assets/portraits/E09.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Hetzer (2D Raser) |
@@ -118,6 +121,12 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `portraits/E12.webp` | Ruinenstadt 2D `assets/portraits/E12.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Der Rex |
 | `portraits/X01.webp` | Ruinenstadt 2D `assets/portraits/X01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Hauptmann von Köpenick |
 | `portraits/X03.webp` | Ruinenstadt 2D `assets/portraits/X03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Der Turmwächter |
+| `portraits/X04.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Der Feldwebel, chipped Pickelhaube and blue tunic |
+| `portraits/X05.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Der Schaffner, peaked cap and railway signal disk |
+| `portraits/L01.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Flink, forward-leaning cyan runner |
+| `portraits/L02.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Brennend, charred coat and orange flames |
+| `portraits/L03.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Spaltend, lime fissures and split silhouette |
+| `portraits/L04.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Gepanzert, layered steel plate with ivory edges |
 | `portraits/S01.webp` | Ruinenstadt 2D `assets/portraits/S01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Dr. Ahmet |
 | `portraits/S02.webp` | Ruinenstadt 2D `assets/portraits/S02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Mira |
 | `portraits/S03.webp` | Ruinenstadt 2D `assets/portraits/S03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Kurier Jonas |
