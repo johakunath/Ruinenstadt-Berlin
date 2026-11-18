@@ -38,7 +38,9 @@ export interface Facade {
 
 export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stringLights' | 'tankTrap'
   // M11c lot types (render: `src/render/props-urban.ts`, `props-market.ts`, `vegetation.ts`).
-  | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind | GdrPropKind;
+  | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind | GdrPropKind | MittePropKind;
+/** M15 Mitte step 7 props (render: `src/render/props-mitte.ts`). */
+export type MittePropKind = 'tent' | 'beerTable' | 'speaker' | 'camPole';
 /** M15 Alexanderplatz props (render: `src/render/props-gdr.ts`). */
 export type GdrPropKind = 'greenhouse' | 'sunflowers' | 'climber' | 'flagpole';
 /** M11d step 4 closed map edge (render: `src/render/props-edge.ts`, placement: `edgeProps` in `map.ts`). */
@@ -203,6 +205,11 @@ export function propCollider(p: Prop): Collider | null {
     case 'hedge': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.45, rot: p.rot };
     // A trunk lying along local x; `size` is its length.
     case 'fallenTree': return { kind: 'box', x: p.x, z: p.z, hx: p.size / 2, hz: 0.45, rot: p.rot };
+    // M15 Mitte step 7. A tent's ridge runs along local x; a beer set is a table with two benches along x.
+    case 'tent': return { kind: 'box', x: p.x, z: p.z, hx: 1.3 * p.size, hz: 1.05 * p.size, rot: p.rot };
+    case 'beerTable': return { kind: 'box', x: p.x, z: p.z, hx: 1.1, hz: 0.85, rot: p.rot };
+    case 'speaker': return { kind: 'box', x: p.x, z: p.z, hx: 0.45 * p.size, hz: 0.4 * p.size, rot: p.rot };
+    case 'camPole': return { kind: 'circle', x: p.x, z: p.z, r: 0.15 };
     case 'clothesline': case 'spill': case 'gardenBed': case 'gnome': case 'jetty': case 'bush': case 'topiary': case 'flowers': case 'reeds':
       return null;
   }

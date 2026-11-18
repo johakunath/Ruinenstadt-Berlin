@@ -167,8 +167,8 @@ export function mitteMap(scale = 1): MapDef {
     { id: 'tilla', name: 'Tilla-Durieux-Park', ground: 'grass', frontage: null, trees: 0.2, poly: line([[-26, 128], [-11, 128], [-11, 182], [-26, 182]]) },
     { id: 'republik', name: 'Platz der Republik', ground: 'grass', frontage: null, trees: 0, poly: line([[-108, -142], [-58, -142], [-58, -104], [-108, -104]]) },
     { id: 'biergarten', name: 'Biergarten am Neuen See', ground: 'cobbles', frontage: null, trees: 0.3, poly: line([[-152, 24], [-122, 24], [-122, 40], [-152, 40]]) },
-    { id: 'regierung', name: 'Regierungsviertel', ground: 'asphalt', frontage: 'platte', trees: 0.3, specials: ['baustelle', 'parkplatz'], poly: line([[-162, -205], [185, -205], [185, -114], [-16, -114], [-16, -98], [-162, -98]]) },
-    { id: 'friedrichstadt', name: 'Friedrichstadt', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['markt', 'hinterhof'], poly: line([[-4, -114], [185, -114], [185, 140], [66, 140], [60, 112], [42, 80], [-4, 80]]) },
+    { id: 'regierung', name: 'Regierungsviertel', ground: 'asphalt', frontage: 'altbau', trees: 0.3, specials: ['sperrzone', 'parkplatz'], poly: line([[-162, -205], [185, -205], [185, -114], [-16, -114], [-16, -98], [-162, -98]]) },
+    { id: 'friedrichstadt', name: 'Friedrichstadt', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['markt', 'clubhof'], poly: line([[-4, -114], [185, -114], [185, 140], [66, 140], [60, 112], [42, 80], [-4, 80]]) },
     { id: 'tiergarten', name: 'Tiergarten', ground: 'forest', frontage: null, trees: 1.1, poly: line([[-162, -98], [-16, -98], [-16, 40], [-162, 40]]) },
     { id: 'kulturforum', name: 'Kulturforum', ground: 'cobbles', frontage: null, trees: 0.4, poly: line([[-162, 40], [-95, 40], [-95, 118], [-45, 118], [-45, 200], [-162, 200]]) },
     { id: 'potsdamer', name: 'Potsdamer Platz', ground: 'asphalt', frontage: 'altbau', trees: 0.15, specials: ['nachtmarkt', 'containerdorf', 'baustelle'], poly: line([[-95, 40], [-4, 40], [-4, 80], [42, 80], [60, 112], [66, 140], [185, 140], [185, 200], [-45, 200], [-45, 118], [-95, 118]]) },
@@ -277,8 +277,14 @@ export function mitteMap(scale = 1): MapDef {
     strictLots: true,
     hiddenSpots: [endOf('Hinterhof', 1.2, 0)],
     // Step 7: a container village on the route between the Potsdamer Brücke and the Tilla-Durieux-Park.
-    specialLots: [{ special: 'containerdorf', x: -44 * s, z: 160 * s, rot: 0, w: 18, d: 14 }],
-    specialMax: { nachtmarkt: 2, containerdorf: 3, baustelle: 1 },
+    // The Tiergarten has no frontage: its two lot types stand by hand beside the route (east of the
+    // Hofjägerallee, south of the Straße des 17. Juni).
+    specialLots: [
+      { special: 'containerdorf', x: -44 * s, z: 160 * s, rot: 0, w: 18, d: 14 },
+      { special: 'zeltlager', x: -80 * s, z: -12 * s, rot: -Math.PI / 2, w: 18, d: 15 },
+      { special: 'lichtung', x: -60 * s, z: -38 * s, rot: Math.PI, w: 18, d: 15 },
+    ],
+    specialMax: { nachtmarkt: 2, containerdorf: 3, baustelle: 1, markt: 2, clubhof: 3, sperrzone: 3, parkplatz: 2 },
     guards: [{ ...endOf('Arkadenhof', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 }],
     fixedProps: [
       { kind: 'crates', ...endOf('Checkpoint Charlie', 1.5, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Checkpoint Charlie', 3.5, -1.4), rot: 1, size: 1 },

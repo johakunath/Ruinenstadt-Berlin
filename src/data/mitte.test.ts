@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { GROSSER_STERN, MITTE_BOSS_STANDIN, mitteMap } from './mitte';
 import { EDGE_FRONT, propCollider } from './courtyard';
-import { generateLots, generateProps, isWater, LAMP_CURB, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, type MapDef } from './map';
+import { areaAt, generateLots, generateProps, isWater, LAMP_CURB, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, type MapDef } from './map';
 import type { Level } from '../sim/level';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT, type SimEvent } from '../sim/types';
@@ -156,6 +156,18 @@ describe('Mitte map (M15, layout B2)', () => {
       expect(of('containerdorf'), `${scale}`).toBeGreaterThanOrEqual(1);
       expect(lots.some((l) => l.special === 'containerdorf' && Math.hypot(l.x + 44 * scale, l.z - 160 * scale) < 1), `${scale}`).toBe(true);
       expect(m.landmarks.filter((l) => l.kind === 'glasbau').length).toBe(2);
+    }
+  });
+
+  it('step 7, other zones (variant A): Markt and Clubhof, Sperrzone and Parkplatz, Zeltlager and Lichtung, spots reachable', () => {
+    for (const scale of [1, 1.3]) {
+      const m = mitteMap(scale), lots = generateLots(m), props = generateProps(m, lots), seen = reach(m, mapLevel(m, lots, props));
+      const zone = (k: string, area: string): number => lots.filter((l) => l.special === k && areaAt(m, l.x, l.z)?.id === area).length;
+      for (const [k, area] of [['markt', 'friedrichstadt'], ['clubhof', 'friedrichstadt'], ['sperrzone', 'regierung'], ['zeltlager', 'tiergarten'], ['lichtung', 'tiergarten']] as const) expect(zone(k, area), `${k} ${scale}`).toBeGreaterThanOrEqual(1);
+      for (const l of lots) {
+        if (l.kind !== 'special' || !['clubhof', 'sperrzone', 'zeltlager', 'lichtung'].includes(l.special!)) continue;
+        for (const [name, p] of Object.entries(l.content!.spots)) if (p) expect(near(seen, p[0], p[1]), `${l.special} ${name} ${scale}`).toBe(true);
+      }
     }
   });
 
