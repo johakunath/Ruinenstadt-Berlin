@@ -384,8 +384,9 @@ export function updateContent(s: Sim): void {
     const T = c.trader;
     if (travel) T.t -= DT;
     const close = near(T, CONTENT.trader.touch);
-    // The tunnel trader only waits for the enemies close by (a sleeping mini-boss far off does not count).
-    const calm = T.fixed ? !s.enemies.some((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < CONTENT.shop.calm) : s.enemies.every((e) => e.state === 'dead');
+    // The trader only waits for the enemies close by, like a Späti (playtest 2026-11-18: in the Spreepark a
+    // sleeping guard or a straggler far off kept him silent all run).
+    const calm = !s.enemies.some((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < CONTENT.shop.calm);
     if (close && !c.tradeOpen && calm) c.talk = -1;
     if (T.t <= 0 && !c.tradeOpen) {
       done('trader', 'lost', T);

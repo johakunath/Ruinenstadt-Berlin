@@ -6,6 +6,10 @@ import { clamp } from '../sim/math';
 import { VIEW } from '../data/cut';
 import type { RevealPose } from './reveal';
 
+/** Far plane of the game camera, and during a landmark reveal. */
+const FAR = 120;
+const REVEAL_FAR = 450;
+
 const PITCH = VIEW.pitch;
 const DISTANCE = 18.5;
 export const FOV = 36;
@@ -19,7 +23,7 @@ const SPRING_STEP = 1 / 120;
 const ZOOMS = [0.78, 1, 1.28];
 
 export class FollowCamera {
-  readonly camera = new PerspectiveCamera(FOV, 16 / 9, 1, 120);
+  readonly camera = new PerspectiveCamera(FOV, 16 / 9, 1, FAR);
   private readonly target = new Vector3();
   private readonly look = new Vector3();
   private readonly ahead = new Vector3();
@@ -123,6 +127,9 @@ export class FollowCamera {
       this.camera.position.lerp(reveal.pos, reveal.weight);
       this.look.lerp(reveal.look, reveal.weight);
     }
+    // The reveal looks far over the city (playtest 2026-11-18: at 120 m the world behind cut off into black).
+    const far = Math.round(FAR + (REVEAL_FAR - FAR) * (reveal?.weight ?? 0));
+    if (far !== this.camera.far) { this.camera.far = far; this.camera.updateProjectionMatrix(); }
     this.camera.lookAt(this.look);
   }
 

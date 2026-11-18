@@ -957,7 +957,7 @@ function frame(now: number): void {
     ui.setPerf(
       `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms\n` +
         `${pf.calls} draw calls · ${(pf.triangles / 1000).toFixed(0)}k Dreiecke · ${sim.enemies.length} Gegner\n` +
-        PROFILES[opts.profile].label,
+        `${PROFILES[opts.profile].label} · x ${sim.player.x.toFixed(1)} z ${sim.player.z.toFixed(1)}`,
     );
   }
 }

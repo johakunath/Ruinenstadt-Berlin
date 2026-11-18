@@ -385,7 +385,9 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   // Under bridges the bed runs on, so decks span the water on their piers (M11d: no ground sheet beside the deck).
   // M15 bridge terraces (Warschauer Brücke) keep the ground below their deck; `xhain-world.ts` draws the deck.
   const underDeck = (x: number, z: number): boolean => m.terraces.some((t) => t.bridge && (inPoly(t.poly, x, z) || onStair(t, x, z) !== null));
-  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : heightAt(m, x, z));
+  // Under bridge decks and ferry piers on land the ground sinks below the deck: relief within a few cm of the
+  // deck top z-fought it (Lange Brücke and the Grünau pier, playtest 2026-11-18).
+  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : onBridge(m, x, z) ? Math.min(heightAt(m, x, z), -0.15) : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += GROUND_CHUNK) {
     for (let cx = B.minX; cx < B.maxX; cx += GROUND_CHUNK) {
       const n = Math.ceil(Math.min(GROUND_CHUNK, B.maxX - cx) / step);
@@ -770,7 +772,11 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         if (isWater(m, (x0 + x1) / 2, (z0 + z1) / 2) && !onBridge(m, (x0 + x1) / 2, (z0 + z1) / 2)) continue;
         const nx = -dz * (s.width / 2);
         const nz = dx * (s.width / 2);
-        const v = (x: number, z: number): Vector3 => new Vector3(x, y + surfaceAt(m, x, z), z);
+        // On a bridge the ribbon lies on the deck (top at DECK_TOP), never at the deck's own height.
+        const v = (x: number, z: number): Vector3 => {
+          const br = onBridge(m, x, z);
+          return new Vector3(x, y + (br && br.kind !== 'ferry' ? Math.max(surfaceAt(m, x, z), DECK_TOP) : surfaceAt(m, x, z)), z);
+        };
         const b = chunkOf((x0 + x1) / 2, (z0 + z1) / 2);
         const batch = b.solid.of(mat);
         // Point on the piece: u along (0..1), w across (-1..1).
@@ -916,6 +922,9 @@ function buildFerryBoat(mats: MapMats, width: number): Group {
   return g;
 }
 
+/** Top of a fixed bridge deck over the ground plane. */
+const DECK_TOP = 0.05;
+
 function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder, boats: Array<{ lane: FerryLane; group: Group }>): void {
   for (const br of m.bridges) {
     const b = chunkOf(br.x, br.z);
@@ -940,7 +949,7 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
     }
     // Deck (top flush with the ground) on a stone body, piers down to the bed, abutments closing both
     // banks under the bridge heads (M11d: no ground sheet or gap beside the deck), railing, lamps.
-    b.box(mats.cobbles, local(0, -0.2, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
+    b.box(mats.cobbles, local(0, DECK_TOP - 0.25, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
     b.box(mats.stucco, local(0, -0.85, 0), br.width + 0.8, 0.8, br.len, [0.5, 0.5, 0.47]);
     for (const end of [-1, 1]) b.box(mats.stucco, local(0, (BED_Y + 0.05) / 2, end * (br.len / 2 - 1.2)), br.width + 1.4, 0.05 - BED_Y, 2.4, [0.48, 0.47, 0.44]);
     for (const side of [-1, 1]) {

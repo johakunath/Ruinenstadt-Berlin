@@ -110,6 +110,19 @@ describe('events', () => {
     expect(h.enemies.length).toBeGreaterThanOrEqual(8);
     expect(h.enemies.every((e) => e.kind === 'runner')).toBe(true);
   });
+  it('trader: an enemy far off (a sleeping guard) does not keep him silent, one close by does', () => {
+    const s = make();
+    onLeg(s, 'trader');
+    run(s, 2);
+    const T = s.content.trader!;
+    const far = spawnEnemy(s, T.x + 40, T.z, 'walker', 1, 1);
+    walkTo(s, T);
+    run(s, 1);
+    expect(s.content.talk).toBe(-1);
+    far.x = s.player.x + 3; far.z = s.player.z;
+    run(s, 1);
+    expect(s.content.talk).toBeNull();
+  });
   it('trader: opens on a talk press within reach, sells for Schrott, heals, leaves after a minute', () => {
     const s = make();
     onLeg(s, 'trader');
