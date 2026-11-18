@@ -52,6 +52,8 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P18 | Ambient animals: ducks on ponds, pigeons on plazas (fly off), rats near bins and in the tunnel. Research done (Gobkit CC0 GLBs). Refined task: `docs/tasks/m11c-animals.md` | Playtest 2026-11-17 (split off the M11c session) | Next session |
 | P19 | Painted textures for the lot types and plants (Codex). Task: `docs/tasks/m11c-textures.md`; reconcile its material keys with the merged M11c art first | Session 2026-11-17 | After M11c art merge |
 | P20 | M11c art follow-ups (agents stopped early to save tokens): look at scaffold, clothesline, gravestones, walls, slabs, girders, crane and Rohbau close up; jetty over the real pond; Jägerzaun and long fences; Platte loggias (no Platte district yet); tree and bush tints and jungle frond brightness after the last fix; greenery scatter density (bushes hiding enemies?); brick seam on broken wall tops | Session 2026-11-17 (M11c) | Next session, PC check |
+| P24 | Landmarks look too clean and intact for a ruined city: every sight (Rathaus, Tor, Reichstag, Sony Center, Fernsehturm, …) gets wear: soot streaks, cracks, broken and boarded windows, missing pieces, rubble and trash at the foot, rust and moss, graffiti up to 3 m, scaffolding or tarps on some. Shape stays recognizable. All four districts; code first (geometry breaks, vertex-colour grime), dirt and grime textures via Codex | Johannes, 2026-11-18 | Before the next district playtest; new landmarks are built worn from now on |
+| P25 | Der Türsteher in rage closes the Tor passages with neon barriers for a few seconds (needs dynamic colliders in the level hash) | M12c spec 2026-11-18 | After the Mitte boss playtest |
 
 ## Ideas (not decided)
 
@@ -62,4 +64,10 @@ Pure ideas for later (Johannes, 2026-11-16). Nothing here is planned or decided;
 | I1 | Blessings bound to verbs: each family gets blessings that change one action (Schlag, Finisher, Rolle, Kraft, Ultimativ), about 20 new, the card shows the verb. Example: Glut on the finisher makes it explode | Runs with the same weapon play differently, as boons do in Hades | G1 option A (`docs/tasks/g1-build-variety.md`) | idea |
 | I2 | Weapon variants: three per weapon, chosen at run start, each changes the chain or the powers. 2D already has three names per power (Kreissäge, Neonwirbel, Ernteschlacht) | A reason to pick a weapon on purpose | G1 option B | idea |
 | Q1 | Three quality levels: Qualität (PC), Ausgewogen (today's Leistung: tablet, notebook), a new lowest Leistung (cheap or no shadows, lower resolution, less decoration). Contents after Johannes' hardware checks: `docs/tasks/q1-quality-levels.md` | Johannes, 2026-11-18 | After the checks in `docs/tasks/pt-hardware-checks.md` |
+| I3 | Der Kabelbaum: a cable-wrapped tree as a Tiergarten boss, root lines along the ground that hold the hero (Wurzler rule) | Lost to Der Dirigent for the Neuer See (M12c) | idea |
+| I4 | Mitte lot type Kontrollpunkt: container lock with a barrier, sandbags and a guard booth (cache), Friedrichstadt | Variant B of `docs/mockups/m15-mitte-lots.svg`, not picked (2026-11-18) | idea |
+| I5 | Mitte lot type Ladenpassage: covered arcade under a broken glass roof, looted shops, dead escalator, sleeping elite (Friedrichstadt-Passagen) | Variant B, not picked | idea |
+| I6 | Mitte lot type Aktenhof: yard behind a ministry with heaps of files, toppled cabinets and desks, wet paper, cache | Variant B, not picked | idea |
+| I7 | Tiergarten lot type Windbruch: fallen trunks as a barricade, deer stand with crows, fireflies, cache | Variant B, not picked | idea |
+| I8 | Regierungsviertel facade F-B: concrete ribs and shattered glass (Bundesbau look) as a second frontage next to the sandstone ministry | Variant F-B, not picked | idea |
 | PT | Running list of hardware and quality checks for Johannes; every session adds its rows: `docs/tasks/pt-hardware-checks.md` | Johannes, 2026-11-18 | Running |

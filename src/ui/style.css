@@ -383,6 +383,11 @@ body:has(.overlay:not([hidden])) #touch {
   color: var(--ochre);
   letter-spacing: 0.06em;
 }
+#banner i {
+  font-size: 14px;
+  font-style: normal;
+  color: #43d1cf;
+}
 @keyframes banner {
   0% { opacity: 0; transform: translate(-50%, 8px); }
   12% { opacity: 1; transform: translate(-50%, 0); }

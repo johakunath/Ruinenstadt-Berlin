@@ -2,20 +2,32 @@
 // scale, gear built in code), the raptor and the Rex (Quaternius dinosaurs, repainted in
 // tools/build-creatures.mjs), a crow built from a few boxes with a procedural wing beat and (M12b)
 // a rat from six small meshes (shared geometry) with a run cycle from sim time.
+// M12c (Mitte): Kabelghul, Boxenkopf and four bosses on the zombie rig (cables and speakers in code),
+// pink cables on every Schlurfer, Hetzer and Brocken on neon maps, and drones built in code (shared
+// geometry, the four rotors one instanced mesh spun from time).
+// M15 Alexanderplatz: the Quaternius mechs (Uhrwerkläufer, Großer Uhrwerkläufer) with a clock-face
+// shield, the code-built Kernspeier and Koloss, the Weltzeituhr (the landmark's own rig on four legs),
+// Wurzler gear and the Brigadeghul's Blaumann (`enemies-alex.ts`, `clock.ts`).
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
-  BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, Mesh, SphereGeometry, Sphere, TorusGeometry, Vector3,
+  BoxGeometry, CatmullRomCurve3, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
   type AnimationClip, type BufferGeometry, type Object3D, type SkinnedMesh,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { ELITES, SPAWN, THREAT, type BodyKind, type EnemyKind } from '../data/enemies';
+import { BOSS, ELITES, SPAWN, THREAT, type BodyKind, type EnemyKind } from '../data/enemies';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Enemy } from '../sim/types';
 import { Animator, type CharacterAssets } from './characters';
 import { groundY } from './ground';
 import type { LitMaterial, Materials } from './materials';
 import { WeaponRack } from './weapons';
+import {
+  alexKit, assemble as assembleAlex, buildClockLegs, buildKern, buildKoloss, CLOCK_LEG, domeParts, emblemParts, keyParts, reachLeg, shieldParts, tf as tfAlex, zombieAlexGear,
+  type ClockLeg, type Kern, type Koloss, type Part as AlexPart,
+} from './enemies-alex';
+import { clockMats, makeClockRig, type ClockRig } from './clock';
+import { CLOCK } from './alex-world';
 
 const FLASH_TIME = 0.1;
 const WHITE = new Color(0xffffff);
@@ -25,6 +37,10 @@ const DEATH_FROM = 0.35;
 const SCRATCH_HIT = 0.55;
 const SCRATCH_SWIPE = 0.16;
 const WALK_CLIP_SPEED = 1.15;
+/** M12c Türsteher grab: Zombie_Scratch at the end of the swipe, hunched with both hands in front (clutching), held while the hero is caught. */
+const GRAB_HOLD = 0.68;
+/** M12c shove: Shield_Dash with the arms out in front (from the clip sheet), reached when the circle goes off. */
+const SHOVE_PUSH = 0.25;
 
 /** Skin tints per kind (one is picked per body). */
 const TINTS: Record<EnemyKind, number[]> = {
@@ -44,14 +60,31 @@ const TINTS: Record<EnemyKind, number[]> = {
   brandmeister: [0xc4a08a],
   rattenmutter: [0x9c9a7e],
   spreehexe: [0xc8ccb8],
+  // M12c Mitte (board: pale violet-grey skin under neon).
+  kabel: [0xc4b8c0, 0xb8aeb8],
+  bass: [0xa89ca4],
+  drone: [0xffffff],
+  tuersteher: [0x9c8e8c],
+  wachdrohne: [0xffffff],
+  dirigent: [0xb8b0a8],
+  bassprediger: [0xa8989c],
+  uhrwerk: [0xffffff], wurzler: [0x9aa878, 0xa8a070], kernspeier: [0xffffff],
+  wurzelmutter: [0x8e9a6a], uhrwerkgross: [0xffffff], volkskoloss: [0xffffff], weltzeituhr: [0xffffff],
 };
+/** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
+type GearKey = EnemyKind | 'brigade';
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
   spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x5a6f9a, waechter: 0x6a5a4a, hauptmann: 0x44588c, schaffner: 0x2e3f5c,
   // M12b Xhain 1981: GDR border grey-green, riot red-orange, sewer brown-green, squat black.
   grenzer: 0x6f7a5e, brandmeister: 0xb8482a, rattenmutter: 0x5e5a3a, spreehexe: 0x2e2834,
+  // M12c Mitte 2089: rags in violet-brown, the Boxenkopf's purple, black for the bouncer and the conductor.
+  kabel: 0x6a5260, bass: 0x5a4a78, tuersteher: 0x2a2a30, dirigent: 0x26242a, bassprediger: 0x3e2c48,
+  // M15 Alexanderplatz 1989: garden rags, the Brigadeghul's blue Blaumann.
+  wurzler: 0x6a5634, wurzelmutter: 0x5a4a2a,
 };
+const CLOTH_BRIGADE = 0x34528e;
 
 /** Proportions by bone scale; children inherit, so a big chest needs a smaller head to match. */
 const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
@@ -66,21 +99,35 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   brandmeister: { spine_02: 1.22, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.86 },
   rattenmutter: { spine_01: 1.15, spine_03: 1.12, Head: 0.95 },
   spreehexe: { upperarm_l: 0.92, upperarm_r: 0.92, Head: 0.96 },
+  // Speaker heads: the skull shrinks into the box mounted on the neck.
+  kabel: { spine_02: 0.82, upperarm_l: 1.12, upperarm_r: 1.12, Head: 1.06 },
+  bass: { spine_02: 1.18, Head: 0.05 },
+  tuersteher: { spine_02: 1.3, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.74 },
+  dirigent: { spine_02: 0.92, Head: 1.02 },
+  bassprediger: { spine_02: 1.12, Head: 0.05 },
+  wurzler: { upperarm_l: 1.1, upperarm_r: 1.1 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.9 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
 const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   runner: [0.86, 1], brute: [1.12, 1], feldwebel: [1.1, 1], waechter: [0.9, 1.1], hauptmann: [1.1, 1],
   grenzer: [1, 1.04], brandmeister: [1.12, 1], rattenmutter: [1.15, 0.85], spreehexe: [0.86, 1.16],
+  kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
+  wurzelmutter: [1.1, 1],
 };
-/** Bent forward all the time (the Rattenmutter's hunch). */
-const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2 };
+/** Bent forward all the time (the Rattenmutter's hunch, the Kabelghul's crouch). */
+const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2, kabel: 0.28 };
+/** Eye glow per kind (zombie rig); bosses default to ember, the rest to the zombie green. */
+const EYES: Partial<Record<EnemyKind, number>> = { spitter: 0x97ff5a, kabel: 0xff4fa3, tuersteher: 0xff4fa3, dirigent: 0xff4fa3 };
+/** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
+const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, brute: true };
 
 // ---------------------------------------------------------------- gear
 
 interface GearKit {
   steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; blue: LitMaterial; cloth: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial;
   olive: LitMaterial; ember: LitMaterial; moss: LitMaterial; punk: LitMaterial; flame: LitMaterial;
+  neon: LitMaterial; cyan: LitMaterial; violet: LitMaterial; speaker: LitMaterial; cone: LitMaterial; hazard: LitMaterial; paper: LitMaterial; jacket: LitMaterial; lining: LitMaterial;
 }
 let kit: GearKit | null = null;
 function gearKit(m: Materials): GearKit {
@@ -101,19 +148,30 @@ function gearKit(m: Materials): GearKit {
     punk: m.surface({ color: 0x7a2ab8, emissive: 0x9a3ae0, emissiveIntensity: 0.6, roughness: 0.6 }),
     // Torch flame: emissive only, no light (the light count stays constant).
     flame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
+    // M12c Mitte (board palette: magenta #ff4fa3, cyan #43d1cf): lit cables and implants, emissive only (no lights).
+    neon: m.surface({ color: 0x5a1034, emissive: 0xff4fa3, emissiveIntensity: 1.8, roughness: 0.5 }),
+    cyan: m.surface({ color: 0x0a3a3a, emissive: 0x43d1cf, emissiveIntensity: 2.4, roughness: 0.4 }),
+    violet: m.surface({ color: 0x4a3a62, roughness: 0.9, doubleSided: true }),
+    speaker: m.surface({ color: 0x1a181e, roughness: 0.55, metalness: 0.2 }),
+    cone: m.surface({ color: 0x2e2c34, roughness: 0.4, metalness: 0.5 }),
+    hazard: m.surface({ color: 0xc8a020, roughness: 0.7 }),
+    paper: m.surface({ color: 0xe4dccb, roughness: 0.9, doubleSided: true }),
+    jacket: m.surface({ color: 0x2c3328, roughness: 0.75, doubleSided: true }),
+    lining: m.surface({ color: 0xe1792a, roughness: 0.8, doubleSided: true }),
   };
   return kit;
 }
 
-type Part = [BufferGeometry, keyof GearKit];
+/** `pulse`: the speaker rings of this body, its own material so one Boxenkopf can swell alone. */
+type Part = [BufferGeometry, keyof GearKit | 'pulse'];
 const tf = (g: BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0): BufferGeometry => {
   if (rx || ry || rz) g.rotateX(rx).rotateY(ry).rotateZ(rz);
   return g.translate(x, y, z);
 };
 
 /** Merges parts per material into a few meshes. */
-function assemble(k: GearKit, parts: Part[], castShadow: boolean): Group {
-  const by = new Map<keyof GearKit, BufferGeometry[]>();
+function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial): Group {
+  const by = new Map<keyof GearKit | 'pulse', BufferGeometry[]>();
   for (const [g, m] of parts) {
     const list = by.get(m) ?? [];
     list.push(g.index ? g.toNonIndexed() : g);
@@ -121,11 +179,55 @@ function assemble(k: GearKit, parts: Part[], castShadow: boolean): Group {
   }
   const group = new Group();
   for (const [m, list] of by) {
-    const mesh = new Mesh(mergeGeometries(list), k[m]);
-    mesh.castShadow = castShadow;
+    const mesh = new Mesh(mergeGeometries(list), m === 'pulse' ? pulse ?? k.neon : k[m]);
+    // Lit cables and rings cast no shadow (thin, emissive).
+    mesh.castShadow = castShadow && m !== 'neon' && m !== 'pulse' && m !== 'cyan';
     group.add(mesh);
   }
   return group;
+}
+
+/** A cable through these points (model meters around the mount bone), as a thin tube. */
+const cable = (pts: Array<[number, number, number]>, r = 0.014): BufferGeometry =>
+  new TubeGeometry(new CatmullRomCurve3(pts.map(([x, y, z]) => new Vector3(x, y, z))), 10, r, 4, false);
+
+/** 2D `D.cyber` (and the Kabelghul): `n` pink cables from the skull base out and down to the shoulder blades (mounted on the neck). */
+function cables(n: number, spread: number, r = 0.014): Part[] {
+  const out: Part[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = n > 1 ? i / (n - 1) - 0.5 : 0;
+    out.push([cable([[t * 0.08, 0.07, -0.05], [t * spread * 0.8, 0.02, -0.17], [t * spread * 1.3, -0.13, -0.21], [t * spread * 1.7, -0.32, -0.15]], r), 'neon']);
+  }
+  return out;
+}
+/** Board E13 / Potsdamer Platz: thick cables that arch up off the back and plug into the skull, readable from the camera. */
+function arches(n: number, r: number): Part[] {
+  const out: Part[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = n > 1 ? i / (n - 1) - 0.5 : 0;
+    out.push([cable([[t * 0.1, 0.07, -0.05], [t * 0.3, 0.22, -0.2], [t * 0.42, 0.12, -0.36], [t * 0.36, -0.12, -0.3], [t * 0.3, -0.32, -0.18]], r), 'neon']);
+  }
+  return out;
+}
+/** Two lit implant dots on the temple and the cheek (mounted on the head). */
+const implants = (): Part[] => [[tf(new SphereGeometry(0.022, 6, 4), 0.08, 0.06, 0.07), 'neon'], [tf(new SphereGeometry(0.017, 6, 4), 0.09, 0.0, 0.07), 'neon']];
+
+/** A speaker box head (Boxenkopf, Bassprediger), built on the neck: box, two cones with pulsing rings, a cyan eye strip. */
+function speakerHead(w: number, h: number, d: number): Part[] {
+  const cones: Part[] = [];
+  for (const [y, r] of [[h * 0.72, w * 0.26], [h * 0.3, w * 0.33]] as const) {
+    cones.push([tf(new CylinderGeometry(r * 0.35, r, 0.06, 14), 0, y, d / 2 + 0.01, Math.PI / 2), 'cone']);
+    cones.push([tf(new TorusGeometry(r * 1.02, 0.018, 4, 18), 0, y, d / 2 + 0.03), 'pulse']);
+  }
+  // Lit edges round the top, so the box reads from the camera on every side.
+  const rim = (x: number, z: number, lx: number, lz: number): Part => [tf(new BoxGeometry(lx, 0.025, lz), x, h + 0.02, z), 'pulse'];
+  return [
+    [tf(new BoxGeometry(w, h, d), 0, h / 2, 0), 'speaker'],
+    [tf(new BoxGeometry(w * 1.04, 0.03, d * 1.04), 0, h, 0), 'cone'],
+    rim(0, d / 2, w, 0.025), rim(0, -d / 2, w, 0.025), rim(w / 2, 0, 0.025, d), rim(-w / 2, 0, 0.025, d),
+    [tf(new BoxGeometry(w * 0.4, 0.025, 0.012), -w * 0.2, h * 0.94, d / 2 + 0.006), 'cyan'],
+    ...cones,
+  ];
 }
 
 /** Pickelhaube: dome, brim, spike, front plate. Built around the origin at the top of the skull. */
@@ -162,7 +264,7 @@ function tunic(coat: keyof GearKit, trim: keyof GearKit): Part[] {
   ];
 }
 
-function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castShadow: boolean): Object3D[] {
+function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials, castShadow: boolean, pulse?: LitMaterial): Object3D[] {
   const k = gearKit(materials);
   const out: Object3D[] = [];
   const bone = (n: string): Object3D | undefined => model.getObjectByName(n);
@@ -171,7 +273,19 @@ function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castSha
   const mount = (name: string, parts: Part[], dy = 0, dz = 0): void => {
     const b = bone(name);
     if (!b) return;
-    const g = assemble(k, parts, castShadow);
+    const g = assemble(k, parts, castShadow, pulse);
+    b.getWorldPosition(p);
+    model.worldToLocal(p);
+    g.position.set(p.x, p.y + dy, p.z + dz);
+    model.add(g);
+    b.attach(g);
+    out.push(g);
+  };
+  /** M15: the same, with the Alexanderplatz kit. */
+  const mountAlex = (name: string, parts: AlexPart[], dy = 0, dz = 0): void => {
+    const b = bone(name);
+    if (!b) return;
+    const g = assembleAlex(alexKit(materials), parts, castShadow);
     b.getWorldPosition(p);
     model.worldToLocal(p);
     g.position.set(p.x, p.y + dy, p.z + dz);
@@ -180,6 +294,9 @@ function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castSha
     out.push(g);
   };
   switch (kind) {
+    case 'wurzler': case 'wurzelmutter': case 'brigade':
+      zombieAlexGear(kind, mountAlex);
+      break;
     case 'brute':
       // Boiler plate bolted over one shoulder, a rusted collar.
       mount('spine_03', [
@@ -282,6 +399,64 @@ function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castSha
       mount('spine_03', [...tunic('dark', 'dark'), [tf(new BoxGeometry(0.05, 0.05, 0.05), -0.12, 0.05, 0.19), 'steel'], [tf(new BoxGeometry(0.05, 0.05, 0.05), 0.12, 0.05, 0.19), 'steel']], 0.08);
       mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.36, 0.86, 10, 1, true, Math.PI * 0.55, Math.PI * 1.9), 0, -0.4, 0), 'dark']]);
       mount('hand_l', [[tf(new SphereGeometry(0.1, 10, 8), 0, -0.14, 0), 'acid'], [tf(new TorusGeometry(0.14, 0.008, 4, 14), 0, -0.14, 0, Math.PI / 2), 'acid']]);
+      break;
+    case 'cyber':
+      // Neon maps (2D `D.cyber`): three pink cables and two implant dots on the plain bodies.
+      mount('neck_01', cables(3, 0.16));
+      mount('Head', implants());
+      break;
+    case 'kabel':
+      // Kabelghul (2D art, board E13): four lit cables from the skull to the back, implants on the temple.
+      mount('neck_01', [...arches(4, 0.026), ...cables(2, 0.2, 0.018)]);
+      mount('Head', implants());
+      break;
+    case 'bass':
+      // Boxenkopf (2D art, board E14): a speaker for a head, purple rags with a yellow hazard band.
+      mount('neck_01', speakerHead(0.42, 0.5, 0.36), 0.02);
+      mount('spine_03', [...tunic('violet', 'hazard'), [tf(new BoxGeometry(0.46, 0.05, 0.34), 0, -0.16, 0.01), 'hazard']], 0.08);
+      break;
+    case 'tuersteher':
+      // Kabelbrocken in a bomber jacket with orange lining, dark glasses, the guest list on a clipboard.
+      mount('neck_01', [...cables(4, 0.24, 0.02), [tf(new TorusGeometry(0.11, 0.03, 5, 12).scale(1.2, 1, 1.05), 0, -0.04, 0, Math.PI / 2), 'lining']]);
+      mount('Head', [...implants(), [tf(new BoxGeometry(0.2, 0.04, 0.05), 0, 0.03, 0.13), 'dark']]);
+      // The jacket fits the Brocken chest (spine ×1.3): a wider shell than the uniform tunic.
+      mount('spine_03', [
+        [tf(new CylinderGeometry(0.24, 0.2, 0.46, 12, 1, true).scale(1.2, 1, 0.9), 0, -0.12, 0.01), 'jacket'],
+        [tf(new BoxGeometry(0.03, 0.42, 0.02), 0, -0.12, 0.225), 'lining'],
+        [tf(new BoxGeometry(0.5, 0.06, 0.36), 0, -0.34, 0), 'jacket'],
+      ], 0.08);
+      mount('hand_l', [
+        [tf(new BoxGeometry(0.22, 0.3, 0.018), 0, -0.14, 0.05, 0, 0.3), 'rust'],
+        [tf(new BoxGeometry(0.19, 0.24, 0.006), 0, -0.15, 0.062, 0, 0.3), 'paper'],
+        [tf(new BoxGeometry(0.07, 0.03, 0.03), 0, -0.01, 0.06, 0, 0.3), 'steel'],
+      ]);
+      break;
+    case 'dirigent':
+      // Torn tailcoat, white shirt front and bow tie, a rebar baton, a speaker on his back.
+      mount('neck_01', [
+        ...cables(2, 0.14),
+        [tf(new ConeGeometry(0.035, 0.07, 4), -0.035, -0.06, 0.1, 0, 0, Math.PI / 2), 'red'],
+        [tf(new ConeGeometry(0.035, 0.07, 4), 0.035, -0.06, 0.1, 0, 0, -Math.PI / 2), 'red'],
+      ]);
+      mount('spine_03', [
+        ...tunic('dark', 'dark'),
+        [tf(new BoxGeometry(0.12, 0.3, 0.02), 0, 0.06, 0.2), 'paper'],
+        [tf(new BoxGeometry(0.3, 0.36, 0.2), 0, 0.0, -0.26), 'speaker'],
+        [tf(new CylinderGeometry(0.04, 0.1, 0.04, 12), 0, 0.0, -0.38, Math.PI / 2), 'cone'],
+        [tf(new TorusGeometry(0.1, 0.015, 4, 14), 0, 0.0, -0.4), 'pulse'],
+      ], 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.21, 0.28, 0.66, 10, 1, true, Math.PI * 0.52, Math.PI * 0.96), 0, -0.3, 0), 'dark']]);
+      mount('hand_r', [[tf(new CylinderGeometry(0.012, 0.009, 0.5, 5), 0, -0.04, 0.2, Math.PI / 2 - 0.3), 'rust']]);
+      break;
+    case 'bassprediger':
+      // 2D art: speaker head, five pink cables, cyan eyes; from the bust (X09): preacher's collar, a mixer on the chest.
+      mount('neck_01', [...speakerHead(0.46, 0.56, 0.38), ...[0, 1, 2, 3, 4].map((i): Part => [cable([[-0.16 + i * 0.08, 0.3, -0.19], [-0.22 + i * 0.11, 0.18, -0.3], [-0.26 + i * 0.13, -0.05, -0.3], [-0.3 + i * 0.15, -0.3, -0.2]], 0.02), 'neon'])], 0.02);
+      mount('spine_03', [
+        ...tunic('violet', 'paper'),
+        [tf(new BoxGeometry(0.34, 0.2, 0.08), 0, -0.14, 0.22, -0.2), 'speaker'],
+        ...[0, 1, 2, 3, 4].map((i): Part => [tf(new BoxGeometry(0.035, 0.04 + (i % 3) * 0.03, 0.01), -0.12 + i * 0.06, -0.11, 0.27, -0.2), i % 2 ? 'cyan' : 'neon']),
+      ], 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.32, 0.78, 10, 1, true, Math.PI * 0.6, Math.PI * 1.8), 0, -0.36, 0), 'violet']]);
       break;
     case 'hauptmann':
       mount('Head', [...pickelhaube(true), [tf(new ConeGeometry(0.05, 0.2, 6), 0, 0.3, -0.02, -0.25), 'red']], 0.12);
@@ -390,6 +565,74 @@ function buildRat(materials: Materials, castShadow: boolean): Rat {
   return { model, body, front, back, tail, mats: [fur, skin], eyes };
 }
 
+// ---------------------------------------------------------------- drone
+
+interface Drone { model: Group; tilt: Group; rotors: InstancedMesh; hubs: Vector3[]; size: number; light: LitMaterial | null; mats: LitMaterial[]; eyes: LitMaterial }
+/** Shared drone geometry (built once): small quadcopter and the Wachdrohne; frame, lit parts, one rotor. */
+let droneGeo: { small: BufferGeometry; smallLit: BufferGeometry; big: BufferGeometry; bigLit: BufferGeometry; bigLamp: BufferGeometry; rotor: BufferGeometry } | null = null;
+const SMALL_ARM = 0.26, BIG_ARM = 0.95;
+
+/**
+ * M12c drones in code. Small: a 0.5 m quadcopter with a magenta lens (Mitte palette). Wachdrohne: a flat
+ * octagonal surveillance body 1.9 m across, four rotors, one cyan lens and a searchlight under it.
+ * Draws per body: frame, lit parts, rotors (one instanced mesh of four), the boss's lamp: 3, the boss 4.
+ */
+function buildDrone(materials: Materials, castShadow: boolean, big: boolean): Drone {
+  const flat = (list: BufferGeometry[]): BufferGeometry => mergeGeometries(list.map((g) => (g.index ? g.toNonIndexed() : g)));
+  const arms = (r: number, w: number, h: number, motor: number): BufferGeometry[] => [0, 1, 2, 3].flatMap((i) => {
+    const a = Math.PI / 4 + (i * Math.PI) / 2;
+    return [
+      tf(new BoxGeometry(w, h, r), Math.sin(a) * r * 0.5, 0, Math.cos(a) * r * 0.5, 0, a),
+      tf(new CylinderGeometry(motor, motor, motor * 1.6, 8), Math.sin(a) * r, motor * 0.4, Math.cos(a) * r),
+    ];
+  });
+  droneGeo ??= {
+    small: flat([tf(new BoxGeometry(0.2, 0.08, 0.26), 0, 0, 0), tf(new SphereGeometry(0.09, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0.03, 0), ...arms(SMALL_ARM, 0.035, 0.025, 0.03)]),
+    smallLit: flat([tf(new SphereGeometry(0.04, 8, 6), 0, -0.01, 0.14), tf(new BoxGeometry(0.12, 0.012, 0.012), 0, -0.045, -0.08)]),
+    big: flat([
+      tf(new CylinderGeometry(0.7, 0.82, 0.2, 8), 0, 0, 0, 0, Math.PI / 8),
+      tf(new CylinderGeometry(0.42, 0.55, 0.14, 8), 0, 0.17, 0, 0, Math.PI / 8),
+      tf(new BoxGeometry(0.5, 0.12, 0.2), 0, -0.14, 0.45),
+      ...arms(BIG_ARM, 0.12, 0.08, 0.09),
+    ]),
+    bigLit: flat([
+      tf(new SphereGeometry(0.13, 10, 8), 0, -0.14, 0.58),
+      ...[0, 1, 2, 3].map((i) => tf(new SphereGeometry(0.03, 6, 4), Math.sin(Math.PI / 4 + (i * Math.PI) / 2) * 0.82, 0.02, Math.cos(Math.PI / 4 + (i * Math.PI) / 2) * 0.82)),
+    ]),
+    bigLamp: flat([tf(new CylinderGeometry(0.2, 0.26, 0.1, 12), 0, -0.15, 0), tf(new TorusGeometry(0.27, 0.025, 4, 16), 0, -0.13, 0, Math.PI / 2)]),
+    rotor: flat([new BoxGeometry(1, 0.01, 0.09), new BoxGeometry(0.09, 0.01, 1)]),
+  };
+  const G = droneGeo;
+  const frame = materials.surface({ color: big ? 0x3a3e46 : 0x2a2c32, roughness: 0.45, metalness: 0.6 });
+  const eyes = materials.surface({ color: 0x102a2a, emissive: big ? 0x43d1cf : 0xff4fa3, emissiveIntensity: 3 });
+  const model = new Group();
+  const tilt = new Group();
+  model.add(tilt);
+  const mk = (g: BufferGeometry, m: LitMaterial, shadow: boolean): Mesh => {
+    const mesh = new Mesh(g, m);
+    mesh.castShadow = shadow;
+    tilt.add(mesh);
+    return mesh;
+  };
+  mk(big ? G.big : G.small, frame, castShadow);
+  mk(big ? G.bigLit : G.smallLit, eyes, false);
+  let light: LitMaterial | null = null;
+  if (big) {
+    light = materials.surface({ color: 0x2a3a3a, emissive: 0xd8fff8, emissiveIntensity: 3 });
+    mk(G.bigLamp, light, false);
+  }
+  const arm = big ? BIG_ARM : SMALL_ARM;
+  const hubs = [0, 1, 2, 3].map((i) => new Vector3(Math.sin(Math.PI / 4 + (i * Math.PI) / 2) * arm, big ? 0.2 : 0.07, Math.cos(Math.PI / 4 + (i * Math.PI) / 2) * arm));
+  const blur = materials.surface({ color: 0x1a1a1e, roughness: 0.6, doubleSided: true });
+  const rotors = new InstancedMesh(G.rotor, blur, 4);
+  rotors.castShadow = false;
+  rotors.frustumCulled = false;
+  tilt.add(rotors);
+  return { model, tilt, rotors, hubs, size: big ? 0.62 : 0.24, light, mats: [frame, blur], eyes };
+}
+const rotorM = new Matrix4();
+const rotorS = new Vector3();
+
 // ---------------------------------------------------------------- view
 
 interface DinoClips { hit: number; swipe: number; walk: number; run: number }
@@ -398,6 +641,17 @@ const DINO: Record<'raptor' | 'rex', DinoClips> = {
   raptor: { hit: 0.36, swipe: 0.14, walk: 1.1, run: 6.5 },
   rex: { hit: 0.52, swipe: 0.16, walk: 2.4, run: 7 },
 };
+
+/**
+ * Mech clips (Quaternius Animated Mech Pack): the strike clip per body, where it lands and how far the
+ * walk clip carries the body per second (looked at with `tools/enemy-sheet.mjs`, see the task handover).
+ */
+const MECH = {
+  // Leela's Kick: the leg is out from 0.55 to 0.67 of the clip; Mike's Punch: the fist is out from 0.5 to 0.62.
+  mech: { strike: 'Kick', hit: 0.55, swipe: 0.12, walk: 1.1, run: 3 },
+  mechBig: { strike: 'Punch', hit: 0.5, swipe: 0.12, walk: 1.5, run: 4 },
+} as const;
+const smooth = (a: number, b: number, v: number): number => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 /** Eye position from the head joint, in Rex meters (the raptor scales it down). */
 const EYE = { x: 0.24, y: 0.1, z: 0.4 };
@@ -416,17 +670,56 @@ export class EnemyView {
   private readonly anim: Animator | null = null;
   private readonly crow: Crow | null = null;
   private readonly rat: Rat | null = null;
+  /** M12c drones, built on first use (one view can carry a small drone or the Wachdrohne). */
+  private readonly drones: { small?: Drone; big?: Drone } = {};
+  private drone: Drone | null = null;
+  /** M12c: pink cables on neon maps (plain bodies), and the speaker rings of this body. */
+  private cyber: Object3D[] | null = null;
+  private readonly pulse: LitMaterial | null = null;
+  private readonly kern: Kern | null = null;
+  private readonly koloss: Koloss | null = null;
+  private readonly clock: { rig: ClockRig; legs: ClockLeg[]; legGroup: Object3D } | null = null;
+  /** Mech gear that moves: the shield (swings aside when the guard opens), the Großer Uhrwerkläufer's key. */
+  private shield: Object3D | null = null;
+  private key: Object3D | null = null;
+  /** Skeleton the clips belong to (a mech falls back to the zombie when the mech pack is not loaded). */
+  private readonly skin: 'zombie' | 'raptor' | 'rex' | 'mech' | 'mechBig' | null = null;
+  private spinDrum = 0;
+  private spinOrbit = 0;
+  private spinRing = 0;
   private readonly mats: LitMaterial[] = [];
   private readonly cloth: LitMaterial[] = [];
   private readonly glow: LitMaterial[] = [];
   private readonly seed = Math.random();
-  private readonly gear = new Map<EnemyKind, Object3D[]>();
+  private readonly gear = new Map<GearKey, Object3D[]>();
   private readonly bones = new Map<string, Object3D>();
   private readonly model: Object3D | null = null;
   private rack: WeaponRack | null = null;
 
-  constructor(assets: CharacterAssets, private readonly materials: Materials, readonly body: BodyKind, private readonly castShadow: boolean) {
+  /** `gdr`: Alexanderplatz (walkers wear the Brigadeghul's Blaumann); `clockRig`: the map's maker of Weltzeituhr rigs. */
+  constructor(assets: CharacterAssets, private readonly materials: Materials, readonly body: BodyKind, private readonly castShadow: boolean, private readonly opts: { gdr?: boolean; clockRig?: () => ClockRig } = {}) {
     this.root.add(this.inner);
+    if (body === 'kern') {
+      this.kern = buildKern(materials, castShadow);
+      this.inner.add(this.kern.model);
+      this.collect(this.kern.model);
+      return;
+    }
+    if (body === 'koloss') {
+      this.koloss = buildKoloss(materials, castShadow);
+      this.inner.add(this.koloss.model);
+      this.collect(this.koloss.model);
+      return;
+    }
+    if (body === 'clock') {
+      const rig = opts.clockRig?.() ?? makeClockRig(clockMats(materials));
+      const legs = buildClockLegs(materials, CLOCK.drum, castShadow);
+      rig.body.add(legs.group);
+      this.inner.add(rig.group);
+      this.clock = { rig, legs: legs.legs, legGroup: legs.group };
+      this.collect(rig.group);
+      return;
+    }
     if (body === 'crow') {
       this.crow = buildCrow(materials, castShadow);
       this.inner.add(this.crow.model);
@@ -441,9 +734,14 @@ export class EnemyView {
       this.glow.push(this.rat.eyes);
       return;
     }
-    const src = body === 'zombie' ? assets.zombie : body === 'raptor' ? assets.raptor : assets.rex;
-    // (crow and rat returned above)
-    const clips: Map<string, AnimationClip> = body === 'zombie' ? assets.zombieClips : body === 'raptor' ? assets.raptorClips : assets.rexClips;
+    if (body === 'drone') return;
+    this.pulse = materials.surface({ color: 0x5a1034, emissive: 0xff4fa3, emissiveIntensity: 1.6, roughness: 0.5 });
+    const mech = body === 'mech' || body === 'mechBig' ? assets.mech : undefined;
+    const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
+    this.skin = skin;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big : skin === 'zombie' ? assets.zombie : skin === 'raptor' ? assets.raptor : assets.rex;
+    // (crow, rat and the code-built bodies returned above)
+    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips : skin === 'zombie' ? assets.zombieClips : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
     this.model = model;
     this.inner.add(model);
@@ -458,8 +756,8 @@ export class EnemyView {
           mat = srcMat.clone();
           own.set(srcMat, mat);
           if (srcMat.name === 'eyes') {
-            mat.emissive.set(body === 'zombie' ? 0xd8ff7a : 0xffc04a);
-            mat.emissiveIntensity = body === 'zombie' ? 2.2 : 3;
+            mat.emissive.set(skin === 'zombie' ? 0xd8ff7a : 0xffc04a);
+            mat.emissiveIntensity = skin === 'zombie' ? 2.2 : 3;
             this.glow.push(mat);
           } else {
             (srcMat.name === 'cloth' ? this.cloth : this.mats).push(mat);
@@ -470,12 +768,16 @@ export class EnemyView {
       };
       mesh.material = Array.isArray(mesh.material) ? (mesh.material as LitMaterial[]).map(one) : one(mesh.material as LitMaterial);
       mesh.castShadow = castShadow;
-      if (body === 'zombie') {
+      if (skin === 'zombie') {
         mesh.frustumCulled = true;
         mesh.boundingSphere = new Sphere(new Vector3(0, 0.9, 0), 1.7);
       } else mesh.frustumCulled = false;
     });
-    if (body !== 'zombie') {
+    if (skin === 'mech' || skin === 'mechBig') {
+      this.mechGear(model, skin);
+      return;
+    }
+    if (skin !== 'zombie') {
       // The pack's dinosaurs have no eye geometry: two embers on the skull.
       model.updateMatrixWorld(true);
       const head = model.getObjectByName('Head');
@@ -493,7 +795,7 @@ export class EnemyView {
         }
       }
     }
-    if (body === 'zombie') {
+    if (skin === 'zombie') {
       model.updateMatrixWorld(true);
       for (const names of Object.values(SHAPE)) for (const n of Object.keys(names)) {
         const b = model.getObjectByName(n);
@@ -502,7 +804,66 @@ export class EnemyView {
     }
   }
 
-  assign(e: Enemy): void {
+  /**
+   * Code-built bodies: their materials flash and glow like a skinned body's. The kit and the map's
+   * materials are shared (the Weltzeituhr rig uses the map's own), so each body gets its own copies.
+   */
+  private collect(o: Object3D): void {
+    const own = new Map<LitMaterial, LitMaterial>();
+    o.traverse((q) => {
+      const mesh = q as Mesh;
+      if (!mesh.isMesh) return;
+      const src = mesh.material as LitMaterial;
+      // Unlit parts (the drum's dark underside) neither flash nor glow.
+      if (!src.emissive) return;
+      let m = own.get(src);
+      if (!m) {
+        m = src.clone();
+        own.set(src, m);
+        // Glowing parts (lamps, painted panels with their own glow) keep their light; the rest flash white when hit.
+        if (m.emissiveMap || (m.emissiveIntensity > 1 && m.emissive.getHex() !== 0)) this.glow.push(m);
+        else this.mats.push(m);
+      }
+      mesh.material = m;
+    });
+  }
+
+  /** The clock-face shield on the chest, a dome and chimney (Uhrwerkläufer) or the wind-up key (Großer), the emblem plate, a glowing lens. */
+  private mechGear(model: Object3D, skin: 'mech' | 'mechBig'): void {
+    const k = alexKit(this.materials);
+    model.updateMatrixWorld(true);
+    const p = new Vector3();
+    const at = (name: string, parts: AlexPart[], x: number, y: number, z: number): Object3D | null => {
+      const b = model.getObjectByName(name);
+      if (!b) return null;
+      const g = assembleAlex(k, parts, this.castShadow);
+      b.getWorldPosition(p);
+      model.worldToLocal(p);
+      g.position.set(p.x + x, p.y + y, p.z + z);
+      model.add(g);
+      b.attach(g);
+      return g;
+    };
+    const big = skin === 'mechBig';
+    // The shield hangs from its top edge so it can swing down when the guard opens.
+    const r = big ? 0.85 : 0.42;
+    // Mike punches with the right: his shield sits on the left of the chest.
+    const shield = at('Chest', shieldParts(r).map(([g, m]): AlexPart => [tfAlex(g, 0, -r, 0), m]), big ? 0.45 : 0, big ? 0.55 : 0.32, big ? 0.85 : 0.5);
+    this.shield = shield;
+    if (big) {
+      this.key = at('Chest', keyParts(1.1), 0, 0.2, -0.75);
+      at('Chest', emblemParts(0.45).map(([g, m]): AlexPart => [tfAlex(g, 0, 0, 0, 0, 0, 0), m]), 0.75, 0.45, 0.45);
+      at('Head', [[tfAlex(new SphereGeometry(0.09, 8, 6), 0.16, 0.1, 0.42), 'lens'], [tfAlex(new SphereGeometry(0.09, 8, 6), -0.16, 0.1, 0.42), 'lens']], 0, 0, 0);
+    } else {
+      at('Head', domeParts(0.34), 0, 0.46, 0);
+      at('Chest', emblemParts(0.22).map(([g, m]): AlexPart => [tfAlex(g, 0, 0, 0, 0, Math.PI), m]), 0, 0.05, -0.42);
+      at('Head', [[tfAlex(new SphereGeometry(0.11, 10, 8), 0, 0.15, 0.45), 'lens']], 0, 0, 0);
+    }
+    this.glow.push(k.lens);
+  }
+
+  /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. */
+  assign(e: Enemy, neon = false): void {
     this.id = e.id;
     this.kind = e.kind;
     this.flash = 0;
@@ -518,18 +879,38 @@ export class EnemyView {
       if (m.name === 'skin') m.color.set(tint);
       m.emissive.setScalar(0);
     }
-    for (const m of this.cloth) m.color.set(CLOTH[e.kind] ?? 0xffffff);
-    if (this.body === 'zombie' && this.model) {
+    const key: GearKey = this.opts.gdr && e.kind === 'walker' ? 'brigade' : e.kind;
+    for (const m of this.cloth) m.color.set(key === 'brigade' ? CLOTH_BRIGADE : CLOTH[e.kind] ?? 0xffffff);
+    if (this.body === 'drone') {
+      const big = e.kind === 'wachdrohne';
+      const d = (big ? this.drones.big : this.drones.small) ?? buildDrone(this.materials, this.castShadow, big);
+      if (big) this.drones.big = d; else this.drones.small = d;
+      if (!d.model.parent) this.inner.add(d.model);
+      for (const o of [this.drones.small, this.drones.big]) if (o) o.model.visible = o === d;
+      this.drone = d;
+      this.mats.length = 0;
+      this.mats.push(...d.mats);
+      this.glow.length = 0;
+      this.glow.push(d.eyes);
+      for (const m of this.mats) m.emissive.setScalar(0);
+      this.inner.position.y = (big ? BOSS.wachdrohne.height : 1.8) / (this.root.scale.y || 1);
+    }
+    if (this.skin === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
       for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) this.bones.get(n)?.scale.setScalar(v);
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
-      let gear = this.gear.get(e.kind);
+      let gear = this.gear.get(key);
       if (!gear) {
-        gear = gearFor(e.kind, this.model, this.materials, this.castShadow);
-        this.gear.set(e.kind, gear);
+        gear = gearFor(key, this.model, this.materials, this.castShadow, this.pulse ?? undefined);
+        this.gear.set(key, gear);
       }
       for (const g of gear) g.visible = true;
+      // Speaker heads start at rest size.
+      for (const g of gear) g.scale.setScalar(g.userData.rest ??= g.scale.x);
+      const cyber = neon && !!CYBER[e.kind];
+      if (cyber && !this.cyber) this.cyber = gearFor('cyber', this.model, this.materials, this.castShadow);
+      for (const g of this.cyber ?? []) g.visible = cyber;
       // Officers carry a saber.
       const armed = e.kind === 'feldwebel' || e.kind === 'hauptmann';
       if (armed && !this.rack) {
@@ -538,7 +919,12 @@ export class EnemyView {
         this.model.getObjectByName('hand_r')?.add(this.rack.group);
       }
       if (this.rack) this.rack.group.visible = armed;
-      for (const m of this.glow) m.emissive.set(e.def.boss ? 0xff5a2a : e.kind === 'spitter' ? 0x97ff5a : 0xd8ff7a);
+      for (const m of this.glow) m.emissive.set(EYES[e.kind] ?? (e.def.boss ? 0xff5a2a : e.kind === 'spitter' || e.kind === 'wurzler' ? 0x97ff5a : neon ? 0xff4fa3 : 0xd8ff7a));
+    }
+    if (this.clock) {
+      this.clock.rig.body.position.y = 0;
+      this.clock.legGroup.scale.setScalar(0.01);
+      this.spinDrum = this.spinOrbit = 0;
     }
     this.root.visible = true;
   }
@@ -571,14 +957,20 @@ export class EnemyView {
     const t = e.stateT + (frozen ? 0 : alpha * DT);
     // M11c: hidden guards stay unseen until they wake (doorway, rubble).
     this.root.visible = !(e.sleep && e.pose === 'hidden');
+    const dt2 = frozen ? 0 : dt;
     if (this.body === 'crow') this.poseCrow(e, t);
     else if (this.body === 'rat') this.poseRat(e, t);
-    else if (this.body === 'zombie') this.poseZombie(e, t);
-    else this.poseDino(e, t, DINO[this.body]);
-    if (e.state === 'dead') {
-      // Sink into the ground before the body is removed.
+    else if (this.body === 'drone') this.poseDrone(e, t);
+    else if (this.kern) this.poseKern(e, t);
+    else if (this.koloss) this.poseKoloss(e, t, dt2);
+    else if (this.clock) this.poseClock(e, t, dt2, alpha);
+    else if (this.skin === 'zombie') this.poseZombie(e, t);
+    else if (this.skin === 'mech' || this.skin === 'mechBig') this.poseMech(e, t, MECH[this.skin], dt2);
+    else this.poseDino(e, t, DINO[this.skin as 'raptor' | 'rex']);
+    if (e.state === 'dead' && !this.clock) {
+      // Sink into the ground before the body is removed (the Weltzeituhr settles on its base instead).
       const sink = Math.max(0, t - (SPAWN.corpseTime - 0.8)) / 0.8;
-      this.root.position.y -= sink * (this.body === 'rex' ? 1.6 : this.body === 'rat' ? 0.3 : 0.55);
+      this.root.position.y -= sink * (this.body === 'rex' || this.body === 'koloss' || this.body === 'mechBig' ? 1.6 : this.body === 'rat' || this.body === 'drone' ? 0.3 : 0.55);
     }
     if (!this.anim) return;
     // Distance LOD: far enemies update their skeleton every 2nd or 3rd frame with the summed time.
@@ -637,7 +1029,24 @@ export class EnemyView {
           case 'slam': case 'stomp': case 'bossSlam': case 'flame':
             a.pose('Sword_Heavy_Combo', going ? lerp(2.66, 2.95, g) : lerp(2.3, 2.66, w * w), 0.1);
             break;
-          case 'lunge': case 'charge': case 'pounce':
+          case 'bass':
+            // Boxenkopf: rears back while the speaker swells, then thumps forward.
+            a.loop('Zombie_Idle_Loop', 0.1);
+            pitch = going ? lerp(0.3, 0, g) : -0.25 * w;
+            break;
+          case 'grab':
+            // Caught: arms out, holding on (Zombie_Scratch at the reach).
+            if (sp.hit) { a.pose('Zombie_Scratch', GRAB_HOLD, 0.08); pitch = 0.12; break; }
+            if (going) a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05);
+            else { a.pose('Zombie_Scratch', lerp(0.05, 0.35, w), 0.12); pitch = 0.3 * w; }
+            break;
+          case 'shove':
+            // Coils with the arms spread, then pushes: the arms are out in front when the circle goes off.
+            if (going) a.pose('Shield_Dash', lerp(SHOVE_PUSH, 0.3, g), 0.05);
+            else if (w < 0.7) a.pose('Zombie_Scratch', lerp(0.05, 0.3, w / 0.7), 0.12);
+            else a.pose('Shield_Dash', lerp(0, SHOVE_PUSH, (w - 0.7) / 0.3), 0.04);
+            break;
+          case 'lunge': case 'charge': case 'pounce': case 'leap':
             if (going) a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05);
             else {
               a.pose('Zombie_Scratch', lerp(0.05, 0.35, w), 0.12);
@@ -665,6 +1074,17 @@ export class EnemyView {
     }
     if (e.state !== 'dead') pitch += HUNCH[this.kind] ?? 0;
     lean.x += (pitch - lean.x) * 0.35;
+    // M12c speakers swell while a ring winds up and throb with the bass otherwise.
+    if (this.pulse) {
+      const sp = e.state === 'special' ? e.sp : null;
+      const ring = sp && e.stateT < sp.wind && (sp.kind === 'bass' || sp.kind === 'roar' || sp.kind === 'beat' || sp.kind === 'charge') ? e.stateT / sp.wind : 0;
+      const beat = 0.5 + 0.5 * Math.sin(this.time * 8 + this.seed * 6);
+      this.pulse.emissiveIntensity = e.state === 'dead' ? 0.3 : 1.1 + 0.6 * beat + 3 * ring;
+      if (this.kind === 'bass' || this.kind === 'bassprediger') {
+        const head = this.gear.get(this.kind)?.[0];
+        if (head) head.scale.setScalar((head.userData.rest as number) * (1 + 0.22 * ring + 0.025 * beat));
+      }
+    }
     // The spitter's throat swells while it winds up.
     if (this.kind === 'spitter') {
       const sac = this.gear.get('spitter')?.[0];
@@ -775,6 +1195,249 @@ export class EnemyView {
     r.back.rotation.x = -legs;
     r.tail.rotation.y = Math.sin(this.time * 6 + this.seed * 4) * 0.45;
     r.tail.rotation.x = -0.15 + 0.1 * Math.sin(ph * 0.5);
+  }
+
+  /** Hover and bob, tilt into the flight, rotors from time; dazed drones sink to 0.6 m, the Wachdrohne lands. */
+  private poseDrone(e: Enemy, t: number): void {
+    const d = this.drone;
+    if (!d) return;
+    const m = this.inner;
+    const big = e.kind === 'wachdrohne';
+    const W = BOSS.wachdrohne;
+    const hover = big ? W.height : 1.8;
+    let y = hover + (big ? 0.06 : 0.08) * Math.sin(this.time * (big ? 1.7 : 2.6) + this.seed * 6);
+    let pitch = Math.min(0.3, e.speed * (big ? 0.06 : 0.05));
+    let roll = 0, spin = 1, lamp = 1, ease = big ? 0.08 : 0.25;
+    switch (e.state) {
+      case 'chase':
+        if (e.rest > 0) {
+          // Dazed after a dive: low, wobbling, rotors stuttering.
+          y = 0.6 + 0.04 * Math.sin(this.time * 21);
+          roll = 0.35 * Math.sin(this.time * 7);
+          spin = 0.35;
+        }
+        if (big && e.open > 0) {
+          y = 0.5;
+          lamp = 0;
+          spin = 0.2;
+          pitch = 0;
+        }
+        break;
+      case 'special': {
+        const sp = e.sp;
+        if (!sp) break;
+        const w = Math.min(1, t / sp.wind);
+        const g = Math.min(1, Math.max(0, (t - sp.wind) / sp.go));
+        if (sp.kind === 'dive') {
+          if (t < sp.wind) { y = hover + 0.4 * w; pitch = -0.4; }
+          else { y = lerp(hover + 0.4, 0.7, Math.min(1, g * 2.2)); pitch = 0.7 * (1 - g); }
+          ease = 0.3;
+        } else if (sp.kind === 'land') {
+          // Sinks onto the marked circle, the searchlight goes out.
+          y = lerp(hover, 0.5, t < sp.wind ? w * w : 1);
+          lamp = 1 - w;
+          ease = 0.25;
+        } else if (sp.kind === 'volley') pitch = 0.28 * w;
+        else roll = 0.08 * Math.sin(this.time * 12);
+        break;
+      }
+      case 'stagger':
+        roll = Math.sin(t * 20) * 0.45;
+        break;
+      case 'dead':
+        y = Math.max(big ? 0.25 : 0.12, hover - t * t * (big ? 6 : 9));
+        roll = Math.min(big ? 0.5 : 2.4, t * 6);
+        spin = Math.max(0, 1 - t * 2);
+        ease = 1;
+        break;
+      default:
+        break;
+    }
+    // Heights are world meters; the root carries the body scale.
+    y /= this.root.scale.y || 1;
+    m.position.y += (y - m.position.y) * ease;
+    d.tilt.rotation.x += (pitch - d.tilt.rotation.x) * 0.2;
+    d.tilt.rotation.z += (roll - d.tilt.rotation.z) * 0.25;
+    if (d.light) d.light.emissiveIntensity += (3 * lamp - d.light.emissiveIntensity) * 0.2;
+    const a = this.time * 46 * spin;
+    d.hubs.forEach((h, i) => {
+      rotorM.makeRotationY(a + i * 0.8 * (i % 2 ? -1 : 1));
+      rotorM.scale(rotorS.setScalar(d.size));
+      rotorM.setPosition(h);
+      d.rotors.setMatrixAt(i, rotorM);
+    });
+    d.rotors.instanceMatrix.needsUpdate = true;
+  }
+
+  /** Mechs: walk and run clips by speed, the strike clip posed from sim time, the shield swings aside while the guard is open. */
+  private poseMech(e: Enemy, t: number, k: (typeof MECH)['mech' | 'mechBig'], dt: number): void {
+    const a = this.anim!;
+    const def = e.def;
+    const lean = this.inner.rotation;
+    let pitch = 0;
+    const hitT = a.duration(k.strike) * k.hit, swipe = a.duration(k.strike) * k.swipe;
+    switch (e.state) {
+      case 'chase':
+        if (e.speed > k.run * 0.6) a.loop('Run', 0.15, Math.min(2, e.speed / k.run));
+        else if (e.speed > 0.15) a.loop('Walk', 0.2, Math.min(2.4, Math.max(0.6, e.speed / k.walk)));
+        else a.loop('Idle', 0.25);
+        if (e.open > 0) pitch = 0.18;
+        break;
+      case 'windup':
+        a.pose(k.strike, lerp(0, hitT, Math.min(1, t / def.windup)), 0.12);
+        break;
+      case 'strike':
+        a.pose(k.strike, hitT + swipe * Math.min(1, t / def.active), 0.03);
+        break;
+      case 'recover':
+        a.pose(k.strike, lerp(hitT + swipe, a.duration(k.strike), Math.min(1, t / def.recovery)), 0.05);
+        break;
+      case 'special': {
+        const sp = e.sp;
+        if (!sp) break;
+        const w = Math.min(1, t / sp.wind), going = t >= sp.wind;
+        if (sp.kind === 'charge') {
+          if (going) a.loop('Run', 0.06, 2.2);
+          else { a.loop('Idle', 0.15); pitch = 0.25 * w; }
+        } else if (sp.kind === 'key') a.loop('Yes', 0.15, 1.4);
+        else a.loop('Idle', 0.15);
+        break;
+      }
+      case 'stagger':
+        a.pose('HitRecieve_1', (t / Math.max(0.01, e.staggerDur)) * a.duration('HitRecieve_1'), 0.04);
+        break;
+      case 'dead':
+        a.pose('Death', t * 1.2, 0.06);
+        break;
+    }
+    lean.x += (pitch - lean.x) * 0.3;
+    // Guard open: the dial swings down and out of the way; a little sway otherwise.
+    if (this.shield) {
+      const open = e.state !== 'dead' && (e.guardOpen ?? 0) > 0;
+      this.shield.rotation.x += ((open ? 1.25 : 0.05 * Math.sin(this.time * 2)) - this.shield.rotation.x) * 0.2;
+    }
+    if (this.key) this.key.rotation.z += dt * (e.state === 'special' && e.sp?.kind === 'key' ? 9 : 1.2);
+  }
+
+  /** Kernspeier: hops when it moves; plants (squashes, head back, mouth open), then snaps the head forward. */
+  private poseKern(e: Enemy, t: number): void {
+    const c = this.kern!;
+    let hop = 0, squash = 1, head = 0.1, mouth = 1, roll = 0, lean = 0;
+    switch (e.state) {
+      case 'chase':
+        if (e.speed > 0.2) { hop = Math.abs(Math.sin(this.time * 9 + this.seed * 5)) * 0.14; lean = 0.15; }
+        head = 0.1 + 0.08 * Math.sin(this.time * 2.3 + this.seed * 4);
+        if (e.open > 0) head = 0.65;
+        break;
+      case 'windup':
+        head = -0.3 * Math.min(1, t / e.def.windup);
+        break;
+      case 'strike':
+        head = 0.5;
+        break;
+      case 'special': {
+        const sp = e.sp;
+        if (!sp) break;
+        const w = Math.min(1, t / sp.wind);
+        if (t < sp.wind) { squash = 1 - 0.12 * w; head = -0.6 * w; mouth = 1 + 0.6 * w; }
+        else { head = 0.45; mouth = 1.2; }
+        break;
+      }
+      case 'stagger':
+        roll = Math.sin(t * 28) * 0.25;
+        break;
+      case 'dead':
+        roll = Math.min(Math.PI / 2, t * 4);
+        head = 0.8;
+        break;
+      default:
+        break;
+    }
+    c.model.position.y += (hop - c.model.position.y) * 0.5;
+    c.pot.scale.set(1 + (1 - squash) * 0.6, squash, 1 + (1 - squash) * 0.6);
+    c.stem.rotation.x += (lean - c.stem.rotation.x) * 0.3;
+    c.head.rotation.x += (head - c.head.rotation.x) * 0.35;
+    c.mouth.scale.setScalar(mouth);
+    this.inner.rotation.z += (roll - this.inner.rotation.z) * 0.3;
+  }
+
+  /** Koloss: the slab walks on two clockwork legs; the hammer arm rises and slams, the ring spins while it sprays. */
+  private poseKoloss(e: Enemy, t: number, dt: number): void {
+    const K = this.koloss!;
+    const moving = e.state === 'chase' && e.speed > 0.15;
+    const ph = this.time * (1.6 + e.speed * 1.6);
+    K.legs.forEach((l, i) => {
+      const q = ph + i * Math.PI;
+      l.hip.rotation.x += ((moving ? -Math.sin(q) * 0.42 : 0) - l.hip.rotation.x) * 0.25;
+      l.knee.rotation.x += ((moving ? Math.max(0, Math.sin(q - 1)) * 0.8 : 0) - l.knee.rotation.x) * 0.25;
+    });
+    K.slab.position.y = 1.9 + (moving ? Math.abs(Math.cos(ph)) * 0.08 : 0.02 * Math.sin(this.time * 1.5));
+    let hammer = 0.1 * Math.sin(this.time * 1.2), compass = -0.1 + 0.08 * Math.sin(this.time * 0.9 + 1), tilt = 0;
+    if (e.state === 'special' && e.sp) {
+      const sp = e.sp, w = Math.min(1, t / sp.wind), g = Math.min(1, Math.max(0, (t - sp.wind) / sp.go));
+      if (sp.kind === 'bossSlam') hammer = t < sp.wind ? -2.6 * w * w : lerp(-2.6, 0.35, Math.min(1, g * 3));
+      else if (sp.kind === 'slabs') compass = -2.4 * (t < sp.wind ? w : 1 - g);
+    } else if (e.state === 'dead') tilt = Math.min(0.5, t * 0.6);
+    K.hammer.rotation.x += (hammer - K.hammer.rotation.x) * 0.35;
+    K.compass.rotation.x += (compass - K.compass.rotation.x) * 0.25;
+    this.spinRing += dt * ((e.spin ?? 0) > 0 ? 9 : 0.5);
+    K.ring.rotation.z = this.spinRing;
+    this.inner.rotation.x += (tilt - this.inner.rotation.x) * 0.2;
+  }
+
+  /**
+   * Weltzeituhr: while it wakes the drum and orbit spin up, the body lifts off its base and the four legs
+   * unfold to the ground; it then walks on them. Defeated, it walks back onto its base and settles,
+   * exactly the landmark's rest pose (the landmark takes over when the body is removed).
+   */
+  private poseClock(e: Enemy, t: number, dt: number, alpha: number): void {
+    const C = this.clock!, L = CLOCK_LEG;
+    const wake = e.def.wake ?? 0;
+    let lift = L.lift, legs = 1, drum = 0.25, orbit = 0.6;
+    if ((e.wake ?? 0) > 0) {
+      const k = 1 - (e.wake ?? 0) / Math.max(0.01, wake);
+      lift = smooth(0.25, 0.85, k) * L.lift;
+      legs = Math.max(0.01, smooth(0.1, 0.6, k));
+      drum = 4 * k;
+      orbit = 6 * k;
+    } else if (e.state === 'dead') {
+      const k = smooth(0, 1.8, t);
+      lift = (1 - k) * L.lift;
+      legs = Math.max(0.01, 1 - smooth(0.6, 1.8, t));
+      drum = 2 * (1 - k);
+      orbit = 3 * (1 - k);
+      // Back onto its base (the landmark's place).
+      if (e.home) {
+        const x = lerp(lerp(e.px, e.x, alpha), e.home.x, k), z = lerp(lerp(e.pz, e.z, alpha), e.home.z, k);
+        this.root.position.set(x, groundY(x, z), z);
+        this.root.rotation.y = lerpAngle(this.root.rotation.y, 0, k);
+      }
+    } else if (e.state === 'special' && e.sp) {
+      drum = e.sp.kind === 'sectors' ? 3 : e.sp.kind === 'hand' ? 1.5 : 0.8;
+    }
+    if ((e.spin ?? 0) > 0) orbit = 7;
+    this.spinDrum += dt * drum;
+    this.spinOrbit += dt * orbit;
+    // Settled: drum and orbit turn back to the landmark's angles.
+    if (e.state === 'dead') {
+      const back = smooth(1, 2.2, t);
+      C.rig.drum.rotation.y = this.spinDrum * (1 - back);
+      C.rig.orbit.rotation.y = this.spinOrbit * (1 - back);
+    } else {
+      C.rig.drum.rotation.y = this.spinDrum;
+      C.rig.orbit.rotation.y = this.spinOrbit;
+    }
+    const moving = e.state === 'chase' && e.speed > 0.15 && (e.wake ?? 0) <= 0;
+    const ph = this.time * (1.8 + e.speed * 2);
+    C.rig.body.position.y = lift + (moving ? 0.06 * Math.sin(ph * 2) : 0);
+    C.legGroup.scale.setScalar(legs);
+    C.legs.forEach((l, i) => {
+      const q = ph + (i % 2) * Math.PI;
+      const up = moving ? Math.max(0, Math.sin(q)) * 0.6 : 0;
+      l.hip.rotation.y = l.angle + (moving ? Math.cos(q) * 0.18 : 0);
+      // The foot target in the leg's plane, on the ground below the lifted body (the group scales with `legs`).
+      reachLeg(l, (-(CLOCK.drum + C.rig.body.position.y) + up) / legs, (L.foot - L.hip) / Math.max(0.3, legs));
+    });
   }
 
   private poseCrow(e: Enemy, t: number): void {

@@ -116,6 +116,10 @@ export const PLAYER = {
   /** Extra kill hitstop and shake. */
   killHitstop: 0.03,
   hitByEnemyHitstop: 0.06,
+  /** M12c shove: damping of the knock velocity per second; a push of d meters starts at d × this m/s. */
+  pushDamp: 5,
+  /** M12c: no step moves the hero farther than this (below the body radius, so a shove never tunnels a thin wall). */
+  maxStep: 0.36,
 } as const;
 
 /** Input buffer length in seconds (#35: 150 to 200 ms). */

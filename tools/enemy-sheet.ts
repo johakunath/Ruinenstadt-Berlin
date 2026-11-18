@@ -4,7 +4,8 @@
 //   /tools/enemy-sheet.html?kind=rex&state=windup&n=6          strip through the wind-up
 //   /tools/enemy-sheet.html?kind=raptor&special=pounce&n=8     strip through a special
 //   &size=0.35 zooms the camera (small bodies such as the rat)
-//   &elite=flink  &view=game|side|front  &open=1
+//   &elite=flink  &view=game|side|front  &open=1  &neon=1 (Mitte cables)  &wind=0.8&go=0.5 (special timing)
+//   &wake=strip (the Weltzeituhr waking up across the strip), &wake=0 (awake)
 import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
 import { loadCharacters } from '../src/render/characters';
@@ -27,7 +28,7 @@ const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(W * n, H, false);
 canvas.style.width = `${W * n}px`;
 const materials = new Materials(LOOK, PROFILES.qualitaet);
-const assets = await loadCharacters(materials);
+const assets = await loadCharacters(materials, true);
 const scene = new Scene();
 scene.background = new Color(0x26343a);
 scene.add(new HemisphereLight(0xdfeeff, 0x3a3020, 2.2));
@@ -49,7 +50,7 @@ for (let i = 0; i < n; i++) {
   const f = n > 1 ? i / (n - 1) : 0;
   if (special) {
     e.state = 'special';
-    e.sp = { kind: special, wind: 0.8, go: 0.5, open: 0, dx: 0, dz: 1, speed: 0, fired: false, hit: false };
+    e.sp = { kind: special, wind: Number(q.get('wind') ?? 0.8), go: Number(q.get('go') ?? 0.5), open: 0, dx: 0, dz: 1, speed: 0, fired: false, hit: q.get('hit') === '1' };
     e.stateT = f * 1.3;
   } else if (kind) {
     e.state = state;
@@ -58,12 +59,14 @@ for (let i = 0; i < n; i++) {
     e.speed = state === 'chase' ? Number(q.get('speed') ?? 0) : 0;
   }
   if (q.get('open')) e.open = 1;
+  if (q.get('wake') === 'strip') e.wake = (def.wake ?? 0) * (1 - f);
+  else if (q.get('wake') !== null) e.wake = Number(q.get('wake'));
   const v = new EnemyView(assets, materials, def.body, false);
-  v.assign(e);
+  v.assign(e, q.get('neon') === '1');
   scene.add(v.root);
   // Let fades and springs settle on the pose.
   for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
-  const size = Number(q.get('size') ?? 0) || Math.max(1, def.body === 'rex' ? 3.2 : def.body === 'raptor' ? 1.3 : def.scale);
+  const size = Number(q.get('size') ?? 0) || Math.max(1, def.body === 'rex' ? 3.2 : def.body === 'raptor' ? 1.3 : def.kind === 'wachdrohne' ? 1.6 : def.scale);
   if (view === 'front') cam.position.set(0, 1.3 * size, 6.2 * size); else if (view === 'game') cam.position.set(0, 7 * size, 6.6 * size); else cam.position.set(-4.6 * size, 2.2 * size, 4.2 * size);
   cam.lookAt(0, 0.95 * size * (view === 'game' ? 0.5 : 1), 0.2);
   renderer.setViewport(i * W, 0, W, H);

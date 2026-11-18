@@ -23,6 +23,7 @@ import { buildProp, GROUND_H, FLOOR_H, PARAPET, Run } from './world';
 import type { Prop } from '../data/courtyard';
 import { buildNorth } from './mitte-north';
 import { buildSouth } from './mitte-south';
+import { dressZones } from './mitte-zones';
 import { buildKultur } from './mitte-kultur';
 
 export type RGB = readonly [number, number, number];
@@ -324,15 +325,15 @@ function neonPole(b: ChunkBuilder, N: MitteMats, M: MapMats, x: number, z: numbe
 function dressSpecials(m: MapDef, lots: readonly Lot[], props: readonly Prop[], N: MitteMats, M: MapMats, wet: Wet, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number): void {
   const glow = 2.2 * wet.glow, neon = [...wet.neon.warm, ...wet.neon.cold];
   for (const l of lots) {
-    if (l.special !== 'nachtmarkt' && l.special !== 'containerdorf') continue;
+    if (l.special !== 'nachtmarkt' && l.special !== 'containerdorf' && l.special !== 'markt') continue;
     const rng = new Rng(l.seed + 909), c = Math.cos(l.rot), s = Math.sin(l.rot), W = l.w / 2, D = l.d / 2;
     const P = (a: number, bb: number): [number, number] => [l.x + c * a + s * bb, l.z - s * a + c * bb];
-    for (const a of l.special === 'nachtmarkt' ? [-W + 0.8, W - 0.8] : [-W + 0.8, W - 0.8]) {
+    for (const a of [-W + 0.8, W - 0.8]) {
       const [x, z] = P(a, D - 0.6);
       neonPole(chunkOf(x, z), N, M, x, z, ground(x, z), rng.pick(neon), glow, rng);
     }
     const b = chunkOf(l.x, l.z), y0 = ground(l.x, l.z);
-    if (l.special === 'nachtmarkt') {
+    if (l.special === 'nachtmarkt' || l.special === 'markt') {
       // Cable over the lane (a, 0) from one side to the other at about 4.6 m, bulbs every 1.6 m.
       b.on(y0, () => {
         const n = Math.max(6, Math.round(l.w / 1.6));
@@ -367,6 +368,7 @@ function dressSpecials(m: MapDef, lots: readonly Lot[], props: readonly Prop[], 
 export function buildMitteWorld(m: MapDef, lots: readonly Lot[], props: readonly Prop[], N: MitteMats, M: MapMats, wet: Wet | undefined, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, lotCut: (l: Lot) => { id: number; y: number } | undefined = () => undefined): void {
   if (!wet) return;
   dressSpecials(m, lots, props, N, M, wet, chunkOf, ground);
+  dressZones(m, lots, props, N, M, 2.2 * wet.glow, chunkOf, ground);
   const pick = (rng: Rng, mood: 'warm' | 'mixed' | 'cold'): number => rng.pick(mood === 'warm' ? wet.neon.warm : mood === 'cold' ? wet.neon.cold : rng.next() < 0.5 ? wet.neon.warm : wet.neon.cold);
   const glow = 2.2 * wet.glow;
   for (const l of lots) {

@@ -46,6 +46,8 @@ export interface EncounterDef {
    * every `every` seconds (an elite at half charge). Full: a `power` event, then the other waves.
    */
   hold?: { r: number; need: number; every: number; mouth: Point };
+  /** M15: the boss stands here instead of coming from the rim (the Weltzeituhr on its base). */
+  bossAt?: Point;
 }
 
 /** M20 tunnel grating across the track bed: closed (its collider in the level) until encounter `after` is won. */
@@ -156,6 +158,8 @@ export class Level {
   /** L2: district index for loot (2D `D.lvl`: item level +3 per district) and item name flavor. Köpenick 0. */
   district = 0;
   flavor?: 'neon' | 'gdr';
+  /** M12c rain (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
+  wet?: boolean;
   /** M20 walkable camp: no enemies, no director, no run content. */
   camp = false;
   /** M16b/M19 side passages: fixed hidden blessing spots (replace the random ones) and sleeping guards. */

@@ -1,6 +1,7 @@
 // Player state machine: move, 3-hit chain, dodge with i-frames, dash strike.
 import { finisherOf, weaponAttack, PLAYER, WEAPON, type AttackId } from '../data/combat';
 import { POWER } from '../data/powers';
+import { BOSS } from '../data/enemies';
 import { CONSUMABLE, onDodge, shock, shoot, updateCast } from './abilities';
 import { hasL, knock, pk, STATUS } from './combat';
 import type { Level } from './level';
@@ -60,7 +61,7 @@ export function createPlayer(level: Level, at = level.start): Player {
     hp: PLAYER.maxHp, state: 'move', stateT: 0,
     attack: null, cast: null, finisher: false, wucht: false, attackSpeed: 1, critical: false, swing: 0, hits: [], propHits: [], chain: null, chainT: 0,
     dodgeX: 0, dodgeZ: 0, dodgeCd: 0, invuln: 0, strikeT: 0, hurtT: 99,
-    sweeping: false, sweepLo: 0, sweepHi: 0,
+    sweeping: false, sweepLo: 0, sweepHi: 0, kx: 0, kz: 0, root: 0, rootBy: 0, rootI: 0, slowT: 0,
   };
 }
 
@@ -194,6 +195,9 @@ function startDodge(sim: Sim, inp: SimInput): void {
   p.facing = angleOf(dx, dz);
   p.invuln = Math.max(p.invuln, PLAYER.dodge.iframes);
   p.cast = null;
+  // A roll breaks free of Wurzler roots (2D `dash`: P.root = 0) and of the Türsteher grab (M12c).
+  p.root = 0;
+  p.rootBy = 0;
   onDodge(sim);
   sim.consumed.dodge = true;
   sim.events.push({ type: 'dodge' });
@@ -214,8 +218,13 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
   p.invuln = Math.max(0, p.invuln - DT);
   p.strikeT = Math.max(0, p.strikeT - DT);
   p.chainT = Math.max(0, p.chainT - DT);
+  p.root = Math.max(0, p.root - DT);
+  p.rootI = Math.max(0, p.rootI - DT);
+  p.slowT = Math.max(0, p.slowT - DT);
 
   if (p.state === 'dead') {
+    p.root = 0;
+    p.rootBy = 0;
     p.vx *= 0.8;
     p.vz *= 0.8;
     integrate(sim);
@@ -274,7 +283,9 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     const scale = len > 1 ? 1 / len : 1;
     // Brief slow after taking a hit instead of a stun: attacks and dodges are never interrupted.
     // M20: wading through the flooded tunnel stretch (2D `P.wet`).
-    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? POWER.gully.slow : 1) * sim.level.speedAt(p.x, p.z);
+    // M15: rooted (no walking) or in the Weltzeituhr's Stillstand (half speed).
+    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? POWER.gully.slow : 1) * sim.level.speedAt(p.x, p.z)
+      * (p.root > 0 ? 0 : 1) * (p.slowT > 0 ? BOSS.weltzeituhr.stillSlow : 1);
     const tx = inp.moveX * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     const tz = inp.moveZ * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     // Linear ramp: full speed (or a full stop) within `accelTime`.
@@ -289,7 +300,7 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
   } else if (p.state === 'attack' && p.attack) {
     const a = p.attack;
     const lungeTime = a.windup + a.active;
-    const v = p.stateT <= lungeTime ? a.lunge / lungeTime : 0;
+    const v = p.stateT <= lungeTime && p.root <= 0 ? a.lunge / lungeTime : 0;
     p.vx = Math.sin(p.facing) * v;
     p.vz = Math.cos(p.facing) * v;
   } else if (p.state === 'dodge') {
@@ -302,8 +313,21 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
 
 function integrate(sim: Sim): void {
   const p = sim.player;
-  p.x += p.vx * DT;
-  p.z += p.vz * DT;
+  let sx = p.vx * DT, sz = p.vz * DT;
+  if (p.kx !== 0 || p.kz !== 0) {
+    // M12c shove on top of the own motion, capped per step so walls still hold.
+    const cap = Math.max(PLAYER.maxStep, Math.hypot(sx, sz));
+    sx += p.kx * DT;
+    sz += p.kz * DT;
+    const l = Math.hypot(sx, sz);
+    if (l > cap) { sx *= cap / l; sz *= cap / l; }
+    const damp = Math.exp(-PLAYER.pushDamp * DT);
+    p.kx *= damp;
+    p.kz *= damp;
+    if (Math.abs(p.kx) + Math.abs(p.kz) < 0.05) p.kx = p.kz = 0;
+  }
+  p.x += sx;
+  p.z += sz;
   sim.level.resolve(p, PLAYER.radius);
   const y = sim.level.playerBox;
   p.x = clamp(p.x, y.minX + PLAYER.radius, y.maxX - PLAYER.radius);

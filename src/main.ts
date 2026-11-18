@@ -4,7 +4,7 @@ import { weaponModel } from './render/weapons';
 import { InventoryUi } from './ui/inventory';
 import { Menu } from './ui/menu';
 import { CampUi } from './ui/camp';
-import { IntroUi } from './ui/intro';
+import { IntroUi, SIGHT_TIPS } from './ui/intro';
 import { endExpedition } from './sim/camp';
 import { startEndless } from './sim/director';
 import { INGREDIENTS } from './data/crafting';
@@ -612,7 +612,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : '');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -781,6 +781,14 @@ function drainEvents(): void {
         }
         break;
       }
+      case 'spawn': {
+        // M12c: a one-line tip the first time a kind shows up (2D `tip`).
+        const kind = sim.enemies.find((e) => e.id === ev.id)?.kind;
+        const tip = kind && SIGHT_TIPS[kind];
+        const tips = (sim.inventory.tips ??= {});
+        if (tip && kind && !tips[`sight:${kind}`]) { tips[`sight:${kind}`] = 1; lootUi.toast(`<span style="color:#7dd3ff">Tipp</span> · ${tip}`, 5); }
+        break;
+      }
       case 'kodex':
         lootUi.toast(`Neu im Kodex · <span style="color:#ef9f27">${ev.name}</span>`);
         break;
@@ -848,6 +856,10 @@ function frame(now: number): void {
     enemies: sim.enemies.filter(e => e.state !== 'dead').length,
     boss: sim.enemies.some(e => e.state !== 'dead' && !!e.def.boss), cyber: false,
   }, sim.player.state === 'dead' ? 1 : sim.player.hp / sim.stats.maxHp);
+  // M12c: the drones' rotor whine follows the nearest one.
+  let droneD = Infinity;
+  if (phase === 'play' && !menu.isOpen) for (const e of sim.enemies) if (e.def.body === 'drone' && e.state !== 'dead') droneD = Math.min(droneD, Math.hypot(e.x - sim.player.x, e.z - sim.player.z));
+  audio.rotors(droneD);
   requestAnimationFrame(frame);
   if (now < nextAt - 1) return;
   nextAt = Math.max(nextAt + FRAME_MS, now - FRAME_MS);
@@ -1060,6 +1072,7 @@ const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
+  mechs: opts.spawn.some((k) => /^(uhrwerk|volkskoloss|weltzeituhr)/.test(k)),
 })
   .then((r) => {
     renderer = r;

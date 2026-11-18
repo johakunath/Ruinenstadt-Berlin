@@ -9,6 +9,7 @@ import { PX } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { killDrops } from './loot';
 import { kodexKill } from './inventory';
+import { angleDiff, angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
 
 export const pk = (s: Sim, k: PerkId): number => s.statContext.perks[k] ?? 0;
@@ -25,7 +26,12 @@ export const STATUS = {
   streakTime: 2.6, jagdTime: 3, jagdMax: 5, jagdStep: 0.06, eliteHp: 2.6,
   /** Zweiter Atem: life restored and seconds of invulnerability. */
   secondHp: 0.3, secondInvuln: 1.5, stellung: 0.75, thorns: 0.6, mauerBurn: 0.8, mauerTime: 3,
+  /** M12c rain (2D `D.wet`): an element burn lasts 1.4 s, a shock chain reaches 190 px and jumps once more. */
+  wetBurnTime: 1.4, wetChainRange: 190 * PX, wetJumps: 1,
 } as const;
+
+/** Burn time of an element proc: shorter in the rain. */
+export const burnTime = (s: Sim): number => (s.wet ? STATUS.wetBurnTime : STATUS.burnTime);
 
 export interface StrikeOpts {
   crit?: boolean;
@@ -47,7 +53,7 @@ const tough = (e: Enemy): boolean => !!e.def.boss || !!e.elite;
 export const resist = (e: Enemy, el: ElementId): number => (e.def.res === 'none' ? 1 : ENEMY_RESISTANCES[e.def.res][el]);
 
 export function stun(e: Enemy, seconds: number): void {
-  if (e.state === 'dead' || seconds <= 0) return;
+  if (e.state === 'dead' || seconds <= 0 || (e.wake ?? 0) > 0) return;
   // A boss finishes what it marked; a rush in flight cannot be stopped.
   if (e.state === 'special' && e.sp && (e.def.boss || (e.sp.speed > 0 && e.stateT >= e.sp.wind))) return;
   e.sp = null;
@@ -59,7 +65,8 @@ export function stun(e: Enemy, seconds: number): void {
 }
 
 export function ignite(s: Sim, e: Enemy, dps: number, time: number, stack = false): void {
-  if (e.state === 'dead') return;
+  // M15: nothing catches on the Weltzeituhr while it wakes up (Codex review).
+  if (e.state === 'dead' || (e.wake ?? 0) > 0) return;
   dps *= resist(e, 'fire');
   if (dps <= 0) return;
   const cur = e.burn > 0 ? e.bdps : 0;
@@ -68,10 +75,11 @@ export function ignite(s: Sim, e: Enemy, dps: number, time: number, stack = fals
   e.burn = Math.max(e.burn, time);
 }
 
-/** Lightning from `src` to its nearest neighbors (2D `chain`). */
+/** Lightning from `src` to its nearest neighbors (2D `chain`); in the rain it reaches further and jumps once more. */
 export function chain(s: Sim, src: Enemy, damage: number, jumps: number): void {
   const d = (t: Enemy): number => Math.hypot(t.x - src.x, t.z - src.z);
-  const targets = s.enemies.filter((t) => t !== src && t.state !== 'dead' && d(t) < STATUS.chainRange).sort((a, b) => d(a) - d(b)).slice(0, jumps);
+  const reach = s.wet ? STATUS.wetChainRange : STATUS.chainRange;
+  const targets = s.enemies.filter((t) => t !== src && t.state !== 'dead' && d(t) < reach).sort((a, b) => d(a) - d(b)).slice(0, jumps + (s.wet ? STATUS.wetJumps : 0));
   let x = src.x;
   let z = src.z;
   for (const t of targets) {
@@ -82,9 +90,34 @@ export function chain(s: Sim, src: Enemy, damage: number, jumps: number): void {
   }
 }
 
+/**
+ * M15 shield (2D `SHD` in `hit`): the factor a hit from the hero's side takes. A stun or a shock hit
+ * inside the front arc opens the guard instead (full damage), so do secondary hits (chains, rings):
+ * 2D lets them pass. The Großer Uhrwerkläufer closes its front completely while it winds its key.
+ */
+export function shieldFactor(s: Sim, e: Enemy, o: StrikeOpts, stuns = (o.stun ?? 0) > 0): number {
+  const sh = e.def.shield;
+  if (!sh || (e.guardOpen ?? 0) > 0) return 1;
+  const p = s.player;
+  if (Math.abs(angleDiff(e.facing, angleOf(p.x - e.x, p.z - e.z))) >= sh.arc) return 1;
+  if (stuns || o.element === 'shock') {
+    e.guardOpen = sh.open;
+    s.events.push({ type: 'note', text: 'Deckung offen', color: '#f2d14b', x: e.x, z: e.z });
+    return 1;
+  }
+  if (o.noproc) return 1;
+  if ((e.noteT ?? 0) <= 0) {
+    e.noteT = THREAT.shield.note;
+    s.events.push({ type: 'note', text: 'geblockt', color: '#a8957d', x: e.x, z: e.z });
+  }
+  return e.state === 'special' && e.sp?.kind === 'key' ? 0 : sh.front;
+}
+
 /** One hit on an enemy. Returns the damage dealt. */
 export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): number {
   if (e.state === 'dead') return 0;
+  // M15: the Weltzeituhr is untouchable while it wakes up.
+  if ((e.wake ?? 0) > 0) return 0;
   const p = s.player;
   const a = s.abilities;
   const dist = Math.hypot(e.x - p.x, e.z - p.z);
@@ -95,12 +128,19 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   }
   if (pk(s, 'kimme')) damage *= 1 + Math.min(0.32, (0.04 * dist) / STATUS.kimmeStep);
   if (a.banner && Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) damage *= 1.5;
-  if (tough(e)) damage *= (1 + s.stats.eliteBonus) * (1 + 0.25 * pk(s, 'breaker')) * (hasL(s, 'auge') ? 1.25 : 1);
+  // 2D Brecher also counts against shield bearers.
+  if (tough(e) || e.def.shield) damage *= (tough(e) ? (1 + s.stats.eliteBonus) * (hasL(s, 'auge') ? 1.25 : 1) : 1) * (1 + 0.25 * pk(s, 'breaker'));
   if (pk(s, 'rush') && a.streak.n >= 10) damage *= 1 + 0.02 * Math.floor(a.streak.n / 10);
   if (e.acid > 0) damage *= 1 + STATUS.acidBonus * s.stats.elementPower;
   // M12: open bodies take more, armored elites half until they open; elemental hits meet the type's resistance.
   if (e.open > 0) damage *= THREAT.openBonus;
   else if (e.elite === 'gepanzert') damage *= THREAT.armored;
+  // Every stun this hit brings opens a shield in front: the weapon's (hammer, Gegengewicht), the
+  // crit-stun blessing and every fourth Kiezbox hit (those two stun further down; Codex review).
+  const stuns = (o.stun ?? 0) > 0 || (crit && pk(s, 'stun') > 0) || (!o.noproc && hasL(s, 'kiezbox') && (a.legHits + 1) % 4 === 0);
+  const guard = shieldFactor(s, e, o, stuns);
+  if (guard <= 0) return 0;
+  damage *= guard;
   if (o.element) {
     const w = resist(e, o.element);
     if (w <= 0) {
@@ -145,7 +185,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (!o.noproc) {
     for (const el of s.stats.elements) {
       if (!(crit && pk(s, 'd_kurz')) && s.rng.next() > s.stats.elementChance) continue;
-      if (el === 'fire') ignite(s, e, damage * STATUS.burnShare * s.stats.elementPower, STATUS.burnTime + pk(s, 'schwel'), pk(s, 'schwel') > 0);
+      if (el === 'fire') ignite(s, e, damage * STATUS.burnShare * s.stats.elementPower, burnTime(s) + pk(s, 'schwel'), pk(s, 'schwel') > 0);
       else if (el === 'acid') { if (resist(e, 'acid') > 0) e.acid = STATUS.acidTime; }
       else chain(s, e, damage * STATUS.chainShare * s.stats.elementPower, 2 + 2 * pk(s, 'chain'));
     }
@@ -175,6 +215,12 @@ export function killEnemy(s: Sim, e: Enemy): void {
   e.hp = 0;
   e.sp = null;
   e.open = 0;
+  // M12c: a grabbing Türsteher lets go when he dies.
+  if (p.rootBy === e.id) { p.root = 0; p.rootBy = 0; }
+  e.spin = 0;
+  e.wake = 0;
+  // M15: the Weltzeituhr stands on its base again; its colliders come back.
+  if (e.stand) for (const c of e.stand.splice(0)) s.level.add(c);
   if (e.elite === 'spaltend') splitElite(s, e);
   s.kills++;
   if (kodexKill(s, e.def.kind)) s.events.push({ type: 'kodex', name: e.def.name });
@@ -210,7 +256,7 @@ export function killEnemy(s: Sim, e: Enemy): void {
 export function updateStatuses(s: Sim): void {
   const p = s.player;
   for (const e of s.enemies) {
-    if (e.state === 'dead') continue;
+    if (e.state === 'dead' || (e.wake ?? 0) > 0) continue;
     if (e.acid > 0) e.acid = Math.max(0, e.acid - DT);
     if (e.slow && e.slow > 0) e.slow = Math.max(0, e.slow - DT);
     if (e.burn <= 0) continue;
@@ -283,6 +329,8 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
       p.stateT = 0;
       p.attack = null;
       p.cast = null;
+      p.root = 0;
+      p.rootBy = 0;
       p.sweeping = false;
       p.vx = dx * 3;
       p.vz = dz * 3;

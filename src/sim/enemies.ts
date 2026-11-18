@@ -12,8 +12,16 @@ const KNOCK_DAMP = 9;
 const SEPARATION_PAD = 0.25;
 const dir = { x: 0, z: 0 };
 
+/** M12c: alive bodies of `kind`, and whether one more would break its `cap` (Boxenkopf: two). */
+export function aliveOf(sim: Sim, kind: EnemyKind): number {
+  let n = 0;
+  for (const e of sim.enemies) if (e.kind === kind && e.state !== 'dead') n++;
+  return n;
+}
+export const capped = (sim: Sim, kind: EnemyKind): boolean => ENEMIES[kind].cap !== undefined && aliveOf(sim, kind) >= ENEMIES[kind].cap!;
+
 export function pickKind(sim: Sim, mix?: Partial<Record<EnemyKind, number>>): EnemyKind {
-  const kinds = Object.values(ENEMIES).filter((k) => (mix ? (mix[k.kind] ?? 0) : k.weight) > 0);
+  const kinds = Object.values(ENEMIES).filter((k) => (mix ? (mix[k.kind] ?? 0) : k.weight) > 0 && !capped(sim, k.kind));
   let total = 0;
   const w = (k: (typeof kinds)[number]): number => (mix ? (mix[k.kind] ?? 0) : k.weight);
   for (const k of kinds) total += w(k);
@@ -36,6 +44,7 @@ export function spawnEnemy(sim: Sim, x: number, z: number, kind: EnemyKind = pic
   };
   e.side = jitter(e.id, 3) < 0.5 ? 1 : -1;
   e.orb = jitter(e.id, 4) * Math.PI * 2;
+  if (def.wake) e.wake = def.wake;
   initCooldowns(e);
   sim.enemies.push(e);
   sim.events.push({ type: 'spawn', id: e.id });
@@ -66,6 +75,8 @@ export function spawnPack(sim: Sim, x: number, z: number, kind: EnemyKind, hpMul
 /** Turns a body into an elite (2D: ×2.6 life, bigger, Flink is faster). Crows and rats stay plain (2D). */
 export function makeElite(sim: Sim, e: Enemy, mod: EliteMod = sim.rng.pick(ELITE_MODS)): void {
   if (e.def.boss || e.def.fly || e.def.pack) return;
+  // M15: a shield bearer already blocks; it never comes armored as well.
+  if (mod === 'gepanzert' && e.def.shield) mod = 'brennend';
   e.elite = mod;
   e.hp = e.maxHp = Math.round(e.maxHp * THREAT.eliteHp);
   e.def = { ...e.def, radius: e.def.radius * 1.15, speed: e.def.speed * (mod === 'flink' ? THREAT.eliteSpeed : 1) };
@@ -147,6 +158,21 @@ export function updateEnemies(sim: Sim): void {
       sim.events.push({ type: 'bossRage', id: e.id, name: def.name });
     }
     if (e.buff > 0) e.buff -= DT;
+    if ((e.guardOpen ?? 0) > 0) e.guardOpen! -= DT;
+    if ((e.noteT ?? 0) > 0) e.noteT! -= DT;
+    // M15: the Weltzeituhr wakes up on its base (untouchable, does nothing), then roars.
+    if ((e.wake ?? 0) > 0 && e.state !== 'dead') {
+      e.wake! -= DT;
+      e.px = e.x;
+      e.pz = e.z;
+      e.pfacing = e.facing;
+      if (e.wake! <= 0) {
+        const R = BOSS.roar;
+        for (let i = 0; i < 2; i++) sim.threats.waves.push({ x: e.x, z: e.z, r: -i * R.gap, max: R.max, speed: R.speed, damage: e.def.damage * e.dmgMul * R.damage, floor: R.floor, width: R.width, hit: false });
+        sim.events.push({ type: 'enemySpecial', id: e.id, kind: 'roar', phase: 'go', x: e.x, z: e.z });
+      }
+      continue;
+    }
     if (e.state !== 'dead') {
       tickCooldowns(e);
       if (def.boss) passive(sim, e);
@@ -216,11 +242,14 @@ export function updateEnemies(sim: Sim): void {
           // Standarte and Zersetzung slow by 30% each (2D).
           const slow=(banner&&Math.hypot(e.x-banner.x,e.z-banner.z)<banner.r?POWER.stand.slow:1)*(e.acid>0&&(sim.statContext.perks.corrode??0)>0?STATUS.corrodeSlow:1)*((e.slow??0)>0?.6:1);
           // M20: walkers wade through the flooded tunnel stretch like the hero; flyers do not.
-          const v = def.speed * slow * plan.speed * (e.buff > 0 ? THREAT.buffSpeed : 1) * (def.fly ? 1 : sim.level.speedAt(e.x, e.z));
+          // M15: a shield bearer with its guard open drags (2D ×0.4).
+          const guard = def.shield && (e.guardOpen ?? 0) > 0 ? THREAT.shield.openSpeed : 1;
+          const v = def.speed * slow * guard * plan.speed * (e.buff > 0 ? THREAT.buffSpeed : 1) * (def.fly ? 1 : sim.level.speedAt(e.x, e.z));
           vx = mx * v;
           vz = mz * v;
-          // Crows and backing spitters keep looking at the hero.
-          e.facing = turnToward(e.facing, plan.mode === 'dir' && !(def.fly && e.rest <= 0) ? angleOf(toX, toZ) : angleOf(mx, mz), 7 * DT);
+          // Crows and backing spitters keep looking at the hero; shield bearers hold the shield to them and turn slowly.
+          if (def.shield) e.facing = turnToward(e.facing, angleOf(toX, toZ), def.shield.turn * DT);
+          else e.facing = turnToward(e.facing, plan.mode === 'dir' && !(def.fly && e.rest <= 0) ? angleOf(toX, toZ) : angleOf(mx, mz), 7 * DT);
         }
         break;
       }
@@ -231,7 +260,7 @@ export function updateEnemies(sim: Sim): void {
         break;
       case 'windup':
         // Track the player early, then commit so a dodge can beat the strike.
-        if (e.stateT < def.windup * 0.6) e.facing = turnToward(e.facing, angleOf(toX, toZ), 4 * DT);
+        if (e.stateT < def.windup * 0.6) e.facing = turnToward(e.facing, angleOf(toX, toZ), Math.min(4, def.shield?.turn ?? 4) * DT);
         if (e.stateT >= def.windup) {
           e.state = 'strike';
           e.stateT = 0;

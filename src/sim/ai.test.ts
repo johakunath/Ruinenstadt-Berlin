@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
-import { strike } from './combat';
-import { makeElite, spawnEnemy, spawnPack } from './enemies';
+import { ignite, strike } from './combat';
+import { capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { autoAttackTarget } from './player';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
@@ -471,6 +471,734 @@ describe('Xhain roster (M12b)', () => {
 
   it('no Xhain boss takes more than 45 % of max life in one hit, even at ten times the damage', () => {
     for (const kind of ['grenzer', 'brandmeister', 'rattenmutter', 'spreehexe'] as const) {
+      const s = fresh();
+      const e = spawnEnemy(s, s.player.x, s.player.z + 3, kind, 1, 10);
+      e.hp = e.maxHp = 1e6;
+      let hits = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        s.hitstop = 0;
+        const before = s.player.hp;
+        stepSim(s, NO_INPUT);
+        for (const q of s.events) if (q.type === 'playerHit') {
+          hits++;
+          expect(q.damage, kind).toBeLessThanOrEqual(s.stats.maxHp * 0.45 + 1e-6);
+          expect(before - s.player.hp, kind).toBeLessThan(s.stats.maxHp * 0.46);
+        }
+        s.events.length = 0;
+        s.player.hp = s.stats.maxHp;
+      }
+      expect(hits, kind).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('Alexanderplatz roster (M15)', () => {
+  const notes = (evs: SimEvent[]): string[] => evs.filter((q) => q.type === 'note').map((q) => (q as { text: string }).text);
+  /** A body that stands still facing the hero. */
+  const still = (s: Sim, kind: EnemyKind, dx: number, dz: number): Enemy => {
+    const e = put(s, kind, dx, dz);
+    e.hp = e.maxHp = 1e6;
+    e.def = { ...e.def, speed: 0 };
+    e.cd = [99, 99, 99];
+    e.wake = 0;
+    return e;
+  };
+
+  it('the Uhrwerkläufer blocks from the front (20 %), a stun or a shock opens its guard, it is never armored', () => {
+    const s = fresh();
+    const e = still(s, 'uhrwerk', 0, 2);
+    expect(Math.abs(e.facing - Math.PI)).toBeLessThan(0.01);
+    const front = strike(s, e, 100);
+    expect(front).toBe(20);
+    expect(notes(s.events)).toContain('geblockt');
+    // From behind: full damage.
+    e.facing = 0;
+    expect(strike(s, e, 100)).toBe(100);
+    e.facing = Math.PI;
+    // A stun in front opens the guard (full damage), then front hits pass for 2.2 s.
+    s.events.length = 0;
+    expect(strike(s, e, 100, { stun: 0.6 })).toBe(100);
+    expect(notes(s.events)).toContain('Deckung offen');
+    expect(strike(s, e, 100)).toBe(100);
+    run(s, ENEMIES.uhrwerk.shield!.open + 0.1);
+    e.facing = Math.PI;
+    expect(strike(s, e, 100)).toBe(20);
+    expect(strike(s, e, 100, { element: 'shock' })).toBe(Math.round(100 * 1.7));
+    makeElite(s, e, 'gepanzert');
+    expect(e.elite).not.toBe('gepanzert');
+  });
+
+  it('the crit-stun blessing and every fourth Kiezbox hit open the guard too (Codex review)', () => {
+    const s = fresh();
+    const e = still(s, 'uhrwerk', 0, 2);
+    s.statContext.perks.stun = 1;
+    expect(strike(s, e, 100, { crit: true })).toBe(100);
+    expect(e.guardOpen).toBeGreaterThan(0);
+    const k = fresh();
+    const u = still(k, 'uhrwerk', 0, 2);
+    k.stats.legendary.push('kiezbox');
+    k.abilities.legHits = 0;
+    expect([strike(k, u, 100), strike(k, u, 100), strike(k, u, 100)]).toEqual([20, 20, 20]);
+    expect(strike(k, u, 100)).toBe(100);
+    expect(u.guardOpen).toBeGreaterThan(0);
+  });
+
+  it('the Uhrwerkläufer turns at most 90°/s, so the hero can get behind it', () => {
+    const s = fresh();
+    const e = put(s, 'uhrwerk', 0, 3);
+    e.facing = e.pfacing = 0;
+    e.def = { ...e.def, speed: 0.01 };
+    run(s, 0.5);
+    expect(Math.abs(e.facing)).toBeLessThan(ENEMIES.uhrwerk.shield!.turn * 0.5 + 0.05);
+  });
+
+  it('the Wurzler marks roots under the hero; caught, the hero cannot walk until a roll breaks free, then is immune', () => {
+    const s = fresh();
+    const e = still(s, 'wurzler', 0, 8);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('roots');
+    const z = s.threats.zones[0]!;
+    expect(z.kind).toBe('root');
+    expect(Math.hypot(z.x - s.player.x, z.z - s.player.z)).toBeLessThan(0.01);
+    expect(z.r).toBe(THREAT.roots.radius);
+    const evs = run(s, THREAT.roots.wind);
+    expect(notes(evs)).toContain('Festgehalten');
+    expect(has(evs, 'playerHit')).toBe(true);
+    expect(s.player.root).toBeGreaterThan(0);
+    // Held: walking does nothing.
+    const x0 = s.player.x;
+    run(s, 0.3, { moveX: 1 });
+    expect(Math.abs(s.player.x - x0)).toBeLessThan(0.05);
+    // A roll breaks free; the next roots within 2.5 s do not hold.
+    run(s, 0.05, { dodge: true, moveX: 1 });
+    expect(s.player.root).toBe(0);
+    expect(s.player.rootI).toBeGreaterThan(0);
+    // The Wurzler stood open after its cast.
+    expect(e.open > 0 || e.state === 'chase').toBe(true);
+    // Out of range (> 10 m): no roots.
+    const f = fresh();
+    const w = still(f, 'wurzler', 0, 8);
+    w.x = w.px = f.player.x + 8;
+    w.z = w.pz = f.player.z + 8;
+    w.cd[1] = 0;
+    run(f, 0.2);
+    expect(Math.hypot(w.x - f.player.x, w.z - f.player.z)).toBeGreaterThan(THREAT.roots.range);
+    expect(f.threats.zones).toHaveLength(0);
+  });
+
+  it('a roll through the root field does not get held', () => {
+    const s = fresh();
+    const e = still(s, 'wurzler', 0, 8);
+    e.cd[1] = 0;
+    run(s, THREAT.roots.wind - 0.1);
+    run(s, 0.2, { dodge: true, moveX: 1 });
+    expect(s.player.root).toBe(0);
+  });
+
+  it('the Kernspeier plants itself, spits three seeds ±15° at 70 %, then stands open', () => {
+    const s = fresh();
+    const e = still(s, 'kernspeier', 0, 7);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('seeds');
+    run(s, THREAT.seeds.wind + 0.02);
+    const shots = s.threats.shots;
+    expect(shots).toHaveLength(3);
+    for (const q of shots) expect(q.damage).toBeCloseTo(ENEMIES.kernspeier.damage * THREAT.seeds.damage);
+    // Spread around the aim (toward the hero), wrapped to ±π.
+    const aim = Math.atan2(s.player.x - e.x, s.player.z - e.z);
+    const off = shots.map((q) => Math.atan2(Math.sin(Math.atan2(q.vx, q.vz) - aim), Math.cos(Math.atan2(q.vx, q.vz) - aim))).sort((a, b) => a - b);
+    expect(off[0]).toBeCloseTo(-THREAT.seeds.spread, 3);
+    expect(off[2]).toBeCloseTo(THREAT.seeds.spread, 3);
+    run(s, 0.3);
+    expect(e.open).toBeGreaterThan(0);
+    // It backs off when the hero comes close.
+    const b = fresh();
+    const k = put(b, 'kernspeier', 0, 3);
+    k.cd = [99, 99, 99];
+    run(b, 1);
+    expect(Math.hypot(k.x - b.player.x, k.z - b.player.z)).toBeGreaterThan(3.5);
+  });
+
+  it('Die Wurzel-Mutter lays three root fields (four in rage), calls two Kernspeier and roots in a ring up close', () => {
+    const s = fresh();
+    const e = still(s, 'wurzelmutter', 0, 7);
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('roots');
+    expect(s.threats.zones.filter((z) => z.kind === 'root')).toHaveLength(3);
+    const r = fresh();
+    const m = still(r, 'wurzelmutter', 0, 7);
+    m.hp = m.maxHp * 0.4;
+    m.cd[0] = 0;
+    run(r, 0.05);
+    expect(r.threats.zones.filter((z) => z.kind === 'root')).toHaveLength(4);
+    const a = fresh();
+    const q = still(a, 'wurzelmutter', 0, 7);
+    q.cd[1] = 0;
+    run(a, BOSS.summon.wind + 0.6);
+    expect(a.enemies.filter((o) => o.kind === 'kernspeier')).toHaveLength(BOSS.wurzelmutter.adds);
+    const c = fresh();
+    const w = still(c, 'wurzelmutter', 0, 2.5);
+    w.cd[2] = 0;
+    stepSim(c, NO_INPUT);
+    expect(w.sp?.kind).toBe('rootRing');
+    expect(c.threats.zones[0]!.root).toBe(THREAT.roots.hold);
+  });
+
+  it('Der Große Uhrwerkläufer charges at 12 m/s, then winds down open; every third cycle it winds its key, front closed', () => {
+    const s = fresh();
+    const e = still(s, 'uhrwerkgross', 0, 9);
+    e.def = { ...ENEMIES.uhrwerkgross };
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('charge');
+    expect(e.sp?.speed).toBe(BOSS.uhrwerkgross.speed);
+    run(s, BOSS.charge.wind + BOSS.uhrwerkgross.time + 0.05);
+    expect(e.open).toBeGreaterThan(1);
+    // Cycles two and three: the third is the key.
+    e.cycle = 2;
+    e.cd[0] = 0;
+    e.open = 0;
+    e.gap = 0;
+    e.x = e.px = s.player.x;
+    e.z = e.pz = s.player.z + 6;
+    run(s, 0.05);
+    expect(e.sp?.kind).toBe('key');
+    e.facing = Math.PI;
+    expect(strike(s, e, 100)).toBe(0);
+    e.facing = 0;
+    expect(strike(s, e, 100)).toBe(100);
+    run(s, BOSS.uhrwerkgross.key);
+    expect(s.threats.shots.length).toBeGreaterThanOrEqual(BOSS.uhrwerkgross.shots);
+  });
+
+  it('Der Volkseigene Koloss drops three slabs, then sprays gears in a two-arm spiral, and calls Uhrwerkläufer every third cycle', () => {
+    const s = fresh();
+    const e = still(s, 'volkskoloss', 0, 8);
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('slabs');
+    const slabs = s.threats.zones.filter((z) => z.kind === 'slab');
+    expect(slabs).toHaveLength(BOSS.volkskoloss.slabs);
+    expect(Math.hypot(slabs[0]!.x - s.player.x, slabs[0]!.z - s.player.z)).toBeLessThan(0.01);
+    run(s, 2);
+    e.cd[0] = 0;
+    run(s, 1);
+    expect(e.cycle).toBe(2);
+    expect(s.threats.shots.length).toBeGreaterThanOrEqual(6);
+    e.cd[0] = 0;
+    run(s, 0.1);
+    expect(s.enemies.filter((o) => o.kind === 'uhrwerk')).toHaveLength(BOSS.volkskoloss.adds);
+  });
+
+  it('Die Weltzeituhr wakes up untouchable for 3 s, then roars; hour sectors only hit inside their slice', () => {
+    const s = fresh();
+    const e = put(s, 'weltzeituhr', 0, 8);
+    expect(e.wake).toBe(3);
+    expect(strike(s, e, 100)).toBe(0);
+    const d0 = Math.hypot(e.x - s.player.x, e.z - s.player.z);
+    const evs = run(s, 2.9);
+    // It does not walk while waking (a courtyard prop may nudge it).
+    expect(Math.hypot(e.x - s.player.x, e.z - s.player.z)).toBeGreaterThan(d0 - 0.6);
+    expect(s.threats.waves).toHaveLength(0);
+    run(s, 0.2);
+    expect(s.threats.waves).toHaveLength(2);
+    expect(strike(s, e, 100)).toBeGreaterThan(0);
+    expect(has(evs, 'enemySpecial')).toBe(false);
+    // Fire does not catch while it wakes either (Codex review).
+    const b = fresh();
+    const w = put(b, 'weltzeituhr', 0, 8);
+    ignite(b, w, 500, 3);
+    expect(w.burn).toBe(0);
+    w.burn = 2;
+    w.bdps = 500;
+    run(b, 1);
+    expect(w.hp).toBe(w.maxHp);
+    // Sectors: the hero's slice hits, three of them (four in rage).
+    const z = fresh();
+    const c = still(z, 'weltzeituhr', 0, 6);
+    c.cd[0] = 0;
+    stepSim(z, NO_INPUT);
+    expect(c.sp?.kind).toBe('sectors');
+    expect(z.threats.zones).toHaveLength(BOSS.weltzeituhr.sectors);
+    const hits = run(z, BOSS.weltzeituhr.sectorWind + 0.05).filter((q) => q.type === 'zoneHit' && q.hit);
+    expect(hits).toHaveLength(1);
+    // Inside the inner radius nothing hits.
+    const n = fresh();
+    const d = still(n, 'weltzeituhr', 0, 2.6);
+    d.cd[0] = 0;
+    expect(run(n, BOSS.weltzeituhr.sectorWind + 0.1).filter((q) => q.type === 'zoneHit' && q.hit)).toHaveLength(0);
+    const r = fresh();
+    const g = still(r, 'weltzeituhr', 0, 6);
+    g.hp = g.maxHp * 0.4;
+    g.still = 3;
+    g.cd[0] = 0;
+    run(r, 0.05);
+    expect(r.threats.zones).toHaveLength(BOSS.weltzeituhr.sectors + 1);
+  });
+
+  it('the minute hand sweeps a full circle: it hits a standing hero once and misses one that keeps rolling', () => {
+    const s = fresh();
+    const e = still(s, 'weltzeituhr', 0, 5);
+    e.cycle = 2;
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('hand');
+    expect(s.threats.sweeps).toHaveLength(1);
+    const hits = run(s, BOSS.weltzeituhr.handWind + BOSS.weltzeituhr.handTime).filter((q) => q.type === 'playerHit');
+    expect(hits).toHaveLength(1);
+    expect(s.threats.sweeps).toHaveLength(0);
+    const r = fresh();
+    const c = still(r, 'weltzeituhr', 0, 5);
+    c.cycle = 2;
+    c.cd[0] = 0;
+    const out: SimEvent[] = [];
+    for (let i = 0; i < 60 * 4; i++) { r.player.invuln = 1; stepSim(r, NO_INPUT); out.push(...r.events); r.events.length = 0; }
+    expect(has(out, 'playerHit')).toBe(false);
+  });
+
+  it('Stillstand at 75, 50 and 25 %: the hero walks at half speed for 2 s and two Uhrwerkläufer drop in', () => {
+    const s = fresh();
+    const e = still(s, 'weltzeituhr', 0, 9);
+    e.hp = e.maxHp * 0.74;
+    const evs = run(s, 0.05);
+    expect(notes(evs)).toContain('Stillstand');
+    expect(s.player.slowT).toBeGreaterThan(1.9);
+    expect(s.enemies.filter((o) => o.kind === 'uhrwerk')).toHaveLength(BOSS.weltzeituhr.adds);
+    const x0 = s.player.x;
+    run(s, 1, { moveX: 1 });
+    const slow = s.player.x - x0;
+    const f = fresh();
+    const x1 = f.player.x;
+    run(f, 1, { moveX: 1 });
+    expect(slow).toBeLessThan((f.player.x - x1) * 0.6);
+    // Once per threshold.
+    expect(notes(run(s, 0.5))).not.toContain('Stillstand');
+    e.hp = e.maxHp * 0.2;
+    run(s, 0.05);
+    expect(e.still).toBe(3);
+  });
+
+  it('no Alexanderplatz enemy takes more than 45 % of max life in one hit, even at ten times the damage', () => {
+    for (const kind of ['uhrwerk', 'wurzler', 'kernspeier', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr'] as const) {
+      const s = fresh();
+      const e = spawnEnemy(s, s.player.x, s.player.z + 4, kind, 1, 10);
+      e.hp = e.maxHp = 1e6;
+      let hits = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        s.hitstop = 0;
+        const before = s.player.hp;
+        stepSim(s, NO_INPUT);
+        for (const q of s.events) if (q.type === 'playerHit') {
+          hits++;
+          expect(q.damage, kind).toBeLessThanOrEqual(s.stats.maxHp * 0.45 + 1e-6);
+          expect(before - s.player.hp, kind).toBeLessThan(s.stats.maxHp * 0.46);
+        }
+        s.events.length = 0;
+        s.player.hp = s.stats.maxHp;
+      }
+      expect(hits, kind).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Alexanderplatz boss rages below half life and runs all its specials', () => {
+    const want: Record<string, string[]> = {
+      wurzelmutter: ['roots', 'summon', 'rootRing'], uhrwerkgross: ['charge', 'key'], volkskoloss: ['slabs', 'bossSlam'], weltzeituhr: ['sectors', 'hand', 'bossSlam'],
+    };
+    for (const [kind, list] of Object.entries(want)) {
+      const s = fresh();
+      const e = put(s, kind as EnemyKind, 0, 9);
+      e.wake = 0;
+      e.hp = e.maxHp * 0.45;
+      expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(1);
+      e.hp = 1e6;
+      const evs: SimEvent[] = [];
+      for (let t = 0; t < 40; t += 2) {
+        // Alternate near and far so close-range specials come too.
+        if (e.state !== 'special') { e.state = 'chase'; e.x = e.px = s.player.x; e.z = e.pz = s.player.z + ((t / 2) % 2 ? 2.8 + e.def.radius * 0.3 : 8); }
+        evs.push(...run(s, 2));
+      }
+      expect(specials(evs), kind).toEqual(expect.arrayContaining(list));
+    }
+  });
+});
+
+describe('Mitte roster (M12c)', () => {
+  const fight = (kind: EnemyKind, seconds: number, apart = 0): { s: Sim; e: Enemy; evs: SimEvent[] } => {
+    const s = fresh();
+    const e = put(s, kind, 0, 6);
+    e.hp = e.maxHp = 1e6;
+    const evs: SimEvent[] = [];
+    for (let t = 0; t < seconds; t += 3) {
+      if (apart && e.state !== 'special') { e.state = 'chase'; e.x = e.px = s.player.x; e.z = e.pz = s.player.z + apart; }
+      evs.push(...run(s, 3));
+    }
+    return { s, e, evs };
+  };
+  const notes = (evs: SimEvent[]): string[] => evs.filter((q) => q.type === 'note').map((q) => (q as { text: string }).text);
+  const still = (e: Enemy): void => { e.def = { ...e.def, speed: 0 }; };
+  const alive = (s: Sim, kind: EnemyKind): number => s.enemies.filter((q) => q.kind === kind && q.state !== 'dead').length;
+
+  it('the Kabelghul is the 2D kabel on the ghoul ratios and leaps along a marked line, then stands open', () => {
+    const k = ENEMIES.kabel;
+    expect([k.hp, k.damage, k.speed, k.radius, k.res]).toEqual([22, 10, 3.3, 0.3, 'kabel']);
+    const s = fresh();
+    const e = put(s, 'kabel', 0, 4.6);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('leap');
+    const x0 = e.x, z0 = e.z;
+    run(s, THREAT.leap.wind - 0.05);
+    expect(Math.hypot(e.x - x0, e.z - z0)).toBeLessThan(0.05);
+    const evs = run(s, THREAT.leap.time + 0.1);
+    expect(Math.hypot(e.x - x0, e.z - z0)).toBeCloseTo(THREAT.leap.speed * THREAT.leap.time, 0);
+    expect(evs.filter((q) => q.type === 'playerHit')).toHaveLength(1);
+    expect(e.open).toBeGreaterThan(THREAT.leap.open - 0.15);
+    // The cooldown is fixed per body, 2.2 to 3 s.
+    expect(e.cd[1]).toBeGreaterThan(THREAT.leap.every[0] - 0.6);
+    expect(e.cd[1]).toBeLessThanOrEqual(THREAT.leap.every[1]);
+  });
+
+  it('the Boxenkopf sends one bass ring to 9 m that a roll passes, drives the others on and stands open', () => {
+    const s = fresh();
+    const e = put(s, 'bass', 0, 6);
+    const w = put(s, 'walker', 3, 6);
+    e.cd[1] = 0;
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('bass');
+    run(s, THREAT.bass.wind + 0.02);
+    expect(s.threats.waves).toHaveLength(1);
+    expect(s.threats.waves[0]!.max).toBeCloseTo(9, 0);
+    expect(s.threats.waves[0]!.floor).toBe(0);
+    expect(w.buff).toBeGreaterThan(THREAT.bass.buff - 0.2);
+    const evs = run(s, 0.7, {}, false);
+    expect(evs.some((q) => q.type === 'playerHit' && q.damage <= ENEMIES.bass.damage * THREAT.bass.damage + 1e-6)).toBe(true);
+    expect(e.open).toBeGreaterThan(0.3);
+    // Rolling through (invulnerable): the ring passes.
+    const r = fresh();
+    const b = put(r, 'bass', 0, 6);
+    b.cd[1] = 0;
+    still(b);
+    const out: SimEvent[] = [];
+    for (let i = 0; i < 90; i++) { r.player.invuln = 1; stepSim(r, NO_INPUT); out.push(...r.events); r.events.length = 0; }
+    expect(out.some((q) => q.type === 'enemySpecial' && q.kind === 'bass' && q.phase === 'go')).toBe(true);
+    expect(has(out, 'playerHit')).toBe(false);
+  });
+
+  it('never more than two Boxenköpfe alive: the pick, ?spawn and boss calls keep the cap', () => {
+    expect(ENEMIES.bass.cap).toBe(2);
+    const s = fresh();
+    put(s, 'bass', 0, 8);
+    expect(capped(s, 'bass')).toBe(false);
+    put(s, 'bass', 0, -8);
+    expect(capped(s, 'bass')).toBe(true);
+    for (let i = 0; i < 40; i++) expect(pickKind(s, { bass: 5, walker: 0.1 })).toBe('walker');
+    const sp = createSim({ empty: true, spawn: ['bass', 'bass', 'bass', 'kabel'] });
+    expect(alive(sp, 'bass')).toBe(2);
+    expect(alive(sp, 'kabel')).toBe(1);
+    // Sleeping side-passage guards do not use up a boss's adds.
+    const z = fresh();
+    for (let i = 0; i < 10; i++) put(z, 'walker', 20 + i, 20).sleep = 6;
+    const t = put(z, 'tuersteher', 0, 7);
+    t.cd = [99, 99, 0];
+    run(z, BOSS.summon.wind + 0.6);
+    expect(alive(z, 'kabel')).toBe(BOSS.tuersteher.adds);
+    // The Dirigent's Orchester with one Boxenkopf alive calls only one more.
+    const d = fresh();
+    put(d, 'bass', 4, 4);
+    const g = put(d, 'dirigent', 0, 6);
+    g.hp = g.maxHp = 1e6;
+    run(d, 2);
+    expect(alive(d, 'bass')).toBe(2);
+  });
+
+  it('the Drohne flies like a Krähe: circles, dives, then sits dazed', () => {
+    const d = ENEMIES.drone;
+    expect(d.fly && d.ai === 'crow' && d.body === 'drone').toBe(true);
+    const s = fresh();
+    const e = put(s, 'drone', 0, 4);
+    const evs = run(s, 6);
+    expect(specials(evs)).toContain('dive');
+    let rested = false;
+    for (let i = 0; i < 360 && !rested; i++) { run(s, 1 / 60); rested = e.rest > 0; }
+    expect(rested).toBe(true);
+  });
+
+  it('Der Türsteher shoves out of a circle in front of him, twice in rage', () => {
+    const s = fresh();
+    const e = put(s, 'tuersteher', 0, 2.5);
+    e.cd = [0, 99, 99];
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('shove');
+    const z = s.threats.zones[0]!;
+    expect(z.kind).toBe('shove');
+    expect(z.r).toBe(BOSS.tuersteher.shoveRadius);
+    expect(Math.hypot(z.x - e.x, z.z - e.z)).toBeCloseTo(BOSS.tuersteher.shoveAhead, 1);
+    const x0 = s.player.x, z0 = s.player.z;
+    const evs = run(s, BOSS.tuersteher.shoveWind + 1);
+    expect(has(evs, 'playerHit')).toBe(true);
+    expect(Math.hypot(s.player.x - x0, s.player.z - z0)).toBeGreaterThan(2.5);
+    expect(s.player.z).toBeLessThan(z0);
+    // Rage: a second shove follows half a second after the first.
+    const r = fresh();
+    const t = put(r, 'tuersteher', 0, 2.5);
+    t.hp = t.maxHp * 0.4;
+    t.cd = [0, 99, 99];
+    still(t);
+    const out = run(r, 2.6);
+    expect(specials(out).filter((k) => k === 'shove')).toHaveLength(2);
+  });
+
+  it('the rage shove follows after its pause even when the hero dodged the first and stays in reach', () => {
+    const s = fresh();
+    const e = put(s, 'tuersteher', 0, 1.8);
+    e.hp = e.maxHp * 0.4;
+    e.cd = [0, 99, 99];
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('shove');
+    e.cd[0] = 99;
+    let ended = -1, second = -1, strike = false;
+    for (let i = 0; i < 60 * 3 && second < 0; i++) {
+      s.player.invuln = 1;
+      s.player.hp = s.stats.maxHp;
+      stepSim(s, NO_INPUT);
+      if (ended < 0 && e.state !== 'special') ended = i;
+      if (ended >= 0 && e.state === 'windup') strike = true;
+      if (ended >= 0 && e.state === 'special' && e.sp?.kind === 'shove') second = i;
+    }
+    expect(strike).toBe(false);
+    expect(second).toBeGreaterThan(ended);
+    expect((second - ended) / 60).toBeCloseTo(BOSS.tuersteher.rageGap, 1);
+  });
+
+  it('Der Türsteher grabs and holds: no walking, attacks work, a roll breaks free; the hold never outlasts 1 s', () => {
+    const grab = (): { s: Sim; e: Enemy } => {
+      const s = fresh();
+      const e = put(s, 'tuersteher', 0, 4.5);
+      e.hp = e.maxHp = 1e6;
+      e.cd = [99, 0, 99];
+      still(e);
+      stepSim(s, NO_INPUT);
+      expect(e.sp?.kind).toBe('grab');
+      for (let i = 0; i < 90 && s.player.rootBy !== e.id; i++) run(s, 1 / 60);
+      expect(s.player.rootBy).toBe(e.id);
+      return { s, e };
+    };
+    // Held: walking does nothing, an attack still starts, the throw comes after the hold.
+    const { s, e } = grab();
+    expect(s.player.root).toBeCloseTo(BOSS.tuersteher.hold, 1);
+    const x0 = s.player.x, z0 = s.player.z;
+    run(s, 0.3, { moveX: 1 });
+    expect(Math.hypot(s.player.x - x0, s.player.z - z0)).toBeLessThan(0.05);
+    run(s, 1 / 60, { attack: true });
+    expect(s.player.state).toBe('attack');
+    const evs = run(s, 0.9);
+    expect(has(evs, 'playerHit')).toBe(true);
+    expect(s.player.root).toBe(0);
+    expect(e.state === 'chase' && e.open > 0).toBe(true);
+    // A roll breaks free at once: no throw.
+    const f = grab();
+    run(f.s, 0.2);
+    const free = run(f.s, 1 / 60, { dodge: true, moveX: 1 });
+    expect(f.s.player.root).toBe(0);
+    const after = [...free, ...run(f.s, 1.2)];
+    expect(has(after, 'playerHit')).toBe(false);
+    expect(f.e.sp).toBeNull();
+    // Hitstop does not stretch it: free within one second of steps, frozen or not.
+    const h = grab();
+    let steps = 0;
+    while (h.s.player.root > 0 && steps < 200) {
+      if (steps % 10 === 0) h.s.hitstop = 0.12;
+      stepSim(h.s, NO_INPUT);
+      h.s.events.length = 0;
+      steps++;
+    }
+    expect(steps).toBeLessThanOrEqual(Math.round(BOSS.tuersteher.hold * 60) + 1);
+  });
+
+  it('Der Türsteher calls two Kabelghule from the guest list, three in rage', () => {
+    const s = fresh();
+    const e = put(s, 'tuersteher', 0, 7);
+    e.cd = [99, 99, 0];
+    const evs = run(s, BOSS.summon.wind + 0.6);
+    expect(alive(s, 'kabel')).toBe(BOSS.tuersteher.adds);
+    expect(notes(evs)).toContain('„Nicht auf der Liste!“');
+    const r = fresh();
+    const t = put(r, 'tuersteher', 0, 7);
+    t.hp = t.maxHp * 0.4;
+    t.cd = [99, 99, 0];
+    run(r, BOSS.summon.wind + 0.6);
+    expect(alive(r, 'kabel')).toBe(BOSS.tuersteher.rageAdds);
+    expect(specials(fight('tuersteher', 30, 4.5).evs)).toEqual(expect.arrayContaining(['summon', 'shove', 'grab']));
+  });
+
+  it('Die Wachdrohne: the searchlight follows the hero, locks after 0.6 s, then five laser shots', () => {
+    const s = fresh();
+    const e = put(s, 'wachdrohne', 0, 8);
+    e.cd = [99, 99, 99];
+    still(e);
+    run(s, 1 / 60);
+    expect(s.threats.spots).toHaveLength(1);
+    const sp = s.threats.spots[0]!;
+    const d0 = Math.hypot(sp.x - s.player.x, sp.z - s.player.z);
+    run(s, 1);
+    expect(d0 - Math.hypot(sp.x - s.player.x, sp.z - s.player.z)).toBeCloseTo(BOSS.wachdrohne.spotSpeed, 1);
+    sp.x = s.player.x;
+    sp.z = s.player.z;
+    const lock = run(s, BOSS.wachdrohne.lock + 0.02);
+    expect(has(lock, 'spotLock')).toBe(true);
+    expect(s.threats.shots).toHaveLength(0);
+    run(s, BOSS.wachdrohne.flash);
+    expect(s.threats.shots).toHaveLength(BOSS.wachdrohne.shots);
+    // Out of the light, nothing locks.
+    const o = fresh();
+    const q = put(o, 'wachdrohne', 0, 8);
+    q.cd = [99, 99, 99];
+    still(q);
+    run(o, 1 / 60);
+    o.threats.spots[0]!.x += 6;
+    expect(has(run(o, 1), 'spotLock')).toBe(false);
+  });
+
+  it('Die Wachdrohne lands every third special (marked circle, 2.5 s open, no light), calls three drones, keeps away', () => {
+    const s = fresh();
+    const e = put(s, 'wachdrohne', 0, 8);
+    e.hp = e.maxHp = 1e6;
+    e.cd = [0, 99, 99];
+    e.cycle = BOSS.wachdrohne.landEvery - 1;
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('land');
+    expect(s.threats.zones.some((z) => z.kind === 'land' && z.r === BOSS.wachdrohne.landRadius)).toBe(true);
+    run(s, BOSS.wachdrohne.landWind + 0.3);
+    expect(e.open).toBeGreaterThan(BOSS.wachdrohne.landed - 0.3);
+    expect(s.threats.spots).toHaveLength(0);
+    run(s, BOSS.wachdrohne.landed);
+    expect(s.threats.spots).toHaveLength(1);
+    // Drones.
+    const d = fresh();
+    const w = put(d, 'wachdrohne', 0, 8);
+    w.cd = [99, 99, 0];
+    run(d, BOSS.summon.wind + 0.6);
+    expect(alive(d, 'drone')).toBe(BOSS.wachdrohne.adds);
+    // Too close: she backs off. In rage: two lights.
+    const b = fresh();
+    const x = put(b, 'wachdrohne', 0, 3);
+    x.cd = [99, 99, 99];
+    run(b, 1.5);
+    expect(Math.hypot(x.x - b.player.x, x.z - b.player.z)).toBeGreaterThan(4);
+    x.hp = x.maxHp * 0.4;
+    run(b, 0.1);
+    expect(b.threats.spots.filter((q) => q.src === x.id)).toHaveLength(2);
+    expect(specials(fight('wachdrohne', 30, 8).evs)).toEqual(expect.arrayContaining(['volley', 'summon', 'land']));
+  });
+
+  it('Der Dirigent calls two Boxenköpfe, beats one ring every 4 s, every fourth beat a Fortissimo that pulses them all', () => {
+    const s = fresh();
+    const e = put(s, 'dirigent', 0, 7);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    run(s, 1.5);
+    expect(alive(s, 'bass')).toBe(BOSS.dirigent.adds);
+    for (const b of s.enemies) if (b.kind === 'bass') { still(b); b.cd[1] = 99; }
+    const evs: SimEvent[] = [];
+    let fort = -1;
+    for (let i = 0; i < 60 * 18 && fort < 0; i++) {
+      evs.push(...run(s, 1 / 60));
+      if (e.state === 'special' && e.sp?.kind === 'roar') fort = i;
+    }
+    const beats = specials(evs).filter((k) => k === 'beat' || k === 'roar');
+    expect(beats).toEqual(['beat', 'beat', 'beat', 'roar']);
+    const pulsing = s.enemies.filter((b) => b.kind === 'bass' && b.state === 'special' && b.sp?.kind === 'bass');
+    expect(pulsing).toHaveLength(BOSS.dirigent.adds);
+    // They release together with him (within a step).
+    for (const b of pulsing) expect(b.sp!.wind - b.stateT).toBeCloseTo(e.sp!.wind - e.stateT, 1);
+    const out = run(s, BOSS.dirigent.beatWind + 0.05);
+    expect(notes(out)).toContain('Fortissimo!');
+    expect(s.threats.waves.length).toBe(2 + BOSS.dirigent.adds);
+    // Once more at half life.
+    const r = fresh();
+    const g = put(r, 'dirigent', 0, 7);
+    g.calls = 1;
+    g.hp = g.maxHp * 0.4;
+    run(r, 1.5);
+    expect(alive(r, 'bass')).toBe(BOSS.dirigent.adds);
+    run(r, 6);
+    expect(g.calls).toBe(2);
+  });
+
+  it('Der Bassprediger charges 10 m, preaches two rings after every second charge (every charge in rage), calls his congregation', () => {
+    const charge = (s: Sim, e: Enemy): void => {
+      e.x = e.px = s.player.x;
+      e.z = e.pz = s.player.z + 9;
+      e.state = 'chase';
+      e.open = 0;
+      e.gap = 0;
+      e.cd = [0, 99, 99];
+      stepSim(s, NO_INPUT);
+      expect(e.sp?.kind).toBe('charge');
+    };
+    const B = BOSS.bassprediger;
+    const s = fresh();
+    const e = put(s, 'bassprediger', 0, 9);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    charge(s, e);
+    const z0 = e.z;
+    run(s, B.wind + B.time + 0.02);
+    expect(z0 - e.z).toBeCloseTo(B.speed * B.time, 0);
+    expect(e.open).toBeGreaterThan(B.open - 0.1);
+    expect(e.queue).toBeUndefined();
+    charge(s, e);
+    run(s, B.wind + B.time + 0.02);
+    expect(e.queue?.kind).toBe('roar');
+    const evs = run(s, B.open + BOSS.roar.wind + 0.1);
+    expect(specials(evs)).toContain('roar');
+    expect(s.threats.waves).toHaveLength(2);
+    expect(s.threats.waves[0]!.max).toBeCloseTo(B.max, 1);
+    // In rage every charge preaches.
+    const r = fresh();
+    const q = put(r, 'bassprediger', 0, 9);
+    q.hp = q.maxHp * 0.4;
+    still(q);
+    run(r, 1 / 60);
+    charge(r, q);
+    run(r, B.wind + B.time + 0.02);
+    expect(q.queue?.kind).toBe('roar');
+    // Gemeinde: three Kabelghule, in rage two Boxenköpfe.
+    const g = fresh();
+    const p = put(g, 'bassprediger', 0, 9);
+    p.cd = [99, 99, 0];
+    const notesOut = run(g, BOSS.summon.wind + 0.6);
+    expect(alive(g, 'kabel')).toBe(B.adds);
+    expect(notes(notesOut)).toContain('„Gemeinde!“');
+    const h = fresh();
+    const m = put(h, 'bassprediger', 0, 9);
+    m.hp = m.maxHp * 0.4;
+    m.cd = [99, 99, 0];
+    run(h, BOSS.summon.wind + 0.6);
+    expect(alive(h, 'bass')).toBe(B.rageAdds);
+  });
+
+  it('every Mitte boss rages below half life on the ladder; the Bassprediger is the Hauptmann tier', () => {
+    for (const kind of ['tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'] as const) {
+      const s = fresh();
+      const e = put(s, kind, 0, 9);
+      e.hp = e.maxHp * 0.45;
+      expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(1);
+      expect(e.def.speed).toBeCloseTo(ENEMIES[kind].speed * BOSS.rageSpeed);
+    }
+    expect([ENEMIES.tuersteher.hp, ENEMIES.dirigent.hp, ENEMIES.wachdrohne.hp, ENEMIES.bassprediger.hp]).toEqual([1000, 1400, 2200, 4400]);
+    expect(ENEMIES.bassprediger.damage).toBe(ENEMIES.hauptmann.damage);
+  });
+
+  it('no Mitte hit takes more than 45 % of max life, even at ten times the damage', () => {
+    for (const kind of ['kabel', 'bass', 'drone', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'] as const) {
       const s = fresh();
       const e = spawnEnemy(s, s.player.x, s.player.z + 3, kind, 1, 10);
       e.hp = e.maxHp = 1e6;

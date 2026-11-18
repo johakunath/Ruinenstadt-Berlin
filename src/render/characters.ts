@@ -15,6 +15,8 @@ import heroUrl from '../../assets/characters/hero.glb?url';
 import zombieUrl from '../../assets/characters/zombie.glb?url';
 import raptorUrl from '../../assets/characters/raptor.glb?url';
 import rexUrl from '../../assets/characters/rex.glb?url';
+import mechUrl from '../../assets/characters/mech.glb?url';
+import mechBigUrl from '../../assets/characters/mechbig.glb?url';
 import { PLAYER, type AttackDef } from '../data/combat';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Cast, type Player } from '../sim/types';
@@ -33,6 +35,8 @@ export interface CharacterAssets {
   rex: Object3D;
   raptorClips: Map<string, AnimationClip>;
   rexClips: Map<string, AnimationClip>;
+  /** M15 Quaternius mechs (Leela, Mike), loaded only for Alexanderplatz or `?spawn=` of their kinds. */
+  mech?: { small: Object3D; big: Object3D; smallClips: Map<string, AnimationClip>; bigClips: Map<string, AnimationClip> };
 }
 
 const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
@@ -70,8 +74,9 @@ function prepare(scene: Object3D, materials: Materials): void {
   });
 }
 
-export async function loadCharacters(materials: Materials): Promise<CharacterAssets> {
+export async function loadCharacters(materials: Materials, mechs = false): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
+  const mechLoad = mechs ? Promise.all([mechUrl, mechBigUrl].map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF]> : null;
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF];
   for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf]) prepare(g.scene, materials);
   const named = (g: GLTF): Map<string, AnimationClip> => new Map(g.animations.map((c) => [c.name, c]));
@@ -84,7 +89,14 @@ export async function loadCharacters(materials: Materials): Promise<CharacterAss
     // Enemies only get the clips they play: every clip costs bindings per body.
     if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
   }
-  return { hero: heroGltf.scene, zombie: zombieGltf.scene, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
+  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
+  if (mechLoad) {
+    const [small, big] = await mechLoad;
+    prepare(small.scene, materials);
+    prepare(big.scene, materials);
+    out.mech = { small: small.scene, big: big.scene, smallClips: named(small), bigClips: named(big) };
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- animator

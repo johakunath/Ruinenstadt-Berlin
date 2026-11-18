@@ -22,27 +22,26 @@ export const MITTE_WAVES = 27;
 export const MITTE_TIER = { from: 24, to: 46 } as const;
 
 /**
- * Bosses until the district's own are built (step 6 of `docs/tasks/m15-mitte.md`): Der Türsteher at the
- * Brandenburger Tor, Die Wachdrohne at the Kanzleramt, the mini-boss at the Neuer See, Der Bassprediger
- * in the Sony Center. Stand-ins keep the blockout playable.
+ * The district's bosses (M12c, `docs/tasks/m12c-mitte-enemies.md`): Der Türsteher at the Brandenburger Tor,
+ * Die Wachdrohne at the Kanzleramt, the mini-boss Der Dirigent at the Neuer See, Der Bassprediger in the Sony Center.
  */
-export const MITTE_BOSS_STANDIN: Record<'tor' | 'kanzleramt' | 'see' | 'sony', BossKind> = { tor: 'feldwebel', kanzleramt: 'grenzer', see: 'brandmeister', sony: 'hauptmann' };
+export const MITTE_BOSSES: Record<'tor' | 'kanzleramt' | 'see' | 'sony', BossKind> = { tor: 'tuersteher', kanzleramt: 'wachdrohne', see: 'dirigent', sony: 'bassprediger' };
 
 /**
- * Difficulty of wave `g` (24 … 46) in `zone`. Until the district types exist (Kabelghul, Boxenkopf,
- * Kabelbrocken, drones) the mix leans on runners (for the leaping Kabelghule, 2D share 0.2) and brutes
- * (for the Boxenköpfe); a few crows stand in for drones in the Tiergarten. The Tiergarten is calm:
- * smaller waves, no elites.
+ * Difficulty of wave `g` (24 … 46) in `zone` (M12c mix, 2D Mitte: spitter 0.14, brute 0.16, kabel 0.2, bass 0.07,
+ * the rest ghouls). Kabelghule are the face of the Friedrichstraße, drones fly over the Regierungsviertel, the
+ * Potsdamer Platz is the loudest (most Boxenköpfe, at most two alive by `EnemyDef.cap`). The Tiergarten is calm:
+ * smaller waves, no elites, no Boxenkopf and no drones. Zünder and Schildträger stay in the backlog (P12).
  */
 export function mitteWaveTier(g: number, bosses: BossKind[] = [], zone = 0): WaveDef {
   const calm = zone === 2;
-  const mix: Partial<Record<EnemyKind, number>> = {
-    walker: 6,
-    runner: 1.6 + g * 0.22,
-    spitter: 1 + g * 0.05,
-    brute: 0.5 + g * 0.08 + (zone === 3 ? 0.6 : 0),
-    crow: calm ? 0.8 : 0,
-  };
+  const MIX: Array<Partial<Record<EnemyKind, number>>> = [
+    { walker: 6, runner: 1 + g * 0.1, kabel: 2.2 + g * 0.06, spitter: 1 + g * 0.05, brute: 0.4 + g * 0.06, bass: 0.6 },
+    { walker: 6, kabel: 1.4, spitter: 1.2 + g * 0.05, brute: 0.5 + g * 0.06, bass: 0.5, drone: 1.2 },
+    { walker: 6, kabel: 1, crow: 0.8, runner: 1 },
+    { walker: 6, kabel: 2, spitter: 1 + g * 0.05, brute: 0.6 + g * 0.08, bass: 1.1 },
+  ];
+  const mix = MIX[zone] ?? MIX[0]!;
   return {
     count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1)),
     maxAlive: Math.min(12, 6 + Math.floor(g / 3)) - (calm ? 3 : 0),
@@ -81,20 +80,20 @@ export function mitteMap(scale = 1): MapDef {
     enc('leipziger', 'Leipziger Straße', 0, 95, 90, 13, 3),
     enc('friedrich', 'Friedrichstraße', 0, 150, 22, 13, 3),
     enc('linden', 'Unter den Linden', 0, 115, -62, 14, 3),
-    boss('pariser', 'Pariser Platz', 0, 32, -62, 15, MITTE_BOSS_STANDIN.tor, 3),
+    boss('pariser', 'Pariser Platz', 0, 32, -62, 15, MITTE_BOSSES.tor, 3),
     // Zone 1: the Regierungsviertel along the Spree (9 waves); the Wachdrohne at the Kanzleramt.
     enc('dorotheen', 'Dorotheenstraße', 1, 24, -116, 13, 3),
     enc('spreeufer', 'Spreeufer', 1, 32, -162, 12, 3),
     enc('republik', 'Platz der Republik', 1, -88, -118, 14, 3),
-    boss('kanzleramt', 'Kanzleramt', 1, -130, -106, 15, MITTE_BOSS_STANDIN.kanzleramt, 4),
+    boss('kanzleramt', 'Kanzleramt', 1, -130, -106, 15, MITTE_BOSSES.kanzleramt, 4),
     // Zone 2: the calm Tiergarten (2 waves): around the Siegessäule, then the mini-boss at the Neuer See.
     enc('stern', 'Großer Stern', 2, GROSSER_STERN.x + 9, GROSSER_STERN.z, 13, 2),
-    boss('see', 'Neuer See', 2, -104, 26, 14, MITTE_BOSS_STANDIN.see, 2),
+    boss('see', 'Neuer See', 2, -104, 26, 14, MITTE_BOSSES.see, 2),
     // Zone 3: Potsdamer Platz with the Kulturforum and the canal (7 waves); the Bassprediger in the Sony Center.
     enc('matthaei', 'Matthäikirchplatz', 3, -118, 108, 14, 3),
     enc('bruecke', 'Potsdamer Brücke', 3, -100, 163, 12, 2),
     enc('tilla', 'Tilla-Durieux-Park', 3, -18, 152, 13, 2),
-    boss('sony', 'Sony Center', 3, -62, 85, 15, MITTE_BOSS_STANDIN.sony, 6),
+    boss('sony', 'Sony Center', 3, -62, 85, 15, MITTE_BOSSES.sony, 6),
   ];
 
   const zones: ZoneDef[] = [
@@ -167,8 +166,8 @@ export function mitteMap(scale = 1): MapDef {
     { id: 'tilla', name: 'Tilla-Durieux-Park', ground: 'grass', frontage: null, trees: 0.2, poly: line([[-26, 128], [-11, 128], [-11, 182], [-26, 182]]) },
     { id: 'republik', name: 'Platz der Republik', ground: 'grass', frontage: null, trees: 0, poly: line([[-108, -142], [-58, -142], [-58, -104], [-108, -104]]) },
     { id: 'biergarten', name: 'Biergarten am Neuen See', ground: 'cobbles', frontage: null, trees: 0.3, poly: line([[-152, 24], [-122, 24], [-122, 40], [-152, 40]]) },
-    { id: 'regierung', name: 'Regierungsviertel', ground: 'asphalt', frontage: 'platte', trees: 0.3, specials: ['baustelle', 'parkplatz'], poly: line([[-162, -205], [185, -205], [185, -114], [-16, -114], [-16, -98], [-162, -98]]) },
-    { id: 'friedrichstadt', name: 'Friedrichstadt', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['markt', 'hinterhof'], poly: line([[-4, -114], [185, -114], [185, 140], [66, 140], [60, 112], [42, 80], [-4, 80]]) },
+    { id: 'regierung', name: 'Regierungsviertel', ground: 'asphalt', frontage: 'altbau', trees: 0.3, specials: ['sperrzone', 'parkplatz'], poly: line([[-162, -205], [185, -205], [185, -114], [-16, -114], [-16, -98], [-162, -98]]) },
+    { id: 'friedrichstadt', name: 'Friedrichstadt', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['markt', 'clubhof'], poly: line([[-4, -114], [185, -114], [185, 140], [66, 140], [60, 112], [42, 80], [-4, 80]]) },
     { id: 'tiergarten', name: 'Tiergarten', ground: 'forest', frontage: null, trees: 1.1, poly: line([[-162, -98], [-16, -98], [-16, 40], [-162, 40]]) },
     { id: 'kulturforum', name: 'Kulturforum', ground: 'cobbles', frontage: null, trees: 0.4, poly: line([[-162, 40], [-95, 40], [-95, 118], [-45, 118], [-45, 200], [-162, 200]]) },
     { id: 'potsdamer', name: 'Potsdamer Platz', ground: 'asphalt', frontage: 'altbau', trees: 0.15, specials: ['nachtmarkt', 'containerdorf', 'baustelle'], poly: line([[-95, 40], [-4, 40], [-4, 80], [42, 80], [60, 112], [66, 140], [185, 140], [185, 200], [-45, 200], [-45, 118], [-95, 118]]) },
@@ -274,11 +273,18 @@ export function mitteMap(scale = 1): MapDef {
     terraces: [],
     district: 3,
     flavor: 'neon',
+    wet: true,
     strictLots: true,
     hiddenSpots: [endOf('Hinterhof', 1.2, 0)],
     // Step 7: a container village on the route between the Potsdamer Brücke and the Tilla-Durieux-Park.
-    specialLots: [{ special: 'containerdorf', x: -44 * s, z: 160 * s, rot: 0, w: 18, d: 14 }],
-    specialMax: { nachtmarkt: 2, containerdorf: 3, baustelle: 1 },
+    // The Tiergarten has no frontage: its two lot types stand by hand beside the route (east of the
+    // Hofjägerallee, south of the Straße des 17. Juni).
+    specialLots: [
+      { special: 'containerdorf', x: -44 * s, z: 160 * s, rot: 0, w: 18, d: 14 },
+      { special: 'zeltlager', x: -80 * s, z: -12 * s, rot: -Math.PI / 2, w: 18, d: 15 },
+      { special: 'lichtung', x: -60 * s, z: -38 * s, rot: Math.PI, w: 18, d: 15 },
+    ],
+    specialMax: { nachtmarkt: 2, containerdorf: 3, baustelle: 1, markt: 2, clubhof: 3, sperrzone: 3, parkplatz: 2 },
     guards: [{ ...endOf('Arkadenhof', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 }],
     fixedProps: [
       { kind: 'crates', ...endOf('Checkpoint Charlie', 1.5, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Checkpoint Charlie', 3.5, -1.4), rot: 1, size: 1 },

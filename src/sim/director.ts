@@ -169,10 +169,20 @@ export function updateDirector(sim: Sim): void {
   run.spawnT -= DT;
   if (run.spawnT <= 0 && (run.bossesToSpawn.length > 0 || (run.toSpawn > 0 && aliveCount(sim) < w.maxAlive))) {
     run.spawnT = SPAWN_GAP;
-    const boss = run.bossesToSpawn.shift();
-    if (boss) {
-      const s = rimSpot(sim, enc, ENEMIES[boss].radius);
-      spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp, w.dmgMul * df.dmg);
+    // M15: while the Weltzeituhr wakes up, the wave waits.
+    const waking = sim.enemies.some((e) => e.state !== 'dead' && (e.wake ?? 0) > 0);
+    const boss = waking ? undefined : run.bossesToSpawn.shift();
+    if (waking) {
+      // Nothing comes out until it stands.
+    } else if (boss) {
+      const s = enc.bossAt ?? rimSpot(sim, enc, ENEMIES[boss].radius);
+      const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      // It stands where the landmark stood: the landmark's colliders leave until it dies.
+      if (enc.bossAt) {
+        e.home = { x: s.x, z: s.z };
+        e.stand = sim.level.near(s.x, s.z, 0.5).filter((c) => colliderDistance(c, s.x, s.z) <= 0);
+        for (const c of e.stand) sim.level.remove(c);
+      }
     } else {
       // M12b: a pack kind (rat) spawns its whole pack of five for ONE unit of the wave's `count`, as
       // in 2D `spawnOne` (one rat roll, four more beside it). Mix weights are per unit, so a rat

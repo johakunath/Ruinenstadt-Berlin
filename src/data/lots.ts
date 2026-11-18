@@ -12,7 +12,10 @@ export type SpecialKind = 'hinterhof' | 'parkplatz' | 'kleingarten' | 'teich' | 
   // M15 Alexanderplatz (GDR clockwork gardens): a greenhouse garden and a Plattenbau courtyard.
   | 'glashaus' | 'plattenhof'
   // M15 Mitte (2089, Potsdamer Platz): a neon night market and a container village.
-  | 'nachtmarkt' | 'containerdorf';
+  | 'nachtmarkt' | 'containerdorf'
+  // M15 Mitte step 7, the other zones (`docs/mockups/m15-mitte-lots.svg`, variant A): a club yard (Friedrichstadt),
+  // a checkpoint zone (Regierungsviertel), a tent camp and a beer garden clearing (Tiergarten, placed by hand).
+  | 'clubhof' | 'sperrzone' | 'zeltlager' | 'lichtung';
 /** Sleeping guards: `lying` play dead on the ground, `hidden` wait unseen in a doorway or under rubble. */
 export interface LotGuard { x: number; z: number; kind: EnemyKind; elite: boolean; wake: number; hp: number; pose: 'lying' | 'hidden'; facing: number }
 /** A walkable plank path over water (pond jetty): center, facing along its length. */
@@ -44,12 +47,17 @@ export const SPECIAL_SIZE: Record<SpecialKind, { w: [number, number]; d: [number
   plattenhof: { w: [19, 23], d: [16, 19], max: 3 },
   nachtmarkt: { w: [17, 21], d: [13, 16], max: 3 },
   containerdorf: { w: [18, 22], d: [15, 18], max: 3 },
+  clubhof: { w: [18, 21], d: [18, 21], max: 3 },
+  sperrzone: { w: [18, 22], d: [14, 17], max: 3 },
+  zeltlager: { w: [17, 20], d: [14, 16], max: 2 },
+  lichtung: { w: [17, 20], d: [14, 16], max: 2 },
 };
 /** Chance per street slot to try a lot type (Johannes: two in five lots; many tries do not fit, so higher). */
 export const SPECIAL_SHARE = 0.7;
 export const SPECIAL_NAME: Record<SpecialKind, string> = {
   hinterhof: 'Hinterhof', parkplatz: 'Parkplatz', kleingarten: 'Kleingärten', teich: 'Teich', truemmer: 'Trümmerfeld', baustelle: 'Baustelle', markt: 'Markt', kirchhof: 'Kirchhof',
   glashaus: 'Gewächshausgarten', plattenhof: 'Plattenbauhof', nachtmarkt: 'Nachtmarkt', containerdorf: 'Containerdorf',
+  clubhof: 'Clubhof', sperrzone: 'Sperrzone', zeltlager: 'Zeltlager', lichtung: 'Lichtung',
 };
 
 export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
@@ -297,6 +305,78 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       prop('crates', rng.range(-3, 3), -D + 4.8, rng.range(0, 3), 1, 0.4);
       guard('runner', side * (W - 1.6), -D + 6.6, 'hidden', { elite: true, hp: 1.8, wake: 4 });
       out.spots.cache = P(-side * (W - 3), -D + 4.5);
+      break;
+    }
+    case 'clubhof': {
+      // Club yard (2089): a Vorderhaus with a Durchfahrt, the club in the back house (its yard door is the
+      // club door, neon by `mitte-zones.ts`), speaker stacks beside it, a queue of posts from the gate to the
+      // door with ghouls still standing in line (playing dead), a fire barrel. Cache in the corner.
+      out.ground = 'cobbles';
+      const gx = rng.range(-W + 5, W - 5), fb = D - 5, cb = -D + 5;
+      building('altbau', -W, gx - 1.6, fb, D, 1 + rng.int(2));
+      building('altbau', gx + 1.6, W, fb, D, 1 + rng.int(2));
+      building('altbau', -W, W, -D, cb, 2);
+      run('wall', -W + 0.2, cb, -W + 0.2, fb, [], 0.02); run('wall', W - 0.2, cb, W - 0.2, fb, [], 0.02);
+      for (const sa of [-1, 1]) prop('speaker', sa * 2.4, cb + 0.7, Math.PI + rng.range(-0.15, 0.15), 1.1, 0.05);
+      const qa = gx * 0.4 + 1.3;
+      for (let b = cb + 2.2; b < fb - 1.2; b += 1.5) prop('bollard', qa, b, 0, 1, 0.02);
+      let i = 0;
+      for (let b = cb + 2.4; b < fb - 1.5 && i < 4; b += 1.7, i++) guard(i === 3 ? 'runner' : 'walker', qa - 0.8 + rng.range(-0.15, 0.15), b, 'lying', { wake: 3.8 });
+      prop('fireBarrel', -side * (W - 1.6), (cb + fb) / 2 + rng.range(-1, 1));
+      // Candles in the Durchfahrt, where the queue begins.
+      prop('candles', gx + 1.1, D - 0.9, 0, 1, 0);
+      prop('crates', side * (W - 1.6), cb + 1.4, rng.range(0, 3), 1, 0.3); prop('bins', side * (W - 1.4), fb - 1.4, Math.PI / 2, 1, 0.2);
+      prop('rubble', -side * (W - 3), cb + 1.2, 0, rng.range(0.5, 0.8));
+      out.spots.cache = P(side * (W - 2.2), cb + 2.6); out.spots.rescue = P(-side * (W - 3), fb - 1.6);
+      break;
+    }
+    case 'sperrzone': {
+      // Checkpoint zone in front of a Bundesbau (2089): a sandbag wall at the back, a barrier line with a gap
+      // (the holo band over it is render dressing), tank traps, a camera pole and a work lamp as the
+      // searchlight. Few fires; somebody waits behind the sandbags. Cache behind the wall.
+      out.ground = 'asphalt';
+      const gap = rng.range(-W / 3, W / 3);
+      for (let a = -W + 1.4; a < W - 1; a += 2.2) if (Math.abs(a - gap) > 1.6) prop('sandbags', a, -D + 2.6, rng.range(-0.08, 0.08), 1, 0.04);
+      const hb = rng.range(-1, 1.5);
+      prop('barrier', (-W + 1 + gap - 1.8) / 2, hb, 0, gap - 1.8 + W - 1, 0.01);
+      prop('barrier', (gap + 1.8 + W - 1) / 2, hb, 0, W - 1 - gap - 1.8, 0.01);
+      for (let k = 0; k < 3; k++) prop('tankTrap', rng.range(-W + 2.5, W - 2.5), rng.range(hb + 2.2, D - 2), rng.range(0, 3), 1, 0.4);
+      prop('camPole', side * (W - 1), D - 1.2, Math.PI + side * 0.6, 1, 0.1);
+      prop('workLamp', -side * (W - 1.5), -D + 4.4, side * 0.5, 1, 0.2); prop('workLamp', -side * (W - 1.4), D - 1.3, Math.PI - side * 0.5, 1, 0.2);
+      prop('crates', gap + rng.range(-1, 1), -D + 1.2, rng.range(0, 3), 1, 0.3);
+      guard('spitter', -side * rng.range(1, W - 3), -D + 1.3, 'hidden', { wake: 4.5 });
+      out.spots.cache = P(side * (W - 2.5), -D + 1.2);
+      break;
+    }
+    case 'zeltlager': {
+      // Tent camp in the Tiergarten: tents round a cooking fire, tarps and a washing line, crates and a few
+      // pallets. Survivors live here (rescue and trader spots by the fire); calm, nobody sleeps on guard.
+      out.ground = 'dirt';
+      const n = 5 + rng.int(2);
+      for (let k = 0; k < n; k++) {
+        const t = (k / n) * Math.PI * 2 + rng.range(-0.2, 0.2), ra = W - 3.2, rb = D - 3;
+        const a = Math.sin(t) * ra, b = Math.cos(t) * rb;
+        prop('tent', a, b, t + Math.PI / 2 + rng.range(-0.25, 0.25), rng.range(0.85, 1.05), 0.05);
+      }
+      prop('campfire', rng.range(-0.6, 0.6), rng.range(-0.6, 0.6), 0, 1, 0.3);
+      prop('clothesline', rng.range(-2, 2), -D + 1.5, rng.range(-0.25, 0.25), rng.range(6, 8), 0.1);
+      prop('crates', rng.range(-W + 2, W - 2), D - 1.2, rng.range(0, 3), 1, 0.4); prop('pallets', -side * (W - 1.3), rng.range(-2, 2), Math.PI / 2, 1, 0.3);
+      prop('planks', side * (W - 1.5), -D + 2.2, 0.8);
+      out.spots.trader = P(rng.range(-1.5, 1.5), 2.2); out.spots.rescue = P(rng.range(-1.5, 1.5), -2.2);
+      break;
+    }
+    case 'lichtung': {
+      // A clearing with a small beer garden: beer sets in loose rows, string lights between the trees, beer
+      // crates, a barrel fire. The last guests are still here, playing dead under the tables.
+      out.ground = undefined;
+      for (const [a, b] of [[-W + 2, D - 2], [W - 2, D - 2.2], [-W + 1.8, -D + 2], [W - 2.2, -D + 1.8]] as Pt[]) tree(a, b, rng.range(5, 6.5));
+      const sets: Pt[] = [];
+      for (const b of [-2.8, 2.2]) for (const a of [-4.2, 0, 4.2]) if (rng.next() < 0.85) sets.push([a + rng.range(-0.6, 0.6), b + rng.range(-0.5, 0.5)]);
+      for (const [a, b] of sets) prop('beerTable', a, b, rng.range(-0.25, 0.25), 1, 0.05);
+      prop('stringLights', 0, -0.4, rng.range(-0.15, 0.15), W * 2 - 4, 0.05);
+      prop('fireBarrel', side * (W - 1.8), rng.range(-1, 1)); prop('crates', -side * (W - 2), rng.range(-1.5, 1.5), rng.range(0, 3), 1, 0.4);
+      for (let k = 0; k < Math.min(3, sets.length); k++) { const [a, b] = sets[k * 2 % sets.length]!; guard('walker', a + 0.4, b + (b > 0 ? 1.3 : -1.3), 'lying', { wake: 4 }); }
+      out.spots.cache = P(-side * (W - 2.4), D - 3.5);
       break;
     }
     case 'glashaus': {

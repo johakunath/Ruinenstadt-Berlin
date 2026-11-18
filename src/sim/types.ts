@@ -102,6 +102,16 @@ export interface Player {
   sweeping: boolean;
   sweepLo: number;
   sweepHi: number;
+  /** M12c shove: knock velocity on top of the player's own, damped every step (`pushPlayer`). */
+  kx: number;
+  kz: number;
+  /** Seconds the hero cannot walk: M15 Wurzler roots or the M12c Türsteher grab (a roll breaks free; attacks and powers work). */
+  root: number;
+  /** Who holds the hero (Türsteher id, 0: roots or nobody); immunity after a Wurzler root. */
+  rootBy: number;
+  rootI: number;
+  /** M15 Stillstand of the Weltzeituhr: the hero walks at half speed for this long. */
+  slowT: number;
 }
 
 /** `special`: a telegraphed special attack runs (`Enemy.sp`, `src/sim/ai.ts`). */
@@ -175,6 +185,25 @@ export interface Enemy {
   guardIndex?: number;
   /** The last hit was critical (kill effects). */
   lastCrit?: boolean;
+  /** M12c: a special that follows this one after `t` seconds (Türsteher rage shove, the Basspredigt). */
+  queue?: { kind: SpecialKind; t: number };
+  /** M12c: one-time boss calls already made (the Dirigent's Orchester). */
+  calls?: number;
+  /** M15 shield bearers: the guard stands open this long (a stun or shock opened it). */
+  guardOpen?: number;
+  /** Seconds until the next "geblockt" note may show. */
+  noteT?: number;
+  /** M15: still waking up (untouchable, does nothing): the Weltzeituhr on its base. */
+  wake?: number;
+  /** M15: a ring spins and sprays for this long (Koloss gears, Weltzeituhr orbit); `sprayT` times the shots. */
+  spin?: number;
+  sprayT?: number;
+  /** M15 Weltzeituhr: Stillstand thresholds already passed. */
+  still?: number;
+  /** Map colliders it stands in while awake (the Weltzeituhr's base); they come back when it dies. */
+  stand?: Collider[];
+  /** Where it stood before it woke (the Weltzeituhr's base): render walks it back there when it dies. */
+  home?: { x: number; z: number };
 }
 
 export type SimEvent =
@@ -211,6 +240,8 @@ export type SimEvent =
   /** A marked ground zone goes off. */
   | { type: 'zoneHit'; kind: ZoneKind; x: number; z: number; r: number; hit: boolean }
   | { type: 'enemyShot'; x: number; z: number; boss: boolean }
+  /** M12c: a Wachdrohne searchlight locked onto the hero; the volley follows. */
+  | { type: 'spotLock'; id: number; x: number; z: number }
   | { type: 'bossRage'; id: number; name: string }
   | { type: 'summon'; id: number; x: number; z: number; count: number }
   | { type: 'spawn'; id: number }
@@ -311,4 +342,6 @@ export interface Sim {
   stress: number;
   /** M20 tunnel gratings (`level.gates`): sim time each one opened, Infinity while closed. */
   gateT: number[];
+  /** M12c rain (2D `D.wet`, from the map; tunnels and the camp are dry): fire burns shorter, shock jumps further. */
+  wet: boolean;
 }
