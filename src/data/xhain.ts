@@ -128,7 +128,8 @@ export function xhainMap(scale = 1): MapDef {
     { name: 'Mariannenplatz', kind: 'path', width: 5, pts: line([[-205, -62], [-205, -46], [-204, -30], [-198, 0], [-200, 24]]) },
     // The Bethaniendamm follows the Wall with its bend; St. Thomas stands inside the bend.
     { name: 'Bethaniendamm', kind: 'side', width: 6, pts: line([[-124, -68], [-130, -50], [-150, -46], [-196, -46], [-250, -45], [-305, -43]]) },
-    { name: 'Oranienstraße', kind: 'side', width: 7, pts: line([[-305, 20], [-272, 20], [-232, 24], [-190, 26], [-150, 22], [-112, 14]]) },
+    // M15 test street for the Berliner Blockrand (Johannes 2026-11-18): tall north side, low south side.
+    { name: 'Oranienstraße', kind: 'side', width: 7, sidewalk: 3, block: true, pts: line([[-305, 20], [-272, 20], [-232, 24], [-190, 26], [-150, 22], [-112, 14]]) },
     { name: 'Adalbertstraße', kind: 'side', width: 6, pts: line([[-252, 20], [-250, -20], [-249, -45]]) },
     { name: 'Mariannenstraße', kind: 'side', width: 6, pts: line([[-200, 26], [-198, 58]]) },
     { name: 'Manteuffelstraße', kind: 'side', width: 6, pts: line([[-150, 22], [-148, -20], [-150, -46]]) },
@@ -141,7 +142,7 @@ export function xhainMap(scale = 1): MapDef {
     { name: 'Görli-Querweg', kind: 'path', width: 4, pts: line([GOERLI_AT(10), GOERLI_AT(13, 28)]) },
     { name: 'Wiener Straße', kind: 'side', width: 7, pts: line([[-114, 52], GOERLI_AT(52, 28), GOERLI_AT(62, 28)]) },
     { name: 'Ohlauer Straße', kind: 'side', width: 6.5, pts: line([GOERLI_AT(-54, -28), GOERLI_AT(56, -28)]) },
-    { name: 'Reichenberger Straße', kind: 'side', width: 6.5, pts: line([[-305, 104], [-200, 108], GOERLI_AT(-54, -28)]) },
+    { name: 'Reichenberger Straße', kind: 'side', width: 6.5, sidewalk: 3, block: true, pts: line([[-305, 104], [-200, 108], GOERLI_AT(-54, -28)]) },
     { name: 'Görlitzer Straße', kind: 'side', width: 7, pts: line([[-64, 36], GOERLI_AT(13, 28)]) },
     { name: 'Schlesische Straße', kind: 'side', width: 7, pts: line([[-64, 36], [-20, 58], [26, 84], [56, 130]]) },
     { name: 'Taborstraße', kind: 'side', width: 6, pts: line([[-20, 58], [-40, 96], [-43, 104]]) },

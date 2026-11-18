@@ -1,6 +1,17 @@
-# V1 Visibility behind buildings: back yards and enemy contours [Claude · Opus high; layout fork → Fable high]
+# V1 Visibility behind buildings: back yards and enemy contours [Claude · Fable high for the B engine choice, then Opus high]
 
-Status: open. Playtest Johannes, 2026-11-17.
+Status: open. Playtest Johannes, 2026-11-17. Layout decided 2026-11-18 (below); B needs the engine pass.
+
+## Decision (Johannes, 2026-11-18, `docs/mockups/m15-altbau-visibility.svg`)
+Mainly **A**: tall closed rows only where they do not hide a walkable street (built as `Street.block`, `docs/maps/guidelines.md` › Blockrand). Selectively **B**: a building is cut off above the ground floor (hard cut, dark cap, no transparency) while the hero is in a courtyard behind it or behind a landmark. This overrides the 2026-11-16 "no proximity effect" rule only for these flagged objects.
+
+## B: engine options (decide in a Fable high pass before building)
+| Option | How | Cost and risk |
+|---|---|---|
+| B1 Cut by id | Flagged lots and landmarks get a vertex attribute `cutId` in the merged batches (0 for everything else); the building materials, the depth pre-pass, the shadow pass and the hero contour's occluder mask all discard fragments above `GROUND_H` whose id is in a uniform list of up to 8 active ids. Cut faces show the inside: back faces drawn dark as the cap | Precise per building, no extra draw calls; touches `batch.ts` (one more attribute everywhere, +4 bytes per vertex) and every pass's material (`onBeforeCompile`). Must keep shader count constant |
+| B2 Separate upper batches | Flagged objects' upper floors go into their own small batch per chunk and material; `visible = false` while the hero is in a trigger zone | No shader work; extra draw calls (one per material per chunk with flagged objects) and the whole chunk's flagged uppers vanish together |
+Trigger zones (data): `Lot.cut` / `Landmark.cut` polygon (the courtyard, or the area north of a landmark within about 20 m). Both options must also drop the cut part from the hero-contour occluder mask, or the contour would show behind invisible walls.
+
 
 ## Findings
 1. The new back yards (M11c lot type Hinterhof, M16b lane "Hinterhof") lie fully behind building fronts as seen by the camera. The hero contour shows, but not the ground, so you cannot see where you walk.

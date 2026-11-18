@@ -29,6 +29,8 @@ export interface Facade {
   depth: number;
   /** Upper floors above the ground floor (altbau only). */
   floors: number;
+  /** M15: a fire wall (Brandwand) between Blockrand neighbours: no windows, doors or balconies. */
+  blank?: boolean;
   tone: PlasterTone;
   features: FacadeFeature[];
   seed: number;

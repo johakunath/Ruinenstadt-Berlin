@@ -233,4 +233,18 @@ describe('Xhain map (M15, concept B)', () => {
     expect(log.filter((e) => e.type === 'zoneClear').map((e) => (e as { zone: number }).zone)).toEqual([0, 1, 2, 3]);
     expect(log.at(-1)?.type).toBe('victory');
   });
+
+  it('Blockrand (M15, variant A): tall rows never stand on the camera side of their street', () => {
+    const m = xhainMap(1), lots = generateLots(m).filter((l) => l.block);
+    const tall = lots.filter((l) => l.kind === 'altbau' && l.floors >= 3), low = lots.filter((l) => l.floors <= 1);
+    expect(tall.length).toBeGreaterThanOrEqual(4); // two test streets so far (Oranienstraße, Reichenberger Straße)
+    expect(low.length).toBeGreaterThan(4);
+    // The front faces the street along (sin rot, cos rot): a lot south of its street faces north (cos < 0).
+    for (const l of tall) expect(Math.cos(l.rot), `${l.x.toFixed(0)},${l.z.toFixed(0)}`).toBeGreaterThan(-0.5);
+    for (const l of lots.filter((q) => Math.cos(q.rot) < -0.5)) expect(l.floors).toBeLessThanOrEqual(1);
+    // Rows close up: tall houses stand wall to wall with a neighbour unless a Baulücke or a fight interrupts the row.
+    let tight = 0;
+    for (const a of tall) if (tall.some((b) => b !== a && Math.abs(Math.hypot(a.x - b.x, a.z - b.z) - (a.w + b.w) / 2) < 0.6)) tight++;
+    expect(tight / tall.length).toBeGreaterThanOrEqual(0.5);
+  });
 });

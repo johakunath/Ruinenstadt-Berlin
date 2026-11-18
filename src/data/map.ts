@@ -50,6 +50,13 @@ export interface Street {
    */
   profile?: 'haupt' | 'allee';
   sidewalk?: number;
+  /**
+   * M15 Berliner Blockrand (Johannes 2026-11-18, variant A of `docs/mockups/m15-altbau-visibility.svg`):
+   * closed rows of 5-storey Altbau wall to wall, but only where they do not stand between the camera and
+   * the street (the north side of east–west streets, both sides of north–south ones). The camera side
+   * gets shops and ruins. Tall rows open in Baulücken (a Trümmerfeld between two fire walls).
+   */
+  block?: boolean;
 }
 /** Tree pits on profile sidewalks: spacing and distance from the curb. */
 export const TREE_PIT = { gap: 9, fromCurb: 1.4 } as const;
@@ -110,6 +117,8 @@ export interface Lot {
   ruin?: boolean;
   /** Back wing (Seitenflügel, annex): same facing, centered at (x, z), so the footprint is an L. */
   wing?: { x: number; z: number; w: number; d: number };
+  /** M15: part of a closed Blockrand row (side walls are windowless fire walls). */
+  block?: boolean;
   special?: SpecialKind;
   content?: LotContent;
 }
@@ -560,6 +569,58 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
 
 const pondsOf = new WeakMap<MapDef, Pt[][]>();
 
+/** M15 Blockrand: tall rows face south or sideways, the camera side stays low (see `Street.block`). */
+export const BLOCK = { w: [12, 19] as [number, number], d: [12, 14] as [number, number], tallFloors: 4, gap: 0.12, baulucke: 0.14, ruinTall: 0.3, ruinLow: 0.55 } as const;
+
+/** Is a lot whose front faces the street with outward normal (nx, nz) on the camera side of it? */
+export function cameraSide(nz: number): boolean {
+  return nz > 0.5;
+}
+
+/**
+ * One slot of a Blockrand street side: a tall Altbau wall to wall with the previous one, a low shop or
+ * ruin on the camera side, or (on tall rows) a Baulücke: a Trümmerfeld between two fire walls. Returns
+ * the next position along the street piece.
+ */
+function blockSlot(m: MapDef, s: Street, rng: Rng, occ: Occupancy, lots: Lot[], area: Area, ax: number, az: number, dx: number, dz: number, side: number, t: number, len: number): number {
+  const nx = -dz * side, nz = dx * side, low = cameraSide(nz);
+  const front = s.width / 2 + Math.max(1.6, s.sidewalk ?? 0);
+  const place = (w: number, d: number): { x: number; z: number; rot: number; ok: boolean } => {
+    const x = ax + dx * (t + w / 2) + nx * (front + d / 2), z = az + dz * (t + w / 2) + nz * (front + d / 2), rot = Math.atan2(-nx, -nz);
+    return { x, z, rot, ok: t + w < len + 1 && areaAt(m, x, z) === area && streetDist(m, x, z).d > d / 2 - 0.5 && cornersOk(m, x, z, rot, w / 2, d / 2) && occ.free(x, z, rot, w / 2 - 1.05, d / 2 - 0.5) };
+    // The occupancy raster is 2 m: neighbours wall to wall share edge cells, so the check is shrunk by a cell's half.
+  };
+  if (!low && rng.next() < BLOCK.baulucke && lots.some((l) => l.block)) {
+    const w = rng.range(11, 14), d = rng.range(13, 15), p = place(w, d);
+    if (p.ok) {
+      const lot = { kind: 'special' as const, special: 'truemmer' as const, x: p.x, z: p.z, rot: p.rot, w, d, floors: 0, seed: rng.int(1e6) };
+      const content = lotContent(lot);
+      occ.take(p.x, p.z, p.rot, w / 2 + 0.05, d / 2 + 0.05);
+      lots.push({ ...lot, content }, ...content.lots);
+      return t + w + BLOCK.gap;
+    }
+  }
+  const w = low ? rng.range(7, 12) : rng.range(BLOCK.w[0], BLOCK.w[1]);
+  const d = low ? rng.range(8, 11) : rng.range(BLOCK.d[0], BLOCK.d[1]);
+  const p = place(w, d);
+  if (!p.ok) return t + rng.range(1.5, 3);
+  const kind: LotKind = low && rng.next() < 0.6 ? 'shop' : 'altbau';
+  const lot: Lot = { kind, x: p.x, z: p.z, rot: p.rot, w, d, floors: low ? (kind === 'shop' ? 0 : rng.int(2)) : BLOCK.tallFloors - (rng.next() < 0.2 ? 1 : 0), seed: rng.int(1e6), block: true };
+  if (rng.next() < (low ? BLOCK.ruinLow : BLOCK.ruinTall)) lot.ruin = true;
+  if (!low && rng.next() < 0.7) {
+    // Seitenflügel: a back wing two floors lower, as deep as the yard allows.
+    const ww = rng.range(4.5, 6.5), wd = rng.range(7, 11), a = rng.pick([-1, 1]) * (w / 2 - ww / 2), b = -(d / 2 + wd / 2) + 0.05;
+    const wx = p.x + Math.cos(p.rot) * a + Math.sin(p.rot) * b, wz = p.z - Math.sin(p.rot) * a + Math.cos(p.rot) * b;
+    if (cornersOk(m, wx, wz, p.rot, ww / 2, wd / 2) && areaAt(m, wx, wz) === area && occ.free(wx, wz, p.rot, ww / 2 + 0.3, wd / 2)) {
+      occ.take(wx, wz, p.rot, ww / 2 + 0.3, wd / 2 + 0.3);
+      lot.wing = { x: wx, z: wz, w: ww, d: wd };
+    }
+  }
+  occ.take(p.x, p.z, p.rot, w / 2 + 0.05, d / 2 + 0.05);
+  lots.push(lot);
+  return t + w + BLOCK.gap;
+}
+
 /** Generates buildings along streets and trees on free ground. Deterministic per map seed. */
 export function generateLots(m: MapDef): Lot[] {
   if (m.tunnel) return [];
@@ -623,6 +684,10 @@ export function generateLots(m: MapDef): Lot[] {
           }
           if (!kind) {
             t += 6;
+            continue;
+          }
+          if (s.block && kind === 'altbau') {
+            t = blockSlot(m, s, rng, occ, lots, area!, ax, az, dx, dz, side, t, len);
             continue;
           }
           // Altbau streets get single-storey shops (Läden, Spätis) between the blocks.

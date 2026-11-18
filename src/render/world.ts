@@ -460,11 +460,11 @@ export function buildAltbau(b: Builder, f: Facade, opts: { balconies?: boolean }
   }
   if (at < run.len) b.box(b.mats.stucco, run.mat((at + run.len) / 2, 0.45, 0.04), run.len - at, 0.9, 0.12, [0.5, 0.52, 0.5]);
   b.box(b.mats.stucco, run.mat(run.len / 2, GROUND_H, 0.1), run.len, 0.32, 0.24, [0.85, 0.82, 0.78]);
-  for (let k = 1; k < f.floors; k++) b.box(b.mats.stucco, run.mat(run.len / 2, GROUND_H + k * FLOOR_H, 0.06), run.len, 0.18, 0.14);
+  if (!f.blank) for (let k = 1; k < f.floors; k++) b.box(b.mats.stucco, run.mat(run.len / 2, GROUND_H + k * FLOOR_H, 0.06), run.len, 0.18, 0.14);
   b.box(b.mats.stucco, run.mat(run.len / 2, H - 0.3, 0.16), run.len, 0.45, 0.36);
 
-  // --- windows
-  const bays = Math.floor(run.len / 2.7);
+  // --- windows (a Brandwand has none)
+  const bays = f.blank ? 0 : Math.floor(run.len / 2.7);
   const spacing = run.len / bays;
   for (let i = 0; i < bays; i++) {
     const s = (i + 0.5) * spacing;
@@ -478,7 +478,7 @@ export function buildAltbau(b: Builder, f: Facade, opts: { balconies?: boolean }
 
   // --- balconies: some facades, stacked on chosen window axes, not every floor (own rng: windows stay put)
   const brng = new Rng(f.seed * 31 + 7);
-  if (opts.balconies !== false && f.floors > 0 && bays >= 2 && brng.next() < 0.55) {
+  if (!f.blank && opts.balconies !== false && f.floors > 0 && bays >= 2 && brng.next() < 0.55) {
     const mode = brng.int(3);
     const off = brng.int(2);
     const axes: Array<[number, number]> = mode === 1 && bays % 2 === 0 && bays > 2

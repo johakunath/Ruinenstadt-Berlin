@@ -28,7 +28,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
 | M15 Xhain, district 2: concept B "Über die Mauer" (Johannes, 2026-11-18), rats, Grenzer, Brandmeister, Rattenmutter, Spreehexe | Claude · Opus high | built 2026-11-18, playtest open: `docs/maps/xhain.md`, `docs/tasks/m12b-xhain-enemies.md`; textures (Codex) and bot calibration open |
-| V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Opus high (layout rule: mockup first) | open: `docs/tasks/v1-visibility.md` |
+| V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Fable high (B engine choice), then Opus high | layout decided 2026-11-18 (A built as Blockrand in Xhain, B selective, engine choice open): `docs/tasks/v1-visibility.md` |
 | U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
 | K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
 | P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; next candidates to measure (playtest 2026-11-17) | Claude · Opus high, Johannes measures | step 1 built, measurement open: `docs/tasks/p1-heat.md` |

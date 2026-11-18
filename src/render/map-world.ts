@@ -1220,6 +1220,8 @@ export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m:
     const f: Facade = {
       id: `lot${l.seed}-${i}`, style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1],
       depth: Math.min(l.w, l.d) / 2, floors: l.floors, tone, features, seed: (l.seed + i * 13) % 997,
+      // M15 Blockrand: the side walls touch the neighbours or stand bare over a Baulücke.
+      ...(l.block && (i === 1 || i === 3) ? { blank: true } : {}),
     };
     buildAltbau(b, f, { balconies: l.kind !== 'platte' });
     if (l.kind === 'platte' && (i === 0 || i === 2)) b.solid.excludeOccluder(() => loggias(b, f, l.seed * 3 + i));
