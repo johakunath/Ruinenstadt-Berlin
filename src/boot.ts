@@ -12,7 +12,8 @@ import { GO_KEY, reloadWith, RESUME_KEY } from './options';
 import { campOpen, LINES, stopName } from './data/lines';
 import { optionsScreen } from './ui/options-screen';
 import { bindSettings, initFullscreenButton, opts } from './ui/settings';
-import { MAP_NAME, MAP_SUB, showTitleLinks, type MapId } from './ui/maps';
+import { MAP_NAME, MAP_SUB, type MapId } from './ui/maps';
+import { pickIsHere, titleNet } from './ui/title-net';
 import { startScreen } from './ui/start';
 
 const SAVE_KEY = 'ruinenstadt-berlin.save';
@@ -34,7 +35,10 @@ const peek = ((): { difficulty?: unknown; run?: { map?: string; index?: number }
 const mapName = opts.map === 'tunnel' && opts.line > 0 ? `${LINES[opts.line]?.id ?? 'S3'}-Tunnel` : MAP_NAME[opts.map];
 const run = opts.map !== 'hof' && peek?.run?.map === mapName ? peek.run : null;
 start.setResume(run ? `Kampf ${(run.index ?? 0) + 1}` : null, isDifficulty(peek?.difficulty) ? peek.difficulty : start.difficulty);
-showTitleLinks(opts.map, peek?.profile?.inventory?.camp?.freed ?? []);
+// Layout 2A: the network map with the next place picked; the main button follows the pick.
+titleNet().show(peek?.profile?.inventory?.camp?.freed ?? []);
+start.setTarget(titleNet().label() || null);
+titleNet().onSelect = () => start.setTarget(titleNet().label() || null);
 // M20: the camp opens with the S3 (Johannes, 2026-11-18); before that no button leads there.
 const freed = peek?.profile?.inventory?.camp?.freed;
 document.getElementById('open-camp')!.hidden = !campOpen(freed) || opts.map === 'hof';
@@ -68,6 +72,9 @@ title.addEventListener('click', e => {
   if (b.id === 'open-camp') {
     e.stopImmediatePropagation();
     reloadWith({ map: 'lager' });
+  } else if (b.id === 'play' && !pickIsHere()) {
+    e.stopImmediatePropagation();
+    if (titleNet().canRide()) titleNet().rideSelected();
   } else if (b.id === 'play' || b.id === 'resume') {
     e.stopImmediatePropagation();
     void loadGame().then(m => { if (m) b.click(); });

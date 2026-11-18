@@ -1035,3 +1035,7 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 }
 @media (max-width: 599px) and (orientation: portrait) { .camp-main { grid-template-columns: 1fr; } }
 .row-c > button, .row-b > button { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; flex: none; }
+/* Layout 2A (Johannes 2026-11-18): the network map on the title; the next place is picked, Losziehen rides there. */
+#title-net:empty { display: none; }
+.net-inline svg.net { max-height: 34vh; border: 1px solid #33443f; }
+@media (max-height: 500px) { .net-inline svg.net { max-height: 40vh; } .start-main h1 { font-size: 48px; } }

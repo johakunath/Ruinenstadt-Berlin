@@ -13,13 +13,23 @@ export class NetBoard {
   private padDown: boolean[] = [];
   private padNext = 0;
 
-  constructor(private readonly go: (to: NetGo) => void, private readonly onClose: () => void) {
-    this.root.id = 'netboard';
-    this.root.className = 'overlay';
-    this.root.hidden = true;
-    this.root.setAttribute('role', 'dialog');
+  /** Layout 2A (Johannes 2026-11-18): the same map inline on the title, without its own card; the title's main button rides. */
+  private readonly inline: boolean;
+  /** Inline: called when the player picks another place. */
+  onSelect: () => void = () => undefined;
+  constructor(private readonly go: (to: NetGo) => void, private readonly onClose: () => void, host?: HTMLElement) {
+    this.inline = !!host;
     this.root.setAttribute('aria-label', 'Netzplan');
-    document.body.append(this.root);
+    if (host) {
+      this.root.className = 'net-inline';
+      host.append(this.root);
+    } else {
+      this.root.id = 'netboard';
+      this.root.className = 'overlay';
+      this.root.hidden = true;
+      this.root.setAttribute('role', 'dialog');
+      document.body.append(this.root);
+    }
     this.root.addEventListener('click', (e) => {
       const t = e.target as Element;
       if (t.closest('[data-close]')) { this.close(); return; }
@@ -28,9 +38,10 @@ export class NetBoard {
       if (!g) return;
       this.sel = g.dataset.stop !== undefined ? { stop: +g.dataset.stop } : { line: +g.dataset.line! };
       this.render();
+      this.onSelect();
       this.root.querySelector<HTMLElement>('[data-ride]:not(:disabled)')?.focus();
     });
-    keyNav(this.root, () => this.close());
+    if (!this.inline) keyNav(this.root, () => this.close());
     this.root.addEventListener('keydown', (e) => {
       if ((e.code === 'Enter' || e.code === 'Space') && (e.target as Element).closest('[data-stop],[data-line]')) { e.preventDefault(); (e.target as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true })); return; }
       // Keyboard only (Codex review): arrows walk the network as the pad does; Enter on the button rides.
@@ -47,7 +58,20 @@ export class NetBoard {
     this.render();
     this.root.querySelector<HTMLElement>('[data-ride]:not(:disabled)')?.focus();
   }
-  close(): void { if (!this.isOpen) return; this.root.hidden = true; this.onClose(); }
+  close(): void { if (!this.isOpen || this.inline) return; this.root.hidden = true; this.onClose(); }
+  /** Inline on the title: show the network with the next destination picked (a pick of the player stays). */
+  show(freed: readonly number[]): void {
+    const same = this.freed.length === freed.length && this.freed.every((v, i) => v === freed[i]);
+    this.freed = freed;
+    if (!this.sel || !same) this.sel = nextDestination(freed);
+    this.render();
+  }
+  /** The picked place and whether it can be played now. */
+  get selection(): { stop: number } | { line: number } | null { return this.sel; }
+  canRide(): boolean { const s = this.sel; return !!s && ('stop' in s ? this.stopOpen(s.stop) : linePlayable(s.line, this.freed)); }
+  /** Short label of the picked place for the title button. */
+  label(): string { const s = this.sel; return !s ? '' : 'stop' in s ? STOPS[s.stop]!.name : `${LINES[s.line]!.id} · ${stopName(s.line)} → ${stopName(s.line + 1)}`; }
+  rideSelected(): void { this.ride(); }
 
   /** Pad: D-pad/stick moves between the stops, lines and buttons, A presses, B closes. */
   pollPad(now: number): void {
@@ -108,7 +132,7 @@ export class NetBoard {
       svg += `<text x="${x + lx}" y="${y + ly + 11}" class="nets" style="text-anchor:${an}">${here ? 'Lager · ' : ''}${open ? d.station : 'kommt bald'}</text><circle cx="${x}" cy="${y}" r="15" fill="transparent"/></g>`;
     });
     svg += '<g transform="translate(12,238)" class="nets"><line x1="0" y1="-3" x2="14" y2="-3" stroke="#2a8a3a" stroke-width="5"/><text x="18">frei</text><line x1="46" y1="-3" x2="60" y2="-3" stroke="#da421e" stroke-width="5" stroke-dasharray="5 3"/><text x="64">Tunnel offen</text><line x1="124" y1="-3" x2="138" y2="-3" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 3"/><text x="142">kommt bald</text></g></svg>';
-    this.root.innerHTML = `<div class="net-panel"><header class="menu-head"><h2>Abfahrt · Netzplan</h2><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header>${svg}${this.card()}</div>`;
+    this.root.innerHTML = this.inline ? svg : `<div class="net-panel"><header class="menu-head"><h2>Abfahrt · Netzplan</h2><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header>${svg}${this.card()}</div>`;
   }
 
   /** The chosen place: what it is and the button that goes there (2D `tunCard`). */

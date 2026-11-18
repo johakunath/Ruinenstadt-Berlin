@@ -21,6 +21,7 @@ export class StartScreen {
       <section class="start-main">
         <h1>Ruinenstadt<span>Berlin</span></h1>
         <p class="sub" id="title-sub">Köpenick bei Nacht</p>
+        <div id="title-net"></div>
         <button id="resume" type="button" class="btn main" hidden>Weiter</button>
         <button id="play" type="button" class="btn main"><b>Losziehen</b><small>${MAP_PLAY[opts.map]}</small></button>
         <div class="diff"><div id="title-diff" class="seg" role="group" aria-label="Schwierigkeit">${DIFFICULTIES.map(d => `<button type="button" data-id="${d.id}" aria-pressed="false">${d.label}</button>`).join('')}</div><small id="diff-hint"></small></div>
@@ -62,10 +63,16 @@ export class StartScreen {
     if (label !== null) r.innerHTML = `<b>Weiter · ${label}</b><small>Dort weiter, wo du warst</small>`;
     p.classList.toggle('main', label === null);
     // Playtest 2026-11-16: each button says what it keeps.
-    p.innerHTML = label === null ? `<b>Losziehen</b><small>${MAP_PLAY[opts.map]}</small>` : '<b>Neue Expedition</b><small>Von vorn, Ausrüstung bleibt</small>';
+    p.innerHTML = label === null ? `<b>Losziehen</b><small>${this.target ?? MAP_PLAY[opts.map]}</small>` : '<b>Neue Expedition</b><small>Von vorn, Ausrüstung bleibt</small>';
+    this.resumeLabel = label;
     this.locked = label !== null;
     this.setDifficulty(difficulty);
   }
+
+  /** Layout 2A: the place picked on the title's network map (null: this page's map). */
+  private target: string | null = null;
+  private resumeLabel: string | null = null;
+  setTarget(label: string | null): void { this.target = label; this.setResume(this.resumeLabel, this.difficulty); }
 
   setDifficulty(id: DifficultyId): void {
     this.difficulty = id;

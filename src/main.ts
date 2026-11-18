@@ -40,8 +40,9 @@ import { xhainMap } from './data/xhain';
 import { mitteMap } from './data/mitte';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor } from './render/sky';
-import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, showTitleLinks, wonLink, type MapId } from './ui/maps';
+import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, wonLink, type MapId } from './ui/maps';
 import { areaAt, generateLots, generateProps, mapLevel } from './data/map';
+import { pickIsHere, titleNet } from './ui/title-net';
 import { mapSvg } from './data/map-svg';
 import { EdgeMarkers, Minimap } from './ui/minimap';
 import { ENEMIES } from './data/enemies';
@@ -239,9 +240,12 @@ document.getElementById('won-tunnel')!.addEventListener('click', () => {
 });
 /** M19/M15: the title's map buttons (tunnel after Köpenick, Xhain after the tunnel). */
 function showTunnelButton(): void {
-  if (level) showTitleLinks(mapId, sim.inventory.camp?.freed ?? []);
+  // Layout 2A (Johannes 2026-11-18): the network map on the title replaces the map buttons.
+  titleNet().show(sim.inventory.camp?.freed ?? []);
+  startScreen().setTarget(titleNet().label() || null);
   showCampButtons();
 }
+
 for (const id of ['go-tunnel', 'go-xhain']) document.getElementById(id)!.addEventListener('click', (e) => goMap(((e.currentTarget as HTMLElement).dataset.to as MapId | undefined) ?? 'koepenick'));
 /** Stay in the freed district: walk, loot, break things, test the build. */
 function explore(): void {
@@ -311,6 +315,7 @@ function playNow(): void {
 const intro = new IntroUi(() => sim, () => { if (phase === 'title') saveProfile(); });
 const ui = new Ui(opts, {
   onPlay: () => {
+    if (!pickIsHere()) { if (titleNet().canRide()) { saveProfile(); titleNet().rideSelected(); } return; }
     // M17: the intro cards come once, before the first run.
     if (!intro.seen('intro') && !opts.autostart) { intro.showIntro(() => playNow()); return; }
     playNow();
