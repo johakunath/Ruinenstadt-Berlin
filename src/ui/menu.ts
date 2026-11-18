@@ -34,9 +34,15 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   drone: 'Kreist und stößt herab. Strom holt sie runter.',
   tuersteher: 'Hält die Tür am Tor. Wer gepackt wird, rollt sich frei.', wachdrohne: 'Sucht dich mit dem Licht. Raus aus dem Kegel, schlag zu, wenn sie landet.',
   dirigent: 'Gibt den Takt vor. Die Boxen folgen ihm.', bassprediger: 'Predigt mit Strom und Bass. Nach dem Stoß ist er offen.',
+  // M15 Alexanderplatz (task step 6).
+  uhrwerk: 'Zifferblatt vorn. Von hinten treffen, Strom bringt das Werk aus dem Takt.',
+  wurzler: 'Wurzeln halten fest. In Bewegung bleiben.',
+  kernspeier: 'Spuckt Kerne im Fächer. Ran, solange er pflanzt.',
+  wurzelmutter: 'Wuchs aus dem Glashaus des Palasts.', uhrwerkgross: 'Nach dem Ansturm läuft er ab.',
+  volkskoloss: 'Ein Stück Platte auf Uhrwerkbeinen.', weltzeituhr: 'Sie stand still. Bis du kamst.',
 };
-const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'kabel', 'bass', 'drone'];
-const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'];
+const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone'];
+const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
 export interface MenuHost {
@@ -219,6 +225,14 @@ const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
   wachdrohne: '<path d="M4 7h4M16 7h4M6 7v2M18 7v2M8 9h8v3H8zM12 12l-5 8M12 12l5 8M7 20h10"/>',
   dirigent: '<path d="M3 9h18M3 13h18M3 17h18M6 20L18 4"/><circle cx="18" cy="4" r="1"/>',
   drone: '<path d="M4 8h5M15 8h5M6.5 8v3M17.5 8v3M8 11h8v3H8zM12 14v2"/>',
+  // M15 Alexanderplatz: no 2D busts for these, so line glyphs (clock face, roots, seed fan, slab, the clock).
+  uhrwerk: '<circle cx="12" cy="11" r="6"/><path d="M12 11V7.5M12 11l2.5 1.5M9 17l-2 4M15 17l2 4"/>',
+  wurzler: '<circle cx="12" cy="6" r="2.5"/><path d="M12 8.5v6M12 14.5l-4 6M12 14.5l4 6M12 14.5l-1 6M12 14.5l1.5 6M8 11c-2 0-3 2-4 1M16 11c2 0 3 2 4 1"/>',
+  kernspeier: '<circle cx="12" cy="7" r="3"/><path d="M12 10v4M8 14h8l-1 7H9zM17 5l4-2M17 7h4M17 9l4 2"/>',
+  wurzelmutter: '<circle cx="12" cy="8" r="3"/><path d="M7 4l1.5 2M17 4l-1.5 2M12 2v2.5M12 11v4M12 15l-6 6M12 15l6 6M12 15v6M6 12c-2 0-3 2-4 1M18 12c2 0 3 2 4 1"/>',
+  uhrwerkgross: '<circle cx="11" cy="11" r="7"/><path d="M11 11V6.5M11 11l3 2M19 9h3M20.5 7.5v3M7 18l-2 3M15 18l2 3"/>',
+  volkskoloss: '<rect x="6" y="3" width="12" height="12"/><path d="M9 6h2M13 6h2M9 9h2M13 9h2M9 12h6M9 15l-2 6M15 15l2 6M18 6h3v6"/>',
+  weltzeituhr: '<path d="M4 9h16v5H4zM12 9V4M8 4h8M6 14l-2 7M18 14l2 7M10 14l-1 7M14 14l1 7M7 11.5h10"/>',
 };
 /** 2D `kImg`: portrait, greyed (`dim`) or a black silhouette with "?" (`sil`). */
 const kimg = (inner: string, state: 'on' | 'dim' | 'sil', ring = '', cls = ''): string => state === 'sil'

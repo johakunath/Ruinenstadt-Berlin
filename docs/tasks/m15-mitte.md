@@ -139,6 +139,6 @@ Variant A of `docs/mockups/m15-mitte-lots.svg` and facade F-A (Johannes took the
 - New props (`src/render/props-mitte.ts`): `tent`, `beerTable` (one bench snapped), `speaker` (torn cone), `camPole`. Colliders in `propCollider`.
 - Reused: hinterhof layout logic for the Clubhof, the Köpenick market and parking lot, the Nachtmarkt dressing, `windowAt` for the ministry windows, existing materials only (no new draw-call material).
 - Test: `mitte.test.ts` › step 7 other zones (each type in its area, all their spots reachable, scale 1 and 1.3); light coverage and lamp rules still pass.
-- Cost: no new material; one pooled light per club door, holo barrier, charging post and camera LED (the pool size is fixed). Hardware check 25 (`pt-hardware-checks.md`).
-- Proof: `docs/proof/m15-mitte/zones-fill.jpg` (Clubhof, Neonmarkt, Zeltlager, Lichtung). The Sperrzone holo band and the ministries were checked in cloud shots only; a close look is part of hardware check 25.
+- Cost: no new material; one pooled light per club door, holo barrier, charging post and camera LED (the pool size is fixed). Hardware check 27 (`pt-hardware-checks.md`).
+- Proof: `docs/proof/m15-mitte/zones-fill.jpg` (Clubhof, Neonmarkt, Zeltlager, Lichtung). The Sperrzone holo band and the ministries were checked in cloud shots only; a close look is part of hardware check 27.
 - Open: the Regierungsviertel has few intact ministries (most lots roll ruin as everywhere); the holo band does not flicker in the geometry, only its light does.

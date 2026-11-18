@@ -35,4 +35,9 @@ mkdir -p assets-src
 cp "$tmp"/ual1/*/Unreal-Godot/UAL1_Standard.glb "$tmp"/ual2/*/Unreal-Godot/UAL2_Standard.glb assets-src/
 cp -r "$tmp"/ubc/*/"Base Characters/Godot - UE" assets-src/body
 cp -r "$tmp"/ubc/*/Hairstyles/"Rigged to Head Bone"/"glTF (Godot -Unreal)" assets-src/hair
-echo "assets-src/ ready. Next: npm run assets"
+# M15: Quaternius Animated Mech Pack (CC0) for mech.glb and mechbig.glb (`node tools/build-creatures.mjs`).
+# The Drive copy linked on quaternius.com is often over quota; OpenGameArt hosts the same March 2021 zip.
+curl -sS -L https://opengameart.org/sites/default/files/animated_mech_pack_-_march_2021.zip -o "$tmp/mech.zip"
+mkdir -p "$tmp/mech" assets-src/mechs && unzip -qo "$tmp/mech.zip" -d "$tmp/mech"
+cp "$tmp"/mech/*/FBX/{Leela,Mike}.fbx "$tmp"/mech/*/Textures/{Leela,Mike}_Texture.png "$tmp"/mech/*/License.txt assets-src/mechs/
+echo "assets-src/ ready. Next: npm run assets, node tools/build-creatures.mjs"

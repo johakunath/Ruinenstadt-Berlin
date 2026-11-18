@@ -3,12 +3,15 @@
 // on the FX layer: no lights, no shadows, the same cost on both profiles.
 // M12c: the Wachdrohne's searchlight (a decal and a beam per spot, at most two), the pink ring under a
 // winding Boxenkopf, sparks over dazed drones. Each visible piece is one draw call, nothing else.
+// M15: hour sectors of the Weltzeituhr (ring slices), its minute hand (a turning strip), green root
+// circles and the roots round a held hero.
 import {
   AdditiveBlending, CircleGeometry, Color, ConeGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, SphereGeometry, Sprite, SpriteMaterial,
   Vector3,
 } from 'three';
 import { BOSS, THREAT } from '../data/enemies';
 import { lerp, Rng } from '../sim/math';
+import { sweepAngle } from '../sim/threats';
 import type { Sim, SimEvent } from '../sim/types';
 import type { Emitters } from './abilities';
 import { groundY } from './ground';
@@ -17,9 +20,11 @@ import { paintGlow } from './paint';
 
 const BARS = 18;
 /** Where the life bar floats, per body. */
-const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4 } as const;
-const ZONES = 14, LINES = 6, SHOTS = 72, HAZARDS = 60, WAVES = 8, OPEN = 6, SPOTS = 2, PULSES = 6;
-const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a, shove: 0xffa03a, land: 0x43d1cf } as const;
+const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4, mech: 2.3, mechBig: 4, kern: 1.25, koloss: 6.5, clock: 9 } as const;
+const ZONES = 14, LINES = 6, SHOTS = 96, HAZARDS = 60, WAVES = 8, OPEN = 6, SPOTS = 2, PULSES = 6, SECTORS = 5, HANDS = 2;
+const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a, shove: 0xffa03a, land: 0x43d1cf, root: 0x97c459, slab: 0xffa03a, hour: 0xff3a2a } as const;
+/** Hour sector geometry: inner radius as a share of the outer (3 of 9 m), one of 24 slices, centred on angle 0. */
+const SECTOR_IN = BOSS.weltzeituhr.r0 / BOSS.weltzeituhr.r1, SECTOR_HALF = Math.PI / 24;
 const up = new Vector3(0, 1, 0);
 const dirV = new Vector3();
 const m4 = new Matrix4();
@@ -53,6 +58,10 @@ export class ThreatView {
   private readonly bossShots: InstancedMesh;
   private readonly hazards: InstancedMesh;
   private readonly bars: Array<{ back: Sprite; fill: Sprite }> = [];
+  private readonly sectors: Array<{ rim: Mesh; fill: Mesh }> = [];
+  private readonly hands: Mesh[] = [];
+  /** M15: the green roots round a hero a Wurzler holds. */
+  private readonly roots: Mesh;
   private time = 0;
 
   constructor(private readonly emit: Emitters) {
@@ -75,6 +84,22 @@ export class ThreatView {
       this.group.add(rim, fill);
       this.zones.push({ rim, fill });
     }
+    for (let i = 0; i < SECTORS; i++) {
+      const rim = fx(flat(new Mesh(new RingGeometry(SECTOR_IN, 1, 6, 1, -SECTOR_HALF, SECTOR_HALF * 2), add(0xff3a2a, 0.5))), 2);
+      const fill = fx(flat(new Mesh(new RingGeometry(SECTOR_IN, 1, 6, 1, -SECTOR_HALF, SECTOR_HALF * 2), add(0xff3a2a, 0.3))), 2);
+      this.group.add(rim, fill);
+      this.sectors.push({ rim, fill });
+    }
+    for (let i = 0; i < HANDS; i++) {
+      const g = new PlaneGeometry(1, 1);
+      g.translate(0, 0.5, 0);
+      const m = fx(new Mesh(g, add(0xff2a1e, 0.5)), 3);
+      m.visible = false;
+      this.group.add(m);
+      this.hands.push(m);
+    }
+    this.roots = fx(flat(new Mesh(new RingGeometry(0.35, 0.62, 10, 1), add(0x97c459, 0.8))), 3);
+    this.group.add(this.roots);
     for (let i = 0; i < LINES; i++) {
       const g = new PlaneGeometry(1, 1);
       g.translate(0, 0.5, 0);
@@ -146,28 +171,71 @@ export class ThreatView {
     }
   }
 
+  private drawZone(m: { rim: Mesh; fill: Mesh }, z: Sim['threats']['zones'][number], k: number, y: number): void {
+    m.rim.visible = m.fill.visible = true;
+    m.rim.position.set(z.x, y, z.z);
+    m.fill.position.set(z.x, y, z.z);
+    m.rim.scale.setScalar(z.r);
+    m.fill.scale.setScalar(z.r * Math.max(0.05, k));
+    const c = ZONE_COLOR[z.kind];
+    (m.rim.material as MeshBasicMaterial).color.setHex(c);
+    (m.fill.material as MeshBasicMaterial).color.setHex(k > 0.85 ? 0xffd6a0 : c);
+    (m.fill.material as MeshBasicMaterial).opacity = 0.22 + 0.3 * k;
+  }
+
   update(s: Sim, alpha: number, dt: number): void {
     this.time += dt;
     const T = s.threats;
     const E = this.emit;
     const R = this.rng;
 
-    // Marked circles: the fill grows to the rim, then the circle goes off.
-    this.zones.forEach((m, i) => {
-      const z = T.zones[i];
-      m.rim.visible = m.fill.visible = !!z;
-      if (!z) return;
-      const y = groundY(z.x, z.z) + 0.07;
+    // Marked circles: the fill grows to the rim, then the circle goes off. Hour sectors are slices of a ring.
+    let nz = 0, ns = 0;
+    for (const z of T.zones) {
       const k = 1 - Math.max(0, z.t) / z.max;
-      m.rim.position.set(z.x, y, z.z);
-      m.fill.position.set(z.x, y, z.z);
-      m.rim.scale.setScalar(z.r);
-      m.fill.scale.setScalar(z.r * Math.max(0.05, k));
-      const c = ZONE_COLOR[z.kind];
-      (m.rim.material as MeshBasicMaterial).color.setHex(c);
-      (m.fill.material as MeshBasicMaterial).color.setHex(k > 0.85 ? 0xffd6a0 : c);
-      (m.fill.material as MeshBasicMaterial).opacity = 0.22 + 0.3 * k;
+      const y = groundY(z.x, z.z) + 0.07;
+      if (z.sector) {
+        if (ns >= SECTORS) continue;
+        const m = this.sectors[ns++]!;
+        m.rim.visible = m.fill.visible = true;
+        for (const q of [m.rim, m.fill]) {
+          q.position.set(z.x, y, z.z);
+          q.scale.setScalar(z.r);
+          // Ring angle θ lies at sim angle θ + 90° once the mesh is laid flat.
+          q.rotation.z = z.sector.a - Math.PI / 2;
+        }
+        (m.rim.material as MeshBasicMaterial).opacity = 0.35 + 0.25 * Math.sin(this.time * 18) ** 2;
+        (m.fill.material as MeshBasicMaterial).color.setHex(k > 0.85 ? 0xffd6a0 : ZONE_COLOR.hour);
+        (m.fill.material as MeshBasicMaterial).opacity = 0.12 + 0.45 * k;
+        continue;
+      }
+      if (nz >= ZONES) continue;
+      this.drawZone(this.zones[nz++]!, z, k, y);
+    }
+    for (let i = nz; i < ZONES; i++) this.zones[i]!.rim.visible = this.zones[i]!.fill.visible = false;
+    for (let i = ns; i < SECTORS; i++) this.sectors[i]!.rim.visible = this.sectors[i]!.fill.visible = false;
+
+    // The minute hand: faint while it is only shown, bright while it sweeps.
+    this.hands.forEach((m, i) => {
+      const w = T.sweeps[i];
+      m.visible = !!w;
+      if (!w) return;
+      const t = w.t - w.wind + dt * alpha;
+      m.position.set(w.x, groundY(w.x, w.z) + 0.09, w.z);
+      m.rotation.set(Math.PI / 2, sweepAngle(w, t), 0, 'YXZ');
+      m.scale.set(w.width * 2, w.r, 1);
+      (m.material as MeshBasicMaterial).opacity = t < 0 ? 0.2 + 0.25 * (w.t / w.wind) : 0.85;
     });
+
+    // Roots round a held hero (a Wurzler; the Türsteher's grab shows its own pink ring below).
+    const p = s.player;
+    this.roots.visible = p.root > 0 && p.rootBy === 0;
+    if (this.roots.visible) {
+      const x = lerp(p.px, p.x, alpha), z = lerp(p.pz, p.z, alpha);
+      this.roots.position.set(x, groundY(x, z) + 0.08, z);
+      this.roots.rotation.z = Math.sin(this.time * 9) * 0.2;
+    }
+
 
     // Rush lines while a pounce, lunge, dive or charge winds up; the gold ring under open bodies.
     let nl = 0, no = 0, np = 0;
@@ -211,7 +279,7 @@ export class ThreatView {
 
     // M12c: held by the Türsteher.
     const hp = s.player;
-    this.held.visible = hp.root > 0 && hp.state !== 'dead';
+    this.held.visible = hp.root > 0 && hp.rootBy !== 0 && hp.state !== 'dead';
     if (this.held.visible) {
       const x = lerp(hp.px, hp.x, alpha), z = lerp(hp.pz, hp.z, alpha);
       this.held.position.set(x, groundY(x, z) + 0.1, z);
@@ -255,7 +323,7 @@ export class ThreatView {
       if (e.state === 'dead' || e.def.boss || e.hp >= e.maxHp) continue;
       const b = this.bars[nbar++]!;
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
-      const w = Math.min(1.5, 0.7 + e.def.radius * 0.6), y = groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' ? e.def.scale : 1);
+      const w = Math.min(1.5, 0.7 + e.def.radius * 0.6), y = groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' || e.def.body === 'mech' ? e.def.scale : 1);
       b.back.visible = b.fill.visible = true;
       // Sprites face the camera; the left edge is the anchor, so shift half a width to the camera's left (screen x = world x here).
       b.back.position.set(x - w / 2, y, z);

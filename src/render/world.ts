@@ -70,6 +70,9 @@ export interface World {
   breakables?: BreakableView;
   /** M20 tunnel: gratings, the generator hold ring and the end platform's power. */
   tunnel?: import('./tunnel-view').TunnelView;
+  /** M15 the Weltzeituhr landmark (hidden while the boss is up) and a maker of boss rigs with the map's materials. */
+  clock?: import('three').Group;
+  clockRig?: () => import('./clock').ClockRig;
 }
 
 /**

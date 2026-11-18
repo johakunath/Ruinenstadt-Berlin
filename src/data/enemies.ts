@@ -5,16 +5,23 @@
 // M12b (Xhain): Ratten come in packs of five and zig-zag in; four new bosses from existing blocks.
 // M12c (Mitte, `docs/tasks/m12c-mitte-enemies.md`): Kabelghule leap along a line, Boxenköpfe send bass
 // rings and drive the others on (at most two alive), Drohnen circle and dive; four bosses.
+// M15 Alexanderplatz (2D `uhr`, `wurz`, `kern`, Koloss v8): the Uhrwerkläufer blocks from the front,
+// the Wurzler roots the hero, the Kernspeier spits a fan of seeds; four clockwork and garden bosses.
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
 export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner' | 'grenzer' | 'brandmeister' | 'rattenmutter' | 'spreehexe'
-  | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger';
-export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | BossKind;
-/** Which model and clip set draws the body (`src/render/creatures.ts`). */
-export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone';
+  | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
+  | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr';
+export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier' | BossKind;
+/**
+ * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
+ * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
+ * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`).
+ */
+export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
-export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | BossKind;
+export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
 export type EliteMod = 'flink' | 'brennend' | 'spaltend' | 'gepanzert';
 
@@ -58,6 +65,13 @@ export interface EnemyDef {
   pack?: number;
   /** M12c: at most this many alive at once (the director's pick, boss calls and `?spawn` honour it). */
   cap?: number;
+  /**
+   * M15: carries a shield in front (2D `SHD`): hits inside ±`arc` of its facing deal `front`; it turns
+   * at `turn` rad/s. A stun or a shock hit opens the guard for `open` s. Never `gepanzert`.
+   */
+  shield?: { arc: number; front: number; turn: number; open: number };
+  /** M15: seconds it stands untouchable after it spawns (the Weltzeituhr wakes up). */
+  wake?: number;
 }
 
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
@@ -120,6 +134,26 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     kind: 'drone', name: 'Drohne', body: 'drone', ai: 'crow', res: 'crow', radius: 0.3, scale: 1.3, hp: 14, speed: 5,
     attackRange: 0, windup: 0.35, active: 0.1, recovery: 0.5,
     reach: 1.2, halfAngle: 40 * DEG, damage: 10, knockbackTaken: 1.4, poise: false, weight: 0, fly: true,
+  },
+  // M15 Alexanderplatz. 2D Uhrwerkläufer (r 22, 58 life, 34 px/s, 13): the clock face is its shield.
+  // Slow, heavy swing; get behind it or open it with the hammer, a stun or shock.
+  uhrwerk: {
+    kind: 'uhrwerk', name: 'Uhrwerkläufer', body: 'mech', ai: 'melee', res: 'uhr', radius: 0.7, scale: 1, hp: 85, speed: 1.1,
+    attackRange: 2.0, windup: 0.9, active: 0.14, recovery: 0.9,
+    reach: 2.4, halfAngle: 55 * DEG, damage: 22, knockbackTaken: 0.4, poise: true, weight: 0,
+    shield: { arc: 70 * DEG, front: 0.2, turn: 90 * DEG, open: 2.2 },
+  },
+  // 2D Wurzler (r 12, 40 life, 54 px/s, 10): a ghoul full of roots. Roots the hero from a distance.
+  wurzler: {
+    kind: 'wurzler', name: 'Wurzler', body: 'zombie', ai: 'wurzler', res: 'wurz', radius: 0.4, scale: 1.05, hp: 55, speed: 1.7,
+    attackRange: 1.45, windup: 0.55, active: 0.12, recovery: 0.7,
+    reach: 1.7, halfAngle: 50 * DEG, damage: 16, knockbackTaken: 1, poise: false, weight: 0,
+  },
+  // 2D Kernspeier (r 11, 18 life, 58 px/s, 8): a clay pot with a toothed sunflower. Plants itself, spits three seeds.
+  kernspeier: {
+    kind: 'kernspeier', name: 'Kernspeier', body: 'kern', ai: 'kernspeier', res: 'kern', radius: 0.34, scale: 1, hp: 26, speed: 1.8,
+    attackRange: 0, windup: 0.5, active: 0.1, recovery: 0.6,
+    reach: 1.2, halfAngle: 40 * DEG, damage: 10, knockbackTaken: 1.2, poise: false, weight: 0,
   },
   // Zone bosses.
   feldwebel: {
@@ -199,6 +233,31 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
+  // M15 Alexanderplatz. Zone 1: a Wurzler grown out of the Palast glass house, a crown of sunflowers.
+  wurzelmutter: {
+    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'zombie', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
+    attackRange: 2.6, windup: 0.75, active: 0.14, recovery: 0.85,
+    reach: 3.2, halfAngle: 70 * DEG, damage: 26, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
+  },
+  // Zone 2 (Jannowitzbrücke): the Mech Mike at 1.8 with the shield; charges, then winds down.
+  uhrwerkgross: {
+    kind: 'uhrwerkgross', name: 'Der Große Uhrwerkläufer', body: 'mechBig', ai: 'uhrwerkgross', res: 'uhr', radius: 1.15, scale: 1, hp: 2900, speed: 1.6,
+    attackRange: 2.7, windup: 0.8, active: 0.16, recovery: 0.9,
+    reach: 3.3, halfAngle: 65 * DEG, damage: 30, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
+    shield: { arc: 70 * DEG, front: 0.35, turn: 63 * DEG, open: 1.2 },
+  },
+  // Zone 3 (Karl-Marx-Allee): 2D Volkseigener Koloss (v 8), a walking Plattenbau slab on clockwork legs.
+  volkskoloss: {
+    kind: 'volkskoloss', name: 'Der Volkseigene Koloss', body: 'koloss', ai: 'volkskoloss', res: 'volk', radius: 1.7, scale: 1, hp: 3900, speed: 1.5,
+    attackRange: 0, windup: 0.7, active: 0.14, recovery: 0.8,
+    reach: 3, halfAngle: 70 * DEG, damage: 32, knockbackTaken: 0.05, poise: true, weight: 0, boss: true,
+  },
+  // District boss: the Weltzeituhr itself wakes up on its base and walks on four clockwork legs.
+  weltzeituhr: {
+    kind: 'weltzeituhr', name: 'Die Weltzeituhr', body: 'clock', ai: 'weltzeituhr', res: 'uhr', radius: 2.4, scale: 1, hp: 5400, speed: 1.3,
+    attackRange: 0, windup: 0.7, active: 0.14, recovery: 0.8,
+    reach: 3, halfAngle: 70 * DEG, damage: 36, knockbackTaken: 0, poise: true, weight: 0, boss: true, wake: 3,
+  },
 };
 
 const PX = 1 / 30;
@@ -245,6 +304,12 @@ export const THREAT = {
   flame: { range: 140 * PX, wind: 0.9, radius: 95 * PX, damage: 1.2, floor: 0.2, open: 1, trailEvery: 0.45, trailRadius: 20 * PX, trailTime: 3.5, trailDamage: 0.45 },
   split: { count: 2, hp: 0.4, scale: 0.7 },
   hazard: { tick: 0.5 },
+  /** M15 Wurzler roots (2D `wurz`): marked under the hero, then held unless dodging; immune for a while after. */
+  roots: { range: 320 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.95, radius: 1.5, damage: 0.6, hold: 0.8, immune: 2.5, open: 0.9, near: 120 * PX, nearSpeed: 0.7 },
+  /** M15 Kernspeier (2D `kern`): keeps `near`..`far`, plants for `wind`, three seeds ±15° at 70 %. */
+  seeds: { near: 5, far: 8, range: 400 * PX, every: [3, 3.8], wind: 0.7, spread: 15 * DEG, damage: 0.7, speed: 240 * PX, life: 2.6, radius: 0.2, open: 0.9 },
+  /** M15 shield bearers (2D `SHD`): slower while the guard stands open; a "geblockt" note at most this often. */
+  shield: { openSpeed: 0.4, note: 0.6 },
   /** Chance of an elite per normal spawn in wave g (2D: min(25 %, 2.2 % per wave pair), from the third wave). */
   eliteChance: (g: number): number => (g < 3 ? 0 : Math.min(0.25, 0.011 * (g + 1))),
 } as const;
@@ -322,6 +387,32 @@ export const BOSS = {
     charge: 3.8, range: 13, wind: 0.7, time: 0.55, speed: 560 * PX, damage: 1.1, floor: 0.25, open: 1.25,
     sermonEvery: 2, gap: 150 * PX, max: 340 * PX, ringDamage: 0.7, ringFloor: 0.18,
     summon: 13, adds: 3, rageAdds: 2,
+  },
+  // M15 Alexanderplatz (spec: docs/tasks/m15-alexanderplatz.md › Step 6). Cooldowns in seconds.
+  /** Three root fields (one under the hero, `beside` m to both sides); two Kernspeier; a root ring round her when close. */
+  wurzelmutter: { fields: 4.2, extra: 2, beside: 2.6, summon: 9, adds: 2, rageAdds: 3, slam: 3.6, close: 3, ringRadius: 3.2, ringWind: 0.8 },
+  /** Charge along a marked line, then wound down (open); every `keyEvery`-th cycle it winds its key: front closed, then a ring of sparks. */
+  uhrwerkgross: { charge: 4.2, speed: 12, time: 0.6, open: 1.4, keyEvery: 3, key: 2, shots: 14 },
+  /**
+   * 2D v 8: a cycle every 4.4 s (3.2 s in rage, real time). Odd cycles three slab drops (first on the
+   * hero, landing 0.9 to 1.4 s after), even cycles the ring on its back sprays gears in a two-arm spiral;
+   * every third cycle two Uhrwerkläufer. Hammer slam on the hero within `close` m.
+   */
+  volkskoloss: {
+    cycle: [4.4, 3.2], slabs: 3, slabRadius: 1.9, slabFirst: 0.9, slabStep: 0.25, spreadX: 130 * PX, spreadZ: 110 * PX, slabDamage: 0.95, slabFloor: 0.2,
+    spin: 2.4, gearEvery: 0.16, gearSpeed: 175 * PX, gearTurn: 2.6, gearDamage: 0.6, gearLife: 3.2, addsEvery: 3, adds: 2, slam: 3.6, close: 3,
+  },
+  /**
+   * The Weltzeituhr. Zeitzonen: `sectors` of the 24 hour sectors of the ring `r0`..`r1` light up `wind` s,
+   * then strike (one more in rage). Orbit: the planet balls fly out in a three-arm spiral for `spin` s,
+   * every second cycle. Zeiger: every third cycle the minute hand sweeps a full circle at `hand` m, slow
+   * then fast. Stillstand at 75, 50, 25 % life: the hero walks at half speed for 2 s, two Uhrwerkläufer drop in.
+   */
+  weltzeituhr: {
+    cycle: 4, sectors: 3, r0: 3, r1: 9, sectorWind: 1.1, sectorDamage: 1, sectorFloor: 0.22,
+    spin: 2.2, orbitEvery: 0.2, arms: 3, orbitSpeed: 160 * PX, orbitTurn: 1.9, orbitDamage: 0.55, orbitLife: 3,
+    hand: 7, handWind: 0.8, handTime: 3.2, handFrom: 0.8, handTo: 3.2, handDamage: 1.1, handFloor: 0.25, handWidth: 0.45,
+    still: [0.75, 0.5, 0.25], stillTime: 2, stillSlow: 0.5, adds: 2, stomp: 3.6, close: 3.5,
   },
 } as const;
 

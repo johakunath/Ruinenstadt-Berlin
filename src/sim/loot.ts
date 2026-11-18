@@ -29,8 +29,9 @@ export const LOOT = {
 
 export const INGREDIENT_IDS: readonly IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
 /** 2D EZUT by role: ghoul and brute meat, spitter vegetables, the rest spices. */
-const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel', rat: 'stoff', kabel: 'kabel', bass: 'metall', drone: 'kabel' };
-const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese', rat: 'fleisch' };
+// M15: 2D EMAT and EZUT for uhr (metall, gemuese), wurz (stoff, gemuese), kern (chemie, gemuese).
+const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel', rat: 'stoff', kabel: 'kabel', bass: 'metall', drone: 'kabel', uhrwerk: 'metall', wurzler: 'stoff', kernspeier: 'chemie' };
+const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese', rat: 'fleisch', uhrwerk: 'gemuese', wurzler: 'gemuese', kernspeier: 'gemuese' };
 export const MATERIAL_IDS: readonly MaterialId[] = ['stoff', 'metall', 'chemie', 'kabel'];
 
 export type DropContent =
@@ -133,16 +134,17 @@ export function creditScrap(sim: Sim, amount: number, x: number, z: number, from
 }
 
 // 2D drop chances and Schrott by role (ghoul, raser, brute, spitter, crow; M12c kabel 0.12, bass 0.45, drones as crows).
-const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15 };
+const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15, uhrwerk: 0.4, wurzler: 0.3, kernspeier: 0.2 };
 const SCRAP: Partial<Record<EnemyKind, number>> = {
   walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, crow: 1, rat: 0, kabel: 1, bass: 4, drone: 1, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70, schaffner: 60,
   grenzer: 40, brandmeister: 40, rattenmutter: 40, spreehexe: 70, tuersteher: 40, wachdrohne: 40, dirigent: 40, bassprediger: 70,
+  uhrwerk: 4, wurzler: 3, kernspeier: 2, wurzelmutter: 40, uhrwerkgross: 40, volkskoloss: 40, weltzeituhr: 70,
 };
 /** 2D: rats drop material and ingredients rarely (8 % and 1 % instead of 22 % and 3 %). */
 const MAT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.08 };
 const ZUT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.01 };
 /** District bosses: three items and a legendary (2D `big`). */
-const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spreehexe: true, bassprediger: true };
+const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spreehexe: true, bassprediger: true, weltzeituhr: true };
 
 /** 2D `kill()`: bosses drop first, then one of material, item or heal. Scrap is credited at once. */
 export function killDrops(sim: Sim, e: Enemy): void {

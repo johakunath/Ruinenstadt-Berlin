@@ -20,24 +20,26 @@ export const ALEX_WAVES = 27;
 /** Alexanderplatz picks up where Xhain's middle was and climbs past its end (calibrate with the bot). */
 export const ALEX_TIER = { from: 16, to: 38 } as const;
 
-/**
- * Bosses until the district's own are built (step 7 of the task): zone 1 Wurzel-Mutter, zone 2 Großer
- * Uhrwerkläufer, zone 3 Volkseigener Koloss, final the Weltzeituhr itself. Stand-ins keep the blockout playable.
- */
-export const ALEX_BOSS_STANDIN: Record<'insel' | 'spree' | 'allee' | 'uhr', BossKind> = { insel: 'rattenmutter', spree: 'waechter', allee: 'brandmeister', uhr: 'hauptmann' };
+/** The district's bosses (step 7): Wurzel-Mutter, Großer Uhrwerkläufer, Volkseigener Koloss, the Weltzeituhr itself. */
+export const ALEX_BOSSES: Record<'insel' | 'spree' | 'allee' | 'uhr', BossKind> = { insel: 'wurzelmutter', spree: 'uhrwerkgross', allee: 'volkskoloss', uhr: 'weltzeituhr' };
 
 /**
- * Difficulty of wave `g` (16 … 38) in `zone`. Until the district types exist (Uhrwerkläufer, Wurzler,
- * Kernspeier, Brigadeghul) the mix leans on brutes (stand in for the shield walkers) and spitters
- * (for the Kernspeier); crows over the Museumsinsel gardens.
+ * Difficulty of wave `g` (16 … 38) in `zone`. 2D `MIX[2]` (uhr 0.1, wurz 0.08, kern 0.09, crow 0.05;
+ * spit 0.08, brute 0.12) on the walker-6 scale: Uhrwerkläufer from the second wave of the district,
+ * Wurzler from the third, the Kernspeier takes most of the spitters' place; fewer runners and brutes
+ * than Xhain, crows over the Museumsinsel gardens. The walkers are the Brigadeghule (render only).
  */
 export function alexWaveTier(g: number, bosses: BossKind[] = [], zone = 0): WaveDef {
+  const t = g - ALEX_TIER.from;
   const mix: Partial<Record<EnemyKind, number>> = {
     walker: 6,
-    runner: 1 + g * 0.2,
-    spitter: 1.2 + g * 0.08 + (zone === 0 ? 0.6 : 0),
-    brute: 0.6 + g * 0.08 + (zone === 2 ? 0.8 : 0),
-    crow: zone === 0 ? 0.8 : 0,
+    runner: 1 + g * 0.15,
+    spitter: 0.4,
+    brute: 0.4 + g * 0.03,
+    uhrwerk: t < 0.5 ? 0 : 0.8 + t * 0.03 + (zone === 1 ? 0.3 : 0),
+    wurzler: t < 1.5 ? 0 : 0.7 + t * 0.03 + (zone === 0 ? 0.3 : 0),
+    kernspeier: 0.9 + t * 0.03 + (zone === 0 ? 0.3 : 0),
+    crow: zone === 0 ? 0.6 : 0,
   };
   return {
     count: Math.round(5 + g * 0.45),
@@ -83,19 +85,19 @@ export function alexMap(scale = 1): MapDef {
     enc('lustgarten', 'Lustgarten', 0, -150, -62, 14, 3),
     enc('schlossplatz', 'Schlossplatz', 0, -165, -2, 13, 3),
     enc('palastgarten', 'Palastgarten', 0, -164, 42, 13, 3),
-    boss('palast', 'Palast der Republik', 0, -125, 78, 15, ALEX_BOSS_STANDIN.insel, 3),
+    boss('palast', 'Palast der Republik', 0, -125, 78, 15, ALEX_BOSSES.insel, 3),
     // Zone 1: Nikolaiviertel and the Spree bank (9 waves), the Großer Uhrwerkläufer at the Jannowitzbrücke.
     enc('nikolaiviertel', 'Nikolaiviertel', 1, -40, 88, 13, 3),
     enc('molkenmarkt', 'Molkenmarkt', 1, 22, 98, 13, 3),
     enc('rolandufer', 'Rolandufer', 1, 68, 96, 13, 3),
-    boss('jannowitz', 'Jannowitzbrücke', 1, 150, 90, 15, ALEX_BOSS_STANDIN.spree, 4),
+    boss('jannowitz', 'Jannowitzbrücke', 1, 150, 90, 15, ALEX_BOSSES.spree, 4),
     // Zone 2: Karl-Marx-Allee (9 waves), the Volkseigener Koloss on the Allee.
     enc('holzmarkt', 'Holzmarktstraße', 2, 176, 50, 13, 3),
     enc('moskau', 'Café Moskau', 2, 178, -2, 13, 3),
     enc('kino', 'Kino International', 2, 168, -64, 13, 3),
-    boss('allee', 'Karl-Marx-Allee', 2, 130, -34, 15, ALEX_BOSS_STANDIN.allee, 4),
+    boss('allee', 'Karl-Marx-Allee', 2, 130, -34, 15, ALEX_BOSSES.allee, 4),
     // Zone 3: the Weltzeituhr wakes up. The circle sits just south of the clock (its centre stays free).
-    boss('weltzeituhr', 'Weltzeituhr', 3, 72, -50, 16, ALEX_BOSS_STANDIN.uhr, 6),
+    { ...boss('weltzeituhr', 'Weltzeituhr', 3, 72, -50, 16, ALEX_BOSSES.uhr, 6), bossAt: { x: 72 * s, z: -62 * s } },
   ];
 
   const zones: ZoneDef[] = [

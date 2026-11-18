@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
-import { strike } from './combat';
+import { ignite, strike } from './combat';
 import { capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
@@ -487,6 +487,339 @@ describe('Xhain roster (M12b)', () => {
         s.player.hp = s.stats.maxHp;
       }
       expect(hits, kind).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('Alexanderplatz roster (M15)', () => {
+  const notes = (evs: SimEvent[]): string[] => evs.filter((q) => q.type === 'note').map((q) => (q as { text: string }).text);
+  /** A body that stands still facing the hero. */
+  const still = (s: Sim, kind: EnemyKind, dx: number, dz: number): Enemy => {
+    const e = put(s, kind, dx, dz);
+    e.hp = e.maxHp = 1e6;
+    e.def = { ...e.def, speed: 0 };
+    e.cd = [99, 99, 99];
+    e.wake = 0;
+    return e;
+  };
+
+  it('the Uhrwerkläufer blocks from the front (20 %), a stun or a shock opens its guard, it is never armored', () => {
+    const s = fresh();
+    const e = still(s, 'uhrwerk', 0, 2);
+    expect(Math.abs(e.facing - Math.PI)).toBeLessThan(0.01);
+    const front = strike(s, e, 100);
+    expect(front).toBe(20);
+    expect(notes(s.events)).toContain('geblockt');
+    // From behind: full damage.
+    e.facing = 0;
+    expect(strike(s, e, 100)).toBe(100);
+    e.facing = Math.PI;
+    // A stun in front opens the guard (full damage), then front hits pass for 2.2 s.
+    s.events.length = 0;
+    expect(strike(s, e, 100, { stun: 0.6 })).toBe(100);
+    expect(notes(s.events)).toContain('Deckung offen');
+    expect(strike(s, e, 100)).toBe(100);
+    run(s, ENEMIES.uhrwerk.shield!.open + 0.1);
+    e.facing = Math.PI;
+    expect(strike(s, e, 100)).toBe(20);
+    expect(strike(s, e, 100, { element: 'shock' })).toBe(Math.round(100 * 1.7));
+    makeElite(s, e, 'gepanzert');
+    expect(e.elite).not.toBe('gepanzert');
+  });
+
+  it('the crit-stun blessing and every fourth Kiezbox hit open the guard too (Codex review)', () => {
+    const s = fresh();
+    const e = still(s, 'uhrwerk', 0, 2);
+    s.statContext.perks.stun = 1;
+    expect(strike(s, e, 100, { crit: true })).toBe(100);
+    expect(e.guardOpen).toBeGreaterThan(0);
+    const k = fresh();
+    const u = still(k, 'uhrwerk', 0, 2);
+    k.stats.legendary.push('kiezbox');
+    k.abilities.legHits = 0;
+    expect([strike(k, u, 100), strike(k, u, 100), strike(k, u, 100)]).toEqual([20, 20, 20]);
+    expect(strike(k, u, 100)).toBe(100);
+    expect(u.guardOpen).toBeGreaterThan(0);
+  });
+
+  it('the Uhrwerkläufer turns at most 90°/s, so the hero can get behind it', () => {
+    const s = fresh();
+    const e = put(s, 'uhrwerk', 0, 3);
+    e.facing = e.pfacing = 0;
+    e.def = { ...e.def, speed: 0.01 };
+    run(s, 0.5);
+    expect(Math.abs(e.facing)).toBeLessThan(ENEMIES.uhrwerk.shield!.turn * 0.5 + 0.05);
+  });
+
+  it('the Wurzler marks roots under the hero; caught, the hero cannot walk until a roll breaks free, then is immune', () => {
+    const s = fresh();
+    const e = still(s, 'wurzler', 0, 8);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('roots');
+    const z = s.threats.zones[0]!;
+    expect(z.kind).toBe('root');
+    expect(Math.hypot(z.x - s.player.x, z.z - s.player.z)).toBeLessThan(0.01);
+    expect(z.r).toBe(THREAT.roots.radius);
+    const evs = run(s, THREAT.roots.wind);
+    expect(notes(evs)).toContain('Festgehalten');
+    expect(has(evs, 'playerHit')).toBe(true);
+    expect(s.player.root).toBeGreaterThan(0);
+    // Held: walking does nothing.
+    const x0 = s.player.x;
+    run(s, 0.3, { moveX: 1 });
+    expect(Math.abs(s.player.x - x0)).toBeLessThan(0.05);
+    // A roll breaks free; the next roots within 2.5 s do not hold.
+    run(s, 0.05, { dodge: true, moveX: 1 });
+    expect(s.player.root).toBe(0);
+    expect(s.player.rootI).toBeGreaterThan(0);
+    // The Wurzler stood open after its cast.
+    expect(e.open > 0 || e.state === 'chase').toBe(true);
+    // Out of range (> 10 m): no roots.
+    const f = fresh();
+    const w = still(f, 'wurzler', 0, 8);
+    w.x = w.px = f.player.x + 8;
+    w.z = w.pz = f.player.z + 8;
+    w.cd[1] = 0;
+    run(f, 0.2);
+    expect(Math.hypot(w.x - f.player.x, w.z - f.player.z)).toBeGreaterThan(THREAT.roots.range);
+    expect(f.threats.zones).toHaveLength(0);
+  });
+
+  it('a roll through the root field does not get held', () => {
+    const s = fresh();
+    const e = still(s, 'wurzler', 0, 8);
+    e.cd[1] = 0;
+    run(s, THREAT.roots.wind - 0.1);
+    run(s, 0.2, { dodge: true, moveX: 1 });
+    expect(s.player.root).toBe(0);
+  });
+
+  it('the Kernspeier plants itself, spits three seeds ±15° at 70 %, then stands open', () => {
+    const s = fresh();
+    const e = still(s, 'kernspeier', 0, 7);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('seeds');
+    run(s, THREAT.seeds.wind + 0.02);
+    const shots = s.threats.shots;
+    expect(shots).toHaveLength(3);
+    for (const q of shots) expect(q.damage).toBeCloseTo(ENEMIES.kernspeier.damage * THREAT.seeds.damage);
+    // Spread around the aim (toward the hero), wrapped to ±π.
+    const aim = Math.atan2(s.player.x - e.x, s.player.z - e.z);
+    const off = shots.map((q) => Math.atan2(Math.sin(Math.atan2(q.vx, q.vz) - aim), Math.cos(Math.atan2(q.vx, q.vz) - aim))).sort((a, b) => a - b);
+    expect(off[0]).toBeCloseTo(-THREAT.seeds.spread, 3);
+    expect(off[2]).toBeCloseTo(THREAT.seeds.spread, 3);
+    run(s, 0.3);
+    expect(e.open).toBeGreaterThan(0);
+    // It backs off when the hero comes close.
+    const b = fresh();
+    const k = put(b, 'kernspeier', 0, 3);
+    k.cd = [99, 99, 99];
+    run(b, 1);
+    expect(Math.hypot(k.x - b.player.x, k.z - b.player.z)).toBeGreaterThan(3.5);
+  });
+
+  it('Die Wurzel-Mutter lays three root fields (four in rage), calls two Kernspeier and roots in a ring up close', () => {
+    const s = fresh();
+    const e = still(s, 'wurzelmutter', 0, 7);
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('roots');
+    expect(s.threats.zones.filter((z) => z.kind === 'root')).toHaveLength(3);
+    const r = fresh();
+    const m = still(r, 'wurzelmutter', 0, 7);
+    m.hp = m.maxHp * 0.4;
+    m.cd[0] = 0;
+    run(r, 0.05);
+    expect(r.threats.zones.filter((z) => z.kind === 'root')).toHaveLength(4);
+    const a = fresh();
+    const q = still(a, 'wurzelmutter', 0, 7);
+    q.cd[1] = 0;
+    run(a, BOSS.summon.wind + 0.6);
+    expect(a.enemies.filter((o) => o.kind === 'kernspeier')).toHaveLength(BOSS.wurzelmutter.adds);
+    const c = fresh();
+    const w = still(c, 'wurzelmutter', 0, 2.5);
+    w.cd[2] = 0;
+    stepSim(c, NO_INPUT);
+    expect(w.sp?.kind).toBe('rootRing');
+    expect(c.threats.zones[0]!.root).toBe(THREAT.roots.hold);
+  });
+
+  it('Der Große Uhrwerkläufer charges at 12 m/s, then winds down open; every third cycle it winds its key, front closed', () => {
+    const s = fresh();
+    const e = still(s, 'uhrwerkgross', 0, 9);
+    e.def = { ...ENEMIES.uhrwerkgross };
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('charge');
+    expect(e.sp?.speed).toBe(BOSS.uhrwerkgross.speed);
+    run(s, BOSS.charge.wind + BOSS.uhrwerkgross.time + 0.05);
+    expect(e.open).toBeGreaterThan(1);
+    // Cycles two and three: the third is the key.
+    e.cycle = 2;
+    e.cd[0] = 0;
+    e.open = 0;
+    e.gap = 0;
+    e.x = e.px = s.player.x;
+    e.z = e.pz = s.player.z + 6;
+    run(s, 0.05);
+    expect(e.sp?.kind).toBe('key');
+    e.facing = Math.PI;
+    expect(strike(s, e, 100)).toBe(0);
+    e.facing = 0;
+    expect(strike(s, e, 100)).toBe(100);
+    run(s, BOSS.uhrwerkgross.key);
+    expect(s.threats.shots.length).toBeGreaterThanOrEqual(BOSS.uhrwerkgross.shots);
+  });
+
+  it('Der Volkseigene Koloss drops three slabs, then sprays gears in a two-arm spiral, and calls Uhrwerkläufer every third cycle', () => {
+    const s = fresh();
+    const e = still(s, 'volkskoloss', 0, 8);
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('slabs');
+    const slabs = s.threats.zones.filter((z) => z.kind === 'slab');
+    expect(slabs).toHaveLength(BOSS.volkskoloss.slabs);
+    expect(Math.hypot(slabs[0]!.x - s.player.x, slabs[0]!.z - s.player.z)).toBeLessThan(0.01);
+    run(s, 2);
+    e.cd[0] = 0;
+    run(s, 1);
+    expect(e.cycle).toBe(2);
+    expect(s.threats.shots.length).toBeGreaterThanOrEqual(6);
+    e.cd[0] = 0;
+    run(s, 0.1);
+    expect(s.enemies.filter((o) => o.kind === 'uhrwerk')).toHaveLength(BOSS.volkskoloss.adds);
+  });
+
+  it('Die Weltzeituhr wakes up untouchable for 3 s, then roars; hour sectors only hit inside their slice', () => {
+    const s = fresh();
+    const e = put(s, 'weltzeituhr', 0, 8);
+    expect(e.wake).toBe(3);
+    expect(strike(s, e, 100)).toBe(0);
+    const d0 = Math.hypot(e.x - s.player.x, e.z - s.player.z);
+    const evs = run(s, 2.9);
+    // It does not walk while waking (a courtyard prop may nudge it).
+    expect(Math.hypot(e.x - s.player.x, e.z - s.player.z)).toBeGreaterThan(d0 - 0.6);
+    expect(s.threats.waves).toHaveLength(0);
+    run(s, 0.2);
+    expect(s.threats.waves).toHaveLength(2);
+    expect(strike(s, e, 100)).toBeGreaterThan(0);
+    expect(has(evs, 'enemySpecial')).toBe(false);
+    // Fire does not catch while it wakes either (Codex review).
+    const b = fresh();
+    const w = put(b, 'weltzeituhr', 0, 8);
+    ignite(b, w, 500, 3);
+    expect(w.burn).toBe(0);
+    w.burn = 2;
+    w.bdps = 500;
+    run(b, 1);
+    expect(w.hp).toBe(w.maxHp);
+    // Sectors: the hero's slice hits, three of them (four in rage).
+    const z = fresh();
+    const c = still(z, 'weltzeituhr', 0, 6);
+    c.cd[0] = 0;
+    stepSim(z, NO_INPUT);
+    expect(c.sp?.kind).toBe('sectors');
+    expect(z.threats.zones).toHaveLength(BOSS.weltzeituhr.sectors);
+    const hits = run(z, BOSS.weltzeituhr.sectorWind + 0.05).filter((q) => q.type === 'zoneHit' && q.hit);
+    expect(hits).toHaveLength(1);
+    // Inside the inner radius nothing hits.
+    const n = fresh();
+    const d = still(n, 'weltzeituhr', 0, 2.6);
+    d.cd[0] = 0;
+    expect(run(n, BOSS.weltzeituhr.sectorWind + 0.1).filter((q) => q.type === 'zoneHit' && q.hit)).toHaveLength(0);
+    const r = fresh();
+    const g = still(r, 'weltzeituhr', 0, 6);
+    g.hp = g.maxHp * 0.4;
+    g.still = 3;
+    g.cd[0] = 0;
+    run(r, 0.05);
+    expect(r.threats.zones).toHaveLength(BOSS.weltzeituhr.sectors + 1);
+  });
+
+  it('the minute hand sweeps a full circle: it hits a standing hero once and misses one that keeps rolling', () => {
+    const s = fresh();
+    const e = still(s, 'weltzeituhr', 0, 5);
+    e.cycle = 2;
+    e.cd[0] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('hand');
+    expect(s.threats.sweeps).toHaveLength(1);
+    const hits = run(s, BOSS.weltzeituhr.handWind + BOSS.weltzeituhr.handTime).filter((q) => q.type === 'playerHit');
+    expect(hits).toHaveLength(1);
+    expect(s.threats.sweeps).toHaveLength(0);
+    const r = fresh();
+    const c = still(r, 'weltzeituhr', 0, 5);
+    c.cycle = 2;
+    c.cd[0] = 0;
+    const out: SimEvent[] = [];
+    for (let i = 0; i < 60 * 4; i++) { r.player.invuln = 1; stepSim(r, NO_INPUT); out.push(...r.events); r.events.length = 0; }
+    expect(has(out, 'playerHit')).toBe(false);
+  });
+
+  it('Stillstand at 75, 50 and 25 %: the hero walks at half speed for 2 s and two Uhrwerkläufer drop in', () => {
+    const s = fresh();
+    const e = still(s, 'weltzeituhr', 0, 9);
+    e.hp = e.maxHp * 0.74;
+    const evs = run(s, 0.05);
+    expect(notes(evs)).toContain('Stillstand');
+    expect(s.player.slowT).toBeGreaterThan(1.9);
+    expect(s.enemies.filter((o) => o.kind === 'uhrwerk')).toHaveLength(BOSS.weltzeituhr.adds);
+    const x0 = s.player.x;
+    run(s, 1, { moveX: 1 });
+    const slow = s.player.x - x0;
+    const f = fresh();
+    const x1 = f.player.x;
+    run(f, 1, { moveX: 1 });
+    expect(slow).toBeLessThan((f.player.x - x1) * 0.6);
+    // Once per threshold.
+    expect(notes(run(s, 0.5))).not.toContain('Stillstand');
+    e.hp = e.maxHp * 0.2;
+    run(s, 0.05);
+    expect(e.still).toBe(3);
+  });
+
+  it('no Alexanderplatz enemy takes more than 45 % of max life in one hit, even at ten times the damage', () => {
+    for (const kind of ['uhrwerk', 'wurzler', 'kernspeier', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr'] as const) {
+      const s = fresh();
+      const e = spawnEnemy(s, s.player.x, s.player.z + 4, kind, 1, 10);
+      e.hp = e.maxHp = 1e6;
+      let hits = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        s.hitstop = 0;
+        const before = s.player.hp;
+        stepSim(s, NO_INPUT);
+        for (const q of s.events) if (q.type === 'playerHit') {
+          hits++;
+          expect(q.damage, kind).toBeLessThanOrEqual(s.stats.maxHp * 0.45 + 1e-6);
+          expect(before - s.player.hp, kind).toBeLessThan(s.stats.maxHp * 0.46);
+        }
+        s.events.length = 0;
+        s.player.hp = s.stats.maxHp;
+      }
+      expect(hits, kind).toBeGreaterThan(0);
+    }
+  });
+
+  it('every Alexanderplatz boss rages below half life and runs all its specials', () => {
+    const want: Record<string, string[]> = {
+      wurzelmutter: ['roots', 'summon', 'rootRing'], uhrwerkgross: ['charge', 'key'], volkskoloss: ['slabs', 'bossSlam'], weltzeituhr: ['sectors', 'hand', 'bossSlam'],
+    };
+    for (const [kind, list] of Object.entries(want)) {
+      const s = fresh();
+      const e = put(s, kind as EnemyKind, 0, 9);
+      e.wake = 0;
+      e.hp = e.maxHp * 0.45;
+      expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(1);
+      e.hp = 1e6;
+      const evs: SimEvent[] = [];
+      for (let t = 0; t < 40; t += 2) {
+        // Alternate near and far so close-range specials come too.
+        if (e.state !== 'special') { e.state = 'chase'; e.x = e.px = s.player.x; e.z = e.pz = s.player.z + ((t / 2) % 2 ? 2.8 + e.def.radius * 0.3 : 8); }
+        evs.push(...run(s, 2));
+      }
+      expect(specials(evs), kind).toEqual(expect.arrayContaining(list));
     }
   });
 });

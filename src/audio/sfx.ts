@@ -32,6 +32,13 @@ export const FX = {
  lockBeep:[{w:0,f:880,fe:1760,a:.005,s:.2,d:.06,du:.5,v:.1},{w:2,f:1760,fe:2640,dl:.12,a:.005,s:.1,d:.05,v:.09}],
  laser:[{w:1,f:2400,fe:300,a:.002,d:.16,v:.28},{w:3,f:5000,fe:1200,d:.1,q:1,v:.14}],
  tap:[{w:4,f:1250,m:KNOCK,d:.05,v:.4},{w:3,f:3800,d:.02,q:.9,v:.15}],
+ // M15 Alexanderplatz (variations of the cues above): clockwork tick-tock and steam, a root creak, a seed pop,
+ // the Koloss' grinding gears, the Weltzeituhr's bell.
+ growlUhr:[{w:4,f:1250,m:CLINK,d:.05,v:.2},{w:4,f:940,m:CLINK,dl:.12,d:.05,v:.18},{w:3,f:2600,fe:1800,dl:.2,d:.25,q:.6,v:.1}],
+ growlWurz:[{w:4,f:210,m:KNOCK,d:.12,v:.35},{w:2,f:95,fe:70,a:.05,s:.1,d:.35,vd:.08,vs:9,v:.16}],
+ growlKern:[{w:2,f:420,fe:900,a:.01,d:.08,v:.2},{w:4,f:520,m:KNOCK,dl:.06,d:.05,v:.25}],
+ growlKoloss:[{w:2,f:70,fe:40,a:.06,s:.2,d:.55,v:.26},{w:3,f:420,fe:260,d:.45,q:6,am:.7,ams:24,v:.12}],
+ growlZeit:[{w:4,f:330,m:BELL,d:1.2,v:.3},{w:4,f:495,m:BELL,dl:.18,d:1,v:.22},{w:2,f:82,fe:60,a:.08,s:.2,d:.7,v:.18}],
  swing:[{w:3,f:380,fe:1700,a:.05,s:.01,d:.09,q:1.6,v:.5}],
  heavy:[{w:3,f:220,fe:950,a:.07,s:.02,d:.16,q:1.4,v:.6},{w:2,f:95,fe:42,dl:.07,d:.22,v:.5}],
  sling:[{w:3,f:1800,fe:4200,a:.012,d:.07,q:2,v:.5},{w:4,f:430,m:[[1,1,1],[2.01,.6,.4]],d:.05,v:.25}],

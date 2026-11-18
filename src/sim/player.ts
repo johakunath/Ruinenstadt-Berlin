@@ -1,6 +1,7 @@
 // Player state machine: move, 3-hit chain, dodge with i-frames, dash strike.
 import { finisherOf, weaponAttack, PLAYER, WEAPON, type AttackId } from '../data/combat';
 import { POWER } from '../data/powers';
+import { BOSS } from '../data/enemies';
 import { CONSUMABLE, onDodge, shock, shoot, updateCast } from './abilities';
 import { hasL, knock, pk, STATUS } from './combat';
 import type { Level } from './level';
@@ -60,7 +61,7 @@ export function createPlayer(level: Level, at = level.start): Player {
     hp: PLAYER.maxHp, state: 'move', stateT: 0,
     attack: null, cast: null, finisher: false, wucht: false, attackSpeed: 1, critical: false, swing: 0, hits: [], propHits: [], chain: null, chainT: 0,
     dodgeX: 0, dodgeZ: 0, dodgeCd: 0, invuln: 0, strikeT: 0, hurtT: 99,
-    sweeping: false, sweepLo: 0, sweepHi: 0, kx: 0, kz: 0, root: 0, rootBy: 0,
+    sweeping: false, sweepLo: 0, sweepHi: 0, kx: 0, kz: 0, root: 0, rootBy: 0, rootI: 0, slowT: 0,
   };
 }
 
@@ -175,7 +176,7 @@ function startDodge(sim: Sim, inp: SimInput): void {
   p.facing = angleOf(dx, dz);
   p.invuln = Math.max(p.invuln, PLAYER.dodge.iframes);
   p.cast = null;
-  // M12c: a roll breaks free of a grab.
+  // A roll breaks free of Wurzler roots (2D `dash`: P.root = 0) and of the Türsteher grab (M12c).
   p.root = 0;
   p.rootBy = 0;
   onDodge(sim);
@@ -199,6 +200,8 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
   p.strikeT = Math.max(0, p.strikeT - DT);
   p.chainT = Math.max(0, p.chainT - DT);
   p.root = Math.max(0, p.root - DT);
+  p.rootI = Math.max(0, p.rootI - DT);
+  p.slowT = Math.max(0, p.slowT - DT);
 
   if (p.state === 'dead') {
     p.root = 0;
@@ -261,8 +264,9 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     const scale = len > 1 ? 1 / len : 1;
     // Brief slow after taking a hit instead of a stun: attacks and dodges are never interrupted.
     // M20: wading through the flooded tunnel stretch (2D `P.wet`).
-    // M12c: held by the Türsteher, no walking (turning, attacks and powers still work).
-    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? POWER.gully.slow : 1) * sim.level.speedAt(p.x, p.z) * (p.root > 0 ? 0 : 1);
+    // M15: rooted (no walking) or in the Weltzeituhr's Stillstand (half speed).
+    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? POWER.gully.slow : 1) * sim.level.speedAt(p.x, p.z)
+      * (p.root > 0 ? 0 : 1) * (p.slowT > 0 ? BOSS.weltzeituhr.stillSlow : 1);
     const tx = inp.moveX * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     const tz = inp.moveZ * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     // Linear ramp: full speed (or a full stop) within `accelTime`.

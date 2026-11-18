@@ -58,6 +58,8 @@ export interface RendererOptions {
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
   map?: { def: MapDef; lots: Lot[]; props: Prop[]; breakables?: BreakableDef[] };
+  /** M15: load the mech bodies (Alexanderplatz, or `?spawn=` of a mech kind elsewhere). */
+  mechs?: boolean;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -197,7 +199,7 @@ export class GameRenderer {
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
     const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
-    const assets = await loadCharacters(materials);
+    const assets = await loadCharacters(materials, opts.mechs || opts.map?.def.id === 'alex');
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
     // the first frame applies the real look.
@@ -383,7 +385,7 @@ export class GameRenderer {
       seen.add(e.id);
       let view = this.views.get(e.id);
       if (!view) {
-        view = this.pool.get(e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows);
+        view = this.pool.get(e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows, { gdr: this.opts.map?.def.id === 'alex', clockRig: this.world.clockRig });
         if (!view.root.parent) this.scene.add(view.root);
         view.assign(e, sim.level.flavor === 'neon');
         view.root.traverse((o) => { if ((o as Mesh).isMesh) o.layers.enable(ENEMY_LAYER); });
@@ -402,6 +404,8 @@ export class GameRenderer {
     }
     live.sort((a, b) => a.d - b.d);
     this.outlined = live;
+    // M15: the Weltzeituhr landmark steps aside while its boss body is up (awake, fighting or settling).
+    if (this.world.clock) this.world.clock.visible = !sim.enemies.some((e) => e.kind === 'weltzeituhr');
     for (const [id, view] of this.views) {
       if (seen.has(id)) continue;
       this.views.delete(id);

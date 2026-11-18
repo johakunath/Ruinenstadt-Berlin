@@ -146,7 +146,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   // Hitstop: attacker and targets freeze; the input layer keeps buffering.
   if (sim.hitstop > 0) {
     sim.hitstop = Math.max(0, sim.hitstop - DT);
-    // M12c: a grab never lasts longer because of hitstop.
+    // M12c: a hold (grab or Wurzler roots) never lasts longer because of hitstop.
     p.root = Math.max(0, p.root - DT);
     return;
   }

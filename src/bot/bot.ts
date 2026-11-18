@@ -16,6 +16,7 @@ import { profileOf } from '../sim/save';
 import { createSim, stepSim } from '../sim/sim';
 import { heroStats, power } from '../sim/stats';
 import { DT, type Enemy, type Sim, type SimInput } from '../sim/types';
+import { inZone, sweepAngle } from '../sim/threats';
 
 export interface BotSkill {
   /** Share of telegraphs (zones, shots, rushes, wind-ups) the bot does not react to at all. */
@@ -235,6 +236,14 @@ export class Bot {
     // Marked circles: out, and roll when it gets tight.
     for (const z of T.zones) {
       if (!this.aware(z)) continue;
+      // M15 hour sector: out of its slice (away from the slice's middle), roll when it is about to strike.
+      if (z.sector) {
+        if (!inZone(z, p.x, p.z, 0.9)) continue;
+        const m = (z.sector.r0 + z.r) / 2;
+        flee(z.x + Math.sin(z.sector.a) * m * 0.2, z.z + Math.cos(z.sector.a) * m * 0.2, 3);
+        if (z.t < 0.3) dodge = true;
+        continue;
+      }
       const d = Math.hypot(p.x - z.x, p.z - z.z);
       if (d > z.r + 0.9) continue;
       flee(z.x, z.z, 3);
@@ -261,6 +270,17 @@ export class Bot {
     for (const q of T.spots) if (this.aware(q) && Math.hypot(p.x - q.x, p.z - q.z) < q.r + 0.4) flee(q.x, q.z, 2.5);
     const holder = p.root > 0 ? s.enemies.find((e) => e.id === p.rootBy) : undefined;
     if (holder?.sp && this.aware(holder.sp)) dodge = true;
+    // M15 minute hand: roll through it just before it reaches the hero.
+    for (const w of T.sweeps) {
+      if (w.hit || !this.aware(w)) continue;
+      const d = Math.hypot(p.x - w.x, p.z - w.z);
+      if (d > w.r + 0.8 || d < w.r0) continue;
+      const t = Math.max(0, w.t - w.wind);
+      const rate = w.w0 + ((w.w1 - w.w0) * Math.min(t, w.dur)) / w.dur;
+      let ahead = Math.atan2(p.x - w.x, p.z - w.z) - sweepAngle(w, t);
+      ahead -= Math.floor(ahead / (Math.PI * 2)) * Math.PI * 2;
+      if (ahead / Math.max(0.3, rate) < 0.22) dodge = true;
+    }
     // Roar rings: roll through.
     for (const w of T.waves) {
       if (w.hit || w.r <= 0 || !this.aware(w)) continue;
@@ -341,6 +361,16 @@ export class Bot {
       } else if (ranged && d < 4) {
         mx -= ux;
         mz -= uz;
+      }
+      // M15 shield bearer facing the hero with its guard up: walk round it (it turns slower than the hero).
+      const sh = near.def.shield;
+      if (sh && (near.guardOpen ?? 0) <= 0 && d < want + 2.5) {
+        const front = Math.cos(near.facing) * -uz + Math.sin(near.facing) * -ux;
+        if (front > Math.cos(sh.arc)) {
+          const side = Math.sin(near.facing) * uz - Math.cos(near.facing) * ux >= 0 ? 1 : -1;
+          mx += -uz * side * 1.4;
+          mz += ux * side * 1.4;
+        }
       }
       if (d < reach + near.def.radius + 0.2 && threat < 3) {
         // A person mashes: press, release, press.
