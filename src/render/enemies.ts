@@ -15,7 +15,7 @@ import {
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BOSS, ELITES, SPAWN, type BodyKind, type EnemyKind } from '../data/enemies';
+import { BOSS, ELITES, SPAWN, THREAT, type BodyKind, type EnemyKind } from '../data/enemies';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Enemy } from '../sim/types';
 import { Animator, type CharacterAssets } from './characters';
@@ -37,8 +37,6 @@ const DEATH_FROM = 0.35;
 const SCRATCH_HIT = 0.55;
 const SCRATCH_SWIPE = 0.16;
 const WALK_CLIP_SPEED = 1.15;
-/** Seconds a lying guard takes to get up. */
-const RISE_TIME = 0.7;
 /** M12c Türsteher grab: Zombie_Scratch at the end of the swipe, hunched with both hands in front (clutching), held while the hero is caught. */
 const GRAB_HOLD = 0.68;
 /** M12c shove: Shield_Dash with the arms out in front (from the clip sheet), reached when the circle goes off. */
@@ -666,8 +664,6 @@ export class EnemyView {
   private skip = 0;
   private pending = 0;
   private flash = 0;
-  /** M11c lying guards: time the get-up started (-1 still lying, -2 none). */
-  private riseAt = -2;
   private status = 0;
   private time = Math.random() * 10;
   private readonly inner = new Group();
@@ -931,7 +927,6 @@ export class EnemyView {
       this.spinDrum = this.spinOrbit = 0;
     }
     this.root.visible = true;
-    this.riseAt = -2;
   }
 
   hit(): void {
@@ -994,11 +989,9 @@ export class EnemyView {
     // M11c: playing dead on the ground, then getting up (Death01 backwards) when the hero comes close.
     if (e.pose === 'lying' && e.state !== 'dead') {
       const end = a.duration('Death01');
-      if (e.sleep) { this.riseAt = -1; a.pose('Death01', end, 0.01); return; }
-      if (this.riseAt === -1) this.riseAt = this.time;
-      const k = (this.time - this.riseAt) / RISE_TIME;
-      if (this.riseAt >= 0 && k < 1) { a.pose('Death01', DEATH_FROM + (end - DEATH_FROM) * (1 - k), 0.04); return; }
-      this.riseAt = -2;
+      if (e.sleep) { a.pose('Death01', end, 0.01); return; }
+      // Posed from the sim's get-up timer (P22), so the body is up exactly when it can strike.
+      if (e.rise) { const k = 1 - e.rise / THREAT.rise; a.pose('Death01', DEATH_FROM + (end - DEATH_FROM) * (1 - k), 0.04); return; }
     }
     const def = e.def;
     const lean = this.inner.rotation;

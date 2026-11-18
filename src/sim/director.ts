@@ -9,7 +9,7 @@ import { difficultyOf } from '../data/difficulty';
 import { ENEMIES, type BossKind, type EnemyKind } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { aliveCount, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
-import { freeSpot } from './reach';
+import { freeSpot, reachable } from './reach';
 import { FlowField, type Bounds } from './flowfield';
 import type { EncounterDef } from './level';
 import { spawnDrop } from './loot';
@@ -110,6 +110,8 @@ function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: n
     const z = enc.z + Math.cos(a) * rr;
     if (sim.level.blocked(x, z, radius)) continue;
     if (sim.level.near(x, z, radius + 1).some((c) => colliderDistance(c, x, z) < radius + 0.2)) continue;
+    // Never into a closed pocket (a yard boxed in by props): the wave could not reach the hero (review of PR 55).
+    if (!reachable(sim.level, x, z)) continue;
     const score = Math.hypot(x - p.x, z - p.z) + sim.rng.range(0, 4);
     if (score > bestScore) {
       bestScore = score;

@@ -597,6 +597,9 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 .trade-offer .inv-card { flex: 1; margin: 0; }
 .trade-offer button, .trade-row button { width: auto; margin: 0; padding: 9px 12px; font-size: 14px; }
 .trade-delta { font-size: 13px; }
+.trade-offer.sel .inv-card { outline: 2px solid var(--cream); outline-offset: 2px; }
+.trade-worn { margin: 10px 0; }
+.trade-worn .inv-card { margin: 0; max-width: 420px; }
 .trade-sold { display: grid; place-items: center; min-height: 120px; border: 1px dashed #4c453a; color: #7a7064; }
 .trade-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #4c453a; background: #202520; }
 .trade-msg { min-height: 18px; margin: 0; color: #ef9f27; font-size: 13px; text-align: center; }
@@ -1004,3 +1007,6 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 .net-card button.primary { background: #8b3a2b; border-color: #c2453a; } .net-card button:disabled { opacity: .4; }
 .net-card button:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
 .lbadge { display: inline-block; padding: 0 6px; color: #fff; font-size: 12px; margin-right: 4px; }
+
+.death-by { font-size: 17px; margin-bottom: 2px; }
+.death-recent { font-size: 13px; opacity: 0.8; margin-bottom: 8px; }

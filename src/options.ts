@@ -26,6 +26,8 @@ export interface Options {
   showPerf: boolean;
   /** Send anonymous run and performance telemetry (Optionen, default on). */
   telemetry: boolean;
+  /** Auto-Angriff (2D `autoAtk`): swing when an enemy is in reach. Default off (2D: on for touch). */
+  autoAttack: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
   /** M11d landmark reveal shot: on in normal play, off for debug starts and automated browsers unless ?reveal. */
@@ -63,6 +65,7 @@ interface Stored {
   eco?: boolean;
   showPerf?: boolean;
   telemetry?: boolean;
+  autoAttack?: boolean;
 }
 
 function readStored(): Stored {
@@ -75,7 +78,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry };
+    const s: Stored = { profile: o.profile, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry, autoAttack: o.autoAttack };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -123,6 +126,7 @@ export function readOptions(): Options {
     eco: stored.eco ?? false,
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     telemetry: stored.telemetry ?? true,
+    autoAttack: stored.autoAttack ?? false,
     autostart: q.has('autostart'),
     reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),

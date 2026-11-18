@@ -1,0 +1,16 @@
+# Architecture
+
+Where code lives and the rules each folder keeps. Read the part your task touches.
+
+| Folder | Rule |
+|---|---|
+| `src/sim` | Game state and rules at a fixed 60 Hz step. No Three.js, no DOM, no `Math.random` (use `sim.rng`). Every rule has a unit test. Ground plane is XZ in meters; facing θ means direction `(sin θ, cos θ)` |
+| `src/data` | Typed tuning and map data, single source for sim footprints and render meshes. `map.ts` is the expedition map format with seeded lot and prop generators; `koepenick.ts` the Köpenick map, route and wave tiers (`docs/maps/koepenick.md`); `courtyard.ts` the gate 1 yard (`?map=hof`); `combat.ts` attack timing per weapon; `powers.ts` powers and cast times; `enemies.ts` roster, elite modifiers, special and boss tuning |
+| `src/bot` | Balance bot (M14): plays the sim through `SimInput`, no DOM. `node tools/balance.mjs`; rerun after balance changes and compare with `docs/balance.md` |
+| `src/render` | Three.js scene. Reads sim state, interpolates between steps, never writes to it. One-shot clips are posed from sim time so pose and hitbox match |
+| `src/input` | Devices → move vector plus buffered actions. Polled every render frame, also during hitstop |
+| `src/audio`, `src/ui` | WebAudio synth, DOM overlay |
+| `assets/` | Built GLBs. Every file has a row in `assets/LICENSES.md` |
+| `tools/` | Asset build and dev tools (`screenshot.mjs`, `sequence.mjs`, `clip-swing.mjs`, `clip-sheet.mjs`, `enemy-sheet.mjs`, `build-creatures.mjs`, `balance.mjs`, `passes.mjs`) |
+
+Every hit on an enemy goes through `strike` and every hit on the hero through `hurtPlayer` (`src/sim/combat.ts`); blessing rules live there. Powers and consumables: `src/sim/abilities.ts`; blessing choice: `blessings.ts`; events, hidden blessings, shrines, trader: `runcontent.ts`. The sim reports through `sim.events`; the loop in `src/main.ts` hands them to renderer, audio and rumble. A `Level` (`src/sim/level.ts`) holds colliders in a spatial hash plus a walk grid (water); the encounter director (`src/sim/director.ts`) runs waves on expedition maps. Enemies (M12): what a type does beyond walking up and striking is in `src/sim/ai.ts` (specials: wind-up, action, punish window; boss patterns); marked zones (also root circles and hour sectors), shots, ground hazards, roar rings and the minute hand live in `src/sim/threats.ts` and hurt through `threatHit`; bodies in `src/render/enemies.ts` (Alexanderplatz gear and code bodies `enemies-alex.ts`; the Weltzeituhr is the landmark's own rig, `clock.ts`). Maps render in 32 m chunks (`src/render/map-world.ts`). Buildings and large vehicles remain opaque; a depth-tested hero contour appears only behind their explicitly classified geometry (`src/render/hero-outline.ts`). Small props, enemies, lamps and trees never trigger it; do not add proximity fades or material-wide clipping. The one exception (V1 B, Johannes 2026-11-18): objects flagged in `src/data/cut.ts` (Hinterhof buildings on the camera side, landmarks with `Landmark.cut`) are cut off hard above a height while the hero is in their trigger zone. The cut is geometry, not shader: `BatchSet.cut` clips at build time and `src/render/cutaway.ts` blanks index ranges, so every pass agrees and it costs no draw call.

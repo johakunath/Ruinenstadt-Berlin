@@ -554,7 +554,7 @@ function pallets(b: Builder, p: Prop, rng: Rng): void {
   const m = b.mats;
   const base = at(p, rng.range(-0.05, 0.05), 0, 0, 0, rng.range(-0.1, 0.1));
   const kind = rng.pick(['bricks', 'sacks', 'empty'] as const);
-  const n = kind === 'empty' ? 3 + rng.int(4) : 1 + rng.int(2);
+  const n = kind === 'empty' ? 3 + rng.int(2) : 1 + rng.int(2);
   for (let i = 0; i < n; i++) pallet(b, L(base, rng.range(-0.04, 0.04), i * 0.145, rng.range(-0.04, 0.04), 0, rng.range(-0.06, 0.06)), rng);
   const y = n * 0.145;
   if (kind === 'bricks') {

@@ -8,6 +8,7 @@
 - Maps: every district follows `docs/maps/guidelines.md` (concept, OpenStreetMap check, layout rules, invariants); Köpenick is the reference (`docs/maps/koepenick.md`).
 - Vision: `docs/vision.md`. Story: `docs/story.md`. Roles, token rules and task format for Claude and Codex: `docs/workflow.md`.
 - Art: `docs/style-bible.md` and the boards in `docs/style/` are the source of truth (Köpenick = default look). Check them before any visual work.
+- Asset status: `docs/equipment-pipeline.md` (every item: 3D model, hero look, icon) and `docs/enemy-pipeline.md` (every enemy, boss and NPC: body, Kodex). **Whoever touches an item or enemy model, icon, bust, texture or effect (Claude or Codex) updates these indexes in the same PR.**
 - Textures: `docs/asset-pipeline.md`. Claude builds objects in code with code-painted placeholder textures; **only Codex** generates texture images and does their first integration; Claude then does the performance integration.
 - Stack: Three.js (WebGL 2), TypeScript strict, Vite, Vitest, Playwright. Versions are pinned exactly in `package.json`. No React, no ECS, no physics engine.
 - Game text is German, short: a few words or one line. Code, comments and docs are English.
@@ -30,18 +31,7 @@ Fable 5.2 is scarce (lower limit, access may end): spend it where it is clearly 
 
 ## Architecture
 
-| Folder | Rule |
-|---|---|
-| `src/sim` | Game state and rules at a fixed 60 Hz step. No Three.js, no DOM, no `Math.random` (use `sim.rng`). Every rule has a unit test. Ground plane is XZ in meters; facing θ means direction `(sin θ, cos θ)` |
-| `src/data` | Typed tuning and map data, single source for sim footprints and render meshes. `map.ts` is the expedition map format with seeded lot and prop generators; `koepenick.ts` the Köpenick map, route and wave tiers (`docs/maps/koepenick.md`); `courtyard.ts` the gate 1 yard (`?map=hof`); `combat.ts` attack timing per weapon; `powers.ts` powers and cast times; `enemies.ts` roster, elite modifiers, special and boss tuning |
-| `src/bot` | Balance bot (M14): plays the sim through `SimInput`, no DOM. `node tools/balance.mjs`; rerun after balance changes and compare with `docs/balance.md` |
-| `src/render` | Three.js scene. Reads sim state, interpolates between steps, never writes to it. One-shot clips are posed from sim time so pose and hitbox match |
-| `src/input` | Devices → move vector plus buffered actions. Polled every render frame, also during hitstop |
-| `src/audio`, `src/ui` | WebAudio synth, DOM overlay |
-| `assets/` | Built GLBs. Every file has a row in `assets/LICENSES.md` |
-| `tools/` | Asset build and dev tools (`screenshot.mjs`, `sequence.mjs`, `clip-swing.mjs`, `clip-sheet.mjs`, `enemy-sheet.mjs`, `build-creatures.mjs`, `balance.mjs`, `passes.mjs`) |
-
-Every hit on an enemy goes through `strike` and every hit on the hero through `hurtPlayer` (`src/sim/combat.ts`); blessing rules live there. Powers and consumables: `src/sim/abilities.ts`; blessing choice: `blessings.ts`; events, hidden blessings, shrines, trader: `runcontent.ts`. The sim reports through `sim.events`; the loop in `src/main.ts` hands them to renderer, audio and rumble. A `Level` (`src/sim/level.ts`) holds colliders in a spatial hash plus a walk grid (water); the encounter director (`src/sim/director.ts`) runs waves on expedition maps. Enemies (M12): what a type does beyond walking up and striking is in `src/sim/ai.ts` (specials: wind-up, action, punish window; boss patterns); marked zones (also root circles and hour sectors), shots, ground hazards, roar rings and the minute hand live in `src/sim/threats.ts` and hurt through `threatHit`; bodies in `src/render/enemies.ts` (Alexanderplatz gear and code bodies `enemies-alex.ts`; the Weltzeituhr is the landmark's own rig, `clock.ts`). Maps render in 32 m chunks (`src/render/map-world.ts`). Buildings and large vehicles remain opaque; a depth-tested hero contour appears only behind their explicitly classified geometry (`src/render/hero-outline.ts`). Small props, enemies, lamps and trees never trigger it; do not add proximity fades or material-wide clipping. The one exception (V1 B, Johannes 2026-11-18): objects flagged in `src/data/cut.ts` (Hinterhof buildings on the camera side, landmarks with `Landmark.cut`) are cut off hard above a height while the hero is in their trigger zone. The cut is geometry, not shader: `BatchSet.cut` clips at build time and `src/render/cutaway.ts` blanks index ranges, so every pass agrees and it costs no draw call.
+Folders, their rules and where each system lives: `docs/architecture.md` (read the part your task touches). The three that bite most often: `src/sim` has no Three.js, no DOM and no `Math.random` (use `sim.rng`), and every rule has a unit test; `src/render` reads sim state and never writes it; every hit goes through `strike` or `hurtPlayer` (`src/sim/combat.ts`).
 
 ## Rules
 
@@ -52,7 +42,7 @@ Every hit on an enemy goes through `strike` and every hit on the hero through `h
 - Keep the light count constant at runtime (a changing count recompiles every shader).
 - Critical visual or layout decisions: show clearly distinct alternatives first (look variants, mockups). Routine work inside an approved direction: build, show, continue.
 - Reviews and CI (Johannes, 2026-11-16): one Codex review per session and PR (again only after substantial new commits); CI is not run per commit but when the PR is marked ready after that review; cancel superseded runs. Details in `docs/workflow.md` › Token budget.
-- Anything Johannes must check on real hardware (fps, heat, a look decision, a hitch): add a row to `docs/tasks/pt-hardware-checks.md` (Johannes, 2026-11-18), not only to your task file.
+- Anything Johannes must check on real hardware (fps, heat, a look decision, a hitch): add a row to `docs/tasks/pt-hardware-checks.md` (Johannes, 2026-11-18), not only to your task file; a built feature he must play goes into its Playtest table.
 - Build features in the order of `docs/migration.md`; do not start a step before the steps it needs. Not planned: Rapier, lightmaps.
 
 ## Commands
@@ -65,6 +55,6 @@ Every hit on an enemy goes through `strike` and every hit on the hero through `h
 | `npm run assets` | Rebuild `assets/characters/zombie.glb` and `anims.glb` from `assets-src/` (`tools/fetch-assets.sh` downloads it) |
 | `npm run assets:hero` | Rebuild `assets/characters/hero.glb` through headless Blender (`$BLENDER`, PATH or the Windows default path; `docs/tasks/h1-hero.md`) |
 
-URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero), `?shadows=boxes` (A/B: only caster boxes shadow, not map chunks).
+URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero), `?shadows=boxes` (A/B: only caster boxes shadow, not map chunks), `?map=tunnel&line=1`, `?sky=a|b|c` (Alexanderplatz light), `?cut=off|4.3` (V1 B cutaway), `?props=stall:1.5*4,crane` (prop showcase near the start, rot 0).
 
-CI runs type check, unit tests, build and the smoke test on every PR and deploys `main` to GitHub Pages. Cloud browsers have no real GPU: measure performance only on the PC and the Tab S9.
+CI runs type check, unit tests, build and the smoke test once a PR is marked ready (not per commit, Rules › Reviews and CI) and on `main`, which it deploys to GitHub Pages. Cloud browsers have no real GPU: measure performance only on the PC and the Tab S9.

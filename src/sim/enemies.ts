@@ -3,6 +3,7 @@ import { PLAYER } from '../data/combat';
 import { BOSS, ELITE_MODS, ENEMIES, SPAWN, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
 import { initCooldowns, isRush, jitter, passive, runSpecial, think, tickCooldowns } from './ai';
 import { colliderDistance } from './collide';
+import { reachable } from './reach';
 import { angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Sim } from './types';
 import { POWER } from '../data/powers';
@@ -63,7 +64,7 @@ export function spawnPack(sim: Sim, x: number, z: number, kind: EnemyKind, hpMul
     for (let tries = 0; tries < 6; tries++) {
       qx = x + sim.rng.range(-0.8, 0.8);
       qz = z + sim.rng.range(-0.8, 0.8);
-      if (!sim.level.blocked(qx, qz, r) && !sim.level.near(qx, qz, r + 0.5).some((c) => colliderDistance(c, qx, qz) < r)) break;
+      if (!sim.level.blocked(qx, qz, r) && !sim.level.near(qx, qz, r + 0.5).some((c) => colliderDistance(c, qx, qz) < r) && (!sim.level.expedition || reachable(sim.level, qx, qz))) break;
       qx = x;
       qz = z;
     }
@@ -180,7 +181,14 @@ export function updateEnemies(sim: Sim): void {
 
     switch (e.state) {
       case 'chase': {
-        if (e.sleep) { if (dist > e.sleep && e.hp >= e.maxHp) break; e.sleep = 0; sim.events.push({ type: 'note', text: '!', color: '#f2d14b', x: e.x, z: e.z }); }
+        if (e.sleep) {
+          if (dist > e.sleep && e.hp >= e.maxHp) break;
+          e.sleep = 0;
+          if (e.pose === 'lying') e.rise = THREAT.rise;
+          sim.events.push({ type: 'note', text: '!', color: '#f2d14b', x: e.x, z: e.z });
+        }
+        // A lying guard gets up first (the body rises from the ground), then fights.
+        if (e.rise !== undefined && e.rise > 0) { e.rise = Math.max(0, e.rise - DT); break; }
         // Punish window: the body stands open.
         if (e.open > 0) {
           e.open -= DT;

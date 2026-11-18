@@ -96,3 +96,24 @@ export function freeSpot(level: Level, rng: Rng, x: number, z: number, near: num
   }
   return null;
 }
+
+/**
+ * The point itself when reachable, else the centre of the nearest reachable cell within `max` meters,
+ * else null (backlog P21, P23: lot guards and event spots that props land on).
+ */
+export function snapReachable(level: Level, x: number, z: number, max = 4): { x: number; z: number } | null {
+  if (reachable(level, x, z)) return { x, z };
+  const g = reachGrid(level);
+  const c0 = Math.floor((x - g.minX) / CELL), r0 = Math.floor((z - g.minZ) / CELL);
+  let best: { x: number; z: number } | null = null;
+  let bd = max;
+  const n = Math.ceil(max / CELL);
+  for (let dr = -n; dr <= n; dr++) for (let dc = -n; dc <= n; dc++) {
+    const c = c0 + dc, r = r0 + dr;
+    if (c < 0 || r < 0 || c >= g.cols || r >= g.rows || g.ok[r * g.cols + c] !== 1) continue;
+    const cx = g.minX + (c + 0.5) * CELL, cz = g.minZ + (r + 0.5) * CELL;
+    const d = Math.hypot(cx - x, cz - z);
+    if (d < bd) { bd = d; best = { x: cx, z: cz }; }
+  }
+  return best;
+}

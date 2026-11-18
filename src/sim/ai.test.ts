@@ -3,6 +3,7 @@ import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
 import { ignite, strike } from './combat';
 import { capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
+import { autoAttackTarget } from './player';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
 
@@ -1216,5 +1217,45 @@ describe('Mitte roster (M12c)', () => {
       }
       expect(hits, kind).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('lying guards get up first (P22)', () => {
+  it('a guard woken at 1 m neither winds up nor strikes before it stands', () => {
+    const s = fresh();
+    const e = put(s, 'runner', 1, 0);
+    e.sleep = 4; e.pose = 'lying';
+    let windAt = -1;
+    for (let i = 0; i < 120 && windAt < 0; i++) {
+      for (const ev of run(s, 1 / 60)) if (ev.type === 'enemyWindup' && ev.id === e.id) windAt = i / 60;
+    }
+    expect(windAt).toBeGreaterThanOrEqual(THREAT.rise);
+    expect(e.rise).toBe(0);
+  });
+
+  it('a hidden guard has no get-up', () => {
+    const s = fresh();
+    const e = put(s, 'runner', 1, 0);
+    e.sleep = 4; e.pose = 'hidden';
+    run(s, 1 / 60);
+    expect(e.rise).toBeUndefined();
+  });
+});
+
+describe('Auto-Angriff (2D autoAtk)', () => {
+  it('picks an awake enemy in reach, not a sleeping or a far one', () => {
+    const s = fresh();
+    const far = put(s, 'walker', 6, 0);
+    expect(autoAttackTarget(s)).toBeNull();
+    const sleeper = put(s, 'walker', 0, 1.5);
+    sleeper.sleep = 4;
+    expect(autoAttackTarget(s)).toBeNull();
+    const near = put(s, 'walker', -1.8, 0);
+    expect(autoAttackTarget(s)).toBe(near);
+    s.stats.kind = 'sling';
+    far.x = s.player.x + 1.5; near.x = s.player.x - 10;
+    expect(autoAttackTarget(s)).toBe(far);
+    far.wake = 2;
+    expect(autoAttackTarget(s)).toBe(near);
   });
 });
