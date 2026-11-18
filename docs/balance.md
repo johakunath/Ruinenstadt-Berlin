@@ -69,3 +69,19 @@ Damage taken is the winning try, as a share of max life (healing during the figh
 ## Alexanderplatz first run (M15, 2026-11-18)
 
 `node tools/balance.mjs 3 normal johannes 1 --map=alex`, fresh gear, stand-in bosses (Rattenmutter, Turmwächter, Brandmeister, Hauptmann) and the old roster: 3 of 3 campaigns won, 5.7 deaths and 25.0 min per campaign. Deaths sit at the Lustgarten (4.3 per run: tier 16 against fresh gear) and the first boss (1.3); the rest is easy (17 to 35 % damage taken). Read: a hero arriving with Xhain gear finds the district too easy until its own enemies and bosses exist; calibrate `ALEX_TIER` after step 7 with a carried-gear start. A first run stopped for good at the Kino International: the Plattenbau side passage ran into its footprint (fixed, test added).
+
+## District chain with carried gear (2026-11-18)
+
+`node tools/balance.mjs 3 normal johannes 1 --chain`: one hero plays Köpenick, Xhain, Alexanderplatz and Mitte in order; gear, Schrott and camp carry over (tunnels between the districts and the bot's missing systems, backlog P33, are not played).
+
+| District | Won | Deaths per run | Min | Power start → end | Avg damage per fight | Bosses (time / damage) |
+|---|---|---|---|---|---|---|
+| Köpenick | 3/3 | 2.0 | 19.5 | 33 → 214 to 516 | 27 to 58 % | 22 to 74 s, 16 to 200 % |
+| Xhain | 2/3 (one stuck, see below) | 0 | 10.9 | 192 to 342 → 263 to 679 | 7 to 14 % | 7 to 30 s, 0 to 43 % |
+| Alexanderplatz | 2/2 | 0 | 11.7 | 464 to 610 → 921 to 1086 | 7 to 8 % | 9 to 53 s, 5 to 20 % |
+| Mitte | 2/2 | 0 | 12.1 | 683 to 872 → 1083 to 1255 | 7 to 8 % | 7 to 23 s, 0 to 11 % |
+
+Read:
+- Köpenick is the only real challenge. With carried gear every later district is far too easy: no deaths, fights cost under 15 % life, bosses fall in seconds. Power keeps growing (×3 to ×4 per district), the district tiers were set against fresh gear.
+- Fix direction (decide in the balance session, P33): scale each district's tier to the power a hero brings (about 200 to 500 into Xhain, 600 into Alexanderplatz, 700 to 900 into Mitte), and slow the power growth itself (item level per district, fewer upgrades), so B10 holds over the chain.
+- Run 1 stopped in Xhain after one boss and 180 sim minutes with 0 deaths: the bot got stuck there (route or a fight that never ends), not a balance result. Reproduce with seed 1 before the next balance session.
