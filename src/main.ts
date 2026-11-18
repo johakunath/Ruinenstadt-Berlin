@@ -681,6 +681,8 @@ function drainEvents(): void {
       case 'victory':
         // Playtest 2026-11-17: no dialog over the falling boss. The run counts as won now; the
         // end screen follows after a while and offers to stay. The loot warning comes when leaving.
+        // 2D tunWin: the first S3 opens the camp at its end.
+        if (isTunnel && line === 0 && !campOpen(sim.inventory.camp?.freed)) lootUi.toast('<span style="color:#ef9f27">S+U Warschauer Straße</span> ist jetzt dein Lager', 6);
         endExpedition(sim, true, isTunnel ? TUNNEL_LINE : 0);
         saveNow(false);
         telemetry.end('win');
