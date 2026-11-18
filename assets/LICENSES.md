@@ -124,6 +124,8 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `portraits/E09.webp` | Ruinenstadt 2D `assets/portraits/E09.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Hetzer (2D Raser) |
 | `portraits/E11.webp` | Ruinenstadt 2D `assets/portraits/E11.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Raptor |
 | `portraits/E12.webp` | Ruinenstadt 2D `assets/portraits/E12.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Der Rex |
+| `portraits/E13.webp` | Ruinenstadt 2D `assets/portraits/E13.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Kabelghul (M12c) |
+| `portraits/E14.webp` | Ruinenstadt 2D `assets/portraits/E14.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Boxenkopf (M12c) |
 | `portraits/X01.webp` | Ruinenstadt 2D `assets/portraits/X01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Hauptmann von Köpenick |
 | `portraits/X03.webp` | Ruinenstadt 2D `assets/portraits/X03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Der Turmwächter |
 | `portraits/X04.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Der Feldwebel, chipped Pickelhaube and blue tunic |
@@ -133,6 +135,7 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `portraits/L03.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Spaltend, lime fissures and split silhouette |
 | `portraits/L04.webp` | OpenAI image generation, painted Kodex bust | Codex for Johannes | Own work | Gepanzert, layered steel plate with ivory edges |
 | `portraits/X06.webp` | Ruinenstadt 2D `assets/portraits/X06.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Die Rattenmutter (M12b) |
+| `portraits/X09.webp` | Ruinenstadt 2D `assets/portraits/X09.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Der Bassprediger (M12c) |
 | `portraits/X10.webp` | Ruinenstadt 2D `assets/portraits/X05.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Der Brandmeister (M12b; 3D X05 is the Schaffner) |
 | `portraits/S01.webp` | Ruinenstadt 2D `assets/portraits/S01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Dr. Ahmet |
 | `portraits/S02.webp` | Ruinenstadt 2D `assets/portraits/S02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Mira |

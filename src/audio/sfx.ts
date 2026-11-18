@@ -24,6 +24,14 @@ export const FX = {
  growlBrand:[{w:2,f:100,fe:50,a:.04,s:.1,d:.45,v:.22},{w:3,nt:1,f:280,fe:1300,a:.03,d:.35,v:.22}],
  growlMutter:[{w:2,f:110,fe:70,a:.04,s:.1,d:.45,vd:.1,vs:20,v:.22},{w:2,f:1300,fe:2100,dl:.05,d:.12,vd:.05,vs:30,v:.1}],
  growlHexe:[{w:2,f:330,fe:220,a:.08,s:.2,d:.5,vd:.15,vs:7,v:.18},{w:3,f:1200,fe:700,d:.4,q:5,v:.1}],
+ // M12c Mitte: Kabelghul crackle, Boxenkopf hum and sub thump, Türsteher grunt, Wachdrohne lock beep and laser, the Dirigent's baton.
+ crackle:[{w:3,f:3200,fe:1800,a:.01,s:.05,d:.18,q:1.2,am:1,ams:60,v:.35},{w:1,f:120,fe:90,d:.15,am:.8,ams:50,v:.1}],
+ growlBass:[{w:1,f:55,fe:62,a:.1,s:.3,d:.4,vd:.06,vs:6,lp:.08,v:.28},{w:2,f:110,fe:124,a:.1,s:.3,d:.4,vd:.06,vs:6,v:.08}],
+ thump:[{w:2,f:62,fe:32,a:.005,s:.08,d:.5,p:.6,v:.75},{w:3,nt:1,f:180,fe:60,d:.2,v:.3}],
+ growlTuer:[{w:2,f:95,fe:60,a:.02,s:.06,d:.3,v:.24},{w:3,f:320,fe:180,d:.25,q:2,v:.14}],
+ lockBeep:[{w:0,f:880,fe:1760,a:.005,s:.2,d:.06,du:.5,v:.1},{w:2,f:1760,fe:2640,dl:.12,a:.005,s:.1,d:.05,v:.09}],
+ laser:[{w:1,f:2400,fe:300,a:.002,d:.16,v:.28},{w:3,f:5000,fe:1200,d:.1,q:1,v:.14}],
+ tap:[{w:4,f:1250,m:KNOCK,d:.05,v:.4},{w:3,f:3800,d:.02,q:.9,v:.15}],
  // M15 Alexanderplatz (variations of the cues above): clockwork tick-tock and steam, a root creak, a seed pop,
  // the Koloss' grinding gears, the Weltzeituhr's bell.
  growlUhr:[{w:4,f:1250,m:CLINK,d:.05,v:.2},{w:4,f:940,m:CLINK,dl:.12,d:.05,v:.18},{w:3,f:2600,fe:1800,dl:.2,d:.25,q:.6,v:.1}],

@@ -3,22 +3,25 @@
 // Every type needs a different answer: Schlurfer crowd, Hetzer rush, Brocken slam a marked circle,
 // Speier keep their distance and spit, Raptoren pounce along a line, Krähen circle and dive.
 // M12b (Xhain): Ratten come in packs of five and zig-zag in; four new bosses from existing blocks.
+// M12c (Mitte, `docs/tasks/m12c-mitte-enemies.md`): Kabelghule leap along a line, Boxenköpfe send bass
+// rings and drive the others on (at most two alive), Drohnen circle and dive; four bosses.
 // M15 Alexanderplatz (2D `uhr`, `wurz`, `kern`, Koloss v8): the Uhrwerkläufer blocks from the front,
 // the Wurzler roots the hero, the Kernspeier spits a fan of seeds; four clockwork and garden bosses.
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
 export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner' | 'grenzer' | 'brandmeister' | 'rattenmutter' | 'spreehexe'
+  | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
   | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr';
-export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'uhrwerk' | 'wurzler' | 'kernspeier' | BossKind;
+export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier' | BossKind;
 /**
- * Which model and clip set draws the body (`src/render/enemies.ts`). M15: `mech` and `mechBig` are the
- * Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab, `clock`
- * the Weltzeituhr (the landmark itself, `src/render/clock.ts`).
+ * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
+ * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
+ * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`).
  */
-export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
+export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
-export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'wurzler' | 'kernspeier' | BossKind;
+export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
 export type EliteMod = 'flink' | 'brennend' | 'spaltend' | 'gepanzert';
 
@@ -60,6 +63,8 @@ export interface EnemyDef {
    * pack for one unit of its count (`spawnPack` in `src/sim/enemies.ts`). Pack kinds never turn elite.
    */
   pack?: number;
+  /** M12c: at most this many alive at once (the director's pick, boss calls and `?spawn` honour it). */
+  cap?: number;
   /**
    * M15: carries a shield in front (2D `SHD`): hits inside ±`arc` of its facing deal `front`; it turns
    * at `turn` rad/s. A stun or a shock hit opens the guard for `open` s. Never `gepanzert`.
@@ -109,6 +114,26 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     kind: 'rat', name: 'Ratte', body: 'rat', ai: 'rat', res: 'rat', radius: 0.24, scale: 1, hp: 9, speed: 3.5,
     attackRange: 0.95, windup: 0.3, active: 0.08, recovery: 0.45,
     reach: 1.05, halfAngle: 45 * DEG, damage: 5, knockbackTaken: 1.6, poise: false, weight: 0, pack: 5,
+  },
+  // M12c Mitte. 2D kabel (r 9 px, life 15, 92-104 px/s, hit 6) on the ghoul ratios: thin, fast, leaps
+  // along a marked line (`THREAT.leap`). Fire burns it well, shock barely touches it.
+  kabel: {
+    kind: 'kabel', name: 'Kabelghul', body: 'zombie', ai: 'pouncer', res: 'kabel', radius: 0.3, scale: 0.92, hp: 22, speed: 3.3,
+    attackRange: 1.3, windup: 0.4, active: 0.1, recovery: 0.55,
+    reach: 1.5, halfAngle: 45 * DEG, damage: 10, knockbackTaken: 1.3, poise: false, weight: 0,
+  },
+  // 2D bass (r 15 px, life 62, 44 px/s, hit 13) on the brute ratios: a speaker head that strikes like a
+  // Brocken without the slam and sends bass rings (`THREAT.bass`) that drive the others on. Two alive at most.
+  bass: {
+    kind: 'bass', name: 'Boxenkopf', body: 'zombie', ai: 'bass', res: 'bass', radius: 0.5, scale: 1.15, hp: 75, speed: 1.4,
+    attackRange: 1.7, windup: 0.7, active: 0.12, recovery: 0.8,
+    reach: 2.0, halfAngle: 55 * DEG, damage: 19, knockbackTaken: 0.6, poise: true, weight: 0, cap: 2,
+  },
+  // New for 3D (2D only as the power „Drohnenschwarm“): the Krähe's brain on a drone body; dazed it sinks and sparks.
+  drone: {
+    kind: 'drone', name: 'Drohne', body: 'drone', ai: 'crow', res: 'crow', radius: 0.3, scale: 1.3, hp: 14, speed: 5,
+    attackRange: 0, windup: 0.35, active: 0.1, recovery: 0.5,
+    reach: 1.2, halfAngle: 40 * DEG, damage: 10, knockbackTaken: 1.4, poise: false, weight: 0, fly: true,
   },
   // M15 Alexanderplatz. 2D Uhrwerkläufer (r 22, 58 life, 34 px/s, 13): the clock face is its shield.
   // Slow, heavy swing; get behind it or open it with the hammer, a stun or shock.
@@ -183,6 +208,31 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
+  // M12c Mitte (2089). Zone 0, Pariser Platz: a Kabelbrocken in a bomber jacket holds the Tor like a club
+  // door („Kein Einlass“). Shoves, grabs and holds, calls Kabelghule from the guest list.
+  tuersteher: {
+    kind: 'tuersteher', name: 'Der Türsteher', body: 'zombie', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1000, speed: 2.4,
+    attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
+    reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
+  },
+  // Zone 1, Kanzleramt: a flat surveillance drone. Searchlight, laser volleys, drone swarms; lands to recharge.
+  wachdrohne: {
+    kind: 'wachdrohne', name: 'Die Wachdrohne', body: 'drone', ai: 'wachdrohne', res: 'ritter', radius: 0.9, scale: 1, hp: 2200, speed: 2.2,
+    attackRange: 0, windup: 0.6, active: 0.12, recovery: 0.8,
+    reach: 2.4, halfAngle: 60 * DEG, damage: 28, knockbackTaken: 0.2, poise: true, weight: 0, boss: true, fly: true,
+  },
+  // Zone 2, Neuer See (mini-boss): a ghoul in a torn tailcoat on the band stand; beat rings, the Boxenköpfe follow him.
+  dirigent: {
+    kind: 'dirigent', name: 'Der Dirigent', body: 'zombie', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 1400, speed: 2.2,
+    attackRange: 2.1, windup: 0.65, active: 0.14, recovery: 0.8,
+    reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
+  },
+  // District boss on the Sony Center stage: 2D Bassprediger (v 2). Shock charge, bass sermons, a congregation.
+  bassprediger: {
+    kind: 'bassprediger', name: 'Der Bassprediger', body: 'zombie', ai: 'bassprediger', res: 'bass', radius: 0.85, scale: 1.7, hp: 4400, speed: 2.8,
+    attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
+    reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
+  },
   // M15 Alexanderplatz. Zone 1: a Wurzler grown out of the Palast glass house, a crown of sunflowers.
   wurzelmutter: {
     kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'zombie', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
@@ -236,6 +286,17 @@ export const THREAT = {
   spit: { near: 200 * PX, far: 290 * PX, range: 440 * PX, every: [2.3, 3.1], wind: 0.4, speed: 210 * PX, life: 3.5, radius: 0.22 },
   fan: { range: 380 * PX, wind: 0.6, speed: 230 * PX, spread: 0.3, open: 1 },
   pounce: { range: 260 * PX, every: 2.4, wind: 0.6, time: 0.45, speed: 520 * PX, damage: 20, open: 0.8 },
+  /**
+   * M12c Kabelghul (2D kabel): with a clear line, 0.4 s marked, 0.3 s at 440 px/s (4.4 m), hit ×1, open 0.5 s.
+   * Leaps from 5 m, not the 2D 200 px (6.7 m): 2D hurt by touch after the leap, here the leap itself hits and
+   * from 6.7 m it would land 2 m short of a hero who stands still.
+   */
+  leap: { range: 5, every: [2.2, 3], first: [1, 2], wind: 0.4, time: 0.3, speed: 440 * PX, damage: 1, open: 0.5 },
+  /**
+   * M12c Boxenkopf (2D bass): within 9 m a wind-up of 0.8 s, then one ring 12 → 270 px at 0.9 of its hit
+   * (no floor); bodies within 220 px are driven on for 3 s; open 1.1 s. First after 2-4 s, then every 5-6.5 s (2D).
+   */
+  bass: { range: 9, first: [2, 4], every: [5, 6.5], wind: 0.8, start: 12 * PX, max: 270 * PX, damage: 0.9, floor: 0, buff: 3, buffRange: 220 * PX, open: 1.1 },
   lunge: { range: 260 * PX, wind: 0.7, time: 0.4, speed: 480 * PX, damage: 1.3, open: 1.2 },
   dive: { orbitX: 150 * PX, orbitZ: 110 * PX, orbitSpeed: 1.5, range: 280 * PX, every: [2.5, 3.8], wind: 0.35, time: 0.6, speed: 380 * PX, rest: 1.3, restSpeed: 40 * PX },
   slam: { range: 220 * PX, every: [4.5, 6.5], first: [2, 4], wind: 0.95, radius: 60 * PX, damage: 1, floor: 0.2, open: 1 },
@@ -292,6 +353,40 @@ export const BOSS = {
   spreehexe: {
     pool: 2.2, poolWind: 0.8, poolX: 30 * PX, poolZ: 20 * PX, poolRadius: 26 * PX, poolTime: 5, poolDamage: 0.4,
     ring: 5 / 0.6, shots: 16, wave: 8, slam: 3.6, rageAdds: 3,
+  },
+  // M12c Mitte. Distances in meters, cooldowns in seconds (rage ticks them ×1.35 faster).
+  /**
+   * Schubser: a circle 1.6 m in front of him (r 2.2) that hurts and shoves the hero `push` meters (×3 the
+   * 2D ring push of 40 px); twice in rage. Griff: a short lunge that holds the hero `hold` s (a roll breaks
+   * free), then throws (`throwDamage`, `throwPush`); from 3.5 to 5.5 m only, as the lunge covers 4.2 m plus the
+   * contact (the spec's 8 m would whiff). Gästeliste: two Kabelghule, three in rage.
+   */
+  tuersteher: {
+    shove: 3.2, shoveRange: 3.5, shoveAhead: 1.6, shoveRadius: 2.2, shoveWind: 0.7, shoveDamage: 1, shoveFloor: 0.15, push: 3 * 40 * PX, shoveOpen: 0.8, rageGap: 0.5,
+    grab: 6, grabMin: 3.5, grabMax: 5.5, grabWind: 0.5, grabTime: 0.35, grabSpeed: 12, grabDamage: 0.5, hold: 1, throwDamage: 0.6, throwPush: 2, grabOpen: 1.2,
+    summon: 10, adds: 2, rageAdds: 3,
+  },
+  /**
+   * Flies at `height`, keeps `near`..`far` away. Suchlicht (`Spot`): a lit circle that follows the hero; standing
+   * in it `lock` s in a row locks it, `flash` s red, then the laser volley. Volley also every `volley` s with a
+   * clear line; three Drohnen every `summon` s; every third special she lands instead (punish window).
+   */
+  wachdrohne: {
+    height: 2.4, near: 6, far: 10,
+    spotRadius: 1.8, spotSpeed: 2.6, lock: 0.6, flash: 0.3, spotCool: 1.5, spotOrbit: 2.8,
+    volley: 4, shots: 5, spread: 0.18, volleyWind: 0.5, volleySpeed: 9, volleyDamage: 0.5, volleyLife: 1.8,
+    summon: 11, adds: 3, landEvery: 3, landWind: 0.8, landRadius: 2.5, landDamage: 1, landFloor: 0.2, landed: 2.5,
+  },
+  /** Takt: one ring every `beat` s; every `fortEvery`-th beat the Fortissimo (two rings, every Boxenkopf pulses). Orchester: two Boxenköpfe at the start and once at half life. */
+  dirigent: {
+    beat: 4, beatWind: 0.6, beatMax: 7, beatDamage: 0.6, beatFloor: 0.12,
+    fortEvery: 4, fortGap: 4, fortMax: 9, fortDamage: 0.7, fortFloor: 0.18, fortOpen: 1.5, adds: 2,
+  },
+  /** 2D v 2: Stromstoß every 3.8 s (0.7 s marked, 0.55 s at 560 px/s), after every second one (every one in rage) the Basspredigt; Gemeinde every 13 s. */
+  bassprediger: {
+    charge: 3.8, range: 13, wind: 0.7, time: 0.55, speed: 560 * PX, damage: 1.1, floor: 0.25, open: 1.25,
+    sermonEvery: 2, gap: 150 * PX, max: 340 * PX, ringDamage: 0.7, ringFloor: 0.18,
+    summon: 13, adds: 3, rageAdds: 2,
   },
   // M15 Alexanderplatz (spec: docs/tasks/m15-alexanderplatz.md › Step 6). Cooldowns in seconds.
   /** Three root fields (one under the hero, `beside` m to both sides); two Kernspeier; a root ring round her when close. */

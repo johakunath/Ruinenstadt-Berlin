@@ -12,8 +12,16 @@ const KNOCK_DAMP = 9;
 const SEPARATION_PAD = 0.25;
 const dir = { x: 0, z: 0 };
 
+/** M12c: alive bodies of `kind`, and whether one more would break its `cap` (Boxenkopf: two). */
+export function aliveOf(sim: Sim, kind: EnemyKind): number {
+  let n = 0;
+  for (const e of sim.enemies) if (e.kind === kind && e.state !== 'dead') n++;
+  return n;
+}
+export const capped = (sim: Sim, kind: EnemyKind): boolean => ENEMIES[kind].cap !== undefined && aliveOf(sim, kind) >= ENEMIES[kind].cap!;
+
 export function pickKind(sim: Sim, mix?: Partial<Record<EnemyKind, number>>): EnemyKind {
-  const kinds = Object.values(ENEMIES).filter((k) => (mix ? (mix[k.kind] ?? 0) : k.weight) > 0);
+  const kinds = Object.values(ENEMIES).filter((k) => (mix ? (mix[k.kind] ?? 0) : k.weight) > 0 && !capped(sim, k.kind));
   let total = 0;
   const w = (k: (typeof kinds)[number]): number => (mix ? (mix[k.kind] ?? 0) : k.weight);
   for (const k of kinds) total += w(k);

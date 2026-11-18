@@ -26,7 +26,12 @@ export const STATUS = {
   streakTime: 2.6, jagdTime: 3, jagdMax: 5, jagdStep: 0.06, eliteHp: 2.6,
   /** Zweiter Atem: life restored and seconds of invulnerability. */
   secondHp: 0.3, secondInvuln: 1.5, stellung: 0.75, thorns: 0.6, mauerBurn: 0.8, mauerTime: 3,
+  /** M12c rain (2D `D.wet`): an element burn lasts 1.4 s, a shock chain reaches 190 px and jumps once more. */
+  wetBurnTime: 1.4, wetChainRange: 190 * PX, wetJumps: 1,
 } as const;
+
+/** Burn time of an element proc: shorter in the rain. */
+export const burnTime = (s: Sim): number => (s.wet ? STATUS.wetBurnTime : STATUS.burnTime);
 
 export interface StrikeOpts {
   crit?: boolean;
@@ -70,10 +75,11 @@ export function ignite(s: Sim, e: Enemy, dps: number, time: number, stack = fals
   e.burn = Math.max(e.burn, time);
 }
 
-/** Lightning from `src` to its nearest neighbors (2D `chain`). */
+/** Lightning from `src` to its nearest neighbors (2D `chain`); in the rain it reaches further and jumps once more. */
 export function chain(s: Sim, src: Enemy, damage: number, jumps: number): void {
   const d = (t: Enemy): number => Math.hypot(t.x - src.x, t.z - src.z);
-  const targets = s.enemies.filter((t) => t !== src && t.state !== 'dead' && d(t) < STATUS.chainRange).sort((a, b) => d(a) - d(b)).slice(0, jumps);
+  const reach = s.wet ? STATUS.wetChainRange : STATUS.chainRange;
+  const targets = s.enemies.filter((t) => t !== src && t.state !== 'dead' && d(t) < reach).sort((a, b) => d(a) - d(b)).slice(0, jumps + (s.wet ? STATUS.wetJumps : 0));
   let x = src.x;
   let z = src.z;
   for (const t of targets) {
@@ -179,7 +185,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (!o.noproc) {
     for (const el of s.stats.elements) {
       if (!(crit && pk(s, 'd_kurz')) && s.rng.next() > s.stats.elementChance) continue;
-      if (el === 'fire') ignite(s, e, damage * STATUS.burnShare * s.stats.elementPower, STATUS.burnTime + pk(s, 'schwel'), pk(s, 'schwel') > 0);
+      if (el === 'fire') ignite(s, e, damage * STATUS.burnShare * s.stats.elementPower, burnTime(s) + pk(s, 'schwel'), pk(s, 'schwel') > 0);
       else if (el === 'acid') { if (resist(e, 'acid') > 0) e.acid = STATUS.acidTime; }
       else chain(s, e, damage * STATUS.chainShare * s.stats.elementPower, 2 + 2 * pk(s, 'chain'));
     }
@@ -209,6 +215,8 @@ export function killEnemy(s: Sim, e: Enemy): void {
   e.hp = 0;
   e.sp = null;
   e.open = 0;
+  // M12c: a grabbing Türsteher lets go when he dies.
+  if (p.rootBy === e.id) { p.root = 0; p.rootBy = 0; }
   e.spin = 0;
   e.wake = 0;
   // M15: the Weltzeituhr stands on its base again; its colliders come back.
@@ -321,6 +329,8 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
       p.stateT = 0;
       p.attack = null;
       p.cast = null;
+      p.root = 0;
+      p.rootBy = 0;
       p.sweeping = false;
       p.vx = dx * 3;
       p.vz = dz * 3;

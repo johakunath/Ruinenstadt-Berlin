@@ -73,10 +73,13 @@ export class Ui {
   }
 
   /** Big centered message that fades out by itself. */
-  banner(title: string, sub = ''): void {
+  banner(title: string, sub = '', note = ''): void {
     const b = el('banner');
     el('banner-title').textContent = title;
     el('banner-sub').textContent = sub;
+    // M12c: a third line for the map's rule (rain in Mitte).
+    el('banner-note').textContent = note;
+    el('banner-note').hidden = !note;
     b.hidden = false;
     b.style.animation = 'none';
     void b.offsetWidth;

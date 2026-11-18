@@ -13,7 +13,7 @@ import { ELITES, ENEMIES, SPAWN, type EliteMod, type EnemyKind } from '../data/e
 import { sectorHitsCircle } from './collide';
 import { ferryPos, onFerryBoat } from './ferry';
 import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
-import { makeElite, randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, spawnPack, updateEnemies, updateSpawner } from './enemies';
+import { capped, makeElite, randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, spawnPack, updateEnemies, updateSpawner } from './enemies';
 import { FlowField } from './flowfield';
 import type { Level } from './level';
 import { lerp, Rng } from './math';
@@ -83,6 +83,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     spawnT: opts.empty || level.camp || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
     gateT: level.gates.map(() => Infinity),
+    wet: !!level.wet,
   };
   sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...(sim.inventory.camp?.stash ?? []), ...Object.values(equipment)].map((i) => i?.id ?? 0));
   sim.player.hp = stats.maxHp;
@@ -112,7 +113,7 @@ export function createSim(opts: SimOptions = {}): Sim {
   if (opts.spawn?.length) {
     opts.spawn.forEach((spec, i) => {
       const [kind, mod] = spec.split('+') as [EnemyKind, EliteMod | undefined];
-      if (!(kind in ENEMIES)) return;
+      if (!(kind in ENEMIES) || capped(sim, kind)) return;
       const a = (i / opts.spawn!.length) * Math.PI * 2;
       const e = spawnPack(sim, sim.player.x + Math.sin(a) * 7, sim.player.z + Math.cos(a) * 7, kind);
       if (mod) makeElite(sim, e, mod in ELITES ? mod : undefined);
@@ -145,6 +146,8 @@ export function stepSim(sim: Sim, input: SimInput): void {
   // Hitstop: attacker and targets freeze; the input layer keeps buffering.
   if (sim.hitstop > 0) {
     sim.hitstop = Math.max(0, sim.hitstop - DT);
+    // M12c: a hold (grab or Wurzler roots) never lasts longer because of hitstop.
+    p.root = Math.max(0, p.root - DT);
     return;
   }
   // After the hitstop check: the boat stands still while the world is frozen.

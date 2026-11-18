@@ -20,6 +20,7 @@ import {
 import { buildBin, buildCrate } from './breakable-parts';
 import { buildCar, buildUrbanProp } from './props-urban';
 import { buildMarketProp } from './props-market';
+import { buildMitteProp } from './props-mitte';
 import { buildEdgeProp } from './props-edge';
 import { buildPlantProp } from './vegetation';
 import { buildGdrProp } from './props-gdr';
@@ -934,7 +935,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
     }
     default:
       // M11c lot type props live in their own files.
-      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng) && !buildGdrProp(b, p, rng)) buildPlantProp(b, p, rng);
+      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng) && !buildGdrProp(b, p, rng) && !buildMitteProp(b, p, rng)) buildPlantProp(b, p, rng);
   }
 }
 

@@ -158,6 +158,8 @@ export class Level {
   /** L2: district index for loot (2D `D.lvl`: item level +3 per district) and item name flavor. Köpenick 0. */
   district = 0;
   flavor?: 'neon' | 'gdr';
+  /** M12c rain (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
+  wet?: boolean;
   /** M20 walkable camp: no enemies, no director, no run content. */
   camp = false;
   /** M16b/M19 side passages: fixed hidden blessing spots (replace the random ones) and sleeping guards. */
