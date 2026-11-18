@@ -60,7 +60,7 @@ T1 is done (PR #14). The T1b paving and leaf images are built, with performance 
 | # | Textures | Replaces (code placeholder) | World size per tile | Task |
 |---|---|---|---|---|
 | T1 | Köpenick ground: grass, dirt, sidewalk plates, leaf litter; scatter atlas (puddle, leaf pile, trash, rubble, 2 × 2 cells) | `paintGrass`, `paintDirt`, `paintPaving`, `paintLeafLitter`, `paintLitter` | 5 m (atlas cell: 1 to 3 m decal) | `docs/tasks/t1-ground-textures.md` |
-| T2 | Street surfaces: cobbles, asphalt | `paintCobbles`, `paintAsphalt` | 5 m | after T1 |
+| T2 | Street surfaces: cobbles, asphalt | `paintCobbles`, `paintAsphalt` | 5 m | built in [T2 street textures](tasks/t2-street-textures.md) |
 | T3 | Facades and roofs: plaster tones, brick, stucco, roof tiles, concrete, shop front | `paintPlaster`, `paintBrick`, `paintStucco`, `paintRoofTiles`, `paintConcrete` | 3 to 4 m | after T2 |
 | T4 | Props: wood, metal paint, car and bus paint, tram | `paintWood`, `paintMetal`, `paintVan` | per prop | after T3 |
 | T5 | Landmarks (M11d): slate roof; dark red Rathenow brick with a few green glazed bricks (Rathaus); clean baroque plaster with soft staining, cream (Schloss, S-Bahnhof); reddish-brown granite cladding with joints (Forum); fibreglass dinosaur skin with scales, cracks and faded paint (neutral grey-green, tinted per figure) | `paintSlate`; `brick` on the Rathaus; `stucco` on Schloss and S-Bahnhof; `concrete` on the Forum; `mossy` on the dinos (`src/render/landmarks.ts`) | 3 m (slate, brick, plaster, granite); 2 m (dino skin) | `docs/maps/landmarks.md`; after T3 |
