@@ -61,7 +61,7 @@ function stairTo(edge: Pt, rot: number, width = 5, len = 5): Stair {
  * M16b: a side passage reads as a lane, not a trail: fence or site fence panels on both sides, open
  * for the first 4 m (the entrance from the route), closed across the end.
  */
-function lane(st: Street, kind: 'fence' | 'bauzaun'): Prop[] {
+export function lane(st: Street, kind: 'fence' | 'bauzaun'): Prop[] {
   const out: Prop[] = [], PANEL = 2.4, off = st.width / 2 + 0.5;
   let walked = 0;
   for (let i = 1; i < st.pts.length; i++) {

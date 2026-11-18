@@ -72,7 +72,9 @@ export interface Area {
   specials?: SpecialKind[];
 }
 
-export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati';
+export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'mueggelturm' | 'riesenrad' | 'dino' | 'kirche' | 'spati'
+  // M15 Xhain (1981): stations, the Oberbaumbrücke towers, a GDR watchtower, squats and churches.
+  | 'warschauer' | 'ostbahnhof' | 'oberbaum' | 'wachturm' | 'thomaskirche' | 'bethanien' | 'rauchhaus' | 'nkz' | 'u1station' | 'goerlitzer';
 
 export interface Landmark {
   kind: LandmarkKind;
@@ -85,6 +87,8 @@ export interface Landmark {
   hz: number;
   /** Extra free space kept around it (no generated lots). */
   clear: number;
+  /** Elevated (a station on the viaduct): keeps lots away but has no collider at street level. */
+  walkUnder?: boolean;
   /** Shown when the hero enters (Späti rest stops). */
   name?: string;
 }
@@ -174,6 +178,64 @@ export interface MapDef {
   piers?: Pier[];
   /** M11c lot types placed by hand where the generator finds no room (Altstadt market, churchyard). */
   specialLots?: Array<{ special: SpecialKind; x: number; z: number; rot: number; w: number; d: number }>;
+  /** M15: the Berlin Wall (1981) as polylines; each piece blocks. Gaps are separate polylines. */
+  walls?: Wall[];
+  /** M15: elevated railways. The brick Stadtbahn blocks along its length; the U1 Hochbahn only at its pillars. */
+  viaducts?: Viaduct[];
+}
+
+/** A run of Berlin Wall elements (3.6 m concrete with the pipe on top), 0.6 m thick. */
+export interface Wall { name: string; pts: Pt[] }
+export const WALL = { height: 3.6, thick: 0.6 } as const;
+
+export interface Viaduct {
+  name: string;
+  kind: 'stadtbahn' | 'hochbahn';
+  pts: Pt[];
+  /** Deck width. */
+  width: number;
+  /** Deck height above the street. */
+  h: number;
+}
+/** U1 pillar spacing along the deck (pairs, one each side of the median). */
+export const HOCHBAHN_PILLAR = { step: 15, r: 0.35, across: 1.6 } as const;
+
+/** Collider centres of the U1 pillars along a viaduct (both sides of the centre line). */
+export function hochbahnPillars(v: Viaduct): Pt[] {
+  const out: Pt[] = [];
+  let acc = HOCHBAHN_PILLAR.step / 2;
+  for (let i = 1; i < v.pts.length; i++) {
+    const [ax, az] = v.pts[i - 1]!, [bx, bz] = v.pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+    for (; acc < len; acc += HOCHBAHN_PILLAR.step) for (const side of [-1, 1]) out.push([ax + ux * acc - uz * HOCHBAHN_PILLAR.across * side, az + uz * acc + ux * HOCHBAHN_PILLAR.across * side]);
+    acc -= len;
+  }
+  return out;
+}
+
+/** Boxes along a polyline (one per segment), for walls and solid viaducts. */
+function lineBoxes(pts: readonly Pt[], half: number): Collider[] {
+  const out: Collider[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, az] = pts[i - 1]!, [bx, bz] = pts[i]!, len = Math.hypot(bx - ax, bz - az);
+    out.push({ kind: 'box', x: (ax + bx) / 2, z: (az + bz) / 2, hx: half, hz: len / 2, rot: Math.atan2(bx - ax, bz - az) });
+  }
+  return out;
+}
+
+/** Wall and solid viaduct colliders of a map. */
+export function barrierColliders(m: MapDef): Collider[] {
+  return [
+    ...(m.walls ?? []).flatMap((w) => lineBoxes(w.pts, WALL.thick / 2)),
+    ...(m.viaducts ?? []).flatMap((v) => (v.kind === 'stadtbahn' ? lineBoxes(v.pts, v.width / 2) : hochbahnPillars(v).map(([x, z]): Collider => ({ kind: 'circle', x, z, r: HOCHBAHN_PILLAR.r })))),
+  ];
+}
+
+/** Distance to the nearest wall or solid viaduct edge (Infinity without any). */
+export function barrierDist(m: MapDef, x: number, z: number): number {
+  let d = Infinity;
+  for (const w of m.walls ?? []) d = Math.min(d, lineDist(w.pts, x, z) - WALL.thick / 2);
+  for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') d = Math.min(d, lineDist(v.pts, x, z) - v.width / 2);
+  return d;
 }
 
 /** A walkable tunnel piece along a polyline: track bed, station hall or side passage. */
@@ -478,6 +540,7 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
   for (const e of m.encounters) if (Math.hypot(x - e.x, z - e.z) < e.r + pad) return true;
   for (const l of m.landmarks) if (Math.abs(x - l.x) < l.hx + l.clear + pad && Math.abs(z - l.z) < l.hz + l.clear + pad) return true;
   if (m.rail && Math.abs(z - m.rail.z) < 6 + pad && x > m.rail.minX && x < m.rail.maxX) return true;
+  if (barrierDist(m, x, z) < pad + 1) return true;
   for (const t of m.terraces) if (polyEdgeDist(t.poly, x, z) < pad + 1 || onStair(t, x, z, pad + 1.5)) return true;
   return x < m.bounds.minX + 2 || x > m.bounds.maxX - 2 || z < m.bounds.minZ + 2 || z > m.bounds.maxZ - 2;
 }
@@ -682,7 +745,8 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
     (r > 0.6 && lotFront(lots, x, z, r)) ||
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
     m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
-    m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r);
+    m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r) ||
+    barrierDist(m, x, z) < r + 0.6;
   // Street lamps (Johannes 2026-11-16): evenly spaced along each street, right at the curb, one
   // side on side streets and staggered on both sides of main streets, plus corner lamps where streets
   // meet or bend. Only about a third still work; the rest are dark and bent.
@@ -796,7 +860,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       for (let t = rng.range(10, 30); t < len - 6; t += rng.range(30, 60)) {
         const x = ax + ((bx - ax) / len) * t + rng.range(-2, 2);
         const z = az + ((bz - az) / len) * t + rng.range(-2, 2);
-        if (onBridge(m, x, z, 2) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 3)) continue;
+        if (onBridge(m, x, z, 2) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 3) || m.zones.some((zn) => Math.hypot(x - zn.entry.x, z - zn.entry.z) < 6)) continue;
         const roll = rng.next();
         const van = roll < 0.35;
         const bus = roll > 0.8 && s.width >= 7;
@@ -1123,9 +1187,10 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   for (const l of m.landmarks) {
     if (l.kind === 'spati') colliders.push(...spatiColliders(l));
-    else if (l.hx > 0) colliders.push(landmarkCollider(l));
+    else if (l.hx > 0 && !l.walkUnder) colliders.push(landmarkCollider(l));
   }
   for (const l of lots) colliders.push(...lotColliders(l));
+  colliders.push(...barrierColliders(m));
   if (m.rail) {
     const r = m.rail;
     const left = (r.gapX - r.gapW / 2 + r.minX) / 2;
