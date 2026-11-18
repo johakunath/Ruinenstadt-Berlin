@@ -6,7 +6,7 @@ import {
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
 import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
-import { FX_LAYER, isLargeProp } from './layers';
+import { FX_LAYER, isOccluderProp } from './layers';
 export { FX_LAYER } from './layers';
 import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
@@ -1038,7 +1038,7 @@ export function buildWorld(materials: Materials): World {
   }
   const rng = new Rng(404);
   for (const p of COURTYARD.props) {
-    if (isLargeProp(p.kind)) b.solid.captureOccluder(() => buildProp(b, p, rng));
+    if (isOccluderProp(p.kind)) b.solid.captureOccluder(() => buildProp(b, p, rng));
     else buildProp(b, p, rng);
   }
   buildGreens(b);
