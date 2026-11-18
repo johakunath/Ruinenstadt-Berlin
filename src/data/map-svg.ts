@@ -50,7 +50,11 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
   // M19 tunnel: rock everywhere, the tubes as walkable bands (stations lighter).
   if (m.tunnel) {
     out.push(`<rect x="${B.minX}" y="${B.minZ}" width="${B.maxX - B.minX}" height="${B.maxZ - B.minZ}" fill="#141414"/>`);
-    for (const t of m.tunnel.tubes) out.push(`<path d="${path(t.pts)}" fill="none" stroke="${t.kind === 'station' ? '#8a8378' : t.kind === 'branch' ? '#5d564c' : '#4a4640'}" stroke-width="${t.width}" stroke-linejoin="round" stroke-linecap="${t.kind === 'track' ? 'butt' : 'round'}"/>`);
+    for (const t of m.tunnel.tubes) out.push(`<path d="${path(t.pts)}" fill="none" stroke="${t.kind === 'station' ? '#8a8378' : t.kind === 'branch' || t.kind === 'bypass' ? '#5d564c' : '#4a4640'}" stroke-width="${t.width}" stroke-linejoin="round" stroke-linecap="${t.kind === 'track' ? 'butt' : 'round'}"/>`);
+    // M20: the collapse (rubble) and the flooded stretch.
+    const { rubble: r, flood: f } = m.tunnel;
+    if (r) out.push(`<path d="${path(r.pts)}" fill="none" stroke="#6b5a48" stroke-width="${r.width - 1}" stroke-linecap="round"/>`);
+    if (f) out.push(`<path d="${path(f.pts)}" fill="none" stroke="#2f6a86" stroke-width="${f.width}" stroke-linecap="butt" opacity="0.85"/>`);
   }
   for (const s of m.streets) {
     const col = s.kind === 'path' ? '#6a5d45' : '#6f6656';

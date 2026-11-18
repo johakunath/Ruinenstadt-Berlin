@@ -3,11 +3,11 @@
 // sim (gratings, the hold ring with its charge arc, the end platform's power). Reads sim state,
 // never writes it; gratings pose from sim time.
 //
-// Cost: 3 sign materials (one per station name), the water ribbon shares the river water material
-// (one merged mesh per chunk, its scrolling normal map is the ripple, Qualität only), each grating is
-// one group of 3 merged meshes, hidden once open; the hold ring is 3 unlit meshes on the FX layer;
-// the strip lamps are one mesh. No new lights: the power comes from four extra spots in the existing
-// light pool that stay at intensity 0 (never picked) until the generator runs.
+// Cost: 3 sign materials (one per station name, merged per chunk); the flood is one see-through
+// mesh (1 draw call, the river's scrolling ripple normal map, Qualität only); each grating is 4 merged
+// meshes (panel 2, hidden once open; frame 2), frustum-culled; the hold ring is 3 unlit meshes on the
+// FX layer; strip lamps 1 mesh, generator lamp 1. No new lights: the power comes from four extra spots
+// in the existing light pool that stay at intensity 0 (never picked) until the generator runs.
 import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, DoubleSide, Group, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, Vector3, type Material } from 'three';
 import { GENERATOR, type MapDef, type Pt } from '../data/map';
 import { FX_LAYER } from './layers';
@@ -30,7 +30,7 @@ export interface GridSpot { pos: Vector3; color: number; intensity: number; dist
 
 const hex = (c: string): RGB => { const n = parseInt(c.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
 /** BVG yellow and black for the grating stripes (tints on the light enamel). */
-const YELLOW: RGB = [1.05, 0.72, 0.12];
+const YELLOW: RGB = [1.15, 0.62, 0.04];
 const BLACK: RGB = [0.08, 0.08, 0.08];
 /** Grating height and the time it takes to sink into its floor slot. */
 export const GATE = { h: 3.4, sink: 1.4 } as const;
