@@ -1,6 +1,6 @@
 // Ties the scene together: world, characters, effects, camera, post-processing.
 // The sim knows nothing about this file; it reads sim state and events and draws them.
-import { KOEPENICK_WEATHER, Weather } from './weather';
+import { KOEPENICK_WEATHER, Weather, XHAIN_WEATHER } from './weather';
 import { HeroPreview, type PreviewState } from './hero-preview';
 import { heroLook } from '../data/hero-look';
 import {
@@ -121,7 +121,7 @@ export class GameRenderer {
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     // M11c: weather per zone (Köpenick only; the tunnel stays dry).
-    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : {}, opts.profile.embers / 140);
+    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : def?.id === 'xhain' ? XHAIN_WEATHER : {}, opts.profile.embers / 140);
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.content = new ContentView(assets, materials);
     this.scene.add(this.fx.group, this.loot.group, this.content.group);

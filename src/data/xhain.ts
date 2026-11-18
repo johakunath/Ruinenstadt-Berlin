@@ -174,7 +174,8 @@ export function xhainMap(scale = 1): MapDef {
   const walls: Wall[] = [
     { name: 'Grenzübergang Oberbaumbrücke', pts: [cpWest, cpEast] },
     { name: 'Hinterlandmauer Osthafen', pts: [cpEast, north[0]!] },
-    { name: 'East Side Gallery', pts: [cpWest, north[2]!, north[3]!, north[4]!, north[5]!] },
+    // Starts beside the checkpoint, off the bridge deck (north[2] would sit on it).
+    { name: 'East Side Gallery', pts: [cpWest, north[3]!, north[4]!, north[5]!] },
     { name: 'Hinterlandmauer Schillingbrücke', pts: [[sbNorth[0] - 8, sbNorth[1] - 3], ...bankWall(7, 8)] },
     // West of the Schillingbrücke the border leaves the river: the land wall along the Bethaniendamm,
     // south-west from the Spree, bending west beside St. Thomas; the breach opens to the Mariannenplatz.

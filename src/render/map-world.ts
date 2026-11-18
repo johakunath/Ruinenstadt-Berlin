@@ -11,13 +11,14 @@ import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
-import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
+import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall, inPoly, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet, boxGeo } from './batch';
+import { buildXhainWorld } from './xhain-world';
 import { isLargeProp } from './layers';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
@@ -42,7 +43,7 @@ interface LightSpot {
   phase: number;
 }
 
-interface MapMats extends Mats {
+export interface MapMats extends Mats {
   railSteel: LitMaterial;
   ground: LitMaterial;
   /** Ground scatter atlas (puddles, leaves, trash, rubble). */
@@ -64,7 +65,7 @@ interface MapMats extends Mats {
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
-class ChunkBuilder extends Builder {
+export class ChunkBuilder extends Builder {
   readonly spots: LightSpot[] = [];
   readonly glows = new BatchSet();
   private readonly glowMats = new Map<number, Material>();
@@ -257,7 +258,9 @@ function surfaceAt(m: MapDef, x: number, z: number): number {
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   const step = GROUND_STEP;
   const B = m.bounds;
-  const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : heightAt(m, x, z));
+  // M15 bridge terraces (Warschauer Brücke) keep the ground below their deck; `xhain-world.ts` draws the deck.
+  const underDeck = (x: number, z: number): boolean => m.terraces.some((t) => t.bridge && (inPoly(t.poly, x, z) || onStair(t, x, z) !== null));
+  const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : underDeck(x, z) ? 0 : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += CHUNK) {
     for (let cx = B.minX; cx < B.maxX; cx += CHUNK) {
       const n = Math.ceil(Math.min(CHUNK, B.maxX - cx) / step);
@@ -768,6 +771,7 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
 /** Retaining walls with a low parapet along the outline (open at the stairs), stone steps. */
 function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder): void {
   for (const t of m.terraces) {
+    if (t.bridge) continue;
     const n = t.poly.length;
     for (let i = 0; i < n; i++) {
       const [ax, az] = t.poly[i] as Pt;
@@ -890,7 +894,7 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
 const TONES: PlasterTone[] = ['cream', 'ochre', 'oxblood', 'cream', 'ochre'];
 
 /** The four outward facades of a block: front, right, back, left (see map.ts for the frame). */
-function blockFacades(l: { x: number; z: number; rot: number; w: number; d: number }): Array<{ a: Pt; b: Pt; len: number }> {
+export function blockFacades(l: { x: number; z: number; rot: number; w: number; d: number }): Array<{ a: Pt; b: Pt; len: number }> {
   const ux = Math.cos(l.rot);
   const uz = -Math.sin(l.rot);
   const fx = Math.sin(l.rot);
@@ -1307,7 +1311,7 @@ function woodBalcony(b: ChunkBuilder, run: Run, rng: Rng, s: number, y: number):
 }
 
 /** Gable roof prism along X (local), ridge at height h. */
-function gableRoof(w: number, d: number, h: number): BufferGeometry {
+export function gableRoof(w: number, d: number, h: number): BufferGeometry {
   const hw = w / 2 + 0.4;
   const hd = d / 2 + 0.4;
   const p = [
@@ -1323,7 +1327,7 @@ function gableRoof(w: number, d: number, h: number): BufferGeometry {
   return g;
 }
 
-function gableEnds(w: number, d: number, h: number): BufferGeometry {
+export function gableEnds(w: number, d: number, h: number): BufferGeometry {
   const hw = w / 2;
   const hd = d / 2;
   const p = [hw, 0, hd, hw, 0, -hd, hw, h, 0, -hw, 0, -hd, -hw, 0, hd, -hw, h, 0];
@@ -1335,7 +1339,7 @@ function gableEnds(w: number, d: number, h: number): BufferGeometry {
 }
 
 /** Plaster walls with windows on all four sides (Run frames), for houses and landmarks. */
-function walls(b: ChunkBuilder, l: { x: number; z: number; rot: number; w: number; d: number }, mat: Material, h: number, rows: number[], seed: number, lit = 0.25, bay = 3): void {
+export function walls(b: ChunkBuilder, l: { x: number; z: number; rot: number; w: number; d: number }, mat: Material, h: number, rows: number[], seed: number, lit = 0.25, bay = 3): void {
   const rng = new Rng(seed);
   blockFacades(l).forEach((s, i) => {
     const run = new Run({ id: 'w', style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1], depth: 1, floors: 0, tone: 'cream', features: [], seed: seed + i });
@@ -1594,16 +1598,16 @@ function buildPalm(b: ChunkBuilder, l: Lot): void {
 
 // ---------------------------------------------------------------- landmarks
 
-function lm(l: Landmark, x = 0, y = 0, z = 0, ry = 0): Matrix4 {
+export function lm(l: Landmark, x = 0, y = 0, z = 0, ry = 0): Matrix4 {
   return new Matrix4().makeRotationY(l.rot + ry).setPosition(l.x, 0, l.z).multiply(new Matrix4().setPosition(x, y, z));
 }
 
 /** Local point of a landmark frame (x right of the front, z toward the front). */
-function lp(l: Landmark, x: number, y: number, z: number): Vector3 {
+export function lp(l: Landmark, x: number, y: number, z: number): Vector3 {
   return new Vector3(x, y, z).applyMatrix4(new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0, l.z));
 }
 
-function steppedGable(b: ChunkBuilder, l: Landmark, x: number, y: number, z: number, w: number, ry = 0): void {
+export function steppedGable(b: ChunkBuilder, l: Landmark, x: number, y: number, z: number, w: number, ry = 0): void {
   for (let i = 0; i < 4; i++) {
     const sw = w * (1 - i * 0.24);
     b.box(b.mm.brick, lm(l, x, y + i * 1.1 + 0.55, z, ry), sw, 1.1, 0.7, [0.95, 0.75, 0.68]);
@@ -1907,6 +1911,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
+  // M15 Xhain: the Wall, the viaducts and the Xhain landmarks (`xhain-world.ts`).
+  buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z));
   if (m.tunnel) buildTunnel(m, mats, chunkOf);
   if (m.rail) {
     const r = m.rail;

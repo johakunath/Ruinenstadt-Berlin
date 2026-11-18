@@ -2,7 +2,7 @@
 // Everything is code-built geometry with painted textures (plan-3d.md › Style: closing the gap).
 import {
   BoxGeometry, BufferAttribute, CircleGeometry, Euler, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide,
-  Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, SphereGeometry, Vector3,
+  Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
 import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
@@ -879,6 +879,21 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       b.box(m.awning, at(p, 0, 1.15, 0), 1.4, 0.4, 0.05);
       b.box(m.iron, at(p, 0, 0.95, 0.04), 0.06, 0.4, 0.06);
       b.shadowBox(at(p, 0, 0.45, 0), L, 0.9, 0.7);
+      break;
+    }
+    case 'tankTrap': {
+      // M15 Panzersperre (Czech hedgehog): three crossed steel angles standing on three ends, ~1.5 m.
+      // The triad is turned so its (1, 1, 1) diagonal points up; each angle is two thin plates.
+      const tilt = new Matrix4().makeRotationFromQuaternion(new Quaternion().setFromUnitVectors(new Vector3(1, 1, 1).normalize(), new Vector3(0, 1, 0)));
+      const L = 1.9;
+      const hub = at(p, 0, (L / 2) / Math.sqrt(3) - 0.05, 0).multiply(tilt);
+      const col: RGB = [0.5, 0.45, 0.42];
+      for (const [rx, rz] of [[0, 0], [Math.PI / 2, 0], [0, Math.PI / 2]] as const) {
+        const beam = hub.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rx, 0, rz)));
+        b.box(m.rust, beam.clone().multiply(new Matrix4().setPosition(0, 0, 0.06)), 0.03, L, 0.15, col);
+        b.box(m.rust, beam.clone().multiply(new Matrix4().setPosition(0.06, 0, 0)), 0.15, L, 0.03, col);
+      }
+      b.shadowBox(at(p, 0, 0.55, 0), 1.2, 1.1, 1.2);
       break;
     }
     case 'bollard': {
