@@ -11,6 +11,7 @@ export { FX_LAYER } from './layers';
 import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
+import { loadGroundTexture } from './ground-textures';
 import { Materials, type LitMaterial } from './materials';
 import {
   paintAwning, paintBrick, paintCarPaint, paintCloth, paintCobbles, paintConcrete, paintCorrugated, paintGraffiti, paintLattice, paintTarp, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster, paintMarket, paintStallTarp,
@@ -19,6 +20,7 @@ import {
 import { buildBin, buildCrate } from './breakable-parts';
 import { buildCar, buildUrbanProp } from './props-urban';
 import { buildMarketProp } from './props-market';
+import { buildEdgeProp } from './props-edge';
 import { buildPlantProp } from './vegetation';
 
 export const GROUND_H = 4.3;
@@ -160,6 +162,11 @@ export function makeMats(m: Materials): Mats {
   }
   const brick = paintBrick(o);
   const cobbles = paintCobbles(o);
+  const cobbleMaterial = m.surface({ map: cobbles.map, normalMap: cobbles.normalMap, roughness: 0.78, vertexColors: true });
+  loadGroundTexture('cobbles', o.anisotropy, texture => {
+    cobbleMaterial.map = texture;
+    cobbles.map.dispose();
+  });
   const windows = paintWindows();
   const shop = paintShopWindow();
   const sign = paintSign();
@@ -171,7 +178,7 @@ export function makeMats(m: Materials): Mats {
     plaster,
     brick: m.surface({ map: brick.map, normalMap: brick.normalMap, roughness: 0.9, vertexColors: true }),
     stucco: m.surface({ map: paintStucco(o).map, roughness: 0.85, vertexColors: true }),
-    cobbles: m.surface({ map: cobbles.map, normalMap: cobbles.normalMap, roughness: 0.78, vertexColors: true }),
+    cobbles: cobbleMaterial,
     windows: m.surface({ map: windows.map, emissiveMap: windows.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.2, roughness: 0.35 }),
     shop: m.surface({ map: shop.map, emissiveMap: shop.emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.6, roughness: 0.4 }),
     sign: m.surface({ map: sign.map, emissiveMap: sign.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.5, roughness: 0.6 }),
@@ -506,7 +513,8 @@ export function buildAltbau(b: Builder, f: Facade, opts: { balconies?: boolean }
 
   if (shop) buildSpati(b, run, shop.from, shop.to);
 
-  // --- drain pipe and ivy
+  // --- drain pipe and ivy (not on the short steps of a shaped footprint)
+  if (run.len < 2.4) return;
   b.geo(b.mats.rust, new CylinderGeometry(0.07, 0.07, H, 8), run.mat(0.5, H / 2, 0.1));
   const blobs = 4 + rng.int(3);
   for (let i = 0; i < blobs; i++) {
@@ -920,7 +928,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
     }
     default:
       // M11c lot type props live in their own files.
-      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng)) buildPlantProp(b, p, rng);
+      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng)) buildPlantProp(b, p, rng);
   }
 }
 

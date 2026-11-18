@@ -1899,3 +1899,139 @@ export function paintBark(): Texture {
   mottle(ctx, rng, W, H, 10, ['#5a7040', '#2a2018'], [10, 30], 0.25);
   return toTexture(c);
 }
+
+// ---------------------------------------------------------------- M11d landmarks
+
+/** Slate roof (Rathaus, church spires): dark blue-grey scale shingles with a few moss runs. */
+export function paintSlate(o: PaintOptions): Surface {
+  const S = 512;
+  const rng = new Rng(97);
+  const [c, ctx] = canvas(S, S);
+  ctx.fillStyle = '#1c2026';
+  ctx.fillRect(0, 0, S, S);
+  const rows = 20;
+  const rh = S / rows;
+  for (let r = 0; r < rows; r++) {
+    let x = r % 2 ? -10 : 0;
+    while (x < S) {
+      const w = rng.range(16, 22);
+      ctx.fillStyle = shade(rng.pick(['#3a414b', '#333a43', '#434a54', '#2d333b']), rng.range(-0.15, 0.12));
+      ctx.beginPath();
+      ctx.roundRect(x + 1, r * rh + 1, w - 2, rh - 1, [0, 0, 6, 6]);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(x + 1, r * rh + rh - 4, w - 2, 3);
+      x += w;
+    }
+  }
+  mottle(ctx, rng, S, S, 12, ['#3d4a32', '#15181c'], [20, 70], 0.3);
+  flatten(ctx, S, S, o.flatten * 0.6);
+  return { map: toTexture(c, true, o.anisotropy) };
+}
+
+/** Tower clock: cream dial with Roman ticks and black hands; the dial glows faintly at night. */
+export function paintClock(): EmissiveSurface {
+  const S = 128;
+  const [c, ctx] = canvas(S, S);
+  const [e, ectx] = canvas(S, S);
+  ectx.fillStyle = '#000';
+  ectx.fillRect(0, 0, S, S);
+  for (const [k, dial] of [[ctx, '#efe2b8'], [ectx, '#a08850']] as Array<[Ctx, string]>) {
+    k.fillStyle = '#2a2018';
+    k.beginPath();
+    k.arc(S / 2, S / 2, S / 2 - 1, 0, Math.PI * 2);
+    k.fill();
+    k.fillStyle = dial;
+    k.beginPath();
+    k.arc(S / 2, S / 2, S / 2 - 8, 0, Math.PI * 2);
+    k.fill();
+  }
+  ctx.strokeStyle = '#1a1410';
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    ctx.lineWidth = i % 3 ? 3 : 6;
+    ctx.beginPath();
+    ctx.moveTo(S / 2 + Math.sin(a) * 42, S / 2 - Math.cos(a) * 42);
+    ctx.lineTo(S / 2 + Math.sin(a) * 52, S / 2 - Math.cos(a) * 52);
+    ctx.stroke();
+  }
+  // Stopped at ten to five.
+  for (const [a, len, w] of [[-Math.PI / 3, 40, 4], [Math.PI * 0.95, 28, 6]] as const) {
+    ctx.lineWidth = w;
+    ctx.beginPath();
+    ctx.moveTo(S / 2, S / 2);
+    ctx.lineTo(S / 2 + Math.sin(a) * len, S / 2 - Math.cos(a) * len);
+    ctx.stroke();
+  }
+  return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
+}
+
+/** S-Bahn roundel: green disc, white S. */
+export function paintSRoundel(): EmissiveSurface {
+  const S = 128;
+  const [c, ctx] = canvas(S, S);
+  const [e, ectx] = canvas(S, S);
+  for (const [k, disc, letter] of [[ctx, '#0b7a45', '#f4f4ee'], [ectx, '#1d6a40', '#ffffff']] as Array<[Ctx, string, string]>) {
+    k.fillStyle = '#000';
+    k.fillRect(0, 0, S, S);
+    k.fillStyle = disc;
+    k.beginPath();
+    k.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2);
+    k.fill();
+    k.fillStyle = letter;
+    k.font = 'bold 100px Arial, sans-serif';
+    k.textAlign = 'center';
+    k.textBaseline = 'middle';
+    k.fillText('S', S / 2, S / 2 + 6);
+  }
+  return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
+}
+
+/** Lettering on a wall band: `fg` letters on `bg`, sans serif, a few dead letters when `dead`. */
+export function paintLettering(text: string, bg: string, fg: string, glow: number, dead = 0): EmissiveSurface {
+  const W = 1024;
+  const H = 96;
+  const [c, ctx] = canvas(W, H);
+  const [e, ectx] = canvas(W, H);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ectx.fillStyle = '#000';
+  ectx.fillRect(0, 0, W, H);
+  const g = Math.round(255 * glow);
+  for (const [k, color] of [[ctx, fg], [ectx, `rgb(${g},${g},${g})`]] as Array<[Ctx, string]>) {
+    k.fillStyle = color;
+    k.font = 'bold 72px Arial, sans-serif';
+    k.textAlign = 'center';
+    k.textBaseline = 'middle';
+    k.fillText(text, W / 2, H / 2 + 4, W - 24);
+  }
+  if (dead) {
+    ectx.fillStyle = 'rgba(0,0,0,0.85)';
+    ectx.fillRect(W * dead, 0, W * 0.07, H);
+  }
+  return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
+}
+
+/** M11d water: soft ripples as a tiling normal map (scrolled in `World.update`). */
+export function paintWaterNormal(): Texture {
+  const S = 256;
+  const rng = new Rng(131);
+  const [, ctx] = canvas(S, S);
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, S, S);
+  // Overlapping soft blobs, wrapped at the edges so the map tiles.
+  for (let i = 0; i < 260; i++) {
+    const x = rng.range(0, S), y = rng.range(0, S), r = rng.range(6, 26), v = rng.next() < 0.5 ? 255 : 0;
+    for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) {
+      const g = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+      g.addColorStop(0, `rgba(${v},${v},${v},0.16)`);
+      g.addColorStop(1, `rgba(${v},${v},${v},0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+    }
+  }
+  const t = normalFromHeight(ctx, S, S, 1.6);
+  t.wrapS = t.wrapT = RepeatWrapping;
+  return t;
+}

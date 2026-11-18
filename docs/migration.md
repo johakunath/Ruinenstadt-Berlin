@@ -12,7 +12,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M7/M8 parity, M9 consumable controls, M16 run content | Claude | done (review of PR #17 and completion, same task file); Johannes playtest open |
 | M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
 | M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
-| M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Claude (taken over 2026-11-17) | step 2 built (profiles A Bahnhofstraße, C Spreeufer with tracks); water level, footprints, map edge, landmarks open: `docs/tasks/m11d-map-realism.md` |
+| M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Claude (taken over 2026-11-17) | step 2 built (profiles A Bahnhofstraße, C Spreeufer with tracks); all steps built 2026-11-17 (0 water, 3 footprints and ruins, 4 closed edge, 5 hand-built zone 0, 6 landmarks with reveal shot); Johannes playtest open: `docs/tasks/m11d-map-realism.md` |
 | M11c World variety: two lot types per zone, weather per zone (variant A) | Claude | weather and area messages built 2026-11-17; the eight lot types built 2026-11-17 (data, guards, event spots; art by sub-agents): `docs/maps/guidelines.md` › Lot types and weather |
 | M16b Side branches, variant A (lanes beside the route) | Claude | built 2026-11-17 (Hinterhof: blessing, Kietzgasse: sleeping elite, Hangarweg: cache), playtest open |
 | M19 S3 tunnel, layout B, blessing in the first passage | Claude | built, playtest open: `docs/maps/guidelines.md` › U-Bahn tunnels |
@@ -20,6 +20,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | C1 Spear light attacks thrust forward, not sideways (playtest 2026-11-17) | Claude · Opus high | done (2026-11-17), playtest open: `docs/tasks/c1-spear-light.md` |
 | U2 Menu tabs: Segen, Kodex, map legend, options parity | Sonnet | done, playtest open: `docs/tasks/u2-menu-tabs.md` |
 | T1b Ground textures: repetition, memory, loading | Sonnet (code), Codex (images) | paving and leaf image pass built; texture performance and rail follow-up open: `docs/tasks/t1b-ground-polish.md` |
+| T2 Street textures | Codex | built: `docs/tasks/t2-street-textures.md`; profile performance and playtest open |
 | A2 Audio follow-ups | Sonnet | done (2026-11-16), listening test open: `docs/tasks/a2-audio-followups.md` |
 | L2 Loot and item follow-ups | Sonnet | done (2026-11-16): `docs/tasks/l2-loot-followups.md` |
 | Pad layout as in 2D (Johannes, 2026-11-17) | Claude | done (PR #26) |
@@ -30,11 +31,11 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M15 Xhain, district 2: concept B "Über die Mauer" (Johannes, 2026-11-18), rats, Grenzer, Brandmeister, Rattenmutter, Spreehexe | Claude · Opus high | built 2026-11-18, playtest open: `docs/maps/xhain.md`, `docs/tasks/m12b-xhain-enemies.md`; textures (Codex) and bot calibration open |
 | V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Fable high (B engine decision and spec), Opus high (build) | A built as Blockrand in Xhain; B built 2026-11-18 as a cutaway of flagged objects (engine B3, cut by index range: Hinterhof lots, Thomaskirche, Bethanien; PR #50); Johannes picks the yard cut height and playtests: `docs/tasks/v1-visibility.md` |
 | U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
-| K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
+| K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
 | P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; per-pass analysis and ranked measures (playtest 2026-11-17) | Claude · Fable high (analysis), Opus high (build), Johannes measures | steps 1 and 2 built (2026-11-18: 32 m chunks, shadow map at 30 Hz on Leistung, test switch `?shadows=boxes`), measurement open: `docs/tasks/p1-heat.md` |
 | PT Hardware and quality checks for Johannes (running list; every session adds what must be checked on real devices) | Johannes; all sessions add rows | open: `docs/tasks/pt-hardware-checks.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements: `docs/tasks/p1b-proxy-passes.md` |
-| KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
+| KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 

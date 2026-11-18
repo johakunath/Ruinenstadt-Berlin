@@ -4,21 +4,25 @@
 // Lamps are light *spots*; a fixed pool of point lights follows the hero (constant light count, no
 // shader recompiles).
 import {
-  BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight,
+  BufferAttribute, BufferGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
-  SphereGeometry, TorusGeometry, Vector3, Euler, type Material, type Texture,
+  ShapeUtils, SphereGeometry, Vector2, Vector3, Euler, type Material, type Texture,
 } from 'three';
 import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
-import { areaAt, heightAt, isQuay, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall, inPoly, type GroundKind, type Landmark, type Lot, type MapDef, type Pt, inTunnel, type Street } from '../data/map';
-import type { Prop } from '../data/courtyard';
+import { buildLandmark } from './landmarks';
+import {
+  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
+  type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
+} from '../data/map';
+import { EDGE_FRONT, propCollider, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
-import { BatchSet, boxGeo } from './batch';
+import { BatchSet } from './batch';
 import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
@@ -28,7 +32,7 @@ import { loadGroundTexture } from './ground-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
-import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, type PaintOptions } from './paint';
+import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, paintWaterNormal, type PaintOptions } from './paint';
 import {
   Builder, balconyLife, buildAltbau, buildProp, partOf, type BreakableView, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
@@ -67,6 +71,12 @@ export interface MapMats extends Mats {
   forumSign: LitMaterial;
   spatiSign: LitMaterial;
   frond: LitMaterial;
+  // M11d landmarks.
+  slate: LitMaterial;
+  clock: LitMaterial;
+  sRoundel: LitMaterial;
+  stationName: LitMaterial;
+  ratskeller: LitMaterial;
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
@@ -103,7 +113,7 @@ export class ChunkBuilder extends Builder {
    */
   cut(part: number, y: number, fn: () => void, caps: readonly (readonly Pt[])[] = []): void {
     const boxes = this.shadowBoxes.length, lids = this.lids.length;
-    const lid = (): void => { for (const p of [...caps, ...this.lids.splice(lids)]) this.solid.of(this.mm.tar).add(capGeo(p, y + 0.01), IDENTITY, CAP_TINT); };
+    const lid = (): void => { for (const p of [...caps, ...this.lids.splice(lids)]) this.solid.of(this.mm.tar).add(cutCapGeo(p, y + 0.01), IDENTITY, CAP_TINT); };
     this.cutAt = y;
     try { this.solid.cut(part, y, () => this.cards.cut(part, y, () => this.glows.cut(part, y, fn)), lid); } finally { this.cutAt = null; }
     for (let i = boxes; i < this.shadowBoxes.length; i++) this.shadowBoxes[i]!.cut = { part, y };
@@ -147,8 +157,8 @@ const IDENTITY = new Matrix4();
 /** Cap colour: dark, so the cut reads as a section, not as a roof. */
 const CAP_TINT: RGB = [0.2, 0.22, 0.23];
 
-/** A flat, upward facing convex polygon at height y (fan). */
-function capGeo(poly: readonly Pt[], y: number): BufferGeometry {
+/** V1 B cut cap: a flat, upward facing convex polygon in world coordinates at height y (fan). */
+function cutCapGeo(poly: readonly Pt[], y: number): BufferGeometry {
   // Counter-clockwise seen from above, whatever order the polygon comes in.
   let area = 0;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) area += poly[j]![0] * poly[i]![1] - poly[i]![0] * poly[j]![1];
@@ -169,23 +179,29 @@ function lotCaps(l: Lot): Pt[][] {
   return l.ruin ? [] : lotBodies(l).map(({ rect }) => rectPoly(rect));
 }
 
-function makeMapMats(materials: Materials): MapMats {
+function emissive(materials: Materials, t: { map: Texture; emissiveMap: Texture }, color: number, intensity: number): LitMaterial {
+  return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
+}
+
+export function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
+  const asphalt = paintAsphalt(o).map;
   const uDirt = { value: dirt };
   const m: MapMats = {
     ...base,
     railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
-    asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
+    asphalt: materials.surface({ map: asphalt, roughness: 0.85, vertexColors: true }),
     path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
     roof: materials.surface({ map: paintRoofTiles(o).map, roughness: 0.8, vertexColors: true }),
-    tar: materials.surface({ map: paintAsphalt(o).map, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
+    tar: materials.surface({ map: asphalt, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
     concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
     mossy: materials.surface({ map: paintConcrete(o, '#6f7a5c').map, roughness: 0.9, vertexColors: true }),
-    water: materials.surface({ color: 0x1a5560, emissive: 0x0a2228, roughness: 0.04, metalness: 0.55 }),
+    // M11d: rippled, reflective water; the normal map scrolls in `update` (Qualität only: one extra texture read on water pixels).
+    water: materials.surface({ color: 0x1a5560, emissive: 0x0a2228, roughness: 0.08, metalness: 0.55, normalMap: o.normalMaps ? (() => { const t = paintWaterNormal(); t.repeat.set(70, 70); return t; })() : null }),
     trunk: materials.surface({ color: 0x3a2c22, roughness: 0.95 }),
     crown: materials.surface({ color: 0xffffff, roughness: 0.85 }),
     glass: materials.surface({ color: 0x1a2a2c, emissive: 0x5a8a7a, emissiveIntensity: 0.25, roughness: 0.15, metalness: 0.3 }),
@@ -199,6 +215,11 @@ function makeMapMats(materials: Materials): MapMats {
       return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffa050, emissiveIntensity: 1.4, roughness: 0.6 });
     })(),
     frond: materials.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
+    slate: materials.surface({ map: paintSlate(o).map, roughness: 0.55, metalness: 0.15, vertexColors: true }),
+    clock: emissive(materials, paintClock(), 0xffe0a0, 1.1),
+    sRoundel: emissive(materials, paintSRoundel(), 0x40ff90, 1.3),
+    stationName: emissive(materials, paintLettering('BERLIN-KÖPENICK', '#d8cdb0', '#0d6a3a', 0.7, 0.62), 0x40e080, 0.55),
+    ratskeller: emissive(materials, paintLettering('RATSKELLER', '#1e2a22', '#d9b25a', 1, 0.3), 0xffc060, 1.1),
   };
   loadGroundTexture('dirt', o.anisotropy, texture => {
     uDirt.value = m.path.map = texture;
@@ -207,6 +228,10 @@ function makeMapMats(materials: Materials): MapMats {
   loadGroundTexture('litter', o.anisotropy, texture => {
     m.litter.map?.dispose();
     m.litter.map = texture;
+  });
+  loadGroundTexture('asphalt', o.anisotropy, texture => {
+    m.asphalt.map = m.tar.map = texture;
+    asphalt.dispose();
   });
   return m;
 }
@@ -310,9 +335,10 @@ function surfaceAt(m: MapDef, x: number, z: number): number {
 function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   const step = GROUND_STEP;
   const B = m.bounds;
+  // Under bridges the bed runs on, so decks span the water on their piers (M11d: no ground sheet beside the deck).
   // M15 bridge terraces (Warschauer Brücke) keep the ground below their deck; `xhain-world.ts` draws the deck.
   const underDeck = (x: number, z: number): boolean => m.terraces.some((t) => t.bridge && (inPoly(t.poly, x, z) || onStair(t, x, z) !== null));
-  const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : underDeck(x, z) ? 0 : heightAt(m, x, z));
+  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += GROUND_CHUNK) {
     for (let cx = B.minX; cx < B.maxX; cx += GROUND_CHUNK) {
       const n = Math.ceil(Math.min(GROUND_CHUNK, B.maxX - cx) / step);
@@ -327,15 +353,15 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           const x = cx + i * step;
           const z = cz + j * step;
           const y = height(x, z);
-          wet.push(y < -0.5);
+          wet.push(y < BED_Y + 0.5);
           pos.push(x, y, z);
           uv.push(x / 5, z / 5);
           const a = areaAt(m, x, z);
           const t = GROUND_TINT[a?.ground ?? m.defaultGround];
           const noise = 0.82 + 0.3 * (0.5 + 0.5 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2) * Math.cos(z * 0.19 + Math.sin(x * 0.13) * 1.6));
-          const nearWater = y >= -0.5 && (isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6));
+          const nearWater = y >= BED_Y + 0.5 && (isWater(m, x + 1.6, z) || isWater(m, x - 1.6, z) || isWater(m, x, z + 1.6) || isWater(m, x, z - 1.6));
           // Damp, dark banks.
-          const shore = y < -0.5 ? 0.35 : nearWater ? 0.6 : 1;
+          const shore = y < BED_Y + 0.5 ? 0.35 : y < -0.3 ? 0.55 : nearWater ? 0.6 : 1;
           // M19 tunnel: ground outside the tubes is rock in the dark (the walls hide most of it).
           const rock = m.tunnel && !inTunnel(m, x, z, -1.5) ? 0.06 : 1;
           col.push(t[0] * noise * shore * rock, t[1] * noise * shore * rock, t[2] * noise * shore * rock);
@@ -369,7 +395,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   }
   const water = new Mesh(new PlaneGeometry(B.maxX - B.minX + 200, B.maxZ - B.minZ + 200), mats.water);
   water.rotation.x = -Math.PI / 2;
-  water.position.set((B.minX + B.maxX) / 2, -0.45, (B.minZ + B.maxZ) / 2);
+  water.position.set((B.minX + B.maxX) / 2, WATER_Y, (B.minZ + B.maxZ) / 2);
   water.receiveShadow = true;
   group.add(water);
 }
@@ -410,8 +436,68 @@ function buildQuays(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =>
         const yaw = Math.atan2(dx, dz);
         const at = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(x - wx * o, y, z - wz * o);
         const b = chunkOf(x, z);
-        b.box(mats.cobbles, at(0.6, -0.78), 1.8, 1.68, piece, [0.5, 0.48, 0.45]);
+        // M11d: the wall runs from the bed to the coping, 1.7 m above the water; a dark wet band at the waterline.
+        b.box(mats.cobbles, at(0.6, (BED_Y + 0.06) / 2), 1.8, 0.06 - BED_Y, piece, [0.5, 0.48, 0.45]);
+        b.box(mats.cobbles, at(-0.31, WATER_Y + 0.25), 0.04, 0.5, piece, [0.22, 0.25, 0.22]);
         b.box(mats.cobbles, at(-0.05, 0.08), 0.5, 0.12, piece, [0.85, 0.82, 0.76]);
+      }
+    }
+  }
+}
+
+/**
+ * M11d: wrecked and moored boats along the banks (rowing boats, small motor boats, a half-sunk one,
+ * a capsized hull). Seeded; never near bridges, the ferry lane or the map edge. Render only: the
+ * water already blocks.
+ */
+function buildBoats(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) => ChunkBuilder): void {
+  const rng = new Rng(m.seed * 13 + 5);
+  const edges: Array<{ pts: readonly Pt[]; off: number }> = [];
+  for (const r of m.rivers) for (const side of [-1, 1]) edges.push({ pts: r.pts, off: (side * r.width) / 2 });
+  for (const lake of m.lakes) edges.push({ pts: [...lake, lake[0] as Pt], off: 0 });
+  const placed: Array<[number, number]> = [];
+  const B = m.bounds;
+  const COLORS: RGB[] = [[1.2, 1.18, 1.1], [0.45, 0.6, 1.0], [1.1, 0.45, 0.35], [0.5, 0.85, 0.6], [1.15, 0.95, 0.4]];
+  for (const e of edges) {
+    for (let i = 1; i < e.pts.length; i++) {
+      const [ax, az] = e.pts[i - 1] as Pt, [bx, bz] = e.pts[i] as Pt;
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.1) continue;
+      const dx = (bx - ax) / len, dz = (bz - az) / len;
+      for (let t = 2; t < len - 2; t += 2) {
+        if (rng.next() > 0.07) continue;
+        const ex = ax + dx * t - dz * e.off, ez = az + dz * t + dx * e.off;
+        // Into the water by 2.2 m on whichever side is wet.
+        let wx = -dz, wz = dx;
+        if (!isWater(m, ex + wx * 2.2, ez + wz * 2.2)) { wx = dz; wz = -dx; }
+        const x = ex + wx * 2.2, z = ez + wz * 2.2;
+        if (!isWater(m, x, z) || !isWater(m, x + dx * 2.6, z + dz * 2.6) || !isWater(m, x - dx * 2.6, z - dz * 2.6)) continue;
+        if (x < B.minX + 4 || x > B.maxX - 4 || z < B.minZ + 4 || z > B.maxZ - 4) continue;
+        if (m.bridges.some((br) => Math.hypot(x - br.x, z - br.z) < br.len / 2 + 5)) continue;
+        if (placed.some(([px, pz]) => Math.hypot(x - px, z - pz) < 16)) continue;
+        placed.push([x, z]);
+        const kind = rng.int(4), c = COLORS[rng.int(COLORS.length)]!;
+        const yaw = Math.atan2(dx, dz) + rng.range(-0.25, 0.25);
+        const sunk = kind === 2, capsized = kind === 3;
+        const roll = capsized ? Math.PI : sunk ? rng.range(0.2, 0.35) : rng.range(-0.06, 0.06);
+        const y = WATER_Y + (capsized ? 0.15 : sunk ? -0.35 : 0.05);
+        const base = new Matrix4().makeRotationY(yaw).multiply(new Matrix4().makeRotationX(sunk ? 0.18 : 0)).multiply(new Matrix4().makeRotationZ(roll)).setPosition(x, y, z);
+        const f = (px: number, py: number, pz: number, ry = 0): Matrix4 => base.clone().multiply(new Matrix4().makeRotationY(ry).setPosition(px, py, pz));
+        const L = kind === 1 ? 5.2 : 3.8, W = kind === 1 ? 1.9 : 1.4;
+        const b = chunkOf(x, z);
+        // Hull: sides and stern as boxes, a pointed bow, plank seats; motor boats get a small cabin.
+        b.box(mats.carPaint, f(0, 0.05, -0.3), W, 0.6, L - 1.2, c);
+        b.box(mats.carPaint, f(0, 0.05, L / 2 - 0.9, Math.PI / 4), W / Math.SQRT2, 0.6, W / Math.SQRT2, c);
+        b.box(mats.darkWood, f(0, 0.32, -0.3), W - 0.2, 0.05, L - 1.4, [0.7, 0.6, 0.5]);
+        b.box(mats.carPaint, f(0, -0.2, -0.2), W - 0.2, 0.2, L - 1.0, [0.35, 0.3, 0.28]);
+        if (kind === 1) {
+          b.box(mats.carPaint, f(0, 0.75, 0.2), W - 0.4, 0.8, 1.6, [1.2, 1.18, 1.1]);
+          b.box(mats.carGlass, f(0, 0.9, 1.02), W - 0.5, 0.35, 0.04);
+          b.box(mats.iron, f(0, 0.3, -L / 2 + 0.55), 0.35, 0.7, 0.35);
+        } else if (!capsized) {
+          for (const sz of [-0.9, 0.5]) b.box(mats.wood, f(0, 0.4, sz), W - 0.15, 0.06, 0.28);
+          b.box(mats.wood, f(0.5, 0.45, -0.2, 0.3), 0.06, 0.04, 2.4, [0.8, 0.7, 0.55]);
+        }
       }
     }
   }
@@ -529,16 +615,19 @@ function buildGreenery(m: MapDef, lots: Lot[], props: Prop[], chunkOf: (x: numbe
   const walls: Array<{ l: Box; ruin: boolean }> = [];
   for (const l of lots) {
     if (l.kind === 'tree') continue;
-    const o = { x: l.x, z: l.z, rot: l.rot, hx: l.w / 2, hz: l.d / 2 };
-    block(o);
-    walls.push({ l: o, ruin: !!l.ruin });
-    if (l.wing) {
-      const w = { x: l.wing.x, z: l.wing.z, rot: l.rot, hx: l.wing.w / 2, hz: l.wing.d / 2 };
-      block(w);
-      walls.push({ l: w, ruin: !!l.ruin });
+    // Buildings by their footprint boxes (M11d shapes, wing); M11c lot types as their whole rectangle.
+    const boxes: Box[] = l.kind === 'special' ? [{ x: l.x, z: l.z, rot: l.rot, hx: l.w / 2, hz: l.d / 2 }] : lotColliders(l).flatMap((c) => (c.kind === 'box' ? [c] : []));
+    for (const o of boxes) {
+      block(o);
+      walls.push({ l: o, ruin: !!l.ruin });
     }
   }
-  for (const p of props) block(HEDGED[p.kind] !== undefined || p.kind === 'hedge' ? { x: p.x, z: p.z, rot: p.rot, hx: p.size / 2, hz: 0.3 } : { x: p.x, z: p.z, rot: p.rot, hx: 0.9, hz: 0.9 });
+  for (const p of props) {
+    // Closed edge fronts block their whole footprint (it is drawn behind the front face).
+    const c = EDGE_FRONT[p.kind] !== undefined || p.kind === 'fallenTree' ? propCollider(p) : null;
+    if (c?.kind === 'box') block({ x: c.x, z: c.z, rot: c.rot, hx: c.hx, hz: c.hz });
+    else block(HEDGED[p.kind] !== undefined || p.kind === 'hedge' ? { x: p.x, z: p.z, rot: p.rot, hx: p.size / 2, hz: 0.3 } : { x: p.x, z: p.z, rot: p.rot, hx: 0.9, hz: 0.9 });
+  }
   const free = (x: number, z: number, pad: number): boolean => {
     if (isWater(m, x, z) || onBridge(m, x, z, 1.5) || terraceWall(m, x, z) || m.terraces.some((t) => onStair(t, x, z, 1))) return false;
     const sd = streetDist(m, x, z);
@@ -756,7 +845,8 @@ function worldUv(g: BufferGeometry, ox: number, oz: number, scale: number): void
 function buildFerryBoat(mats: MapMats, width: number): Group {
   const b = new ChunkBuilder(mats);
   const L = FERRY.boat;
-  b.box(mats.rust, new Matrix4().setPosition(0, -0.6, 0), width + 0.4, 1.0, L - 0.6, [0.75, 0.6, 0.5]);
+  // Hull down past the waterline (M11d: the water lies 1.7 m below the deck).
+  b.box(mats.rust, new Matrix4().setPosition(0, -1.2, 0), width + 0.4, 2.2, L - 0.6, [0.75, 0.6, 0.5]);
   b.box(mats.rust, new Matrix4().setPosition(0, -0.35, 0), width + 0.6, 0.25, L, [0.9, 0.85, 0.8]);
   b.box(mats.wood, new Matrix4().setPosition(0, -0.06, 0), width, 0.12, L, [1.25, 1.12, 0.95]);
   for (const side of [-1, 1]) {
@@ -769,7 +859,7 @@ function buildFerryBoat(mats: MapMats, width: number): Group {
   // Small wheelhouse hanging over the side, out of the walkway.
   b.box(mats.stucco, new Matrix4().setPosition(width / 2 + 1.1, 1.0, 1.2), 1.8, 2.0, 2.4, [1.05, 1.0, 0.95]);
   b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, 2.08, 1.2), 2.2, 0.16, 2.8, [0.6, 0.45, 0.35]);
-  b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, -0.55, 1.2), 2.0, 1.0, 2.8, [0.75, 0.6, 0.5]);
+  b.box(mats.rust, new Matrix4().setPosition(width / 2 + 1.1, -1.1, 1.2), 2.0, 2.1, 2.8, [0.75, 0.6, 0.5]);
   const g = new Group();
   for (const mesh of b.solid.meshes()) {
     mesh.castShadow = true;
@@ -792,7 +882,7 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
         const c = end * (br.len / 2 - pl / 2);
         b.box(mats.wood, local(0, -0.1, c), br.width, 0.2, pl, [1.15, 1.05, 0.9]);
         for (const side of [-1, 1]) {
-          for (const z of [c - pl / 2 + 0.3, c + pl / 2 - 0.3]) b.box(mats.wood, local(side * (br.width / 2 - 0.2), -0.9, z), 0.3, 1.6, 0.3, [0.55, 0.5, 0.45]);
+          for (const z of [c - pl / 2 + 0.3, c + pl / 2 - 0.3]) b.box(mats.wood, local(side * (br.width / 2 - 0.2), (BED_Y - 0.1) / 2, z), 0.3, -BED_Y - 0.1, 0.3, [0.55, 0.5, 0.45]);
           b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.5, c), 0.06, 0.06, pl);
           b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.25, c - pl / 2 + 0.2), 0.06, 0.5, 0.06);
         }
@@ -800,14 +890,17 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
       boats.push({ lane: br, group: buildFerryBoat(mats, br.width) });
       continue;
     }
-    // Deck (top flush with the ground), stone sides, iron railing, two lamps.
+    // Deck (top flush with the ground) on a stone body, piers down to the bed, abutments closing both
+    // banks under the bridge heads (M11d: no ground sheet or gap beside the deck), railing, lamps.
     b.box(mats.cobbles, local(0, -0.2, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
+    b.box(mats.stucco, local(0, -0.85, 0), br.width + 0.8, 0.8, br.len, [0.5, 0.5, 0.47]);
+    for (const end of [-1, 1]) b.box(mats.stucco, local(0, (BED_Y + 0.05) / 2, end * (br.len / 2 - 1.2)), br.width + 1.4, 0.05 - BED_Y, 2.4, [0.48, 0.47, 0.44]);
     for (const side of [-1, 1]) {
       b.box(mats.stucco, local(side * (br.width / 2 + 0.2), 0.05, 0), 0.4, 0.6, br.len, [0.55, 0.55, 0.52]);
       b.box(mats.iron, local(side * (br.width / 2 + 0.2), 1.05, 0), 0.08, 0.08, br.len);
       for (let z = -br.len / 2 + 0.6; z < br.len / 2; z += 1.2) b.box(mats.iron, local(side * (br.width / 2 + 0.2), 0.7, z), 0.05, 0.7, 0.05);
       // Arch piers in the water.
-      for (const z of [-br.len / 4, br.len / 4]) b.box(mats.stucco, local(side * (br.width / 2 - 0.6), -1.1, z), 1.2, 1.8, 1.6, [0.45, 0.45, 0.42]);
+      for (const z of [-br.len / 4, br.len / 4]) b.box(mats.stucco, local(side * (br.width / 2 - 0.6), (BED_Y - 1.25) / 2, z), 1.2, -1.25 - BED_Y, 1.6, [0.45, 0.45, 0.42]);
     }
     if (br.len > 15) {
       for (const [side, z] of [[-1, -br.len / 4], [1, br.len / 4]] as Array<[number, number]>) {
@@ -945,21 +1038,41 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
 
 const TONES: PlasterTone[] = ['cream', 'ochre', 'oxblood', 'cream', 'ochre'];
 
-/** The four outward facades of a block: front, right, back, left (see map.ts for the frame). */
-export function blockFacades(l: { x: number; z: number; rot: number; w: number; d: number }): Array<{ a: Pt; b: Pt; len: number }> {
-  const ux = Math.cos(l.rot);
-  const uz = -Math.sin(l.rot);
-  const fx = Math.sin(l.rot);
-  const fz = Math.cos(l.rot);
-  const hw = l.w / 2;
-  const hd = l.d / 2;
-  const c = (a: number, b: number): Pt => [l.x + ux * a + fx * b, l.z + uz * a + fz * b];
-  return [
-    { a: c(-hw, hd), b: c(hw, hd), len: l.w },
-    { a: c(hw, hd), b: c(hw, -hd), len: l.d },
-    { a: c(hw, -hd), b: c(-hw, -hd), len: l.w },
-    { a: c(-hw, -hd), b: c(-hw, hd), len: l.d },
-  ];
+/** One outward facade of a block. `face`: 0 street front, 1 right, 2 back, 3 left, 4 chamfer; `back`: how far it stands behind the lot front. */
+export interface Side { a: Pt; b: Pt; len: number; face: number; back: number }
+
+/**
+ * The outward facades of a block: the front piece(s) from left to right, then right side, back and
+ * left side (see map.ts for the frame). A plain rectangle gives exactly front, right, back, left.
+ */
+export function blockFacades(l: LotFrame): Side[] {
+  const loc = lotOutlineLocal(l), hd = l.d / 2;
+  return loc.map((p, i) => {
+    const q = loc[(i + 1) % loc.length] as Pt, da = q[0] - p[0], db = q[1] - p[1], len = Math.hypot(da, db);
+    const na = -db / len, nb = da / len;
+    const face = nb > 0.9 ? 0 : na > 0.9 ? 1 : nb < -0.9 ? 2 : na < -0.9 ? 3 : 4;
+    return { a: lotToWorld(l, p[0], p[1]), b: lotToWorld(l, q[0], q[1]), len, face, back: hd - Math.max(p[1], q[1]) };
+  });
+}
+
+/** Flat cap over a footprint outline (lot frame [a, b]) at height y, facing up; place it with the lot matrix. */
+function capGeo(pts: readonly Pt[], y: number, uv = 3): BufferGeometry {
+  const tris = ShapeUtils.triangulateShape(pts.map(([a, b]) => new Vector2(a, b)), []);
+  const pos: number[] = [], uvs: number[] = [];
+  for (const t of tris) {
+    const [p0, p1, p2] = t.map((k) => pts[k] as Pt) as [Pt, Pt, Pt];
+    // Counter-clockwise seen from above (normal +Y).
+    const up = (p1[1] - p0[1]) * (p2[0] - p0[0]) - (p1[0] - p0[0]) * (p2[1] - p0[1]) > 0;
+    for (const p of up ? [p0, p1, p2] : [p0, p2, p1]) {
+      pos.push(p[0], y, p[1]);
+      uvs.push(p[0] / uv, p[1] / uv);
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2));
+  g.computeVertexNormals();
+  return g;
 }
 
 /** Quads with free per-corner UVs and colours, merged as one geometry (flat normals). */
@@ -1004,13 +1117,15 @@ function profileAt(p: Profile, s: number): number {
 
 /**
  * Broken top line of a ruin wall: nodes every few metres joined by brick-tooth steps, ragged
- * diagonals or a V-shaped break. Steps are two points 2 mm apart.
+ * diagonals or a V-shaped break. Steps are two points 2 mm apart. `band` gives the height range
+ * of a node at s (see `ruinMass`).
  */
-function ruinProfile(rng: Rng, len: number, lo: number, hi: number, gable: number, floor: number): Profile {
+function ruinProfile(rng: Rng, len: number, band: (s: number) => readonly [number, number], gable: number, floor: number): Profile {
   const nodes: Array<[number, number]> = [];
   for (let s = 0; ; s += rng.range(1.6, 4.2)) {
     const at = Math.min(s, len);
     const peak = gable ? gable * Math.max(0, 1 - Math.abs((2 * at) / len - 1)) * rng.range(0.7, 1) : 0;
+    const [lo, hi] = band(at);
     nodes.push([at, Math.max(floor, rng.range(lo, hi) + peak)]);
     if (at >= len) break;
   }
@@ -1045,11 +1160,56 @@ function ruinProfile(rng: Rng, len: number, lo: number, hi: number, gable: numbe
 
 interface Hole { s0: number; s1: number; y: number; h: number }
 
+/** Ruin wall mass, as fractions of the full height: still to the cornice, broken at an upper floor, down to the ground floor. */
+const RUIN_LEVELS: ReadonlyArray<readonly [number, number]> = [[0.84, 1.02], [0.45, 0.68], [0.14, 0.3]];
+
 /**
- * Burnt-out shell of an Altbau, shop or house: no roof, walls broken off along jagged brick-tooth,
- * diagonal and V-shaped lines, some corners collapsed, windows that break the top line, soot above
- * every opening, charred beam stubs and slab remnants, rubble heaps inside. Same footprint and
- * collider as the intact lot; everything stays inside the footprint.
+ * M11d: the mass of a ruin wall along its length, in stretches of 2.5 to 6.5 m that still stand to
+ * the cornice, broke off at an upper floor or fell down to the ground floor, so the wall tops step
+ * clearly from the game camera. The street front keeps more of its height.
+ */
+function ruinMass(rng: Rng, len: number, street: boolean): (s: number) => readonly [number, number] {
+  const w = street ? [0.45, 0.35] : [0.28, 0.4];
+  const pick = (): number => {
+    const r = rng.next();
+    return r < (w[0] as number) ? 0 : r < (w[0] as number) + (w[1] as number) ? 1 : 2;
+  };
+  const ends: Array<[number, number]> = [];
+  let last = -1;
+  for (let s = 0; s < len; ) {
+    let k = pick();
+    if (k === last) k = pick();
+    s += rng.range(2.5, 6.5);
+    ends.push([s, k]);
+    last = k;
+  }
+  return (s) => RUIN_LEVELS[(ends.find((e) => s <= e[0]) ?? (ends[ends.length - 1] as [number, number]))[1]] as readonly [number, number];
+}
+
+/**
+ * Stepped remains of a gable (firewall of the old pitched roof) on a flank: brick courses climb
+ * from both ends to a broken peak above the old eaves; one course broke out lower.
+ */
+function gableSteps(rng: Rng, len: number, base: number, peak: number): Profile {
+  const n = Math.max(2, Math.round(len / 2 / rng.range(0.75, 1.1))), bite = rng.int(2 * n);
+  const p: Profile = [];
+  for (let k = 0; k < 2 * n; k++) {
+    const s0 = (k * len) / (2 * n), s1 = ((k + 1) * len) / (2 * n);
+    let h = base + (peak - base) * (1 - Math.abs(k + 0.5 - n) / n) + rng.range(-0.1, 0.1);
+    if (k === bite) h -= rng.range(0.7, 1.6);
+    p.push([k ? s0 + 0.001 : s0, h], [k < 2 * n - 1 ? s1 - 0.001 : s1, h]);
+  }
+  return p;
+}
+
+/**
+ * Burnt-out shell of an Altbau, shop or house on any footprint (M11d): no roof, wall tops in
+ * stretches that still reach the cornice, broke at an upper floor or fell to the ground floor,
+ * joined by jagged brick-tooth, diagonal and V-shaped breaks; collapsed corners, a stepped gable
+ * on a flank, a chimney stack standing above it all, a broken cross wall inside, windows that break
+ * the top line, soot above every opening, charred beam stubs and slab remnants, rubble heaps inside
+ * and a little at the foot of the low stretches. Walls meet in mitred corners (also inner corners).
+ * Same footprint and collider as the intact lot.
  */
 function buildRuin(b: ChunkBuilder, l: Lot): void {
   const rng = new Rng(l.seed + 77);
@@ -1061,32 +1221,55 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
   const rows: Array<[number, number]> = house ? [[1.1, 1.6], ...(l.floors ? [[4.0, 1.6] as [number, number]] : [])] : [[1.55, 1.75], ...levels.map((y): [number, number] => [y + 0.95, 1.95])];
   const winW = house ? 1.1 : 1.15;
   const wall = 0.4;
-  const sides = blockFacades(l);
-  // Collapsed corners (corner i starts side i): low stump, then a ragged diagonal climbing away.
-  const corners: Array<{ low: number; slope: number; r: number } | null> = [0, 1, 2, 3].map(() => (rng.next() < 0.38 ? { low: rng.range(0.3, 1.6), slope: rng.range(0.9, 2.2), r: rng.range(2, 4.5) } : null));
-  if (!corners.some((c) => c !== null)) corners[rng.int(4)] = { low: rng.range(0.5, 1.8), slope: rng.range(1, 2), r: rng.range(2.5, 4) };
+  const sides = blockFacades(l), n = sides.length, loc = lotOutlineLocal(l);
+  const runs = sides.map((side, i) => new Run({ id: 'r', style: 'altbau', ax: side.a[0], az: side.a[1], bx: side.b[0], bz: side.b[1], depth: 1, floors: 0, tone, features: [], seed: l.seed + i }));
+  const prevOf = (i: number): number => (i + n - 1) % n;
+  // Vertex i starts side i. Convex corners turn right (outline order as in `lotOutlineLocal`).
+  const convex = runs.map((q, i) => { const p = runs[prevOf(i)] as Run; return p.dx * q.dz - p.dz * q.dx < 0; });
+  // Inner face: mitred at every vertex, so inner corners close as well as outer ones.
+  const miter = runs.map((q, i): Pt => {
+    const p = runs[prevOf(i)] as Run, v = (sides[i] as Side).a, k = wall / (1 + p.nx * q.nx + p.nz * q.nz);
+    return [v[0] - (p.nx + q.nx) * k, v[1] - (p.nz + q.nz) * k];
+  });
+  const along = (r: Run, pt: Pt): number => (pt[0] - r.f.ax) * r.dx + (pt[1] - r.f.az) * r.dz;
+  const t0 = runs.map((r, i) => along(r, miter[i] as Pt)), t1 = runs.map((r, i) => along(r, miter[(i + 1) % n] as Pt));
+  const innU = (i: number, s: number): number => {
+    const len = (runs[i] as Run).len, a = t0[i] as number, c = t1[i] as number;
+    return s <= 1e-6 ? a : s >= len - 1e-6 ? c : Math.min(Math.max(s, a), c);
+  };
+  const inn = (i: number, s: number, y: number): Vector3 => (runs[i] as Run).pt(innU(i, s), y, -wall);
+  // Collapsed corners (convex, between two real walls): low stump, then a ragged diagonal climbing away.
+  const canFall = sides.map((s, i) => convex[i] && s.len >= 3 && (sides[prevOf(i)] as Side).len >= 3);
+  const corners: Array<{ low: number; slope: number; r: number } | null> = sides.map((_, i) => (canFall[i] && rng.next() < 0.38 ? { low: rng.range(0.3, 1.6), slope: rng.range(0.9, 2.2), r: rng.range(2, 4.5) } : null));
+  const fallable = canFall.flatMap((c, i) => (c ? [i] : []));
+  if (!corners.some((c) => c !== null) && fallable.length) corners[rng.pick(fallable)] = { low: rng.range(0.5, 1.8), slope: rng.range(1, 2), r: rng.range(2.5, 4) };
   const ramp = (c: (typeof corners)[number] | undefined, len: number, from0: boolean): Profile | null => {
     if (!c) return null;
     const p: Profile = [];
     for (let d = 0; d <= Math.min(c.r * 2.5, len); d += 0.4) p.push([from0 ? d : len - d, c.low + d * c.slope + (d ? rng.range(-0.12, 0.12) : 0)]);
     return from0 ? p : p.reverse();
   };
-  const gableSide = house && l.floors && rng.next() < 0.6 ? (rng.next() < 0.5 ? 1 : 3) : -1;
+  // A gable on one flank: the old pitched roof of a house, the stepped firewall of an Altbau (no windows).
+  const flanks = sides.flatMap((s, i) => ((s.face === 1 || s.face === 3) && s.len >= Math.max(6, l.d * 0.62) ? [i] : []));
+  const gableSide = flanks.length && (house ? l.floors && rng.next() < 0.6 : rng.next() < 0.45) ? rng.pick(flanks) : -1;
   const ridge = Math.min(l.w, l.d) * 0.42;
   const outer = new Quads(), inner = new Quads(), masonry = new Quads();
   const brickTint: RGB = [0.72, 0.6, 0.54];
+  const darkIn: RGB = [0.26, 0.24, 0.24];
   const ends: Array<[number, number]> = [];
-  const runs = sides.map((side, i) => new Run({ id: 'r', style: 'altbau', ax: side.a[0], az: side.a[1], bx: side.b[0], bz: side.b[1], depth: 1, floors: 0, tone, features: [], seed: l.seed + i }));
   const tops = sides.map((side, i) => {
     const len = side.len;
-    // The street front stands highest; back and sides crumble more.
-    const [lo, hi] = i === 0 ? [0.55, 1.02] : [0.25, 0.9];
-    const base = ruinProfile(rng, len, H * lo, H * hi, i === gableSide ? ridge : 0, 1.1);
-    const cuts = [ramp(corners[i], len, true), ramp(corners[(i + 1) % 4], len, false)].filter((p): p is Profile => !!p);
+    // The street front stands highest; back and flanks crumble more.
+    const street = side.face === 0 || side.face === 4;
+    const mass = ruinMass(rng, len, street);
+    const stepped = i === gableSide && !house;
+    const base = stepped ? gableSteps(rng, len, H * rng.range(0.7, 0.92), H + rng.range(1.3, 2.6))
+      : ruinProfile(rng, len, (s) => { const [lo, hi] = mass(s); return [H * lo, H * hi]; }, i === gableSide ? ridge : 0, 1.1);
+    const cuts = [ramp(corners[i], len, true), ramp(corners[(i + 1) % n], len, false)].filter((p): p is Profile => !!p);
     const wallTop = (s: number): number => Math.min(profileAt(base, s), ...cuts.map((p) => profileAt(p, s)));
     // Windows: holes where the wall still stands above them, notches where the break cuts through.
     const holes: Hole[] = [], notches: Hole[] = [];
-    const bays = Math.max(1, Math.round(len / 2.7));
+    const bays = stepped || len < winW + 1 ? 0 : Math.max(1, Math.round(len / 2.7));
     for (let k = 0; k < bays; k++) {
       const mid = ((k + 0.5) * len) / bays;
       for (const [y, h] of rows) {
@@ -1110,12 +1293,12 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
       return [(0.5 + 0.5 * low - y * 0.012) * k, (0.54 + 0.44 * low - y * 0.012) * k * 0.97, (0.52 + 0.46 * low - y * 0.01) * k * 0.95];
     };
     const sootAt = (s: number, y: number): number => Math.max(0, ...[...holes, ...notches].filter((w) => s >= w.s0 - 0.2 && s <= w.s1 + 0.2 && y >= w.y + w.h - 0.01).map((w) => 0.68 * Math.max(0, 1 - (y - w.y - w.h) / 2.4)));
-    const darkIn: RGB = [0.26, 0.24, 0.24];
     const band = new Map<number, number>(bps.map((s) => [s, rng.range(0.18, 0.6)]));
     for (let k = 0; k < bps.length - 1; k++) {
       const sa = bps[k] as number, sb = bps[k + 1] as number;
       if (sb - sa < 1e-4) continue;
       const ta = top(sa + 1e-5), tb = top(sb - 1e-5), mid = (sa + sb) / 2;
+      const thick = Math.abs(innU(i, sb) - innU(i, sa)) > 1e-4;
       const here = holes.filter((w) => mid > w.s0 && mid < w.s1).sort((p, q) => p.y - q.y);
       // V1 B cutaway: a 0.4 m lid on the wall where it still stands at the cut height (not over breaks or windows).
       if (b.cutAt !== null) {
@@ -1141,33 +1324,33 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
         const u0 = (sa + run.f.seed * 1.7) / 6, u1 = (sb + run.f.seed * 1.7) / 6;
         outer.add([run.pt(sa, a, 0), run.pt(sb, a, 0), run.pt(sb, yb, 0), run.pt(sa, ya, 0)], [u0, a / 6, u1, a / 6, u1, yb / 6, u0, ya / 6],
           [tint(a, sootAt(sa, a)), tint(a, sootAt(sb, a)), tint(yb, sootAt(sb, yb)), tint(ya, sootAt(sa, ya))]);
-        inner.add([run.pt(sb, a, -wall), run.pt(sa, a, -wall), run.pt(sa, ya, -wall), run.pt(sb, yb, -wall)], [u1, a / 6, u0, a / 6, u0, ya / 6, u1, yb / 6], [darkIn]);
+        if (thick) inner.add([inn(i, sb, a), inn(i, sa, a), inn(i, sa, ya), inn(i, sb, yb)], [u1, a / 6, u0, a / 6, u0, ya / 6, u1, yb / 6], [darkIn]);
       }
       // Broken top: spalled plaster shows a ragged brick band, then the brick core on top.
       const ba = Math.min(band.get(sa) ?? 0.3, ta - solid), bb = Math.min(band.get(sb) ?? 0.3, tb - solid);
       if (ba > 0.02 || bb > 0.02) masonry.add([run.pt(sa, ta - ba, 0.012), run.pt(sb, tb - bb, 0.012), run.pt(sb, tb, 0.012), run.pt(sa, ta, 0.012)], [sa / 2, (ta - ba) / 2, sb / 2, (tb - bb) / 2, sb / 2, tb / 2, sa / 2, ta / 2], [[0.62, 0.52, 0.46], [0.62, 0.52, 0.46], [0.42, 0.36, 0.33], [0.42, 0.36, 0.33]]);
-      masonry.add([run.pt(sa, ta, 0), run.pt(sb, tb, 0), run.pt(sb, tb, -wall), run.pt(sa, ta, -wall)], [sa / 2, 0, sb / 2, 0, sb / 2, wall / 2, sa / 2, wall / 2], [brickTint]);
+      masonry.add([run.pt(sa, ta, 0), run.pt(sb, tb, 0), inn(i, sb, tb), inn(i, sa, ta)], [sa / 2, 0, sb / 2, 0, sb / 2, wall / 2, sa / 2, wall / 2], [brickTint]);
       // Steps in the top line show the cut brick.
       const tn = k + 2 < bps.length ? top(sb + 1e-5) : tb;
       if (Math.abs(tn - tb) > 0.02) {
         const lo = Math.min(tn, tb), hi = Math.max(tn, tb);
-        masonry.add(tb > tn ? [run.pt(sb, lo, 0), run.pt(sb, lo, -wall), run.pt(sb, hi, -wall), run.pt(sb, hi, 0)] : [run.pt(sb, lo, -wall), run.pt(sb, lo, 0), run.pt(sb, hi, 0), run.pt(sb, hi, -wall)],
+        masonry.add(tb > tn ? [run.pt(sb, lo, 0), inn(i, sb, lo), inn(i, sb, hi), run.pt(sb, hi, 0)] : [inn(i, sb, lo), run.pt(sb, lo, 0), run.pt(sb, hi, 0), inn(i, sb, hi)],
           [0, lo / 2, wall / 2, lo / 2, wall / 2, hi / 2, 0, hi / 2], [brickTint]);
       }
     }
     // Window reveals.
     for (const w of holes) {
       const { s0, s1, y, h } = w, t = y + h, rv: RGB = [0.45, 0.4, 0.38];
-      masonry.add([run.pt(s0, y, 0), run.pt(s0, y, -wall), run.pt(s0, t, -wall), run.pt(s0, t, 0)], [0, y / 2, wall / 2, y / 2, wall / 2, t / 2, 0, t / 2], [rv]);
-      masonry.add([run.pt(s1, y, -wall), run.pt(s1, y, 0), run.pt(s1, t, 0), run.pt(s1, t, -wall)], [0, y / 2, wall / 2, y / 2, wall / 2, t / 2, 0, t / 2], [rv]);
-      masonry.add([run.pt(s0, y, 0), run.pt(s1, y, 0), run.pt(s1, y, -wall), run.pt(s0, y, -wall)], [s0 / 2, 0, s1 / 2, 0, s1 / 2, wall / 2, s0 / 2, wall / 2], [rv]);
-      masonry.add([run.pt(s1, t, 0), run.pt(s0, t, 0), run.pt(s0, t, -wall), run.pt(s1, t, -wall)], [s1 / 2, 0, s0 / 2, 0, s0 / 2, wall / 2, s1 / 2, wall / 2], [[0.3, 0.27, 0.26]]);
+      masonry.add([run.pt(s0, y, 0), inn(i, s0, y), inn(i, s0, t), run.pt(s0, t, 0)], [0, y / 2, wall / 2, y / 2, wall / 2, t / 2, 0, t / 2], [rv]);
+      masonry.add([inn(i, s1, y), run.pt(s1, y, 0), run.pt(s1, t, 0), inn(i, s1, t)], [0, y / 2, wall / 2, y / 2, wall / 2, t / 2, 0, t / 2], [rv]);
+      masonry.add([run.pt(s0, y, 0), run.pt(s1, y, 0), inn(i, s1, y), inn(i, s0, y)], [s0 / 2, 0, s1 / 2, 0, s1 / 2, wall / 2, s0 / 2, wall / 2], [rv]);
+      masonry.add([run.pt(s1, t, 0), run.pt(s0, t, 0), inn(i, s0, t), inn(i, s1, t)], [s1 / 2, 0, s0 / 2, 0, s0 / 2, wall / 2, s1 / 2, wall / 2], [[0.3, 0.27, 0.26]]);
       // Stone sill and a sooty lintel keep the Altbau rhythm; some sills broke away.
       if (!house && rng.next() < 0.7) b.box(b.mm.stucco, run.mat((s0 + s1) / 2, y - 0.06, 0.1, 0, rng.range(-0.04, 0.04)), winW + 0.36, 0.12, 0.22, [0.55, 0.53, 0.5]);
     }
     for (const w of notches) if (rng.next() < 0.6) b.box(b.mm.stucco, run.mat((w.s0 + w.s1) / 2, w.y - 0.06, 0.1, 0, rng.range(-0.08, 0.08)), winW + 0.3, 0.12, 0.22, [0.5, 0.48, 0.46]);
     // Floor cornices where the wall still stands above them: they end at the breaks like slab edges.
-    for (const y of levels) {
+    for (const y of len > 1.2 ? levels : []) {
       let from = -1;
       for (let s = 0; s <= len + 0.01; s += 0.25) {
         const up = s < len && top(s) > y + 0.35 && !holes.some((w) => y > w.y - 0.1 && y < w.y + w.h + 0.1 && s > w.s0 - 0.1 && s < w.s1 + 0.1);
@@ -1184,29 +1367,28 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
     const avg = sum / Math.max(1, Math.floor(len / 0.5));
     b.shadowBox(run.mat(len / 2, avg / 2, -wall / 2), len, avg, wall);
   });
-  // Corner ends: where one wall stands higher than its neighbour, close its end.
+  // Corner ends: where one wall stands higher than its neighbour, close its end along the mitre.
   tops.forEach(({ len }, i) => {
     const run = runs[i] as Run;
     const [h0, h1] = ends[i] as [number, number];
-    const prev = (ends[(i + 3) % 4] as [number, number])[1], next = (ends[(i + 1) % 4] as [number, number])[0];
-    if (h0 > prev + 0.02) outer.add([run.pt(0, prev, -wall), run.pt(0, prev, 0), run.pt(0, h0, 0), run.pt(0, h0, -wall)], [0, prev / 6, wall / 6, prev / 6, wall / 6, h0 / 6, 0, h0 / 6], [[0.6, 0.58, 0.55]]);
-    if (h1 > next + 0.02) outer.add([run.pt(len, next, 0), run.pt(len, next, -wall), run.pt(len, h1, -wall), run.pt(len, h1, 0)], [0, next / 6, wall / 6, next / 6, wall / 6, h1 / 6, 0, h1 / 6], [[0.6, 0.58, 0.55]]);
+    const prev = (ends[prevOf(i)] as [number, number])[1], next = (ends[(i + 1) % n] as [number, number])[0];
+    if (h0 > prev + 0.02) outer.add([inn(i, 0, prev), run.pt(0, prev, 0), run.pt(0, h0, 0), inn(i, 0, h0)], [0, prev / 6, wall / 6, prev / 6, wall / 6, h0 / 6, 0, h0 / 6], [[0.6, 0.58, 0.55]]);
+    if (h1 > next + 0.02) outer.add([run.pt(len, next, 0), inn(i, len, next), inn(i, len, h1), run.pt(len, h1, 0)], [0, next / 6, wall / 6, next / 6, wall / 6, h1 / 6, 0, h1 / 6], [[0.6, 0.58, 0.55]]);
   });
-  outer.flush(b, plaster);
-  inner.flush(b, plaster);
-  masonry.flush(b, b.mm.brick);
   // Inside: charred floor, beam stubs and slab remnants at the old floor levels, rubble heaps.
   const m4 = new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0.04, l.z);
   const local = (x: number, y: number, z: number, ry = 0, rx = 0, rz = 0): Matrix4 => m4.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rx, ry, rz)).setPosition(x, y, z));
-  b.box(b.mm.tar, m4, l.w - 0.8, 0.06, l.d - 0.8, [0.35, 0.33, 0.32]);
+  if (l.shape) b.geo(b.mm.tar, capGeo(loc, 0.03), m4, [0.35, 0.33, 0.32]);
+  else b.box(b.mm.tar, m4, l.w - 0.8, 0.06, l.d - 0.8, [0.35, 0.33, 0.32]);
   const charred: RGB = [0.32, 0.27, 0.23];
   tops.forEach(({ len, top }, i) => {
     const run = runs[i] as Run;
+    if (len < 3.5) return;
     for (const y of levels) {
       if (rng.next() < 0.35) continue;
       // Joist stubs: charred beams sticking out of the inner face, some sagging.
-      const s0 = rng.range(0.6, Math.max(0.7, len - 3)), n = 2 + rng.int(4);
-      for (let k = 0; k < n; k++) {
+      const s0 = rng.range(0.6, Math.max(0.7, len - 3)), k0 = 2 + rng.int(4);
+      for (let k = 0; k < k0; k++) {
         const s = s0 + k * rng.range(0.7, 1.0), reach = rng.range(0.4, 2.2);
         if (s > len - 0.5 || top(s) < y + 0.3) continue;
         b.box(b.mm.darkWood, run.mat(s, y - 0.1, -wall - reach / 2 + 0.05, rng.range(-0.05, 0.25 * reach), rng.range(-0.08, 0.08)), 0.18, 0.24, reach, charred);
@@ -1223,33 +1405,87 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
       }
     }
   });
+  // Chimney stacks: the flue walls outlast everything and stand above the broken tops.
+  const backs = sides.flatMap((s, i) => (s.face !== 0 && s.face !== 4 && s.len >= 4 && i !== gableSide ? [i] : []));
+  for (let k = house ? (l.floors ? 1 : 0) : 1 + (rng.next() < 0.4 ? 1 : 0); k > 0 && backs.length; k--) {
+    const i = rng.pick(backs), run = runs[i] as Run, s = rng.range(1.2, run.len - 1.2);
+    const ht = Math.max((tops[i] as { top: (s: number) => number }).top(s) + rng.range(0.6, 2), H * rng.range(0.6, 0.85));
+    const soot: RGB = [0.5, 0.43, 0.4];
+    b.box(b.mm.brick, run.mat(s, ht / 2, -wall - 0.27), 0.95, ht, 0.55, soot);
+    b.box(b.mm.brick, run.mat(s, ht + 0.07, -wall - 0.27), 1.1, 0.14, 0.7, [0.42, 0.37, 0.35]);
+    if (rng.next() < 0.6) b.box(b.mm.brick, run.mat(s + rng.range(-0.25, 0.25), ht + 0.32, -wall - 0.27, 0, rng.range(-0.2, 0.2)), 0.3, 0.42, 0.3, [0.45, 0.4, 0.38]);
+  }
+  // A broken cross wall between front and back (Altbau): the shell no longer reads as an empty box.
+  const hw = l.w / 2, hd = l.d / 2, ch = l.shape?.chamfer;
+  if (!house && l.w >= 10 && rng.next() < 0.65) {
+    const a = rng.range(-hw + 2.6, hw - 2.6), piece = lotPieces(l).find((p) => a >= p.a0 && a <= p.a1);
+    const f = piece ? piece.f - (ch && Math.abs(a - ch.side * hw) < ch.c + 0.3 ? ch.c : 0) : -hd;
+    const len = f - wall - (-hd + wall), t = 0.15;
+    if (len > 4) {
+      const [ax, az] = lotToWorld(l, a, -hd + wall), [bx, bz] = lotToWorld(l, a, f - wall);
+      const run = new Run({ id: 'x', style: 'altbau', ax, az, bx, bz, depth: 1, floors: 0, tone, features: [], seed: l.seed });
+      const p = ruinProfile(rng, len, () => [H * 0.25, H * 0.8], 0, 0.8);
+      for (let k = 1; k < p.length; k++) {
+        const [sa, ha] = p[k - 1] as [number, number], [sb, hb] = p[k] as [number, number];
+        if (sb - sa < 1e-4) {
+          const lo = Math.min(ha, hb), hi = Math.max(ha, hb);
+          masonry.add([run.pt(sb, lo, t), run.pt(sb, lo, -t), run.pt(sb, hi, -t), run.pt(sb, hi, t)], [0, lo / 2, 0.15, lo / 2, 0.15, hi / 2, 0, hi / 2], [brickTint]);
+          masonry.add([run.pt(sb, lo, -t), run.pt(sb, lo, t), run.pt(sb, hi, t), run.pt(sb, hi, -t)], [0, lo / 2, 0.15, lo / 2, 0.15, hi / 2, 0, hi / 2], [brickTint]);
+          continue;
+        }
+        inner.add([run.pt(sa, 0, t), run.pt(sb, 0, t), run.pt(sb, hb, t), run.pt(sa, ha, t)], [sa / 6, 0, sb / 6, 0, sb / 6, hb / 6, sa / 6, ha / 6], [[0.4, 0.37, 0.36], [0.4, 0.37, 0.36], darkIn, darkIn]);
+        inner.add([run.pt(sb, 0, -t), run.pt(sa, 0, -t), run.pt(sa, ha, -t), run.pt(sb, hb, -t)], [sb / 6, 0, sa / 6, 0, sa / 6, ha / 6, sb / 6, hb / 6], [[0.4, 0.37, 0.36], [0.4, 0.37, 0.36], darkIn, darkIn]);
+        masonry.add([run.pt(sa, ha, t), run.pt(sb, hb, t), run.pt(sb, hb, -t), run.pt(sa, ha, -t)], [sa / 2, 0, sb / 2, 0, sb / 2, 0.15, sa / 2, 0.15], [brickTint]);
+      }
+      b.shadowBox(run.mat(len / 2, H * 0.25, 0), len, H * 0.5, t * 2);
+    }
+  }
+  outer.flush(b, plaster);
+  inner.flush(b, plaster);
+  masonry.flush(b, b.mm.brick);
   // Rubble: big heaps under the collapsed corners, smaller ones along the walls, loose bricks.
-  const hw = l.w / 2, hd = l.d / 2;
-  const heap = (x: number, z: number, r: number, h: number): void => {
+  const heap = (at: Matrix4, r: number, h: number): void => {
     const g = rng.range(0.55, 0.8);
     const geo = new IcosahedronGeometry(1, 0);
-    b.geo(b.mm.brick, geo, local(x, -h * 0.25, z, rng.range(0, 6)).multiply(tmpScale.makeScale(r, h, r * rng.range(0.7, 1))), [g, g * 0.9, g * 0.85]);
+    b.geo(b.mm.brick, geo, at.clone().multiply(new Matrix4().makeRotationY(rng.range(0, 6)).setPosition(0, -h * 0.25, 0)).multiply(tmpScale.makeScale(r, h, r * rng.range(0.7, 1))), [g, g * 0.9, g * 0.85]);
     for (let k = 0; k < 4; k++) {
       const a = rng.range(0, Math.PI * 2), d = r * rng.range(0.4, 1.0);
-      b.box(rng.next() < 0.7 ? b.mm.brick : b.mm.plaster[tone] as LitMaterial, local(x + Math.cos(a) * d, h * 0.35 * rng.next(), z + Math.sin(a) * d, rng.range(0, 3), rng.range(-0.5, 0.5), rng.range(-0.5, 0.5)), rng.range(0.3, 0.8), rng.range(0.15, 0.35), rng.range(0.25, 0.5), [g, g * 0.92, g * 0.88]);
+      b.box(rng.next() < 0.7 ? b.mm.brick : plaster, at.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rng.range(-0.5, 0.5), rng.range(0, 3), rng.range(-0.5, 0.5))).setPosition(Math.cos(a) * d, h * 0.35 * rng.next(), Math.sin(a) * d)),
+        rng.range(0.3, 0.8), rng.range(0.15, 0.35), rng.range(0.25, 0.5), [g, g * 0.92, g * 0.88]);
     }
   };
-  const corner = [[-1, 1], [1, 1], [1, -1], [-1, -1]] as const;
+  // Heaps stay inside the footprint (a, b in the lot frame).
+  const roomFor = (a: number, c: number, r: number): boolean => inPoly(loc, a, c) && polyEdgeDist(loc, a, c) > r * 0.9 + 0.3;
   corners.forEach((c, k) => {
     if (!c) return;
-    const [cx, cz] = corner[k] as readonly [number, number];
-    const r = Math.min(2.2, hw - 0.5, hd - 0.5);
-    heap(cx * (hw - r - 0.3), cz * (hd - r - 0.3), r, rng.range(0.9, 1.6));
+    const v = loc[k] as Pt, p = loc[prevOf(k)] as Pt, q = loc[(k + 1) % n] as Pt;
+    // Inward bisector from the two edge directions (local frame).
+    const d1 = Math.hypot(v[0] - p[0], v[1] - p[1]), d2 = Math.hypot(q[0] - v[0], q[1] - v[1]);
+    const ia = (v[0] - p[0]) / d1 * -1 + (q[0] - v[0]) / d2, ib = (v[1] - p[1]) / d1 * -1 + (q[1] - v[1]) / d2, il = Math.hypot(ia, ib) || 1;
+    const r = Math.min(2.2, hw - 0.5, hd - 0.5), off = (r + 0.3) * Math.SQRT2;
+    const a = v[0] + (ia / il) * off, cb = v[1] + (ib / il) * off;
+    if (roomFor(a, cb, r * 0.6)) heap(local(a, 0, cb), r, rng.range(0.9, 1.6));
   });
-  for (let i = 0; i < 4; i++) {
-    const r = rng.range(0.8, 1.5), along = rng.next() < 0.5;
-    const x = along ? rng.range(-hw + r + 0.5, hw - r - 0.5) : (rng.next() < 0.5 ? -1 : 1) * (hw - r - 0.45);
-    const z = along ? (rng.next() < 0.5 ? -1 : 1) * (hd - r - 0.45) : rng.range(-hd + r + 0.5, hd - r - 0.5);
-    heap(x, z, r, rng.range(0.4, 0.9));
+  for (let k = 0; k < 4; k++) {
+    const r = rng.range(0.8, 1.5), i = rng.int(n), p = loc[i] as Pt, q = loc[(i + 1) % n] as Pt, len = (sides[i] as Side).len;
+    if (len < 2 * r + 1) continue;
+    const s = rng.range(r + 0.5, len - r - 0.5), da = (q[0] - p[0]) / len, db = (q[1] - p[1]) / len;
+    const a = p[0] + da * s + db * (r + 0.45), cb = p[1] + db * s - da * (r + 0.45);
+    if (roomFor(a, cb, r)) heap(local(a, 0, cb), r, rng.range(0.4, 0.9));
   }
-  // A fallen roof beam leaning against a wall.
-  const beam = Math.min(l.w, l.d) * 0.8;
-  b.box(b.mm.darkWood, local(0, 0.9, 0, rng.range(0, 3), 0, 0.35), beam, 0.25, 0.25, [0.4, 0.35, 0.3]);
+  // A little rubble spilled out at the foot of the stretches that fell to the ground floor.
+  tops.forEach(({ len, top }, i) => {
+    if (len < 3 || rng.next() > 0.7) return;
+    for (let s = 1.2; s < len - 1.2; s += 1.5) {
+      if (top(s) > H * 0.32) continue;
+      heap(new Matrix4().setPosition((runs[i] as Run).pt(s, 0.04, 0.05)), rng.range(0.5, 0.75), rng.range(0.3, 0.45));
+      break;
+    }
+  });
+  // A fallen roof beam across the largest open room.
+  const big = lotBoxesLocal(l).reduce((p, q) => (q.ha * q.hb > p.ha * p.hb ? q : p));
+  const beam = Math.min(big.ha, big.hb) * 1.6;
+  b.box(b.mm.darkWood, local(big.a, 0.9, big.b, rng.range(0, 3), 0, 0.35), beam, 0.25, 0.25, [0.4, 0.35, 0.3]);
 }
 
 /** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
@@ -1258,43 +1494,54 @@ export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m:
   const tone = rng.pick(TONES);
   const sides = blockFacades(l);
   const main = streetDist(m, l.x + Math.sin(l.rot) * l.d, l.z + Math.cos(l.rot) * l.d).street?.kind === 'main';
+  // M11d: the street piece that carries the shop or the main door (the longest one at the lot front);
+  // door niches, the back wall of an open courtyard and some chamfers get their own door.
+  const front = sides.reduce((best, s, i) => (s.face === 0 && (best < 0 || s.len - s.back * 4 > (sides[best] as Side).len - (sides[best] as Side).back * 4) ? i : best), -1);
+  const niche = sides.some((s) => s.face === 0 && s.back >= 1 && s.len < 3.2);
   sides.forEach((s, i) => {
     const features: FacadeFeature[] = [];
-    if (i === 0 && l.kind === 'shop') {
+    const centered = (): void => void features.push({ kind: 'door', from: s.len / 2 - 0.7, to: s.len / 2 + 0.7 });
+    if (i === front && l.kind === 'shop') {
       // Single-storey Laden / Späti: shop window over most of the front.
       const from = Math.max(0.6, (s.len - 7) / 2);
       features.push({ kind: 'spati', from, to: Math.min(s.len - 0.6, from + 7) });
-    } else if (i === 0 && !l.inner) {
+    } else if (i === front && !l.inner) {
       if (s.len > 15 && rng.next() < (main ? 0.4 : 0.22)) {
         const from = rng.range(1.5, s.len - 9.5);
         features.push({ kind: 'spati', from, to: from + 7 });
         const door = from > 5 ? 1.6 : from + 8.5;
         if (door + 1.4 < s.len - 0.5) features.push({ kind: 'door', from: door, to: door + 1.4 });
-      } else {
-        const d = rng.range(2, s.len - 3.5);
-        features.push({ kind: 'door', from: d, to: d + 1.4 });
+      } else if (!niche) {
+        if (s.len < 5.5) centered();
+        else {
+          const d = rng.range(2, s.len - 3.5);
+          features.push({ kind: 'door', from: d, to: d + 1.4 });
+        }
       }
-    } else if (i === 2 && rng.next() < 0.5) {
+    } else if (!l.inner && s.face === 0 && s.back >= 1 && s.len >= 2) centered();
+    else if (!l.inner && s.face === 4 && s.len > 2.4 && rng.next() < 0.6) centered();
+    else if (s.face === 2 && rng.next() < 0.5) {
       const d = rng.range(1.5, s.len - 3);
       features.push({ kind: 'door', from: d, to: d + 1.4 });
     }
     const f: Facade = {
       id: `lot${l.seed}-${i}`, style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1],
-      depth: Math.min(l.w, l.d) / 2, floors: l.floors, tone, features, seed: (l.seed + i * 13) % 997,
+      // Shaped blocks cast their shadow from the footprint boxes below.
+      depth: l.shape ? 0.3 : Math.min(l.w, l.d) / 2, floors: l.floors, tone, features, seed: (l.seed + i * 13) % 997,
       // M15 Blockrand: the side walls touch the neighbours or stand bare over a Baulücke.
-      ...(l.block && (i === 1 || i === 3) ? { blank: true } : {}),
+      ...(l.block && (s.face === 1 || s.face === 3) ? { blank: true } : {}),
     };
-    buildAltbau(b, f, { balconies: l.kind !== 'platte' });
-    if (l.kind === 'platte' && (i === 0 || i === 2)) b.solid.excludeOccluder(() => loggias(b, f, l.seed * 3 + i));
+    buildAltbau(b, f, { balconies: l.kind !== 'platte' && s.len > 3 });
+    if (l.kind === 'platte' && (s.face === 0 || s.face === 2)) b.solid.excludeOccluder(() => loggias(b, f, l.seed * 3 + i));
     // Organic light at height (Johannes 2026-11-16): some street doors get front steps and a wall
     // lamp that throws a pool onto the sidewalk; warm, cold LED or (rarely) teal.
-    const door = i === 0 && !l.inner ? features.find((g) => g.kind === 'door') : undefined;
+    const door = (s.face === 0 || s.face === 4) && !l.inner ? features.find((g) => g.kind === 'door') : undefined;
     if (door) {
       const run = new Run(f);
       const mid = (door.from + door.to) / 2;
       if (rng.next() < 0.5) {
-        b.box(b.mm.cobbles, run.mat(mid, 0.1, 0.45), 2.0, 0.2, 0.9, [0.85, 0.82, 0.78]);
-        b.box(b.mm.cobbles, run.mat(mid, 0.27, 0.25), 1.7, 0.16, 0.5, [0.9, 0.87, 0.83]);
+        b.box(b.mm.cobbles, run.mat(mid, 0.1, 0.45), Math.min(2.0, s.len), 0.2, 0.9, [0.85, 0.82, 0.78]);
+        b.box(b.mm.cobbles, run.mat(mid, 0.27, 0.25), Math.min(1.7, s.len), 0.16, 0.5, [0.9, 0.87, 0.83]);
       }
       if (rng.next() < 0.45) {
         const roll = rng.next();
@@ -1310,11 +1557,23 @@ export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m:
   // Flat tar roof with chimneys.
   const H = GROUND_H + l.floors * FLOOR_H + PARAPET;
   const m4 = new Matrix4().makeRotationY(l.rot).setPosition(l.x, H - 0.05, l.z);
-  b.box(b.mm.tar, m4, l.w - 0.1, 0.1, l.d - 0.1, [0.6, 0.6, 0.6]);
-  for (let i = 0; i < 2 + rng.int(3); i++) {
-    const cm = m4.clone().multiply(new Matrix4().setPosition(rng.range(-l.w / 2 + 1, l.w / 2 - 1), 0.7, rng.range(-l.d / 2 + 1, l.d / 2 - 1)));
-    b.box(b.mm.brick, cm, 0.8, 1.4, 0.6, [0.8, 0.75, 0.7]);
+  const loc = lotOutlineLocal(l);
+  if (!l.shape) b.box(b.mm.tar, m4, l.w - 0.1, 0.1, l.d - 0.1, [0.6, 0.6, 0.6]);
+  else {
+    b.geo(b.mm.tar, capGeo(loc, 0.03), m4, [0.6, 0.6, 0.6]);
+    for (const q of lotBoxesLocal(l)) b.shadowBox(new Matrix4().makeRotationY(l.rot + q.turn).setPosition(...lotXZ(l, q.a, H / 2, q.b)), q.ha * 2, H, q.hb * 2);
   }
+  for (let i = 0; i < 2 + rng.int(3); i++) {
+    const ca = rng.range(-l.w / 2 + 1, l.w / 2 - 1), cb = rng.range(-l.d / 2 + 1, l.d / 2 - 1);
+    if (l.shape && !(inPoly(loc, ca, cb) && polyEdgeDist(loc, ca, cb) > 0.6)) continue;
+    b.box(b.mm.brick, m4.clone().multiply(new Matrix4().setPosition(ca, 0.7, cb)), 0.8, 1.4, 0.6, [0.8, 0.75, 0.7]);
+  }
+}
+
+/** World position [x, y, z] of a point in the lot frame. */
+function lotXZ(l: LotFrame, a: number, y: number, b: number): [number, number, number] {
+  const [x, z] = lotToWorld(l, a, b);
+  return [x, y, z];
 }
 
 /**
@@ -1434,6 +1693,108 @@ function buildHouse(b: ChunkBuilder, l: Lot): void {
   b.geo(b.mm.roof, gableRoof(l.w, l.d, ridge), m4, [rng.range(0.75, 1), 0.85, 0.8]);
   b.geo(plaster, gableEnds(l.w, l.d, ridge), m4);
   b.shadowBox(new Matrix4().makeRotationY(l.rot).setPosition(l.x, h / 2, l.z), l.w, h, l.d);
+}
+
+// ---------------------------------------------------------------- beyond the closed edge (M11d step 4)
+
+/**
+ * A building mass in the row behind the edge (render only, in the fog): plaster body, a window grid
+ * on the face toward the map (2 triangles per window, few lit), cornice, tar roof with chimneys or a
+ * gable roof; a quarter burnt out and roofless. About 150-250 triangles.
+ */
+function buildBackdropBlock(b: ChunkBuilder, k: EdgeBlock): void {
+  const rng = new Rng(k.seed);
+  const H = GROUND_H + k.floors * FLOOR_H + PARAPET;
+  const plaster = b.mm.plaster[rng.pick(TONES)] as LitMaterial;
+  const burnt = rng.next() < 0.25;
+  const tint: RGB = burnt ? [0.35, 0.34, 0.33] : [0.7, 0.7, 0.68];
+  const F = new Matrix4().makeRotationY(k.rot).setPosition(k.x, 0, k.z);
+  const part = (x: number, y: number, z: number): Matrix4 => F.clone().multiply(new Matrix4().makeTranslation(x, y, z));
+  b.box(plaster, part(0, H / 2, 0), k.w, H, k.d, tint);
+  // Face toward the map: local +Z.
+  const c = Math.cos(k.rot), sn = Math.sin(k.rot);
+  const pt = (x: number, y: number): Vector3 => new Vector3(k.x + c * x + sn * (k.d / 2 + 0.02), y, k.z - sn * x + c * (k.d / 2 + 0.02));
+  const bays = Math.max(1, Math.floor(k.w / 2.7));
+  for (let i = 0; i < bays; i++) {
+    const x = -k.w / 2 + (i + 0.5) * (k.w / bays);
+    for (let f = -1; f < k.floors; f++) {
+      const y = f < 0 ? 1.55 : GROUND_H + f * FLOOR_H + 0.95;
+      const h = f < 0 ? 1.75 : 1.95;
+      const lit = !burnt && rng.next() < 0.05;
+      const cell = lit ? rng.int(4) : 4 + rng.int(4);
+      const cu = (cell % 4) / 4, cv = cell < 4 ? 0.5 : 0;
+      b.solid.of(b.mm.windows).quad([pt(x - 0.57, y), pt(x + 0.57, y), pt(x + 0.57, y + h), pt(x - 0.57, y + h)], [cu, cv, cu + 0.25, cv + 0.5], burnt ? [[0.4, 0.4, 0.4]] : [[1, 1, 1]]);
+    }
+  }
+  b.box(b.mm.stucco, part(0, GROUND_H, k.d / 2 + 0.08), k.w, 0.3, 0.2, [0.6, 0.6, 0.58]);
+  b.box(b.mm.stucco, part(0, H - 0.3, k.d / 2 + 0.12), k.w, 0.4, 0.3, [0.6, 0.6, 0.58]);
+  if (!burnt) {
+    if (rng.next() < 0.4) {
+      const ridge = Math.min(k.w, k.d) * 0.32;
+      b.geo(b.mm.roof, gableRoof(k.w, k.d, ridge), part(0, H, 0), [rng.range(0.55, 0.75), 0.6, 0.58]);
+      b.geo(plaster, gableEnds(k.w, k.d, ridge), part(0, H, 0), tint);
+    } else b.box(b.mm.tar, part(0, H + 0.03, 0), k.w - 0.1, 0.1, k.d - 0.1, [0.5, 0.5, 0.5]);
+    for (let i = 0; i < 2 + rng.int(2); i++) b.box(b.mm.brick, part(rng.range(-k.w / 2 + 1, k.w / 2 - 1), H + 0.8, rng.range(-k.d / 2 + 1, k.d / 2 - 1)), 0.8, 1.6, 0.6, [0.6, 0.55, 0.5]);
+  }
+  b.shadowBox(part(0, H / 2, 0), k.w, H, k.d);
+}
+
+/**
+ * Ground beyond the bound along every edge run that is not water, 55 m out, so the camera sees
+ * land under the backdrop instead of the water plane. The north and south strips also run past the
+ * corners. Same ground material and blend as the map (one draw call per side). It starts 0.75 m
+ * inside the bound, 3 cm under the map ground, so no crack shows at the seam.
+ */
+function buildEdgeSkirt(m: MapDef, mats: MapMats, runs: EdgeRun[], group: Group): void {
+  const RINGS = [0.75, 0, -3, -8, -16, -30, -55];
+  const sides = new Map<number, EdgeRun[]>();
+  for (const r of runs) if (r.kind !== 'water') sides.set(r.side.i, [...(sides.get(r.side.i) ?? []), r]);
+  for (const list of sides.values()) {
+    const pos: number[] = [], col: number[] = [], uv: number[] = [], splat: number[] = [], idx: number[] = [];
+    for (const r of list) {
+      const s = r.side;
+      const ns = s.i % 2 === 0;
+      const t0 = ns && r.t0 === 0 ? -55 : r.t0;
+      const t1 = ns && r.t1 >= s.len - 1e-6 ? s.len + 55 : r.t1;
+      const ts: number[] = [];
+      for (let t = t0; t < t1; t += 3) ts.push(t);
+      ts.push(t1);
+      const first = pos.length / 3;
+      for (const t of ts) {
+        const tc = Math.max(0, Math.min(s.len, t));
+        const [ix, iz] = sidePt(s, tc, 1.5);
+        const h0 = heightAt(m, ...sidePt(s, tc, 0)) - 0.03;
+        const sp = groundSplat(m, ix, iz, false);
+        const tint = GROUND_TINT[areaAt(m, ix, iz)?.ground ?? m.defaultGround];
+        for (const d of RINGS) {
+          const [x, z] = sidePt(s, t, d);
+          const fade = d >= 0 ? 1 : Math.max(0, 1 + d / 12);
+          pos.push(x, h0 * fade - 0.03 + (d < 0 ? d * 0.004 : 0), z);
+          const k = (0.82 + 0.3 * (0.5 + 0.5 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2))) * (d >= 0 ? 1 : Math.max(0.55, 1 + d / 60));
+          col.push(tint[0] * k, tint[1] * k, tint[2] * k);
+          uv.push(x / 5, z / 5);
+          splat.push(...sp);
+        }
+      }
+      const R = RINGS.length;
+      for (let i = 0; i < ts.length - 1; i++) for (let j = 0; j < R - 1; j++) {
+        const a = first + i * R + j, b2 = a + R;
+        // Sides run clockwise with the map on the left, so this winding faces up.
+        idx.push(a, b2, a + 1, b2, b2 + 1, a + 1);
+      }
+    }
+    if (!idx.length) continue;
+    const g = new BufferGeometry();
+    g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
+    g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
+    g.setAttribute('splat', new BufferAttribute(new Float32Array(splat), 4));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    const mesh = new Mesh(g, mats.ground);
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
 }
 
 // ---------------------------------------------------------------- trees
@@ -1750,145 +2111,6 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
   up.box(M.rust, lm(l, 2.5, H + 0.6, -1.5), 1.2, 0.7, 0.9, [0.8, 0.8, 0.8]);
 }
 
-function buildLandmark(b: ChunkBuilder, l: Landmark): void {
-  const M = b.mm;
-  const frame = { x: l.x, z: l.z, rot: l.rot };
-  switch (l.kind) {
-    case 'rathaus': {
-      // Red brick, neo-gothic: two storeys, stepped gables, tall corner tower with spire and clock.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      const h = 12;
-      walls(b, { ...frame, w, d }, M.brick, h, [1.4, 5.2, 8.6], 1906, 0.35, 2.6);
-      b.box(M.stucco, lm(l, 0, h + 0.2, 0), w + 0.4, 0.4, d + 0.4, [0.8, 0.7, 0.6]);
-      b.geo(M.roof, gableRoof(d, w, 6), lm(l, 0, h + 0.4, 0, Math.PI / 2), [0.55, 0.6, 0.62]);
-      for (const x of [-w / 4, w / 4]) steppedGable(b, l, x, h, d / 2, 6);
-      steppedGable(b, l, 0, h, d / 2, 8);
-      // Tower at the front left corner.
-      const tx = -w / 2 + 3;
-      const tz = d / 2 - 3;
-      b.box(M.brick, lm(l, tx, 12.5, tz), 6.4, 25, 6.4, [0.95, 0.72, 0.64]);
-      b.shadowBox(lm(l, tx, 12.5, tz), 6.4, 25, 6.4);
-      b.box(M.stucco, lm(l, tx, 25.2, tz), 7, 0.5, 7, [0.8, 0.7, 0.6]);
-      b.geo(M.roof, new ConeGeometry(4.4, 11, 4), lm(l, tx, 31, tz, Math.PI / 4), [0.45, 0.55, 0.55]);
-      for (const ry of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
-        const cm = lm(l, tx, 21, tz, ry).multiply(new Matrix4().setPosition(0, 0, 3.25));
-        b.geo(M.lampGlass, new CircleGeometry(1.3, 20), cm);
-      }
-      // Arched portal and lamps on the front.
-      b.box(M.stucco, lm(l, 2, 2, d / 2 + 0.2), 4.2, 4, 0.5, [0.85, 0.75, 0.65]);
-      b.box(M.dark, lm(l, 2, 1.7, d / 2 + 0.3), 2.6, 3.2, 0.5);
-      for (const x of [-1, 5]) b.light(lp(l, x, 3.2, d / 2 + 1.2), 0xffb060, 16, 11, 0.1, 3.5);
-      b.shadowBox(lm(l, 0, h / 2, 0), w, h, d);
-      break;
-    }
-    case 'schloss': {
-      // Baroque palace: three storeys of ochre plaster, red hip roof, a projecting center with pediment.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      const h = 12;
-      const plaster = M.plaster.ochre as LitMaterial;
-      walls(b, { ...frame, w, d }, plaster, h, [1.4, 5.0, 8.6], 1690, 0.2, 2.4);
-      b.box(M.stucco, lm(l, 0, h, 0), w + 0.5, 0.5, d + 0.5);
-      b.geo(M.roof, gableRoof(d, w, 5.5), lm(l, 0, h + 0.25, 0, Math.PI / 2));
-      b.geo(plaster, gableEnds(d, w, 5.5), lm(l, 0, h + 0.25, 0, Math.PI / 2));
-      b.box(plaster, lm(l, 0, h / 2 + 0.5, d / 2 + 0.6), 5, h + 1, 1.2);
-      b.box(M.stucco, lm(l, 0, h + 1.6, d / 2 + 0.6), 5.6, 2.4, 1.3, [0.95, 0.9, 0.82]);
-      b.light(lp(l, 0, 3, d / 2 + 2.5), 0xffc070, 12, 10, 0.05, 3);
-      b.shadowBox(lm(l, 0, h / 2, 0), w, h, d);
-      break;
-    }
-    case 'kirche': {
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      walls(b, { ...frame, w, d }, M.brick, 9, [3.5], 1841, 0.4, 3);
-      b.geo(M.roof, gableRoof(d, w, 5), lm(l, 0, 9, 0, Math.PI / 2), [0.6, 0.65, 0.6]);
-      b.geo(M.brick, gableEnds(d, w, 5), lm(l, 0, 9, 0, Math.PI / 2));
-      b.box(M.brick, lm(l, 0, 9, d / 2 + 2), 4.5, 18, 4.5, [0.9, 0.7, 0.62]);
-      b.geo(M.roof, new ConeGeometry(3.2, 9, 8), lm(l, 0, 22.5, d / 2 + 2), [0.4, 0.55, 0.5]);
-      b.shadowBox(lm(l, 0, 9, d / 2 + 2), 4.5, 18, 4.5);
-      break;
-    }
-    case 'sbahnhof': {
-      // Brick station hall on the embankment, platform canopy, green S sign.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      walls(b, { ...frame, w, d }, M.brick, 7, [1.4, 4.2], 1882, 0.5, 3);
-      b.box(M.tar, lm(l, 0, 7.2, 0), w + 1, 0.4, d + 1, [0.5, 0.5, 0.5]);
-      for (let x = -w / 2 - 20; x <= w / 2 + 20; x += 6) {
-        b.box(M.iron, lm(l, x, 2.4, -d / 2 - 3), 0.25, 4.8, 0.25);
-      }
-      b.box(M.rust, lm(l, 0, 4.9, -d / 2 - 3), w + 44, 0.25, 6);
-      b.geo(M.greenSign, new CylinderGeometry(1.5, 1.5, 0.3, 24), lm(l, 0, 8.6, d / 2 + 0.3).multiply(new Matrix4().makeRotationX(Math.PI / 2)));
-      b.light(lp(l, 0, 6, d / 2 + 2), 0x9dffb0, 14, 12, 0, 4);
-      b.box(M.door, lm(l, 0, 1.5, d / 2 + 0.05), 4, 3, 0.2);
-      b.shadowBox(lm(l, 0, 3.5, 0), w, 7, d);
-      break;
-    }
-    case 'forum': {
-      // Shopping center: concrete box with a dead glass front and a flickering sign.
-      const w = l.hx * 2;
-      const d = l.hz * 2;
-      b.box(M.concrete, lm(l, 0, 5, 0), w, 10, d);
-      b.box(M.glass, lm(l, 0, 3, d / 2 + 0.1), w - 4, 5.4, 0.2);
-      b.geo(M.forumSign, new PlaneGeometry(12, 2.25), lm(l, 0, 8.4, d / 2 + 0.12));
-      b.light(lp(l, 0, 6, d / 2 + 3), 0xff9a4a, 14, 14, 0.6, 5);
-      b.shadowBox(lm(l, 0, 5, 0), w, 10, d);
-      break;
-    }
-    case 'mueggelturm': {
-      // GDR viewing tower: slim concrete shaft, glazed top box, flat roof.
-      b.box(M.concrete, lm(l, 0, 14, 0), 4.2, 28, 4.2);
-      b.box(M.concrete, lm(l, 0, 29.5, 0), 7.5, 3, 7.5);
-      b.box(M.windows, lm(l, 0, 29.6, 0), 7.6, 1.6, 7.6);
-      b.box(M.concrete, lm(l, 0, 31.2, 0), 8.5, 0.4, 8.5);
-      b.box(M.concrete, lm(l, 0, 1.8, 6), 12, 3.6, 6);
-      b.light(lp(l, 0, 3, 10), 0xffb060, 14, 12, 0.2, 4);
-      b.shadowBox(lm(l, 0, 14, 0), 4.2, 28, 4.2);
-      break;
-    }
-    case 'riesenrad': {
-      // The Spreepark wheel: rusty rim, spokes, gondolas, A-frame legs.
-      const R = 17;
-      const hub = R + 3;
-      const rim = new TorusGeometry(R, 0.35, 6, 48);
-      b.geo(M.rust, rim, lm(l, 0, hub, -0.6));
-      b.geo(M.rust, rim, lm(l, 0, hub, 0.6));
-      for (let i = 0; i < 16; i++) {
-        const a = (i / 16) * Math.PI * 2;
-        const sm = lm(l, 0, hub, 0).multiply(new Matrix4().makeRotationZ(a)).multiply(new Matrix4().setPosition(0, R / 2, 0));
-        b.box(M.rust, sm, 0.15, R, 0.15);
-        const gx = Math.sin(a) * R;
-        const gy = hub + Math.cos(a) * R;
-        b.box(M.vanSide, lm(l, gx, gy - 1.3, 0), 1.5, 1.6, 1.6);
-      }
-      for (const z of [-2.5, 2.5]) {
-        for (const x of [-1, 1]) {
-          const leg = lm(l, x * 4.5, hub / 2, z).multiply(new Matrix4().makeRotationZ(x * -0.22));
-          b.box(M.rust, leg, 0.6, hub + 1, 0.6);
-        }
-      }
-      b.light(lp(l, 0, 4, 4), 0xff8a50, 12, 12, 0.5, 4);
-      b.shadowBox(lm(l, 0, hub, 0), R * 2, R * 2, 1.2);
-      break;
-    }
-    case 'dino': {
-      // Toppled amusement park dinosaur: mossy concrete body, long neck and tail.
-      const s = 1.6;
-      const body = new SphereGeometry(1, 12, 8);
-      b.geo(M.mossy, body, lm(l, 0, 2.2 * s, 0).multiply(tmpScale.makeScale(1.6 * s, 1.2 * s, 2.6 * s)));
-      b.geo(M.mossy, new CylinderGeometry(0.45 * s, 0.8 * s, 4 * s, 10), lm(l, 0, 4.3 * s, 2.8 * s).multiply(new Matrix4().makeRotationX(0.7)));
-      b.geo(M.mossy, boxGeo(1 * s, 0.9 * s, 1.8 * s, 0.5), lm(l, 0, 5.8 * s, 4.6 * s));
-      b.geo(M.mossy, new ConeGeometry(0.9 * s, 5 * s, 10), lm(l, 0, 1.6 * s, -4.4 * s).multiply(new Matrix4().makeRotationX(-1.35)));
-      for (const [x, z] of [[-1, 1.2], [1, 1.2], [-1, -1.2], [1, -1.2]]) {
-        b.geo(M.mossy, new CylinderGeometry(0.4 * s, 0.5 * s, 2 * s, 8), lm(l, (x as number) * 0.9 * s, 1 * s, (z as number) * s));
-      }
-      b.shadowBox(lm(l, 0, 2.5 * s, 0), 3 * s, 4 * s, 7 * s);
-      break;
-    }
-  }
-}
-
 // ---------------------------------------------------------------- assembly
 
 export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean; cut?: 'off' | number } = {}): World {
@@ -1917,6 +2139,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildGround(m, mats, group);
   buildStreets(m, mats, chunkOf);
   buildQuays(m, mats, chunkOf);
+  buildBoats(m, mats, chunkOf);
   buildScatter(m, lots, mats, chunkOf);
   buildGreenery(m, lots, props, chunkOf);
   const boats: Array<{ lane: FerryLane; group: Group }> = [];
@@ -1937,7 +2160,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
       if (l.wing) {
         // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
-        const wing = { ...l, ...l.wing, wing: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
+        const wing = { ...l, ...l.wing, wing: undefined, shape: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
         if (l.ruin) b.on(y0, () => buildRuin(b, wing));
         else if (l.kind === 'house') b.on(y0, () => buildHouse(b, wing));
         else b.on(y0, () => buildAltbauLot(b, wing, m));
@@ -1997,13 +2220,27 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   if (m.tunnel) buildTunnel(m, mats, chunkOf);
   if (m.rail) {
     const r = m.rail;
-    for (let x = r.minX; x < r.maxX; x += 40) {
+    // The embankment runs on out of the map (closed edge, M11d step 4).
+    for (let x = r.minX - 40; x < r.maxX + 40; x += 40) {
       const cb = chunkOf(x + 20, r.z);
       cb.box(mats.stucco, new Matrix4().setPosition(x + 20, 0.9, r.z), 40, 1.8, 8, [0.45, 0.42, 0.4]);
       for (const z of [-1.5, 1.5]) cb.box(mats.iron, new Matrix4().setPosition(x + 20, 1.9, r.z + z), 40, 0.15, 0.12);
     }
   }
-  buildTrees(m, lots, mats, chunkKey, chunkOf, group);
+  // M11d step 4: beyond the closed edge, building masses and tree rows (render only) on a ground skirt.
+  const edge = m.tunnel ? null : edgeRuns(m);
+  const backdrop = edge ? edgeBackdrop(m, edge) : { blocks: [], trees: [] };
+  if (edge) buildEdgeSkirt(m, mats, edge, group);
+  for (const k of backdrop.blocks) {
+    const b = chunkOf(k.x, k.z);
+    if (k.kind === 'house') b.on(0, () => buildHouse(b, { kind: 'house', x: k.x, z: k.z, rot: k.rot, w: k.w, d: k.d, floors: k.floors, seed: k.seed }));
+    else buildBackdropBlock(b, k);
+  }
+  for (const l of backdrop.trees) if (l.jungle) {
+    const b = chunkOf(l.x, l.z);
+    b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
+  }
+  buildTrees(m, [...lots, ...backdrop.trees], mats, chunkKey, chunkOf, group);
 
   const spots: LightSpot[] = [];
   const caster = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
@@ -2111,6 +2348,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     lights: [],
     fires,
     update(time: number): void {
+      mats.water.normalMap?.offset.set(time * 0.012, time * 0.007);
       for (const slot of pool) {
         const s = slot.spot;
         slot.weight = Math.min(1, slot.weight + (s ? 0.05 : -0.08));

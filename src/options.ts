@@ -25,6 +25,8 @@ export interface Options {
   telemetry: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
+  /** M11d landmark reveal shot: on in normal play, off for debug starts and automated browsers unless ?reveal. */
+  reveal: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
   /** ?shadows=boxes: map chunk meshes cast no shadow (A/B test on the tablet; default off). */
@@ -114,6 +116,7 @@ export function readOptions(): Options {
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     telemetry: stored.telemetry ?? true,
     autostart: q.has('autostart'),
+    reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),
     boxShadows: q.get('shadows') === 'boxes',
     cut: parseCut(q.get('cut')),

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT } from '../sim/types';
 import { koepenickMap } from './koepenick';
-import { generateLots, heightAt, mapLevel } from './map';
+import { BED_Y, WATER_Y, generateLots, heightAt, isQuay, isWater, mapLevel, streetDist } from './map';
 
 const m = koepenickMap(1);
 const level = mapLevel(m, generateLots(m));
@@ -60,4 +60,25 @@ describe('heights', () => {
     // Builds a whole map at another scale and walks every stair: slow on small CI machines.
     }, 20000);
   }
+});
+
+describe('M11d banks', () => {
+  const near = (x: number, z: number): boolean => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => isWater(m, x + dx!, z + dz!));
+  it('natural banks slope down to the water, quays and streets stay at street level', () => {
+    const natural: number[] = [];
+    const quay: number[] = [];
+    for (let x = m.bounds.minX + 4; x < m.bounds.maxX - 4; x += 2) {
+      for (let z = m.bounds.minZ + 4; z < m.bounds.maxZ - 4; z += 2) {
+        if (isWater(m, x, z) || !near(x, z)) continue;
+        if (isQuay(m, x, z)) quay.push(heightAt(m, x, z));
+        else if (streetDist(m, x, z).d > 8 && !m.bridges.some((b) => Math.hypot(x - b.x, z - b.z) < b.len / 2 + 8)) natural.push(heightAt(m, x, z));
+      }
+    }
+    natural.sort((a, b) => a - b);
+    expect(natural.length).toBeGreaterThan(50);
+    expect(natural[Math.floor(natural.length / 2)]!).toBeLessThan(-0.3);
+    expect(Math.min(...quay)).toBeGreaterThanOrEqual(0);
+    expect(WATER_Y).toBeLessThan(-1.4);
+    expect(BED_Y).toBeLessThan(WATER_Y);
+  });
 });

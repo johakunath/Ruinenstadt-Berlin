@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { xhainMap } from './xhain';
-import { generateLots, generateProps, isWater, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, streetDist, type MapDef } from './map';
+import { EDGE_FRONT, propCollider } from './courtyard';
+import { barrierDist, inRailYard, generateLots, generateProps, isWater, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, streetDist, type MapDef } from './map';
 import type { Level } from '../sim/level';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT, type SimEvent } from '../sim/types';
@@ -126,15 +127,18 @@ describe('Xhain map (M15, concept B)', () => {
     expect(empty / n).toBeLessThan(0.1);
   });
 
-  it('no invisible walls: land at the map edge has a fence or roadblock', () => {
-    const m = xhainMap(1);
-    const edge = generateProps(m, generateLots(m)).filter((p) => p.kind === 'bauzaun' || p.kind === 'barrier');
-    const B = m.bounds, pts: Array<[number, number]> = [];
-    for (let x = B.minX + 3; x < B.maxX - 3; x += 2) pts.push([x, B.minZ + 1], [x, B.maxZ - 1]);
-    for (let z = B.minZ + 3; z < B.maxZ - 3; z += 2) pts.push([B.minX + 1, z], [B.maxX - 1, z]);
-    for (const [x, z] of pts) {
-      if (isWater(m, x, z) && !onBridge(m, x, z)) continue;
-      expect(edge.some((p) => Math.hypot(p.x - x, p.z - z) < 2.2), `${x},${z}`).toBe(true);
+  it('no invisible walls: land at the map edge is closed by a visible front (M11d edge), or by the Wall or the track field', () => {
+    for (const scale of [1, 1.3]) {
+      const m = xhainMap(scale);
+      const props = generateProps(m, generateLots(m));
+      const fronts = props.filter((p) => EDGE_FRONT[p.kind] !== undefined || p.kind === 'fence').map((p) => propCollider(p)!);
+      const B = m.bounds, pts: Array<[number, number]> = [];
+      for (let x = B.minX + 0.5; x < B.maxX; x += 1) pts.push([x, B.minZ + 0.5], [x, B.maxZ - 0.5]);
+      for (let z = B.minZ + 0.5; z < B.maxZ; z += 1) pts.push([B.minX + 0.5, z], [B.maxX - 0.5, z]);
+      for (const [x, z] of pts) {
+        if ((isWater(m, x, z) && !onBridge(m, x, z)) || inRailYard(m, x, z, 1) || barrierDist(m, x, z) <= 0.5) continue;
+        expect(fronts.some((c) => colliderDistance(c, x, z) <= 0), `${scale}: ${x.toFixed(1)},${z.toFixed(1)}`).toBe(true);
+      }
     }
   });
 

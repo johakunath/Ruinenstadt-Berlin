@@ -4,10 +4,11 @@ import { FX_LAYER } from './layers';
 import type { Bounds } from '../sim/flowfield';
 import { clamp } from '../sim/math';
 import { VIEW } from '../data/cut';
+import type { RevealPose } from './reveal';
 
 const PITCH = VIEW.pitch;
 const DISTANCE = 18.5;
-const FOV = 36;
+export const FOV = 36;
 /** The view centers a little north of the hero so more of the facades shows. */
 const FRAME_Z = -1.4;
 const LOOK_AHEAD = 0.22;
@@ -20,6 +21,7 @@ const ZOOMS = [0.78, 1, 1.28];
 export class FollowCamera {
   readonly camera = new PerspectiveCamera(FOV, 16 / 9, 1, 120);
   private readonly target = new Vector3();
+  private readonly look = new Vector3();
   private readonly ahead = new Vector3();
   private readonly kick = new Vector3();
   private readonly kickVel = new Vector3();
@@ -74,7 +76,7 @@ export class FollowCamera {
   }
 
   /** `y` is the ground height under the hero; the view eases up and down hills with it. */
-  update(x: number, z: number, vx: number, vz: number, dt: number, y = 0): void {
+  update(x: number, z: number, vx: number, vz: number, dt: number, y = 0, reveal: RevealPose | null = null): void {
     this.time += dt;
     const k = 1 - Math.exp(-FOLLOW * dt);
     const ax = clamp(vx * LOOK_AHEAD, -LOOK_AHEAD_MAX, LOOK_AHEAD_MAX);
@@ -115,7 +117,13 @@ export class FollowCamera {
     this.zoomNow += (ZOOMS[this.zoom]! - this.zoomNow) * Math.min(1, dt * 8);
     const dist = this.distance * this.zoomNow;
     this.camera.position.set(lookX, lookY + Math.sin(this.pitch) * dist, lookZ + Math.cos(this.pitch) * dist);
-    this.camera.lookAt(lookX, lookY, lookZ);
+    this.look.set(lookX, lookY, lookZ);
+    // M11d landmark reveal: blend toward the reveal view.
+    if (reveal && reveal.weight > 0) {
+      this.camera.position.lerp(reveal.pos, reveal.weight);
+      this.look.lerp(reveal.look, reveal.weight);
+    }
+    this.camera.lookAt(this.look);
   }
 
   /** World point on the ground under a screen position (normalized device coordinates). */

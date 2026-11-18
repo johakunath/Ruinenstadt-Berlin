@@ -50,4 +50,35 @@ Johannes walks zone 0 and the street reads as a Berlin street.
 
 ## Handover (Opus 5.5, 2026-11-17)
 - Step 2 for the two decided streets: `Street.profile` (`haupt`, `allee`) and `sidewalk`. Bahnhofstraße north of the bridge 14 m (lane dashes beside the tram, parking lines), Spreeufer 12 m with tram on a raised grass track and low curbs. Paved 3 m sidewalks, trees in pits every 9 m (not in fight circles or on the station forecourt), buildings behind the sidewalk. The Dammbrücke part keeps 7.5 m (bridge deck). Screens: `docs/proof/m11d/`.
-- Open: step 0 (water level), 3 (non-rectangular footprints), 4 (closed edge), 5 (hand-built zone 0), 6 (landmarks); other streets stay on the old profile until Johannes picks for them.
+- Other streets stay on the old profile until Johannes picks for them.
+
+## Handover step 6, landmarks (Opus 5.5, 2026-11-17)
+- Built in `src/render/landmarks.ts` from Wikimedia Commons photos (2D had only the Rathaus colours, reused): Rathaus (brick wings around a courtyard, slate and tile roofs, pinnacled show gables, corner tower with clocks and slate helm, stair turret, portal with green lanterns, Hauptmann statue, Ratskeller), Schloss (cream, ochre bays, risalit with segmental pediment, hip roof with flat top, balustrade, dormers, ball trees), St. Laurentius (brick nave, tower with clock and belfry, slender slate spire, apse), S-Bahnhof (three arches, clock, lanterns, S roundel, lettering, shop wings, platform canopy), Müggelturm (white storey bands, open deck, flat roof, pavilion, beer garden), Riesenrad (faded red, 40 gondolas, tension spokes, two A-frames, broken gondolas, booth), dinos (sauropod on its back, triceratops on its side, broken T-Rex).
+- Data: Schloss 23 × 11 m along the island, Müggelturm footprint covers the pavilion, Riesenrad covers its legs (clearing 10 m), dinos now block (`Landmark.variant`).
+- Camera finding: at 18.5 m / 44° the view shows about 6 m of height at the hero, so tower tops and the wheel never show in normal play. Cues sit low (portal, statue, arches, signs, roofs from above). Proposal for Johannes: a short camera pull-back when a landmark first comes into view.
+- Check tool: `node tools/landmark-sheet.mjs out.png "kind=rathaus&views=quarter,front,game,top"`. Proof: `docs/proof/m11d/landmarks-day.jpg`, `landmarks-dinos.jpg`.
+- Cost: merged per material per chunk; five new materials (slate, clock, S roundel, station lettering, Ratskeller), a few draw calls where they are in view. Not measured on the PC.
+- Open: Johannes reviews each landmark on the phone.
+
+## Handover step 0, Forum, reveal (Opus 5.5, 2026-11-17)
+- Water 1.7 m below the street (`WATER_Y`, bed `BED_Y` in `src/data/map.ts`); quays reach the bed with a wet band; natural banks slope down over 4.5 m (relief grid, water mask, faster load than before); bridges get a stone body, piers to the bed and abutments, the ground under them is bed (Lange Brücke clipping gone); ferry hull and piers reach the water; about a dozen seeded boat wrecks (`buildBoats`). Water normal map scrolls in Qualität (one texture read on water pixels), Leistung unchanged.
+- Forum rebuilt from photos: two granite blocks, mall street under a half-shattered glass vault, footbridge, tree.
+- Reveal shot (Johannes' wish): `src/render/reveal.ts`, first time within 12 m of a landmark (also mid-fight), game paused, view from the front and above with name and hint until a tap, click, key or pad button, then back in; off for `?autostart`, `?at`, `?cam` and automated browsers unless `?reveal`.
+- Guide for the next districts: `docs/maps/landmarks.md` (also in the map-building skill); Codex texture row T5 in `docs/asset-pipeline.md`.
+
+## Handover step 3, footprints and ruins (Opus 5.5 subagent, 2026-11-17)
+- Step 3: `Lot.shape` (`LotShape` in `src/data/map.ts`), picked per street Altbau/shop from the lot seed (`pickLotShape`, the generator's stream is untouched): open courtyard (two wings joined at the back), central or two corner risalits, deep door niche, whole front set back, plain; street corners get the chamfer. All cut out of the old rectangle; colliders are one box per front piece plus a 45° box per chamfer (`lotBoxesLocal`, test: no wall without collider, no collider in the air). Render: `blockFacades` walks the outline, polygon roof cap, doors in niches, courtyard back walls and chamfers. Ruins (any footprint): wall mass in stretches (cornice / upper floor / ground floor), stepped firewall gable on a flank, chimney stacks above the breaks, a broken cross wall, mitred corners, rubble at the foot of fallen stretches. 2D had only rectangles, nothing to reuse. Screens: `docs/proof/m11d/footprints-*.jpg`.
+- Known: Node (tests) and Chromium differ in the last bit of `Math.sin`, so the seeded lot layout in the browser is not the one the tests check (e.g. lots near (92, -108) differ). Pre-existing; fix separately.
+
+## Handover step 5, hand-built zone 0 (Opus 5.5, 2026-11-17)
+- `MapDef.handLots`: authored buildings take their space before the generator fills the rest (any `Lot` field incl. `shape`, `ruin`, `wing`). Köpenick zone 0: chamfered corner blocks at Bahnhofstraße / Mahlsdorfer Straße (one burnt out), a row on the Mahlsdorfer Straße with an open courtyard and risalits, a shop and a block with a door niche on its south side. Test: off streets, sidewalks, fights, landmarks and water at scale 1 and 1.3, kept by the generator.
+- Seeded thresholds that moved with it (comments in `koepenick.test.ts`): L-wings ≥ 3, lamp gaps ≥ 20, dark street samples < 2.5 %, Spreeufer pits ≥ 5.
+- Editor decision: not needed yet. Hand lots in code plus the map SVG (`MAP_SVG=… npx vitest run src/data/map-svg.test.ts`) and a placement test were quick enough; revisit when a district needs dozens of authored blocks.
+
+## Handover step 4 (Opus 5.5, 2026-11-17)
+- Closed map edge: `edgeRuns`, `edgeProps`, `edgeBackdrop` in `src/data/map.ts` replace the construction fence and roadblocks. The bound is classified every 0.5 m (water, rail, street running out, else the style of the area 6 m inside); front pieces 4 to 10 m long stand 1.6 to 3.2 m inside (`EDGE_FRONT`, `src/data/courtyard.ts`) and draw only behind their face (`src/render/props-edge.ts`). Other generated props keep 3.8 m off the bound.
+- Beyond the bound (`src/render/map-world.ts`): ground skirt 55 m out on every non-water run, taller blocks (2 rows on the north bound), houses and tree rows, the rail embankment runs on. Nothing beyond the south bound.
+- Tests (`src/data/koepenick.test.ts`): every land point by the bound is inside a front collider, flood fill in the outer 12 m never gets closer than 1.5 m, street ends are barricaded across their width, fronts match their area, colliders start at the face, backdrop outside and dry.
+- 2D had nothing to reuse (its map clamps at the border).
+- Seen in game: the north town row (behind the rail) reads as a city that goes on; forest, jungle and hedge fronts sit at the side of the screen and read as dense growth, close to the normal forest. Köpenick's only street end (Bahnhofstraße) is hidden under the S-Bahnhof. Screens: `docs/proof/m11d/edge-*.jpg` (suburb with a debug camera, barricade at a test spot).
+- Found, not changed: the camera frame (`renderer.ts`, maxZ − 14) lets the hero walk about 7 m below the bottom of the screen along the south bound.

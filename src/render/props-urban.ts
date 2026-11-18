@@ -273,7 +273,7 @@ function pallet(b: Builder, base: Matrix4, rng: Rng): void {
 }
 
 const IVY = new PlaneGeometry(1, 1);
-function ivyPatch(b: Builder, base: Matrix4, rng: Rng, n: number, x0: number, x1: number, y0: number, y1: number, z: number, size = 0.8): void {
+export function ivyPatch(b: Builder, base: Matrix4, rng: Rng, n: number, x0: number, x1: number, y0: number, y1: number, z: number, size = 0.8): void {
   for (let i = 0; i < n; i++) {
     const g = rng.range(0.55, 1);
     const s = size * rng.range(0.7, 1.3);
@@ -281,7 +281,7 @@ function ivyPatch(b: Builder, base: Matrix4, rng: Rng, n: number, x0: number, x1
   }
 }
 
-function graffitiCell(cell: number): BufferGeometry {
+export function graffitiCell(cell: number): BufferGeometry {
   return cached(`graffiti-${cell}`, () => {
     const g = new PlaneGeometry(1, 1);
     const uv = g.getAttribute('uv');

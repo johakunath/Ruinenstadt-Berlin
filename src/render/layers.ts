@@ -8,5 +8,7 @@ export const OCCLUDER_LAYER = 3;
 export const ENEMY_LAYER = 4;
 
 export function isLargeProp(kind: PropKind): boolean {
-  return kind === 'tram' || kind === 'bus' || kind === 'van' || kind === 'car' || kind === 'rohbau' || kind === 'container';
+  return kind === 'tram' || kind === 'bus' || kind === 'van' || kind === 'car' || kind === 'rohbau' || kind === 'container'
+    // M11d closed edge: building rows, collapsed houses and street-end barricades.
+    || kind === 'brandwand' || kind === 'rubbleWall' || kind === 'barricade';
 }

@@ -12,6 +12,7 @@ import { HIT_FEEL } from '../data/combat';
 import { lerp } from '../sim/math';
 import { DT, type Sim, type SimEvent } from '../sim/types';
 import { FollowCamera } from './camera';
+import { LandmarkReveal } from './reveal';
 import { HeroView, loadCharacters, type CharacterAssets } from './characters';
 import { EnemyView } from './enemies';
 import { ENEMY_LAYER } from './layers';
@@ -45,6 +46,8 @@ export interface RendererOptions {
   boxShadows?: boolean;
   /** `?cut=off` / `?cut=<meters>`: V1 B cutaway off, or the Hinterhof cut height. */
   cut?: 'off' | number;
+  /** M11d: show each landmark once with a camera swing. */
+  reveal?: boolean;
   /** ?cam=distance,pitch for close-up checks. */
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
@@ -52,6 +55,7 @@ export interface RendererOptions {
 }
 
 const NIGHT = 0x0b1a1d;
+const FOG = 0.017;
 
 /** Small night-sky environment for reflections on metal, glass and puddles: teal above, warm lamps low down. */
 function nightEnvironment(renderer: WebGLRenderer): Texture {
@@ -84,6 +88,8 @@ export class GameRenderer {
   readonly perf = new PerfStats();
   private readonly scene = new Scene();
   private readonly cam: FollowCamera;
+  /** M11d: camera swing to a landmark the first time the hero comes near (null in the courtyard). */
+  readonly reveal: LandmarkReveal | null;
   private readonly post: Post;
   private readonly fx: Fx;
   private readonly weather: Weather;
@@ -115,12 +121,14 @@ export class GameRenderer {
     const B = opts.map?.def.bounds;
     this.cam = new FollowCamera(
       opts.cam,
-      B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 14 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
+      // The south edge front stands about 2 m inside the bound: the frame stops 5 m short so the hero stays on screen above the HUD (M11d step 4).
+      B ? { minX: B.minX + 12, maxX: B.maxX - 12, minZ: B.minZ + 6, maxZ: B.maxZ - 5 } : { minX: Y.minX + 4, maxX: Y.maxX - 4, minZ: Y.minZ + 1.5, maxZ: Y.maxZ - 4 },
     );
     const def = opts.map?.def;
+    this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks, (x, z) => groundY(x, z)) : null;
     setGround(def ? meshSurface(def.bounds.minX, def.bounds.minZ, (x, z) => heightAt(def, x, z)) : () => 0);
     this.scene.background = new Color(NIGHT);
-    this.scene.fog = new FogExp2(NIGHT, 0.017);
+    this.scene.fog = new FogExp2(NIGHT, FOG);
     this.scene.environment = nightEnvironment(renderer);
     this.scene.environmentIntensity = 0.55;
     this.scene.add(world.group);
@@ -368,10 +376,14 @@ export class GameRenderer {
     const py = groundY(px, pz);
     this.heroX = px;
     this.heroZ = pz;
-    this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py);
+    const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead', this.cam.camera.aspect) ?? null;
+    this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py, reveal);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     const shadows = this.shadowClock.tick(dt);
-    this.world.follow?.(px, pz, shadows);
+    // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
+    if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows);
+    else this.world.follow?.(px, pz, shadows);
+    (this.scene.fog as FogExp2).density = FOG * (1 - 0.7 * (reveal?.weight ?? 0));
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);
