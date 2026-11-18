@@ -7,6 +7,16 @@ Status: open (Johannes, playtest 2026-11-18). Built already in PR #57: Späti Sc
 - Tunnels after Köpenick are easy: a well-equipped hero one-shots everything with powers. Lots of enemies in little space, you just mow through them. Wanted: more variety, and some slower but stronger enemies so there is an order of play (kill the fast ones first, dodge the heavy blows, then take on the heavy ones).
 - The tablet still gets hot after about 20 minutes (see `p1-heat.md`).
 
+## Johannes' save after Köpenick and the S3 (cloud save, 2026-11-18)
+| Resource | Held | Camp need (all four sites, all level 2, all level-1 upgrades, before this PR) |
+|---|---|---|
+| Schrott | 3699 | about 2700 |
+| Stoff / Metall / Kabel / Chemie | 120 / 49 / 59 / 39 | about 30 / 25 / 25 / 10 |
+| Fleisch / Gemüse / Gewürze | 30 / 6 / 8 | meals only |
+| Item level worn | 9 to 19, bag up to 23 | |
+
+Nothing was built (the camp opens after the S3). First correction in PR #57, `ECONOMY` in `src/data/progression.ts`: Schrott × 0.7, materials × 0.5, camp Schrott prices × 1.5. Bot after it: 3/3 Köpenick campaigns, 0 deaths, Hauptmann fight 58 % of life lost. A guess, not a calibration; step 2 replaces it.
+
 ## Step 1 Bot economy (B13 and more) [Opus high]
 The bot in `src/bot/bot.ts` plays Köpenick only and does not trade. Teach it to:
 

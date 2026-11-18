@@ -1,3 +1,4 @@
+import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { createSim } from './sim';
 import { buySpatiUpgrade, SPATI_UPGRADE, spatiUpgradeCost, OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
@@ -19,7 +20,7 @@ describe('M20 build sites', () => {
     const scrap = s.inventory.scrap, metall = s.inventory.materials.metall!;
     expect(nextLevel(s, 'zeug')).toMatchObject({ level: 1, ok: true });
     expect(buildStation(s, 'zeug')).toEqual({ ok: true, text: 'Zeughaus gebaut' });
-    expect(s.inventory.scrap).toBe(scrap - SITE_COST.zeug!.scrap!);
+    expect(s.inventory.scrap).toBe(scrap - Math.round(SITE_COST.zeug!.scrap! * ECONOMY.campPrice));
     expect(s.inventory.materials.metall).toBe(metall - SITE_COST.zeug!.metall!);
     expect(siteLevel(s, 'zeug')).toBe(1);
     expect(buyUpgrade(s, 'dmg').ok).toBe(true);
@@ -43,7 +44,7 @@ describe('M20 build sites', () => {
 describe('M13 camp', () => {
   it('upgrades cost 2D prices and stop at the station cap', () => {
     const s = rich();
-    expect(upgradeCost(s, 'dmg')).toBe(19);
+    expect(upgradeCost(s, 'dmg')).toBe(Math.round(15 * 1.25 * ECONOMY.campPrice));
     for (let i = 0; i < 5; i++) expect(buyUpgrade(s, 'dmg').ok).toBe(true);
     expect(upgradeMax(s, 'dmg')).toBe(5);
     expect(buyUpgrade(s, 'dmg').ok).toBe(false);

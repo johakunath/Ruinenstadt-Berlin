@@ -1,3 +1,4 @@
+import { ECONOMY } from '../data/progression';
 import { describe, it, expect } from 'vitest';
 import { koepenickMap } from '../data/koepenick';
 import { generateLots, generateProps, mapLevel } from '../data/map';
@@ -181,7 +182,7 @@ describe('events', () => {
     expect(s.content.cache).toBeNull();
     expect(s.drops.filter((d) => d.content.kind === 'item')).toHaveLength(2);
     expect(s.drops.filter((d) => d.content.kind === 'material')).toHaveLength(3);
-    expect(s.inventory.scrap).toBe(scrap + CONTENT.cache.scrap);
+    expect(s.inventory.scrap).toBe(scrap + Math.round(CONTENT.cache.scrap * ECONOMY.scrap));
     const l = make();
     onLeg(l, 'cache');
     run(l, 51 * 60);
@@ -301,7 +302,7 @@ describe('events', () => {
     // Through the normal kill path.
     return import('./combat').then(({ killEnemy }) => {
       killEnemy(s, e);
-      expect(s.inventory.scrap).toBe(scrap + 4);
+      expect(s.inventory.scrap).toBe(scrap + Math.round(4 * ECONOMY.scrap));
       expect(s.drops.some((d) => d.content.kind === 'item')).toBe(true);
     });
   });
