@@ -13,7 +13,7 @@ District 4, 2089: neon future, rain, implants, Kabelghule, the club cult; boss D
 
 ## Route (B2, scale 1: about 330 × 396 m, route about 1 km between fights)
 
-Map axes as in the mockup: +x east, north up (in the data z = −north). Anchors in `docs/tasks/m15-mitte.md`.
+Map axes as in the mockup: +x east, north up (in the data z = −north). Data `src/data/mitte.ts`, tests `src/data/mitte.test.ts`, map image from the data [`mitte.svg`](mitte.svg) (regenerate: `MITTE_SVG=docs/maps/mitte.svg npx vitest run src/data/map-svg.test.ts`).
 
 | Zone | Fights (waves) | Boss | Landmarks |
 |---|---|---|---|

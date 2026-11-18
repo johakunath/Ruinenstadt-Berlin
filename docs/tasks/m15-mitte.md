@@ -7,7 +7,7 @@ Layout B2 "Vom Reichstag zum Bass" (Johannes, 2026-11-18). Concept, decisions M1
 | # | Step | Needs | Model | State |
 |---|---|---|---|---|
 | 0 | Concept, geography check, 2D inventory, plan | | Opus | done 2026-11-18 |
-| 1 | Data `src/data/mitte.ts` from the anchors below, invariant tests `src/data/mitte.test.ts` at scale 1 and 1.3 (as `xhain.test.ts`), map SVG `docs/maps/mitte.svg` shown in chat. Stand-in bosses `MITTE_BOSS_STANDIN`; `flavor: 'neon'`, district 3 | 0 | Opus high | open |
+| 1 | Data `src/data/mitte.ts` from the anchors below, invariant tests `src/data/mitte.test.ts` at scale 1 and 1.3 (as `xhain.test.ts`), map SVG `docs/maps/mitte.svg` shown in chat. Stand-in bosses `MITTE_BOSS_STANDIN`; `flavor: 'neon'`, district 3 | 0 | Opus high | done 2026-11-18 |
 | 2 | Playable blockout `?map=mitte`: wiring (`options.ts`, `ui/maps.ts`, `main.ts`, bot `mapLevelOf`), landmark massing, Spree and Landwehrkanal, Großer Stern roundabout, Neuer See | 1, PR #49 merged (it changes the same wiring files, `map.ts` landmark kinds and adds `render/sky.ts`) | Opus high | open |
 | 3 | Neon night look: three variants in game (`?look=a|b|c` or via `sky.ts`), Johannes picks. Wet ground (reflection streaks under every light, puddle mirrors), neon signs and poles below 5 m, rain with splashes and coloured streaks, cyan and magenta light colours, zone tints. State the Leistung cost | 2 | Opus high, variants first | open |
 | 4 | Landmarks from photos (`docs/maps/landmarks.md`): north (Brandenburger Tor walk-through, Pariser Platz fronts, Reichstag, Jakob-Kaiser-Haus, Lüders-Haus, Paul-Löbe-Haus, Kanzleramt, Haus der Kulturen, Siegessäule) and south (Sony Center forum with tent and `cut`, Bahntower, Kollhoff, Verkehrsturm, Leipziger Platz, Mall of Berlin, Galeries Lafayette, Philharmonie, St. Matthäus, Staatsbibliothek, Neue Nationalgalerie, stage, clinic, Mauerstücke, Checkpoint Charlie, beer garden) | 2 | Opus high | open (two sessions: north, south) |
@@ -18,7 +18,7 @@ Layout B2 "Vom Reichstag zum Bass" (Johannes, 2026-11-18). Concept, decisions M1
 | 9 | Textures: rows in `docs/asset-pipeline.md` (wet asphalt, glass curtain wall, sandstone, neon sign atlas) | 3, 4, 7 | Codex | open |
 | 10 | Screenshots (street at night, fight, each landmark), PC and Tab S9 playtest | all | Johannes | open |
 
-## Anchors for step 1 (scale 1, meters, +X east, +Z south, from mockup B2)
+## Anchors (scale 1, meters, +X east, +Z south, from mockup B2; the built positions are in `src/data/mitte.ts`)
 
 Bounds x −155 … 175, z −198 … 198. Start U Potsdamer Platz (15, 108), beside the Leipziger Platz octagon (30, 95).
 
@@ -81,3 +81,11 @@ Bosses: Türsteher → `feldwebel`, Wachdrohne → `grenzer`, mini-boss → `bra
 - Concept: three layouts from OSM data, Johannes picked B and revised it to B2 (smaller Tiergarten, Friedrichstraße, denser Regierungsviertel, larger Potsdamer Platz). Decisions M1 to M4 in `docs/maps/mitte.md`.
 - Reused from 2D: map, zones, streets and all landmark colours of `js/mitte.js`; enemy and boss numbers, rain rule, neon item flavour, palette and props from `js/data.js`, `js/update.js`, `js/combat.js`, `js/art.js`.
 - PR #49 (Alexanderplatz) is open and touches the wiring files; step 1 adds only new files plus the map SVG test, step 2 waits for #49.
+
+## Handover 2026-11-18 (step 1) [Claude · Opus high]
+
+- Data `src/data/mitte.ts` (B2, scale 1: 330 × 387 m, origin about the map centre): Spree and Landwehrkanal as quay edges, Neuer See at the west edge, the Großer Stern as a closed ring road (r 19) around a grass island with the Siegessäule, 30 streets (Blockrand on the Friedrichstadt streets, `allee` profile on Unter den Linden), 14 fights (27 waves, tier 24 to 46, the Tiergarten calm: 0.7 count, no elites), four rest stops (the beer garden is a `spati` landmark until step 4 builds it), three side passages (Checkpoint Charlie cache, Friedrichstraße Hinterhof blessing, Arkadenhof elite), 24 landmarks with new kinds (`ubahn`, `tor`, `reichstag`, `bundesbau` ×3, `kanzleramt`, `siegessaeule`, `sony`, `stage`, `bahntower`, `kollhoff`, `verkehrsturm`, `klinik`, `philharmonie`, `matthaeus`, `stabi`, `nng`, `checkpoint`, `mauerstuecke`, `lafayette`). Stand-ins: `MITTE_BOSS_STANDIN`, runners for Kabelghule, brutes for Boxenköpfe, crows for drones.
+- Engine (`src/data/map.ts`): `OPEN_PARTS` lets the Tor block only at its six pillar walls and gate houses (five walkable passages) and the Sony Center only at its six ring blocks (gaps at 30°, 90° … 330°); `MapDef.strictLots` (Mitte only, backlog B14) keeps lots out of turned landmark footprints and off side paths. Köpenick and Xhain lots are byte-identical (checked).
+- Tests `src/data/mitte.test.ts` (20): the Xhain invariants plus a flood fill that also respects colliders (Xhain's only respects water), Tor passages and pillars, Sony gaps, the ring road all round the Siegessäule, Blockrand rows, the beer garden as rest stop. `npm run check` green (571 tests).
+- Not wired yet: no `?map=mitte`, no renderer for the new kinds. Step 2 does both once PR #49 is merged.
+- Density: the Regierungsviertel east of the Reichstag and the Potsdamer Platz core use stand-in frontage (`platte`, `altbau`) and read thin in the data map; step 7 fills them with the district's own building types.
