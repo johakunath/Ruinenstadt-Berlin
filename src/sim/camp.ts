@@ -74,8 +74,12 @@ export function buySpatiUpgrade(s: Sim, id: 'dmg' | 'hp'): Result {
   setLoadout(s, s.equipment, { ...s.statContext, upgrades: { ...s.statContext.upgrades, [id]: l + 1 } });
   return ok(`${CAMP_UPGRADES.find(u => u.id === id)!.name} · Stufe ${l + 1}`);
 }
-/** 2D drillCost: endless Schrott sink, +2 % damage and life per rank. */
-export const drillCost = (s: Sim): number => 300 + 60 * (s.statContext.drill ?? 0);
+/**
+ * Drill: endless Schrott sink, +2 % damage and life per rank. Johannes 2026-11-18: each rank much dearer
+ * and the step growing fast (2D was 300 + 60 per rank): 400, 560, 780, 1100, 1540, ... ×1.4 per rank.
+ */
+export const DRILL_COST = { base: 400, growth: 1.4 } as const;
+export const drillCost = (s: Sim): number => Math.round(DRILL_COST.base * DRILL_COST.growth ** (s.statContext.drill ?? 0) / 10) * 10;
 export function buyDrill(s: Sim): Result {
   const c = drillCost(s);
   if (!stationBuilt(s, 'exer')) return no('Erst den Exerzierplatz bauen.');

@@ -1,7 +1,7 @@
 import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { createSim } from './sim';
-import { buySpatiUpgrade, SPATI_UPGRADE, spatiUpgradeCost, OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
+import { drillCost, buySpatiUpgrade, SPATI_UPGRADE, spatiUpgradeCost, OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
 import { parseSave, simFromSave, snapshot } from './save';
 
 const rich = (built = true) => { const s = createSim({ seed: 5 }); s.inventory.scrap = 5000; s.inventory.materials = { metall: 40, stoff: 40, kabel: 40, chemie: 40 }; if (built) s.inventory.camp = { stations: { zeug: 1, hack: 1, imbiss: 1, exer: 1 }, stash: [], freed: [] }; return s; };
@@ -128,5 +128,15 @@ describe('Späti upgrades (playtest 2026-11-18)', () => {
     expect(buySpatiUpgrade(s, 'dmg').ok).toBe(false);
     expect(s.statContext.upgrades.dmg).toBe(SPATI_UPGRADE.max);
     expect(buySpatiUpgrade(s, 'hp').ok).toBe(true);
+  });
+});
+
+describe('drill price (Johannes 2026-11-18)', () => {
+  it('starts at 400 and grows 40 % per rank', () => {
+    const s = rich();
+    expect(drillCost(s)).toBe(400);
+    s.statContext.drill = 1; expect(drillCost(s)).toBe(560);
+    s.statContext.drill = 5; expect(drillCost(s)).toBe(2150);
+    s.statContext.drill = 10; expect(drillCost(s)).toBe(11570);
   });
 });

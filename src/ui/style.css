@@ -1011,3 +1011,27 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 .stash-card { display: flex; flex-direction: column; gap: 8px; }
 .inv-cell.sel { outline: 2px solid #ef9f27; outline-offset: 1px; }
 @media (max-width: 699px), (max-height: 500px) { .stash-cols { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); } }
+/* Camp layout 1A (Johannes 2026-11-18): head with name and level, keeper line, use left, next level right, resource bar below. */
+.camp-panel .menu-head { align-items: center; }
+.camp-lv { display: inline-flex; align-items: center; gap: 6px; color: #b5aa98; font-size: 14px; }
+.camp-who { margin: 0 0 10px; color: #b5aa98; font-style: italic; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.camp-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); gap: 12px; align-items: start; }
+.camp-main .camp-body { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.camp-next { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: #1d2120; border: 1px solid #ef9f27; border-radius: 6px; }
+.camp-next h3 { margin: 0; font-size: 12px; color: #ef9f27; letter-spacing: .06em; text-transform: uppercase; }
+.camp-next b { font-size: 14px; }
+.camp-next small.warn { color: #ef9f27; font-size: 12px; }
+.camp-next button { align-self: stretch; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px 2px 3px; border: 1px solid #3a342c; border-radius: 12px; font-size: 13px; background: #252924; }
+.chip.negative { color: #e5483a; border-color: #6a2e28; }
+.chip .mico, .camp-panel button .mico, .camp-res .mico { width: 18px; height: 18px; margin-right: 3px; vertical-align: -4px; }
+.camp-res { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 16px 10px; border-top: 1px solid #3a342c; font-size: 14px; color: #b5aa98; }
+.camp-res span { display: inline-flex; align-items: center; }
+.camp-res b { color: #ead9c0; font-weight: 600; }
+@media (max-width: 699px), (max-height: 500px) {
+  .camp-main { grid-template-columns: minmax(0, 1fr) minmax(180px, 220px); gap: 8px; }
+  .camp-res { padding: 5px 10px 6px; font-size: 13px; }
+}
+@media (max-width: 599px) and (orientation: portrait) { .camp-main { grid-template-columns: 1fr; } }
+.row-c > button, .row-b > button { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; flex: none; }
