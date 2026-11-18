@@ -16,7 +16,8 @@ import { footprintDist } from './reveal';
 import { Materials, type LitMaterial } from './materials';
 import type { PaintOptions } from './paint';
 import { bladeCell, NEON_BLADES, NEON_WORDS, neonCell, paintCurtain, paintGoldPanels, paintNeonAtlas, paintSandstone } from './mitte-paint';
-import { blockFacades, lm, type ChunkBuilder, type MapMats } from './map-world';
+import { blockFacades, lm, lp, walls, type ChunkBuilder, type MapMats } from './map-world';
+import { frustum } from './landmarks';
 import type { Wet } from './sky';
 import { Run } from './world';
 import { buildNorth } from './mitte-north';
@@ -27,7 +28,7 @@ export type RGB = readonly [number, number, number];
 
 export const MITTE_KINDS = new Set<LandmarkKind>([
   'ubahn', 'tor', 'mauerstuecke', 'lafayette', 'reichstag', 'bundesbau', 'kanzleramt', 'siegessaeule', 'sony', 'stage', 'bahntower',
-  'kollhoff', 'verkehrsturm', 'klinik', 'philharmonie', 'matthaeus', 'stabi', 'nng', 'checkpoint',
+  'kollhoff', 'verkehrsturm', 'klinik', 'philharmonie', 'matthaeus', 'stabi', 'nng', 'checkpoint', 'pariser',
 ]);
 
 /** Mitte materials, made once per map build (`mitteMats`) and hung on `MapMats.mitte`. */
@@ -189,11 +190,46 @@ function massing(c: MCtx, l: Landmark): void {
   }
 }
 
+/**
+ * Pariser Platz fronts (photos of the square: light sandstone and render, 4 to 5 storeys, flat fronts with a
+ * tight window grid, slate mansard roofs; Haus Liebermann and Haus Sommer flank the Tor as a pair, the
+ * Akademie der Künste has the glass front, the Adlon the slate roof with dormers). Only `hz` 3 deep: they
+ * frame the square without eating the boss arena. The north row faces the camera: lit entrances, flags.
+ */
+function pariser(c: MCtx, l: Landmark): void {
+  const { b, M, N } = c, v = l.variant ?? 0, W = l.hx * 2, D = l.hz * 2, rng = new Rng(4100 + v);
+  const glass = v === 4, H = v === 0 || v === 3 ? 12.5 : 15, rows = v === 0 || v === 3 ? [2.4, 6.1, 9.4] : [2.4, 6.1, 9.4, 12.6];
+  if (glass) {
+    block(c, l, N.curtain, 0, 0, 0, W, H, D, MC.glass);
+    block(c, l, N.sandstone, 0, 0, 0, W + 0.2, 0.6, D + 0.2, [0.85, 0.82, 0.74]);
+  } else {
+    walls(b, { x: l.x, z: l.z, rot: l.rot, w: W, d: D }, N.sandstone, H, rows, 4100 + v, 0.22, v === 1 ? 2.2 : 2.8);
+    // Plinth, cornice and the flat roof under the mansard.
+    block(c, l, N.sandstone, 0, 0, 0, W + 0.15, 0.9, D + 0.15, [0.8, 0.76, 0.66]);
+    block(c, l, N.sandstone, 0, H - 0.5, 0, W + 0.5, 0.5, D + 0.5, [0.95, 0.9, 0.78]);
+    block(c, l, M.tar, 0, H - 0.05, 0, W, 0.1, D, [0.4, 0.4, 0.42]);
+  }
+  // Slate mansard (Liebermann, Sommer, Adlon) or a low setback storey (the others).
+  if (v === 0 || v === 3 || v === 5) {
+    b.geo(M.slate, frustum(W, D, 3.2, W - 2.4, D - 2.4), lm(l, 0, H, 0), [0.55, 0.58, 0.64]);
+    if (v === 5) for (let x = -l.hx + 2; x < l.hx - 1.5; x += 3) block(c, l, M.slate, x, H + 0.9, -l.hz + 1.1, 1.2, 1.4, 0.8, [0.5, 0.52, 0.58]);
+  } else block(c, l, glass ? N.curtain : N.sandstone, 0, H, -0.8, W - 2, 2.6, D - 2.2, glass ? MC.glass : [0.9, 0.86, 0.76]);
+  // Entrance on the front (local +z): a dark door bay, lit for the north row; embassies fly worn flags.
+  const doorX = v === 1 || v === 4 ? 0 : rng.range(-l.hx + 2.5, l.hx - 2.5);
+  block(c, l, M.door, doorX, 0, l.hz + 0.02, 2.2, 3.4, 0.08, [0.5, 0.45, 0.4]);
+  if (l.rot === 0) b.light(lp(l, doorX, 3.6, l.hz + 1.2), 0xffb060, 9, 8, 0.05, 2.6);
+  if (v === 1 || v === 4) for (const s of [-1, 1]) {
+    cylinder(c, l, M.iron, s * (l.hx - 2), H - 4, l.hz + 0.6, 0.05, 4.5, [0.5, 0.5, 0.5], 5);
+    block(c, l, M.linen, s * (l.hx - 2) + 0.75, H - 0.3, l.hz + 0.6, 1.5, 1, 0.03, v === 1 ? [0.35, 0.4, 0.75] : [0.85, 0.85, 0.85]);
+  }
+}
+
 /** Builds one Mitte landmark (inside `b.on` at its ground height). */
 export function buildMitteLandmark(b: ChunkBuilder, l: Landmark): void {
   const N = b.mm.mitte;
   if (!N) return;
   const c: MCtx = { b, M: b.mm, N };
+  if (l.kind === 'pariser') return pariser(c, l);
   if (buildNorth(c, l) || buildSouth(c, l) || buildKultur(c, l)) return;
   massing(c, l);
 }

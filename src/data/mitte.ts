@@ -178,6 +178,13 @@ export function mitteMap(scale = 1): MapDef {
   const landmarks: Landmark[] = [
     // Zone 0. The Tor faces east onto the Pariser Platz; its passages are open (`TOR_PARTS` in map.ts).
     L('tor', 3, -62, 90 * DEG, 26.5, 4.5, 2, { name: 'Brandenburger Tor' }),
+    // Pariser Platz fronts (step 4): thin blocks on the north and south edge, the boss arena stays open.
+    L('pariser', 13, -79, 0, 4.5, 3, 1, { name: 'Haus Liebermann', variant: 0 }),
+    L('pariser', 28, -79, 0, 9.5, 3, 1, { name: 'Französische Botschaft', variant: 1 }),
+    L('pariser', 47, -79, 0, 8.5, 3, 1, { name: 'Eugen-Gutmann-Haus', variant: 2 }),
+    L('pariser', 13, -45, 180 * DEG, 4.5, 3, 1, { name: 'Haus Sommer', variant: 3 }),
+    L('pariser', 28, -45, 180 * DEG, 9.5, 3, 1, { name: 'Akademie der Künste', variant: 4 }),
+    L('pariser', 47, -45, 180 * DEG, 8.5, 3, 1, { name: 'Hotel Adlon', variant: 5 }),
     L('ubahn', 30, 91, 0, 1.8, 3, 2, { name: 'U Potsdamer Platz' }),
     L('mauerstuecke', 30, 74, 0, 7, 0.8, 2, { name: 'Mauerstücke' }),
     L('lafayette', 165, -12, -90 * DEG, 7, 7, 2, { name: 'Galeries Lafayette' }),
