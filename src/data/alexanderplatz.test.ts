@@ -236,4 +236,20 @@ describe('Alexanderplatz map (M15, layout C)', () => {
     expect(log.at(-1)?.type).toBe('victory');
   });
 
+  it('rows (M15 Blockrand): Plattenbau slabs and Altbau stand tall only away from the camera; pavilions on the camera side', () => {
+    const m = alexMap(1), lots = generateLots(m).filter((l) => l.block);
+    const tall = lots.filter((l) => l.floors >= 3);
+    expect(generateLots(m).filter((l) => l.kind === 'platte' && l.floors >= 5).length).toBeGreaterThanOrEqual(6);
+    expect(lots.filter((l) => l.kind === 'shop').length).toBeGreaterThanOrEqual(4);
+    for (const l of tall) expect(Math.cos(l.rot), `${l.kind} ${l.x.toFixed(0)},${l.z.toFixed(0)}`).toBeGreaterThan(-0.5);
+  });
+
+  it('lot types (M11c): glass house gardens on the island, Plattenbau courtyards by the Allee', () => {
+    for (const scale of [1, 1.3]) {
+      const m = alexMap(scale), lots = generateLots(m);
+      const of = (k: string): number => lots.filter((l) => l.kind === 'special' && l.special === k).length;
+      expect(of('glashaus'), `glashaus ${scale}`).toBeGreaterThanOrEqual(1);
+      expect(of('plattenhof'), `plattenhof ${scale}`).toBeGreaterThanOrEqual(1);
+    }
+  });
 });

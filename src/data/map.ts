@@ -689,6 +689,8 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
 const pondsOf = new WeakMap<MapDef, Pt[][]>();
 
 /** M15 Blockrand: tall rows face south or sideways, the camera side stays low (see `Street.block`). */
+/** M15 Alexanderplatz Plattenbau rows (Karl-Marx-Allee, Spree bank): slab size, floors and the lanes between slabs. */
+export const PLATTE_BLOCK = { w: [22, 32] as [number, number], d: [11, 12.5] as [number, number], floors: [5, 6] as [number, number], gap: [3, 6] as [number, number] } as const;
 export const BLOCK = { w: [12, 19] as [number, number], d: [12, 14] as [number, number], tallFloors: 4, gap: 0.12, baulucke: 0.14, ruinTall: 0.3, ruinLow: 0.55 } as const;
 
 /** Is a lot whose front faces the street with outward normal (nx, nz) on the camera side of it? */
@@ -719,14 +721,19 @@ function blockSlot(m: MapDef, s: Street, rng: Rng, occ: Occupancy, lots: Lot[], 
       return t + w + BLOCK.gap;
     }
   }
-  const w = low ? rng.range(7, 12) : rng.range(BLOCK.w[0], BLOCK.w[1]);
-  const d = low ? rng.range(8, 11) : rng.range(BLOCK.d[0], BLOCK.d[1]);
+  // M15 Alexanderplatz: in Plattenbau areas the tall side is a row of slabs (wider, with lanes between them),
+  // the camera side single-storey pavilions (HO, Konsum) and low slabs.
+  const platte = area.frontage === 'platte';
+  const w = low ? (platte ? rng.range(10, 16) : rng.range(7, 12)) : platte ? rng.range(PLATTE_BLOCK.w[0], PLATTE_BLOCK.w[1]) : rng.range(BLOCK.w[0], BLOCK.w[1]);
+  const d = low ? rng.range(8, 11) : platte ? rng.range(PLATTE_BLOCK.d[0], PLATTE_BLOCK.d[1]) : rng.range(BLOCK.d[0], BLOCK.d[1]);
   const p = place(w, d);
   if (!p.ok) return t + rng.range(1.5, 3);
-  const kind: LotKind = low && rng.next() < 0.6 ? 'shop' : 'altbau';
-  const lot: Lot = { kind, x: p.x, z: p.z, rot: p.rot, w, d, floors: low ? (kind === 'shop' ? 0 : rng.int(2)) : BLOCK.tallFloors - (rng.next() < 0.2 ? 1 : 0), seed: rng.int(1e6), block: true };
+  const kind: LotKind = low ? (rng.next() < (platte ? 0.75 : 0.6) ? 'shop' : platte ? 'platte' : 'altbau') : platte ? 'platte' : 'altbau';
+  // Same draw order as before for Altbau rows (Xhain stays as it was).
+  const tall = (): number => (platte ? PLATTE_BLOCK.floors[0] + rng.int(PLATTE_BLOCK.floors[1] - PLATTE_BLOCK.floors[0] + 1) : BLOCK.tallFloors - (rng.next() < 0.2 ? 1 : 0));
+  const lot: Lot = { kind, x: p.x, z: p.z, rot: p.rot, w, d, floors: low ? (kind === 'shop' ? 0 : platte ? 1 : rng.int(2)) : tall(), seed: rng.int(1e6), block: true };
   if (rng.next() < (low ? BLOCK.ruinLow : BLOCK.ruinTall)) lot.ruin = true;
-  if (!low && rng.next() < 0.7) {
+  if (!low && !platte && rng.next() < 0.7) {
     // Seitenflügel: a back wing two floors lower, as deep as the yard allows.
     const ww = rng.range(4.5, 6.5), wd = rng.range(7, 11), a = rng.pick([-1, 1]) * (w / 2 - ww / 2), b = -(d / 2 + wd / 2) + 0.05;
     const wx = p.x + Math.cos(p.rot) * a + Math.sin(p.rot) * b, wz = p.z - Math.sin(p.rot) * a + Math.cos(p.rot) * b;
@@ -737,7 +744,7 @@ function blockSlot(m: MapDef, s: Street, rng: Rng, occ: Occupancy, lots: Lot[], 
   }
   occ.take(p.x, p.z, p.rot, w / 2 + 0.05, d / 2 + 0.05);
   lots.push(lot);
-  return t + w + BLOCK.gap;
+  return t + w + (platte ? rng.range(PLATTE_BLOCK.gap[0], PLATTE_BLOCK.gap[1]) : BLOCK.gap);
 }
 
 /** Generates buildings along streets and trees on free ground. Deterministic per map seed. */
@@ -811,7 +818,7 @@ export function generateLots(m: MapDef): Lot[] {
             t += 6;
             continue;
           }
-          if (s.block && kind === 'altbau') {
+          if (s.block && (kind === 'altbau' || kind === 'platte')) {
             t = blockSlot(m, s, rng, occ, lots, area!, ax, az, dx, dz, side, t, len);
             continue;
           }

@@ -4,7 +4,7 @@
 // emblem red `#b93432`, cream `#eadfc6`; hammer and sickle as a real crossed hammer and curved sickle.
 import { canvas, toTexture, type Ctx, type EmissiveSurface } from './paint';
 
-export const ATLAS_W = 2048, ATLAS_H = 1024;
+export const ATLAS_W = 2048, ATLAS_H = 1536;
 /** Atlas regions in pixels (x, y from the top left, w, h). */
 export const ATLAS = {
   hours: [0, 0, 2048, 128],
@@ -20,6 +20,9 @@ export const ATLAS = {
   curtain: [512, 768, 512, 256],
   bronze: [1024, 768, 512, 256],
   foyer: [1536, 768, 512, 256],
+  mural: [0, 1024, 512, 512],
+  shop0: [512, 1024, 512, 128], shop1: [1024, 1024, 512, 128], shop2: [1536, 1024, 512, 128],
+  shop3: [512, 1152, 512, 128], shop4: [1024, 1152, 512, 128], shop5: [1536, 1152, 512, 128],
 } as const satisfies Record<string, readonly [number, number, number, number]>;
 export type AtlasKey = keyof typeof ATLAS;
 
@@ -193,6 +196,39 @@ export function paintAlexAtlas(): EmissiveSurface {
     for (let i = 0; i <= 4; i++) k.fillRect(x0 + i * cw - 3, y0, 6, h);
     for (let j = 0; j <= 4; j++) k.fillRect(x0, y0 + j * ch - 4, w, 8);
   };
+  // Plattenbau gable mural (the board's Pioneer face): red and cream sunburst, a face looking up, the red
+  // neckerchief, in mosaic tiles.
+  {
+    const [x0, y0, w, h] = ATLAS.mural, cx = x0 + w * 0.15, cy = y0 + h * 0.9;
+    for (let i = 0; i < 18; i++) {
+      const a0 = -Math.PI / 2 - 0.1 + (i / 18) * Math.PI * 0.62, a1 = a0 + (Math.PI * 0.62) / 18;
+      k.fillStyle = i % 2 ? RED : CREAM;
+      k.beginPath(); k.moveTo(cx, cy); k.lineTo(cx + Math.cos(a0) * w * 1.6, cy + Math.sin(a0) * w * 1.6); k.lineTo(cx + Math.cos(a1) * w * 1.6, cy + Math.sin(a1) * w * 1.6); k.fill();
+    }
+    k.save(); k.beginPath(); k.rect(x0, y0, w, h); k.clip();
+    k.fillStyle = '#e0b48a';
+    k.beginPath(); k.ellipse(x0 + w * 0.55, y0 + h * 0.42, w * 0.2, h * 0.25, -0.25, 0, Math.PI * 2); k.fill();
+    k.fillRect(x0 + w * 0.47, y0 + h * 0.55, w * 0.16, h * 0.2);
+    k.fillStyle = '#5a3a28';
+    k.beginPath(); k.ellipse(x0 + w * 0.6, y0 + h * 0.26, w * 0.2, h * 0.12, -0.35, 0, Math.PI * 2); k.fill();
+    k.fillStyle = BLUE; k.fillRect(x0 + w * 0.3, y0 + h * 0.78, w * 0.5, h * 0.22);
+    k.fillStyle = RED;
+    k.beginPath(); k.moveTo(x0 + w * 0.42, y0 + h * 0.74); k.lineTo(x0 + w * 0.68, y0 + h * 0.74); k.lineTo(x0 + w * 0.55, y0 + h * 0.95); k.fill();
+    k.fillStyle = '#3a2a20'; k.fillRect(x0 + w * 0.6, y0 + h * 0.38, w * 0.04, h * 0.02);
+    hammerSickle(k, x0 + w * 0.82, y0 + h * 0.14, w * 0.16, YELLOW);
+    k.fillStyle = 'rgba(0,0,0,0.18)';
+    for (let x = x0; x < x0 + w; x += 16) k.fillRect(x, y0, 2, h);
+    for (let y = y0; y < y0 + h; y += 16) k.fillRect(x0, y, w, 2);
+    k.restore();
+  }
+  // Pavilion shop signs (state retail of 1989), light letters on coloured boards.
+  for (const [key, t, bg, fg] of [['shop0', 'KONSUM', BLUE, '#f4f2ea'], ['shop1', 'HO', RED, '#f4f2ea'], ['shop2', 'DELIKAT', '#2b3338', YELLOW], ['shop3', 'OBST GEMÜSE', '#3d6a3a', '#f4f2ea'], ['shop4', 'BLUMEN', YELLOW, '#2b3338'], ['shop5', 'FRISEUR', CREAM, BLUE]] as Array<[AtlasKey, string, string, string]>) {
+    const [x, y, w, h] = ATLAS[key];
+    k.fillStyle = bg; k.fillRect(x, y, w, h);
+    k.fillStyle = 'rgba(255,255,255,0.3)'; k.fillRect(x, y + 6, w, 4); k.fillRect(x, y + h - 10, w, 4);
+    text(k, t, x, y, w, h, fg, 'bold', 0.58);
+    text(ek, t, x, y, w, h, '#8a7a50', 'bold', 0.58);
+  }
   grid('curtain', '#9fbccc', '#4f6a78', '#d8d8d2', 0.03, '#c8a070');
   grid('bronze', '#c88a50', '#6a3c20', '#e8e2d4', 0.08, '#f0b060');
   grid('foyer', '#7a8e96', '#2e3a40', '#3a3c3c', 0.12, '#c89a60');

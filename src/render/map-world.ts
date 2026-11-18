@@ -28,7 +28,7 @@ import { BatchSet } from './batch';
 import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
-import { ALEX_KINDS, buildAlexLandmark, buildArches, buildStadtbahn } from './alex-world';
+import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexLots } from './alex-world';
 import { paintAlexAtlas } from './alex-paint';
 import { NIGHT_SKY, type Sky } from './sky';
 import { isLargeProp } from './layers';
@@ -1539,7 +1539,8 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
 /** An Altbau, shop or Platte block; `inner` marks a back wing (no shop front, door only at the back). */
 export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m: MapDef): void {
   const rng = new Rng(l.seed);
-  const tone = rng.pick(TONES);
+  const pick = rng.pick(TONES);
+  const tone = pick;
   const sides = blockFacades(l);
   const main = streetDist(m, l.x + Math.sin(l.rot) * l.d, l.z + Math.cos(l.rot) * l.d).street?.kind === 'main';
   // M11d: the street piece that carries the shop or the main door (the longest one at the lot front);
@@ -2206,6 +2207,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
     const build = (): void => {
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
+      // M15 Alexanderplatz: intact Plattenbau gets its panel facade; ruins keep the shared burnt-out shell.
+      else if (l.kind === 'platte' && m.id === 'alex' && !l.ruin) b.on(y0, () => buildAlexPlatte(b, l, (f, seed) => loggias(b, f, seed)));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
       else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
@@ -2275,6 +2278,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   if (m.id === 'alex') {
     for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') buildStadtbahn(chunkOf, mats, v);
     buildArches(chunkOf, mats, m);
+    dressAlexLots(chunkOf, lots, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
+    buildStrausberger(chunkOf, m);
   }
   if (m.tunnel) {
     buildTunnel(m, mats, chunkOf);

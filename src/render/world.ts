@@ -22,6 +22,7 @@ import { buildCar, buildUrbanProp } from './props-urban';
 import { buildMarketProp } from './props-market';
 import { buildEdgeProp } from './props-edge';
 import { buildPlantProp } from './vegetation';
+import { buildGdrProp } from './props-gdr';
 
 export const GROUND_H = 4.3;
 export const FLOOR_H = 3.5;
@@ -930,7 +931,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
     }
     default:
       // M11c lot type props live in their own files.
-      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng)) buildPlantProp(b, p, rng);
+      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng) && !buildGdrProp(b, p, rng)) buildPlantProp(b, p, rng);
   }
 }
 

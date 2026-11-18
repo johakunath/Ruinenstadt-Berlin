@@ -2,7 +2,10 @@
 // with open arches, and massing for the district landmarks (silhouette, height and colour only). The
 // landmarks get their real models from photos in step 4; this keeps the layout readable until then.
 import { CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometry, TorusGeometry, type BufferGeometry, type Material } from 'three';
-import type { Landmark, MapDef, Viaduct } from '../data/map';
+import type { Landmark, Lot, MapDef, Viaduct } from '../data/map';
+import { blockFacades } from './map-world';
+import { FLOOR_H, GROUND_H, PARAPET, Run } from './world';
+import type { Facade } from '../data/courtyard';
 import type { ChunkBuilder, MapMats } from './map-world';
 import { Rng } from '../sim/math';
 import { archWindow, cached, ENDS, frameOf, frustum, pane, SLOPES, sub, type Frame, type RGB } from './landmarks';
@@ -425,4 +428,111 @@ export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, mat
     // A painted iron beam over the street: GDR blue with a yellow stripe.
     for (const s of [-1, 1]) b.box(mats.iron, at(s * (v.width / 2 + 0.05), v.h - 1.1, 0), 0.12, 0.8, len, s < 0 ? BLUE : YELLOW);
   }
+}
+
+/**
+ * Step 5 dressing of the district's ordinary buildings (only on this map): Plattenbau entrances with a
+ * concrete canopy and the hammer-and-sickle crest, red banners down some fronts, the Pioneer mosaic on
+ * some gable ends; Altbau gets an occasional banner; pavilions get their state shop sign.
+ */
+export function dressAlexLots(chunkOf: (x: number, z: number) => ChunkBuilder, lots: Lot[], ground: (x: number, z: number) => number, lotCut: (l: Lot) => { id: number; y: number } | undefined): void {
+  for (const l of lots) {
+    if (l.kind === 'tree' || l.kind === 'special' || l.kind === 'house' || l.ruin) continue;
+    const rng = new Rng(l.seed * 17 + 3), b = chunkOf(l.x, l.z), y0 = ground(l.x, l.z), cut = lotCut(l);
+    const sides = blockFacades(l);
+    const runOf = (i: number): Run => { const s = sides[i]!; return new Run({ id: 'ad', style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1], depth: 1, floors: 0, tone: 'cream', features: [], seed: 1 } as Facade); };
+    const front = sides.findIndex((s) => s.face === 0);
+    if (front < 0) continue;
+    const fs = sides[front]!, fr = runOf(front), H = GROUND_H + l.floors * FLOOR_H;
+    const dress = (fn: () => void): void => (cut ? b.cut(cut.id, cut.y, () => b.on(y0, fn)) : b.on(y0, fn));
+    dress(() => {
+      if (l.kind === 'shop') {
+        // A letter board on the roof edge, readable from the street and from the camera (pavilions on the
+        // camera side turn their front away from it).
+        const key = rng.pick(['shop0', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5'] as AtlasKey[]), sw = Math.min(fs.len - 1, 5.2);
+        const sign = fr.mat(fs.len / 2, GROUND_H + 0.75, -0.7);
+        atlasPlane(b, sign, sw, 1.0, key);
+        atlasPlane(b, sign.clone().multiply(new Matrix4().makeRotationY(Math.PI)), sw, 1.0, key);
+        for (const dx of [-sw / 2 + 0.3, sw / 2 - 0.3]) b.box(b.mm.iron, fr.mat(fs.len / 2 + dx, GROUND_H + 0.15, -0.7), 0.08, 0.5, 0.08, [0.6, 0.6, 0.6]);
+        b.box(b.mm.concrete, fr.mat(fs.len / 2, GROUND_H - 0.35, 0.25), fs.len + 0.2, 0.3, 0.6, CREAM);
+        return;
+      }
+      if (l.kind === 'platte') {
+        if (l.floors >= 4 && rng.next() < 0.45) atlasPlane(b, fr.mat(fs.len * rng.range(0.15, 0.85), Math.min(H - 2.4, 7.8), 0.06), 1.3, 4.2, 'banner');
+        // Pioneer mosaic on a gable end.
+        const gable = sides.findIndex((s) => s.face === 1 || s.face === 3);
+        if (gable >= 0 && l.floors >= 3 && rng.next() < 0.5) {
+          const gs = sides[gable]!, gr = runOf(gable), mh = Math.min(H - 4.6, gs.len * 1.5);
+          atlasPlane(b, gr.mat(gs.len / 2, GROUND_H + 0.3 + mh / 2, 0.05), gs.len - 1.2, mh, 'mural');
+        }
+        return;
+      }
+      if (l.kind === 'altbau' && l.floors >= 2 && rng.next() < 0.22) atlasPlane(b, fr.mat(fs.len * rng.range(0.3, 0.7), GROUND_H + FLOOR_H, 0.06), 1.1, 3.4, 'banner');
+    });
+  }
+}
+
+/** Beyond the east bound on the Allee axis: the two Zuckerbäcker towers of the Strausberger Platz (render only). */
+export function buildStrausberger(chunkOf: (x: number, z: number) => ChunkBuilder, m: MapDef): void {
+  const allee = m.streets.find((s) => s.name === 'Karl-Marx-Allee');
+  if (!allee) return;
+  const [, z] = allee.pts[allee.pts.length - 1]!, x = m.bounds.maxX + 34;
+  for (const dz of [-24, 24]) {
+    const b = chunkOf(m.bounds.maxX - 2, z + dz), at = (px: number, y: number, pz: number): Matrix4 => new Matrix4().setPosition(x + px, y, z + dz + pz);
+    const M = b.mm, ZB: RGB = [1.2, 1.12, 0.95];
+    // Wings along the square, the tower with set-back storeys, the gilded spire.
+    b.box(M.stucco, at(-6, 11, 0), 30, 22, 14, ZB);
+    b.box(M.stucco, at(0, 20, 0), 14, 40, 14, ZB);
+    b.box(M.stucco, at(0, 42, 0), 10, 8, 10, ZB);
+    b.box(M.stucco, at(0, 48, 0), 7, 5, 7, ZB);
+    b.geo(M.iron, cached('zbSpire', () => new CylinderGeometry(0.15, 0.9, 9, 8)), at(0, 55, 0), BRASS);
+    b.box(M.stucco, at(-6, 22.5, 0), 30.6, 1, 14.6, [1.3, 1.0, 0.55]);
+    for (let y = 3; y < 38; y += 3.2) b.box(M.windows, at(-6, y, -7.03), 28, 1.4, 0.02);
+  }
+}
+
+/**
+ * A Plattenbau slab of the WBS 70 kind (this map, intact lots): light concrete panels with dark joints, a
+ * grid of windows, a grey plinth, the glass entrance under a concrete canopy with the crest, loggias on the
+ * long sides (`loggia` is the shared builder), flat roof with the lift housing.
+ */
+export function buildAlexPlatte(b: ChunkBuilder, l: Lot, loggia: (f: Facade, seed: number) => void): void {
+  const M = b.mm, rng = new Rng(l.seed * 7 + 1), H = GROUND_H + l.floors * FLOOR_H, sides = blockFacades(l);
+  const panel: RGB = rng.pick<RGB>([[1.08, 1.04, 0.95], [1.0, 0.98, 0.92], [1.1, 1.0, 0.85]]);
+  const at = (x: number, y: number, z: number): Matrix4 => new Matrix4().makeRotationY(l.rot).setPosition(x, y, z);
+  b.box(M.concrete, at(l.x, H / 2, l.z), l.w - 0.1, H, l.d - 0.1, panel);
+  b.shadowBox(at(l.x, H / 2, l.z), l.w, H, l.d);
+  const entrance = rng.range(0.25, 0.75);
+  sides.forEach((s, i) => {
+    if (s.len < 2) return;
+    const f: Facade = { id: `pl${l.seed}-${i}`, style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1], depth: 1, floors: l.floors, tone: 'cream', features: [], seed: (l.seed + i * 13) % 997 } as Facade;
+    const r = new Run(f), long = s.face === 0 || s.face === 2;
+    // Joints: every slab and every 3.6 m panel; plinth.
+    for (let k = 0; k <= l.floors; k++) b.box(M.concrete, r.mat(s.len / 2, GROUND_H + k * FLOOR_H - 0.05, 0.03), s.len, 0.09, 0.03, [0.45, 0.44, 0.42]);
+    for (let x = 3.6; x < s.len - 0.5; x += 3.6) b.box(M.concrete, r.mat(x, H / 2, 0.03), 0.08, H, 0.03, [0.52, 0.5, 0.47]);
+    b.box(M.concrete, r.mat(s.len / 2, 0.45, 0.06), s.len, 0.9, 0.06, [0.62, 0.62, 0.6]);
+    if (!long) return;
+    // Windows: two per panel on every floor, smaller on the ground floor; the entrance on the front.
+    const door = s.face === 0 ? s.len * entrance : -99;
+    for (let k = -1; k < l.floors; k++) {
+      const y = k < 0 ? 2.4 : GROUND_H + k * FLOOR_H + 1.6;
+      for (let x = 1.0; x < s.len - 0.6; x += 1.8) {
+        if (Math.abs(x - door) < 2.2 && k < 0) continue;
+        pane(b, r.mat(x, y, 0.02), k < 0 ? 1.1 : 1.3, k < 0 ? 1.1 : 1.4, rng, 0.05);
+      }
+    }
+    if (s.face === 0) {
+      b.box(M.dark, r.mat(door, 1.3, 0.04), 2.2, 2.5, 0.03);
+      b.box(M.iron, r.mat(door, 1.3, 0.06), 0.06, 2.5, 0.03, [0.7, 0.7, 0.7]);
+      b.box(M.concrete, r.mat(door, 2.85, 0.85), 3.4, 0.2, 1.7, [0.85, 0.83, 0.78]);
+      for (const dx of [-1.5, 1.5]) b.box(M.iron, r.mat(door + dx, 1.4, 1.55), 0.08, 2.8, 0.08, [0.7, 0.7, 0.7]);
+      atlasPlane(b, r.mat(door, 3.65, 0.05), 0.75, 0.75, 'emblem');
+    }
+    if (l.floors >= 2) b.solid.excludeOccluder(() => loggia(f, l.seed * 3 + i));
+  });
+  // Roof: tar, parapet edge, the lift housing.
+  b.box(M.tar, at(l.x, H + 0.05, l.z), l.w - 0.3, 0.1, l.d - 0.3, [0.6, 0.6, 0.6]);
+  b.box(M.concrete, at(l.x, H + PARAPET / 2, l.z), l.w, PARAPET, l.d, panel.map((c) => c * 0.9) as unknown as RGB);
+  const [hx, hz] = [l.x + Math.cos(l.rot) * l.w * 0.2, l.z - Math.sin(l.rot) * l.w * 0.2];
+  b.box(M.concrete, at(hx, H + 1.4, hz), 3, 2.8, 4, panel);
 }

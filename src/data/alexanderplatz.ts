@@ -126,27 +126,27 @@ export function alexMap(scale = 1): MapDef {
 
   const streets: Street[] = [
     // Zone 0: the start strip under the Stadtbahn and the island.
-    { name: 'Burgstraße', kind: 'side', width: 6.5, pts: line([[-198, -117], [-150, -117], [-127, -117]]) },
+    { name: 'Burgstraße', kind: 'side', width: 6.5, sidewalk: 2.5, block: true, pts: line([[-198, -117], [-150, -117], [-127, -117]]) },
     { name: 'Am Lustgarten', kind: 'side', width: 7, pts: line([[-150, -112], [-150, -86], [-152, -45], [-162, -20], [-165, 18], [-164, 60], [-148, 76], [-125, 82], [-106, 70]]) },
     // Unter den Linden ends at the Lustgarten; across the Liebknechtbrücke it runs on through the forum to the Alex.
-    { name: 'Karl-Liebknecht-Straße', kind: 'main', width: 14, profile: 'haupt', sidewalk: 3, pts: line([[-152, -45], [-110, -50], [-60, -68], [-2, -74], [40, -66], [60, -62]]) },
+    { name: 'Karl-Liebknecht-Straße', kind: 'main', width: 14, profile: 'haupt', sidewalk: 3, block: true, pts: line([[-152, -45], [-110, -50], [-60, -68], [-2, -74], [40, -66], [60, -62]]) },
     // Zone 1: Nikolaiviertel and the Spree bank.
     { name: 'Spandauer Straße', kind: 'side', width: 8, pts: line([[-74, 58], [-70, 30], [-66, 16]]) },
     { name: 'Poststraße', kind: 'side', width: 6, pts: line([[-72, 60], [-50, 74], [-40, 88], [-30, 104]]) },
-    { name: 'Spreeufer', kind: 'side', width: 8, sidewalk: 3, pts: line([[-30, 110], [22, 112], [68, 110], [100, 104], [124, 96], [150, 92], [195.5, 96]]) },
+    { name: 'Spreeufer', kind: 'side', width: 8, sidewalk: 3, block: true, pts: line([[-30, 110], [22, 112], [68, 110], [100, 104], [124, 96], [150, 92], [195.5, 96]]) },
     { name: 'Jüdenstraße', kind: 'side', width: 6, pts: line([[0, 18], [2, 60], [10, 98], [22, 112]]) },
     // Around the forum: the Rathausstraße south of it, through an arch to the Alexanderstraße.
-    { name: 'Rathausstraße', kind: 'main', width: 10, pts: line([[-66, 16], [-20, 18], [20, 16], [70, 2], [108, -12]]) },
+    { name: 'Rathausstraße', kind: 'main', width: 10, sidewalk: 2.5, block: true, pts: line([[-66, 16], [-20, 18], [20, 16], [70, 2], [108, -12]]) },
     // Zone 2: east of the Stadtbahn.
-    { name: 'Alexanderstraße', kind: 'main', width: 12, pts: line([[104, -40], [108, -12], [118, 30], [134, 70], [150, 92]]) },
-    { name: 'Lichtenberger Straße', kind: 'side', width: 8, pts: line([[186, 96], [184, 40], [184, -30]]) },
+    { name: 'Alexanderstraße', kind: 'main', width: 12, sidewalk: 2.5, block: true, pts: line([[104, -40], [108, -12], [118, 30], [134, 70], [150, 92]]) },
+    { name: 'Lichtenberger Straße', kind: 'side', width: 8, sidewalk: 2.5, block: true, pts: line([[186, 96], [184, 40], [184, -30]]) },
     // The Allee: a wide boulevard with a green middle strip (real 90 m, here 22 m), no tram.
-    { name: 'Karl-Marx-Allee', kind: 'main', width: 22, profile: 'allee', sidewalk: 3, pts: line([[104, -38], [150, -34], [195.5, -30]]) },
+    { name: 'Karl-Marx-Allee', kind: 'main', width: 22, profile: 'allee', sidewalk: 3, block: true, pts: line([[104, -38], [150, -34], [195.5, -30]]) },
     { name: 'Schillingstraße', kind: 'side', width: 7, pts: line([[150, -45], [150, -110]]) },
     { name: 'Otto-Braun-Straße', kind: 'side', width: 9, pts: line([[100, -46], [98, -100], [96, -153]]) },
     // North of the viaduct: the old Spandauer Vorstadt behind the station (not on the route).
-    { name: 'Neue Promenade', kind: 'side', width: 7, pts: line([[-100, -143], [-40, -134], [24, -120], [60, -112]]) },
-    { name: 'Mollstraße', kind: 'side', width: 8, pts: line([[98, -112], [150, -112], [195.5, -114]]) },
+    { name: 'Neue Promenade', kind: 'side', width: 7, sidewalk: 2.5, block: true, pts: line([[-100, -143], [-40, -134], [24, -120], [60, -112]]) },
+    { name: 'Mollstraße', kind: 'side', width: 8, sidewalk: 2.5, block: true, pts: line([[98, -112], [150, -112], [195.5, -114]]) },
     // M16b side passages: the hidden blessing in the churchyard of the Marienkirche, a cache in a
     // Nikolaiviertel yard, a sleeping elite in a Plattenbau courtyard.
     { name: 'Kirchhof', kind: 'path', width: 4, pts: line([[-50, -66], [-58, -50], [-60, -38]]) },
@@ -209,14 +209,14 @@ export function alexMap(scale = 1): MapDef {
   // First area that contains a point wins.
   const areas: Area[] = [
     { id: 'hackescher', name: 'Hackescher Markt', ground: 'asphalt', frontage: 'altbau', trees: 0.3, specials: ['hinterhof'], poly: line([[-210, -160], [-100, -160], [-100, -106], [-210, -106]]) },
-    { id: 'museumsinsel', name: 'Museumsinsel', ground: 'cobbles', frontage: null, trees: 0.7, specials: ['kleingarten', 'markt'], poly: line([[-200, -106], [-112, -106], [-104, 40], [-78, 92], [-70, 112], [-140, 112], [-200, 96]]) },
+    { id: 'museumsinsel', name: 'Museumsinsel', ground: 'cobbles', frontage: null, trees: 0.7, specials: ['glashaus', 'kleingarten'], poly: line([[-200, -106], [-112, -106], [-104, 40], [-78, 92], [-70, 112], [-140, 112], [-200, 96]]) },
     { id: 'spandauer', name: 'Spandauer Vorstadt', ground: 'cobbles', frontage: 'altbau', trees: 0.4, specials: ['hinterhof'], poly: line([[-100, -160], [96, -160], [32, -88], [-2, -82], [-60, -78], [-100, -62]]) },
     { id: 'forum', name: 'Rathausforum', ground: 'grass', frontage: null, trees: 1, specials: ['kirchhof'], poly: line([[-100, -62], [-60, -78], [-2, -82], [32, -88], [62, -22], [70, 6], [20, 10], [-66, 10], [-100, 30]]) },
     { id: 'alexanderplatz', name: 'Alexanderplatz', ground: 'cobbles', frontage: null, trees: 0.2, specials: ['markt'], poly: line([[96, -160], [96, -46], [108, -20], [70, 6], [62, -22], [32, -88]]) },
     { id: 'nikolaiviertel', name: 'Nikolaiviertel', ground: 'cobbles', frontage: 'altbau', trees: 0.3, specials: ['hinterhof', 'markt'], poly: line([[-100, 30], [-66, 10], [40, 10], [50, 160], [-100, 160]]) },
-    { id: 'rolandufer', name: 'Rolandufer', ground: 'asphalt', frontage: 'platte', trees: 0.5, specials: ['baustelle', 'parkplatz'], poly: line([[40, 10], [70, 6], [108, -20], [118, 40], [150, 160], [50, 160]]) },
-    { id: 'holzmarkt', name: 'Holzmarkt', ground: 'asphalt', frontage: 'platte', trees: 0.6, specials: ['baustelle', 'parkplatz'], poly: line([[118, 40], [108, -20], [210, -20], [210, 160], [150, 160]]) },
-    { id: 'allee', name: 'Karl-Marx-Allee', ground: 'asphalt', frontage: 'platte', trees: 0.8, specials: ['kleingarten', 'parkplatz'], poly: line([[96, -46], [96, -160], [210, -160], [210, -20], [108, -20]]) },
+    { id: 'rolandufer', name: 'Rolandufer', ground: 'asphalt', frontage: 'platte', trees: 0.5, specials: ['hinterhof', 'markt'], poly: line([[40, 10], [70, 6], [108, -20], [118, 40], [150, 160], [50, 160]]) },
+    { id: 'holzmarkt', name: 'Holzmarkt', ground: 'asphalt', frontage: 'platte', trees: 0.6, specials: ['plattenhof', 'baustelle'], poly: line([[118, 40], [108, -20], [210, -20], [210, 160], [150, 160]]) },
+    { id: 'allee', name: 'Karl-Marx-Allee', ground: 'asphalt', frontage: 'platte', trees: 0.8, specials: ['plattenhof', 'baustelle'], poly: line([[96, -46], [96, -160], [210, -160], [210, -20], [108, -20]]) },
   ];
 
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3, extra: Partial<Landmark> = {}): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear, ...extra });
@@ -308,6 +308,21 @@ export function alexMap(scale = 1): MapDef {
   // Corners the fill pass cannot reach (junctions beside landmarks and bridge heads).
   for (const [kind, x, z] of [['workLamp', 113, -2], ['candles', 123, 24], ['candles', -160, 22], ['fireBarrel', -140, -42]] as Array<[Prop['kind'], number, number]>) lights.push({ kind, x: x * s, z: z * s, rot: 0.4, size: 0.9 });
   lights.push({ kind: 'fireBarrel', x: -48 * s, z: 11 * s, rot: 0, size: 1.1 }, { kind: 'candles', x: -150 * s, z: -40 * s, rot: 0, size: 0.8 });
+  // Flag poles with red banners down the middle of the Allee (2D `aBanners`), off the fights.
+  const flags: Prop[] = [];
+  {
+    const pts = streets.find((q) => q.name === 'Karl-Marx-Allee')!.pts;
+    let at = 15, k = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1]!, [bx, bz] = pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+      for (; at < len; at += 18, k++) {
+        const x = ax + ux * at, z = az + uz * at;
+        if (encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 1.5)) continue;
+        flags.push({ kind: 'flagpole', x, z, rot: Math.atan2(uz, -ux) + (k % 2 ? Math.PI : 0), size: 1 });
+      }
+      at -= len;
+    }
+  }
   const yards: Prop[] = [
     { kind: 'crates', ...endOf('Hofgasse', 1.2, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Hofgasse', 3, -1.2), rot: 1, size: 1 }, { kind: 'crate', ...endOf('Hofgasse', 3, 1.2), rot: -0.3, size: 1 },
     { kind: 'workLamp', ...endOf('Hofgasse', 5, 1.4), rot: -0.8, size: 1 }, { kind: 'candles', ...endOf('Kirchhof', 3.5, 1.2), rot: 0, size: 1 }, { kind: 'fireBarrel', ...endOf('Plattenhof', 5, -1.3), rot: 0, size: 1 },
@@ -336,10 +351,23 @@ export function alexMap(scale = 1): MapDef {
     terraces: [],
     district: 2,
     flavor: 'gdr',
+    // Lot types per zone (M11c): Museumsinsel glass houses and allotments, Nikolaiviertel and Spree bank back
+    // yards and markets, Karl-Marx-Allee Plattenbau courtyards and building sites.
+    specialMax: { glashaus: 3, plattenhof: 4 },
     viaducts,
+    // Plattenbau slabs in the open blocks east of the Stadtbahn and on the Rolandufer (the street rows leave
+    // them empty: fights, landmarks and lot types take the street slots). Fronts to their street.
+    handLots: [
+      { kind: 'platte', x: 124 * s, z: -132 * s, rot: 0, w: 30, d: 12, floors: 6 },
+      { kind: 'platte', x: 170 * s, z: -133 * s, rot: 0, w: 28, d: 12, floors: 6, ruin: true },
+      { kind: 'platte', x: 124 * s, z: -97 * s, rot: 0, w: 24, d: 11, floors: 5 },
+      { kind: 'platte', x: 146 * s, z: 56 * s, rot: -90 * DEG, w: 22, d: 11, floors: 5 },
+      { kind: 'platte', x: 40 * s, z: 50 * s, rot: 0, w: 28, d: 11, floors: 5, ruin: true },
+      { kind: 'platte', x: 62 * s, z: 68 * s, rot: 0, w: 24, d: 11, floors: 5 },
+    ],
     hiddenSpots: [endOf('Kirchhof', 1.2, 0)],
     guards: [{ ...endOf('Plattenhof', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 }],
-    fixedProps: [...yards, ...lights],
+    fixedProps: [...yards, ...lights, ...flags],
     seed: 1989,
   };
 }
