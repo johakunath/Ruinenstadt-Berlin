@@ -49,5 +49,17 @@ export const LINE_FREED = 100;
 export const campOpen = (freed: readonly number[] | undefined): boolean => !!freed?.includes(LINE_FREED);
 /** A line can be ridden once its start district is freed and its end has a 3D map. */
 export const linePlayable = (k: number, freed: readonly number[] | undefined): boolean => !!freed?.includes(k) && !!STOPS[k + 1]?.map;
+/**
+ * The next place the story leads (playtest 2026-11-18: the board and the main button went back to
+ * Köpenick): district k, then line k, in order; the first one not yet freed that can be played.
+ */
+export function nextDestination(freed: readonly number[] | undefined): { stop: number } | { line: number } {
+  const f = freed ?? [];
+  for (let k = 0; k < STOPS.length; k++) {
+    if (STOPS[k]!.map && !f.includes(k)) return { stop: k };
+    if (k < LINES.length && linePlayable(k, f) && !f.includes(LINE_FREED + k)) return { line: k };
+  }
+  return { stop: 0 };
+}
 /** Short station name without the S/U prefix ("Warschauer Straße"). */
 export const stopName = (k: number): string => STOPS[k]!.station.replace(/^[SU+ ]+/, '');

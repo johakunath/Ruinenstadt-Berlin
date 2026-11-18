@@ -22,3 +22,13 @@ describe('M20 S+U network (2D js/ubahn.js)', () => {
     expect(stopName(1)).toBe('Warschauer Straße');
   });
 });
+
+describe('next destination (playtest 2026-11-18)', () => {
+  it('leads on: Köpenick, the S3, Xhain, the U8', async () => {
+    const { nextDestination, LINE_FREED } = await import('./lines');
+    expect(nextDestination([])).toEqual({ stop: 0 });
+    expect(nextDestination([0])).toEqual({ line: 0 });
+    expect(nextDestination([0, LINE_FREED])).toEqual({ stop: 1 });
+    expect(nextDestination([0, LINE_FREED, 1])).toEqual({ line: 1 });
+  });
+});

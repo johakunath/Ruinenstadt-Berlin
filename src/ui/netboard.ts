@@ -1,7 +1,7 @@
 // M20: the S+U network map at the camp's train (2D `netSVG`/`tunCard` in `js/ubahn.js`): districts
 // as interchanges, lines as tunnels between them. Tap a district for an expedition, a line for its
 // tunnel; places without a 3D map yet stay grey ("kommt bald"). Ported layout and colors.
-import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, stopName, STOPS } from '../data/lines';
+import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, nextDestination, stopName, STOPS } from '../data/lines';
 import { keyNav } from './focus';
 
 export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' } | { map: 'tunnel'; line: number };
@@ -42,7 +42,7 @@ export class NetBoard {
   get isOpen(): boolean { return !this.root.hidden; }
   open(freed: readonly number[]): void {
     this.freed = freed;
-    this.sel = this.sel ?? { stop: 0 };
+    this.sel = nextDestination(freed);
     this.root.hidden = false;
     this.render();
     this.root.querySelector<HTMLElement>('[data-ride]:not(:disabled)')?.focus();
