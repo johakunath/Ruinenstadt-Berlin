@@ -85,7 +85,10 @@ export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'muegg
   | 'warschauer' | 'ostbahnhof' | 'oberbaum' | 'wachturm' | 'thomaskirche' | 'bethanien' | 'rauchhaus' | 'nkz' | 'u1station' | 'goerlitzer'
   // M15 Alexanderplatz (1989): Museumsinsel, forum, Nikolaiviertel, the Alex and the Karl-Marx-Allee.
   | 'altesmuseum' | 'dom' | 'palast' | 'fernsehturm' | 'marienkirche' | 'neptunbrunnen' | 'rotesrathaus' | 'nikolaikirche'
-  | 'weltzeituhr' | 'brunnen' | 'hotelstadtberlin' | 'sbahnalex' | 'sbahnhackescher' | 'hausdeslehrers' | 'kongresshalle' | 'kino' | 'cafemoskau';
+  | 'weltzeituhr' | 'brunnen' | 'hotelstadtberlin' | 'sbahnalex' | 'sbahnhackescher' | 'hausdeslehrers' | 'kongresshalle' | 'kino' | 'cafemoskau'
+  // M15 Mitte (2089): Friedrichstadt, Regierungsviertel, Tiergarten, Kulturforum and the Potsdamer Platz.
+  | 'ubahn' | 'tor' | 'mauerstuecke' | 'lafayette' | 'reichstag' | 'bundesbau' | 'kanzleramt' | 'siegessaeule' | 'sony' | 'stage' | 'bahntower' | 'kollhoff'
+  | 'verkehrsturm' | 'klinik' | 'philharmonie' | 'matthaeus' | 'stabi' | 'nng' | 'checkpoint' | 'pariser' | 'glasbau';
 
 export interface Landmark {
   kind: LandmarkKind;
@@ -222,6 +225,12 @@ export interface MapDef {
   railYards?: RailYard[];
   /** M15: elevated railways. The brick Stadtbahn blocks along its length; the U1 Hochbahn only at its pillars. */
   viaducts?: Viaduct[];
+  /**
+   * M15 Mitte: stricter lot placement. Lots keep out of the turned footprint of a landmark too (not only
+   * its axis-aligned box) and off the whole width of side paths (not only at their corners). Off for
+   * Köpenick and Xhain until their playtests are done: switching it on regenerates all their lots.
+   */
+  strictLots?: boolean;
   /** M11d step 5: hand-placed buildings on the route; they take their space before the generator fills the rest. */
   handLots?: Array<Omit<Lot, 'seed' | 'kind'> & { kind: LotKind; seed?: number }>;
 }
@@ -621,12 +630,28 @@ export const DINO_PARTS: ReadonlyArray<ReadonlyArray<{ x: number; z: number; hx:
   [{ x: 2.2, z: 0.6, hx: 1.3, hz: 2.6, rot: 0 }, { x: 0.9, z: -4, hx: 0.6, hz: 2.1, rot: Math.atan2(-1.4, -4.2) }, { x: -2.2, z: 3, hx: 0.7, hz: 1.1, rot: 0.7 }],
 ];
 
-/** Every blocking box of a landmark: the footprint plus the parts of figures that reach past it. */
+/**
+ * M15 Mitte: landmarks the hero walks through or into block only with these parts, not with their
+ * footprint (local frame as `DINO_PARTS`; the footprint still keeps lots and props away).
+ */
+export const OPEN_PARTS: Partial<Record<LandmarkKind, ReadonlyArray<{ x: number; z: number; hx: number; hz: number; rot: number }>>> = {
+  // Brandenburger Tor: six pillar walls (11 m deep) around five passages (middle 5.65 m, the others
+  // 3.8 m, as built), the gate houses at both ends.
+  tor: [
+    ...[-16.925, -10.525, -4.125, 4.125, 10.525, 16.925].map((x) => ({ x, z: 0, hx: 1.3, hz: 4.5, rot: 0 })),
+    { x: -22.5, z: 0, hx: 4, hz: 4.5, rot: 0 }, { x: 22.5, z: 0, hx: 4, hz: 4.5, rot: 0 },
+  ],
+  // Sony Center: six blocks on a 24 m ring around the forum, open between them (gaps face 30°, 90° … 330°).
+  sony: [0, 60, 120, 180, 240, 300].map((d) => ({ x: Math.sin((d * Math.PI) / 180) * 24, z: Math.cos((d * Math.PI) / 180) * 24, hx: 7, hz: 5, rot: (d * Math.PI) / 180 })),
+};
+
+/** Every blocking box of a landmark: the footprint plus the parts of figures that reach past it (or only the parts of an open one). */
 export function landmarkColliders(l: Landmark): Collider[] {
-  const out: Collider[] = [landmarkCollider(l)];
-  if (l.kind !== 'dino') return out;
+  const open = OPEN_PARTS[l.kind];
+  const out: Collider[] = open ? [] : [landmarkCollider(l)];
+  const parts = l.kind === 'dino' ? DINO_PARTS[l.variant ?? 0] ?? [] : open ?? [];
   const c = Math.cos(l.rot), sn = Math.sin(l.rot);
-  for (const p of DINO_PARTS[l.variant ?? 0] ?? []) out.push({ kind: 'box', x: l.x + c * p.x + sn * p.z, z: l.z - sn * p.x + c * p.z, hx: p.hx, hz: p.hz, rot: l.rot + p.rot });
+  for (const p of parts) out.push({ kind: 'box', x: l.x + c * p.x + sn * p.z, z: l.z - sn * p.x + c * p.z, hx: p.hx, hz: p.hz, rot: l.rot + p.rot });
   return out;
 }
 
@@ -679,7 +704,14 @@ class Occupancy {
 function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
   if (isWater(m, x, z) || onBridge(m, x, z, pad + 2)) return true;
   for (const e of m.encounters) if (Math.hypot(x - e.x, z - e.z) < e.r + pad) return true;
-  for (const l of m.landmarks) if (Math.abs(x - l.x) < l.hx + l.clear + pad && Math.abs(z - l.z) < l.hz + l.clear + pad) return true;
+  for (const l of m.landmarks) {
+    if (Math.abs(x - l.x) < l.hx + l.clear + pad && Math.abs(z - l.z) < l.hz + l.clear + pad) return true;
+    // M15 Mitte: also the turned footprint (the box above ignores `rot`; see `MapDef.strictLots`).
+    if (m.strictLots && l.rot % Math.PI !== 0) {
+      const dx = x - l.x, dz = z - l.z, c = Math.cos(l.rot), sn = Math.sin(l.rot);
+      if (Math.abs(dx * c - dz * sn) < l.hx + l.clear + pad && Math.abs(dx * sn + dz * c) < l.hz + l.clear + pad) return true;
+    }
+  }
   if (m.rail && Math.abs(z - m.rail.z) < 6 + pad && x > m.rail.minX && x < m.rail.maxX) return true;
   if (barrierDist(m, x, z) < pad + 1 || inRailYard(m, x, z, pad + 1)) return true;
   for (const t of m.terraces) if (polyEdgeDist(t.poly, x, z) < pad + 1 || onStair(t, x, z, pad + 1.5)) return true;
@@ -769,6 +801,11 @@ export function generateLots(m: MapDef): Lot[] {
     occ.take(h.x, h.z, h.rot, h.w / 2 + 0.3, h.d / 2 + 0.3);
     if (h.wing) occ.take(h.wing.x, h.wing.z, h.rot, h.wing.w / 2 + 0.3, h.wing.d / 2 + 0.3);
     lots.push(lot);
+  }
+  // M15 Mitte (`strictLots`): side paths keep their whole width free, not only where lot corners test them.
+  if (m.strictLots) for (const st of m.streets) if (st.kind === 'path') for (let i = 1; i < st.pts.length; i++) {
+    const [ax, az] = st.pts[i - 1]!, [bx, bz] = st.pts[i]!, len = Math.hypot(bx - ax, bz - az);
+    occ.take((ax + bx) / 2, (az + bz) / 2, Math.atan2(-(bz - az), bx - ax), len / 2 + 1, st.width / 2 + 0.6);
   }
   const ponds: Pt[][] = [], piers: Pier[] = [];
 

@@ -20,6 +20,27 @@ export interface Sky {
   lamps: number;
   /** Grade on top of `LOOK`. */
   look: Partial<Look>;
+  /** M15 Mitte (2089): wet streets, recoloured lanterns, the neon palette; other maps leave it out. */
+  wet?: Wet;
+}
+
+/** Rain-wet neon night (Mitte, `docs/tasks/m15-mitte.md` step 3). */
+export interface Wet {
+  /** Reflection streak under every light toward the camera: length factor (0 = none) and opacity. */
+  streak: number;
+  streakAlpha: number;
+  /** Roughness scale of the street materials (lower is glossier: they mirror the sky environment). */
+  gloss: number;
+  /** Light colours of the street lanterns (warm `0xffb060` on other maps), picked per lantern; repeat a colour to weight it. */
+  lamp: number[];
+  /** Neon colours: warm shop and club signs, cold signs (Regierungsviertel, towers). */
+  neon: { warm: number[]; cold: number[] };
+  /** Neon brightness and the share of street fronts that carry a sign. */
+  glow: number;
+  density: number;
+  /** Rain streak colour and the share of streaks tinted by the neon. */
+  rain: number;
+  rainNeon: number;
 }
 
 export const NIGHT_SKY: Sky = {
@@ -78,8 +99,33 @@ export const ALEX_SKIES: Record<'a' | 'b' | 'c', Sky> = {
   },
 };
 
-/** The sky of a map: Alexanderplatz by `?sky=` (default A until Johannes picks), every other map night. */
+/**
+ * Mitte 2089 neon night (Johannes 2026-11-18, from the three variants of step 3: mainly A "Neonregen", a bit
+ * less saturated, some of B's blue, occasional red from C). Rain-wet streets with a reflection streak under
+ * every light, neon signs and poles below 5 m, tinted rain. Most lanterns amber, some cold blue LED, a few
+ * sodium red; neon mostly magenta, amber and cyan with blue and red accents.
+ */
+export const MITTE_SKY: Sky = {
+  id: 'mitte',
+  background: 0x18132c,
+  fog: 0x221a35,
+  fogDensity: 0.021,
+  env: { top: [0.21, 0.14, 0.34], horizon: [0.07, 0.045, 0.105], lamps: 1.1, intensity: 0.74 },
+  hemi: { sky: 0x7c6fb2, ground: 0x241a26, intensity: 0.85 },
+  sun: { color: 0xafadff, intensity: 1.55, from: [-11, 24, 12] },
+  lamps: 1,
+  look: { saturation: 1.28, split: 0.3, contrast: 1.1, bloom: 0.95, exposure: 1.15 },
+  wet: {
+    streak: 1.05, streakAlpha: 0.58, gloss: 0.42,
+    lamp: [0xffb060, 0xffb060, 0xffb060, 0xffb060, 0xffb060, 0xffb060, 0xffb060, 0x6a8cff, 0x6a8cff, 0xff6a3a],
+    neon: { warm: [0xff4fa3, 0xe19142, 0xff4fa3, 0xff4fa3, 0xe19142, 0xff3b30], cold: [0x43d1cf, 0x43d1cf, 0x6a8cff, 0x43d1cf, 0xff4fa3] },
+    glow: 0.95, density: 0.75, rain: 0xc0b8e8, rainNeon: 0.25,
+  },
+};
+
+/** The sky of a map: Alexanderplatz by `?sky=` (default A until Johannes picks), Mitte's neon night, every other map night. */
 export function skyFor(mapId: string | undefined, variant: string | null): Sky {
+  if (mapId === 'mitte') return MITTE_SKY;
   if (mapId !== 'alex') return NIGHT_SKY;
   return ALEX_SKIES[(variant === 'b' || variant === 'c' ? variant : 'a')];
 }

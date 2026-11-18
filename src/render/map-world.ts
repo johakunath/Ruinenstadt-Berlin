@@ -30,7 +30,8 @@ import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexEdge, dressAlexLots } from './alex-world';
 import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
-import { NIGHT_SKY, type Sky } from './sky';
+import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
+import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isLargeProp } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { Materials, type LitMaterial } from './materials';
@@ -38,7 +39,7 @@ import { loadGroundTexture } from './ground-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
-import { paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, paintWaterNormal, type PaintOptions } from './paint';
+import { canvas, toTexture, paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, paintWaterNormal, type PaintOptions } from './paint';
 import {
   Builder, balconyLife, buildAltbau, buildProp, partOf, type BreakableView, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
@@ -87,6 +88,8 @@ export interface MapMats extends Mats {
   alex?: LitMaterial;
   /** M15 Alexanderplatz painted banners and Pioneer poster (2D art, alpha-tested), only on that map. */
   posters?: LitMaterial;
+  /** M15 Mitte materials (`mitte-world.ts`), only on that map. */
+  mitte?: MitteMats;
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
@@ -94,6 +97,7 @@ export class ChunkBuilder extends Builder {
   readonly spots: LightSpot[] = [];
   readonly glows = new BatchSet();
   private readonly glowMats = new Map<number, Material>();
+  private readonly streakMats = new Map<number, Material>();
 
   constructor(readonly mm: MapMats) {
     super(mm);
@@ -146,7 +150,19 @@ export class ChunkBuilder extends Builder {
     const lp = pos.clone().setY(pos.y + this.lift);
     lp.x += ux * reach * 0.5;
     lp.z += uz * reach * 0.5;
+    // M15 Mitte: lanterns take one of the night's lamp colours (`Wet.lamp`, fixed per position).
+    if (wet && color === 0xffb060) color = wet.lamp[Math.abs(Math.round(pos.x * 7.3 + pos.z * 13.1)) % wet.lamp.length]!;
     this.spots.push({ pos: lp, color, intensity, distance, flicker, phase: Math.random() * 6 });
+    if (wet && wet.streak > 0) {
+      // Wet street: the light's reflection runs from its foot toward the camera (south), as long as the
+      // light is high (the mirror image sits about one height in front of the foot), broken by ripples.
+      const len = Math.min(9, (1.5 + pos.y * 1.4) * wet.streak), w = Math.max(0.7, Math.min(2.2, pool * 0.3));
+      let sm = this.streakMats.get(color);
+      if (!sm) this.streakMats.set(color, (sm = Materials.glow(streakTex(), color, wet.streakAlpha * glowScale)));
+      const g = new PlaneGeometry(w, len);
+      g.rotateX(-Math.PI / 2);
+      this.glows.of(sm).add(g, new Matrix4().setPosition(pos.x, 0.04, pos.z + len * 0.45));
+    }
     let mat = this.glowMats.get(color);
     if (!mat) this.glowMats.set(color, (mat = Materials.glow(this.glowTex, color, 0.22 * glowScale)));
     const geo = new PlaneGeometry(pool * 2, pool * 2 * (shape.stretch ?? 1));
@@ -165,6 +181,23 @@ export class ChunkBuilder extends Builder {
 
 /** Ground glow strength of lamps for the map being built (daylight maps dim them, `Sky.lamps`). */
 let glowScale = 1;
+/** M15 Mitte: wet streets of the map being built (`Sky.wet`), else undefined. */
+let wet: Wet | undefined;
+let streakCache: Texture | undefined;
+/** Soft vertical reflection streak: bright in the middle, faded at both ends, broken by ripple bands. */
+function streakTex(): Texture {
+  if (streakCache) return streakCache;
+  const [c, g] = canvas(32, 128);
+  const img = g.createImageData(32, 128), rng = new Rng(77);
+  const bands = Array.from({ length: 128 }, () => 0.55 + 0.45 * rng.next());
+  for (let y = 0; y < 128; y++) for (let x = 0; x < 32; x++) {
+    const u = (x + 0.5) / 32 - 0.5, v = (y + 0.5) / 128;
+    const a = Math.exp(-((u / 0.2) ** 2)) * Math.pow(Math.sin(Math.PI * v), 0.9) * bands[y]!;
+    img.data.set([255, 255, 255, Math.round(255 * a)], (y * 32 + x) * 4);
+  }
+  g.putImageData(img, 0, 0);
+  return (streakCache = toTexture(c, false));
+}
 const IDENTITY = new Matrix4();
 /** Cap colour: dark, so the cut reads as a section, not as a roof. */
 const CAP_TINT: RGB = [0.2, 0.22, 0.23];
@@ -2167,13 +2200,17 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
 export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean; cut?: 'off' | number; sky?: Sky } = {}): World {
   const sky = opts.sky ?? NIGHT_SKY;
   glowScale = sky.lamps;
+  wet = sky.wet;
   const mats = makeMapMats(materials);
+  // Wet streets mirror the sky environment and the lamps.
+  if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
   if (m.id === 'alex') {
     mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
     const posters = materials.surface({ map: paintPosterFallback(), alphaTest: 0.5, doubleSided: true, roughness: 0.85 });
     mats.posters = posters;
     loadPosters(materials.profile.anisotropy, (t) => { posters.map = t; posters.needsUpdate = true; });
   }
+  if (m.id === 'mitte') mats.mitte = mitteMats(materials);
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
   const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
   const cutaway = new Cutaway(plan.zones);
@@ -2216,6 +2253,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
       // M15 Alexanderplatz: intact Plattenbau gets its panel facade; ruins keep the shared burnt-out shell.
       else if (l.kind === 'platte' && m.id === 'alex' && !l.ruin) b.on(y0, () => buildAlexPlatte(b, l, (f, seed) => loggias(b, f, seed)));
+      // M15 Mitte step 7: the Potsdamer Platz builds in glass (same footprint and height as the Altbau).
+      else if (mats.mitte && !l.shape && (l.kind === 'altbau' || l.kind === 'shop') && areaAt(m, l.x, l.z)?.id === 'potsdamer') b.on(y0, () => buildGlassLot(b, l));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
       else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
@@ -2258,8 +2297,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     }
     // Xhain landmarks are built and cut in `buildXhainWorld`.
     const cut = XHAIN_KINDS.has(l.kind) ? undefined : landmarkCut.get(l);
-    // M15 Alexanderplatz landmarks live in `alex-world.ts`.
-    const build = (): void => b.on(y0, () => (ALEX_KINDS.has(l.kind) ? buildAlexLandmark(b, l) : buildLandmark(b, l)));
+    // M15 Alexanderplatz and Mitte landmarks live in `alex-world.ts` and `mitte-world.ts`.
+    const build = (): void => b.on(y0, () => (ALEX_KINDS.has(l.kind) ? buildAlexLandmark(b, l) : MITTE_KINDS.has(l.kind) ? buildMitteLandmark(b, l) : buildLandmark(b, l)));
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
   const rng = new Rng(m.seed);
@@ -2289,6 +2328,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     dressAlexEdge(chunkOf, props, (x, z) => surfaceAt(m, x, z));
     buildStrausberger(chunkOf, m);
   }
+  // M15 Mitte: neon street dressing (`mitte-world.ts`).
+  if (mats.mitte) buildMitteWorld(m, lots, props, mats.mitte, mats, wet, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
   if (m.tunnel) {
     buildTunnel(m, mats, chunkOf);
     buildTunnelExtras(m, mats, materials, chunkOf);

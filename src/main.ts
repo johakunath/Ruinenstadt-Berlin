@@ -37,6 +37,7 @@ import { tunnelNotice, tunnelObjective } from './ui/tunnel-notice';
 import { STATIONS } from './data/camp';
 import { siteLevel } from './sim/camp';
 import { xhainMap } from './data/xhain';
+import { mitteMap } from './data/mitte';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor } from './render/sky';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, showTitleLinks, wonLink, type MapId } from './ui/maps';
@@ -79,9 +80,9 @@ input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
 abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
-// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
+// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : koepenickMap(opts.mapScale);
+  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
@@ -598,7 +599,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : MAP_NAME[mapId]) : 'Neustart');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -1032,7 +1033,7 @@ window.__game = {
 // The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
 showTunnelButton();
 
-// M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants).
+// M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.
 const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
