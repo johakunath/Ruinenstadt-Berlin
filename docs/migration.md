@@ -12,6 +12,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | M7/M8 parity, M9 consumable controls, M16 run content | Claude | done (review of PR #17 and completion, same task file); Johannes playtest open |
 | M12 enemy roster, elites and boss attacks | Fable 5.2 | done: `docs/tasks/m12-enemies.md`; Johannes playtest open |
 | M14 balance bot | Fable 5.2 | built: `docs/tasks/m14-balance-bot.md`, numbers in `docs/balance.md`; calibration to Johannes after the playtest |
+| B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
 | M11d Map realism: streets, sidewalks, shapes, limits (playtest 2026-11-17) | Claude (taken over 2026-11-17) | step 2 built (profiles A Bahnhofstraße, C Spreeufer with tracks); all steps built 2026-11-17 (0 water, 3 footprints and ruins, 4 closed edge, 5 hand-built zone 0, 6 landmarks with reveal shot); Johannes playtest open: `docs/tasks/m11d-map-realism.md` |
 | M11c World variety: two lot types per zone, weather per zone (variant A) | Claude | weather and area messages built 2026-11-17; the eight lot types built 2026-11-17 (data, guards, event spots; art by sub-agents): `docs/maps/guidelines.md` › Lot types and weather |
 | M16b Side branches, variant A (lanes beside the route) | Claude | built 2026-11-17 (Hinterhof: blessing, Kietzgasse: sleeping elite, Hangarweg: cache), playtest open |
