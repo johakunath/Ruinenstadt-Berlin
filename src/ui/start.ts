@@ -33,7 +33,7 @@ export class StartScreen {
         ${row('Grafik', '', profileSeg())}
         ${row('Ton', '', toggle('sound', 'Ton'))}${row('Musik', '', toggle('music', 'Musik'))}
         ${row('Lautstärke', '', volumeRange())}
-        ${row('Vibration', '', toggle('rumble', 'Vibration'))}${row('Akkusparen', '', toggle('eco', 'Akkusparen'))}${row('Vollbild', '', toggle('fullscreen', 'Vollbild'))}
+        ${row('Vibration', '', toggle('rumble', 'Vibration'))}${row('Akkusparen', '', toggle('eco', 'Akkusparen'))}
         <p class="keys" id="keys-hint"></p>
         <button id="open-options" type="button" class="btn sm">Alle Optionen</button>
       </section></div>`;

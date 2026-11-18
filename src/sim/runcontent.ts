@@ -406,6 +406,7 @@ export function updateContent(s: Sim): void {
       for (let i = 0; i < 2; i++) spawnDrop(s, C.x, C.z, { kind: 'item', item: makeItem(rng, ctx(), il + 1, 1) });
       spawnDrop(s, C.x, C.z, { kind: 'material', id: rng.pick(MATERIAL_IDS) });
       done('rescue', 'done', C, `${who.name} · ${who.description}`);
+      s.events.push({ type: 'note', text: '„Danke! Wir sehen uns im Lager.“', color: '#ead9c0', x: C.x, z: C.z });
       c.captive = null;
     }
   }
