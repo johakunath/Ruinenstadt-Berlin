@@ -42,28 +42,52 @@ test('M6: damaged save is ignored', async ({ page }) => {
   await expect(page.locator('#resume')).toBeHidden();
 });
 
-test('M13: the camp spends Schrott, keeps the checkpoint and survives a reload', async ({ page }) => {
+test('M20: the walkable camp opens with the S3, spends Schrott at a station, keeps the Köpenick checkpoint; the train leads back', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript((s) => {
-    if (!localStorage.getItem('ruinenstadt-berlin.save')) localStorage.setItem('ruinenstadt-berlin.save', JSON.stringify({ ...s, profile: { ...s.profile, inventory: { ...s.profile.inventory, scrap: 100 } } }));
+    if (!localStorage.getItem('ruinenstadt-berlin.save')) localStorage.setItem('ruinenstadt-berlin.save', JSON.stringify({ ...s, profile: { ...s.profile, inventory: { ...s.profile.inventory, scrap: 100, camp: { stations: { zeug: 1 }, stash: [], freed: [0, 100] } } } }));
   }, SAVE);
   await page.goto('/?profile=Leistung');
-  await expect(page.locator('#open-camp')).toBeEnabled({ timeout: 90_000 });
+  await expect(page.locator('#open-camp')).toBeVisible({ timeout: 90_000 });
   await page.locator('#open-camp').click();
+  // The camp page has no title: it loads straight into the station hall.
+  await page.waitForURL(/map=lager/, { timeout: 30_000 });
+  await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 120_000 });
+  await expect(page.locator('#title')).toBeHidden();
+  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 58; p.z = p.pz = 14.5; });
+  await expect(page.locator('#talk-btn')).toContainText('Zeughaus', { timeout: 30_000 });
+  await page.keyboard.press('KeyF');
+  await expect(page.locator('#camp')).toBeVisible();
   await page.locator('[data-up="dmg"]').click();
   await expect(page.locator('.camp-msg')).toHaveText('Schärfen · Stufe 1');
-  await page.locator('[data-close]').click();
+  await page.locator('#camp [data-close]').click();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.save')!));
   expect(saved.profile.inventory.scrap).toBe(81);
   expect(saved.profile.statContext.upgrades.dmg).toBe(1);
   expect(saved.run.index).toBe(1);
-  await page.reload();
-  await expect(page.locator('#resume')).toBeEnabled({ timeout: 90_000 });
-  await page.locator('#resume').click();
-  await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 90_000 });
-  expect(await page.evaluate(() => window.__game!.sim().statContext.upgrades.dmg)).toBe(1);
+  // The train: the network map, Köpenick, and straight back into the waiting checkpoint.
+  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 12; p.z = p.pz = 18.2; });
+  await expect(page.locator('#talk-btn')).toContainText('Netzplan', { timeout: 30_000 });
+  await page.keyboard.press('KeyF');
+  await expect(page.locator('#netboard')).toBeVisible();
+  await page.locator('#netboard [data-stop="0"]').click();
+  await page.locator('#netboard [data-ride]').click();
+  await page.waitForURL((u) => !/map=lager/.test(u.search), { timeout: 30_000 });
+  await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 120_000 });
+  expect(await page.evaluate(() => ({ dmg: window.__game!.sim().statContext.upgrades.dmg, index: window.__game!.sim().run.index }))).toEqual({ dmg: 1, index: 1 });
   expect(errors).toEqual([]);
+});
+
+test('M20: before the S3 the camp is out of reach', async ({ page }) => {
+  await page.addInitScript((s) => { if (!localStorage.getItem('ruinenstadt-berlin.save')) localStorage.setItem('ruinenstadt-berlin.save', JSON.stringify({ ...s, run: null, profile: { ...s.profile, inventory: { ...s.profile.inventory, camp: { stations: {}, stash: [], freed: [0] } } } })); }, SAVE);
+  await page.goto('/?profile=Leistung');
+  await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
+  await expect(page.locator('#open-camp')).toBeHidden();
+  await expect(page.locator('#go-tunnel')).toBeVisible();
+  await page.goto('/?profile=Leistung&map=lager');
+  await page.waitForURL((u) => !/map=lager/.test(u.search), { timeout: 30_000 });
+  await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
 });
 
 test('M17: the intro cards come once before the first run', async ({ page }) => {

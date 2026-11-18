@@ -31,6 +31,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
 | K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
 | P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; next candidates to measure (playtest 2026-11-17) | Claude · Opus high, Johannes measures | step 1 built, measurement open: `docs/tasks/p1-heat.md` |
+| M20 Tunnels between the maps (2D route A content, line generator) and the walkable camp at S+U Warschauer Straße (layout A+C, flow F1, build sites; Johannes 2026-11-18) | Claude · Opus high | built 2026-11-18, playtest open: `docs/tasks/m20-tunnels-camp.md` |
 | KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
@@ -123,7 +124,7 @@ Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`): steps 1–5 done 2
 | Q7 | Map size | Concept first, size set by the Tab S9 |
 | Q8 | Districts | Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg, Fernsehturm finale. Each redrawn. Not migrated: Tempelhof, Wedding, Spandau, Marzahn |
 | Q10 | Parity scope | P1 above: with endless mode and one tunnel; without threat levels and daily fight |
-| Q11 | Camp | Menu first; walkable 3D camp later |
+| Q11 | Camp | Menu first; walkable 3D camp later. Walkable camp built in M20 (2026-11-18): opens with the S3 at Warschauer Straße, stations unlock as build sites |
 
 ## Open
 

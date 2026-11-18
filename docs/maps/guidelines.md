@@ -80,6 +80,15 @@ Any new visual whose form is open (layout, minimap, ground look, a building type
 | Render | Walls 4.6 m along both tube edges, open at junctions, as thick as fits before the next tube (up to 12 m) with a black top, so the camera sees rock; tiles in stations, two tracks with sleepers, tiled platforms. Ground outside the tubes is darkened |
 | Flow | A separate page load (`?map=tunnel`): reachable from the title and the victory screen once Köpenick is freed; back the same way. Tunnel enemies +25 % life; a cleared line is stored in `camp.freed` as 100 + line |
 
+## Camp (M20)
+
+| Topic | Rule |
+|---|---|
+| Layout | A+C of `docs/mockups/m20-camp-combined.svg` (Johannes, 2026-11-18): platform hall inside (0 m), wide stairs, open track yard outside (+3 m) under the Warschauer Brücke. Every station is its own place with its own floor or object (Kachelraum, Bäckerei, Markt, Güterwagen, Brückenbogen, Stellwerk, Sandsackhof) |
+| Data | `MapDef.camp` (`src/data/camp-map.ts`): floor polygons (everything else is solid), walls, stations (footprint = collider), rings. No encounters, `Level.camp` keeps it peaceful |
+| Camera | Walls facing the camera stay knee high (2D cutaway rule); columns stand north of the walking line; the exercise yard nearest the camera stays low |
+| Light | One fixed light spot per station plus hall and bridge lamps; a shadow-only ceiling keeps the moon out of the hall, it falls down the stairs |
+
 ## Invariants (tests per map)
 
 - Wave and boss counts per zone as decided; difficulty rises wave by wave.

@@ -19,7 +19,7 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 | Enemies | Six types that each want another answer (M12): Schlurfer, Hetzer, Brocken (marks a circle), Speier (keeps distance, spits), Raptor (pounces along a line), Krähe (circles and dives). Elites Flink, Brennend, Spaltend, Gepanzert with a special and a punish window (gold ring, +30 % damage). Element resistances as in 2D. Bosses: Feldwebel (charge, calls men), Turmwächter (barrage, shot ring, slam), Rex (bite, charge, roar rings, tail), Hauptmann (slam, shot ring, calls men); all rage below half life. Small life bars over hurt enemies. Raptor and Rex are CC0 dinosaur models, the crow and the uniforms are built in code |
 | Feedback | Hit flash, sparks, smear, shake, rumble, telegraphs, ported 2D synth effects and adaptive music (S1); persistent Musik toggle and volume |
 | HUD | Objective with distance and arrow, minimap (tap opens the map), edge triangles to the objective and the last enemies of a wave, wave banner, boss bar, victory screen, one pause button (pulses when the bag holds an upgrade) |
-| Camp | Lager between expeditions (title, victory screen): seven stations with three levels, workshop upgrades and Drill, five meals from Zutaten that drop from enemies, Verband and Molotow, Aufsätze, a stash of 40 places (M13) |
+| Camp | Walkable camp at S+U Warschauer Straße (M20), reached through the S3 after Köpenick; before that it does not exist. Hall below (Schwarzmarkt, Lazarett in the old toilets, Imbiss in the bakery, the train to the S+U network map), stairs up to the track yard under the bridge (Zeughaus in a freight car, Hackerspace in a bridge arch, Kommandantur in the signal box, Exerzierplatz, campfire). Three stations work on arrival, four are build sites; each station shows its level. Station windows as in M13: workshop upgrades and Drill, meals from Zutaten, Verband and Molotow, Aufsätze, stash of 40 places |
 | Start and end | Light start screen (U3): the game (renderer, map, assets) loads only on Weiter, Neue Expedition (gear stays), Lager or Spielstand löschen; on the same screen difficulty and Grafik, Ton, Musik, Lautstärke, Vibration, Vollbild, a controls line and Alle Optionen. Intro cards before the first run, one-time tips for loot and blessings. End screens with fights, kills, time and Schrott. Hauptmenü in the options (Weiter resumes); a Grafik change in a run reloads straight back into it |
 | Streets | M11d: the Bahnhofstraße is a 14 m Berlin main street (tram in the middle, lane and parking lines, 3 m sidewalks with trees in pits); the Spreeufer from the Köllnische Vorstadt to the Spreepark an Allee with a grass tram track. Other streets as before |
 | Weather | Per zone (M11c variant A): rain in the Bahnhofsviertel, fog with fireflies in the Müggelberge, ash and embers around the Spreepark, clear over the Altstadt; fog density eases between zones. Area name shown when walking into an area |
@@ -34,7 +34,11 @@ What is in the game now. Updated 2026-11-17. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-17)
+## Latest (2026-11-18)
+
+- M20: walkable camp at Warschauer Straße (layout A+C, build sites), S+U network map at the camp's train, the S3 victory leads into the camp; tunnels get the 2D route A content and one generator for every line (`docs/tasks/m20-tunnels-camp.md`).
+
+## Earlier (2026-11-17)
 
 - U3: menus look like 2D (font, tabs, stat tooltips, options screen with controls graphics), a light start screen that loads the game only on play, and a fullscreen button top right (`docs/tasks/u3-menu-2d.md`).
 - H1 hero: own clothing from Blender (coat, vest, boots, sneakers, gloves, scarf) that follows the equipped items, left hand on two-handed weapons, the hammer's two-handed stance, a turnable hero in the inventory (`docs/tasks/h1-hero.md`).
