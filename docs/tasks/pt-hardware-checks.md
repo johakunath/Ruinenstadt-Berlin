@@ -1,10 +1,27 @@
-# PT Hardware and quality checks for Johannes (running list)
+# PT Playtest and hardware checks for Johannes (running list)
 
 Status: open, running list. Johannes checks these on real devices after the open PRs are merged (2026-11-18). Mostly performance, heat and look, not gameplay.
 
 **Every session:** when your work needs a check on real hardware (fps, heat, a look decision, a hitch), add a row here instead of leaving it only in your task file. Keep the row short, link the task file. Johannes fills in Result; the session that picks it up deletes the row once it is answered and acted on (findings go to `docs/playtests.md`).
 
 Cloud browsers have no real GPU: counts of draw calls and triangles are valid there (`node tools/passes.mjs`), fps and temperature are not.
+
+## Playtest
+
+Built features nobody has played yet. Delete a row once Johannes has played it; findings go to `docs/backlog.md` or a task file.
+
+| Area | What to try | Task file |
+|---|---|---|
+| Combat | Four weapons with finishers, powers and ultimates, blessings, Umbau cards (G1), spear thrusts (C1), Auto-Angriff, legendary powers | `combat-audio-migration.md`, `g1-build-variety.md`, `c1-spear-light.md` |
+| Enemies | Köpenick roster, elites and four bosses (M12); Xhain, Alexanderplatz and Mitte rosters and bosses; guards that lie on the ground get up before they strike | `m12-enemies.md`, `m12b-xhain-enemies.md`, `m15-alexanderplatz.md`, `m12c-mitte-enemies.md` |
+| Maps | Köpenick map realism (M11d), lot types and weather (M11c), side branches (M16b), Xhain, Alexanderplatz, Mitte; back yard cutaway and its height (V1) | `m11d-map-realism.md`, `docs/maps/*.md`, `v1-visibility.md` |
+| Run flow | S3 tunnel (M19), tunnels between the maps and the walkable camp (M20), endless mode, events, Späti trade with the worn-item comparison | `m20-tunnels-camp.md`, `docs/status.md` |
+| Menus | Pause menu, inventory, Segen, Kodex, options, controls graphics, start screen (U1 to U3); set-break warning on a swap (2D backlog 29, not confirmed) | `u1-pause-menu.md`, `u2-menu-tabs.md`, `u3-menu-2d.md` |
+| Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
+| Audio | Enemy sounds per type, listening test (A2) | `a2-audio-followups.md` |
+| Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
+
+## Hardware checks
 
 | # | Check | How | Device | From | Result |
 |---|---|---|---|---|---|

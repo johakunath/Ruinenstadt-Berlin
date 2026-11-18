@@ -35,7 +35,6 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | B14 | Switch `MapDef.strictLots` on for Köpenick and Xhain: lots then keep out of turned landmark footprints and off the full width of side paths (today they can overlap a turned landmark or straddle a path). Regenerates all their lots, so it waits for their playtests | M15 Mitte data step (2026-11-18) | After the Köpenick and Xhain playtests |
 | P2 | Flicker on a yellow house wall on the PC (Qualität) until the hero stands still. Likely two coplanar facade layers (plaster patch, ivy or window trim on the wall plane) fighting for depth while the camera moves; check the yellow Altbau facade parts in `src/render/world.ts` / `map-world.ts` and give the overlay a real offset | Playtest 2026-11-17 | Next PC session |
 | P3 | Cars as recognizable models (Trabi, Wartburg, BVG bus) instead of boxes | Playtest 2026-11-17 | PC or Codex models |
-| P6 | Item comparison as in 2D: same layout and rows, item level as the main number instead of Kampfkraft, units coherent (%, per second, absolute) | Playtest 2026-11-17 | U1 |
 | P7 | A reward moment after a won fight (short line, drop shower or dialogue) before the blessing cards; the 1.3 s pause is in | Playtest 2026-11-17 | M17 |
 | P8 | Contour behind buildings also for enemies (red) and NPCs (green), hero stays amber | Playtest 2026-11-17 | After R1 (built 2026-11-17; Johannes' measurement first) |
 | P10 | Pickups: own model per item type (weapon kinds, armor slots, materials, food) instead of one bag | Playtest 2026-11-17 | L2 |
