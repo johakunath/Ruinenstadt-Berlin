@@ -9,12 +9,14 @@ Second district, 1981 (story: West Berlin squats, the Wall stands; boss Die Spre
 | X1 | Layout B: start in the East at S Warschauer Straße, Mühlenstraße behind the Wall, through the death strip over the Schillingbrücke, then Kreuzberg; final on the Oberbaumbrücke |
 | X2 | Bosses from the 2D list, built from the existing attack blocks: Der Grenzer (zone 1), Der Brandmeister (zone 2), Die Rattenmutter (zone 3), Die Spreehexe (district boss). Task `docs/tasks/m12b-xhain-enemies.md` |
 | X3 | Rats (2D `rat`) are Xhain's new enemy type, in packs |
+| X4 | Feedback on the data map (Johannes, 2026-11-18): the sites he cares about most are S-Bahnhof and Warschauer Straße, Ostbahnhof, East Side Gallery, Schlesisches Tor, Görlitzer Park, the Bethaniendamm with St. Thomas, Oberbaumbrücke and Kotti, in one loop; landmarks at Köpenick quality; density, back yards and small things like Köpenick but Xhain's own |
+| X5 | A wide track field (`MapDef.railYards`) runs from the south-east under the Warschauer Brücke to the Ostbahnhof; the bridge is a raised deck (`Terrace.bridge`) with stairs down to the street, and the run starts on it. Görli is a long rectangle (OSM). The Bethaniendamm and its Wall bend, with St. Thomas inside the bend. The death strip on the north bank between the East Side Gallery and the Spree is wide and visible; west of the Schillingbrücke the land wall along the Bethaniendamm stays, as in 1981 |
 
 ## Route (scale 1: 400 × 344 m, route about 820 m)
 
 | Zone | Encounters (waves) | Boss | Landmarks |
 |---|---|---|---|
-| 0 Mühlenstraße (East) | Warschauer Brücke (3), Mühlenstraße (3), Ostbahnhof (3) | Der Grenzer in the death strip | S Warschauer Straße, Ostbahnhof ("Hauptbahnhof" 1981), Stadtbahn viaduct, hinterland wall, watchtower |
+| 0 Mühlenstraße (East) | Warschauer Straße (3), East Side Gallery (3), Ostbahnhof (3) | Der Grenzer in the death strip | S Warschauer Straße on the bridge over the track field, Ostbahnhof, East Side Gallery, watchtower |
 | 1 Mariannenplatz (SO36) | Rauch-Haus (3), Mariannenplatz (3), Oranienstraße (3) | Der Brandmeister on the Oranienplatz | Georg-von-Rauch-Haus, St.-Thomas-Kirche, Bethanien |
 | 2 Kottbusser Tor | Kottbusser Tor (3), Skalitzer Straße (3), Görlitzer Bahnhof (3) | Die Rattenmutter in Görlitzer Park | NKZ, U1 Hochbahn with three stations, ruin of the Görlitzer Bahnhof |
 | 3 Oberbaumbrücke | | Die Spreehexe at the Kreuzberg head | Oberbaumbrücke (towers, U1 upper deck), checkpoint at the north head |
@@ -30,7 +32,7 @@ Origin Oberbaumbrücke (52.50173 N, 13.44573 E). Real offsets east/north; map of
 | Place | Real | Map | Note |
 |---|---|---|---|
 | S+U Warschauer Straße | 0.20 km E, 0.35 km N | 50 m E, 94 m N | North-east ✓ |
-| East Side Gallery (hinterland wall) | 0.33 km W, 0.30 km N | along the Mühlenstraße, 18 m off the Spree | North-west, between street and river ✓ |
+| East Side Gallery (hinterland wall) | 0.33 km W, 0.30 km N | along the Mühlenstraße, 22 m off the Spree | North-west, between street and river ✓ |
 | Mühlenstraße | 0.64 km W, 0.62 km N | 40 m W, 70 m N | ✓ |
 | Ostbahnhof | 0.72 km W, 1.00 km N | 100 m W, 168 m N | North-west on the Stadtbahn ✓ |
 | Schillingbrücke | 1.11 km W, 0.84 km N | 143 m W, 108 m N | Over the Spree ✓ |
@@ -42,7 +44,7 @@ Origin Oberbaumbrücke (52.50173 N, 13.44573 E). Real offsets east/north; map of
 | Oranienplatz | 2.03 km W, 0.06 km N | 278 m W, 14 m S | West end ✓ (compressed north–south) |
 | Kottbusser Tor | 1.86 km W, 0.31 km S | 246 m W, 62 m S | South-west ✓ |
 | U Görlitzer Bahnhof | 1.17 km W, 0.27 km S | 150 m W, 54 m S | ✓ |
-| Görlitzer Park | 0.55 km W, 0.57 km S | 98 m W, 96 m S | South-west of the bridge ✓ |
+| Görlitzer Park | 0.55 km W, 0.57 km S; 950 × 120 m rectangle running south-east | centre 86 m W, 112 m S; 104 × 44 m, same axis | South-west of the bridge ✓ |
 | U Schlesisches Tor | 0.29 km W, 0.10 km S | 70 m W, 38 m S | ✓ |
 
 Not checked: side street courses (Wrangelstraße, Cuvrystraße, Holzmarktstraße and Am Wriezener Bahnhof are placed where they read right), the exact wall line at the Schillingbrücke. Left out: the Landwehrkanal (south of the map), Berghain and post-1990 buildings (era 1981).
@@ -53,8 +55,7 @@ Not checked: side street courses (Wrangelstraße, Cuvrystraße, Holzmarktstraße
 |---|---|
 | Wall | `MapDef.walls`: hinterland wall along the Friedrichshain bank, checkpoint across the north head of the Oberbaumbrücke (the bridge is reached from Kreuzberg only), land wall along the Bethaniendamm with one breach for the route. Every piece blocks; no other way through |
 | Death strip | Open grass strip between the Spree and the land wall, tank traps, watchtower; the Grenzer fight |
-| Viaducts | `MapDef.viaducts`: the brick Stadtbahn blocks (north edge), the U1 Hochbahn blocks only at its pillar pairs (every 15 m) |
-| Trams | Only in the East (Warschauer Straße); West Berlin had none in 1981 |
+| Tracks | `MapDef.railYards`: the fenced Stadtbahn track field is the north edge; `MapDef.viaducts`: the U1 Hochbahn blocks only at its pillar pairs (every 15 m) |
 | Lights | Fires and candles of people under the Hochbahn and along the Warschauer Straße (hand-placed, the fill pass finds no free sidewalk there) |
 
 ## Späti rest stops

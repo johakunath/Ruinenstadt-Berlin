@@ -20,9 +20,9 @@ export const KOEPENICK_WEATHER: Readonly<Record<string, WeatherKind>> = {
  * of SO36, rain at the Kotti and in the Görli, a clear night in the Wrangelkiez. Same particle layers.
  */
 export const XHAIN_WEATHER: Readonly<Record<string, WeatherKind>> = {
-  osthafen: 'fog', andreasviertel: 'fog', todesstreifen: 'fog',
+  osthafen: 'fog', andreasviertel: 'fog', todesstreifen: 'fog', grenzstreifen: 'fog',
   so36: 'ash', mariannenplatz: 'ash',
-  kotti: 'rain', goerli: 'rain',
+  kotti: 'rain', goerli: 'rain', reichenberger: 'rain',
   wrangelkiez: 'clear',
 };
 /** Fog density per weather (scene default 0.017). */
