@@ -102,6 +102,12 @@ export interface Player {
   sweeping: boolean;
   sweepLo: number;
   sweepHi: number;
+  /** M12c shove: knock velocity on top of the player's own, damped every step (`pushPlayer`). */
+  kx: number;
+  kz: number;
+  /** M12c Türsteher grab: seconds the hero cannot walk (attacks, powers work; a roll breaks free) and who holds. */
+  root: number;
+  rootBy: number;
 }
 
 /** `special`: a telegraphed special attack runs (`Enemy.sp`, `src/sim/ai.ts`). */
@@ -173,6 +179,10 @@ export interface Enemy {
   guardIndex?: number;
   /** The last hit was critical (kill effects). */
   lastCrit?: boolean;
+  /** M12c: a special that follows this one after `t` seconds (Türsteher rage shove, the Basspredigt). */
+  queue?: { kind: SpecialKind; t: number };
+  /** M12c: one-time boss calls already made (the Dirigent's Orchester). */
+  calls?: number;
 }
 
 export type SimEvent =
@@ -209,6 +219,8 @@ export type SimEvent =
   /** A marked ground zone goes off. */
   | { type: 'zoneHit'; kind: ZoneKind; x: number; z: number; r: number; hit: boolean }
   | { type: 'enemyShot'; x: number; z: number; boss: boolean }
+  /** M12c: a Wachdrohne searchlight locked onto the hero; the volley follows. */
+  | { type: 'spotLock'; id: number; x: number; z: number }
   | { type: 'bossRage'; id: number; name: string }
   | { type: 'summon'; id: number; x: number; z: number; count: number }
   | { type: 'spawn'; id: number }
@@ -309,4 +321,6 @@ export interface Sim {
   stress: number;
   /** M20 tunnel gratings (`level.gates`): sim time each one opened, Infinity while closed. */
   gateT: number[];
+  /** M12c rain (2D `D.wet`, from the map; tunnels and the camp are dry): fire burns shorter, shock jumps further. */
+  wet: boolean;
 }

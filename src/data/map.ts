@@ -206,6 +206,8 @@ export interface MapDef {
   /** L2: district index (Köpenick 0) and item name flavor for the loot of this map. */
   district?: number;
   flavor?: 'neon' | 'gdr';
+  /** M12c rain rule (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
+  wet?: boolean;
   /** M19 U-Bahn tunnel: only these tubes are walkable, everything else is rock (no lots, no streets). M20: line, gratings, collapse, flood, trader, generator, signs. */
   tunnel?: TunnelDef;
   /** M20 walkable camp: floor polygons, walls, stations and rings (`src/data/camp-map.ts`). */
@@ -1807,6 +1809,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   level.district = m.district ?? 0;
   level.camp = !!m.camp;
   if (m.flavor) level.flavor = m.flavor;
+  if (m.wet) level.wet = true;
   level.hiddenSpots = m.hiddenSpots ?? [];
   if (T) {
     level.gates = gates;

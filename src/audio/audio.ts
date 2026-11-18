@@ -2,6 +2,7 @@
 import type { HitWeight } from '../data/combat';
 import type { EnemyKind } from '../data/enemies';
 import type { Sim, SimEvent } from '../sim/types';
+import type { SpecialKind } from '../sim/threats';
 import { SoundEffects, Synth, type SfxId } from './sfx';
 import { Music, type MusicState } from './music';
 
@@ -9,7 +10,11 @@ import { Music, type MusicState } from './music';
 const VOICE: Partial<Record<EnemyKind, SfxId>> = {
   runner: 'growlRunner', brute: 'growlBrute', raptor: 'growlRaptor', spitter: 'growlSpitter', crow: 'growlCrow', rat: 'growlRat',
   grenzer: 'growlGrenzer', brandmeister: 'growlBrand', rattenmutter: 'growlMutter', spreehexe: 'growlHexe',
+  kabel: 'growlRunner', bass: 'growlBass', tuersteher: 'growlTuer', bassprediger: 'growlBass',
 };
+/** M12c: specials with their own voice at the wind-up and the release (by special, then by kind). */
+const WIND: Partial<Record<SpecialKind, SfxId>> = { leap: 'crackle', bass: 'growlBass', shove: 'growlTuer', grab: 'growlTuer', land: 'spin' };
+const GO: Partial<Record<SpecialKind, SfxId>> = { leap: 'dash', bass: 'thump', grab: 'dash', beat: 'tap' };
 
 export class GameAudio {
   private ctx: AudioContext | null = null;
@@ -106,6 +111,21 @@ export class GameAudio {
     osc.stop(t + decay + 0.02);
   }
 
+  private rotorGain: GainNode | null = null;
+  /** M12c: one shared rotor whine for every drone, as loud as the nearest one (Infinity: silent). */
+  rotors(dist: number): void {
+    if (!this.ctx || !this.master) return;
+    if (!this.rotorGain) {
+      if (dist > 16) return;
+      const g = this.ctx.createGain(), f = this.ctx.createBiquadFilter();
+      g.gain.value = 0; f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = .9;
+      for (const hz of [196, 203]) { const o = this.ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz; o.connect(f); o.start(); }
+      f.connect(g); g.connect(this.master); this.rotorGain = g;
+    }
+    const v = dist < 16 ? .05 * (1 - dist / 16) ** 1.5 : 0;
+    this.rotorGain.gain.setTargetAtTime(v, this.ctx.currentTime, .15);
+  }
+
   setMusic(enabled: boolean): void {
     this.musicEnabled = enabled;
     if (enabled && this.volume > 0) this.music?.start(); else this.music?.stop();
@@ -176,6 +196,13 @@ export class GameAudio {
       // M12: specials announce themselves by type; marked zones land with a boom.
       case 'enemySpecial': {
         const k=event.kind;
+        const who=sim?.enemies.find(e=>e.id===event.id)?.kind;
+        // M12c: Bassprediger zap on the charge, the Dirigent's baton before the Fortissimo, the Wachdrohne's laser.
+        if(event.phase==='wind'&&k==='charge'&&who==='bassprediger'){this.play('zap',0,pan,volume);break;}
+        if(event.phase==='wind'&&k==='roar'&&who==='dirigent'){this.play('tap',0,pan,volume);break;}
+        if(event.phase==='go'&&k==='volley'&&who==='wachdrohne'){this.play('laser',0,pan,volume);break;}
+        if(event.phase==='wind'&&WIND[k]){this.play(WIND[k]!,0,pan,volume);break;}
+        if(event.phase==='go'&&GO[k]){this.play(GO[k]!,0,pan,volume);if(k==='beat')this.play('thump',0,pan,volume*.5);break;}
         if(event.phase==='wind')this.play(k==='roar'?'roar':k==='pounce'?'growlRaptor':k==='dive'?'growlCrow':k==='spit'||k==='fan'?'growlSpitter':k==='summon'||k==='charge'||k==='lunge'?'horn':k==='slam'||k==='stomp'||k==='bossSlam'||k==='tail'?'growlBrute':k==='molotov'?'swing':'growlBoss',0,pan,volume);
         else if(k==='pounce'||k==='dive'||k==='lunge'||k==='charge')this.play('dash',0,pan,volume);
         else if(k==='volley')this.play('sling',0,pan,volume);
@@ -183,6 +210,7 @@ export class GameAudio {
         break;
       }
       case 'enemyShot': this.play('spit',0,pan,volume); break;
+      case 'spotLock': this.play('lockBeep',0,pan,volume); break;
       case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play('pop',0,pan,volume); break;
       case 'bossRage': this.play('roar'); this.play('horn'); break;
       case 'ability': {
@@ -225,7 +253,7 @@ export class GameAudio {
   dispose(): void {
     this.cancelPrewarm?.(); this.music?.stop();
     if (this.ctx) void this.ctx.close();
-    this.ctx = null; this.master = null; this.effects = null; this.music = null;
+    this.ctx = null; this.master = null; this.effects = null; this.music = null; this.rotorGain = null;
   }
 
   /** 2D initAudio ambient wind. */

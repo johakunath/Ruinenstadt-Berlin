@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
 import { strike } from './combat';
-import { makeElite, spawnEnemy, spawnPack } from './enemies';
+import { capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
 
@@ -470,6 +470,371 @@ describe('Xhain roster (M12b)', () => {
 
   it('no Xhain boss takes more than 45 % of max life in one hit, even at ten times the damage', () => {
     for (const kind of ['grenzer', 'brandmeister', 'rattenmutter', 'spreehexe'] as const) {
+      const s = fresh();
+      const e = spawnEnemy(s, s.player.x, s.player.z + 3, kind, 1, 10);
+      e.hp = e.maxHp = 1e6;
+      let hits = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        s.hitstop = 0;
+        const before = s.player.hp;
+        stepSim(s, NO_INPUT);
+        for (const q of s.events) if (q.type === 'playerHit') {
+          hits++;
+          expect(q.damage, kind).toBeLessThanOrEqual(s.stats.maxHp * 0.45 + 1e-6);
+          expect(before - s.player.hp, kind).toBeLessThan(s.stats.maxHp * 0.46);
+        }
+        s.events.length = 0;
+        s.player.hp = s.stats.maxHp;
+      }
+      expect(hits, kind).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('Mitte roster (M12c)', () => {
+  const fight = (kind: EnemyKind, seconds: number, apart = 0): { s: Sim; e: Enemy; evs: SimEvent[] } => {
+    const s = fresh();
+    const e = put(s, kind, 0, 6);
+    e.hp = e.maxHp = 1e6;
+    const evs: SimEvent[] = [];
+    for (let t = 0; t < seconds; t += 3) {
+      if (apart && e.state !== 'special') { e.state = 'chase'; e.x = e.px = s.player.x; e.z = e.pz = s.player.z + apart; }
+      evs.push(...run(s, 3));
+    }
+    return { s, e, evs };
+  };
+  const notes = (evs: SimEvent[]): string[] => evs.filter((q) => q.type === 'note').map((q) => (q as { text: string }).text);
+  const still = (e: Enemy): void => { e.def = { ...e.def, speed: 0 }; };
+  const alive = (s: Sim, kind: EnemyKind): number => s.enemies.filter((q) => q.kind === kind && q.state !== 'dead').length;
+
+  it('the Kabelghul is the 2D kabel on the ghoul ratios and leaps along a marked line, then stands open', () => {
+    const k = ENEMIES.kabel;
+    expect([k.hp, k.damage, k.speed, k.radius, k.res]).toEqual([22, 10, 3.3, 0.3, 'kabel']);
+    const s = fresh();
+    const e = put(s, 'kabel', 0, 4.6);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('leap');
+    const x0 = e.x, z0 = e.z;
+    run(s, THREAT.leap.wind - 0.05);
+    expect(Math.hypot(e.x - x0, e.z - z0)).toBeLessThan(0.05);
+    const evs = run(s, THREAT.leap.time + 0.1);
+    expect(Math.hypot(e.x - x0, e.z - z0)).toBeCloseTo(THREAT.leap.speed * THREAT.leap.time, 0);
+    expect(evs.filter((q) => q.type === 'playerHit')).toHaveLength(1);
+    expect(e.open).toBeGreaterThan(THREAT.leap.open - 0.15);
+    // The cooldown is fixed per body, 2.2 to 3 s.
+    expect(e.cd[1]).toBeGreaterThan(THREAT.leap.every[0] - 0.6);
+    expect(e.cd[1]).toBeLessThanOrEqual(THREAT.leap.every[1]);
+  });
+
+  it('the Boxenkopf sends one bass ring to 9 m that a roll passes, drives the others on and stands open', () => {
+    const s = fresh();
+    const e = put(s, 'bass', 0, 6);
+    const w = put(s, 'walker', 3, 6);
+    e.cd[1] = 0;
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('bass');
+    run(s, THREAT.bass.wind + 0.02);
+    expect(s.threats.waves).toHaveLength(1);
+    expect(s.threats.waves[0]!.max).toBeCloseTo(9, 0);
+    expect(s.threats.waves[0]!.floor).toBe(0);
+    expect(w.buff).toBeGreaterThan(THREAT.bass.buff - 0.2);
+    const evs = run(s, 0.7, {}, false);
+    expect(evs.some((q) => q.type === 'playerHit' && q.damage <= ENEMIES.bass.damage * THREAT.bass.damage + 1e-6)).toBe(true);
+    expect(e.open).toBeGreaterThan(0.3);
+    // Rolling through (invulnerable): the ring passes.
+    const r = fresh();
+    const b = put(r, 'bass', 0, 6);
+    b.cd[1] = 0;
+    still(b);
+    const out: SimEvent[] = [];
+    for (let i = 0; i < 90; i++) { r.player.invuln = 1; stepSim(r, NO_INPUT); out.push(...r.events); r.events.length = 0; }
+    expect(out.some((q) => q.type === 'enemySpecial' && q.kind === 'bass' && q.phase === 'go')).toBe(true);
+    expect(has(out, 'playerHit')).toBe(false);
+  });
+
+  it('never more than two Boxenköpfe alive: the pick, ?spawn and boss calls keep the cap', () => {
+    expect(ENEMIES.bass.cap).toBe(2);
+    const s = fresh();
+    put(s, 'bass', 0, 8);
+    expect(capped(s, 'bass')).toBe(false);
+    put(s, 'bass', 0, -8);
+    expect(capped(s, 'bass')).toBe(true);
+    for (let i = 0; i < 40; i++) expect(pickKind(s, { bass: 5, walker: 0.1 })).toBe('walker');
+    const sp = createSim({ empty: true, spawn: ['bass', 'bass', 'bass', 'kabel'] });
+    expect(alive(sp, 'bass')).toBe(2);
+    expect(alive(sp, 'kabel')).toBe(1);
+    // The Dirigent's Orchester with one Boxenkopf alive calls only one more.
+    const d = fresh();
+    put(d, 'bass', 4, 4);
+    const g = put(d, 'dirigent', 0, 6);
+    g.hp = g.maxHp = 1e6;
+    run(d, 2);
+    expect(alive(d, 'bass')).toBe(2);
+  });
+
+  it('the Drohne flies like a Krähe: circles, dives, then sits dazed', () => {
+    const d = ENEMIES.drone;
+    expect(d.fly && d.ai === 'crow' && d.body === 'drone').toBe(true);
+    const s = fresh();
+    const e = put(s, 'drone', 0, 4);
+    const evs = run(s, 6);
+    expect(specials(evs)).toContain('dive');
+    let rested = false;
+    for (let i = 0; i < 360 && !rested; i++) { run(s, 1 / 60); rested = e.rest > 0; }
+    expect(rested).toBe(true);
+  });
+
+  it('Der Türsteher shoves out of a circle in front of him, twice in rage', () => {
+    const s = fresh();
+    const e = put(s, 'tuersteher', 0, 2.5);
+    e.cd = [0, 99, 99];
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('shove');
+    const z = s.threats.zones[0]!;
+    expect(z.kind).toBe('shove');
+    expect(z.r).toBe(BOSS.tuersteher.shoveRadius);
+    expect(Math.hypot(z.x - e.x, z.z - e.z)).toBeCloseTo(BOSS.tuersteher.shoveAhead, 1);
+    const x0 = s.player.x, z0 = s.player.z;
+    const evs = run(s, BOSS.tuersteher.shoveWind + 1);
+    expect(has(evs, 'playerHit')).toBe(true);
+    expect(Math.hypot(s.player.x - x0, s.player.z - z0)).toBeGreaterThan(2.5);
+    expect(s.player.z).toBeLessThan(z0);
+    // Rage: a second shove follows half a second after the first.
+    const r = fresh();
+    const t = put(r, 'tuersteher', 0, 2.5);
+    t.hp = t.maxHp * 0.4;
+    t.cd = [0, 99, 99];
+    still(t);
+    const out = run(r, 2.6);
+    expect(specials(out).filter((k) => k === 'shove')).toHaveLength(2);
+  });
+
+  it('Der Türsteher grabs and holds: no walking, attacks work, a roll breaks free; the hold never outlasts 1 s', () => {
+    const grab = (): { s: Sim; e: Enemy } => {
+      const s = fresh();
+      const e = put(s, 'tuersteher', 0, 4.5);
+      e.hp = e.maxHp = 1e6;
+      e.cd = [99, 0, 99];
+      still(e);
+      stepSim(s, NO_INPUT);
+      expect(e.sp?.kind).toBe('grab');
+      for (let i = 0; i < 90 && s.player.rootBy !== e.id; i++) run(s, 1 / 60);
+      expect(s.player.rootBy).toBe(e.id);
+      return { s, e };
+    };
+    // Held: walking does nothing, an attack still starts, the throw comes after the hold.
+    const { s, e } = grab();
+    expect(s.player.root).toBeCloseTo(BOSS.tuersteher.hold, 1);
+    const x0 = s.player.x, z0 = s.player.z;
+    run(s, 0.3, { moveX: 1 });
+    expect(Math.hypot(s.player.x - x0, s.player.z - z0)).toBeLessThan(0.05);
+    run(s, 1 / 60, { attack: true });
+    expect(s.player.state).toBe('attack');
+    const evs = run(s, 0.9);
+    expect(has(evs, 'playerHit')).toBe(true);
+    expect(s.player.root).toBe(0);
+    expect(e.state === 'chase' && e.open > 0).toBe(true);
+    // A roll breaks free at once: no throw.
+    const f = grab();
+    run(f.s, 0.2);
+    const free = run(f.s, 1 / 60, { dodge: true, moveX: 1 });
+    expect(f.s.player.root).toBe(0);
+    const after = [...free, ...run(f.s, 1.2)];
+    expect(has(after, 'playerHit')).toBe(false);
+    expect(f.e.sp).toBeNull();
+    // Hitstop does not stretch it: free within one second of steps, frozen or not.
+    const h = grab();
+    let steps = 0;
+    while (h.s.player.root > 0 && steps < 200) {
+      if (steps % 10 === 0) h.s.hitstop = 0.12;
+      stepSim(h.s, NO_INPUT);
+      h.s.events.length = 0;
+      steps++;
+    }
+    expect(steps).toBeLessThanOrEqual(Math.round(BOSS.tuersteher.hold * 60) + 1);
+  });
+
+  it('Der Türsteher calls two Kabelghule from the guest list, three in rage', () => {
+    const s = fresh();
+    const e = put(s, 'tuersteher', 0, 7);
+    e.cd = [99, 99, 0];
+    const evs = run(s, BOSS.summon.wind + 0.6);
+    expect(alive(s, 'kabel')).toBe(BOSS.tuersteher.adds);
+    expect(notes(evs)).toContain('„Nicht auf der Liste!“');
+    const r = fresh();
+    const t = put(r, 'tuersteher', 0, 7);
+    t.hp = t.maxHp * 0.4;
+    t.cd = [99, 99, 0];
+    run(r, BOSS.summon.wind + 0.6);
+    expect(alive(r, 'kabel')).toBe(BOSS.tuersteher.rageAdds);
+    expect(specials(fight('tuersteher', 30, 4.5).evs)).toEqual(expect.arrayContaining(['summon', 'shove', 'grab']));
+  });
+
+  it('Die Wachdrohne: the searchlight follows the hero, locks after 0.6 s, then five laser shots', () => {
+    const s = fresh();
+    const e = put(s, 'wachdrohne', 0, 8);
+    e.cd = [99, 99, 99];
+    still(e);
+    run(s, 1 / 60);
+    expect(s.threats.spots).toHaveLength(1);
+    const sp = s.threats.spots[0]!;
+    const d0 = Math.hypot(sp.x - s.player.x, sp.z - s.player.z);
+    run(s, 1);
+    expect(d0 - Math.hypot(sp.x - s.player.x, sp.z - s.player.z)).toBeCloseTo(BOSS.wachdrohne.spotSpeed, 1);
+    sp.x = s.player.x;
+    sp.z = s.player.z;
+    const lock = run(s, BOSS.wachdrohne.lock + 0.02);
+    expect(has(lock, 'spotLock')).toBe(true);
+    expect(s.threats.shots).toHaveLength(0);
+    run(s, BOSS.wachdrohne.flash);
+    expect(s.threats.shots).toHaveLength(BOSS.wachdrohne.shots);
+    // Out of the light, nothing locks.
+    const o = fresh();
+    const q = put(o, 'wachdrohne', 0, 8);
+    q.cd = [99, 99, 99];
+    still(q);
+    run(o, 1 / 60);
+    o.threats.spots[0]!.x += 6;
+    expect(has(run(o, 1), 'spotLock')).toBe(false);
+  });
+
+  it('Die Wachdrohne lands every third special (marked circle, 2.5 s open, no light), calls three drones, keeps away', () => {
+    const s = fresh();
+    const e = put(s, 'wachdrohne', 0, 8);
+    e.hp = e.maxHp = 1e6;
+    e.cd = [0, 99, 99];
+    e.cycle = BOSS.wachdrohne.landEvery - 1;
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('land');
+    expect(s.threats.zones.some((z) => z.kind === 'land' && z.r === BOSS.wachdrohne.landRadius)).toBe(true);
+    run(s, BOSS.wachdrohne.landWind + 0.3);
+    expect(e.open).toBeGreaterThan(BOSS.wachdrohne.landed - 0.3);
+    expect(s.threats.spots).toHaveLength(0);
+    run(s, BOSS.wachdrohne.landed);
+    expect(s.threats.spots).toHaveLength(1);
+    // Drones.
+    const d = fresh();
+    const w = put(d, 'wachdrohne', 0, 8);
+    w.cd = [99, 99, 0];
+    run(d, BOSS.summon.wind + 0.6);
+    expect(alive(d, 'drone')).toBe(BOSS.wachdrohne.adds);
+    // Too close: she backs off. In rage: two lights.
+    const b = fresh();
+    const x = put(b, 'wachdrohne', 0, 3);
+    x.cd = [99, 99, 99];
+    run(b, 1.5);
+    expect(Math.hypot(x.x - b.player.x, x.z - b.player.z)).toBeGreaterThan(4);
+    x.hp = x.maxHp * 0.4;
+    run(b, 0.1);
+    expect(b.threats.spots.filter((q) => q.src === x.id)).toHaveLength(2);
+    expect(specials(fight('wachdrohne', 30, 8).evs)).toEqual(expect.arrayContaining(['volley', 'summon', 'land']));
+  });
+
+  it('Der Dirigent calls two Boxenköpfe, beats one ring every 4 s, every fourth beat a Fortissimo that pulses them all', () => {
+    const s = fresh();
+    const e = put(s, 'dirigent', 0, 7);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    run(s, 1.5);
+    expect(alive(s, 'bass')).toBe(BOSS.dirigent.adds);
+    for (const b of s.enemies) if (b.kind === 'bass') { still(b); b.cd[1] = 99; }
+    const evs: SimEvent[] = [];
+    let fort = -1;
+    for (let i = 0; i < 60 * 18 && fort < 0; i++) {
+      evs.push(...run(s, 1 / 60));
+      if (e.state === 'special' && e.sp?.kind === 'roar') fort = i;
+    }
+    const beats = specials(evs).filter((k) => k === 'beat' || k === 'roar');
+    expect(beats).toEqual(['beat', 'beat', 'beat', 'roar']);
+    const pulsing = s.enemies.filter((b) => b.kind === 'bass' && b.state === 'special' && b.sp?.kind === 'bass');
+    expect(pulsing).toHaveLength(BOSS.dirigent.adds);
+    // They release together with him (within a step).
+    for (const b of pulsing) expect(b.sp!.wind - b.stateT).toBeCloseTo(e.sp!.wind - e.stateT, 1);
+    const out = run(s, BOSS.dirigent.beatWind + 0.05);
+    expect(notes(out)).toContain('Fortissimo!');
+    expect(s.threats.waves.length).toBe(2 + BOSS.dirigent.adds);
+    // Once more at half life.
+    const r = fresh();
+    const g = put(r, 'dirigent', 0, 7);
+    g.calls = 1;
+    g.hp = g.maxHp * 0.4;
+    run(r, 1.5);
+    expect(alive(r, 'bass')).toBe(BOSS.dirigent.adds);
+    run(r, 6);
+    expect(g.calls).toBe(2);
+  });
+
+  it('Der Bassprediger charges 10 m, preaches two rings after every second charge (every charge in rage), calls his congregation', () => {
+    const charge = (s: Sim, e: Enemy): void => {
+      e.x = e.px = s.player.x;
+      e.z = e.pz = s.player.z + 9;
+      e.state = 'chase';
+      e.open = 0;
+      e.gap = 0;
+      e.cd = [0, 99, 99];
+      stepSim(s, NO_INPUT);
+      expect(e.sp?.kind).toBe('charge');
+    };
+    const B = BOSS.bassprediger;
+    const s = fresh();
+    const e = put(s, 'bassprediger', 0, 9);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    charge(s, e);
+    const z0 = e.z;
+    run(s, B.wind + B.time + 0.02);
+    expect(z0 - e.z).toBeCloseTo(B.speed * B.time, 0);
+    expect(e.open).toBeGreaterThan(B.open - 0.1);
+    expect(e.queue).toBeUndefined();
+    charge(s, e);
+    run(s, B.wind + B.time + 0.02);
+    expect(e.queue?.kind).toBe('roar');
+    const evs = run(s, B.open + BOSS.roar.wind + 0.1);
+    expect(specials(evs)).toContain('roar');
+    expect(s.threats.waves).toHaveLength(2);
+    expect(s.threats.waves[0]!.max).toBeCloseTo(B.max, 1);
+    // In rage every charge preaches.
+    const r = fresh();
+    const q = put(r, 'bassprediger', 0, 9);
+    q.hp = q.maxHp * 0.4;
+    still(q);
+    run(r, 1 / 60);
+    charge(r, q);
+    run(r, B.wind + B.time + 0.02);
+    expect(q.queue?.kind).toBe('roar');
+    // Gemeinde: three Kabelghule, in rage two Boxenköpfe.
+    const g = fresh();
+    const p = put(g, 'bassprediger', 0, 9);
+    p.cd = [99, 99, 0];
+    const notesOut = run(g, BOSS.summon.wind + 0.6);
+    expect(alive(g, 'kabel')).toBe(B.adds);
+    expect(notes(notesOut)).toContain('„Gemeinde!“');
+    const h = fresh();
+    const m = put(h, 'bassprediger', 0, 9);
+    m.hp = m.maxHp * 0.4;
+    m.cd = [99, 99, 0];
+    run(h, BOSS.summon.wind + 0.6);
+    expect(alive(h, 'bass')).toBe(B.rageAdds);
+  });
+
+  it('every Mitte boss rages below half life on the ladder; the Bassprediger is the Hauptmann tier', () => {
+    for (const kind of ['tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'] as const) {
+      const s = fresh();
+      const e = put(s, kind, 0, 9);
+      e.hp = e.maxHp * 0.45;
+      expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(1);
+      expect(e.def.speed).toBeCloseTo(ENEMIES[kind].speed * BOSS.rageSpeed);
+    }
+    expect([ENEMIES.tuersteher.hp, ENEMIES.dirigent.hp, ENEMIES.wachdrohne.hp, ENEMIES.bassprediger.hp]).toEqual([1000, 1400, 2200, 4400]);
+    expect(ENEMIES.bassprediger.damage).toBe(ENEMIES.hauptmann.damage);
+  });
+
+  it('no Mitte hit takes more than 45 % of max life, even at ten times the damage', () => {
+    for (const kind of ['kabel', 'bass', 'drone', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'] as const) {
       const s = fresh();
       const e = spawnEnemy(s, s.player.x, s.player.z + 3, kind, 1, 10);
       e.hp = e.maxHp = 1e6;

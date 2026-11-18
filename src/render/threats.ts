@@ -1,8 +1,11 @@
 // What enemies put into the world (M12): marked circles that fill until they go off, rush lines,
 // shots, burning and acid ground, roar rings, the gold ring under an open body. Pooled, unlit,
 // on the FX layer: no lights, no shadows, the same cost on both profiles.
+// M12c: the Wachdrohne's searchlight (a decal and a beam per spot, at most two), the pink ring under a
+// winding Boxenkopf, sparks over dazed drones. Each visible piece is one draw call, nothing else.
 import {
-  AdditiveBlending, CircleGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, SphereGeometry, Sprite, SpriteMaterial,
+  AdditiveBlending, CircleGeometry, Color, ConeGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, SphereGeometry, Sprite, SpriteMaterial,
+  Vector3,
 } from 'three';
 import { BOSS, THREAT } from '../data/enemies';
 import { lerp, Rng } from '../sim/math';
@@ -14,9 +17,11 @@ import { paintGlow } from './paint';
 
 const BARS = 18;
 /** Where the life bar floats, per body. */
-const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6 } as const;
-const ZONES = 14, LINES = 6, SHOTS = 72, HAZARDS = 60, WAVES = 4, OPEN = 6;
-const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a } as const;
+const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4 } as const;
+const ZONES = 14, LINES = 6, SHOTS = 72, HAZARDS = 60, WAVES = 8, OPEN = 6, SPOTS = 2, PULSES = 6;
+const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a, shove: 0xffa03a, land: 0x43d1cf } as const;
+const up = new Vector3(0, 1, 0);
+const dirV = new Vector3();
 const m4 = new Matrix4();
 const col = new Color();
 
@@ -40,6 +45,8 @@ export class ThreatView {
   private readonly lines: Mesh[] = [];
   private readonly waves: Mesh[] = [];
   private readonly open: Mesh[] = [];
+  private readonly spots: Array<{ rim: Mesh; fill: Mesh; beam: Mesh }> = [];
+  private readonly pulses: Mesh[] = [];
   private readonly globs: InstancedMesh;
   private readonly bossShots: InstancedMesh;
   private readonly hazards: InstancedMesh;
@@ -83,6 +90,22 @@ export class ThreatView {
       const m = fx(flat(new Mesh(new RingGeometry(0.86, 1, 36, 1, 0, Math.PI * 1.7), add(0xf2d14b, 0.9))), 2);
       this.group.add(m);
       this.open.push(m);
+    }
+    for (let i = 0; i < SPOTS; i++) {
+      const rim = fx(flat(new Mesh(new RingGeometry(0.9, 1, 48), add(0xd8fff8, 0.8))), 2);
+      const fill = fx(flat(new Mesh(new CircleGeometry(1, 36), add(0x9ff0ea, 0.22))), 2);
+      // The beam from the lens to the spot: an open cone, tip at the top.
+      const cone = new ConeGeometry(1, 1, 20, 1, true);
+      cone.translate(0, -0.5, 0);
+      const beam = fx(new Mesh(cone, add(0x9ff0ea, 0.07)), 4);
+      beam.visible = false;
+      this.group.add(rim, fill, beam);
+      this.spots.push({ rim, fill, beam });
+    }
+    for (let i = 0; i < PULSES; i++) {
+      const m = fx(flat(new Mesh(new RingGeometry(0.82, 1, 40), add(0xff4fa3, 0.7))), 2);
+      this.group.add(m);
+      this.pulses.push(m);
     }
     const inst = (r: number, color: number): InstancedMesh => {
       const m = fx(new InstancedMesh(new SphereGeometry(r, 8, 6), new MeshBasicMaterial({ color, fog: false }), SHOTS), 5);
@@ -143,11 +166,22 @@ export class ThreatView {
     });
 
     // Rush lines while a pounce, lunge, dive or charge winds up; the gold ring under open bodies.
-    let nl = 0, no = 0;
+    let nl = 0, no = 0, np = 0;
     for (const e of s.enemies) {
       if (e.state === 'dead') continue;
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
       const sp = e.sp;
+      // M12c: a pink ring fills under a body that winds up a bass ring or a beat.
+      if (e.state === 'special' && sp && (sp.kind === 'bass' || sp.kind === 'beat') && e.stateT < sp.wind && np < PULSES) {
+        const m = this.pulses[np++]!;
+        const k = e.stateT / sp.wind;
+        m.visible = true;
+        m.position.set(x, groundY(x, z) + 0.09, z);
+        m.scale.setScalar(e.def.radius * (1.4 + 1.6 * k));
+        (m.material as MeshBasicMaterial).opacity = 0.35 + 0.5 * k;
+      }
+      // Dazed drones spark.
+      if (e.kind === 'drone' && e.rest > 0 && R.next() < dt * 14) E.glow(x, groundY(x, z) + 0.6, z, R.range(-1.5, 1.5), R.range(0.5, 2.5), R.range(-1.5, 1.5), R.range(0.15, 0.3), 0.06, 3, 4.5, 6, 6);
       if (e.state === 'special' && sp && sp.speed > 0 && sp.kind !== 'dive' && e.stateT < sp.wind && nl < LINES) {
         const m = this.lines[nl++]!;
         const k = e.stateT / sp.wind;
@@ -169,6 +203,36 @@ export class ThreatView {
     }
     for (let i = nl; i < LINES; i++) this.lines[i]!.visible = false;
     for (let i = no; i < OPEN; i++) this.open[i]!.visible = false;
+    for (let i = np; i < PULSES; i++) this.pulses[i]!.visible = false;
+
+    // M12c searchlights: white-cyan, brighter while the hero stands in it, red when it locks.
+    this.spots.forEach((m, i) => {
+      const q = T.spots[i];
+      m.rim.visible = m.fill.visible = m.beam.visible = !!q;
+      if (!q) return;
+      const x = lerp(q.px, q.x, alpha), z = lerp(q.pz, q.z, alpha), y = groundY(x, z);
+      const lock = q.flash > 0 ? 1 : 0;
+      const heat = Math.min(1, q.inT / 0.6);
+      m.rim.position.set(x, y + 0.075, z);
+      m.fill.position.set(x, y + 0.07, z);
+      m.rim.scale.setScalar(q.r);
+      m.fill.scale.setScalar(q.r * (1 - 0.25 * heat));
+      const c = lock ? (Math.sin(this.time * 40) > 0 ? 0xff2a2a : 0xff8060) : 0xd8fff8;
+      (m.rim.material as MeshBasicMaterial).color.setHex(c);
+      (m.fill.material as MeshBasicMaterial).color.setHex(lock ? 0xff3a2a : 0x9ff0ea);
+      (m.fill.material as MeshBasicMaterial).opacity = 0.18 + 0.25 * heat + 0.3 * lock;
+      (m.rim.material as MeshBasicMaterial).opacity = q.cool > 0 ? 0.35 : 0.85;
+      // Beam from the source's lens down to the spot.
+      const src = s.enemies.find((e) => e.id === q.src);
+      if (!src) { m.beam.visible = false; return; }
+      const sx = lerp(src.px, src.x, alpha), sz = lerp(src.pz, src.z, alpha), sy = groundY(sx, sz) + 2.25;
+      dirV.set(x - sx, y - sy, z - sz);
+      const len = dirV.length();
+      m.beam.position.set(sx, sy, sz);
+      m.beam.quaternion.setFromUnitVectors(up, dirV.multiplyScalar(-1 / (len || 1)));
+      m.beam.scale.set(q.r, len, q.r);
+      (m.beam.material as MeshBasicMaterial).color.setHex(lock ? 0xff3a2a : 0x9ff0ea);
+    });
 
     // Life bars: only on bodies that took damage, nearest slots first come first served.
     let nbar = 0;
