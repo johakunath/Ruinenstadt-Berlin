@@ -6,7 +6,7 @@
 // Stations themselves change with their level and live in `camp-stations.ts`.
 // Cost: merged boxes per material and chunk (the camp is two chunks wide), five painted textures,
 // a fixed number of light spots for the shared pool; no new lights at runtime.
-import { Matrix4, Vector3, type Material } from 'three';
+import { CylinderGeometry, Matrix4, Vector3, type Material } from 'three';
 import { CAMP_LAYOUT, RAMP_H, YARD_H } from '../data/camp-map';
 import type { MapDef } from '../data/map';
 import { Rng } from '../sim/math';
@@ -241,6 +241,79 @@ export function buildCampWorld(m: MapDef, mats: MapMats, cm: CampMats, chunkOf: 
   box(mats.corrugated, 30.9, 1.4, 31.2, 6.4, 2.8, 0.15, [0.55, 0.5, 0.42], 1 / 2);
   box(mats.dark, 30.9, 1.4, 37, 6.4, 2.8, 11.5);
   box(mats.concrete, 27.4, 1.4, 36, 0.3, 2.8, 10, [0.4, 0.4, 0.38]);
+
+  // Room furniture in the lower halves (colliders come from the layout).
+  for (const f of c.decor) {
+    const { x, z, w, d } = f;
+    switch (f.kind) {
+      case 'stalls': {
+        // Old toilet cubicles along the east wall: partitions, half-open doors, white bowls.
+        const n = Math.round(d / 1.45);
+        for (let i = 0; i <= n; i++) box(mats.enamel, x, 1.05, z - d / 2 + (i * d) / n, w, 2.1, 0.06, [0.62, 0.66, 0.6]);
+        for (let i = 0; i < n; i++) {
+          const zc = z - d / 2 + ((i + 0.5) * d) / n;
+          box(cm.whiteTile, x + w / 2 - 0.3, 0.22, zc, 0.5, 0.44, 0.4, [1, 1, 0.97]);
+          box(mats.enamel, x - w / 2 + 0.1, 1.05, zc + (i % 2 ? 0.25 : -0.2), 0.05, 1.8, 0.75, [0.48, 0.55, 0.5]);
+        }
+        box(mats.enamel, x, 2.12, z, w, 0.05, d, [0.55, 0.6, 0.55]);
+        break;
+      }
+      case 'sinks': {
+        box(cm.whiteTile, x, 0.85, z, w, 0.18, d, [1, 1, 0.97]);
+        for (let k = 0; k < 3; k++) { const zc = z - d / 3 + (k * d) / 3; box(mats.iron, x + 0.05, 0.4, zc, 0.06, 0.8, 0.06, [0.5, 0.5, 0.5]); box(mats.glass, x - w / 2 + 0.02, 1.6, zc, 0.03, 0.7, 0.55); }
+        break;
+      }
+      case 'cot': {
+        for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) box(mats.iron, x + dx * (w / 2 - 0.08), 0.22, z + dz * (d / 2 - 0.08), 0.04, 0.44, 0.04, [0.4, 0.42, 0.4]);
+        box(mats.linen, x, 0.48, z, w, 0.12, d, [0.72, 0.74, 0.66]);
+        box(mats.burlap, x + 0.2, 0.56, z, w * 0.55, 0.06, d * 0.95, [0.45, 0.5, 0.38]);
+        box(mats.linen, x - w / 2 + 0.3, 0.6, z, 0.4, 0.12, d * 0.7, [0.9, 0.9, 0.86]);
+        break;
+      }
+      case 'boxes': {
+        box(mats.wood, x - 0.2, 0.3, z, 0.6, 0.6, 0.6, [0.7, 0.6, 0.45]);
+        box(mats.wood, x + 0.3, 0.22, z + 0.1, 0.5, 0.44, 0.5, [0.75, 0.65, 0.5]);
+        box(mats.linen, x - 0.2, 0.68, z, 0.4, 0.16, 0.3, [0.95, 0.95, 0.92]);
+        box(mats.enamel, x - 0.2, 0.69, z + 0.16, 0.14, 0.14, 0.01, [0.8, 0.12, 0.1]);
+        break;
+      }
+      case 'bench': {
+        // Workbench with junk electronics, a vise and a lamp.
+        box(mats.wood, x, 0.9, z, w, 0.06, d, [0.6, 0.48, 0.35]);
+        for (const dz of [-1, 1]) box(mats.iron, x, 0.45, z + dz * (d / 2 - 0.1), w - 0.1, 0.9, 0.05, [0.3, 0.3, 0.3]);
+        for (let k = 0; k < 5; k++) box(k % 2 ? mats.enamel : mats.iron, x + 0.05, 1.05, z - d / 2 + 0.5 + k * 0.8, 0.45, 0.2 + (k % 3) * 0.08, 0.35, k % 2 ? [0.2, 0.4, 0.3] : [0.35, 0.33, 0.3]);
+        box(mats.glass, x + 0.1, 1.15, z + 0.9, 0.3, 0.2, 0.25);
+        box(mats.lampGlass, x + 0.2, 1.5, z - 1.2, 0.18, 0.1, 0.18, [0.6, 1.4, 0.9]);
+        break;
+      }
+      case 'sofa': {
+        box(mats.burlap, x, 0.25, z, w, 0.5, d, [0.45, 0.25, 0.2]);
+        box(mats.burlap, x, 0.6, z + d / 2 - 0.15, w, 0.7, 0.3, [0.42, 0.22, 0.18]);
+        for (const dx of [-1, 1]) box(mats.burlap, x + dx * (w / 2 - 0.12), 0.45, z, 0.24, 0.4, d, [0.4, 0.21, 0.17]);
+        break;
+      }
+      case 'table': {
+        box(mats.wood, x, 0.42, z, w, 0.05, d, [0.55, 0.45, 0.32]);
+        for (const dx of [-1, 1]) box(mats.iron, x + dx * (w / 2 - 0.1), 0.2, z, 0.05, 0.4, d - 0.1, [0.3, 0.3, 0.3]);
+        box(mats.iron, x - 0.2, 0.47, z, 0.4, 0.02, 0.3, [0.2, 0.2, 0.22]);
+        box(mats.lampGlass, x - 0.2, 0.6, z - 0.12, 0.38, 0.24, 0.02, [0.4, 1.3, 1.2]);
+        box(mats.glass, x + 0.35, 0.52, z, 0.07, 0.16, 0.07);
+        break;
+      }
+      case 'arcade': {
+        box(mats.carPaint, x, 0.9, z, w, 1.8, d, [0.18, 0.12, 0.3]);
+        box(mats.lampGlass, x - w / 2 - 0.01, 1.3, z, 0.02, 0.45, 0.55, [1.2, 0.5, 1.4]);
+        box(mats.iron, x - w / 2 - 0.12, 0.95, z, 0.25, 0.06, 0.6, [0.15, 0.15, 0.15]);
+        break;
+      }
+      case 'reel': {
+        at(x, z).geo(mats.wood, new CylinderGeometry(0.5, 0.5, 0.12, 14), new Matrix4().makeRotationX(Math.PI / 2).setPosition(x, 0.5, z - 0.3), [0.6, 0.48, 0.32]);
+        at(x, z).geo(mats.wood, new CylinderGeometry(0.5, 0.5, 0.12, 14), new Matrix4().makeRotationX(Math.PI / 2).setPosition(x, 0.5, z + 0.3), [0.6, 0.48, 0.32]);
+        at(x, z).geo(mats.rubber, new CylinderGeometry(0.36, 0.36, 0.5, 14), new Matrix4().makeRotationX(Math.PI / 2).setPosition(x, 0.5, z), [0.2, 0.2, 0.2]);
+        break;
+      }
+    }
+  }
 
   // Ceiling: shadow only (never drawn, the camera looks in from above), so the moon stays out of the hall.
   at(17, 24).shadowBox(M(17, 5.8, 24), 36, 0.3, 40);

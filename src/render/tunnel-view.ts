@@ -9,7 +9,7 @@
 // FX layer; strip lamps 1 mesh, generator lamp 1. No new lights: the power comes from four extra spots
 // in the existing light pool that stay at intensity 0 (never picked) until the generator runs.
 import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, DoubleSide, Group, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, Vector3, type Material } from 'three';
-import { GENERATOR, type MapDef, type Pt } from '../data/map';
+import { GENERATOR, lineDist, type MapDef, type Pt } from '../data/map';
 import { FX_LAYER } from './layers';
 import type { LitMaterial, Materials } from './materials';
 import { paintStationSign } from './paint';
@@ -76,14 +76,22 @@ export function buildTunnelExtras(m: MapDef, mats: TunnelMats, materials: Materi
     if (t.kind !== 'bypass') continue;
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
-      const ux = (bx - ax) / len, uz = (bz - az) / len, yaw = Math.atan2(ux, uz), mx = (ax + bx) / 2, mz = (az + bz) / 2;
-      const b = chunkOf(mx, mz);
-      b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, 0.05, mz), t.width - 0.3, 0.1, len + 0.1, [0.55, 0.53, 0.5]);
-      // North wall (outward normal towards -z).
-      // The passage runs towards +x, so (uz, -ux) points north, to its outer wall.
+      const ux = (bx - ax) / len, uz = (bz - az) / len, yaw = Math.atan2(ux, uz);
+      // The ends of the passage turn back into the track bed: draw the walkway, its edge and pipes only
+      // where they are off the track (playtest 2026-11-18: the slab cut across the rails there).
+      const track = T.tubes.find((q) => q.kind === 'track')!;
+      const off = (x: number, z: number): boolean => lineDist(track.pts, x, z) > track.width / 2 + 0.1;
       const nx = uz, nz = -ux, w = t.width / 2 - 0.12;
-      for (const [y, r] of [[1.25, 0.11], [1.6, 0.07]] as const) b.box(mats.rust, new Matrix4().makeRotationY(yaw).setPosition(mx + nx * w, y, mz + nz * w), r * 2, r * 2, len + 0.06, [0.75, 0.62, 0.5]);
-      b.box(mats.enamel, new Matrix4().makeRotationY(yaw).setPosition(mx - nx * (w - 0.08), 0.11, mz - nz * (w - 0.08)), 0.14, 0.03, len, YELLOW);
+      const STEP = 0.5;
+      for (let d = 0; d < len; d += STEP) {
+        const l = Math.min(STEP, len - d), cx = ax + ux * (d + l / 2), cz = az + uz * (d + l / 2), b = chunkOf(cx, cz);
+        const m = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(cx + nx * o, y, cz + nz * o);
+        // The whole width of the slab must be off the track, not only its middle.
+        if (lineDist(track.pts, cx, cz) > track.width / 2 + t.width / 2) b.box(mats.concrete, m(0, 0.05), t.width - 0.3, 0.1, l + 0.02, [0.55, 0.53, 0.5]);
+        // North wall (outward normal towards -z): two pipes; the yellow edge on the track side.
+        if (off(cx + nx * w, cz + nz * w)) for (const [y, r] of [[1.25, 0.11], [1.6, 0.07]] as const) b.box(mats.rust, m(w, y), r * 2, r * 2, l + 0.02, [0.75, 0.62, 0.5]);
+        if (off(cx - nx * (w - 0.08), cz - nz * (w - 0.08))) b.box(mats.enamel, m(-(w - 0.08), 0.11), 0.14, 0.03, l, YELLOW);
+      }
     }
   }
   // Generator: a skid with the engine block, radiator grille, exhaust and a cable run to the wall.

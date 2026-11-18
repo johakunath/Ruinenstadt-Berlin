@@ -68,11 +68,14 @@ describe('M20 tunnel generator (every line)', () => {
     expect(m.tunnel!.signs.map((s) => s.text)).toEqual(expect.arrayContaining(['Köpenick', 'Rummelsburg', 'Warschauer Straße']));
   });
 
-  it('lines differ: own curve, some mirrored passages, the stretches in different orders', () => {
-    const maps = LINES.map((_, k) => tunnelMap(k));
-    expect(new Set(maps.map((mm) => mm.encounters[2]!.z.toFixed(2))).size).toBeGreaterThan(3);
-    expect(new Set(LINES.map((_, k) => lineLayout(k).side)).size).toBe(2);
-    expect(new Set(LINES.map((_, k) => lineLayout(k).order.join())).size).toBeGreaterThan(1);
+  it('every line reuses the S3 tunnel, only the names follow the line (Johannes, 2026-11-18)', () => {
+    const s3 = tunnelMap(0);
+    for (const [k, L] of LINES.entries()) {
+      const mm = tunnelMap(k);
+      expect(mm.encounters.map((e) => [e.x, e.z])).toEqual(s3.encounters.map((e) => [e.x, e.z]));
+      expect(mm.tunnel!.tubes).toEqual(s3.tunnel!.tubes);
+      expect(mm.zones[1]!.name).toBe(`Geisterbahnhof ${L.ghost}`);
+    }
   });
 
   for (const [k, L] of LINES.entries()) {

@@ -14,8 +14,13 @@ export const YARD_H = 3;
 /** The loading ramp in the north of the yard (signal box), 1.5 m above the yard. */
 export const RAMP_H = YARD_H + 1.5;
 
+export type DecorKind = 'stalls' | 'sinks' | 'cot' | 'boxes' | 'bench' | 'sofa' | 'arcade' | 'table' | 'reel';
 /** Where a station stands: footprint center, facing (toward the hero's ring), size. */
-export interface StationSpot { id: StationId; x: number; z: number; rot: number; w: number; d: number; inside: boolean; /** Floor height when it is not the hall (0) or the yard (YARD_H). */ y?: number }
+export interface StationSpot {
+  id: StationId; x: number; z: number; rot: number; w: number; d: number; inside: boolean;
+  /** Floor height when it is not the hall (0) or the yard (YARD_H). */ y?: number;
+  /** Where the keeper stands, in the station frame (x across the front, z toward the front). */ keeper: readonly [number, number];
+}
 /** A ring that opens something when the hero stands in it. */
 export interface CampPlace { id: StationId | 'abfahrt'; x: number; z: number; r: number }
 export interface CampLayout {
@@ -24,6 +29,8 @@ export interface CampLayout {
   /** Wall colliders (boxes, half extents) with their drawn height. */
   walls: Array<{ x: number; z: number; hx: number; hz: number; h: number; kind: 'tile' | 'low' | 'glass' | 'column' }>;
   stations: StationSpot[];
+  /** Room furniture that blocks (axis aligned: w along x, d along z); drawn in `camp-world.ts`. */
+  decor: Array<{ kind: DecorKind; x: number; z: number; w: number; d: number }>;
   places: CampPlace[];
   /** The train on the hall track (the departure). */
   train: { x: number; z: number; len: number };
@@ -32,6 +39,16 @@ export interface CampLayout {
 }
 
 // Facing θ means direction (sin θ, cos θ): 0 faces +Z (south, toward the camera and the ring).
+
+/** NPC rings (Johannes, 2026-11-18): about a character's footprint, right in front of the person, faint. */
+export const RING_R = 0.65;
+
+/** The ring of a station: in front of where its keeper stands, clear of the station's footprint. */
+export function stationRing(s: StationSpot): CampPlace {
+  const [lx, lz] = s.keeper, rz = Math.max(lz + 1, s.d / 2 + 0.55);
+  const c = Math.cos(s.rot), sn = Math.sin(s.rot);
+  return { id: s.id, x: s.x + lx * c + rz * sn, z: s.z - lx * sn + rz * c, r: RING_R };
+}
 
 export const CAMP_LAYOUT: CampLayout = {
   floor: [
@@ -67,30 +84,38 @@ export const CAMP_LAYOUT: CampLayout = {
     { x: 30.5, z: 21.6, hx: 0.25, hz: 0.25, h: 5.4, kind: 'column' },
   ],
   stations: [
-    { id: 'markt', x: 22, z: 20.5, rot: 0, w: 11, d: 4, inside: true },
-    { id: 'laz', x: 7.5, z: 34, rot: 0, w: 10, d: 4, inside: true },
+    { id: 'markt', x: 22, z: 20.5, rot: 0, w: 11, d: 4, inside: true, keeper: [1.5, 1.4] },
+    { id: 'laz', x: 7.5, z: 34, rot: 0, w: 10, d: 4, inside: true, keeper: [1.1, 1.0] },
     // Johannes 2026-11-18: Hackerspace inside (old bakery), Imbiss outside in a viaduct arch, the
     // signal box on a raised loading ramp in the north, the freight car on the southern track.
-    { id: 'hack', x: 21, z: 32.6, rot: 0, w: 10, d: 2.6, inside: true },
-    { id: 'imbiss', x: 50, z: 4.6, rot: 0, w: 7.4, d: 3.4, inside: false },
-    { id: 'kom', x: 62, z: 9.6, rot: 0, w: 7, d: 6, inside: false, y: RAMP_H },
+    { id: 'hack', x: 21, z: 32.6, rot: 0, w: 10, d: 2.6, inside: true, keeper: [-1.3, 0.85] },
+    { id: 'imbiss', x: 50, z: 4.6, rot: 0, w: 7.4, d: 3.4, inside: false, keeper: [-1.0, -0.2] },
+    { id: 'kom', x: 62, z: 9.6, rot: 0, w: 7, d: 6, inside: false, y: RAMP_H, keeper: [0.3, 1.9] },
     // The freight car's open side faces south, toward the camera and its ring (a ring north of it hid the hero behind the car).
-    { id: 'zeug', x: 56.5, z: 40, rot: 0, w: 13, d: 5, inside: false },
-    { id: 'exer', x: 62.5, z: 26, rot: -Math.PI / 2, w: 10, d: 7, inside: false },
+    { id: 'zeug', x: 56.5, z: 40, rot: 0, w: 13, d: 5, inside: false, keeper: [-0.5, 1.4] },
+    { id: 'exer', x: 62.5, z: 26, rot: -Math.PI / 2, w: 10, d: 7, inside: false, keeper: [-1.0, 2.6] },
   ],
-  places: [
-    { id: 'abfahrt', x: 12, z: 18.2, r: 1.8 },
-    { id: 'markt', x: 22, z: 25.5, r: 1.8 },
-    { id: 'laz', x: 7.5, z: 39, r: 1.8 },
-    { id: 'hack', x: 21, z: 37, r: 1.8 },
-    { id: 'imbiss', x: 50, z: 9.6, r: 1.8 },
-    { id: 'kom', x: 62, z: 14, r: 1.4 },
-    { id: 'zeug', x: 56.5, z: 44.5, r: 1.5 },
-    { id: 'exer', x: 57.2, z: 26, r: 1.8 },
+  // The lower half of the old toilets and of the bakery (playtest 2026-11-18: the rooms felt empty there).
+  decor: [
+    { kind: 'stalls', x: 13.15, z: 39.9, w: 1.5, d: 5.8 },
+    { kind: 'sinks', x: 1.45, z: 39.5, w: 0.7, d: 3.4 },
+    { kind: 'cot', x: 4.4, z: 39.4, w: 2.1, d: 0.85 },
+    { kind: 'cot', x: 4.4, z: 41.7, w: 2.1, d: 0.85 },
+    { kind: 'cot', x: 8.6, z: 41.7, w: 2.1, d: 0.85 },
+    { kind: 'boxes', x: 10.2, z: 39.2, w: 1.1, d: 0.8 },
+    { kind: 'bench', x: 15.75, z: 38, w: 0.9, d: 4.2 },
+    { kind: 'sofa', x: 21.6, z: 40.1, w: 2.3, d: 0.9 },
+    { kind: 'table', x: 21.6, z: 38.5, w: 1.3, d: 0.65 },
+    { kind: 'arcade', x: 26.2, z: 37.3, w: 0.8, d: 0.8 },
+    { kind: 'reel', x: 25.3, z: 40.2, w: 1.0, d: 1.0 },
   ],
+  // Rings: small, at the keeper's feet in front of the station (Johannes, 2026-11-18); see `stationRing`.
+  places: [],
   train: { x: 15, z: 11, len: 22 },
   viaduct: { z: 6, h: 6.5, arches: [[36, 44], [46, 54], [56, 66], [68, 76]] },
 };
+// The train's door, then one ring per station.
+CAMP_LAYOUT.places.push({ id: 'abfahrt', x: 12, z: 16.9, r: RING_R }, ...CAMP_LAYOUT.stations.map(stationRing));
 
 /** Inside a camp floor polygon (walkable before walls and props). */
 export function onCampFloor(c: CampLayout, x: number, z: number): boolean {

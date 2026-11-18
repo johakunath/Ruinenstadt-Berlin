@@ -925,6 +925,8 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
   // M20: a thin divider between two tubes (the bypass beside the collapse) stays low, so the camera sees over it.
   const LOW = 1.4;
   const stripe = lineTint(m.tunnel!.color);
+  /** Meters of wall built so far per tube kind and side: places ribs, niches and lamps along the run. */
+  const wallRun = new Map<string, number>();
   for (const t of m.tunnel!.tubes) {
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
@@ -933,6 +935,7 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
       for (const side of [-1, 1]) {
         // Normal pointing out of the tube on this side.
         const nx = uz * side, nz = -ux * side;
+        const key = `${t.kind}${side}`;
         for (let d = 0; d < len; d += 1) {
           const cx = ax + ux * (d + 0.5), cz = az + uz * (d + 0.5);
           const ex = cx + nx * t.width / 2, ez = cz + nz * t.width / 2;
@@ -943,8 +946,38 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           while (thick < 12 && !inTunnel(m, ex + nx * (thick + 0.5), ez + nz * (thick + 0.5))) thick += 0.5;
           const h = thick < 2.5 ? LOW : H;
           const b = chunkOf(cx, cz);
-          const mx = ex + nx * thick / 2, mz = ez + nz * thick / 2;
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04, [0.42, 0.4, 0.38]);
+          // Playtest 2026-11-18: uneven walls. The face swells by up to 0.3 m (two slow waves along the
+          // tube), the tint drifts, damp darkens the foot; ribs, refuge niches, a cable tray and wall lamps
+          // break the run. Cost: boxes in the existing tunnel materials, merged per chunk; lamps feed the fixed pool.
+          const run = (wallRun.get(key) ?? 0) + 1;
+          wallRun.set(key, run);
+          const u = run + side * 37 + t.width * 3;
+          const bump = h < H ? 0 : 0.15 + 0.1 * Math.sin(u * 0.43) + 0.05 * Math.sin(u * 1.9 + 1.3);
+          const tone = 0.86 + 0.14 * Math.sin(u * 0.21) + 0.06 * Math.sin(u * 1.37);
+          const mx = ex + nx * (thick - bump) / 2, mz = ez + nz * (thick - bump) / 2;
+          const fx = ex - nx * bump, fz = ez - nz * bump;
+          const onFace = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(fx - nx * o, y, fz - nz * o);
+          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick + bump, h, 1.04, [0.42 * tone, 0.4 * tone, 0.38 * tone]);
+          if (h === H && t.kind !== 'station') {
+            b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, 1.04, [0.2, 0.21, 0.19]);
+            if (run % 8 === 0) b.box(mats.concrete, onFace(0.15, H / 2), 0.3, H, 0.55, [0.5 * tone, 0.48 * tone, 0.45 * tone]);
+            else if (run % 29 === 14) {
+              // Refuge niche: a dark recess with a light frame.
+              b.box(mats.dark, onFace(0.015, 1.05), 0.02, 2.1, 1.0);
+              b.box(mats.concrete, onFace(0.03, 2.18), 0.05, 0.12, 1.2, [0.6, 0.58, 0.54]);
+            }
+            // Cable tray on brackets along the wall.
+            b.box(mats.iron, onFace(0.1, 2.05), 0.16, 0.05, 1.04, [0.24, 0.24, 0.22]);
+            b.box(mats.rubber, onFace(0.1, 2.12), 0.12, 0.09, 1.04, [0.12, 0.12, 0.12]);
+            if (run % 2 === 0) b.box(mats.iron, onFace(0.08, 2.0), 0.16, 0.12, 0.05, [0.3, 0.3, 0.28]);
+            // U-Bahn tunnel lamp: a caged bulkhead light on the wall, every 12 m, alternating sides and shades.
+            if ((t.kind === 'track' || t.kind === 'bypass') && (run + (side > 0 ? 6 : 0)) % 12 === 0) {
+              const cold = ((run / 12) | 0) % 3 === 1;
+              b.box(mats.iron, onFace(0.08, 2.75), 0.16, 0.3, 0.42, [0.2, 0.2, 0.2]);
+              b.box(mats.lampGlass, onFace(0.17, 2.75), 0.04, 0.2, 0.32, cold ? [1.2, 1.5, 1.8] : [1.7, 1.25, 0.55]);
+              b.light(new Vector3(fx - nx * 0.5, 2.6, fz - nz * 0.5), cold ? 0xd8ecff : 0xffb060, 18, 10, 0.02, 4.5, { yaw: Math.atan2(-nx, -nz), stretch: 1.3, reach: 1.6, halo: 0.3 });
+            }
+          }
           b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h + 0.05, mz), thick + 0.4, 0.1, 1.04, h < H ? [0.3, 0.29, 0.27] : [0.08, 0.08, 0.09]);
           b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04);
           if (t.kind === 'station') {

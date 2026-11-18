@@ -41,22 +41,17 @@ const STRETCH_NAME: Record<Stretch, string> = { collapse: 'Einsturz', flood: 'Ge
 /** The followed Köpenick: tunnel waves start where the district's late waves were. */
 const G0 = 14;
 
-/** Centre line of line `line`: S3 keeps layout B, the others get a seeded amplitude, period and phase. */
-export function lineCurve(line: number): (x: number) => number {
-  if (line === 0) return tunnelZ;
-  const rng = new Rng(7919 * (line + 1));
-  const amp = rng.range(10, 17) * (rng.next() < 0.5 ? -1 : 1), period = rng.range(160, 230), phase = rng.range(0, 200);
-  return (x) => amp * Math.sin((Math.PI * (x - phase)) / period);
+/**
+ * Every line reuses the S3 tunnel as it is (Johannes, 2026-11-18: recycle it completely for now,
+ * only the names follow the line). Kept as functions so a line can get its own shape later.
+ */
+export function lineCurve(_line: number): (x: number) => number {
+  return tunnelZ;
 }
 
-/** Line layout choices: side of the passages (1 as S3, -1 mirrored) and which slot gets which stretch. */
-export function lineLayout(line: number): { side: 1 | -1; order: Stretch[] } {
-  if (line === 0) return { side: 1, order: ['collapse', 'flood', 'wreck'] };
-  const rng = new Rng(4099 * (line + 3));
-  const side = rng.next() < 0.5 ? 1 : -1;
-  // The collapse needs a slot without a station cap beside it: the first or the last.
-  const order = rng.pick<Stretch[]>([['collapse', 'flood', 'wreck'], ['collapse', 'wreck', 'flood'], ['flood', 'wreck', 'collapse'], ['wreck', 'flood', 'collapse']]);
-  return { side, order: [...order] };
+/** Line layout: side of the passages and the order of the special stretches (the S3's for every line). */
+export function lineLayout(_line: number): { side: 1 | -1; order: Stretch[] } {
+  return { side: 1, order: ['collapse', 'flood', 'wreck'] };
 }
 
 /** The S3 tunnel (line 0) or the tunnel of another line from `LINES` (data only until its districts exist). */
@@ -161,7 +156,7 @@ export function tunnelMap(line = 0): MapDef {
   fixedProps.push({ kind: 'tram', x: wx, z: cz(wx) - 2.4, rot: Math.PI / 2 + Math.atan2(cz(wx + 7) - cz(wx - 7), 14), size: 1 });
   fixedProps.push({ kind: 'campfire', x: at(14)[0], z: at(14, -7)[1], rot: 0, size: 1 }, { kind: 'campfire', x: at(256)[0], z: at(256, 7)[1], rot: 0, size: 1 });
   // The collapse: rubble heaps and fallen ceiling slabs and girders across the track bed (they stay inside the blocked band).
-  const rr = new Rng(5151 + line);
+  const rr = new Rng(5151);
   for (let x = ca + 8, k = 0; x <= cb - 8; x += 2.6, k++) {
     const off = [0, 2.8, -2.8][k % 3]!;
     fixedProps.push({ kind: 'rubble', x, z: cz(x) + off + rr.range(-0.3, 0.3), rot: rr.range(0, 6.28), size: rr.range(2.2, 2.9) });
@@ -197,7 +192,7 @@ export function tunnelMap(line = 0): MapDef {
     hiddenSpots: [hidden],
     guards: [{ x: 314, z: cz(316) - 40 * s, kind: 'brute', elite: true, wake: 9, hp: 2.6 * TUNNEL.hp }],
     district: 0,
-    seed: 3030 + line * 101,
+    seed: 3030,
   };
 }
 

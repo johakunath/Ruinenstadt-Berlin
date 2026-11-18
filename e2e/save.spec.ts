@@ -55,7 +55,7 @@ test('M20: the walkable camp opens with the S3, spends Schrott at a station, kee
   await page.waitForURL(/map=lager/, { timeout: 30_000 });
   await page.waitForFunction(() => window.__game?.phase() === 'play', null, { timeout: 120_000 });
   await expect(page.locator('#title')).toBeHidden();
-  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 56.5; p.z = p.pz = 44.5; });
+  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 56; p.z = p.pz = 43.05; });
   await expect(page.locator('#talk-btn')).toContainText('Zeughaus', { timeout: 30_000 });
   await page.keyboard.press('KeyF');
   await expect(page.locator('#camp')).toBeVisible();
@@ -67,7 +67,7 @@ test('M20: the walkable camp opens with the S3, spends Schrott at a station, kee
   expect(saved.profile.statContext.upgrades.dmg).toBe(1);
   expect(saved.run.index).toBe(1);
   // The train: the network map, Köpenick, and straight back into the waiting checkpoint.
-  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 12; p.z = p.pz = 18.2; });
+  await page.evaluate(() => { const p = window.__game!.sim().player; p.x = p.px = 12; p.z = p.pz = 16.9; });
   await expect(page.locator('#talk-btn')).toContainText('Netzplan', { timeout: 30_000 });
   await page.keyboard.press('KeyF');
   await expect(page.locator('#netboard')).toBeVisible();

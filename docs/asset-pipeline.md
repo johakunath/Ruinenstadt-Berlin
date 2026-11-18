@@ -62,6 +62,7 @@ Read only: `johakunath/Ruinenstadt` `assets/buildings/koep-*.webp` (asphalt, pav
 | T3 | Facades and roofs: plaster tones, brick, stucco, roof tiles, concrete, shop front | `paintPlaster`, `paintBrick`, `paintStucco`, `paintRoofTiles`, `paintConcrete` | 3 to 4 m | after T2 |
 | T4 | Props: wood, metal paint, car and bus paint, tram | `paintWood`, `paintMetal`, `paintVan` | per prop | after T3 |
 | T5 | Landmarks (M11d): slate roof; dark red Rathenow brick with a few green glazed bricks (Rathaus); clean baroque plaster with soft staining, cream (Schloss, S-Bahnhof); reddish-brown granite cladding with joints (Forum); fibreglass dinosaur skin with scales, cracks and faded paint (neutral grey-green, tinted per figure) | `paintSlate`; `brick` on the Rathaus; `stucco` on Schloss and S-Bahnhof; `concrete` on the Forum; `mossy` on the dinos (`src/render/landmarks.ts`) | 3 m (slate, brick, plaster, granite); 2 m (dino skin) | `docs/maps/landmarks.md`; after T3 |
+| T6 | U-Bahn tunnel walls (playtest 2026-11-18: the code concrete repeats and reads flat): poured tunnel concrete with formwork joints, damp and soot streaks, efflorescence, cable scars; three variants to mix per wall meter; a tile band for station walls | `concrete` on the tunnel walls (`buildTunnel` in `src/render/map-world.ts`) | 4 m along the wall, 4.6 m high (full wall height) | after T3; Claude does the performance integration |
 
 Claude adds a row and a task file whenever step 1 finishes for a new surface.
 

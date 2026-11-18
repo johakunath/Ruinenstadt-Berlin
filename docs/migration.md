@@ -32,6 +32,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
 | P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; next candidates to measure (playtest 2026-11-17) | Claude · Opus high, Johannes measures | step 1 built, measurement open: `docs/tasks/p1-heat.md` |
 | M20 Tunnels between the maps (2D route A content, line generator) and the walkable camp at S+U Warschauer Straße (layout A+C, flow F1, build sites; Johannes 2026-11-18) | Claude · Opus high | built 2026-11-18, playtest open: `docs/tasks/m20-tunnels-camp.md` |
+| T6 U-Bahn tunnel wall textures: three concrete variants and a station tile band (playtest 2026-11-18) | Codex | open: `docs/asset-pipeline.md` › Texture queue |
 | KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.

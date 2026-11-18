@@ -1594,6 +1594,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   for (const l of lots) colliders.push(...lotColliders(l));
   for (const w of m.camp?.walls ?? []) colliders.push({ kind: 'box', x: w.x, z: w.z, hx: w.hx, hz: w.hz, rot: 0 });
   for (const t of m.camp?.stations ?? []) colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot });
+  for (const f of m.camp?.decor ?? []) colliders.push({ kind: 'box', x: f.x, z: f.z, hx: f.w / 2, hz: f.d / 2, rot: 0 });
   if (m.rail) {
     const r = m.rail;
     const left = (r.gapX - r.gapW / 2 + r.minX) / 2;
@@ -1664,7 +1665,9 @@ function tunnelProps(m: MapDef): Prop[] {
         acc = rng.range(-2, 2);
         const off = t.width / 2 - 0.8, x = ax + ux * d - uz * off * side, z = az + uz * d + ux * off * side;
         side = -side;
-        if (free(x, z, 0.3)) props.push({ kind: rng.next() < 0.75 ? 'workLamp' : 'candles', x, z, rot: Math.atan2(uz * side, -ux * side), size: 1 });
+        // Playtest 2026-11-18: the track and the bypass get lamps on their walls (render); here only candles there.
+        const roll = rng.next(), walled = t.kind === 'track' || t.kind === 'bypass';
+        if ((!walled || roll >= 0.75) && free(x, z, 0.3)) props.push({ kind: roll < 0.75 ? 'workLamp' : 'candles', x, z, rot: Math.atan2(uz * side, -ux * side), size: 1 });
         const cx = ax + ux * (d + 5) + uz * off * 0.6 * side, cz = az + uz * (d + 5) - ux * off * 0.6 * side;
         // The 4 m bypass stays clear of crates.
         if (rng.next() < 0.55 && t.kind !== 'bypass' && free(cx, cz, 0.8)) props.push({ kind: rng.pick(['crates', 'crate', 'rubble', 'planks', 'bins'] as const), x: cx, z: cz, rot: rng.range(0, Math.PI * 2), size: rng.range(0.8, 1.3) });

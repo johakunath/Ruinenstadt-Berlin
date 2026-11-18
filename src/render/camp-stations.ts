@@ -783,10 +783,6 @@ const BUILD: Record<StationId, (k: Kit, level: number) => void> = { markt, laz, 
 
 /** Keepers further from the hero than this are hidden (the camera frames about 12 m around her). */
 const KEEPER_RANGE = 15;
-/** Where the keeper stands (local frame), near the front corner. */
-const KEEPER: Record<StationId, [number, number]> = {
-  markt: [1.5, 1.4], laz: [1.1, 1.0], imbiss: [-1.0, -0.2], kom: [0.3, 1.9], zeug: [-0.5, 1.4], hack: [-1.3, 0.85], exer: [-1.0, 2.6],
-};
 
 function buildStationArt(b: Builder, s: StationSpot, st: CampStationState, art: Art): Kit {
   const k = new Kit(b, art, s, new Rng(s.id.length * 977 + Math.round(s.x * 13) + st.level));
@@ -887,10 +883,11 @@ export class CampStationsView {
     for (const place of layout.places) {
       const station = layout.stations.find((s) => s.id === place.id);
       const y = (station ? floorY(station) : 0) + 0.06;
-      const color = place.id === 'abfahrt' ? 0x7dd3ff : 0xef9f27;
-      const mat = new MeshBasicMaterial({ color, transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false });
-      const mesh = new Mesh(new RingGeometry(place.r - 0.12, place.r, 40), mat);
-      mesh.add(new Mesh(new CircleGeometry(place.r - 0.12, 40), new MeshBasicMaterial({ color, transparent: true, opacity: 0.07, depthWrite: false })));
+      // Johannes 2026-11-18: a footprint-sized, dim disc with a very faint rim, at the person's feet.
+      const color = place.id === 'abfahrt' ? 0x5aa8c8 : 0xc08a3a;
+      const mat = new MeshBasicMaterial({ color, transparent: true, opacity: 0.12, depthWrite: false });
+      const mesh = new Mesh(new RingGeometry(place.r - 0.05, place.r, 32), mat);
+      mesh.add(new Mesh(new CircleGeometry(place.r - 0.05, 32), new MeshBasicMaterial({ color, transparent: true, opacity: 0.16, depthWrite: false })));
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(place.x, y, place.z);
       this.group.add(mesh);
@@ -928,7 +925,7 @@ export class CampStationsView {
       this.group.add(keeper.root);
     }
     if (keeper) {
-      const [lx, lz] = KEEPER[s.id];
+      const [lx, lz] = s.keeper;
       const c = Math.cos(s.rot), sn = Math.sin(s.rot);
       const x = s.x + lx * c + lz * sn, z = s.z - lx * sn + lz * c;
       keeper.root.position.set(x, floorY(s), z);
@@ -961,8 +958,8 @@ export class CampStationsView {
     }
     for (const r of this.rings) {
       const on = r.place.id === near;
-      r.mat.opacity = on ? 0.75 + 0.2 * Math.sin(time * 6) : 0.38 + 0.12 * Math.sin(time * 2 + r.place.x);
-      r.mesh.scale.setScalar(on ? 1.06 : 1);
+      r.mat.opacity = on ? 0.3 + 0.08 * Math.sin(time * 4) : 0.12;
+      (r.mesh.children[0] as Mesh<CircleGeometry, MeshBasicMaterial>).material.opacity = on ? 0.3 : 0.16;
     }
   }
 }
