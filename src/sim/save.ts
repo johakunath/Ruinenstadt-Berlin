@@ -51,7 +51,10 @@ export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now
   const r = sim.run;
   // Endless mode has no checkpoint (M18): its pauses are not resumable.
   const inRun = withRun && sim.level.expedition && r.endless === undefined && (r.phase === 'pause' || r.phase === 'travel' || r.phase === 'hold') && sim.player.state !== 'dead';
-  // M20: a save during the generator hold resumes before it (the charge starts again).
+  // M20: a save during the generator hold resumes before it (the charge starts again), so the hold
+  // wave the director already counted on entering the ring is taken back out (Codex review).
+  const enc = sim.level.encounters[r.index];
+  const holdCounted = r.phase === 'hold' && !!enc?.hold && enc.waves[0]!.bosses.length === 0 ? 1 : 0;
   return {
     v: 1, t: now, difficulty: sim.difficulty, profile: profileOf(sim),
     run: !inRun ? null : {
@@ -60,7 +63,7 @@ export function snapshot(sim: Sim, map: string, withRun: boolean, now = Date.now
       content: structuredClone({ ...sim.content, tradeOpen: false }),
       map, index: r.index, wave: r.phase === 'pause' ? r.wave : -1, hp: sim.player.hp,
       x: sim.player.x, z: sim.player.z, facing: sim.player.facing, rng: sim.rng.state, nextId: sim.nextId,
-      itemId: sim.lootCtx.itemId ?? 0, lootWaves: sim.lootWaves, kills: sim.kills,
+      itemId: sim.lootCtx.itemId ?? 0, lootWaves: sim.lootWaves - holdCounted, kills: sim.kills,
       broken: sim.breakables.filter((b) => b.broken).map((b) => b.id), restSeen: [...sim.rest.seen],
       drops: sim.drops.map((d) => structuredClone({ ...d, vx: 0, vz: 0, h: 0, vh: 0, landed: true })),
       guardsDown: sim.level.guards.map((_, i) => i).filter((i) => !sim.enemies.some((e) => e.guardIndex === i && e.state !== 'dead')),

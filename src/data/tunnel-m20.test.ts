@@ -189,6 +189,16 @@ describe('M20 generator hold', () => {
     stepSim(sim, NO_INPUT);
     return sim;
   };
+  it('a save during the hold counts its wave once after the resume (Codex review)', () => {
+    const sim = atHold();
+    const counted = sim.lootWaves;
+    const back = simFromSave(snapshot(sim, m.name, true), { level, seed: 5 }, true);
+    expect(back.run.phase).toBe('travel');
+    teleport(back, H.x, H.z);
+    stepSim(back, NO_INPUT);
+    expect(back.run.phase).toBe('hold');
+    expect(back.lootWaves).toBe(counted);
+  });
   it('starts at the generator and charges only while the hero stands in the ring', () => {
     const sim = atHold();
     expect(sim.run.phase).toBe('hold');

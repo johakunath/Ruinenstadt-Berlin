@@ -31,7 +31,12 @@ export class NetBoard {
       this.root.querySelector<HTMLElement>('[data-ride]:not(:disabled)')?.focus();
     });
     keyNav(this.root, () => this.close());
-    this.root.addEventListener('keydown', (e) => { if ((e.code === 'Enter' || e.code === 'Space') && (e.target as Element).closest('[data-stop],[data-line]')) { e.preventDefault(); (e.target as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
+    this.root.addEventListener('keydown', (e) => {
+      if ((e.code === 'Enter' || e.code === 'Space') && (e.target as Element).closest('[data-stop],[data-line]')) { e.preventDefault(); (e.target as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true })); return; }
+      // Keyboard only (Codex review): arrows walk the network as the pad does; Enter on the button rides.
+      const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.code];
+      if (dir) { e.preventDefault(); e.stopPropagation(); this.step(dir); }
+    }, true);
   }
 
   get isOpen(): boolean { return !this.root.hidden; }
@@ -58,10 +63,14 @@ export class NetBoard {
     const dx = down[14] || ax < -0.5 ? -1 : down[15] || ax > 0.5 ? 1 : 0, dy = down[12] || ay < -0.5 ? -1 : down[13] || ay > 0.5 ? 1 : 0;
     if (!dx && !dy) return;
     this.padNext = now + 170;
-    // Stops and lines in route order (Köpenick, S3, Lager, U8, …); the pad walks along the network.
+    this.step(dx || dy);
+  }
+
+  /** Pad and arrow keys: walk the stops and lines in route order (Köpenick, S3, Lager, U8, …). */
+  private step(dir: number): void {
     const order = STOPS.flatMap((_, i) => (i < LINES.length ? [{ stop: i }, { line: i }] : [{ stop: i }]));
     const cur = order.findIndex((o) => this.sel && ('stop' in o ? 'stop' in this.sel && this.sel.stop === o.stop : 'line' in this.sel && this.sel.line === o.line));
-    this.sel = order[(Math.max(0, cur) + (dx || dy) + order.length) % order.length]!;
+    this.sel = order[(Math.max(0, cur) + dir + order.length) % order.length]!;
     this.render();
     this.root.querySelector<HTMLElement>('[data-ride]')?.focus();
   }
