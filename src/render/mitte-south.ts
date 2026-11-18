@@ -386,7 +386,7 @@ function sony(c: MCtx, l: Landmark): void {
   const front = [...inner].reverse();
   const ring: P2[] = [...outer, ...front];
   for (const p of OPEN_PARTS.sony ?? []) {
-    const d = (Math.round((p.rot * 180) / Math.PI) + 360) % 360, h = SONY_H[d] ?? 18, F = lm(l, p.x, 0, p.z, p.rot);
+    const d = (Math.round((p.rot * 180) / Math.PI) + 360) % 360, h = SONY_H[d] ?? 18, F = sub(lm(l), p.x, 0, p.z, p.rot);
     if (d === 0) sonyPavilion(c, F, ring, front, outer, h);
     else sonyBlock(c, F, front, outer, h, d, rng);
     b.geo(M.tar, capGeo('sony-block', ring), sub(F, 0, h, 0), [0.55, 0.55, 0.57]);
@@ -409,7 +409,7 @@ function sony(c: MCtx, l: Landmark): void {
     b.geo(M.concrete, flat('sony-floor', () => new CircleGeometry(19.6, 48)), lm(l, 0, 0.03, 0), [1.0, 0.99, 1.0]);
     b.geo(M.concrete, flat('sony-band', () => new RingGeometry(7.4, 8.2, 48)), lm(l, 0, 0.045, 0), [0.42, 0.42, 0.45]);
     b.geo(M.concrete, flat('sony-band2', () => new RingGeometry(18.6, 19.6, 48)), lm(l, 0, 0.045, 0), [0.42, 0.42, 0.45]);
-    b.geo(S.signs, lit('sony-ring', 'magenta', () => new RingGeometry(13.5, 13.8, 64).rotateX(-Math.PI / 2)), lm(l, 0, 0.05, 0));
+    b.geo(S.signs, lit('sony-ring', 'magenta', () => new RingGeometry(13.56, 13.72, 64).rotateX(-Math.PI / 2)), lm(l, 0, 0.05, 0));
     for (let k = 0; k < 16; k++) b.box(M.concrete, lm(l, 0, 0.04, 0, (k / 16) * Math.PI * 2).multiply(new Matrix4().makeTranslation(0, 0, 14)), 0.5, 0.02, 9, [0.5, 0.5, 0.53]);
     const oval = new Matrix4().makeScale(1.3, 1, 1);
     b.geo(c.N.sandstone, cached('ms-basin', () => new CylinderGeometry(4.3, 4.5, 0.25, 32)), lm(l, 0, 0.125, 0).multiply(oval), [0.62, 0.62, 0.64]);
@@ -438,7 +438,7 @@ function sonyBridge(c: MCtx, l: Landmark, g: number, top: number): void {
 /** Glass office block (or the dark cinema block at 180°) on the forum ring. */
 function sonyBlock(c: MCtx, F: Matrix4, front: readonly P2[], outer: readonly P2[], h: number, d: number, rng: Rng): void {
   const { b, M, N } = c, cinema = d === 180, led: Neon = d === 120 || d === 300 ? 'cyan' : 'magenta', G = 4.4;
-  const skin = cinema ? M.corrugated : N.curtain, tint: RGB = cinema ? [0.3, 0.31, 0.36] : GLASS, us = cinema ? 0.5 : 1 / 6, vs = cinema ? 0.5 : 1 / 12;
+  const skin = cinema ? M.corrugated : N.curtain, tint: RGB = cinema ? [0.24, 0.25, 0.3] : GLASS, us = cinema ? 0.5 : 1 / 6, vs = cinema ? 0.5 : 1 / 12;
   faces(c, skin, F, [...outer, front[0]!], 0, h, tint, us, vs);
   faces(c, skin, F, [front[4]!, outer[0]!], 0, h, tint, us, vs);
   faces(c, skin, F, front, G, h, tint, us, vs);
@@ -603,7 +603,7 @@ function bahntower(c: MCtx, l: Landmark): void {
   });
   const P = plan(1), lobby = plan(0.8), G = 5.6, top = (p: P2): number => 70 - (2 / 7) * p[1];
   cells(c, A.lobby, F, lobby, 0, G - 0.4, true);
-  for (let i = 1; i < 14; i += 2) cyl(c, M.enamel, sub(F, P[i]![0] * 0.9, G / 2, P[i]![1] * 0.9), 0.32, 0.32, G, 8, [0.85, 0.86, 0.9]);
+  for (let i = 1; i < 14; i += 2) cyl(c, M.railSteel, sub(F, P[i]![0] * 0.9, G / 2, P[i]![1] * 0.9), 0.32, 0.32, G, 8, [0.85, 0.86, 0.9]);
   faces(c, M.enamel, F, P, G - 0.6, G + 0.4, [0.8, 0.82, 0.85], 0.5, 0.5, true);
   cells(c, 'cyan', F, plan(1.012), G - 0.5, G - 0.38);
   faces(c, N.curtain, F, P, G + 0.4, top, GLASS, 1 / 6, 1 / 12, true);
@@ -688,7 +688,7 @@ function verkehrsturm(c: MCtx, l: Landmark): void {
   const pent = (r: number, h: number): BufferGeometry => cached(`ms-pent${r},${h}`, () => new CylinderGeometry(r, r, h, 5));
   const at = (y: number): Matrix4 => lm(l, 0, y, 0, Math.PI / 5);
   b.solid.excludeOccluder(() => {
-    b.geo(N.sandstone, pent(1.25, 0.45), at(0.225), STONE);
+    b.geo(N.sandstone, pent(1.25, 0.45), at(0.225), [0.72, 0.75, 0.8]);
     for (let k = 0; k < 5; k++) {
       const a = Math.PI / 5 + (k * 2 * Math.PI) / 5;
       b.box(M.enamel, lm(l, Math.sin(a) * 0.95, 2.75, Math.cos(a) * 0.95, a), 0.2, 4.6, 0.2, GREEN);
@@ -735,7 +735,7 @@ function klinik(c: MCtx, l: Landmark): void {
     for (let x = -2.5; x <= 2.5; x += 1) card(c, A.vials, sub(F, x, y + 0.42, -3.78), 0.95, 0.78);
   }
   // Counter with a cyan edge and a monitor.
-  b.box(M.enamel, sub(F, -0.6, 0.66, 2.75), 6, 1.04, 0.75, CASE);
+  b.box(M.carPaint, sub(F, -0.6, 0.66, 2.75), 6, 1.04, 0.75, CASE);
   b.box(M.railSteel, sub(F, -0.6, 1.2, 2.75), 6.1, 0.05, 0.85);
   neon(c, 'cyan', sub(F, -0.6, 1.0, 3.13), 6, 0.06, 0.03);
   const mon = sub(F, 1.4, 1.48, 2.7, 0.3);
@@ -760,7 +760,7 @@ function klinik(c: MCtx, l: Landmark): void {
   }
   neon(c, 'cyan', lm(l, -1.45, 1.3, -0.7), 0.08, 0.12, 0.08);
   const box = sub(F, 3.4, 0.84, -3.2);
-  b.box(M.enamel, box, 1.0, 1.4, 0.6, [0.38, 0.42, 0.5]);
+  b.box(M.carPaint, box, 1.0, 1.4, 0.6, [0.38, 0.42, 0.5]);
   neon(c, 'cyan', sub(box, 0, 0.35, 0.31), 0.6, 0.32, 0.01);
   // Cyan cross on a pole at the south front corner, facing south (the camera).
   b.box(M.iron, sub(F, 4.75, 1.6, 3.2), 0.1, 3.0, 0.1, LIGHT);
