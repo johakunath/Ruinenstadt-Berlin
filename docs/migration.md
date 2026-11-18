@@ -29,9 +29,9 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
 | V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Opus high (layout rule: mockup first) | open: `docs/tasks/v1-visibility.md` |
 | U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
-| K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
+| K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
 | P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; next candidates to measure (playtest 2026-11-17) | Claude · Opus high, Johannes measures | step 1 built, measurement open: `docs/tasks/p1-heat.md` |
-| KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
+| KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
 
