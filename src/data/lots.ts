@@ -310,8 +310,8 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       let i = 0;
       for (let b = cb + 2.4; b < fb - 1.5 && i < 4; b += 1.7, i++) guard(i === 3 ? 'runner' : 'walker', qa - 0.8 + rng.range(-0.15, 0.15), b, 'lying', { wake: 3.8 });
       prop('fireBarrel', -side * (W - 1.6), (cb + fb) / 2 + rng.range(-1, 1));
-      // Candles in the Durchfahrt, where the queue begins.
-      prop('candles', gx + 1.1, D - 0.9, 0, 1, 0);
+      // A storm lantern in the Durchfahrt, where the queue begins.
+      prop('stormLantern', gx + 1.1, D - 0.9, 0, 1, 0);
       prop('crates', side * (W - 1.6), cb + 1.4, rng.range(0, 3), 1, 0.3); prop('bins', side * (W - 1.4), fb - 1.4, Math.PI / 2, 1, 0.2);
       prop('rubble', -side * (W - 3), cb + 1.2, 0, rng.range(0.5, 0.8));
       out.spots.cache = P(side * (W - 2.2), cb + 2.6); out.spots.rescue = P(-side * (W - 3), fb - 1.6);

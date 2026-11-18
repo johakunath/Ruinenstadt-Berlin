@@ -136,7 +136,7 @@ export function campMap(): MapDef {
   const c = CAMP_LAYOUT;
   const props: Prop[] = [
     // Hall: the campfire's indoor sibling (a barrel by the train), lamps along the platform, the market's string lights.
-    P('fireBarrel', 2.2, 29.4), P('workLamp', 30.5, 17.2, Math.PI), P('candles', 1.6, 17.2),
+    P('fireBarrel', 2.2, 29.4), P('workLamp', 30.5, 17.2, Math.PI), P('stormLantern', 1.6, 17.2),
     P('stringLights', 22, 23.6, 0, 12),
     // Yard: campfire with benches, a fire barrel by the stairs top, string lights from the viaduct, lamps.
     P('campfire', 50.5, 23.5), P('bench', 50.5, 20.9, 0), P('bench', 47.9, 24.1, Math.PI / 2), P('bench', 53.1, 24.1, -Math.PI / 2),
