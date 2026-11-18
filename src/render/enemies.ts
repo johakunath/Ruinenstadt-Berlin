@@ -1,6 +1,7 @@
-// Enemy bodies (M12). Four rigs: the CC0 zombie body in six dressed variants (proportions by bone
+// Enemy bodies (M12). Five rigs: the CC0 zombie body in dressed variants (proportions by bone
 // scale, gear built in code), the raptor and the Rex (Quaternius dinosaurs, repainted in
-// tools/build-creatures.mjs) and a crow built from a few boxes with a procedural wing beat.
+// tools/build-creatures.mjs), a crow built from a few boxes with a procedural wing beat and (M12b)
+// a rat from four merged meshes with a run cycle from sim time.
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
   BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, Mesh, SphereGeometry, Sphere, TorusGeometry, Vector3,
@@ -40,11 +41,18 @@ const TINTS: Record<EnemyKind, number[]> = {
   rex: [0xffffff],
   hauptmann: [0xb39a86],
   schaffner: [0xa8a49a],
+  rat: [0xffffff],
+  grenzer: [0xb0b4a2],
+  brandmeister: [0xc4a08a],
+  rattenmutter: [0x9c9a7e],
+  spreehexe: [0xc8ccb8],
 };
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
   spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x5a6f9a, waechter: 0x6a5a4a, hauptmann: 0x44588c, schaffner: 0x2e3f5c,
+  // M12b Xhain 1981: GDR border grey-green, riot red-orange, sewer brown-green, squat black.
+  grenzer: 0x6f7a5e, brandmeister: 0xb8482a, rattenmutter: 0x5e5a3a, spreehexe: 0x2e2834,
 };
 
 /** Proportions by bone scale; children inherit, so a big chest needs a smaller head to match. */
@@ -56,16 +64,26 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   waechter: { upperarm_l: 1.18, upperarm_r: 1.18, Head: 0.95 },
   hauptmann: { spine_02: 1.12, Head: 0.92 },
   schaffner: { spine_02: 1.18, Head: 0.9 },
+  grenzer: { spine_02: 1.08, Head: 0.92 },
+  brandmeister: { spine_02: 1.22, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.86 },
+  rattenmutter: { spine_01: 1.15, spine_03: 1.12, Head: 0.95 },
+  spreehexe: { upperarm_l: 0.92, upperarm_r: 0.92, Head: 0.96 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
 const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   runner: [0.86, 1], brute: [1.12, 1], feldwebel: [1.1, 1], waechter: [0.9, 1.1], hauptmann: [1.1, 1],
+  grenzer: [1, 1.04], brandmeister: [1.12, 1], rattenmutter: [1.15, 0.85], spreehexe: [0.86, 1.16],
 };
+/** Bent forward all the time (the Rattenmutter's hunch). */
+const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2 };
 
 // ---------------------------------------------------------------- gear
 
-interface GearKit { steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; blue: LitMaterial; cloth: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial }
+interface GearKit {
+  steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; blue: LitMaterial; cloth: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial;
+  olive: LitMaterial; ember: LitMaterial; moss: LitMaterial; punk: LitMaterial; flame: LitMaterial;
+}
 let kit: GearKit | null = null;
 function gearKit(m: Materials): GearKit {
   kit ??= {
@@ -79,6 +97,12 @@ function gearKit(m: Materials): GearKit {
     bone: m.surface({ color: 0xd9d2b4, roughness: 0.8 }),
     acid: m.surface({ color: 0x5a7a2a, emissive: 0x97c459, emissiveIntensity: 1.6, roughness: 0.4 }),
     lamp: m.surface({ color: 0x3a2a12, emissive: 0xffb04a, emissiveIntensity: 3, roughness: 0.4 }),
+    olive: m.surface({ color: 0x55604a, roughness: 0.9, doubleSided: true }),
+    ember: m.surface({ color: 0xb03c1c, roughness: 0.85, doubleSided: true }),
+    moss: m.surface({ color: 0x4c4a2c, roughness: 0.95, doubleSided: true }),
+    punk: m.surface({ color: 0x7a2ab8, emissive: 0x9a3ae0, emissiveIntensity: 0.6, roughness: 0.6 }),
+    // Torch flame: emissive only, no light (the light count stays constant).
+    flame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
   };
   return kit;
 }
@@ -208,6 +232,59 @@ function gearFor(kind: EnemyKind, model: Object3D, materials: Materials, castSha
         [tf(new CylinderGeometry(0.09, 0.09, 0.015, 14), 0, -0.26, 0, Math.PI / 2), 'red'],
       ]);
       break;
+    case 'grenzer':
+      // GDR border guard: peaked cap with a high crown, grey-green tunic, a rifle in the right hand.
+      mount('Head', [
+        [tf(new CylinderGeometry(0.15, 0.13, 0.1, 12), 0, 0.06, 0), 'olive'],
+        [tf(new CylinderGeometry(0.17, 0.15, 0.04, 12).scale(1, 1, 1.08), 0, 0.12, -0.01), 'olive'],
+        [tf(new BoxGeometry(0.2, 0.015, 0.1), 0, 0.01, 0.12, 0.2), 'dark'],
+        [tf(new TorusGeometry(0.135, 0.012, 4, 14), 0, 0.03, 0, Math.PI / 2), 'red'],
+        [tf(new SphereGeometry(0.022, 6, 4), 0, 0.09, 0.14), 'brass'],
+      ], 0.12);
+      mount('spine_03', [...tunic('olive', 'dark'), [tf(new BoxGeometry(0.42, 0.04, 0.3), 0, -0.36, 0), 'dark']], 0.08);
+      mount('hand_r', [
+        [tf(new BoxGeometry(0.05, 0.07, 0.62), 0, -0.04, 0.16), 'dark'],
+        [tf(new BoxGeometry(0.045, 0.1, 0.2), 0, -0.07, -0.22, -0.2), 'rust'],
+        [tf(new BoxGeometry(0.035, 0.13, 0.05), 0, -0.13, 0.12, 0.3), 'dark'],
+      ]);
+      break;
+    case 'brandmeister':
+      // Riot fire chief: fire helmet with a brass comb and neck flap, red-orange coat, a burning torch.
+      mount('Head', [
+        [tf(new SphereGeometry(0.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0), 'dark'],
+        [tf(new BoxGeometry(0.03, 0.06, 0.32), 0, 0.15, 0), 'brass'],
+        [tf(new CylinderGeometry(0.16, 0.2, 0.12, 12, 1, true, Math.PI * 0.7, Math.PI * 1.6), 0, -0.06, 0), 'dark'],
+        [tf(new BoxGeometry(0.2, 0.018, 0.08), 0, 0.005, 0.15, 0.25), 'brass'],
+      ], 0.12);
+      // The torch rides on his back and burns over the left shoulder: upright in every clip.
+      mount('spine_03', [
+        ...tunic('ember', 'dark'), [tf(new BoxGeometry(0.44, 0.05, 0.32), 0, -0.36, 0), 'dark'],
+        [tf(new CylinderGeometry(0.025, 0.03, 0.95, 6), 0.19, 0.22, -0.2, -0.2, 0, -0.25), 'rust'],
+        [tf(new CylinderGeometry(0.055, 0.04, 0.1, 8), 0.31, 0.7, -0.1, -0.2, 0, -0.25), 'dark'],
+        [tf(new SphereGeometry(0.08, 8, 6), 0.33, 0.78, -0.08), 'lamp'],
+        [tf(new ConeGeometry(0.09, 0.32, 7), 0.37, 0.94, -0.05, -0.2, 0, -0.25), 'flame'],
+      ], 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.3, 0.5, 10, 1, true), 0, -0.25, 0), 'ember']]);
+      break;
+    case 'rattenmutter':
+      // Hunched in a long brown-green coat with a hood; a rat sits on her shoulder.
+      mount('Head', [[tf(new SphereGeometry(0.16, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), 0, -0.01, -0.06), 'moss']], 0.08);
+      mount('spine_03', [
+        ...tunic('moss', 'rust'),
+        [tf(new SphereGeometry(0.05, 6, 5).scale(0.8, 0.7, 1.6), 0.2, 0.1, 0), 'cloth'],
+        [tf(new SphereGeometry(0.035, 6, 5), 0.2, 0.12, 0.08), 'cloth'],
+      ], 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.23, 0.31, 0.72, 10, 1, true), 0, -0.34, 0), 'moss'], [tf(new TorusGeometry(0.24, 0.018, 4, 14), 0, 0.02, 0, Math.PI / 2), 'rust']]);
+      break;
+    case 'spreehexe':
+      // Punk witch of the squats: a purple and green crest, a long black coat, acid glowing in her hand.
+      mount('Head', [
+        ...[0, 1, 2, 3, 4, 5].map((i): Part => [tf(new ConeGeometry(0.045, 0.3 - Math.abs(i - 2.5) * 0.04, 5).scale(0.5, 1, 1), 0, 0.17, 0.14 - i * 0.055, -0.2 + i * 0.08), i % 2 ? 'acid' : 'punk']),
+      ], 0.06);
+      mount('spine_03', [...tunic('dark', 'dark'), [tf(new BoxGeometry(0.05, 0.05, 0.05), -0.12, 0.05, 0.19), 'steel'], [tf(new BoxGeometry(0.05, 0.05, 0.05), 0.12, 0.05, 0.19), 'steel']], 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.36, 0.86, 10, 1, true, Math.PI * 0.55, Math.PI * 1.9), 0, -0.4, 0), 'dark']]);
+      mount('hand_l', [[tf(new SphereGeometry(0.1, 10, 8), 0, -0.14, 0), 'acid'], [tf(new TorusGeometry(0.14, 0.008, 4, 14), 0, -0.14, 0, Math.PI / 2), 'acid']]);
+      break;
     case 'hauptmann':
       mount('Head', [...pickelhaube(true), [tf(new ConeGeometry(0.05, 0.2, 6), 0, 0.3, -0.02, -0.25), 'red']], 0.12);
       mount('spine_03', [
@@ -267,6 +344,54 @@ function buildCrow(materials: Materials, castShadow: boolean): Crow {
   return { model, wingL, wingR, tipL, tipR, head, mats: [black, beakM], eyes };
 }
 
+// ---------------------------------------------------------------- rat
+
+interface Rat { model: Group; body: Group; front: Mesh; back: Mesh; tail: Mesh; mats: LitMaterial[]; eyes: LitMaterial }
+/** Shared rat geometry (built once): body with head, ears and snout; a leg pair; the tail. */
+let ratGeo: { body: BufferGeometry; skin: BufferGeometry; legs: BufferGeometry; tail: BufferGeometry; eyes: BufferGeometry } | null = null;
+
+/** 2D rat colors: fur #5a4e44, head #6a5e52, pink ears, nose and tail, red eyes. Along +Z, 0.55 m long. */
+function buildRat(materials: Materials, castShadow: boolean): Rat {
+  const flat = (list: BufferGeometry[]): BufferGeometry => mergeGeometries(list.map((g) => (g.index ? g.toNonIndexed() : g)));
+  ratGeo ??= {
+    body: flat([
+      tf(new SphereGeometry(0.1, 8, 6).scale(1, 0.8, 1.9), 0, 0.15, -0.02),
+      tf(new SphereGeometry(0.075, 8, 6).scale(1, 0.85, 1.25), 0, 0.17, 0.2),
+      tf(new ConeGeometry(0.045, 0.1, 6), 0, 0.15, 0.31, Math.PI / 2),
+    ]),
+    skin: flat([
+      tf(new SphereGeometry(0.035, 6, 4).scale(1, 1, 0.4), 0.05, 0.24, 0.17),
+      tf(new SphereGeometry(0.035, 6, 4).scale(1, 1, 0.4), -0.05, 0.24, 0.17),
+      tf(new SphereGeometry(0.016, 5, 4), 0, 0.15, 0.36),
+    ]),
+    legs: flat([tf(new BoxGeometry(0.035, 0.11, 0.04), 0.07, -0.055, 0), tf(new BoxGeometry(0.035, 0.11, 0.04), -0.07, -0.055, 0)]),
+    tail: tf(new CylinderGeometry(0.018, 0.006, 0.34, 5), 0, 0, -0.17, Math.PI / 2),
+    eyes: flat([tf(new SphereGeometry(0.014, 5, 4), 0.035, 0.2, 0.27), tf(new SphereGeometry(0.014, 5, 4), -0.035, 0.2, 0.27)]),
+  };
+  const fur = materials.surface({ color: 0x5a4e44, roughness: 0.95 });
+  const skin = materials.surface({ color: 0xb07a74, roughness: 0.7 });
+  const eyes = materials.surface({ color: 0x401010, emissive: 0xff4030, emissiveIntensity: 2.4 });
+  const model = new Group();
+  const body = new Group();
+  model.add(body);
+  const mk = (g: BufferGeometry, m: LitMaterial, parent: Object3D, shadow = castShadow): Mesh => {
+    const mesh = new Mesh(g, m);
+    mesh.castShadow = shadow;
+    parent.add(mesh);
+    return mesh;
+  };
+  mk(ratGeo.body, fur, body);
+  mk(ratGeo.skin, skin, body, false);
+  mk(ratGeo.eyes, eyes, body, false);
+  const front = mk(ratGeo.legs, fur, body, false);
+  front.position.set(0, 0.11, 0.12);
+  const back = mk(ratGeo.legs, fur, body, false);
+  back.position.set(0, 0.11, -0.12);
+  const tail = mk(ratGeo.tail, skin, body, false);
+  tail.position.set(0, 0.13, -0.19);
+  return { model, body, front, back, tail, mats: [fur, skin], eyes };
+}
+
 // ---------------------------------------------------------------- view
 
 interface DinoClips { hit: number; swipe: number; walk: number; run: number }
@@ -294,6 +419,7 @@ export class EnemyView {
   private readonly inner = new Group();
   private readonly anim: Animator | null = null;
   private readonly crow: Crow | null = null;
+  private readonly rat: Rat | null = null;
   private readonly mats: LitMaterial[] = [];
   private readonly cloth: LitMaterial[] = [];
   private readonly glow: LitMaterial[] = [];
@@ -312,7 +438,15 @@ export class EnemyView {
       this.glow.push(this.crow.eyes);
       return;
     }
+    if (body === 'rat') {
+      this.rat = buildRat(materials, castShadow);
+      this.inner.add(this.rat.model);
+      this.mats.push(...this.rat.mats);
+      this.glow.push(this.rat.eyes);
+      return;
+    }
     const src = body === 'zombie' ? assets.zombie : body === 'raptor' ? assets.raptor : assets.rex;
+    // (crow and rat returned above)
     const clips: Map<string, AnimationClip> = body === 'zombie' ? assets.zombieClips : body === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
     this.model = model;
@@ -443,12 +577,13 @@ export class EnemyView {
     // M11c: hidden guards stay unseen until they wake (doorway, rubble).
     this.root.visible = !(e.sleep && e.pose === 'hidden');
     if (this.body === 'crow') this.poseCrow(e, t);
+    else if (this.body === 'rat') this.poseRat(e, t);
     else if (this.body === 'zombie') this.poseZombie(e, t);
     else this.poseDino(e, t, DINO[this.body]);
     if (e.state === 'dead') {
       // Sink into the ground before the body is removed.
       const sink = Math.max(0, t - (SPAWN.corpseTime - 0.8)) / 0.8;
-      this.root.position.y -= sink * (this.body === 'rex' ? 1.6 : 0.55);
+      this.root.position.y -= sink * (this.body === 'rex' ? 1.6 : this.body === 'rat' ? 0.3 : 0.55);
     }
     if (!this.anim) return;
     // Distance LOD: far enemies update their skeleton every 2nd or 3rd frame with the summed time.
@@ -535,6 +670,7 @@ export class EnemyView {
         a.pose('Death01', DEATH_FROM + t * 1.3, 0.06);
         break;
     }
+    if (e.state !== 'dead') pitch += HUNCH[this.kind] ?? 0;
     lean.x += (pitch - lean.x) * 0.35;
     // The spitter's throat swells while it winds up.
     if (this.kind === 'spitter') {
@@ -604,6 +740,48 @@ export class EnemyView {
     }
     lean.x += (pitch - lean.x) * 0.3;
     lean.y = spin;
+  }
+
+  /** Scurry: legs swing in pairs at a rate from the walking speed, the body bobs, the tail swishes. */
+  private poseRat(e: Enemy, t: number): void {
+    const r = this.rat!;
+    const m = this.inner;
+    const run = e.state === 'chase' && e.speed > 0.2;
+    const ph = this.time * (run ? 7 + e.speed * 3.2 : 0) + this.seed * 6;
+    let pitch = 0, roll = 0, y = 0, legs = run ? Math.sin(ph) * 0.9 : 0;
+    switch (e.state) {
+      case 'chase':
+        y = run ? Math.abs(Math.sin(ph)) * 0.035 : 0;
+        break;
+      case 'windup':
+        // Rears up on its hind legs, then snaps forward.
+        pitch = -0.55 * Math.min(1, t / e.def.windup);
+        legs = 0.5;
+        break;
+      case 'strike':
+        pitch = 0.35;
+        y = 0.04;
+        break;
+      case 'recover':
+        pitch = 0.35 * (1 - Math.min(1, t / e.def.recovery));
+        break;
+      case 'stagger':
+        roll = Math.sin(t * 30) * 0.4;
+        break;
+      case 'dead':
+        roll = Math.min(Math.PI * 0.55, t * 9);
+        legs = 0.7 + Math.sin(this.time * 30) * Math.max(0, 0.4 - t);
+        break;
+      default:
+        break;
+    }
+    m.position.y += (y - m.position.y) * 0.5;
+    m.rotation.x += (pitch - m.rotation.x) * 0.4;
+    m.rotation.z += (roll - m.rotation.z) * 0.4;
+    r.front.rotation.x = legs;
+    r.back.rotation.x = -legs;
+    r.tail.rotation.y = Math.sin(this.time * 6 + this.seed * 4) * 0.45;
+    r.tail.rotation.x = -0.15 + 0.1 * Math.sin(ph * 0.5);
   }
 
   private poseCrow(e: Enemy, t: number): void {

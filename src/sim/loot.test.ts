@@ -65,6 +65,30 @@ describe('kill drops', () => {
     }
   });
 
+  it('M12b: rats drop rarely and give no scrap; Xhain bosses drop like the others, the Spreehexe like the Hauptmann', () => {
+    const sim = flat();
+    const n = 6000;
+    let mat = 0, item = 0;
+    for (let i = 0; i < n; i++) {
+      sim.drops.length = 0;
+      killDrops(sim, spawnEnemy(sim, 2, 2, 'rat'));
+      for (const d of sim.drops) if (d.content.kind === 'material') mat++; else if (d.content.kind === 'item') item++;
+    }
+    expect(mat / n).toBeCloseTo(0.08, 1);
+    expect(item / n).toBeLessThan(0.02);
+    expect(sim.inventory.scrap).toBe(0);
+    for (const kind of ['grenzer', 'brandmeister', 'rattenmutter'] as const) {
+      const sm = flat();
+      killDrops(sm, spawnEnemy(sm, 2, 2, kind));
+      expect(sm.drops.filter((d) => d.content.kind === 'item').length, kind).toBeGreaterThanOrEqual(2);
+      expect(sm.inventory.scrap, kind).toBe(40);
+    }
+    const sm = flat();
+    killDrops(sm, spawnEnemy(sm, 2, 2, 'spreehexe'));
+    expect(sm.drops.some((d) => d.content.kind === 'item' && d.content.item.rarity === 3)).toBe(true);
+    expect(sm.inventory.scrap).toBe(70);
+  });
+
   it('item ids stay unique', () => {
     const sim = flat();
     for (let i = 0; i < 200; i++) killDrops(sim, spawnEnemy(sim, 2, 2, 'brute'));

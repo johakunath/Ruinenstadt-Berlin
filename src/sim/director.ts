@@ -8,7 +8,7 @@ import { offerBlessings } from './blessings';
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES } from '../data/enemies';
 import { colliderDistance } from './collide';
-import { aliveCount, makeElite, pickKind, spawnEnemy } from './enemies';
+import { aliveCount, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { freeSpot } from './reach';
 import { FlowField, type Bounds } from './flowfield';
 import type { EncounterDef } from './level';
@@ -129,9 +129,13 @@ export function updateDirector(sim: Sim): void {
       const s = rimSpot(sim, enc, ENEMIES[boss].radius);
       spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp, w.dmgMul * df.dmg);
     } else {
+      // M12b: a pack kind (rat) spawns its whole pack of five for ONE unit of the wave's `count`, as
+      // in 2D `spawnOne` (one rat roll, four more beside it). Mix weights are per unit, so a rat
+      // weight of 1 brings as many packs as a walker weight of 1 brings walkers. The pack fills
+      // five `maxAlive` slots, which holds back the next spawns until rats die.
       const kind = pickKind(sim, w.mix);
       const s = rimSpot(sim, enc, ENEMIES[kind].radius);
-      const e = spawnEnemy(sim, s.x, s.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      const e = spawnPack(sim, s.x, s.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
       if (w.elite && sim.rng.next() < w.elite) makeElite(sim, e);
       run.toSpawn--;
     }
@@ -213,7 +217,7 @@ function updateEndless(sim: Sim): void {
     const boss = run.bossesToSpawn.shift();
     const kind = boss ?? pickKind(sim, w.mix);
     const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, ENEMIES[kind].radius + 0.2) ?? { x: p.x + 12, z: p.z };
-    const e = spawnEnemy(sim, q.x, q.z, kind, w.hpMul * df.hp * (boss ? 0.8 : 1), w.dmgMul * df.dmg);
+    const e = spawnPack(sim, q.x, q.z, kind, w.hpMul * df.hp * (boss ? 0.8 : 1), w.dmgMul * df.dmg);
     if (!boss) { if (sim.rng.next() < w.elite) makeElite(sim, e); run.toSpawn--; }
   }
   followFlow(sim);

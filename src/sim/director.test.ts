@@ -131,6 +131,20 @@ describe('encounter director', () => {
     expect(sim.run.phase).toBe('travel');
   });
 
+  it('a rat in a wave mix is one unit of the count and comes as a pack of five, never elite (M12b)', () => {
+    const lv = mapLevel(map, generateLots(map));
+    lv.guards = [];
+    lv.encounters[0] = { ...lv.encounters[0]!, waves: [{ count: 2, maxAlive: 20, mix: { rat: 1 }, hpMul: 1, dmgMul: 1, bosses: [], elite: 1 }] };
+    const sim = createSim({ level: lv });
+    const enc = lv.encounters[0]!;
+    teleport(sim, enc.x, enc.z);
+    for (let i = 0; i < 60; i++) { sim.player.invuln = 1e9; stepSim(sim, NO_INPUT); }
+    const rats = sim.enemies.filter((e) => e.kind === 'rat');
+    expect(rats).toHaveLength(10);
+    expect(sim.run.toSpawn).toBe(0);
+    expect(rats.some((e) => e.elite)).toBe(false);
+  });
+
   it('keeps bodies out of the water', () => {
     const sim = createSim({ level });
     // Walk north from the Altstadt into the Spree west of the Dammbrücke.

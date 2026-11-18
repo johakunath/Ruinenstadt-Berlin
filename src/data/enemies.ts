@@ -2,15 +2,16 @@
 // tactics and boss patterns in js/update.js); bodies, reach and timing are rebuilt for 3D.
 // Every type needs a different answer: Schlurfer crowd, Hetzer rush, Brocken slam a marked circle,
 // Speier keep their distance and spit, Raptoren pounce along a line, Krähen circle and dive.
+// M12b (Xhain): Ratten come in packs of five and zig-zag in; four new bosses from existing blocks.
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
-export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner';
-export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | BossKind;
+export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner' | 'grenzer' | 'brandmeister' | 'rattenmutter' | 'spreehexe';
+export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | BossKind;
 /** Which model and clip set draws the body (`src/render/creatures.ts`). */
-export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow';
+export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
-export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | BossKind;
+export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
 export type EliteMod = 'flink' | 'brennend' | 'spaltend' | 'gepanzert';
 
@@ -47,6 +48,11 @@ export interface EnemyDef {
   boss?: boolean;
   /** Ignores walls, water and other bodies. */
   fly?: boolean;
+  /**
+   * Comes as a pack of this many (2D rat: one spawn plus four next to it). A wave spawns the whole
+   * pack for one unit of its count (`spawnPack` in `src/sim/enemies.ts`). Pack kinds never turn elite.
+   */
+  pack?: number;
 }
 
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
@@ -83,6 +89,13 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     attackRange: 0, windup: 0.35, active: 0.1, recovery: 0.5,
     reach: 1.2, halfAngle: 40 * DEG, damage: 10, knockbackTaken: 1.4, poise: false, weight: 0, fly: true,
   },
+  // 2D Ratte (6 px, 6 life, 118-140 px/s, bite 3): the ghoul-to-Schlurfer ratios (life ×1.5,
+  // damage ×1.7, speed ×0.027). Zig-zags in, bites weakly, always five of them.
+  rat: {
+    kind: 'rat', name: 'Ratte', body: 'rat', ai: 'rat', res: 'rat', radius: 0.24, scale: 1, hp: 9, speed: 3.5,
+    attackRange: 0.95, windup: 0.3, active: 0.08, recovery: 0.45,
+    reach: 1.05, halfAngle: 45 * DEG, damage: 5, knockbackTaken: 1.6, poise: false, weight: 0, pack: 5,
+  },
   // Zone bosses.
   feldwebel: {
     kind: 'feldwebel', name: 'Der Feldwebel', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
@@ -110,6 +123,31 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     kind: 'schaffner', name: 'Der Schaffner', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.75, scale: 1.55, hp: 2800, speed: 2.7,
     attackRange: 2.2, windup: 0.65, active: 0.14, recovery: 0.75,
     reach: 2.7, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
+  },
+  // M12b Xhain (1981). Zone 1: the GDR border guard from the watchtower, the weakest. Shoots from a
+  // distance, calls runners. Resistances of the 2D Volkseigener Koloss (GDR row: weak to shock).
+  grenzer: {
+    kind: 'grenzer', name: 'Der Grenzer', body: 'zombie', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 950, speed: 2.3,
+    attackRange: 2.0, windup: 0.65, active: 0.14, recovery: 0.8,
+    reach: 2.4, halfAngle: 60 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
+  },
+  // Zone 2 (Mariannenplatz): the riots, burning barricades. Molotovs, fire ring, flame burst (2D `brand`).
+  brandmeister: {
+    kind: 'brandmeister', name: 'Der Brandmeister', body: 'zombie', ai: 'brandmeister', res: 'brand', radius: 0.78, scale: 1.55, hp: 2100, speed: 2.4,
+    attackRange: 2.3, windup: 0.75, active: 0.14, recovery: 0.85,
+    reach: 2.8, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
+  },
+  // Zone 3 (Kotti, Görli): 2D Rattenmutter (v 5). Rat packs, acid trail, slam.
+  rattenmutter: {
+    kind: 'rattenmutter', name: 'Die Rattenmutter', body: 'zombie', ai: 'rattenmutter', res: 'ratten', radius: 0.85, scale: 1.5, hp: 3200, speed: 2.2,
+    attackRange: 2.3, windup: 0.7, active: 0.14, recovery: 0.8,
+    reach: 2.8, halfAngle: 70 * DEG, damage: 32, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
+  },
+  // District boss on the Oberbaumbrücke: 2D Spreehexe (v 1). Hauptmann tier of life and damage.
+  spreehexe: {
+    kind: 'spreehexe', name: 'Die Spreehexe', body: 'zombie', ai: 'spreehexe', res: 'hexe', radius: 0.8, scale: 1.7, hp: 4400, speed: 2.6,
+    attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
+    reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
 };
 
@@ -168,6 +206,28 @@ export const BOSS = {
   waechter: { barrage: 5, ring: 7.5, slam: 4.5, shots: 12, extra: 4 },
   rex: { charge: [4.2, 3], roar: 8, tail: 5, tailRadius: 110 * PX, tailWind: 0.8, raptorsEvery: 3 },
   hauptmann: { slam: 3.6, ring: 5.5, summon: 9, adds: 3, shots: 16 },
+  // M12b Xhain. Cooldowns in seconds (rage makes them tick ×1.35 faster, as for every boss).
+  /** Barrage „Feuerstoß“ (one circle on the hero, `extra` around), a five-shot fan, „Alarm!“ calls two Hetzer. Keeps `near`..`far` away. */
+  grenzer: {
+    barrage: 5.5, extra: 3, volley: 3.4, summon: 9, adds: 2, near: 5.5, far: 9,
+    shots: 5, spread: 0.2, volleyWind: 0.7, volleySpeed: 270 * PX, volleyDamage: 0.55, volleyLife: 2.6,
+  },
+  /** Molotovs: `bottles` marked circles near the hero (first on the hero) that leave fire; a ring of fire; a flame burst when close. */
+  brandmeister: {
+    molotov: 4.6, ring: 6.5, flame: 4, close: 3, shots: 12,
+    bottles: 3, wind: 1.0, step: 0.18, spread: 90 * PX, radius: 45 * PX, damage: 0.8, floor: 0.15,
+    fireRadius: 40 * PX, fireTime: 4, fireDamage: 0.3,
+  },
+  /** 2D v 5: five rats every 3.8 s (2.6 s in rage, real time), acid trail while walking, the base slam. */
+  rattenmutter: { summon: [3.8, 2.6], adds: 5, slam: 4.2, trailEvery: 0.5, trailRadius: 24 * PX, trailTime: 4, trailDamage: 0.3 },
+  /**
+   * 2D v 1: an acid pool under the hero every 2.2 s (here marked for `poolWind` first), a slower ring.
+   * 3D: the Spreewelle (roar block, two rings to roll through) every 8 s; in rage each wave also calls three rats.
+   */
+  spreehexe: {
+    pool: 2.2, poolWind: 0.8, poolX: 30 * PX, poolZ: 20 * PX, poolRadius: 26 * PX, poolTime: 5, poolDamage: 0.4,
+    ring: 5 / 0.6, shots: 16, wave: 8, slam: 3.6, rageAdds: 3,
+  },
 } as const;
 
 export const SPAWN = {
