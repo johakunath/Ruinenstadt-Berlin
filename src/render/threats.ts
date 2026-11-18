@@ -14,9 +14,9 @@ import { paintGlow } from './paint';
 
 const BARS = 18;
 /** Where the life bar floats, per body. */
-const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2 } as const;
+const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6 } as const;
 const ZONES = 14, LINES = 6, SHOTS = 72, HAZARDS = 60, WAVES = 4, OPEN = 6;
-const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e } as const;
+const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a } as const;
 const m4 = new Matrix4();
 const col = new Color();
 

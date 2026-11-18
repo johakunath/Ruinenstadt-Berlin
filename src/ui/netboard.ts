@@ -4,7 +4,7 @@
 import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, stopName, STOPS } from '../data/lines';
 import { keyNav } from './focus';
 
-export type NetGo = { map: 'koepenick' | 'lager' } | { map: 'tunnel'; line: number };
+export type NetGo = { map: 'koepenick' | 'xhain' } | { map: 'tunnel'; line: number };
 
 export class NetBoard {
   readonly root = document.createElement('div');
@@ -79,7 +79,7 @@ export class NetBoard {
   private ride(): void {
     const s = this.sel;
     if (!s) return;
-    if ('stop' in s) { const m = STOPS[s.stop]?.map; if (m === 'koepenick') this.go({ map: 'koepenick' }); else if (m === 'lager') this.close(); return; }
+    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
     if (linePlayable(s.line, this.freed)) this.go({ map: 'tunnel', line: s.line });
   }
 
@@ -97,14 +97,14 @@ export class NetBoard {
       svg += `<polyline points="${P}" fill="none" stroke="transparent" stroke-width="18"/></g>`;
     });
     STOPS.forEach((d, i) => {
-      const [x, y] = d.at, open = this.stopOpen(i), won = f.includes(i) || (i === 1 && campOpen(f)), here = i === 1, sel = this.sel && 'stop' in this.sel && this.sel.stop === i;
+      const [x, y] = d.at, open = this.stopOpen(i), won = f.includes(i), here = i === 1, sel = this.sel && 'stop' in this.sel && this.sel.stop === i;
       const lx = [0, 30, 17, -27, 0, 0, 0][i]!, ly = [25, 20, 23, -5, 25, 26, 26][i]!, an = lx > 20 ? 'start' : lx < -20 ? 'end' : 'middle';
       svg += `<g class="node${open ? '' : ' lock'}" data-stop="${i}" role="button" tabindex="0" aria-label="${d.name}${open ? '' : ' kommt bald'}">`;
       if (here || sel) svg += `<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="#ef9f27" stroke-width="2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/></circle>`;
       svg += `<rect x="${x - 12}" y="${y - 9}" width="24" height="18" rx="9" fill="${!open ? '#2a211b' : won ? '#3b6d11' : '#993c1d'}" stroke="${sel ? '#ef9f27' : open ? '#ead9c0' : '#4a5a5e'}" stroke-width="${sel ? 3 : 2}"/>`;
       if (won && i === 0) svg += `<path d="M${x - 4} ${y}l3 3 5-6" stroke="#ead9c0" stroke-width="2" fill="none"/>`;
-      svg += `<text x="${x + lx}" y="${y + ly}" class="mname${open ? '' : ' lock'}" style="text-anchor:${an}">${here ? 'Lager' : d.name}</text>`;
-      svg += `<text x="${x + lx}" y="${y + ly + 11}" class="nets" style="text-anchor:${an}">${open ? d.station : 'kommt bald'}</text><circle cx="${x}" cy="${y}" r="15" fill="transparent"/></g>`;
+      svg += `<text x="${x + lx}" y="${y + ly}" class="mname${open ? '' : ' lock'}" style="text-anchor:${an}">${d.name}</text>`;
+      svg += `<text x="${x + lx}" y="${y + ly + 11}" class="nets" style="text-anchor:${an}">${here ? 'Lager · ' : ''}${open ? d.station : 'kommt bald'}</text><circle cx="${x}" cy="${y}" r="15" fill="transparent"/></g>`;
     });
     svg += '<g transform="translate(12,238)" class="nets"><line x1="0" y1="-3" x2="14" y2="-3" stroke="#2a8a3a" stroke-width="5"/><text x="18">frei</text><line x1="46" y1="-3" x2="60" y2="-3" stroke="#da421e" stroke-width="5" stroke-dasharray="5 3"/><text x="64">Tunnel offen</text><line x1="124" y1="-3" x2="138" y2="-3" stroke="#3a4a4e" stroke-width="3" stroke-dasharray="3 3"/><text x="142">kommt bald</text></g></svg>';
     this.root.innerHTML = `<div class="net-panel"><header class="menu-head"><h2>Abfahrt · Netzplan</h2><button type="button" class="tr-x" data-close aria-label="Zurück">×</button></header>${svg}${this.card()}</div>`;
@@ -116,8 +116,7 @@ export class NetBoard {
     if (!s) return '';
     if ('stop' in s) {
       const d = STOPS[s.stop]!, open = this.stopOpen(s.stop);
-      if (s.stop === 1) return `<div class="net-card"><div><b>Lager · ${d.station}</b><small>Du bist hier.</small></div><button type="button" data-ride>Bleiben</button></div>`;
-      return `<div class="net-card"><div><b>${d.name}</b><small>${open ? (f.includes(s.stop) ? 'Befreit. Nochmal hin für Beute.' : 'Expedition') : 'Kommt bald'}</small></div><button type="button" class="primary" data-ride ${open ? '' : 'disabled'}>Losziehen</button></div>`;
+      return `<div class="net-card"><div><b>${d.name}</b><small>${open ? `${s.stop === 1 ? 'Das Lager liegt hier. ' : ''}${f.includes(s.stop) ? 'Befreit. Nochmal hin für Beute.' : 'Expedition'}` : 'Kommt bald'}</small></div><button type="button" class="primary" data-ride ${open ? '' : 'disabled'}>Losziehen</button></div>`;
     }
     const L = LINES[s.line]!, fr = f.includes(LINE_FREED + s.line), op = linePlayable(s.line, f);
     return `<div class="net-card"><div><b><span class="lbadge" style="background:${L.color};border-radius:${L.id.startsWith('S') ? 9 : 3}px">${L.id}</span> ${stopName(s.line)} → ${stopName(s.line + 1)}</b><small>${op ? `Geisterbahnhof ${L.ghost}, Gitter, geflutete Strecke. Am Ende den Generator halten: Der Schaffner.${fr ? ' Strecke frei.' : ''}` : 'Kommt bald'}</small></div><button type="button" class="primary" data-ride ${op ? '' : 'disabled'}>Einsteigen</button></div>`;

@@ -1,8 +1,12 @@
 // Start options from the URL and from the options menu (stored in localStorage).
 //   ?profile=Qualität|Leistung   ?debug=hit,perf,flow   ?stress=40   ?seed=7
-//   ?map=hof (gate 1 courtyard)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
-//   ?map=tunnel&line=1 (a tunnel line, S3 default)   ?map=lager (the walkable camp, M20)
+//   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15), lager (walkable camp, M20)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
+//   ?map=tunnel&line=1 (a tunnel line, S3 default)
+//   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
+//   ?cut=off (no V1 B cutaway)   ?cut=4.3 (yard cut height in meters, look test)
 import { PROFILES, type ProfileId } from './render/profile';
+import type { MapId } from './ui/maps';
+export type { MapId } from './ui/maps';
 
 export interface Options {
   profile: ProfileId;
@@ -28,7 +32,11 @@ export interface Options {
   reveal: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
-  /** Köpenick (default), the gate 1 courtyard, a tunnel or the walkable camp (M20). */
+  /** ?shadows=boxes: map chunk meshes cast no shadow (A/B test on the tablet; default off). */
+  boxShadows: boolean;
+  /** ?cut=off disables the V1 B cutaway; ?cut=<meters> overrides the Hinterhof cut height. */
+  cut?: 'off' | number;
+  /** Köpenick (default), the gate 1 courtyard, a tunnel, Xhain or the walkable camp (M20). */
   map: MapId;
   /** M20: tunnel line (0 = S3). */
   line: number;
@@ -39,8 +47,7 @@ export interface Options {
   spawn: string[];
 }
 
-export type MapId = 'koepenick' | 'hof' | 'tunnel' | 'lager';
-const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'lager'];
+const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'lager'];
 const KEY = 'ruinenstadt-berlin.options';
 /** M20: session flag for the next page load: start straight into this (the camp's departure board). */
 export const GO_KEY = 'ruinenstadt-berlin.go';
@@ -119,6 +126,8 @@ export function readOptions(): Options {
     autostart: q.has('autostart'),
     reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),
+    boxShadows: q.get('shadows') === 'boxes',
+    cut: parseCut(q.get('cut')),
     map: MAPS.find((m) => m === q.get('map')) ?? 'koepenick',
     line: Math.max(0, Math.min(5, Number(q.get('line') ?? 0) || 0)),
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
@@ -127,11 +136,17 @@ export function readOptions(): Options {
   };
 }
 
+function parseCut(v: string | null): Options['cut'] {
+  if (v === 'off') return 'off';
+  const h = Number(v);
+  return v !== null && v !== '' && Number.isFinite(h) && h >= 0 ? h : undefined;
+}
+
 /** Reloads with a changed profile (materials and render targets are built once at start). */
 export function reloadWith(change: Partial<Pick<Options, 'profile' | 'map' | 'line'>>): void {
   const q = new URLSearchParams(location.search);
   if (change.profile) q.set('profile', PROFILES[change.profile].label);
-  // M19: Köpenick and the tunnel are separate page loads (the renderer builds one map).
+  // M19/M15/M20: Köpenick, the tunnels, Xhain and the camp are separate page loads (the renderer builds one map).
   if (change.map) { if (change.map === 'koepenick') q.delete('map'); else q.set('map', change.map); q.delete('autostart'); q.delete('at'); q.delete('line'); }
   if (change.line) q.set('line', String(change.line));
   location.search = q.toString();

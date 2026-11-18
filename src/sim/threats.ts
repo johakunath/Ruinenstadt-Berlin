@@ -7,7 +7,7 @@ import { colliderDistance } from './collide';
 import { hurtPlayer } from './combat';
 import { DT, type Enemy, type Sim } from './types';
 
-export type SpecialKind = 'spit' | 'fan' | 'pounce' | 'lunge' | 'dive' | 'slam' | 'stomp' | 'flame' | 'charge' | 'summon' | 'ring' | 'roar' | 'barrage' | 'tail' | 'bossSlam';
+export type SpecialKind = 'spit' | 'fan' | 'pounce' | 'lunge' | 'dive' | 'slam' | 'stomp' | 'flame' | 'charge' | 'summon' | 'ring' | 'roar' | 'barrage' | 'tail' | 'bossSlam' | 'volley' | 'molotov';
 
 /** A running special: `wind` seconds of telegraph, then `go` seconds of action, then `open` seconds of standing open. */
 export interface Special {
@@ -25,12 +25,14 @@ export interface Special {
   hit: boolean;
 }
 
-export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail';
+export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail' | 'acid';
 /** A marked circle: fills for `max` seconds, then hits the hero inside it. */
 export interface Zone {
   x: number; z: number; r: number; t: number; max: number; damage: number; floor: number; kind: ZoneKind; src: number;
   /** Free zones go off whatever happens to their source (a barrage already thrown). All others fizzle when the source is interrupted or killed. */
   free?: boolean;
+  /** M12b: ground it leaves where it lands (a Molotov's fire, the Spreehexe's acid pool). */
+  leave?: { r: number; t: number; damage: number; kind: Hazard['kind'] };
 }
 export interface EnemyShot { x: number; z: number; px: number; pz: number; vx: number; vz: number; r: number; damage: number; life: number; boss: boolean }
 export interface Hazard { x: number; z: number; r: number; t: number; max: number; damage: number; tick: number; kind: 'fire' | 'acid' }
@@ -91,7 +93,9 @@ export function updateThreats(sim: Sim): void {
     // Interrupted or killed during the wind-up: the marked attack never lands.
     if (!z.free && !sim.enemies.some((e) => e.id === z.src && e.state === 'special')) continue;
     let hit = false;
-    if (Math.hypot(p.x - z.x, p.z - z.z) < z.r + PLAYER.radius * 0.5) {
+    if (z.leave) addHazard(sim, { x: z.x, z: z.z, ...z.leave });
+    // A zone with no damage only marks where its ground lands (the acid pool hurts by ticking).
+    if ((z.damage > 0 || z.floor > 0) && Math.hypot(p.x - z.x, p.z - z.z) < z.r + PLAYER.radius * 0.5) {
       const a = away(sim, z.x, z.z);
       hit = threatHit(sim, null, z.damage, z.floor, a.dx, a.dz);
     }

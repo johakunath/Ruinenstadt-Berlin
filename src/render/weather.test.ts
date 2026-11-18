@@ -20,3 +20,11 @@ describe('M11c weather per zone (variant A)', () => {
     expect(w.current).toBe('fog');
   });
 });
+
+describe('M15 Xhain weather', () => {
+  it('has a weather for every Xhain area', async () => {
+    const { xhainMap } = await import('../data/xhain');
+    const { XHAIN_WEATHER } = await import('./weather');
+    for (const a of xhainMap(1).areas) expect(XHAIN_WEATHER[a.id], a.id).toBeDefined();
+  });
+});

@@ -4,7 +4,8 @@
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, difficultyOf, type DifficultyId } from '../data/difficulty';
 import { PadNav, keyNav } from './focus';
 import { optionsScreen } from './options-screen';
-import { profileSeg, row, toggle, volumeRange } from './settings';
+import { MAP_PLAY } from './maps';
+import { opts, profileSeg, row, toggle, volumeRange } from './settings';
 
 export class StartScreen {
   readonly root = document.getElementById('title') as HTMLElement;
@@ -21,9 +22,9 @@ export class StartScreen {
         <h1>Ruinenstadt<span>Berlin</span></h1>
         <p class="sub" id="title-sub">Köpenick bei Nacht</p>
         <button id="resume" type="button" class="btn main" hidden>Weiter</button>
-        <button id="play" type="button" class="btn main"><b>Losziehen</b><small>Neue Expedition durch Köpenick</small></button>
+        <button id="play" type="button" class="btn main"><b>Losziehen</b><small>${MAP_PLAY[opts.map]}</small></button>
         <div class="diff"><div id="title-diff" class="seg" role="group" aria-label="Schwierigkeit">${DIFFICULTIES.map(d => `<button type="button" data-id="${d.id}" aria-pressed="false">${d.label}</button>`).join('')}</div><small id="diff-hint"></small></div>
-        <div class="start-row"><button id="go-tunnel" type="button" class="btn" hidden><b>S3-Tunnel</b><small>Köpenick → Warschauer Straße</small></button><button id="open-camp" type="button" class="btn">Lager</button></div>
+        <div class="start-row"><button id="go-tunnel" type="button" class="btn" hidden><b>S3-Tunnel</b><small>Köpenick → Warschauer Straße</small></button><button id="go-xhain" type="button" class="btn" hidden><b>Xhain</b><small>1981 · Über die Mauer</small></button><button id="open-camp" type="button" class="btn">Lager</button></div>
         <button id="new-game" type="button" class="btn ghost"><b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small></button>
         <p id="loading" hidden>Lädt …</p>
       </section>
@@ -61,7 +62,7 @@ export class StartScreen {
     if (label !== null) r.innerHTML = `<b>Weiter · ${label}</b><small>Dort weiter, wo du warst</small>`;
     p.classList.toggle('main', label === null);
     // Playtest 2026-11-16: each button says what it keeps.
-    p.innerHTML = label === null ? '<b>Losziehen</b><small>Neue Expedition durch Köpenick</small>' : '<b>Neue Expedition</b><small>Von vorn, Ausrüstung bleibt</small>';
+    p.innerHTML = label === null ? `<b>Losziehen</b><small>${MAP_PLAY[opts.map]}</small>` : '<b>Neue Expedition</b><small>Von vorn, Ausrüstung bleibt</small>';
     this.locked = label !== null;
     this.setDifficulty(difficulty);
   }

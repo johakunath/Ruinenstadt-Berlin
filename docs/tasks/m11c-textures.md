@@ -2,6 +2,8 @@
 
 Status: open. Pipeline, style and technical rules: `docs/asset-pipeline.md` (read it first), `docs/style-bible.md`, board `docs/style/koepenick.png`. Follows T1 (`t1-ground-textures.md`) and T1b (`t1b-ground-polish.md`); same loader pattern.
 
+The asphalt image and its `asphalt` and `tar` hooks are built in [T2](t2-street-textures.md). The next image is the markings atlas (#1b).
+
 ## Goal
 
 The eight M11c lot types (Hinterhof, Parkplatz, Kleingärten, Teich im Park, Trümmerfeld, Baustelle mit Kran, Markt, Kirchhof), the new plants (bushes, hedges, flowers, reeds, better trees), balconies and broken ruin walls are built in code with painted placeholders. Ten generated textures replace the placeholders where flat code painting reads worst. All are reusable by other districts (Wedding, Charlottenburg, Tempelhof): paint neutral Berlin materials, not Köpenick-only motifs.

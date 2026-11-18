@@ -1,8 +1,15 @@
 // Sound, generated with WebAudio: no audio files. Hits play on the exact sim step of the damage frame.
 import type { HitWeight } from '../data/combat';
+import type { EnemyKind } from '../data/enemies';
 import type { Sim, SimEvent } from '../sim/types';
 import { SoundEffects, Synth, type SfxId } from './sfx';
 import { Music, type MusicState } from './music';
+
+/** Wind-up voice per kind (S2); other bosses growl, other bodies use the walker's. */
+const VOICE: Partial<Record<EnemyKind, SfxId>> = {
+  runner: 'growlRunner', brute: 'growlBrute', raptor: 'growlRaptor', spitter: 'growlSpitter', crow: 'growlCrow', rat: 'growlRat',
+  grenzer: 'growlGrenzer', brandmeister: 'growlBrand', rattenmutter: 'growlMutter', spreehexe: 'growlHexe',
+};
 
 export class GameAudio {
   private ctx: AudioContext | null = null;
@@ -163,19 +170,20 @@ export class GameAudio {
         const e=sim.enemies.find(e=>e.id===event.id);
         if(!e||!this.ctx||volume<=0||this.ctx.currentTime-this.lastGrowl<.25)break;
         this.lastGrowl=this.ctx.currentTime;
-        this.play(e.def.boss?'growlBoss':e.kind==='runner'?'growlRunner':e.kind==='brute'?'growlBrute':e.kind==='raptor'?'growlRaptor':e.kind==='spitter'?'growlSpitter':e.kind==='crow'?'growlCrow':'growlWalker',0,pan,volume);
+        this.play(VOICE[e.kind]??(e.def.boss?'growlBoss':'growlWalker'),0,pan,volume);
         break;
       }
       // M12: specials announce themselves by type; marked zones land with a boom.
       case 'enemySpecial': {
         const k=event.kind;
-        if(event.phase==='wind')this.play(k==='roar'?'roar':k==='pounce'?'growlRaptor':k==='dive'?'growlCrow':k==='spit'||k==='fan'?'growlSpitter':k==='summon'||k==='charge'||k==='lunge'?'horn':k==='slam'||k==='stomp'||k==='bossSlam'||k==='tail'?'growlBrute':'growlBoss',0,pan,volume);
+        if(event.phase==='wind')this.play(k==='roar'?'roar':k==='pounce'?'growlRaptor':k==='dive'?'growlCrow':k==='spit'||k==='fan'?'growlSpitter':k==='summon'||k==='charge'||k==='lunge'?'horn':k==='slam'||k==='stomp'||k==='bossSlam'||k==='tail'?'growlBrute':k==='molotov'?'swing':'growlBoss',0,pan,volume);
         else if(k==='pounce'||k==='dive'||k==='lunge'||k==='charge')this.play('dash',0,pan,volume);
+        else if(k==='volley')this.play('sling',0,pan,volume);
         else if(k==='roar')this.play('boom',0,pan,volume*.7);
         break;
       }
       case 'enemyShot': this.play('spit',0,pan,volume); break;
-      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play('pop',0,pan,volume); break;
+      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play('pop',0,pan,volume); break;
       case 'bossRage': this.play('roar'); this.play('horn'); break;
       case 'ability': {
         const cues:Record<string,SfxId>={Kreissäge:'spin',Fechtsprung:'dash',Säbeltanz:'spin',Fallhammer:'boom',Gullydeckel:'wood',Abrissbirne:'boom',Nagelsturm:'sling',Brandsatz:'ignite',Sperrfeuer:'heavy',Spießrute:'heavy',Stabhochsprung:'dash',Standarte:'legend'};

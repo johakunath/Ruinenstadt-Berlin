@@ -1,7 +1,7 @@
 // M20: the S+U network between the districts, ported from 2D `js/ubahn.js` (LINES, STN, NETP, NETL,
 // NETB). Line k runs from district k to k + 1 and is the gate between them: free district k, clear its
 // line, then district k + 1 opens. The 3D district list (migration Q8) differs from 2D after
-// Alexanderplatz; Xhain (district 1) is the camp at S+U Warschauer Straße. A cleared line is stored in
+// Alexanderplatz; the camp is at S+U Warschauer Straße in Xhain (district 1). A cleared line is stored in
 // `camp.freed` as LINE_FREED + k (M19).
 export interface LineDef {
   /** Badge: S3, U8, ... */
@@ -25,7 +25,7 @@ export const LINES: readonly LineDef[] = [
 export interface NetStop { readonly name: string; readonly station: string; readonly map?: string; readonly at: readonly [number, number] }
 export const STOPS: readonly NetStop[] = [
   { name: 'Köpenick', station: 'S Köpenick', map: 'koepenick', at: [340, 190] },
-  { name: 'Xhain', station: 'S+U Warschauer Straße', map: 'lager', at: [250, 140] },
+  { name: 'Xhain', station: 'S+U Warschauer Straße', map: 'xhain', at: [250, 140] },
   { name: 'Alexanderplatz', station: 'U Alexanderplatz', at: [215, 90] },
   { name: 'Mitte', station: 'U Potsdamer Platz', at: [165, 115] },
   { name: 'Charlottenburg', station: 'U Platz der Luftbrücke', at: [190, 185] },

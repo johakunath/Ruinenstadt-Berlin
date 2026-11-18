@@ -1,7 +1,8 @@
 // Builds an expedition map (M11) from `src/data/map.ts`: ground with water banks, street ribbons,
 // bridges, generated Altbau blocks and houses, instanced trees, landmarks and props. Everything is
-// grouped in chunks so the camera frustum culls what is off screen. Lamps are light *spots*; a
-// fixed pool of point lights follows the hero (constant light count, no shader recompiles).
+// grouped in 32 m chunks so the camera frustum culls what is off screen (the view reaches about 40 m).
+// Lamps are light *spots*; a fixed pool of point lights follows the hero (constant light count, no
+// shader recompiles).
 import {
   BufferAttribute, BufferGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
@@ -24,6 +25,9 @@ import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { SPATI, spatiParts, spatiRest } from '../data/spati';
 import { BatchSet } from './batch';
+import { Cutaway } from './cutaway';
+import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
+import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { isLargeProp } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { Materials, type LitMaterial } from './materials';
@@ -37,7 +41,9 @@ import {
 } from './world';
 
 type RGB = readonly [number, number, number];
-const CHUNK = 48;
+const CHUNK = 32;
+/** Ground chunks: the multiple of the ground grid step nearest below CHUNK, so chunk edges stay on the grid `meshSurface` samples. */
+const GROUND_CHUNK = Math.floor(CHUNK / GROUND_STEP) * GROUND_STEP;
 const tmpScale = new Matrix4();
 
 interface LightSpot {
@@ -103,6 +109,27 @@ export class ChunkBuilder extends Builder {
     super.shadowBox(new Matrix4().makeTranslation(0, this.lift, 0).multiply(m), sx, sy, sz);
   }
 
+  /**
+   * V1 B cutaway: builds `fn` as part `part`, clipped at world height `y` in the solid, card and glow
+   * batches and the shadow casters; `caps` (convex ground polygons) become dark lids at `y`, shown only
+   * while the part is cut. Call inside `solid.captureOccluder`.
+   */
+  cut(part: number, y: number, fn: () => void, caps: readonly (readonly Pt[])[] = []): void {
+    const boxes = this.shadowBoxes.length, lids = this.lids.length;
+    const lid = (): void => { for (const p of [...caps, ...this.lids.splice(lids)]) this.solid.of(this.mm.tar).add(cutCapGeo(p, y + 0.01), IDENTITY, CAP_TINT); };
+    this.cutAt = y;
+    try { this.solid.cut(part, y, () => this.cards.cut(part, y, () => this.glows.cut(part, y, fn)), lid); } finally { this.cutAt = null; }
+    for (let i = boxes; i < this.shadowBoxes.length; i++) this.shadowBoxes[i]!.cut = { part, y };
+  }
+
+  /** While a cut part is built: its world cut height; builders of open shells add their own lids (`lids`). */
+  cutAt: number | null = null;
+  readonly lids: Pt[][] = [];
+  /** Ground height `on` currently builds on. */
+  get base(): number {
+    return this.lift;
+  }
+
   override light(pos: Vector3, color: number, intensity: number, distance: number, flicker: number, pool = 4, shape: LightShape = {}): void {
     const yaw = shape.yaw ?? 0;
     const reach = shape.reach ?? 0;
@@ -129,6 +156,32 @@ export class ChunkBuilder extends Builder {
   }
 }
 
+const IDENTITY = new Matrix4();
+/** Cap colour: dark, so the cut reads as a section, not as a roof. */
+const CAP_TINT: RGB = [0.2, 0.22, 0.23];
+
+/** V1 B cut cap: a flat, upward facing convex polygon in world coordinates at height y (fan). */
+function cutCapGeo(poly: readonly Pt[], y: number): BufferGeometry {
+  // Counter-clockwise seen from above, whatever order the polygon comes in.
+  let area = 0;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) area += poly[j]![0] * poly[i]![1] - poly[i]![0] * poly[j]![1];
+  const pts = area < 0 ? poly : [...poly].reverse();
+  const pos: number[] = [], uv: number[] = [], nor: number[] = [], idx: number[] = [];
+  for (const [x, z] of pts) { pos.push(x, y, z); uv.push(x / 4, z / 4); nor.push(0, 1, 0); }
+  for (let i = 1; i + 1 < pts.length; i++) idx.push(0, i, i + 1);
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('normal', new BufferAttribute(new Float32Array(nor), 3));
+  g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
+  g.setIndex(idx);
+  return g;
+}
+
+/** Cap polygons of a lot (main body and wing). Ruins are open shells: `buildRuin` lids its own wall tops. */
+function lotCaps(l: Lot): Pt[][] {
+  return l.ruin ? [] : lotBodies(l).map(({ rect }) => rectPoly(rect));
+}
+
 function emissive(materials: Materials, t: { map: Texture; emissiveMap: Texture }, color: number, intensity: number): LitMaterial {
   return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
 }
@@ -137,16 +190,17 @@ export function makeMapMats(materials: Materials): MapMats {
   const base = makeMats(materials);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
+  const asphalt = paintAsphalt(o).map;
   const uDirt = { value: dirt };
   const m: MapMats = {
     ...base,
     railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
-    asphalt: materials.surface({ map: paintAsphalt(o).map, roughness: 0.85, vertexColors: true }),
+    asphalt: materials.surface({ map: asphalt, roughness: 0.85, vertexColors: true }),
     path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
     roof: materials.surface({ map: paintRoofTiles(o).map, roughness: 0.8, vertexColors: true }),
-    tar: materials.surface({ map: paintAsphalt(o).map, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
+    tar: materials.surface({ map: asphalt, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
     concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
     mossy: materials.surface({ map: paintConcrete(o, '#6f7a5c').map, roughness: 0.9, vertexColors: true }),
     // M11d: rippled, reflective water; the normal map scrolls in `update` (Qualität only: one extra texture read on water pixels).
@@ -177,6 +231,10 @@ export function makeMapMats(materials: Materials): MapMats {
   loadGroundTexture('litter', o.anisotropy, texture => {
     m.litter.map?.dispose();
     m.litter.map = texture;
+  });
+  loadGroundTexture('asphalt', o.anisotropy, texture => {
+    m.asphalt.map = m.tar.map = texture;
+    asphalt.dispose();
   });
   return m;
 }
@@ -281,11 +339,13 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   const step = GROUND_STEP;
   const B = m.bounds;
   // Under bridges the bed runs on, so decks span the water on their piers (M11d: no ground sheet beside the deck).
-  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : heightAt(m, x, z));
-  for (let cz = B.minZ; cz < B.maxZ; cz += CHUNK) {
-    for (let cx = B.minX; cx < B.maxX; cx += CHUNK) {
-      const n = Math.ceil(Math.min(CHUNK, B.maxX - cx) / step);
-      const k = Math.ceil(Math.min(CHUNK, B.maxZ - cz) / step);
+  // M15 bridge terraces (Warschauer Brücke) keep the ground below their deck; `xhain-world.ts` draws the deck.
+  const underDeck = (x: number, z: number): boolean => m.terraces.some((t) => t.bridge && (inPoly(t.poly, x, z) || onStair(t, x, z) !== null));
+  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : heightAt(m, x, z));
+  for (let cz = B.minZ; cz < B.maxZ; cz += GROUND_CHUNK) {
+    for (let cx = B.minX; cx < B.maxX; cx += GROUND_CHUNK) {
+      const n = Math.ceil(Math.min(GROUND_CHUNK, B.maxX - cx) / step);
+      const k = Math.ceil(Math.min(GROUND_CHUNK, B.maxZ - cz) / step);
       const pos: number[] = [];
       const col: number[] = [];
       const uv: number[] = [];
@@ -859,6 +919,7 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
 /** Retaining walls with a low parapet along the outline (open at the stairs), stone steps. */
 function buildTerraces(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder): void {
   for (const t of m.terraces) {
+    if (t.bridge) continue;
     const n = t.poly.length;
     for (let i = 0; i < n; i++) {
       const [ax, az] = t.poly[i] as Pt;
@@ -1019,13 +1080,13 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
 const TONES: PlasterTone[] = ['cream', 'ochre', 'oxblood', 'cream', 'ochre'];
 
 /** One outward facade of a block. `face`: 0 street front, 1 right, 2 back, 3 left, 4 chamfer; `back`: how far it stands behind the lot front. */
-interface Side { a: Pt; b: Pt; len: number; face: number; back: number }
+export interface Side { a: Pt; b: Pt; len: number; face: number; back: number }
 
 /**
  * The outward facades of a block: the front piece(s) from left to right, then right side, back and
  * left side (see map.ts for the frame). A plain rectangle gives exactly front, right, back, left.
  */
-function blockFacades(l: LotFrame): Side[] {
+export function blockFacades(l: LotFrame): Side[] {
   const loc = lotOutlineLocal(l), hd = l.d / 2;
   return loc.map((p, i) => {
     const q = loc[(i + 1) % loc.length] as Pt, da = q[0] - p[0], db = q[1] - p[1], len = Math.hypot(da, db);
@@ -1280,6 +1341,15 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
       const ta = top(sa + 1e-5), tb = top(sb - 1e-5), mid = (sa + sb) / 2;
       const thick = Math.abs(innU(i, sb) - innU(i, sa)) > 1e-4;
       const here = holes.filter((w) => mid > w.s0 && mid < w.s1).sort((p, q) => p.y - q.y);
+      // V1 B cutaway: a 0.4 m lid on the wall where it still stands at the cut height (not over breaks or windows).
+      if (b.cutAt !== null) {
+        const ch = b.cutAt - b.base;
+        if ((ta > ch || tb > ch) && !here.some((w) => ch > w.y && ch < w.y + w.h)) {
+          const at = (t: number): number => sa + ((sb - sa) * (t - ta)) / (tb - ta);
+          const s0 = ta < ch ? at(ch) : sa, s1 = tb < ch ? at(ch) : sb;
+          b.lids.push([run.pt(s0, 0, 0), run.pt(s1, 0, 0), run.pt(s1, 0, -wall), run.pt(s0, 0, -wall)].map((p): Pt => [p.x, p.z]));
+        }
+      }
       // Vertical pieces of wall between the openings, cut at the dirt line and the soot fade.
       let y0 = 0;
       const pieces: Array<[number, number, number]> = []; // y0, y1 (flat) or -1 for the broken top
@@ -1499,6 +1569,8 @@ export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m:
       id: `lot${l.seed}-${i}`, style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1],
       // Shaped blocks cast their shadow from the footprint boxes below.
       depth: l.shape ? 0.3 : Math.min(l.w, l.d) / 2, floors: l.floors, tone, features, seed: (l.seed + i * 13) % 997,
+      // M15 Blockrand: the side walls touch the neighbours or stand bare over a Baulücke.
+      ...(l.block && (s.face === 1 || s.face === 3) ? { blank: true } : {}),
     };
     buildAltbau(b, f, { balconies: l.kind !== 'platte' && s.len > 3 });
     if (l.kind === 'platte' && (s.face === 0 || s.face === 2)) b.solid.excludeOccluder(() => loggias(b, f, l.seed * 3 + i));
@@ -1602,7 +1674,7 @@ function woodBalcony(b: ChunkBuilder, run: Run, rng: Rng, s: number, y: number):
 }
 
 /** Gable roof prism along X (local), ridge at height h. */
-function gableRoof(w: number, d: number, h: number): BufferGeometry {
+export function gableRoof(w: number, d: number, h: number): BufferGeometry {
   const hw = w / 2 + 0.4;
   const hd = d / 2 + 0.4;
   const p = [
@@ -1618,7 +1690,7 @@ function gableRoof(w: number, d: number, h: number): BufferGeometry {
   return g;
 }
 
-function gableEnds(w: number, d: number, h: number): BufferGeometry {
+export function gableEnds(w: number, d: number, h: number): BufferGeometry {
   const hw = w / 2;
   const hd = d / 2;
   const p = [hw, 0, hd, hw, 0, -hd, hw, h, 0, -hw, 0, -hd, -hw, 0, hd, -hw, h, 0];
@@ -1630,7 +1702,7 @@ function gableEnds(w: number, d: number, h: number): BufferGeometry {
 }
 
 /** Plaster walls with windows on all four sides (Run frames), for houses and landmarks. */
-function walls(b: ChunkBuilder, l: { x: number; z: number; rot: number; w: number; d: number }, mat: Material, h: number, rows: number[], seed: number, lit = 0.25, bay = 3): void {
+export function walls(b: ChunkBuilder, l: { x: number; z: number; rot: number; w: number; d: number }, mat: Material, h: number, rows: number[], seed: number, lit = 0.25, bay = 3): void {
   const rng = new Rng(seed);
   blockFacades(l).forEach((s, i) => {
     const run = new Run({ id: 'w', style: 'altbau', ax: s.a[0], az: s.a[1], bx: s.b[0], bz: s.b[1], depth: 1, floors: 0, tone: 'cream', features: [], seed: seed + i });
@@ -1991,13 +2063,20 @@ function buildPalm(b: ChunkBuilder, l: Lot): void {
 
 // ---------------------------------------------------------------- landmarks
 
-function lm(l: Landmark, x = 0, y = 0, z = 0, ry = 0): Matrix4 {
+export function lm(l: Landmark, x = 0, y = 0, z = 0, ry = 0): Matrix4 {
   return new Matrix4().makeRotationY(l.rot + ry).setPosition(l.x, 0, l.z).multiply(new Matrix4().setPosition(x, y, z));
 }
 
 /** Local point of a landmark frame (x right of the front, z toward the front). */
-function lp(l: Landmark, x: number, y: number, z: number): Vector3 {
+export function lp(l: Landmark, x: number, y: number, z: number): Vector3 {
   return new Vector3(x, y, z).applyMatrix4(new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0, l.z));
+}
+
+export function steppedGable(b: ChunkBuilder, l: Landmark, x: number, y: number, z: number, w: number, ry = 0): void {
+  for (let i = 0; i < 4; i++) {
+    const sw = w * (1 - i * 0.24);
+    b.box(b.mm.brick, lm(l, x, y + i * 1.1 + 0.55, z, ry), sw, 1.1, 0.7, [0.95, 0.75, 0.68]);
+  }
 }
 
 /**
@@ -2075,8 +2154,18 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
 
 // ---------------------------------------------------------------- assembly
 
-export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = []): World {
+export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean; cut?: 'off' | number } = {}): World {
   const mats = makeMapMats(materials);
+  // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
+  const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
+  const cutaway = new Cutaway(plan.zones);
+  /** Cut lots with their world cut height: later facade dressing (Xhain graffiti, banners) joins the same part. */
+  const lotCutAt = new Map<Lot, { id: number; y: number }>();
+  const lotCut = new Map<number, CutPart>(), landmarkCut = new Map<Landmark, CutPart>();
+  for (const p of plan.parts) {
+    if (p.kind === 'lot') lotCut.set(p.index, p);
+    else landmarkCut.set(m.landmarks[p.index]!, p);
+  }
   const group = new Group();
   group.name = m.id;
   const chunks = new Map<string, ChunkBuilder>();
@@ -2100,10 +2189,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   // Buildings stand on the lowest corner of their footprint; the rest sinks into the slope.
   const base = (x: number, z: number, r: number): number =>
     Math.min(surfaceAt(m, x, z), surfaceAt(m, x - r, z - r), surfaceAt(m, x + r, z - r), surfaceAt(m, x - r, z + r), surfaceAt(m, x + r, z + r));
-  for (const l of lots) {
+  lots.forEach((l, li) => {
     const b = chunkOf(l.x, l.z);
     // M11c lot types: only their ground cover; their buildings, trees and props come as ordinary lots and props.
-    if (l.kind === 'special') { buildLotGround(l, b.solid, { ...mats, cobbles: b.mats.cobbles }, (x, z) => surfaceAt(m, x, z)); continue; }
+    if (l.kind === 'special') { buildLotGround(l, b.solid, { ...mats, cobbles: b.mats.cobbles }, (x, z) => surfaceAt(m, x, z)); return; }
     const y0 = base(l.x, l.z, Math.max(l.w, l.d) / 2);
     const build = (): void => {
       if (l.ruin && l.kind !== 'tree') b.on(y0, () => buildRuin(b, l));
@@ -2118,9 +2207,14 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         else b.on(y0, () => buildAltbauLot(b, wing, m));
       }
     };
+    const cut = lotCut.get(li);
     if (l.kind === 'tree') build();
+    else if (cut) {
+      lotCutAt.set(l, { id: cut.id, y: y0 + cut.h });
+      b.solid.captureOccluder(() => b.cut(cut.id, y0 + cut.h, build, lotCaps(l)));
+    }
     else b.solid.captureOccluder(build);
-  }
+  });
   // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
   const spatis: Array<{ rest: RestArea; upper: Group }> = [];
   for (const l of m.landmarks) {
@@ -2142,7 +2236,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       spatis.push({ rest: spatiRest(l), upper: g });
       continue;
     }
-    b.solid.captureOccluder(() => b.on(y0, () => buildLandmark(b, l)));
+    // Xhain landmarks are built and cut in `buildXhainWorld`.
+    const cut = XHAIN_KINDS.has(l.kind) ? undefined : landmarkCut.get(l);
+    const build = (): void => b.on(y0, () => buildLandmark(b, l));
+    b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
   const rng = new Rng(m.seed);
   const instanced = new Set(breakables.map((d) => d.prop));
@@ -2153,12 +2250,16 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       rng.next();
       return;
     }
-    const build = (): void => b.on(surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
+    // Props on an M15 bridge deck stand on the deck itself (the terrain grid blends near its edges).
+    const onDeck = m.terraces.some((t) => t.bridge && inPoly(t.poly, p.x, p.z));
+    const build = (): void => b.on(onDeck ? heightAt(m, p.x, p.z) : surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
     if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
     else build();
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
+  // M15 Xhain: the Wall, the viaducts and the Xhain landmarks (`xhain-world.ts`).
+  buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
   if (m.tunnel) {
     buildTunnel(m, mats, chunkOf);
     buildTunnelExtras(m, mats, materials, chunkOf);
@@ -2193,30 +2294,42 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const fires: Vector3[] = [];
   for (const b of chunks.values()) {
     const occluder = b.solid.occluderMesh();
-    if (occluder) group.add(occluder);
+    if (occluder) { group.add(occluder); cutaway.add(occluder); }
     for (const mesh of b.solid.meshes()) {
-      mesh.castShadow = true;
+      // `?shadows=boxes` (A/B test): only caster boxes, instanced things and characters cast.
+      mesh.castShadow = !opts.boxShadows;
       mesh.receiveShadow = true;
       group.add(mesh);
+      cutaway.add(mesh);
     }
     for (const mesh of b.cards.meshes()) {
       mesh.layers.set(FX_LAYER);
       mesh.receiveShadow = true;
       group.add(mesh);
+      cutaway.add(mesh);
     }
     for (const mesh of b.glows.meshes()) {
       mesh.layers.set(FX_LAYER);
       mesh.renderOrder = 1;
       group.add(mesh);
+      cutaway.add(mesh);
     }
-    // Shadow casters merged per chunk.
+    // Shadow casters merged per chunk; those of a cut part are clipped with it (one range per part).
     if (b.shadowBoxes.length) {
       const set = new BatchSet();
-      for (const s of b.shadowBoxes) set.of(caster).add(UNIT_BOX, s.m);
+      const cut = new Map<number, { y: number; boxes: Matrix4[] }>();
+      for (const s of b.shadowBoxes) {
+        if (!s.cut) { set.of(caster).add(UNIT_BOX, s.m); continue; }
+        const g = cut.get(s.cut.part) ?? { y: s.cut.y, boxes: [] };
+        g.boxes.push(s.m);
+        cut.set(s.cut.part, g);
+      }
+      for (const [part, g] of cut) set.cut(part, g.y, () => { for (const bm of g.boxes) set.of(caster).add(UNIT_BOX, bm); });
       for (const mesh of set.meshes()) {
         mesh.castShadow = true;
         mesh.layers.set(FX_LAYER);
         group.add(mesh);
+        cutaway.add(mesh);
       }
     }
     for (const o of b.extras) group.add(o);
@@ -2316,10 +2429,13 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         bt.group.position.y = 0.04 * Math.sin(simTime * 1.3);
       }
     },
-    follow(x: number, z: number): void {
+    follow(x: number, z: number, shadow: boolean): void {
       hx = x;
       hz = z;
       for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
+      cutaway.update(x, z);
+      // The light moves only with a fresh shadow map, or static shadows would swim between renders.
+      if (!shadow) return;
       // Snap the shadow frustum to whole texels so shadows do not shimmer while walking.
       const sx = Math.round(x / texel) * texel;
       const sz = Math.round(z / texel) * texel;

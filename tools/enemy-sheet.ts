@@ -3,6 +3,7 @@
 //   /tools/enemy-sheet.html                         every kind, idle
 //   /tools/enemy-sheet.html?kind=rex&state=windup&n=6          strip through the wind-up
 //   /tools/enemy-sheet.html?kind=raptor&special=pounce&n=8     strip through a special
+//   &size=0.35 zooms the camera (small bodies such as the rat)
 //   &elite=flink  &view=game|side|front  &open=1
 import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
@@ -62,7 +63,7 @@ for (let i = 0; i < n; i++) {
   scene.add(v.root);
   // Let fades and springs settle on the pose.
   for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
-  const size = Math.max(1, def.body === 'rex' ? 3.2 : def.body === 'raptor' ? 1.3 : def.scale);
+  const size = Number(q.get('size') ?? 0) || Math.max(1, def.body === 'rex' ? 3.2 : def.body === 'raptor' ? 1.3 : def.scale);
   if (view === 'front') cam.position.set(0, 1.3 * size, 6.2 * size); else if (view === 'game') cam.position.set(0, 7 * size, 6.6 * size); else cam.position.set(-4.6 * size, 2.2 * size, 4.2 * size);
   cam.lookAt(0, 0.95 * size * (view === 'game' ? 0.5 : 1), 0.2);
   renderer.setViewport(i * W, 0, W, H);

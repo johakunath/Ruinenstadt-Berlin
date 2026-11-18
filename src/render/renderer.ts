@@ -1,6 +1,6 @@
 // Ties the scene together: world, characters, effects, camera, post-processing.
 // The sim knows nothing about this file; it reads sim state and events and draws them.
-import { KOEPENICK_WEATHER, Weather } from './weather';
+import { KOEPENICK_WEATHER, Weather, XHAIN_WEATHER } from './weather';
 import { HeroPreview, type PreviewState } from './hero-preview';
 import { heroLook } from '../data/hero-look';
 import {
@@ -26,12 +26,12 @@ import { leapHeight } from '../sim/abilities';
 import type { Look } from './looks';
 import { Materials } from './materials';
 import { Post } from './post';
+import { ShadowClock } from './shadow-rate';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
 import type { TunnelState } from './tunnel-view';
-import { groundY, meshSurface, setGround } from './ground';
-import { heightAt } from '../data/map';
+import { bridgeAwareSurface, groundY, setGround } from './ground';
 import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
 import type { Prop } from '../data/courtyard';
@@ -45,6 +45,10 @@ export interface RendererOptions {
   look: Look;
   debugHit: boolean;
   debugFlow: boolean;
+  /** `?shadows=boxes`: map chunk meshes cast no shadow, only caster boxes, instanced props and characters. */
+  boxShadows?: boolean;
+  /** `?cut=off` / `?cut=<meters>`: V1 B cutaway off, or the Hinterhof cut height. */
+  cut?: 'off' | number;
   /** M11d: show each landmark once with a camera swing. */
   reveal?: boolean;
   /** ?cam=distance,pitch for close-up checks. */
@@ -121,6 +125,8 @@ export class GameRenderer {
   private readonly heroLight = new PointLight(0xffe2bd, 9, 7, 1.4);
   private time = 0;
   private height = 720;
+  /** Sun shadow map rate (profile `shadowInterval`). */
+  private readonly shadowClock: ShadowClock;
 
   private constructor(
     private readonly renderer: WebGLRenderer,
@@ -129,6 +135,7 @@ export class GameRenderer {
     private readonly materials: Materials,
     private readonly opts: RendererOptions,
   ) {
+    this.shadowClock = new ShadowClock(opts.profile.shadowInterval);
     const Y = COURTYARD.yard;
     const B = opts.map?.def.bounds;
     this.cam = new FollowCamera(
@@ -138,7 +145,7 @@ export class GameRenderer {
     );
     const def = opts.map?.def;
     this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks, (x, z) => groundY(x, z)) : null;
-    setGround(def ? meshSurface(def.bounds.minX, def.bounds.minZ, (x, z) => heightAt(def, x, z)) : () => 0);
+    setGround(def ? bridgeAwareSurface(def) : () => 0);
     this.scene.background = new Color(NIGHT);
     this.scene.fog = new FogExp2(NIGHT, FOG);
     this.scene.environment = nightEnvironment(renderer);
@@ -149,7 +156,7 @@ export class GameRenderer {
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     // M11c: weather per zone (Köpenick only; the tunnel stays dry).
-    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : {}, opts.profile.embers / 140);
+    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : def?.id === 'xhain' ? XHAIN_WEATHER : {}, opts.profile.embers / 140);
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.content = new ContentView(assets, materials);
     // M20: the walkable camp's stations (build sites, levels, keepers) and their rings.
@@ -182,9 +189,11 @@ export class GameRenderer {
     renderer.toneMapping = ACESFilmicToneMapping;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = PCFShadowMap;
+    // Shadow renders are requested per frame (`ShadowClock`, `Post.render`), never automatic.
+    renderer.shadowMap.autoUpdate = false;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
-    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables) : buildWorld(materials);
+    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut }) : buildWorld(materials);
     const assets = await loadCharacters(materials);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
@@ -216,6 +225,7 @@ export class GameRenderer {
     this.renderer.setSize(w, h, false);
     this.post.setSize(w, h, dpr);
     this.cam.setAspect(w / h);
+    this.shadowClock.invalidate();
   }
 
   /**
@@ -226,7 +236,8 @@ export class GameRenderer {
     for (const view of this.views.values()) this.release(view);
     this.views.clear();
     this.cam.snap(sim.player.x, sim.player.z, groundY(sim.player.x, sim.player.z));
-    this.world.follow?.(sim.player.x, sim.player.z);
+    this.world.follow?.(sim.player.x, sim.player.z, true);
+    this.shadowClock.invalidate();
     this.world.breakables?.reset();
     for (const b of sim.breakables) if (b.broken) this.world.breakables?.broke(b.id);
   }
@@ -383,7 +394,7 @@ export class GameRenderer {
       view.update(e, alpha, dt, frozen, skip);
       if (e.state !== 'dead') {
         const b = e.def.body;
-        live.push({ root: view.root, size: b === 'rex' ? 2.4 : b === 'raptor' ? 1.1 : b === 'crow' ? 0.6 : e.def.scale, d: Math.hypot(e.x - p.x, e.z - p.z) });
+        live.push({ root: view.root, size: b === 'rex' ? 2.4 : b === 'raptor' ? 1.1 : b === 'crow' ? 0.6 : b === 'rat' ? 0.35 : e.def.scale, d: Math.hypot(e.x - p.x, e.z - p.z) });
       }
     }
     live.sort((a, b) => a.d - b.d);
@@ -402,9 +413,10 @@ export class GameRenderer {
     const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead', this.cam.camera.aspect) ?? null;
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py, reveal);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
+    const shadows = this.shadowClock.tick(dt);
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
-    if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z);
-    else this.world.follow?.(px, pz);
+    if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows);
+    else this.world.follow?.(px, pz, shadows);
     (this.scene.fog as FogExp2).density = FOG * (1 - 0.7 * (reveal?.weight ?? 0));
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
@@ -415,8 +427,9 @@ export class GameRenderer {
     this.debug?.update(sim, alpha);
 
     this.renderer.info.reset();
-    this.post.render(dt);
+    this.post.render(dt, shadows);
     this.perf.calls = this.renderer.info.render.calls;
     this.perf.triangles = this.renderer.info.render.triangles;
   }
 }
+

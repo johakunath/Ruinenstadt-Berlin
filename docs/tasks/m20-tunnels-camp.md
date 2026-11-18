@@ -55,7 +55,7 @@ Tests: `src/data/camp-map.test.ts` (peaceful, every ring reached on foot, stairs
 | Tunnels for all lines | Every line reuses the S3 tunnel, renamed |
 | Lazarett and Hackerspace empty toward the camera | `CampLayout.decor`: toilet cubicles, sinks, cots and boxes; workbench, sofa, table with a laptop, arcade cabinet, cable reel |
 | Rings | Footprint-sized, dim, at the keeper's feet (`stationRing`); rule in `docs/style-bible.md` |
-| Tunnel walls flat and repetitive | Uneven faces, ribs, niches, cable tray, caged wall lamps; texture task T6 for Codex in `docs/asset-pipeline.md` |
+| Tunnel walls flat and repetitive | Uneven faces, ribs, niches, cable tray, caged wall lamps; texture task T7 for Codex in `docs/asset-pipeline.md` |
 
 ## Open
 - Playtest by Johannes; Tab S9 measurement of the camp (see Cost).

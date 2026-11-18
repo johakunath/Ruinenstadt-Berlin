@@ -1,7 +1,7 @@
 // U1/U2/U3: one pause menu with tabs, as in 2D (`js/panels.js` renderInv): Inventar, Karte, Segen,
 // Kodex as text tabs with line icons. The Kodex tab is the 2D Kodex card list (playtest 2026-11-17). Header shows Schrott, Item Level, district and fight, found
 // hidden blessings, the cog for the options screen and × to close.
-import { ELITES, ELITE_MODS, ENEMIES, type EnemyKind } from '../data/enemies';
+import { ELITES, ELITE_MODS, ENEMIES, type EliteMod, type EnemyKind } from '../data/enemies';
 import { BASES } from '../data/item-names';
 import { ELEMENTS, ENEMY_RESISTANCES, LEGENDARY_POWERS, RARITIES, SETS, SET_COLOR, type LegendaryId, type SetId, type SlotId } from '../data/items';
 import { STATIONS } from '../data/camp';
@@ -26,9 +26,12 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   raptor: 'Zeigt eine Linie, dann springt er. Seitlich ausweichen.', crow: 'Kreist und stößt herab. Fliegt über alles.',
   feldwebel: 'Stürmt los und ruft Männer.', waechter: 'Feuert Salven und Ringe. Nah ran.',
   rex: 'Biss, Ansturm, Brüllringe, Schwanz.', schaffner: 'Rast über die Gleise wie ein Zug, pfeift Fahrgäste herbei.', hauptmann: 'Der Hauptmann von Köpenick. Schlägt, schießt, ruft.',
+  rat: 'Ratten kommen im Rudel, schnell und schwach.',
+  grenzer: 'Schießt vom Turm, Feuerstoß und Salve. Ruft „Alarm!“.', brandmeister: 'Wirft Molotows, Feuerring. Nah: Flammenstoß.',
+  rattenmutter: 'Ruft Ratten, zieht eine Säurespur.', spreehexe: 'Säurepfützen und die Spreewelle. Durchrollen.',
 };
-const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow'];
-const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner'];
+const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat'];
+const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
 export interface MenuHost {
@@ -193,22 +196,29 @@ export class Menu {
   }
 }
 
-/** 2D Kodex portraits (`js/items.js` PORTI): painted busts in `assets/portraits/`. */
+/** Kodex busts in `assets/portraits/`, including portraits imported from 2D (`js/items.js` PORTI). */
 const portraits = import.meta.glob('../../assets/portraits/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const portraitUrl = (id: string): string => portraits[`../../assets/portraits/${id}.webp`] ?? '';
-const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', waechter: 'X03', rex: 'E12', hauptmann: 'X01' };
+const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04', feldwebel: 'X04', schaffner: 'X05', waechter: 'X03', rex: 'E12', hauptmann: 'X01', brandmeister: 'X10', rattenmutter: 'X06' };
+const ELITE_PORTRAIT: Record<EliteMod, string> = { flink: 'L01', brennend: 'L02', spaltend: 'L03', gepanzert: 'L04' };
 const SURVIVOR_PORTRAIT: Record<SurvivorId, string> = { doktor: 'S01', schmied: 'S02', kurier: 'S03', koechin: 'S04', spaeher: 'S05', mechaniker: 'S06' };
-/** Code-painted placeholders for bosses without a painted bust yet (art gap). */
+/** Code-painted fallbacks for bosses when portrait files are missing. */
 const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
   feldwebel: '<path d="M5 8l7-4 7 4M5 13l7-4 7 4M5 18l7-4 7 4"/>',
   schaffner: '<path d="M3 16h18M5 16c0-5 3-8 7-8s7 3 7 8M9 12h6M12 8V6"/><circle cx="12" cy="19" r="1.5"/>',
+  // Watchtower; the 2D Spreehexe bust (river hag) does not match the 3D punk look, so a crest and a wave.
+  grenzer: '<path d="M8 21l2-12h4l2 12M7 9h10l-1-4H8zM12 5V3M10 14h4"/>',
+  spreehexe: '<path d="M8 11l1-7 1.5 5 1.5-6 1.5 6 1.5-5 1 7M7 12h10M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
 };
 /** 2D `kImg`: portrait, greyed (`dim`) or a black silhouette with "?" (`sil`). */
 const kimg = (inner: string, state: 'on' | 'dim' | 'sil', ring = '', cls = ''): string => state === 'sil'
   ? `<span class="kimg ksil${cls}">${inner}<b>?</b></span>`
   : `<span class="kimg${cls}${state === 'dim' ? ' kdim' : ''}"${ring ? ` style="--ring:${ring}"` : ''}>${inner}</span>`;
 const kport = (id: string): string => `<img src="${portraitUrl(id)}" alt="" draggable="false">`;
-const enemyArt = (kind: EnemyKind): string => ENEMY_PORTRAIT[kind] ? kport(ENEMY_PORTRAIT[kind]!) : `<svg class="kgly" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BOSS_GLYPH[kind] ?? ''}</svg>`;
+const enemyArt = (kind: EnemyKind): string => {
+  const id = ENEMY_PORTRAIT[kind];
+  return id && portraitUrl(id) ? kport(id) : `<svg class="kgly" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BOSS_GLYPH[kind] ?? ''}</svg>`;
+};
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
 /** 2D Kodex tab (`js/panels.js` invTab 'kodex'): sections Gegner, Endgegner, Bewohner, Legendäre Funde,
@@ -226,7 +236,7 @@ export function kodexHtml(s: Sim): string {
   const legs = Object.keys(LEGENDARY_POWERS) as LegendaryId[], nLeg = legs.filter(b => k.found[b]).length;
   const legRows = legs.map(b => { const f = !!k.found[b]; return card(kimg(itemIcon({ base: b, slot: 'w' }), f ? 'on' : 'dim', '', ' kitem'), f ? esc(BASE_NAME[b] ?? b) : unk, f ? RARITIES[3].color : DIM, f ? esc(LEGENDARY_POWERS[b].description) : 'Noch nicht gefunden'); }).join('');
   const sets = (Object.keys(SETS) as SetId[]).map(id => { const S = SETS[id], ps = Object.entries(S.pieces) as Array<[SlotId, { base: string }]>, n = ps.filter(([, p]) => k.found[p.base]).length; return card(`<span class="kset">${ps.map(([slot, p]) => kimg(itemIcon({ base: p.base, slot }), k.found[p.base] ? 'on' : 'dim', '', ' kitem')).join('')}</span>`, `${esc(S.name)} · ${n}/${ps.length} gefunden`, SET_COLOR, `(2) ${esc(S.bonusDescriptions[2])} · (3) ${esc(S.bonusDescriptions[3])} · (5) ${esc(S.bonusDescriptions[5])}`); }).join('');
-  const elites = ELITE_MODS.map(m => { const o = !!k.kills[`e:${m}`], c = hex(ELITES[m].color); return card(kimg(kport('E02'), o ? 'on' : 'sil', o ? c : ''), o ? esc(ELITES[m].name) : unk, o ? c : DIM, o ? esc(ELITES[m].hint) : 'Noch nicht begegnet'); }).join('');
+  const elites = ELITE_MODS.map(m => { const o = !!k.kills[`e:${m}`], c = hex(ELITES[m].color); return card(kimg(kport(ELITE_PORTRAIT[m]), o ? 'on' : 'sil', o ? c : ''), o ? esc(ELITES[m].name) : unk, o ? c : DIM, o ? esc(ELITES[m].hint) : 'Noch nicht begegnet'); }).join('');
   const surv = SURVIVORS.filter(v => has(v.id)).length;
   return `<div class="kodex"><div class="lbl">Gegner</div><div class="cols2">${enemies}</div><div class="lbl">Endgegner</div><div class="cols2">${bosses}</div><div class="lbl">Bewohner ${surv} von ${SURVIVORS.length}</div><p class="hint">Befreie Gefangene auf Expeditionen. Sie ziehen ins Lager, helfen dauerhaft und ermöglichen Stufe 2 ihrer Station.</p><div class="cols2">${survivors}</div><div class="lbl">Legendäre Funde ${nLeg} von ${legs.length}</div><div class="cols2">${legRows}</div><div class="lbl">Sets</div><div class="cols2">${sets}</div><div class="lbl">Elite-Gegner</div><div class="cols2">${elites}</div></div>`;
 }

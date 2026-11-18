@@ -3,9 +3,10 @@ import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
 import { FX_LAYER } from './layers';
 import type { Bounds } from '../sim/flowfield';
 import { clamp } from '../sim/math';
+import { VIEW } from '../data/cut';
 import type { RevealPose } from './reveal';
 
-const PITCH = 44;
+const PITCH = VIEW.pitch;
 const DISTANCE = 18.5;
 export const FOV = 36;
 /** The view centers a little north of the hero so more of the facades shows. */
