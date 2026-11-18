@@ -4,6 +4,8 @@
 import { CONSUMABLES } from '../data/crafting';
 import { WEAPON_KINDS } from '../data/items';
 import { POWERS, type PowerDef } from '../data/powers';
+import { CAMP_UPGRADES } from '../data/progression';
+import { buySpatiUpgrade, SPATI_UPGRADE, spatiUpgradeCost } from '../sim/camp';
 import { FAMILIES, PERKS, SHRINES, type PerkFamilyId, type PerkId, type ShrineId } from '../data/progression';
 import type { Input } from '../input/input';
 import { cooldownOf, powerOf, selectPower, type Offer } from '../sim/abilities';
@@ -121,6 +123,7 @@ export class AbilitiesUi {
       if (b.dataset.buy !== undefined) this.tradeMsg = buyOffer(s, Number(b.dataset.buy)).text;
       else if (b.dataset.heal) this.tradeMsg = buyHeal(s).text;
       else if (b.dataset.cons) this.tradeMsg = buyConsumable(s, b.dataset.cons as 'verband' | 'molotow').text;
+      else if (b.dataset.up) this.tradeMsg = buySpatiUpgrade(s, b.dataset.up as 'dmg' | 'hp').text;
       else if (b.dataset.close) return this.closeTrade();
       this.tradeSig = '';
     });
@@ -209,7 +212,12 @@ export class AbilitiesUi {
       const delta = o.item.itemLevel - (worn?.itemLevel ?? 0);
       return `<div class="trade-offer">${itemCard(o.item, 'Angebot', s.equipment)}<div class="trade-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">Stufe ${o.item.itemLevel}${worn ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}</div><button type="button" data-buy="${i}" class="${s.inventory.scrap >= o.price ? 'primary' : ''}">Kaufen · ${o.price} Schrott</button></div>`;
     }).join('');
-    const goods = shop ? CONSUMABLES.map((c) => `<div class="trade-row"><span><b>${c.name}</b> <small>${cons[c.id as 'verband' | 'molotow']}/3</small><br><small>${c.description}</small></span><button type="button" data-cons="${c.id}" ${cons[c.id as 'verband' | 'molotow'] >= 3 ? 'disabled' : ''}>${c.scrapCost} Schrott</button></div>`).join('') : '';
+    // Playtest 2026-11-18: Schärfen and Panzerung at the Späti, up to SPATI_UPGRADE.max (they stay).
+    const ups = shop ? SPATI_UPGRADE.ids.map((id) => {
+      const u = CAMP_UPGRADES.find((q) => q.id === id)!, l = s.statContext.upgrades[id] ?? 0, c = spatiUpgradeCost(s, id), full = l >= SPATI_UPGRADE.max;
+      return `<div class="trade-row"><span><b>${u.name}</b> <small>${l}/${SPATI_UPGRADE.max}</small><br><small>+${u.perLevel}% ${id === 'dmg' ? 'Schaden' : 'Leben'}, bleibt${full ? ' · mehr im Lager' : ''}</small></span><button type="button" data-up="${id}" ${full ? 'disabled' : ''}>${full ? 'Voll' : `${c} Schrott`}</button></div>`;
+    }).join('') : '';
+    const goods = ups + (shop ? CONSUMABLES.map((c) => `<div class="trade-row"><span><b>${c.name}</b> <small>${cons[c.id as 'verband' | 'molotow']}/3</small><br><small>${c.description}</small></span><button type="button" data-cons="${c.id}" ${cons[c.id as 'verband' | 'molotow'] >= 3 ? 'disabled' : ''}>${c.scrapCost} Schrott</button></div>`).join('') : '');
     this.trade.firstElementChild!.innerHTML = `<button type="button" class="x-btn" data-close="1" aria-label="Schließen">×</button><h2>${shop ? (s.level.rests[s.content.tradeAt]?.name ?? 'Späti') : 'Händler'}</h2><p class="sub">${shop ? '„Wat darf’s sein?“' : '„Schrott gegen Ware. Kein Feilschen.“'} · Schrott <b>${s.inventory.scrap}</b></p><div class="trade-offers">${offers}</div>${goods}`
       + `<div class="trade-row"><span><b>Verbandskasten</b><br><small>Heilt dich vollständig</small></span><button type="button" data-heal="1">${healPrice(s)} Schrott</button></div><p class="trade-msg">${this.tradeMsg}</p>`;
   }

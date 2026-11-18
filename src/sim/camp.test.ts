@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createSim } from './sim';
-import { OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
+import { buySpatiUpgrade, SPATI_UPGRADE, spatiUpgradeCost, OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
 import { parseSave, simFromSave, snapshot } from './save';
 
 const rich = (built = true) => { const s = createSim({ seed: 5 }); s.inventory.scrap = 5000; s.inventory.materials = { metall: 40, stoff: 40, kabel: 40, chemie: 40 }; if (built) s.inventory.camp = { stations: { zeug: 1, hack: 1, imbiss: 1, exer: 1 }, stash: [], freed: [] }; return s; };
@@ -110,5 +110,22 @@ describe('M13 camp', () => {
     s.inventory.camp!.stash.push({ id: 999, slot: 'h', kind: 'head', base: 'helm', name: 'Helm', rarity: 0, value: 5, itemLevel: 1, affixes: [] });
     const t = createSim({ seed: 2, inventory: s.inventory, equipment: s.equipment, statContext: s.statContext });
     expect(t.lootCtx.itemId).toBeGreaterThanOrEqual(999);
+  });
+});
+
+describe('Späti upgrades (playtest 2026-11-18)', () => {
+  it('sharpen and armor at a Späti only, up to the cap, dearer than the workshop, and they stay', () => {
+    const s = rich(false);
+    expect(buySpatiUpgrade(s, 'dmg').ok).toBe(false);
+    s.content.tradeAt = 0;
+    expect(spatiUpgradeCost(s, 'dmg')).toBe(upgradeCost(s, 'dmg') * SPATI_UPGRADE.markup);
+    const before = s.stats.damage, scrap = s.inventory.scrap, cost = spatiUpgradeCost(s, 'dmg');
+    expect(buySpatiUpgrade(s, 'dmg').ok).toBe(true);
+    expect(s.inventory.scrap).toBe(scrap - cost);
+    expect(s.stats.damage).toBeGreaterThan(before);
+    for (let i = 1; i < SPATI_UPGRADE.max; i++) expect(buySpatiUpgrade(s, 'dmg').ok).toBe(true);
+    expect(buySpatiUpgrade(s, 'dmg').ok).toBe(false);
+    expect(s.statContext.upgrades.dmg).toBe(SPATI_UPGRADE.max);
+    expect(buySpatiUpgrade(s, 'hp').ok).toBe(true);
   });
 });

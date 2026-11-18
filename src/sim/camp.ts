@@ -58,6 +58,22 @@ export function buyUpgrade(s: Sim, id: CampUpgradeId): Result {
   setLoadout(s, s.equipment, { ...s.statContext, upgrades: { ...s.statContext.upgrades, [id]: l + 1 } });
   return ok(`${CAMP_UPGRADES.find(u => u.id === id)!.name} · Stufe ${l + 1}`);
 }
+/**
+ * Playtest 2026-11-18: Schärfen and Panzerung at a Späti, so Schrott is worth something before the camp
+ * opens. Capped (`max` levels in all; the Zeughaus and Hackerspace take it further) and dearer than the
+ * workshop (`markup`).
+ */
+export const SPATI_UPGRADE = { ids: ['dmg', 'hp'] as const, max: 2, markup: 3 };
+export const spatiUpgradeCost = (s: Sim, id: 'dmg' | 'hp'): number => upgradeCost(s, id) * SPATI_UPGRADE.markup;
+export function buySpatiUpgrade(s: Sim, id: 'dmg' | 'hp'): Result {
+  const l = s.statContext.upgrades[id] ?? 0, c = spatiUpgradeCost(s, id);
+  if (s.content.tradeAt < 0) return no('Nur im Späti.');
+  if (l >= SPATI_UPGRADE.max) return no('Mehr geht nur im Lager.');
+  if (s.inventory.scrap < c) return no(`Dir fehlen ${c - s.inventory.scrap} Schrott.`);
+  s.inventory.scrap -= c;
+  setLoadout(s, s.equipment, { ...s.statContext, upgrades: { ...s.statContext.upgrades, [id]: l + 1 } });
+  return ok(`${CAMP_UPGRADES.find(u => u.id === id)!.name} · Stufe ${l + 1}`);
+}
 /** 2D drillCost: endless Schrott sink, +2 % damage and life per rank. */
 export const drillCost = (s: Sim): number => 300 + 60 * (s.statContext.drill ?? 0);
 export function buyDrill(s: Sim): Result {

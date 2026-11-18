@@ -157,7 +157,7 @@ export class Menu {
   renderHead(): void {
     const s = this.host.sim(), hid = s.content.hidden;
     this.resEl.innerHTML = this.host.inRun()
-      ? `<span><img class="mico" src="${artUrl('R05')}" alt="" width="24" height="24">Schrott <b>${s.inventory.scrap}</b></span><span>Item Level <b>${avgIl(s.equipment)}</b></span><span>${esc(this.host.where())}</span>${hid.length ? `<span>Versteckte Segen ${hid.filter(h => h.got).length}/${hid.length}</span>` : ''}`
+      ? `<span><img class="mico" src="${artUrl('R05')}" alt="" width="24" height="24">Schrott <b>${s.inventory.scrap}</b> <small>fürs Lager</small></span><span>Item Level <b>${avgIl(s.equipment)}</b></span><span>${esc(this.host.where())}</span>${hid.length ? `<span>Versteckte Segen ${hid.filter(h => h.got).length}/${hid.length}</span>` : ''}`
       : '';
   }
   private renderTab(): void {
