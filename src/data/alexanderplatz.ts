@@ -323,6 +323,36 @@ export function alexMap(scale = 1): MapDef {
       at -= len;
     }
   }
+  const lineDistOf = (pts: readonly Pt[], x: number, z: number): number => { let d = Infinity; for (let i = 1; i < pts.length; i++) { const [ax, az] = pts[i - 1]!, [bx, bz] = pts[i]!, dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)); d = Math.min(d, Math.hypot(x - ax - dx * t, z - az - dz * t)); } return d; };
+  // More flags (Johannes 2026-11-18: a propaganda state, flags in a lot of places): a ring round the
+  // Weltzeituhr outside its fight, rows on both sidewalks of the Liebknecht- and Rathausstraße between the
+  // tree pits, a row along the Lustgarten.
+  {
+    const fin = encounters.find((e) => e.id === 'weltzeituhr')!;
+    for (let k = 0; k < 14; k++) {
+      const a = (k / 14) * Math.PI * 2, r = fin.r + 3.5;
+      flags.push({ kind: 'flagpole', x: fin.x + Math.sin(a) * r, z: fin.z + Math.cos(a) * r, rot: a + Math.PI / 2, size: 1 });
+    }
+    const curb = (name: string, step: number): void => {
+      const st = streets.find((q) => q.name === name)!;
+      let at = step / 2, k = 0;
+      for (let i = 1; i < st.pts.length; i++) {
+        const [ax, az] = st.pts[i - 1]!, [bx, bz] = st.pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+        for (; at < len; at += step, k++) for (const sd of [-1, 1]) {
+          const off = st.width / 2 + 0.9, x = ax + ux * at - uz * off * sd, z = az + uz * at + ux * off * sd;
+          if (encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 1.5) || zones.some((q) => Math.hypot(x - q.entry.x, z - q.entry.z) < 4)) continue;
+          if (bridges.some((bq) => Math.hypot(x - bq.x, z - bq.z) < bq.len / 2 + 3)) continue;
+          if (streets.some((o) => o !== st && o.kind !== 'path' && lineDistOf(o.pts, x, z) < o.width / 2 + 2)) continue;
+          if (arches.some((a) => { const [rx, rz] = cut(a.at, a.at)[0]!; return Math.hypot(x - rx, z - rz) < 12; })) continue;
+          flags.push({ kind: 'flagpole', x, z, rot: Math.atan2(-uz * sd, ux * sd) + Math.PI / 2, size: 1 });
+        }
+        at -= len;
+      }
+    };
+    curb('Karl-Liebknecht-Straße', 18);
+    curb('Rathausstraße', 18);
+    curb('Am Lustgarten', 16);
+  }
   const yards: Prop[] = [
     { kind: 'crates', ...endOf('Hofgasse', 1.2, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Hofgasse', 3, -1.2), rot: 1, size: 1 }, { kind: 'crate', ...endOf('Hofgasse', 3, 1.2), rot: -0.3, size: 1 },
     { kind: 'workLamp', ...endOf('Hofgasse', 5, 1.4), rot: -0.8, size: 1 }, { kind: 'candles', ...endOf('Kirchhof', 3.5, 1.2), rot: 0, size: 1 }, { kind: 'fireBarrel', ...endOf('Plattenhof', 5, -1.3), rot: 0, size: 1 },

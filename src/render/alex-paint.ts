@@ -24,6 +24,7 @@ export const ATLAS = {
   mural: [0, 1024, 512, 512],
   shop0: [512, 1024, 512, 128], shop1: [1024, 1024, 512, 128], shop2: [1536, 1024, 512, 128],
   shop3: [512, 1152, 512, 128], shop4: [1024, 1152, 512, 128], shop5: [1536, 1152, 512, 128],
+  slogan0: [512, 1280, 768, 128], slogan1: [1280, 1280, 768, 128], slogan2: [512, 1408, 768, 128], slogan3: [1280, 1408, 768, 128],
 } as const satisfies Record<string, readonly [number, number, number, number]>;
 export type AtlasKey = keyof typeof ATLAS;
 
@@ -223,6 +224,15 @@ export function paintAlexAtlas(): EmissiveSurface {
     k.restore();
   }
   // Pavilion shop signs (state retail of 1989), light letters on coloured boards.
+  // Slogans of the happy clock state (story: the Zeitnormal), yellow on red with a hammer and sickle each end.
+  for (const [key, t] of [['slogan0', 'PÜNKTLICH IST GLÜCKLICH'], ['slogan1', 'DIE ZEIT GEHÖRT DEM VOLK'], ['slogan2', 'VORWÄRTS ZUR NORMALZEIT'], ['slogan3', 'LÄCHELN, GENOSSE! WIR SEHEN DICH']] as Array<[AtlasKey, string]>) {
+    const [x, y, w, h] = ATLAS[key];
+    k.fillStyle = RED; k.fillRect(x, y, w, h);
+    k.fillStyle = YELLOW; k.fillRect(x, y + 6, w, 5); k.fillRect(x, y + h - 11, w, 5);
+    hammerSickle(k, x + 52, y + h / 2, 70, YELLOW); hammerSickle(k, x + w - 52, y + h / 2, 70, YELLOW);
+    text(k, t, x + 100, y, w - 200, h, YELLOW, 'bold', 0.42);
+    text(ek, t, x + 100, y, w - 200, h, '#806020', 'bold', 0.42);
+  }
   for (const [key, t, bg, fg] of [['shop0', 'KONSUM', BLUE, '#f4f2ea'], ['shop1', 'HO', RED, '#f4f2ea'], ['shop2', 'DELIKAT', '#2b3338', YELLOW], ['shop3', 'OBST GEMÜSE', '#3d6a3a', '#f4f2ea'], ['shop4', 'BLUMEN', YELLOW, '#2b3338'], ['shop5', 'FRISEUR', CREAM, BLUE]] as Array<[AtlasKey, string, string, string]>) {
     const [x, y, w, h] = ATLAS[key];
     k.fillStyle = bg; k.fillRect(x, y, w, h);

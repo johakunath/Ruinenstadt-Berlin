@@ -82,6 +82,14 @@ function flagpole(b: Builder, p: Prop): void {
     b.geo(posters, g, banner);
   } else b.box(m.stucco, banner, bw, bh, 0.02, [1.3, 0.42, 0.38]);
   b.geo(m.stucco, new CircleGeometry(0.3, 10), at(p, 0, 0.02, 0, -Math.PI / 2), [0.7, 0.7, 0.68]);
+  // The loudspeaker horns of the state radio, and on every second pole a camera watching the street.
+  for (const sd of [-1, 1]) b.geo(m.stucco, new CylinderGeometry(0.22, 0.05, 0.55, 10, 1, true), at(p, 0, H - 1.6, sd * 0.32, sd * Math.PI / 2 + 0.35, 0, 0), [0.85, 0.86, 0.82]);
+  b.box(m.iron, at(p, 0, H - 1.6, 0), 0.12, 0.12, 0.5, [0.6, 0.6, 0.6]);
+  if (Math.round(p.x * 3 + p.z * 7) % 2 === 0) {
+    b.box(m.iron, at(p, -0.2, H - 2.4, 0), 0.4, 0.06, 0.06, [0.55, 0.55, 0.55]);
+    b.box(m.stucco, at(p, -0.45, H - 2.5, 0, 0.45, Math.PI / 2, 0), 0.22, 0.2, 0.42, [1.25, 1.25, 1.22]);
+    b.geo(m.lampGlass, new SphereGeometry(0.03, 6, 4), at(p, -0.66, H - 2.45, 0.07), [2.2, 0.25, 0.2]);
+  }
 }
 
 /** Builds a GDR prop; false when `p` is not one. */

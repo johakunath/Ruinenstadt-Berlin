@@ -13,6 +13,7 @@ Layout C "Großer Ring um den Turm" (Johannes, 2026-11-18). Concept, geography c
 | A5 | New enemies (Uhrwerkläufer, Wurzler, Kernspeier, Brigadeghul); look for fitting free models first (research below) |
 | A6 | Look: Pioneer palette, saturated yellow and blue, hammer-and-sickle emblems on facades, banners, crests and enemies (`docs/style-bible.md` › GDR / Pioneer direction, `docs/style/alexanderplatz-pioneer.png`) |
 | A9 | Light: variant A Goldene Stunde (Johannes, 2026-11-18): low warm sun from the south-west, amber haze, lamps at a quarter |
+| A10 | Propaganda over the top (Johannes, 2026-11-18): neo-Soviet steampunk, a wannabe happy propaganda state with strong control. The Pioneer poster everywhere and huge, rows of it side by side, flags in many places, cameras on walls and poles |
 | A8 | Koloss stays on the Karl-Marx-Allee (zone 3 boss). Boss and enemy specs are written by Opus; a Fable pass only if Johannes does not like a boss |
 | A7 | Order: after Xhain. Xhain (PR #46) changes the map format (Stadtbahn viaducts, Blockrand rows, map selection, enemy roster); build on it once it is in `main`. Reuse its Altbau blocks, back yards and building parts where they fit (Nikolaiviertel, Spandauer Vorstadt edge) |
 
@@ -130,3 +131,11 @@ No free root or sunflower creature fits. Wurzler and Brigadeghul build on the zo
 - The 2D game's painted GDR art (Codex task 11, v0.69): torn red banner, blue banner, Pioneer poster, packed into `assets/textures/alex/posters.webp` (768 × 384, alpha; row in `assets/LICENSES.md`). Material `MapMats.posters` (alpha-tested, two-sided, this map only), code-painted fallback until the image is decoded (`paintPosterFallback`, `loadPosters` in `alex-paint.ts`).
 - Where: Allee flag poles (red or blue), banners down Plattenbau and Altbau fronts, the Pioneer poster as the gable mural, pasted Pioneer posters at eye height on about half of the intact fronts and on every second viaduct bay. Proof `docs/proof/m15-alex/posters.jpg`.
 - No Blender needed for step 7: `tools/build-creatures.mjs` converts the Quaternius packs in Node (FBXLoader, glTF export); Wurzler, Kernspeier and the Weltzeituhr boss are built in code.
+
+## Handover 2026-11-18 (propaganda pass, decision A10)
+
+- Giant Pioneer posters: on every Plattenbau gable end (as big as the wall), on two of three blank fire walls of the north map edge (7 m, with a camera), on the Kino front. Rows of the same poster side by side on two of three viaduct bays, on half the long fronts at eye height; one or a pair on most other fronts.
+- Flags: 58 poles (Allee middle, a ring of 14 round the Weltzeituhr fight, both sidewalks of Karl-Liebknecht- and Rathausstraße between the tree pits, the Lustgarten), each with state radio horns, every second with a camera. Banners down every slab (one to three), most Altbau fronts, every Rathaus face, four 11 m banners on the Palast front, two 40 m banners down the Hotel Stadt Berlin, two on the Kino.
+- Slogans (atlas, yellow on red): „Pünktlich ist glücklich“, „Die Zeit gehört dem Volk“, „Vorwärts zur Normalzeit“, „Lächeln, Genosse! Wir sehen dich“ on slab and Altbau fronts, every third viaduct bay and the Hotel base.
+- Cameras (`cctv` in `alex-world.ts`, red LED, no light): about half the fronts, pavilion roofs, Rathaus corners, viaduct bays, fire walls, every second flag pole.
+- Proof `docs/proof/m15-alex/propaganda.jpg`. Cost: all on the existing poster, atlas and shared materials (no new draw call per chunk beyond the poster material); hardware check 18 covers the look.

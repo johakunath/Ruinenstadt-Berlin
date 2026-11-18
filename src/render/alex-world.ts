@@ -3,6 +3,7 @@
 // landmarks get their real models from photos in step 4; this keeps the layout readable until then.
 import { CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometry, TorusGeometry, type BufferGeometry, type Material } from 'three';
 import type { Landmark, Lot, MapDef, Viaduct } from '../data/map';
+import type { Prop } from '../data/courtyard';
 import { blockFacades } from './map-world';
 import { FLOOR_H, GROUND_H, PARAPET, Run } from './world';
 import type { Facade } from '../data/courtyard';
@@ -208,6 +209,9 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
         windowRow(b, f.m, f.len - 2, 7.2, 1.3, 3, 3.3, rng, 0.1, true);
         windowRow(b, f.m, f.len - 2, 11.6, 1.1, 2.4, 3.3, rng, 0.06, true);
         b.box(M.brick, sub(f.m, 0, H - 0.6, 0.15), f.len + 0.3, 1.2, 0.3, [0.95, 0.62, 0.5]);
+        // Banners down every face, red and blue, and cameras at the corners.
+        if (f.len > 20) for (const x of [-f.len * 0.3, f.len * 0.3]) posterPlane(b, sub(f.m, x, 8.6, 0.32), 7, x < 0 ? 'red' : 'blue');
+        cctv(b, sub(f.m, f.len / 2 - 0.7, 3.8, 0.05));
         b.box(M.stucco, sub(f.m, 0, 0.35, 0.08), f.len, 0.7, 0.16, [0.75, 0.72, 0.66]);
       }
       const tz = l.hz - 4;
@@ -319,6 +323,9 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       windowRow(b, F(0, 0, 3 + (d + 4) / 2), w + 4, 3, 2.6, 2.4, 3.2, rng, 0.2);
       b.box(M.concrete, F(0, 26, 0), w, 52, d, [1.2, 1.18, 1.12]);
       glassFace(b, F(0, 0, l.hz + 0.02), w - 1, 6, 44, 'curtain', 5.5);
+      // Two banners as tall as the slab, the cheerful state on the skyline.
+      for (const x of [-l.hx * 0.55, l.hx * 0.55]) posterPlane(b, F(x, 30, l.hz + 0.08), 40, x < 0 ? 'red' : 'blue');
+      atlasPlane(b, F(0, 7.2, l.hz + 3 + (d + 4) / 2 - d / 2 + 0.05), Math.min(w + 2, 14), 1.8, 'slogan2');
       return;
     }
     case 'sbahnalex':
@@ -364,6 +371,8 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       glassBox(b, F, w, d, 4.4, 4.6, 'curtain', 0, 4.6);
       b.box(M.concrete, F(0, 10.4, 0), w, 3.2, d, [1.15, 1.1, 1.0]);
       atlasPlane(b, F(0, 10.4, l.hz + 0.03), w * 0.8, 1.3, 'kino');
+      for (const x of [-l.hx + 1.2, l.hx - 1.2]) posterPlane(b, F(x, 7.4, l.hz + 0.12), 5.6, 'blue');
+      posterPlane(b, F(0, 6.6, l.hz + 0.12), 3.6, 'pioneer');
       return;
     }
     case 'cafemoskau': {
@@ -399,6 +408,8 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       // The glass house: a vault along the roof (its lower half stays inside the building).
       b.geo(M.glass, cached(`plVault${w},${d}`, () => new CylinderGeometry(l.hz - 1.5, l.hz - 1.5, w - 9, 14, 1, true)), F(0, H + 0.5, 0).multiply(new Matrix4().makeRotationZ(Math.PI / 2)), [0.8, 1.2, 1]);
       b.box(M.ivy, F(2, 4, l.hz + 0.03), 9, 8, 0.02, GREEN);
+      // Four giant banners down the bronze front.
+      for (const x of [-12, -4, 4, 12]) posterPlane(b, F(x, 7.2, l.hz + 0.25), 11, x === -4 || x === 4 ? 'red' : 'blue');
       return;
     }
   }
@@ -424,7 +435,14 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
       for (const s of [-1, 1]) b.box(mats.railSteel, at(s * 1.6, v.h + 0.4, 0), 0.12, 0.15, seg);
       // Ivy over the bricks on every second bay (the district grew wild), posters pasted on the others.
       if (k % 2 === 0) b.box(mats.ivy, at(v.width / 2 + 0.05, v.h / 2, 0), 0.1, v.h * 0.7, seg * 0.6, GREEN);
-      if (k % 2 === 1) for (const s of [-1, 1]) posterPlane(b, at(s * (v.width / 2 + 0.06), 2.1, 0).multiply(new Matrix4().makeRotationY((s * Math.PI) / 2)), 1.5, 'pioneer');
+      // Poster walls: the same Pioneer poster side by side over whole bays, a slogan band, cameras.
+      for (const sd of [-1, 1]) {
+        const face = at(sd * (v.width / 2 + 0.06), 0, 0).multiply(new Matrix4().makeRotationY((sd * Math.PI) / 2));
+        const ph = 1.6, pw = ph * POSTER_ASPECT.pioneer + 0.05;
+        if (k % 3 !== 2) for (let x = -seg / 2 + pw / 2 + 0.1; x < seg / 2 - pw / 2; x += pw) posterPlane(b, face.clone().multiply(new Matrix4().setPosition(x, 2.0, 0)), ph, 'pioneer');
+        else atlasPlane(b, face.clone().multiply(new Matrix4().setPosition(0, 3.6, 0)), seg - 1, 1.5, (['slogan0', 'slogan1', 'slogan2', 'slogan3'] as AtlasKey[])[(i + k) % 4]!);
+        if (k % 4 === 1) cctv(b, face.clone().multiply(new Matrix4().setPosition(0, 4.6, 0)));
+      }
     }
   }
 }
@@ -449,7 +467,34 @@ export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, mat
  * concrete canopy and the hammer-and-sickle crest, red banners down some fronts, the Pioneer mosaic on
  * some gable ends; Altbau gets an occasional banner; pavilions get their state shop sign.
  */
+/** A wall camera (the state watches): bracket, housing, lens and a red LED; frame `m` on the wall, z out. */
+export function cctv(b: ChunkBuilder, m: Matrix4, turn = 0): void {
+  const M = b.mm, f = m.clone().multiply(new Matrix4().makeRotationY(turn));
+  b.box(M.iron, f.clone().multiply(new Matrix4().setPosition(0, 0, 0.12)), 0.08, 0.08, 0.24, [0.55, 0.55, 0.55]);
+  const body = f.clone().multiply(new Matrix4().makeRotationX(0.45).setPosition(0, -0.05, 0.38));
+  b.box(M.stucco, body, 0.22, 0.2, 0.42, [1.25, 1.25, 1.22]);
+  b.box(M.stucco, body.clone().multiply(new Matrix4().setPosition(0, 0.12, 0.04)), 0.28, 0.03, 0.5, [0.9, 0.9, 0.88]);
+  b.geo(M.dark, cached('camLens', () => new CircleGeometry(0.07, 10)), body.clone().multiply(new Matrix4().setPosition(0, 0, 0.215)));
+  b.geo(M.lampGlass, cached('camLed', () => new SphereGeometry(0.025, 6, 4)), body.clone().multiply(new Matrix4().setPosition(0.07, 0.06, 0.215)), [2.2, 0.25, 0.2]);
+}
+
+/** A row of the same Pioneer poster pasted side by side, slightly askew, some torn off. */
+function posterRow(b: ChunkBuilder, r: Run, from: number, to: number, y: number, h: number, rng: Rng, n0 = 0.09): void {
+  const w = h * POSTER_ASPECT.pioneer + 0.06;
+  for (let s = from + w / 2, k = 0; s < to - w / 2; s += w, k++) {
+    if (rng.next() < 0.12) continue;
+    posterPlane(b, r.mat(s, y + rng.range(-0.06, 0.06), n0 + (k % 2) * 0.005, 0, rng.range(-0.04, 0.04)), h, 'pioneer');
+  }
+}
+
+/**
+ * Step 5 dressing of the district's ordinary buildings (only on this map), over the top on purpose
+ * (Johannes 2026-11-18: a wannabe happy propaganda state with strong control): banners down every slab
+ * and most Altbau fronts, the Pioneer poster as the gable mural, rows of the same poster at eye height,
+ * slogan bands, wall cameras; pavilions get their state shop sign.
+ */
 export function dressAlexLots(chunkOf: (x: number, z: number) => ChunkBuilder, lots: Lot[], ground: (x: number, z: number) => number, lotCut: (l: Lot) => { id: number; y: number } | undefined): void {
+  const slogans: AtlasKey[] = ['slogan0', 'slogan1', 'slogan2', 'slogan3'];
   for (const l of lots) {
     if (l.kind === 'tree' || l.kind === 'special' || l.kind === 'house' || l.ruin) continue;
     const rng = new Rng(l.seed * 17 + 3), b = chunkOf(l.x, l.z), y0 = ground(l.x, l.z), cut = lotCut(l);
@@ -469,27 +514,57 @@ export function dressAlexLots(chunkOf: (x: number, z: number) => ChunkBuilder, l
         atlasPlane(b, sign.clone().multiply(new Matrix4().makeRotationY(Math.PI)), sw, 1.0, key);
         for (const dx of [-sw / 2 + 0.3, sw / 2 - 0.3]) b.box(b.mm.iron, fr.mat(fs.len / 2 + dx, GROUND_H + 0.15, -0.7), 0.08, 0.5, 0.08, [0.6, 0.6, 0.6]);
         b.box(b.mm.concrete, fr.mat(fs.len / 2, GROUND_H - 0.35, 0.25), fs.len + 0.2, 0.3, 0.6, CREAM);
+        // The roof carries a camera too.
+        cctv(b, fr.mat(fs.len - 0.6, GROUND_H + 0.2, 0.05));
         return;
       }
       if (l.kind === 'platte') {
-        // The painted banners of the 2D game hang down the front, red and blue.
-        if (l.floors >= 4 && rng.next() < 0.55) for (let k = 0; k < (fs.len > 22 ? 2 : 1); k++) posterPlane(b, fr.mat(fs.len * (k ? rng.range(0.6, 0.85) : rng.range(0.15, 0.4)), Math.min(H - 2.6, 8), 0.08), 4.4, rng.pick<PosterKey>(['red', 'blue']));
-        // Pioneer mosaic on a gable end.
-        const gable = sides.findIndex((s) => s.face === 1 || s.face === 3);
-        if (gable >= 0 && l.floors >= 3 && rng.next() < 0.5) {
-          const gs = sides[gable]!, gr = runOf(gable), mh = Math.min(H - 4.6, (gs.len - 1.2) / POSTER_ASPECT.pioneer);
-          posterPlane(b, gr.mat(gs.len / 2, GROUND_H + 0.3 + mh / 2, 0.06), mh, 'pioneer');
+        // Banners down every slab, two or three on long fronts, red and blue.
+        if (l.floors >= 3) {
+          const n = fs.len > 26 ? 3 : fs.len > 16 ? 2 : 1;
+          for (let k = 0; k < n; k++) posterPlane(b, fr.mat(fs.len * ((k + 0.5) / n) + rng.range(-1, 1), Math.min(H - 2.8, 9), 0.08), 4.8, k % 2 ? 'blue' : 'red');
         }
+        // The Pioneer poster as the mural on every gable end, as big as the wall allows.
+        for (const [gi, gs] of sides.entries()) {
+          if ((gs.face !== 1 && gs.face !== 3) || l.floors < 3 || gs.len < 6) continue;
+          const gr = runOf(gi), mh = Math.min(H - 1.4, (gs.len - 0.8) / POSTER_ASPECT.pioneer);
+          posterPlane(b, gr.mat(gs.len / 2, 0.7 + mh / 2, 0.06), mh, 'pioneer');
+        }
+        // A slogan band over the ground floor.
+        if (fs.len > 12 && rng.next() < 0.6) atlasPlane(b, fr.mat(fs.len / 2, GROUND_H + 0.45, 0.1), Math.min(fs.len - 2, 10), 1.6, rng.pick(slogans));
+      }
+      if (l.kind === 'altbau' && l.floors >= 1 && rng.next() < 0.55) posterPlane(b, fr.mat(fs.len * rng.range(0.3, 0.7), GROUND_H + FLOOR_H * Math.min(1, l.floors - 0.5), 0.08), 3.6, rng.pick<PosterKey>(['red', 'blue']));
+      if (l.kind === 'altbau' && l.floors >= 2 && fs.len > 11 && rng.next() < 0.3) atlasPlane(b, fr.mat(fs.len / 2, GROUND_H + 0.4, 0.1), Math.min(fs.len - 2, 8), 1.3, rng.pick(slogans));
+      // Cameras watch about half the fronts, at the corner over the first floor.
+      if (rng.next() < 0.55) cctv(b, fr.mat(rng.next() < 0.5 ? 0.8 : fs.len - 0.8, 3.4, 0.02), rng.range(-0.5, 0.5));
+    });
+    // Pioneer posters at eye height, the cue the game camera sees (`docs/maps/landmarks.md`): a row of
+    // them on long fronts, one or a torn pair elsewhere; about three in four fronts.
+    if (rng.next() < 0.75) dress(() => {
+      if (fs.len > 12 && rng.next() < 0.5) {
+        const a = rng.range(0.5, fs.len * 0.3);
+        posterRow(b, fr, a, a + Math.min(fs.len - a - 0.5, rng.range(5, 9)), 1.9, 1.5, rng);
         return;
       }
-      if (l.kind === 'altbau' && l.floors >= 2 && rng.next() < 0.3) posterPlane(b, fr.mat(fs.len * rng.range(0.3, 0.7), GROUND_H + FLOOR_H, 0.08), 3.6, rng.pick<PosterKey>(['red', 'blue']));
+      const n = rng.next() < 0.4 ? 2 : 1, s0 = rng.range(1.3, Math.max(1.4, fs.len - 2.8));
+      for (let k = 0; k < n; k++) posterPlane(b, fr.mat(s0 + k * 1.45, 1.85 + k * 0.08, 0.09 + k * 0.01, 0, rng.range(-0.06, 0.06)), 1.5, 'pioneer');
     });
-    // Pioneer posters pasted at eye height, the cue the game camera sees (`docs/maps/landmarks.md`): one,
-    // sometimes a torn pair, on about half of the fronts.
-    if (rng.next() < 0.5) dress(() => {
-      const n = rng.next() < 0.3 ? 2 : 1, s0 = rng.range(1.3, Math.max(1.4, fs.len - 2.8));
-      for (let k = 0; k < n; k++) posterPlane(b, fr.mat(s0 + k * 1.3, 1.85 + k * 0.08, 0.09 + k * 0.01, 0, rng.range(-0.06, 0.06)), 1.5, 'pioneer');
-    });
+  }
+}
+
+/**
+ * Giant Pioneer murals on the blank fire walls of the closed map edge (`brandwand` props): the two
+ * Pioneers looking the same way, 7 m tall, facing into the district. Their walls stand 8.5 m and more.
+ */
+export function dressAlexEdge(chunkOf: (x: number, z: number) => ChunkBuilder, props: readonly Prop[], ground: (x: number, z: number) => number): void {
+  let k = 0;
+  for (const p of props) {
+    if (p.kind !== 'brandwand' || p.size < 6) continue;
+    if (k++ % 3 === 2) continue;
+    const b = chunkOf(p.x, p.z), h = Math.min(7.2, (p.size - 1) / POSTER_ASPECT.pioneer);
+    const m = new Matrix4().makeRotationY(p.rot).setPosition(p.x, ground(p.x, p.z) + 0.8 + h / 2, p.z).multiply(new Matrix4().setPosition(0, 0, 0.14));
+    posterPlane(b, m, h, 'pioneer');
+    cctv(b, new Matrix4().makeRotationY(p.rot).setPosition(p.x + Math.cos(p.rot) * (p.size / 2 - 0.6), ground(p.x, p.z) + 4, p.z - Math.sin(p.rot) * (p.size / 2 - 0.6)).multiply(new Matrix4().setPosition(0, 0, 0.1)));
   }
 }
 

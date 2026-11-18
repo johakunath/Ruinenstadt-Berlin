@@ -28,7 +28,7 @@ import { BatchSet } from './batch';
 import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
-import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexLots } from './alex-world';
+import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexEdge, dressAlexLots } from './alex-world';
 import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
 import { NIGHT_SKY, type Sky } from './sky';
 import { isLargeProp } from './layers';
@@ -2286,6 +2286,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') buildStadtbahn(chunkOf, mats, v);
     buildArches(chunkOf, mats, m);
     dressAlexLots(chunkOf, lots, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
+    dressAlexEdge(chunkOf, props, (x, z) => surfaceAt(m, x, z));
     buildStrausberger(chunkOf, m);
   }
   if (m.tunnel) {
