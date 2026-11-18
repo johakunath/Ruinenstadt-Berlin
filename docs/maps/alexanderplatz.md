@@ -6,18 +6,18 @@ District 3: 1989, frozen in autumn; the GDR kept going and grew wild (clockwork,
 
 | Step | State |
 |---|---|
-| 1 Concept | Three layouts in [`../mockups/alex-layouts.svg`](../mockups/alex-layouts.svg) (2026-11-18): A Spreeinsel-Runde, B Magistrale, C Großer Ring. Waiting for Johannes' pick |
+| 1 Concept | Three layouts in [`../mockups/alex-layouts.svg`](../mockups/alex-layouts.svg) (2026-11-18). Johannes picked **C Großer Ring** (2026-11-18). Plan and decisions: `docs/tasks/m15-alexanderplatz.md` |
 | 2 Geography check | Done for the landmarks below |
 | 3+ | Not started |
 
-## Open decisions (Johannes)
+## Decisions (Johannes, 2026-11-18)
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 |---|---|---|
-| AQ1 | Layout A, B or C | B: the strongest GDR identity (Platte, pavilions, Zuckerbäcker, Karl-Marx-Allee) and the most different from Köpenick (no old town island) |
-| AQ2 | Time of day: story says daylight district; light rules and look are night-based | Late afternoon / golden hour as on the board: lamps and lit greenhouses still read, one new sky and grade preset, light coverage rule relaxed |
-| AQ3 | Zone bosses: 2D has only the Koloss | Elite-sized variants of the new district types (giant Uhrwerkläufer, Wurzler-Mutter, Brigadier) in M12 style; decide with the enemy task |
-| AQ4 | Order: migration lists Xhain before Alexanderplatz | Johannes asked for Alexanderplatz first (2026-11-18) |
+| AQ1 | Layout | C Großer Ring (both worlds) |
+| AQ2 | Time of day | Afternoon, golden hour, brighter than the other districts |
+| AQ3 | Bosses | Larger versions of the district enemies per zone; the Weltzeituhr wakes up as the final boss |
+| AQ4 | Order | After Xhain; build on the Xhain map format once PR #46 is merged |
 
 ## Geography check (OpenStreetMap Nominatim, 2026-11-18)
 

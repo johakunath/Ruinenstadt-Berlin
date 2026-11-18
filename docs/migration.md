@@ -27,6 +27,7 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | H1 Custom hero: real clothing, outfits, inventory preview, left-hand grip | PC · Blender · Opus high (spec: Fable 5.2) | steps 1–5 done 2026-11-17 (PRs #36–#41): left-hand IK, coat, vest, boots, sneakers, gloves, scarf, equipment swap, turnable doll; open: step 6 textures (Codex), step 7 measurement (Johannes), equipment variety (later): `docs/tasks/h1-hero.md` |
 | L1 Legendary item powers | Fable 5.2 | done (PR #18): `docs/tasks/l1-legendary-powers.md` |
 | G1 Weapon identity: three Umbau cards per weapon (option C, decided 2026-11-16) | Fable 5.2 | done, playtest open: `docs/tasks/g1-build-variety.md` |
+| M15 Alexanderplatz, district 3: layout C "Großer Ring" (Johannes, 2026-11-18), afternoon light, Weltzeituhr wakes up as final boss | Claude · Opus high; boss spec Fable high | concept, geography check and model research done (PR #49); data and build wait for Xhain (PR #46) in `main`: `docs/tasks/m15-alexanderplatz.md` |
 | V1 Visibility: back yards hidden behind buildings, enemy contours behind buildings (playtest 2026-11-17) | Claude · Opus high (layout rule: mockup first) | open: `docs/tasks/v1-visibility.md` |
 | U3 Menus, options and Steuerung graphics exactly as 2D; light start screen; fullscreen button (playtest 2026-11-17) | Claude · Opus medium | done (2026-11-17), playtest open: `docs/tasks/u3-menu-2d.md` |
 | K1 Klinge icons: Rostige Klinge, Stahlklinge, Hackmesser (Johannes, 2026-11-17) | Codex | open: `docs/asset-pipeline.md` › Portrait and icon queue |
