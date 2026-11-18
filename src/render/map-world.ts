@@ -1,7 +1,8 @@
 // Builds an expedition map (M11) from `src/data/map.ts`: ground with water banks, street ribbons,
 // bridges, generated Altbau blocks and houses, instanced trees, landmarks and props. Everything is
-// grouped in chunks so the camera frustum culls what is off screen. Lamps are light *spots*; a
-// fixed pool of point lights follows the hero (constant light count, no shader recompiles).
+// grouped in 32 m chunks so the camera frustum culls what is off screen (the view reaches about 40 m).
+// Lamps are light *spots*; a fixed pool of point lights follows the hero (constant light count, no
+// shader recompiles).
 import {
   BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
@@ -31,7 +32,9 @@ import {
 } from './world';
 
 type RGB = readonly [number, number, number];
-const CHUNK = 48;
+const CHUNK = 32;
+/** Ground chunks: the multiple of the ground grid step nearest below CHUNK, so chunk edges stay on the grid `meshSurface` samples. */
+const GROUND_CHUNK = Math.floor(CHUNK / GROUND_STEP) * GROUND_STEP;
 const tmpScale = new Matrix4();
 
 interface LightSpot {
@@ -261,10 +264,10 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   // M15 bridge terraces (Warschauer Brücke) keep the ground below their deck; `xhain-world.ts` draws the deck.
   const underDeck = (x: number, z: number): boolean => m.terraces.some((t) => t.bridge && (inPoly(t.poly, x, z) || onStair(t, x, z) !== null));
   const height = (x: number, z: number): number => (isWater(m, x, z) && !onBridge(m, x, z) ? -1.4 : underDeck(x, z) ? 0 : heightAt(m, x, z));
-  for (let cz = B.minZ; cz < B.maxZ; cz += CHUNK) {
-    for (let cx = B.minX; cx < B.maxX; cx += CHUNK) {
-      const n = Math.ceil(Math.min(CHUNK, B.maxX - cx) / step);
-      const k = Math.ceil(Math.min(CHUNK, B.maxZ - cz) / step);
+  for (let cz = B.minZ; cz < B.maxZ; cz += GROUND_CHUNK) {
+    for (let cx = B.minX; cx < B.maxX; cx += GROUND_CHUNK) {
+      const n = Math.ceil(Math.min(GROUND_CHUNK, B.maxX - cx) / step);
+      const k = Math.ceil(Math.min(GROUND_CHUNK, B.maxZ - cz) / step);
       const pos: number[] = [];
       const col: number[] = [];
       const uv: number[] = [];
@@ -1830,7 +1833,7 @@ function buildLandmark(b: ChunkBuilder, l: Landmark): void {
 
 // ---------------------------------------------------------------- assembly
 
-export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = []): World {
+export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean } = {}): World {
   const mats = makeMapMats(materials);
   const group = new Group();
   group.name = m.id;
@@ -1933,7 +1936,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     const occluder = b.solid.occluderMesh();
     if (occluder) group.add(occluder);
     for (const mesh of b.solid.meshes()) {
-      mesh.castShadow = true;
+      // `?shadows=boxes` (A/B test): only caster boxes, instanced things and characters cast.
+      mesh.castShadow = !opts.boxShadows;
       mesh.receiveShadow = true;
       group.add(mesh);
     }
@@ -2045,10 +2049,12 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         bt.group.position.y = 0.04 * Math.sin(simTime * 1.3);
       }
     },
-    follow(x: number, z: number): void {
+    follow(x: number, z: number, shadow: boolean): void {
       hx = x;
       hz = z;
       for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
+      // The light moves only with a fresh shadow map, or static shadows would swim between renders.
+      if (!shadow) return;
       // Snap the shadow frustum to whole texels so shadows do not shimmer while walking.
       const sx = Math.round(x / texel) * texel;
       const sz = Math.round(z / texel) * texel;

@@ -39,7 +39,7 @@ Fable 5.2 is scarce (lower limit, access may end): spend it where it is clearly 
 | `src/input` | Devices → move vector plus buffered actions. Polled every render frame, also during hitstop |
 | `src/audio`, `src/ui` | WebAudio synth, DOM overlay |
 | `assets/` | Built GLBs. Every file has a row in `assets/LICENSES.md` |
-| `tools/` | Asset build and dev tools (`screenshot.mjs`, `sequence.mjs`, `clip-swing.mjs`, `clip-sheet.mjs`, `enemy-sheet.mjs`, `build-creatures.mjs`, `balance.mjs`) |
+| `tools/` | Asset build and dev tools (`screenshot.mjs`, `sequence.mjs`, `clip-swing.mjs`, `clip-sheet.mjs`, `enemy-sheet.mjs`, `build-creatures.mjs`, `balance.mjs`, `passes.mjs`) |
 
 Every hit on an enemy goes through `strike` and every hit on the hero through `hurtPlayer` (`src/sim/combat.ts`); blessing rules live there. Powers and consumables: `src/sim/abilities.ts`; blessing choice: `blessings.ts`; events, hidden blessings, shrines, trader: `runcontent.ts`. The sim reports through `sim.events`; the loop in `src/main.ts` hands them to renderer, audio and rumble. A `Level` (`src/sim/level.ts`) holds colliders in a spatial hash plus a walk grid (water); the encounter director (`src/sim/director.ts`) runs waves on expedition maps. Enemies (M12): what a type does beyond walking up and striking is in `src/sim/ai.ts` (specials: wind-up, action, punish window; boss patterns); marked zones, shots, ground hazards and roar rings live in `src/sim/threats.ts` and hurt through `threatHit`; bodies in `src/render/enemies.ts`. Maps render in 48 m chunks (`src/render/map-world.ts`). Buildings and large vehicles remain opaque; a depth-tested hero contour appears only behind their explicitly classified geometry (`src/render/hero-outline.ts`). Small props, enemies, lamps and trees never trigger it; do not add proximity fades or material-wide clipping.
 
@@ -64,6 +64,6 @@ Every hit on an enemy goes through `strike` and every hit on the hero through `h
 | `npm run assets` | Rebuild `assets/characters/zombie.glb` and `anims.glb` from `assets-src/` (`tools/fetch-assets.sh` downloads it) |
 | `npm run assets:hero` | Rebuild `assets/characters/hero.glb` through headless Blender (`$BLENDER`, PATH or the Windows default path; `docs/tasks/h1-hero.md`) |
 
-URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero).
+URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero), `?shadows=boxes` (A/B: only caster boxes shadow, not map chunks).
 
 CI runs type check, unit tests, build and the smoke test on every PR and deploys `main` to GitHub Pages. Cloud browsers have no real GPU: measure performance only on the PC and the Tab S9.

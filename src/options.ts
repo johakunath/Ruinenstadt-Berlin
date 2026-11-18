@@ -1,6 +1,7 @@
 // Start options from the URL and from the options menu (stored in localStorage).
 //   ?profile=Qualität|Leistung   ?debug=hit,perf,flow   ?stress=40   ?seed=7
 //   ?map=hof (gate 1 courtyard), tunnel (S3), xhain (M15)   ?mapscale=1.3 (stretch Köpenick)   ?at=4 (start at encounter 4)
+//   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
 import { PROFILES, type ProfileId } from './render/profile';
 
 export interface Options {
@@ -25,6 +26,8 @@ export interface Options {
   autostart: boolean;
   /** ?cam=distance,pitch: camera override for close-up art checks. */
   cam?: { distance: number; pitch: number };
+  /** ?shadows=boxes: map chunk meshes cast no shadow (A/B test on the tablet; default off). */
+  boxShadows: boolean;
   /** Köpenick (default) or the gate 1 courtyard. */
   map: 'koepenick' | 'hof' | 'tunnel' | 'xhain';
   mapScale: number;
@@ -109,6 +112,7 @@ export function readOptions(): Options {
     telemetry: stored.telemetry ?? true,
     autostart: q.has('autostart'),
     cam: parseCam(q.get('cam')),
+    boxShadows: q.get('shadows') === 'boxes',
     map: (['hof', 'tunnel', 'xhain'] as const).find((k) => k === q.get('map')) ?? 'koepenick',
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),

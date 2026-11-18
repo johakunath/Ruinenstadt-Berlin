@@ -25,6 +25,7 @@ import { leapHeight } from '../sim/abilities';
 import type { Look } from './looks';
 import { Materials } from './materials';
 import { Post } from './post';
+import { ShadowClock } from './shadow-rate';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
@@ -40,6 +41,8 @@ export interface RendererOptions {
   look: Look;
   debugHit: boolean;
   debugFlow: boolean;
+  /** `?shadows=boxes`: map chunk meshes cast no shadow, only caster boxes, instanced props and characters. */
+  boxShadows?: boolean;
   /** ?cam=distance,pitch for close-up checks. */
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
@@ -95,6 +98,8 @@ export class GameRenderer {
   private readonly heroLight = new PointLight(0xffe2bd, 9, 7, 1.4);
   private time = 0;
   private height = 720;
+  /** Sun shadow map rate (profile `shadowInterval`). */
+  private readonly shadowClock: ShadowClock;
 
   private constructor(
     private readonly renderer: WebGLRenderer,
@@ -103,6 +108,7 @@ export class GameRenderer {
     private readonly materials: Materials,
     private readonly opts: RendererOptions,
   ) {
+    this.shadowClock = new ShadowClock(opts.profile.shadowInterval);
     const Y = COURTYARD.yard;
     const B = opts.map?.def.bounds;
     this.cam = new FollowCamera(
@@ -150,9 +156,11 @@ export class GameRenderer {
     renderer.toneMapping = ACESFilmicToneMapping;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = PCFShadowMap;
+    // Shadow renders are requested per frame (`ShadowClock`, `Post.render`), never automatic.
+    renderer.shadowMap.autoUpdate = false;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
-    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables) : buildWorld(materials);
+    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows }) : buildWorld(materials);
     const assets = await loadCharacters(materials);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
@@ -184,6 +192,7 @@ export class GameRenderer {
     this.renderer.setSize(w, h, false);
     this.post.setSize(w, h, dpr);
     this.cam.setAspect(w / h);
+    this.shadowClock.invalidate();
   }
 
   /**
@@ -194,7 +203,8 @@ export class GameRenderer {
     for (const view of this.views.values()) this.release(view);
     this.views.clear();
     this.cam.snap(sim.player.x, sim.player.z, groundY(sim.player.x, sim.player.z));
-    this.world.follow?.(sim.player.x, sim.player.z);
+    this.world.follow?.(sim.player.x, sim.player.z, true);
+    this.shadowClock.invalidate();
     this.world.breakables?.reset();
     for (const b of sim.breakables) if (b.broken) this.world.breakables?.broke(b.id);
   }
@@ -358,7 +368,8 @@ export class GameRenderer {
     this.heroZ = pz;
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
-    this.world.follow?.(px, pz);
+    const shadows = this.shadowClock.tick(dt);
+    this.world.follow?.(px, pz, shadows);
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);
@@ -367,7 +378,7 @@ export class GameRenderer {
     this.debug?.update(sim, alpha);
 
     this.renderer.info.reset();
-    this.post.render(dt);
+    this.post.render(dt, shadows);
     this.perf.calls = this.renderer.info.render.calls;
     this.perf.triangles = this.renderer.info.render.triangles;
   }
