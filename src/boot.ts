@@ -8,7 +8,8 @@ import '@fontsource/barlow-condensed/latin-700.css';
 import '@fontsource/pirata-one/latin-400.css';
 import './ui/style.css';
 import { isDifficulty } from './data/difficulty';
-import { reloadWith, RESUME_KEY } from './options';
+import { GO_KEY, reloadWith, RESUME_KEY } from './options';
+import { campOpen, LINES } from './data/lines';
 import { optionsScreen } from './ui/options-screen';
 import { bindSettings, initFullscreenButton, opts } from './ui/settings';
 import { startScreen } from './ui/start';
@@ -21,7 +22,7 @@ bindSettings();
 initFullscreenButton();
 const title = start.root;
 const sub = document.getElementById('title-sub')!;
-if (opts.map === 'tunnel') sub.textContent = 'S3-Tunnel · Richtung Warschauer Straße';
+if (opts.map === 'tunnel') sub.textContent = `${LINES[opts.line]?.id ?? 'S3'}-Tunnel · Richtung Warschauer Straße`;
 else if (opts.map === 'hof') sub.textContent = 'Köpenick · Hinterhof bei Nacht';
 
 // The few save facts the screen needs, read without the sim (main.ts reads the real save on load).
@@ -31,11 +32,14 @@ const peek = ((): { difficulty?: unknown; run?: { map?: string; index?: number }
   if (!persist) return null;
   try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
 })();
-const mapName = opts.map === 'tunnel' ? 'S3-Tunnel' : opts.map === 'hof' ? 'Hof' : 'Köpenick';
+const mapName = opts.map === 'tunnel' ? `${LINES[opts.line]?.id ?? 'S3'}-Tunnel` : opts.map === 'hof' ? 'Hof' : 'Köpenick';
 const run = opts.map !== 'hof' && peek?.run?.map === mapName ? peek.run : null;
 start.setResume(run ? `Kampf ${(run.index ?? 0) + 1}` : null, isDifficulty(peek?.difficulty) ? peek.difficulty : start.difficulty);
 document.getElementById('go-tunnel')!.hidden = opts.map === 'hof' || (opts.map !== 'tunnel' && !peek?.profile?.inventory?.camp?.freed?.includes(0));
 if (opts.map === 'tunnel') document.getElementById('go-tunnel')!.innerHTML = '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>';
+// M20: the camp opens with the S3 (Johannes, 2026-11-18); before that no button leads there.
+const freed = peek?.profile?.inventory?.camp?.freed;
+document.getElementById('open-camp')!.hidden = !campOpen(freed) || opts.map === 'hof';
 
 type Game = typeof import('./main');
 let game: Promise<Game | null> | null = null;
@@ -63,7 +67,10 @@ title.addEventListener('click', e => {
   const b = (e.target as Element).closest<HTMLButtonElement>('button[id]');
   if (!b || !title.contains(b)) return;
   if (game) { e.stopImmediatePropagation(); return; }
-  if (b.id === 'play' || b.id === 'resume' || b.id === 'open-camp') {
+  if (b.id === 'open-camp') {
+    e.stopImmediatePropagation();
+    reloadWith({ map: 'lager' });
+  } else if (b.id === 'play' || b.id === 'resume') {
     e.stopImmediatePropagation();
     void loadGame().then(m => { if (m) b.click(); });
   } else if (b.id === 'go-tunnel') {
@@ -79,13 +86,20 @@ title.addEventListener('click', e => {
   }
 }, true);
 
-let resumeNow = false;
-try { resumeNow = sessionStorage.getItem(RESUME_KEY) === '1'; sessionStorage.removeItem(RESUME_KEY); } catch { /* no session storage */ }
-if (opts.autostart) {
+let resumeNow = false, goNow = false;
+try { resumeNow = sessionStorage.getItem(RESUME_KEY) === '1'; sessionStorage.removeItem(RESUME_KEY); goNow = sessionStorage.getItem(GO_KEY) === 'play'; sessionStorage.removeItem(GO_KEY); } catch { /* no session storage */ }
+if (opts.map === 'lager') {
+  // M20: the walkable camp has no title; it is reachable only once the S3 is cleared.
+  if (!opts.autostart && persist && !campOpen(freed)) reloadWith({ map: 'koepenick' });
+  else { title.hidden = true; void loadGame(); }
+} else if (opts.autostart) {
   title.hidden = true;
   void import('./main');
 } else if (resumeNow && run) {
   void loadGame().then(m => { if (m) document.getElementById('resume')!.click(); });
+} else if (goNow) {
+  // From the camp's network map: straight into the expedition (a waiting checkpoint goes on).
+  void loadGame().then(m => { if (m) document.getElementById(run ? 'resume' : 'play')!.click(); });
 } else {
   start.root.querySelector<HTMLElement>(run ? '#resume' : '#play')?.focus({ preventScroll: true });
 }

@@ -802,6 +802,7 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .camp-panel button:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
 .camp-panel .menu-x { margin-left: auto; font-size: 26px; line-height: 1; padding: 0; border: 0; background: none; }
 .camp-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 200px minmax(0, 1fr); }
+.camp-cols.single { grid-template-columns: minmax(0, 1fr); }
 .camp-list { display: flex; flex-direction: column; gap: 4px; padding: 8px; overflow-y: auto; border-right: 1px solid #3a342c; }
 .camp-panel .stl { display: flex; justify-content: space-between; align-items: center; gap: 6px; text-align: left; }
 .stl.on { border-color: #ef9f27; background: #2e2a1e; }
@@ -980,3 +981,20 @@ body:has(#title:not([hidden])) #run-actions { display: none; }
 #reveal-hint span { font-size: 14px; letter-spacing: 0.06em; color: var(--ochre); animation: reveal-pulse 1.6s ease-in-out infinite; }
 @keyframes reveal-pulse { 50% { opacity: 0.45; } }
 body:has(#reveal-hint:not([hidden])) #actions, body:has(#reveal-hint:not([hidden])) #touch, body:has(#reveal-hint:not([hidden])) #bossbar { opacity: 0.25; }
+
+/* M20: the S+U network map at the camp's train (2D netSVG colors). */
+#netboard { z-index: 45; }
+.net-panel { width: min(760px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px; background: #171917; border: 1px solid #665745; border-radius: 6px; color: #ead9c0; overflow: auto; text-transform: none; }
+.net-panel .menu-head { display: flex; align-items: center; } .net-panel h2 { margin: 0; font-size: 18px; letter-spacing: .06em; }
+.net-panel .tr-x { margin-left: auto; width: 44px; height: 44px; padding: 0; background: rgba(13, 9, 7, .62); border: 1px solid #665745; color: #ead9c0; font: 400 32px/1 var(--f-ui); border-radius: 4px; }
+svg.net { width: 100%; height: auto; border-radius: 6px; font-family: var(--f-ui); }
+svg.net .nett { fill: #ead9c0; font-size: 11px; font-weight: 700; } svg.net .netb { fill: #fff; font-size: 8px; font-weight: 700; text-anchor: middle; }
+svg.net .neto { fill: #ef9f27; font-size: 7px; text-anchor: middle; } svg.net .mname { fill: #ead9c0; font-size: 10px; font-weight: 700; } svg.net .mname.lock { fill: #6a6058; }
+svg.net .nets { fill: #a8957d; font-size: 7px; } svg.net g[role=button] { cursor: pointer; outline: none; } svg.net g.lock { cursor: default; }
+svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
+.net-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #202520; border: 1px solid #3a342c; border-radius: 4px; }
+.net-card b { display: block; font-size: 15px; } .net-card small { display: block; color: #b5aa98; font-size: 12px; }
+.net-card button { flex: none; min-height: 44px; padding: 6px 14px; border: 1px solid #665745; background: #252924; color: #ead9c0; font: inherit; border-radius: 4px; }
+.net-card button.primary { background: #8b3a2b; border-color: #c2453a; } .net-card button:disabled { opacity: .4; }
+.net-card button:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
+.lbadge { display: inline-block; padding: 0 6px; color: #fff; font-size: 12px; margin-right: 4px; }

@@ -17,7 +17,7 @@ export const PALETTE = {
   scarf: '#b8261c',
 } as const;
 
-function canvas(w: number, h: number): [HTMLCanvasElement, Ctx] {
+export function canvas(w: number, h: number): [HTMLCanvasElement, Ctx] {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
@@ -32,7 +32,7 @@ function rgb(hex: string): [number, number, number] {
 }
 
 /** Shifts a hex color in brightness (-1..1) and returns a CSS color. */
-function shade(hex: string, amount: number, alpha = 1): string {
+export function shade(hex: string, amount: number, alpha = 1): string {
   const [r, g, b] = rgb(hex);
   const f = (v: number): number => Math.round(Math.max(0, Math.min(255, amount >= 0 ? v + (255 - v) * amount : v * (1 + amount))));
   return `rgba(${f(r)},${f(g)},${f(b)},${alpha})`;
@@ -56,7 +56,7 @@ interface StrokeOpts {
 }
 
 /** Visible brush strokes: the main painterly ingredient. */
-function strokes(ctx: Ctx, rng: Rng, w: number, h: number, o: StrokeOpts): void {
+export function strokes(ctx: Ctx, rng: Rng, w: number, h: number, o: StrokeOpts): void {
   ctx.lineCap = 'round';
   for (let i = 0; i < o.count; i++) {
     const x = rng.range(0, w);
@@ -79,7 +79,7 @@ function strokes(ctx: Ctx, rng: Rng, w: number, h: number, o: StrokeOpts): void 
 }
 
 /** Soft blotches for large-scale tone variation. */
-function mottle(ctx: Ctx, rng: Rng, w: number, h: number, count: number, colors: string[], radius: [number, number], alpha: number): void {
+export function mottle(ctx: Ctx, rng: Rng, w: number, h: number, count: number, colors: string[], radius: [number, number], alpha: number): void {
   for (let i = 0; i < count; i++) {
     const x = rng.range(0, w);
     const y = rng.range(0, h);
@@ -118,7 +118,7 @@ function crack(ctx: Ctx, rng: Rng, x: number, y: number, steps: number, step: nu
   path(0, 0);
 }
 
-function toTexture(c: HTMLCanvasElement, repeat = true, anisotropy = 4): CanvasTexture {
+export function toTexture(c: HTMLCanvasElement, repeat = true, anisotropy = 4): CanvasTexture {
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = RepeatWrapping;
@@ -127,7 +127,7 @@ function toTexture(c: HTMLCanvasElement, repeat = true, anisotropy = 4): CanvasT
 }
 
 /** Pulls every pixel toward the mean color (calmer surfaces). */
-function flatten(ctx: Ctx, w: number, h: number, amount: number): void {
+export function flatten(ctx: Ctx, w: number, h: number, amount: number): void {
   if (amount <= 0) return;
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;

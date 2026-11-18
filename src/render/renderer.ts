@@ -35,6 +35,9 @@ import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import type { BreakableDef } from '../sim/breakables';
+import { campPlaceAt, type CampLayout } from '../data/camp-map';
+import { campStates } from '../sim/camp';
+import { CampStationsView } from './camp-stations';
 
 export interface RendererOptions {
   profile: Profile;
@@ -90,6 +93,8 @@ export class GameRenderer {
   private readonly weather: Weather;
   private readonly loot = new LootView();
   private readonly content: ContentView;
+  private readonly campView: CampStationsView | null;
+  private readonly campLayout: CampLayout | null;
   private readonly hero: HeroView;
   private readonly views = new Map<number, EnemyView>();
   /** V1: living enemies nearest the hero, for their contour behind buildings (half height in m). */
@@ -132,6 +137,10 @@ export class GameRenderer {
     this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : {}, opts.profile.embers / 140);
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.content = new ContentView(assets, materials);
+    // M20: the walkable camp's stations (build sites, levels, keepers) and their rings.
+    this.campLayout = def?.camp ?? null;
+    this.campView = def?.camp ? new CampStationsView(assets, materials, def.camp) : null;
+    if (this.campView) this.scene.add(this.campView.group);
     this.scene.add(this.fx.group, this.loot.group, this.content.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
@@ -374,6 +383,7 @@ export class GameRenderer {
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);
+    if (this.campView && this.campLayout) this.campView.update(campStates(sim), this.time, campPlaceAt(this.campLayout, px, pz)?.id ?? null);
     this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap, this.hero.thrustTipY());
     this.weather.update(dt, px, pz, this.time);
     this.debug?.update(sim, alpha);

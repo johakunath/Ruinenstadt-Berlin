@@ -13,6 +13,7 @@ import { onFerryPier } from '../sim/ferry';
 import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
 import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, type SpecialKind } from './lots';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
+import { onCampFloor, type CampLayout } from './camp-map';
 
 export type Pt = readonly [number, number];
 
@@ -182,6 +183,8 @@ export interface MapDef {
   flavor?: 'neon' | 'gdr';
   /** M19 U-Bahn tunnel: only these tubes are walkable, everything else is rock (no lots, no streets). */
   tunnel?: { tubes: Tube[] };
+  /** M20 walkable camp: floor polygons, walls, stations and rings (`src/data/camp-map.ts`). */
+  camp?: CampLayout;
   /** M16b/M19 side passage surprises: fixed hidden blessings and sleeping guards (a mini-boss). */
   hiddenSpots?: Point[];
   guards?: Level['guards'];
@@ -887,6 +890,7 @@ function lotFront(lots: Lot[], x: number, z: number, r: number): boolean {
  */
 export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
   if (m.tunnel) return tunnelProps(m);
+  if (m.camp) return [...m.fixedProps];
   const rng = new Rng(m.seed + 7);
   const props: Prop[] = [];
   // Späti sandbags and lantern first, so everything else keeps clear of them.
@@ -1554,6 +1558,8 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     else if (l.hx > 0) colliders.push(...landmarkColliders(l));
   }
   for (const l of lots) colliders.push(...lotColliders(l));
+  for (const w of m.camp?.walls ?? []) colliders.push({ kind: 'box', x: w.x, z: w.z, hx: w.hx, hz: w.hz, rot: 0 });
+  for (const t of m.camp?.stations ?? []) colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot });
   if (m.rail) {
     const r = m.rail;
     const left = (r.gapX - r.gapW / 2 + r.minX) / 2;
@@ -1562,11 +1568,12 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     colliders.push({ kind: 'box', x: right, z: r.z, hx: (r.maxX - r.gapX - r.gapW / 2) / 2, hz: 4, rot: 0 });
   }
   const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
-  const breakables = breakableDefs(m, props, propColliders, rests);
+  const breakables = m.camp ? [] : breakableDefs(m, props, propColliders, rests);
   const onPier = (x: number, z: number): boolean => (m.piers ?? []).some((p) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2; });
-  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3));
+  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3) || (!!m.camp && !onCampFloor(m.camp, x, z)));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
+  level.camp = !!m.camp;
   if (m.flavor) level.flavor = m.flavor;
   level.hiddenSpots = m.hiddenSpots ?? [];
   level.guards = [...(m.guards ?? []), ...lots.flatMap((l) => l.content?.guards ?? [])];

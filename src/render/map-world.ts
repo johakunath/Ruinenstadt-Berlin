@@ -11,6 +11,8 @@ import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
+import { buildCampWorld, makeCampMats } from './camp-world';
+import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
 import {
   BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
@@ -303,7 +305,7 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
           // Damp, dark banks.
           const shore = y < BED_Y + 0.5 ? 0.35 : y < -0.3 ? 0.55 : nearWater ? 0.6 : 1;
           // M19 tunnel: ground outside the tubes is rock in the dark (the walls hide most of it).
-          const rock = m.tunnel && !inTunnel(m, x, z, -1.5) ? 0.06 : 1;
+          const rock = (m.tunnel && !inTunnel(m, x, z, -1.5)) || (m.camp && !onCampFloor(m.camp, x, z) && !onCampFloor(m.camp, x + 1.5, z) && !onCampFloor(m.camp, x - 1.5, z) && !onCampFloor(m.camp, x, z + 1.5) && !onCampFloor(m.camp, x, z - 1.5)) ? 0.06 : 1;
           col.push(t[0] * noise * shore * rock, t[1] * noise * shore * rock, t[2] * noise * shore * rock);
           splat.push(...groundSplat(m, x, z, nearWater && !isQuay(m, x, z)));
         }
@@ -528,7 +530,7 @@ const HEDGED: Partial<Record<Prop['kind'], number>> = { fence: 0.3, picket: 0.3,
  * seed; never on streets, sidewalks, water, bridges, stairs, landmarks, buildings or props.
  */
 function buildGreenery(m: MapDef, lots: Lot[], props: Prop[], chunkOf: (x: number, z: number) => ChunkBuilder): void {
-  if (m.tunnel) return;
+  if (m.tunnel || m.camp) return;
   const rng = new Rng(m.seed + 137);
   // Blockers in an 8 m hash: rotated boxes (half extents) around buildings and props.
   type Box = { x: number; z: number; rot: number; hx: number; hz: number };
@@ -2119,6 +2121,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
   buildTerraces(m, chunkOf);
   if (m.tunnel) buildTunnel(m, mats, chunkOf);
+  if (m.camp) buildCampWorld(m, mats, makeCampMats(materials, { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy }), chunkOf);
   if (m.rail) {
     const r = m.rail;
     // The embankment runs on out of the map (closed edge, M11d step 4).
@@ -2129,7 +2132,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     }
   }
   // M11d step 4: beyond the closed edge, building masses and tree rows (render only) on a ground skirt.
-  const edge = m.tunnel ? null : edgeRuns(m);
+  const edge = m.tunnel || m.camp ? null : edgeRuns(m);
   const backdrop = edge ? edgeBackdrop(m, edge) : { blocks: [], trees: [] };
   if (edge) buildEdgeSkirt(m, mats, edge, group);
   for (const k of backdrop.blocks) {
