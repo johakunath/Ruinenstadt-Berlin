@@ -29,9 +29,14 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   rat: 'Ratten kommen im Rudel, schnell und schwach.',
   grenzer: 'Schießt vom Turm, Feuerstoß und Salve. Ruft „Alarm!“.', brandmeister: 'Wirft Molotows, Feuerring. Nah: Flammenstoß.',
   rattenmutter: 'Ruft Ratten, zieht eine Säurespur.', spreehexe: 'Säurepfützen und die Spreewelle. Durchrollen.',
+  // M12c Mitte.
+  kabel: 'Verkabelt und flink, springt dich an. Brennt gut, Strom perlt ab.', bass: 'Wummert Basswellen und treibt andere an. Durch die Welle rollen.',
+  drone: 'Kreist und stößt herab. Strom holt sie runter.',
+  tuersteher: 'Hält die Tür am Tor. Wer gepackt wird, rollt sich frei.', wachdrohne: 'Sucht dich mit dem Licht. Raus aus dem Kegel, schlag zu, wenn sie landet.',
+  dirigent: 'Gibt den Takt vor. Die Boxen folgen ihm.', bassprediger: 'Predigt mit Strom und Bass. Nach dem Stoß ist er offen.',
 };
-const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat'];
-const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe'];
+const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'kabel', 'bass', 'drone'];
+const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
 export interface MenuHost {
@@ -199,7 +204,7 @@ export class Menu {
 /** Kodex busts in `assets/portraits/`, including portraits imported from 2D (`js/items.js` PORTI). */
 const portraits = import.meta.glob('../../assets/portraits/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const portraitUrl = (id: string): string => portraits[`../../assets/portraits/${id}.webp`] ?? '';
-const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04', feldwebel: 'X04', schaffner: 'X05', waechter: 'X03', rex: 'E12', hauptmann: 'X01', brandmeister: 'X10', rattenmutter: 'X06' };
+const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04', feldwebel: 'X04', schaffner: 'X05', waechter: 'X03', rex: 'E12', hauptmann: 'X01', brandmeister: 'X10', rattenmutter: 'X06', kabel: 'E13', bass: 'E14', bassprediger: 'X09' };
 const ELITE_PORTRAIT: Record<EliteMod, string> = { flink: 'L01', brennend: 'L02', spaltend: 'L03', gepanzert: 'L04' };
 const SURVIVOR_PORTRAIT: Record<SurvivorId, string> = { doktor: 'S01', schmied: 'S02', kurier: 'S03', koechin: 'S04', spaeher: 'S05', mechaniker: 'S06' };
 /** Code-painted fallbacks for bosses when portrait files are missing. */
@@ -209,6 +214,11 @@ const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
   // Watchtower; the 2D Spreehexe bust (river hag) does not match the 3D punk look, so a crest and a wave.
   grenzer: '<path d="M8 21l2-12h4l2 12M7 9h10l-1-4H8zM12 5V3M10 14h4"/>',
   spreehexe: '<path d="M8 11l1-7 1.5 5 1.5-6 1.5 6 1.5-5 1 7M7 12h10M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
+  // M12c until Codex busts: a door with a rope (Türsteher), a drone with its light cone, a baton over a stave; small drones too.
+  tuersteher: '<path d="M7 21V4h10v17M10 12h1M3 14c2 2 4 2 6 0M15 14c2 2 4 2 6 0"/>',
+  wachdrohne: '<path d="M4 7h4M16 7h4M6 7v2M18 7v2M8 9h8v3H8zM12 12l-5 8M12 12l5 8M7 20h10"/>',
+  dirigent: '<path d="M3 9h18M3 13h18M3 17h18M6 20L18 4"/><circle cx="18" cy="4" r="1"/>',
+  drone: '<path d="M4 8h5M15 8h5M6.5 8v3M17.5 8v3M8 11h8v3H8zM12 14v2"/>',
 };
 /** 2D `kImg`: portrait, greyed (`dim`) or a black silhouette with "?" (`sil`). */
 const kimg = (inner: string, state: 'on' | 'dim' | 'sil', ring = '', cls = ''): string => state === 'sil'

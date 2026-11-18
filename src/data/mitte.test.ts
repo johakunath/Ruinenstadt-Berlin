@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
-import { GROSSER_STERN, MITTE_BOSS_STANDIN, mitteMap } from './mitte';
+import { GROSSER_STERN, MITTE_BOSSES, mitteMap } from './mitte';
 import { EDGE_FRONT, propCollider } from './courtyard';
 import { areaAt, generateLots, generateProps, isWater, LAMP_CURB, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, type MapDef } from './map';
 import type { Level } from '../sim/level';
@@ -34,9 +34,10 @@ describe('Mitte map (M15, layout B2)', () => {
       expect(normal(m)).toHaveLength(27);
       const perZone = [0, 1, 2, 3].map((z) => m.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves).filter((w) => w.bosses.length === 0).length);
       expect(perZone).toEqual([9, 9, 2, 7]);
-      expect(m.encounters.flatMap((e) => e.waves).flatMap((w) => w.bosses)).toEqual([MITTE_BOSS_STANDIN.tor, MITTE_BOSS_STANDIN.kanzleramt, MITTE_BOSS_STANDIN.see, MITTE_BOSS_STANDIN.sony]);
+      expect(m.encounters.flatMap((e) => e.waves).flatMap((w) => w.bosses)).toEqual([MITTE_BOSSES.tor, MITTE_BOSSES.kanzleramt, MITTE_BOSSES.see, MITTE_BOSSES.sony]);
       expect(m.district).toBe(3);
       expect(m.flavor).toBe('neon');
+      expect(m.wet).toBe(true);
       expect(m.encounters.at(-1)!.id).toBe('sony');
     });
 

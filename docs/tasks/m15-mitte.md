@@ -12,7 +12,7 @@ Layout B2 "Vom Reichstag zum Bass" (Johannes, 2026-11-18). Concept, decisions M1
 | 3 | Neon night look: three variants in game (`?look=a|b|c` or via `sky.ts`), Johannes picks. Wet ground (reflection streaks under every light, puddle mirrors), neon signs and poles below 5 m, rain with splashes and coloured streaks, cyan and magenta light colours, zone tints. State the Leistung cost | 2 | Opus high, variants first | variants built 2026-11-18 (`?sky=a|b| done 2026-11-18: Johannes picked a mix (mainly A, a bit less saturated, some B blue, occasional C red) → `MITTE_SKY` |
 | 4 | Landmarks from photos (`docs/maps/landmarks.md`): north (Brandenburger Tor walk-through, Pariser Platz fronts, Reichstag, Jakob-Kaiser-Haus, Lüders-Haus, Paul-Löbe-Haus, Kanzleramt, Haus der Kulturen, Siegessäule) and south (Sony Center forum with tent and `cut`, Bahntower, Kollhoff, Verkehrsturm, Leipziger Platz, Mall of Berlin, Galeries Lafayette, Philharmonie, St. Matthäus, Staatsbibliothek, Neue Nationalgalerie, stage, clinic, Mauerstücke, Checkpoint Charlie, beer garden) | 2 | Opus high | done 2026-11-18 (three Opus builders plus the Pariser Platz fronts) |
 | 5 | Enemy and boss spec: Kabelghul, Boxenkopf, Kabelbrocken skin, drones, Der Türsteher, Die Wachdrohne, the Neuer See mini-boss, Der Bassprediger; wave mix and tier; rain rule; Kodex lines | 0 (can run now, parallel to 1 to 4) | Opus xhigh (Johannes, 2026-11-18) | done 2026-11-18: `docs/tasks/m12c-mitte-enemies.md` |
-| 6 | Enemy and boss build (sim, bodies, sounds, Kodex) from `docs/tasks/m12c-mitte-enemies.md` | 5 | Opus high | open |
+| 6 | Enemy and boss build (sim, bodies, sounds, Kodex) from `docs/tasks/m12c-mitte-enemies.md` | 5 | Opus high | done 2026-11-18: `docs/tasks/m12c-mitte-enemies.md` › Handover (step 6) |
 | 7 | Buildings and lot types: glass office blocks with lit lobbies, government stone and glass, Friedrichstadt Blockrand with neon shops, tents and beer garden in the Tiergarten; two lot types per zone, weather per zone (proposals below) | 3 | Opus high | Potsdamer Platz done 2026-11-18 (glass offices, Nachtmarkt, Containerdorf, two towers); other zones built 2026-11-18 (see Handover › step 7, other zones): mockup `docs/mockups/m15-mitte-lots.svg`, picked 2026-11-18 (Johannes: Claude's recommendation): A everywhere (Friedrichstadt Neonmarkt and Clubhof, Regierungsviertel Sperrzone and Autofriedhof, Tiergarten Zeltlager and Lichtung) and facade F-A Sandstein-Ministerium; the B variants are backlog ideas I4 to I8 |
 | 8 | Flow and balance: U2 tunnel from Alexanderplatz to U Potsdamer Platz, title and victory links, network map stop `map: 'mitte'`, bot `--map=mitte`, tier calibration | 2, 6, Alexanderplatz flow | Opus medium | open |
 | 9 | Textures: rows in `docs/asset-pipeline.md` (wet asphalt, glass curtain wall, sandstone, neon sign atlas) | 3, 4, 7 | Codex | open |
@@ -74,7 +74,7 @@ Tier: Köpenick 0 … 19, Xhain 8 … 30, Alexanderplatz 16 … 38; Mitte 24 …
 
 ## Stand-ins until step 6
 
-Bosses: Türsteher → `feldwebel`, Wachdrohne → `grenzer`, mini-boss → `brandmeister`, Bassprediger → `hauptmann`. Kabelghul → `runner`, Boxenkopf → `brute`, drones → `crow` (Tiergarten only).
+Replaced in step 6 (2026-11-18): `MITTE_BOSSES` holds the real bosses, `mitteWaveTier` the per-zone mix from the M12c spec. (Were: Türsteher → `feldwebel`, Wachdrohne → `grenzer`, mini-boss → `brandmeister`, Bassprediger → `hauptmann`; Kabelghul → `runner`, Boxenkopf → `brute`, drones → `crow`.)
 
 ## Handover 2026-11-18 (step 0) [Claude · Opus high]
 
@@ -139,6 +139,6 @@ Variant A of `docs/mockups/m15-mitte-lots.svg` and facade F-A (Johannes took the
 - New props (`src/render/props-mitte.ts`): `tent`, `beerTable` (one bench snapped), `speaker` (torn cone), `camPole`. Colliders in `propCollider`.
 - Reused: hinterhof layout logic for the Clubhof, the Köpenick market and parking lot, the Nachtmarkt dressing, `windowAt` for the ministry windows, existing materials only (no new draw-call material).
 - Test: `mitte.test.ts` › step 7 other zones (each type in its area, all their spots reachable, scale 1 and 1.3); light coverage and lamp rules still pass.
-- Cost: no new material; one pooled light per club door, holo barrier, charging post and camera LED (the pool size is fixed). Hardware check 22 (`pt-hardware-checks.md`).
-- Proof: `docs/proof/m15-mitte/zones-fill.jpg` (Clubhof, Neonmarkt, Zeltlager, Lichtung). The Sperrzone holo band and the ministries were checked in cloud shots only; a close look is part of hardware check 22.
+- Cost: no new material; one pooled light per club door, holo barrier, charging post and camera LED (the pool size is fixed). Hardware check 25 (`pt-hardware-checks.md`).
+- Proof: `docs/proof/m15-mitte/zones-fill.jpg` (Clubhof, Neonmarkt, Zeltlager, Lichtung). The Sperrzone holo band and the ministries were checked in cloud shots only; a close look is part of hardware check 25.
 - Open: the Regierungsviertel has few intact ministries (most lots roll ruin as everywhere); the holo band does not flicker in the geometry, only its light does.

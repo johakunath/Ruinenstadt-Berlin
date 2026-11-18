@@ -15,6 +15,11 @@ export const TUTORIALS = {
   perk: ['Segen', 'Nach jedem Kampf wählst du 1 von 3. Gilt nur für diese Expedition. Gleiche Familien kommen öfter, zwei Familien öffnen einen Doppelsegen.'],
 } as const;
 export type TipId = keyof typeof TUTORIALS | 'intro';
+/** M12c 2D `tip(kind)` on the first sight of a kind: one line as a toast, once per profile (`inventory.tips`). */
+export const SIGHT_TIPS: Partial<Record<import('../data/enemies').EnemyKind, string>> = {
+  kabel: 'Kabelghule springen dich an (Linie am Boden).',
+  bass: 'Boxenköpfe wummern rosa Ringe. Durchrollen.',
+};
 
 export class IntroUi {
   readonly root = document.createElement('div');

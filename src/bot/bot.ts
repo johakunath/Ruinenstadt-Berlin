@@ -257,6 +257,10 @@ export class Bot {
       threat += 2;
       if (d < 1.6) dodge = true;
     }
+    // M12c searchlights: walk out before it locks; held by the Türsteher: roll free.
+    for (const q of T.spots) if (this.aware(q) && Math.hypot(p.x - q.x, p.z - q.z) < q.r + 0.4) flee(q.x, q.z, 2.5);
+    const holder = p.root > 0 ? s.enemies.find((e) => e.id === p.rootBy) : undefined;
+    if (holder?.sp && this.aware(holder.sp)) dodge = true;
     // Roar rings: roll through.
     for (const w of T.waves) {
       if (w.hit || w.r <= 0 || !this.aware(w)) continue;

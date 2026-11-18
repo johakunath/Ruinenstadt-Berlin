@@ -2,6 +2,8 @@
 
 Step 5 of `docs/tasks/m15-mitte.md` (spec). Johannes, 2026-11-18: Opus 5.5 xhigh is enough for the enemies and bosses (the task file had asked for Fable). Step 6 builds from this file; format and blocks as in `m12b-xhain-enemies.md`.
 
+Status: built 2026-11-18 (step 6, see Handover at the end). Johannes playtest open.
+
 ## Rules for every number below
 
 - 2D to 3D: 30 px = 1 m. Normal enemies use the 2D-ghoul-to-Schlurfer ratios (life ×1.5, hit ×1.7) for light bodies and the 2D-brute-to-Brocken ratios (life ×1.2, hit ×1.44, speed ×0.032) for heavy ones, as the rat did.
@@ -124,3 +126,45 @@ Chosen over Der Kabelbaum: it reuses roar and summon only, ties the Boxenköpfe 
 4. Kodex, notes, sounds, banner line; smoke check `?map=mitte&spawn=kabel,bass,drone` and each boss via `?spawn=`.
 5. Clip timing: look at the leap and the grab with `tools/clip-sheet.mjs` (skill `combat-animation`) before setting wind-ups in stone.
 6. Bot: `node tools/balance.mjs --map=mitte` once, note the result; calibration stays step 8.
+
+## Handover 2026-11-18 (step 6) [Claude · Opus high]
+
+Built in parallel to the Mitte lot session; `src/data/mitte.ts` only changed in `MITTE_BOSSES` (was `MITTE_BOSS_STANDIN`), `mitteWaveTier` and `wet: true`.
+
+- **Data** `src/data/enemies.ts`: `ENEMIES.kabel|bass|drone`, the four bosses, `THREAT.leap|bass`, `BOSS.tuersteher|wachdrohne|dirigent|bassprediger`, `EnemyDef.cap` (Boxenkopf 2). `MapDef.wet` → `Level.wet` → `sim.wet`. Per-zone mix in `mitteWaveTier` as specified.
+- **Sim**: brains in `src/sim/ai.ts` (`bass`, the Kabelghul branch of `pouncer`, four boss cases; `own()` and `roarOf()` give shared blocks their own numbers; `Enemy.queue` runs a follow-up special: the rage shove, the Basspredigt). New specials `leap`, `bass`, `shove`, `grab`, `land`, `beat`. `src/sim/threats.ts`: `Zone.push` and `pushPlayer` (new hero knock velocity `Player.kx/kz`, damped, at most 0.36 m per step so walls hold), `Spot` (searchlight) and `laserVolley`. Hero root: `Player.root/rootBy` in `src/sim/player.ts` (no walking, attacks and powers work, a roll clears it, counts down in hitstop steps too, released on the holder's death or the hero's). Cap: `capped()` in `src/sim/enemies.ts`, used by `pickKind`, boss calls and `?spawn`. Wet rule in `src/sim/combat.ts` (`burnTime`, `chain`). Loot rows in `src/sim/loot.ts` (Kabel, Metall, Kabel; Bassprediger drops as a district boss).
+- **Tests**: `ai.test.ts` › Mitte roster (each special fires and opens, cap, root: no walking, attack works, roll frees, ≤ 1 s, hitstop does not stretch it; shove push, rage double shove, spot follow/lock/volley, landing, Fortissimo pulse, sermon after every second charge, 45 % cap at ten times the damage for all seven kinds); `combat.test.ts` (wet burn, chain reach and jumps, the map flag); `mitte.test.ts` (wet).
+- **Render** `src/render/enemies.ts`: Kabelghul (thin, crouched, four lit cables arching off the back, implants, pink eyes), Boxenkopf (speaker box on the neck with lit rim and pulsing rings, purple rags, hazard band; the box swells on the wind-up), pink cables and implant dots on Schlurfer, Hetzer and Brocken on `flavor: 'neon'` maps (`assign(e, neon)`), Türsteher (Brocken build, bomber jacket with orange lining, glasses, clipboard), Dirigent (tailcoat, bow tie, rebar baton, speaker on the back), Bassprediger (speaker head, five cables, preacher's collar and chest mixer from the X09 bust). Drones in code: shared geometry, rotors one instanced mesh spun from time, the small one dazed at 0.6 m with sparks, the Wachdrohne hovers at 2.4 m and sinks on `land`, searchlight off. `src/render/threats.ts`: spot decal and beam, pink ring under a winding Boxenkopf or beat, a closing pink ring round a held hero, eight ring slots (was four).
+- **UI, sound**: Kodex lines and order (`src/ui/menu.ts`, busts E13, E14 and X09 from 2D, glyphs for Türsteher, Wachdrohne, Dirigent, Drohne), first-sight tips for Kabelghul and Boxenkopf (`SIGHT_TIPS` in `src/ui/intro.ts`, toast in `main.ts`), banner line „Regen: Strom springt weiter, Feuer brennt kürzer.“ (third banner line on wet maps). Notes „Nicht auf der Liste!“, „Festgehalten“, „Fortissimo!“, „Gemeinde!“. Synth cues in `src/audio/sfx.ts` (crackle, bass hum and sub thump, grunt, lock beep, laser, baton tap) and one shared rotor whine (`GameAudio.rotors`, volume by the nearest drone).
+- **Bot** `src/bot/bot.ts`: walks out of searchlights, rolls free of a grab.
+
+### Reused from 2D
+Kabelghul stats, leap (0.4 s line, 0.3 s at 440 px/s, open 0.5 s, cooldown 2.2–3 s), resistances, drop chance 0.12 and Kabel; Boxenkopf stats, ring (0.9 of its hit, 12 → 270 px), buff 3 s within 220 px, open 1.1 s, cooldowns (first 2–4 s, then 5–6.5 s), drop chance 0.45 and Metall; Bassprediger charge (0.7 s, 0.55 s at 560 px/s, open 1.25 s, 3.8 s), two rings 150 px apart to 340 px after every second charge, every charge in rage (v0.99); rain rule (1.4 s burn, 190 px chain, +1 jump) and its banner text; root from the 2D Wurzler (`P.root`, a dash frees, „Festgehalten“); 2D tips (shortened as specified); Kodex busts E13, E14, X09; 2D `D.cyber` cables on ghouls and brutes (three and four cables, two implant dots); speaker head, rings and cyan strip from the 2D `bass` and Bassprediger drawings. All 2D Mitte items (Neonbrille, Kabelarm, Bassherz, Arm des Basspredigers, `NI` implants) already exist in `src/data/item-names.ts`; nothing missing.
+
+### Numbers changed against the spec (why)
+| What | Spec | Built | Why |
+|---|---|---|---|
+| Kabelghul leap trigger | within 6.7 m | within 5 m | 2D hurt by touch after the leap; here the leap itself hits. 4.4 m of travel plus 0.8 m contact: from 6.7 m it lands 2 m short of a hero who stands still |
+| Türsteher grab trigger | 3.5–8 m | 3.5–5.5 m | 0.35 s at 12 m/s covers 4.2 m plus 1.3 m contact; beyond 5.5 m it always whiffs |
+| Boxenkopf ring cooldown | every 2–4 s | first after 2–4 s, then 5–6.5 s | the 2D code (`pc=R(5,6.5)`); 2–4 s with two Boxenköpfe and their buff is a wall of rings |
+| Schubser knockback ×3 | – | `push` 4 m (3 × the 2D ring push of 40 px), damped hero knock | no hero knockback existed; this defines it |
+| Throw after the hold | hit 0.6 | hit 0.6 and a 2 m push | reads as being thrown out; new number |
+| Wachdrohne cooldown volley | – | wind 0.5 s, life 1.8 s; a lock fires after the 0.3 s flash, then 1.5 s before the spot can lock again; the rage spot circles the hero at 2.8 m | not specified; two spots on the same path would merge into one |
+| Spot light | one pooled light | decal and beam only, no light | the map's light pool already uses every slot; one more light changes the count on every map |
+| Basspredigt | after every second charge | after the charge's punish window, with the roar's 0.8 s wind-up | rhythm: Stoß, open, then roll through the rings (2D started the rings with the charge) |
+| Fortissimo pulse | every Boxenkopf pulses | every Boxenkopf alive is put into its ring wind-up with the Dirigent's 0.6 s, so all rings leave together | readable on the ground (pink ring under each) |
+| Drone body | – | scale 1.3 | the 0.5 m quadcopter was lost on screen |
+
+Fix outside the spec: boss calls counted sleeping side-passage guards as adds. Mitte has fifteen of them (lot types), so no boss could call anyone (`summon` in `src/sim/ai.ts`; also affected other maps with many guards). They no longer count; test in Mitte roster.
+
+### Cost (cloud readout, Leistung, courtyard, all passes / main pass)
+Kabelghul +4.5 / +1.5 draws over a Schlurfer (cables and implants are two merged meshes, no shadow); Boxenkopf +7.5 / +2.5 over a Brocken; a cyber Schlurfer on neon maps +2 meshes; a drone 3 draws (frame, lit parts, instanced rotors) and −33 / −11 against a Krähe; the Wachdrohne 4; each searchlight 3 (rim, fill, beam; at most two); ring slots and the held ring one each while shown. No lights, no shadow from emissive parts. Fps only on hardware (rows 22 to 24 in `docs/tasks/pt-hardware-checks.md`).
+
+### Bot (`node tools/balance.mjs --map=mitte`, normal, johannes, five fresh campaigns)
+5/5 won, 3.2 deaths and 20.5 min per campaign; all deaths at the first fight (Leipziger Straße, fresh gear, power 130, 132 % damage taken); after that nothing is hard: bosses fall in 24 s (Türsteher), 31 s (Wachdrohne), 15 s (Dirigent), 28 s (Bassprediger), lowest life 83–93 %. Calibration (tier start, boss life) is step 8; the start needs the gear from Alexanderplatz.
+
+### Open
+- Bodies are code placeholders on the zombie rig; Kodex glyphs for Türsteher, Wachdrohne, Dirigent and Drohne until Codex busts.
+- Grab and shove reuse clips (Zombie_Scratch at 0.68, Shield_Dash to 0.25, chosen from `tools/enemy-sheet.mjs` strips); a real grab clip would read better.
+- Backlog: P25 neon barriers, I3 Kabelbaum, P12 Zünder and Schildträger.
+- Check: `?map=mitte&autostart&spawn=kabel,bass,drone`, `?spawn=tuersteher` (and `wachdrohne`, `dirigent`, `bassprediger`); `node tools/enemy-sheet.mjs out.png "kind=bass&n=3&neon=1"`, `"kind=tuersteher&special=grab&hit=1&n=2"`. Proof: `docs/proof/m15-mitte/m12c-*.jpg`.
