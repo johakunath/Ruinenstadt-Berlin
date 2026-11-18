@@ -72,7 +72,7 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     out.push(`<rect x="${-b.width / 2}" y="${-b.len / 2}" width="${b.width}" height="${b.len}" fill="#a99876" stroke="#14282b" stroke-width="0.6" transform="translate(${b.x} ${b.z}) rotate(${deg})"/>`);
   }
   // M11c lot types under their own buildings and trees (later in the list); the pond shows through.
-  const SPECIAL_COLOR: Record<string, string> = { hinterhof: '#6f6656', parkplatz: '#4a4d52', kleingarten: '#4d6a3a', teich: '#3d5a2c80', truemmer: '#5a5048', baustelle: '#6a5a44', markt: '#7a6e5c', kirchhof: '#3a4a30' };
+  const SPECIAL_COLOR: Record<string, string> = { hinterhof: '#6f6656', parkplatz: '#4a4d52', kleingarten: '#4d6a3a', teich: '#3d5a2c80', truemmer: '#5a5048', baustelle: '#6a5a44', markt: '#7a6e5c', kirchhof: '#3a4a30', nachtmarkt: '#7a4a6e', containerdorf: '#5a5a62' };
   for (const l of lots) {
     if (l.kind === 'tree') {
       if (o.trees) out.push(`<circle cx="${l.x.toFixed(1)}" cy="${l.z.toFixed(1)}" r="${(l.w * 0.45).toFixed(1)}" fill="${l.jungle ? '#4f7a35' : '#1f3324'}" opacity="0.9"/>`);

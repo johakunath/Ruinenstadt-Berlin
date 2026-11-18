@@ -18,6 +18,9 @@ const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: num
   // M15 Alexanderplatz.
   weltzeituhr: { top: 10.5, half: 4.5 }, fernsehturm: { top: 92, half: 15, near: 32 }, dom: { top: 32, half: 13 }, palast: { top: 16, half: 18 },
   rotesrathaus: { top: 45, half: 20 }, nikolaikirche: { top: 27, half: 10 }, hausdeslehrers: { top: 36, half: 11 }, kino: { top: 13, half: 15 },
+  // M15 Mitte: the seven sights of the route (Kollhoff-Tower shows the Bahntower beside it).
+  tor: { top: 26, half: 20 }, reichstag: { top: 23, half: 14 }, kanzleramt: { top: 25, half: 14 }, siegessaeule: { top: 49, half: 6 },
+  sony: { top: 39, half: 30 }, kollhoff: { top: 70, half: 12 }, philharmonie: { top: 23, half: 16 },
 };
 /** German names for the hint while the view holds. */
 const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
@@ -100,7 +103,7 @@ export class LandmarkReveal {
 
   /** Name of the landmark on show (for the hint). */
   get name(): string {
-    return this.current ? (NAMES[this.current.kind] ?? '') : '';
+    return this.current ? (NAMES[this.current.kind] ?? this.current.name ?? '') : '';
   }
 
   /** Advances the reveal. Returns the pose or null when the game camera has the view. */

@@ -10,7 +10,9 @@ import { Rng } from '../sim/math';
 
 export type SpecialKind = 'hinterhof' | 'parkplatz' | 'kleingarten' | 'teich' | 'truemmer' | 'baustelle' | 'markt' | 'kirchhof'
   // M15 Alexanderplatz (GDR clockwork gardens): a greenhouse garden and a Plattenbau courtyard.
-  | 'glashaus' | 'plattenhof';
+  | 'glashaus' | 'plattenhof'
+  // M15 Mitte (2089, Potsdamer Platz): a neon night market and a container village.
+  | 'nachtmarkt' | 'containerdorf';
 /** Sleeping guards: `lying` play dead on the ground, `hidden` wait unseen in a doorway or under rubble. */
 export interface LotGuard { x: number; z: number; kind: EnemyKind; elite: boolean; wake: number; hp: number; pose: 'lying' | 'hidden'; facing: number }
 /** A walkable plank path over water (pond jetty): center, facing along its length. */
@@ -40,12 +42,14 @@ export const SPECIAL_SIZE: Record<SpecialKind, { w: [number, number]; d: [number
   kirchhof: { w: [19, 22], d: [16, 18], max: 2 },
   glashaus: { w: [18, 22], d: [15, 18], max: 3 },
   plattenhof: { w: [19, 23], d: [16, 19], max: 3 },
+  nachtmarkt: { w: [17, 21], d: [13, 16], max: 3 },
+  containerdorf: { w: [18, 22], d: [15, 18], max: 3 },
 };
 /** Chance per street slot to try a lot type (Johannes: two in five lots; many tries do not fit, so higher). */
 export const SPECIAL_SHARE = 0.7;
 export const SPECIAL_NAME: Record<SpecialKind, string> = {
   hinterhof: 'Hinterhof', parkplatz: 'Parkplatz', kleingarten: 'Kleingärten', teich: 'Teich', truemmer: 'Trümmerfeld', baustelle: 'Baustelle', markt: 'Markt', kirchhof: 'Kirchhof',
-  glashaus: 'Gewächshausgarten', plattenhof: 'Plattenbauhof',
+  glashaus: 'Gewächshausgarten', plattenhof: 'Plattenbauhof', nachtmarkt: 'Nachtmarkt', containerdorf: 'Containerdorf',
 };
 
 export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
@@ -248,6 +252,38 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       prop('candles', rng.range(-W / 2, 0), rng.range(-2, 2)); prop('bush', -W + 1.6, -D + 1.6, 0, 1.2);
       for (let i = 0; i < 3; i++) { const [a, b] = rng.pick(graves); guard('walker', a + 0.4, b - 1.1, 'lying', { wake: 3.8 }); }
       out.spots.rescue = P(W - 4, 0);
+      break;
+    }
+    case 'nachtmarkt': {
+      // Neon night market (2089): stalls in two loose rows facing a middle lane, crates of parts, a fire
+      // barrel, string lights over the lane; the neon signs and cables over it are render dressing
+      // (`mitte-world.ts`). The cable dealer trades here.
+      out.ground = 'cobbles';
+      for (const b of [D - 3.2, -D + 3.6]) for (let a = -W + 2.4; a < W - 2; a += rng.range(3.4, 4)) {
+        const r = (b > 0 ? Math.PI : 0) + rng.range(-0.2, 0.2);
+        if (rng.next() < 0.1) prop('stallBroken', a, b, r, 1, 0.3);
+        else prop('stall', a + rng.range(-0.3, 0.3), b + rng.range(-0.4, 0.4), r, 1, 0.08);
+      }
+      prop('stringLights', 0, 0, rng.range(-0.15, 0.15), 1, 0.05);
+      prop('fireBarrel', rng.pick([-1, 1]) * (W - 1.4), rng.range(-1, 1));
+      for (let i = 0; i < 2; i++) prop('crates', rng.range(-W + 2, W - 2), rng.range(-1.2, 1.2), rng.range(0, 3), 0.9, 0.4);
+      out.spots.trader = P(rng.range(-2, 2), 0);
+      break;
+    }
+    case 'containerdorf': {
+      // Container village (2089): shipping containers in two staggered rows along the back and one side,
+      // the second tier stacked on some of them (render dressing), washing lines, a fire, bins and pallets
+      // in the yard; a lane to the street stays open. Somebody sleeps in a container.
+      out.ground = 'gravel';
+      // A container is 2.44 × 6.1 m with its long side along its local z: the back row turns a quarter.
+      for (let a = -W + 3.4; a < W - 3; a += rng.range(6.3, 6.8)) prop('container', a, -D + 1.8, Math.PI / 2 + rng.range(-0.04, 0.04), 1, 0.02);
+      for (let b = -D + 6.6; b < D - 3.5; b += rng.range(6.3, 6.8)) prop('container', side * (W - 1.6), b, rng.range(-0.04, 0.04), 1, 0.02);
+      prop('clothesline', -side * 2, 0.5, rng.range(-0.3, 0.3), 1, 0.2);
+      prop('fireBarrel', -side * (W - 3), rng.range(1, 3));
+      prop('bins', -side * (W - 1.5), D - 2.2, 0, 1, 0.3); prop('pallets', rng.range(-2, 2), D - 3.5, rng.range(0, 3), 1, 0.4);
+      prop('crates', rng.range(-3, 3), -D + 4.8, rng.range(0, 3), 1, 0.4);
+      guard('runner', side * (W - 1.6), -D + 6.6, 'hidden', { elite: true, hp: 1.8, wake: 4 });
+      out.spots.cache = P(-side * (W - 3), -D + 4.5);
       break;
     }
     case 'glashaus': {
