@@ -26,7 +26,7 @@ export interface NetStop { readonly name: string; readonly station: string; read
 export const STOPS: readonly NetStop[] = [
   { name: 'Köpenick', station: 'S Köpenick', map: 'koepenick', at: [340, 190] },
   { name: 'Xhain', station: 'S+U Warschauer Straße', map: 'xhain', at: [250, 140] },
-  { name: 'Alexanderplatz', station: 'U Alexanderplatz', at: [215, 90] },
+  { name: 'Alexanderplatz', station: 'U Alexanderplatz', map: 'alex', at: [215, 90] },
   { name: 'Mitte', station: 'U Potsdamer Platz', at: [165, 115] },
   { name: 'Charlottenburg', station: 'U Platz der Luftbrücke', at: [190, 185] },
   { name: 'Spandau', station: 'U Rathaus Spandau', at: [45, 120] },

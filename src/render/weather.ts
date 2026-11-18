@@ -7,7 +7,7 @@ import { areaAt, type MapDef } from '../data/map';
 import { FX_LAYER } from './world';
 import { groundY } from './ground';
 
-export type WeatherKind = 'rain' | 'fog' | 'ash' | 'clear';
+export type WeatherKind = 'rain' | 'fog' | 'ash' | 'leaves' | 'clear';
 /** Which weather an area has (area ids of `MapDef.areas`); missing ids are clear. */
 export const KOEPENICK_WEATHER: Readonly<Record<string, WeatherKind>> = {
   bahnhof: 'rain', friedrichshagen: 'rain',
@@ -25,8 +25,16 @@ export const XHAIN_WEATHER: Readonly<Record<string, WeatherKind>> = {
   kotti: 'rain', goerli: 'rain', reichenberger: 'rain',
   wrangelkiez: 'clear',
 };
+/**
+ * Alexanderplatz 1989, frozen in autumn (M15, afternoon light A): leaves drift over the island, the forum,
+ * the Nikolaiviertel and the Allee; the plaza at the Weltzeituhr stays clear.
+ */
+export const ALEX_WEATHER: Readonly<Record<string, WeatherKind>> = {
+  museumsinsel: 'leaves', forum: 'leaves', nikolaiviertel: 'leaves', rolandufer: 'leaves', allee: 'leaves', holzmarkt: 'leaves',
+  alexanderplatz: 'clear', hackescher: 'clear', spandauer: 'clear',
+};
 /** Fog density per weather (scene default 0.017). */
-const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, clear: 0.014 };
+const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, leaves: 0.014, clear: 0.014 };
 const W = 36, D = 30, H = 14;
 
 /** Soft round dot for point particles (white, tinted by the material color). */
@@ -42,7 +50,7 @@ function dot(): CanvasTexture | null {
 interface Layer { obj: Points | LineSegments; pos: Float32Array; vel: Float32Array; level: number; max: number }
 
 export class Weather {
-  private readonly layers: Record<'rain' | 'fireflies' | 'ash' | 'embers', Layer>;
+  private readonly layers: Record<'rain' | 'fireflies' | 'ash' | 'embers' | 'leaves', Layer>;
   private kind: WeatherKind = 'clear';
   private seed = 1;
   private readonly tex = dot();
@@ -54,6 +62,7 @@ export class Weather {
       fireflies: this.points(n(90), 0xf2e27a, 0.3, true),
       ash: this.points(n(520), 0xc8c2ba, 0.14, false),
       embers: this.points(n(140), 0xff7a2a, 0.22, true),
+      leaves: this.points(n(160), 0xd88a2a, 0.2, false),
     };
   }
   private rnd(): number { this.seed = (this.seed * 16807) % 2147483647; return this.seed / 2147483647; }
@@ -86,7 +95,7 @@ export class Weather {
   }
   update(dt: number, hx: number, hz: number, time: number): void {
     this.kind = this.kindAt(hx, hz);
-    const want = { rain: this.kind === 'rain', fireflies: this.kind === 'fog', ash: this.kind === 'ash', embers: this.kind === 'ash' };
+    const want = { rain: this.kind === 'rain', fireflies: this.kind === 'fog', ash: this.kind === 'ash', embers: this.kind === 'ash', leaves: this.kind === 'leaves' };
     for (const key of Object.keys(this.layers) as Array<keyof typeof this.layers>) {
       const L = this.layers[key];
       L.level = Math.max(0, Math.min(1, L.level + (want[key] ? dt : -dt) / 2));
@@ -126,6 +135,10 @@ export class Weather {
         p[i]! += Math.sin(t * 0.7 + k) * 0.6 * dt + v[i]! * 0.3 * dt;
         p[i + 2]! += Math.cos(t * 0.6 + k * 1.3) * 0.6 * dt + v[i + 2]! * 0.3 * dt;
         p[i + 1] = 0.3 + ((k * 0.37) % 2.2) + Math.sin(t * 1.3 + k) * 0.3;
+      } else if (key === 'leaves') {
+        // Autumn leaves: a slow fall with a wide sway and flutter.
+        p[i + 1]! -= (0.55 + Math.abs(v[i + 1]!) * 0.5) * dt; p[i]! += (0.4 + Math.sin(t * 1.1 + k) * 1.1) * dt; p[i + 2]! += Math.cos(t * 0.9 + k * 1.7) * 0.7 * dt;
+        if (p[i + 1]! < 0) p[i + 1]! += H;
       } else if (key === 'ash') {
         p[i + 1]! -= (0.5 + Math.abs(v[i + 1]!)) * dt; p[i]! += (0.6 + Math.sin(t + k) * 0.4) * dt; p[i + 2]! += v[i + 2]! * 0.3 * dt;
         if (p[i + 1]! < 0) p[i + 1]! += H;

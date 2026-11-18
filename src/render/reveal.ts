@@ -11,11 +11,12 @@ import { FOV } from './camera';
  * Top of each kind above its ground (finials, the wheel's top gondola) and half width, as built in
  * `landmarks.ts`; kinds without a value are never revealed.
  */
-const SHOW: Partial<Record<LandmarkKind, { top: number; half: number }>> = {
+/** `near`: start distance when the route passes further off than `REVEAL_NEAR` (the Fernsehturm inside the Alexanderplatz loop). */
+const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: number }>> = {
   rathaus: { top: 44, half: 15 }, kirche: { top: 40.5, half: 9 }, mueggelturm: { top: 33, half: 6.5 }, riesenrad: { top: 38, half: 18 },
   sbahnhof: { top: 10, half: 15 }, schloss: { top: 17.5, half: 12 }, forum: { top: 15, half: 22 },
   // M15 Alexanderplatz.
-  weltzeituhr: { top: 10.5, half: 4.5 }, fernsehturm: { top: 92, half: 15 }, dom: { top: 32, half: 13 }, palast: { top: 16, half: 18 },
+  weltzeituhr: { top: 10.5, half: 4.5 }, fernsehturm: { top: 92, half: 15, near: 32 }, dom: { top: 32, half: 13 }, palast: { top: 16, half: 18 },
   rotesrathaus: { top: 45, half: 20 }, nikolaikirche: { top: 27, half: 10 }, hausdeslehrers: { top: 36, half: 11 }, kino: { top: 13, half: 15 },
 };
 /** German names for the hint while the view holds. */
@@ -106,7 +107,7 @@ export class LandmarkReveal {
   update(dt: number, x: number, z: number, alive: boolean, aspect = 16 / 9): RevealPose | null {
     if (!this.current) {
       if (!alive) return null;
-      const next = this.landmarks.find((l) => SHOW[l.kind] !== undefined && !this.seen.has(l) && footprintDist(l, x, z) < REVEAL_NEAR);
+      const next = this.landmarks.find((l) => SHOW[l.kind] !== undefined && !this.seen.has(l) && footprintDist(l, x, z) < (SHOW[l.kind]?.near ?? REVEAL_NEAR));
       if (!next) return null;
       this.seen.add(next);
       this.current = next;

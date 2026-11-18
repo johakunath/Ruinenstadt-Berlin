@@ -220,6 +220,18 @@ test('M15: Xhain loads on the Warschauer Brücke, the first fight starts, the ma
   expect(errors).toEqual([]);
 });
 
+test('M15: Alexanderplatz loads at S Hackescher Markt in afternoon light, the first fight starts, the map opens', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=alex&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Lustgarten');
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; });
+  await page.waitForFunction(() => window.__game!.sim().run.phase === 'fight', null, { timeout: 90_000 });
+  await page.keyboard.press('m');
+  await expect(page.locator('.map-svg svg')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('H1: the inventory doll shows the live hero and turns her on drag and keys', async ({ page }, testInfo) => {
   const errors = watchErrors(page);
   await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');

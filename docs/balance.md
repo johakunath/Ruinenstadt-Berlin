@@ -61,3 +61,7 @@ Damage taken is the winning try, as a share of max life (healing during the figh
 ## Xhain first run (M15, 2026-11-18)
 
 `node tools/balance.mjs 3 normal johannes 1 --map=xhain`, fresh gear (the bot does not carry Köpenick gear yet): 2 of 3 campaigns won, 4.0 deaths and 17.3 min per campaign; all deaths at the Spreehexe (one run, spear build, 127 % damage taken there). The other twelve fights: no deaths, 18 to 77 % damage taken. Read: from fresh gear Xhain plays like Köpenick with a harder final boss, so a hero who arrives with Köpenick gear (power about 400) will find the first zone easy. Calibrate after Johannes' playtest: a bot start with carried gear, then `XHAIN_TIER` in `src/data/xhain.ts` or the Spreehexe's life.
+
+## Alexanderplatz first run (M15, 2026-11-18)
+
+`node tools/balance.mjs 3 normal johannes 1 --map=alex`, fresh gear, stand-in bosses (Rattenmutter, Turmwächter, Brandmeister, Hauptmann) and the old roster: 3 of 3 campaigns won, 5.7 deaths and 25.0 min per campaign. Deaths sit at the Lustgarten (4.3 per run: tier 16 against fresh gear) and the first boss (1.3); the rest is easy (17 to 35 % damage taken). Read: a hero arriving with Xhain gear finds the district too easy until its own enemies and bosses exist; calibrate `ALEX_TIER` after step 7 with a carried-gear start. A first run stopped for good at the Kino International: the Plattenbau side passage ran into its footprint (fixed, test added).

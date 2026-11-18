@@ -199,6 +199,18 @@ describe('Alexanderplatz map (M15, layout C)', () => {
     for (const e of m.encounters) for (const g of m.guards!) expect(Math.hypot(e.x - g.x, e.z - g.z)).toBeGreaterThan(e.r + 8);
   });
 
+  it('side passages, the sleeping guard and the hidden blessing stay off every landmark and building', () => {
+    const m = alexMap(1), lots = generateLots(m), level = mapLevel(m, lots, generateProps(m, lots));
+    // Inside a landmark's rotated footprint (local x along its front, z out of it).
+    const inFoot = (l: (typeof m.landmarks)[number], x: number, z: number, pad: number): boolean => { const dx = x - l.x, dz = z - l.z, c = Math.cos(l.rot), sn = Math.sin(l.rot), lx = dx * c - dz * sn, lz = dx * sn + dz * c; return !l.walkUnder && Math.abs(lx) < l.hx + pad && Math.abs(lz) < l.hz + pad; };
+    const spots = [...m.hiddenSpots!, ...m.guards!];
+    for (const p of spots) {
+      expect(level.near(p.x, p.z, 1).some((c) => colliderDistance(c, p.x, p.z) <= 0), `${p.x.toFixed(0)},${p.z.toFixed(0)}`).toBe(false);
+      for (const l of m.landmarks) expect(inFoot(l, p.x, p.z, 0.5), `${l.kind}`).toBe(false);
+    }
+    for (const st of m.streets.filter((q) => q.kind === 'path')) for (const [x, z] of st.pts) for (const l of m.landmarks) expect(inFoot(l, x, z, 0), `${st.name} in ${l.kind}`).toBe(false);
+  });
+
   it('one Späti per zone, reachable, away from fight circles', () => {
     const m = alexMap(1), lots = generateLots(m), level = mapLevel(m, lots, generateProps(m, lots)), seen = reach(m, level);
     const spatis = m.landmarks.filter((l) => l.kind === 'spati');

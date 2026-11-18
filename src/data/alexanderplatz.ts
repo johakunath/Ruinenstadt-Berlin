@@ -149,9 +149,10 @@ export function alexMap(scale = 1): MapDef {
     { name: 'Mollstraße', kind: 'side', width: 8, sidewalk: 2.5, block: true, pts: line([[98, -112], [150, -112], [195.5, -114]]) },
     // M16b side passages: the hidden blessing in the churchyard of the Marienkirche, a cache in a
     // Nikolaiviertel yard, a sleeping elite in a Plattenbau courtyard.
-    { name: 'Kirchhof', kind: 'path', width: 4, pts: line([[-50, -66], [-58, -50], [-60, -38]]) },
+    { name: 'Kirchhof', kind: 'path', width: 4, pts: line([[-49, -66], [-52, -55], [-53, -46]]) },
     { name: 'Hofgasse', kind: 'path', width: 4, pts: line([[2, 60], [-14, 54], [-20, 44]]) },
-    { name: 'Plattenhof', kind: 'path', width: 4.5, pts: line([[150, -100], [166, -92], [178, -86]]) },
+    // Between the two slabs north of the Mollstraße (the first try ran into the Kino International).
+    { name: 'Plattenhof', kind: 'path', width: 4.5, pts: line([[147, -116], [147.5, -128], [148, -139]]) },
   ];
 
   // The Stadtbahn on its brick viaduct, cut at the arches the streets pass through.

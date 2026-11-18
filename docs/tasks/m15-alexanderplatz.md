@@ -30,7 +30,7 @@ Layout C "Großer Ring um den Turm" (Johannes, 2026-11-18). Concept, geography c
 | 6 | Enemy and boss spec (attacks, telegraphs, counters, wave mix, Weltzeituhr wake-up) | | Opus high (Fable only if Johannes dislikes a boss) | open |
 | 7 | Enemy and boss build (models from the research, code parts, emblems) | 6 | Opus high | open |
 | 8 | Textures: rows in `docs/asset-pipeline.md` for Codex | 4, 5 | Codex | open |
-| 9 | Screenshots (street, fight, each landmark), PC and Tab S9 playtest (layout C is the largest map: 390 × 300 m) | all | Johannes | open |
+| 9 | Screenshots (street, fight, each landmark), PC and Tab S9 playtest (layout C is the largest map: 390 × 300 m) | all | Johannes | screenshots done (`docs/proof/m15-alex/`); playtest open |
 
 ## Layout C anchors (scale 1, meters, +X east, +Z south, origin map center)
 
@@ -139,3 +139,12 @@ No free root or sunflower creature fits. Wurzler and Brigadeghul build on the zo
 - Slogans (atlas, yellow on red): „Pünktlich ist glücklich“, „Die Zeit gehört dem Volk“, „Vorwärts zur Normalzeit“, „Lächeln, Genosse! Wir sehen dich“ on slab and Altbau fronts, every third viaduct bay and the Hotel base.
 - Cameras (`cctv` in `alex-world.ts`, red LED, no light): about half the fronts, pavilion roofs, Rathaus corners, viaduct bays, fire walls, every second flag pole.
 - Proof `docs/proof/m15-alex/propaganda.jpg`. Cost: all on the existing poster, atlas and shared materials (no new draw call per chunk beyond the poster material); hardware check 18 covers the look.
+
+## Handover 2026-11-18 (finishing the map)
+
+- Flow: Xhain victory offers „In die U8“ (line 1 to Alexanderplatz), the U8 victory „Weiter zum Alex“; the network board opens the Alex once the U8 is cleared (`STOPS[2].map`, `stopOpen`). Title of the Alex page: back to Köpenick.
+- Weather: `ALEX_WEATHER`, falling leaves over the island, the forum, the Nikolaiviertel and the Allee, the plaza clear (story: frozen in autumn); new `leaves` particle layer, light fog by day.
+- Reveal: the Fernsehturm starts its camera swing from 32 m (`SHOW.near`), so the route along the Liebknecht- and Rathausstraße shows it.
+- Fixes found by the balance bot: the Plattenbau side passage ran into the Kino International (moved between the two slabs north of the Mollstraße), the churchyard blessing stood inside the Marienkirche (lane shortened); test: passages, guard and blessing off every landmark and building. The bot names its stop position now.
+- Checks: 23 map tests, weather and line tests, smoke test for `?map=alex`, bot 3/3 campaigns (`docs/balance.md`).
+- Left for the enemy session (step 7): district enemies and bosses, the Weltzeituhr wake-up, Brigadeghul clothing, `ALEX_TIER` calibration with carried gear. Textures T7 for Codex. Hardware checks 17 and 18.
