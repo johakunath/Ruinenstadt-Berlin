@@ -12,6 +12,7 @@ Layout C "Großer Ring um den Turm" (Johannes, 2026-11-18). Concept, geography c
 | A4 | Zone bosses: larger versions of the district enemies |
 | A5 | New enemies (Uhrwerkläufer, Wurzler, Kernspeier, Brigadeghul); look for fitting free models first (research below) |
 | A6 | Look: Pioneer palette, saturated yellow and blue, hammer-and-sickle emblems on facades, banners, crests and enemies (`docs/style-bible.md` › GDR / Pioneer direction, `docs/style/alexanderplatz-pioneer.png`) |
+| A9 | Light: variant A Goldene Stunde (Johannes, 2026-11-18): low warm sun from the south-west, amber haze, lamps at a quarter |
 | A8 | Koloss stays on the Karl-Marx-Allee (zone 3 boss). Boss and enemy specs are written by Opus; a Fable pass only if Johannes does not like a boss |
 | A7 | Order: after Xhain. Xhain (PR #46) changes the map format (Stadtbahn viaducts, Blockrand rows, map selection, enemy roster); build on it once it is in `main`. Reuse its Altbau blocks, back yards and building parts where they fit (Nikolaiviertel, Spandauer Vorstadt edge) |
 
@@ -22,8 +23,8 @@ Layout C "Großer Ring um den Turm" (Johannes, 2026-11-18). Concept, geography c
 | 0 | Concept, geography check, enemy model research | | Opus | done 2026-11-18 |
 | 1 | Data `src/data/alexanderplatz.ts` from the anchors below; map SVG from the data shown in chat (`docs/maps/alexanderplatz.svg`) | #46 merged | Opus high | done 2026-11-18 |
 | 2 | Playable blockout `?map=alex` with the existing generators; invariant tests at scale 1 and 1.3 (`src/data/alexanderplatz.test.ts`) | 1 | Opus high | done 2026-11-18: URL only, no title button yet; stand-in bosses, landmark massing and the brick Stadtbahn in `src/render/alex-world.ts` |
-| 3 | Afternoon look: sun direction and color, sky, grade, fog; light rules for a day map (below) | 2 | Opus high, mockup first | open |
-| 4 | Landmarks in code from photos (`docs/maps/landmarks.md`) | 2 | Opus high | open |
+| 3 | Afternoon look: sun direction and color, sky, grade, fog; light rules for a day map (below) | 2 | Opus high, mockup first | done 2026-11-18: three variants in game (`?sky=a|b|c`), Johannes picked **A Goldene Stunde** (default) |
+| 4 | Landmarks in code from photos (`docs/maps/landmarks.md`) | 2 | Opus high | first pass done 2026-11-18 (all 17 kinds, proof `docs/proof/m15-alex/`); photo check open for the ones without a downloaded photo (below) |
 | 5 | Buildings: Platte (WBS 70), Zuckerbäcker blocks, 60s pavilions, greenhouses, Xhain Altbau blocks; two lot types per zone | 2, #46 | Opus high | open |
 | 6 | Enemy and boss spec (attacks, telegraphs, counters, wave mix, Weltzeituhr wake-up) | | Opus high (Fable only if Johannes dislikes a boss) | open |
 | 7 | Enemy and boss build (models from the research, code parts, emblems) | 6 | Opus high | open |
@@ -80,3 +81,12 @@ No free root or sunflower creature fits. Wurzler and Brigadeghul build on the zo
 - Wiring: `?map=alex` (options, `ui/maps.ts`, `main.ts`, bot `mapLevelOf('alex')`). No title or victory button leads here yet; add it when the district enemies and landmarks are in.
 - Reused: Xhain map format (viaducts, `lane`, wave tier shape), Köpenick generators; 2D `js/alex.js` for the landmark list, zones and the Allee split.
 - Next: step 3 needs look variants (afternoon light) shown to Johannes first; step 4 landmarks from photos; step 6 boss spec.
+
+## Handover 2026-11-18 (steps 3 and 4)
+
+- Light: `src/render/sky.ts` holds the night sky (old values, unchanged for every other map) and the three Alexanderplatz variants; `skyFor` picks A unless `?sky=b|c`. Renderer, map world (hemisphere, sun, pooled lamp strength, glow decals) and weather fog read it. The sun keeps the moon's single shadow map and pool; no new light.
+- Landmarks: models in `src/render/alex-world.ts` (`buildAlexLandmark`), signs in one atlas material (`src/render/alex-paint.ts`, `MapMats.alex`, only built on this map): Weltzeituhr (rose floor, column with clocks and emblem, 24-sided drum with city panels and the red hour band, brass teeth, orbit sculpture), Dom (paired columns, mosaic portal west and a side portal south, corner towers, verdigris dome), Rotes Rathaus (three storeys of arched windows, terracotta frieze, clock tower with flag), Fernsehturm (folded pavilion roofs, chained door, shaft, sphere, antenna), Marienkirche, Nikolaikirche (twin spires), Neptunbrunnen, Brunnen der Völkerfreundschaft (bowl spiral), Haus des Lehrers (frieze lowered to 3.2 to 7.4 m for the camera), Kongresshalle, Kino International, Café Moskau (Sputnik), Altes Museum (18 columns), Palast der Republik (bronze glass, glass house vault), Hotel Stadt Berlin, both stations (name board and S roundel at street level). Reveal shot for eight of them (`reveal.ts`). Landmark sheets work for Alexanderplatz (`tools/landmark-sheet.mjs kind=<kind>`).
+- Orientation as real: Dom, Palast, Marienkirche and Nikolaikirche fronts west, Rathaus front north; cues added on the faces the camera sees (Dom south portal, Rathaus windows and frieze all round).
+- Photos looked at: Weltzeituhr (2), Dom (2), Rathaus tower. The others were built from the 2D drawings and known geometry, because Wikimedia rate-limited the downloads; check them against photos in the next pass (Fernsehturm pavilion, Neptunbrunnen figures, Brunnen der Völkerfreundschaft, Kino, Café Moskau, Altes Museum, Palast).
+- Known: the Fernsehturm is inside the loop and only revealed when the hero explores the forum; the V1 B cut caps of Hinterhof lots show as black squares from above (shared with Xhain, hardware check 6).
+- Next: step 5 buildings (Platte WBS 70, Zuckerbäcker, pavilions, greenhouses, Xhain Blockrand reuse), step 6 enemy and boss spec, then step 7.

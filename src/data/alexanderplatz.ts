@@ -133,7 +133,7 @@ export function alexMap(scale = 1): MapDef {
     // Zone 1: Nikolaiviertel and the Spree bank.
     { name: 'Spandauer Straße', kind: 'side', width: 8, pts: line([[-74, 58], [-70, 30], [-66, 16]]) },
     { name: 'Poststraße', kind: 'side', width: 6, pts: line([[-72, 60], [-50, 74], [-40, 88], [-30, 104]]) },
-    { name: 'Spreeufer', kind: 'side', width: 8, sidewalk: 3, pts: line([[-30, 110], [22, 112], [68, 110], [100, 104], [124, 96], [150, 92], [199, 96]]) },
+    { name: 'Spreeufer', kind: 'side', width: 8, sidewalk: 3, pts: line([[-30, 110], [22, 112], [68, 110], [100, 104], [124, 96], [150, 92], [195.5, 96]]) },
     { name: 'Jüdenstraße', kind: 'side', width: 6, pts: line([[0, 18], [2, 60], [10, 98], [22, 112]]) },
     // Around the forum: the Rathausstraße south of it, through an arch to the Alexanderstraße.
     { name: 'Rathausstraße', kind: 'main', width: 10, pts: line([[-66, 16], [-20, 18], [20, 16], [70, 2], [108, -12]]) },
@@ -141,12 +141,12 @@ export function alexMap(scale = 1): MapDef {
     { name: 'Alexanderstraße', kind: 'main', width: 12, pts: line([[104, -40], [108, -12], [118, 30], [134, 70], [150, 92]]) },
     { name: 'Lichtenberger Straße', kind: 'side', width: 8, pts: line([[186, 96], [184, 40], [184, -30]]) },
     // The Allee: a wide boulevard with a green middle strip (real 90 m, here 22 m), no tram.
-    { name: 'Karl-Marx-Allee', kind: 'main', width: 22, profile: 'allee', sidewalk: 3, pts: line([[104, -38], [150, -34], [199, -30]]) },
+    { name: 'Karl-Marx-Allee', kind: 'main', width: 22, profile: 'allee', sidewalk: 3, pts: line([[104, -38], [150, -34], [195.5, -30]]) },
     { name: 'Schillingstraße', kind: 'side', width: 7, pts: line([[150, -45], [150, -110]]) },
     { name: 'Otto-Braun-Straße', kind: 'side', width: 9, pts: line([[100, -46], [98, -100], [96, -153]]) },
     // North of the viaduct: the old Spandauer Vorstadt behind the station (not on the route).
     { name: 'Neue Promenade', kind: 'side', width: 7, pts: line([[-100, -143], [-40, -134], [24, -120], [60, -112]]) },
-    { name: 'Mollstraße', kind: 'side', width: 8, pts: line([[98, -112], [150, -112], [199, -114]]) },
+    { name: 'Mollstraße', kind: 'side', width: 8, pts: line([[98, -112], [150, -112], [195.5, -114]]) },
     // M16b side passages: the hidden blessing in the churchyard of the Marienkirche, a cache in a
     // Nikolaiviertel yard, a sleeping elite in a Plattenbau courtyard.
     { name: 'Kirchhof', kind: 'path', width: 4, pts: line([[-50, -66], [-58, -50], [-60, -38]]) },
@@ -223,15 +223,17 @@ export function alexMap(scale = 1): MapDef {
   const landmarks: Landmark[] = [
     // Museumsinsel.
     L('altesmuseum', -150, -88, 0, 16, 4.5, 1),
-    L('dom', -135, -28, 90 * DEG, 12, 13, 2),
-    L('palast', -138, 38, 270 * DEG, 9, 18, 2),
+    // Main fronts in their real directions: the Dom to the west (Lustgarten), the Palast to the west
+    // (Schlossplatz), the Marienkirche and Nikolaikirche towers to the west, the Rathaus tower to the north.
+    L('dom', -135, -28, 270 * DEG, 13, 12, 2),
+    L('palast', -138, 38, 270 * DEG, 18, 9, 2),
     // The forum inside the loop.
-    L('fernsehturm', -25, -28, 0, 9, 9, 6),
+    L('fernsehturm', -25, -28, 0, 15, 15, 4),
     L('marienkirche', -70, -38, 270 * DEG, 5, 11, 2),
     L('neptunbrunnen', -42, -2, 0, 5, 5, 2),
     // Nikolaiviertel and the Rathaus.
-    L('rotesrathaus', -40, 40, 0, 20, 12, 2),
-    L('nikolaikirche', -12, 80, 0, 5.5, 10, 2),
+    L('rotesrathaus', -40, 40, 180 * DEG, 20, 12, 2),
+    L('nikolaikirche', -12, 80, 270 * DEG, 5.5, 10, 2),
     // Alexanderplatz: the clock (it wakes up as the final boss), the fountain, the hotel tower, the station on the viaduct.
     L('weltzeituhr', 72, -62, 0, 2.5, 2.5, 4),
     L('brunnen', 70, -100, 0, 7, 7, 2),
@@ -242,7 +244,7 @@ export function alexMap(scale = 1): MapDef {
     L('hausdeslehrers', 124, -68, 0, 11, 11, 2),
     L('kongresshalle', 126, -6, 0, 10, 7, 2),
     L('kino', 168, -92, 0, 15, 7, 2),
-    L('cafemoskau', 148, 4, 0, 11, 7, 2),
+    L('cafemoskau', 148, 4, 180 * DEG, 11, 7, 2),
     // Späti rest stops, one per zone beside the route (front to the street).
     { ...L('spati', -128, -74, 270 * DEG, 5.5, 4, 2), name: 'Späti am Lustgarten' },
     { ...L('spati', -9, 40, 90 * DEG, 5.5, 4, 2), name: 'Späti an der Jüdenstraße' },
@@ -295,12 +297,16 @@ export function alexMap(scale = 1): MapDef {
       if (Math.min(e[0] - B.minX, B.maxX - e[0], e[1] - B.minZ, B.maxZ - e[1]) > 12) continue;
       const l = Math.hypot(f[0] - e[0], f[1] - e[1]), ux = (f[0] - e[0]) / l, uz = (f[1] - e[1]) / l, side = st.width / 2 - 1.2;
       // The barricade at the end brings its own work lamp (`edgeProps`); fires stand a little further in.
-      for (const k of [0, 1]) { const t = 4 * s + 7 + k * 12; lights.push({ kind: 'fireBarrel', x: e[0] + ux * t - uz * side, z: e[1] + uz * t + ux * side, rot: 0.6, size: k ? 0.8 : 1 }); }
+      for (const k of [0, 1]) { const t = 5 + k * 12; lights.push({ kind: 'fireBarrel', x: e[0] + ux * t - uz * side, z: e[1] + uz * t + ux * side, rot: 0.6, size: k ? 0.8 : 1 }); }
     }
   }
-  // The Koloss arena spans the whole Allee: fires on both curbs at its rim.
-  const allee = encounters.find((e) => e.id === 'allee')!;
-  for (const k of [-1, 1]) lights.push({ kind: 'fireBarrel', x: allee.x, z: allee.z + k * (allee.r + 1.5), rot: k, size: 1.2 });
+  // Fire barrels inside the two widest arenas (guideline: two per encounter), on the Allee's green strip.
+  for (const id of ['allee', 'jannowitz']) {
+    const e = encounters.find((q) => q.id === id)!;
+    for (const k of [-1, 1]) lights.push({ kind: 'fireBarrel', x: e.x + k * e.r * 0.55, z: e.z + (id === 'allee' ? 1 : k * 3) * s, rot: k, size: 1.2 });
+  }
+  // Corners the fill pass cannot reach (junctions beside landmarks and bridge heads).
+  for (const [kind, x, z] of [['workLamp', 113, -2], ['candles', 123, 24], ['candles', -160, 22], ['fireBarrel', -140, -42]] as Array<[Prop['kind'], number, number]>) lights.push({ kind, x: x * s, z: z * s, rot: 0.4, size: 0.9 });
   lights.push({ kind: 'fireBarrel', x: -48 * s, z: 11 * s, rot: 0, size: 1.1 }, { kind: 'candles', x: -150 * s, z: -40 * s, rot: 0, size: 0.8 });
   const yards: Prop[] = [
     { kind: 'crates', ...endOf('Hofgasse', 1.2, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Hofgasse', 3, -1.2), rot: 1, size: 1 }, { kind: 'crate', ...endOf('Hofgasse', 3, 1.2), rot: -0.3, size: 1 },

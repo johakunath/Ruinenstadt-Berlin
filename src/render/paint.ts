@@ -3,7 +3,7 @@
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Texture } from 'three';
 import { Rng } from '../sim/math';
 
-type Ctx = CanvasRenderingContext2D;
+export type Ctx = CanvasRenderingContext2D;
 
 export const PALETTE = {
   cream: '#f0b27a',
@@ -17,7 +17,7 @@ export const PALETTE = {
   scarf: '#b8261c',
 } as const;
 
-function canvas(w: number, h: number): [HTMLCanvasElement, Ctx] {
+export function canvas(w: number, h: number): [HTMLCanvasElement, Ctx] {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
@@ -118,7 +118,7 @@ function crack(ctx: Ctx, rng: Rng, x: number, y: number, steps: number, step: nu
   path(0, 0);
 }
 
-function toTexture(c: HTMLCanvasElement, repeat = true, anisotropy = 4): CanvasTexture {
+export function toTexture(c: HTMLCanvasElement, repeat = true, anisotropy = 4): CanvasTexture {
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = RepeatWrapping;

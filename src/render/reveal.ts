@@ -14,9 +14,13 @@ import { FOV } from './camera';
 const SHOW: Partial<Record<LandmarkKind, { top: number; half: number }>> = {
   rathaus: { top: 44, half: 15 }, kirche: { top: 40.5, half: 9 }, mueggelturm: { top: 33, half: 6.5 }, riesenrad: { top: 38, half: 18 },
   sbahnhof: { top: 10, half: 15 }, schloss: { top: 17.5, half: 12 }, forum: { top: 15, half: 22 },
+  // M15 Alexanderplatz.
+  weltzeituhr: { top: 10.5, half: 4.5 }, fernsehturm: { top: 92, half: 15 }, dom: { top: 32, half: 13 }, palast: { top: 16, half: 18 },
+  rotesrathaus: { top: 45, half: 20 }, nikolaikirche: { top: 27, half: 10 }, hausdeslehrers: { top: 36, half: 11 }, kino: { top: 13, half: 15 },
 };
 /** German names for the hint while the view holds. */
-const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick' };
+const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
+  weltzeituhr: 'Weltzeituhr', fernsehturm: 'Fernsehturm', dom: 'Berliner Dom', palast: 'Palast der Republik', rotesrathaus: 'Rotes Rathaus', nikolaikirche: 'Nikolaikirche', hausdeslehrers: 'Haus des Lehrers', kino: 'Kino International' };
 /** Start when the hero is this close to the footprint (also mid-fight: the game pauses). */
 export const REVEAL_NEAR = 12;
 export const REVEAL_IN = 1.0;

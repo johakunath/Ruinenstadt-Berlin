@@ -1,10 +1,12 @@
 // M15 Alexanderplatz blockout (`docs/tasks/m15-alexanderplatz.md`, step 2): the brick Stadtbahn viaduct
 // with open arches, and massing for the district landmarks (silhouette, height and colour only). The
 // landmarks get their real models from photos in step 4; this keeps the layout readable until then.
-import { CylinderGeometry, Euler, Matrix4, SphereGeometry } from 'three';
+import { CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometry, TorusGeometry, type BufferGeometry, type Material } from 'three';
 import type { Landmark, MapDef, Viaduct } from '../data/map';
 import type { ChunkBuilder, MapMats } from './map-world';
-type RGB = readonly [number, number, number];
+import { Rng } from '../sim/math';
+import { archWindow, cached, ENDS, frameOf, frustum, pane, SLOPES, sub, type Frame, type RGB } from './landmarks';
+import { atlasUv, type AtlasKey } from './alex-paint';
 
 export const ALEX_KINDS = new Set<Landmark['kind']>([
   'altesmuseum', 'dom', 'palast', 'fernsehturm', 'marienkirche', 'neptunbrunnen', 'rotesrathaus', 'nikolaikirche',
@@ -13,112 +15,366 @@ export const ALEX_KINDS = new Set<Landmark['kind']>([
 
 // Pioneer palette (`docs/style-bible.md` › GDR / Pioneer direction) as vertex tints.
 const CREAM: RGB = [1.15, 1.08, 0.95], BLUE: RGB = [0.45, 0.62, 1.05], YELLOW: RGB = [1.35, 1.1, 0.45], RED: RGB = [1.1, 0.45, 0.42];
-const SAND: RGB = [1.05, 0.95, 0.8], BRICK: RGB = [1, 0.75, 0.68], GREEN: RGB = [0.55, 0.8, 0.65], GREY: RGB = [0.85, 0.85, 0.85];
+const SAND: RGB = [1.08, 0.96, 0.78], BRICK: RGB = [1.05, 0.72, 0.6], GREEN: RGB = [0.55, 0.8, 0.65], GREY: RGB = [0.85, 0.85, 0.85];
+const COPPER: RGB = [0.68, 1.08, 0.9], BRONZE: RGB = [1.25, 1.1, 0.82], BRASS: RGB = [1.4, 1.15, 0.6], ALU: RGB = [1.05, 1.05, 1.02];
+const TERRACOTTA: RGB = [1.2, 0.85, 0.6], WHITE: RGB = [1.45, 1.42, 1.34];
 
-function frame(l: Landmark): (x: number, y: number, z: number, ry?: number) => Matrix4 {
-  const base = new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0, l.z);
-  return (x, y, z, ry = 0) => base.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(0, ry, 0)).setPosition(x, y, z));
+/** A plane (x, y; z out) whose UVs are the atlas region `key`. */
+function atlasPlane(b: ChunkBuilder, m: Matrix4, w: number, h: number, key: AtlasKey, color?: RGB): void {
+  const mat = b.mm.alex;
+  if (!mat) return;
+  const [u0, v0, u1, v1] = atlasUv(key);
+  const g = cached(`ap${w},${h},${key}`, () => {
+    const p = new PlaneGeometry(w, h), uv = p.getAttribute('uv');
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
+    return p;
+  });
+  b.geo(mat, g, m, color);
 }
 
-/** Massing of one landmark at its real proportions (heights compressed below the camera where needed). */
+/** An open cylinder band (radius r, height h, `seg` sides) wrapped with the atlas region `key`. */
+function atlasBand(b: ChunkBuilder, m: Matrix4, r: number, h: number, seg: number, key: AtlasKey, color?: RGB): void {
+  const mat = b.mm.alex;
+  if (!mat) return;
+  const [u0, v0, u1, v1] = atlasUv(key);
+  const g = cached(`ab${r},${h},${seg},${key}`, () => {
+    const c = new CylinderGeometry(r, r, h, seg, 1, true), uv = c.getAttribute('uv');
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
+    return c;
+  });
+  b.geo(mat, g, m, color);
+}
+
+/** A glass front: atlas panes tiled over len × h from height y0 (frame `m` at the face centre, z out). */
+function glassFace(b: ChunkBuilder, m: Matrix4, len: number, y0: number, h: number, key: AtlasKey, cell = 6): void {
+  const nx = Math.max(1, Math.round(len / cell)), ny = Math.max(1, Math.round(h / cell)), cw = len / nx, ch = h / ny;
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) atlasPlane(b, sub(m, (i + 0.5) * cw - len / 2, y0 + (j + 0.5) * ch, 0.03), cw, ch, key);
+}
+
+/** All four faces of a w × d glass box from y0 to y0 + h, with a dark core so no face is empty. */
+function glassBox(b: ChunkBuilder, F: Frame, w: number, d: number, y0: number, h: number, key: AtlasKey, cz = 0, cell = 6): void {
+  b.box(b.mm.concrete, F(0, y0 + h / 2, cz), w, h, d, [0.35, 0.4, 0.42]);
+  for (const f of faces(F, w, d, cz)) glassFace(b, f.m, f.len, y0, h, key, cell);
+}
+
+/** A row of windows along a face: frame `m` at the face centre (z out), `n` panes of w × h at height y. */
+function windowRow(b: ChunkBuilder, m: Matrix4, len: number, y: number, w: number, h: number, step: number, rng: Rng, lit: number, arched = false): void {
+  const n = Math.max(1, Math.floor(len / step));
+  for (let k = 0; k < n; k++) {
+    const x = (k + 0.5 - n / 2) * (len / n);
+    if (arched) archWindow(b, sub(m, x, y, 0), w, h, rng, lit, false);
+    else pane(b, sub(m, x, y, 0), w, h, rng, lit);
+  }
+}
+
+/** The four faces of a w × d box: frame at each face centre (z out), and its length. */
+function faces(F: Frame, w: number, d: number, cz = 0): Array<{ m: Matrix4; len: number }> {
+  return [
+    { m: F(0, 0, cz + d / 2), len: w },
+    { m: F(w / 2, 0, cz, Math.PI / 2), len: d },
+    { m: F(-w / 2, 0, cz, -Math.PI / 2), len: d },
+    { m: F(0, 0, cz - d / 2, Math.PI), len: w },
+  ];
+}
+
+/** A simple standing figure (bronze or stone): legs, body, arms, head; `pose` raises one arm. */
+function figure(b: ChunkBuilder, m: Matrix4, s: number, color: RGB, pose = 0): void {
+  const M = b.mm;
+  const c = (r0: number, r1: number, h: number): BufferGeometry => cached(`fig${r0},${r1},${h}`, () => new CylinderGeometry(r0, r1, h, 8));
+  for (const x of [-0.12, 0.12]) b.geo(M.iron, c(0.08, 0.09, 0.85), sub(m, x * s, 0.42 * s, 0).multiply(new Matrix4().makeScale(s, s, s)), color);
+  b.geo(M.iron, c(0.2, 0.17, 0.75), sub(m, 0, 1.2 * s, 0).multiply(new Matrix4().makeScale(s, s, s)), color);
+  b.geo(M.iron, cached('figHead', () => new SphereGeometry(0.12, 10, 8)), sub(m, 0, 1.72 * s, 0).multiply(new Matrix4().makeScale(s, s, s)), color);
+  b.geo(M.iron, c(0.055, 0.06, 0.65), sub(m, 0.27 * s, 1.2 * s, 0, 0, 0, 0.15).multiply(new Matrix4().makeScale(s, s, s)), color);
+  b.geo(M.iron, c(0.055, 0.06, 0.65), sub(m, -0.3 * s, (1.2 + pose * 0.45) * s, 0, 0, 0, -0.15 - pose * 2.4).multiply(new Matrix4().makeScale(s, s, s)), color);
+}
+
+/** Landmark models from reference photos (step 4). Heights compressed about like the footprints. */
 export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
-  const M = b.mm, F = frame(l), w = l.hx * 2, d = l.hz * 2;
-  const cyl = (rt: number, rb: number, h: number, y: number, mat = M.concrete, color: RGB = GREY, x = 0, z = 0): void => b.geo(mat, new CylinderGeometry(rt, rb, h, 16), F(x, y + h / 2, z), color);
-  const ball = (r: number, y: number, mat = M.concrete, color: RGB = GREY, x = 0, z = 0): void => b.geo(mat, new SphereGeometry(r, 16, 10), F(x, y, z), color);
+  const M = b.mm, F = frameOf(l), w = l.hx * 2, d = l.hz * 2, rng = new Rng(Math.round(l.x * 31 + l.z * 17));
+  const cyl = (rt: number, rb: number, h: number, y: number, mat: Material = M.concrete, color: RGB = GREY, x = 0, z = 0, seg = 16): void => b.geo(mat, cached(`c${rt},${rb},${h},${seg}`, () => new CylinderGeometry(rt, rb, h, seg)), F(x, y + h / 2, z), color);
+  const ball = (r: number, y: number, mat: Material = M.concrete, color: RGB = GREY, x = 0, z = 0, sy = 1): void => b.geo(mat, cached(`s${r}`, () => new SphereGeometry(r, 18, 12)), F(x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), color);
+  const dome = (r: number, y: number, mat: Material, color: RGB, x = 0, z = 0, sy = 1.15): void => b.geo(mat, cached(`d${r}`, () => new SphereGeometry(r, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2)), F(x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), color);
   switch (l.kind) {
-    case 'altesmuseum':
-      b.box(M.stucco, F(0, 0.6, 0), w, 1.2, d, SAND);
-      b.box(M.stucco, F(0, 6, -0.5), w - 2, 10, d - 1, CREAM);
-      for (let x = -l.hx + 1.5; x <= l.hx - 1.5; x += 2) cyl(0.35, 0.35, 9, 1.2, M.stucco, CREAM, x, l.hz - 0.4);
+    case 'weltzeituhr': {
+      // Urania-Weltzeituhr (Erich John, 1969), 10 m: compass-rose mosaic, column with two small clocks,
+      // a 24-sided drum (city panels above and below the red hour band with gold numerals), the mast and
+      // the orbit sculpture. The Stillstand turned it clockwork: brass gear teeth under the drum, cable
+      // boxes at its foot, ivy up the column. It wakes up as the final boss (step 7).
+      b.geo(M.stucco, cached('wzRose', () => new CircleGeometry(4.2, 32)), F(0, 0.03, 0, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [1.1, 0.75, 0.72]);
+      b.geo(M.stucco, cached('wzRose2', () => new CircleGeometry(3.3, 32)), F(0, 0.04, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [0.95, 0.93, 0.88]);
+      for (let k = 0; k < 8; k++) b.box(M.stucco, F(0, 0.05, 0, (k * Math.PI) / 4), 0.22, 0.02, k % 2 ? 4.4 : 6.4, k % 2 ? [0.7, 0.5, 0.5] : [0.55, 0.55, 0.6]);
+      cyl(0.45, 0.48, 2.75, 0, M.concrete, [0.95, 0.93, 0.88]);
+      for (const s of [-1, 1]) b.geo(M.clock, cached('wzClock', () => new CircleGeometry(0.24, 16)), F(s * 0.47, 2.15, 0, (s * Math.PI) / 2));
+      // Clockwork foot: two cable boxes and the ivy.
+      for (const s of [-1, 1]) {
+        b.box(M.iron, F(s * 1.1, 0.45, -0.6), 0.6, 0.9, 0.4, s < 0 ? YELLOW : [0.8, 0.85, 0.8]);
+        b.box(M.rubber, F(s * 0.6, 0.06, -0.55), 1.1, 0.08, 0.1, [0.4, 0.4, 0.4]);
+      }
+      b.box(M.ivy, F(0, 1.2, 0.47), 0.6, 2.2, 0.02, GREEN);
+      // Hammer and sickle on the column, at eye height, facing the plaza.
+      atlasPlane(b, F(0, 1.55, 0.49), 0.5, 0.5, 'emblem');
+      // The drum.
+      const y0 = 2.75, R = 2.95;
+      b.geo(M.stucco, cached('wzCap', () => new CylinderGeometry(R, R, 0.12, 24)), F(0, y0 + 0.06, 0), ALU);
+      b.geo(M.stucco, cached('wzCap', () => new CylinderGeometry(R, R, 0.12, 24)), F(0, y0 + 2.72, 0), ALU);
+      atlasBand(b, F(0, y0 + 0.55, 0), R, 0.9, 24, 'cities');
+      atlasBand(b, F(0, y0 + 1.37, 0, Math.PI / 24), R + 0.03, 0.74, 24, 'hours');
+      atlasBand(b, F(0, y0 + 2.2, 0, Math.PI / 12), R, 0.9, 24, 'cities');
+      b.geo(M.dark, cached('wzBot', () => new CircleGeometry(R - 0.05, 24)), F(0, y0 + 0.01, 0).multiply(new Matrix4().makeRotationX(Math.PI / 2)));
+      for (let k = 0; k < 24; k++) b.box(M.iron, F(Math.sin((k * Math.PI) / 12) * (R - 0.15), y0 - 0.12, Math.cos((k * Math.PI) / 12) * (R - 0.15), (k * Math.PI) / 12), 0.28, 0.22, 0.32, BRASS);
+      // Mast and orbit sculpture (spins when it wakes).
+      cyl(0.13, 0.16, 2.4, y0 + 2.78, M.iron, [0.6, 0.6, 0.62]);
+      const c = y0 + 5.0;
+      ball(0.38, c, M.stucco, [1.35, 1.35, 1.38]);
+      b.box(M.iron, F(0, c, 0, 0.3), 4.6, 0.07, 0.07, [0.5, 0.5, 0.52]);
+      for (let k = 0; k < 5; k++) b.geo(M.iron, cached('wzRing', () => new TorusGeometry(2.25, 0.035, 5, 48)), F(0, c, 0, k * 0.63).multiply(new Matrix4().makeRotationX(Math.PI / 2 + 0.35 * Math.sin(k * 1.7))), [0.7, 0.7, 0.72]);
+      for (let k = 0; k < 9; k++) {
+        const a = k * 0.7 + 0.3, r = 2.25, t = Math.sin(k * 2.3) * 0.9;
+        ball(0.12 + (k % 3) * 0.05, c + t, M.stucco, k % 4 === 0 ? BRASS : [1.35, 1.35, 1.38], Math.sin(a) * Math.sqrt(r * r - t * t), Math.cos(a) * Math.sqrt(r * r - t * t));
+      }
       return;
-    case 'dom':
-      b.box(M.stucco, F(0, 8, 0), w, 16, d, SAND);
-      cyl(7, 7, 4, 16, M.stucco, SAND);
-      ball(7, 20, M.slate, GREEN);
-      for (const [x, z] of [[-l.hx + 2, -l.hz + 2], [l.hx - 2, -l.hz + 2], [-l.hx + 2, l.hz - 2], [l.hx - 2, l.hz - 2]] as const) { cyl(1.8, 1.8, 6, 16, M.stucco, SAND, x, z); ball(1.8, 22, M.slate, GREEN, x, z); }
+    }
+    case 'dom': {
+      // Berliner Dom: sandstone front of paired columns, a central arched portal with a mosaic lunette over
+      // a broad stair, corner towers and the big verdigris dome with lantern. Front faces west, the Lustgarten.
+      const H = 11, bodyD = d - 2;
+      b.box(M.stucco, F(0, 0.3, l.hz - 1.2), w * 0.55, 0.6, 2.4, SAND);
+      b.box(M.stucco, F(0, 0.15, l.hz - 0.4), w * 0.62, 0.3, 0.8, SAND);
+      b.box(M.stucco, F(0, H / 2, -1), w, H, bodyD, SAND);
+      for (const f of faces(F, w, bodyD, -1)) {
+        windowRow(b, f.m, f.len - 4, 3.2, 1.3, 2.4, 4, rng, 0.05, true);
+        windowRow(b, f.m, f.len - 4, 7.6, 1.2, 2.2, 4, rng, 0.05, true);
+      }
+      const fz = l.hz - 2 + 0.3;
+      // Portal: deep arch, gold mosaic lunette, dark doors.
+      b.box(M.stucco, F(0, 4.2, fz + 0.2), 5.4, 8.4, 0.6, [1.15, 1.02, 0.84]);
+      b.box(M.dark, F(0, 1.7, fz + 0.52), 2.4, 3.4, 0.05);
+      b.geo(M.stucco, cached('domLun', () => new CircleGeometry(1.9, 16, 0, Math.PI)), F(0, 4.3, fz + 0.52), [1.45, 1.15, 0.55]);
+      for (const x of [-3.3, -2.6, 2.6, 3.3, -8.6, -7.9, 7.9, 8.6]) cyl(0.3, 0.33, 8.6, 0.6, M.stucco, [1.12, 1.0, 0.82], x, fz + 0.5);
+      for (const x of [-5.6, 5.6]) figure(b, F(x, 0.6, fz + 0.9), 1.15, COPPER, x < 0 ? 1 : 0);
+      // The south side (the camera sees it from the Schlossplatz): paired columns and the side portal.
+      const side = F(l.hx, 0, -1, Math.PI / 2);
+      for (const x of [-7.6, -6.9, -1.6, -0.9, 0.9, 1.6, 6.9, 7.6]) b.geo(M.stucco, cached('domCol', () => new CylinderGeometry(0.28, 0.31, 8.4, 10)), sub(side, x, 4.8, 0.4), [1.12, 1.0, 0.82]);
+      b.box(M.stucco, sub(side, 0, 3.6, 0.2), 3.6, 7.2, 0.4, [1.15, 1.02, 0.84]);
+      b.box(M.dark, sub(side, 0, 1.5, 0.42), 1.8, 3, 0.05);
+      b.geo(M.stucco, cached('domLun2', () => new CircleGeometry(1.3, 14, 0, Math.PI)), sub(side, 0, 3.4, 0.42), [1.45, 1.15, 0.55]);
+      b.box(M.stucco, sub(side, 0, 0.25, 0.9), 6, 0.5, 1.6, SAND);
+      b.box(M.stucco, F(0, H + 0.4, -1), w + 0.6, 0.8, bodyD + 0.6, [1.12, 1.0, 0.84]);
+      b.box(M.stucco, F(0, H + 1.7, -1), w - 3, 1.8, bodyD - 3, SAND);
+      // Corner towers.
+      for (const x of [-l.hx + 2.4, l.hx - 2.4]) {
+        b.box(M.stucco, F(x, H + 3.5, fz - 2.4), 4.2, 7, 4.2, SAND);
+        windowRow(b, F(x, 0, fz - 0.29), 4, H + 3.2, 1.2, 2.6, 4, rng, 0, true);
+        cyl(1.9, 1.9, 1.4, H + 7, M.stucco, SAND, x, fz - 2.4);
+        dome(1.9, H + 8.4, M.stucco, COPPER, x, fz - 2.4, 1.3);
+        cyl(0.25, 0.35, 1.4, H + 10.8, M.stucco, COPPER, x, fz - 2.4);
+        ball(0.25, H + 12.4, M.iron, BRASS, x, fz - 2.4);
+      }
+      // The main dome over its drum.
+      cyl(7.2, 7.4, 4.5, H + 2.6, M.stucco, SAND, 0, -2);
+      for (let k = 0; k < 16; k++) { const a = (k * Math.PI) / 8; archWindow(b, F(Math.sin(a) * 7.42, H + 4.8, -2 + Math.cos(a) * 7.42, a), 1.1, 2.2, rng, 0, false); }
+      dome(7.2, H + 7.1, M.stucco, COPPER, 0, -2, 1.2);
+      cyl(0.9, 1.1, 3, H + 15.6, M.stucco, COPPER, 0, -2);
+      ball(0.5, H + 19, M.iron, BRASS, 0, -2);
+      b.box(M.iron, F(0, H + 20.2, -2), 0.12, 1.4, 0.12, BRASS);
+      b.box(M.iron, F(0, H + 20.5, -2), 0.7, 0.12, 0.12, BRASS);
       return;
-    case 'palast':
-      // Bronze mirror glass between white marble ends, a glass house vault on the roof.
-      b.box(M.glass, F(0, 7, 0), w, 14, d - 6, [1.3, 0.75, 0.45]);
-      for (const z of [-l.hz + 1.5, l.hz - 1.5]) b.box(M.stucco, F(0, 7, z), w + 0.4, 14, 3, CREAM);
-      b.geo(M.glass, new CylinderGeometry(l.hx - 1, l.hx - 1, d - 8, 12, 1, true, -Math.PI / 2, Math.PI), new Matrix4().copy(F(0, 14, 0)).multiply(new Matrix4().makeRotationX(Math.PI / 2)), [0.8, 1.2, 1]);
+    }
+    case 'rotesrathaus': {
+      // Rotes Rathaus: red-orange brick block with arched windows in three storeys, the terracotta frieze
+      // ("Steinerne Chronik") over the ground floor, a corbelled cornice, and the clock tower in the middle
+      // of the front (north, the Rathausstraße). The route passes south of it: windows and frieze run round.
+      const H = 15;
+      b.box(M.brick, F(0, H / 2, 0), w, H, d, BRICK);
+      for (const f of faces(F, w, d)) {
+        windowRow(b, f.m, f.len - 2, 2.2, 1.3, 2.6, 3.3, rng, 0.08, true);
+        b.box(M.stucco, sub(f.m, 0, 4.4, 0.06), f.len, 0.9, 0.12, TERRACOTTA);
+        windowRow(b, f.m, f.len - 2, 7.2, 1.3, 3, 3.3, rng, 0.1, true);
+        windowRow(b, f.m, f.len - 2, 11.6, 1.1, 2.4, 3.3, rng, 0.06, true);
+        b.box(M.brick, sub(f.m, 0, H - 0.6, 0.15), f.len + 0.3, 1.2, 0.3, [0.95, 0.62, 0.5]);
+        b.box(M.stucco, sub(f.m, 0, 0.35, 0.08), f.len, 0.7, 0.16, [0.75, 0.72, 0.66]);
+      }
+      const tz = l.hz - 4;
+      b.box(M.brick, F(0, H + 9, tz), 7.5, 18, 7.5, BRICK);
+      for (const r of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+        const m = F(Math.sin(r) * 3.76, 0, tz + Math.cos(r) * 3.76, r);
+        archWindow(b, sub(m, -1, H + 4, 0), 0.9, 3.6, rng, 0, false);
+        archWindow(b, sub(m, 1, H + 4, 0), 0.9, 3.6, rng, 0, false);
+        b.geo(M.clock, cached('rrClock', () => new CircleGeometry(1.2, 20)), sub(m, 0, H + 11, 0.05));
+        b.box(M.brick, sub(m, 0, H + 17.6, 0.2), 7.9, 0.8, 0.4, [0.95, 0.62, 0.5]);
+      }
+      b.geo(M.slate, frustum(7.6, 7.6, 1, 6, 6), F(0, H + 18, tz), [0.5, 0.55, 0.6]);
+      b.geo(M.iron, cached('rrSpire', () => new CylinderGeometry(0.15, 1.4, 6, 8)), F(0, H + 22, tz), [0.6, 0.62, 0.66]);
+      b.box(M.iron, F(0, H + 26, tz), 0.08, 3, 0.08);
+      atlasPlane(b, F(0.8, H + 26.5, tz), 1.4, 0.9, 'banner');
       return;
-    case 'fernsehturm':
-      // Folded pavilion roofs, the shaft, the sphere (above the camera; the reveal shot shows it).
-      for (let i = 0; i < 6; i++) b.box(M.concrete, F(Math.sin(i * 1.047) * 7, 2.5, Math.cos(i * 1.047) * 7, i * 1.047), 6, 5, 4, CREAM);
-      cyl(2.6, 4.2, 60, 0, M.concrete, CREAM);
-      ball(8, 66, M.concrete, [0.75, 0.82, 0.9]);
-      cyl(0.6, 0.9, 22, 73, M.iron, RED);
+    }
+    case 'fernsehturm': {
+      // Fernsehturm foot: the pavilion with its folded, pointed roof wings round the shaft (the cue at street
+      // level), the tapering concrete shaft, the sphere and the red and white antenna above the camera.
+      // The tower is the finale (its own district): the doors are chained.
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3 + Math.PI / 6, cx = Math.sin(a) * 9.5, cz = Math.cos(a) * 9.5;
+        glassBox(b, (x, y, z, ry = 0) => F(cx, y, cz, a).multiply(new Matrix4().makeRotationY(ry).setPosition(x, 0, z)), 9, 7, 0, 4.4, 'foyer', 0, 4.4);
+        b.geo(M.concrete, frustum(10, 8, 3.2, 0, 8, SLOPES | ENDS), F(cx, 4.4, cz, a + Math.PI / 2), WHITE);
+        b.box(M.concrete, F(cx, 4.45, cz, a), 10.2, 0.25, 8.2, WHITE);
+      }
+      b.box(M.iron, F(0, 1.4, 14.3), 3.2, 2.8, 0.2, [0.5, 0.5, 0.5]);
+      b.box(M.iron, F(0, 1.4, 14.42), 2.6, 0.1, 0.05, [0.7, 0.7, 0.7]);
+      atlasPlane(b, F(-3.2, 3.2, 14.4), 1.6, 0.5, 'stripe');
+      cyl(3.2, 4.6, 66, 0, M.concrete, [1.1, 1.08, 1.02]);
+      ball(8.5, 72, M.stucco, [0.95, 1.0, 1.08]);
+      cyl(8.6, 8.6, 1.4, 70.8, M.glass, [0.7, 0.8, 0.9]);
+      for (let k = 0; k < 6; k++) cyl(0.5, 0.6, 3.5, 80 + k * 3.5, M.iron, k % 2 ? RED : WHITE);
       return;
-    case 'marienkirche':
-      b.box(M.brick, F(0, 6, 3), w, 12, d - 6, BRICK);
-      b.box(M.brick, F(0, 11, -l.hz + 3), 6, 22, 6, BRICK);
-      b.geo(M.slate, new CylinderGeometry(0.2, 3.4, 9, 4), F(0, 26.5, -l.hz + 3, Math.PI / 4), GREEN);
+    }
+    case 'marienkirche': {
+      // St. Marien: brick hall church, tall pointed windows, the west tower with its stone storey and the
+      // green neo-Gothic spire. Front (tower) faces west.
+      const H = 11, tz = l.hz - 3;
+      b.box(M.brick, F(0, H / 2, -2), w, H, d - 4, BRICK);
+      for (const f of faces(F, w, d - 4, -2)) if (f.len > w) windowRow(b, f.m, f.len - 6, 5.2, 1.4, 6, 3.6, rng, 0.06, true);
+      b.geo(M.roof, frustum(w + 0.6, d - 3.6, 5, w + 0.6, 0, SLOPES | ENDS), F(0, H, -2, Math.PI / 2), [1.0, 0.75, 0.62]);
+      b.box(M.brick, F(0, 9, tz), 6.4, 18, 6, BRICK);
+      archWindow(b, F(0, 0, tz + 3.01), 1.6, 3.2, rng, 0, false);
+      b.box(M.door, F(0, 1.4, tz + 3.02), 1.6, 2.8, 0.05);
+      b.box(M.stucco, F(0, 19.5, tz), 5.6, 3, 5.2, [1.0, 0.95, 0.85]);
+      b.geo(M.stucco, cached('mkSpire', () => new CylinderGeometry(0.15, 3.7, 11, 4)), F(0, 26.5, tz, Math.PI / 4), COPPER);
       return;
-    case 'neptunbrunnen':
-      cyl(l.hx, l.hx, 0.7, 0, M.stucco, GREY);
-      b.geo(M.water, new CylinderGeometry(l.hx - 0.6, l.hx - 0.6, 0.1, 20), F(0, 0.62, 0));
-      cyl(1.2, 1.6, 2.2, 0.7, M.iron, GREEN);
-      cyl(0.4, 0.5, 2, 2.9, M.iron, GREEN);
+    }
+    case 'neptunbrunnen': {
+      // Neptunbrunnen (Begas 1891): a red granite basin, Neptune on a rock with four tritons, the four
+      // river women on the rim. Bronze turns green-black.
+      cyl(l.hx, l.hx + 0.2, 0.7, 0, M.stucco, [1.0, 0.7, 0.65], 0, 0, 28);
+      b.geo(M.water, cached('nbWater', () => new CylinderGeometry(l.hx - 0.5, l.hx - 0.5, 0.1, 28)), F(0, 0.6, 0));
+      cyl(1.6, 2.1, 1.6, 0.6, M.stucco, [0.7, 0.65, 0.6], 0, 0, 7);
+      cyl(0.75, 0.95, 0.9, 2.2, M.iron, BRONZE);
+      figure(b, F(0, 3.1, 0), 1.25, [0.6, 0.85, 0.7], 1);
+      b.box(M.iron, F(0.55, 4.6, 0, 0, 0), 0.06, 3, 0.06, [0.6, 0.85, 0.7]);
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 2 + Math.PI / 4;
+        b.box(M.iron, F(Math.sin(a) * (l.hx - 0.4), 0.95, Math.cos(a) * (l.hx - 0.4), a + Math.PI / 2), 1.5, 0.5, 0.6, [0.6, 0.85, 0.7]);
+        ball(0.22, 1.45, M.iron, [0.6, 0.85, 0.7], Math.sin(a) * (l.hx - 0.4), Math.cos(a) * (l.hx - 0.4));
+      }
       return;
-    case 'rotesrathaus':
-      b.box(M.brick, F(0, 7, 0), w, 14, d, BRICK);
-      b.box(M.brick, F(0, 13, l.hz - 4), 8, 26, 8, BRICK);
-      b.box(M.slate, F(0, 26.5, l.hz - 4), 9, 1, 9, GREEN);
+    }
+    case 'nikolaikirche': {
+      // Nikolaikirche: brick church in the Nikolaiviertel, the stone tower base and two slender green
+      // spires over the west front.
+      const H = 10, tz = l.hz - 2.5;
+      b.box(M.brick, F(0, H / 2, -1), w, H, d - 2, BRICK);
+      for (const f of faces(F, w, d - 2, -1)) if (f.len > w) windowRow(b, f.m, f.len - 6, 4.6, 1.2, 5, 3.4, rng, 0.06, true);
+      b.geo(M.roof, frustum(w + 0.5, d - 1.6, 4.4, w + 0.5, 0, SLOPES | ENDS), F(0, H, -1, Math.PI / 2), [1.0, 0.75, 0.62]);
+      b.box(M.stucco, F(0, 7, tz), w, 14, 5, [1.0, 0.95, 0.85]);
+      b.box(M.door, F(0, 1.5, tz + 2.51), 1.8, 3, 0.05);
+      archWindow(b, F(0, 0, tz + 2.51), 1.4, 2.6, rng, 0, true);
+      for (const x of [-1.7, 1.7]) {
+        b.box(M.brick, F(x, 16, tz), 2.4, 4, 2.4, BRICK);
+        b.geo(M.stucco, cached('nkSpire', () => new CylinderGeometry(0.08, 1.5, 9, 8)), F(x, 22.5, tz), COPPER);
+      }
       return;
-    case 'nikolaikirche':
-      b.box(M.brick, F(0, 6, 2), w, 12, d - 4, BRICK);
-      for (const x of [-1.6, 1.6]) b.geo(M.slate, new CylinderGeometry(0.2, 1.6, 10, 8), F(x, 17, -l.hz + 2), GREEN);
-      b.box(M.brick, F(0, 6, -l.hz + 2), w, 12, 4, BRICK);
+    }
+    case 'brunnen': {
+      // Brunnen der Völkerfreundschaft (1970): a spiral of enamelled copper bowls stepping up round a
+      // centre, water falling from bowl to bowl, on a mosaic floor in a round basin.
+      cyl(l.hx, l.hx, 0.5, 0, M.stucco, [0.9, 0.88, 0.84], 0, 0, 28);
+      b.geo(M.water, cached('bvWater', () => new CylinderGeometry(l.hx - 0.4, l.hx - 0.4, 0.1, 28)), F(0, 0.42, 0));
+      cyl(0.5, 0.7, 3, 0.4, M.stucco, [1.05, 0.7, 0.5]);
+      for (let k = 0; k < 17; k++) {
+        const a = k * 0.78, r = 2.6 - k * 0.1, y = 0.7 + k * 0.32, br = 1.1 - k * 0.035;
+        b.geo(M.stucco, cached(`bvBowl${k}`, () => new CylinderGeometry(br, br * 0.55, 0.35, 14)), F(Math.sin(a) * r, y, Math.cos(a) * r), k % 3 === 0 ? BLUE : [1.15, 0.72, 0.48]);
+      }
       return;
-    case 'weltzeituhr':
-      // Column, the ring of city panels, the orbit sculpture. Stands still until the final fight wakes it.
-      cyl(3, 3.4, 0.4, 0, M.concrete, GREY);
-      cyl(0.5, 0.6, 4.2, 0.4, M.iron, BLUE);
-      cyl(2.4, 2.4, 1.2, 4.6, M.stucco, YELLOW);
-      cyl(0.08, 0.08, 1.6, 5.8, M.iron, GREY);
-      b.geo(M.iron, new SphereGeometry(0.5, 12, 8), F(0, 8, 0), YELLOW);
-      for (let i = 0; i < 3; i++) b.geo(M.iron, new CylinderGeometry(1.2 + i * 0.6, 1.2 + i * 0.6, 0.06, 24, 1, true), new Matrix4().copy(F(0, 8, 0)).multiply(new Matrix4().makeRotationX(0.4 - i * 0.3)), [1.2, 1, 0.7]);
+    }
+    case 'hotelstadtberlin': {
+      // Interhotel Stadt Berlin: a white slab with vertical window strips on a wide low base; tall, but on the
+      // north edge where it never stands between the camera and the hero.
+      b.box(M.concrete, F(0, 3, 3), w + 6, 6, d + 4, CREAM);
+      windowRow(b, F(0, 0, 3 + (d + 4) / 2), w + 4, 3, 2.6, 2.4, 3.2, rng, 0.2);
+      b.box(M.concrete, F(0, 26, 0), w, 52, d, [1.2, 1.18, 1.12]);
+      glassFace(b, F(0, 0, l.hz + 0.02), w - 1, 6, 44, 'curtain', 5.5);
       return;
-    case 'brunnen':
-      cyl(l.hx, l.hx, 0.6, 0, M.stucco, GREY);
-      b.geo(M.water, new CylinderGeometry(l.hx - 0.6, l.hx - 0.6, 0.1, 24), F(0, 0.5, 0));
-      cyl(3, 1, 1.4, 0.6, M.iron, [0.9, 0.7, 0.5]);
-      cyl(1.6, 0.6, 1, 2, M.iron, [0.9, 0.7, 0.5]);
-      return;
-    case 'hotelstadtberlin':
-      // The tall slab is on the north edge, where it never stands between the camera and the hero.
-      b.box(M.concrete, F(0, 3, 4), w + 6, 6, d + 6, CREAM);
-      b.box(M.concrete, F(0, 22, 0), w, 44, d, CREAM);
-      return;
+    }
     case 'sbahnalex':
-    case 'sbahnhackescher':
-      // A station hall on the viaduct: walk under it, the glass roof above the deck.
-      b.box(M.brick, F(0, 8.2, 0), w, 3.4, d, BRICK);
-      b.geo(M.glass, new CylinderGeometry(l.hx, l.hx, d, 10, 1, true, -Math.PI / 2, Math.PI), new Matrix4().copy(F(0, 9.9, 0)).multiply(new Matrix4().makeRotationX(Math.PI / 2)), [0.85, 1.1, 1.05]);
+    case 'sbahnhackescher': {
+      // Station hall on the viaduct: walk under it. Brick sides, the glass barrel roof, and at street level
+      // the enamel name board with the S roundel (the cue the camera sees).
+      b.box(M.brick, F(-l.hx + 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
+      b.box(M.brick, F(l.hx - 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
+      b.geo(M.glass, cached(`sbVault${l.hx},${d}`, () => new CylinderGeometry(l.hx, l.hx, d, 10, 1, true, -Math.PI / 2, Math.PI)), F(0, 9.9, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [0.85, 1.1, 1.05]);
+      for (const s of [-1, 1]) {
+        const m = F(s * (l.hx + 0.35), 4.2, 0, (s * Math.PI) / 2);
+        atlasPlane(b, m, 6.5, 0.8, l.kind === 'sbahnalex' ? 'alex' : 'hackescher');
+        b.geo(M.sRoundel, cached('sbRound', () => new CircleGeometry(0.55, 18)), sub(m, 3.9, 0, 0.02));
+      }
       return;
-    case 'hausdeslehrers':
-      // Tower block with the mosaic frieze (yellow, blue and red bands) round the second floor.
-      b.box(M.concrete, F(0, 3, 0), w, 6, d, [0.6, 0.7, 0.75]);
-      b.box(M.stucco, F(0, 8, 0), w + 0.1, 4, d + 0.1, BLUE);
-      for (const [y, c] of [[6.7, YELLOW], [9.3, RED]] as Array<[number, RGB]>) b.box(M.stucco, F(0, y, 0), w + 0.15, 0.5, d + 0.15, c);
-      b.box(M.glass, F(0, 21, 0), w, 22, d, [0.75, 0.9, 1]);
+    }
+    case 'hausdeslehrers': {
+      // Haus des Lehrers (1964): glass curtain-wall tower on a low base, wrapped by Womacka's mosaic frieze
+      // "Unser Leben" over the first floors: blue, yellow and red, the strongest GDR cue on the Alex.
+      // The frieze sits low (3.2 to 7.4 m) so the game camera sees it from the Allee.
+      glassBox(b, F, w - 1, d - 1, 0, 3.2, 'foyer', 0, 3.2);
+      for (const f of faces(F, w, d)) atlasPlane(b, sub(f.m, 0, 5.3, 0.02), f.len, 4.2, 'frieze');
+      b.box(M.concrete, F(0, 5.3, 0), w, 4.2, d, BLUE);
+      b.box(M.concrete, F(0, 3.25, 0), w + 0.3, 0.3, d + 0.3, CREAM);
+      b.box(M.concrete, F(0, 7.5, 0), w + 0.3, 0.3, d + 0.3, CREAM);
+      glassBox(b, F, w, d, 7.65, 27, 'curtain', 0, 6.75);
+      b.box(M.concrete, F(0, 34.9, 0), w + 0.2, 0.6, d + 0.2, CREAM);
       return;
-    case 'kongresshalle':
-      b.box(M.glass, F(0, 2.5, 0), w, 5, d, [0.75, 0.9, 1]);
-      b.geo(M.concrete, new SphereGeometry(l.hx * 0.75, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new Matrix4().copy(F(0, 5, 0)).multiply(new Matrix4().makeScale(1, 0.35, 1)), CREAM);
+    }
+    case 'kongresshalle': {
+      // Kongresshalle: glass hall under a shallow shell dome, the ceramic frieze in blue.
+      glassBox(b, F, w, d, 0, 5, 'foyer', 0, 5);
+      b.box(M.concrete, F(0, 5.4, 0), w + 0.4, 0.8, d + 0.4, BLUE);
+      b.geo(M.concrete, cached('khDome', () => new SphereGeometry(1, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2)), F(0, 5.8, 0).multiply(new Matrix4().makeScale(l.hx * 0.8, 2.4, l.hz * 0.9)), CREAM);
       return;
-    case 'kino':
-      b.box(M.glass, F(0, 2.2, 1), w - 4, 4.4, d - 2, [0.75, 0.9, 1]);
-      b.box(M.concrete, F(0, 7, 0), w, 5.4, d, CREAM);
-      b.box(M.stucco, F(0, 10.2, -1), w * 0.6, 1.4, 0.3, BLUE);
+    }
+    case 'kino': {
+      // Kino International: glass foyer on the ground floor, the closed upper hall with its relief bands,
+      // and INTERNATIONAL on the roof edge facing the Allee.
+      glassBox(b, F, w - 4, d - 2, 0, 4.4, 'foyer', 1, 4.4);
+      for (const x of [-l.hx + 3, 0, l.hx - 3]) b.box(M.concrete, F(x, 2.2, l.hz - 0.4), 0.5, 4.4, 0.5, CREAM);
+      b.box(M.concrete, F(0, 7.4, 0), w, 6, d, CREAM);
+      for (let x = -l.hx + 2; x < l.hx - 1; x += 3) b.box(M.concrete, F(x, 7.4, l.hz + 0.05), 1.6, 5, 0.1, [1.0, 0.95, 0.85]);
+      atlasPlane(b, F(0, 11.4, l.hz - 0.5), w * 0.7, 1.8, 'kino');
+      b.box(M.iron, F(0, 10.6, l.hz - 0.6), w * 0.72, 0.15, 0.15, [0.4, 0.4, 0.4]);
       return;
-    case 'cafemoskau':
-      b.box(M.glass, F(0, 2, 0), w, 4, d, [0.75, 0.9, 1]);
+    }
+    case 'cafemoskau': {
+      // Café Moskau: a glass pavilion with a closed upper storey, the Sputnik model on its mast over the
+      // entrance (front to the Allee, north) and the lettering on the east end seen from the route.
+      glassBox(b, F, w, d, 0, 4, 'foyer', 0, 4);
       b.box(M.concrete, F(0, 5.5, 0), w, 3, d, CREAM);
-      cyl(0.3, 0.3, 5, 7, M.iron, GREY, l.hx - 2, 0);
-      b.geo(M.iron, new SphereGeometry(0.9, 12, 8), F(l.hx - 2, 12.5, 0), YELLOW);
+      atlasPlane(b, F(0, 5.5, l.hz + 0.02), w * 0.7, 1.2, 'moskau');
+      atlasPlane(b, F(l.hx + 0.02, 5.5, 0, Math.PI / 2), d * 0.9, 1.0, 'moskau');
+      cyl(0.12, 0.15, 6, 7, M.iron, GREY, l.hx - 2, l.hz - 1.5);
+      ball(0.7, 13.4, M.stucco, [1.35, 1.35, 1.38], l.hx - 2, l.hz - 1.5);
+      for (let k = 0; k < 4; k++) b.box(M.iron, F(l.hx - 2 + Math.sin(k * 1.57 + 0.6) * 1.1, 12.6, l.hz - 1.5 + Math.cos(k * 1.57 + 0.6) * 1.1, k * 1.57 + 0.6), 0.05, 0.05, 2.4, GREY);
       return;
+    }
+    case 'altesmuseum': {
+      // Altes Museum (Schinkel): 18 Ionic columns across the front on a high plinth, the broad central
+      // stair, the attic block over the hidden dome. Front faces south to the Lustgarten.
+      b.box(M.stucco, F(0, 0.75, -0.3), w, 1.5, d - 0.6, SAND);
+      b.box(M.stucco, F(0, 0.4, l.hz - 0.4), 8, 0.8, 0.8, SAND);
+      b.box(M.stucco, F(0, 5.6, -1.2), w - 1, 8.2, d - 2.4, CREAM);
+      for (let k = 0; k < 18; k++) cyl(0.3, 0.34, 7, 1.5, M.stucco, WHITE, -l.hx + 0.9 + k * ((w - 1.8) / 17), l.hz - 1);
+      b.box(M.stucco, F(0, 9, -0.3), w, 1, d - 0.6, CREAM);
+      b.box(M.stucco, F(0, 10.6, -1.5), 10, 2.2, 5, CREAM);
+      return;
+    }
+    case 'palast': {
+      // Palast der Republik: the long front of bronze mirror glass between white marble ends; in the
+      // Stillstand a glass house grew on its roof (the Wurzel-Mutter's den, zone 1 boss).
+      const H = 13;
+      glassBox(b, F, w - 7, d - 0.4, 0, H, 'bronze', 0, 3.25);
+      for (const x of [-l.hx + 1.75, l.hx - 1.75]) b.box(M.stucco, F(x, H / 2, 0), 3.5, H, d, WHITE);
+      b.box(M.stucco, F(0, H + 0.3, 0), w, 0.6, d + 0.2, WHITE);
+      // The glass house: a vault along the roof (its lower half stays inside the building).
+      b.geo(M.glass, cached(`plVault${w},${d}`, () => new CylinderGeometry(l.hz - 1.5, l.hz - 1.5, w - 9, 14, 1, true)), F(0, H + 0.5, 0).multiply(new Matrix4().makeRotationZ(Math.PI / 2)), [0.8, 1.2, 1]);
+      b.box(M.ivy, F(2, 4, l.hz + 0.03), 9, 8, 0.02, GREEN);
+      return;
+    }
   }
 }
 

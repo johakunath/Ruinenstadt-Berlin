@@ -26,7 +26,9 @@ import { BatchSet } from './batch';
 import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
-import { buildArches, buildStadtbahn } from './alex-world';
+import { ALEX_KINDS, buildAlexLandmark, buildArches, buildStadtbahn } from './alex-world';
+import { paintAlexAtlas } from './alex-paint';
+import { NIGHT_SKY, type Sky } from './sky';
 import { isLargeProp } from './layers';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
@@ -78,6 +80,8 @@ export interface MapMats extends Mats {
   sRoundel: LitMaterial;
   stationName: LitMaterial;
   ratskeller: LitMaterial;
+  /** M15 Alexanderplatz sign atlas (`alex-paint.ts`), only on that map. */
+  alex?: LitMaterial;
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
@@ -139,7 +143,7 @@ export class ChunkBuilder extends Builder {
     lp.z += uz * reach * 0.5;
     this.spots.push({ pos: lp, color, intensity, distance, flicker, phase: Math.random() * 6 });
     let mat = this.glowMats.get(color);
-    if (!mat) this.glowMats.set(color, (mat = Materials.glow(this.glowTex, color, 0.22)));
+    if (!mat) this.glowMats.set(color, (mat = Materials.glow(this.glowTex, color, 0.22 * glowScale)));
     const geo = new PlaneGeometry(pool * 2, pool * 2 * (shape.stretch ?? 1));
     geo.rotateX(-Math.PI / 2);
     this.glows.of(mat).add(geo, new Matrix4().makeRotationY(yaw).setPosition(pos.x + ux * reach, 0.035, pos.z + uz * reach));
@@ -154,6 +158,8 @@ export class ChunkBuilder extends Builder {
   }
 }
 
+/** Ground glow strength of lamps for the map being built (daylight maps dim them, `Sky.lamps`). */
+let glowScale = 1;
 const IDENTITY = new Matrix4();
 /** Cap colour: dark, so the cut reads as a section, not as a roof. */
 const CAP_TINT: RGB = [0.2, 0.22, 0.23];
@@ -2114,8 +2120,11 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
 
 // ---------------------------------------------------------------- assembly
 
-export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean; cut?: 'off' | number } = {}): World {
+export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean; cut?: 'off' | number; sky?: Sky } = {}): World {
+  const sky = opts.sky ?? NIGHT_SKY;
+  glowScale = sky.lamps;
   const mats = makeMapMats(materials);
+  if (m.id === 'alex') mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
   const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
   const cutaway = new Cutaway(plan.zones);
@@ -2198,7 +2207,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     }
     // Xhain landmarks are built and cut in `buildXhainWorld`.
     const cut = XHAIN_KINDS.has(l.kind) ? undefined : landmarkCut.get(l);
-    const build = (): void => b.on(y0, () => buildLandmark(b, l));
+    // M15 Alexanderplatz landmarks live in `alex-world.ts`.
+    const build = (): void => b.on(y0, () => (ALEX_KINDS.has(l.kind) ? buildAlexLandmark(b, l) : buildLandmark(b, l)));
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
   const rng = new Rng(m.seed);
@@ -2299,9 +2309,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   }
 
   // --- light: moon follows the hero; a fixed pool of point lights takes the nearest lamps.
-  group.add(new HemisphereLight(0x6fb0ae, 0x1f1c18, 0.8));
-  const moon = new DirectionalLight(0xa8dde2, 1.9);
-  const MOON = new Vector3(-11, 24, 12);
+  // Daylight maps: the same light is the sun (`Sky.sun`), from another direction.
+  group.add(new HemisphereLight(sky.hemi.sky, sky.hemi.ground, sky.hemi.intensity));
+  const moon = new DirectionalLight(sky.sun.color, sky.sun.intensity);
+  const MOON = new Vector3(...sky.sun.from);
   moon.castShadow = true;
   const size = materials.profile.shadowMap;
   moon.shadow.mapSize.set(size, size);
@@ -2365,7 +2376,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
           continue;
         }
         const f = s.flicker > 0 ? 0.5 * Math.sin(time * 11 + s.phase) + 0.3 * Math.sin(time * 23.7 + s.phase * 2) + 0.2 * Math.sin(time * 47.3 + s.phase * 3) : 0;
-        slot.light.intensity = s.intensity * slot.weight * (1 + f * 0.22 * s.flicker);
+        slot.light.intensity = s.intensity * sky.lamps * slot.weight * (1 + f * 0.22 * s.flicker);
       }
       pickT += 1 / 60;
       if (pickT > 0.25) {

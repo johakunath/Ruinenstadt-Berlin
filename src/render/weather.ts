@@ -47,7 +47,7 @@ export class Weather {
   private seed = 1;
   private readonly tex = dot();
 
-  constructor(private readonly scene: Scene, private readonly map: MapDef | undefined, private readonly table: Readonly<Record<string, WeatherKind>>, scale: number) {
+  constructor(private readonly scene: Scene, private readonly map: MapDef | undefined, private readonly table: Readonly<Record<string, WeatherKind>>, scale: number, private readonly fogScale = 1) {
     const n = (k: number): number => Math.max(8, Math.round(k * scale));
     this.layers = {
       rain: this.lines(n(700), 0x9fc8e0, 0.32),
@@ -99,7 +99,7 @@ export class Weather {
       L.obj.geometry.attributes.position!.needsUpdate = true;
     }
     const fog = this.scene.fog as FogExp2 | null;
-    if (fog) fog.density += (FOG[this.kind] - fog.density) * Math.min(1, dt * 0.6);
+    if (fog) fog.density += (FOG[this.kind] * this.fogScale - fog.density) * Math.min(1, dt * 0.6);
   }
   /** Moves particles and wraps them inside the box around the hero. */
   private step(key: keyof Weather['layers'], L: Layer, dt: number, hx: number, hz: number, t: number): void {
