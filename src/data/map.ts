@@ -138,6 +138,8 @@ export interface Terrace {
   poly: Pt[];
   h: number;
   stairs: Stair[];
+  /** M15: a street bridge over a track field (render: deck on piers with railings, the ground stays below). */
+  bridge?: boolean;
 }
 
 export interface MapDef {
@@ -182,8 +184,17 @@ export interface MapDef {
   specialMax?: Partial<Record<SpecialKind, number>>;
   /** M15: the Berlin Wall (1981) as polylines; each piece blocks. Gaps are separate polylines. */
   walls?: Wall[];
+  /** M15: ground-level track fields (fenced, blocked; terraces may bridge them). */
+  railYards?: RailYard[];
   /** M15: elevated railways. The brick Stadtbahn blocks along its length; the U1 Hochbahn only at its pillars. */
   viaducts?: Viaduct[];
+}
+
+/** A fenced track field at ground level: `tracks` parallel tracks across `width`. */
+export interface RailYard { name: string; pts: Pt[]; width: number; tracks: number }
+/** Inside a track field (`pad` widens it). */
+export function inRailYard(m: MapDef, x: number, z: number, pad = 0): boolean {
+  return (m.railYards ?? []).some((r) => lineDist(r.pts, x, z) < r.width / 2 + pad);
 }
 
 /** A run of Berlin Wall elements (3.6 m concrete with the pipe on top), 0.6 m thick. */
@@ -542,7 +553,7 @@ function reserved(m: MapDef, x: number, z: number, pad: number): boolean {
   for (const e of m.encounters) if (Math.hypot(x - e.x, z - e.z) < e.r + pad) return true;
   for (const l of m.landmarks) if (Math.abs(x - l.x) < l.hx + l.clear + pad && Math.abs(z - l.z) < l.hz + l.clear + pad) return true;
   if (m.rail && Math.abs(z - m.rail.z) < 6 + pad && x > m.rail.minX && x < m.rail.maxX) return true;
-  if (barrierDist(m, x, z) < pad + 1) return true;
+  if (barrierDist(m, x, z) < pad + 1 || inRailYard(m, x, z, pad + 1)) return true;
   for (const t of m.terraces) if (polyEdgeDist(t.poly, x, z) < pad + 1 || onStair(t, x, z, pad + 1.5)) return true;
   return x < m.bounds.minX + 2 || x > m.bounds.maxX - 2 || z < m.bounds.minZ + 2 || z > m.bounds.maxZ - 2;
 }
@@ -748,7 +759,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
     props.some((p) => Math.hypot(x - p.x, z - p.z) < r + 1.2) ||
     m.terraces.some((t) => polyEdgeDist(t.poly, x, z) < r + 1 || onStair(t, x, z, r + 1) !== null) ||
     m.landmarks.some((l) => Math.abs(x - l.x) < l.hx + r && Math.abs(z - l.z) < l.hz + r) ||
-    barrierDist(m, x, z) < r + 0.6;
+    barrierDist(m, x, z) < r + 0.6 || inRailYard(m, x, z, r + 0.4);
   // Street lamps (Johannes 2026-11-16): evenly spaced along each street, right at the curb, one
   // side on side streets and staggered on both sides of main streets, plus corner lamps where streets
   // meet or bend. Only about a third still work; the rest are dark and bent.
@@ -1203,7 +1214,8 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
   const breakables = breakableDefs(m, props, propColliders, rests);
   const onPier = (x: number, z: number): boolean => (m.piers ?? []).some((p) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2; });
-  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3));
+  const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !inTunnel(m, x, z, 0.3)
+    || (inRailYard(m, x, z) && !m.terraces.some((t) => inPoly(t.poly, x, z) || onStair(t, x, z) !== null)));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
   if (m.flavor) level.flavor = m.flavor;
