@@ -154,7 +154,14 @@ export function updateEnemies(sim: Sim): void {
 
     switch (e.state) {
       case 'chase': {
-        if (e.sleep) { if (dist > e.sleep && e.hp >= e.maxHp) break; e.sleep = 0; sim.events.push({ type: 'note', text: '!', color: '#f2d14b', x: e.x, z: e.z }); }
+        if (e.sleep) {
+          if (dist > e.sleep && e.hp >= e.maxHp) break;
+          e.sleep = 0;
+          if (e.pose === 'lying') e.rise = THREAT.rise;
+          sim.events.push({ type: 'note', text: '!', color: '#f2d14b', x: e.x, z: e.z });
+        }
+        // A lying guard gets up first (the body rises from the ground), then fights.
+        if (e.rise !== undefined && e.rise > 0) { e.rise = Math.max(0, e.rise - DT); break; }
         // Punish window: the body stands open.
         if (e.open > 0) {
           e.open -= DT;

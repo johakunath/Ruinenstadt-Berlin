@@ -183,6 +183,8 @@ export const THREAT = {
   stomp: { radius: 70 * PX, damage: 1.3, open: 1.6 },
   flame: { range: 140 * PX, wind: 0.9, radius: 95 * PX, damage: 1.2, floor: 0.2, open: 1, trailEvery: 0.45, trailRadius: 20 * PX, trailTime: 3.5, trailDamage: 0.45 },
   split: { count: 2, hp: 0.4, scale: 0.7 },
+  /** M11c lying guards: seconds to get up after waking; no move or strike meanwhile (backlog P22). */
+  rise: 0.7,
   hazard: { tick: 0.5 },
   /** Chance of an elite per normal spawn in wave g (2D: min(25 %, 2.2 % per wave pair), from the third wave). */
   eliteChance: (g: number): number => (g < 3 ? 0 : Math.min(0.25, 0.011 * (g + 1))),

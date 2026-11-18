@@ -17,3 +17,23 @@ export function backupSave(s: SaveV1): void {
 export function clearSave(): void {
   try { localStorage.removeItem(KEY); } catch { /* no save */ }
 }
+
+/** Spielstand kopieren (2D `exportSave`, `RS1:`): the save as a text code; `END` marks a complete copy. */
+export function saveCode(s: SaveV1): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(s));
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return `RB1:${btoa(bin)}\nEND`;
+}
+
+/** Spielstand laden (2D `importSave`): a pasted code back to a save; null for a cut-off, foreign or damaged code. */
+export function parseSaveCode(text: string): SaveV1 | null {
+  const m = /RB1:([A-Za-z0-9+/=\s]+?)\s*END/.exec(text);
+  if (!m) return null;
+  try {
+    const bin = atob(m[1]!.replace(/\s+/g, ''));
+    return parseSave(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
+  } catch {
+    return null;
+  }
+}

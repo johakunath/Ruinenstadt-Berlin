@@ -26,6 +26,7 @@ import { GameRenderer } from './render/renderer';
 import { setLoadout } from './sim/loadout';
 import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
+import { autoAttackTarget } from './sim/player';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
@@ -488,6 +489,7 @@ document.getElementById('to-title')!.addEventListener('click', () => {
 // Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
 window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
+input.onZoom = (dir) => { if (phase === 'play') renderer?.zoom(dir); };
 input.onMenu = () => {
   if (optionsScreen().isOpen) optionsScreen().close();
   else if (menu.isOpen) menu.close();
@@ -635,6 +637,15 @@ function readInput(): SimInput {
     simInput.aimZ = input.stickZ;
   }
   simInput.attack = input.buffer.has('attack');
+  // Auto-Angriff (2D autoAtk): press for the player and aim at the target, unless they pressed themselves.
+  if (opts.autoAttack && input.enabled && !simInput.attack) {
+    const t = autoAttackTarget(sim);
+    if (t) {
+      const len = Math.hypot(t.x - p.x, t.z - p.z);
+      simInput.attack = true;
+      if (len > 0.05) { simInput.aimX = (t.x - p.x) / len; simInput.aimZ = (t.z - p.z) / len; simInput.aimAssist = false; }
+    }
+  }
   simInput.dodge = input.buffer.has('dodge');
   simInput.power = input.buffer.has('power');
   simInput.ultimate = input.buffer.has('ultimate');

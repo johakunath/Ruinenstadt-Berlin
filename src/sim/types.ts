@@ -169,6 +169,8 @@ export interface Enemy {
   sleep?: number;
   /** M11c: how a sleeping guard waits: playing dead on the ground or unseen in a doorway/under rubble. */
   pose?: 'lying' | 'hidden';
+  /** Lying guard getting up: seconds left (`THREAT.rise`); it neither moves nor strikes meanwhile. */
+  rise?: number;
   /** Index into `level.guards` for side passage guards (saved as defeated). */
   guardIndex?: number;
   /** The last hit was critical (kill effects). */

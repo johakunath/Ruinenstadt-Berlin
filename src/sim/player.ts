@@ -5,7 +5,7 @@ import { CONSUMABLE, onDodge, shock, shoot, updateCast } from './abilities';
 import { hasL, knock, pk, STATUS } from './combat';
 import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
-import { DT, type Player, type Sim, type SimInput } from './types';
+import { DT, type Enemy, type Player, type Sim, type SimInput } from './types';
 import { dodgeCooldown, STARTER_DAMAGE } from './loadout';
 
 /** What a swing releases when its active frames start: shots, the hammer's rings, the thrown spear. */
@@ -62,6 +62,25 @@ export function createPlayer(level: Level, at = level.start): Player {
     dodgeX: 0, dodgeZ: 0, dodgeCd: 0, invuln: 0, strikeT: 0, hurtT: 99,
     sweeping: false, sweepLo: 0, sweepHi: 0,
   };
+}
+
+/**
+ * Auto-Angriff (2D `autoAtk`, Optionen): the nearest awake, visible enemy in striking distance of the
+ * current weapon, or null. The caller presses attack and aims at it.
+ */
+export function autoAttackTarget(sim: Sim): Enemy | null {
+  const p = sim.player;
+  if (p.state === 'dead' || p.state === 'dodge' || p.state === 'cast') return null;
+  const kind = sim.stats.kind;
+  const range = kind === 'sling' ? PLAYER.autoRangeSling : weaponAttack(kind, 'light1').reach + PLAYER.autoMargin;
+  let best: Enemy | null = null;
+  let bd = range;
+  for (const e of sim.enemies) {
+    if (e.state === 'dead' || e.sleep) continue;
+    const d = Math.hypot(e.x - p.x, e.z - p.z) - e.def.radius;
+    if (d < bd) { bd = d; best = e; }
+  }
+  return best;
 }
 
 /** Attack direction: aim, else stick, else facing; with soft lock-on when asked. */
