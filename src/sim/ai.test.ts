@@ -952,6 +952,29 @@ describe('Mitte roster (M12c)', () => {
     expect(specials(out).filter((k) => k === 'shove')).toHaveLength(2);
   });
 
+  it('the rage shove follows after its pause even when the hero dodged the first and stays in reach', () => {
+    const s = fresh();
+    const e = put(s, 'tuersteher', 0, 1.8);
+    e.hp = e.maxHp * 0.4;
+    e.cd = [0, 99, 99];
+    still(e);
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('shove');
+    e.cd[0] = 99;
+    let ended = -1, second = -1, strike = false;
+    for (let i = 0; i < 60 * 3 && second < 0; i++) {
+      s.player.invuln = 1;
+      s.player.hp = s.stats.maxHp;
+      stepSim(s, NO_INPUT);
+      if (ended < 0 && e.state !== 'special') ended = i;
+      if (ended >= 0 && e.state === 'windup') strike = true;
+      if (ended >= 0 && e.state === 'special' && e.sp?.kind === 'shove') second = i;
+    }
+    expect(strike).toBe(false);
+    expect(second).toBeGreaterThan(ended);
+    expect((second - ended) / 60).toBeCloseTo(BOSS.tuersteher.rageGap, 1);
+  });
+
   it('Der Türsteher grabs and holds: no walking, attacks work, a roll breaks free; the hold never outlasts 1 s', () => {
     const grab = (): { s: Sim; e: Enemy } => {
       const s = fresh();

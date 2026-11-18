@@ -560,6 +560,10 @@ export function think(sim: Sim, e: Enemy, dist: number, toX: number, toZ: number
       begin(sim, e, k, true);
       return plan;
     }
+    // The pause before it: no strike and no other special takes its place (Codex on PR 53).
+    plan.melee = false;
+    plan.mode = 'hold';
+    return plan;
   }
   // Elite Brennend leaves fire where it walks.
   if (e.elite === 'brennend') {
