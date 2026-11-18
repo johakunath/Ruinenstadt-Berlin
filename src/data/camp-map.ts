@@ -74,7 +74,8 @@ export const CAMP_LAYOUT: CampLayout = {
     { id: 'hack', x: 21, z: 32.6, rot: 0, w: 10, d: 2.6, inside: true },
     { id: 'imbiss', x: 50, z: 4.6, rot: 0, w: 7.4, d: 3.4, inside: false },
     { id: 'kom', x: 62, z: 9.6, rot: 0, w: 7, d: 6, inside: false, y: RAMP_H },
-    { id: 'zeug', x: 56.5, z: 40, rot: Math.PI, w: 13, d: 5, inside: false },
+    // The freight car's open side faces south, toward the camera and its ring (a ring north of it hid the hero behind the car).
+    { id: 'zeug', x: 56.5, z: 40, rot: 0, w: 13, d: 5, inside: false },
     { id: 'exer', x: 62.5, z: 26, rot: -Math.PI / 2, w: 10, d: 7, inside: false },
   ],
   places: [
@@ -84,7 +85,7 @@ export const CAMP_LAYOUT: CampLayout = {
     { id: 'hack', x: 21, z: 37, r: 1.8 },
     { id: 'imbiss', x: 50, z: 9.6, r: 1.8 },
     { id: 'kom', x: 62, z: 14, r: 1.4 },
-    { id: 'zeug', x: 56.5, z: 34, r: 1.8 },
+    { id: 'zeug', x: 56.5, z: 44.5, r: 1.5 },
     { id: 'exer', x: 57.2, z: 26, r: 1.8 },
   ],
   train: { x: 15, z: 11, len: 22 },

@@ -2069,3 +2069,436 @@ export function paintWaterNormal(): Texture {
   t.wrapS = t.wrapT = RepeatWrapping;
   return t;
 }
+
+// ---------------------------------------------------------------- M20 camp stations
+
+/** Chain-link mesh on a transparent sheet: one diamond per tile, tiles seamlessly (alpha-tested). */
+export function paintChainLink(): Texture {
+  const S = 64;
+  const [c, ctx] = canvas(S, S);
+  ctx.lineCap = 'round';
+  for (const [col, w] of [['rgba(30,26,22,0.9)', 5], ['#a8aaa4', 2.5]] as const) {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = w;
+    for (const o of [-S, 0, S]) {
+      ctx.beginPath(); ctx.moveTo(o, 0); ctx.lineTo(o + S, S); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(o + S, 0); ctx.lineTo(o, S); ctx.stroke();
+    }
+  }
+  return toTexture(c, true);
+}
+
+/** A cell of an atlas in UV space: [u0, v0, u1, v1] (v up, the canvas is flipped on upload). */
+export type AtlasCell = readonly [number, number, number, number];
+
+/**
+ * Camp station atlas (`camp-stations.ts`): name boards, the build site sign, neon letters, the bear
+ * banner, screens, the map table, notes, the tool wall, cabinets, lockers and shelf goods. One lit
+ * material with an emissive map, so all decals of a station are one draw call.
+ * `names`: station id → German name for the boards.
+ */
+export function paintCampAtlas(names: Readonly<Record<string, string>>): EmissiveSurface & { cells: Record<string, AtlasCell> } {
+  const W = 2048, H = 1024;
+  const [c, ctx] = canvas(W, H);
+  const [e, ectx] = canvas(W, H);
+  ctx.fillStyle = '#2a2420';
+  ctx.fillRect(0, 0, W, H);
+  ectx.fillStyle = '#000';
+  ectx.fillRect(0, 0, W, H);
+  const rng = new Rng(2020);
+  const cells: Record<string, AtlasCell> = {};
+  type Painter = (x: number, y: number, w: number, h: number) => void;
+  const list: Array<[string, number, number, Painter]> = [];
+  const add = (name: string, w: number, h: number, p: Painter): void => { list.push([name, w, h, p]); };
+
+  /** Text squeezed to fit a width. */
+  const text = (k: Ctx, s: string, x: number, y: number, maxW: number, size: number, color: string, font = 'Arial', weight = 'bold'): void => {
+    k.font = `${weight} ${size}px ${font}, sans-serif`;
+    const f = Math.min(1, maxW / k.measureText(s).width);
+    k.save();
+    k.translate(x, y);
+    k.scale(f, 1);
+    k.fillStyle = color;
+    k.textAlign = 'center';
+    k.textBaseline = 'middle';
+    k.fillText(s, 0, 0);
+    k.restore();
+  };
+  const grime = (x: number, y: number, w: number, h: number, amount = 1): void => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.translate(x, y);
+    mottle(ctx, rng, w, h, Math.round(6 + (w * h) / 6000), ['#2a2018', '#4a3a28', '#6a4a30'], [8, 40], 0.18 * amount);
+    strokes(ctx, rng, w, h, { count: Math.round((w * h) / 300), colors: ['#1a1410', '#e8dcc0'], len: [3, 16], width: [1, 2], alpha: [0.04, 0.14 * amount] });
+    ctx.restore();
+  };
+  const screws = (x: number, y: number, w: number, h: number): void => {
+    ctx.fillStyle = '#8a8478';
+    for (const [sx, sy] of [[x + 9, y + 9], [x + w - 9, y + 9], [x + 9, y + h - 9], [x + w - 9, y + h - 9]] as const) { ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, Math.PI * 2); ctx.fill(); }
+  };
+  const both = (draw: (k: Ctx, emissive: boolean) => void): void => { draw(ctx, false); draw(ectx, true); };
+
+  // Name boards: each station its own sign (style bible U-Bahn palette). [board, letters, font, glow]
+  const BOARD: Record<string, [string, string, string, number]> = {
+    markt: ['#33504c', '#fac997', 'Georgia', 0.35],
+    laz: ['#e8e4d6', '#a32a22', 'Arial', 0.25],
+    imbiss: ['#ed9e25', '#2a1c12', 'Arial', 0.12],
+    kom: ['#5c5a34', '#f0e2b8', 'Georgia', 0.3],
+    zeug: ['#7d322d', '#fac997', 'Georgia', 0.35],
+    hack: ['#1a1d22', '#6dff9a', 'Courier New', 0.9],
+    exer: ['#6b4a30', '#f0e2c0', 'Arial', 0.3],
+  };
+  for (const [id, name] of Object.entries(names)) {
+    const [bg, fg, font, glow] = BOARD[id] ?? ['#33504c', '#fac997', 'Arial', 0.3];
+    add(`name_${id}`, 512, 112, (x, y, w, h) => {
+      ctx.fillStyle = '#16110f';
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = bg;
+      ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
+      if (id === 'exer') for (let k = 1; k < 3; k++) { ctx.fillStyle = 'rgba(20,12,8,0.5)'; ctx.fillRect(x + 5, y + (k * h) / 3, w - 10, 3); }
+      ctx.strokeStyle = shade(fg, -0.2, 0.55);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x + 13, y + 13, w - 26, h - 26);
+      grime(x + 5, y + 5, w - 10, h - 10);
+      screws(x, y, w, h);
+      const left = id === 'laz' ? 70 : 0;
+      if (id === 'laz') { ctx.fillStyle = '#a32a22'; ctx.fillRect(x + 30, y + 44, 44, 24); ctx.fillRect(x + 40, y + 34, 24, 44); }
+      const g = Math.round(255 * glow);
+      both((k, em) => text(k, name, x + w / 2 + left / 2, y + h / 2 + 3, w - 60 - left, 70, em ? `rgb(${g},${g},${g})` : fg, font));
+    });
+  }
+  add('bauplatz', 256, 128, (x, y, w, h) => {
+    ctx.fillStyle = '#f2efe4';
+    ctx.fillRect(x, y, w, h);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.rect(x + 16, y + 16, w - 32, h - 32);
+    ctx.clip('evenodd');
+    ctx.fillStyle = '#c0281e';
+    for (let k = -h; k < w; k += 28) { ctx.beginPath(); ctx.moveTo(x + k, y + h); ctx.lineTo(x + k + 14, y + h); ctx.lineTo(x + k + 14 + h, y); ctx.lineTo(x + k + h, y); ctx.fill(); }
+    ctx.restore();
+    both((k, em) => text(k, 'Bauplatz', x + w / 2, y + h / 2 + 2, w - 44, 48, em ? '#202020' : '#16110f'));
+    grime(x, y, w, h, 0.8);
+  });
+  /** Neon letters: dark backing, colored glow, a pale tube core; the emissive map carries the light. */
+  const neon = (s: string, color: string, size: number, font = 'Arial'): Painter => (x, y, w, h) => {
+    ctx.fillStyle = '#140d0b';
+    ctx.fillRect(x, y, w, h);
+    grime(x, y, w, h, 0.5);
+    both((k, em) => {
+      k.save();
+      k.shadowColor = color;
+      k.shadowBlur = 18;
+      text(k, s, x + w / 2, y + h / 2 + 3, w - 30, size, color, font);
+      k.shadowBlur = 6;
+      text(k, s, x + w / 2, y + h / 2 + 3, w - 30, size, em ? shade(color, 0.35) : '#fff4dc', font, 'normal');
+      k.restore();
+    });
+    ctx.strokeStyle = '#3a2a22';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+  };
+  add('neon_imbiss', 512, 128, neon('IMBISS', '#ffa040', 92));
+  add('neon_offen', 256, 96, neon('OFFEN', '#ff4a5a', 64));
+  add('neon_hack', 256, 96, neon('HACK', '#ff3fd0', 66, 'Courier New'));
+  add('sign_zeug', 512, 128, (x, y, w, h) => {
+    ctx.fillStyle = '#1e1612';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#3a2a1e';
+    ctx.fillRect(x + 8, y + 8, w - 16, h - 16);
+    // Marquee bulbs along the edges.
+    both((k, em) => {
+      k.fillStyle = em ? '#ffc070' : '#ffd890';
+      for (let i = 0; i < 22; i++) for (const yy of [y + 10, y + h - 10]) { k.beginPath(); k.arc(x + 16 + (i * (w - 32)) / 21, yy, 4.5, 0, Math.PI * 2); k.fill(); }
+      text(k, 'ZEUGHAUS', x + w / 2, y + h / 2 + 3, w - 60, 72, em ? '#ffb050' : '#ffcf7a', 'Georgia');
+    });
+  });
+  add('cross', 128, 128, (x, y, w, h) => {
+    ctx.fillStyle = '#ece8dc';
+    ctx.fillRect(x, y, w, h);
+    grime(x, y, w, h, 0.6);
+    both((k, em) => { k.fillStyle = em ? '#401414' : '#b8261c'; k.fillRect(x + 44, y + 16, 40, 96); k.fillRect(x + 16, y + 44, 96, 40); });
+  });
+  add('target', 128, 128, (x, y, w, h) => {
+    ctx.fillStyle = '#d8ccb0';
+    ctx.fillRect(x, y, w, h);
+    for (const [r, col] of [[60, '#16110f'], [57, '#ece2c8'], [46, '#b8261c'], [35, '#ece2c8'], [24, '#b8261c'], [12, '#ece2c8'], [5, '#16110f']] as const) {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + h / 2, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#16110f';
+    for (let k = 0; k < 9; k++) { ctx.beginPath(); ctx.arc(x + w / 2 + rng.range(-40, 40), y + h / 2 + rng.range(-40, 40), 2.5, 0, Math.PI * 2); ctx.fill(); }
+    grime(x, y, w, h, 0.7);
+  });
+  add('bear', 192, 256, (x, y, w, h) => {
+    // Berlin flag (red, white, red) with the bear, frayed hem.
+    ctx.fillStyle = '#e8dcc0';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#9e2a22';
+    ctx.fillRect(x, y, w, h * 0.17);
+    ctx.fillRect(x, y + h * 0.78, w, h * 0.22);
+    ctx.save();
+    ctx.translate(x + w / 2 - 54, y + h * 0.22);
+    ctx.fillStyle = '#16110f';
+    ctx.strokeStyle = '#16110f';
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.ellipse(48, 62, 22, 33, -0.25, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(66, 26, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(79, 30, 9, 6, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(59, 14, 4.5, 0, Math.PI * 2); ctx.arc(70, 12, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.moveTo(60, 46); ctx.lineTo(82, 40); ctx.moveTo(58, 58); ctx.lineTo(80, 62); ctx.moveTo(38, 88); ctx.lineTo(30, 112); ctx.moveTo(56, 90); ctx.lineTo(64, 112); ctx.stroke();
+    ctx.lineWidth = 2.5;
+    for (const [cx, cy] of [[84, 38], [82, 62], [28, 116], [66, 116]] as const) for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(cx, cy + k * 3); ctx.lineTo(cx + 6, cy + k * 4 + 2); ctx.stroke(); }
+    ctx.fillStyle = '#b8261c';
+    ctx.beginPath(); ctx.ellipse(86, 34, 4, 2, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    grime(x, y, w, h, 1.3);
+    ctx.fillStyle = '#2a2420';
+    for (let k = 0; k < w; k += 10) ctx.fillRect(x + k, y + h - rng.range(2, 14), 6, 16);
+  });
+  add('map', 256, 192, (x, y, w, h) => {
+    ctx.fillStyle = '#d8cfa8';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(120,100,70,0.5)';
+    ctx.lineWidth = 2;
+    for (let k = 0; k < 9; k++) {
+      ctx.beginPath(); ctx.moveTo(x + rng.range(0, w), y); ctx.lineTo(x + rng.range(0, w), y + h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, y + rng.range(0, h)); ctx.lineTo(x + w, y + rng.range(0, h)); ctx.stroke();
+    }
+    ctx.strokeStyle = '#4a7aa0';
+    ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(x, y + h * 0.7); ctx.bezierCurveTo(x + w * 0.3, y + h * 0.5, x + w * 0.6, y + h * 0.9, x + w, y + h * 0.6); ctx.stroke();
+    ctx.strokeStyle = '#b8261c';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 6]);
+    ctx.beginPath(); ctx.moveTo(x + 30, y + 30); ctx.lineTo(x + 90, y + 80); ctx.lineTo(x + 150, y + 50); ctx.lineTo(x + 220, y + 140); ctx.stroke();
+    ctx.setLineDash([]);
+    both((k, em) => { k.fillStyle = em ? '#601010' : '#c0281e'; for (const [px, py] of [[30, 30], [90, 80], [150, 50], [220, 140]] as const) { k.beginPath(); k.arc(x + px, y + py, 7, 0, Math.PI * 2); k.fill(); } });
+    grime(x, y, w, h, 0.9);
+  });
+  add('notes', 256, 192, (x, y, w, h) => {
+    ctx.fillStyle = '#9a6a3a';
+    ctx.fillRect(x, y, w, h);
+    grime(x, y, w, h, 1.2);
+    for (let k = 0; k < 11; k++) {
+      ctx.save();
+      ctx.translate(x + 22 + (k % 4) * 58 + rng.range(-6, 6), y + 26 + Math.floor(k / 4) * 56 + rng.range(-6, 6));
+      ctx.rotate(rng.range(-0.2, 0.2));
+      ctx.fillStyle = rng.pick(['#f4ecb8', '#f4a8b8', '#b8e0f4', '#cfe8b8', '#f2efe4']);
+      ctx.fillRect(-4, -4, 46, 38);
+      ctx.fillStyle = 'rgba(40,30,30,0.6)';
+      for (let l = 0; l < 3; l++) ctx.fillRect(2, 6 + l * 9, rng.range(18, 36), 3);
+      ctx.fillStyle = '#c0281e';
+      ctx.beginPath(); ctx.arc(19, -1, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.strokeStyle = '#b8261c';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + 41, y + 25); ctx.lineTo(x + 157, y + 81); ctx.lineTo(x + 215, y + 137); ctx.stroke();
+  });
+  add('tools', 384, 192, (x, y, w, h) => {
+    ctx.fillStyle = '#4f4b42';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#26231e';
+    for (let yy = 10; yy < h; yy += 16) for (let xx = 10; xx < w; xx += 16) ctx.fillRect(x + xx, y + yy, 3, 3);
+    const tool = (tx: number, ty: number, draw: (k: Ctx) => void): void => {
+      for (const [off, col] of [[3, '#1a1816'], [0, '#b8bcc0']] as const) { ctx.save(); ctx.translate(x + tx + off, y + ty + off); ctx.fillStyle = col; ctx.strokeStyle = col; draw(ctx); ctx.restore(); }
+    };
+    const wrench = (k: Ctx, len: number): void => { k.lineWidth = 8; k.beginPath(); k.moveTo(0, 0); k.lineTo(0, len); k.stroke(); k.beginPath(); k.arc(0, 0, 10, 0, Math.PI * 2); k.fill(); k.beginPath(); k.arc(0, len, 8, 0, Math.PI * 2); k.fill(); };
+    for (let k = 0; k < 5; k++) tool(24 + k * 22, 30, (kk) => wrench(kk, 60 + k * 12));
+    tool(150, 24, (k) => { k.fillRect(-5, 20, 10, 110); k.fillRect(-22, 8, 44, 22); });
+    tool(205, 20, (k) => { k.beginPath(); k.moveTo(-18, 0); k.lineTo(18, 0); k.lineTo(10, 120); k.lineTo(-6, 120); k.fill(); k.fillRect(-14, 120, 26, 34); });
+    tool(255, 24, (k) => { k.lineWidth = 7; k.beginPath(); k.moveTo(-10, 0); k.lineTo(6, 120); k.moveTo(10, 0); k.lineTo(-6, 120); k.stroke(); });
+    tool(300, 20, (k) => { k.fillRect(-8, 0, 16, 50); k.fillRect(-3, 50, 6, 80); });
+    tool(345, 30, (k) => { k.fillRect(-4, 0, 8, 120); k.beginPath(); k.moveTo(-4, 0); k.lineTo(-30, -6); k.lineTo(-30, 34); k.lineTo(-4, 26); k.fill(); });
+    // Painted handles over the steel.
+    ctx.fillStyle = '#8a5030';
+    ctx.fillRect(x + 145, y + 44, 10, 110);
+    ctx.fillRect(x + 191, y + 140, 26, 34);
+    ctx.fillStyle = '#b8261c';
+    ctx.fillRect(x + 292, y + 20, 16, 50);
+    ctx.fillStyle = '#e0a020';
+    ctx.fillRect(x, y + h - 14, w, 14);
+    grime(x, y, w, h, 1);
+  });
+  add('rack', 128, 256, (x, y, w, h) => {
+    ctx.fillStyle = '#16181c';
+    ctx.fillRect(x, y, w, h);
+    for (let k = 0; k < 9; k++) {
+      const yy = y + 8 + k * 27;
+      ctx.fillStyle = '#353b42';
+      ctx.fillRect(x + 8, yy, w - 16, 22);
+      ctx.fillStyle = '#12141a';
+      for (let l = 0; l < 6; l++) ctx.fillRect(x + 64 + l * 9, yy + 5, 5, 12);
+      for (let j = 0; j < 5; j++) {
+        const on = rng.next() < 0.75, col = rng.pick(['#5f6', '#f55', '#fb4', '#4ff', '#5f6']);
+        both((kk, em) => { kk.fillStyle = on ? col : em ? '#000' : '#333'; kk.fillRect(x + 14 + j * 9, yy + 8, 5, 5); });
+      }
+    }
+  });
+  /** Screen: dark glass, lines of text and a trace, scanlines; the emissive map lights it. */
+  const screen = (col: string, bg: string): Painter => (x, y, w, h) => {
+    const seed = rng.int(1000);
+    both((k, em) => {
+      const r = new Rng(seed);
+      k.fillStyle = em ? shade(bg, -0.3) : bg;
+      k.fillRect(x, y, w, h);
+      k.fillStyle = col;
+      for (let l = 0; l < 6; l++) k.fillRect(x + 12, y + 12 + l * 12, r.range(20, w - 30), 5);
+      k.strokeStyle = col;
+      k.lineWidth = 3;
+      k.beginPath();
+      for (let p = 0; p < 8; p++) k.lineTo(x + 60 + p * 8, y + 50 - r.range(0, 30));
+      k.stroke();
+      k.fillStyle = 'rgba(0,0,0,0.25)';
+      for (let l = 0; l < h; l += 4) k.fillRect(x, y + l, w, 2);
+    });
+  };
+  add('crt_g', 128, 96, screen('#6dff9a', '#0e2a1c'));
+  add('crt_c', 128, 96, screen('#46f0ff', '#0c2430'));
+  add('crt_a', 128, 96, screen('#ffc060', '#2a1a0c'));
+  add('radio', 128, 96, (x, y, w, h) => {
+    ctx.fillStyle = '#5e6440';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#23251c';
+    ctx.fillRect(x + 8, y + 10, 50, 44);
+    ctx.fillStyle = '#5a5c48';
+    for (let l = 0; l < 6; l++) ctx.fillRect(x + 12, y + 14 + l * 7, 42, 3);
+    both((k, em) => { k.fillStyle = em ? '#806a30' : '#e8dcb0'; k.beginPath(); k.arc(x + 92, y + 32, 20, 0, Math.PI * 2); k.fill(); });
+    ctx.strokeStyle = '#16110f';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x + 92, y + 32); ctx.lineTo(x + 104, y + 18); ctx.stroke();
+    ctx.fillStyle = '#2a2c20';
+    for (const kx of [20, 46, 72]) { ctx.beginPath(); ctx.arc(x + kx, y + 74, 8, 0, Math.PI * 2); ctx.fill(); }
+    both((k, em) => { k.fillStyle = em ? '#ff3030' : '#ff5050'; k.beginPath(); k.arc(x + 108, y + 74, 6, 0, Math.PI * 2); k.fill(); });
+    grime(x, y, w, h, 0.8);
+  });
+  add('windows', 256, 96, (x, y, w, h) => {
+    ctx.fillStyle = '#3a2a1e';
+    ctx.fillRect(x, y, w, h);
+    for (let k = 0; k < 4; k++) {
+      const px = x + 8 + k * 62, lit = k !== 2;
+      ctx.fillStyle = lit ? '#e8a050' : '#1a2024';
+      ctx.fillRect(px, y + 10, 54, h - 20);
+      if (lit) { ectx.fillStyle = k === 1 ? '#ffb060' : '#c07838'; ectx.fillRect(px, y + 10, 54, h - 20); }
+      both((kk, em) => { kk.fillStyle = em ? '#000' : '#2a1e16'; kk.fillRect(px + 25, y + 10, 4, h - 20); kk.fillRect(px, y + 40, 54, 4); });
+    }
+    grime(x, y, w, h, 0.6);
+  });
+  add('meds', 192, 256, (x, y, w, h) => {
+    ctx.fillStyle = '#e4e0d4';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#aab8bc';
+    ctx.fillRect(x + 12, y + 46, w - 24, h - 60);
+    for (let s = 0; s < 4; s++) {
+      const sy = y + 50 + s * 48;
+      ctx.fillStyle = '#d0ccc0';
+      ctx.fillRect(x + 12, sy + 40, w - 24, 5);
+      for (let k = 16; k < w - 24; k += rng.range(12, 20)) {
+        const bh = rng.range(16, 34), bw = rng.range(8, 13);
+        ctx.fillStyle = rng.pick(['#7a4a1e', '#f2efe4', '#3a6a9a', '#7a4a1e', '#c0c8b0', '#a8302a']);
+        ctx.fillRect(x + k, sy + 40 - bh, bw, bh);
+        ctx.fillRect(x + k + bw / 2 - 2, sy + 40 - bh - 5, 4, 5);
+      }
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(x + 12, y + 46, (w - 24) / 2 - 2, h - 60);
+    ctx.fillStyle = '#e4e0d4';
+    ctx.fillRect(x + w / 2 - 2, y + 46, 4, h - 60);
+    ctx.fillStyle = '#b8261c';
+    ctx.fillRect(x + w / 2 - 8, y + 8, 16, 32);
+    ctx.fillRect(x + w / 2 - 16, y + 16, 32, 16);
+    grime(x, y, w, h, 0.7);
+  });
+  add('lockers', 256, 192, (x, y, w, h) => {
+    ctx.fillStyle = '#1e2220';
+    ctx.fillRect(x, y, w, h);
+    for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) {
+      const lx = x + 4 + k * 63, ly = y + 4 + r * 94;
+      ctx.fillStyle = rng.pick(['#4e6a5c', '#5a6a6a', '#6a5040', '#4e6a5c', '#8f7c45']);
+      ctx.fillRect(lx, ly, 59, 90);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      for (let l = 0; l < 4; l++) ctx.fillRect(lx + 14, ly + 10 + l * 6, 30, 3);
+      ctx.fillStyle = '#d8d0b0';
+      ctx.fillRect(lx + 20, ly + 40, 18, 12);
+      ctx.fillStyle = '#16110f';
+      ctx.font = 'bold 11px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(String(r * 4 + k + 1), lx + 29, ly + 50);
+      ctx.fillStyle = '#c9a22a';
+      ctx.fillRect(lx + 46, ly + 52, 7, 9);
+    }
+    grime(x, y, w, h, 1.1);
+  });
+  add('goods', 256, 128, (x, y, w, h) => {
+    ctx.fillStyle = '#2a2420';
+    ctx.fillRect(x, y, w, h);
+    for (const row of [0, 1]) {
+      let k = x + 4;
+      const base = y + 58 + row * 60;
+      while (k < x + w - 14) {
+        const t = rng.int(3), gw = t === 0 ? rng.range(26, 44) : rng.range(12, 20), gh = t === 0 ? rng.range(26, 46) : rng.range(18, 34);
+        ctx.fillStyle = rng.pick(['#a54a3a', '#4a7a5a', '#c9a22a', '#6a8ac8', '#e8dcb4', '#7a4a2a', '#c97a2a']);
+        ctx.fillRect(k, base - gh, gw, gh);
+        if (t > 0) { ctx.fillStyle = '#e8e4d6'; ctx.fillRect(k, base - gh * 0.65, gw, gh * 0.3); }
+        k += gw + 3;
+      }
+    }
+    grime(x, y, w, h, 0.8);
+  });
+  add('chalk', 192, 128, (x, y, w, h) => {
+    ctx.fillStyle = '#5a3a20';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#26302a';
+    ctx.fillRect(x + 8, y + 8, w - 16, h - 16);
+    ctx.strokeStyle = 'rgba(235,230,210,0.85)';
+    ctx.lineWidth = 3;
+    for (let g = 0; g < 4; g++) for (let l = 0; l < 5; l++) {
+      const gx = x + 24 + g * 40, gy = y + 60;
+      ctx.beginPath();
+      if (l < 4) { ctx.moveTo(gx + l * 6, gy); ctx.lineTo(gx + l * 6, gy + 34); } else { ctx.moveTo(gx - 4, gy + 30); ctx.lineTo(gx + 24, gy + 4); }
+      ctx.stroke();
+    }
+    text(ctx, 'Drill', x + w / 2, y + 34, w - 40, 30, 'rgba(235,230,210,0.9)', 'Georgia', 'italic');
+    grime(x, y, w, h, 0.6);
+  });
+  const stripes = (name: string, base: string, band: string): void => add(name, 256, 32, (x, y, w, h) => {
+    ctx.fillStyle = base;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = band;
+    for (let k = -h; k < w; k += 32) { ctx.beginPath(); ctx.moveTo(x + k, y + h); ctx.lineTo(x + k + 16, y + h); ctx.lineTo(x + k + 16 + h, y); ctx.lineTo(x + k + h, y); ctx.fill(); }
+    grime(x, y, w, h, 0.5);
+  });
+  stripes('stripes', '#f2efe4', '#c0281e');
+  stripes('hazard', '#e0b020', '#16110f');
+  add('forge', 128, 96, (x, y, w, h) => {
+    both((k) => {
+      const g = k.createRadialGradient(x + w / 2, y + h * 0.7, 4, x + w / 2, y + h * 0.7, w * 0.6);
+      g.addColorStop(0, '#fff2a0');
+      g.addColorStop(0.35, '#ff8a20');
+      g.addColorStop(1, '#3a0a04');
+      k.fillStyle = g;
+      k.fillRect(x, y, w, h);
+    });
+  });
+  add('dark', 32, 32, (x, y, w, h) => { ctx.fillStyle = '#0c0a09'; ctx.fillRect(x, y, w, h); });
+
+  // Shelf packing, left to right, a new row when full; cells keep 2 px off their painted edge.
+  let px = 0, py = 0, row = 0;
+  for (const [name, w, h, paint] of list) {
+    if (px + w > W) { px = 0; py += row; row = 0; }
+    paint(px + 4, py + 4, w - 8, h - 8);
+    cells[name] = [(px + 6) / W, 1 - (py + h - 6) / H, (px + w - 6) / W, 1 - (py + 6) / H];
+    px += w;
+    row = Math.max(row, h);
+  }
+  if (py + row > H) throw new Error('camp atlas overflow');
+  return { map: toTexture(c, false), emissiveMap: toTexture(e, false), cells };
+}
