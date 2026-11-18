@@ -51,7 +51,7 @@ export interface RunContent {
 }
 
 export const CONTENT = {
-  delay: 5, touch: 34 * PX, hiddenTouch: 1.2, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
+  delay: 5, touch: 34 * PX, hidden: 5, hiddenTouch: 1.2, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
   trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.4 },
   /** Späti counter: stand this close to the customer spot; no trade while enemies are this near. */
   shop: { touch: 1, calm: 12, offers: 4 },
@@ -141,10 +141,10 @@ export function createContent(s: Sim, seed: number): RunContent {
     }
     return best;
   };
-  // Fixed spots first (M19/M16b: the end of a side passage); then random ones up to three.
+  // Fixed spots first (M19/M16b: the end of a side passage); then random ones up to `CONTENT.hidden`.
   for (const h of L.hiddenSpots) c.hidden.push({ x: h.x, z: h.z, got: false });
-  // Hidden blessings (2D `hidSpots`): three, far from the start and from each other, in corners off the route.
-  for (let i = L.hiddenSpots.length; i < 3; i++) {
+  // Hidden blessings (2D `hidSpots`): five (2D three; maps are bigger), far from the start and from each other, in corners off the route.
+  for (let i = L.hiddenSpots.length; i < CONTENT.hidden; i++) {
     const spot = sample(
       (x, z) => Math.hypot(x - L.start.x, z - L.start.z) > CONTENT.hiddenApart && !c.hidden.some((h) => Math.hypot(h.x - x, h.z - z) < CONTENT.hiddenApart * 2)
         && routeDist(L, x, z) > 9 && routeDist(L, x, z) < 34 && reachable(L, x + 0.8, z) && reachable(L, x - 0.8, z) && reachable(L, x, z + 0.8) && reachable(L, x, z - 0.8),

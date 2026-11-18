@@ -50,17 +50,17 @@ describe('run plan', () => {
     const s = make(4, { camp: { funk: true } });
     expect(s.content.plan.filter((k) => k && k !== 'crate')).toHaveLength(7);
   });
-  it('three hidden blessings and three shrines lie on reachable ground, far apart, outside fights', () => {
+  it('five hidden blessings and three shrines lie on reachable ground, far apart, outside fights', () => {
     for (let seed = 1; seed <= 6; seed++) {
       const s = make(seed);
-      expect(s.content.hidden).toHaveLength(3);
+      expect(s.content.hidden).toHaveLength(CONTENT.hidden);
       expect(s.content.shrines).toHaveLength(3);
       for (const h of [...s.content.hidden, ...s.content.shrines]) {
         expect(reachable(level, h.x, h.z)).toBe(true);
         expect(level.encounters.some((e) => Math.hypot(h.x - e.x, h.z - e.z) < e.r)).toBe(false);
       }
-      const [a, b, c] = s.content.hidden;
-      expect(Math.min(Math.hypot(a!.x - b!.x, a!.z - b!.z), Math.hypot(a!.x - c!.x, a!.z - c!.z), Math.hypot(b!.x - c!.x, b!.z - c!.z))).toBeGreaterThan(40);
+      const h = s.content.hidden;
+      for (let i = 0; i < h.length; i++) for (let j = i + 1; j < h.length; j++) expect(Math.hypot(h[i]!.x - h[j]!.x, h[i]!.z - h[j]!.z)).toBeGreaterThan(40);
     }
   });
 });
