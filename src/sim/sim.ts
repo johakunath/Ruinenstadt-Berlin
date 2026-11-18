@@ -80,8 +80,9 @@ export function createSim(opts: SimOptions = {}): Sim {
     lootCtx: { district: level.district, ...(level.flavor ? { flavor: level.flavor } : {}), luck: stats.luck, wave: 1, itemId: 0 },
     bagFullT: 0,
     kills: 0,
-    spawnT: opts.empty || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
+    spawnT: opts.empty || level.camp || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
+    gateT: level.gates.map(() => Infinity),
   };
   sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...(sim.inventory.camp?.stash ?? []), ...Object.values(equipment)].map((i) => i?.id ?? 0));
   sim.player.hp = stats.maxHp;
@@ -116,7 +117,7 @@ export function createSim(opts: SimOptions = {}): Sim {
       const e = spawnPack(sim, sim.player.x + Math.sin(a) * 7, sim.player.z + Math.cos(a) * 7, kind);
       if (mod) makeElite(sim, e, mod in ELITES ? mod : undefined);
     });
-  } else if (!opts.empty && (!level.expedition || sim.stress > 0)) {
+  } else if (!opts.empty && !level.camp && (!level.expedition || sim.stress > 0)) {
     const opening = sim.stress > 0 ? sim.stress : SPAWN.startAlive - 2;
     for (let i = 0; i < opening; i++) {
       const s = randomYardSpot(sim, 6);
@@ -160,7 +161,8 @@ export function stepSim(sim: Sim, input: SimInput): void {
   enemyStrikes(sim);
   updateThreats(sim);
   removeCorpses(sim);
-  if (sim.level.expedition && sim.stress === 0) updateDirector(sim);
+  if (sim.level.camp) { /* M20: the camp is peaceful */ }
+  else if (sim.level.expedition && sim.stress === 0) updateDirector(sim);
   else updateSpawner(sim);
   updateRest(sim);
   updateContent(sim);

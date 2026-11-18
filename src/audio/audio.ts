@@ -200,6 +200,10 @@ export class GameAudio {
       case 'scrap': break;
       case 'breakableHit': this.play('wood'); break;
       case 'breakableBreak': this.play('crash'); break;
+      // M20 tunnel (2D sounds): the grating falls, the generator starts, the power comes.
+      case 'gateOpen': this.play('crash'); this.play('boom', 0, 0, 0.5); break;
+      case 'holdStart': this.play('zap'); break;
+      case 'power': this.play('zap'); this.play('win'); break;
     }
   }
 

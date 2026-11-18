@@ -16,7 +16,7 @@ import type { Item } from './sim/items';
 import { GameAudio } from './audio/audio';
 import { HIT_FEEL } from './data/combat';
 import { Input } from './input/input';
-import { reloadWith, RESUME_KEY } from './options';
+import { GO_KEY, reloadWith, RESUME_KEY } from './options';
 import { opts, settingHooks } from './ui/settings';
 import { optionsScreen } from './ui/options-screen';
 import { startScreen } from './ui/start';
@@ -30,6 +30,12 @@ import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
 import { tunnelMap } from './data/tunnel';
+import { campMap, campPlaceAt } from './data/camp-map';
+import { campOpen, LINE_FREED, LINES, stopName } from './data/lines';
+import { NetBoard, type NetGo } from './ui/netboard';
+import { tunnelNotice, tunnelObjective } from './ui/tunnel-notice';
+import { STATIONS } from './data/camp';
+import { siteLevel } from './sim/camp';
 import { xhainMap } from './data/xhain';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor } from './render/sky';
@@ -65,6 +71,7 @@ const input = new Input(canvas);
 const abilitiesUi = new AbilitiesUi(input);
 /** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
 function talk(): void {
+  if (isCamp) { campAct(); return; }
   if (phase === 'play' && !menu.isOpen && talkTo(sim)) { input.clear(); drainEvents(); }
 }
 const talkPrompt = new TalkPrompt(() => talk());
@@ -72,9 +79,9 @@ input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
 abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
-// Köpenick (M11), the S3 tunnel (M19, ?map=tunnel), Xhain (M15, ?map=xhain) or the gate 1 courtyard (?map=hof).
+// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'tunnel' ? tunnelMap() : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : koepenickMap(opts.mapScale);
+  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
@@ -84,16 +91,27 @@ const map = opts.map !== 'hof' ? (() => {
   return { def, lots, props, level: mapLevel(def, lots, props) };
 })() : null;
 const isTunnel = map?.def.tunnel !== undefined;
+/** M20: the walkable camp at Warschauer Straße: no fights, rings open the stations, the train the network map. */
+const isCamp = map?.def.camp !== undefined;
+const line = isTunnel ? opts.line : 0;
 const mapId: MapId = opts.map;
 /** What a won run is called: the district freed or the line cleared. */
-const winText = MAP_WON[mapId];
+const winText = isTunnel && line > 0 ? `${LINES[line]?.id ?? 'S3'} frei` : MAP_WON[mapId];
 const level: Level | undefined = map?.level;
 
 // M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
 const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0;
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
-if (save?.run && (save.run.map !== mapName || !level)) save = { ...save, run: null };
+/** A checkpoint of another map waits while this one is played (M20: a visit to the camp must not drop it). */
+let foreignRun = save?.run && (save.run.map !== mapName || !level) ? save.run : null;
+if (foreignRun) save = { ...save!, run: null };
+/** Writes the save; with no run of this map, another map's waiting checkpoint stays in it. */
+function store(s: SaveV1): void {
+  const out = !s.run && foreignRun ? { ...s, run: foreignRun } : s;
+  writeSave(out);
+  cloud.queue(out);
+}
 // The start screen may have changed it before the game loaded; a waiting checkpoint keeps its own.
 let difficulty: DifficultyId = save?.run ? save.difficulty : startScreen().difficulty;
 // Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
@@ -193,9 +211,17 @@ function showWon(): void {
   const t = document.getElementById('won-tunnel')!, link = wonLink(mapId);
   t.hidden = !level || !link;
   if (link) t.innerHTML = link.html;
+  showCampButtons();
 }
-/** M19: the tunnel opens once Köpenick is freed; M15: Xhain once the tunnel is cleared. */
-function goMap(to: MapId): void { saveProfile(); reloadWith({ map: to }); }
+/** `camp.freed` id of this map's victory: districts by index, a cleared line as LINE_FREED + line. */
+const FREED_ID = isTunnel ? LINE_FREED + line : MAP_FREED[mapId];
+/** M19: the tunnel opens once Köpenick is freed; M15: Xhain once the tunnel is cleared; M20: the camp with the S3. */
+function goMap(to: MapId, toLine = 0): void { saveProfile(); reloadWith({ map: to, line: toLine }); }
+/** M20: the camp is out of reach until the S3 is cleared (Johannes, 2026-11-18): no button leads there before. */
+function showCampButtons(): void {
+  const open = campOpen(sim.inventory.camp?.freed);
+  for (const id of ['open-camp', 'won-camp', 'dead-camp']) document.getElementById(id)!.hidden = !open;
+}
 // Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
 document.getElementById('won-tunnel')!.addEventListener('click', () => {
   if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
@@ -204,6 +230,7 @@ document.getElementById('won-tunnel')!.addEventListener('click', () => {
 /** M19/M15: the title's map buttons (tunnel after Köpenick, Xhain after the tunnel). */
 function showTunnelButton(): void {
   if (level) showTitleLinks(mapId, sim.inventory.camp?.freed ?? []);
+  showCampButtons();
 }
 for (const id of ['go-tunnel', 'go-xhain']) document.getElementById(id)!.addEventListener('click', (e) => goMap(((e.currentTarget as HTMLElement).dataset.to as MapId | undefined) ?? 'koepenick'));
 /** Stay in the freed district: walk, loot, break things, test the build. */
@@ -229,6 +256,8 @@ export function newGame(): void {
   if (!renderer) return;
   clearSave();
   save = null;
+  // A wiped save keeps no other map's checkpoint either (Codex review).
+  foreignRun = null;
   sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, difficulty });
   renderer?.reset(sim);
   ui.setResume(null, difficulty);
@@ -239,6 +268,7 @@ export function newGame(): void {
 function abortRun(): void {
   optionsScreen().close();
   menu.close();
+  if (isCamp) { goMap('koepenick'); return; }
   telemetry.end('quit');
   endExpedition(sim, false);
   saveNow(false);
@@ -344,8 +374,8 @@ const menu = new Menu({
 optionsScreen().onClose = () => menu.resetPad();
 input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
 // M13: the camp between expeditions, from the title and the victory screen.
-const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); });
-document.getElementById('open-camp')!.addEventListener('click', () => camp.open());
+const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); if (isCamp && phase === 'play') { input.enabled = true; input.clear(); } });
+document.getElementById('open-camp')!.addEventListener('click', () => { if (isCamp) startCamp(); else goMap('lager'); });
 document.getElementById('won-camp')!.addEventListener('click', () => {
   // Leaving the freed district for the camp ends the run (same loot warning as Nochmal).
   if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'camp'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
@@ -353,6 +383,8 @@ document.getElementById('won-camp')!.addEventListener('click', () => {
 });
 /** Back to the title with the camp open: a fresh run waits, gear and Schrott stay. */
 function toCamp(): void {
+  // M20: the camp is its own page (the walkable station).
+  if (!isCamp) { lootExit = 'off'; goMap('lager'); return; }
   lootExit = 'off'; lootWarn.hidden = true; lootChip.hidden = true;
   phase = 'title';
   input.enabled = false; input.clear();
@@ -362,6 +394,43 @@ function toCamp(): void {
   ui.showTitle(); showTunnelButton();
   camp.open();
 }
+// ---------------------------------------------------------------- M20 walkable camp
+/** The ring the hero stands in. */
+const campHere = (): ReturnType<typeof campPlaceAt> => (isCamp && map?.def.camp && phase === 'play' ? campPlaceAt(map.def.camp, sim.player.x, sim.player.z) : null);
+const netBoard = new NetBoard((to: NetGo) => {
+  // Straight into the run on the next page (boot presses Weiter or Losziehen there).
+  try { sessionStorage.setItem(GO_KEY, 'play'); } catch { /* the title waits instead */ }
+  goMap(to.map, to.map === 'tunnel' ? to.line : 0);
+}, () => { input.enabled = phase === 'play'; input.clear(); });
+function campAct(): void {
+  const p = campHere();
+  if (!p || menu.isOpen || camp.isOpen || netBoard.isOpen) return;
+  input.clear();
+  input.enabled = false;
+  if (p.id === 'abfahrt') netBoard.open(sim.inventory.camp?.freed ?? []);
+  else camp.open(p.id);
+}
+/** The prompt over the action arc: what the ring in reach opens. */
+function campPrompt(): string | null {
+  const p = campHere();
+  if (!p) return null;
+  if (p.id === 'abfahrt') return 'Zug · Netzplan';
+  const st = STATIONS.find((t) => t.id === p.id)!;
+  return siteLevel(sim, st.id) === 0 ? `${st.name} · Bauplatz` : st.name;
+}
+/** Enters the camp: no title, no fights; gear, Schrott and the camp's state come from the profile. */
+function startCamp(): void {
+  camp.close();
+  phase = 'play';
+  wonFor = -1;
+  input.buffer.clear();
+  input.enabled = true;
+  ui.showGame();
+  ui.setExpedition(false);
+  ui.banner('S+U Warschauer Straße', 'Lager');
+  audio.start();
+}
+
 input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen) menu.toggle('karte'); };
 document.getElementById('won-explore')!.addEventListener('click', explore);
 // M18: endless waves around the hero after the district boss.
@@ -379,6 +448,7 @@ document.getElementById('version')!.textContent = `Ruinenstadt Berlin · ${VERSI
 document.getElementById('to-title')!.addEventListener('click', () => {
   optionsScreen().close();
   menu.close();
+  if (isCamp) { goMap('koepenick'); return; }
   // Mid-fight the last checkpoint stays; gear and Schrott are written with the profile.
   if (sim.run.phase === 'fight' || sim.run.endless !== undefined) saveProfile(); else saveNow(true);
   telemetry.end('quit');
@@ -439,7 +509,7 @@ if (map) {
     const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
     return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
   };
-  document.getElementById('title-sub')!.textContent = MAP_SUB[mapId];
+  document.getElementById('title-sub')!.textContent = isTunnel && line > 0 ? `${map.def.name} · Richtung ${stopName(line + 1)}` : MAP_SUB[mapId];
 } else {
   const sub = document.getElementById('title-sub');
   if (sub) sub.textContent = 'Köpenick · Hinterhof bei Nacht';
@@ -455,16 +525,14 @@ function saveNow(withRun: boolean): void {
   // reached during a wave). Keep the last one instead of replacing it with "no run".
   if (withRun && level && sim.run.phase === 'fight' && sim.player.state !== 'dead') return;
   save = snapshot(sim, mapName, withRun);
-  writeSave(save);
-  cloud.queue(save);
+  store(save);
 }
 
 /** Camp changes at the title: the profile is written, a waiting checkpoint stays. */
 function saveProfile(): void {
   if (!persist) return;
   save = save ? { ...save, t: Date.now(), profile: profileOf(sim) } : snapshot(sim, mapName, false);
-  writeSave(save);
-  cloud.queue(save);
+  store(save);
 }
 
 function resumeLabel(): string | null {
@@ -578,6 +646,8 @@ function drainEvents(): void {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev, sim);
     telemetry.event(ev);
+    // M20 tunnel: gratings opening, the generator and its power (2D messages).
+    tunnelNotice(ev, map?.def, { banner: (t, s) => ui.banner(t, s), toast: (h, s) => lootUi.toast(h, s) });
     switch (ev.type) {
       case 'hit': {
         const feel = HIT_FEEL[ev.weight];
@@ -618,7 +688,9 @@ function drainEvents(): void {
       case 'victory':
         // Playtest 2026-11-17: no dialog over the falling boss. The run counts as won now; the
         // end screen follows after a while and offers to stay. The loot warning comes when leaving.
-        endExpedition(sim, true, MAP_FREED[mapId]);
+        // 2D tunWin: the first S3 opens the camp at its end.
+        if (isTunnel && line === 0 && !campOpen(sim.inventory.camp?.freed)) lootUi.toast('<span style="color:#ef9f27">S+U Warschauer Straße</span> ist jetzt dein Lager', 6);
+        endExpedition(sim, true, FREED_ID);
         saveNow(false);
         telemetry.end('win');
         ui.banner(winText);
@@ -769,6 +841,7 @@ function frame(now: number): void {
   }
   menu.pollPad(now);
   camp.pollPad(now);
+  netBoard.pollPad(now);
   if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
 
   // The tutorial card blocks the blessing pad; it is polled after, so its closing press is not a pick (Codex review).
@@ -780,7 +853,7 @@ function frame(now: number): void {
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
     revealStep(dt);
-  const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active;
+  const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active && !camp.isOpen && !netBoard.isOpen;
   const simStart = performance.now();
   if (running) {
     acc += dt;
@@ -788,6 +861,11 @@ function frame(now: number): void {
     while (acc >= DT && steps < 5) {
       // E and Y (power) talk instead while a trader is in reach: no enemies are near then.
       if (sim.content.talk != null && input.buffer.has('power')) { input.buffer.consume('power'); talk(); break; }
+      if (isCamp) {
+        // The camp is peaceful: E/Y opens the ring in reach, powers and consumables wait for the next run.
+        if (input.buffer.has('power') && campHere()) { input.buffer.consume('power'); campAct(); break; }
+        for (const a of ['power', 'ultimate', 'verband', 'molotow'] as const) input.buffer.consume(a);
+      }
       stepSim(sim, readInput());
       if (sim.consumed.attack) input.buffer.consume('attack');
       if (sim.consumed.dodge) input.buffer.consume('dodge');
@@ -805,7 +883,8 @@ function frame(now: number): void {
     if (steps === 5) acc = 0;
   }
   renderer.perf.simMs = performance.now() - simStart;
-  talkPrompt.update(sim.content.talk, running && phase === 'play', input.device);
+  if (isCamp) talkPrompt.say(campPrompt(), running && phase === 'play' && !camp.isOpen && !netBoard.isOpen, input.device);
+  else talkPrompt.update(sim.content.talk, running && phase === 'play', input.device);
   // Paused screens (trade, camp, menu) can still raise events, e.g. the coin of a purchase (A2).
   if (!running && sim.events.length) drainEvents();
 
@@ -845,7 +924,8 @@ function frame(now: number): void {
       document.getElementById('loot-pad')!.hidden = input.device !== 'gamepad';
     }
   }
-  if (level) expeditionHud(dt);
+  if (level && !isCamp) expeditionHud(dt);
+  else if (isCamp) { minimap?.show(phase === 'play' && !camp.isOpen && !netBoard.isOpen); minimap?.update(dt, sim.player, [], []); }
   pollLootPad();
   // Heights are above the local ground (hills and terraces).
   lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !menu.isOpen);
@@ -905,6 +985,8 @@ function expeditionHud(dt: number): void {
     const dz = enc.z - p.z;
     // The camera looks north: world X is screen right, world -Z is screen up.
     ui.objective(`${enc.name} · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
+  } else if (tunnelObjective(sim)) {
+    ui.objective(tunnelObjective(sim)!, null);
   } else {
     ui.objective(enc.waves.length > 1 ? `${enc.name} · Welle ${Math.min(sim.run.wave + 1, enc.waves.length)}/${enc.waves.length}` : enc.name, null);
   }
@@ -964,7 +1046,8 @@ export const ready: Promise<boolean> = GameRenderer.create(canvas, {
     void preview.warm().then(() => inventory.setPortrait(preview));
     window.addEventListener('resize', () => r.resize());
     ui.loaded();
-    if (opts.autostart) start();
+    if (isCamp) startCamp();
+    else if (opts.autostart) start();
     return true;
   })
   .catch((err: unknown) => {

@@ -36,6 +36,8 @@ Read `CLAUDE.md`, then the linked task and only its source/target files. Complet
 | P1 Tablet heat: Akkusparen (30 fps, 1× DPR), still overlays draw at 10 fps; per-pass analysis and ranked measures (playtest 2026-11-17) | Claude · Fable high (analysis), Opus high (build), Johannes measures | steps 1 and 2 built (2026-11-18: 32 m chunks, shadow map at 30 Hz on Leistung, test switch `?shadows=boxes`), measurement open: `docs/tasks/p1-heat.md` |
 | PT Hardware and quality checks for Johannes (running list; every session adds what must be checked on real devices) | Johannes; all sessions add rows | open: `docs/tasks/pt-hardware-checks.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements: `docs/tasks/p1b-proxy-passes.md` |
+| M20 Tunnels between the maps (2D route A content, line generator) and the walkable camp at S+U Warschauer Straße (layout A+C, flow F1, build sites; Johannes 2026-11-18) | Claude · Opus high | built 2026-11-18, playtest open: `docs/tasks/m20-tunnels-camp.md` |
+| T7 U-Bahn tunnel wall textures: three concrete variants and a station tile band (playtest 2026-11-18) | Codex | open: `docs/asset-pipeline.md` › Texture queue |
 | KP1–KP3 Kodex busts: Feldwebel, Schaffner, four elites (playtest 2026-11-17) | Codex | built: `docs/asset-pipeline.md` › Portrait and icon queue |
 
 Split (Johannes, 2026-11-16): the strongest model takes global, hard gameplay (combat rules, enemies and bosses M12, legendary powers L1, balance M14, map design and side branches M16b, textures' look decisions); Opus and Sonnet take the scoped UI, audio, loot and tooling tasks above. Review of the Codex PRs #5 to #17: findings are in those task files; the data, item and stat ports are exact.
@@ -128,7 +130,7 @@ Parallel on the PC: H1 custom hero (`docs/tasks/h1-hero.md`): steps 1–5 done 2
 | Q7 | Map size | Concept first, size set by the Tab S9 |
 | Q8 | Districts | Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg, Fernsehturm finale. Each redrawn. Not migrated: Tempelhof, Wedding, Spandau, Marzahn |
 | Q10 | Parity scope | P1 above: with endless mode and one tunnel; without threat levels and daily fight |
-| Q11 | Camp | Menu first; walkable 3D camp later |
+| Q11 | Camp | Menu first; walkable 3D camp later. Walkable camp built in M20 (2026-11-18): opens with the S3 at Warschauer Straße, stations unlock as build sites |
 
 ## Open
 

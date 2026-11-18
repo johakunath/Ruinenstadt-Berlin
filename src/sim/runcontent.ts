@@ -33,7 +33,8 @@ export interface RunContent {
   shrines: Array<{ x: number; z: number; used: boolean }>;
   /** Seconds left per shrine buff. */
   shrine: Partial<Record<ShrineId, number>>;
-  trader: { x: number; z: number; t: number; offers: Array<TradeOffer | null>; left: boolean } | null;
+  /** `fixed`: the M20 tunnel trader on the start platform (2D `TUN.npc`): stays all run, no mark, no timer. */
+  trader: { x: number; z: number; t: number; offers: Array<TradeOffer | null>; left: boolean; fixed?: boolean } | null;
   /** The trade screen is open: the game loop pauses the sim. */
   tradeOpen: boolean;
   /** Who is trading: -1 the wandering trader, else the Späti with this rest index. */
@@ -110,6 +111,8 @@ export function createContent(s: Sim, seed: number): RunContent {
   if (!L.expedition) return c;
   const rng = new Rng((seed ^ 0x5bd1e995) >>> 0);
   const legs = L.encounters.length;
+  // M20: the tunnel trader stands on the start platform from the first step (2D `TUN.npc`).
+  if (L.traderSpot) c.trader = { ...L.traderSpot, t: 1e9, offers: rollTrader(s, rng), left: true, fixed: true };
   const kinds: RunEventKind[] = shuffle(rng, ['ambush', 'trader', 'zone', 'cache', 'horde', 'rescue']);
   // Funkmast: one more event per run.
   if (s.statContext.camp.funk) kinds.push(rng.pick(['ambush', 'cache', 'zone', 'horde'] as const));
@@ -117,6 +120,8 @@ export function createContent(s: Sim, seed: number): RunContent {
   c.plan = Array.from({ length: legs }, () => null);
   slots.forEach((leg, i) => { c.plan[leg] = kinds[i]!; });
   for (const leg of CONTENT.crateLegs) if (leg < legs && !c.plan[leg]) c.plan[leg] = 'crate';
+  // 2D tunnels have no events (`run.events={}`): gratings would close off their spots.
+  if (L.gates.length) c.plan = c.plan.map(() => null);
   c.done = c.plan.map(() => false);
 
   const b = L.bounds;
@@ -231,15 +236,7 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
     case 'trader': {
       at = lotSpot('trader', CONTENT.trader.near, CONTENT.trader.far, 1.2);
       if (!at) break;
-      const il = Math.max(lootLevel(s), ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
-      const ctx = lootContext(s);
-      const n = (s.statContext.survivors.kurier ? 4 : 3) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
-      const offers: TradeOffer[] = [];
-      for (let i = 0; i < n; i++) {
-        const item = makeItem(rng, ctx, il + (i === 2 ? 2 : 0), i === 2 && rng.next() < 0.15 ? 3 : 2);
-        offers.push({ item, price: price(item) * 5 + 15 });
-      }
-      c.trader = { ...at, t: CONTENT.trader.time, offers, left: true };
+      c.trader = { ...at, t: CONTENT.trader.time, offers: rollTrader(s, rng), left: true };
       break;
     }
     case 'rescue': {
@@ -270,11 +267,24 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
   if (at) s.events.push({ type: 'runEvent', kind, phase: 'start', x: at.x, z: at.z });
 }
 
+/** The trader's stock (2D: three items, the third two levels higher and sometimes rare). */
+function rollTrader(s: Sim, rng: Rng): TradeOffer[] {
+  const il = Math.max(lootLevel(s), ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
+  const ctx = lootContext(s);
+  const n = (s.statContext.survivors.kurier ? 4 : 3) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
+  const offers: TradeOffer[] = [];
+  for (let i = 0; i < n; i++) {
+    const item = makeItem(rng, ctx, il + (i === 2 ? 2 : 0), i === 2 && rng.next() < 0.15 ? 3 : 2);
+    offers.push({ item, price: price(item) * 5 + 15 });
+  }
+  return offers;
+}
+
 /** Marks on the HUD: where the open events are. */
 export function contentMarks(s: Sim): Array<{ x: number; z: number; kind: RunEventKind | 'crate'; t: number }> {
   const c = s.content;
   const out: Array<{ x: number; z: number; kind: RunEventKind | 'crate'; t: number }> = [];
-  if (c.trader) out.push({ x: c.trader.x, z: c.trader.z, kind: 'trader', t: c.trader.t });
+  if (c.trader && !c.trader.fixed) out.push({ x: c.trader.x, z: c.trader.z, kind: 'trader', t: c.trader.t });
   if (c.captive) out.push({ x: c.captive.x, z: c.captive.z, kind: 'rescue', t: 0 });
   if (c.cache) out.push({ x: c.cache.x, z: c.cache.z, kind: 'cache', t: c.cache.t });
   if (c.zone) out.push({ x: c.zone.x, z: c.zone.z, kind: 'zone', t: c.zone.t });
@@ -374,7 +384,9 @@ export function updateContent(s: Sim): void {
     const T = c.trader;
     if (travel) T.t -= DT;
     const close = near(T, CONTENT.trader.touch);
-    if (close && !c.tradeOpen && s.enemies.every((e) => e.state === 'dead')) c.talk = -1;
+    // The tunnel trader only waits for the enemies close by (a sleeping mini-boss far off does not count).
+    const calm = T.fixed ? !s.enemies.some((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < CONTENT.shop.calm) : s.enemies.every((e) => e.state === 'dead');
+    if (close && !c.tradeOpen && calm) c.talk = -1;
     if (T.t <= 0 && !c.tradeOpen) {
       done('trader', 'lost', T);
       c.trader = null;

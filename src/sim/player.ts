@@ -254,7 +254,8 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     const len = Math.hypot(inp.moveX, inp.moveZ);
     const scale = len > 1 ? 1 / len : 1;
     // Brief slow after taking a hit instead of a stun: attacks and dodges are never interrupted.
-    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? POWER.gully.slow : 1);
+    // M20: wading through the flooded tunnel stretch (2D `P.wet`).
+    const slow = (p.hurtT < PLAYER.hitStun ? 0.45 : 1) * (sim.abilities.guard > 0 ? POWER.gully.slow : 1) * sim.level.speedAt(p.x, p.z);
     const tx = inp.moveX * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     const tz = inp.moveZ * scale * PLAYER.speed * sim.stats.moveSpeed * slow;
     // Linear ramp: full speed (or a full stop) within `accelTime`.

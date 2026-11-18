@@ -233,9 +233,15 @@ export type SimEvent =
   /** U2: first kill of a kind or first find of a legendary or set base. */
   | { type: 'kodex'; name: string }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
-  | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean };
+  | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean }
+  /** M20 tunnel: a grating opened after its fight was won (2D `openGate`). */
+  | { type: 'gateOpen'; index: number; x: number; z: number }
+  /** M20 tunnel: the hero reached the generator; hold the ring (2D GEN). */
+  | { type: 'holdStart'; index: number; x: number; z: number }
+  /** M20 tunnel: the generator is charged, the end platform has power ("Strom!"). */
+  | { type: 'power'; index: number; x: number; z: number };
 
-export type RunPhase = 'travel' | 'fight' | 'pause' | 'won';
+export type RunPhase = 'travel' | 'fight' | 'pause' | 'hold' | 'won';
 
 /** Expedition progress (encounter director). Arena levels leave it at travel forever. */
 export interface RunState {
@@ -253,6 +259,8 @@ export interface RunState {
   endless?: number;
   /** M13: the expedition's camp effects were settled (`endExpedition` runs once). */
   ended?: boolean;
+  /** M20 generator hold (`EncounterDef.hold`): charge in seconds, the hero stands in the ring, next spawn, elite sent, sim time the power came. */
+  hold?: { p: number; need: number; inside: boolean; sp: number; elite: boolean; on?: number };
 }
 
 export interface Sim {
@@ -299,4 +307,6 @@ export interface Sim {
   spawnT: number;
   /** > 0: keep this many enemies alive (`?stress=`). */
   stress: number;
+  /** M20 tunnel gratings (`level.gates`): sim time each one opened, Infinity while closed. */
+  gateT: number[];
 }
