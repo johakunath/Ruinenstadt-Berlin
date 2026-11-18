@@ -60,7 +60,8 @@ export function stun(e: Enemy, seconds: number): void {
 }
 
 export function ignite(s: Sim, e: Enemy, dps: number, time: number, stack = false): void {
-  if (e.state === 'dead') return;
+  // M15: nothing catches on the Weltzeituhr while it wakes up (Codex review).
+  if (e.state === 'dead' || (e.wake ?? 0) > 0) return;
   dps *= resist(e, 'fire');
   if (dps <= 0) return;
   const cur = e.burn > 0 ? e.bdps : 0;
@@ -88,12 +89,12 @@ export function chain(s: Sim, src: Enemy, damage: number, jumps: number): void {
  * inside the front arc opens the guard instead (full damage), so do secondary hits (chains, rings):
  * 2D lets them pass. The Großer Uhrwerkläufer closes its front completely while it winds its key.
  */
-export function shieldFactor(s: Sim, e: Enemy, o: StrikeOpts): number {
+export function shieldFactor(s: Sim, e: Enemy, o: StrikeOpts, stuns = (o.stun ?? 0) > 0): number {
   const sh = e.def.shield;
   if (!sh || (e.guardOpen ?? 0) > 0) return 1;
   const p = s.player;
   if (Math.abs(angleDiff(e.facing, angleOf(p.x - e.x, p.z - e.z))) >= sh.arc) return 1;
-  if ((o.stun ?? 0) > 0 || o.element === 'shock') {
+  if (stuns || o.element === 'shock') {
     e.guardOpen = sh.open;
     s.events.push({ type: 'note', text: 'Deckung offen', color: '#f2d14b', x: e.x, z: e.z });
     return 1;
@@ -128,7 +129,10 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   // M12: open bodies take more, armored elites half until they open; elemental hits meet the type's resistance.
   if (e.open > 0) damage *= THREAT.openBonus;
   else if (e.elite === 'gepanzert') damage *= THREAT.armored;
-  const guard = shieldFactor(s, e, o);
+  // Every stun this hit brings opens a shield in front: the weapon's (hammer, Gegengewicht), the
+  // crit-stun blessing and every fourth Kiezbox hit (those two stun further down; Codex review).
+  const stuns = (o.stun ?? 0) > 0 || (crit && pk(s, 'stun') > 0) || (!o.noproc && hasL(s, 'kiezbox') && (a.legHits + 1) % 4 === 0);
+  const guard = shieldFactor(s, e, o, stuns);
   if (guard <= 0) return 0;
   damage *= guard;
   if (o.element) {
@@ -244,7 +248,7 @@ export function killEnemy(s: Sim, e: Enemy): void {
 export function updateStatuses(s: Sim): void {
   const p = s.player;
   for (const e of s.enemies) {
-    if (e.state === 'dead') continue;
+    if (e.state === 'dead' || (e.wake ?? 0) > 0) continue;
     if (e.acid > 0) e.acid = Math.max(0, e.acid - DT);
     if (e.slow && e.slow > 0) e.slow = Math.max(0, e.slow - DT);
     if (e.burn <= 0) continue;

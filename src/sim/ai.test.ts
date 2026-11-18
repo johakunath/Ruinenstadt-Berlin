@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
-import { strike } from './combat';
+import { ignite, strike } from './combat';
 import { makeElite, spawnEnemy, spawnPack } from './enemies';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
@@ -527,6 +527,21 @@ describe('Alexanderplatz roster (M15)', () => {
     expect(e.elite).not.toBe('gepanzert');
   });
 
+  it('the crit-stun blessing and every fourth Kiezbox hit open the guard too (Codex review)', () => {
+    const s = fresh();
+    const e = still(s, 'uhrwerk', 0, 2);
+    s.statContext.perks.stun = 1;
+    expect(strike(s, e, 100, { crit: true })).toBe(100);
+    expect(e.guardOpen).toBeGreaterThan(0);
+    const k = fresh();
+    const u = still(k, 'uhrwerk', 0, 2);
+    k.stats.legendary.push('kiezbox');
+    k.abilities.legHits = 0;
+    expect([strike(k, u, 100), strike(k, u, 100), strike(k, u, 100)]).toEqual([20, 20, 20]);
+    expect(strike(k, u, 100)).toBe(100);
+    expect(u.guardOpen).toBeGreaterThan(0);
+  });
+
   it('the Uhrwerkläufer turns at most 90°/s, so the hero can get behind it', () => {
     const s = fresh();
     const e = put(s, 'uhrwerk', 0, 3);
@@ -691,6 +706,15 @@ describe('Alexanderplatz roster (M15)', () => {
     expect(s.threats.waves).toHaveLength(2);
     expect(strike(s, e, 100)).toBeGreaterThan(0);
     expect(has(evs, 'enemySpecial')).toBe(false);
+    // Fire does not catch while it wakes either (Codex review).
+    const b = fresh();
+    const w = put(b, 'weltzeituhr', 0, 8);
+    ignite(b, w, 500, 3);
+    expect(w.burn).toBe(0);
+    w.burn = 2;
+    w.bdps = 500;
+    run(b, 1);
+    expect(w.hp).toBe(w.maxHp);
     // Sectors: the hero's slice hits, three of them (four in rage).
     const z = fresh();
     const c = still(z, 'weltzeituhr', 0, 6);
