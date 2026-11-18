@@ -216,8 +216,8 @@ export class Builder {
   readonly lights: FlickerLight[] = [];
   readonly fires: Vector3[] = [];
   readonly extras: Object3D[] = [];
-  /** Building bodies and big props, as invisible shadow casters. */
-  readonly shadowBoxes: Array<{ m: Matrix4 }> = [];
+  /** Building bodies and big props, as invisible shadow casters; `cut` = clipped like their building (V1 B). */
+  readonly shadowBoxes: Array<{ m: Matrix4; cut?: { part: number; y: number } }> = [];
   protected readonly glowTex = paintGlow('rgba(255,190,110,0.55)', 'rgba(255,170,90,0)');
 
   constructor(readonly mats: Mats) {}

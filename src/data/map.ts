@@ -98,6 +98,8 @@ export interface Landmark {
   walkUnder?: boolean;
   /** Shown when the hero enters (Späti rest stops). */
   name?: string;
+  /** V1 B cutaway (`src/data/cut.ts`): cut off above `h` while the hero is behind it (north, within `reach`). */
+  cut?: { h?: number; reach?: number };
 }
 
 export interface Lot {

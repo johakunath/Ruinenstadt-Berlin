@@ -227,9 +227,9 @@ export function xhainMap(scale = 1): MapDef {
     // Towers and arcades of the Oberbaumbrücke; the deck itself is the bridge.
     { kind: 'oberbaum', x: 0, z: 0, rot: OBERBAUM_ROT, hx: 0, hz: 0, clear: 0 },
     L('wachturm', -226, -96, 0, 1.6, 1.6, 2),
-    L('thomaskirche', -114, -34, 0, 8, 11, 2),
+    L('thomaskirche', -114, -34, 0, 8, 11, 2, { cut: {} }),
     L('rauchhaus', -236, -30, 90 * DEG, 5.5, 8, 2),
-    L('bethanien', -238, -2, 90 * DEG, 6, 10, 2),
+    L('bethanien', -238, -2, 90 * DEG, 6, 10, 2, { cut: {} }),
     L('nkz', -276, 76, 0, 20, 7, 3),
     L('goerlitzer', -160, 84, Math.atan2(GU[0], GU[1]), 12, 6, 2),
     // U1 stations on the viaduct (walk under).

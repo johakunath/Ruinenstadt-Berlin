@@ -43,6 +43,8 @@ export interface RendererOptions {
   debugFlow: boolean;
   /** `?shadows=boxes`: map chunk meshes cast no shadow, only caster boxes, instanced props and characters. */
   boxShadows?: boolean;
+  /** `?cut=off` / `?cut=<meters>`: V1 B cutaway off, or the Hinterhof cut height. */
+  cut?: 'off' | number;
   /** ?cam=distance,pitch for close-up checks. */
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
@@ -160,7 +162,7 @@ export class GameRenderer {
     renderer.shadowMap.autoUpdate = false;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
-    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows }) : buildWorld(materials);
+    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut }) : buildWorld(materials);
     const assets = await loadCharacters(materials);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
