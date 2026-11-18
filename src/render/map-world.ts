@@ -16,7 +16,7 @@ import { buildCampWorld, makeCampMats } from './camp-world';
 import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
 import {
-  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
+  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, lineDist, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
   type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
 } from '../data/map';
 import { EDGE_FRONT, propCollider, type Prop } from '../data/courtyard';
@@ -1042,7 +1042,38 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
   const stripe = lineTint(m.tunnel!.color);
   /** Meters of wall built so far per tube kind and side: places ribs, niches and lamps along the run. */
   const wallRun = new Map<string, number>();
+  const wallBoxes = new Map<string, { b: ChunkBuilder; box: Box3 }>();
   for (const t of m.tunnel!.tubes) {
+    // Playtest 2026-11-18: a tube end that joins no other tube (station ends, side passages) gets a wall
+    // and a rubble pile, so it no longer looks like it runs on into the dark.
+    for (const [end, prev] of [[t.pts[0]!, t.pts[1]!], [t.pts[t.pts.length - 1]!, t.pts[t.pts.length - 2]!]] as Array<[Pt, Pt]>) {
+      const len = Math.hypot(end[0] - prev[0], end[1] - prev[1]);
+      if (len < 0.01) continue;
+      const ux = (end[0] - prev[0]) / len, uz = (end[1] - prev[1]) / len;
+      // Joins another tube (a junction, the track inside a station): that tube closes it, or nothing does.
+      const px = end[0] + ux * (t.width / 2 + 0.6), pz = end[1] + uz * (t.width / 2 + 0.6);
+      if (m.tunnel!.tubes.some((o) => o !== t && lineDist(o.pts, px, pz) <= o.width / 2)) continue;
+      const yaw = Math.atan2(ux, uz), thick = 3;
+      const cx = end[0] + ux * thick / 2, cz = end[1] + uz * thick / 2;
+      const b = chunkOf(end[0], end[1]);
+      b.solid.captureOccluder(() => b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick, [0.38, 0.36, 0.34]));
+      b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H + 0.05, cz), t.width + 1.4, 0.1, thick + 0.4, [0.08, 0.08, 0.09]);
+      b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick);
+      const rng = new Rng(Math.round(end[0] * 31 + end[1] * 17));
+      const n = Math.max(2, Math.round(t.width / 2.5));
+      for (let i = 0; i < n; i++) {
+        const across = ((i + 0.5) / n - 0.5) * t.width * 0.9;
+        const x = end[0] + uz * across - ux * rng.range(0, 0.6), z = end[1] - ux * across - uz * rng.range(0, 0.6);
+        buildProp(b, { kind: 'rubble', x, z, rot: rng.range(0, 6.28), size: rng.range(1.3, 2.2) }, rng);
+      }
+      if (t.kind === 'branch' || t.kind === 'bypass') {
+        const x = end[0] - ux * 0.8 + uz * t.width * 0.25, z = end[1] - uz * 0.8 - ux * t.width * 0.25;
+        // Render only, so no crate that looks breakable: fallen planks.
+        buildProp(b, { kind: 'planks', x, z, rot: rng.range(0, 6.28), size: 1.2 }, rng);
+      }
+    }
+  }
+  for (const [ti, t] of m.tunnel!.tubes.entries()) {
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
       if (len < 0.01) continue;
@@ -1072,7 +1103,10 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           const mx = ex + nx * (thick - bump) / 2, mz = ez + nz * (thick - bump) / 2;
           const fx = ex - nx * bump, fz = ez - nz * bump;
           const onFace = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(fx - nx * o, y, fz - nz * o);
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick + bump, h, 1.04, [0.42 * tone, 0.4 * tone, 0.38 * tone]);
+          // Playtest 2026-11-18: characters behind a tunnel wall get their contour. One mask box per 8 m of wall and chunk.
+          const occKey = `${ti}:${side}:${(run / 8) | 0}`, occ = wallBoxes.get(occKey);
+          const occBox = b.solid.captureOccluder(() => b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick + bump, h, 1.04, [0.42 * tone, 0.4 * tone, 0.38 * tone]), occ?.b === b ? occ.box : undefined);
+          if (occBox) wallBoxes.set(occKey, { b, box: occBox });
           if (h === H && t.kind !== 'station') {
             b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, 1.04, [0.2, 0.21, 0.19]);
             if (run % 8 === 0) b.box(mats.concrete, onFace(0.15, H / 2), 0.3, H, 0.55, [0.5 * tone, 0.48 * tone, 0.45 * tone]);
