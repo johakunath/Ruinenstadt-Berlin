@@ -1,4 +1,4 @@
-// Hidden character contours only (hero gold, enemies red, V1 2026-11-17). World materials are never faded, clipped or replaced in beauty.
+// Hidden character contours only (hero gold, enemies red, V1 2026-11-17; hidden finds amber within 15 m, 2026-11-19). World materials are never faded, clipped or replaced in beauty.
 // Cost (R1, docs/tasks/r1-outline-cost.md): nothing is drawn unless an occluder's box overlaps the
 // hero's screen rectangle in front of her. Then only the masks with such boxes render their depth,
 // both depth renders and the contour are scissored to her rectangle, and the contour is blended onto
@@ -9,28 +9,29 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { FullScreenQuad, Pass } from 'three/examples/jsm/postprocessing/Pass.js';
-import { ENEMY_LAYER, HERO_LAYER, OCCLUDER_LAYER } from './layers';
+import { ENEMY_LAYER, HERO_LAYER, LOOT_LAYER, OCCLUDER_LAYER } from './layers';
 
 const OutlineShader = {
   uniforms: {
-    tHero: { value: null }, tEnemy: { value: null }, tOccluder: { value: null },
+    tHero: { value: null }, tEnemy: { value: null }, tLoot: { value: null }, tOccluder: { value: null },
     stepUv: { value: new Vector2() }, near: { value: 1 }, far: { value: 120 },
-    outlineColor: { value: new Color(0xf2cc83) }, enemyColor: { value: new Color(0xe5483a) },
+    outlineColor: { value: new Color(0xf2cc83) }, enemyColor: { value: new Color(0xe5483a) }, lootColor: { value: new Color(0xffb84a) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   // Contour colour with the edge as alpha, blended over the frame (same result as mixing the beauty).
   fragmentShader: /* glsl */ `
-    uniform sampler2D tHero, tEnemy, tOccluder;
+    uniform sampler2D tHero, tEnemy, tLoot, tOccluder;
     uniform vec2 stepUv;
     uniform float near, far;
-    uniform vec3 outlineColor, enemyColor;
+    uniform vec3 outlineColor, enemyColor, lootColor;
     varying vec2 vUv;
     float distanceToCamera(float d) { return near * far / (far - d * (far - near)); }
     void main() {
       float lo = 1.0, hi = 0.0, hidden = 0.0;
       float elo = 1.0, ehi = 0.0, ehidden = 0.0;
+      float llo = 1.0, lhi = 0.0, lhidden = 0.0;
       for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
         vec2 uv = vUv + vec2(float(x), float(y)) * stepUv;
         float hero = texture2D(tHero, uv).x;
@@ -45,10 +46,16 @@ const OutlineShader = {
         float epresent = 1.0 - step(0.999999, enemy);
         elo = min(elo, epresent); ehi = max(ehi, epresent);
         ehidden = max(ehidden, epresent * step(0.035, distanceToCamera(enemy) - wallDist) * wall);
+        float loot = texture2D(tLoot, uv).x;
+        float lpresent = 1.0 - step(0.999999, loot);
+        llo = min(llo, lpresent); lhi = max(lhi, lpresent);
+        lhidden = max(lhidden, lpresent * step(0.035, distanceToCamera(loot) - wallDist) * wall);
       }
       float h = (hi - lo) * hidden;
       float e = (ehi - elo) * ehidden;
-      gl_FragColor = h > 0.0 ? vec4(outlineColor, h * 0.95) : vec4(enemyColor, e * 0.9);
+      // A hidden find also fills faintly, so the small shard reads through the wall, not only its edge.
+      float l = max((lhi - llo) * lhidden, lhidden * 0.35);
+      gl_FragColor = h > 0.0 ? vec4(outlineColor, h * 0.95) : e > 0.0 ? vec4(enemyColor, e * 0.9) : vec4(lootColor, l * 0.95);
     }`,
 };
 
@@ -92,11 +99,16 @@ const bounds = new Sphere();
 const enemyRect = new Vector4();
 /** Enemy contours: at most this many, nearest first (the caller orders them). */
 export const ENEMY_OUTLINES = 24;
+/** Hidden finds with a contour at once (three hidden blessings and the cache). */
+export const LOOT_OUTLINES = 4;
 
 export class HeroOutline extends Pass {
   private readonly heroDepth = depthTarget();
   private readonly enemyDepth = depthTarget();
   private readonly enemySpheres = Array.from({ length: ENEMY_OUTLINES }, () => new Sphere());
+  private readonly lootDepth = depthTarget();
+  private readonly lootSpheres = Array.from({ length: LOOT_OUTLINES }, () => new Sphere());
+  private lootN = 0;
   private readonly occluderDepth = depthTarget();
   private readonly depthMaterial = new MeshDepthMaterial({ blending: NoBlending });
   private readonly material = new ShaderMaterial({ ...OutlineShader, uniforms: UniformsUtils.clone(OutlineShader.uniforms), transparent: true, blending: NormalBlending, depthTest: false, depthWrite: false });
@@ -116,11 +128,14 @@ export class HeroOutline extends Pass {
     private readonly scene: Scene, private readonly camera: PerspectiveCamera, private readonly heroBounds?: (out: Sphere) => Sphere,
     /** Fills spheres around living enemies (nearest first) and returns how many. */
     private readonly enemyBounds?: (out: Sphere[]) => number,
+    /** Fills spheres around hidden finds near the hero and returns how many. */
+    private readonly lootBounds?: (out: Sphere[]) => number,
   ) {
     super();
     this.needsSwap = false;
     this.material.uniforms.tHero!.value = this.heroDepth.depthTexture;
     this.material.uniforms.tEnemy!.value = this.enemyDepth.depthTexture;
+    this.material.uniforms.tLoot!.value = this.lootDepth.depthTexture;
     this.material.uniforms.tOccluder!.value = this.occluderDepth.depthTexture;
   }
 
@@ -128,6 +143,7 @@ export class HeroOutline extends Pass {
     this.heroDepth.setSize(Math.max(1, Math.round(width * dpr * scale)), Math.max(1, Math.round(height * dpr * scale)));
     this.occluderDepth.setSize(this.heroDepth.width, this.heroDepth.height);
     this.enemyDepth.setSize(this.heroDepth.width, this.heroDepth.height);
+    this.lootDepth.setSize(this.heroDepth.width, this.heroDepth.height);
     // Constant CSS-pixel width on both profiles and at different DPRs.
     this.material.uniforms.stepUv!.value.set(1.25 / width, 1.25 / height);
   }
@@ -154,6 +170,8 @@ export class HeroOutline extends Pass {
     const spheres: Sphere[] = [this.heroBounds(bounds)];
     const n = this.enemyBounds ? this.enemyBounds(this.enemySpheres) : 0;
     for (let i = 0; i < n; i++) spheres.push(this.enemySpheres[i]!);
+    this.lootN = this.lootBounds ? this.lootBounds(this.lootSpheres) : 0;
+    for (let i = 0; i < this.lootN; i++) spheres.push(this.lootSpheres[i]!);
     const hits: Mesh[] = [];
     this.area.set(Infinity, Infinity, -Infinity, -Infinity);
     for (const s of spheres) {
@@ -200,9 +218,11 @@ export class HeroOutline extends Pass {
       renderer.shadowMap.autoUpdate = false;
       renderer.setClearColor(0x000000, 0);
       for (const m of skipped) m.visible = false;
-      const passes = this.enemyBounds
-        ? [[HERO_LAYER, this.heroDepth], [ENEMY_LAYER, this.enemyDepth], [OCCLUDER_LAYER, this.occluderDepth]] as const
-        : [[HERO_LAYER, this.heroDepth], [OCCLUDER_LAYER, this.occluderDepth]] as const;
+      const passes: Array<[number, WebGLRenderTarget]> = [[HERO_LAYER, this.heroDepth]];
+      if (this.enemyBounds) passes.push([ENEMY_LAYER, this.enemyDepth]);
+      // The find mask is cleared even when no find is near, so an old contour never stays behind.
+      if (this.lootBounds) passes.push([LOOT_LAYER, this.lootDepth]);
+      passes.push([OCCLUDER_LAYER, this.occluderDepth]);
       for (const [layer, depth] of passes) {
         this.camera.layers.set(layer);
         renderer.setRenderTarget(depth);
@@ -241,7 +261,7 @@ export class HeroOutline extends Pass {
   }
 
   override dispose(): void {
-    this.heroDepth.dispose(); this.enemyDepth.dispose(); this.occluderDepth.dispose(); this.depthMaterial.dispose();
+    this.heroDepth.dispose(); this.enemyDepth.dispose(); this.lootDepth.dispose(); this.occluderDepth.dispose(); this.depthMaterial.dispose();
     this.material.dispose(); this.quad.dispose();
   }
 }

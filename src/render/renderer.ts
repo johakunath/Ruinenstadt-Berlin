@@ -185,7 +185,7 @@ export class GameRenderer {
         o.radius = v.size * 1.3;
       }
       return n;
-    });
+    }, (out) => this.content.lootSpheres(out));
     this.resize();
   }
 
