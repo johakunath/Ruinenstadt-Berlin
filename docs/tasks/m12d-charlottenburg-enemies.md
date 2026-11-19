@@ -2,7 +2,7 @@
 
 Step 5 of `docs/tasks/m16-charlottenburg.md` (spec). Step 6 builds from this file; format and blocks as in `m12c-mitte-enemies.md`. Board: `docs/style/charlottenburg.png` (`docs/district-design-directions.md` › Final · Charlottenburg). 2D has nothing for this district (only the era string), so every number here is new and sits on the existing 3D ladders.
 
-Status: spec written 2026-11-19, not built. Short notes; Opus writes final German text where a draft is marked.
+Status: spec written 2026-11-19; built 2026-11-19 (step 6 without the maze riddles 6c and the loot section, see Handover at the end). Johannes playtest open.
 
 ## Design aims
 
@@ -159,3 +159,65 @@ Three gown tiers are three phases: at 66 % and 33 % life a tier shatters.
 5. Clip timing: look at the pirouette and the heavy blow with `tools/clip-sheet.mjs` (skill `combat-animation`) before fixing wind-ups.
 6. Bot: `node tools/balance.mjs --map=charlottenburg` once, note the result; calibration stays step 8. The bot must learn two things: do not stand in a burst circle, and hit the guards first.
 7. Indexes: `docs/enemy-pipeline.md` (every new body and Kodex entry) in the same PR.
+
+## Handover 2026-11-19 (step 6) [Claude · Opus high]
+
+Built in the worktree `m16-enemies` beside the three landmark builders; `src/data/charlottenburg.ts` only changed in `CHARLOTTENBURG_BOSSES` (was `CHARLOTTENBURG_BOSS_STANDIN`), `charlottenburgWaveTier` (the mix, an `extra` for the KaDeWe), `flavor: 'revue'` and `shards: true`. Not built: the maze riddles (6c) and the Loot section.
+
+- **Data** `src/data/enemies.ts`: `ENEMIES.scherbe|loge|souffleur|spiegelbild` and the four bosses, `THREAT.pirouette|faust|cue|shards`, `BOSS.conferencier|ringvater|spiegelpaar|diva`, `EnemyDef.glass`, `EnemyDef.noRage` (the Diva), `shield.down` (the Logenbrecher's front is down while he is open). Resistance rows `glas`, `rauchglas`, `spiegel` (`src/data/items.ts`). D9 classes: the three kinds `untote`, the bosses and the reflection `menschen`. `MapDef.flavor` takes `revue` (render only; the loot context ignores it, `src/sim/sim.ts`); `MapDef.shards` → `Level.shards` → `sim.shards`. Drops (`src/sim/loot.ts`): Scherbentänzerin and Souffleur Stoff at the Kabelghul's chance, Logenbrecher Metall at the Boxenkopf's, the Diva as a district boss.
+- **Sim**: brains in `src/sim/ai.ts` (the dancer's branch of `pouncer`, the Logenbrecher's of `brute`, the Souffleur's of `heuler`, the new `spiegelbild` brain, four boss cases; `own()` gives the shared rushes their own hit and floor through the new `Special.mul` and `Special.floor`; `roarOf` the Vorhang; `keepSpots` shares the searchlight between the Wachdrohne and the Conférencier). New specials `pirouette`, `faust`, `prism`, `swap`. `src/sim/threats.ts`: `Zone.burst` (glass bursts hit every other enemy inside after the loop, like the Zünder's blast), `Zone.line` with `lineOffset` and `Zone.act` (a strip that stays active 0.3 s and hits once), `EnemyShot.src` (the Diva's blades fall on a tier break), `applause()` from a locked Conférencier spot. `src/sim/combat.ts`: `glassBurst` from `killEnemy`, `shardHit` (plain damage, boss cap), `guarded` and the half damage in `strike`, the reflection: `strike` only flashes it (note at most every 3 s), `stun`, `ignite`, `chain`, `blastHit` skip it, it `vanish`es with its host (no kill, no loot). It is no add, no wave holder (`aliveCount`, `summon`) and no target for powers, aim assist, Auto-Angriff and hero shots (`src/sim/abilities.ts`, `src/sim/player.ts`). The Diva's gown tiers reuse the Weltzeituhr's `Enemy.still`.
+- **Fallback decision**: the reflection is built as specified (`mirrorOf` and the swap), not the `sharedLife` fallback. One deviation: its position is not a pure function. It glides to the point reflection `2c − host` every step (at least 7 m/s, faster when she moves), because it must leave that point for its own Doppelpirouette and come back; its state is ordinary `Enemy` state in `sim.enemies` like every body, so determinism holds. Centre: the encounter's; with `?spawn` the hero's position at her first step (so the two stand across the hero).
+- **Tests**: `ai.test.ts` › Charlottenburg roster (12 tests: pirouette line, hit, open and cooldown, sidestep; Logenbrecher front 20 %, Faustschlag circle, floor, open with the front down, rolling out, cap 2 via `?spawn`; Souffleur distance, cue drives on, five shards halfway; Conférencier Tanz/Kraftakt by turns and both in rage, two spots in rage, spot lock → four applause circles, the first on the spot, floor; Ringvater escort, half damage and the note once, full damage without guard, the 50 % guard, Schutzgeld; Ringschlag 9.6 m, open, twice in rage; reflection at the point reflection, follows, no damage and one note, not counted, dies with her; Doppelpirouette both lines at the hero, the reflection's hit share, Tausch swaps and keeps life; Diva no rage, tier breaks (ring to 9 m, blades fall, open 2 s, note at 33 %), one/two/three fans, one/two/three prism lines, Zugabe with a Souffleur in phase 3; the prism strip hits only inside, once, after its wind-up, a 1.5 m sidestep escapes; boss rage and ladder; the 45 % cap at ten times the damage for all seven kinds, the reflection included). `combat.test.ts` › Glas splittert (4 tests: one burst hits the hero and an enemy once and not a far one; a chain of three in order, 0.5 s a link, ends, three kills; the boss cap of 2 %, walkers do not burst, no burst with the rule off; the map flag on Charlottenburg only, `revue` not in the loot context). `charlottenburg.test.ts`: the per-zone mix (dancers first, the trio from zone 1, glass only in zone 3, the calm pond, the KaDeWe's +1, no stand-ins left).
+- **Render** `src/render/enemies.ts` (proof `docs/proof/m16-charlottenburg/enemies/`): see `docs/enemy-pipeline.md` for every body. New kit materials: cut glass, smoked glass and frost keep a faint lilac or blue emissive (no light) so they stay their own material in `paint` mode and read as glass at night; mirror, velvet, plum, tux, shirt, feather, pearl, silver, the lit heart and chandelier. All Charlottenburg gear uses `paint` mode (cloth merged per bone). Revue dress as a per-view overlay like the neon cables (`REVUE`, `assign(e, neon, revue)`); the Brocken's vest hides under the stagehand's apron. The Spiegelbild: negative x scale, faces `host.facing + π`, poses with her animation outside its own specials (`update(..., host)`); both shimmer white in the Tausch wind-up. The Diva's tiers hide by `e.still`; her fans are one merged mesh that circles. The Souffleur hovers 0.3 m, the Diva floats a little and glides (idle pose while moving). `src/render/threats.ts`: white-violet burst rings (18 zone slots, was 14) with a shard spray of pooled particles, gold applause circles and sparks, crimson Faustschlag circles, three prism strip slots (thin while marked, white while hitting), a gold ring under a guarded Ringvater and a warm one under the real Spiegelpaar (two ring slots), the Conférencier's spot as a warm stage light from above (no lens beam).
+- **UI, sound** Kodex lines and order (`src/ui/menu.ts`, the spec's lines unchanged; glyphs, portrait ids E19 to E21 and X20 to X23 reserved for Codex busts; the Spiegelbild is not a Kodex entry), first-sight tips for the three kinds (`SIGHT_TIPS`), the banner line „Glas splittert: Wer zerspringt, trifft alle ringsum.“ on maps with `shards` (`src/main.ts`). Notes „Die nächste Nummer!“, „Leibwache!“, „Schutzgeld!“, „Erst die Leibwache!“, „Nur ein Spiegelbild“, „Zugabe!“, „Der Vorhang fällt“. Synth cues in `src/audio/sfx.ts`: glass chime on a burst (a lower one when the body that broke is big), whirr, creak and crash, whisper, drum roll for the Nummer, applause for the spot's barrage, register bell for the Ringvater's calls, shimmer for the Tausch, a rising tone before the prism ray, a curtain thud with a low chime on a tier break (`divaTier` event). No boss voices (no lines recorded; `SIGNATURE` unchanged).
+- **Bot** `src/bot/bot.ts`: steps sideways out of prism strips (rolls just before they hit); glass bursts are marked circles, so its circle rule already walks it out; never targets the Spiegelbild (its rush line is still dodged); scores a guarded boss 12 m worse, so it fights the Logenbrecher first.
+- **Tools**: `tools/enemy-sheet.mjs` reads `PORT`; `enemy-sheet.ts` takes `revue=1`, `tier=1|2`, `guard=0`.
+
+### Reused
+2D has nothing for Charlottenburg (checked: only the era string in `js/data.js`). Reused 3D blocks: the Kabelghul's leap branch (pirouette), the Uhrwerkläufer's shield (Glasfront), the Brocken's slam pose and the Türsteher's circle-in-front (Faustschlag), the Heuler's howl and the elite fan (Souffleur), the Wachdrohne's `Spot` (Spotlicht), the Grenzer/Waechter barrage (Applaus, Scherbenregen), the lunge and charge rushes, `Enemy.queue` (rage double Ringschlag, Vorhang), the Weltzeituhr's life thresholds (tiers), the Zünder's after-loop blast pass and `blastHit` (bursts), `EnemyDef.cap`, `fitCoat`/`BodyFit` coats and the neon-cable overlay pattern.
+
+### Numbers changed against the spec (why)
+| What | Spec | Built | Why |
+|---|---|---|---|
+| Ringschlag trigger | within 12 m | 3 to 11 m | 0.6 s at 16 m/s covers 9.6 m plus 1.4 m contact; from 12 m it always stops short |
+| Faustschlag cooldown | not given | 3 to 4 s (first 1.5 to 2.5 s); no plain strike | his only attack, so the order „dodge, then hit him open“ is the whole fight with him |
+| Faustschlag circle | r 2.4 „in front“ | centre 1.4 m ahead of him | the circle reaches 3.8 m and covers the trigger range of 3.2 m |
+| Applaus | four circles on and round the spot | first on the spot 0.6 s after the 0.3 s flash, three more 2.8 to 3.6 m round it at 120°, 0.15 s apart; the spot cools 1.5 s after a lock | a wind-up was not given; 2 m out between two circles is safe, so walking or rolling out works |
+| Doppelpirouette | both at once, clear line | 1.6 to 5.5 m; the reflection's speed is set so its line reaches the hero (at most 30 m/s) | the reflection stands across the arena; at 13 m/s its line would never cross the hero's |
+| Spiegelbild position | pure function of host and centre | glides to that point (≥ 7 m/s) | it has to leave it for its own pirouette; ordinary sim state |
+| Tausch in rage | 8 s | 8 real seconds (the rage tick rate undone) | the spec gives the number in seconds, as the Rattenmutter's calls |
+| Scherbenfächer | five shards, spread 0.3 | 0.3 rad between shards, 7.7 m/s, life 2.2 s, clear line within 12 m | the fan block's meaning of spread; at 7 m the hero is hit by at most one shard |
+| Prismenstrahl | wall to wall; X; three 25° apart | 36 m strips through the hero (18 m each way); X at ±45°; three at −25°, 0, +25° | no wall data in the sim; all lines meet at the hero, so a 1.2 to 1.5 m sidestep across them escapes every phase |
+| Fächerschlag phase 3 | three fans, each turned 20° | −20°, 0, +20°, 0.4 s apart | reading of „each turned 20°“ |
+| Ringvater guard note | on the first blocked hit | once per guard set (again after the 50 % guard) | the note teaches the rule again when it comes back |
+| Ringvater entrance | „enters with two Logenbrecher“ | his first act is a call of two (note „Leibwache!“, new); Schutzgeld note „Schutzgeld!“ (new) | the boss wave spawns one body; the call respects the cap of 2 |
+| Weakness Ringvater | – | Säure shown | his row is `brute` as specified (acid 1.6); the Kodex derives the weakness from the row |
+| Drops | nearest light material | Stoff for the dancer and the Souffleur | the Kabelghul's Kabel would not fit a costume; Kristall stays a loot decision |
+
+Clip timing (skill `combat-animation`, `tools/enemy-sheet.mjs` strips): the Faustschlag uses the Brocken's `Sword_Heavy_Combo` 2.3 → 2.66 over the 1.1 s wind-up (arm up from about 0.7 of it) and 2.66 → 2.95 as the circle goes off; the pirouette rises on `Zombie_Scratch` 0.05 → 0.3, then `Shield_Dash` 0 → 0.3 with two full turns while she spins. Both match the sim timing; no new clips.
+
+### Cost
+Cloud readout (`node tools/passes.mjs`, courtyard, Leistung, all passes / main pass, two or four bodies of a kind against the same number of Schlurfer; a Schlurfer is 9 / 3 draws):
+
+| Body | Over the kind it resembles | Over a Schlurfer |
+|---|---|---|
+| Scherbentänzerin | — (female base) | +13.5 / +4.5 |
+| Logenbrecher | +22.5 / +7.5 over a Brocken | +25.5 / +8.5 |
+| Spiegelsouffleur | +10.5 / +3.5 over a Speier | +15 / +5 |
+| Revue dress (Schlurfer, Hetzer, Brocken, Speier) | 2 or 3 merged meshes per body (counted from the gear, not measured: no map without the flavor to compare) | — |
+| Der Conférencier | −6.75 / +1 against the Feldwebel | +27.75 / +11.25 |
+| Der Ringvater | −4.5 / −0.25 against the Feldwebel | +30 / +10 |
+| Das Spiegelpaar with its reflection (two bodies) | +5.5 / +2.5 against two Spreehexen | +44.5 / +15.5 |
+| Die Diamantene Diva | +19.5 / +6.5 over the Spreehexe | +39 / +13 |
+
+Boss rows may include an add or two called in before the frame was measured. Telegraphs: a glass burst ring is two draws (rim, fill) while marked, at most 18 zones shown; the shard spray uses the pooled glow particles (no draw of its own); a prism strip one draw (three slots), the guard and real-one rings one each (two slots), the stage spotlight the Wachdrohne's three. No lights, no shadow from glass glows or telegraphs. Fps only on hardware (`docs/tasks/pt-hardware-checks.md` rows 40, 41).
+
+### Bot
+`node tools/balance.mjs --map=charlottenburg` (normal, johannes, five fresh campaigns, tier 32 to 54): 5/5 won, 3.6 deaths and 24.1 min per campaign. Every death is in the first fight (Konzertgarten, fresh gear, power 132, 73 % damage taken); from the Elefantentor on nothing kills: bosses fall in 44 s (Conférencier), 35 s (Ringvater), 47 s (Spiegelpaar), 38 s (Diva), lowest life 81 to 86 %; the calm Karpfenteich takes 2 %. The same shape as Mitte (start too hard on fresh gear, the rest too easy, bosses short): calibration of tier start and boss life stays step 8.
+
+### Open
+- Bodies are code placeholders; Kodex glyphs until Codex busts (E19 to E21, X20 to X23); no boss voices.
+- Maze riddles (6c) and the loot (Ornat des Letzten Vorhangs, Schlussapplaus, Kristall) not built.
+- The Diva's stage lights following her phases and the dawn per phase (render ties) not built.
+- Pitch of the burst chime is by body size in two steps (`glassChime`, `glassLow`), not continuous.
+- Check: `?map=charlottenburg&autostart&spawn=scherbe,loge,souffleur`, `?spawn=conferencier` (and `ringvater`, `spiegelpaar`, `diva`); `PORT=5184 node tools/enemy-sheet.mjs out.png "kind=diva&n=3&tier=1"`, `"kind=walker&n=2&revue=1"`. Johannes rows: `docs/tasks/pt-hardware-checks.md` › Playtest (Charlottenburg roster), hardware 40 and 41.

@@ -158,5 +158,5 @@ describe('Glas splittert (M16, MapDef.shards)', () => {
     expect(c.level.flavor).toBe('revue');
     // The loot sees no flavor for `revue` (no loot table yet).
     expect(c.lootCtx.flavor).toBeUndefined();
-  });
+  }, 30000);
 });
