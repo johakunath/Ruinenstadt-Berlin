@@ -365,7 +365,7 @@ Look 1, sheets 2 and 3 (Johannes, 2026-11-19, second message):
 | Zorn der Ringbahn (I32), Krähenschleuder (I53), Zwille des Spreegeists (I09 set) | Smaller, bands and ribbons that hang, a little more detail |
 | Speer der Siegessäule (I56) | More detail, a little shorter |
 
-Fable: models that get up to a third shorter keep their kind's reach (look only). Reach and damage change only for the three bases in D8, which are half as long. To confirm with Johannes on the next sheet.
+Johannes, 2026-11-19 (third message): reach fits the weapon's length roughly, for every weapon; the readings I15 (white glow) and I16, I52 (bigger head) are right. Rule: D8.
 
 Done when: new sheets; hammer and spear left hand still on the shaft where the model is two-handed; `npm run check`.
 
@@ -381,7 +381,9 @@ The kind still sets clips and arcs, but a base may scale them. New table (plain 
 
 - Reach folds into `stats.reachFactor` (the smear follows it already), damage into `stats.damage` (so the Kampfkraft comparison sees it).
 - One-handed hammers: no left-hand grip, standing clip as the blade (`hands` decides, not the kind).
-- Two-handed hammers are a third shorter as models: hammer reach in `combat.ts` × 0.9. Hammer knockback × 1.5 on every hammer attack (Johannes: strong, slow, pushes enemies back; the stun on every hit stays).
+- **Reach follows length for every melee base** (Johannes, third message): each base has a `length` (tip height of its model, plain data, checked against the model by the envelope test). Reach factor = 1 − (reference length of the kind − length) ÷ reach of the kind's first attack, rounded to 0.05, never under 0.6. Reference lengths are the pre-WP4 kind models (blade 1.11, hammer 1.16, spear 1.81), so `combat.ts` reach values stay. This replaces the fixed reach column above (it gives about the same for the three short bases) and covers the shorter hammers, Leuchtröhre, Sichel, Fernsehturm-Splitter, Klinge der Zitadelle and the Speer der Siegessäule. Slings: no reach change (their factor is shot speed).
+- Damage changes only for the three bases in the table; the other shortened weapons lose a little reach without compensation (watch in the playtest).
+- Hammer knockback × 1.5 on every hammer attack (Johannes: strong, slow, pushes enemies back; the stun on every hit stays).
 - All numbers are start values for Johannes' playtest.
 
 ### D9 Weapon type against enemy type (new rule)
