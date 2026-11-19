@@ -4,7 +4,7 @@
 //   &views=front,side,back   &zoom=head|hands|feet|torso|body   &pose=Idle_Loop@0.4 (clip@time; `bind` for the T-pose)
 //   /tools/look-sheet.html?mode=icons               every wearable icon (tools/item-icons.mjs saves them)
 // Caption: item names, gear triangles per slot and the hero's visible skinned meshes (draw calls per pass).
-import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, PerspectiveCamera, Scene, Vector3, WebGLRenderer, type Mesh, type Object3D } from 'three';
+import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, PerspectiveCamera, Scene, Vector3, WebGLRenderer, type Mesh, type Object3D, type SkinnedMesh } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { heroLook, WEAR } from '../src/data/hero-look';
 import { BASES } from '../src/data/item-names';
@@ -83,13 +83,15 @@ if (mode === 'icons') {
     const keep = (n: string): boolean => n.startsWith('gear_') || (it.slot === 'a' && n === (look.outfit === 'weste' ? 'a_weste' : 'a_mantel')) || (it.slot === 'f' && n === (look.boots === 'turnsch' ? 'f_turnsch' : 'f_stiefel')) || (it.slot === 'g' && n === 'g_handsch' && !!look.gloves);
     const shown: Object3D[] = [];
     body.model.traverse((o) => { if ((o as Mesh).isMesh) { if (o.visible && !keep(o.name)) { o.visible = false; shown.push(o); } } });
-    // Three-quarter view from the front left, a little from above; gloves: the right hand only.
-    const yaw = it.slot === 'h' ? 0.7 : it.slot === 'f' ? 0.6 : it.slot === 'g' ? -0.9 : 0.45;
+    // Three-quarter view from the front left, a little from above; gloves and boots nearly from the side,
+    // so the pair overlaps and fills the icon.
+    const yaw = it.slot === 'h' ? 0.7 : it.slot === 'f' ? 1.25 : it.slot === 'g' ? -1.25 : 0.45;
     body.model.rotation.y = yaw;
+    // Boots: the straight bind pose, feet side by side, so the pair overlaps from the side.
+    if (it.slot === 'f') body.model.traverse((o) => { if ((o as SkinnedMesh).isSkinnedMesh) (o as SkinnedMesh).skeleton.pose(); });
     body.model.updateMatrixWorld(true);
     const box = new Box3();
     body.model.traverse((o) => { if ((o as Mesh).isMesh && o.visible) box.expandByObject(o, true); });
-    if (it.slot === 'g') { box.max.x = Math.min(box.max.x, box.min.x + 0.22); }
     const c = box.getCenter(new Vector3()), size = box.getSize(new Vector3());
     const half = Math.max(size.x, size.y) / 2 / 0.92;
     cam.position.set(c.x, c.y + half * 0.25, c.z + 5);
@@ -101,6 +103,7 @@ if (mode === 'icons') {
     out[icon] = renderer.domElement.toDataURL('image/webp', 0.92);
     for (const o of shown) o.visible = true;
     body.model.rotation.y = 0;
+    if (it.slot === 'f' && clip !== 'bind') { anim.pose(clip!, Number(time ?? 0), 0); anim.update(0); }
   }
   (window as unknown as { __icons: Record<string, string> }).__icons = out;
   document.title = `done ${items.length}`;

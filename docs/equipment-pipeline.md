@@ -3,8 +3,8 @@
 Index of every equipment base and named item with its 3D model, hero look, inventory icon and what is missing.
 Rule: every session that touches equipment art, models, icons or effects updates this file in the same PR.
 **Plan (2026-11-19): `docs/tasks/wp4-equipment-visuals.md`** decides how every row below gets its model (one weapon model per base, rigid gear built in code, palettes per base, pickups per kind, legendary effects) and in which order. The index stays the status; the task file is the plan.
-**Clothing looks (2026-11-19):** one mockup per Körper, Kopf, Hände and Füße item in `docs/mockups/wp4-clothes/` (start values in `items.mjs`), decisions in the task file › Step 2 looks. Talisman, ring and implant stay icon-only. The Needs column below changes when Johannes has picked.
-Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key from `src/data/weapon-look.ts`); `piece:x` = hero.glb node from `src/data/hero-look.ts`; `none` = nothing in 3D. Hero `yes` = equipping changes the hero mesh, `same` = shows the no-item default, `-` = not shown. Icon `yes/partly/no` compares the painted icon (`src/ui/item-icons.ts`, `assets/inventory/*.webp`) with what the game shows. Needs: M model or piece, I icon re-render, E effect, T texture.
+**Clothing looks (2026-11-19):** built in 3D from the approved mockups (`docs/mockups/wp4-clothes/`), decisions in the task file › Step 2 looks. Talisman, ring and implant stay icon-only. Needs: T = Codex texture T9, E = WP4 step 5 effect, M = Blender piece.
+Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key from `src/data/weapon-look.ts`); `wear:x` = the look of `WEAR` in `src/data/hero-look.ts` (palette on a hero.glb piece, coat cut, gear parts from `src/render/gear*.ts`; WP4 step 2); `piece:x` = hero.glb node; `none` = nothing in 3D. Hero `yes` = equipping changes the hero mesh, `same` = shows the no-item default, `-` = not shown. Icon `yes/partly/no` compares the painted icon (`src/ui/item-icons.ts`, `assets/inventory/*.webp`) with what the game shows. Needs: M model or piece, I icon re-render, E effect, T texture.
 
 ## Facts checked in code (2026-11-18)
 
@@ -14,8 +14,8 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Weapons (2026-11-19) | One model per base (30) plus 2 set variants (`brech:kiez`, `zwille:spree`), `weaponModel(kind, base, set)`; sheets in `docs/proof/wp4/`. Length per base in `weapon-look.ts` sets reach and damage (D8); damage type per base (D9) |
 | Weapon icons (2026-11-19) | Rendered from the models (`node tools/item-icons.mjs`, D10), 32 files incl. I91, I92; rerun after every weapon model change. Painted originals: `git show e2ed157:assets/inventory/<id>.webp` |
 | Element (2026-11-19) | Element lights the weapon's glow parts (`ELEMENT_GLOW`, 2.4); without one, neon and legendary bases glow in their signature colour (1.6); else the glow mesh is hidden. No particles yet (step 5) |
-| Hero look | `heroLook`: armor `mantel`/`weste` own, `leder`/`blaumann` → vest, every other armor and no armor → coat. Any glove → `g_handsch`. Feet `turnsch` own, else `stiefel`. `hat` is always `null` (no `h_` piece) |
-| Not on the hero | Head, talisman, ring, implant: nothing in 3D |
+| Hero look (2026-11-19, WP4 step 2) | `heroLook` reads `WEAR` per slot (`base:set` first): outfit piece (coat or vest), coat cut (jackets), palette per piece and scarf, shoulder volume, rigid gear parts, hair hidden (Topfhelm). Every Körper, Kopf, Hände and Füße base has its own look; icons rendered from it (`node tools/item-icons.mjs`, `PAGES=wear`). Sheets: `docs/proof/wp4/step2/` |
+| Not on the hero | Talisman, ring, implant: painted icons, no 3D (Johannes, 2026-11-19) |
 | Ground drops | `src/render/loot.ts`: one instanced crystal in rarity colour, beam for rare and up. Same for every item (backlog P10) |
 | Starter | `starterEquipment()` (`src/sim/loadout.ts`): only `Rostige Klinge`, base `rohr`, kind `blade`. No armor, gloves, boots: hero starts in coat, boots, bare hands |
 | Legacy | `Holzlatte` (`latte`, I01) and `Rostiges Rohr` exist only in `BASES` for old saves; no drop pool rolls them |
@@ -28,14 +28,14 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Slot | Bases | Own 3D model | Changes hero | Icon yes / partly / no |
 |---|---|---|---|---|
 | Waffe (w) | 30 | 30 + 2 set variants | 30 | 32 / 0 / 0 (rendered) |
-| Körper (a) | 12 (+ Kettenhemd on `kette`) | 2 pieces | 3 (vest); 1 same | 2 / 3 / 8 |
-| Kopf (h) | 9 | 0 | 0 | n/a |
-| Hände (g) | 6 | 1 piece (generic) | 6 (all one glove) | 1 / 3 / 2 |
-| Füße (f) | 6 | 2 pieces | 1 (`turnsch`); 1 same | 2 / 4 / 0 |
+| Körper (a) | 12 (+ Kettenhemd on `kette`) | 15 looks (2 pieces, cut, palettes, gear) | 15 | 15 / 0 / 0 (rendered) |
+| Kopf (h) | 9 | 9 hats (gear) | 9 | 9 / 0 / 0 (rendered) |
+| Hände (g) | 6 | 6 looks (glove piece, palettes, gear) | 6 | 6 / 0 / 0 (rendered) |
+| Füße (f) | 6 | 6 looks (2 pieces, palettes, gear) | 6 | 6 / 0 / 0 (rendered) |
 | Talisman (t) | 9 | 0 | 0 | n/a |
 | Ring (r) | 8 | 0 | 0 | n/a |
 | Implantat (i) | 7 | 0 | 0 | n/a |
-| Total | 87 | 0 item models, 5 hero pieces | 40 | |
+| Total | 87 | 30 weapon models, 36 looks | 66 | |
 
 ## Index
 
@@ -73,42 +73,42 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: rendered from the model | E | 3 |
 | Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | E | 3 |
 | Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | E | 3 |
-| Lederjacke | leder | a | normal | piece:vest | yes | I17 | no: jacket vs vest | M | 2 |
-| Arbeitsmantel | mantel | a | normal | piece:coat | same | I18 | yes: long coat | T | 2 |
-| Schutzweste | weste | a | normal | piece:vest | yes | I19 | yes: vest | T | 2 |
-| Feuerwehrjacke | feuer | a | normal | piece:coat | same | I20 | no: reflective jacket | M | 2 |
-| BVG-Uniform | bvg | a | normal | piece:coat | same | I21 | no: blue jacket | M | 2 |
-| Regenponcho | poncho | a | neon | piece:coat | same | I63 | no: clear poncho | M, E | 4 |
-| Kabelmantel | kmantel | a | neon | piece:coat | same | I64 | partly: cables missing | T, E | 4 |
-| Blaumann | blaumann | a | GDR | piece:vest | yes | I75 | no: overalls | M | 4 |
-| Mantel des letzten Späti | spaeti | a | legendary | piece:coat | same | I49 | partly: patched coat | T, E | 3 |
-| Panzer vom Tempelhofer Feld | panzer | a | legendary | piece:coat | same | I50 | no: plate armor | M, E | 3 |
-| Mantel der Rattenmutter | rattenmantel | a | legendary | piece:coat | same | I54 | partly: fur coat | T, E | 3 |
-| Rüstung des Zitadellenritters | ritter | a | legendary | piece:coat | same | I55 | no: plate armor | M, E | 3 |
-| Weste der Kiezwache | weste | a | set kiez | piece:vest | yes | I19 | yes: plain vest | T, I | 3 |
-| Mantel des Spreegeists | mantel | a | set spree | piece:coat | same | I18 | yes: plain coat | T, I | 3 |
-| Kettenhemd der Zitadelle | kette | a | set zit | piece:coat | same | I42 | no: bike chain | M, I (use I57) | 3 |
-| Bauhelm | helm | h | normal | none | - | I22 | n/a | M | 2 |
-| Schiebermütze | schieber | h | normal | none | - | I23 | n/a | M | 2 |
-| Wollmütze | muetze | h | normal | none | - | I24 | n/a | M | 2 |
-| Gasmaske | maske | h | normal | none | - | I25 | n/a | M | 2 |
-| Neonbrille | nbrille | h | neon | none | - | I65 | n/a | M, E | 4 |
-| Strohhut | stroh | h | GDR | none | - | I76 | n/a | M | 4 |
-| Pickelhaube des Hauptmanns | pickel | h | legendary | none | - | I78 | n/a | M, E | 3 |
-| Helm der Kiezwache | kiezhelm | h | set kiez | none | - | I79 | n/a | M | 3 |
-| Topfhelm der Zitadelle | topfhelm | h | set zit | none | - | I83 | n/a | M | 3 |
-| Arbeitshandschuhe | handsch | g | normal | piece:gloves | yes | I26 | yes: work gloves | T | 2 |
-| Boxbandagen | bandage | g | normal | piece:gloves | yes | I27 | no: wraps vs gloves | M | 2 |
-| Schweißerhandschuhe | schweiss | g | normal | piece:gloves | yes | I28 | partly: long cuffs | T | 2 |
-| Gartenhandschuhe | gartenh | g | GDR | piece:gloves | yes | I77 | partly: green colour | T | 4 |
-| Fäuste des Kiezboxers | kiezbox | g | legendary | piece:gloves | yes | I85 | no: boxing gloves | M, E | 3 |
-| Handschuhe der Kiezwache | kiezhand | g | set kiez | piece:gloves | yes | I80 | partly: blue colour | T | 3 |
-| Turnschuhe | turnsch | f | normal | piece:sneakers | yes | I29 | yes: sneakers | - | 2 |
-| Arbeitsstiefel | stiefel | f | normal | piece:boots | same | I30 | yes: work boots | - | 2 |
-| Gummistiefel | gummi | f | normal | piece:boots | same | I31 | partly: tall rubber | M | 2 |
-| Stiefel des Schaffners | schaffner | f | legendary | piece:boots | same | I86 | partly: tall black | M, E | 3 |
-| Stiefel des Spreegeists | spreestief | f | set spree | piece:boots | same | I81 | partly: green colour | T | 3 |
-| Eisenstiefel der Zitadelle | eisenstief | f | set zit | piece:boots | same | I84 | partly: iron plates | M | 3 |
+| Lederjacke | leder | a | normal | wear:leder | yes | I17 | yes: rendered from the look | T | 2 |
+| Arbeitsmantel | mantel | a | normal | wear:mantel | yes | I18 | yes: rendered from the look | none | 2 |
+| Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |
+| Feuerwehrjacke | feuer | a | normal | wear:feuer | yes | I20 | yes: rendered from the look | none | 2 |
+| BVG-Uniform | bvg | a | normal | wear:bvg | yes | I21 | yes: rendered from the look | none | 2 |
+| Regenponcho | poncho | a | neon | wear:poncho | yes | I63 | yes: rendered from the look | M (Blender B1) | 4 |
+| Kabelmantel | kmantel | a | neon | wear:kmantel | yes | I64 | yes: rendered from the look | none | 4 |
+| Blaumann | blaumann | a | GDR | wear:blaumann | yes | I75 | yes: rendered from the look | none | 4 |
+| Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look | T, E | 3 |
+| Panzer vom Tempelhofer Feld | panzer | a | legendary | wear:panzer | yes | I50 | yes: rendered from the look | E | 3 |
+| Mantel der Rattenmutter | rattenmantel | a | legendary | wear:rattenmantel | yes | I54 | yes: rendered from the look | T, E | 3 |
+| Rüstung des Zitadellenritters | ritter | a | legendary | wear:ritter | yes | I55 | yes: rendered from the look | E | 3 |
+| Weste der Kiezwache | weste | a | set kiez | wear:weste:kiez | yes | I93 | yes: rendered from the look | none | 3 |
+| Mantel des Spreegeists | mantel | a | set spree | wear:mantel:spree | yes | I94 | yes: rendered from the look | none | 3 |
+| Kettenhemd der Zitadelle | kette | a | set zit | wear:kette:zit | yes | I57 | yes: rendered from the look | T | 3 |
+| Bauhelm | helm | h | normal | wear:helm | yes | I22 | yes: rendered from the look | none | 2 |
+| Schiebermütze | schieber | h | normal | wear:schieber | yes | I23 | yes: rendered from the look | T | 2 |
+| Wollmütze | muetze | h | normal | wear:muetze | yes | I24 | yes: rendered from the look | T | 2 |
+| Gasmaske | maske | h | normal | wear:maske | yes | I25 | yes: rendered from the look | none | 2 |
+| Neonbrille | nbrille | h | neon | wear:nbrille | yes | I65 | yes: rendered from the look | E | 4 |
+| Strohhut | stroh | h | GDR | wear:stroh | yes | I76 | yes: rendered from the look | T | 4 |
+| Pickelhaube des Hauptmanns | pickel | h | legendary | wear:pickel | yes | I78 | yes: rendered from the look | E | 3 |
+| Helm der Kiezwache | kiezhelm | h | set kiez | wear:kiezhelm | yes | I79 | yes: rendered from the look | none | 3 |
+| Topfhelm der Zitadelle | topfhelm | h | set zit | wear:topfhelm | yes | I83 | yes: rendered from the look | none | 3 |
+| Arbeitshandschuhe | handsch | g | normal | wear:handsch | yes | I26 | yes: rendered from the look | none | 2 |
+| Boxbandagen | bandage | g | normal | wear:bandage | yes | I27 | yes: rendered from the look | none | 2 |
+| Schweißerhandschuhe | schweiss | g | normal | wear:schweiss | yes | I28 | yes: rendered from the look | none | 2 |
+| Gartenhandschuhe | gartenh | g | GDR | wear:gartenh | yes | I77 | yes: rendered from the look | none | 4 |
+| Fäuste des Kiezboxers | kiezbox | g | legendary | wear:kiezbox | yes | I85 | yes: rendered from the look | E | 3 |
+| Handschuhe der Kiezwache | kiezhand | g | set kiez | wear:kiezhand | yes | I80 | yes: rendered from the look | none | 3 |
+| Turnschuhe | turnsch | f | normal | wear:turnsch | yes | I29 | yes: rendered from the look | none | 2 |
+| Arbeitsstiefel | stiefel | f | normal | wear:stiefel | yes | I30 | yes: rendered from the look | none | 2 |
+| Gummistiefel | gummi | f | normal | wear:gummi | yes | I31 | yes: rendered from the look | none | 2 |
+| Stiefel des Schaffners | schaffner | f | legendary | wear:schaffner | yes | I86 | yes: rendered from the look | E | 3 |
+| Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief | yes | I81 | yes: rendered from the look | none | 3 |
+| Eisenstiefel der Zitadelle | eisenstief | f | set zit | wear:eisenstief | yes | I84 | yes: rendered from the look | none | 3 |
 | Spreekiesel | kiesel | t | normal | none | - | I39 | n/a | - | 2 |
 | Mauerstück | stueck | t | normal | none | - | I40 | n/a | - | 2 |
 | Rabenfeder | feder | t | normal | none | - | I41 | n/a | - | 2 |

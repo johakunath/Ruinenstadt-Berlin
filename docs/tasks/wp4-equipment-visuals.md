@@ -1,6 +1,6 @@
 # WP4 Hero, weapons and loot visuals [Claude · Fable high (spec) · Opus high (build) · Codex (icons)]
 
-Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Step 2 looks: mockups shown 2026-11-19, waiting for Johannes' pick (› Step 2 looks). Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
+Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Step 2 (clothing) and step 4 (2D #2 close-out) built 2026-11-19 (handover at the end); tunnel set waits for Johannes' pick. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
 
 ## Goal
 Every weapon base, armor, hat, glove, boot, talisman, ring and implant shows on the hero, legendaries and sets have their own look, ground loot shows what it is, and daggers come in as dual wield. Draw calls on the hero go down, not up.
@@ -518,4 +518,13 @@ Johannes, 2026-11-19: no painted item icons any more.
 - Models: Hackmesser silvery with an edge gleam (fixed accent `gleam`, not a signature), Kiezwache shinier with a ribbon, Sichel and Werkhammer clean metal (metal atlas with a brushed half), Holzlatte wood, Rohrzange end, fork handles a third shorter (sling grip zone now −0.02 to 0.14), Spreegeist green glow, Boxenhammer sides, Mikroständer shorter (reach 0.95), Mauer- and Plattenbrecher chipped paint, fragments, cracks.
 - Review fix: `thrustTipY` uses the shown spear's `length` (no unit test covers it: the rack needs a canvas).
 - Proof: `neonfl-shot.png`, `neonfl-game.png`; icons, the three sheets and both inventory screenshots rerun after the last model change.
+
+## Handover step 2 and 4 (Opus 5.5, 2026-11-19)
+- Built: `WEAR` and `PALETTES` (`src/data/hero-look.ts`), piece variants with roles, palettes, bands, spots, coat cut and shoulder `puff` (`src/render/hero-wear.ts`), fitted rigid gear merged into ≤ 3 skinned meshes (`gear-kit.ts`, `gear.ts`, builders `gear-head.ts`, `gear-body.ts`, `gear-body-rare.ts`, `gear-limbs.ts`, four parallel Opus builders), `HeroModel` swaps variants and gear in `setLook`; NPCs get no gear.
+- Numbers: gear ≤ 3,200 triangles per full look (D3 2,500 raised), glow ≤ 400; hero ≤ 12 skinned draw calls (vest + 3 gear); heaviest hero about 22,300 triangles; gear build 3 to 11 ms per item on first equip, then cached. Puff per armor 12 to 26 mm.
+- Tests: `hero-look.test.ts` (every wear base, palettes, cuts, set keys, step 4 legendaries and sets differ), `hero-wear.test.ts` (roles in hero.glb, cut, tint, puff, caching), `gear.test.ts` (builders, bones, budget of every combination, hero total), `items.test.ts` (district wear pools).
+- Icons: 36 rendered (`PAGES=wear node tools/item-icons.mjs`, `tools/look-sheet.html?mode=icons`); new I93 Weste der Kiezwache, I94 Mantel des Spreegeists, I57 Kettenhemd (`kette:zit`). Sheets: `node tools/look-sheet.mjs out.png "group=sets"`; proof in `docs/proof/wp4/step2/`.
+- Deviations: Spreegeist boots in code (no Quaternius); brims higher and level (the idle head tilts down); glow colours deeper than the mockup (the glow material emits 2.2×); torso plates split over spine_01..03 (sprint); tassets and jeans rips on the thighs; Kettenhemd grey darker until the T9 mail texture; Arbeitshandschuhe tan (`arbeit` palette).
+- Reused from 2D: `HEADL`, `GLOVE`, `BOOT`, `LOOK` colours as palette start values; the Pickelhaube eagle outline from the Hauptmann boss.
+- Not verified: hardware cost and hitch (row 39 in `pt-hardware-checks.md`), look at the phone camera; known clipping: straw brim vs a raised arm, gas-mask canister and helm edge into the scarf with the chin down, collars stand off a raised shoulder.
 

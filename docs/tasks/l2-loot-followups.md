@@ -1,6 +1,6 @@
 # L2 Loot and item follow-ups from the M1–M3 review [Sonnet 5.5]
 
-Status: open. Review of PRs #5, #7, #9, #10 (2026-11-16). The ports are exact: a differential run of 60,000 seeded item rolls and 30,000 loadouts against the 2D source gave no mismatch (item data, `makeItem`, `lootItem`, `rollRarity`, `gearAffixes`, `heroStats`). Open points are in the code around them:
+Status: done (2026-11-19, WP4 step 4): every row has code (WP4 Findings › L2: first material by kind, district and flavor on the maps, ingredients, `eliteBonus`, one `DIFFICULTIES`); the head, hand and foot legendaries and set pieces have their own looks (test in `src/data/hero-look.test.ts`). Review of PRs #5, #7, #9, #10 (2026-11-16). The ports are exact: a differential run of 60,000 seeded item rolls and 30,000 loadouts against the 2D source gave no mismatch (item data, `makeItem`, `lootItem`, `rollRarity`, `gearAffixes`, `heroStats`). Open points are in the code around them:
 
 | # | 2D | 3D | Do |
 |---|---|---|---|
