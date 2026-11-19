@@ -156,7 +156,7 @@ interface GearKit {
   // WP5 step 3 (boss looks): coats per district, the Brandmeister's bands, the Rattenmutter's fur, the Turmwächter's tower.
   garde: LitMaterial; officer: LitMaterial; navy: LitMaterial; turnout: LitMaterial; band: LitMaterial; helmet: LitMaterial;
   hair: LitMaterial; white: LitMaterial; fur: LitMaterial; furDark: LitMaterial; grime: LitMaterial; rags: LitMaterial; pink: LitMaterial; eye: LitMaterial;
-  tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial; window: LitMaterial;
+  tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial; window: LitMaterial; helmFire: LitMaterial; helmFlame: LitMaterial;
   /** Shared vertex-coloured materials of the boss gear (`assemble` with `paint`). */
   paint: LitMaterial; metal: LitMaterial;
 }
@@ -220,9 +220,14 @@ function gearKit(m: Materials): GearKit {
     window: m.surface({ color: 0x0a3a3a, emissive: 0x43d1cf, emissiveIntensity: 2.4, roughness: 0.4 }),
     // The Brandmeister's helmet fire: orange outer flames (less intense than the torch so they stay orange), yellow cores.
     fire: m.surface({ color: 0x6a1a04, emissive: 0xff5a14, emissiveIntensity: 3.4, roughness: 0.5 }),
+    // H3: the Brandmeister's helmet fire has its own pair, so pulsing it leaves the Zünder's fuse flame alone (review fix).
+    helmFire: m.surface({ color: 0x6a1a04, emissive: 0xff5a14, emissiveIntensity: 3.4, roughness: 0.5 }),
+    helmFlame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
     paint: m.surface({ color: 0xffffff, roughness: 0.85, vertexColors: true, doubleSided: true }),
     metal: m.surface({ color: 0xffffff, roughness: 0.4, metalness: 0.8, vertexColors: true }),
   };
+  // The intensity each material was made with (animated glows change theirs; `assemble` sorts by this one).
+  for (const mat of Object.values(kit)) mat.userData.baseEmissive ??= mat.emissiveIntensity;
   return kit;
 }
 
@@ -241,7 +246,10 @@ function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMat
   const family = (m: keyof GearKit | 'pulse'): keyof GearKit | 'pulse' => {
     if (!paint || m === 'pulse') return m;
     const mat = k[m];
-    const glow = mat.emissiveIntensity * Math.max(mat.emissive.r, mat.emissive.g, mat.emissive.b);
+    // By the intensity the material was made with: some glows are animated (the tower's window ring dims on
+    // death), and a body built meanwhile must still keep them as glows (review fix).
+    const base = (mat.userData.baseEmissive as number | undefined) ?? (mat.userData.baseEmissive = mat.emissiveIntensity);
+    const glow = base * Math.max(mat.emissive.r, mat.emissive.g, mat.emissive.b);
     if (glow > 0.3) return m;
     return mat.metalness >= 0.6 ? 'metal' : 'paint';
   };
@@ -662,7 +670,7 @@ function modelQuat(b: Object3D, model: Object3D, out: Quaternion): Quaternion {
   for (let o: Object3D | null = b; o && o !== model; o = o.parent) out.premultiply(o.quaternion);
   return out;
 }
-const qa = new Quaternion(), qb = new Quaternion(), qc = new Quaternion();
+const qa = new Quaternion(), qb = new Quaternion(), qc = new Quaternion(), qd = new Quaternion();
 
 /** H3: one kind's gear on a mech body; `bones` scales parts of the body away (Leela's head hull under the Turmwächter's tower). */
 interface MechSet { list: Object3D[]; shield: Object3D | null; key: Object3D | null; bones: Record<string, number>; sparks?: Object3D }
@@ -932,8 +940,8 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       for (const [x, z, h, r, lean] of [[0, 0.02, 0.34, 0.075, -0.15], [0.07, -0.05, 0.26, 0.06, -0.35], [-0.07, -0.04, 0.27, 0.06, -0.3], [0.1, 0.07, 0.18, 0.045, 0.1], [-0.1, 0.06, 0.2, 0.045, 0.15], [0, -0.13, 0.2, 0.055, -0.6], [0.16, -0.1, 0.13, 0.035, -0.4], [-0.15, -0.12, 0.14, 0.035, -0.5]] as const) {
         // H3 (Johannes): the flames stand higher.
         const hh = h * 1.65;
-        flames.push([tf(new ConeGeometry(r, hh, 7), x, 0.13 + hh / 2 - 0.02, z, lean, 0, x * 2), 'fire']);
-        flames.push([tf(new ConeGeometry(r * 0.5, hh * 0.6, 6), x, 0.13 + hh * 0.28, z + 0.01, lean, 0, x * 2), 'flame']);
+        flames.push([tf(new ConeGeometry(r, hh, 7), x, 0.13 + hh / 2 - 0.02, z, lean, 0, x * 2), 'helmFire']);
+        flames.push([tf(new ConeGeometry(r * 0.5, hh * 0.6, 6), x, 0.13 + hh * 0.28, z + 0.01, lean, 0, x * 2), 'helmFlame']);
       }
       // The fire keeps burning upwards when he throws his head back.
       hangOn(mount('Head', flames, at.y - hp.y, at.z - hp.z, at.x - hp.x), 0.75);
@@ -1435,7 +1443,7 @@ export class EnemyView {
     const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
     this.skin = skin;
-    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
     // (crow, rat and the code-built bodies returned above)
     const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? assets.zombieClips : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
@@ -1587,7 +1595,7 @@ export class EnemyView {
     m.clipAction(clip).play();
     m.update(0);
     // H3: an upright boss gets its gear fitted in the straightened pose it will stand in.
-    if (this.upright) this.straighten(true);
+    if (this.upright) this.straighten(true, 1);
     this.model.updateMatrixWorld(true);
     const out = build();
     m.stopAllAction();
@@ -1601,7 +1609,7 @@ export class EnemyView {
    * Zombie_Idle_Loop to the first frame of Idle_Loop, measured once, is applied after every animation update.
    * The gait of every zombie clip stays, the back stands up.
    */
-  private straighten(arms: boolean): void {
+  private straighten(arms: boolean, k: number): void {
     if (!this.straight) {
       this.straight = [];
       const zi = this.clips?.get('Zombie_Idle_Loop'), ui = this.clips?.get('Idle_Loop');
@@ -1622,7 +1630,12 @@ export class EnemyView {
         if (b && qz && qu) this.straight.push({ bone: b, fix: qu.clone().multiply(qz.clone().invert()), arm: (STRAIGHT_ARMS as readonly string[]).includes(n) });
       }
     }
-    for (const s of this.straight) if (arms || !s.arm) s.bone.quaternion.premultiply(s.fix);
+    if (k <= 0.001) return;
+    for (const s of this.straight) {
+      if (!arms && s.arm) continue;
+      if (k >= 0.999) s.bone.quaternion.premultiply(s.fix);
+      else s.bone.quaternion.premultiply(qd.identity().slerp(s.fix, k));
+    }
   }
 
   /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. */
@@ -1777,7 +1790,8 @@ export class EnemyView {
     this.skip = skip;
     this.anim.update(this.pending);
     this.pending = 0;
-    if (this.upright) this.straighten(e.state === 'chase');
+    // Only as much as zombie clips drive the pose: the upright clips (heavy swing, dash, throw, hits, death) stand already (review fix).
+    if (this.upright) this.straighten(e.state === 'chase', this.anim.weightOf('Zombie_'));
     if (this.hanging.length) this.hangSkirts(e.state === 'dead');
   }
 
@@ -1933,8 +1947,8 @@ export class EnemyView {
         // H3 (Johannes): the fire glows and licks: it sways and its glow pulses (one boss at a time, so the shared kit material is fine).
         fire.rotation.z = 0.12 * Math.sin(this.time * 9 + this.seed) + 0.05 * Math.sin(this.time * 27);
         const kit = gearKit(this.materials);
-        kit.fire.emissiveIntensity = e.state === 'dead' ? 0.4 : 2.8 + 1.6 * Math.abs(Math.sin(this.time * 13 + this.seed * 5)) + 2 * flare;
-        kit.flame.emissiveIntensity = e.state === 'dead' ? 0.4 : 3.5 + 2 * Math.abs(Math.sin(this.time * 19)) + 2 * flare;
+        kit.helmFire.emissiveIntensity = e.state === 'dead' ? 0.4 : 2.8 + 1.6 * Math.abs(Math.sin(this.time * 13 + this.seed * 5)) + 2 * flare;
+        kit.helmFlame.emissiveIntensity = e.state === 'dead' ? 0.4 : 3.5 + 2 * Math.abs(Math.sin(this.time * 19)) + 2 * flare;
       }
     } else if (this.kind === 'heuler') {
       const sac = this.gear.get('heuler')?.[0];

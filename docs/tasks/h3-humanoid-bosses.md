@@ -24,7 +24,7 @@ Step 1: a few quaternion multiplies per upright boss per animated frame. Step 3:
 
 ## Handover
 - Step 1 and 4 in `src/render/enemies.ts` (`straighten`, `UPRIGHT`, `STRAIGHT`, `STRAIGHT_ARMS`, the rat head, the Brandmeister fire update) and `src/render/threats.ts` (embers).
-- Check: `node tools/enemy-sheet.mjs out.png "kind=feldwebel&n=1&view=profile&speed=2.4"`; hardware look: `docs/tasks/pt-hardware-checks.md` row 35.
+- Check: `node tools/enemy-sheet.mjs out.png "kind=feldwebel&n=1&view=profile&speed=2.4"`; hardware look: `docs/tasks/pt-hardware-checks.md` rows 35 to 37.
 - Step 3: `ENEMIES.waechter` is `body: 'mech'`, scale 1.3 (legs span his 0.85 m radius, 4 m with antenna); sim unchanged. `towerGear` in `src/render/enemies.ts` hides Leela's hull and slims her neck (`TOWER_BONES`), fits a lathe shaft to her vertices, mounts the sphere on the neck.
 - Mech views keep gear sets per kind (`mechSets`: 'clock' at once, the tower on first use in the rest pose, `inRest`). Specials in `poseMech`: barrage leans back then jolts per shell, ring crouches and turns once, bossSlam lifts and stamps a foot (Kick clip); `towerFx` flickers the sparks and flares the window ring. Mech walk now scales with body size.
 - `loadCharacters(…, 'small')` loads Leela alone; `mechsFor` in `src/main.ts` asks for her where the Turmwächter can appear (Köpenick, maps without own bosses, `?spawn=`). His zombie gear, SHAPE, BUILD, CLOTH and UPRIGHT entries are gone.

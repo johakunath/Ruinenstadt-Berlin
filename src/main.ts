@@ -1116,6 +1116,13 @@ function mechsFor(): boolean | 'small' {
   if (kinds.some((k) => body(k) === 'mechBig' || /^(volkskoloss|weltzeituhr)/.test(k))) return true;
   return kinds.some((k) => body(k) === 'mech') ? 'small' : false;
 }
+/** H3: the human boss base, where a male humanoid boss can appear (own bosses, `?spawn=`, maps without own bosses). */
+function humansFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
+  return own.length === 0 || kinds.some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'human');
+}
 
 // M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.
 const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
@@ -1123,6 +1130,7 @@ export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),
+  humans: humansFor(),
 })
   .then((r) => {
     renderer = r;

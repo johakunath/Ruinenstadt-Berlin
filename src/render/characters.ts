@@ -31,7 +31,7 @@ export interface CharacterAssets {
   hero: Object3D;
   zombie: Object3D;
   /** H3: the human base of the male humanoid bosses (same skeleton and clips as the zombie). */
-  human: Object3D;
+  human?: Object3D;
   heroClips: Map<string, AnimationClip>;
   zombieClips: Map<string, AnimationClip>;
   /** Dinosaurs (M12): own skeletons and clips (Idle, Walk, Run, Attack, Jump, Death). */
@@ -109,12 +109,13 @@ function prepare(scene: Object3D, materials: Materials): void {
 }
 
 /** `mechs`: true loads both mechs, 'small' only Leela (448 KB instead of 1.3 MB). */
-export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false): Promise<CharacterAssets> {
+export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
-  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humanUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF];
-  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf]) prepare(g.scene, materials);
+  // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
+  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, ...(humans ? [humanUrl] : [])].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined];
+  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf]) if (g) prepare(g.scene, materials);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
@@ -134,7 +135,7 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
     // Enemies only get the clips they play: every clip costs bindings per body.
     if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
   }
-  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf.scene, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
+  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
   if (mechLoad) {
     const [small, big] = await mechLoad;
     prepare(small.scene, materials);
@@ -209,6 +210,13 @@ export class Animator {
     const l = this.layer(name);
     l.action.paused = true;
     l.action.time = Math.min(Math.max(time, 0), l.action.getClip().duration - 0.001);
+  }
+
+  /** H3: the summed weight of the clips whose name starts with `prefix` (the zombie clips of an upright boss). */
+  weightOf(prefix: string): number {
+    let w = 0;
+    for (const [n, l] of this.layers) if (n.startsWith(prefix)) w += l.w;
+    return Math.min(1, w);
   }
 
   duration(name: string): number {

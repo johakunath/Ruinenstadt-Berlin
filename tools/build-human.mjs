@@ -1,5 +1,6 @@
-// H3 step 2 (comparison only, not in the game): human base candidates for the humanoid bosses, built like
-// zombie.glb in tools/build-assets.mjs but without the zombie repaint. Needs assets-src/ (tools/fetch-assets.sh).
+// H3: human bases for the humanoid bosses, built like zombie.glb in tools/build-assets.mjs but without the zombie
+// repaint (`npm run assets:human`). Needs assets-src/ (tools/fetch-assets.sh). human1.glb ships (Johannes'
+// pick B, the male humanoid bosses); human2.glb is the candidate for female bosses, sheet tool only.
 //
 //   human1.glb  Superhero_Male body, simplified, natural skin, a plain shirt, trousers and boots.
 //   human2.glb  Superhero_Female body (the hero's body), the same way.

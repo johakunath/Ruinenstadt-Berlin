@@ -46,7 +46,8 @@ if (base === 'human1' || base === 'human2') {
     mesh.castShadow = true;
     mesh.frustumCulled = false;
   });
-  assets.zombie = g.scene;
+  // Both bodies: the ghouls (zombie) and the male humanoid bosses (human) take the candidate.
+  assets.zombie = assets.human = g.scene;
   if (base === 'human2') assets.zombieClips = new Map([...assets.zombieClips.keys()].map((k) => [k, assets.heroClips.get(k)!]));
 }
 const scene = new Scene();
