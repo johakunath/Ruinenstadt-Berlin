@@ -519,7 +519,15 @@ export function passive(sim: Sim, e: Enemy): void {
     }
     return;
   }
-  if (e.kind === 'rattenmutter') {
+  if (e.kind === 'brandmeister') {
+    // H3: fire where he walks (2D boss trail), as the Rattenmutter's acid.
+    const M = BOSS.brandmeister;
+    e.trailT -= DT;
+    if (e.trailT <= 0 && e.speed > 0.3) {
+      e.trailT = M.trailEvery;
+      addHazard(sim, { x: e.x, z: e.z, r: M.trailRadius, t: M.trailTime, damage: damageOf(e, M.trailDamage), kind: 'fire' });
+    }
+  } else if (e.kind === 'rattenmutter') {
     const R = BOSS.rattenmutter;
     e.trailT -= DT;
     if (e.trailT <= 0 && e.speed > 0.3) {

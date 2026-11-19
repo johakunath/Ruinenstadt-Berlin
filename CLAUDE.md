@@ -53,6 +53,7 @@ Folders, their rules and where each system lives: `docs/architecture.md` (read t
 | `npm run check` | Type check, unit tests, build |
 | `npm run e2e` | Playwright smoke test against the built game (`npm run build` first) |
 | `npm run assets` | Rebuild `assets/characters/zombie.glb` and `anims.glb` from `assets-src/` (`tools/fetch-assets.sh` downloads it) |
+| `npm run assets:human` | Rebuild `assets/characters/human1.glb` and `human2.glb` (human boss bases) from `assets-src/` |
 | `npm run assets:hero` | Rebuild `assets/characters/hero.glb` through headless Blender (`$BLENDER`, PATH or the Windows default path; `docs/tasks/h1-hero.md`) |
 
 URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero), `?shadows=boxes` (A/B: only caster boxes shadow, not map chunks), `?map=tunnel&line=1`, `?sky=a|b|c` (Alexanderplatz light), `?cut=off|4.3` (V1 B cutaway), `?props=stall:1.5*4,crane` (prop showcase near the start, rot 0).

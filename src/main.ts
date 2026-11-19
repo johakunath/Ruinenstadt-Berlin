@@ -1105,12 +1105,39 @@ window.__game = {
 // The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
 showTunnelButton();
 
+/**
+ * Which Quaternius mechs this run can meet: `?spawn=` kinds and the map's bosses (H3: the Turmwächter walks on
+ * Leela). A map without own bosses brings the default endless bosses, the Turmwächter among them.
+ */
+function mechsFor(): boolean | 'small' {
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own, ...(own.length === 0 && !isCamp ? ['waechter'] : [])];
+  const body = (k: string): string | undefined => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body;
+  if (kinds.some((k) => body(k) === 'mechBig' || /^(volkskoloss|weltzeituhr)/.test(k))) return true;
+  return kinds.some((k) => body(k) === 'mech') ? 'small' : false;
+}
+/** H3: the human boss base, where a male humanoid boss can appear (own bosses, `?spawn=`, maps without own bosses). */
+function humansFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
+  return own.length === 0 || kinds.some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'human');
+}
+/** H3: the female boss base (Spreehexe, Wurzel-Mutter), where one of them can appear. */
+function femalesFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  return [...opts.spawn.map((k) => k.split('+')[0]!), ...own].some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'female');
+}
+
 // M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.
 const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
-  mechs: opts.spawn.some((k) => /^(uhrwerk|volkskoloss|weltzeituhr)/.test(k)),
+  mechs: mechsFor(),
+  humans: humansFor(),
+  females: femalesFor(),
 })
   .then((r) => {
     renderer = r;
