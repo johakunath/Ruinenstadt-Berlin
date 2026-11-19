@@ -1,23 +1,55 @@
-// M6/Q6: optional cloud save without a login, same backend and protocol as the 2D game
+// M6/Q6/M6b: optional cloud save without a login, same backend and protocol as the 2D game
 // (`tools/sync/Code.gs` in the 2D repo: Google Sheet + Apps Script web app, POST text/plain JSON):
-//   {a:'get',c}          -> {ok,s,t}            s = save JSON string or null
+//   {a:'get',c}          -> {ok,s,t}            s = stored JSON string or null
 //   {a:'put',c,s,t,b}    -> {ok,t} | {ok:false,newer:true,t}   b = server t this device last saw
-// A random 8 character code (XXXX-XXXX) is the only key. The browser copy stays the primary save;
-// this only mirrors it. The server never validates the payload, so 2D and 3D saves can share the sheet.
-// Conflict rule (2D v0.84, simplified): a push that finds a newer remote write is refused. The device
-// then stops pushing and the next page load adopts the remote save, keeping the local one as backup.
-import { parseSave, type SaveV1 } from './sim/save';
+// The server is a key-value store (one row per key in the tab "Saves", the value chunked), so M6b needs
+// no server change. A random 8 character account code (XXXX-XXXX) is the only secret. Keys under it:
+//   slot 1        the account code itself (a save from before M6b is slot 1 without moving)
+//   slot 2, 3     derived codes (hash of code + slot), each its own row with its own conflict rule
+//   account       derived code (hash of code + "konto"): {k:'konto',v:1,n:name,s:[slot names]}
+// Each slot syncs on its own, so playing slot 1 on the PC never blocks slot 2 on the tablet.
+// The browser copy stays the primary save; this only mirrors it. Conflict rule (2D v0.84, simplified):
+// a push that finds a newer remote write is refused; that slot stops pushing and the next page load
+// adopts the remote save, keeping the local one as backup.
+import { SLOTS, type Slot } from './save';
+import { parseSave, type SaveV1 } from './sim/save-format';
 
 const URL = 'https://script.google.com/macros/s/AKfycbyUCf3slojkaYJhVemGU54EBidrXFhj2FoOANlOZQQdIxhO4YIWTW1kF9FPv3hVDXQ/exec';
 const KEY = 'ruinenstadt-berlin.sync';
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const CODE_RE = /^[A-Z2-9]{8}$/;
+export const NAME_MAX = 20;
 
 export type SyncState = 'off' | 'sync' | 'on' | 'slow' | 'conflict';
 export const formatCode = (c: string | null): string => (c ? `${c.slice(0, 4)}-${c.slice(4)}` : '');
 export const cleanCode = (s: string): string => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+export const cleanName = (s: string): string => s.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, NAME_MAX);
 
-interface Stored { c?: string; b?: number; s?: number; off?: boolean }
+/** 8 characters of the code alphabet from a string (cyrb53-style hash, two 32-bit lanes). */
+function derive(s: string): string {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) { const ch = s.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  let out = '';
+  for (let i = 0; i < 8; i++) out += ALPHABET[(((i < 4 ? h1 : h2) >>> ((i % 4) * 8)) & 255) % ALPHABET.length];
+  return out;
+}
+/** Server key of a slot. */
+export const slotCode = (acct: string, slot: Slot): string => (slot === 1 ? acct : derive(`${acct}:${slot}`));
+/** Server key of the account record (name, slot names). */
+export const metaCode = (acct: string): string => derive(`${acct}:konto`);
+
+interface Meta { k: 'konto'; v: 1; n: string; s: string[] }
+function parseMeta(text: string | null | undefined): Meta | null {
+  try {
+    const m = JSON.parse(text ?? 'null') as Partial<Meta> | null;
+    if (!m || m.k !== 'konto') return null;
+    return { k: 'konto', v: 1, n: cleanName(String(m.n ?? '')), s: SLOTS.map((_, i) => cleanName(String(m.s?.[i] ?? ''))) };
+  } catch { return null; }
+}
+
+interface Stored { c?: string; n?: string; sn?: string[]; b?: number | Partial<Record<Slot, number>>; mb?: number; s?: number; off?: boolean }
 export interface SyncDeps {
   fetch: (url: string, init: { method: 'POST'; body: string; signal?: AbortSignal }) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
   store: { get(): string | null; set(v: string | null): void };
@@ -36,85 +68,32 @@ const browserDeps = (): SyncDeps => ({
 
 interface Reply { ok?: boolean; s?: string | null; t?: number; newer?: boolean }
 
-export class CloudSave {
-  code: string | null = null;
+/** One slot's mirror: its server key, the last server time seen, a debounced upload. */
+class Channel {
   /** Server time of the last write this device has seen (its own or adopted). */
   base = 0;
-  /** Wall clock of the last confirmed upload (0 = none yet). */
-  saved = 0;
   state: SyncState = 'off';
-  onState: (s: SyncState) => void = () => {};
-  private busy = false;
-  private pending: SaveV1 | null = null;
-  private timer: ReturnType<typeof setTimeout> | undefined;
-  private disabled = false;
+  pending: SaveV1 | null = null;
+  timer: ReturnType<typeof setTimeout> | undefined;
+  busy = false;
+  constructor(readonly slot: Slot, private readonly cs: CloudSave) {}
 
-  /** `allowed` false (localhost, automated browsers, debug starts): nothing is read, sent or stored. */
-  constructor(private readonly allowed: boolean, private readonly deps: SyncDeps = browserDeps()) {
-    if (!allowed) return;
-    try {
-      const j = JSON.parse(deps.store.get() ?? 'null') as Stored | null;
-      this.disabled = !!j?.off;
-      if (j?.c && CODE_RE.test(j.c)) { this.code = j.c; this.base = Number(j.b) || 0; this.saved = Number(j.s) || 0; this.state = 'sync'; }
-    } catch { /* damaged entry: start clean */ }
-  }
+  set(s: SyncState): void { this.state = s; this.cs.changed(); }
+  reset(): void { this.base = 0; this.pending = null; clearTimeout(this.timer); this.busy = false; }
 
-  private keep(): void {
-    if (!this.allowed) return;
-    this.deps.store.set(this.code ? JSON.stringify({ c: this.code, b: this.base, s: this.saved } satisfies Stored) : JSON.stringify({ off: true } satisfies Stored));
-  }
-  private set(s: SyncState): void { this.state = s; this.onState(s); }
-
-  private async call(q: object): Promise<Reply | null> {
-    const ac = new AbortController();
-    const to = setTimeout(() => ac.abort(), 15000);
-    try {
-      const r = await this.deps.fetch(URL, { method: 'POST', body: JSON.stringify(q), signal: ac.signal });
-      return r.ok ? ((await r.json()) as Reply) : null;
-    } catch { return null; } finally { clearTimeout(to); }
-  }
-
-  get available(): boolean { return this.allowed; }
-
-  /** New random code (once per device, unless the player switched it off). */
-  enable(): string | null {
-    if (!this.allowed) return null;
-    if (!this.code) {
-      const r = this.deps.random(8);
-      this.code = [...r].map((x) => ALPHABET[x % ALPHABET.length]).join('');
-      this.base = 0; this.saved = 0; this.disabled = false;
-      this.keep();
-      this.set('sync');
-    }
-    return this.code;
-  }
-  /** First run on a public game: switch on unless the player turned it off before. */
-  autoStart(): void { if (this.allowed && !this.code && !this.disabled) this.enable(); }
-  disable(): void {
-    this.code = null; this.base = 0; this.saved = 0; this.pending = null;
-    clearTimeout(this.timer);
-    this.disabled = true;
-    this.keep();
-    this.set('off');
-  }
-
-  /**
-   * Startup check. Returns the remote save to adopt (another device wrote since this one last synced and
-   * it is newer than the local copy), or null. Pushes the local save when the server has nothing newer.
-   */
   async pull(local: SaveV1 | null): Promise<SaveV1 | null> {
-    if (!this.allowed || !this.code || this.busy) return null;
-    const c = this.code;
+    const c = this.cs.code;
+    if (!c || this.busy) return null;
     this.busy = true;
-    const r = await this.call({ a: 'get', c });
+    const r = await this.cs.call({ a: 'get', c: slotCode(c, this.slot) });
     this.busy = false;
-    if (this.code !== c) return null;
+    if (this.cs.code !== c) return null;
     if (!r?.ok) { this.set('slow'); return null; }
     if (r.s && (r.t !== this.base || !local)) {
       const remote = parseSave(r.s);
-      if (remote && (!local || remote.t > local.t)) { this.base = r.t ?? 0; this.keep(); this.set('on'); return remote; }
+      if (remote && (!local || remote.t > local.t)) { this.base = r.t ?? 0; this.cs.keep(); this.set('on'); return remote; }
       // Remote unusable or older: the local save replaces it (the old remote stays in the sheet's history only).
-      this.base = r.t ?? 0; this.keep();
+      this.base = r.t ?? 0; this.cs.keep();
     }
     if (!r.s) this.base = 0;
     // A save queued while this request was in flight is newer than `local`: keep it.
@@ -123,43 +102,183 @@ export class CloudSave {
     return null;
   }
 
-  /** Debounced upload of the latest save. */
-  queue(save: SaveV1, delay = 3000): void {
-    if (!this.allowed || !this.code || this.state === 'conflict') return;
+  queue(save: SaveV1, delay: number): void {
+    if (!this.cs.code || this.state === 'conflict') return;
     this.pending = save;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.flush(), delay);
   }
+
   async flush(): Promise<void> {
-    const c = this.code;
+    const c = this.cs.code;
     const save = this.pending;
     if (!c || !save) return;
-    if (this.busy) { this.timer = setTimeout(() => void this.flush(), 1500); return; }
+    if (this.busy) { clearTimeout(this.timer); this.timer = setTimeout(() => void this.flush(), 1500); return; }
     this.pending = null;
     this.busy = true;
-    const r = await this.call({ a: 'put', c, s: JSON.stringify(save), t: save.t, b: this.base });
+    const r = await this.cs.call({ a: 'put', c: slotCode(c, this.slot), s: JSON.stringify(save), t: save.t, b: this.base });
     this.busy = false;
-    if (this.code !== c) return;
-    if (r?.ok) { this.base = r.t ?? save.t; this.saved = this.deps.now(); this.keep(); this.set('on'); }
+    if (this.cs.code !== c) return;
+    if (r?.ok) { this.base = r.t ?? save.t; this.cs.saved = this.cs.deps.now(); this.cs.keep(); this.set('on'); }
     else if (r?.newer) { this.set('conflict'); }
-    else { this.pending ??= save; this.set('slow'); this.timer = setTimeout(() => void this.flush(), 30000); }
+    else { this.pending ??= save; this.set('slow'); clearTimeout(this.timer); this.timer = setTimeout(() => void this.flush(), 30000); }
+  }
+}
+
+export type JoinResult = { saves: Partial<Record<Slot, SaveV1>> } | { error: 'code' | 'net' | 'unknown' | 'damaged' };
+
+export class CloudSave {
+  /** Account code (slot 1's key). */
+  code: string | null = null;
+  /** Account name and slot names ('' = not named yet). */
+  name = '';
+  slotNames: string[] = SLOTS.map(() => '');
+  /** Wall clock of the last confirmed upload of any slot (0 = none yet). */
+  saved = 0;
+  /** The slot this device plays; `state` reports it. */
+  active: Slot = 1;
+  /** Called on any change of state, code or names. */
+  onChange: () => void = () => {};
+  private readonly ch: Record<Slot, Channel>;
+  private metaBase = 0;
+  private disabled = false;
+
+  /** `allowed` false (localhost, automated browsers, debug starts): nothing is read, sent or stored. */
+  constructor(private readonly allowed: boolean, readonly deps: SyncDeps = browserDeps()) {
+    this.ch = { 1: new Channel(1, this), 2: new Channel(2, this), 3: new Channel(3, this) };
+    if (!allowed) return;
+    try {
+      const j = JSON.parse(deps.store.get() ?? 'null') as Stored | null;
+      this.disabled = !!j?.off;
+      if (j?.c && CODE_RE.test(j.c)) {
+        this.code = j.c;
+        this.name = cleanName(j.n ?? '');
+        this.slotNames = SLOTS.map((_, i) => cleanName(j.sn?.[i] ?? ''));
+        // Before M6b `b` was one number: slot 1's.
+        const b = typeof j.b === 'number' ? { 1: j.b } : j.b ?? {};
+        for (const s of SLOTS) { this.ch[s].base = Number(b[s]) || 0; this.ch[s].state = 'sync'; }
+        this.metaBase = Number(j.mb) || 0;
+        this.saved = Number(j.s) || 0;
+      }
+    } catch { /* damaged entry: start clean */ }
   }
 
-  /** A newer remote save arrived while playing: stop pushing, adopt it on the next load. */
-  hold(): void { this.base = 0; this.keep(); this.set('conflict'); }
+  get available(): boolean { return this.allowed; }
+  get state(): SyncState { return this.code ? this.ch[this.active].state : 'off'; }
+  slotState(slot: Slot): SyncState { return this.code ? this.ch[slot].state : 'off'; }
 
-  /** Join an existing code: returns its save, or why not. The caller backs up the local save and adopts it. */
-  async join(raw: string): Promise<{ save: SaveV1 } | { error: 'code' | 'net' | 'unknown' | 'damaged' }> {
+  /** @internal */
+  changed(): void { this.onChange(); }
+  /** @internal */
+  keep(): void {
+    if (!this.allowed) return;
+    const st: Stored = this.code
+      ? { c: this.code, n: this.name, sn: this.slotNames, b: { 1: this.ch[1].base, 2: this.ch[2].base, 3: this.ch[3].base }, mb: this.metaBase, s: this.saved }
+      : { off: true };
+    this.deps.store.set(JSON.stringify(st));
+  }
+  /** @internal */
+  async call(q: object): Promise<Reply | null> {
+    const ac = new AbortController();
+    const to = setTimeout(() => ac.abort(), 15000);
+    try {
+      const r = await this.deps.fetch(URL, { method: 'POST', body: JSON.stringify(q), signal: ac.signal });
+      return r.ok ? ((await r.json()) as Reply) : null;
+    } catch { return null; } finally { clearTimeout(to); }
+  }
+
+  /** New random account code (once per device, unless the player switched it off). */
+  enable(): string | null {
+    if (!this.allowed) return null;
+    if (!this.code) {
+      const r = this.deps.random(8);
+      this.code = [...r].map((x) => ALPHABET[x % ALPHABET.length]).join('');
+      for (const s of SLOTS) { this.ch[s].reset(); this.ch[s].state = 'sync'; }
+      this.metaBase = 0; this.saved = 0; this.disabled = false;
+      this.keep();
+      this.changed();
+    }
+    return this.code;
+  }
+  /** First run on a public game: switch on unless the player turned it off before. */
+  autoStart(): void { if (this.allowed && !this.code && !this.disabled) this.enable(); }
+  disable(): void {
+    this.code = null; this.metaBase = 0; this.saved = 0; this.name = ''; this.slotNames = SLOTS.map(() => '');
+    for (const s of SLOTS) { this.ch[s].reset(); this.ch[s].state = 'off'; }
+    this.disabled = true;
+    this.keep();
+    this.changed();
+  }
+
+  /**
+   * Startup check of every slot and the account record. Returns the remote saves to adopt (another
+   * device wrote since this one last synced, and it is newer than the local copy). Pushes local saves
+   * the server has nothing newer for.
+   */
+  async start(locals: Partial<Record<Slot, SaveV1 | null>>): Promise<Partial<Record<Slot, SaveV1>>> {
+    if (!this.allowed || !this.code) return {};
+    const [, ...got] = await Promise.all([this.pullMeta(), ...SLOTS.map((s) => this.ch[s].pull(locals[s] ?? null))]);
+    const out: Partial<Record<Slot, SaveV1>> = {};
+    SLOTS.forEach((s, i) => { const g = got[i]; if (g) out[s] = g; });
+    return out;
+  }
+  /** Debounced upload of a slot's latest save. */
+  queue(save: SaveV1, slot: Slot = this.active, delay = 3000): void { if (this.allowed) this.ch[slot].queue(save, delay); }
+  /** Sends every waiting upload now (tab hidden). */
+  async flush(): Promise<void> { await Promise.all(SLOTS.map((s) => this.ch[s].flush())); }
+  /** A newer remote save of a slot arrived while playing: stop pushing it, adopt it on the next load. */
+  hold(slot: Slot = this.active): void { this.ch[slot].base = 0; this.keep(); this.ch[slot].set('conflict'); }
+
+  /** Account name, shown on every device with this code. */
+  rename(name: string): Promise<void> { const n = cleanName(name); return this.pushMeta((m) => { m.n = n; }); }
+  renameSlot(slot: Slot, name: string): Promise<void> { const n = cleanName(name); return this.pushMeta((m) => { m.s[slot - 1] = n; }); }
+
+  private meta(): Meta { return { k: 'konto', v: 1, n: this.name, s: [...this.slotNames] }; }
+  private adoptMeta(m: Meta, t: number): void { this.name = m.n; this.slotNames = m.s; this.metaBase = t; this.keep(); this.changed(); }
+  private async pullMeta(): Promise<void> {
+    const c = this.code;
+    if (!c) return;
+    const r = await this.call({ a: 'get', c: metaCode(c) });
+    if (this.code !== c || !r?.ok) return;
+    const m = parseMeta(r.s);
+    if (m && r.t !== this.metaBase) this.adoptMeta(m, r.t ?? 0);
+    // Named on this device while the record was missing or unreachable: send it.
+    else if (!r.s && (this.name || this.slotNames.some(Boolean))) void this.pushMeta(() => {});
+  }
+  /** Applies a change locally at once, then writes the record; a newer remote record is merged first. */
+  private async pushMeta(change: (m: Meta) => void): Promise<void> {
+    const c = this.code;
+    if (!this.allowed || !c) return;
+    let m = this.meta();
+    change(m);
+    this.name = m.n; this.slotNames = m.s; this.keep(); this.changed();
+    for (let tries = 0; tries < 2; tries++) {
+      const t = Math.max(this.deps.now(), this.metaBase + 1);
+      const r = await this.call({ a: 'put', c: metaCode(c), s: JSON.stringify(m), t, b: this.metaBase });
+      if (this.code !== c) return;
+      if (r?.ok) { this.metaBase = r.t ?? t; this.keep(); return; }
+      if (!r?.newer) return;
+      const g = await this.call({ a: 'get', c: metaCode(c) });
+      if (this.code !== c || !g?.ok) return;
+      m = parseMeta(g.s) ?? this.meta();
+      change(m);
+      this.adoptMeta(m, g.t ?? 0);
+    }
+  }
+
+  /** Join an existing account: returns its saves per slot, or why not. The caller backs up local saves and adopts them. */
+  async join(raw: string): Promise<JoinResult> {
     const c = cleanCode(raw);
     if (!this.allowed || !CODE_RE.test(c)) return { error: 'code' };
-    const r = await this.call({ a: 'get', c });
-    if (!r?.ok) return { error: 'net' };
-    if (!r.s) return { error: 'unknown' };
-    const save = parseSave(r.s);
-    if (!save) return { error: 'damaged' };
-    this.code = c; this.base = r.t ?? 0; this.saved = 0; this.disabled = false; this.pending = null;
-    this.keep();
-    this.set('on');
-    return { save };
+    const [meta, ...rs] = await Promise.all([this.call({ a: 'get', c: metaCode(c) }), ...SLOTS.map((s) => this.call({ a: 'get', c: slotCode(c, s) }))]);
+    if (!meta?.ok || rs.some((r) => !r?.ok)) return { error: 'net' };
+    const m = parseMeta(meta.s);
+    const saves: Partial<Record<Slot, SaveV1>> = {};
+    SLOTS.forEach((s, i) => { const v = parseSave(rs[i]!.s ?? null); if (v) saves[s] = v; });
+    if (!m && !Object.keys(saves).length) return { error: rs.some((r) => r!.s) ? 'damaged' : 'unknown' };
+    this.code = c; this.saved = 0; this.disabled = false;
+    SLOTS.forEach((s, i) => { this.ch[s].reset(); this.ch[s].base = rs[i]!.t ?? 0; this.ch[s].state = 'on'; });
+    if (m) this.adoptMeta(m, meta.t ?? 0); else { this.name = ''; this.slotNames = SLOTS.map(() => ''); this.metaBase = 0; this.keep(); this.changed(); }
+    return { saves };
   }
 }

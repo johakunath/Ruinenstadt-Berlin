@@ -8,6 +8,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 
 | Task | Owner | Status / start file |
 |---|---|---|
+| M6b Account name and three named save slots, synced across devices; sync shown on the title screen. Logic built, title UI waits for the mockup pick | Claude · Opus high | in progress: `docs/tasks/m6b-account-slots.md` |
 | M15 Alexanderplatz step 4 photo check for the landmarks built without a downloaded photo | Claude · Opus high | open: `docs/tasks/m15-alexanderplatz.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |

@@ -15,12 +15,15 @@ import { bindSettings, initFullscreenButton, opts } from './ui/settings';
 import { MAP_NAME, MAP_SUB, type MapId } from './ui/maps';
 import { pickIsHere, selectHere, titleNet } from './ui/title-net';
 import { startScreen } from './ui/start';
+import { initAccount } from './ui/account';
+import { activeSlot, slotKey } from './save';
 
-const SAVE_KEY = 'ruinenstadt-berlin.save';
 
 const start = startScreen();
 const options = optionsScreen();
 bindSettings();
+// M6b: the cloud sync starts here, so the account and slots show before the game loads.
+initAccount(() => !start.root.hidden);
 initFullscreenButton();
 const title = start.root;
 document.getElementById('title-sub')!.textContent = opts.map === 'tunnel' && opts.line > 0 ? `${LINES[opts.line]?.id ?? 'S3'}-Tunnel · Richtung ${stopName(opts.line + 1)}` : MAP_SUB[opts.map];
@@ -30,7 +33,7 @@ document.getElementById('title-sub')!.textContent = opts.map === 'tunnel' && opt
 const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0;
 const peek = ((): { difficulty?: unknown; run?: { map?: string; index?: number } | null; profile?: { inventory?: { camp?: { freed?: number[] } } } } | null => {
   if (!persist) return null;
-  try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(slotKey(activeSlot())) ?? 'null'); } catch { return null; }
 })();
 const mapName = opts.map === 'tunnel' && opts.line > 0 ? `${LINES[opts.line]?.id ?? 'S3'}-Tunnel` : MAP_NAME[opts.map];
 const run = opts.map !== 'hof' && peek?.run?.map === mapName ? peek.run : null;

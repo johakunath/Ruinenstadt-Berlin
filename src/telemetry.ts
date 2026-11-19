@@ -5,6 +5,7 @@
 // Claude reads that sheet to tune balance and performance. Never sent from localhost, automated
 // browsers or `?autostart` runs; players can switch it off in Optionen.
 import type { Sim, SimEvent } from './sim/types';
+import { activeSlot } from './save';
 
 const URL = 'https://script.google.com/macros/s/AKfycbyUCf3slojkaYJhVemGU54EBidrXFhj2FoOANlOZQQdIxhO4YIWTW1kF9FPv3hVDXQ/exec';
 const QUEUE = 'ruinenstadt-berlin.tlq';
@@ -55,6 +56,8 @@ export interface RunRecord {
   dmg: number;
   rests: number;
   enc: EncounterLog[];
+  /** M6b save slot the run was played on (slot 2 is kept as a fresh test character). */
+  slot?: number;
   /** Death summary: killing hit and the worst sources of the last seconds (share of max life). */
   death?: { by: string; recent: Array<{ by: string; share: number; hits: number }> };
 }
@@ -141,7 +144,7 @@ export class Telemetry {
       at: now.getTime(), v: VERSION, day: now.toISOString().slice(0, 10), d: 0, dn: ctx.map, df: 1, m: '3d', end: 'quit',
       wave: sim.run.index, t: 0, lvl: 0, dev: device(), inp: ctx.input, fps: 0, p95: 0, low1: 0, calls: 0, tris: 0,
       profile: ctx.profile, screen: `${innerWidth}x${innerHeight}`, dpr: Math.round(devicePixelRatio * 100) / 100,
-      scale: ctx.scale, startAt: ctx.startAt, kills: 0, dmg: 0, rests: 0, enc: [],
+      scale: ctx.scale, startAt: ctx.startAt, kills: 0, dmg: 0, rests: 0, enc: [], slot: activeSlot(),
     };
   }
 

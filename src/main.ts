@@ -58,8 +58,8 @@ import { PERKS, SHRINES } from './data/progression';
 import { contentMarks, EVENT_TEXT, talkTo } from './sim/runcontent';
 import { TalkPrompt } from './ui/talk';
 import type { DifficultyId } from './data/difficulty';
-import { backupSave, clearSave, loadSave, writeSave } from './save';
-import { CloudSave, formatCode, type SyncState } from './sync';
+import { clearSave, deviceClass, loadSave, writeSave } from './save';
+import { cloudSave } from './cloud';
 import type { Prop } from './data/courtyard';
 import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
 
@@ -124,13 +124,18 @@ if (foreignRun) save = { ...save!, run: null };
 /** Writes the save; with no run of this map, another map's waiting checkpoint stays in it. */
 function store(s: SaveV1): void {
   const out = !s.run && foreignRun ? { ...s, run: foreignRun } : s;
+  put(out);
+}
+/** Local save plus its cloud mirror; the device class goes on the slot card (M6b). */
+function put(s: SaveV1): void {
+  const out = { ...s, dev: deviceClass() };
   writeSave(out);
   cloud.queue(out);
 }
 // The start screen may have changed it before the game loaded; a waiting checkpoint keeps its own.
 let difficulty: DifficultyId = save?.run ? save.difficulty : startScreen().difficulty;
-// Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
-const cloud = new CloudSave(persist && !navigator.webdriver && !/^(localhost|127\.|0\.0\.0\.0|$)/.test(location.hostname));
+// Cloud save (Q6/M6b): started by the boot on the title screen (`src/boot.ts`); the game only queues uploads.
+const cloud = cloudSave();
 function freshSim(): Sim {
   const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt, spawn: opts.spawn };
   try { if (save) return simFromSave(save, base, false); } catch (err) { console.warn('Save unbrauchbar', err); save = null; clearSave(); }
@@ -296,7 +301,7 @@ export function newGame(): void {
   sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, difficulty });
   renderer?.reset(sim);
   ui.setResume(null, difficulty);
-  if (persist) { save = snapshot(sim, mapName, false); writeSave(save); cloud.queue(save); }
+  if (persist) { save = snapshot(sim, mapName, false); put(save); }
   start();
 }
 /** U2 Expedition abbrechen: the run ends as a loss, back to the title; gear and Schrott stay. */
@@ -325,7 +330,7 @@ const telemetry = new Telemetry(opts.telemetry, opts.autostart);
 /** Title › Spielen: a new run keeps the hero's gear but drops the old checkpoint. */
 function playNow(): void {
   sim.difficulty = difficulty;
-  if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
+  if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; put(save); ui.setResume(null, difficulty); }
   // The run starts from the profile as it is now (camp purchases: garden, Lazarett, Funkmast act in createSim).
   sim = createSim({ difficulty, seed: (opts.seed += 1), stress: opts.stress, level, spawn: opts.spawn, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
   renderer?.reset(sim);
@@ -570,46 +575,6 @@ function resumeLabel(): string | null {
   return `Kampf ${Math.min(r.index + 1, level.encounters.length)}`;
 }
 ui.setResume(resumeLabel(), difficulty);
-
-const cloudRow = document.getElementById('cloud-row') as HTMLDivElement;
-const cloudInfo = document.getElementById('cloud-info') as HTMLElement;
-const cloudToggle = document.getElementById('cloud-toggle') as HTMLButtonElement;
-function showCloud(s: SyncState = cloud.state): void {
-  const label: Record<SyncState, string> = { off: 'Aus auf diesem Gerät.', sync: 'Verbindet …', on: 'Synchron.', slow: 'Nicht erreichbar, speichert lokal.', conflict: 'Anderes Gerät war neuer. Beim nächsten Start geladen.' };
-  cloudInfo.textContent = cloud.code ? `Code ${formatCode(cloud.code)} · ${label[s]}` : label.off;
-  (document.getElementById('cloud-copy') as HTMLButtonElement).hidden = !cloud.code;
-  cloudToggle.textContent = cloud.code ? 'Ausschalten' : 'Aktivieren';
-}
-/** A cloud save replaces the local one: back it up, store the remote, reload into it. */
-function adoptRemote(remote: SaveV1): void {
-  if (save) backupSave(save);
-  writeSave(remote);
-  location.reload();
-}
-if (cloud.available) {
-  cloudRow.hidden = false;
-  cloud.onState = showCloud;
-  cloud.autoStart();
-  showCloud();
-  void cloud.pull(save).then((remote) => {
-    if (!remote) return;
-    if (phase === 'title') adoptRemote(remote); else cloud.hold();
-  });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) void cloud.flush(); });
-}
-document.getElementById('cloud-copy')!.addEventListener('click', () => { void navigator.clipboard?.writeText(formatCode(cloud.code)).catch(() => prompt('Online-Code:', formatCode(cloud.code))); });
-cloudToggle.addEventListener('click', () => {
-  if (cloud.code) { if (confirm(`Online-Speichern ausschalten? Code ${formatCode(cloud.code)} gut aufheben.`)) cloud.disable(); } else { cloud.enable(); if (save) cloud.queue(save, 0); }
-  showCloud();
-});
-document.getElementById('cloud-join')!.addEventListener('click', () => {
-  const raw = prompt('Online-Code eingeben (z. B. ABCD-1234). Der Stand auf diesem Gerät wird ersetzt, eine Sicherung bleibt.');
-  if (!raw) return;
-  void cloud.join(raw).then((r) => {
-    if ('save' in r) { adoptRemote(r.save); return; }
-    cloudInfo.textContent = { code: 'Ungültiger Code.', net: 'Server nicht erreichbar.', unknown: 'Code unbekannt.', damaged: 'Spielstand unbrauchbar.' }[r.error];
-  });
-});
 
 function start(resumed = false): void {
   audio.start();
