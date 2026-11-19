@@ -58,7 +58,7 @@ const coatCore = (k: GearKit): Sampler => subset(k, 'coat-core', 'a_mantel', (x,
 const coatLeg = (k: GearKit, s: Side): Sampler => subset(k, `coat-leg${s}`, 'a_mantel', (x, y, z) => x * s > 0.012 && y < 0.9 && legDist(x, z, s) < 0.1, AXES.leg(s), 0.012 * s);
 
 /** Angle round the torso axis where the surface of `s` at height `y` is `x` m off the middle (the front, or the back). */
-function angleAt(s: Sampler, y: number, x: number, back = false): number {
+export function angleAt(s: Sampler, y: number, x: number, back = false): number {
   let a = 0;
   for (let i = 0; i < 4; i++) {
     const r = s.radius(y, back ? Math.PI - a : a) || 0.15;
@@ -107,7 +107,7 @@ function edge(segs: number, rows: number, at: (u: number, v: number, under: numb
 }
 
 /** A tube through `pts` (Catmull-Rom), radius `r`, optionally scaled by `taper(t)` along it (t 0..1). */
-function tube(pts: readonly Vector3[], r: number, segs: number, rs: number, taper?: (t: number) => number): BufferGeometry {
+export function tube(pts: readonly Vector3[], r: number, segs: number, rs: number, taper?: (t: number) => number): BufferGeometry {
   const curve = new CatmullRomCurve3(pts.map((p) => p.clone()));
   const g = new TubeGeometry(curve, segs, r, rs, false);
   if (taper) {
@@ -123,7 +123,7 @@ function tube(pts: readonly Vector3[], r: number, segs: number, rs: number, tape
 }
 
 /** A flat strip `w` wide through `pts` lying on a surface with outward normals `ns`. */
-function strip(pts: readonly Vector3[], ns: readonly Vector3[], w: number): BufferGeometry {
+export function strip(pts: readonly Vector3[], ns: readonly Vector3[], w: number): BufferGeometry {
   const side = pts.map((_, i) => {
     const t = pts[Math.min(pts.length - 1, i + 1)]!.clone().sub(pts[Math.max(0, i - 1)]!);
     return new Vector3().crossVectors(ns[i]!, t).normalize().multiplyScalar(w / 2);
@@ -148,15 +148,15 @@ function along(g: BufferGeometry, dir: Vector3, at: Vector3): BufferGeometry {
 }
 
 /** `m` tilted about its +X: a tool hanging from the belt rests on the coat flaring out under it (`rx` < 0 swings its bottom out). */
-const tilt = (m: Matrix4, rx: number): Matrix4 => m.clone().multiply(new Matrix4().makeRotationX(rx));
+export const tilt = (m: Matrix4, rx: number): Matrix4 => m.clone().multiply(new Matrix4().makeRotationX(rx));
 
 /** A buckle facing +Z: a plate `w` × `h`, an inset of the belt's colour and a prong. */
-function buckle(k: GearKit, w: number, h: number, frame: Paint, belt: Paint): void {
+export function buckle(k: GearKit, w: number, h: number, frame: Paint, belt: Paint): void {
   k.add(box(w, h, 0.008), frame).add(box(w * 0.6, h * 0.5, 0.004), belt, 0, 0, 0.004).add(box(w * 0.34, 0.006, 0.004), frame, -w * 0.12, 0, 0.0065);
 }
 
 /** A belt band (`beltBand`) and frames on it: `at(a, dy, lift)` sits `lift` m out of the band at angle `a`, `dy` m below its middle (out of the coat there, if that sticks out further). */
-function belt(k: GearKit, outfit: 'a_mantel' | 'a_weste', col: number, h: number): { s: Sampler; y: number; at: (a: number, dy?: number, lift?: number) => Matrix4 } {
+export function belt(k: GearKit, outfit: 'a_mantel' | 'a_weste', col: number, h: number): { s: Sampler; y: number; at: (a: number, dy?: number, lift?: number) => Matrix4 } {
   const s = beltBand(k, outfit, col, h), y = BELT_Y[outfit];
   // The band's rings are median-filtered over 7 of 36 samples (`surface`); match that.
   const med = (t: number, a: number): number => [-3, -2, -1, 0, 1, 2, 3].map((j) => s.radius(t, a + (j * Math.PI) / 18)).sort((p, q) => p - q)[3]!;
@@ -197,6 +197,206 @@ function rowsOf(g: BufferGeometry, segs: number, r0: number, r1: number): Buffer
   return out;
 }
 
+// ---------------------------------------------------------------- neck
+
+/** Round the neck: the torso axis under the middle of the neck (its skin is about round about it). */
+export const NECK_AXIS: Axis = axis([0, 0, -0.045], [0, 1, 0], [0, 0, 1]);
+
+/**
+ * The outfit round the neck, measured round `NECK_AXIS` (angle 0 front, +π/2 the hero's left), for collars
+ * that hug the neck now that most looks wear no scarf (Johannes, 2026-11-19).
+ */
+export interface Neck {
+  /** The outfit round the neck axis without the sleeves (frames with `onSurface`). */
+  s: Sampler;
+  /** Height of the neckline's top (the tips of its frayed edge) at angle `a`, and its radius there. */
+  edgeY(a: number): number;
+  edgeR(a: number): number;
+  /** Outermost neck skin (jaw, chin) or hair at height `y`, within ±`turn` rad of `a` (the head turns); 0 where none. */
+  skin(y: number, a: number, turn?: number): number;
+  hair(y: number, a: number, turn?: number): number;
+  /** Bind point at height `y`, angle `a`, `r` m off the neck axis. */
+  point(y: number, a: number, r: number): Vector3;
+  /** The outfit's outer surface seen from `NECK_BASE` (shoulders, chest, back): its distance at angle `a` and elevation `phi` (0 level, π/2 up). */
+  shell(a: number, phi: number): number;
+  /** Elevation of the neckline's tips seen from `NECK_BASE`. */
+  edgePhi(a: number): number;
+  /** Bind point at angle `a`, elevation `phi`, distance `d` from `NECK_BASE`. */
+  at(a: number, phi: number, d: number): Vector3;
+}
+
+/** Centre of the shoulder shell (`Neck.shell`): under the neck, at the height of the collarbones. */
+export const NECK_BASE = new Vector3(0, 1.37, -0.045);
+
+const necks = new WeakMap<HeroSource, Map<string, Neck>>();
+const NB = 48;
+const angDist = (p: number, q: number): number => { const d = Math.abs(p - q) % (2 * Math.PI); return d > Math.PI ? 2 * Math.PI - d : d; };
+
+/** The neck tables of an outfit (cached per hero). */
+export function neckOf(k: GearKit, node: 'a_mantel' | 'a_weste'): Neck {
+  let m = necks.get(k.src);
+  if (!m) necks.set(k.src, (m = new Map()));
+  const hit = m.get(node);
+  if (hit) return hit;
+  const cz = NECK_AXIS.o.z;
+  // (y, angle, radius) of the vertices near the neck.
+  const pts = (name: string, y0: number, y1: number, rMax: number): Float32Array => {
+    const p = k.src.meshes.get(name) ?? new Float32Array(0), out: number[] = [];
+    for (let i = 0; i < p.length; i += 3) {
+      const x = p[i]!, y = p[i + 1]!, z = p[i + 2]! - cz, r = Math.hypot(x, z);
+      if (y >= y0 && y <= y1 && r <= rMax) out.push(y, Math.atan2(x, z), r);
+    }
+    return new Float32Array(out);
+  };
+  const fit = pts(node, 1.3, 1.56, 0.22), head = pts('body_head', 1.44, 1.66, 0.2), hair = pts('hair', 1.44, 1.7, 0.2);
+  // Neckline per angle bin: the highest outfit vertex within 0.15 m, and the mean radius just under it.
+  const top = new Array<number>(NB).fill(0), rad = new Array<number>(NB).fill(0), cnt = new Array<number>(NB).fill(0);
+  const bin = (a: number): number => ((Math.round((a / (2 * Math.PI)) * NB) % NB) + NB) % NB;
+  for (let i = 0; i < fit.length; i += 3) if (fit[i + 2]! < 0.15 && fit[i]! > 1.4) { const b = bin(fit[i + 1]!); top[b] = Math.max(top[b]!, fit[i]!); }
+  for (let i = 0; i < fit.length; i += 3) if (fit[i + 2]! < 0.15) { const b = bin(fit[i + 1]!); if (fit[i]! > top[b]! - 0.008) { rad[b] = rad[b]! + fit[i + 2]!; cnt[b] = cnt[b]! + 1; } }
+  for (let b = 0; b < NB; b++) rad[b] = cnt[b] ? rad[b]! / cnt[b]! : 0;
+  const fill = (t: number[]): void => { for (let b = 0; b < NB; b++) if (!t[b]) { let d = 1; while (!t[(b + d) % NB] && !t[(b - d + NB) % NB] && d < NB) d++; t[b] = t[(b + d) % NB] || t[(b - d + NB) % NB]!; } };
+  fill(top); fill(rad);
+  // Smooth round: the top keeps its tips (max-preserving), the radius averages.
+  let ty = top, tr = rad;
+  for (let pass = 0; pass < 2; pass++) {
+    ty = ty.map((y, b) => Math.max(y, (ty[(b + NB - 1) % NB]! + 2 * y + ty[(b + 1) % NB]!) / 4));
+    tr = tr.map((r, b) => (tr[(b + NB - 1) % NB]! + 2 * r + tr[(b + 1) % NB]!) / 4);
+  }
+  const lerp = (t: number[], a: number): number => { const f = (((a / (2 * Math.PI)) * NB) % NB + NB) % NB, b = Math.floor(f), w = f - b; return t[b]! * (1 - w) + t[(b + 1) % NB]! * w; };
+  const outer = (p: Float32Array, y: number, a: number, turn: number): number => {
+    let best = 0;
+    for (let i = 0; i < p.length; i += 3) if (Math.abs(p[i]! - y) <= 0.006 && p[i + 2]! > best && angDist(p[i + 1]!, a) <= turn + 0.1) best = p[i + 2]!;
+    return best;
+  };
+  const s = subset(k, `neck-${node}`, node, (x, y, z) => y > 1.3 && Math.hypot(x, z - cz) < 0.2, NECK_AXIS);
+  // The trunk round NECK_BASE: (angle, elevation, distance) without the sleeves.
+  const sph = ((): Float32Array => {
+    const p = k.src.meshes.get(node) ?? new Float32Array(0), out: number[] = [];
+    for (let i = 0; i < p.length; i += 3) {
+      const x = p[i]!, y = p[i + 1]! - NECK_BASE.y, z = p[i + 2]! - NECK_BASE.z, h = Math.hypot(x, z), d = Math.hypot(h, y);
+      if (Math.abs(p[i]!) < 0.18 && p[i + 1]! > 1.2 && d < 0.24) out.push(Math.atan2(x, z), Math.atan2(y, h), d);
+    }
+    return new Float32Array(out);
+  })();
+  const n: Neck = {
+    s,
+    edgeY: (a) => lerp(ty, a),
+    edgeR: (a) => lerp(tr, a),
+    skin: (y, a, turn = 0) => outer(head, y, a, turn),
+    hair: (y, a, turn = 0) => outer(hair, y, a, turn),
+    point: (y, a, r) => s.point(y, a, r),
+    shell: (a, phi) => {
+      for (let tries = 0, da = 0.14, dp = 0.06; tries < 4; tries++, da *= 1.6, dp *= 1.6) {
+        let best = 0;
+        for (let i = 0; i < sph.length; i += 3) if (sph[i + 2]! > best && Math.abs(sph[i + 1]! - phi) <= dp && angDist(sph[i]!, a) <= da) best = sph[i + 2]!;
+        if (best) return best;
+      }
+      return 0.1;
+    },
+    edgePhi: (a) => Math.atan2(lerp(ty, a) - NECK_BASE.y, lerp(tr, a)),
+    at: (a, phi, d) => new Vector3(Math.sin(a) * Math.cos(phi) * d, NECK_BASE.y + Math.sin(phi) * d, NECK_BASE.z + Math.cos(a) * Math.cos(phi) * d),
+  };
+  m.set(node, n);
+  return n;
+}
+
+export interface CollarOpts {
+  /** Angle range round the neck (open at the front between a1 and a0 + 2π). */
+  a0: number;
+  a1: number;
+  segs: number;
+  rows: number;
+  /** Height of the top edge over the neckline, by angle. */
+  h: (a: number) => number;
+  /** The foot starts this far under the neckline's tips (covers its frayed edge). */
+  drop?: number;
+  /** Lift of the foot off the outfit; flare of the top out of the foot (m, by angle; grows with v²). */
+  lift?: number;
+  flare?: (a: number) => number;
+  /** Clearance from the neck skin and from the hair (0: the hair may fall over the collar), with the head turned ±`turn`. */
+  clear?: number;
+  hairClear?: number;
+  turn?: number;
+}
+
+/** A collar standing on the neckline: radii per (row, column) fitted to the neck, `at(u, v, dr)` a point on it (`dr` out of it). */
+export function collarShell(n: Neck, o: CollarOpts): { at: (u: number, v: number, dr?: number) => Vector3; geo: BufferGeometry } {
+  const { a0, a1, segs, rows } = o, drop = o.drop ?? 0.014, lift = o.lift ?? 0.006, clear = o.clear ?? 0.018, turn = o.turn ?? 0.35;
+  const ang = (u: number): number => a0 + (a1 - a0) * u;
+  const yOf = (u: number, v: number): number => { const a = ang(u), e = n.edgeY(a); return e - drop + (o.h(a) + drop) * v; };
+  const R: number[][] = [];
+  for (let r = 0; r <= rows; r++) {
+    const v = r / rows;
+    let row = Array.from({ length: segs + 1 }, (_, j) => {
+      const u = j / segs, a = ang(u), y = yOf(u, v);
+      const base = n.edgeR(a) + lift + (o.flare?.(a) ?? 0) * v * v;
+      return Math.max(base, n.skin(y, a, turn) + clear, o.hairClear ? n.hair(y, a, turn) + o.hairClear : 0);
+    });
+    for (let pass = 0; pass < 2; pass++) row = row.map((x, j) => Math.max(x, (row[Math.max(0, j - 1)]! + 2 * x + row[Math.min(segs, j + 1)]!) / 4));
+    // Never leaning in going up: a clearance higher up pushes the rows under it out a little too.
+    R.push(r ? row.map((x, j) => Math.max(x, R[r - 1]![j]!)) : row);
+  }
+  for (let r = rows - 1; r >= 0; r--) R[r] = R[r]!.map((x, j) => Math.max(x, R[r + 1]![j]! - 1.0 * (yOf(j / segs, (r + 1) / rows) - yOf(j / segs, r / rows))));
+  const at = (u: number, v: number, dr = 0): Vector3 => {
+    const fu = Math.min(segs, Math.max(0, u * segs)), fv = Math.min(rows, Math.max(0, v * rows));
+    const j = Math.min(segs - 1, Math.floor(fu)), r = Math.min(rows - 1, Math.floor(fv)), x = fu - j, y = fv - r;
+    const rr = (R[r]![j]! * (1 - x) + R[r]![j + 1]! * x) * (1 - y) + (R[r + 1]![j]! * (1 - x) + R[r + 1]![j + 1]! * x) * y;
+    return n.point(yOf(u, v), ang(u), rr + dr);
+  };
+  return { at, geo: grid(segs, rows, (u, v) => at(u, v)) };
+}
+
+export interface YokeOpts {
+  a0: number;
+  a1: number;
+  segs: number;
+  /** Rings on the shoulders from the outer edge up to the neckline (one more ring hugs the neck above it). */
+  rows: number;
+  /** Elevation of the outer edge seen from `NECK_BASE`, by angle. */
+  phi0: (a: number) => number;
+  /** Height of the top ring over the neckline, by angle. */
+  top: (a: number) => number;
+  /** Lift off the outfit at the outer edge and at the neckline. */
+  lift0: number;
+  lift1: number;
+  clear?: number;
+  turn?: number;
+}
+
+/** A shell lying on the shoulders round the neck: from an outer edge up the outfit to a ring hugging the neck; `at(u, v, dr)` (v 0 outer edge, 1 top ring, `dr` out of it). */
+export function yoke(n: Neck, o: YokeOpts): { at: (u: number, v: number, dr?: number) => Vector3; geo: BufferGeometry } {
+  const { a0, a1, segs, rows } = o, clear = o.clear ?? 0.018, turn = o.turn ?? 0.35;
+  const ang = (u: number): number => a0 + (a1 - a0) * u;
+  const rings: Vector3[][] = [];
+  for (let r = 0; r <= rows; r++) {
+    const w = r / rows, lift = o.lift0 + (o.lift1 - o.lift0) * w;
+    const phi = (u: number): number => { const a = ang(u); return o.phi0(a) + (n.edgePhi(a) - 0.03 - o.phi0(a)) * w; };
+    let d = Array.from({ length: segs + 1 }, (_, j) => n.shell(ang(j / segs), phi(j / segs)));
+    for (let pass = 0; pass < 2; pass++) d = d.map((x, j) => Math.max(x, (d[Math.max(0, j - 1)]! + 2 * x + d[Math.min(segs, j + 1)]!) / 4));
+    rings.push(d.map((x, j) => n.at(ang(j / segs), phi(j / segs), x + lift)));
+  }
+  rings.push(Array.from({ length: segs + 1 }, (_, j) => {
+    const a = ang(j / segs), y = n.edgeY(a) + o.top(a);
+    return n.point(y, a, Math.max(n.edgeR(a) + o.lift1, n.skin(y, a, turn) + clear));
+  }));
+  const R = rows + 1;
+  const at = (u: number, v: number, dr = 0): Vector3 => {
+    const fu = Math.min(segs, Math.max(0, u * segs)), fv = Math.min(R, Math.max(0, v * R));
+    const j = Math.min(segs - 1, Math.floor(fu)), r = Math.min(R - 1, Math.floor(fv)), x = fu - j, y = fv - r;
+    const p = rings[r]![j]!.clone().lerp(rings[r]![j + 1]!, x).lerp(rings[r + 1]![j]!.clone().lerp(rings[r + 1]![j + 1]!, x), y);
+    return dr ? p.addScaledVector(p.clone().sub(NECK_BASE).normalize(), dr) : p;
+  };
+  return { at, geo: grid(segs, R, (u, v) => at(u, v)) };
+}
+
+/** A plain band round the neckline in the outfit's colour (covers the frayed edge where no collar or scarf does), open ±`gap` at the front. */
+export function neckBand(k: GearKit, node: 'a_mantel' | 'a_weste', paint: Paint, h = 0.012, gap = 0, lift = 0.005): void {
+  const n = neckOf(k, node), segs = 20;
+  const { geo } = collarShell(n, { a0: gap || -Math.PI, a1: gap ? 2 * Math.PI - gap : Math.PI, segs, rows: 1, h: () => h, drop: 0.012, lift, clear: 0.016, turn: 0.3 });
+  k.on('spine_03', () => k.add(geo, paint));
+}
+
 // ---------------------------------------------------------------- Köpenick
 
 /** Arbeitsmantel: wide tool belt, brass buckle, two pouches and a hammer in a loop on the left hip, a pocket watch on a chain on the right. */
@@ -228,7 +428,7 @@ function beltTool(k: GearKit): void {
 }
 
 /** Knee pads on the vest's trousers: a domed six-sided cap over a softer pad, a strap round the leg below the knee. */
-function kneepads(cap: number, pad: number, strap: number): GearBuilder {
+export function kneepads(cap: number, pad: number, strap: number): GearBuilder {
   return (k) => {
     for (const s of SIDES) {
       const leg = k.leg(s);
@@ -459,51 +659,42 @@ function ponchoBands(k: GearKit): void {
   k.on('pelvis', () => k.add(surface(s, 1.072, 1.088, { segs: 32, rows: 1, offset: 0.012, median: 11 }), cyan));
 }
 
-/** Regenponcho: the rolled-down hood, a roll round the back of the neck and over the shoulders, its bag hanging on the upper back. */
+/** Regenponcho: the rolled-down hood, a roll lying round the neck on the shoulders (open at the front), its bag hanging on the upper back. */
 function hoodRoll(k: GearKit): void {
-  const s = coatCore(k);
-  // Centre line, one side from the front end to the back middle: angle from the front, height, tube radius.
-  // Over the shoulders it rests on the shoulder top 0.15 m out; at the back it comes out under the scarf.
-  const line: readonly (readonly [number, number, number])[] = [[1.12, 1.468, 0.011], [1.36, 1.49, 0.018], [1.68, 1.496, 0.021], [2.15, 1.448, 0.024], [2.65, 1.396, 0.026], [Math.PI, 1.382, 0.027]];
+  const s = coatCore(k), n = neckOf(k, 'a_mantel');
+  // Centre line, one side from the front end to the back middle: angle from the front, how far down the shoulder from the neckline (rad, seen from NECK_BASE), tube radius.
+  const line: readonly (readonly [number, number, number])[] = [[0.8, 0.05, 0.01], [1.05, 0.07, 0.015], [1.4, 0.09, 0.019], [1.8, 0.1, 0.022], [2.3, 0.13, 0.025], [2.75, 0.16, 0.027], [Math.PI, 0.17, 0.028]];
   const pts: Vector3[] = [], rad: number[] = [];
-  const put = (a: number, y: number, rt: number): void => {
-    const f = Math.abs(a), shoulder = f > 1.3 && f < 2.0;
-    const r = shoulder ? 0.15 : s.radius(y, a, 0.012, 0.2) + rt * 0.85;
-    pts.push(s.point(y + (shoulder ? 0.6 * puffAt('poncho', 0.15, y) : 0), a, r + (shoulder ? 0 : puffAt('poncho', Math.sin(a) * r, y))));
+  const put = (a: number, dp: number, rt: number): void => {
+    const phi = n.edgePhi(a) - dp, d = n.shell(a, phi);
+    const p = n.at(a, phi, d + rt * 0.9);
+    pts.push(p.addScaledVector(new Vector3(Math.sin(a), 0, Math.cos(a)), puffAt('poncho', p.x, p.y)));
     rad.push(rt);
   };
-  for (const [a, y, rt] of line) put(a, y, rt);
+  for (const [a, dp, rt] of line) put(a, dp, rt);
   for (let i = line.length - 2; i >= 0; i--) put(-line[i]![0], line[i]![1], line[i]![2]);
-  const n = pts.length - 1;
-  // The bag: a soft shell under the roll, pointed at the bottom, wider than the scarf's tail, with a thick edge.
+  const m = pts.length - 1;
+  // The bag: a soft shell under the roll, pointed at the bottom, with a thick edge.
   const bag = (u: number, v: number, under = 0): Vector3 => {
-    const U = u * 2 - 1, a = Math.PI + U * 0.95, yb = 1.15 + 0.16 * Math.abs(U) ** 1.3, y = yb + (1.39 - yb) * v;
+    const U = u * 2 - 1, a = Math.PI + U * 0.95, yb = 1.15 + 0.16 * Math.abs(U) ** 1.3, y = yb + (1.45 - 0.03 * U * U - yb) * v;
     return s.point(y, a, s.radius(y, a, 0.012, 0.2) + 0.006 + (1 - under * 0.8) * 0.038 * (1 - U * U) * Math.sin(Math.PI * (0.18 + 0.7 * v)));
   };
   k.on('spine_03', () => {
-    k.add(tube(pts, 1, 30, 6, (t) => { const q = t * n, i = Math.min(n - 1, Math.floor(q)); return rad[i]! + (rad[i + 1]! - rad[i]!) * (q - i); }), cloth(0x3a6070));
+    k.add(tube(pts, 1, 32, 6, (t) => { const q = t * m, i = Math.min(m - 1, Math.floor(q)); return rad[i]! + (rad[i + 1]! - rad[i]!) * (q - i); }), cloth(0x3a6070));
     k.add(grid(8, 4, bag), cloth(0x3a6070)).add(edge(8, 4, bag), cloth(0x24404c));
   });
 }
 
-/** Kabelmantel: a high magenta collar standing round the neck behind the scarf, open at the front, with a light rim. */
+/**
+ * Kabelmantel: a high magenta collar, open at the front, with a light rim. Its foot hugs the neckline; it
+ * rises to the jaw and flares out just enough to stand clear of the bob and the chin when the head turns.
+ */
 function collarHigh(k: GearKit): void {
-  const s = coatCore(k), A = 0.62;
-  const lerp = (tab: readonly (readonly [number, number])[], x: number): number => {
-    for (let i = 1; i < tab.length; i++) if (x <= tab[i]![0]) { const [x0, y0] = tab[i - 1]!, [x1, y1] = tab[i]!; return y0 + (y1 - y0) * ((x - x0) / (x1 - x0)); }
-    return tab[tab.length - 1]![1];
-  };
-  // Bottom and top heights and the top radius by the angle from the front (A..π).
-  const BOT = [[A, 1.405], [1.0, 1.44], [1.57, 1.488], [2.2, 1.45], [Math.PI, 1.42]] as const;
-  const TOP = [[A, 1.545], [1.0, 1.56], [1.57, 1.572], [Math.PI, 1.578]] as const;
-  const RT = [[A, 0.15], [1.2, 0.158], [2.2, 0.165], [Math.PI, 0.162]] as const;
-  const at = (u: number, v: number): Vector3 => {
-    const a = A + (2 * Math.PI - 2 * A) * u, f = Math.min(a, 2 * Math.PI - a);
-    const yb = lerp(BOT, f), yt = lerp(TOP, f), y = yb + (yt - yb) * v;
-    const rb = s.radius(yb, a, 0.012, 0.2) + 0.008 + puffAt('kmantel', Math.sin(a) * 0.17, yb), rt = lerp(RT, f);
-    const w = Math.min(1, v * 2.2);
-    return s.point(y, a, rb + (rt - rb) * (w * (2 - w)));
-  };
+  const A = 0.62, ramp = (a: number): number => Math.min(1, Math.max(0, (Math.abs(angDist(a, 0)) - A) / 1.4));
+  const { at } = collarShell(neckOf(k, 'a_mantel'), {
+    a0: A, a1: 2 * Math.PI - A, segs: 18, rows: 5, drop: 0.016, lift: 0.008,
+    h: (a) => 0.026 + 0.046 * ramp(a) ** 0.8, flare: (a) => 0.02 + 0.03 * ramp(a), hairClear: 0.016,
+  });
   k.on('spine_03', () => {
     k.add(grid(18, 5, at), plain(0xbd2b77));
     const rim: Vector3[] = [];

@@ -4,7 +4,7 @@
 // stands along +Y with the grip at the origin; `mountWeapon` puts it into the right hand so that the
 // business end follows the hand bone's +Z (what `tools/clip-swing.mjs` measures).
 import {
-  BoxGeometry, BufferAttribute, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Euler, ExtrudeGeometry, Group,
+  BoxGeometry, BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, Euler, ExtrudeGeometry, Group,
   IcosahedronGeometry, Matrix4, Mesh, Path, PlaneGeometry, Quaternion, Shape, SphereGeometry, TorusGeometry, Vector2, Vector3,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -377,8 +377,7 @@ function pflaster(b: Parts): void {
 }
 
 /** Rohrzange (I08), one-handed and half as long: a red handle widening toward a thick fixed hook jaw and a sliding jaw on a knurled nut. */
-function zange(b: Parts): void {
-  const red = metal(0xa83224), dark = metal(0x7a2418);
+function zange(b: Parts, red: Paint = metal(0xa83224), dark: Paint = metal(0x7a2418), strip = true): void {
   // Wider at its end (look 2) and toward the jaw, narrow where the hand holds it.
   const handle: [number, number][] = [[-0.03, -0.13], [0.03, -0.13], [0.026, -0.1], [0.023, -0.05], [0.024, 0.14], [0.032, 0.34], [0.036, 0.43], [-0.036, 0.43], [-0.032, 0.34], [-0.024, 0.14], [-0.023, -0.05], [-0.026, -0.1]];
   b.add(flat(handle, 0.03), red, 0, 0, 0)
@@ -392,8 +391,33 @@ function zange(b: Parts): void {
     .add(box(0.17, 0.065, 0.085), P.steel, -0.08, 0.49, 0)
     .add(box(0.14, 0.016, 0.087), P.iron, -0.1, 0.527, 0)
     .add(cyl(0.046, 0.046, 0.065, 10), P.iron, -0.005, 0.44, 0)
-    .add(ring(0.046, 0.007, 4, 12), P.steel, -0.005, 0.44, 0, Math.PI / 2)
-    .add(box(0.05, 0.07, 0.034), GLOW, 0, 0.3, 0);
+    .add(ring(0.046, 0.007, 4, 12), P.steel, -0.005, 0.44, 0, Math.PI / 2);
+  if (strip) b.add(box(0.05, 0.07, 0.034), GLOW, 0, 0.3, 0);
+}
+
+/**
+ * Rohrzange des Tunnelläufers: the Rohrzange in brass with a leather grip, a pressure gauge on the handle
+ * above the hand and a small lantern on a strap beside it. The lantern's glass is the glow part: warm
+ * (the set's signature), or the element's colour.
+ */
+function zangeTunnel(b: Parts): void {
+  const brass = bright(0xc9a34a), frame = metal(0x3a3c40);
+  zange(b, bright(0xb08a3a), metal(0x8a6a2a), false);
+  b.add(cyl(0.031, 0.031, 0.135, 8), plain(0x3a2414), 0, -0.048, 0);
+  // Gauge on the handle's face: brass case, cream dial, needle, a red mark.
+  const gy = 0.195;
+  b.add(cyl(0.027, 0.027, 0.014, 14), brass, 0, gy, 0.022, Math.PI / 2)
+    .add(new CircleGeometry(0.021, 14), plain(0xf0e2c0), 0, gy, 0.0292)
+    .add(box(0.0026, 0.016, 0.0012), plain(0x1a1a1a), 0.004, gy + 0.005, 0.0302, 0, 0, -0.6)
+    .add(box(0.009, 0.0045, 0.0012), plain(0xb8261c), 0.012, gy + 0.012, 0.0298, 0, 0, -0.9);
+  // Lantern hanging on a leather strap from the nut: bail, cap, glass in a cage, base.
+  const lx = 0.078, ly = 0.25;
+  cord(b, [0.034, 0.41, 0.004], [lx, ly + 0.066, 0], 0.012, 0.004, plain(0x8b4a35), 4);
+  b.add(ring(0.011, 0.0022, 3, 8), frame, lx, ly + 0.056, 0)
+    .add(cone(0.022, 0.02, 8), frame, lx, ly + 0.034, 0)
+    .add(cyl(0.016, 0.016, 0.036, 8), GLOW, lx, ly + 0.006, 0)
+    .add(cyl(0.021, 0.02, 0.01, 8), frame, lx, ly - 0.017, 0);
+  for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 2 + Math.PI / 4; b.add(box(0.0035, 0.036, 0.0035), frame, lx + Math.cos(a) * 0.0175, ly + 0.006, Math.sin(a) * 0.0175); }
 }
 
 /** Paints of a forked slingshot; set variants and the legendary forks swap them. */
@@ -862,6 +886,7 @@ const BUILD: Partial<Record<WeaponLookId, Builder>> = {
   leucht, boxh, neonfl, mikro, sichel, werkh, aufzieh, zeiger,
   turm, zitklinge, mauer, pbrecher, ring: ringbahn, kraehe, siegsp, morgen,
   'brech:kiez': (b) => brech(b, plain(0x3a5a8a), plain(0xe07a2a), 0xdadee2),
+  'zange:tunnel': zangeTunnel,
   'zwille:spree': (b) => {
     fork(b, { ...FORK, arm: wood(0x4f6e52), wrap: cloth(0x6a8a78), band: plain(0x2f8a80), rubber: plain(0x2a4a40), pouch: plain(0x2f5a4a) });
     // Set signature: green glow bands on the arms and at the crotch.

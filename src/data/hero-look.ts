@@ -116,7 +116,8 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
   'scarf:gold': { roles: { scarf: '#f2d14b' } },
   'scarf:acid': { roles: { scarf: '#97c459' } },
   // Tunnelläufer (mockup `tunnel`): ochre-olive coat, BVG-yellow hem and cuffs, cargo trousers; heavy boots.
-  'mantel:tunnel': { roles: { coat: '#7a6a34', hem: '#e0a020', cuff: '#e0a020', trousers: '#3a3c36', leather: '#3a2414', brass: '#e0a020' } },
+  // Brass buttons as the mockup's (the yellow buckle is the gear belt's).
+  'mantel:tunnel': { roles: { coat: '#7a6a34', hem: '#e0a020', cuff: '#e0a020', trousers: '#3a3c36', leather: '#3a2414', brass: '#c9a34a' } },
   'stiefel:tunnel': { roles: { boot: '#3a2a1c', sole: '#1e140c' } },
 };
 

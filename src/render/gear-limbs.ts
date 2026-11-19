@@ -13,7 +13,7 @@ type Bone = 'lowerarm' | 'hand' | 'calf' | 'foot' | 'ball';
 const _m = new Matrix4(), _q = new Quaternion(), _e = new Euler(), _v = new Vector3(), ONE = new Vector3(1, 1, 1), UP = new Vector3(0, 1, 0);
 
 /** Parts of one limb in bind space on the hero's left; `both` adds them and their mirror image. */
-class Limb {
+export class Limb {
   readonly parts: { bone: Bone; geo: BufferGeometry; paint: Paint }[] = [];
 
   add(bone: Bone, geo: BufferGeometry, paint: Paint, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0): this {
@@ -42,14 +42,14 @@ function mirrored(g: BufferGeometry): BufferGeometry {
 }
 
 /** Builds the left limb's parts and adds them on the left bones and, mirrored, on the right. */
-function both(k: GearKit, build: (l: Limb) => void): void {
+export function both(k: GearKit, build: (l: Limb) => void): void {
   const l = new Limb();
   build(l);
   for (const s of [1, -1] as const) for (const p of l.parts) k.on(`${p.bone}_${side(s)}`, () => k.add(s > 0 ? p.geo.clone() : mirrored(p.geo), p.paint));
 }
 
 /** A grid over the hero's surface: `at(u, v)` gives the height along the sampler's axis and the angle. */
-interface Fit {
+export interface Fit {
   cols: number;
   rows: number;
   at: (u: number, v: number) => readonly [number, number];
@@ -67,7 +67,7 @@ interface Fit {
 }
 
 /** The measured, smoothed radius over the grid of `f`, read back bilinearly at (u, v). */
-function fitted(smp: Sampler, f: Fit): (u: number, v: number) => number {
+export function fitted(smp: Sampler, f: Fit): (u: number, v: number) => number {
   const { cols, rows } = f, sp = f.span ?? 0, L = cols;
   const g: number[][] = [];
   for (let r = 0; r <= rows; r++) {
@@ -110,7 +110,7 @@ function fitted(smp: Sampler, f: Fit): (u: number, v: number) => number {
  * A mesh over the grid of `f` at distance `r(u, v)` from the axis, with UVs 0..1. `map` takes the mesh's
  * own (u, v) to the grid's (a strip of a shaft, a tilted band), `cols` × `rows` quads.
  */
-function shell(smp: Sampler, f: Fit, r: (u: number, v: number) => number, map?: (u: number, v: number) => readonly [number, number], cols = f.cols, rows = f.rows): BufferGeometry {
+export function shell(smp: Sampler, f: Fit, r: (u: number, v: number) => number, map?: (u: number, v: number) => readonly [number, number], cols = f.cols, rows = f.rows): BufferGeometry {
   const pos: number[] = [], uv: number[] = [], idx: number[] = [], p = new Vector3();
   for (let k = 0; k <= rows; k++) for (let j = 0; j <= cols; j++) {
     const [u, v] = map ? map(j / cols, k / rows) : [j / cols, k / rows];
@@ -150,7 +150,7 @@ function shell(smp: Sampler, f: Fit, r: (u: number, v: number) => number, map?: 
 }
 
 /** Angle once round the axis (u 0..1), starting at the back. */
-const round = (u: number): number => -Math.PI + 2 * Math.PI * u;
+export const round = (u: number): number => -Math.PI + 2 * Math.PI * u;
 /** The strip v0..v1 of a grid. */
 const strip = (v0: number, v1: number) => (u: number, v: number): readonly [number, number] => [u, v0 + (v1 - v0) * v];
 /** The narrow strip u0..u1, v0..v1 of a grid (a seam line, a gloss streak). */
@@ -206,12 +206,12 @@ function fist(): BufferGeometry {
 
 /** The left lower leg round its own centre line (boot and trousers; angle +π/2 is the outside). */
 const LEG = axis([0.116, 0, -0.088], [0, 1, 0], [0, 0, 1]);
-const leg = (k: GearKit): Sampler => k.sampler(['f_stiefel', 'a_weste'], LEG, 0.012);
+export const leg = (k: GearKit): Sampler => k.sampler(['f_stiefel', 'a_weste'], LEG, 0.012);
 /** The left foot along its length (angle 0 up, −π/2 the outside); `y` the axis' height. */
 const footAxis = (y: number, x = 0.12) => axis([x, y, 0], [0, 0, 1], [0, 1, 0]);
 const feet = new WeakMap<GearKit, Map<string, Sampler>>();
 /** Sampler of a shoe's foot only (vertices below `top`), along the foot: the shaft above would lift the instep. */
-function foot(k: GearKit, node: string, top: number, y: number, x?: number): Sampler {
+export function foot(k: GearKit, node: string, top: number, y: number, x?: number): Sampler {
   let m = feet.get(k);
   if (!m) feet.set(k, (m = new Map()));
   const key = `${node}|${top}|${y}|${x}`;

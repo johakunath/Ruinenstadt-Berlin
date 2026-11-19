@@ -92,7 +92,7 @@ export class HeadMap {
 
 const maps = new WeakMap<GearKit, Map<string, HeadMap>>();
 /** Head maps per kit: `hair` (hair, skull, brows) and `face` (skull, brows and eyes only: masks under the hair). */
-function headMap(k: GearKit, kind: 'hair' | 'face'): HeadMap {
+export function headMap(k: GearKit, kind: 'hair' | 'face'): HeadMap {
   let m = maps.get(k);
   if (!m) maps.set(k, (m = new Map()));
   let h = m.get(kind);
@@ -124,7 +124,7 @@ function formDist(f: Form, c: Vector3, e: number, a: number): number {
 const _a = new Vector3(), _b = new Vector3(), _c = new Vector3(), _d = new Vector3();
 
 /** A shell round the head: the form, or `lift` outside the mapped hair where that is further out (a soft max). */
-class Shell {
+export class Shell {
   constructor(readonly map: HeadMap, readonly lift: number, readonly form?: Form, readonly soft = 0.012) {}
 
   r(e: number, a: number): number {
@@ -354,7 +354,7 @@ function press(g: BufferGeometry, top: (z: number) => number, k = 0.012): Buffer
  * The outermost surface of `s` round the head between heights `y0(a)` and `y1(a)`, angle a0..a1: sampled
  * densely, left and right alike, median and smoothed round the head (no bumps over strands).
  */
-function fitRing(s: Sampler, a0: number, a1: number, y0: (a: number) => number, y1: (a: number) => number, n = 48): (a: number) => number {
+export function fitRing(s: Sampler, a0: number, a1: number, y0: (a: number) => number, y1: (a: number) => number, n = 48): (a: number) => number {
   const at = (a: number): number => { let m = 0; for (let f = 0; f <= 1 + 1e-6; f += 0.25) m = Math.max(m, s.radius(mix(y0(a), y1(a), f), a, 0.006, Math.PI / 30)); return m; };
   let r = Array.from({ length: n + 1 }, (_, j) => { const a = mix(a0, a1, j / n); return Math.max(at(a), at(-a)); });
   const L = r.length;
@@ -364,7 +364,7 @@ function fitRing(s: Sampler, a0: number, a1: number, y0: (a: number) => number, 
 }
 
 /** A band on the head at heights `y(a, v)` (v 0..1), angle a0..a1, at the fitted radius `r(a)` + `extra(u, v)`. */
-function band(s: Sampler, o: { a0: number; a1: number; segs: number; rows: number; y: (a: number, v: number) => number; r: (a: number) => number; extra: (u: number, v: number) => number }): BufferGeometry {
+export function band(s: Sampler, o: { a0: number; a1: number; segs: number; rows: number; y: (a: number, v: number) => number; r: (a: number) => number; extra: (u: number, v: number) => number }): BufferGeometry {
   const pos: number[] = [], uv: number[] = [], idx: number[] = [];
   const q = new Vector3();
   for (let i = 0; i <= o.rows; i++) for (let j = 0; j <= o.segs; j++) {

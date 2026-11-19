@@ -6,9 +6,9 @@
 // (`TORSO`) into pieces that overlap a little. Belts ride on the pelvis, pauldrons on the upper arms,
 // vambraces on the forearms, tassets on the thighs.
 import { BufferAttribute, BufferGeometry, PlaneGeometry, Vector3 } from 'three';
-import { AXES, Sampler, axis, bright, cloth, glow, metal, onSurface, plain, type Axis, type GearKit, type HeroSource, type Paint } from './gear-kit';
+import { AXES, Sampler, axis, basis, bright, cloth, glow, metal, onSurface, plain, type Axis, type GearKit, type HeroSource, type Paint } from './gear-kit';
 import type { GearBuilder } from './gear';
-import { BELT_Y } from './gear-body';
+import { BELT_Y, collarShell, neckBand, neckOf, yoke } from './gear-body';
 import { ball, box, cyl, flat, scaled } from './weapons';
 
 const SIDES = [1, -1] as const;
@@ -18,8 +18,8 @@ const NECK: Axis = axis([0, 0, -0.04], [0, 1, 0], [0, 0, 1]);
 const Y = BELT_Y.a_mantel;
 
 /** Torso bones by height (from the top), with the overlap of neighbouring pieces. */
-const TORSO = [['spine_03', 1.305, 2], ['spine_02', 1.165, 1.32], ['spine_01', 0, 1.18]] as const;
-const torsoBand = (t: number): number => (t >= 1.312 ? 0 : t >= 1.172 ? 1 : 2);
+export const TORSO = [['spine_03', 1.305, 2], ['spine_02', 1.165, 1.32], ['spine_01', 0, 1.18]] as const;
+export const torsoBand = (t: number): number => (t >= 1.312 ? 0 : t >= 1.172 ? 1 : 2);
 /** Lower torso pieces sit this much further out, so overlaps never flicker. */
 const STEP = 0.0025;
 
@@ -28,7 +28,7 @@ const STEP = 0.0025;
 const trunks = new WeakMap<HeroSource, Map<string, Sampler>>();
 
 /** Sampler of `nodes` round `ax` without the sleeves (only |x| < `maxX`): plates, collars and lapels. */
-function trunk(k: GearKit, nodes: readonly string[], ax: Axis = AXES.torso, maxX = 0.19): Sampler {
+export function trunk(k: GearKit, nodes: readonly string[], ax: Axis = AXES.torso, maxX = 0.19): Sampler {
   let m = trunks.get(k.src);
   if (!m) trunks.set(k.src, (m = new Map()));
   const key = `${nodes.join()}|${ax.o.toArray().join()}|${maxX}`;
@@ -54,13 +54,13 @@ function smoothRow(row: number[], passes: number): number[] {
 }
 
 /** A radius field over heights t and angles a. */
-type Field = (t: number, a: number) => number;
+export type Field = (t: number, a: number) => number;
 
 /**
  * The surface of `s` over t0..t1 × a0..a1 as a smooth field: smoothed round each row (max-preserving),
  * and draped: going down it never falls in faster than `drape` m per m (a plate or cloth over the bust).
  */
-function field(s: Sampler, t0: number, t1: number, a0: number, a1: number, o: { nt?: number; na?: number; smooth?: number; drape?: number; dt?: number } = {}): Field {
+export function field(s: Sampler, t0: number, t1: number, a0: number, a1: number, o: { nt?: number; na?: number; smooth?: number; drape?: number; dt?: number } = {}): Field {
   const nt = o.nt ?? 12, na = o.na ?? 16;
   const g: number[][] = [];
   for (let i = 0; i <= nt; i++) {
@@ -87,6 +87,13 @@ function grid(pts: number[], uv: number[], segs: number, rows: number): BufferGe
   g.setIndex(idx);
   g.computeVertexNormals();
   return g;
+}
+
+/** A grid of `segs` × `rows` quads through the bind points `at(u, v)`, UVs (u, v). */
+function sheet(at: (u: number, v: number) => Vector3, segs: number, rows: number): BufferGeometry {
+  const pts: number[] = [], uv: number[] = [];
+  for (let r = 0; r <= rows; r++) for (let j = 0; j <= segs; j++) { pts.push(...at(j / segs, r / rows).toArray()); uv.push(j / segs, r / rows); }
+  return grid(pts, uv, segs, rows);
 }
 
 type Lift = number | ((u: number, v: number) => number);
@@ -228,19 +235,13 @@ function pauldron(k: GearKit, s: 1 | -1, plate: Paint, riv: Paint, o: { puff: nu
 
 const KIEZ = { collar: 0x24508e, orange: 0xf08a24, belt: 0x141a2a, dark: 0x2a2c30, cream: 0xf4f0e0 } as const;
 
-/** Stand collar: an upright padded band behind the neck, round the back of the scarf ring, with orange piping. */
+/** Stand collar: an upright padded band round the neck (open at the front, 1.8 cm clear of it), orange piping on its top edge. */
 function collarStand(k: GearKit): void {
-  const s = trunk(k, ['scarf', 'a_weste'], NECK, 0.21);
-  const a0 = 1.7, a1 = 2 * Math.PI - 1.7, segs = 12;
-  // Radius per angle: the scarf ring and the vest's shoulders over the collar's foot; upright above it.
-  const R = field(s, 1.41, 1.5, a0, a1, { nt: 3, na: segs, smooth: 3 });
-  const foot: number[] = [];
-  for (let j = 0; j <= segs; j++) { const a = a0 + ((a1 - a0) * j) / segs; foot.push(Math.max(R(1.41, a), R(1.44, a), R(1.47, a), R(1.5, a))); }
-  const W: Field = (_t, a) => { const f = Math.min(segs, Math.max(0, ((a - a0) / (a1 - a0)) * segs)), j = Math.min(segs - 1, Math.floor(f)); return foot[j]! + (foot[j + 1]! - foot[j]!) * (f - j); };
-  const top = (u: number): number => 1.5 + 0.045 * Math.sin(Math.PI * u) ** 1.5;
+  const A = 0.45, segs = 16, rows = 3;
+  const { at } = collarShell(neckOf(k, 'a_weste'), { a0: A, a1: 2 * Math.PI - A, segs, rows, drop: 0.02, lift: 0.008, h: byAngle([[0, 0.018], [1.2, 0.026], [Math.PI, 0.03]]), flare: () => 0.01 });
   k.on('spine_03', () => {
-    k.add(patch(s, W, (u, v) => [1.42 + (top(u) - 1.42) * v, a0 + (a1 - a0) * u], segs, 3, (_u, v) => 0.012 + 0.008 * v * v), plain(KIEZ.collar));
-    k.add(patch(s, W, (u, v) => [top(u) - 0.012 + 0.014 * v, a0 + (a1 - a0) * u], segs, 1, 0.022), plain(KIEZ.orange));
+    k.add(sheet((u, v) => at(u, v, 0.004 * Math.sin(Math.PI * v)), segs, rows), plain(KIEZ.collar));
+    k.add(sheet((u, v) => at(u, 0.8 + 0.2 * v, 0.003), segs, 1), plain(KIEZ.orange));
   });
 }
 
@@ -262,12 +263,12 @@ function radio(k: GearKit): void {
   }));
 }
 
-/** Whistle on an orange cord from under the scarf down to the left chest. */
+/** Whistle on an orange cord from under the stand collar's left end down to the left chest. */
 function whistle(k: GearKit): void {
   const s = trunk(k, ['a_weste']);
-  const R = field(s, 1.2, 1.42, -0.2, 0.8, { nt: 8, na: 8, drape: 0.6 });
+  const R = field(s, 1.2, 1.48, -0.2, 0.95, { nt: 10, na: 9, drape: 0.6 });
   const path: Array<[number, number]> = [];
-  for (let i = 0; i <= 7; i++) { const v = i / 7; path.push([1.41 - 0.135 * v, 0.12 + 0.36 * v - 0.1 * v * v]); }
+  for (let i = 0; i <= 8; i++) { const v = i / 8; path.push([1.462 - 0.187 * v, 0.8 - 0.55 * v + 0.13 * v * v]); }
   const [t, a] = path[path.length - 1]!;
   torsoStrip(k, s, R, path, 0.008, 0.007, plain(KIEZ.orange));
   onTorso(k, s, R, t - 0.016, a, 0.017, () => {
@@ -328,22 +329,31 @@ function blade(w: number, h: number, curl: number, lean: number): BufferGeometry
   return g;
 }
 
-/** Reed collar: two rows of reed blades fanning out behind the scarf, from a low green band on the shoulders. */
+/**
+ * Reed collar: a dark green yoke from a ring round the neck down over the shoulders (a narrow band at the
+ * front), two rows of reed blades along its outer edge. The blades lean out, most at the back, where the bob
+ * swings over the collar when the head is carried back (idle, running).
+ */
 function collarReed(k: GearKit): void {
-  const s = trunk(k, ['scarf', 'a_mantel'], NECK, 0.2);
-  const a0 = 1.15, a1 = 2 * Math.PI - 1.15;
-  const R = field(s, 1.38, 1.5, a0, a1, { nt: 6, na: 16, smooth: 3 });
+  const segs = 16;
+  const { geo, at: on } = yoke(neckOf(k, 'a_mantel'), {
+    a0: -Math.PI, a1: Math.PI, segs, rows: 2, lift0: 0.008, lift1: 0.007,
+    phi0: byAngle([[0, 0.62], [0.7, 0.5], [1.2, 0.36], [1.8, 0.44], [2.5, 0.3], [Math.PI, 0.26]]), top: byAngle([[0, 0.012], [Math.PI, 0.014]]),
+  });
+  const lean = byAngle([[0.8, 0.2], [1.6, 0.28], [2.4, 0.58], [Math.PI, 0.72]]), tall = byAngle([[0.8, 0.095], [1.5, 0.13], [2.3, 0.1], [Math.PI, 0.075]]);
+  const a0 = 0.8, a1 = 2 * Math.PI - 0.8, up = new Vector3(0, 1, 0);
   k.on('spine_03', () => {
-    k.add(patch(s, R, (u, v) => [1.405 + 0.045 * v, a0 + (a1 - a0) * u], 14, 1, (_u, v) => 0.006 + 0.008 * v), plain(SPREE.base));
+    k.add(geo, plain(SPREE.base));
     for (let row = 0; row < 2; row++) {
       const n = row ? 9 : 10;
       for (let i = 0; i < n; i++) {
         const u = (i + (row ? 1 : 0.5)) / (n + (row ? 1 : 0)), a = a0 + (a1 - a0) * u;
-        // Taller at the back, shorter towards the front; the outer row shorter.
-        const h = (0.1 + 0.045 * Math.sin(Math.PI * u) + 0.018 * (((i * 5 + row * 2) % 3) - 1)) * (row ? 0.78 : 1);
-        const fan = (u - 0.5) * 0.9;
-        k.frame(at(s, R, 1.435 - 0.012 * row, a, 0.012 + 0.012 * row), () => {
-          k.add(blade(0.03 - 0.004 * row, h, 0.22 + 0.1 * row, ((i % 2) * 2 - 1) * 0.012), plain(SPREE.reed[(i + row) % 3]!), 0, 0, 0, 0.1, fan, -fan * 0.5);
+        // The outer row taller; a little height noise.
+        const h = (tall(a) + 0.014 * (((i * 5 + row * 2) % 3) - 1)) * (row ? 0.75 : 1);
+        const fan = (u - 0.5) * 0.5;
+        const out = new Vector3(Math.sin(a), 0, Math.cos(a)), side = new Vector3().crossVectors(up, out);
+        k.frame(basis(on((Math.atan2(Math.sin(a), Math.cos(a)) + Math.PI) / (2 * Math.PI), 0.22 + 0.2 * row, 0.003), side, up, out), () => {
+          k.add(blade(0.034 - 0.004 * row, h, 0.2 + 0.1 * row, ((i % 2) * 2 - 1) * 0.012), plain(SPREE.reed[(i + row) % 3]!), 0, 0, 0, lean(a) - 0.12 * row, fan, -fan * 0.5);
         });
       }
     }
@@ -353,9 +363,9 @@ function collarReed(k: GearKit): void {
 /** Glowing seams down the coat front: the middle line and two lines over the chest, collar to belt. */
 function seamsSpree(k: GearKit): void {
   const s = trunk(k, ['a_mantel']);
-  const R = field(s, 1.1, 1.42, -1.2, 1.2, { nt: 10, na: 16, smooth: 2, drape: 0.5 });
+  const R = field(s, 1.1, 1.46, -1.2, 1.2, { nt: 11, na: 16, smooth: 2, drape: 0.5 });
   const g0 = glow(SPREE.glow);
-  torsoStrip(k, s, R, line(1.36, 0, 1.11, 0, 10), 0.007, 0.006, g0);
+  torsoStrip(k, s, R, line(1.43, 0, 1.11, 0, 10), 0.007, 0.006, g0);
   for (const g of SIDES) {
     const path: Array<[number, number]> = [];
     for (let i = 0; i <= 10; i++) { const v = i / 10; path.push([1.41 - 0.3 * v, g * (0.98 - 0.58 * v + 0.2 * v * v)]); }
@@ -388,9 +398,10 @@ const ZIT = { red: 0xa82828, gold: 0xe0b040, leather: 0x5a2a1a } as const;
 /** Crimson tabard: a front panel over the chest down to the belt and a short pointed apron, gold trim and a gold shield. */
 function tabard(k: GearKit): void {
   const s = trunk(k, ['a_mantel']);
-  const R = field(s, 1.09, 1.42, -0.8, 0.8, { nt: 12, na: 12, smooth: 4, drape: 0.35 });
-  const ha = (t: number): number => 0.46 + 0.04 * (1.4 - t) / 0.3;
-  const P: Shape = { t0: () => 1.1, t1: (u) => 1.4 - 0.025 * (1 - Math.abs(2 * u - 1)), a: (u, t) => (2 * u - 1) * ha(t) };
+  const R = field(s, 1.09, 1.47, -1.0, 1.0, { nt: 13, na: 12, smooth: 4, drape: 0.35 });
+  // Up to just under the mail's neck band (the scarf no longer covers the top); wider round the neck there.
+  const ha = (t: number): number => 0.46 + 0.04 * (1.4 - t) / 0.3 + 6 * Math.max(0, t - 1.385);
+  const P: Shape = { t0: () => 1.1, t1: (u) => 1.455 - 0.016 * (1 - Math.abs(2 * u - 1)), a: (u, t) => (2 * u - 1) * ha(t) };
   // The apron below the belt, on the pelvis: hangs out of the skirt's way.
   const sk = trunk(k, ['a_mantel'], AXES.torso, 0.3);
   const A = field(sk, 0.85, 1.07, -0.8, 0.8, { nt: 8, na: 10, smooth: 4, drape: 0.6 });
@@ -400,6 +411,8 @@ function tabard(k: GearKit): void {
   torsoPatch(k, s, R, P, 10, () => 0.008, red);
   const ch = shapeAt(P);
   for (const u of [0.015, 0.985]) torsoStrip(k, s, R, Array.from({ length: 9 }, (_, i) => ch(u, i / 8)), 0.012, 0.011, gold);
+  torsoStrip(k, s, R, Array.from({ length: 9 }, (_, i) => ch(0.015 + (0.97 * i) / 8, 0.985)), 0.012, 0.011, gold);
+  neckBand(k, 'a_mantel', plain(ZIT.leather), 0.012);
   // Gold shield with a crimson field, on the bust.
   onTorso(k, s, R, 1.255, 0, 0.012, () => {
     k.add(flat([[-0.042, 0.055], [0.042, 0.055], [0.042, -0.01], [0, -0.062], [-0.042, -0.01]], 0.004), gold);
@@ -615,14 +628,24 @@ function beltRattails(k: GearKit): void {
 
 const RITTER = { steel: 0x9aa0a8, dark: 0x7a8088, light: 0xc8ccd2, gold: 0xe0b040, gem: 0x43d1cf, belt: 0x22262e } as const;
 
-/** Gorget: a steel collar round the base of the neck, under the scarf, over the plate tops. */
+/** By |angle| round the neck: piecewise linear through `tab` ([angle, value], angles 0..π rising). */
+function byAngle(tab: ReadonlyArray<readonly [number, number]>): (a: number) => number {
+  return (a) => {
+    const f = Math.abs(Math.atan2(Math.sin(a), Math.cos(a)));
+    for (let i = 1; i < tab.length; i++) if (f <= tab[i]![0]) { const [x0, y0] = tab[i - 1]!, [x1, y1] = tab[i]!; return y0 + ((y1 - y0) * (f - x0)) / (x1 - x0); }
+    return tab[tab.length - 1]![1];
+  };
+}
+
+/** Gorget: a steel collar from the plate tops and the shoulders up to a ring round the neck (1.8 cm clear), a bright band round its middle. */
 function gorget(k: GearKit): void {
-  const s = trunk(k, ['scarf', 'a_mantel'], NECK, 0.165);
-  const R = field(s, 1.34, 1.48, -Math.PI, Math.PI, { nt: 7, na: 16, smooth: 3 });
-  const tb = (a: number): number => 1.37 + 0.035 * (1 - Math.cos(a)) / 2;
+  const n = neckOf(k, 'a_mantel'), segs = 16;
+  // Outer edge: over the breastplate's top at the front, under the pauldrons at the sides, over the back plate.
+  const o = { a0: -Math.PI, a1: Math.PI, segs, rows: 2, phi0: byAngle([[0, 0.02], [0.8, 0.2], [1.57, 0.6], [2.4, 0.42], [Math.PI, 0.26]]), top: byAngle([[0, 0.014], [1.57, 0.012], [Math.PI, 0.01]]), lift0: 0.016, lift1: 0.008 };
+  const { geo, at } = yoke(n, o);
   k.on('spine_03', () => {
-    k.add(patch(s, R, (u, v) => { const a = -Math.PI + 2 * Math.PI * u; return [tb(a) + 0.07 * v, a]; }, 16, 2, (_u, v) => 0.016 - 0.006 * v), bright(RITTER.steel));
-    k.add(patch(s, R, (u, v) => { const a = -Math.PI + 2 * Math.PI * u; return [tb(a) + 0.03 + 0.008 * v, a]; }, 16, 1, 0.016), bright(RITTER.light));
+    k.add(geo, bright(RITTER.steel));
+    k.add(sheet((u, v) => at(u, 0.36 + 0.14 * v, 0.003), segs, 1), bright(RITTER.light));
   });
 }
 
