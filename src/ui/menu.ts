@@ -1,7 +1,7 @@
 // U1/U2/U3: one pause menu with tabs, as in 2D (`js/panels.js` renderInv): Inventar, Karte, Segen,
 // Kodex as text tabs with line icons. The Kodex tab is the 2D Kodex card list (playtest 2026-11-17). Header shows Schrott, Item Level, district and fight, found
 // hidden blessings, the cog for the options screen and × to close.
-import { ELITES, ELITE_MODS, ENEMIES, type EliteMod, type EnemyKind } from '../data/enemies';
+import { ELITES, ELITE_MODS, ENEMIES, ENEMY_CLASS_NAME, type EliteMod, type EnemyKind } from '../data/enemies';
 import { BASES } from '../data/item-names';
 import { ELEMENTS, ENEMY_RESISTANCES, LEGENDARY_POWERS, RARITIES, SETS, SET_COLOR, type LegendaryId, type SetId, type SlotId } from '../data/items';
 import { STATIONS } from '../data/camp';
@@ -256,8 +256,10 @@ export function kodexHtml(s: Sim): string {
   const card = (img: string, name: string, nameColor: string, text: string, side = ''): string => `<div class="kx">${img}<div><div class="un"${nameColor ? ` style="color:${nameColor}"` : ''}>${name}</div><div class="ud">${text}</div></div>${side ? `<span class="ud">${side}</span>` : ''}</div>`;
   const weak = (kind: EnemyKind): string => { const r = ENEMIES[kind].res; if (r === 'none') return ''; const t = ENEMY_RESISTANCES[r]; return (Object.keys(t) as Array<keyof typeof t>).filter(e => (t[e] ?? 1) > 1.2).map(e => `<span style="color:${ELEMENTS[e].color}">${ELEMENTS[e].name}</span>`).join(' '); };
   const DIM = 'var(--dim)', unk = '???';
-  const enemies = NORMAL.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? '' : DIM, o ? esc(ENEMY_TEXT[e] ?? '') : 'Noch nicht begegnet', o ? weak(e) : ''); }).join('');
-  const bosses = BOSSES.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? 'var(--ember)' : DIM, o ? `${esc(ENEMY_TEXT[e] ?? '')} Besiegt: ${k.kills[e]}` : 'Noch nicht besiegt', o ? weak(e) : ''); }).join('');
+  // D9: the enemy's class names the weapon that fits (Kodex text after the description).
+  const cls = (kind: EnemyKind): string => ` <span class="kcls">${ENEMIES[kind].classes.map((c) => ENEMY_CLASS_NAME[c]).join(', ')}</span>`;
+  const enemies = NORMAL.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? '' : DIM, o ? esc(ENEMY_TEXT[e] ?? '') + cls(e) : 'Noch nicht begegnet', o ? weak(e) : ''); }).join('');
+  const bosses = BOSSES.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? 'var(--ember)' : DIM, o ? `${esc(ENEMY_TEXT[e] ?? '')}${cls(e)} Besiegt: ${k.kills[e]}` : 'Noch nicht besiegt', o ? weak(e) : ''); }).join('');
   const has = (id: SurvivorId): boolean => !!s.statContext.survivors[id];
   const survivors = SURVIVORS.map(v => card(kimg(kport(SURVIVOR_PORTRAIT[v.id]), has(v.id) ? 'on' : 'dim'), has(v.id) ? esc(v.name) : unk, has(v.id) ? 'var(--good)' : DIM, esc(v.description), has(v.id) ? `<span class="ok">${esc(STATIONS.find(st => st.npc === v.id)?.name ?? 'Im Lager')}</span>` : 'Vermisst')).join('');
   const legs = Object.keys(LEGENDARY_POWERS) as LegendaryId[], nLeg = legs.filter(b => k.found[b]).length;

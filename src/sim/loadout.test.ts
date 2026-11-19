@@ -18,7 +18,8 @@ function arena(equipment = gear(), context: Partial<StatContext> = {}, seed = 1)
 function target(sim: Sim, x = 3, z = 1.5) {
   const e = spawnEnemy(sim, x, z, 'brute');
   e.hp = e.maxHp = 10000;
-  e.def = { ...e.def, speed: 0, attackRange: 0, knockbackTaken: 0 };
+  // No class: the D9 type bonus would hide the equipment numbers under test.
+  e.def = { ...e.def, speed: 0, attackRange: 0, knockbackTaken: 0, classes: [] };
   return e;
 }
 function run(sim: Sim, steps: number, input: SimInput = NO_INPUT): SimEvent[] {

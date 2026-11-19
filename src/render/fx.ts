@@ -387,7 +387,8 @@ export class Fx {
   }
 
   /** Hit sparks flying along the blow, plus an impact flash. */
-  sparks(x: number, y: number, z: number, dx: number, dz: number, heavy: boolean): void {
+  /** Hit sparks; `effective` (D9: the weapon fits the enemy's class) sparks cool white instead of orange. */
+  sparks(x: number, y: number, z: number, dx: number, dz: number, heavy: boolean, effective = false): void {
     const n = heavy ? 26 : 12;
     for (let i = 0; i < n; i++) {
       const spread = this.rng.range(-0.9, 0.9);
@@ -398,7 +399,7 @@ export class Fx {
         x, y: y + this.rng.range(-0.2, 0.2), z,
         vx: (dx * cs - dz * sn) * speed, vy: this.rng.range(0.5, 5), vz: (dz * cs + dx * sn) * speed,
         life: this.rng.range(0.14, 0.38), size: this.rng.range(0.05, heavy ? 0.12 : 0.09), grow: 0.3,
-        r: 6, g: 4.2, b: 1.8, gravity: 16, drag: 2.5,
+        r: effective ? 3.6 : 6, g: effective ? 5.6 : 4.2, b: effective ? 6.4 : 1.8, gravity: 16, drag: 2.5,
       });
     }
     // Dark droplets from the body.

@@ -275,7 +275,7 @@ export class GameRenderer {
         this.views.get(ev.id)?.hit();
         const feel = HIT_FEEL[ev.weight];
         // Procs and area ticks (quiet) spark a little and never shake the camera.
-        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical));
+        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical), !!ev.effective);
         if (!ev.quiet) this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1) * (ev.critical ? 1.25 : 1));
         if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
         break;

@@ -24,7 +24,8 @@ function fresh(kind: WeaponKindId = 'blade', perks: Perks = {}, power: 0 | 1 = 0
 function dummy(s: Sim, dx: number, dz: number, kind: 'walker' | 'brute' = 'walker', hp = 100000): Enemy {
   const e = spawnEnemy(s, s.player.x + dx, s.player.z + dz, kind);
   e.hp = e.maxHp = hp;
-  e.def = { ...e.def, speed: 0, attackRange: 0, knockbackTaken: 0, res: 'none', ai: 'melee' };
+  // A training dummy: no element resistance and no class (D9 bonus), so rules are measured plain.
+  e.def = { ...e.def, speed: 0, attackRange: 0, knockbackTaken: 0, res: 'none', ai: 'melee', classes: [] };
   return e;
 }
 const run = (s: Sim, steps: number, inp: Partial<typeof NO_INPUT> = {}): void => { for (let i = 0; i < steps; i++) { stepSim(s, { ...NO_INPUT, ...inp }); s.hitstop = 0; } };

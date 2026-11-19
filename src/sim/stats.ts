@@ -47,8 +47,11 @@ const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.m
 /** 2D `KIND.rate`: seconds per attack. Only `power` uses it; real timing is in `data/combat.ts`. */
 const SWING_TIME: Record<WeaponKindId, number> = { blade: 0.3, hammer: 0.68, sling: 0.42, spear: 0.5 };
 
-/** 2D `dps(it)`: weapon damage over its swing time (item card line). */
-export const weaponDps = (item: Item): number => item.value / (SWING_TIME[item.kind as WeaponKindId] ?? .5);
+/** D8: damage factor of a weapon item's base (a shorter base hits harder). */
+export const weaponDamage = (item: Item): number => item.value * (item.slot === 'w' && item.kind in SWING_TIME ? weaponTraits(weaponLookId(item.kind as WeaponKindId, item.base, item.set)).damage : 1);
+
+/** 2D `dps(it)`: weapon damage over its swing time (item card line), with the D8 size factor. */
+export const weaponDps = (item: Item): number => weaponDamage(item) / (SWING_TIME[item.kind as WeaponKindId] ?? .5);
 
 /** 2D baseOf fallback without mutating an item. */
 function baseOf(item: Item): BaseId {
