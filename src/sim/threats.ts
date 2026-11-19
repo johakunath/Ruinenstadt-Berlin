@@ -252,7 +252,7 @@ export function updateThreats(sim: Sim): void {
     if (z.sector) {
       const m = (z.sector.r0 + z.r) / 2;
       sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x + Math.sin(z.sector.a) * m, z: z.z + Math.cos(z.sector.a) * m, r: (z.r - z.sector.r0) * 0.3, hit });
-    } else sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x, z: z.z, r: z.r, hit });
+    } else sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x, z: z.z, r: z.r, hit, ...(z.burst ? { src: z.src } : {}) });
   }
   // 2D `run.blasts`: every body inside takes its share; a Zünder caught in it goes off in turn (next step).
   for (const z of blasts) for (const e of sim.enemies) {

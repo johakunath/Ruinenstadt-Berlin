@@ -249,7 +249,7 @@ export type SimEvent =
   /** A special attack starts its wind-up (`wind`) or is released (`go`). */
   | { type: 'enemySpecial'; id: number; kind: SpecialKind; phase: 'wind' | 'go'; x: number; z: number }
   /** A marked ground zone goes off. */
-  | { type: 'zoneHit'; kind: ZoneKind; x: number; z: number; r: number; hit: boolean }
+  | { type: 'zoneHit'; kind: ZoneKind; x: number; z: number; r: number; hit: boolean; /** M16: the zone's source (a glass burst: the body that broke). */ src?: number }
   | { type: 'enemyShot'; x: number; z: number; boss: boolean }
   /** M12c: a Wachdrohne searchlight locked onto the hero; the volley follows. */
   | { type: 'spotLock'; id: number; x: number; z: number }

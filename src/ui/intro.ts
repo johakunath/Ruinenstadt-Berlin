@@ -23,6 +23,10 @@ export type TipId = keyof typeof TUTORIALS | 'intro';
 export const SIGHT_TIPS: Partial<Record<import('../data/enemies').EnemyKind, string>> = {
   kabel: 'Kabelghule springen dich an (Linie am Boden).',
   bass: 'Boxenköpfe wummern rosa Ringe. Durchrollen.',
+  // M16 Charlottenburg.
+  scherbe: 'Tänzerinnen zerspringen. Lass sie zwischen den anderen fallen.',
+  loge: 'Logenbrecher sind vorn aus Glas. Nach dem Schlag sind sie offen.',
+  souffleur: 'Der Souffleur treibt alle an. Zuerst erledigen.',
 };
 
 export class IntroUi {

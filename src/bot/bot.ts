@@ -17,7 +17,8 @@ import { endExpedition } from '../sim/camp';
 import { createSim, stepSim } from '../sim/sim';
 import { heroStats, power } from '../sim/stats';
 import { DT, type Enemy, type Sim, type SimInput } from '../sim/types';
-import { inZone, sweepAngle } from '../sim/threats';
+import { inZone, lineOffset, sweepAngle } from '../sim/threats';
+import { guarded } from '../sim/combat';
 
 export interface BotSkill {
   /** Share of telegraphs (zones, shots, rushes, wind-ups) the bot does not react to at all. */
@@ -237,6 +238,17 @@ export class Bot {
     // Marked circles: out, and roll when it gets tight.
     for (const z of T.zones) {
       if (!this.aware(z)) continue;
+      // M16 prism strip: step out sideways (away from its middle line), roll when it is about to hit or already does.
+      if (z.line) {
+        const off = lineOffset(z, p.x, p.z);
+        if (off > z.line.width / 2 + 0.9) continue;
+        const side = (p.x - z.x) * z.line.dz - (p.z - z.z) * z.line.dx >= 0 ? 1 : -1;
+        mx += z.line.dz * side * 3;
+        mz += -z.line.dx * side * 3;
+        threat += 3;
+        if (z.t < 0.25) dodge = true;
+        continue;
+      }
       // M15 hour sector: out of its slice (away from the slice's middle), roll when it is about to strike.
       if (z.sector) {
         if (!inZone(z, p.x, p.z, 0.9)) continue;
@@ -301,9 +313,11 @@ export class Bot {
       // Sleeping guards (side passages, M11c lot types) are left alone until they wake up.
       if (e.state === 'dead' || e.sleep) continue;
       const d = Math.hypot(e.x - p.x, e.z - p.z);
-      if (d < 5) crowd++;
-      // Prefer what is open, then what is closest.
-      const score = d - (e.open > 0 ? 3 : 0);
+      // M16: the Spiegelbild is no target (its rush line below is still dodged).
+      const target = e.mirrorOf === undefined;
+      if (d < 5 && target) crowd++;
+      // Prefer what is open, then what is closest; M16: a guarded boss (the Ringvater) only once his guards are down.
+      const score = target ? d - (e.open > 0 ? 3 : 0) + (guarded(s, e) ? 12 : 0) : Infinity;
       if (score < nd) {
         nd = score;
         near = e;
