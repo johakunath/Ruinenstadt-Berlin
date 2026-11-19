@@ -40,6 +40,7 @@ import type { BreakableDef } from '../sim/breakables';
 import { campPlaceAt, type CampLayout } from '../data/camp-map';
 import { campStates } from '../sim/camp';
 import { CampStationsView } from './camp-stations';
+import { BarrierView } from './barriers';
 
 export interface RendererOptions {
   profile: Profile;
@@ -369,6 +370,8 @@ export class GameRenderer {
 
   private heroX = 0;
   private heroZ = 0;
+  /** P25 Türsteher neon bars at the Tor; built on the first frame of a level that has them. */
+  private barriers: BarrierView | null = null;
 
   render(sim: Sim, alpha: number, dt: number): void {
     this.time += dt;
@@ -377,6 +380,8 @@ export class GameRenderer {
     this.world.update(this.time);
     this.world.sync?.(sim.time - DT * (1 - alpha));
     if (this.world.tunnel) this.world.tunnel.update(tunnelState(sim, sim.time - DT * (1 - alpha)), dt);
+    if (!this.barriers && sim.level.barriers.length) this.scene.add((this.barriers = new BarrierView(sim.level.barriers)).group);
+    this.barriers?.update(sim, dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
     this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });

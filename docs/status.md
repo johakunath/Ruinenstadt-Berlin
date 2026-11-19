@@ -39,6 +39,7 @@ What is in the game now. Updated 2026-11-18. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-19)
 
+- WP5 finished: own looks for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter and Turmwächter; spoken boss lines (start, rage, signature special); Der Türsteher shuts the Tor passages with neon bars in rage; hidden blessings and the cache show through walls within 15 m; every normal ghoul in its own colours.
 - WP5 enemies: Zünder (runs up, lights its fuse, explodes; also when killed, smaller), Schildträger (riot shield in front, the hammer opens it), Heuler (stays back, howls the others on) in Xhain, Alexanderplatz and Mitte; Brocken in an orange vest, a fat Speier, cyan cables on the Kabelghul; boss helmets, caps and speaker heads sit upright (`docs/tasks/wp5-enemies.md`).
 
 ## 2026-11-18

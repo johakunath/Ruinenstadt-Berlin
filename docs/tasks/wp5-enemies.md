@@ -2,7 +2,7 @@
 
 Work package WP5 (Johannes, 2026-11-19): P30 quick wins, P12 remaining 2D enemies, H2 own boss models, S3 voices, P25 neon barriers. Order as listed; P25 waits for a Fable decision on dynamic colliders.
 
-Status 2026-11-19: steps 1 to 4 built (PR on `ccr-d099d58b-xmy2l2`; step 3 from Johannes' mockup picks). Step 5 waits for a Fable pass.
+Status 2026-11-19: steps 1 to 4 built (PR on `ccr-d099d58b-xmy2l2`; step 3 from Johannes' mockup picks). Step 5 built after the Fable pass (`docs/tasks/p25-neon-barriers.md`).
 
 ## Steps
 
@@ -12,7 +12,7 @@ Status 2026-11-19: steps 1 to 4 built (PR on `ccr-d099d58b-xmy2l2`; step 3 from 
 | 2 | P12: Zünder, Schildträger, Heuler (Ratte was built in M12b) | built |
 | 3 | H2: own models in code for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter, matching busts X04, X01, X05, X10, X06, X03 | built |
 | 4 | S3: short spoken lines for human and robot enemies and bosses | built (bosses only) |
-| 5 | P25: Türsteher neon barriers | needs a Fable decision (dynamic colliders in the level hash) |
+| 5 | P25: Türsteher neon barriers | built (decision, spec and handover: `docs/tasks/p25-neon-barriers.md`) |
 
 ## Handover (steps 1 and 2)
 

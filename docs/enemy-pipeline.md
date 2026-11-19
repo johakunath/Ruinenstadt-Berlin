@@ -59,7 +59,7 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 | Heuler | heuler | special | X | zombie+gear: swollen throat that bulges on the howl | ok | E08 | yes | none | P2 |
 | Boxenkopf | bass | special | M | zombie+gear: speaker head, violet rags | ok | E14 | yes | none | P4 |
 | Drohne | drone | normal | M | code (`buildDrone`) | ok | E15 | unverified | compare portrait and body | P4 |
-| Der Türsteher | tuersteher | boss | M | zombie+gear: bomber jacket, glasses, clipboard | placeholder | X17 | unverified | silhouette review | P4 |
+| Der Türsteher | tuersteher | boss | M | zombie+gear: bomber jacket, glasses, clipboard; rage effect: neon bars across the Tor passages (`src/render/barriers.ts`, P25) | placeholder | X17 | unverified | silhouette review; bar look on hardware | P4 |
 | Die Wachdrohne | wachdrohne | boss | M | code (`buildDrone`, big) | ok | X18 | unverified | compare portrait and body | P4 |
 | Der Dirigent | dirigent | boss | M | zombie+gear: tailcoat, bow tie, baton, speaker | placeholder | X19 | unverified | silhouette review | P4 |
 | Der Bassprediger | bassprediger | boss | M | zombie+gear: speaker head, five cables, mixer | ok | X09 | yes | none | P4 |

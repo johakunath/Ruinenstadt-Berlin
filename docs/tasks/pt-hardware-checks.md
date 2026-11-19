@@ -20,6 +20,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
 | Audio | Enemy sounds per type, listening test (A2); S3 boss voices: are the 48 lines clear, the right voice per boss, too loud or too often? (`?spawn=tuersteher`, `?spawn=weltzeituhr`) | `a2-audio-followups.md`, `wp5-enemies.md` › Step 4 |
 | Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
+| Mitte Tor fight in rage | Der Türsteher below half life, fight near the Brandenburger Tor: did the neon bars ever shut? Pink strip readable in time to step off? Bars visible in both profiles, also with the Tor cut away? Bodies pop out of a closing bar? (`?map=mitte&at=3&spawn=tuersteher,brute`) | `p25-neon-barriers.md` |
 
 ## Hardware checks
 
