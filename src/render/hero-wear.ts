@@ -79,7 +79,7 @@ export function pieceInfo(mesh: SkinnedMesh, piece: string, geo: BufferGeometry 
     } else if (piece === 'a_weste' && best === 'straps') {
       best = y < 0.82 ? 'thigh' : y < 1.09 ? 'belt' : 'straps';
     } else if (piece === 'f_stiefel' && y < 0.022) best = 'sole';
-    else if (piece === 'g_handsch' && Math.abs(x) < 0.6) best = 'cuff';
+    else if (piece === 'g_handsch' && Math.abs(x) < 0.665) best = 'cuff'; // the wrist ring (the glove starts at |x| 0.62)
     info.role[i] = ROLE_IDS.indexOf(best);
   }
   infos.set(geo, info);
