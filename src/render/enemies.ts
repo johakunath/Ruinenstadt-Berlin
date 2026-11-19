@@ -73,7 +73,7 @@ const TINTS: Record<EnemyKind, number[]> = {
   uhrwerk: [0xffffff], wurzler: [0x9aa878, 0xa8a070], kernspeier: [0xffffff],
   wurzelmutter: [0x8e9a6a], uhrwerkgross: [0xffffff], volkskoloss: [0xffffff], weltzeituhr: [0xffffff],
   // WP5 (busts E07, E06, E08): grey-brown ghouls.
-  zuender: [0xb8b098, 0xaaa88e], schild: [0xa4aaa0], heuler: [0xc0aaa0, 0xb4a49a],
+  zuender: [0xb8b098, 0xaaa88e], schild: [0xa4aaa0], heuler: [0xbca6a0, 0xb4a0a6],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
@@ -88,9 +88,11 @@ const CLOTH: Partial<Record<EnemyKind, number>> = {
   // M15 Alexanderplatz 1989: garden rags, the Brigadeghul's blue Blaumann.
   wurzler: 0x6a5634, wurzelmutter: 0x5a4a2a,
   // WP5: brown rags (Zünder), dark grey under the armour (Schildträger), a faded red shirt (Heuler).
-  zuender: 0x6a5a44, schild: 0x4a5058, heuler: 0x8a5048,
+  zuender: 0x6a5a44, schild: 0x4a5058, heuler: 0x9a3a30,
 };
 const CLOTH_BRIGADE = 0x34528e;
+/** WP5: rag tints for normal ghouls without own clothing colour (multiplies the painted rags), one per body. */
+const RAGS = [0xffffff, 0xd8b890, 0x8fa4c8, 0xc89880, 0x9cb088, 0xb49cc8, 0xe0d0a0, 0xa07868];
 
 /** Proportions by bone scale; children inherit, so a big chest needs a smaller head to match. */
 const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
@@ -113,7 +115,7 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   dirigent: { spine_02: 0.92, Head: 1.02 },
   bassprediger: { spine_02: 1.12, Head: 0.05 },
   schild: { spine_02: 1.12, Head: 0.9 }, heuler: { spine_02: 0.9, Head: 1.12 },
-  wurzler: { upperarm_l: 1.1, upperarm_r: 1.1 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.9 },
+  wurzler: { upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.05 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
@@ -536,7 +538,11 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       break;
     case 'heuler':
       // Bust E08: a swollen throat (gear [0]) that bulges while it howls, the rest is rags.
-      mount('neck_01', [[tf(new SphereGeometry(0.1, 10, 8).scale(1.15, 1, 1), 0, -0.05, 0.08), 'flesh']]);
+      mount('neck_01', [
+        [tf(new SphereGeometry(0.105, 16, 12).scale(1.25, 1.1, 1.05), 0, 0.0, 0.07), 'flesh'],
+        [tf(new SphereGeometry(0.055, 12, 8), 0.085, 0.03, 0.04), 'flesh'],
+        [tf(new SphereGeometry(0.05, 12, 8), -0.085, 0.02, 0.04), 'flesh'],
+      ]);
       break;
     case 'bass':
       // Boxenkopf (2D art, board E14): a speaker for a head, purple rags with a yellow hazard band.
@@ -1024,12 +1030,22 @@ export class EnemyView {
     this.root.scale.set(s * b[0], s * b[1], s * b[0]);
     const tints = TINTS[e.kind];
     const tint = tints[Math.floor(this.seed * tints.length)] as number;
+    // WP5 (Johannes): every normal ghoul looks a little different, skin and rags; bosses keep their colours.
+    const vary = this.skin === 'zombie' && !e.def.boss;
+    const r = (n: number): number => { const v = Math.sin((this.seed + e.id * 0.137) * 91.7 + n * 12.9) * 43758.5; return v - Math.floor(v) - 0.5; };
     for (const m of this.mats) {
-      if (m.name === 'skin') m.color.set(tint);
+      if (m.name === 'skin') {
+        m.color.set(tint);
+        if (vary) m.color.offsetHSL(r(1) * 0.12, r(2) * 0.3, r(3) * 0.22);
+      }
       m.emissive.setScalar(0);
     }
     const key: GearKey = this.opts.gdr && e.kind === 'walker' ? 'brigade' : e.kind;
-    for (const m of this.cloth) m.color.set(key === 'brigade' ? CLOTH_BRIGADE : CLOTH[e.kind] ?? 0xffffff);
+    for (const m of this.cloth) {
+      const own = key === 'brigade' ? CLOTH_BRIGADE : CLOTH[e.kind];
+      m.color.set(own ?? (vary ? RAGS[Math.floor((r(4) + 0.5) * RAGS.length)]! : 0xffffff));
+      if (vary) m.color.offsetHSL(r(5) * 0.08, r(6) * 0.2, r(7) * 0.2);
+    }
     if (this.body === 'drone') {
       const big = e.kind === 'wachdrohne';
       const d = (big ? this.drones.big : this.drones.small) ?? buildDrone(this.materials, this.castShadow, big);
