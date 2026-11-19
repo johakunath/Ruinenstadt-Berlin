@@ -70,6 +70,14 @@ Damage taken is the winning try, as a share of max life (healing during the figh
 
 `node tools/balance.mjs 3 normal johannes 1 --map=alex`, fresh gear, stand-in bosses (Rattenmutter, Turmwächter, Brandmeister, Hauptmann) and the old roster: 3 of 3 campaigns won, 5.7 deaths and 25.0 min per campaign. Deaths sit at the Lustgarten (4.3 per run: tier 16 against fresh gear) and the first boss (1.3); the rest is easy (17 to 35 % damage taken). Read: a hero arriving with Xhain gear finds the district too easy until its own enemies and bosses exist; calibrate `ALEX_TIER` after step 7 with a carried-gear start. A first run stopped for good at the Kino International: the Plattenbau side passage ran into its footprint (fixed, test added).
 
+## Mitte with its own enemies (M15 step 8, 2026-11-19)
+
+`node tools/balance.mjs 3 normal johannes 1 --map=mitte`, fresh gear, district roster and bosses: 3 of 3 campaigns won, 2.3 deaths and 20.3 min per campaign. Deaths at the Leipziger Straße (2.0 per run, 167 % damage taken: tier 24 against fresh gear, as the Alex Lustgarten) and the Friedrichstraße (0.3). Bosses: Türsteher 14 s, 26 %; Wachdrohne 36 s, 26 %; Dirigent 13 s, 27 %; Bassprediger 28 s, 21 %. Read: same shape as the Alex: a hard opening against fresh gear, then too easy. `MITTE_TIER` stays 24 … 46 until the P33 decision (tier against carried power).
+
+Chain rerun (`--chain`, 2026-11-19, same seed): 3 of 3 chains won all four districts; Mitte with carried gear (power 395 to 641 in): 0 deaths, 9 to 17 % damage per fight, bosses 7 to 36 s. P33 still stands.
+
+Tunnels (no bot run, the bot plays no tunnels): each line starts at the late tier of its start district, S3 14 … 19, U8 25 … 30 (was 14 … 19), U2 33 … 38.
+
 ## District chain with carried gear (2026-11-18)
 
 `node tools/balance.mjs 3 normal johannes 1 --chain`: one hero plays Köpenick, Xhain, Alexanderplatz and Mitte in order; gear, Schrott and camp carry over (tunnels between the districts and the bot's missing systems, backlog P33, are not played).

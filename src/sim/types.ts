@@ -210,7 +210,7 @@ export interface Enemy {
 
 export type SimEvent =
   | { type: 'swing'; attack: AttackId; weight: HitWeight }
-  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean; element?: ElementId; quiet?: boolean; note?: string }
+  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean; element?: ElementId; quiet?: boolean; note?: string; /** D9: the weapon fits the enemy's class. */ effective?: boolean }
   /** Burn damage summed over a short time (no hit feel). */
   | { type: 'dot'; id: number; x: number; z: number; damage: number; killed: boolean }
   | { type: 'ability'; id: import('../data/powers').PowerId; name: string; ultimate: boolean }

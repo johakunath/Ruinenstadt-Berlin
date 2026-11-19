@@ -6,7 +6,9 @@ import { POWERS } from '../data/powers';
 import { selectPower } from '../sim/abilities';
 import { BAG_SIZE, bulkCandidates, equipItem, salvageItem, setImplantMode, unequipItem } from '../sim/inventory';
 import { isUpgrade, scrapValue, shownLevel, type Item } from '../sim/items';
-import { heroStats, lostSetTiers, setCount, weaponDps, type Equipment, type HeroStats } from '../sim/stats';
+import { heroStats, lostSetTiers, setCount, weaponDamage, weaponDps, type Equipment, type HeroStats } from '../sim/stats';
+import { ENEMY_CLASS_NAME } from '../data/enemies';
+import { strongAgainst, weaponLookId } from '../data/weapon-look';
 import type { Sim } from '../sim/types';
 import { ITEM_ICONS } from './item-icons';
 import { POWER_GLYPHS } from './glyphs';
@@ -20,7 +22,11 @@ export const RES_ICON = { scrap: 'R05', stoff: 'R01', metall: 'R02', chemie: 'R0
 export const resIcon = (k: keyof typeof RES_ICON): string => `<img class="mico" src="${artUrl(RES_ICON[k])}" alt="" width="24" height="24">`;
 export const esc = (s: string): string => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const color = (i: Item): string => i.set ? '#75d68a' : RARITIES[i.rarity].color;
-export const itemIcon = (i: { base: string; slot: SlotId }): string => ITEM_ICONS[i.base] ? `<img src="${artUrl(ITEM_ICONS[i.base]!)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
+/** Icon of an item: `base:set` first (set weapons with their own icon, D10), then the base. */
+export const itemIcon = (i: { base: string; slot: SlotId; set?: string }): string => {
+  const id = (i.set ? ITEM_ICONS[`${i.base}:${i.set}`] : undefined) ?? ITEM_ICONS[i.base];
+  return id ? `<img src="${artUrl(id)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
+};
 const pct = (v: number): number => v * 100;
 /** 2D SINFO: icon and a one-line tooltip per stat row (hover on desktop, tap on touch). */
 const STAT_INFO: Record<string, [UiIcon, string]> = {
@@ -49,7 +55,7 @@ const fmt = (v: number, d: number, u: string): string => v.toFixed(d) + u;
 
 /** 2D statLine: the main value of an item in one line. */
 export function statLine(i: Item): string {
-  if (i.slot === 'w') return `${i.value} Schaden · ${WEAPON_KINDS[i.kind as WeaponKindId].name} · ${Math.round(weaponDps(i))} DPS`;
+  if (i.slot === 'w') return `${Math.round(weaponDamage(i))} Schaden · ${WEAPON_KINDS[i.kind as WeaponKindId].name} · ${Math.round(weaponDps(i))} DPS`;
   if (i.slot === 'a') return `+${i.value} Leben`;
   const stat = SLOT_MAIN_STATS[i.slot] ?? ATTRIBUTE_STATS[i.kind as AttributeKindId];
   const a = AFFIXES[stat];
@@ -89,6 +95,8 @@ function extraLines(i: Item, eq: Equipment): string {
   const lp = LEGENDARY_POWERS[i.base as LegendaryId];
   if (i.rarity === 3 && lp) h += `<div class="af legend">${esc(lp.description)}</div>`;
   if (i.element) h += `<div class="af" style="color:${ELEMENTS[i.element].color}">Element: ${ELEMENTS[i.element].name}</div>`;
+  // D9: the enemy classes this weapon's damage type is strong against.
+  if (i.slot === 'w' && i.kind in WEAPON_KINDS) h += `<div class="af strong">Stark gegen: ${strongAgainst(weaponLookId(i.kind as WeaponKindId, i.base, i.set)).map((c) => ENEMY_CLASS_NAME[c]).join(', ')}</div>`;
   for (const id of i.mods ?? []) { const m = WEAPON_MODS.find(x => x.id === id); if (m) h += `<div class="af mod">Aufsatz ${m.name} · ${m.description}</div>`; }
   return h;
 }

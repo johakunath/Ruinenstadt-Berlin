@@ -62,8 +62,12 @@ export interface RendererOptions {
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
   map?: { def: MapDef; lots: Lot[]; props: Prop[]; breakables?: BreakableDef[] };
-  /** M15: load the mech bodies (Alexanderplatz, or `?spawn=` of a mech kind elsewhere). */
-  mechs?: boolean;
+  /** M15: load the mech bodies (Alexanderplatz, or `?spawn=` of a mech kind elsewhere); H3: 'small' only Leela (the Turmwächter). */
+  mechs?: boolean | 'small';
+  /** H3: load the human boss base (default true). */
+  humans?: boolean;
+  /** H3: load the female boss base (default true). */
+  females?: boolean;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -203,7 +207,7 @@ export class GameRenderer {
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
     const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
-    const assets = await loadCharacters(materials, opts.mechs || opts.map?.def.id === 'alex');
+    const assets = await loadCharacters(materials, opts.map?.def.id === 'alex' || (opts.mechs ?? false), opts.humans ?? true, opts.females ?? true);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
     // the first frame applies the real look.
@@ -279,7 +283,7 @@ export class GameRenderer {
         this.views.get(ev.id)?.hit();
         const feel = HIT_FEEL[ev.weight];
         // Procs and area ticks (quiet) spark a little and never shake the camera.
-        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical));
+        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical), !!ev.effective);
         if (!ev.quiet) this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1) * (ev.critical ? 1.25 : 1));
         if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
         break;
@@ -393,7 +397,7 @@ export class GameRenderer {
     this.barriers?.update(sim, dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
-    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', set: w?.set, element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();

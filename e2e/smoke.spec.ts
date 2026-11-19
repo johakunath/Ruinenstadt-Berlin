@@ -163,7 +163,8 @@ test('equipment changes combat and HUD health, and survives a retry', async ({ p
     const g = window.__game!, sim = g.sim(), p = sim.player;
     g.hold(true);
     const enemy = sim.enemies[0]!;
-    enemy.def = { ...enemy.def, speed: 0, attackRange: 0, knockbackTaken: 0 };
+    // No class: the D9 weapon-type bonus would hide the equipped damage under test.
+    enemy.def = { ...enemy.def, speed: 0, attackRange: 0, knockbackTaken: 0, classes: [] };
     Object.assign(enemy, { x: 3, px: 3, z: 1.5, pz: 1.5, hp: 1000, maxHp: 1000, state: 'chase', stateT: 0, kx: 0, kz: 0 });
     sim.enemies = [enemy]; sim.spawnT = Infinity;
     Object.assign(p, { x: 3, px: 3, z: 0, pz: 0, facing: 0, pfacing: 0 });
@@ -205,6 +206,18 @@ test('M19: the S3 tunnel loads, the first fight starts, the map shows the tubes'
   await page.waitForFunction(() => window.__game!.sim().run.phase === 'fight', null, { timeout: 90_000 });
   await page.keyboard.press('m');
   await expect(page.locator('.map-svg svg')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('M15 step 8: the U2 tunnel loads with the mechs, its first fight brings Alexanderplatz enemies', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=tunnel&line=2&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Tunnelmund');
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; s.player.hp = 1e9; });
+  await page.waitForFunction(() => window.__game!.sim().enemies.some((e) => ['uhrwerk', 'wurzler', 'kernspeier'].includes(e.kind)), null, { timeout: 90_000 });
+  // A few rendered frames with the mechs on screen.
+  await page.waitForTimeout(1500);
   expect(errors).toEqual([]);
 });
 

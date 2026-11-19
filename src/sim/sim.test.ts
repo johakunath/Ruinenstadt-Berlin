@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTACKS, HIT_FEEL, PLAYER } from '../data/combat';
+import { ATTACKS, HIT_FEEL, PLAYER, WEAPON } from '../data/combat';
 import { ENEMIES } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { spawnEnemy } from './enemies';
@@ -57,7 +57,8 @@ describe('attack chain', () => {
     const log = run(sim, secs(0.6));
     const hits = log.filter((ev) => ev.type === 'hit');
     expect(hits).toHaveLength(1);
-    expect(e.hp).toBe(ENEMIES.brute.hp - ATTACKS.light1.damage);
+    // The starter blade cuts Untote: + the D9 type bonus.
+    expect(e.hp).toBe(ENEMIES.brute.hp - Math.round(ATTACKS.light1.damage * (1 + WEAPON.typeBonus)));
     expect(e.z).toBeGreaterThan(1.4);
   });
 
