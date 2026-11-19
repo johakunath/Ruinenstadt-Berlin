@@ -4,6 +4,7 @@
 // run sees every event type once. Places are 2D pixel distances at 30 px per meter.
 import { CONSUMABLES } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
+import { FUNDE, FUNDE_TEILE, fundId, TEIL_BONUS, type FundKind } from '../data/funde';
 import { PX } from '../data/powers';
 import { SHRINES, SURVIVORS, type ShrineId, type SurvivorId } from '../data/progression';
 import { offerBlessings } from './blessings';
@@ -30,6 +31,8 @@ export interface RunContent {
   /** Seconds until this leg's event starts (2D `evIn`). */
   timer: number;
   hidden: Array<{ x: number; z: number; got: boolean }>;
+  /** Funde (2D #14, #27): fixed spots per district map (same every run); `got` mirrors `statContext.funde`. Missing in older saves. */
+  funde?: Fund[];
   shrines: Array<{ x: number; z: number; used: boolean }>;
   /** Seconds left per shrine buff. */
   shrine: Partial<Record<ShrineId, number>>;
@@ -50,8 +53,15 @@ export interface RunContent {
   rng: number;
 }
 
+export interface Fund { id: string; kind: FundKind; i: number; x: number; z: number; got: boolean }
+
+const FUND_SPOTS = new WeakMap<Level, Fund[]>();
+
+/** District index of a map that has Funde (tunnels, camp and the courtyard have none). */
+export const FUNDE_MAPS: Readonly<Record<string, number>> = { koepenick: 0, xhain: 1, alex: 2, mitte: 3 };
+
 export const CONTENT = {
-  delay: 5, touch: 34 * PX, hidden: 5, hiddenTouch: 1.2, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
+  delay: 5, touch: 34 * PX, hidden: 5, hiddenTouch: 1.2, fundTouch: 1.3, fundApart: 28, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
   trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.4 },
   /** Späti counter: stand this close to the customer spot; no trade while enemies are this near. */
   shop: { touch: 1, calm: 12, offers: 4 },
@@ -104,6 +114,38 @@ function routeDist(L: Level, x: number, z: number): number {
   return best;
 }
 
+/**
+ * Funde of this map (2D #14, #27): from a seed of the map alone and once per level, so a Fund left behind
+ * waits at the same spot next run; `got` from `statContext.funde`. Undefined on maps without Funde.
+ * Also called when a checkpoint saved before Funde existed is loaded.
+ */
+export function placeFunde(s: Sim): Fund[] | undefined {
+  const L = s.level, got = s.statContext.funde ?? [];
+  const cached = FUND_SPOTS.get(L);
+  if (cached) return cached.map((f) => ({ ...f, got: got.includes(f.id) }));
+  const district = FUNDE_MAPS[L.id];
+  if (district === undefined || !L.expedition || L.gates.length) return undefined;
+  const fr = new Rng((0x9e3779b9 ^ (district + 1) * 0x85ebca6b) >>> 0), b = L.bounds, fs: Fund[] = [];
+  const kinds: Array<[FundKind, number]> = [...Array.from({ length: FUNDE_TEILE }, (_, i) => ['teil', i] as [FundKind, number]), ...FUNDE[district]!.kassetten.map((_, i) => ['kassette', i] as [FundKind, number])];
+  for (const [kind, i] of kinds) {
+    let best: { x: number; z: number } | null = null, bs = -Infinity;
+    for (let t = 0, found = 0; t < 900 && found < 14; t++) {
+      const x = fr.range(b.minX + 4, b.maxX - 4), z = fr.range(b.minZ + 4, b.maxZ - 4);
+      if (!reachable(L, x, z) || inFight(L, x, z, 4) || restAt(L.rests, x, z) >= 0) continue;
+      if (Math.hypot(x - L.start.x, z - L.start.z) <= 20 || fs.some((f) => Math.hypot(f.x - x, f.z - z) < CONTENT.fundApart)
+        || L.hiddenSpots.some((h) => Math.hypot(h.x - x, h.z - z) < 6) || routeDist(L, x, z) <= 6 || routeDist(L, x, z) >= 40
+        || !reachable(L, x + 0.8, z) || !reachable(L, x - 0.8, z) || !reachable(L, x, z + 0.8) || !reachable(L, x, z - 0.8)) continue;
+      found++;
+      const sc = enclosure(L, x, z);
+      if (sc > bs) { bs = sc; best = { x, z }; }
+    }
+    if (best) { const id = fundId(district, kind, i); fs.push({ id, kind, i, ...best, got: got.includes(id) }); }
+  }
+  // Once per level: later runs add shrine colliders, which must not move a Fund.
+  FUND_SPOTS.set(L, fs.map((f) => ({ ...f, got: false })));
+  return fs;
+}
+
 /** Plans a run: which leg gets which event, where the hidden blessings and shrines are. Seeded. */
 export function createContent(s: Sim, seed: number): RunContent {
   const c = emptyContent();
@@ -141,13 +183,15 @@ export function createContent(s: Sim, seed: number): RunContent {
     }
     return best;
   };
+  // Funde first (their own map seed), so the hidden blessings keep clear of them.
+  c.funde = placeFunde(s);
   // Fixed spots first (M19/M16b: the end of a side passage); then random ones up to `CONTENT.hidden`.
   for (const h of L.hiddenSpots) c.hidden.push({ x: h.x, z: h.z, got: false });
   // Hidden blessings (2D `hidSpots`): five (2D three; maps are bigger), far from the start and from each other, in corners off the route.
   for (let i = L.hiddenSpots.length; i < CONTENT.hidden; i++) {
     const spot = sample(
       (x, z) => Math.hypot(x - L.start.x, z - L.start.z) > CONTENT.hiddenApart && !c.hidden.some((h) => Math.hypot(h.x - x, h.z - z) < CONTENT.hiddenApart * 2)
-        && routeDist(L, x, z) > 9 && routeDist(L, x, z) < 34 && reachable(L, x + 0.8, z) && reachable(L, x - 0.8, z) && reachable(L, x, z + 0.8) && reachable(L, x, z - 0.8),
+        && routeDist(L, x, z) > 9 && routeDist(L, x, z) < 34 && !(c.funde ?? []).some((f) => Math.hypot(f.x - x, f.z - z) < 6) && reachable(L, x + 0.8, z) && reachable(L, x - 0.8, z) && reachable(L, x, z + 0.8) && reachable(L, x, z - 0.8),
       (x, z) => enclosure(L, x, z),
     );
     if (spot) c.hidden.push({ ...spot, got: false });
@@ -292,6 +336,20 @@ export function contentMarks(s: Sim): Array<{ x: number; z: number; kind: RunEve
   return out;
 }
 
+/** Picks up a Fund for good (2D #14, #27): saved in the profile, an Uhrwerkteil also raises the stats. */
+export function collectFund(s: Sim, f: Fund): void {
+  f.got = true;
+  const got = [...(s.statContext.funde ?? []), f.id], district = FUNDE_MAPS[s.level.id] ?? 0, D = FUNDE[district]!;
+  s.statContext.funde = got;
+  if (f.kind === 'teil') applyShrines(s);
+  // Count from the profile, not the run content: a resumed checkpoint can hold older `got` flags.
+  const total = f.kind === 'teil' ? FUNDE_TEILE : D.kassetten.length;
+  const found = Array.from({ length: total }, (_, i) => fundId(district, f.kind, i)).filter((id) => got.includes(id)).length;
+  const title = f.kind === 'teil' ? `Uhrwerkteil ${found} von ${total}` : `Kassette · ${D.kassetten[f.i]!.title}`;
+  const line = f.kind === 'teil' ? (found === total ? `${TEIL_BONUS[f.i % 2]!.text} · alle: ${D.bonus.name}, ${D.bonus.text}` : `${TEIL_BONUS[f.i % 2]!.text}, für immer`) : D.kassetten[f.i]!.text;
+  s.events.push({ type: 'fund', kind: f.kind, x: f.x, z: f.z, title, line });
+}
+
 function applyShrines(s: Sim): void {
   const c = s.content;
   setLoadout(s, s.equipment, { ...s.statContext, shrines: { as: (c.shrine.as ?? 0) > 0, res: (c.shrine.res ?? 0) > 0, spd: (c.shrine.spd ?? 0) > 0 } });
@@ -336,6 +394,12 @@ export function updateContent(s: Sim): void {
     c.shrine[id] = CONTENT.shrineTime;
     applyShrines(s);
     s.events.push({ type: 'shrine', id, x: h.x, z: h.z });
+  }
+  for (const f of c.funde ?? []) {
+    if (f.got || !near(f, CONTENT.fundTouch)) continue;
+    // A checkpoint written before the pickup still holds it as open: never count a Fund twice.
+    if (s.statContext.funde?.includes(f.id)) { f.got = true; continue; }
+    collectFund(s, f);
   }
   for (const h of c.hidden) {
     if (h.got || !near(h, CONTENT.hiddenTouch) || s.abilities.offers.length) continue;

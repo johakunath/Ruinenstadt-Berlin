@@ -1,10 +1,11 @@
-// Sound, generated with WebAudio: no audio files. Hits play on the exact sim step of the damage frame.
+// Sound, generated with WebAudio; only the S3 boss lines are files (voices.ts). Hits play on the exact sim step of the damage frame.
 import type { HitWeight } from '../data/combat';
 import type { EnemyKind } from '../data/enemies';
 import type { Sim, SimEvent } from '../sim/types';
 import type { SpecialKind } from '../sim/threats';
 import { SoundEffects, Synth, type SfxId } from './sfx';
 import { Music, type MusicState } from './music';
+import { BossVoices } from './voices';
 
 /** Wind-up voice per kind (S2); other bosses growl, other bodies use the walker's. */
 const VOICE: Partial<Record<EnemyKind, SfxId>> = {
@@ -13,10 +14,13 @@ const VOICE: Partial<Record<EnemyKind, SfxId>> = {
   kabel: 'growlRunner', bass: 'growlBass', tuersteher: 'growlTuer', bassprediger: 'growlBass',
   // M15 Alexanderplatz: clockwork ticks and a steam hiss, a wooden creak, a seed pop, the big clock's chime.
   uhrwerk: 'growlUhr', uhrwerkgross: 'growlUhr', wurzler: 'growlWurz', wurzelmutter: 'growlWurz', kernspeier: 'growlKern', volkskoloss: 'growlKoloss', weltzeituhr: 'growlZeit',
+  // WP5: the Schildträger grunts like a Brocken, the Heuler wails.
+  schild: 'growlBrute', heuler: 'growlHowl',
 };
 /** M12c: specials with their own voice at the wind-up and the release (by special, then by kind). */
-const WIND: Partial<Record<SpecialKind, SfxId>> = { leap: 'crackle', bass: 'growlBass', shove: 'growlTuer', grab: 'growlTuer', land: 'spin' };
-const GO: Partial<Record<SpecialKind, SfxId>> = { leap: 'dash', bass: 'thump', grab: 'dash', beat: 'tap' };
+// WP5 (2D): the Zünder's fuse hisses ('zap'), the Heuler wails and the horn sounds when the others are driven on.
+const WIND: Partial<Record<SpecialKind, SfxId>> = { leap: 'crackle', bass: 'growlBass', shove: 'growlTuer', grab: 'growlTuer', land: 'spin', fuse: 'zap', howl: 'growlHowl' };
+const GO: Partial<Record<SpecialKind, SfxId>> = { leap: 'dash', bass: 'thump', grab: 'dash', beat: 'tap', howl: 'horn' };
 
 export class GameAudio {
   private ctx: AudioContext | null = null;
@@ -30,6 +34,7 @@ export class GameAudio {
   private eco = false;
   private room: GainNode | null = null;
   private cancelPrewarm: (() => void) | null = null;
+  private voices: BossVoices | null = null;
 
   /** Must be called from a user gesture (the Spielen button). */
   start(): void {
@@ -62,6 +67,7 @@ export class GameAudio {
     this.effects = new SoundEffects(synth); this.effects.setEco(this.eco);
     this.cancelPrewarm = this.effects.prewarm();
     this.music = new Music(synth);
+    this.voices = new BossVoices(this.ctx, this.master);
     if (this.musicEnabled && this.volume > 0) this.music.start();
     const len = this.ctx.sampleRate;
     this.noise = this.ctx.createBuffer(1, len, len);
@@ -160,6 +166,11 @@ export class GameAudio {
     if (sim) {
       const source = 'x' in event ? event : 'id' in event ? sim.enemies.find(e=>e.id===event.id) : undefined;
       if(source) ({volume,pan}=spatialAudio(source.x-sim.player.x,source.z-sim.player.z));
+      // S3: boss lines (spawn loads them; first act, rage and the signature special speak).
+      if (this.voices && this.volume > 0 && (event.type === 'spawn' || event.type === 'enemyWindup' || event.type === 'enemySpecial' || event.type === 'bossRage')) {
+        const boss = sim.enemies.find(e => e.id === event.id);
+        if (boss?.def.boss) this.voices.onEvent(event, boss.id, boss.kind, volume, pan);
+      }
     }
     // Out of earshot: no voices, and the hit throttle stays free for audible hits (2D returns early).
     if (sim && volume <= 0.02 && (event.type === 'hit' || event.type === 'dot' || event.type === 'bolt' || event.type === 'ignite' || event.type === 'impact' || event.type === 'shock')) return;
@@ -179,7 +190,7 @@ export class GameAudio {
       case 'heal': if (event.source === 'trader') this.play('heal'); break;
       case 'secondWind': this.play('lvl'); break;
       case 'blessing': this.play('coin'); break;
-      case 'hidden': case 'shrine': this.play('legend'); break;
+      case 'hidden': case 'shrine': case 'fund': this.play('legend'); break;
       case 'trade': this.play('bell'); break;
       case 'buy': this.play('coin'); break;
       case 'streak': this.play('coin'); break;
@@ -214,7 +225,7 @@ export class GameAudio {
       }
       case 'enemyShot': this.play('spit',0,pan,volume); break;
       case 'spotLock': this.play('lockBeep',0,pan,volume); break;
-      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':event.kind==='root'?'wood':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play('pop',0,pan,volume); break;
+      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':event.kind==='root'?'wood':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play(event.r>2?'boom':'pop',0,pan,volume); break;
       case 'bossRage': this.play('roar'); this.play('horn'); break;
       case 'ability': {
         const cues:Record<string,SfxId>={Kreissäge:'spin',Fechtsprung:'dash',Säbeltanz:'spin',Fallhammer:'boom',Gullydeckel:'wood',Abrissbirne:'boom',Nagelsturm:'sling',Brandsatz:'ignite',Sperrfeuer:'heavy',Spießrute:'heavy',Stabhochsprung:'dash',Standarte:'legend'};
@@ -256,7 +267,7 @@ export class GameAudio {
   dispose(): void {
     this.cancelPrewarm?.(); this.music?.stop();
     if (this.ctx) void this.ctx.close();
-    this.ctx = null; this.master = null; this.effects = null; this.music = null; this.rotorGain = null;
+    this.ctx = null; this.master = null; this.effects = null; this.music = null; this.rotorGain = null; this.voices = null;
   }
 
   /** 2D initAudio ambient wind. */

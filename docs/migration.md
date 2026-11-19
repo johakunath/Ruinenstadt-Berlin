@@ -15,6 +15,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | Painted textures: M11c lot types and plants, T5 Köpenick landmarks, T6 Xhain, Mitte step 9 | Codex | open: `docs/asset-pipeline.md` › Texture queue and `docs/tasks/m15-mitte.md` |
 | Texture performance and rail follow-up: T1b, plus profile checks for the new painted batches | Claude and Johannes | open: `docs/tasks/t1b-ground-polish.md`, `docs/tasks/pt-hardware-checks.md` |
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals, P24 worn landmarks | Claude · Opus high | open: `docs/backlog.md` |
+| WP5 enemies and bosses: step 3 H2 boss models (after Johannes picks the looks in `docs/mockups/wp5-boss-looks.html`), step 4 S3 voices (after he picks the tool), step 5 P25 neon barriers (Fable decision on dynamic colliders first) | Claude · Opus high (step 5: Fable high first) | open: `docs/tasks/wp5-enemies.md` |
 | Next district Charlottenburg (Q8), concept first | Claude · Fable high (concept), Opus high (build) | not started: `docs/maps/guidelines.md` |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
 

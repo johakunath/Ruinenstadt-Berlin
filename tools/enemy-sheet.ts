@@ -67,7 +67,7 @@ for (let i = 0; i < n; i++) {
   // Let fades and springs settle on the pose.
   for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
   const size = Number(q.get('size') ?? 0) || Math.max(1, def.body === 'rex' ? 3.2 : def.body === 'raptor' ? 1.3 : def.kind === 'wachdrohne' ? 1.6 : def.scale);
-  if (view === 'front') cam.position.set(0, 1.3 * size, 6.2 * size); else if (view === 'game') cam.position.set(0, 7 * size, 6.6 * size); else cam.position.set(-4.6 * size, 2.2 * size, 4.2 * size);
+  if (view === 'front') cam.position.set(0, 1.3 * size, 6.2 * size); else if (view === 'back') cam.position.set(0, 1.3 * size, -6.2 * size); else if (view === 'profile') cam.position.set(6.2 * size, 1.3 * size, 0); else if (view === 'game') cam.position.set(0, 7 * size, 6.6 * size); else cam.position.set(-4.6 * size, 2.2 * size, 4.2 * size);
   cam.lookAt(0, 0.95 * size * (view === 'game' ? 0.5 : 1), 0.2);
   renderer.setViewport(i * W, 0, W, H);
   renderer.setScissor(i * W, 0, W, H);

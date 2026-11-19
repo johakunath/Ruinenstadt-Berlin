@@ -3,6 +3,7 @@ import { AFFIXES, ATTRIBUTE_STATS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, S
   type AffixId, type AttributeKindId, type BaseId, type ElementId, type SetId, type SlotId, type WeaponKindId } from '../data/items';
 import { BASES } from '../data/item-names';
 import { WEAPON_MODS, type MealId } from '../data/crafting';
+import { fundeAffixes } from '../data/funde';
 import { DRILL, type CampBuildingId, type CampUpgradeId, type PerkId, type SurvivorId } from '../data/progression';
 import type { Item } from './items';
 
@@ -16,6 +17,8 @@ export interface StatContext {
   meal?: MealId;
   drill?: number;
   shrines?: Partial<Record<'as' | 'res' | 'spd', boolean>>;
+  /** Funde found for good (2D #14, #27, `data/funde.ts` ids). */
+  funde?: string[];
 }
 export interface HeroStats {
   kind: WeaponKindId;
@@ -58,6 +61,14 @@ export function setCount(eq: Equipment, set: SetId): number {
   return SLOTS.filter(slot => eq[slot]?.set === set).length;
 }
 
+/** 2D #29: set bonus tiers (2, 3, 5 pieces) that putting `item` on would lose. Empty when no tier is lost. */
+export function lostSetTiers(eq: Equipment, item: Item): { set: SetId; tiers: (2 | 3 | 5)[] } | null {
+  const old = eq[item.slot]?.set;
+  if (!old || old === item.set) return null;
+  const n = setCount(eq, old), tiers = ([2, 3, 5] as const).filter(t => n >= t && n - 1 < t);
+  return tiers.length ? { set: old, tiers } : null;
+}
+
 export function gearAffixes(eq: Equipment, ctx: StatContext): Record<AffixId, number> {
   const a = Object.fromEntries(Object.keys(AFFIXES).map(id => [id, 0])) as Record<AffixId, number>;
   for (const slot of SLOTS) {
@@ -78,6 +89,7 @@ export function gearAffixes(eq: Equipment, ctx: StatContext): Record<AffixId, nu
     }
   }
   if (ctx.camp.turm) a.res += 8;
+  for (const [id, v] of Object.entries(fundeAffixes(ctx.funde)) as Array<[AffixId, number]>) a[id] += v;
   for (const set of Object.keys(SET_BONUSES) as SetId[]) {
     const n = setCount(eq, set);
     for (const bonus of SET_BONUSES[set]) if (n >= bonus.pieces) {
