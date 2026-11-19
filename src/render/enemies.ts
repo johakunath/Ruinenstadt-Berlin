@@ -130,6 +130,15 @@ const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
 };
+/** H3: humanoid bosses stand upright (`EnemyView.straighten`); the Rattenmutter keeps her hunch. */
+const UPRIGHT: Partial<Record<EnemyKind, true>> = {
+  feldwebel: true, hauptmann: true, schaffner: true, waechter: true, grenzer: true, brandmeister: true, spreehexe: true,
+  tuersteher: true, dirigent: true, bassprediger: true, wurzelmutter: true,
+};
+/** The bones whose zombie-to-upright turn `straighten` applies. */
+const STRAIGHT = ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head', 'clavicle_l', 'clavicle_r'] as const;
+/** H3: arm bones, straightened only while walking or standing (strikes and specials keep their own arm motion). */
+const STRAIGHT_ARMS = ['upperarm_l', 'upperarm_r', 'lowerarm_l', 'lowerarm_r'] as const;
 /** Bent forward all the time (the Rattenmutter's hunch, the Kabelghul's crouch). */
 const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.34, kabel: 0.28, heuler: 0.12 };
 /** Eye glow per kind (zombie rig); bosses default to ember, the rest to the zombie green. */
@@ -1298,6 +1307,10 @@ export class EnemyView {
   /** WP5 step 3: coat skirts of the worn gear that hang instead of turning fully with the pelvis. */
   private hanging: Object3D[] = [];
   private readonly bones = new Map<string, Object3D>();
+  /** H3: this body stands upright (humanoid bosses): the zombie clips' hunch is taken out of the spine. */
+  private upright = false;
+  /** H3: per spine bone, the turn from the zombie idle pose to the upright idle pose (local space). */
+  private straight: Array<{ bone: Object3D; fix: Quaternion; arm: boolean }> | null = null;
   private readonly model: Object3D | null = null;
   private readonly clips: Map<string, AnimationClip> | null = null;
   private rack: WeaponRack | null = null;
@@ -1481,11 +1494,43 @@ export class EnemyView {
     const m = new AnimationMixer(this.model);
     m.clipAction(clip).play();
     m.update(0);
+    // H3: an upright boss gets its gear fitted in the straightened pose it will stand in.
+    if (this.upright) this.straighten(true);
     this.model.updateMatrixWorld(true);
     const out = build();
     m.stopAllAction();
     m.uncacheRoot(this.model);
     return out;
+  }
+
+  /**
+   * H3 (Johannes, 2026-11-19): the humanoid bosses lost the ghouls' hunch. The zombie and the upright clips share
+   * one skeleton, so the hunch is only in the spine: per spine bone the turn from the first frame of
+   * Zombie_Idle_Loop to the first frame of Idle_Loop, measured once, is applied after every animation update.
+   * The gait of every zombie clip stays, the back stands up.
+   */
+  private straighten(arms: boolean): void {
+    if (!this.straight) {
+      this.straight = [];
+      const zi = this.clips?.get('Zombie_Idle_Loop'), ui = this.clips?.get('Idle_Loop');
+      if (!zi || !ui || !this.model) return;
+      const sample = (clip: AnimationClip): Map<string, Quaternion> => {
+        const m = new AnimationMixer(this.model!);
+        m.clipAction(clip).play();
+        m.update(0);
+        const out = new Map<string, Quaternion>();
+        for (const n of [...STRAIGHT, ...STRAIGHT_ARMS]) { const b = this.model!.getObjectByName(n); if (b) out.set(n, b.quaternion.clone()); }
+        m.stopAllAction();
+        m.uncacheRoot(this.model!);
+        return out;
+      };
+      const z = sample(zi), u = sample(ui);
+      for (const n of [...STRAIGHT, ...STRAIGHT_ARMS]) {
+        const b = this.model.getObjectByName(n), qz = z.get(n), qu = u.get(n);
+        if (b && qz && qu) this.straight.push({ bone: b, fix: qu.clone().multiply(qz.clone().invert()), arm: (STRAIGHT_ARMS as readonly string[]).includes(n) });
+      }
+    }
+    for (const s of this.straight) if (arms || !s.arm) s.bone.quaternion.premultiply(s.fix);
   }
 
   /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. */
@@ -1531,6 +1576,7 @@ export class EnemyView {
       for (const m of this.mats) m.emissive.setScalar(0);
       this.inner.position.y = (big ? BOSS.wachdrohne.height : 1.8) / (this.root.scale.y || 1);
     }
+    this.upright = this.skin === 'zombie' && !!UPRIGHT[e.kind];
     if (this.skin === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
@@ -1620,6 +1666,7 @@ export class EnemyView {
     this.skip = skip;
     this.anim.update(this.pending);
     this.pending = 0;
+    if (this.upright) this.straighten(e.state === 'chase');
     if (this.hanging.length) this.hangSkirts(e.state === 'dead');
   }
 
