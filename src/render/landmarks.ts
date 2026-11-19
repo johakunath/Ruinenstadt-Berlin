@@ -96,7 +96,7 @@ export function pane(b: ChunkBuilder, m: Matrix4, w: number, h: number, rng: Rng
   const cu = (cell % 4) / 4;
   const cv = cell < 4 ? 0.5 : 0;
   const p = (x: number, y: number): Vector3 => new Vector3(x, y, 0.04).applyMatrix4(m);
-  b.solid.of(b.mm.windows).quad([p(-w / 2, -h / 2), p(w / 2, -h / 2), p(w / 2, h / 2), p(-w / 2, h / 2)], [cu, cv, cu + 0.25, cv + 0.5]);
+  if (!b.wearWindow(m, w, h)) b.solid.of(b.mm.windows).quad([p(-w / 2, -h / 2), p(w / 2, -h / 2), p(w / 2, h / 2), p(-w / 2, h / 2)], [cu, cv, cu + 0.25, cv + 0.5]);
   if (!trim) return;
   b.box(trim.mat, sub(m, -w / 2 - 0.08, 0, 0.05), 0.16, h, 0.12, trim.color);
   b.box(trim.mat, sub(m, w / 2 + 0.08, 0, 0.05), 0.16, h, 0.12, trim.color);
@@ -135,6 +135,7 @@ const GLAZE: RGB = [0.3, 0.62, 0.48];
  */
 function showGable(b: ChunkBuilder, m: Matrix4, w: number, h: number, brick: RGB, rose: boolean): void {
   const M = b.mm;
+  const masonry = M.landmarkFinishes?.brick ?? M.brick;
   const n = 5;
   const tops: number[] = [];
   for (let i = 0; i < n; i++) {
@@ -142,16 +143,17 @@ function showGable(b: ChunkBuilder, m: Matrix4, w: number, h: number, brick: RGB
     const x = (t - 0.5) * (w - 0.7);
     const top = h * (0.38 + 0.62 * (1 - Math.abs(t - 0.5) * 2));
     tops.push(top);
-    b.box(M.brick, sub(m, x, top / 2, 0.1), 0.7, top, 0.8, brick);
-    b.geo(M.slate, frustum(0.8, 0.8, 1.5, 0, 0), sub(m, x, top, 0.1), [0.85, 0.95, 0.9]);
+    b.box(masonry, sub(m, x, top / 2, 0.1), 0.7, top, 0.8, brick);
+    if (!M.landmarkWear || i !== 1) b.geo(M.slate, frustum(0.8, 0.8, 1.5, 0, 0), sub(m, x, top, 0.1), [0.85, 0.95, 0.9]);
+    else b.box(masonry, sub(m, x, top + 0.15, 0.1, 0, 0, -0.22), 0.62, 0.36, 0.56, [0.71, 0.65, 0.61]);
   }
   for (let i = 0; i < n - 1; i++) {
     const x0 = (i / (n - 1) - 0.5) * (w - 0.7), x1 = ((i + 1) / (n - 1) - 0.5) * (w - 0.7);
     const top = Math.min(tops[i]!, tops[i + 1]!) - 0.3;
     const cx = (x0 + x1) / 2, gw = x1 - x0 - 0.7;
-    b.box(M.brick, sub(m, cx, top / 2, -0.05), gw + 0.1, top, 0.6, brick);
+    b.box(masonry, sub(m, cx, top / 2, -0.05), gw + 0.1, top, 0.6, brick);
     // A small brick gablet crowning each bay, then the white blind niche below it.
-    b.geo(M.brick, frustum(gw + 0.1, 0.6, Math.min(1.4, gw * 0.7), 0, 0, SLOPES | ENDS), sub(m, cx, top, -0.05), brick);
+    b.geo(masonry, frustum(gw + 0.1, 0.6, Math.min(1.4, gw * 0.7), 0, 0, SLOPES | ENDS), sub(m, cx, top, -0.05), brick);
     b.box(M.stucco, sub(m, cx, top / 2 + 0.2, 0.26), gw * 0.62, Math.max(0.4, top - 1.4), 0.05, WHITE);
     archHead(b, M.stucco, sub(m, cx, top - 0.5, 0.24), gw * 0.62, true, 0.04, WHITE);
   }
@@ -189,13 +191,14 @@ function hauptmann(b: ChunkBuilder, m: Matrix4): void {
 
 function rathaus(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
+  const masonry = M.landmarkFinishes?.brick ?? M.brick;
   const F = frameOf(l);
   const rng = new Rng(1905);
   const BR: RGB = [1.12, 0.68, 0.54];
   const BR2: RGB = [1.25, 0.82, 0.64];
   const H = 11.5;
   const front = 12.5;
-  const old = { mat: M.brick, color: BR2 };
+  const old = { mat: masonry, color: BR2 };
   const ext = { mat: M.stucco, color: WHITE };
   // Wings around a courtyard: the old part (slate) along the street and Rosenstraße, the 1926
   // extension (tiles) toward the Grünstraße and at the back.
@@ -207,19 +210,19 @@ function rathaus(b: ChunkBuilder, l: Landmark): void {
   ];
   for (const w of wings) {
     const cx = (w.x0 + w.x1) / 2, cz = (w.z0 + w.z1) / 2, sx = w.x1 - w.x0, sz = w.z1 - w.z0;
-    b.box(M.brick, F(cx, H / 2, cz), sx, H, sz, BR);
+    b.box(masonry, F(cx, H / 2, cz), sx, H, sz, BR);
     b.box(M.concrete, F(cx, 0.45, cz), sx + 0.14, 0.9, sz + 0.14, [0.5, 0.48, 0.46]);
     b.box(M.enamel, F(cx, 4.4, cz), sx + 0.1, 0.26, sz + 0.1, GLAZE);
-    b.box(M.brick, F(cx, H - 0.2, cz), sx + 0.36, 0.4, sz + 0.36, BR2);
+    b.box(masonry, F(cx, H - 0.2, cz), sx + 0.36, 0.4, sz + 0.36, BR2);
     const [rw, rd, ry] = w.alongX ? [sx, sz, 0] : [sz, sx, Math.PI / 2];
     const rh = rd * 0.72;
     const roofMat = w.slate ? M.slate : M.roof;
     b.geo(roofMat, frustum(rw + 0.7, rd + 0.7, rh + 0.25, rw + 0.7, 0, SLOPES), F(cx, H - 0.25, cz, ry), w.slate ? undefined : [1.05, 0.82, 0.72]);
-    b.geo(M.brick, frustum(rw, rd, rh, rw, 0, ENDS), F(cx, H, cz, ry), BR);
+    b.geo(masonry, frustum(rw, rd, rh, rw, 0, ENDS), F(cx, H, cz, ry), BR);
     b.shadowBox(F(cx, (H + rh / 2) / 2, cz), sx, H + rh / 2, sz);
   }
   // Chimneys on the ridges.
-  for (const [x, z] of [[-9, 8], [9, 8], [-9, -9], [9, -6]] as const) b.box(M.brick, F(x, H + 5.6, z), 0.8, 2.2, 0.8, BR);
+  for (const [x, z] of [[-9, 8], [9, 8], [-9, -9], [9, -6]] as const) b.box(masonry, F(x, H + 5.6, z), 0.8, 2.2, 0.8, BR);
   // Courtyard paving.
   b.box(M.cobbles, F(0, 0.04, -2), 10, 0.08, 12, [0.6, 0.56, 0.52]);
 
@@ -255,8 +258,8 @@ function rathaus(b: ChunkBuilder, l: Landmark): void {
   showGable(b, gm, 8.6, 9, BR, true);
   b.geo(M.slate, frustum(front - 4, 8.4, 8.2, front - 4, 0, SLOPES), F(1.5, H - 0.2, (front + 4) / 2, Math.PI / 2));
   const tw = sub(fm, 1.5, 7.7, 0);
-  b.box(M.brick, sub(tw, 0, 0, 0.05), 4.2, 4.8, 0.1, BR2);
-  archHead(b, M.brick, sub(tw, 0, 2.4, 0), 4.2, true, 0.05, BR2);
+  b.box(masonry, sub(tw, 0, 0, 0.05), 4.2, 4.8, 0.1, BR2);
+  archHead(b, masonry, sub(tw, 0, 2.4, 0), 4.2, true, 0.05, BR2);
   pane(b, tw, 3.4, 4.4, rng, 0.8);
   archHead(b, M.dark, sub(tw, 0, 2.2, 0), 3.4, true, 0.07);
   for (const x of [-0.85, 0, 0.85]) b.box(M.stucco, sub(tw, x, 0.6, 0.1), 0.1, 5.2, 0.06, WHITE);
@@ -270,18 +273,18 @@ function rathaus(b: ChunkBuilder, l: Landmark): void {
 
   // Corner tower at Alt-Köpenick / Rosenstraße: brick shaft, clock stage, pinnacles, slate helm.
   const tx = -9.5, tz = 10.5, T = 6, TH = 22;
-  b.box(M.brick, F(tx, TH / 2, tz), T, TH, T, BR);
+  b.box(masonry, F(tx, TH / 2, tz), T, TH, T, BR);
   b.box(M.concrete, F(tx, 0.5, tz), T + 0.16, 1, T + 0.16, [0.5, 0.48, 0.46]);
   for (const y of [4.4, 14.2]) b.box(M.enamel, F(tx, y, tz), T + 0.12, 0.28, T + 0.12, GLAZE);
-  b.box(M.brick, F(tx, TH, tz), T + 0.5, 0.5, T + 0.5, BR2);
-  b.box(M.brick, F(tx, TH + 1.9, tz), T - 0.4, 3.4, T - 0.4, BR);
+  b.box(masonry, F(tx, TH, tz), T + 0.5, 0.5, T + 0.5, BR2);
+  b.box(masonry, F(tx, TH + 1.9, tz), T - 0.4, 3.4, T - 0.4, BR);
   for (let k = 0; k < 4; k++) {
     const ry = (k * Math.PI) / 2;
     const face = sub(F(tx, 0, tz), 0, 0, 0, ry);
     for (const x of [-0.8, 0.8]) for (const y of [8.5, 11.8]) archWindow(b, sub(face, x, y, T / 2), 0.5, 2.2, rng, 0.15, true);
     for (const x of [-1.4, 0, 1.4]) archWindow(b, sub(face, x, 17.5, T / 2), 0.55, 2.6, rng, 0, true);
     b.geo(M.clock, cached('clock', () => new CircleGeometry(1.15, 24)), sub(face, 0, TH + 2.1, T / 2 - 0.17));
-    b.geo(M.brick, frustum(2.6, 0.4, 2.2, 0, 0, SLOPES | ENDS), sub(face, 0, TH + 3.6, T / 2 - 0.4), BR);
+    b.geo(masonry, frustum(2.6, 0.4, 2.2, 0, 0, SLOPES | ENDS), sub(face, 0, TH + 3.6, T / 2 - 0.4), BR);
     b.geo(M.slate, frustum(0.9, 0.9, 3.4, 0, 0), sub(face, T / 2 - 0.3, TH + 0.25, T / 2 - 0.3));
   }
   b.geo(M.slate, cached('helmLow', () => new CylinderGeometry(2.3, 3.4, 3, 8)), F(tx, TH + 5.1, tz, Math.PI / 8));
@@ -290,8 +293,8 @@ function rathaus(b: ChunkBuilder, l: Landmark): void {
   b.shadowBox(F(tx, (TH + 10) / 2, tz), T, TH + 10, T);
   // Main portal in the tower: deep pointed arch, coat of arms, two green lanterns.
   const pm = F(tx, 0, tz + T / 2);
-  b.box(M.brick, sub(pm, 0, 1.75, 0.08), 3.4, 3.5, 0.16, BR2);
-  archHead(b, M.brick, sub(pm, 0, 3.5, 0), 3.4, true, 0.08, BR2);
+  b.box(masonry, sub(pm, 0, 1.75, 0.08), 3.4, 3.5, 0.16, BR2);
+  archHead(b, masonry, sub(pm, 0, 3.5, 0), 3.4, true, 0.08, BR2);
   b.box(M.dark, sub(pm, 0, 1.6, 0.14), 2.4, 3.2, 0.02);
   archHead(b, M.dark, sub(pm, 0, 3.2, 0), 2.4, true, 0.15);
   b.box(M.stucco, sub(pm, 0, 6.2, 0.06), 1.5, 1.7, 0.08, [0.55, 0.7, 1.35]);
@@ -305,9 +308,9 @@ function rathaus(b: ChunkBuilder, l: Landmark): void {
   }
   // Round stair turret between tower and front, white striped top, slate cone.
   const st = F(tx + T / 2 + 0.7, 0, front - 0.2);
-  b.geo(M.brick, cached('turret', () => new CylinderGeometry(1.4, 1.4, 14, 12)), sub(st, 0, 7, 0), BR);
+  b.geo(masonry, cached('turret', () => new CylinderGeometry(1.4, 1.4, 14, 12)), sub(st, 0, 7, 0), BR);
   for (let k = 0; k < 8; k++) b.box(M.stucco, sub(st, 0, 11.3, 0, (k * Math.PI) / 4).multiply(new Matrix4().setPosition(0, 0, 1.38)), 0.32, 2.6, 0.06, WHITE);
-  b.box(M.brick, sub(st, 0, 14, 0), 3.1, 0.3, 3.1, BR2);
+  b.box(masonry, sub(st, 0, 14, 0), 3.1, 0.3, 3.1, BR2);
   b.geo(M.slate, cached('turretCap', () => new ConeGeometry(1.6, 4, 10)), sub(st, 0, 16.1, 0));
   // The Hauptmann beside the tower, on the landing, looking down the street.
   hauptmann(b, F(tx + T / 2 + 1.2, 0.3, 14.2, -0.35));
@@ -321,7 +324,7 @@ function schloss(b: ChunkBuilder, l: Landmark): void {
   const F = frameOf(l);
   const rng = new Rng(1690);
   const w = l.hx * 2 - 0.4, d = l.hz * 2 - 0.4, H = 11.4;
-  const cream = M.stucco;
+  const cream = M.landmarkFinishes?.plaster ?? M.stucco;
   const C: RGB = [1.36, 1.3, 1.12];
   const OCHRE: RGB = [1.42, 1.2, 0.78];
   b.box(cream, F(0, H / 2, 0), w, H, d, C);
@@ -453,7 +456,7 @@ function kirche(b: ChunkBuilder, l: Landmark): void {
 function sbahnhof(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
   const F = frameOf(l);
-  const cream = M.stucco;
+  const cream = M.landmarkFinishes?.plaster ?? M.stucco;
   const C: RGB = [1.36, 1.3, 1.1];
   const RED: RGB = [0.9, 0.42, 0.3];
   const d = l.hz * 2, fz = l.hz;
@@ -651,50 +654,51 @@ function chain(b: ChunkBuilder, mat: Material, F: Frame, pts: Array<[number, num
  */
 function dino(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
+  const fiberglass = M.landmarkFinishes?.fiberglass ?? M.mossy;
   const F = frameOf(l);
   const ell = (rx: number, ry: number, rz: number, x: number, y: number, z: number, color: RGB, rot = 0): void => {
-    b.geo(M.mossy, cached('dinoBody', () => new SphereGeometry(1, 14, 10)), F(x, y, z, 0, 0, rot).multiply(new Matrix4().makeScale(rx, ry, rz)), color);
+    b.geo(fiberglass, cached('dinoBody', () => new SphereGeometry(1, 14, 10)), F(x, y, z, 0, 0, rot).multiply(new Matrix4().makeScale(rx, ry, rz)), color);
   };
   const v = l.variant ?? 0;
   if (v === 0) {
     const C: RGB = [0.85, 0.95, 0.9];
     ell(1.9, 1.5, 3.4, 0, 1.45, 0, C);
     ell(1.5, 0.5, 2.8, 0, 2.55, 0, [1.15, 1.15, 1.05]);
-    chain(b, M.mossy, F, [[0, 1.4, 2.8], [0.5, 0.95, 4.6], [1.4, 0.6, 6.3], [2.6, 0.5, 7.5]], 0.85, 0.42, C);
+    chain(b, fiberglass, F, [[0, 1.4, 2.8], [0.5, 0.95, 4.6], [1.4, 0.6, 6.3], [2.6, 0.5, 7.5]], 0.85, 0.42, C);
     ell(0.55, 0.45, 0.85, 3.1, 0.55, 8.1, C, 0.4);
-    chain(b, M.mossy, F, [[0, 1.3, -3], [-0.6, 0.85, -4.9], [-1.9, 0.5, -6.6], [-3.4, 0.25, -7.6]], 0.95, 0.12, C);
+    chain(b, fiberglass, F, [[0, 1.3, -3], [-0.6, 0.85, -4.9], [-1.9, 0.5, -6.6], [-3.4, 0.25, -7.6]], 0.95, 0.12, C);
     for (const [x, z] of [[-1, 1.5], [1, 1.5], [-1, -1.5], [1, -1.5]] as const) {
-      limb(b, M.mossy, F, new Vector3(x * 0.95, 2.4, z), new Vector3(x * 1.5, 4.2, z * 1.1 + (z > 0 ? 0.3 : -0.2)), 0.55, 0.42, C);
-      b.geo(M.mossy, cached('foot', () => new CylinderGeometry(0.5, 0.5, 0.25, 9)), F(x * 1.52, 4.3, z * 1.1 + (z > 0 ? 0.3 : -0.2)), [0.6, 0.62, 0.58]);
+      limb(b, fiberglass, F, new Vector3(x * 0.95, 2.4, z), new Vector3(x * 1.5, 4.2, z * 1.1 + (z > 0 ? 0.3 : -0.2)), 0.55, 0.42, C);
+      b.geo(fiberglass, cached('foot', () => new CylinderGeometry(0.5, 0.5, 0.25, 9)), F(x * 1.52, 4.3, z * 1.1 + (z > 0 ? 0.3 : -0.2)), [0.6, 0.62, 0.58]);
     }
     b.geo(M.graffiti, new PlaneGeometry(2.6, 1.3), F(1.92, 1.6, -0.3, Math.PI / 2, 0, 0.05));
   } else if (v === 1) {
     const C: RGB = [1.25, 1.0, 0.68];
     ell(1.6, 1.3, 2.7, 0, 1.3, 0, C, 1.2);
-    limb(b, M.mossy, F, new Vector3(0.2, 1.25, 2.4), new Vector3(0.4, 1.1, 3.6), 0.7, 0.6, C);
-    b.geo(M.mossy, cached('frill', () => new CylinderGeometry(1.6, 1.6, 0.18, 14)), F(0.4, 1.4, 3.55, 0, Math.PI / 2 - 0.3, 1.2), [1.15, 0.85, 0.6]);
+    limb(b, fiberglass, F, new Vector3(0.2, 1.25, 2.4), new Vector3(0.4, 1.1, 3.6), 0.7, 0.6, C);
+    b.geo(fiberglass, cached('frill', () => new CylinderGeometry(1.6, 1.6, 0.18, 14)), F(0.4, 1.4, 3.55, 0, Math.PI / 2 - 0.3, 1.2), [1.15, 0.85, 0.6]);
     ell(0.6, 0.6, 1.0, 0.5, 1.0, 4.3, C, 1.2);
     for (const [x, y, len] of [[0.9, 1.6, 1.3], [0.1, 1.9, 1.3], [0.6, 0.9, 0.6]] as const) {
       b.geo(M.stucco, cached(`horn${len}`, () => new ConeGeometry(0.14, len, 7)), F(x, y, 4.5 + len / 2, 0, Math.PI / 2), [1.2, 1.15, 1.0]);
     }
-    for (const [z, y] of [[1.4, 1.9], [-1.4, 1.9], [1.4, 0.8], [-1.4, 0.8]] as const) limb(b, M.mossy, F, new Vector3(1.0, y, z), new Vector3(2.4, y + 0.3, z * 1.1), 0.42, 0.34, C);
-    chain(b, M.mossy, F, [[0, 1.0, -2.4], [-0.4, 0.6, -3.8], [-1.2, 0.3, -4.8]], 0.6, 0.1, C);
+    for (const [z, y] of [[1.4, 1.9], [-1.4, 1.9], [1.4, 0.8], [-1.4, 0.8]] as const) limb(b, fiberglass, F, new Vector3(1.0, y, z), new Vector3(2.4, y + 0.3, z * 1.1), 0.42, 0.34, C);
+    chain(b, fiberglass, F, [[0, 1.0, -2.4], [-0.4, 0.6, -3.8], [-1.2, 0.3, -4.8]], 0.6, 0.1, C);
     b.geo(M.graffiti, new PlaneGeometry(2.0, 1.0), F(-0.2, 2.7, 0, 0, -Math.PI / 2, 0));
   } else {
     // T-Rex: legs still standing on the plinth, the body toppled beside them, the head torn off.
     const C: RGB = [0.7, 0.92, 0.62];
     b.box(M.concrete, F(0, 0.25, -1.6), 2.6, 0.5, 2.0, [0.6, 0.58, 0.54]);
     for (const x of [-0.6, 0.6]) {
-      limb(b, M.mossy, F, new Vector3(x, 0.5, -1.6), new Vector3(x, 1.9, -1.5), 0.32, 0.38, C);
-      limb(b, M.mossy, F, new Vector3(x, 1.9, -1.5), new Vector3(x * 1.2, 2.9, -1.9), 0.5, 0.55, C);
+      limb(b, fiberglass, F, new Vector3(x, 0.5, -1.6), new Vector3(x, 1.9, -1.5), 0.32, 0.38, C);
+      limb(b, fiberglass, F, new Vector3(x, 1.9, -1.5), new Vector3(x * 1.2, 2.9, -1.9), 0.5, 0.55, C);
       b.box(M.rust, F(x * 1.2, 3.25, -1.9), 0.12, 0.7, 0.12);
     }
     ell(1.3, 1.1, 2.6, 2.2, 1.1, 0.6, C, -0.25);
-    chain(b, M.mossy, F, [[1.6, 1.0, -1.8], [1.0, 0.6, -4], [0.2, 0.3, -6]], 0.8, 0.1, C);
-    limb(b, M.mossy, F, new Vector3(2.6, 1.5, 2.6), new Vector3(3.0, 1.0, 3.4), 0.2, 0.15, C);
+    chain(b, fiberglass, F, [[1.6, 1.0, -1.8], [1.0, 0.6, -4], [0.2, 0.3, -6]], 0.8, 0.1, C);
+    limb(b, fiberglass, F, new Vector3(2.6, 1.5, 2.6), new Vector3(3.0, 1.0, 3.4), 0.2, 0.15, C);
     const hm = F(-2.2, 0.8, 3.0, 0.7, 0, 0.3);
-    b.box(M.mossy, hm, 1.0, 0.9, 1.9, C);
-    b.box(M.mossy, sub(hm, 0, -0.55, 0.3, 0, 0.35), 0.9, 0.25, 1.5, C);
+    b.box(fiberglass, hm, 1.0, 0.9, 1.9, C);
+    b.box(fiberglass, sub(hm, 0, -0.55, 0.3, 0, 0.35), 0.9, 0.25, 1.5, C);
     for (let k = 0; k < 5; k++) b.geo(M.stucco, cached('tooth', () => new ConeGeometry(0.07, 0.22, 5)), sub(hm, -0.35 + k * 0.17, -0.5, 0.85, 0, Math.PI), [1.25, 1.2, 1.05]);
     b.geo(M.graffiti, new PlaneGeometry(2.2, 1.1), F(3.5, 1.2, 0.6, Math.PI / 2, 0, 0));
   }
@@ -706,6 +710,7 @@ function dino(b: ChunkBuilder, l: Landmark): void {
  */
 function forum(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
+  const granite = M.landmarkFinishes?.granite ?? M.concrete;
   const F = frameOf(l);
   const rng = new Rng(1997);
   const GRANITE: RGB = [1.08, 0.8, 0.72];
@@ -713,13 +718,13 @@ function forum(b: ChunkBuilder, l: Landmark): void {
   const H = 10.5, gap = 5, hw = l.hx, hd = l.hz;
   for (const side of [-1, 1]) {
     const x0 = side * gap, x1 = side * hw, cx = (x0 + x1) / 2, w = Math.abs(x1 - x0);
-    b.box(M.concrete, F(cx, H / 2, 0), w, H, hd * 2, GRANITE);
-    b.box(M.concrete, F(cx, H + 0.25, 0), w + 0.3, 0.5, hd * 2 + 0.3, [0.85, 0.7, 0.64]);
+    b.box(granite, F(cx, H / 2, 0), w, H, hd * 2, GRANITE);
+    b.box(granite, F(cx, H + 0.25, 0), w + 0.3, 0.5, hd * 2 + 0.3, [0.85, 0.7, 0.64]);
     b.box(M.tar, F(cx, H + 0.52, 0), w - 0.6, 0.06, hd * 2 - 0.6, [0.5, 0.5, 0.5]);
     for (const [x, z] of [[cx - w / 4, -hd / 2], [cx + w / 5, hd / 3]] as const) b.box(M.iron, F(x, H + 1.1, z), 2.4, 1.1, 1.6, [1.1, 1.1, 1.1]);
     // Street front: dead shop windows on the ground floor, a band, square windows above.
     const fm = F(cx, 0, hd);
-    b.box(M.concrete, sub(fm, 0, 4.1, 0.12), w, 0.5, 0.25, [0.8, 0.66, 0.6]);
+    b.box(granite, sub(fm, 0, 4.1, 0.12), w, 0.5, 0.25, [0.8, 0.66, 0.6]);
     const n = Math.floor(w / 3.4);
     for (let k = 0; k < n; k++) {
       const x = (k + 0.5 - n / 2) * (w / n);
@@ -730,7 +735,7 @@ function forum(b: ChunkBuilder, l: Landmark): void {
     for (const [mx, mz, ry, len] of [[x1, 0, side * Math.PI / 2, hd * 2], [cx, -hd, Math.PI, w]] as const) {
       const m = F(mx, 0, mz, ry);
       const k = Math.floor(len / 4);
-      for (let i = 0; i <= k; i++) b.box(M.concrete, sub(m, (i / k - 0.5) * len, H / 2, 0.1), 0.5, H, 0.2, [0.92, 0.72, 0.66]);
+      for (let i = 0; i <= k; i++) b.box(granite, sub(m, (i / k - 0.5) * len, H / 2, 0.1), 0.5, H, 0.2, [0.92, 0.72, 0.66]);
       for (let i = 0; i < k; i++) for (const y of [5.6, 8.3]) pane(b, sub(m, ((i + 0.5) / k - 0.5) * len, y, 0), 1.4, 1.4, rng, 0.05, { mat: M.enamel, color: GREEN });
     }
     b.shadowBox(F(cx, H / 2, 0), w, H, hd * 2);
@@ -755,7 +760,7 @@ function forum(b: ChunkBuilder, l: Landmark): void {
   }
   // Inside: granite floor, a footbridge between the blocks, a tree in a round planter, shards.
   b.box(M.cobbles, F(0, 0.04, 0), gap * 2, 0.08, hd * 2, [0.85, 0.82, 0.8]);
-  b.box(M.concrete, F(0, 4.6, -2), gap * 2, 0.35, 2.6, [0.8, 0.8, 0.8]);
+  b.box(granite, F(0, 4.6, -2), gap * 2, 0.35, 2.6, [0.8, 0.8, 0.8]);
   for (const s of [-1, 1]) b.box(M.iron, F(0, 5.3, -2 + s * 1.25), gap * 2, 0.06, 0.06);
   b.geo(M.iron, cached('planter', () => new CylinderGeometry(1.2, 1.2, 0.9, 12)), F(0, 0.45, 4), [0.6, 0.55, 0.5]);
   b.box(M.darkWood, F(0, 3, 4), 0.3, 5.2, 0.3);

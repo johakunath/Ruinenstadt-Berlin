@@ -233,7 +233,7 @@ export type SimEvent =
   | { type: 'buy' }
   | { type: 'streak'; kills: number; scrap: number }
   | { type: 'dodge' }
-  | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number; /** What hit (enemy name, or the enemy and its attack), for the death summary. */ by: string }
+  | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number; /** Life right after the hit, before a second wind (telemetry's lowest life). */ hp: number; /** What hit (enemy name, or the enemy and its attack), for the death summary. */ by: string }
   | { type: 'playerDie' }
   | { type: 'enemyWindup'; id: number }
   | { type: 'enemyStrike'; id: number }

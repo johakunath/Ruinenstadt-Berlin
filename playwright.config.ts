@@ -3,7 +3,9 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'e2e',
   timeout: 240_000,
-  workers: 2,
+  // Tests are independent (own page each), so they spread over workers and CI shards; CI runners have 4 vCPUs.
+  fullyParallel: true,
+  workers: process.env.CI ? 3 : 2,
   retries: process.env.CI ? 1 : 0,
   outputDir: 'test-results',
   use: {

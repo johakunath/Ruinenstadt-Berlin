@@ -500,8 +500,8 @@ function rohbau(b: Builder, p: Prop, rng: Rng): void {
     }
   };
   // Ground plate and first slab.
-  b.box(m.concrete, L(base, 0, 0.12, 0), W, 0.24, D, con(0.9));
-  b.box(m.concrete, L(base, 0, fh + 0.12, 0), W - 0.1, 0.26, D - 0.1, con());
+  b.box(m.roughConcrete, L(base, 0, 0.12, 0), W, 0.24, D, con(0.9));
+  b.box(m.roughConcrete, L(base, 0, fh + 0.12, 0), W - 0.1, 0.26, D - 0.1, con());
   // Top slab: only the rear part, ragged at the front edge.
   const cuts = 4;
   for (let i = 0; i < cuts; i++) {
@@ -509,27 +509,27 @@ function rohbau(b: Builder, p: Prop, rng: Rng): void {
     const d = D * rng.range(0.45, 0.75);
     const x = -W / 2 + 0.05 + w * (i + 0.5);
     if (i === cuts - 1 && rng.next() < 0.5) continue;
-    b.box(m.concrete, L(base, x, fh * 2 + 0.12, -D / 2 + 0.05 + d / 2, rng.range(-0.01, 0.01)), w - 0.02, 0.26, d, con());
+    b.box(m.roughConcrete, L(base, x, fh * 2 + 0.12, -D / 2 + 0.05 + d / 2, rng.range(-0.01, 0.01)), w - 0.02, 0.26, d, con());
     rebar(x, fh * 2 + 0.12, -D / 2 + 0.05 + d, 3, 0.5);
   }
   // Columns: a full ground floor; on the first floor only some, the rest end in rebar stubs.
   const cx = [-W / 2 + 0.3, 0, W / 2 - 0.3], cz = [-D / 2 + 0.3, 0, D / 2 - 0.3];
   for (const x of cx) for (const z of cz) {
     if (x === cx[0] && z === cz[0]) continue;
-    b.box(m.concrete, L(base, x, fh / 2 + 0.12, z), 0.36, fh, 0.36, con(0.92));
+    b.box(m.roughConcrete, L(base, x, fh / 2 + 0.12, z), 0.36, fh, 0.36, con(0.92));
     if (z === cz[2] && rng.next() < 0.6) rebar(x, fh + 0.25, z, 4, 0.9);
     else {
-      b.box(m.concrete, L(base, x, fh * 1.5 + 0.25, z), 0.34, fh - 0.1, 0.34, con(0.95));
+      b.box(m.roughConcrete, L(base, x, fh * 1.5 + 0.25, z), 0.34, fh - 0.1, 0.34, con(0.95));
       if (z !== cz[0]) rebar(x, fh * 2 + 0.25, z, 4, 0.8);
     }
   }
   // Stair core in the rear corner, door holes per floor.
   const sx = -W / 2 + 1.25, sz = -D / 2 + 1.25;
   for (const [x, z, w, d] of [[sx, -D / 2 + 0.1, 2.5, 0.2], [-W / 2 + 0.1, sz, 0.2, 2.5], [sx, sz + 1.15, 2.5, 0.2]] as Array<[number, number, number, number]>) {
-    b.box(m.concrete, L(base, x, fh + 0.6, z), w, fh * 2 + 0.7, d, con(0.85));
+    b.box(m.roughConcrete, L(base, x, fh + 0.6, z), w, fh * 2 + 0.7, d, con(0.85));
   }
   for (let k = 0; k < 2; k++) b.box(m.dark, L(base, sx + 0.3, 0.25 + k * fh + 1.05, sz + 1.26), 0.9, 2.0, 0.01);
-  b.box(m.concrete, L(base, sx + 0.1, 1.2, sz + 0.1, 0.62), 1.0, 0.2, 2.6, con(0.8));
+  b.box(m.roughConcrete, L(base, sx + 0.1, 1.2, sz + 0.1, 0.62), 1.0, 0.2, 2.6, con(0.8));
   // Brick infill started on the rear wall, stepped top.
   for (let row = 0; row < 8; row++) {
     const len = (W / 2 - 1.2) * (1 - row * rng.range(0.06, 0.12));
@@ -745,32 +745,32 @@ function gravestone(b: Builder, p: Prop, rng: Rng): void {
   const text = (frame: Matrix4, y: number, w: number, z: number): void => {
     for (let i = 0; i < 3; i++) b.box(m.rubber, L(frame, 0, y - i * 0.09, z), w * (i === 0 ? 0.7 : rng.range(0.4, 0.6)), 0.03, 0.01, g3(1.4));
   };
-  if (v !== 'slab') b.box(m.concrete, L(base, 0, 0.06, 0), 0.72, 0.12, 0.3, mulT(tint, 0.85));
+  if (v !== 'slab') b.box(m.stoneMoss, L(base, 0, 0.06, 0), 0.72, 0.12, 0.3, mulT(tint, 0.85));
   if (v === 'round' || v === 'tilted') {
     const h = rng.range(0.7, 1.0);
-    b.geo(m.concrete, headstoneGeo(0.6, h, rng.pick([0.12, 0.3])), L(base, 0, 0.12, 0), tint);
+    b.geo(m.stoneMoss, headstoneGeo(0.6, h, rng.pick([0.12, 0.3])), L(base, 0, 0.12, 0), tint);
     text(base, 0.12 + h * 0.7, 0.4, 0.085);
   } else if (v === 'cross') {
-    b.box(m.concrete, L(base, 0, 0.32, 0), 0.4, 0.4, 0.22, tint);
-    b.box(m.concrete, L(base, 0, 0.98, 0), 0.12, 0.95, 0.12, tint);
-    b.box(m.concrete, L(base, 0, 1.18, 0), 0.5, 0.12, 0.12, tint);
+    b.box(m.stoneMoss, L(base, 0, 0.32, 0), 0.4, 0.4, 0.22, tint);
+    b.box(m.stoneMoss, L(base, 0, 0.98, 0), 0.12, 0.95, 0.12, tint);
+    b.box(m.stoneMoss, L(base, 0, 1.18, 0), 0.5, 0.12, 0.12, tint);
     text(base, 0.44, 0.3, 0.115);
   } else if (v === 'slab') {
-    b.box(m.concrete, L(base, 0, 0.08, 0.3), 0.62, 0.16, 1.2, tint);
-    b.box(m.concrete, L(base, 0, 0.3, -0.18, -0.25), 0.62, 0.45, 0.14, tint);
+    b.box(m.stoneMoss, L(base, 0, 0.08, 0.3), 0.62, 0.16, 1.2, tint);
+    b.box(m.stoneMoss, L(base, 0, 0.3, -0.18, -0.25), 0.62, 0.45, 0.14, tint);
     text(L(base, 0, 0.3, -0.18, -0.25), 0.12, 0.4, 0.075);
   } else {
     // Broken: the stump stands, the top lies in front.
     const h = rng.range(0.35, 0.5);
-    b.box(m.concrete, L(base, 0, 0.12 + h / 2, 0, 0, 0, 0), 0.6, h, 0.15, tint);
-    b.box(m.concrete, L(base, 0.1, 0.12 + h + 0.02, 0, 0, 0, 0.35), 0.3, 0.06, 0.14, tint);
-    b.geo(m.concrete, headstoneGeo(0.6, 0.45, 0.3), L(base, rng.range(-0.2, 0.2), 0.08, 0.55, -Math.PI / 2 + 0.1, rng.range(-0.5, 0.5)), tint);
+    b.box(m.stoneMoss, L(base, 0, 0.12 + h / 2, 0, 0, 0, 0), 0.6, h, 0.15, tint);
+    b.box(m.stoneMoss, L(base, 0.1, 0.12 + h + 0.02, 0, 0, 0, 0.35), 0.3, 0.06, 0.14, tint);
+    b.geo(m.stoneMoss, headstoneGeo(0.6, 0.45, 0.3), L(base, rng.range(-0.2, 0.2), 0.08, 0.55, -Math.PI / 2 + 0.1, rng.range(-0.5, 0.5)), tint);
   }
   // Grave border with weeds, or moss at the foot.
   if (v !== 'slab' && rng.next() < 0.5) {
     const g = mulT(stone, 0.8);
-    for (const x of [-0.4, 0.4]) b.box(m.concrete, L(base, x, 0.05, 0.95, 0, rng.range(-0.03, 0.03)), 0.08, 0.1, 1.6, g);
-    b.box(m.concrete, L(base, 0, 0.05, 1.72), 0.88, 0.1, 0.08, g);
+    for (const x of [-0.4, 0.4]) b.box(m.stoneMoss, L(base, x, 0.05, 0.95, 0, rng.range(-0.03, 0.03)), 0.08, 0.1, 1.6, g);
+    b.box(m.stoneMoss, L(base, 0, 0.05, 1.72), 0.88, 0.1, 0.08, g);
     ivyPatch(b, L(base, 0, 0, 0, -Math.PI / 2), rng, 3, -0.3, 0.3, -1.6, -0.3, 0.06, 0.6);
   }
   if (mossy) ivyPatch(b, base, rng, 3, -0.3, 0.3, 0.1, 0.4, 0.12, 0.45);
@@ -795,12 +795,12 @@ function wall(b: Builder, p: Prop, rng: Rng): void {
   }
   const low = Math.floor(Math.min(...hs) * 2) / 2;
   const tint = g3(rng.range(0.85, 1.0), 1, 0.95);
-  b.box(m.brick, L(base, 0, low / 2, 0), len, low, t, tint);
+  b.box(m.brickRuin, L(base, 0, low / 2, 0), len, low, t, tint);
   hs.forEach((hh, i) => {
     if (hh <= low + 0.02) return;
     const x = -len / 2 + (i + 0.5) * sw;
-    b.box(m.brick, L(base, x, low + (hh - low) / 2, 0), sw + 0.002, hh - low, t, tint);
-    if (hh >= H - 0.01) b.box(m.brick, L(base, x, H + 0.04, 0), sw + 0.01, 0.08, t + 0.06, g3(0.6));
+    b.box(m.brickRuin, L(base, x, low + (hh - low) / 2, 0), sw + 0.002, hh - low, t, tint);
+    if (hh >= H - 0.01) b.box(m.brickRuin, L(base, x, H + 0.04, 0), sw + 0.01, 0.08, t + 0.06, g3(0.6));
   });
   // Piers every ~3 m.
   const np = Math.max(2, Math.round(len / 3) + 1);
@@ -808,15 +808,15 @@ function wall(b: Builder, p: Prop, rng: Rng): void {
     const x = -len / 2 + 0.25 + (i * (len - 0.5)) / (np - 1);
     const hh = hs[Math.min(n - 1, Math.floor(((x + len / 2) / len) * n))] as number;
     if (hh < H - 0.3) continue;
-    b.box(m.brick, L(base, x, (H + 0.15) / 2, 0), 0.5, H + 0.15, 0.48, mulT(tint, 0.92));
+    b.box(m.brickRuin, L(base, x, (H + 0.15) / 2, 0), 0.5, H + 0.15, 0.48, mulT(tint, 0.92));
     b.box(m.concrete, L(base, x, H + 0.2, 0), 0.58, 0.1, 0.56, g3(0.7));
   }
   // Missing bricks (dark holes on either face) and bricks fallen at the foot.
   for (let i = 0; i < Math.round(len * 0.8); i++) {
     const s = rng.next() < 0.5 ? -1 : 1;
-    b.box(m.brick, L(base, rng.range(-len / 2 + 0.3, len / 2 - 0.3), rng.range(0.3, low - 0.1), s * (t / 2 + 0.002)), 0.24, 0.07, 0.01, g3(0.25));
+    b.box(m.brickRuin, L(base, rng.range(-len / 2 + 0.3, len / 2 - 0.3), rng.range(0.3, low - 0.1), s * (t / 2 + 0.002)), 0.24, 0.07, 0.01, g3(0.25));
   }
-  for (let i = 0; i < Math.round(len * 0.6); i++) b.box(m.brick, L(base, rng.range(-len / 2, len / 2), 0.04, (rng.next() < 0.5 ? -1 : 1) * rng.range(0.3, 0.8), rng.range(-0.3, 0.3), rng.range(0, 3), 0), 0.24, 0.07, 0.115, g3(rng.range(0.75, 1)));
+  for (let i = 0; i < Math.round(len * 0.6); i++) b.box(m.brickRuin, L(base, rng.range(-len / 2, len / 2), 0.04, (rng.next() < 0.5 ? -1 : 1) * rng.range(0.3, 0.8), rng.range(-0.3, 0.3), rng.range(0, 3), 0), 0.24, 0.07, 0.115, g3(rng.range(0.75, 1)));
   if (rng.next() < 0.7) { const x = rng.range(-len / 2 + 0.5, len / 2 - 0.5); ivyPatch(b, base, rng, Math.round(4 + len * 0.8), x - 1.5, x + 1.5, 0.2, low + 0.5, t / 2 + 0.04, 0.9); }
   if (len > 2 && rng.next() < 0.6) {
     const gw = Math.min(len - 0.5, rng.range(1.6, 2.8));
@@ -834,7 +834,7 @@ function lowWall(b: Builder, p: Prop, rng: Rng): void {
   b.box(m.stucco, L(base, 0, H / 2, 0), len, H, t, plaster);
   for (let i = 0; i < Math.round(len * 0.5); i++) {
     const s = rng.next() < 0.5 ? -1 : 1;
-    b.box(m.brick, L(base, rng.range(-len / 2 + 0.5, len / 2 - 0.5), rng.range(0.25, 0.8), s * (t / 2 + 0.003)), rng.range(0.4, 0.9), rng.range(0.2, 0.4), 0.01, g3(0.9));
+    b.box(m.brickRuin, L(base, rng.range(-len / 2 + 0.5, len / 2 - 0.5), rng.range(0.25, 0.8), s * (t / 2 + 0.003)), rng.range(0.4, 0.9), rng.range(0.2, 0.4), 0.01, g3(0.9));
   }
   b.box(m.stucco, L(base, 0, 0.12, 0), len + 0.02, 0.24, t + 0.04, mulT(plaster, 0.6));
   const caps = Math.max(1, Math.round(len / 0.9));
@@ -843,13 +843,13 @@ function lowWall(b: Builder, p: Prop, rng: Rng): void {
     const r = rng.next();
     if (r < 0.1) continue;
     const askew = r < 0.25;
-    b.box(m.concrete, L(base, -len / 2 + (i + 0.5) * cw + (askew ? rng.range(-0.1, 0.1) : 0), H + 0.05, askew ? rng.range(-0.05, 0.05) : 0, 0, askew ? rng.range(-0.2, 0.2) : 0, askew ? rng.range(-0.08, 0.08) : 0), cw - 0.03, 0.1, t + 0.12, g3(rng.range(0.7, 0.85), 1, 0.95));
+    b.box(m.stoneMoss, L(base, -len / 2 + (i + 0.5) * cw + (askew ? rng.range(-0.1, 0.1) : 0), H + 0.05, askew ? rng.range(-0.05, 0.05) : 0, 0, askew ? rng.range(-0.2, 0.2) : 0, askew ? rng.range(-0.08, 0.08) : 0), cw - 0.03, 0.1, t + 0.12, g3(rng.range(0.7, 0.85), 1, 0.95));
   }
   const np = Math.max(2, Math.round(len / 3.5) + 1);
   for (let i = 0; i < np; i++) {
     const x = -len / 2 + 0.22 + (i * (len - 0.44)) / (np - 1);
     b.box(m.stucco, L(base, x, (H + 0.25) / 2, 0), 0.44, H + 0.25, 0.44, mulT(plaster, 0.95));
-    b.box(m.concrete, L(base, x, H + 0.3, 0), 0.52, 0.1, 0.52, g3(0.75));
+    b.box(m.stoneMoss, L(base, x, H + 0.3, 0), 0.52, 0.1, 0.52, g3(0.75));
   }
   if (rng.next() < 0.7) ivyPatch(b, base, rng, Math.round(3 + len * 0.6), -len / 2, len / 2, 0.2, H, t / 2 + 0.04, 0.7);
 }
@@ -878,7 +878,7 @@ function slab(b: Builder, p: Prop, rng: Rng): void {
   const tilt = rng.range(0.12, 0.3);
   const base = at(p, 0, 0, 0, 0, rng.range(-0.1, 0.1));
   const plate = S(L(base, 0, 0.9 * s * Math.sin(tilt) + 0.02, 0, -tilt, 0, rng.range(-0.06, 0.06)), s, 1, s);
-  b.geo(m.concrete, slabGeo(rng.int(7)), plate, g3(rng.range(0.75, 0.95)));
+  b.geo(m.roughConcrete, slabGeo(rng.int(7)), plate, g3(rng.range(0.75, 0.95)));
   // Rebar out of the broken edge (local +z at the far, raised side after the tilt... broken edge is +z).
   for (let i = 0; i < 6; i++) {
     const x = -1.2 + i * 0.48 + rng.range(-0.05, 0.05);
@@ -889,7 +889,7 @@ function slab(b: Builder, p: Prop, rng: Rng): void {
   const chunk = new DodecahedronGeometry(0.5, 0);
   for (let i = 0; i < 4; i++) {
     const c = rng.range(0.3, 0.55) * s;
-    b.geo(m.concrete, chunk, S(L(base, rng.range(-1.3, 1.3) * s, c * 0.3, rng.range(0.4, 1.0) * s, rng.range(0, 3), rng.range(0, 3)), c, c * 0.7, c), g3(rng.range(0.6, 0.8)));
+    b.geo(m.roughConcrete, chunk, S(L(base, rng.range(-1.3, 1.3) * s, c * 0.3, rng.range(0.4, 1.0) * s, rng.range(0, 3), rng.range(0, 3)), c, c * 0.7, c), g3(rng.range(0.6, 0.8)));
   }
 }
 
