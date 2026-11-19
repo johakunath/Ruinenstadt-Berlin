@@ -79,6 +79,8 @@ function posters(): CanvasTexture {
 export class ContentView {
   readonly group = new Group();
   private readonly hidden: Array<{ root: Group; shard: Mesh; glow: Sprite }> = [];
+  /** Funde (2D #14, #27): a gold gear (Uhrwerkteil) or a cassette, each with an unlit glow. */
+  private readonly funde: Array<{ root: Group; body: Group; glow: Sprite }> = [];
   private readonly shrines: Array<{ root: Group; glow: Sprite; halo: Mesh }> = [];
   private readonly cache = new Group();
   private readonly crate = new Group();
@@ -153,8 +155,37 @@ export class ContentView {
   /** Hidden blessings and shrines of this run (positions are fixed for the run). */
   private build(c: RunContent): void {
     this.built = c;
-    for (const h of [...this.hidden, ...this.shrines]) this.group.remove(h.root);
-    this.hidden.length = this.shrines.length = 0;
+    for (const h of [...this.hidden, ...this.shrines, ...this.funde]) this.group.remove(h.root);
+    this.hidden.length = this.shrines.length = this.funde.length = 0;
+    const gold = new MeshBasicMaterial({ color: 0xd9a940, fog: false }), dark = new MeshBasicMaterial({ color: 0x2a2622, fog: false }), label = new MeshBasicMaterial({ color: 0xe8dccb, fog: false });
+    for (const f of c.funde ?? []) {
+      const root = new Group(), body = new Group();
+      if (f.kind === 'teil') {
+        // A gear: a thin wheel with eight teeth and a hub hole look (dark centre).
+        const wheel = new Mesh(new CylinderGeometry(0.22, 0.22, 0.06, 16), gold);
+        wheel.rotation.x = Math.PI / 2;
+        body.add(wheel);
+        for (let k = 0; k < 8; k++) {
+          const t = new Mesh(new BoxGeometry(0.08, 0.08, 0.06), gold), a = (k / 8) * Math.PI * 2;
+          t.position.set(Math.cos(a) * 0.26, Math.sin(a) * 0.26, 0);
+          t.rotation.z = a;
+          body.add(t);
+        }
+        const hub = new Mesh(new CylinderGeometry(0.07, 0.07, 0.07, 10), dark);
+        hub.rotation.x = Math.PI / 2;
+        body.add(hub);
+      } else {
+        const box = new Mesh(new BoxGeometry(0.36, 0.22, 0.06), dark), tag = new Mesh(new BoxGeometry(0.28, 0.08, 0.065), label);
+        tag.position.y = 0.04;
+        body.add(box, tag);
+      }
+      body.traverse((o) => o.layers.set(FX_LAYER));
+      const glow = f.kind === 'teil' ? glowSprite('rgba(255,205,110,1)', 'rgba(255,150,40,0)', 2) : glowSprite('rgba(230,235,255,0.9)', 'rgba(150,170,255,0)', 1.6);
+      root.add(body, glow);
+      root.position.set(f.x, groundY(f.x, f.z), f.z);
+      this.group.add(root);
+      this.funde.push({ root, body, glow });
+    }
     for (const h of c.hidden) {
       const root = new Group();
       const shard = new Mesh(new OctahedronGeometry(0.2), new MeshBasicMaterial({ color: 0xffc46a, fog: false }));
@@ -233,7 +264,7 @@ export class ContentView {
     this.time += dt;
     const c = s.content;
     // A new run has new places: compare the positions, the content object is replaced on restart.
-    if (!this.built || this.built.hidden.length !== c.hidden.length || this.built.hidden[0]?.x !== c.hidden[0]?.x || this.built.shrines[0]?.x !== c.shrines[0]?.x) this.build(c);
+    if (!this.built || this.built.hidden.length !== c.hidden.length || this.built.hidden[0]?.x !== c.hidden[0]?.x || this.built.shrines[0]?.x !== c.shrines[0]?.x || (this.built.funde?.length ?? 0) !== (c.funde?.length ?? 0)) this.build(c);
     this.built = c;
     this.hidden.forEach((h, i) => {
       const d = c.hidden[i]!;
@@ -246,6 +277,18 @@ export class ContentView {
       h.shard.scale.setScalar(k);
       h.glow.position.y = h.shard.position.y;
       (h.glow.material as SpriteMaterial).opacity = k * (0.7 + 0.3 * Math.sin(this.time * 5));
+    });
+    this.funde.forEach((h, i) => {
+      const f = c.funde?.[i];
+      // Seen from about 16 m, then it fades in (they are hidden, not marked on the map).
+      const k = !f || f.got ? 0 : Math.max(0, Math.min(1, (16 - Math.hypot(f.x - heroX, f.z - heroZ)) / 5));
+      h.root.visible = k > 0.01;
+      if (!h.root.visible) return;
+      h.body.position.y = 0.85 + Math.sin(this.time * 2 + i) * 0.08;
+      h.body.rotation.y = this.time * 1.4;
+      h.body.scale.setScalar(k);
+      h.glow.position.y = h.body.position.y;
+      (h.glow.material as SpriteMaterial).opacity = k * (0.6 + 0.25 * Math.sin(this.time * 4 + i));
     });
     this.shrines.forEach((h, i) => {
       const used = c.shrines[i]!.used;

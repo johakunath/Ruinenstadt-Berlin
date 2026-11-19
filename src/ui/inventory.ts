@@ -281,7 +281,9 @@ export class InventoryUi {
     if (x.slot === 'w') {
       const P = POWERS[x.kind as WeaponKindId], cur = x.power === 1 ? 1 : 0;
       const glyph = (id: keyof typeof POWER_GLYPHS): string => `<svg viewBox="0 0 48 48" aria-hidden="true">${POWER_GLYPHS[id]}</svg>`;
-      return `<div class="krsel"><small class="clab">Kraft dieser Waffe</small><div class="krrow">${[0, 1].map(i => `<button type="button" class="krb" data-action="power" data-value="${i}" data-key="power-${i}" aria-pressed="${cur === i}">${glyph(P[i]!.id)}<span>${P[i]!.name}</span><small>${P[i]!.cooldown} s</small></button>`).join('')}<div class="krb ult">${glyph(P[2].id)}<span>${P[2].name}</span><small>Ultimativ · ${P[2].cooldown} s</small></div></div><p class="inv-hint">${P[cur]!.description}. Ultimativ: ${P[2].description}</p></div>`;
+      // U4 layout A (Johannes, 2026-11-19): two power cards to toggle, each with its own text; the ultimate is fixed, so it is a plain line, not a button.
+      const cards = [0, 1].map(i => `<button type="button" class="krb krc" data-action="power" data-value="${i}" data-key="power-${i}" aria-pressed="${cur === i}"><span class="krh">${glyph(P[i]!.id)}<span><b>${P[i]!.name}</b><small>${P[i]!.cooldown} s</small></span>${cur === i ? '<em>Aktiv</em>' : ''}</span><span class="krd">${P[i]!.description}</span></button>`).join('');
+      return `<div class="krsel"><small class="clab">Kraft · wähle eine</small><div class="krrow">${cards}</div><small class="clab">Ultimativ · immer dabei</small><div class="krult">${glyph(P[2].id)}<span><b>${P[2].name}</b><small>${P[2].cooldown} s</small></span><span class="krd">${P[2].description}</span></div></div>`;
     }
     if (x.slot === 'i') return `<div class="krsel"><small class="clab">Implantat-Modus</small><div class="krrow">${IMPLANT_MODES.map((m, i) => `<button type="button" class="krb" data-action="mode" data-value="${i}" data-key="mode-${i}" aria-pressed="${(x.implantMode ?? 0) === i}"><span>${m.name}</span><small>${m.description}</small></button>`).join('')}</div></div>`;
     return '';

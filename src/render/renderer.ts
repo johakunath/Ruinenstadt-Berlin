@@ -305,6 +305,9 @@ export class GameRenderer {
       case 'secondWind':
         this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 60, 8);
         break;
+      case 'fund':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 4.4, 1.4, 40, 5);
+        break;
       case 'hidden':
         this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 3.4, 1, 50, 6);
         break;

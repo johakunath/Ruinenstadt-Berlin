@@ -806,6 +806,11 @@ function drainEvents(): void {
         if (tip && kind && !tips[`sight:${kind}`]) { tips[`sight:${kind}`] = 1; lootUi.toast(`<span style="color:#7dd3ff">Tipp</span> · ${tip}`, 5); }
         break;
       }
+      case 'fund':
+        // 2D #14, #27: a Fund is kept for good, so the profile is written at once (the checkpoint stays).
+        ui.banner(ev.title, ev.line);
+        saveProfile();
+        break;
       case 'kodex':
         lootUi.toast(`Neu im Kodex · <span style="color:#ef9f27">${ev.name}</span>`);
         break;

@@ -265,6 +265,8 @@ export type SimEvent =
   | { type: 'endlessWave'; n: number; done: boolean }
   /** U2: first kill of a kind or first find of a legendary or set base. */
   | { type: 'kodex'; name: string }
+  /** A Fund was picked up (2D #14, #27): banner title and line. */
+  | { type: 'fund'; kind: 'teil' | 'kassette'; x: number; z: number; title: string; line: string }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
   | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean }
   /** M20 tunnel: a grating opened after its fight was won (2D `openGate`). */

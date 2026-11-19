@@ -3,6 +3,7 @@ import { AFFIXES, ATTRIBUTE_STATS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, S
   type AffixId, type AttributeKindId, type BaseId, type ElementId, type SetId, type SlotId, type WeaponKindId } from '../data/items';
 import { BASES } from '../data/item-names';
 import { WEAPON_MODS, type MealId } from '../data/crafting';
+import { fundeAffixes } from '../data/funde';
 import { DRILL, type CampBuildingId, type CampUpgradeId, type PerkId, type SurvivorId } from '../data/progression';
 import type { Item } from './items';
 
@@ -16,6 +17,8 @@ export interface StatContext {
   meal?: MealId;
   drill?: number;
   shrines?: Partial<Record<'as' | 'res' | 'spd', boolean>>;
+  /** Funde found for good (2D #14, #27, `data/funde.ts` ids). */
+  funde?: string[];
 }
 export interface HeroStats {
   kind: WeaponKindId;
@@ -86,6 +89,7 @@ export function gearAffixes(eq: Equipment, ctx: StatContext): Record<AffixId, nu
     }
   }
   if (ctx.camp.turm) a.res += 8;
+  for (const [id, v] of Object.entries(fundeAffixes(ctx.funde)) as Array<[AffixId, number]>) a[id] += v;
   for (const set of Object.keys(SET_BONUSES) as SetId[]) {
     const n = setCount(eq, set);
     for (const bonus of SET_BONUSES[set]) if (n >= bonus.pieces) {

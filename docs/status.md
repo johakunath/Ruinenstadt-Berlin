@@ -27,6 +27,7 @@ What is in the game now. Updated 2026-11-18. Next work: `docs/migration.md` › 
 | Streets | M11d: the Bahnhofstraße is a 14 m Berlin main street (tram in the middle, lane and parking lines, 3 m sidewalks with trees in pits); the Spreeufer from the Köllnische Vorstadt to the Spreepark an Allee with a grass tram track. Other streets as before |
 | Weather | Per zone (M11c variant A): rain in the Bahnhofsviertel, fog with fireflies in the Müggelberge, ash and embers around the Spreepark, clear over the Altstadt; fog density eases between zones. Area name shown when walking into an area |
 | Lot types (M11c) | About two in five street lots are one of eight lot types per zone group: Hinterhof (nested yards, Remise), Parkplatz (once, zombies playing dead), Kleingärten, Teich with jetty, Trümmerfeld, Baustelle with crane, Markt and Kirchhof (hand-placed in the Altstadt). Sleeping or hidden guards, trader/captive/cache prefer them. Code-built art: cars, crane, containers, Rohbau, stalls, Lauben, gnomes, gravestones, bushes, hedges, flowers, reeds, Berlin and jungle trees, balconies and broken ruin walls |
+| Funde | 2D #14, #27 (2026-11-19, `src/data/funde.ts`): per district (Köpenick, Xhain, Alexanderplatz, Mitte) six Uhrwerkteile (each +1 % Schaden or +5 Leben for good; all six add a district bonus) and four Kassetten (story lines, draft texts). Fixed spots per map, off the route in corners; each counts once and is saved at once; one left behind waits at the same spot next run. Seen from about 16 m (gold gear or cassette with a glow). Kodex › Funde lists them per district |
 | Side passages | Köpenick (M16b, variant A): three fenced lanes off the route, each lit at the end: Hinterhof by the Lindenstraße (hidden blessing), Kietzgasse (sleeping elite Brocken), Hangarweg at the airfield (cache of crates). The other two hidden blessings stay random |
 | Tunnel | S3-Tunnel after Köpenick (M19, layout B, M20 content from 2D route A): about 420 m with three stations, five fights, a grating after each that opens on the win, a trader on the start platform, a collapse with a maintenance bypass, a flooded stretch that slows, side passages with the hidden blessing (first), a cache and a sleeping elite mini-boss; at the end hold the generator, then Der Schaffner. Station signs and the line color. Winning it leads out at Warschauer Straße into the camp. One generator builds every line (`?map=tunnel&line=k`), only the S3 is reachable |
 | Endless | After Köpenick: endless waves around the hero, boss every fifth wave, blessing every second, record kept (M18) |
@@ -37,7 +38,11 @@ What is in the game now. Updated 2026-11-18. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-18)
+## Latest (2026-11-19)
+
+- Funde (Uhrwerkteile and Kassetten) in all four districts, Kodex › Funde; inventory Kraft section as two cards to switch plus a fixed ultimate line (U4 A); ⚠ on set-breaking swaps; dust trail on the roll; heavier flinch on big hits.
+
+## Earlier (2026-11-18)
 
 - M15 Mitte (in progress): `?map=mitte` plays end to end; neon night (Johannes' mix of the three variants), landmarks from photos, the Pariser Platz framed, the Potsdamer Platz filled with glass offices, a Nachtmarkt and container villages (`docs/tasks/m15-mitte.md`). Enemies and bosses are stand-ins until steps 5 and 6.
 - M15 Alexanderplatz enemies: Uhrwerkläufer, Wurzler, Kernspeier and Brigadeghule; Wurzel-Mutter, Großer Uhrwerkläufer, Volkseigener Koloss; the Weltzeituhr wakes up, walks on four clockwork legs and settles back on its base (`docs/tasks/m15-alexanderplatz.md` › step 7).

@@ -1,6 +1,6 @@
 # Backlog (3D)
 
-Open items only; delete a row when it is done (the PR and `docs/status.md` keep the record). Done: B3 heights (hills, terraces with stairs, M11b), B6 finishers (M7), M6 wave checkpoints; P1 controls table and pad layout; P4 equip by second tap; P5 trader comparison, P9 pad and pinch zoom, P21 and P23 reachable lot spots, P22 guard get-up (2026-11-18); P7 reward moment, 2D #29 set warning, 2D #31/43/44 dodge dust, flinch and death (2026-11-19); prototype controller feel/rumble, PC performance and hero outline (Johannes, 2026-11-16). Scheduled work lives in `docs/migration.md` (steps M1 to M19, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`. No "check on hardware" rows here (Johannes, 2026-11-19): he reports what he sees while playing; hardware checks go to `docs/tasks/pt-hardware-checks.md` only when a task needs a measurement.
+Open items only; delete a row when it is done (the PR and `docs/status.md` keep the record). Done: B3 heights (hills, terraces with stairs, M11b), B6 finishers (M7), M6 wave checkpoints; P1 controls table and pad layout; P4 equip by second tap; P5 trader comparison, P9 pad and pinch zoom, P21 and P23 reachable lot spots, P22 guard get-up (2026-11-18); P7 reward moment, 2D #29 set warning, 2D #31/43/44 dodge dust, flinch and death, 2D #14/27 Funde (2026-11-19); prototype controller feel/rumble, PC performance and hero outline (Johannes, 2026-11-16). Scheduled work lives in `docs/migration.md` (steps M1 to M19, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`. No "check on hardware" rows here (Johannes, 2026-11-19): he reports what he sees while playing; hardware checks go to `docs/tasks/pt-hardware-checks.md` only when a task needs a measurement.
 
 Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, not before:
 
@@ -8,7 +8,6 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 |---|---|---|
 | 2 | Legendaries and set pieces for head, hands, feet, ring | L2 |
 | 13 | Multi-level interiors | M15 |
-| 14, 27 | Story artefacts (tapes, notes), collectibles with permanent power | M16b |
 | 16, 37, 30 | Camp as a place, stations with levels and NPCs, stash purpose | After M13 |
 | 17, 34 | Umschmieden with control, smith and enchanter | M13 |
 | 18 | Enemy voices | S3 |
@@ -66,4 +65,6 @@ Pure ideas for later (Johannes, 2026-11-16). Nothing here is planned or decided;
 | I6 | Mitte lot type Aktenhof: yard behind a ministry with heaps of files, toppled cabinets and desks, wet paper, cache | Variant B, not picked | idea |
 | I7 | Tiergarten lot type Windbruch: fallen trunks as a barricade, deer stand with crows, fireflies, cache | Variant B, not picked | idea |
 | I8 | Regierungsviertel facade F-B: concrete ribs and shattered glass (Bundesbau look) as a second frontage next to the sandstone ministry | Variant F-B, not picked | idea |
+| I9 | Bedrohung (threat levels, 2D `S.threat`/`S.tmax`): winning a district unlocks the next level; each level gives enemies more life (2D: +25 % per level) and loot more item levels (2D: +3 per level), in 3D also a higher legendary chance. Chosen before a run, separate from Leicht/Normal/Schwer. Today enemy strength is fixed per wave of a map (times difficulty) and loot item level follows the waves of the run plus 3 per district, so a replayed map gets easier as the hero grows; this gives replays a reason, together with the Funde left behind | Johannes, 2026-11-19 (2D panels.js) | idea |
+| I10 | Power previews: in the Kraft cards (inventory) a short looping clip of each power and the ultimate instead of the glyph, recorded from the game (e.g. with `tools/clip-sheet` as WebM or a sprite strip) | Johannes, 2026-11-19 | idea, once the weapons and powers are final |
 | PT | Running list of hardware and quality checks for Johannes; every session adds its rows: `docs/tasks/pt-hardware-checks.md` | Johannes, 2026-11-18 | Running |
