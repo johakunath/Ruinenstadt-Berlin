@@ -27,15 +27,15 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 
 | Slot | Bases | Own 3D model | Changes hero | Icon yes / partly / no |
 |---|---|---|---|---|
-| Waffe (w) | 30 | 30 + 2 set variants | 30 | 32 / 0 / 0 (rendered) |
-| Körper (a) | 12 (+ Kettenhemd on `kette`) | 15 looks (2 pieces, cut, palettes, gear) | 15 | 15 / 0 / 0 (rendered) |
-| Kopf (h) | 9 | 9 hats (gear) | 9 | 9 / 0 / 0 (rendered) |
+| Waffe (w) | 30 | 30 + 3 set variants | 30 | 33 / 0 / 0 (rendered) |
+| Körper (a) | 12 (+ Kettenhemd on `kette`) | 16 looks (2 pieces, cut, palettes, gear) | 16 | 16 / 0 / 0 (rendered) |
+| Kopf (h) | 9 | 10 hats (gear) | 10 | 10 / 0 / 0 (rendered) |
 | Hände (g) | 6 | 6 looks (glove piece, palettes, gear) | 6 | 6 / 0 / 0 (rendered) |
-| Füße (f) | 6 | 6 looks (2 pieces, palettes, gear) | 6 | 6 / 0 / 0 (rendered) |
+| Füße (f) | 6 | 7 looks (2 pieces, palettes, gear) | 7 | 7 / 0 / 0 (rendered) |
 | Talisman (t) | 9 | 0 | 0 | n/a |
 | Ring (r) | 8 | 0 | 0 | n/a |
 | Implantat (i) | 7 | 0 | 0 | n/a |
-| Total | 87 | 30 weapon models, 36 looks | 66 | |
+| Total | 87 | 30 weapon models + 3 set variants, 39 looks | 69 | |
 
 ## Index
 
@@ -73,6 +73,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: rendered from the model | E | 3 |
 | Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | E | 3 |
 | Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | E | 3 |
+| Rohrzange des Tunnelläufers | zange | w | set tunnel | model:zange:tunnel | yes | I101 | yes: rendered from the model | E | 3 |
 | Lederjacke | leder | a | normal | wear:leder | yes | I17 | yes: rendered from the look | T | 2 |
 | Arbeitsmantel | mantel | a | normal | wear:mantel | yes | I18 | yes: rendered from the look | none | 2 |
 | Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |
@@ -88,6 +89,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Weste der Kiezwache | weste | a | set kiez | wear:weste:kiez | yes | I93 | yes: rendered from the look | none | 3 |
 | Mantel des Spreegeists | mantel | a | set spree | wear:mantel:spree | yes | I94 | yes: rendered from the look | none | 3 |
 | Kettenhemd der Zitadelle | kette | a | set zit | wear:kette:zit | yes | I57 | yes: rendered from the look | T | 3 |
+| Mantel des Tunnelläufers | mantel | a | set tunnel | wear:mantel:tunnel | yes | I98 | yes: rendered from the look | none | 3 |
 | Bauhelm | helm | h | normal | wear:helm | yes | I22 | yes: rendered from the look | none | 2 |
 | Schiebermütze | schieber | h | normal | wear:schieber | yes | I23 | yes: rendered from the look | T | 2 |
 | Wollmütze | muetze | h | normal | wear:muetze | yes | I24 | yes: rendered from the look | T | 2 |
@@ -97,6 +99,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Pickelhaube des Hauptmanns | pickel | h | legendary | wear:pickel | yes | I78 | yes: rendered from the look | E | 3 |
 | Helm der Kiezwache | kiezhelm | h | set kiez | wear:kiezhelm | yes | I79 | yes: rendered from the look | none | 3 |
 | Topfhelm der Zitadelle | topfhelm | h | set zit | wear:topfhelm | yes | I83 | yes: rendered from the look | none | 3 |
+| Stirnlampe des Tunnelläufers | nbrille | h | set tunnel | wear:nbrille:tunnel | yes | I99 | yes: rendered from the look | none | 3 |
 | Arbeitshandschuhe | handsch | g | normal | wear:handsch | yes | I26 | yes: rendered from the look | none | 2 |
 | Boxbandagen | bandage | g | normal | wear:bandage | yes | I27 | yes: rendered from the look | none | 2 |
 | Schweißerhandschuhe | schweiss | g | normal | wear:schweiss | yes | I28 | yes: rendered from the look | none | 2 |
@@ -109,6 +112,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Stiefel des Schaffners | schaffner | f | legendary | wear:schaffner | yes | I86 | yes: rendered from the look | E | 3 |
 | Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief | yes | I81 | yes: rendered from the look | none | 3 |
 | Eisenstiefel der Zitadelle | eisenstief | f | set zit | wear:eisenstief | yes | I84 | yes: rendered from the look | none | 3 |
+| Stiefel des Tunnelläufers | stiefel | f | set tunnel | wear:stiefel:tunnel | yes | I100 | yes: rendered from the look | none | 3 |
 | Spreekiesel | kiesel | t | normal | none | - | I39 | n/a | - | 2 |
 | Mauerstück | stueck | t | normal | none | - | I40 | n/a | - | 2 |
 | Rabenfeder | feder | t | normal | none | - | I41 | n/a | - | 2 |
@@ -118,6 +122,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Herz der Spree | herz | t | legendary | none | - | I45 | n/a | E | 3 |
 | Auge des Fernsehturms | auge | t | legendary | none | - | I47 | n/a | E | 3 |
 | Wappen der Zitadelle | wappen | t | set zit | none | - | I46 | n/a | - | 3 |
+| Schlüsselbund des Tunnelläufers | kette | t | set tunnel | none | - | I42 | n/a: bike chain until I102 | I (Codex K4) | 3 |
 | Abzeichen der Kiezwache | abzeichen | t | set kiez | none | - | I44 | n/a: currywurst icon | I | 3 |
 | Kiesel des Spreegeists | kiesel | t | set spree | none | - | I39 | n/a: plain pebble | I | 3 |
 | Siegelring | siegel | r | normal | none | - | I33 | n/a | - | 2 |

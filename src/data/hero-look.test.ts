@@ -82,15 +82,16 @@ describe('heroLook', () => {
     expect(heroLook({ h: { base: 'topfhelm' } }).hideHair).toBe(true);
   });
 
-  it('keeps the red scarf only with the coats, the coloured ones of the legendary coats, none where a collar or neck piece is worn (Johannes, 2026-11-19)', () => {
+  it('keeps the red scarf only with the coats, the coloured ones of the legendary coats, none where a collar or neck piece is worn and in the sets (Johannes, 2026-11-19)', () => {
     expect(heroLook({}).hideScarf).toBe(false);
     expect(heroLook({ a: { base: 'mantel' } }).hideScarf).toBe(false);
     for (const base of ['weste', 'leder', 'feuer', 'bvg', 'blaumann', 'poncho', 'kmantel', 'panzer', 'ritter']) expect(heroLook({ a: { base } }).hideScarf, base).toBe(true);
     for (const [base, set] of [['weste', 'kiez'], ['mantel', 'spree'], ['kette', 'zit'], ['mantel', 'tunnel']] as const) expect(heroLook({ a: { base, set } }).hideScarf, `${base}:${set}`).toBe(true);
     expect(heroLook({ a: { base: 'spaeti' } })).toMatchObject({ hideScarf: false, tint: { scarf: 'scarf:gold' } });
     expect(heroLook({ a: { base: 'rattenmantel' } }).tint.scarf).toBe('scarf:acid');
-    expect(heroLook({ h: { base: 'maske' } }).hideScarf).toBe(true);
-    expect(heroLook({ h: { base: 'topfhelm' } }).hideScarf).toBe(true);
+    // Hats never take the scarf off: the coat neckline under it is not finished (only the armor decides).
+    expect(heroLook({ h: { base: 'maske' } }).hideScarf).toBe(false);
+    expect(heroLook({ h: { base: 'topfhelm' } }).hideScarf).toBe(false);
   });
 
   it('sorts gear ids, so the same items always share one merged gear mesh', () => {

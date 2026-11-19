@@ -40,7 +40,7 @@ What is in the game now. Updated 2026-11-19. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-19)
 
-- Clothing on the hero (WP4 step 2): 36 looks from the approved mockups, rendered icons for everything worn; Köpenick drops only Köpenick wear, Xhain its own at 40 %. Regenponcho shell waits for Blender (B1); tunnel set Tunnelläufer proposed (`docs/mockups/wp4-clothes/tunnel.webp`).
+- Clothing on the hero (WP4 step 2): 36 looks from the approved mockups, rendered icons for everything worn; Köpenick drops only Köpenick wear, Xhain its own at 40 %. The red scarf only with the coats (none with collars and in the sets). Tunnelläufer set (head lamp, pressure tank, puttees, brass Rohrzange, key ring) drops only in the tunnels. Regenponcho shell waits for Blender (B1).
 - Named landmarks across Köpenick, Xhain, Alexanderplatz and Mitte have a first weathering pass. Köpenick landmarks have five dedicated materials, Mitte has painted asphalt, glass, sandstone and neon signs, and Köpenick lot types have painted surfaces and plants. See `docs/asset-pipeline.md`.
 
 - WP5 finished: own looks for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter and Turmwächter; spoken boss lines (start, rage, signature special); Der Türsteher shuts the Tor passages with neon bars in rage; hidden blessings and the cache show through walls within 15 m; every normal ghoul in its own colours.

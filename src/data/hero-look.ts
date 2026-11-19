@@ -133,8 +133,6 @@ interface Wear {
   puff?: number;
   gear?: readonly string[];
   hideHair?: boolean;
-  /** A hat that covers the neck (gas mask, great helm): no scarf. */
-  hideScarf?: boolean;
   covers?: readonly BodyRegion[];
 }
 
@@ -150,7 +148,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     mantel: { palette: 'mantel', puff: 0.02, gear: ['belt-tool'] },
     weste: { outfit: 'weste', scarf: 'none', gear: ['kneepads-dark'] },
     leder: { cut: CUT.jacket, palette: 'leder', scarf: 'none', puff: 0.016, gear: ['studs', 'belt-studded', 'patches-punk', 'rips'] },
-    feuer: { cut: CUT.thigh, palette: 'feuer', scarf: 'none', puff: 0.024, gear: ['belt-fire'] },
+    feuer: { cut: CUT.thigh, palette: 'feuer', scarf: 'none', puff: 0.024, gear: ['belt-fire', 'collar-fire'] },
     bvg: { cut: CUT.hip, palette: 'bvg', scarf: 'none', puff: 0.018, gear: ['boards-bvg', 'badge-bvg', 'belt-bvg'] },
     blaumann: { outfit: 'weste', palette: 'blaumann', scarf: 'none', gear: ['bib', 'patch-gear', 'wrench'] },
     poncho: { palette: 'poncho', scarf: 'none', puff: 0.026, gear: ['poncho-bands', 'hood-roll'] },
@@ -168,12 +166,12 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     helm: { gear: ['hat-hard'] },
     schieber: { gear: ['hat-flatcap'] },
     muetze: { gear: ['hat-beanie'] },
-    maske: { gear: ['hat-gasmask'], hideScarf: true },
+    maske: { gear: ['hat-gasmask'] },
     nbrille: { gear: ['hat-goggles'] },
     stroh: { gear: ['hat-straw'] },
     pickel: { gear: ['hat-pickel'] },
     kiezhelm: { gear: ['hat-kiez'] },
-    topfhelm: { gear: ['hat-greathelm'], hideHair: true, hideScarf: true },
+    topfhelm: { gear: ['hat-greathelm'], hideHair: true },
     'nbrille:tunnel': { gear: ['hat-headlamp'] },
   },
   g: {
@@ -218,7 +216,7 @@ export function heroLook(equipment: Readonly<Partial<Record<SlotId, Equipped>>>)
     puff: a?.puff ?? PUFF,
     gear,
     hideHair: !!h?.hideHair,
-    hideScarf: a?.scarf === 'none' || !!h?.hideScarf,
+    hideScarf: a?.scarf === 'none',
     covers: [...(g?.covers ?? [])],
   };
 }

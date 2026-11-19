@@ -309,7 +309,7 @@ export interface CollarOpts {
   rows: number;
   /** Height of the top edge over the neckline, by angle. */
   h: (a: number) => number;
-  /** The foot starts this far under the neckline's tips (covers its frayed edge). */
+  /** The foot starts this far under the neckline's tips (covers its frayed edge, also when the neck carries the neckline down). */
   drop?: number;
   /** Lift of the foot off the outfit; flare of the top out of the foot (m, by angle; grows with v²). */
   lift?: number;
@@ -322,7 +322,7 @@ export interface CollarOpts {
 
 /** A collar standing on the neckline: radii per (row, column) fitted to the neck, `at(u, v, dr)` a point on it (`dr` out of it). */
 export function collarShell(n: Neck, o: CollarOpts): { at: (u: number, v: number, dr?: number) => Vector3; geo: BufferGeometry } {
-  const { a0, a1, segs, rows } = o, drop = o.drop ?? 0.014, lift = o.lift ?? 0.006, clear = o.clear ?? 0.018, turn = o.turn ?? 0.35;
+  const { a0, a1, segs, rows } = o, drop = o.drop ?? 0.026, lift = o.lift ?? 0.006, clear = o.clear ?? 0.018, turn = o.turn ?? 0.35;
   const ang = (u: number): number => a0 + (a1 - a0) * u;
   const yOf = (u: number, v: number): number => { const a = ang(u), e = n.edgeY(a); return e - drop + (o.h(a) + drop) * v; };
   const R: number[][] = [];
@@ -331,6 +331,8 @@ export function collarShell(n: Neck, o: CollarOpts): { at: (u: number, v: number
     let row = Array.from({ length: segs + 1 }, (_, j) => {
       const u = j / segs, a = ang(u), y = yOf(u, v);
       const base = n.edgeR(a) + lift + (o.flare?.(a) ?? 0) * v * v;
+      // Under the neckline the outfit itself is in the way (the foot runs into it when the neck tilts back, no gap opens).
+      if (y < n.edgeY(a) - 0.004) return base;
       return Math.max(base, n.skin(y, a, turn) + clear, o.hairClear ? n.hair(y, a, turn) + o.hairClear : 0);
     });
     for (let pass = 0; pass < 2; pass++) row = row.map((x, j) => Math.max(x, (row[Math.max(0, j - 1)]! + 2 * x + row[Math.min(segs, j + 1)]!) / 4));
@@ -393,7 +395,7 @@ export function yoke(n: Neck, o: YokeOpts): { at: (u: number, v: number, dr?: nu
 /** A plain band round the neckline in the outfit's colour (covers the frayed edge where no collar or scarf does), open ±`gap` at the front. */
 export function neckBand(k: GearKit, node: 'a_mantel' | 'a_weste', paint: Paint, h = 0.012, gap = 0, lift = 0.005): void {
   const n = neckOf(k, node), segs = 20;
-  const { geo } = collarShell(n, { a0: gap || -Math.PI, a1: gap ? 2 * Math.PI - gap : Math.PI, segs, rows: 1, h: () => h, drop: 0.012, lift, clear: 0.016, turn: 0.3 });
+  const { geo } = collarShell(n, { a0: gap || -Math.PI, a1: gap ? 2 * Math.PI - gap : Math.PI, segs, rows: 1, h: () => h, drop: 0.022, lift, clear: 0.016, turn: 0.3 });
   k.on('spine_03', () => k.add(geo, paint));
 }
 
@@ -450,9 +452,23 @@ export function kneepads(cap: number, pad: number, strap: number): GearBuilder {
 
 // ---------------------------------------------------------------- Xhain
 
-/** Lederjacke: two rows of chrome pyramid studs along each shoulder, from the scarf to the shoulder point. */
+/** A turned-up collar on the coat's neckline: `collarShell` over `a0`..2π−`a0`, `h(a)` tall, painted, `trim` a band round its upper part. */
+function coatCollar(k: GearKit, a0: number, h: (a: number) => number, flare: number, paint: Paint, trim?: { paint: Paint; v0: number; v1: number }, segs = 16, rows = 2): (u: number, v: number, dr?: number) => Vector3 {
+  const { at, geo } = collarShell(neckOf(k, 'a_mantel'), { a0, a1: 2 * Math.PI - a0, segs, rows, h, flare: () => flare, lift: 0.006 });
+  k.on('spine_03', () => {
+    k.add(geo, paint);
+    if (trim) k.add(grid(segs, 1, (u, v) => at(u, trim.v0 + (trim.v1 - trim.v0) * v, 0.0025)), trim.paint);
+  });
+  return at;
+}
+
+/** Height over the neckline by the angle from the front: `f` at the front, `b` at the back. */
+const frontBack = (f: number, b: number) => (a: number): number => f + (b - f) * (1 - Math.cos(a)) / 2;
+
+/** Lederjacke: a black turned-up collar; two rows of chrome pyramid studs along each shoulder. */
 function studs(k: GearKit): void {
   const chrome = bright(0xdfe3e6);
+  coatCollar(k, 0.3, frontBack(0.014, 0.022), 0.014, plain(0x1a1416), undefined, 12, 1);
   for (const s of SIDES) {
     const arm = k.arm(s, ['a_mantel']);
     const top = -s * Math.PI / 2;
@@ -522,8 +538,14 @@ function beltFire(k: GearKit): void {
   });
 }
 
-/** BVG-Uniform: yellow shoulder boards from the collar to the shoulder seam, with a gold button. */
+/** Feuerwehrjacke: a tall dark red stand collar with a reflective yellow band (gear id `collar-fire`). */
+function collarFire(k: GearKit): void {
+  coatCollar(k, 0.3, frontBack(0.024, 0.032), 0.01, cloth(0x7a1a10), { paint: plain(0xe8d36a), v0: 0.42, v1: 0.62 });
+}
+
+/** BVG-Uniform: a navy stand collar with yellow piping; yellow shoulder boards from near the collar to the shoulder seam, with a gold button. */
 function boardsBvg(k: GearKit): void {
+  coatCollar(k, 0.22, frontBack(0.018, 0.022), 0.006, plain(0x1c2438), { paint: plain(0xf2c230), v0: 0.76, v1: 1 });
   for (const s of SIDES) {
     const arm = k.arm(s, ['a_mantel']);
     const top = -s * Math.PI / 2;
@@ -692,7 +714,7 @@ function hoodRoll(k: GearKit): void {
 function collarHigh(k: GearKit): void {
   const A = 0.62, ramp = (a: number): number => Math.min(1, Math.max(0, (Math.abs(angDist(a, 0)) - A) / 1.4));
   const { at } = collarShell(neckOf(k, 'a_mantel'), {
-    a0: A, a1: 2 * Math.PI - A, segs: 18, rows: 5, drop: 0.016, lift: 0.008,
+    a0: A, a1: 2 * Math.PI - A, segs: 18, rows: 5, drop: 0.028, lift: 0.008,
     h: (a) => 0.026 + 0.046 * ramp(a) ** 0.8, flare: (a) => 0.02 + 0.03 * ramp(a), hairClear: 0.016,
   });
   k.on('spine_03', () => {
@@ -709,19 +731,20 @@ function collarHigh(k: GearKit): void {
 function cables(k: GearKit): void {
   const s = k.sampler(['a_mantel'], AXES.torso), dark = plain(0x2a2230), tip = glow(0xff4fa3);
   const on = (x: number, y: number, back: boolean, lift = 0.014): Vector3 => { const a = angleAt(s, y, x, back); return s.point(y, a, s.radius(y, a, 0.012, 0.2) + lift); };
+  // Each run starts tucked under the collar's foot.
   const runs: readonly (readonly [number, number][])[] = [
-    [[-0.075, 1.42], [-0.11, 1.33], [-0.1, 1.24], [-0.088, 1.15]],
-    [[-0.11, 1.415], [-0.15, 1.33], [-0.142, 1.26], [-0.125, 1.2]],
-    [[0.085, 1.42], [0.125, 1.33], [0.122, 1.24], [0.11, 1.16]],
+    [[-0.05, 1.468], [-0.075, 1.42], [-0.11, 1.33], [-0.1, 1.24], [-0.088, 1.15]],
+    [[-0.068, 1.462], [-0.11, 1.415], [-0.15, 1.33], [-0.142, 1.26], [-0.125, 1.2]],
+    [[0.056, 1.468], [0.085, 1.42], [0.125, 1.33], [0.122, 1.24], [0.11, 1.16]],
   ];
   k.on('spine_03', () => {
     const cable = (pts: Vector3[]): void => {
-      k.add(tube(pts, 0.0105, 7, 4), dark);
+      k.add(tube(pts, 0.0105, 8, 4), dark);
       const end = pts[pts.length - 1]!, dir = end.clone().sub(pts[pts.length - 2]!).normalize();
       k.add(along(cyl(0.0125, 0.011, 0.026, 6), dir, end.clone().addScaledVector(dir, 0.008)), tip);
     };
-    for (const run of runs) cable(run.map(([x, y]) => on(x, y, false)));
-    for (const sg of SIDES) cable([on(0.085 * sg, 1.43, true), on(0.12 * sg, 1.35, true), on(0.125 * sg, 1.28, true), on(0.118 * sg, 1.22, true)]);
+    for (const run of runs) cable(run.map(([x, y], i) => on(x, y, false, i ? 0.014 : 0.009)));
+    for (const sg of SIDES) cable([on(0.06 * sg, 1.468, true, 0.009), on(0.085 * sg, 1.43, true), on(0.12 * sg, 1.35, true), on(0.125 * sg, 1.28, true), on(0.118 * sg, 1.22, true)]);
   });
 }
 
@@ -744,6 +767,7 @@ export const BODY_GEAR: Readonly<Record<string, GearBuilder>> = {
   'patches-punk': patchesPunk,
   rips,
   'belt-fire': beltFire,
+  'collar-fire': collarFire,
   'boards-bvg': boardsBvg,
   'badge-bvg': badgeBvg,
   'belt-bvg': beltBvg,

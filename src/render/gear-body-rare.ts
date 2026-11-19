@@ -237,8 +237,8 @@ const KIEZ = { collar: 0x24508e, orange: 0xf08a24, belt: 0x141a2a, dark: 0x2a2c3
 
 /** Stand collar: an upright padded band round the neck (open at the front, 1.8 cm clear of it), orange piping on its top edge. */
 function collarStand(k: GearKit): void {
-  const A = 0.45, segs = 16, rows = 3;
-  const { at } = collarShell(neckOf(k, 'a_weste'), { a0: A, a1: 2 * Math.PI - A, segs, rows, drop: 0.02, lift: 0.008, h: byAngle([[0, 0.018], [1.2, 0.026], [Math.PI, 0.03]]), flare: () => 0.01 });
+  const A = 0.45, segs = 16, rows = 2;
+  const { at } = collarShell(neckOf(k, 'a_weste'), { a0: A, a1: 2 * Math.PI - A, segs, rows, lift: 0.008, h: byAngle([[0, 0.018], [1.2, 0.026], [Math.PI, 0.03]]), flare: () => 0.01 });
   k.on('spine_03', () => {
     k.add(sheet((u, v) => at(u, v, 0.004 * Math.sin(Math.PI * v)), segs, rows), plain(KIEZ.collar));
     k.add(sheet((u, v) => at(u, 0.8 + 0.2 * v, 0.003), segs, 1), plain(KIEZ.orange));
@@ -548,9 +548,10 @@ function plates(k: GearKit, paint: Paint, riv: Paint, rivets: number): { s: Samp
 
 const PANZER = { alu: 0xa8b0b8, rivet: 0xe8ecf0, stripe: 0xe8c020, black: 0x1a1a1a, boss: 0xc8ccd0 } as const;
 
-/** Panzer plates: aircraft aluminium, rivet rows, a yellow-black warning stripe and a propeller hub on the chest. */
+/** Panzer plates: aircraft aluminium, rivet rows, a yellow-black warning stripe and a propeller hub on the chest; a padded leather band round the neckline. */
 function platePanzer(k: GearKit): void {
   const { s, F } = plates(k, bright(PANZER.alu), bright(PANZER.rivet), 5);
+  neckBand(k, 'a_mantel', plain(0x2a2420), 0.016, 0, 0.007);
   // Warning stripe on the bust piece: yellow band and black slanted bars, on the plate's lift.
   const tb = 1.205, th = 0.03, ha = FRONT.a(1, tb + th / 2) * 0.95;
   const L = (u: number): number => FRONT_LIFT(0.5 + (u - 0.5) * 0.95, vOf(FRONT, 0.5, tb + th / 2)) + STEP + 0.003;

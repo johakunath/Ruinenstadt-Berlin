@@ -35,6 +35,7 @@ const GROUPS: Record<string, string> = {
   'alex-mitte': 'a:blaumann;h:stroh;g:gartenh;a:blaumann,h:stroh,g:gartenh;a:poncho;a:kmantel;h:nbrille;a:kmantel,h:nbrille',
   sets: 'a:weste:kiez,h:kiezhelm,g:kiezhand;a:weste:kiez;h:kiezhelm;g:kiezhand;a:mantel:spree,f:spreestief;a:mantel:spree;f:spreestief;a:kette:zit,h:topfhelm,f:eisenstief;a:kette:zit;h:topfhelm;f:eisenstief',
   legendary: 'a:spaeti;a:panzer;a:rattenmantel;a:ritter;h:pickel;g:kiezbox;f:schaffner',
+  tunnel: 'a:mantel:tunnel,h:nbrille:tunnel,f:stiefel:tunnel;a:mantel:tunnel;h:nbrille:tunnel;f:stiefel:tunnel',
 };
 GROUPS.all = Object.values(GROUPS).join(';');
 
