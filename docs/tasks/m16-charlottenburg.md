@@ -58,6 +58,7 @@ Bounds x −135 … 185, z −195 … 215 (320 × 410). Start S+U Zoologischer G
 | E5 | Searchlights (step 3b) | Additive beam cards on `FX_LAYER`, sweeping as a function of time; no lights. Mirrors and cut glass: environment gloss plus a moving highlight; no planar reflection, no extra pass |
 | E6 | Light colours (step 3b) | Two new kinds of source may add a glow colour each: bulb white for marquees, stage pink. Each costs one glow material per chunk where it appears; say so in the cost line |
 | E7 | Riddles (steps 5, 6) | Only from existing parts: hold rings (tunnel generator `hold`), gates that open (`Level.gates`), sleeping guards, hidden blessings. No new input, no text puzzles |
+| E8 | Heights (step 2; Johannes, 2026-11-19) | The Stadtbahn is elevated everywhere (viaduct deck 6.5 m, streets pass through arches). The run starts **on the platform level of Bahnhof Zoo**: a walkable deck at viaduct height (a `Terrace` with stairs, as the Warschauer Brücke in Xhain: `bridge`, h 6) with the arrived train on its track, the 1882 hall above it as bare iron arches without glass so the camera sees the hero, and a wide stair down to the Hardenbergplatz toward the camera. No fight up there. Elsewhere the district is flat: gentle relief only in the Zoo and the garden, front steps at the Opernhaus and the Schloss are dressing |
 
 ## Input for step 5 (proposals, not decided)
 
