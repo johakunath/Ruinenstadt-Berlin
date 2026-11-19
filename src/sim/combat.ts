@@ -1,7 +1,8 @@
 // Damage resolution (2D js/combat.js `hit`, `chain`, `kill`, `hurt`): every hit on an enemy goes
 // through `strike`, every death through `killEnemy`, every hit on the hero through `hurtPlayer`.
 // Blessing and weapon-mod rules live here so a swing, a shot, a power and a burn all obey them.
-import { HIT_FEEL, PLAYER, type HitWeight } from '../data/combat';
+import { HIT_FEEL, PLAYER, WEAPON, type HitWeight } from '../data/combat';
+import { STRONG_AGAINST, type DamageType } from '../data/weapon-look';
 import { ENEMY_RESISTANCES, type ElementId, type LegendaryId } from '../data/items';
 import { ELITES, THREAT } from '../data/enemies';
 import { splitElite } from './enemies';
@@ -115,6 +116,11 @@ export function shieldFactor(s: Sim, e: Enemy, o: StrikeOpts, stuns = (o.stun ??
   return e.state === 'special' && e.sp?.kind === 'key' ? 0 : sh.front;
 }
 
+/** D9: the equipped weapon's damage types are strong against one of the enemy's classes (two classes count once). */
+export function effectiveAgainst(types: readonly DamageType[], e: Enemy): boolean {
+  return types.some((t) => STRONG_AGAINST[t].some((c) => e.def.classes.includes(c)));
+}
+
 /** One hit on an enemy. Returns the damage dealt. */
 export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): number {
   if (e.state === 'dead') return 0;
@@ -151,7 +157,12 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
     }
     damage *= w;
   }
-  damage = Math.max(1, Math.round(damage));
+  // D9: every hit dealt with the weapon that fits the enemy's class (attacks, powers, procs); burn ticks
+  // never come through here, and procs below start from the damage without it (no compounding).
+  const effective = effectiveAgainst(s.stats.types, e);
+  const typeK = effective ? 1 + WEAPON.typeBonus : 1;
+  damage = Math.max(1, Math.round(damage * typeK));
+  const procBase = damage / typeK;
   e.hp -= damage;
   e.lastCrit = crit;
 
@@ -173,13 +184,13 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
     const n = ++a.legHits;
     // Kiezbox: every fourth hit stuns. Bassarm: every fifth hit chains to four.
     if (hasL(s, 'kiezbox') && n % 4 === 0) stun(e, 0.5);
-    if (hasL(s, 'bassarm') && n % 5 === 0) chain(s, e, damage * 0.6, 4);
+    if (hasL(s, 'bassarm') && n % 5 === 0) chain(s, e, procBase * 0.6, 4);
     // Fernsehturm: a crit bursts into fire on the neighbors.
     if (crit && hasL(s, 'turm')) {
       for (const t of s.enemies) {
         if (t === e || t.state === 'dead' || Math.hypot(t.x - e.x, t.z - e.z) >= 75 * PX) continue;
-        strike(s, t, damage * 0.6, { knock: knock(220), noproc: true, feel: 'none', element: 'fire' });
-        ignite(s, t, damage * 0.3, 2);
+        strike(s, t, procBase * 0.6, { knock: knock(220), noproc: true, feel: 'none', element: 'fire' });
+        ignite(s, t, procBase * 0.3, 2);
       }
       s.events.push({ type: 'impact', x: e.x, z: e.z, radius: 75 * PX, kind: 'boom' });
     }
@@ -188,11 +199,11 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (!o.noproc) {
     for (const el of s.stats.elements) {
       if (!(crit && pk(s, 'd_kurz')) && s.rng.next() > s.stats.elementChance) continue;
-      if (el === 'fire') ignite(s, e, damage * STATUS.burnShare * s.stats.elementPower, burnTime(s) + pk(s, 'schwel'), pk(s, 'schwel') > 0);
+      if (el === 'fire') ignite(s, e, procBase * STATUS.burnShare * s.stats.elementPower, burnTime(s) + pk(s, 'schwel'), pk(s, 'schwel') > 0);
       else if (el === 'acid') { if (resist(e, 'acid') > 0) e.acid = STATUS.acidTime; }
-      else chain(s, e, damage * STATUS.chainShare * s.stats.elementPower, 2 + 2 * pk(s, 'chain'));
+      else chain(s, e, procBase * STATUS.chainShare * s.stats.elementPower, 2 + 2 * pk(s, 'chain'));
     }
-    if ((s.content.shrine.zap ?? 0) > 0 && s.rng.next() < 0.25) chain(s, e, damage * 0.45, 2);
+    if ((s.content.shrine.zap ?? 0) > 0 && s.rng.next() < 0.25) chain(s, e, procBase * 0.45, 2);
   }
   let note = o.note;
   if (pk(s, 'exec') && !e.def.boss && e.hp > 0 && e.hp < e.maxHp * STATUS.execShare) {
@@ -204,6 +215,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   s.events.push({
     type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius, dx, dz,
     weight: feel === 'none' ? 'light' : feel, killed, damage, critical: crit, element: o.element, quiet: feel === 'none', note,
+    ...(effective ? { effective: true } : {}),
   });
   if (killed) killEnemy(s, e);
   return damage;

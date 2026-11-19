@@ -23,6 +23,11 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | Menus | Portraits in the Kodex and camp station windows, illustrated intro, pause menu, inventory, Segen, options, controls graphics, start screen (U1 to U3); set-break warning on a swap (2D backlog 29, not confirmed) | `u1-pause-menu.md`, `u2-menu-tabs.md`, `u3-menu-2d.md` |
 | Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
 | Audio | Enemy sounds per type, listening test (A2); S3 boss voices: are the 48 lines clear, the right voice per boss, too loud or too often? (`?spawn=tuersteher`, `?spawn=weltzeituhr`) | `a2-audio-followups.md`, `wp5-enemies.md` › Step 4 |
+| Weapons | Weapon looks per base (WP4 step 1): equip several per kind (Späti, drops, stash); does each read at the game camera, does the glow of neon and legendary weapons read without and with an element, on both profiles; rendered icons readable in the bag on the phone | `wp4-equipment-visuals.md` |
+| Weapon types | D9: +40 % for the fitting weapon (Klinge on Untote and Pflanzen, Hammer on Maschinen, Speer on Menschen, Werfer on Tiere); worth switching, do the white sparks and `Stark gegen` read; Kodex class | `wp4-equipment-visuals.md` |
+| Short weapons | D8: Hackmesser, Pflasterhammer, Rohrzange one-handed, reach 75 to 80 %, damage 120 to 125 %; the shorter two-handed hammers, Leuchtröhre, Sichel and legendary blades lose 10 to 20 % reach and gain the same in damage; does reach still fit the model | `wp4-equipment-visuals.md` |
+| Neonflinte | The rifle (WP4 1h): shots from the pistol pose, left hand at the handguard, shots at muzzle height; does it read as shooting | `wp4-equipment-visuals.md` |
+| Hammer knockback | Every hammer attack pushes 1.5× as far (stun on every hit stays); does it feel strong without pushing enemies out of the next swing | `wp4-equipment-visuals.md` |
 | Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
 | Mitte Tor fight in rage | Der Türsteher below half life, fight near the Brandenburger Tor: did the neon bars ever shut? Pink strip readable in time to step off? Bars visible in both profiles, also with the Tor cut away? Bodies pop out of a closing bar? (`?map=mitte&at=3&spawn=tuersteher,brute`) | `p25-neon-barriers.md` |
 

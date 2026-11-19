@@ -708,7 +708,7 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .crows .crow { display: flex; justify-content: space-between; gap: 6px; min-height: 20px; font-size: 15px; }
 .crow.cbase { font-weight: 600; margin-bottom: 2px; }
 .crow .cnone { color: #5d564c; }
-.af { font-size: 14px; margin: 3px 0; } .af.set { color: #75d68a; } .af.legend { color: var(--ember); font-style: italic; } .af.mod { color: #f2a04b; }
+.af { font-size: 14px; margin: 3px 0; } .af.set { color: #75d68a; } .af.legend { color: var(--ember); font-style: italic; } .af.mod { color: #f2a04b; } .af.strong { color: #bfe6ee; } .kcls { color: #bfe6ee; white-space: nowrap; }
 .cmp { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin: 2px 0; }
 .cmp.ckp { margin-top: 8px; font-size: 15px; }
 .cdet summary { cursor: pointer; font-size: 14px; color: var(--dim); margin: 6px 0; min-height: 28px; }

@@ -163,7 +163,8 @@ test('equipment changes combat and HUD health, and survives a retry', async ({ p
     const g = window.__game!, sim = g.sim(), p = sim.player;
     g.hold(true);
     const enemy = sim.enemies[0]!;
-    enemy.def = { ...enemy.def, speed: 0, attackRange: 0, knockbackTaken: 0 };
+    // No class: the D9 weapon-type bonus would hide the equipped damage under test.
+    enemy.def = { ...enemy.def, speed: 0, attackRange: 0, knockbackTaken: 0, classes: [] };
     Object.assign(enemy, { x: 3, px: 3, z: 1.5, pz: 1.5, hp: 1000, maxHp: 1000, state: 'chase', stateT: 0, kx: 0, kz: 0 });
     sim.enemies = [enemy]; sim.spawnT = Infinity;
     Object.assign(p, { x: 3, px: 3, z: 0, pz: 0, facing: 0, pfacing: 0 });

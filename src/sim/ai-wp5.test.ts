@@ -210,6 +210,8 @@ describe('Schildträger (2D shield)', () => {
   it('blocks from the front (20 %), the hammer stun opens the guard for 2.2 s, from behind full damage', () => {
     const s = fresh();
     const e = pin(put(s, 'schild', 0, 2));
+    // No class: the WP4 D9 weapon-type bonus (blade on Untote) would hide the shield numbers under test.
+    e.def = { ...e.def, classes: [] };
     e.hp = e.maxHp = 1e6;
     e.cd = [99, 99, 99];
     expect(strike(s, e, 100)).toBe(20);

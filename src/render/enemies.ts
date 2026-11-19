@@ -1737,7 +1737,7 @@ export class EnemyView {
       const armed = e.kind === 'feldwebel' || e.kind === 'hauptmann';
       if (armed && !this.rack) {
         this.rack = new WeaponRack(this.materials);
-        this.rack.show('blade', undefined);
+        this.rack.show('stahl', undefined);
         this.model.getObjectByName('hand_r')?.add(this.rack.group);
       }
       if (this.rack) this.rack.group.visible = armed;

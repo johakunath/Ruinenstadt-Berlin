@@ -139,7 +139,8 @@ describe('resistances (2D RES)', () => {
     w.hp = w.maxHp = sp.hp = sp.maxHp = 1e6;
     expect(strike(s, w, 100, { element: 'fire', noproc: true }) / strike(s, w, 100, { noproc: true })).toBeCloseTo(1.6);
     expect(strike(s, sp, 100, { element: 'acid', noproc: true })).toBe(0);
-    expect(strike(s, sp, 100, { element: 'shock', noproc: true })).toBe(160);
+    // 160 × 1.4: the starter blade cuts Untote (D9 type bonus).
+    expect(strike(s, sp, 100, { element: 'shock', noproc: true })).toBe(224);
     // An acid ring (Rattenmantel) leaves no acid on the immune Speier.
     s.abilities.shocks.push({ x: sp.x, z: sp.z, r: 0.1, max: 3, hits: [], mul: 1, stun: 0, knock: 0, acid: true, kind: 'acid' });
     for (let i = 0; i < 30; i++) { s.hitstop = 0; stepSim(s, NO_INPUT); }
@@ -156,9 +157,10 @@ describe('elites (2D modifiers)', () => {
     makeElite(s, e, 'gepanzert');
     expect(e.maxHp).toBe(Math.round(hp * THREAT.eliteHp));
     e.hp = e.maxHp = 1e6;
-    expect(strike(s, e, 100)).toBe(50);
+    // 50 × 1.4 (D9: blade against Untote).
+    expect(strike(s, e, 100)).toBe(70);
     e.open = 1;
-    expect(strike(s, e, 100)).toBe(130);
+    expect(strike(s, e, 100)).toBe(182);
   });
 
   it('Flink is faster; Spaltend splits into two small bodies without loot', () => {
