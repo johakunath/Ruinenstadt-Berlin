@@ -129,6 +129,7 @@ export class Run {
 }
 
 export interface Mats {
+  profile: Materials['profile'];
   plaster: Record<string, LitMaterial>;
   brick: LitMaterial;
   stucco: LitMaterial;
@@ -195,6 +196,7 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
   const ivyTex = paintIvy();
   const corr = paintCorrugated(o);
   const mats: Mats = {
+    profile: m.profile,
     plaster,
     brick: m.surface({ map: brick.map, normalMap: brick.normalMap, roughness: 0.9, vertexColors: true }),
     stucco: m.surface({ map: paintStucco(o).map, roughness: 0.85, vertexColors: true }),
@@ -253,7 +255,7 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
   );
   if (!district) sources.push([new URL('../../assets/textures/common/concrete.webp', import.meta.url).href, [mats.concrete]]);
   for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat);
-  if (district !== 'tunnel') loadLotPropTextures(mats, o.anisotropy);
+  if (district !== 'tunnel') loadLotPropTextures(mats);
   return mats;
 }
 

@@ -36,7 +36,7 @@ export function makeLotGroundMats(materials: Materials, dirt: Texture, active: b
   const marking = materials.surface({ map: toTexture(fallback, false, anisotropy), alphaTest: 0.5, roughness: 0.9, vertexColors: true });
   if (active) {
     swapPaintedMap([gravel], urls.gravel, anisotropy);
-    swapPaintedMap([marking], urls.markings, anisotropy, false);
+    swapPaintedMap([marking], urls.markings, anisotropy, false, 512);
   }
   return { gravel, marking };
 }
@@ -56,11 +56,13 @@ function weatherCloth(material: LitMaterial, albedo: CanvasImageSource, anisotro
   fallback.dispose();
 }
 
-export function loadLotPropTextures(mats: Mats, anisotropy: number): void {
-  swapPaintedMap([mats.corrugated], urls.corrugated, anisotropy);
-  swapPaintedMap([mats.roughConcrete], urls.concrete, anisotropy);
+export function loadLotPropTextures(mats: Mats): void {
+  const { anisotropy, id } = mats.profile;
+  const performance = id === 'leistung';
+  swapPaintedMap([mats.corrugated], urls.corrugated, anisotropy, true, performance ? 256 : 512);
+  swapPaintedMap([mats.roughConcrete], urls.concrete, anisotropy, true, 512);
   swapPaintedMap([mats.stoneMoss], urls.stone, anisotropy);
-  swapPaintedMap([mats.brickRuin], urls.ruin, anisotropy);
+  swapPaintedMap([mats.brickRuin], urls.ruin, anisotropy, true, performance ? 512 : 1024);
   loadPaintedTexture(urls.tarp, anisotropy, (image: Texture) => {
     if (image.image instanceof HTMLImageElement) {
       weatherCloth(mats.tarp, image.image, anisotropy);

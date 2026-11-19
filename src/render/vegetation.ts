@@ -36,7 +36,8 @@ const barkTile = new URL('../../assets/textures/common/bark.webp', import.meta.u
 export function plantMats(m: Mats): PlantMats {
   let p = matCache.get(m);
   if (p) return p;
-  const anisotropy = m.wood.map?.anisotropy ?? 4;
+  const { anisotropy, id } = m.profile;
+  const performance = id === 'leistung';
   const leaf = m.fern.clone();
   leaf.map = paintPlants();
   const foliage = m.wood.clone();
@@ -46,9 +47,9 @@ export function plantMats(m: Mats): PlantMats {
   bark.map = paintBark();
   bark.roughness = 0.95;
   matCache.set(m, (p = { leaf, foliage, bark }));
-  swapPaintedMap([leaf], plantCards, anisotropy, false);
-  swapPaintedMap([foliage], foliageTile, anisotropy);
-  swapPaintedMap([bark], barkTile, anisotropy);
+  swapPaintedMap([leaf], plantCards, anisotropy, false, performance ? 512 : 1024);
+  swapPaintedMap([foliage], foliageTile, anisotropy, true, performance ? 256 : 512);
+  swapPaintedMap([bark], barkTile, anisotropy, true, performance ? 256 : 512);
   return p;
 }
 
