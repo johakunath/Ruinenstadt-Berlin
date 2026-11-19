@@ -1,8 +1,7 @@
 // Breakable props (M4): crates and bins on expedition maps. The hero's swings and dash strike deal
 // one hit each; enemies never break them. A break removes the collider and drops loot (`loot.ts`).
-import { sectorHitsCircle, type Collider } from './collide';
+import { colliderBounds, sectorHitsCircle, type Collider } from './collide';
 import { breakDrops } from './loot';
-import { focusFlow } from './director';
 import type { Sim } from './types';
 import { HIT_FEEL } from '../data/combat';
 
@@ -48,8 +47,11 @@ export function hitBreakable(sim: Sim, b: Breakable): void {
   }
   b.broken = true;
   sim.level.remove(b.def.collider);
-  // The flow field was built with this collider; rebuild it when the prop was inside its window.
-  if (sim.level.expedition && Math.abs(x - sim.flowCenter.x) < 30 && Math.abs(z - sim.flowCenter.z) < 30) focusFlow(sim, sim.flowCenter.x, sim.flowCenter.z);
+  // The flow field was built with this collider: re-mark the cells around it (no new field).
+  if (sim.level.expedition) {
+    const area = colliderBounds(b.def.collider);
+    sim.flow.patch(area, sim.level.inBox(area));
+  }
   sim.events.push({ type: 'breakableBreak', id: b.id, kind, x, z, inside });
   breakDrops(sim, b);
 }
