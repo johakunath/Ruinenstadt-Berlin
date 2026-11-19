@@ -12,6 +12,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 
 | Area | What to try | Task file |
 |---|---|---|
+| Konto und Slots | Title screen: your code, name and Synchron show before Losziehen. Name the account and slots (✎). PC: play slot 1. Tablet: Konto wechseln with the PC code, all three slots and names arrive; start a fresh run in slot 2. Back on the PC the slot 2 card shows the tablet run after a reload. Slot löschen wipes only the active slot | `m6b-account-slots.md` |
 | Combat | Four weapons with finishers, powers and ultimates, blessings, Umbau cards (G1), spear thrusts (C1), Auto-Angriff, legendary powers | `combat-audio-migration.md`, `g1-build-variety.md`, `c1-spear-light.md` |
 | Funde | Find a few Uhrwerkteile and Kassetten in Köpenick: are the spots fair (not hidden under a viaduct or roof), is 15 m the right distance, does the contour through walls read, does the banner show? Leave one, start again: it waits at the same spot | `docs/status.md` › Funde |
 | Kraft cards | Inventory › Waffe: the two power cards switch, the ultimate line below is plain text | `docs/mockups/u4-kraft-layout.svg` (A) |
