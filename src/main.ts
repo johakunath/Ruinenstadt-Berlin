@@ -627,7 +627,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : '');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : '');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -1111,7 +1111,9 @@ showTunnelButton();
  */
 function mechsFor(): boolean | 'small' {
   const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
-  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own, ...(own.length === 0 && !isCamp ? ['waechter'] : [])];
+  // M15 step 8: wave kinds too (the U2 tunnel brings Uhrwerkläufer under a Schaffner).
+  const waves = level?.encounters.flatMap((e) => e.waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix[k as keyof typeof w.mix] ?? 0) > 0))) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own, ...waves, ...(own.length === 0 && !isCamp ? ['waechter'] : [])];
   const body = (k: string): string | undefined => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body;
   if (kinds.some((k) => body(k) === 'mechBig' || /^(volkskoloss|weltzeituhr)/.test(k))) return true;
   return kinds.some((k) => body(k) === 'mech') ? 'small' : false;

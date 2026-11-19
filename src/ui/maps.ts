@@ -43,19 +43,21 @@ export function titleLinks(map: MapId, freed: readonly number[]): MapLink[] {
   } else if (map === 'tunnel') {
     out.push({ id: 'go-tunnel', to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' });
     if (freed.includes(100)) out.push(xhain);
-  } else if (map === 'xhain' || map === 'alex') {
+  } else if (map === 'xhain' || map === 'alex' || map === 'mitte') {
     out.push({ id: 'go-tunnel', to: 'koepenick', html: '<b>Köpenick</b><small>Ausrüstung bleibt</small>' });
   }
   return out;
 }
 
-/** The map the victory screen leads on to (`line`: the tunnel line won or to ride). M15: Xhain → U8 → Alexanderplatz. */
+/** The map the victory screen leads on to (`line`: the tunnel line won or to ride). M15: Xhain → U8 → Alexanderplatz → U2 → Mitte. */
 export function wonLink(map: MapId, line = 0): { to: MapId; line?: number; html: string } | null {
   if (map === 'koepenick') return { to: 'tunnel', html: '<b>In den S3-Tunnel</b><small>Richtung Warschauer Straße</small>' };
+  if (map === 'tunnel' && line === 2) return { to: 'mitte', html: '<b>Weiter nach Mitte</b><small>Ausstieg Potsdamer Platz</small>' };
   if (map === 'tunnel' && line === 1) return { to: 'alex', html: '<b>Weiter zum Alex</b><small>Ausstieg Alexanderplatz</small>' };
   if (map === 'tunnel') return { to: 'xhain', html: '<b>Weiter nach Xhain</b><small>Ausstieg Warschauer Straße</small>' };
   if (map === 'xhain') return { to: 'tunnel', line: 1, html: '<b>In die U8</b><small>Richtung Alexanderplatz</small>' };
-  if (map === 'alex') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
+  if (map === 'alex') return { to: 'tunnel', line: 2, html: '<b>In die U2</b><small>Richtung Potsdamer Platz</small>' };
+  if (map === 'mitte') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
   return null;
 }
 
