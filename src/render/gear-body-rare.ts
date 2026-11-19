@@ -228,15 +228,19 @@ function pauldron(k: GearKit, s: 1 | -1, plate: Paint, riv: Paint, o: { puff: nu
 
 const KIEZ = { collar: 0x24508e, orange: 0xf08a24, belt: 0x141a2a, dark: 0x2a2c30, cream: 0xf4f0e0 } as const;
 
-/** Stand collar: a padded band round the back and sides of the scarf ring, higher at the back, orange piping. */
+/** Stand collar: an upright padded band behind the neck, round the back of the scarf ring, with orange piping. */
 function collarStand(k: GearKit): void {
   const s = trunk(k, ['scarf', 'a_weste'], NECK, 0.21);
-  const a0 = 1.0, a1 = 2 * Math.PI - 1.0;
-  const R = field(s, 1.4, 1.56, a0, a1, { nt: 8, na: 16, smooth: 3 });
-  const top = (u: number): number => 1.5 + 0.035 * Math.sin(Math.PI * u) ** 2;
+  const a0 = 1.7, a1 = 2 * Math.PI - 1.7, segs = 12;
+  // Radius per angle: the scarf ring and the vest's shoulders over the collar's foot; upright above it.
+  const R = field(s, 1.41, 1.5, a0, a1, { nt: 3, na: segs, smooth: 3 });
+  const foot: number[] = [];
+  for (let j = 0; j <= segs; j++) { const a = a0 + ((a1 - a0) * j) / segs; foot.push(Math.max(R(1.41, a), R(1.44, a), R(1.47, a), R(1.5, a))); }
+  const W: Field = (_t, a) => { const f = Math.min(segs, Math.max(0, ((a - a0) / (a1 - a0)) * segs)), j = Math.min(segs - 1, Math.floor(f)); return foot[j]! + (foot[j + 1]! - foot[j]!) * (f - j); };
+  const top = (u: number): number => 1.52 + 0.045 * Math.sin(Math.PI * u) ** 1.5;
   k.on('spine_03', () => {
-    k.add(patch(s, R, (u, v) => [1.415 + (top(u) - 1.415) * v, a0 + (a1 - a0) * u], 16, 3, (_u, v) => 0.014 - 0.004 * v), plain(KIEZ.collar));
-    k.add(patch(s, R, (u, v) => [top(u) - 0.012 + 0.012 * v, a0 + (a1 - a0) * u], 16, 1, 0.013), plain(KIEZ.orange));
+    k.add(patch(s, W, (u, v) => [1.42 + (top(u) - 1.42) * v, a0 + (a1 - a0) * u], segs, 3, (_u, v) => 0.012 + 0.008 * v * v), plain(KIEZ.collar));
+    k.add(patch(s, W, (u, v) => [top(u) - 0.012 + 0.014 * v, a0 + (a1 - a0) * u], segs, 1, 0.022), plain(KIEZ.orange));
   });
 }
 
