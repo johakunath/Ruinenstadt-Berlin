@@ -347,6 +347,26 @@ Verdict on the sheets: good overall. Notes are Fable's; they change D1 and add D
 | Fahnenstange (I13) | Flag lower on the pole and longer; tip longer |
 | Harpune (I14) | Point shorter, barbed blade wider (a real harpoon head); the line is a rope and longer |
 
+Look 1, sheets 2 and 3 (Johannes, 2026-11-19, second message):
+
+| Model | Change |
+|---|---|
+| All neon and GDR weapons (I59 to I62, I71 to I74) | More detail: they are the rarer weapons. Triangle budget as legendary (1,400) |
+| Leuchtröhre (I59), Boxenhammer (I60), Werkhammer (I72) | About a third shorter; I60 and I72 with a bigger head |
+| Neon fork (I61), Aufziehwerfer (I73) | Smaller, bands that hang, and a glow |
+| Sichel (I71) | Smaller overall, shorter handle, thicker blade |
+| Aufziehwerfer (I73), Zeigerlanze (I74) | Add the clockwork: cogs as in the painted icons |
+| Zeigerlanze (I74) | Thicker shaft so the yellow stands out; blade silver and wider |
+| Mauerbrecher (I16), Plattenbrecher (I52), Morgenstern (I48), Hackmesser der Kiezwache (I90) | Shorter (hammers: the two-handed rule above; Hackmesser as the normal one) |
+| Mauerbrecher (I16), Plattenbrecher (I52; Johannes said "I57", read as I52) | Bigger head, more rugged, ribbon fixed |
+| Morgenstern (I48) | Bigger ball, ribbon fixed |
+| Fernsehturm-Splitter (I15), Klinge der Zitadelle (I51) | About a quarter shorter |
+| Fernsehturm-Splitter (I15; Johannes said "I16", read as the shard) | Faint white glow on the shard |
+| Zorn der Ringbahn (I32), Krähenschleuder (I53), Zwille des Spreegeists (I09 set) | Smaller, bands and ribbons that hang, a little more detail |
+| Speer der Siegessäule (I56) | More detail, a little shorter |
+
+Fable: models that get up to a third shorter keep their kind's reach (look only). Reach and damage change only for the three bases in D8, which are half as long. To confirm with Johannes on the next sheet.
+
 Done when: new sheets; hammer and spear left hand still on the shaft where the model is two-handed; `npm run check`.
 
 ### D8 Size and strength per base (changes D1)
