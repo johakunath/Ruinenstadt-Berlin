@@ -9,7 +9,7 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ElementId, SetId, WeaponKindId } from '../data/items';
-import { WEAPON_LOOKS, weaponLookId, DEFAULT_LOOK, type WeaponLookId } from '../data/weapon-look';
+import { WEAPON_LOOKS, weaponLookId, weaponTraits, DEFAULT_LOOK, type WeaponLookId } from '../data/weapon-look';
 import { HERO_LAYER } from './layers';
 import type { LitMaterial, Materials } from './materials';
 import { GRAIN_TONE, paintGrain, paintMetal } from './paint';
@@ -88,7 +88,9 @@ const wood = (hex: number): Paint => ({ slot: 'matte', hex, grain: 0 });
 const cloth = (hex: number): Paint => ({ slot: 'matte', hex, grain: 1 });
 const plain = (hex: number): Paint => ({ slot: 'matte', hex, grain: 2 });
 const stone = (hex: number): Paint => ({ slot: 'matte', hex, grain: 3 });
-const GLOW: Paint = { slot: 'glow', hex: 0xffffff, grain: 2 };
+/** Glow parts: the element or signature colour; `GLOW_WHITE` glows a faint white whatever the colour (D1, Fernsehturm-Splitter). */
+const GLOW: Paint = { slot: 'glow', hex: 0x000000, grain: 2 };
+const GLOW_WHITE: Paint = { slot: 'glow', hex: 0xffffff, grain: 2 };
 
 /** Shared paints. The first seven are the old per-material colours (pre-WP4 kit). */
 const P = {
@@ -116,6 +118,15 @@ const _c = new Color();
 
 class Parts {
   readonly list: WeaponPart[] = [];
+  /** Extra transform for the parts added inside `frame` (a scaled hammer head). */
+  private xf: Matrix4 | null = null;
+
+  frame(m: Matrix4, parts: () => void): void {
+    const prev = this.xf;
+    this.xf = prev ? prev.clone().multiply(m) : m;
+    parts();
+    this.xf = prev;
+  }
 
   /** Places `geo` like a Mesh at position (x, y, z) with Euler rotation (rx, ry, rz) and paints it. */
   add(geo: BufferGeometry, paint: Paint, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, soft = false): this {
@@ -123,6 +134,7 @@ class Parts {
     for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
     g.clearGroups();
     g.applyMatrix4(_m.compose(_p.set(x, y, z), _q.setFromEuler(_e.set(rx, ry, rz)), _s));
+    if (this.xf) g.applyMatrix4(this.xf);
     // Vertex colour = paint ÷ the map's mean tone (linear), so map × colour averages to the paint.
     const tone = paint.slot === 'metal' ? METAL_TONE : paint.slot === 'matte' ? GRAIN_TONE[paint.grain] : 255;
     const div = _c.setHex(tone * 0x10101).r;
@@ -163,15 +175,54 @@ function flat(pts: ReadonlyArray<readonly [number, number]>, depth: number, hole
   return g;
 }
 
-/** A red rag tied at `y`: the knot and a hanging strip (soft). */
-function ribbon(b: Parts, y: number, len = 0.34, paint: Paint = P.red): void {
-  b.add(new PlaneGeometry(0.07, len), paint, -0.05, y - len * 0.35, 0.02, 0, 0, 0.5, true);
-  b.add(cyl(0.036, 0.036, 0.05), paint, 0, y, 0, 0, 0, 0, true);
+/** A rag tied at `y` round a shaft of radius `r`: a knot and a thin, wavy strip of 5 segments that hangs (soft). */
+function ribbon(b: Parts, y: number, len = 0.28, r = 0.028, paint: Paint = P.red): void {
+  b.add(cyl(r + 0.005, r + 0.005, 0.025, 8), paint, 0, y, 0, 0, 0, 0, true);
+  const g = new PlaneGeometry(0.025, len, 1, 5);
+  g.translate(0, -len / 2, 0);
+  const p = g.attributes.position!;
+  for (let i = 0; i < p.count; i++) {
+    const v = -p.getY(i) / len, x = p.getX(i);
+    p.setXYZ(i, x - 0.012 - 0.05 * v * v, p.getY(i) * (1 - 0.08 * v), 0.014 * Math.sin(v * Math.PI * 2.2) + x * 0.4 * v);
+  }
+  g.computeVertexNormals();
+  b.add(g, paint, -r, y, 0, 0, 0, 0, true);
+}
+
+const _a = new Vector3(), _b = new Vector3(), _d = new Vector3();
+
+/** A cord or band from `a` to `c` that sags by `sag` in its middle (a static curve of `n` segments, soft). */
+function cord(b: Parts, a: readonly [number, number, number], c: readonly [number, number, number], sag: number, r: number, paint: Paint, n = 5): void {
+  const mid = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2 - sag, (a[2] + c[2]) / 2];
+  const at = (t: number, out: Vector3): Vector3 => out.set(
+    (1 - t) ** 2 * a[0] + 2 * t * (1 - t) * mid[0]! + t * t * c[0], (1 - t) ** 2 * a[1] + 2 * t * (1 - t) * mid[1]! + t * t * c[1], (1 - t) ** 2 * a[2] + 2 * t * (1 - t) * mid[2]! + t * t * c[2]);
+  at(0, _a);
+  for (let i = 1; i <= n; i++) {
+    at(i / n, _b);
+    _d.subVectors(_b, _a);
+    const g = cyl(r, r, _d.length() + r, 5);
+    g.applyQuaternion(_q.setFromUnitVectors(UP, _d.normalize()));
+    b.add(g, paint, (_a.x + _b.x) / 2, (_a.y + _b.y) / 2, (_a.z + _b.z) / 2, 0, 0, 0, true);
+    _a.copy(_b);
+  }
+}
+
+/** Gear teeth round (x, y) in the XY plane at z. */
+function teeth(b: Parts, paint: Paint, x: number, y: number, z: number, r: number, n: number, size: number, depth = 0.01): void {
+  for (let k = 0; k < n; k++) { const a = (k * 2 * Math.PI) / n; b.add(box(size, size, depth), paint, x + Math.cos(a) * r, y + Math.sin(a) * r, z, 0, 0, a); }
+}
+
+/** A cog facing ±z: rim, teeth, hub and spokes. */
+function cog(b: Parts, paint: Paint, x: number, y: number, z: number, r: number, n: number, hub?: Paint): void {
+  b.add(ring(r, r * 0.2, 4, Math.max(10, n)), paint, x, y, z);
+  teeth(b, paint, x, y, z, r * 1.28, n, r * 0.32, r * 0.3);
+  b.add(cyl(r * 0.32, r * 0.32, r * 0.35, 8), hub ?? paint, x, y, z, Math.PI / 2);
+  for (let k = 0; k < 3; k++) b.add(box(r * 1.7, r * 0.16, r * 0.15), paint, x, y, z, 0, 0, (k * Math.PI) / 3);
 }
 
 type Builder = (b: Parts) => void;
 
-// ---------------------------------------------------------------- models
+// ---------------------------------------------------------------- normal bases
 
 /** Stahlklinge (the pre-WP4 blade): a ground-down leaf spring with a wrench as crossguard. */
 function stahl(b: Parts): void {
@@ -185,39 +236,7 @@ function stahl(b: Parts): void {
     .add(cyl(0.021, 0.025, 0.25), P.wrap, 0, 0.02, 0)
     .add(ball(0.032), P.rust, 0, -0.12, 0)
     .add(box(0.072, 0.1, 0.02), GLOW, 0, 0.26, 0);
-  ribbon(b, 0.13, 0.28);
-}
-
-/** Vorschlaghammer (the pre-WP4 hammer): a sledge on a long ash handle, the head a lump of rail steel with bands. */
-function vorschlag(b: Parts): void {
-  b.add(cyl(0.024, 0.03, 1.22), P.wood, 0, 0.42, 0)
-    .add(box(0.34, 0.2, 0.2), P.steel, 0, 1.06, 0)
-    .add(box(0.06, 0.225, 0.225), P.rust, -0.1, 1.06, 0)
-    .add(box(0.06, 0.225, 0.225), P.rust, 0.1, 1.06, 0)
-    .add(cyl(0.036, 0.036, 0.06), P.rust, 0, 0.94, 0)
-    .add(box(0.345, 0.05, 0.21), GLOW, 0, 1.06, 0)
-    .add(cyl(0.031, 0.031, 0.3), P.wrap, 0, 0, 0)
-    .add(cyl(0.032, 0.032, 0.14), P.wrap, 0, 0.48, 0);
-  ribbon(b, 0.86, 0.3);
-}
-
-/** Paints of a forked slingshot; set variants and the legendary forks swap them. */
-interface ForkPaint { arm: Paint; wrap: Paint; band: Paint; rubber: Paint; pouch: Paint }
-const FORK: ForkPaint = { arm: P.wood, wrap: P.wrap, band: P.red, rubber: P.rubber, pouch: P.leather };
-
-/** Jagdzwille (the pre-WP4 sling): a forked slingshot cut from a branch, bicycle tube as band. */
-function zwille(b: Parts, f: ForkPaint = FORK): void {
-  const arm = (): BufferGeometry => cyl(0.016, 0.02, 0.24, 7);
-  // Arms 1 cm higher than before WP4, so the grip zone stays free (D1 envelope).
-  b.add(cyl(0.022, 0.026, 0.26), f.arm, 0, 0.03, 0)
-    .add(arm(), f.arm, -0.07, 0.25, 0, 0, 0, 0.5)
-    .add(arm(), f.arm, 0.07, 0.25, 0, 0, 0, -0.5)
-    .add(cyl(0.024, 0.024, 0.14), f.wrap, 0, 0, 0)
-    .add(box(0.012, 0.3, 0.02), f.rubber, -0.085, 0.36, -0.11, 0.75, 0, 0, true)
-    .add(box(0.012, 0.3, 0.02), f.rubber, 0.085, 0.36, -0.11, 0.75, 0, 0, true)
-    .add(box(0.2, 0.06, 0.012), f.pouch, 0, 0.26, -0.21, 0.75, 0, 0, true)
-    .add(ball(0.03), GLOW, 0, 0.27, -0.2)
-    .add(cyl(0.026, 0.026, 0.03), f.band, 0, 0.12, 0);
+  ribbon(b, 0.13, 0.26, 0.025);
 }
 
 /** Rostige Klinge (starter): the leaf-spring blade gone to rust, nicks in the edge, a plain bar guard. */
@@ -229,20 +248,25 @@ function rohr(b: Parts): void {
     .add(cyl(0.021, 0.025, 0.25), cloth(0x9a8466), 0, 0.02, 0)
     .add(cyl(0.027, 0.027, 0.03), P.iron, 0, -0.118, 0)
     .add(box(0.07, 0.1, 0.02), GLOW, 0, 0.3, 0);
-  ribbon(b, 0.13, 0.26);
+  ribbon(b, 0.13, 0.24, 0.025);
 }
 
-/** Holzlatte (legacy saves, icon I01): a 5 cm board with nails through the top, wrapped grip. */
+/** Holzlatte (legacy saves, I01): a worn, dirty 5 cm board with chipped edges, nails through the top, wrapped grip. */
 function latte(b: Parts): void {
-  // Driven through from the back (heads) or the side, points sticking out.
   const nail = (x: number, y: number, side = false): void => {
-    if (side) b.add(cyl(0.005, 0.005, 0.11, 5), P.steel, 0.03, y, x, 0, 0, Math.PI / 2).add(cyl(0.012, 0.012, 0.006, 6), P.iron, -0.027, y, x, 0, 0, Math.PI / 2);
-    else b.add(cyl(0.005, 0.005, 0.1, 5), P.steel, x, y, 0.035, Math.PI / 2).add(cyl(0.012, 0.012, 0.006, 6), P.iron, x, y, -0.014, Math.PI / 2);
+    if (side) b.add(cyl(0.005, 0.005, 0.11, 5), P.iron, 0.03, y, x, 0, 0, Math.PI / 2).add(cyl(0.012, 0.012, 0.006, 6), P.rust, -0.027, y, x, 0, 0, Math.PI / 2);
+    else b.add(cyl(0.005, 0.005, 0.1, 5), P.iron, x, y, 0.035, Math.PI / 2).add(cyl(0.012, 0.012, 0.006, 6), P.rust, x, y, -0.014, Math.PI / 2);
   };
-  b.add(box(0.05, 1.03, 0.022), wood(0x9a7448), 0, 0.435, 0)
-    .add(box(0.052, 0.14, 0.024), plain(0x6a2a1a), 0, 0.72, 0)
-    .add(cyl(0.03, 0.03, 0.24), P.wrap, 0, 0.02, 0)
-    .add(box(0.054, 0.08, 0.026), GLOW, 0, 0.5, 0);
+  // Chipped and split edges above the grip.
+  const board: [number, number][] = [[-0.025, -0.1], [0.025, -0.1], [0.025, 0.3], [0.019, 0.33], [0.025, 0.36], [0.025, 0.62], [0.017, 0.66], [0.022, 0.7], [0.025, 0.9], [0.012, 0.95], [-0.008, 0.935], [-0.025, 0.95], [-0.025, 0.74], [-0.018, 0.71], [-0.025, 0.68], [-0.025, 0.45], [-0.02, 0.42], [-0.025, 0.39]];
+  b.add(flat(board, 0.022), wood(0x4a3424), 0, 0, 0)
+    .add(box(0.003, 0.32, 0.024), plain(0x241a12), 0.006, 0.6, 0)
+    .add(box(0.04, 0.12, 0.0235), plain(0x3a2a1c), -0.004, 0.46, 0)
+    .add(box(0.03, 0.09, 0.0235), plain(0x3a2a1c), 0.006, 0.26, 0)
+    .add(box(0.045, 0.13, 0.0238), plain(0x5a1e14), 0, 0.8, 0)
+    .add(cyl(0.03, 0.03, 0.24), cloth(0x8a7a5e), 0, 0.02, 0)
+    .add(cyl(0.031, 0.031, 0.025), plain(0x3a2a1c), 0, 0.12, 0)
+    .add(box(0.054, 0.08, 0.026), GLOW, 0, 0.55, 0);
   nail(-0.012, 0.78);
   nail(0.012, 0.84);
   nail(-0.008, 0.9);
@@ -264,276 +288,362 @@ function machete(b: Parts): void {
     .add(box(0.05, 0.09, 0.014), GLOW, -0.012, 0.4, 0);
 }
 
-/** Hackmesser (I90): a long, broad cleaver with a square end and a hole at the spine. Kiezwache: blue grip, orange band. */
+/** Hackmesser (I90): a short, heavy cleaver with a square end and a hole at the spine. Kiezwache: blue grip, orange band. */
 function brech(b: Parts, grip: Paint = wood(0x3a2416), band?: Paint): void {
-  const blade: [number, number][] = [[0.018, 0.16], [0.018, 0.88], [0.008, 0.9], [-0.1, 0.9], [-0.112, 0.885], [-0.112, 0.24], [-0.09, 0.19], [-0.03, 0.16]];
-  b.add(flat(blade, 0.012, [[-0.012, 0.845, 0.014]]), metal(0x8a8278), 0, 0, 0)
-    .add(box(0.012, 0.62, 0.013), metal(0xb8b8b4), -0.106, 0.56, 0)
-    .add(box(0.05, 0.12, 0.0135), P.rust, -0.06, 0.62, 0)
-    .add(box(0.04, 0.07, 0.0135), P.rust, -0.03, 0.4, 0)
+  const blade: [number, number][] = [[0.018, 0.16], [0.018, 0.51], [0.008, 0.53], [-0.118, 0.53], [-0.128, 0.515], [-0.128, 0.23], [-0.1, 0.185], [-0.03, 0.16]];
+  b.add(flat(blade, 0.016, [[-0.012, 0.49, 0.014]]), metal(0x8a8278), 0, 0, 0)
+    .add(box(0.012, 0.29, 0.017), metal(0xb8b8b4), -0.122, 0.38, 0)
+    .add(box(0.02, 0.33, 0.018), metal(0x6a645a), 0.01, 0.35, 0)
+    .add(box(0.05, 0.1, 0.0175), P.rust, -0.07, 0.42, 0)
+    .add(box(0.04, 0.06, 0.0175), P.rust, -0.04, 0.26, 0)
     .add(box(0.042, 0.025, 0.03), P.steel, 0, 0.152, 0)
     .add(scaled(cyl(0.021, 0.023, 0.27), 1, 1, 0.8), grip, 0, 0.012, 0)
     .add(cyl(0.006, 0.006, 0.04, 6), P.steel, 0, -0.07, 0, Math.PI / 2)
     .add(cyl(0.006, 0.006, 0.04, 6), P.steel, 0, 0.0, 0, Math.PI / 2)
     .add(cyl(0.006, 0.006, 0.04, 6), P.steel, 0, 0.07, 0, Math.PI / 2)
-    .add(box(0.09, 0.06, 0.016), GLOW, -0.045, 0.32, 0);
+    .add(box(0.08, 0.05, 0.02), GLOW, -0.06, 0.3, 0);
   if (band) b.add(cyl(0.024, 0.024, 0.03), band, 0, 0.12, 0);
 }
 
-/** Pflasterhammer (I07): square face on one side, pick end on the other, light ash handle. */
+/** Two-handed hammers (Johannes, 2026-11-19): a third shorter than before WP4, the head a third bigger. */
+const HEAD_Y = 0.71, HEAD_K = 4 / 3;
+
+/** Builds head parts authored round y = 1.06 (the pre-WP4 head) at the shorter hammer's head, a third bigger. */
+function head(b: Parts, parts: () => void, k = HEAD_K): void {
+  b.frame(new Matrix4().makeTranslation(0, HEAD_Y, 0).multiply(new Matrix4().makeScale(k, k, k)).multiply(new Matrix4().makeTranslation(0, -1.06, 0)), parts);
+}
+
+/** Handle, grip wrap and left-hand wrap of a two-handed hammer (handle from −0.13 into the head). */
+function handle2(b: Parts, shaft: Paint, wrap: Paint = P.wrap, wrapR = 0.031): void {
+  b.add(cyl(0.024, 0.03, 0.84), shaft, 0, 0.29, 0)
+    .add(cyl(wrapR, wrapR, 0.28), wrap, 0, 0, 0)
+    .add(cyl(0.032, 0.032, 0.12), wrap, 0, 0.48, 0);
+}
+
+/** Vorschlaghammer (I06): a sledge, the head a lump of rail steel with bands. */
+function vorschlag(b: Parts): void {
+  handle2(b, P.wood);
+  head(b, () => {
+    b.add(box(0.34, 0.2, 0.2), P.steel, 0, 1.06, 0)
+      .add(box(0.06, 0.225, 0.225), P.rust, -0.1, 1.06, 0)
+      .add(box(0.06, 0.225, 0.225), P.rust, 0.1, 1.06, 0)
+      .add(box(0.345, 0.05, 0.21), GLOW, 0, 1.06, 0);
+  });
+  b.add(cyl(0.034, 0.034, 0.04), P.rust, 0, 0.585, 0);
+  ribbon(b, 0.26, 0.24, 0.026);
+}
+
+/** Pflasterhammer (I07), one-handed and half as long: a big square face on one side, a curved pick on the other. */
 function pflaster(b: Parts): void {
-  b.add(cyl(0.024, 0.03, 1.22), wood(0xa07a4a), 0, 0.42, 0)
-    .add(box(0.09, 0.12, 0.1), P.iron, 0, 1.06, 0)
-    .add(box(0.13, 0.13, 0.13), metal(0x8a8278), 0.1, 1.06, 0)
-    .add(box(0.022, 0.142, 0.142), P.rust, 0.172, 1.06, 0)
-    .add(scaled(cone(0.065, 0.3), 1, 1, 0.75).rotateY(Math.PI / 4), metal(0x8a8278), -0.19, 1.06, 0, 0, 0, Math.PI / 2)
-    .add(cyl(0.036, 0.036, 0.06), P.rust, 0, 0.97, 0)
-    .add(box(0.095, 0.124, 0.104), GLOW, -0.005, 1.06, 0)
-    .add(cyl(0.031, 0.031, 0.3), P.wrap, 0, 0, 0)
-    .add(cyl(0.032, 0.032, 0.14), P.wrap, 0, 0.48, 0);
+  const pick: [number, number][] = [[-0.04, 0.59], [-0.12, 0.592], [-0.2, 0.578], [-0.27, 0.545], [-0.335, 0.47], [-0.25, 0.5], [-0.18, 0.512], [-0.11, 0.49], [-0.04, 0.47]];
+  b.add(cyl(0.022, 0.027, 0.64), wood(0xa07a4a), 0, 0.19, 0)
+    .add(cyl(0.029, 0.029, 0.25), P.wrap, 0, 0.0, 0)
+    .add(box(0.09, 0.12, 0.1), P.iron, 0, 0.53, 0)
+    .add(box(0.14, 0.14, 0.14), metal(0x8a8278), 0.11, 0.53, 0)
+    .add(box(0.026, 0.155, 0.155), P.rust, 0.19, 0.53, 0)
+    .add(flat(pick, 0.05), metal(0x8a8278), 0, 0, 0)
+    .add(box(0.2, 0.012, 0.03), metal(0xb4b0a8), -0.16, 0.57, 0, 0, 0, -0.12)
+    .add(cyl(0.034, 0.034, 0.05), P.rust, 0, 0.45, 0)
+    .add(box(0.095, 0.124, 0.104), GLOW, -0.005, 0.53, 0);
 }
 
-/** Rohrzange (I08): a pipe wrench, red I-beam handle, fixed hook jaw, sliding jaw on a knurled nut. */
+/** Rohrzange (I08), one-handed and half as long: a red handle widening toward a thick fixed hook jaw and a sliding jaw on a knurled nut. */
 function zange(b: Parts): void {
-  const red = metal(0xa83224);
-  b.add(box(0.05, 1.05, 0.028), red, 0, 0.38, 0)
-    .add(cyl(0.025, 0.025, 0.028, 10), red, 0, -0.145, 0, Math.PI / 2)
-    .add(box(0.05, 0.3, 0.05), P.steel, -0.005, 1.03, 0)
-    .add(box(0.21, 0.06, 0.06), P.steel, -0.09, 1.15, 0)
-    .add(box(0.05, 0.085, 0.06), P.steel, -0.175, 1.105, 0)
-    .add(box(0.13, 0.014, 0.062), P.iron, -0.1, 1.113, 0)
-    .add(box(0.17, 0.05, 0.06), P.steel, -0.08, 1.02, 0)
-    .add(box(0.13, 0.014, 0.062), P.iron, -0.1, 1.05, 0)
-    .add(cyl(0.042, 0.042, 0.06, 10), P.iron, -0.005, 0.94, 0)
-    .add(ring(0.042, 0.006, 4, 10), P.steel, -0.005, 0.94, 0, Math.PI / 2)
-    .add(box(0.054, 0.08, 0.032), GLOW, 0, 0.7, 0);
+  const red = metal(0xa83224), dark = metal(0x7a2418);
+  const handle: [number, number][] = [[-0.022, -0.13], [0.022, -0.13], [0.024, 0.14], [0.032, 0.34], [0.036, 0.43], [-0.036, 0.43], [-0.032, 0.34], [-0.024, 0.14]];
+  b.add(flat(handle, 0.03), red, 0, 0, 0)
+    .add(cyl(0.022, 0.022, 0.03, 10), red, 0, -0.13, 0, Math.PI / 2)
+    .add(box(0.012, 0.3, 0.034), dark, 0, 0.26, 0)
+    .add(box(0.06, 0.24, 0.07), P.steel, -0.005, 0.54, 0)
+    .add(box(0.21, 0.08, 0.085), P.steel, -0.09, 0.62, 0)
+    .add(box(0.055, 0.1, 0.085), P.steel, -0.17, 0.58, 0)
+    .add(box(0.14, 0.016, 0.087), P.iron, -0.1, 0.574, 0)
+    .add(box(0.17, 0.065, 0.085), P.steel, -0.08, 0.49, 0)
+    .add(box(0.14, 0.016, 0.087), P.iron, -0.1, 0.527, 0)
+    .add(cyl(0.046, 0.046, 0.065, 10), P.iron, -0.005, 0.44, 0)
+    .add(ring(0.046, 0.007, 4, 12), P.steel, -0.005, 0.44, 0, Math.PI / 2)
+    .add(box(0.05, 0.07, 0.034), GLOW, 0, 0.3, 0);
 }
 
-/** Nagelwerfer (I10): the fork with iron plates and a pouch of nails on one arm (the grip stays free). */
+/** Paints of a forked slingshot; set variants and the legendary forks swap them. */
+interface ForkPaint { arm: Paint; wrap: Paint; band: Paint; rubber: Paint; pouch: Paint }
+const FORK: ForkPaint = { arm: P.wood, wrap: P.wrap, band: P.red, rubber: P.rubber, pouch: P.leather };
+/** Fork geometry (two thirds of the pre-WP4 size): crotch height, fork tips (±x, y), the pouch behind. */
+const CROTCH = 0.155, TIP_X = 0.085, TIP_Y = 0.295, POUCH: [number, number, number] = [0, 0.19, -0.05];
+const ARM_LEN = Math.hypot(TIP_X, TIP_Y - CROTCH), ARM_RZ = Math.atan2(TIP_X, TIP_Y - CROTCH);
+/** A point at fraction t along the arm on side sx (±1). */
+const armAt = (sx: number, t: number): [number, number] => [sx * TIP_X * t, CROTCH + (TIP_Y - CROTCH) * t];
+
+/** Jagdzwille (I09): a forked slingshot cut from a branch, bicycle tube bands from the tips to the pouch. */
+function fork(b: Parts, f: ForkPaint = FORK, arms = true): void {
+  b.add(cyl(0.021, 0.025, 0.23), f.arm, 0, 0.04, 0)
+    .add(cyl(0.023, 0.023, 0.12), f.wrap, 0, -0.005, 0)
+    .add(cyl(0.025, 0.025, 0.025), f.band, 0, 0.1, 0);
+  if (arms) for (const sx of [-1, 1]) b.add(cyl(0.013, 0.017, ARM_LEN + 0.02, 7), f.arm, (sx * TIP_X) / 2, (CROTCH + TIP_Y) / 2, 0, 0, 0, -sx * ARM_RZ);
+  // Bands hang from the tips in a curve to the pouch below them.
+  for (const sx of [-1, 1]) cord(b, [sx * TIP_X, TIP_Y, 0], [sx * 0.032, POUCH[1], POUCH[2]], 0.045, 0.007, f.rubber, 4);
+  b.add(scaled(new SphereGeometry(0.042, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), 1, 0.6, 0.45), f.pouch, ...POUCH, 0, 0, 0, true)
+    .add(ball(0.018), GLOW, POUCH[0], POUCH[1], POUCH[2] + 0.004);
+}
+
+/** Nagelwerfer (I10): the fork with an iron plate and a pouch of nails on one arm (the grip stays free). */
 function nagel(b: Parts): void {
-  zwille(b, { ...FORK, arm: wood(0x8a6038) });
-  b.add(cyl(0.027, 0.027, 0.04), P.iron, 0, 0.17, 0)
-    .add(box(0.03, 0.05, 0.034), P.iron, 0.13, 0.31, 0, 0, 0, -0.5)
-    .add(box(0.07, 0.08, 0.045), P.leather, 0.15, 0.2, 0)
-    .add(box(0.074, 0.012, 0.049), P.iron, 0.15, 0.24, 0);
-  for (const [x, z] of [[0.13, -0.01], [0.15, 0.01], [0.17, -0.005], [0.14, 0.012]] as const) b.add(cyl(0.006, 0.006, 0.03, 6), P.steel, x, 0.255, z);
+  fork(b, { ...FORK, arm: wood(0x8a6038) });
+  const [x, y] = armAt(1, 0.45);
+  b.add(cyl(0.024, 0.024, 0.03), P.iron, 0, 0.165, 0)
+    .add(box(0.026, 0.04, 0.03), P.iron, ...armAt(1, 0.8), 0, 0, 0, -ARM_RZ)
+    .add(box(0.05, 0.06, 0.04), P.leather, x + 0.035, y - 0.02, 0)
+    .add(box(0.053, 0.01, 0.043), P.iron, x + 0.035, y + 0.008, 0);
+  for (const [dx, dz] of [[-0.012, -0.008], [0.004, 0.01], [0.016, -0.004], [-0.002, 0.012]] as const) b.add(cyl(0.005, 0.005, 0.026, 6), P.steel, x + 0.035 + dx, y + 0.02, dz);
 }
 
-/** Steinschleuder (I11): a rope sling, two cords up from a knotted grip to a leather cradle with a stone. */
+/** Steinschleuder (I11): a short rope sling, two hanging cords from a knotted grip to a leather cradle with a stone. */
 function stein(b: Parts): void {
-  const cord = cloth(0x8a6a4a);
+  const rope = cloth(0x8a6a4a);
   b.add(cyl(0.02, 0.022, 0.1), P.leather, 0, 0, 0)
-    .add(ring(0.022, 0.006, 4, 10), cord, 0, -0.075, 0)
-    .add(cyl(0.024, 0.024, 0.025), GLOW, 0, 0.065, 0)
-    .add(cyl(0.006, 0.006, 0.27, 5), cord, -0.035, 0.18, 0, 0, 0, 0.27, true)
-    .add(cyl(0.006, 0.006, 0.27, 5), cord, 0.035, 0.18, 0, 0, 0, -0.27, true)
-    .add(scaled(new SphereGeometry(0.058, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), 1.3, 0.6, 0.8), P.leather, 0, 0.33, 0, 0, 0, 0, true)
-    .add(new IcosahedronGeometry(0.036, 0), stone(0x8a8478), 0, 0.335, 0);
+    .add(ring(0.022, 0.006, 4, 10), rope, 0, -0.075, 0)
+    .add(cyl(0.024, 0.024, 0.025), GLOW, 0, 0.065, 0);
+  for (const sx of [-1, 1]) cord(b, [sx * 0.01, 0.05, 0], [sx * 0.055, 0.215, 0], 0.02, 0.006, rope, 5);
+  for (const sx of [-1, 1]) cord(b, [sx * 0.012, 0.06, 0.004], [sx * 0.058, 0.212, 0.004], 0.018, 0.004, rope, 4);
+  b.add(scaled(new SphereGeometry(0.05, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), 1.3, 0.6, 0.8), P.leather, 0, 0.245, 0, 0, 0, 0, true)
+    .add(new IcosahedronGeometry(0.032, 0), stone(0x8a8478), 0, 0.245, 0);
 }
 
-/** Rohrspeer (I12): the bayonet on a rusty steel pipe, lashed with wire. */
+/** Rohrspeer (I12): the bayonet on a thick rusty steel pipe, lashed with wire. */
 function rspeer(b: Parts): void {
-  b.add(cyl(0.02, 0.023, 1.95), metal(0x7d7a74), 0, 0.42, 0)
+  b.add(cyl(0.027, 0.03, 1.95, 10), metal(0x7d7a74), 0, 0.42, 0)
     .add(scaled(cone(0.05, 0.42), 1, 1, 0.3), P.steel, 0, 1.6, 0, 0, Math.PI / 4, 0)
-    .add(cyl(0.03, 0.026, 0.16), P.rust, 0, 1.36, 0)
+    .add(cyl(0.034, 0.03, 0.16, 10), P.rust, 0, 1.36, 0)
     .add(box(0.16, 0.024, 0.024), P.rust, 0, 1.31, 0)
-    .add(cyl(0.031, 0.031, 0.06), GLOW, 0, 1.25, 0)
-    .add(cyl(0.026, 0.026, 0.3), P.wrap, 0, 0.02, 0)
-    .add(cyl(0.025, 0.025, 0.05), P.wrap, 0, 0.78, 0)
-    .add(cyl(0.025, 0.025, 0.05), P.wrap, 0, 1.06, 0)
-    .add(cone(0.026, 0.1, 6), P.rust, 0, -0.6, 0, Math.PI, 0, 0);
-  ribbon(b, 1.18, 0.42);
+    .add(cyl(0.032, 0.032, 0.06), GLOW, 0, 1.25, 0)
+    .add(cyl(0.032, 0.032, 0.3), P.wrap, 0, 0.02, 0)
+    .add(cyl(0.032, 0.032, 0.05), P.wrap, 0, 0.78, 0)
+    .add(cyl(0.032, 0.032, 0.05), P.wrap, 0, 1.06, 0)
+    .add(ring(0.027, 0.005, 4, 10), P.rust, 0, -0.553, 0, Math.PI / 2);
+  ribbon(b, 1.18, 0.34, 0.03);
 }
 
-/** Fahnenstange (I13): a wooden pole, a torn red flag below a light tip. */
+/** Fahnenstange (I13): a wooden pole, a long torn red flag low on the pole, a long light tip. */
 function fahne(b: Parts): void {
-  const flag: [number, number][] = [[-0.015, 1.52], [-0.29, 1.5], [-0.25, 1.44], [-0.3, 1.38], [-0.22, 1.33], [-0.27, 1.25], [-0.13, 1.28], [-0.1, 1.2], [-0.015, 1.24]];
-  const rag: [number, number][] = [[-0.015, 1.15], [-0.12, 1.12], [-0.08, 1.02], [-0.015, 1.06]];
-  b.add(cyl(0.018, 0.021, 2.22), wood(0x8a6a44), 0, 0.51, 0)
-    .add(scaled(cone(0.028, 0.2), 1, 1, 0.5), P.steel, 0, 1.71, 0, 0, Math.PI / 4, 0)
-    .add(cyl(0.024, 0.024, 0.05), P.brass, 0, 1.6, 0)
+  const flag: [number, number][] = [[-0.015, 1.3], [-0.31, 1.28], [-0.26, 1.2], [-0.33, 1.12], [-0.24, 1.06], [-0.3, 0.97], [-0.2, 0.92], [-0.24, 0.84], [-0.13, 0.86], [-0.1, 0.78], [-0.015, 0.8]];
+  const rag: [number, number][] = [[-0.015, 1.42], [-0.13, 1.39], [-0.09, 1.3], [-0.015, 1.34]];
+  b.add(cyl(0.018, 0.021, 2.12), wood(0x8a6a44), 0, 0.46, 0)
+    .add(scaled(cone(0.03, 0.32), 1, 1, 0.5), P.steel, 0, 1.65, 0, 0, Math.PI / 4, 0)
+    .add(cyl(0.024, 0.024, 0.05), P.brass, 0, 1.49, 0)
     .add(flat(flag, 0.004), plain(0xc23a2e), 0, 0, 0, 0, 0, 0, true)
     .add(flat(rag, 0.004), plain(0xd6cfc0), 0, 0, 0, 0, 0, 0, true)
-    .add(cyl(0.024, 0.024, 0.04), P.wrap, 0, 1.52, 0)
+    .add(cyl(0.024, 0.024, 0.03), P.wrap, 0, 1.3, 0)
+    .add(cyl(0.024, 0.024, 0.03), P.wrap, 0, 0.8, 0)
     .add(cyl(0.025, 0.025, 0.3), P.wrap, 0, 0.02, 0)
-    .add(cyl(0.026, 0.026, 0.05), GLOW, 0, 1.2, 0)
+    .add(cyl(0.026, 0.026, 0.05), GLOW, 0, 1.42, 0)
     .add(cone(0.022, 0.08, 6), P.iron, 0, -0.62, 0, Math.PI, 0, 0);
 }
 
-/** Harpune (I14): a dark shaft, a tip with two barbs, a coil of line. */
+/** Harpune (I14): a dark shaft, a short wide barbed head, a long rope tied below it and coiled. */
 function harpune(b: Parts): void {
-  const barb: [number, number][] = [[0, 0], [0.09, -0.13], [0.014, -0.035]];
+  const tip: [number, number][] = [[0, 1.81], [0.075, 1.7], [0.064, 1.62], [0.02, 1.665], [0.012, 1.6], [-0.012, 1.6], [-0.02, 1.665], [-0.064, 1.62], [-0.075, 1.7]];
+  const rope = cloth(0xc9a878);
   b.add(cyl(0.02, 0.023, 2.0), wood(0x4a4038), 0, 0.44, 0)
-    .add(cyl(0.012, 0.016, 0.22), P.steel, 0, 1.5, 0)
-    .add(scaled(cone(0.045, 0.2), 1, 1, 0.3), P.steel, 0, 1.71, 0, 0, Math.PI / 4, 0)
-    .add(flat(barb, 0.008), P.steel, 0.01, 1.62, 0)
-    .add(flat(barb, 0.008), P.steel, -0.01, 1.62, 0, 0, Math.PI, 0)
-    .add(cyl(0.026, 0.024, 0.05), P.iron, 0, 1.4, 0)
-    .add(ring(0.032, 0.006, 4, 12), cloth(0xc9a878), 0, 0.8, 0, Math.PI / 2, 0, 0, true)
-    .add(ring(0.032, 0.006, 4, 12), cloth(0xc9a878), 0, 0.83, 0, Math.PI / 2, 0, 0, true)
-    .add(ring(0.07, 0.005, 4, 14), cloth(0xc9a878), 0.075, 0.72, 0, 0, 0, 0, true)
+    .add(flat(tip, 0.012), P.steel, 0, 0, 0)
+    .add(box(0.01, 0.17, 0.016), metal(0xb8bcc0), 0, 1.69, 0)
+    .add(cyl(0.012, 0.016, 0.12), P.steel, 0, 1.55, 0)
+    .add(cyl(0.026, 0.024, 0.05), P.iron, 0, 1.48, 0)
+    .add(ring(0.027, 0.006, 4, 12), rope, 0, 1.43, 0, Math.PI / 2, 0, 0, true)
+    .add(ring(0.032, 0.007, 4, 12), rope, 0, 0.64, 0, Math.PI / 2, 0, 0, true)
+    .add(ring(0.032, 0.007, 4, 12), rope, 0, 0.66, 0, Math.PI / 2, 0, 0, true)
+    .add(ring(0.032, 0.007, 4, 12), rope, 0, 0.68, 0, Math.PI / 2, 0, 0, true)
     .add(cyl(0.026, 0.026, 0.3), P.wrap, 0, 0.02, 0)
     .add(cyl(0.024, 0.024, 0.04), P.iron, 0, -0.58, 0)
     .add(cyl(0.027, 0.027, 0.05), GLOW, 0, 1.3, 0);
+  cord(b, [0.028, 1.43, 0], [0.07, 1.1, 0.01], 0.06, 0.006, rope, 5);
+  cord(b, [0.07, 1.1, 0.01], [0.03, 0.7, 0], 0.08, 0.006, rope, 5);
 }
 
 // ---------------------------------------------------------------- neon (Mitte) and GDR families
 
-/** Leuchtröhre (I59): a fluorescent tube as the blade (the glow part), metal end caps, taped, dark grip. */
+/** Leuchtröhre (I59), a third shorter: a fluorescent tube in metal caps on a back strip, clips and tape, dark grip. */
 function leucht(b: Parts): void {
   b.add(cyl(0.022, 0.024, 0.25), P.rubber, 0, 0.015, 0)
     .add(cyl(0.028, 0.028, 0.04), P.iron, 0, -0.125, 0)
-    .add(cyl(0.032, 0.03, 0.07), P.iron, 0, 0.18, 0)
-    .add(cyl(0.024, 0.024, 0.8, 10), GLOW, 0, 0.6, 0)
-    .add(cyl(0.027, 0.027, 0.035), P.wrap, 0, 0.42, 0)
-    .add(cyl(0.027, 0.027, 0.035), P.wrap, 0, 0.74, 0)
-    .add(cyl(0.031, 0.028, 0.07), P.iron, 0, 1.02, 0)
-    .add(cyl(0.004, 0.004, 0.04, 4), P.steel, -0.01, 1.07, 0)
-    .add(cyl(0.004, 0.004, 0.04, 4), P.steel, 0.01, 1.07, 0);
-  ribbon(b, -0.1, 0.2);
+    .add(ring(0.028, 0.004, 4, 10), P.steel, 0, -0.105, 0, Math.PI / 2)
+    .add(cyl(0.032, 0.03, 0.07, 10), P.iron, 0, 0.18, 0)
+    .add(ring(0.032, 0.004, 4, 12), P.steel, 0, 0.2, 0, Math.PI / 2)
+    .add(cyl(0.012, 0.012, 0.05, 8), plain(0x2a2a30), 0.035, 0.18, 0, 0, 0, Math.PI / 2)
+    .add(cyl(0.024, 0.024, 0.53, 12), GLOW, 0, 0.47, 0)
+    .add(box(0.008, 0.52, 0.01), P.iron, 0, 0.47, -0.03)
+    .add(cyl(0.027, 0.027, 0.03, 10), P.wrap, 0, 0.34, 0)
+    .add(cyl(0.027, 0.027, 0.03, 10), P.wrap, 0, 0.58, 0)
+    .add(cyl(0.031, 0.028, 0.06, 10), P.iron, 0, 0.73, 0)
+    .add(ring(0.031, 0.004, 4, 12), P.steel, 0, 0.72, 0, Math.PI / 2)
+    .add(cyl(0.004, 0.004, 0.035, 4), P.steel, -0.01, 0.775, 0)
+    .add(cyl(0.004, 0.004, 0.035, 4), P.steel, 0.01, 0.775, 0);
+  for (const y of [0.3, 0.64]) b.add(box(0.06, 0.012, 0.01), P.steel, 0, y, -0.02).add(ring(0.026, 0.004, 4, 10), P.steel, 0, y, 0, Math.PI / 2);
+  cord(b, [0.033, 0.18, 0], [0.028, 0.73, 0.006], 0.0, 0.003, plain(0x2a2a30), 4);
+  ribbon(b, -0.1, 0.18, 0.024);
 }
 
-/** Boxenhammer (I60): a speaker cabinet as the head, the cone rings and level bars glow magenta. */
+/** Boxenhammer (I60): a speaker cabinet as the big head (two-handed rule), the cone rims and level bars glow magenta. */
 function boxh(b: Parts): void {
-  b.add(cyl(0.024, 0.03, 1.22), wood(0x5a3a26), 0, 0.42, 0)
-    .add(box(0.3, 0.24, 0.2), wood(0x3a2a20), 0, 1.06, 0)
-    .add(box(0.31, 0.025, 0.21), P.iron, 0, 1.17, 0)
-    .add(box(0.31, 0.025, 0.21), P.iron, 0, 0.95, 0)
-    .add(cyl(0.036, 0.036, 0.06), P.iron, 0, 0.91, 0)
-    .add(cyl(0.031, 0.031, 0.3), P.wrap, 0, 0, 0)
-    .add(cyl(0.032, 0.032, 0.14), P.wrap, 0, 0.48, 0);
-  for (const z of [1, -1]) {
-    // Speaker cone and dust cap in a glowing rim, three level bars beside it.
-    b.add(cyl(0.072, 0.072, 0.008, 14), P.rubber, -0.04, 1.06, z * 0.102, Math.PI / 2)
-      .add(cyl(0.05, 0.05, 0.01, 12), plain(0x3a3430), -0.04, 1.06, z * 0.104, Math.PI / 2)
-      .add(ring(0.078, 0.008, 4, 16), GLOW, -0.04, 1.06, z * 0.104)
-      .add(scaled(ball(0.022, 8, 4), 1, 1, 0.5), P.iron, -0.04, 1.06, z * 0.108);
-    for (const [x, h] of [[0.07, 0.06], [0.095, 0.1], [0.12, 0.08]] as const) b.add(box(0.014, h, 0.006), GLOW, x, 1.03 + h / 2, z * 0.101);
-  }
-  ribbon(b, 0.86, 0.3);
+  handle2(b, wood(0x5a3a26));
+  head(b, () => {
+    b.add(box(0.3, 0.24, 0.2), wood(0x3a2a20), 0, 1.06, 0)
+      .add(box(0.31, 0.025, 0.21), P.iron, 0, 1.17, 0)
+      .add(box(0.31, 0.025, 0.21), P.iron, 0, 0.95, 0);
+    for (const x of [-0.15, 0.15]) for (const y of [0.95, 1.17]) for (const z of [-0.1, 0.1]) b.add(box(0.025, 0.03, 0.025), P.brass, x, y, z);
+    for (const z of [1, -1]) {
+      // Woofer, tweeter and dust caps in glowing rims, three level bars beside them.
+      b.add(cyl(0.07, 0.07, 0.008, 16), P.rubber, -0.045, 1.04, z * 0.102, Math.PI / 2)
+        .add(cyl(0.048, 0.048, 0.01, 14), plain(0x3a3430), -0.045, 1.04, z * 0.104, Math.PI / 2)
+        .add(ring(0.075, 0.008, 4, 18), GLOW, -0.045, 1.04, z * 0.104)
+        .add(scaled(ball(0.022, 8, 4), 1, 1, 0.5), P.iron, -0.045, 1.04, z * 0.108)
+        .add(cyl(0.022, 0.022, 0.01, 10), P.rubber, 0.095, 1.12, z * 0.104, Math.PI / 2)
+        .add(ring(0.024, 0.004, 4, 10), GLOW, 0.095, 1.12, z * 0.106);
+      for (const [x, h] of [[0.07, 0.05], [0.095, 0.08], [0.12, 0.06]] as const) b.add(box(0.014, h, 0.006), GLOW, x, 0.98 + h / 2, z * 0.101);
+    }
+  });
+  b.add(cyl(0.036, 0.036, 0.04), P.iron, 0, 0.56, 0);
+  cord(b, [0.2, 0.75, 0.06], [0.2, 0.62, -0.06], 0.05, 0.005, plain(0xbd2b77), 4);
+  ribbon(b, 0.26, 0.24, 0.026);
 }
 
 /**
  * Neonflinte (I61) as a neon fork. A one-hand launcher (barrel along −Z, where the pistol clip points)
  * was tried on the `OverhandThrow` strip: she swings it overhead and it points at the ground on release,
- * so it reads as throwing the gun (WP4 1c). The icon shows a rifle and goes to Codex.
+ * so it reads as throwing the gun (WP4 1c).
  */
 function neonfl(b: Parts): void {
-  const arm = (): BufferGeometry => cyl(0.016, 0.02, 0.24, 7);
-  const tube = (): BufferGeometry => cyl(0.009, 0.009, 0.22, 6);
-  b.add(cyl(0.022, 0.026, 0.26), P.rubber, 0, 0.03, 0)
-    .add(ball(0.026, 8, 6), P.brass, 0, -0.1, 0)
-    .add(arm(), metal(0x3a3640), -0.07, 0.25, 0, 0, 0, 0.5)
-    .add(arm(), metal(0x3a3640), 0.07, 0.25, 0, 0, 0, -0.5)
-    .add(tube(), GLOW, -0.072, 0.252, 0.022, 0, 0, 0.5)
-    .add(tube(), GLOW, 0.072, 0.252, 0.022, 0, 0, -0.5)
-    .add(cyl(0.024, 0.024, 0.03), P.brass, 0, 0.15, 0)
-    .add(box(0.045, 0.07, 0.035), P.iron, 0.055, 0.2, 0, 0, 0, -0.3)
-    .add(box(0.012, 0.3, 0.02), plain(0x5a2450), -0.085, 0.36, -0.11, 0.75, 0, 0, true)
-    .add(box(0.012, 0.3, 0.02), plain(0x5a2450), 0.085, 0.36, -0.11, 0.75, 0, 0, true)
-    .add(box(0.2, 0.06, 0.012), P.leather, 0, 0.26, -0.21, 0.75, 0, 0, true)
-    .add(ball(0.03), GLOW, 0, 0.27, -0.2);
+  const arm = metal(0x3a3640);
+  fork(b, { ...FORK, arm: P.rubber, wrap: plain(0x2a2a30), band: P.brass, rubber: plain(0x5a2450) }, false);
+  for (const sx of [-1, 1]) {
+    b.add(cyl(0.013, 0.017, ARM_LEN + 0.02, 7), arm, (sx * TIP_X) / 2, (CROTCH + TIP_Y) / 2, 0, 0, 0, -sx * ARM_RZ)
+      .add(cyl(0.006, 0.006, ARM_LEN, 6), GLOW, (sx * TIP_X) / 2, (CROTCH + TIP_Y) / 2, 0.019, 0, 0, -sx * ARM_RZ)
+      .add(cyl(0.02, 0.02, 0.02, 8), P.brass, ...armAt(sx, 1), 0, 0, 0, -sx * ARM_RZ);
+    for (const t of [0.3, 0.6]) b.add(ring(0.019, 0.004, 4, 8), P.steel, ...armAt(sx, t), 0, Math.PI / 2, 0, -sx * ARM_RZ);
+  }
+  b.add(box(0.034, 0.05, 0.03), P.iron, 0.05, 0.19, 0, 0, 0, -0.3)
+    .add(box(0.026, 0.012, 0.032), GLOW, 0.05, 0.2, 0, 0, 0, -0.3)
+    .add(ball(0.024, 8, 6), P.brass, 0, -0.085, 0)
+    .add(ring(0.024, 0.004, 4, 10), GLOW, 0, -0.05, 0, Math.PI / 2);
+  cord(b, [0.06, 0.17, 0.0], [0.012, 0.16, 0.02], 0.02, 0.003, plain(0x43d1cf), 3);
 }
 
-/** Mikroständer (I62): a thin dark stand tube, the mic capsule as the tip, a magenta band, a spike at the foot. */
+/** Mikroständer (I62): a thin dark stand tube, the mic capsule as the tip, a clamp, cable, magenta bands, a spike at the foot. */
 function mikro(b: Parts): void {
+  const dark = metal(0x2a2a2e), cable = plain(0x1a1a1e);
   b.add(cyl(0.014, 0.016, 2.15), metal(0x3a3a40), 0, 0.475, 0)
     .add(cyl(0.022, 0.016, 0.08, 8), P.iron, 0, 1.6, 0)
     .add(cyl(0.03, 0.022, 0.05, 10), P.iron, 0, 1.66, 0)
-    .add(scaled(ball(0.045, 10, 8), 1, 1.2, 1), metal(0x2a2a2e), 0, 1.755, 0)
-    .add(ring(0.045, 0.006, 4, 12), metal(0x8a8a94), 0, 1.755, 0, Math.PI / 2)
+    .add(scaled(ball(0.045, 12, 8), 1, 1.2, 1), dark, 0, 1.755, 0)
+    .add(ring(0.045, 0.006, 4, 14), metal(0x8a8a94), 0, 1.755, 0, Math.PI / 2)
+    .add(ring(0.04, 0.004, 4, 12), metal(0x8a8a94), 0, 1.785, 0, Math.PI / 2)
+    .add(ring(0.04, 0.004, 4, 12), metal(0x8a8a94), 0, 1.725, 0, Math.PI / 2)
     .add(cyl(0.02, 0.02, 0.04), GLOW, 0, 1.52, 0)
-    .add(ring(0.03, 0.004, 4, 10), plain(0xbd2b77), 0, 1.25, 0, Math.PI / 2.4, 0, 0, true)
-    .add(ring(0.03, 0.004, 4, 10), plain(0xbd2b77), 0, 0.95, 0, Math.PI / 1.8, 0, 0, true)
+    .add(cyl(0.019, 0.019, 0.03), GLOW, 0, 0.92, 0)
+    .add(cyl(0.026, 0.026, 0.06, 10), P.iron, 0, 1.1, 0)
+    .add(cyl(0.008, 0.008, 0.05, 6), P.steel, 0.04, 1.1, 0, 0, 0, Math.PI / 2)
+    .add(ball(0.014, 6, 4), plain(0x2a2a30), 0.068, 1.1, 0)
     .add(cyl(0.024, 0.024, 0.3), P.rubber, 0, 0.02, 0)
     .add(cone(0.03, 0.12, 4), P.steel, 0, -0.6, 0, Math.PI, 0, 0);
-  ribbon(b, 1.3, 0.32);
+  cord(b, [0.02, 1.6, 0], [0.03, 1.2, 0.01], 0.05, 0.005, cable, 4);
+  cord(b, [0.03, 1.2, 0.01], [0.022, 0.65, 0], 0.06, 0.005, cable, 5);
+  for (const y of [1.3, 0.8]) b.add(ring(0.03, 0.004, 4, 10), plain(0xbd2b77), 0, y, 0, Math.PI / 2.4, 0, 0, true);
+  ribbon(b, 1.38, 0.26, 0.016);
 }
 
-/** Sichel (I71): a short wooden handle, red ferrule, a big crescent blade (tip height as every blade). */
+/** Sichel (I71), smaller: a short wooden handle, red ferrule, a thick crescent blade with a bright edge. */
 function sichel(b: Parts): void {
   const arc = (cx: number, cy: number, r: number, a0: number, a1: number, n: number): [number, number][] =>
     Array.from({ length: n + 1 }, (_, i) => { const a = (a0 + ((a1 - a0) * i) / n) * (Math.PI / 180); return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; });
   // Outer arc from the neck over the left and the top to the tip, inner arc back.
-  const blade = [...arc(0.12, 0.55, 0.36, -110, -350, 14), ...arc(0.16, 0.56, 0.29, -352, -122, 12)];
-  b.add(cyl(0.022, 0.025, 0.3), wood(0x7a5030), 0, 0, 0)
-    .add(cyl(0.026, 0.026, 0.05), plain(0xaf4237), 0, 0.17, 0)
-    .add(box(0.022, 0.08, 0.012), P.steel, 0.004, 0.225, 0)
-    .add(flat(blade, 0.012), metal(0x9a968c), 0, 0, 0)
-    .add(box(0.06, 0.03, 0.014), GLOW, -0.19, 0.45, 0, 0, 0, 1.2);
+  const blade = [...arc(0.09, 0.42, 0.29, -110, -350, 14), ...arc(0.12, 0.43, 0.225, -352, -122, 12)];
+  const edge = [...arc(0.12, 0.43, 0.238, -125, -345, 12), ...arc(0.12, 0.43, 0.225, -345, -125, 12)];
+  b.add(cyl(0.022, 0.025, 0.24), wood(0x7a5030), 0, 0.0, 0)
+    .add(cyl(0.024, 0.02, 0.03), wood(0x5a3a22), 0, -0.13, 0)
+    .add(cyl(0.026, 0.026, 0.05), plain(0xaf4237), 0, 0.15, 0)
+    .add(cyl(0.005, 0.005, 0.06, 6), P.brass, 0, 0.15, 0, Math.PI / 2)
+    .add(box(0.022, 0.06, 0.016), P.steel, 0.004, 0.19, 0)
+    .add(flat(blade, 0.018), metal(0x9a968c), 0, 0, 0)
+    .add(flat(edge, 0.02), metal(0xd0d0cc), 0, 0, 0)
+    .add(box(0.04, 0.03, 0.0185), P.rust, -0.17, 0.42, 0, 0, 0, 1.2)
+    .add(box(0.05, 0.026, 0.02), GLOW, -0.15, 0.32, 0, 0, 0, 0.9);
 }
 
-/** Werkhammer (I72): a blue enamel head with a brass gear emblem and an orange centre, black rubber grip. */
+/** Werkhammer (I72): a big blue enamel head (two-handed rule) with a brass cog emblem and an orange centre, black rubber grip. */
 function werkh(b: Parts): void {
-  b.add(cyl(0.024, 0.03, 1.22), wood(0x6a4a30), 0, 0.42, 0)
-    .add(cyl(0.033, 0.033, 0.3), P.rubber, 0, 0, 0)
-    .add(cyl(0.034, 0.034, 0.03), P.brass, 0, 0.175, 0)
-    .add(cyl(0.032, 0.032, 0.14), P.rubber, 0, 0.48, 0)
-    .add(box(0.31, 0.2, 0.2), P.enamel, 0, 1.06, 0)
-    .add(box(0.03, 0.215, 0.215), P.steel, -0.16, 1.06, 0)
-    .add(box(0.03, 0.215, 0.215), P.steel, 0.16, 1.06, 0)
-    .add(box(0.026, 0.205, 0.205), GLOW, 0.13, 1.06, 0);
-  for (const z of [1, -1]) {
-    b.add(ring(0.05, 0.01, 4, 12), P.brass, -0.02, 1.06, z * 0.101)
-      .add(cyl(0.022, 0.022, 0.008, 10), plain(0xe7982b), -0.02, 1.06, z * 0.101, Math.PI / 2);
-    for (let k = 0; k < 8; k++) b.add(box(0.016, 0.016, 0.01), P.brass, -0.02 + Math.cos(k * Math.PI / 4) * 0.064, 1.06 + Math.sin(k * Math.PI / 4) * 0.064, z * 0.101, 0, 0, k * Math.PI / 4);
-  }
+  handle2(b, wood(0x6a4a30), P.rubber, 0.033);
+  b.add(cyl(0.034, 0.034, 0.03), P.brass, 0, 0.175, 0)
+    .add(cyl(0.035, 0.035, 0.04), P.brass, 0, 0.58, 0);
+  head(b, () => {
+    b.add(box(0.31, 0.2, 0.2), P.enamel, 0, 1.06, 0)
+      .add(box(0.03, 0.215, 0.215), P.steel, -0.16, 1.06, 0)
+      .add(box(0.03, 0.215, 0.215), P.steel, 0.16, 1.06, 0)
+      .add(box(0.026, 0.205, 0.205), GLOW, 0.13, 1.06, 0);
+    for (const x of [-0.16, 0.16]) for (const y of [0.98, 1.14]) for (const z of [-0.08, 0.08]) b.add(ball(0.008, 5, 3), P.brass, x + Math.sign(x) * 0.016, y, z);
+    for (const z of [1, -1]) {
+      cog(b, P.brass, -0.02, 1.06, z * 0.104, 0.05, 10, plain(0xe7982b));
+      b.add(box(0.26, 0.012, 0.004), P.brass, 0, 1.15, z * 0.101).add(box(0.26, 0.012, 0.004), P.brass, 0, 0.97, z * 0.101);
+    }
+  });
 }
 
-/** Aufziehwerfer (I73): a blue enamel fork with red bands, a brass gear at the crotch and a wind-up key. */
+/** Aufziehwerfer (I73): a blue enamel fork with red tips, a brass clockwork (two cogs), a wind-up key and a spring; it glows. */
 function aufzieh(b: Parts): void {
-  zwille(b, { ...FORK, arm: P.enamel, wrap: P.leather, band: P.brass, pouch: plain(0x7a5a3a) });
-  b.add(ball(0.026, 8, 6), P.brass, 0, -0.11, 0)
-    .add(cyl(0.022, 0.022, 0.03), P.red, -0.122, 0.34, 0, 0, 0, 0.5)
-    .add(cyl(0.022, 0.022, 0.03), P.red, 0.122, 0.34, 0, 0, 0, -0.5)
-    .add(ring(0.032, 0.009, 4, 12), P.brass, 0, 0.2, 0)
-    .add(cyl(0.02, 0.02, 0.03, 10), plain(0xe7982b), 0, 0.2, 0, Math.PI / 2)
-    .add(cyl(0.006, 0.006, 0.07, 6), P.brass, 0.065, 0.2, 0, 0, 0, Math.PI / 2)
-    .add(ring(0.018, 0.006, 4, 10), P.brass, 0.115, 0.2, 0);
-  for (let k = 0; k < 8; k++) b.add(box(0.013, 0.013, 0.02), P.brass, Math.cos(k * Math.PI / 4) * 0.044, 0.2 + Math.sin(k * Math.PI / 4) * 0.044, 0, 0, 0, k * Math.PI / 4);
+  fork(b, { ...FORK, arm: P.enamel, wrap: P.leather, band: P.brass, pouch: plain(0x7a5a3a) });
+  for (const sx of [-1, 1]) b.add(cyl(0.02, 0.02, 0.025), P.red, ...armAt(sx, 0.92), 0, 0, 0, -sx * ARM_RZ);
+  cog(b, P.brass, 0, 0.2, 0.024, 0.032, 10, GLOW);
+  cog(b, metal(0xc8a050), 0.036, 0.165, 0.03, 0.017, 6);
+  b.add(ball(0.024, 8, 6), P.brass, 0, -0.085, 0)
+    .add(cyl(0.006, 0.006, 0.06, 6), P.brass, 0.06, 0.2, 0.02, 0, 0, Math.PI / 2)
+    .add(ring(0.016, 0.006, 4, 8), P.brass, 0.1, 0.2, 0.02)
+    .add(ring(0.016, 0.006, 4, 8), P.brass, 0.1, 0.2, 0.02, 0, Math.PI / 2, 0);
+  for (let k = 0; k < 3; k++) b.add(ring(0.024, 0.003, 3, 8), metal(0xc8a050), 0, 0.167 + k * 0.007, -0.012, Math.PI / 2, 0, 0);
 }
 
-/** Zeigerlanze (I74): a blue enamel shaft with brass fittings and a gear, a clock hand as the tip. */
+/** Zeigerlanze (I74): a thick blue enamel shaft with brass fittings, two meshing cogs, a wide silver clock hand as the tip. */
 function zeiger(b: Parts): void {
-  const hand: [number, number][] = [[-0.012, 1.42], [-0.032, 1.6], [-0.012, 1.64], [-0.04, 1.7], [0, 1.81], [0.04, 1.7], [0.012, 1.64], [0.032, 1.6], [0.012, 1.42]];
-  b.add(cyl(0.018, 0.021, 2.0), P.enamel, 0, 0.42, 0)
-    .add(flat(hand, 0.01), metal(0x2a2018), 0, 0, 0)
-    .add(ring(0.024, 0.006, 4, 12), P.brass, 0, 1.62, 0)
-    .add(ring(0.045, 0.01, 4, 12), P.brass, 0, 1.3, 0)
-    .add(cyl(0.016, 0.016, 0.03, 8), plain(0xe7982b), 0, 1.3, 0, Math.PI / 2)
-    .add(cyl(0.024, 0.024, 0.05), P.brass, 0, 1.4, 0)
-    .add(cyl(0.024, 0.024, 0.04), P.brass, 0, 0.2, 0)
-    .add(cyl(0.024, 0.024, 0.04), P.brass, 0, 1.0, 0)
-    .add(cyl(0.022, 0.022, 0.05), GLOW, 0, 1.2, 0)
-    .add(cyl(0.025, 0.025, 0.3), P.leather, 0, 0.02, 0)
-    .add(cone(0.022, 0.08, 6), P.brass, 0, -0.62, 0, Math.PI, 0, 0);
-  for (let k = 0; k < 8; k++) b.add(box(0.012, 0.012, 0.02), P.brass, Math.cos(k * Math.PI / 4) * 0.058, 1.3 + Math.sin(k * Math.PI / 4) * 0.058, 0, 0, 0, k * Math.PI / 4);
+  const hand: [number, number][] = [[-0.014, 1.42], [-0.045, 1.58], [-0.016, 1.635], [-0.055, 1.69], [0, 1.81], [0.055, 1.69], [0.016, 1.635], [0.045, 1.58], [0.014, 1.42]];
+  b.add(cyl(0.026, 0.028, 2.0, 10), P.enamel, 0, 0.42, 0)
+    .add(flat(hand, 0.012), metal(0xc8ccd4), 0, 0, 0)
+    .add(box(0.008, 0.3, 0.014), metal(0x8a8e96), 0, 1.6, 0)
+    .add(ring(0.026, 0.007, 4, 12), P.brass, 0, 1.63, 0)
+    .add(cyl(0.031, 0.031, 0.05, 10), P.brass, 0, 1.4, 0)
+    .add(cyl(0.031, 0.031, 0.04, 10), P.brass, 0, 0.21, 0)
+    .add(cyl(0.031, 0.031, 0.04, 10), P.brass, 0, 1.0, 0)
+    .add(cyl(0.031, 0.031, 0.04, 10), P.brass, 0, 0.7, 0)
+    .add(cyl(0.03, 0.03, 0.05, 10), GLOW, 0, 1.18, 0)
+    .add(cyl(0.032, 0.032, 0.3), P.leather, 0, 0.02, 0)
+    .add(cone(0.026, 0.08, 6), P.brass, 0, -0.62, 0, Math.PI, 0, 0);
+  cog(b, P.brass, 0, 1.3, 0.0, 0.05, 12, plain(0xe7982b));
+  cog(b, metal(0xc8a050), 0.07, 1.24, 0.012, 0.026, 8);
 }
 
-// ---------------------------------------------------------------- legendary and set (1d)
+// ---------------------------------------------------------------- legendary and set
 
-/** Fernsehturm-Splitter (I15): a glass shard in an iron claw, a glowing streak inside, the tower sphere as pommel. */
+/** Fernsehturm-Splitter (I15), a quarter shorter: a glass shard with a faint white glow, an iron claw, the tower sphere as pommel. */
 function turm(b: Parts): void {
-  const shard: [number, number][] = [[-0.03, 0.2], [-0.05, 0.45], [-0.075, 0.62], [-0.048, 0.8], [-0.064, 0.92], [-0.012, 1.08], [0.022, 0.98], [0.066, 0.86], [0.052, 0.66], [0.074, 0.5], [0.036, 0.3], [0.03, 0.2]];
-  const core: [number, number][] = [[-0.01, 0.3], [-0.024, 0.6], [-0.004, 0.96], [0.022, 0.62], [0.012, 0.3]];
+  const k = (pts: [number, number][]): [number, number][] => pts.map(([x, y]) => [x, 0.2 + (y - 0.2) * 0.72]);
+  const shard = k([[-0.03, 0.2], [-0.05, 0.45], [-0.075, 0.62], [-0.048, 0.8], [-0.064, 0.92], [-0.012, 1.08], [0.022, 0.98], [0.066, 0.86], [0.052, 0.66], [0.074, 0.5], [0.036, 0.3], [0.03, 0.2]]);
+  const core = k([[-0.012, 0.28], [-0.03, 0.6], [-0.008, 0.98], [0.026, 0.64], [0.014, 0.28]]);
   b.add(flat(shard, 0.02), metal(0x9cc4e4), 0, 0, 0)
-    .add(flat(core, 0.024), GLOW, 0, 0, 0)
+    .add(flat(core, 0.024), GLOW_WHITE, 0, 0, 0)
     .add(box(0.085, 0.05, 0.04), P.iron, 0, 0.17, 0)
     .add(box(0.016, 0.11, 0.03), P.iron, -0.042, 0.23, 0, 0, 0, 0.2)
     .add(box(0.016, 0.11, 0.03), P.iron, 0.042, 0.23, 0, 0, 0, -0.2)
+    .add(box(0.006, 0.08, 0.032), GLOW, -0.042, 0.24, 0, 0, 0, 0.2)
+    .add(box(0.006, 0.08, 0.032), GLOW, 0.042, 0.24, 0, 0, 0, -0.2)
     .add(cyl(0.024, 0.026, 0.26), P.wrap, 0, 0.015, 0)
     .add(cyl(0.027, 0.027, 0.04), P.red, 0, 0.1, 0)
     .add(ball(0.034, 10, 8), metal(0xb8bcc4), 0, -0.15, 0)
     .add(cyl(0.035, 0.035, 0.01, 10), plain(0x2a3a4a), 0, -0.15, 0)
     .add(cyl(0.004, 0.004, 0.06, 4), P.steel, 0, -0.205, 0);
-  ribbon(b, 0.06, 0.24);
+  ribbon(b, 0.06, 0.22, 0.026);
 }
 
-/** Klinge der Zitadelle (I51): a straight knight sword, brass guard and pommel, a cyan gem in the guard. */
+/** Klinge der Zitadelle (I51), a quarter shorter: a straight knight sword, brass guard and pommel, a cyan gem in the guard. */
 function zitklinge(b: Parts): void {
-  const blade: [number, number][] = [[-0.032, 0.17], [-0.03, 0.86], [0, 1.08], [0.03, 0.86], [0.032, 0.17]];
+  const blade: [number, number][] = [[-0.032, 0.18], [-0.03, 0.7], [0, 0.86], [0.03, 0.7], [0.032, 0.18]];
   b.add(flat(blade, 0.012), metal(0xa8a090), 0, 0, 0)
-    .add(box(0.012, 0.66, 0.0135), metal(0x6a645a), 0, 0.5, 0)
+    .add(box(0.012, 0.48, 0.0135), metal(0x6a645a), 0, 0.44, 0)
     .add(box(0.21, 0.03, 0.034), P.brass, 0, 0.168, 0)
     .add(ball(0.02, 8, 6), P.brass, -0.105, 0.168, 0)
     .add(ball(0.02, 8, 6), P.brass, 0.105, 0.168, 0)
@@ -545,109 +655,125 @@ function zitklinge(b: Parts): void {
     .add(ball(0.03, 10, 8), P.brass, 0, -0.13, 0);
 }
 
-/** Mauerbrecher (I16): a slab of Wall concrete with graffiti patches and rebar ends, acid green cracks. */
+/** Mauerbrecher (I16): a big, rugged slab of Wall concrete with graffiti, rebar ends and acid green cracks. */
 function mauer(b: Parts): void {
-  const c = stone(0xb8b0a0);
-  b.add(cyl(0.024, 0.03, 1.22), wood(0x5a3a26), 0, 0.42, 0)
-    .add(box(0.32, 0.22, 0.14), c, 0, 1.06, 0)
-    .add(box(0.09, 0.07, 0.12), c, 0.13, 1.14, 0, 0, 0, 0.25)
-    .add(box(0.08, 0.08, 0.13), c, -0.15, 0.98, 0, 0, 0, 0.4)
-    .add(box(0.07, 0.08, 0.18), P.iron, 0, 0.93, 0)
-    .add(box(0.08, 0.07, 0.004), plain(0xd4537e), -0.07, 1.1, 0.071)
-    .add(box(0.07, 0.05, 0.004), plain(0x7d9bff), 0.06, 1.0, 0.071)
-    .add(box(0.1, 0.06, 0.004), plain(0xe8c23a), 0.06, 1.1, -0.071)
-    .add(box(0.06, 0.08, 0.004), plain(0xd4537e), -0.08, 1.02, -0.071)
-    .add(box(0.08, 0.06, 0.004), plain(0xe0702a), 0.09, 1.13, 0.071)
-    .add(box(0.16, 0.016, 0.146), GLOW, 0.0, 1.05, 0, 0, 0, 0.3)
-    .add(box(0.11, 0.016, 0.146), GLOW, -0.09, 1.1, 0, 0, 0, -0.7)
-    .add(box(0.08, 0.014, 0.146), GLOW, 0.1, 0.99, 0, 0, 0, -0.4)
-    .add(cyl(0.031, 0.031, 0.3), P.wrap, 0, 0, 0)
-    .add(cyl(0.032, 0.032, 0.14), P.wrap, 0, 0.48, 0);
-  for (const [x, y] of [[-0.18, 1.12], [0.19, 1.0], [0.18, 1.09]] as const) b.add(cyl(0.007, 0.007, 0.08, 5), P.rust, x, y, 0.02, 0, 0, Math.PI / 2 + x);
-  ribbon(b, 0.86, 0.3);
+  const c = stone(0xb8b0a0), c2 = stone(0x9a9488);
+  handle2(b, wood(0x5a3a26));
+  b.add(box(0.06, 0.05, 0.1), P.iron, 0, 0.6, 0);
+  head(b, () => {
+    b.add(box(0.32, 0.22, 0.14), c, 0, 1.06, 0)
+      .add(box(0.09, 0.07, 0.12), c, 0.13, 1.14, 0, 0, 0, 0.25)
+      .add(box(0.08, 0.07, 0.13), c2, -0.15, 1.01, 0, 0, 0, 0.4)
+      .add(box(0.07, 0.06, 0.15), c2, 0.16, 1.0, 0.0, 0.2, 0, -0.3)
+      .add(box(0.1, 0.05, 0.12), c2, -0.06, 1.16, 0.01, 0, 0.2, 0.15)
+      .add(box(0.08, 0.07, 0.004), plain(0xd4537e), -0.07, 1.1, 0.071)
+      .add(box(0.07, 0.05, 0.004), plain(0x7d9bff), 0.06, 1.0, 0.071)
+      .add(box(0.08, 0.06, 0.004), plain(0xe0702a), 0.09, 1.11, 0.071)
+      .add(box(0.1, 0.06, 0.004), plain(0xe8c23a), 0.06, 1.1, -0.071)
+      .add(box(0.06, 0.08, 0.004), plain(0xd4537e), -0.08, 1.02, -0.071)
+      .add(box(0.16, 0.016, 0.146), GLOW, 0.0, 1.05, 0, 0, 0, 0.3)
+      .add(box(0.11, 0.016, 0.146), GLOW, -0.09, 1.1, 0, 0, 0, -0.7)
+      .add(box(0.08, 0.014, 0.146), GLOW, 0.1, 0.99, 0, 0, 0, -0.4);
+    for (const [x, y, z] of [[-0.18, 1.12, 0.02], [0.19, 1.02, -0.02], [0.18, 1.09, 0.03], [-0.17, 1.0, -0.03]] as const) b.add(cyl(0.007, 0.007, 0.08, 5), P.rust, x, y, z, 0, 0, Math.PI / 2 + x);
+  });
+  ribbon(b, 0.26, 0.24, 0.026);
 }
 
-/** Plattenbrecher (I52): a Plattenbau slab with four windows glowing ember orange, rebar ends. */
+/** Plattenbrecher (I52): a big, rugged Plattenbau slab with four ember windows, a broken corner and rebar. */
 function pbrecher(b: Parts): void {
   const c = stone(0xb8ad98);
-  b.add(cyl(0.024, 0.03, 1.22), wood(0x6a4a30), 0, 0.42, 0)
-    .add(box(0.3, 0.24, 0.12), c, 0, 1.06, 0)
-    .add(box(0.31, 0.02, 0.13), stone(0x8a8274), 0, 1.06, 0)
-    .add(box(0.07, 0.08, 0.16), P.iron, 0, 0.92, 0)
-    .add(cyl(0.031, 0.031, 0.3), P.wrap, 0, 0, 0)
-    .add(cyl(0.032, 0.032, 0.14), P.wrap, 0, 0.48, 0);
-  for (const x of [-0.075, 0.075]) for (const y of [1.005, 1.115]) b.add(box(0.06, 0.06, 0.126), GLOW, x, y, 0);
-  for (const [x, y] of [[-0.17, 1.0], [0.17, 1.13], [0.17, 0.99]] as const) b.add(cyl(0.006, 0.006, 0.1, 5), P.rust, x, y, 0, 0, 0, Math.PI / 2);
-  ribbon(b, 0.86, 0.3);
+  handle2(b, wood(0x6a4a30));
+  b.add(box(0.06, 0.05, 0.1), P.iron, 0, 0.6, 0);
+  head(b, () => {
+    b.add(box(0.3, 0.24, 0.12), c, 0, 1.06, 0)
+      .add(box(0.31, 0.02, 0.13), stone(0x8a8274), 0, 1.06, 0)
+      .add(box(0.07, 0.06, 0.13), stone(0x8a8274), 0.14, 1.16, 0, 0, 0, 0.5)
+      .add(box(0.05, 0.08, 0.11), c, -0.16, 0.99, 0, 0, 0, -0.3)
+      .add(box(0.32, 0.012, 0.004), stone(0x7a7264), 0, 1.0, 0.061)
+      .add(box(0.32, 0.012, 0.004), stone(0x7a7264), 0, 1.0, -0.061);
+    for (const x of [-0.075, 0.075]) for (const y of [1.005, 1.115]) b.add(box(0.06, 0.06, 0.126), GLOW, x, y, 0).add(box(0.07, 0.01, 0.13), stone(0x6a6458), x, y - 0.035, 0);
+    for (const [x, y, z] of [[-0.17, 1.0, 0], [0.17, 1.13, 0.02], [0.17, 0.99, -0.02], [0.1, 1.19, 0.03]] as const) b.add(cyl(0.006, 0.006, 0.1, 5), P.rust, x, y, z, 0, 0, Math.PI / 2 - x);
+  });
+  ribbon(b, 0.26, 0.24, 0.026);
 }
 
-/** Zorn der Ringbahn (I32 → repaint): an S-Bahn orange fork with a glowing ring between the prongs. */
+/** Zorn der Ringbahn (I32): a smaller S-Bahn orange fork, a glowing ring between the prongs, an S badge, a hanging rag. */
 function ringbahn(b: Parts): void {
-  zwille(b, { arm: metal(0xd8641e), wrap: P.rubber, band: plain(0xe8b23a), rubber: P.rubber, pouch: P.leather });
-  b.add(ring(0.052, 0.008, 4, 16), GLOW, 0, 0.3, 0)
-    .add(cyl(0.022, 0.022, 0.03), plain(0xe8b23a), -0.122, 0.34, 0, 0, 0, 0.5)
-    .add(cyl(0.022, 0.022, 0.03), plain(0xe8b23a), 0.122, 0.34, 0, 0, 0, -0.5);
+  fork(b, { arm: metal(0xd8641e), wrap: P.rubber, band: plain(0xe8b23a), rubber: P.rubber, pouch: P.leather });
+  for (const sx of [-1, 1]) b.add(cyl(0.02, 0.02, 0.022), plain(0xe8b23a), ...armAt(sx, 0.92), 0, 0, 0, -sx * ARM_RZ);
+  b.add(ring(0.04, 0.007, 4, 16), GLOW, 0, 0.25, 0)
+    .add(cyl(0.022, 0.022, 0.008, 12), plain(0x2f8a4a), 0, 0.17, 0.02, Math.PI / 2)
+    .add(box(0.012, 0.024, 0.004), plain(0xf0f0e8), 0, 0.17, 0.025);
+  ribbon(b, 0.1, 0.18, 0.025, plain(0xe8b23a));
 }
 
-/** Krähenschleuder (I53): a dark fork, a crow skull with glowing eyes, feathers hanging from an arm. */
+/** Krähenschleuder (I53): a smaller dark fork, a crow skull with glowing eyes, feathers and beads on hanging cords. */
 function kraehe(b: Parts): void {
-  zwille(b, { arm: wood(0x3a2a20), wrap: plain(0x7a2a1e), band: plain(0x7a2a1e), rubber: P.rubber, pouch: plain(0x3a2a20) });
+  fork(b, { arm: wood(0x3a2a20), wrap: plain(0x7a2a1e), band: plain(0x7a2a1e), rubber: P.rubber, pouch: plain(0x3a2a20) });
   const bone = plain(0xd8d0b8);
-  const feather: [number, number][] = [[0, 0], [0.014, -0.05], [0.012, -0.12], [0, -0.16], [-0.012, -0.11], [-0.013, -0.05]];
-  // Skull tied to the front of the left arm, feathers hanging beside the handle.
-  b.add(scaled(ball(0.03, 8, 6), 0.85, 1, 1), bone, -0.07, 0.25, 0.03)
-    .add(cone(0.014, 0.06, 4), bone, -0.07, 0.2, 0.035, Math.PI, 0, 0)
-    .add(ball(0.008, 6, 4), GLOW, -0.082, 0.26, 0.054)
-    .add(ball(0.008, 6, 4), GLOW, -0.058, 0.26, 0.054)
-    .add(cyl(0.003, 0.003, 0.06, 4), P.wrap, -0.09, 0.2, 0, 0, 0, 0, true);
-  for (const [x, rz] of [[-0.09, 0.1], [-0.105, 0.4], [-0.08, -0.2]] as const) b.add(flat(feather, 0.003), plain(0x1a1a22), x, 0.175, 0.01, 0, 0, rz, true);
+  const feather: [number, number][] = [[0, 0], [0.012, -0.04], [0.011, -0.1], [0, -0.13], [-0.011, -0.09], [-0.012, -0.04]];
+  const [sx, sy] = armAt(-1, 0.55);
+  // Skull tied to the front of the left arm, feathers and beads on cords beside the handle.
+  b.add(scaled(ball(0.024, 8, 6), 0.85, 1, 1), bone, sx, sy, 0.025)
+    .add(cone(0.011, 0.05, 4), bone, sx, sy - 0.04, 0.03, Math.PI, 0, 0)
+    .add(ball(0.006, 6, 4), GLOW, sx - 0.01, sy + 0.006, 0.045)
+    .add(ball(0.006, 6, 4), GLOW, sx + 0.01, sy + 0.006, 0.045);
+  cord(b, [sx - 0.01, sy - 0.01, 0], [-0.075, 0.12, 0.01], 0.02, 0.003, P.wrap, 3);
+  for (const [x, y, rz] of [[-0.075, 0.12, 0.1], [-0.088, 0.13, 0.4], [-0.064, 0.125, -0.2]] as const) b.add(flat(feather, 0.003), plain(0x1a1a22), x, y, 0.01, 0, 0, rz, true);
+  for (const y of [0.15, 0.135]) b.add(ball(0.007, 6, 4), plain(0xb8a060), -0.074, y, 0.012, 0, 0, 0, true);
 }
 
-/** Speer der Siegessäule (I56): a gold shaft and tip, Victoria's wings and a laurel wreath below the tip. */
+/** Speer der Siegessäule (I56), a little shorter: a gold shaft with bands, Victoria with wings and a laurel wreath below the tip. */
 function siegsp(b: Parts): void {
-  const gold = metal(0xd4a62a), bright = metal(0xf2d14b);
-  const wing: [number, number][] = [[0, 0], [0.05, 0.02], [0.11, 0.08], [0.13, 0.15], [0.09, 0.11], [0.05, 0.08], [0.012, 0.05]];
-  b.add(cyl(0.017, 0.02, 2.0), gold, 0, 0.42, 0)
-    .add(scaled(cone(0.042, 0.32), 1, 1, 0.3), bright, 0, 1.65, 0, 0, Math.PI / 4, 0)
-    .add(flat(wing, 0.008), bright, 0.01, 1.38, 0)
-    .add(flat(wing, 0.008), bright, -0.01, 1.38, 0, 0, Math.PI, 0)
-    .add(cyl(0.012, 0.02, 0.1, 8), gold, 0, 1.4, 0)
-    .add(ball(0.016, 8, 6), gold, 0, 1.46, 0)
-    .add(ring(0.04, 0.008, 4, 14), gold, 0, 1.49, 0, Math.PI / 2)
-    .add(ball(0.02, 8, 6), GLOW, 0, 1.51, 0)
-    .add(cyl(0.024, 0.024, 0.04), gold, 0, 1.32, 0)
+  const gold = metal(0xd4a62a), bright = metal(0xf2d14b), leaf = metal(0x8a9a3a);
+  const wing: [number, number][] = [[0, 0], [0.05, 0.02], [0.1, 0.06], [0.14, 0.13], [0.15, 0.2], [0.11, 0.15], [0.08, 0.13], [0.09, 0.1], [0.05, 0.08], [0.012, 0.05]];
+  b.add(cyl(0.017, 0.02, 1.92), gold, 0, 0.38, 0)
+    .add(scaled(cone(0.042, 0.28), 1, 1, 0.3), bright, 0, 1.58, 0, 0, Math.PI / 4, 0)
+    .add(flat(wing, 0.008), bright, 0.012, 1.3, -0.004)
+    .add(flat(wing, 0.008), bright, -0.012, 1.3, -0.004, 0, Math.PI, 0)
+    // Victoria: body, head, raised arm with the wreath.
+    .add(cyl(0.012, 0.026, 0.1, 8), gold, 0, 1.33, 0.006)
+    .add(ball(0.014, 8, 6), gold, 0, 1.395, 0.006)
+    .add(ring(0.038, 0.008, 4, 14), gold, 0, 1.43, 0, Math.PI / 2)
+    .add(ball(0.02, 8, 6), GLOW, 0, 1.43, 0)
+    .add(cyl(0.026, 0.026, 0.04), gold, 0, 1.25, 0)
+    .add(cyl(0.022, 0.022, 0.03), bright, 0, 0.9, 0)
+    .add(cyl(0.022, 0.022, 0.03), bright, 0, 0.3, 0)
     .add(cyl(0.024, 0.024, 0.3), P.leather, 0, 0.02, 0)
+    .add(ring(0.025, 0.004, 4, 10), gold, 0, 0.17, 0, Math.PI / 2)
+    .add(ring(0.025, 0.004, 4, 10), gold, 0, -0.13, 0, Math.PI / 2)
     .add(cone(0.022, 0.08, 6), gold, 0, -0.62, 0, Math.PI, 0, 0);
-  for (let k = 0; k < 6; k++) b.add(scaled(ball(0.012, 5, 3), 1, 0.5, 2), metal(0x8a9a3a), Math.cos(k * Math.PI / 3) * 0.042, 1.49, Math.sin(k * Math.PI / 3) * 0.042, 0, -k * Math.PI / 3, 0);
+  for (let k = 0; k < 10; k++) b.add(scaled(ball(0.011, 5, 3), 1, 0.5, 2), leaf, Math.cos(k * Math.PI / 5) * 0.038, 1.43, Math.sin(k * Math.PI / 5) * 0.038, 0, -k * Math.PI / 5, 0);
 }
 
-/** Morgenstern der Zitadelle (I48, set Zitadelle): an iron ball with spikes on a dark shaft, iron fittings. */
+/** Morgenstern der Zitadelle (I48, set Zitadelle): a big spiked iron ball (two-handed rule), dark shaft, iron fittings. */
 function morgen(b: Parts): void {
   const spike = metal(0x8a8f96);
-  b.add(cyl(0.024, 0.03, 1.22), wood(0x4a3020), 0, 0.42, 0)
-    .add(cyl(0.034, 0.034, 0.08), spike, 0, 0.96, 0)
-    .add(ball(0.08, 12, 8), metal(0x6a6e76), 0, 1.06, 0)
-    .add(cyl(0.036, 0.036, 0.03), GLOW, 0, 0.9, 0)
-    .add(cyl(0.031, 0.031, 0.3), P.leather, 0, 0, 0)
-    .add(cyl(0.032, 0.032, 0.14), P.leather, 0, 0.48, 0);
-  // Spikes along 13 directions (cube corners and faces, none into the shaft).
-  const dirs: [number, number, number][] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, -1]];
-  for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) dirs.push([x, y, z]);
-  for (const [x, y, z] of dirs) {
-    const d = new Vector3(x, y, z).normalize();
-    const g = cone(0.02, 0.06, 4);
-    g.applyQuaternion(_q.setFromUnitVectors(UP, d));
-    b.add(g, spike, d.x * 0.105, 1.06 + d.y * 0.105, d.z * 0.105);
-  }
-  ribbon(b, 0.82, 0.3);
+  handle2(b, wood(0x4a3020), P.leather);
+  b.add(cyl(0.034, 0.034, 0.05), spike, 0, 0.585, 0)
+    .add(cyl(0.036, 0.036, 0.03), GLOW, 0, 0.62, 0);
+  head(b, () => {
+    b.add(ball(0.09, 12, 8), metal(0x6a6e76), 0, 1.06, 0)
+      .add(ring(0.09, 0.008, 4, 16), spike, 0, 1.06, 0, Math.PI / 2);
+    // Spikes along 13 directions (cube corners and faces, none into the shaft).
+    const dirs: [number, number, number][] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, -1]];
+    for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) dirs.push([x, y, z]);
+    for (const [x, y, z] of dirs) {
+      const d = new Vector3(x, y, z).normalize();
+      const g = cone(0.022, 0.06, 4);
+      g.applyQuaternion(_q.setFromUnitVectors(UP, d));
+      b.add(g, spike, d.x * 0.115, 1.06 + d.y * 0.115, d.z * 0.115);
+    }
+  });
+  ribbon(b, 0.26, 0.24, 0.026);
 }
 
 const BUILD: Partial<Record<WeaponLookId, Builder>> = {
-  rohr, latte, stahl, machete, brech, vorschlag, pflaster, zange, zwille: (b) => zwille(b), nagel, stein, rspeer, fahne, harpune,
+  rohr, latte, stahl, machete, brech, vorschlag, pflaster, zange, zwille: (b) => fork(b), nagel, stein, rspeer, fahne, harpune,
   leucht, boxh, neonfl, mikro, sichel, werkh, aufzieh, zeiger,
   turm, zitklinge, mauer, pbrecher, ring: ringbahn, kraehe, siegsp, morgen,
   'brech:kiez': (b) => brech(b, plain(0x3a5a8a), plain(0xe07a2a)),
-  'zwille:spree': (b) => zwille(b, { ...FORK, arm: wood(0x4f6e52), wrap: cloth(0x6a8a78), band: plain(0x2f8a80), pouch: plain(0x2f5a4a) }),
+  'zwille:spree': (b) => fork(b, { ...FORK, arm: wood(0x4f6e52), wrap: cloth(0x6a8a78), band: plain(0x2f8a80), rubber: plain(0x2a4a40), pouch: plain(0x2f5a4a) }),
 };
 
 /** True when `id` has its own builder (else `weaponModel` falls back to the kind's default). */
@@ -723,8 +849,13 @@ export class WeaponRack {
       // Double-sided for ribbons and flags.
       matte: materials.surface({ map: paintGrain(o).map, vertexColors: true, roughness: 0.9, doubleSided: true }),
       // The only emissive parts: element strip or signature glow, so they read at a glance (bloom picks them up).
-      glow: materials.surface({ color: 0x1a1512, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.6 }),
+      glow: materials.surface({ color: 0x1a1512, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.6, vertexColors: true }),
     };
+    // Vertex colour 1 (`GLOW_WHITE`) turns a glow part a faint white whatever the element or signature colour.
+    this.mats.glow.onBeforeCompile = (sh): void => {
+      sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance = mix(totalEmissiveRadiance, vec3(0.55), vColor.r);');
+    };
+    this.mats.glow.customProgramCacheKey = (): string => 'weapon-glow';
     // Grip offset in the hand bone's frame (checked with `?cam=5,30` close-ups).
     this.group.position.copy(BASE_POS);
     this.group.quaternion.copy(BASE_ROT);
@@ -796,9 +927,9 @@ export class WeaponRack {
     return this.group.localToWorld(gv.set(0, t.tip, 0)).y;
   }
 
-  /** True when the shown model is held with both hands. */
+  /** True when the shown model is held with both hands (D8: `hands` of the base, not the kind). */
   get twoHanded(): boolean {
-    return this.kind !== null && LEFT_GRIP[this.kind] !== undefined;
+    return this.shown !== null && weaponTraits(this.shown).hands === 2 && LEFT_GRIP[WEAPON_LOOKS[this.shown].kind] !== undefined;
   }
 
   /**
@@ -807,7 +938,7 @@ export class WeaponRack {
    */
   leftGrip(pos: Vector3, shaft: Vector3, stance = 0): boolean {
     const kind = this.kind;
-    const h = kind === null ? undefined : LEFT_GRIP[kind];
+    const h = kind === null || !this.twoHanded ? undefined : LEFT_GRIP[kind];
     if (h === undefined || kind === null) return false;
     const stand = TWO_HAND_STAND[kind];
     const thrust = THRUST[kind];

@@ -10,6 +10,8 @@ describe('standClip', () => {
     expect(standClip('blade', false)).toBe('Sword_Idle');
     expect(standClip('sling', false)).toBe('Sword_Idle');
     expect(standClip('hammer', true)).toBe('Idle_Shield_Loop');
+    // D8: a one-handed hammer (Pflasterhammer, Rohrzange) stands like the blade.
+    expect(standClip('hammer', false, 1)).toBe('Sword_Idle');
   });
 });
 

@@ -21,6 +21,7 @@ import { PLAYER, type AttackDef } from '../data/combat';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Cast, type Player } from '../sim/types';
 import type { ElementId, SetId, WeaponKindId } from '../data/items';
+import { KIND_HANDS } from '../data/weapon-look';
 import { THRUST, TWO_HAND_STAND, WeaponRack, thrustWeight, weaponModel } from './weapons';
 import { FIST_CLIP, LeftHandIk, easeGrip } from './hand-ik';
 import type { LitMaterial, Materials } from './materials';
@@ -241,10 +242,10 @@ const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; t
   gully: { clip: 'Sword_Block', from: 0, at: 0, to: 0 },
 };
 
-/** Standing clip for a weapon kind: two-handed kinds with their own pose, else the one-handed guard. */
-export function standClip(kind: WeaponKindId, guard: boolean): string {
+/** Standing clip: two-handed weapons with their kind's pose, else the one-handed guard (D8: `hands` decides). */
+export function standClip(kind: WeaponKindId, guard: boolean, hands: 1 | 2 = KIND_HANDS[kind]): string {
   if (guard) return 'Idle_Shield_Loop';
-  return TWO_HAND_STAND[kind]?.clip ?? 'Sword_Idle';
+  return (hands === 2 ? TWO_HAND_STAND[kind]?.clip : undefined) ?? 'Sword_Idle';
 }
 
 /** Extra state the hero view needs beyond the player (weapon, power timers). */
@@ -325,7 +326,7 @@ export class HeroView {
       const speed = Math.hypot(p.vx, p.vz);
       if (speed > 0.8) a.loop(pose.guard > 0 ? 'Jog_Fwd_Loop' : 'Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED) * (pose.guard > 0 ? 1.6 : 1));
       else {
-        const clip = standClip(pose.kind, pose.guard > 0);
+        const clip = standClip(pose.kind, pose.guard > 0, this.rack.twoHanded ? 2 : 1);
         standing = clip === TWO_HAND_STAND[pose.kind]?.clip;
         a.loop(clip, 0.16);
       }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BASES, GDR_WEAPON_NAMES, LEGENDARY_WEAPON_NAMES, NEON_WEAPON_NAMES, WEAPON_NAMES } from './item-names';
 import { SETS, type SetId, type WeaponKindId } from './items';
-import { DEFAULT_LOOK, WEAPON_LOOKS, weaponLookId } from './weapon-look';
+import { DEFAULT_LOOK, WEAPON_LOOKS, strongAgainst, weaponLookId, weaponTraits, type WeaponLookId } from './weapon-look';
 
 /** Every weapon name with its kind: the drop tables, the legacy names in BASES and the set weapons. */
 const named: Array<[string, WeaponKindId]> = [];
@@ -36,7 +36,50 @@ describe('weapon looks (WP4 D1)', () => {
     expect(weaponLookId('blade', 'brech', 'spree')).toBe('brech');
   });
 
-  it('gives a signature glow to neon and legendary bases only', () => {
-    for (const look of Object.values(WEAPON_LOOKS)) expect('glow' in look, JSON.stringify(look)).toBe(look.family === 'neon' || look.family === 'legendary');
+  it('gives a signature glow to neon and legendary bases and the Aufziehwerfer only', () => {
+    for (const [id, look] of Object.entries(WEAPON_LOOKS)) expect('glow' in look, id).toBe(look.family === 'neon' || look.family === 'legendary' || id === 'aufzieh');
+  });
+});
+
+describe('weapon size and strength (WP4 D8)', () => {
+  const t = (id: WeaponLookId): [number, number] => [weaponTraits(id).reach, weaponTraits(id).damage];
+
+  it('gives full-length weapons full reach and shorter ones less reach and more damage', () => {
+    expect(t('stahl')).toEqual([1, 1]);
+    expect(t('rspeer')).toEqual([1, 1]);
+    expect(t('brech')[0]).toBeCloseTo(0.75, 6);
+    expect(t('brech')[1]).toBeCloseTo(1.25, 6);
+    expect(t('brech:kiez')).toEqual(t('brech'));
+    expect(t('pflaster')[0]).toBeCloseTo(0.8, 6);
+    expect(t('zange')[0]).toBeCloseTo(0.8, 6);
+    // A two-handed hammer a third shorter.
+    expect(t('vorschlag')[0]).toBeGreaterThanOrEqual(0.85);
+    expect(t('vorschlag')[0]).toBeLessThanOrEqual(0.9);
+  });
+
+  it('adds up reach and damage to 2 for every melee base, steps of 0.05, never under 0.6; slings keep 1 and 1', () => {
+    for (const [id, look] of Object.entries(WEAPON_LOOKS) as Array<[WeaponLookId, (typeof WEAPON_LOOKS)[WeaponLookId]]>) {
+      const [r, d] = t(id);
+      if (look.kind === 'sling') { expect([r, d], id).toEqual([1, 1]); continue; }
+      expect(r + d, id).toBeCloseTo(2, 9);
+      expect(r, id).toBeGreaterThanOrEqual(0.6);
+      expect(Math.abs(r * 20 - Math.round(r * 20)), id).toBeLessThan(1e-9);
+    }
+  });
+
+  it('holds the short hammers in one hand and the rest by their kind', () => {
+    expect(weaponTraits('pflaster').hands).toBe(1);
+    expect(weaponTraits('zange').hands).toBe(1);
+    expect(weaponTraits('vorschlag').hands).toBe(2);
+    expect(weaponTraits('brech').hands).toBe(1);
+    expect(weaponTraits('rspeer').hands).toBe(2);
+  });
+
+  it('names what a weapon is strong against (D9), each class once', () => {
+    expect(strongAgainst('stahl')).toEqual(['untote', 'pflanzen']);
+    expect(strongAgainst('vorschlag')).toEqual(['maschinen']);
+    expect(strongAgainst('pflaster')).toEqual(['maschinen', 'menschen']);
+    expect(strongAgainst('rspeer')).toEqual(['menschen']);
+    expect(strongAgainst('zwille')).toEqual(['tiere']);
   });
 });

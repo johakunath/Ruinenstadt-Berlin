@@ -1,8 +1,8 @@
 // Dev tool page: every weapon model next to its painted icon (WP4 step 1), to compare model and icon.
 // Never part of the game build.
 //   /tools/item-sheet.html?mode=weapons                      all weapon looks
-//   &family=normal,neon (weapon-look.ts families)  &el=fire (element glow on all)  &cols=3
-// Models are drawn in side view (the model's XY profile), turned so the tip points up right like the
+//   &family=normal,neon (weapon-look.ts families)  &el=fire (element glow on all)  &cols=3  &spin=0.6
+// Models are drawn from the side, turned 0.6 rad about their own axis, the tip up right like the
 // icons, each fitted to its panel; the caption gives the real length, the triangle count and the meshes
 // drawn (draw calls per pass). Studio environment light, ACES tone mapping, no bloom.
 import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, Scene, Vector3, WebGLRenderer, type Mesh } from 'three';
@@ -21,6 +21,7 @@ const families = (q.get('family') ?? '').split(',').filter(Boolean);
 const el = (q.get('el') ?? undefined) as ElementId | undefined;
 const cols = Number(q.get('cols') ?? 3);
 const W = 300, H = 190;
+const spin = Number(q.get('spin') ?? 0.6);
 
 // German name per look: the current name tables first (BASES also keeps legacy names), sets by piece.
 const names = new Map<string, string>();
@@ -29,7 +30,7 @@ names.set('latte', 'Holzlatte');
 for (const [id, s] of Object.entries(SETS)) if (s.pieces.w) names.set(names.has(s.pieces.w.base) ? `${s.pieces.w.base}:${id}` : s.pieces.w.base, s.pieces.w.name);
 
 const ids = (Object.keys(WEAPON_LOOKS) as WeaponLookId[]).filter((id) => !families.length || families.includes(WEAPON_LOOKS[id].family));
-document.getElementById('title')!.textContent = `Weapon models (WP4 step 1) beside their icons: side view, tip up right, each fitted to its panel${el ? `, element ${el}` : ''}`;
+document.getElementById('title')!.textContent = `Weapon models (WP4 step 1) beside their icons, tip up right, each fitted to its panel (length in the caption)${el ? `, element ${el}` : ''}`;
 const grid = document.getElementById('grid')!;
 grid.style.gridTemplateColumns = `repeat(${cols}, 446px)`;
 
@@ -58,7 +59,8 @@ for (const id of ids) {
   rack.show(id, el);
   rack.group.position.set(0, 0, 0);
   // Tip up right along the panel diagonal (icons: grip bottom left, tip top right).
-  rack.group.rotation.set(0, 0, -(Math.PI / 2 - Math.atan2(H, W)));
+  // spin=0.6: turned about its own axis by that many radians, so bands and depth show (default 0.6; 0 = flat side view).
+  rack.group.rotation.set(0, spin, -(Math.PI / 2 - Math.atan2(H, W)), 'ZYX');
   rack.group.updateMatrixWorld(true);
   const shown = rack.group.children.find((g) => g.visible)!;
   box.setFromObject(shown, true).getCenter(c);

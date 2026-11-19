@@ -25,9 +25,15 @@ export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' 
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
 export type EliteMod = 'flink' | 'brennend' | 'spaltend' | 'gepanzert';
 
+/** D9 enemy classes: each weapon damage type is strong against some (`STRONG_AGAINST` in weapon-look.ts). */
+export type EnemyClass = 'untote' | 'maschinen' | 'pflanzen' | 'menschen' | 'tiere';
+export const ENEMY_CLASS_NAME: Readonly<Record<EnemyClass, string>> = { untote: 'Untote', maschinen: 'Maschinen', pflanzen: 'Pflanzen', menschen: 'Menschen', tiere: 'Tiere' };
+
 export interface EnemyDef {
   kind: EnemyKind;
   name: string;
+  /** D9: one or two classes (start assignment, Johannes 2026-11-19; filled from `ENEMY_CLASSES`). */
+  classes: readonly EnemyClass[];
   body: BodyKind;
   ai: AiKind;
   /** Row of the 2D resistance table (`ENEMY_RESISTANCES`); `none`: every element counts once. */
@@ -74,7 +80,17 @@ export interface EnemyDef {
   wake?: number;
 }
 
-export const ENEMIES: Record<EnemyKind, EnemyDef> = {
+/** D9 start assignment of the classes (Johannes, 2026-11-19); Kabelghul and Boxenkopf are both. */
+export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> = {
+  walker: ['untote'], runner: ['untote'], brute: ['untote'], spitter: ['untote'], spreehexe: ['untote'],
+  kabel: ['untote', 'maschinen'], bass: ['untote', 'maschinen'],
+  drone: ['maschinen'], uhrwerk: ['maschinen'], uhrwerkgross: ['maschinen'], wachdrohne: ['maschinen'], weltzeituhr: ['maschinen'], volkskoloss: ['maschinen'], bassprediger: ['maschinen'],
+  wurzler: ['pflanzen'], kernspeier: ['pflanzen'], wurzelmutter: ['pflanzen'],
+  feldwebel: ['menschen'], waechter: ['menschen'], hauptmann: ['menschen'], schaffner: ['menschen'], grenzer: ['menschen'], brandmeister: ['menschen'], tuersteher: ['menschen'], dirigent: ['menschen'],
+  raptor: ['tiere'], rex: ['tiere'], crow: ['tiere'], rat: ['tiere'], rattenmutter: ['tiere'],
+};
+
+const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   walker: {
     kind: 'walker', name: 'Schlurfer', body: 'zombie', ai: 'melee', res: 'ghoul', radius: 0.4, scale: 1, hp: 30, speed: 2.1,
     attackRange: 1.45, windup: 0.55, active: 0.12, recovery: 0.7,
@@ -259,6 +275,10 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     reach: 3, halfAngle: 70 * DEG, damage: 36, knockbackTaken: 0, poise: true, weight: 0, boss: true, wake: 3,
   },
 };
+
+export const ENEMIES: Record<EnemyKind, EnemyDef> = Object.fromEntries(
+  (Object.keys(DEFS) as EnemyKind[]).map((k) => [k, { ...DEFS[k], classes: ENEMY_CLASSES[k] }]),
+) as Record<EnemyKind, EnemyDef>;
 
 const PX = 1 / 30;
 
