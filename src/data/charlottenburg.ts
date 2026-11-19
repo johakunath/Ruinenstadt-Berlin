@@ -337,7 +337,7 @@ export function charlottenburgMap(scale = 1): MapDef {
     LW('hochschule', ...kv(25 * s, hsV), Math.atan2(-dv[0], -dv[1]), 14, hsHz, 1, { name: 'Technische Hochschule' }),
     // The Chaussee passes through the Tor (only its two colonnades block); the Rathaus tower on the Otto-Suhr-Allee.
     L('chtor', 100, 38, Math.atan2(70, -28), 16, 3, 1, { name: 'Charlottenburger Tor' }),
-    L('rathaus', 32, 8, -90 * DEG, 8, 6, 1, { name: 'Rathaus Charlottenburg' }),
+    L('chrathaus', 32, 8, -90 * DEG, 8, 6, 1, { name: 'Rathaus Charlottenburg' }),
     // Zone 2 and 3. The Stülerbauten flank the north end of the Schloßstraße, fronts to the street.
     L('stuelerbau', -92, 5, 90 * DEG, 5, 4, 1, { name: 'Stülerbau', variant: 0 }),
     L('stuelerbau', -58, 5, -90 * DEG, 5, 4, 1, { name: 'Stülerbau', variant: 1 }),

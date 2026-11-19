@@ -30,7 +30,7 @@ export const CHARLOTTENBURG_KINDS = new Set<LandmarkKind>([
   'zoobahnhof', 'loewentor', 'elefantentor', 'aquarium', 'musikpavillon', 'antilopenhaus', 'ufapalast', 'capitol', 'gedaechtniskirche',
   'romanischescafe', 'gloriapalast', 'marmorhaus', 'kadewe', 'wittenbergplatz', 'cafewestens', 'revuepalast', 'theaterwestens', 'variete',
   'opernhaus', 'schillertheater', 'hochschule', 'chtor', 'stuelerbau', 'ehrenhoftor', 'schlossmitte', 'schlossfluegel', 'neuerfluegel',
-  'orangerie', 'gartentor', 'mausoleum', 'belvedere',
+  'orangerie', 'gartentor', 'mausoleum', 'belvedere', 'chrathaus',
 ]);
 
 /** Landmark wear on this map: soot, cracks, broken windows and rubble, no graffiti (1920). */
@@ -375,6 +375,12 @@ function massing(c: Ctx): void {
         blk(c, M.stucco, p.x, 9.2, p.z, p.hx * 2 + 0.4, 1.4, p.hz * 2 + 0.4, C.sand);
         figure(c, M.enamel, p.x, 10.6, p.z, 3.4, [0.5, 0.6, 0.5]);
       }
+      return;
+    case 'chrathaus':
+      // Rathaus Charlottenburg (1905): a long block on the Otto-Suhr-Allee, the tall tower over its front.
+      house(c, 0, 0, W, D, 14, C.sand, 3);
+      blk(c, M.stucco, 0, 0, l.hz - 2, 5, 30, 4, C.sand);
+      roof(c, M.enamel, 0, 30, l.hz - 2, 5.4, 4.4, 7, 0.3, 0.3, C.copper);
       return;
     case 'stuelerbau':
       // Stülerbau: a square block with a domed round tower in the middle.

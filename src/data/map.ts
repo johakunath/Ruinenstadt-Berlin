@@ -94,7 +94,7 @@ export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'muegg
   | 'zoobahnhof' | 'loewentor' | 'elefantentor' | 'aquarium' | 'musikpavillon' | 'antilopenhaus' | 'ufapalast' | 'capitol' | 'gedaechtniskirche'
   | 'romanischescafe' | 'gloriapalast' | 'marmorhaus' | 'kadewe' | 'wittenbergplatz' | 'cafewestens' | 'revuepalast' | 'theaterwestens' | 'variete'
   | 'opernhaus' | 'schillertheater' | 'hochschule' | 'chtor' | 'stuelerbau' | 'ehrenhoftor' | 'schlossmitte' | 'schlossfluegel' | 'neuerfluegel'
-  | 'orangerie' | 'gartentor' | 'mausoleum' | 'belvedere';
+  | 'orangerie' | 'gartentor' | 'mausoleum' | 'belvedere' | 'chrathaus';
 
 export interface Landmark {
   kind: LandmarkKind;

@@ -438,7 +438,7 @@ describe('Charlottenburg map (M16, layout C2)', () => {
     const octant = (x: number, z: number): string => ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'][((Math.round(Math.atan2(-(z - church.z), x - church.x) / (Math.PI / 4)) % 8) + 8) % 8]!;
     const want: Partial<Record<Landmark['kind'], string>> = {
       zoobahnhof: 'NW', loewentor: 'N', elefantentor: 'E', aquarium: 'E', ufapalast: 'NW', romanischescafe: 'E', marmorhaus: 'SW', gloriapalast: 'SW', kadewe: 'SE', wittenbergplatz: 'SE',
-      cafewestens: 'W', revuepalast: 'W', theaterwestens: 'W', variete: 'W', hochschule: 'NW', chtor: 'N', schillertheater: 'NW', opernhaus: 'NW', rathaus: 'NW', stuelerbau: 'NW',
+      cafewestens: 'W', revuepalast: 'W', theaterwestens: 'W', variete: 'W', hochschule: 'NW', chtor: 'N', schillertheater: 'NW', opernhaus: 'NW', chrathaus: 'NW', stuelerbau: 'NW',
       schlossmitte: 'NW', orangerie: 'NW', neuerfluegel: 'NW', mausoleum: 'NW', belvedere: 'NW',
     };
     for (const [kind, o] of Object.entries(want)) for (const l of m.landmarks.filter((q) => q.kind === kind)) expect(octant(l.x, l.z), kind).toBe(o);

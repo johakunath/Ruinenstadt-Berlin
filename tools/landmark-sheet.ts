@@ -63,7 +63,7 @@ const tall = ({ rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnho
   zoobahnhof: 16, gedaechtniskirche: 61, kadewe: 18, opernhaus: 26, schlossmitte: 36, belvedere: 19, ehrenhoftor: 5, orangerie: 11, revuepalast: 18,
   loewentor: 7, elefantentor: 9, aquarium: 12, musikpavillon: 8, antilopenhaus: 12, ufapalast: 15, capitol: 9, romanischescafe: 24, gloriapalast: 18,
   marmorhaus: 14, wittenbergplatz: 10, cafewestens: 20, theaterwestens: 20, variete: 14, schillertheater: 17, hochschule: 22, chtor: 14, stuelerbau: 19,
-  schlossfluegel: 15, neuerfluegel: 16, gartentor: 6, mausoleum: 10 } as Record<string, number>)[kind] ?? 12;
+  schlossfluegel: 15, neuerfluegel: 16, gartentor: 6, mausoleum: 10, chrathaus: 37 } as Record<string, number>)[kind] ?? 12;
 const cam = new PerspectiveCamera(36, W / H, 0.5, 600);
 renderer.setScissorTest(true);
 views.forEach((v, i) => {
