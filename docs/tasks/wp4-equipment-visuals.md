@@ -382,7 +382,7 @@ The kind still sets clips and arcs, but a base may scale them. New table (plain 
 - Reach folds into `stats.reachFactor` (the smear follows it already), damage into `stats.damage` (so the Kampfkraft comparison sees it).
 - One-handed hammers: no left-hand grip, standing clip as the blade (`hands` decides, not the kind).
 - **Reach follows length for every melee base** (Johannes, third message): each base has a `length` (tip height of its model, plain data, checked against the model by the envelope test). Reach factor = 1 − (reference length of the kind − length) ÷ reach of the kind's first attack, rounded to 0.05, never under 0.6. Reference lengths are the pre-WP4 kind models (blade 1.11, hammer 1.16, spear 1.81), so `combat.ts` reach values stay. This replaces the fixed reach column above (it gives about the same for the three short bases) and covers the shorter hammers, Leuchtröhre, Sichel, Fernsehturm-Splitter, Klinge der Zitadelle and the Speer der Siegessäule. Slings: no reach change (their factor is shot speed).
-- Damage changes only for the three bases in the table; the other shortened weapons lose a little reach without compensation (watch in the playtest).
+- **Lost reach is paid back in damage** (Johannes, fourth message): damage factor = 1 + (1 − reach factor) for every melee base, so reach 0.75 gives damage 1.25 and reach 0.85 gives 1.15. This replaces the fixed damage column above; `hands` and the damage types of the table stay.
 - Hammer knockback × 1.5 on every hammer attack (Johannes: strong, slow, pushes enemies back; the stun on every hit stays).
 - All numbers are start values for Johannes' playtest.
 
