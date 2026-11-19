@@ -106,7 +106,8 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   schaffner: { spine_02: 1.18, Head: 0.9 },
   grenzer: { spine_02: 1.08, Head: 0.92 },
   brandmeister: { spine_02: 1.22, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.86 },
-  rattenmutter: { spine_01: 1.15, spine_03: 1.12, Head: 0.95 },
+  // WP5 step 3: the rat head replaces the skull (mounted on the neck).
+  rattenmutter: { spine_01: 1.15, spine_03: 1.12, Head: 0.05 },
   spreehexe: { upperarm_l: 0.92, upperarm_r: 0.92, Head: 0.96 },
   // Speaker heads: the skull shrinks into the box mounted on the neck.
   kabel: { spine_02: 0.82, upperarm_l: 1.12, upperarm_r: 1.12, Head: 1.06 },
@@ -126,7 +127,7 @@ const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   wurzelmutter: [1.1, 1],
 };
 /** Bent forward all the time (the Rattenmutter's hunch, the Kabelghul's crouch). */
-const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2, kabel: 0.28, heuler: 0.12 };
+const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.34, kabel: 0.28, heuler: 0.12 };
 /** Eye glow per kind (zombie rig); bosses default to ember, the rest to the zombie green. */
 const EYES: Partial<Record<EnemyKind, number>> = { spitter: 0x97ff5a, kabel: 0x43d1cf, tuersteher: 0xff4fa3, dirigent: 0xff4fa3 };
 /** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
@@ -841,16 +842,53 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       mountCoat(coat);
       break;
     }
-    case 'rattenmutter':
-      // Hunched in a long brown-green coat with a hood; a rat sits on her shoulder.
-      mount('Head', [[tf(new SphereGeometry(0.16, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), 0, -0.01, -0.06), 'moss']], 0.08);
-      mount('spine_03', [
-        ...tunic('moss', 'rust'),
-        [tf(new SphereGeometry(0.05, 6, 5).scale(0.8, 0.7, 1.6), 0.2, 0.1, 0), 'cloth'],
-        [tf(new SphereGeometry(0.035, 6, 5), 0.2, 0.12, 0.08), 'cloth'],
-      ], 0.08);
-      mount('pelvis', [[tf(new CylinderGeometry(0.23, 0.31, 0.72, 10, 1, true), 0, -0.34, 0), 'moss'], [tf(new TorusGeometry(0.24, 0.018, 4, 14), 0, 0.02, 0, Math.PI / 2), 'rust']]);
+    case 'rattenmutter': {
+      // Bust X06 (Johannes 2026-11-19, A): a giant rat head with a crown replaces the human head (the skull is
+      // shrunk away, SHAPE Head 0.05; mounted on the neck as the Wurzler's sunflower), a fur cloak over the shoulders
+      // and a long torn rag dress; strongly hunched (HUNCH), so the head is built tipped up.
+      const fit = new BodyFit(model);
+      const hd = fit.at('Head'), nk = fit.at('neck_01');
+      const rat: Part[] = [
+        [tf(new SphereGeometry(0.16, 16, 12).scale(1, 0.9, 1.25), 0, 0, 0), 'fur'],
+        [tf(new ConeGeometry(0.105, 0.3, 14).scale(1, 0.78, 1), 0, -0.03, 0.24, Math.PI / 2), 'fur'],
+        [tf(new SphereGeometry(0.036, 10, 8), 0, -0.035, 0.39), 'pink'],
+        // The open lower jaw, the long yellow incisors, a dark mouth.
+        [tf(new ConeGeometry(0.07, 0.24, 10).scale(1, 0.6, 1), 0, -0.1, 0.18, Math.PI / 2 + 0.28), 'fur'],
+        [tf(new BoxGeometry(0.09, 0.012, 0.16), 0, -0.075, 0.24, 0.12), 'dark'],
+        ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(0.02, 0.06, 0.012), sd * 0.013, -0.085, 0.355, -0.15), 'bone']),
+        ...[-1, 1].map((sd): Part => [tf(new SphereGeometry(0.026, 8, 6), sd * 0.085, 0.045, 0.15), 'eye']),
+        // Big round ears, pink inside.
+        ...[-1, 1].flatMap((sd): Part[] => [
+          [tf(new SphereGeometry(0.085, 12, 8).scale(1, 1.1, 0.28), sd * 0.12, 0.14, -0.04, -0.2, sd * 0.35, -sd * 0.35), 'fur'],
+          [tf(new SphereGeometry(0.06, 10, 8).scale(1, 1.1, 0.2), sd * 0.122, 0.142, -0.022, -0.2, sd * 0.35, -sd * 0.35), 'pink'],
+        ]),
+        // Whiskers, three a side.
+        ...[-1, 1].flatMap((sd) => [0.18, 0, -0.18].map((a): Part => [tf(new CylinderGeometry(0.003, 0.002, 0.24, 3), sd * 0.15, -0.03 + a * 0.12, 0.32, a, 0, sd * (Math.PI / 2 - 0.25)), 'white'])),
+        // The crown: a brass band with five points and red stones.
+        [tf(new CylinderGeometry(0.1, 0.09, 0.06, 14, 1, true), 0, 0.15, 0.0), 'brass'],
+        ...[0, 1, 2, 3, 4].flatMap((n): Part[] => {
+          const a = (n / 5) * Math.PI * 2;
+          return [
+            [tf(new ConeGeometry(0.022, 0.08, 5), Math.sin(a) * 0.095, 0.21, Math.cos(a) * 0.095), 'brass'],
+            [tf(new SphereGeometry(0.014, 6, 4), Math.sin(a) * 0.1, 0.152, Math.cos(a) * 0.1), 'red'],
+          ];
+        }),
+        // A fur ruff where the head meets the neck.
+        ...[0, 1, 2, 3, 4, 5, 6].map((n): Part => {
+          const a = Math.PI * 0.55 + (n / 6) * Math.PI * 0.9;
+          return [tf(new ConeGeometry(0.05, 0.2, 6), Math.sin(a) * 0.12, -0.06, Math.cos(a) * 0.12 - 0.08, Math.cos(a) * 1.2 + 1.2, 0, -Math.sin(a) * 1.2), 'fur'];
+        }),
+      ];
+      mount('neck_01', rat.map(([g, m]): Part => [g.scale(1.5, 1.5, 1.5).rotateX(-0.7), m]), hd.y - nk.y + 0.1, hd.z - nk.z + 0.1, hd.x - nk.x);
+      const coat = fitCoat(fit, { mat: 'rags', pad: 0.03, hem: 0.22, flare: 0.17, open: 1.2, sleeves: 'upper', jag: 0.07 });
+      // The fur cloak: from the neck over the shoulders and the hump, torn, open a little at the front.
+      const c = coat.chest, top = c.length - 1;
+      const cloak = [ringGrow(c[top]!, 1.08, 0.015), ringGrow(c[top - 1]!, 1.02, 0.03), ringGrow(c[top - 2]!, 1.02, 0.04), ringGrow(c[top - 3]!, 1.02, 0.045), ringGrow(c[3]!, 1.02, 0.05), ringGrow(c[1]!, 1.03, 0.055)];
+      coat.add('spine_03', [shell(cloak, coat.o('spine_03'), cloak.map((_, i) => lerp(1.2, 2.1, i / (cloak.length - 1))), 24, 0.09), 'fur']);
+      coat.add('spine_01', [band(coat.belly, coat.o('spine_01'), 1.3, 1.7, 0.012), 'dark']);
+      mountCoat(coat, 0.45);
       break;
+    }
     case 'spreehexe':
       // Punk witch of the squats: a purple and green crest, a long black coat, acid glowing in her hand.
       mount('Head', [
