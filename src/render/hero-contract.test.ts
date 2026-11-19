@@ -4,7 +4,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { HERO_BUDGET, HERO_CORE_JOINTS, HERO_EXTRA_JOINTS, HERO_REGIONS } from '../data/hero-contract';
-import { PIECES, hiddenRegions, lookNodes, type HeroLook } from '../data/hero-look';
+import { PIECES, heroLook, hiddenRegions, lookNodes, type HeroLook } from '../data/hero-look';
 
 interface Gltf {
   nodes: { name?: string; mesh?: number; skin?: number }[];
@@ -62,7 +62,8 @@ describe('hero.glb contract', () => {
   it('keeps every look inside the triangle and draw call budget', () => {
     const pieceNodes = new Set(Object.values(PIECES).map((p) => p.node));
     for (const outfit of ['mantel', 'weste']) for (const boots of ['stiefel', 'turnsch']) for (const gloves of ['handsch', null]) {
-      const look: HeroLook = { outfit, boots, gloves, hat: null };
+      // Pieces and regions only; the gear's own budget is tested in gear.test.ts.
+      const look: HeroLook = { ...heroLook({ a: { base: outfit }, f: { base: boots }, g: gloves ? { base: gloves } : undefined }), gear: [] };
       const shown = new Set(lookNodes(look));
       const hidden = new Set([...hiddenRegions(look)].map((r) => `body_${r}`));
       const visible = skinned.filter((n) => !hidden.has(n.name!) && (!pieceNodes.has(n.name!) || shown.has(n.name!)));

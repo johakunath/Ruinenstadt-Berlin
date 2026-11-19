@@ -4,7 +4,7 @@
 // stands along +Y with the grip at the origin; `mountWeapon` puts it into the right hand so that the
 // business end follows the hand bone's +Z (what `tools/clip-swing.mjs` measures).
 import {
-  BoxGeometry, BufferAttribute, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Euler, ExtrudeGeometry, Group,
+  BoxGeometry, BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, Euler, ExtrudeGeometry, Group,
   IcosahedronGeometry, Matrix4, Mesh, Path, PlaneGeometry, Quaternion, Shape, SphereGeometry, TorusGeometry, Vector2, Vector3,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -94,18 +94,18 @@ export function weaponGlow(model: WeaponModel, element: ElementId | undefined): 
 
 export type WeaponSlot = 'metal' | 'matte' | 'glow';
 /** Matte grain cell of `paintGrain`: wood, cloth, plain, concrete. */
-type Grain = 0 | 1 | 2 | 3;
-interface Paint { slot: WeaponSlot; hex: number; grain: Grain }
+export type Grain = 0 | 1 | 2 | 3;
+export interface Paint { slot: WeaponSlot; hex: number; grain: Grain }
 
 /** Mean sRGB tone of the grey metal map; metal vertex colours are divided by it. */
 const METAL_TONE = 0xa0;
-const metal = (hex: number): Paint => ({ slot: 'metal', hex, grain: 0 });
+export const metal = (hex: number): Paint => ({ slot: 'metal', hex, grain: 0 });
 /** Clean, silvery metal: the brushed half of the metal atlas (look 2: Sichel, Hackmesser, Werkhammer). */
-const bright = (hex: number): Paint => ({ slot: 'metal', hex, grain: 1 });
-const wood = (hex: number): Paint => ({ slot: 'matte', hex, grain: 0 });
-const cloth = (hex: number): Paint => ({ slot: 'matte', hex, grain: 1 });
-const plain = (hex: number): Paint => ({ slot: 'matte', hex, grain: 2 });
-const stone = (hex: number): Paint => ({ slot: 'matte', hex, grain: 3 });
+export const bright = (hex: number): Paint => ({ slot: 'metal', hex, grain: 1 });
+export const wood = (hex: number): Paint => ({ slot: 'matte', hex, grain: 0 });
+export const cloth = (hex: number): Paint => ({ slot: 'matte', hex, grain: 1 });
+export const plain = (hex: number): Paint => ({ slot: 'matte', hex, grain: 2 });
+export const stone = (hex: number): Paint => ({ slot: 'matte', hex, grain: 3 });
 /** Glow parts: the element or signature colour; `GLOW_WHITE` glows a faint white whatever the colour (D1, Fernsehturm-Splitter). */
 const GLOW: Paint = { slot: 'glow', hex: 0x000000, grain: 2 };
 const GLOW_WHITE: Paint = { slot: 'glow', hex: 0xffffff, grain: 2 };
@@ -126,8 +126,8 @@ const P = {
   enamel: metal(0x34588c),
 } as const;
 
-/** One part, already in model space. `soft`: cloth, cords and bands, outside the envelope check. */
-export interface WeaponPart { geo: BufferGeometry; slot: WeaponSlot; soft: boolean }
+/** One part, already in model space. `soft`: cloth, cords and bands, outside the envelope check. `tag`: the hero gear's bone (WP4 step 2). */
+export interface WeaponPart { geo: BufferGeometry; slot: WeaponSlot; soft: boolean; tag: string }
 
 const _m = new Matrix4();
 const _e = new Euler();
@@ -136,8 +136,11 @@ const _p = new Vector3();
 const _s = new Vector3(1, 1, 1);
 const _c = new Color();
 
-class Parts {
+/** The parts kit, shared by the weapons and the hero's gear (`src/render/gear-kit.ts`). */
+export class Parts {
   readonly list: WeaponPart[] = [];
+  /** Copied onto every part added (the gear's bone). */
+  tag = '';
   /** Extra transform for the parts added inside `frame` (a scaled hammer head). */
   private xf: Matrix4 | null = null;
 
@@ -175,20 +178,20 @@ class Parts {
       const u0 = (paint.grain % 2) * 0.5, v0 = paint.grain < 2 ? 0.5 : 0, pad = 2 / 512, k = 0.5 - 2 * pad;
       for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + pad + Math.min(1, Math.max(0, uv.getX(i))) * k, v0 + pad + Math.min(1, Math.max(0, uv.getY(i))) * k);
     }
-    this.list.push({ geo: g, slot: paint.slot, soft });
+    this.list.push({ geo: g, slot: paint.slot, soft, tag: this.tag });
     return this;
   }
 }
 
-const box = (w: number, h: number, d: number): BufferGeometry => new BoxGeometry(w, h, d);
-const cyl = (rt: number, rb: number, h: number, s = 8, open = false): BufferGeometry => new CylinderGeometry(rt, rb, h, s, 1, open);
-const cone = (r: number, h: number, s = 4, open = false): BufferGeometry => new ConeGeometry(r, h, s, 1, open);
-const ball = (r: number, w = 8, h = 6): BufferGeometry => new SphereGeometry(r, w, h);
-const ring = (R: number, r: number, rs = 6, ts = 10): BufferGeometry => new TorusGeometry(R, r, rs, ts);
-const scaled = (g: BufferGeometry, x: number, y: number, z: number): BufferGeometry => g.scale(x, y, z);
+export const box = (w: number, h: number, d: number): BufferGeometry => new BoxGeometry(w, h, d);
+export const cyl = (rt: number, rb: number, h: number, s = 8, open = false): BufferGeometry => new CylinderGeometry(rt, rb, h, s, 1, open);
+export const cone = (r: number, h: number, s = 4, open = false): BufferGeometry => new ConeGeometry(r, h, s, 1, open);
+export const ball = (r: number, w = 8, h = 6): BufferGeometry => new SphereGeometry(r, w, h);
+export const ring = (R: number, r: number, rs = 6, ts = 10): BufferGeometry => new TorusGeometry(R, r, rs, ts);
+export const scaled = (g: BufferGeometry, x: number, y: number, z: number): BufferGeometry => g.scale(x, y, z);
 
 /** A flat part from an outline in the model's XY plane (blades, jaws, flags), `depth` thick, centred on z = 0. */
-function flat(pts: ReadonlyArray<readonly [number, number]>, depth: number, holes: ReadonlyArray<readonly [number, number, number]> = []): BufferGeometry {
+export function flat(pts: ReadonlyArray<readonly [number, number]>, depth: number, holes: ReadonlyArray<readonly [number, number, number]> = []): BufferGeometry {
   const s = new Shape(pts.map(([x, y]) => new Vector2(x, y)));
   for (const [x, y, r] of holes) s.holes.push(new Path().absarc(x, y, r, 0, Math.PI * 2, true));
   const g = new ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 6 });
@@ -218,7 +221,7 @@ function ribbon(b: Parts, y: number, len = 0.28, r = 0.028, paint: Paint = P.red
 const _a = new Vector3(), _b = new Vector3(), _d = new Vector3();
 
 /** A cord or band from `a` to `c` that sags by `sag` in its middle (a static curve of `n` segments, soft). */
-function cord(b: Parts, a: readonly [number, number, number], c: readonly [number, number, number], sag: number, r: number, paint: Paint, n = 5): void {
+export function cord(b: Parts, a: readonly [number, number, number], c: readonly [number, number, number], sag: number, r: number, paint: Paint, n = 5): void {
   const mid = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2 - sag, (a[2] + c[2]) / 2];
   const at = (t: number, out: Vector3): Vector3 => out.set(
     (1 - t) ** 2 * a[0] + 2 * t * (1 - t) * mid[0]! + t * t * c[0], (1 - t) ** 2 * a[1] + 2 * t * (1 - t) * mid[1]! + t * t * c[1], (1 - t) ** 2 * a[2] + 2 * t * (1 - t) * mid[2]! + t * t * c[2]);
@@ -239,7 +242,7 @@ function teeth(b: Parts, paint: Paint, x: number, y: number, z: number, r: numbe
 }
 
 /** A cog facing ±z: rim, teeth, hub and spokes. */
-function cog(b: Parts, paint: Paint, x: number, y: number, z: number, r: number, n: number, hub?: Paint): void {
+export function cog(b: Parts, paint: Paint, x: number, y: number, z: number, r: number, n: number, hub?: Paint): void {
   b.add(ring(r, r * 0.2, 4, Math.max(10, n)), paint, x, y, z);
   teeth(b, paint, x, y, z, r * 1.28, n, r * 0.32, r * 0.3);
   b.add(cyl(r * 0.32, r * 0.32, r * 0.35, 8), hub ?? paint, x, y, z, Math.PI / 2);
@@ -374,8 +377,7 @@ function pflaster(b: Parts): void {
 }
 
 /** Rohrzange (I08), one-handed and half as long: a red handle widening toward a thick fixed hook jaw and a sliding jaw on a knurled nut. */
-function zange(b: Parts): void {
-  const red = metal(0xa83224), dark = metal(0x7a2418);
+function zange(b: Parts, red: Paint = metal(0xa83224), dark: Paint = metal(0x7a2418), strip = true): void {
   // Wider at its end (look 2) and toward the jaw, narrow where the hand holds it.
   const handle: [number, number][] = [[-0.03, -0.13], [0.03, -0.13], [0.026, -0.1], [0.023, -0.05], [0.024, 0.14], [0.032, 0.34], [0.036, 0.43], [-0.036, 0.43], [-0.032, 0.34], [-0.024, 0.14], [-0.023, -0.05], [-0.026, -0.1]];
   b.add(flat(handle, 0.03), red, 0, 0, 0)
@@ -389,8 +391,33 @@ function zange(b: Parts): void {
     .add(box(0.17, 0.065, 0.085), P.steel, -0.08, 0.49, 0)
     .add(box(0.14, 0.016, 0.087), P.iron, -0.1, 0.527, 0)
     .add(cyl(0.046, 0.046, 0.065, 10), P.iron, -0.005, 0.44, 0)
-    .add(ring(0.046, 0.007, 4, 12), P.steel, -0.005, 0.44, 0, Math.PI / 2)
-    .add(box(0.05, 0.07, 0.034), GLOW, 0, 0.3, 0);
+    .add(ring(0.046, 0.007, 4, 12), P.steel, -0.005, 0.44, 0, Math.PI / 2);
+  if (strip) b.add(box(0.05, 0.07, 0.034), GLOW, 0, 0.3, 0);
+}
+
+/**
+ * Rohrzange des Tunnelläufers: the Rohrzange in brass with a leather grip, a pressure gauge on the handle
+ * above the hand and a small lantern on a strap beside it. The lantern's glass is the glow part: warm
+ * (the set's signature), or the element's colour.
+ */
+function zangeTunnel(b: Parts): void {
+  const brass = bright(0xc9a34a), frame = metal(0x3a3c40);
+  zange(b, bright(0xb08a3a), metal(0x8a6a2a), false);
+  b.add(cyl(0.031, 0.031, 0.135, 8), plain(0x3a2414), 0, -0.048, 0);
+  // Gauge on the handle's face: brass case, cream dial, needle, a red mark.
+  const gy = 0.195;
+  b.add(cyl(0.027, 0.027, 0.014, 14), brass, 0, gy, 0.022, Math.PI / 2)
+    .add(new CircleGeometry(0.021, 14), plain(0xf0e2c0), 0, gy, 0.0292)
+    .add(box(0.0026, 0.016, 0.0012), plain(0x1a1a1a), 0.004, gy + 0.005, 0.0302, 0, 0, -0.6)
+    .add(box(0.009, 0.0045, 0.0012), plain(0xb8261c), 0.012, gy + 0.012, 0.0298, 0, 0, -0.9);
+  // Lantern hanging on a leather strap from the nut: bail, cap, glass in a cage, base.
+  const lx = 0.078, ly = 0.25;
+  cord(b, [0.034, 0.41, 0.004], [lx, ly + 0.066, 0], 0.012, 0.004, plain(0x8b4a35), 4);
+  b.add(ring(0.011, 0.0022, 3, 8), frame, lx, ly + 0.056, 0)
+    .add(cone(0.022, 0.02, 8), frame, lx, ly + 0.034, 0)
+    .add(cyl(0.016, 0.016, 0.036, 8), GLOW, lx, ly + 0.006, 0)
+    .add(cyl(0.021, 0.02, 0.01, 8), frame, lx, ly - 0.017, 0);
+  for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 2 + Math.PI / 4; b.add(box(0.0035, 0.036, 0.0035), frame, lx + Math.cos(a) * 0.0175, ly + 0.006, Math.sin(a) * 0.0175); }
 }
 
 /** Paints of a forked slingshot; set variants and the legendary forks swap them. */
@@ -859,6 +886,7 @@ const BUILD: Partial<Record<WeaponLookId, Builder>> = {
   leucht, boxh, neonfl, mikro, sichel, werkh, aufzieh, zeiger,
   turm, zitklinge, mauer, pbrecher, ring: ringbahn, kraehe, siegsp, morgen,
   'brech:kiez': (b) => brech(b, plain(0x3a5a8a), plain(0xe07a2a), 0xdadee2),
+  'zange:tunnel': zangeTunnel,
   'zwille:spree': (b) => {
     fork(b, { ...FORK, arm: wood(0x4f6e52), wrap: cloth(0x6a8a78), band: plain(0x2f8a80), rubber: plain(0x2a4a40), pouch: plain(0x2f5a4a) });
     // Set signature: green glow bands on the arms and at the crotch.

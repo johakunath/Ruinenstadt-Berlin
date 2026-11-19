@@ -6,7 +6,7 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 
 | 2D # | Item | With step |
 |---|---|---|
-| 2 | Legendaries and set pieces for head, hands, feet, ring: data and powers are ported; looks and close-out in `docs/tasks/wp4-equipment-visuals.md` steps 2, 4, 5 | WP4 |
+| 2 | Legendaries and set pieces for head, hands, feet, ring: data, powers and looks are built (WP4 steps 2 and 4, 2026-11-19; rings stay icon-only); open only their effects in `docs/tasks/wp4-equipment-visuals.md` step 5 | WP4 step 5 |
 | 13 | Multi-level interiors | M15 |
 | 16, 37, 30 | Camp as a place, stations with levels and NPCs, stash purpose | After M13 |
 | 17, 34 | Umschmieden with control, smith and enchanter | M13 |
@@ -40,7 +40,7 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P29 | Weapon looks: one model per base and rendered icons, built (WP4 step 1); row stays until Johannes has played it. Task: `docs/tasks/wp4-equipment-visuals.md` step 1 | Session 2026-11-18 (contact sheet) | WP4 |
 | P30 | Kodex portraits vs bodies: bosses from 2D (Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter) are the zombie body with a coloured coat, while their busts show helmets, a rat head, a tower head. Quick wins (Brocken vest, Kabelghul cyan, Speier belly) done in WP5; own boss models are WP5 step 3 (`docs/tasks/wp5-enemies.md`) | Session 2026-11-18 (contact sheet) | WP5 step 3, after the mockup pick |
 | P31 | Legendary and set visuals (glow edge, particles, a changed mesh part). Scheduled: `docs/tasks/wp4-equipment-visuals.md` step 5 | Johannes, 2026-11-18 | WP4 |
-| P32 | Equipment on the hero: head, the armors that show the default coat, talisman, ring, implant. Scheduled: `docs/tasks/wp4-equipment-visuals.md` step 2 | Session 2026-11-18 | WP4 |
+| P32 | Equipment on the hero: every armor, hat, glove and boot has its own 3D look and rendered icon (WP4 step 2, built 2026-11-19; talisman, ring, implant stay icon-only); row stays until Johannes has played it. Open: Regenponcho shell (Blender B1), Codex T9 textures, tunnel set (proposal) | Session 2026-11-18 | WP4 |
 | P33 | Balance bot plays every system: today it picks blessings, equips by power, salvages, uses powers, Verband and Molotow. Missing: Späti and trader purchases, camp upgrades and meals, smith and Aufsätze, Umbau cards (G1), shrines, hidden blessings and events, the tunnels between districts, picking the weapon by enemy class (WP4 D9: +40 % for the fitting damage type). Then calibrate the curve over the district chain (`node tools/balance.mjs 3 normal johannes 1 --chain`) to Johannes' telemetry (B9, B10) | Session 2026-11-18 | Next balance session (Fable high) |
 | P34 | Touch controls are harder than the pad (Johannes, 2026-11-18): compare deaths and fight times per input in telemetry (`inp`, `death`), then options such as a larger dodge button, aim assist strength on touch, a stick that follows the thumb, Auto-Angriff on by default for touch | Johannes, 2026-11-18 | After a few runs with the new telemetry |
 
