@@ -21,9 +21,10 @@ export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | '
  * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
  * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
  * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`). H3: `human` is the male humanoid bosses' base
- * (`human1.glb`, the zombie's body without the zombie repaint, same skeleton and clips).
+ * (`human1.glb`, the zombie's body without the zombie repaint, same skeleton and clips); `female` the female ones
+ * (`human2.glb`, UBC Superhero_Female, the hero's proportions).
  */
-export type BodyKind = 'zombie' | 'human' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
+export type BodyKind = 'zombie' | 'human' | 'female' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
 export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
@@ -231,7 +232,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // District boss on the Oberbaumbrücke: 2D Spreehexe (v 1). Hauptmann tier of life and damage.
   spreehexe: {
-    kind: 'spreehexe', name: 'Die Spreehexe', body: 'zombie', ai: 'spreehexe', res: 'hexe', radius: 0.8, scale: 1.7, hp: 4400, speed: 2.6,
+    kind: 'spreehexe', name: 'Die Spreehexe', body: 'female', ai: 'spreehexe', res: 'hexe', radius: 0.8, scale: 1.7, hp: 4400, speed: 2.6,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
@@ -262,7 +263,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // M15 Alexanderplatz. Zone 1: a Wurzler grown out of the Palast glass house, a crown of sunflowers.
   wurzelmutter: {
-    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'zombie', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
+    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'female', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
     attackRange: 2.6, windup: 0.75, active: 0.14, recovery: 0.85,
     reach: 3.2, halfAngle: 70 * DEG, damage: 26, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },

@@ -15,6 +15,8 @@ import heroUrl from '../../assets/characters/hero.glb?url';
 import zombieUrl from '../../assets/characters/zombie.glb?url';
 // H3 (Johannes, 2026-11-19, base B): the male humanoid bosses on the UBC Superhero_Male without the zombie repaint.
 import humanUrl from '../../assets/characters/human1.glb?url';
+// H3 (Johannes, base C): the female humanoid bosses (Spreehexe, Wurzel-Mutter) on the UBC Superhero_Female.
+import femaleUrl from '../../assets/characters/human2.glb?url';
 import raptorUrl from '../../assets/characters/raptor.glb?url';
 import rexUrl from '../../assets/characters/rex.glb?url';
 import mechUrl from '../../assets/characters/mech.glb?url';
@@ -32,6 +34,8 @@ export interface CharacterAssets {
   zombie: Object3D;
   /** H3: the human base of the male humanoid bosses (same skeleton and clips as the zombie). */
   human?: Object3D;
+  /** H3: the base of the female humanoid bosses and its clips (hero proportions). */
+  female?: { body: Object3D; clips: Map<string, AnimationClip> };
   heroClips: Map<string, AnimationClip>;
   zombieClips: Map<string, AnimationClip>;
   /** Dinosaurs (M12): own skeletons and clips (Idle, Walk, Run, Attack, Jump, Death). */
@@ -109,13 +113,13 @@ function prepare(scene: Object3D, materials: Materials): void {
 }
 
 /** `mechs`: true loads both mechs, 'small' only Leela (448 KB instead of 1.3 MB). */
-export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true): Promise<CharacterAssets> {
+export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
-  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, ...(humans ? [humanUrl] : [])].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined];
-  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf]) if (g) prepare(g.scene, materials);
+  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
+  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf]) if (g) prepare(g.scene, materials);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
@@ -130,12 +134,15 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const src = hipLen(animGltf.scene);
   const heroClips = new Map<string, AnimationClip>();
   const zombieClips = new Map<string, AnimationClip>();
+  const femaleClips = new Map<string, AnimationClip>();
   for (const clip of animGltf.animations) {
     heroClips.set(clip.name, fitClip(clip, hipLen(heroGltf.scene) / src, false));
     // Enemies only get the clips they play: every clip costs bindings per body.
     if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
+    // The female base has the hero's proportions: the enemy clip set, fitted to her hips.
+    if (femaleGltf && ZOMBIE_CLIPS.test(clip.name)) femaleClips.set(clip.name, fitClip(clip, hipLen(femaleGltf.scene) / src, true));
   }
-  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
+  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, female: femaleGltf ? { body: femaleGltf.scene, clips: femaleClips } : undefined, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
   if (mechLoad) {
     const [small, big] = await mechLoad;
     prepare(small.scene, materials);

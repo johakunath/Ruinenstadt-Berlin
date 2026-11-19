@@ -1123,6 +1123,12 @@ function humansFor(): boolean {
   const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
   return own.length === 0 || kinds.some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'human');
 }
+/** H3: the female boss base (Spreehexe, Wurzel-Mutter), where one of them can appear. */
+function femalesFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  return [...opts.spawn.map((k) => k.split('+')[0]!), ...own].some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'female');
+}
 
 // M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.
 const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
@@ -1131,6 +1137,7 @@ export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),
   humans: humansFor(),
+  females: femalesFor(),
 })
   .then((r) => {
     renderer = r;

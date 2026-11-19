@@ -2,7 +2,7 @@
 
 Index of every enemy, elite, boss and NPC with its 3D body and Kodex image, so gaps are visible at a glance.
 Rule: every session that touches enemy bodies, animations, Kodex art or textures updates this file.
-Legend: **human+gear** = `assets/characters/human1.glb` (H3: the zombie's body without the zombie repaint, boots; male humanoid bosses) with the same code gear; **zombie+gear** = `assets/characters/zombie.glb` rig with code gear and tints (`gearFor`, `TINTS`, `CLOTH`, `SHAPE` in `src/render/enemies.ts`); **GLB** = own converted model; **code** = built from primitives. Refined: `final` (accepted look), `ok` (own shape, reads right), `placeholder` (task file says so, or base body with a recolour). Status as of 2026-11-19 (WP5, `docs/tasks/wp5-enemies.md`).
+Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Female, the hero's proportions; Spreehexe, Wurzel-Mutter) with code gear; **human+gear** = `assets/characters/human1.glb` (H3: the zombie's body without the zombie repaint, boots; male humanoid bosses) with the same code gear; **zombie+gear** = `assets/characters/zombie.glb` rig with code gear and tints (`gearFor`, `TINTS`, `CLOTH`, `SHAPE` in `src/render/enemies.ts`); **GLB** = own converted model; **code** = built from primitives. Refined: `final` (accepted look), `ok` (own shape, reads right), `placeholder` (task file says so, or base body with a recolour). Status as of 2026-11-19 (WP5, `docs/tasks/wp5-enemies.md`).
 
 ## Summary
 
@@ -43,13 +43,13 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 | Der Grenzer | grenzer | boss | X | human+gear: peaked cap, olive tunic, rifle; WP5 H2: pale grey skin, GDR stone-grey trousers | placeholder | X11 | unverified | silhouette review | P2 |
 | Der Brandmeister | brandmeister | boss | X | human+gear (WP5 H2, pick A): leather fire helmet with flickering flames, turnout coat with yellow bands fitted to the body (no more clipping), chest lamp; torch removed | ok | X10 | yes | hardware look check | P2 |
 | Die Rattenmutter | rattenmutter | boss | X | zombie+gear (WP5 H2, pick A): giant rat head with crown on the neck (skull shrunk away), fur cloak, torn oxblood rag dress, strong hunch | ok | X06 | yes | hardware look check | P2 |
-| Die Spreehexe | spreehexe | boss | X | zombie+gear: punk crest, black coat, acid hand | placeholder | X12 | unverified | silhouette review | P2 |
+| Die Spreehexe | spreehexe | boss | X | female+gear: punk crest, black coat, acid hand | placeholder | X12 | unverified | silhouette review | P2 |
 | Der Schaffner | schaffner | boss | T | human+gear (WP5 H2, pick A): peaked cap with brass badge, long double-breasted navy coat, the Kelle held high in the right hand | ok | X05 | yes | hardware look check | P4 |
 | Brigadeghul | walker (render) | normal | A | zombie+gear: Blaumann, cap, armband | ok | E01 (walker) | no, walker bust | none, shares walker | P4 |
 | Uhrwerkläufer | uhrwerk | normal | A | GLB `mech.glb` (Leela, CC0) + clock shield, dome, key | ok | E16 | unverified | compare portrait and body | P4 |
 | Wurzler | wurzler | special | A | zombie+gear: roots, apron, sunflower face | placeholder | E17 | unverified | silhouette review | P4 |
 | Kernspeier | kernspeier | special | A | code (clay pot, stem, toothed sunflower) | ok | E18 | unverified | compare portrait and body | P4 |
-| Die Wurzel-Mutter | wurzelmutter | boss | A | zombie+gear: roots, crown of sunflowers | placeholder | X13 | unverified | silhouette review | P4 |
+| Die Wurzel-Mutter | wurzelmutter | boss | A | female+gear: roots, crown of sunflowers | placeholder | X13 | unverified | silhouette review | P4 |
 | Der Große Uhrwerkläufer | uhrwerkgross | boss | A | GLB `mechbig.glb` (Mike, CC0) + key | ok | X14 | unverified | compare portrait and body | P4 |
 | Der Volkseigene Koloss | volkskoloss | boss | A | code (Plattenbau slab, clockwork legs, arms) | ok | X15 | unverified | compare portrait and body | P4 |
 | Die Weltzeituhr | weltzeituhr | boss | A | code (landmark rig `src/render/clock.ts` on four legs) | ok | X16 | unverified | compare portrait and body | P4 |

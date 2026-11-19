@@ -66,6 +66,8 @@ export interface RendererOptions {
   mechs?: boolean | 'small';
   /** H3: load the human boss base (default true). */
   humans?: boolean;
+  /** H3: load the female boss base (default true). */
+  females?: boolean;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -205,7 +207,7 @@ export class GameRenderer {
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
     const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
-    const assets = await loadCharacters(materials, opts.map?.def.id === 'alex' || (opts.mechs ?? false), opts.humans ?? true);
+    const assets = await loadCharacters(materials, opts.map?.def.id === 'alex' || (opts.mechs ?? false), opts.humans ?? true, opts.females ?? true);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
     // the first frame applies the real look.

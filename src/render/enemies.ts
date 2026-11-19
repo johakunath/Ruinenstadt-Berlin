@@ -156,7 +156,7 @@ interface GearKit {
   // WP5 step 3 (boss looks): coats per district, the Brandmeister's bands, the Rattenmutter's fur, the Turmwächter's tower.
   garde: LitMaterial; officer: LitMaterial; navy: LitMaterial; turnout: LitMaterial; band: LitMaterial; helmet: LitMaterial;
   hair: LitMaterial; white: LitMaterial; fur: LitMaterial; furDark: LitMaterial; grime: LitMaterial; rags: LitMaterial; pink: LitMaterial; eye: LitMaterial;
-  tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial; window: LitMaterial; helmFire: LitMaterial; helmFlame: LitMaterial;
+  tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial; window: LitMaterial; helmFire: LitMaterial; helmFlame: LitMaterial; garden: LitMaterial;
   /** Shared vertex-coloured materials of the boss gear (`assemble` with `paint`). */
   paint: LitMaterial; metal: LitMaterial;
 }
@@ -221,6 +221,8 @@ function gearKit(m: Materials): GearKit {
     // The Brandmeister's helmet fire: orange outer flames (less intense than the torch so they stay orange), yellow cores.
     fire: m.surface({ color: 0x6a1a04, emissive: 0xff5a14, emissiveIntensity: 3.4, roughness: 0.5 }),
     // H3: the Brandmeister's helmet fire has its own pair, so pulsing it leaves the Zünder's fuse flame alone (review fix).
+    // H3: the Wurzel-Mutter's garden dress on the female base.
+    garden: m.surface({ color: 0x4e5a30, roughness: 0.95, doubleSided: true }),
     helmFire: m.surface({ color: 0x6a1a04, emissive: 0xff5a14, emissiveIntensity: 3.4, roughness: 0.5 }),
     helmFlame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
     paint: m.surface({ color: 0xffffff, roughness: 0.85, vertexColors: true, doubleSided: true }),
@@ -813,6 +815,8 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
   switch (kind) {
     case 'wurzler': case 'wurzelmutter': case 'brigade':
       zombieAlexGear(kind, mountAlex);
+      // H3: on the female base the Wurzel-Mutter wears a torn moss-green garden dress fitted to her body.
+      if (kind === 'wurzelmutter') mountCoat(fitCoat(new BodyFit(model), { mat: 'garden', pad: 0.03, hem: 0.3, flare: 0.2, open: 0.9, sleeves: 'upper', jag: 0.08 }), 0.45);
       break;
     case 'brute':
       // Bust E02: an open orange high-vis vest with two reflective bands over the rags, a rusted collar.
@@ -1443,9 +1447,9 @@ export class EnemyView {
     const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
     this.skin = skin;
-    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
     // (crow, rat and the code-built bodies returned above)
-    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? assets.zombieClips : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
+    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? (body === 'female' && assets.female ? assets.female.clips : assets.zombieClips) : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
     this.model = model;
     this.inner.add(model);
