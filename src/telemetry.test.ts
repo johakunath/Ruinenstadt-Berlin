@@ -41,3 +41,49 @@ describe('telemetry eligibility', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('telemetry fight log', () => {
+  it('logs max and lowest life per fight and drops quits in the first minute', async () => {
+    const { vi } = await import('vitest');
+    const mem = new Map<string, string>();
+    vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => mem.set(k, v), removeItem: (k: string) => mem.delete(k) });
+    vi.stubGlobal('location', { hostname: 'johakunath.github.io' });
+    vi.stubGlobal('navigator', { webdriver: false, userAgent: 'test' });
+    vi.stubGlobal('addEventListener', () => undefined);
+    vi.stubGlobal('innerWidth', 1280);
+    vi.stubGlobal('innerHeight', 800);
+    vi.stubGlobal('devicePixelRatio', 1);
+    vi.stubGlobal('screen', { width: 1280, height: 800 });
+    vi.stubGlobal('fetch', () => new Promise(() => undefined));
+    vi.useFakeTimers();
+    const { Telemetry, VERSION } = await import('./telemetry');
+    const { createSim } = await import('./sim/sim');
+    const sim = createSim({ empty: true });
+    const t = new Telemetry(true, false);
+    const ctx = { map: 'Köpenick', profile: 'leistung', scale: 1, startAt: 0, input: 'touch' };
+    const tick = (n: number): void => { for (let i = 0; i < n; i++) t.frame(1 / 60, sim, { calls: 100, triangles: 1000 }, 'touch'); };
+    t.begin(sim, ctx);
+    tick(3540); // 59 s, then quit: a test start
+    t.end('quit');
+    t.begin(sim, ctx);
+    tick(600); // a death after 10 s still counts
+    t.end('dead');
+    t.begin(sim, ctx);
+    t.event({ type: 'encounterStart', index: 0 });
+    sim.player.hp = sim.stats.maxHp * 0.4;
+    tick(60);
+    sim.player.hp = sim.stats.maxHp;
+    tick(600);
+    // A hit drained between frames (e.g. the killing blow) still counts.
+    t.event({ type: 'playerHit', x: 0, z: 0, dx: 0, dz: 0, damage: 90, hp: 5, by: 'Ratte' });
+    t.event({ type: 'encounterClear', index: 0, heal: 0 });
+    t.end('win');
+    const q = JSON.parse(mem.get('ruinenstadt-berlin.tlq')!) as Array<{ v: string; end: string; enc: Array<{ hp?: number; low?: number }> }>;
+    expect(q.map((r) => r.end)).toEqual(['dead', 'win']);
+    expect(q[1]!.enc[0]!.hp).toBe(Math.round(sim.stats.maxHp));
+    expect(q[1]!.enc[0]!.low).toBe(5);
+    expect(VERSION).toMatch(/^3d-0\.1\.0\+\w+$/);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+});

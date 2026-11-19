@@ -364,7 +364,7 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
   p.hurtT = 0;
   if (pk(s, 'retour')) s.abilities.ret = true;
   s.hitstop = Math.max(s.hitstop, PLAYER.hitByEnemyHitstop);
-  s.events.push({ type: 'playerHit', x: p.x, z: p.z, dx, dz, damage, by: by ?? e?.def.name ?? 'Gefahr' });
+  s.events.push({ type: 'playerHit', x: p.x, z: p.z, dx, dz, damage, hp: p.hp, by: by ?? e?.def.name ?? 'Gefahr' });
   if (p.hp <= 0) {
     if ((pk(s, 'second') || hasL(s, 'herz')) && !s.abilities.secondUsed) {
       s.abilities.secondUsed = true;
