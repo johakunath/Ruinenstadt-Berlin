@@ -106,5 +106,23 @@ describe('FlowField', () => {
     expect(field.setTarget(prop.x + 3, prop.z)).toBe(true);
     L.restore();
   });
+
+  it('patches a collider in and out again to the cells of a fresh build (P25 bars)', () => {
+    const b: Bounds = { minX: -8, maxX: 8, minZ: -8, maxZ: 8 };
+    const wall: Collider = { kind: 'box', x: 0, z: 2, hx: 1, hz: 1, rot: 0.3 };
+    const bar: Collider = { kind: 'box', x: 0, z: 0, hx: 3, hz: 0.3, rot: Math.PI / 2 };
+    const field = new FlowField(b, [wall]);
+    expect(field.setTarget(5, 0)).toBe(true);
+    const area = colliderBounds(bar);
+    field.patch(area, [wall, bar]);
+    expect(field.blocked).toEqual(new FlowField(b, [wall, bar]).blocked);
+    expect(field.setTarget(5, 0)).toBe(true);
+    field.patch(area, [wall]);
+    expect(field.blocked).toEqual(new FlowField(b, [wall]).blocked);
+    // A cell under the other collider (inside the patched area) stays blocked.
+    expect(field.blocked[field.cellAt(0, 1.6)]).toBe(1);
+    expect(field.setTarget(5, 0)).toBe(true);
+    expect(field.setTarget(5, 0)).toBe(false);
+  });
 });
 

@@ -246,6 +246,8 @@ export class GameAudio {
       case 'gateOpen': this.play('crash'); this.play('boom', 0, 0, 0.5); break;
       case 'holdStart': this.play('zap'); break;
       case 'power': this.play('zap'); this.play('win'); break;
+      // P25: the Türsteher's neon bars snap shut (the generator's electric cue).
+      case 'barrier': if (event.phase === 'shut') this.play('zap', 0, pan, volume); break;
     }
   }
 
