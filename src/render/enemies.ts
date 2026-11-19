@@ -155,7 +155,7 @@ interface GearKit {
   vest: LitMaterial; reflect: LitMaterial; plate: LitMaterial; belly: LitMaterial; flesh: LitMaterial; riot: LitMaterial; visor: LitMaterial; spark: LitMaterial;
   // WP5 step 3 (boss looks): coats per district, the Brandmeister's bands, the Rattenmutter's fur, the Turmwächter's tower.
   garde: LitMaterial; officer: LitMaterial; navy: LitMaterial; turnout: LitMaterial; band: LitMaterial; helmet: LitMaterial;
-  hair: LitMaterial; white: LitMaterial; fur: LitMaterial; rags: LitMaterial; pink: LitMaterial; eye: LitMaterial;
+  hair: LitMaterial; white: LitMaterial; fur: LitMaterial; furDark: LitMaterial; grime: LitMaterial; rags: LitMaterial; pink: LitMaterial; eye: LitMaterial;
   tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial;
   /** Shared vertex-coloured materials of the boss gear (`assemble` with `paint`). */
   paint: LitMaterial; metal: LitMaterial;
@@ -206,6 +206,9 @@ function gearKit(m: Materials): GearKit {
     hair: m.surface({ color: 0x4a4038, roughness: 0.9 }),
     white: m.surface({ color: 0xdcd8cc, roughness: 0.9 }),
     fur: m.surface({ color: 0x6e604e, roughness: 1, doubleSided: true }),
+    // H3: the Rattenmutter's matted, dirty fur (darker tufts, grime on the snout, a scar).
+    furDark: m.surface({ color: 0x3e342a, roughness: 1, doubleSided: true }),
+    grime: m.surface({ color: 0x2a221c, roughness: 1 }),
     rags: m.surface({ color: 0x6a2e26, roughness: 0.95, doubleSided: true }),
     pink: m.surface({ color: 0xc08478, roughness: 0.7 }),
     eye: m.surface({ color: 0x401010, emissive: 0xff4030, emissiveIntensity: 2.6, roughness: 0.4 }),
@@ -214,7 +217,7 @@ function gearKit(m: Materials): GearKit {
     shaft: m.surface({ color: 0x74685a, roughness: 0.85, doubleSided: true }),
     beacon: m.surface({ color: 0x401008, emissive: 0xff3a1a, emissiveIntensity: 3, roughness: 0.4 }),
     // The Brandmeister's helmet fire: orange outer flames (less intense than the torch so they stay orange), yellow cores.
-    fire: m.surface({ color: 0x6a1a04, emissive: 0xff4a0a, emissiveIntensity: 1.9, roughness: 0.5 }),
+    fire: m.surface({ color: 0x6a1a04, emissive: 0xff5a14, emissiveIntensity: 3.4, roughness: 0.5 }),
     paint: m.surface({ color: 0xffffff, roughness: 0.85, vertexColors: true, doubleSided: true }),
     metal: m.surface({ color: 0xffffff, roughness: 0.4, metalness: 0.8, vertexColors: true }),
   };
@@ -926,11 +929,27 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
         [tf(new BoxGeometry(0.09, 0.012, 0.16), 0, -0.075, 0.24, 0.12), 'dark'],
         ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(0.02, 0.06, 0.012), sd * 0.013, -0.085, 0.355, -0.15), 'bone']),
         ...[-1, 1].map((sd): Part => [tf(new SphereGeometry(0.026, 8, 6), sd * 0.085, 0.045, 0.15), 'eye']),
-        // Big round ears, pink inside.
+        // H3 (Johannes): big round ears, half again the old size, pink inside with dark veins, one torn at the rim.
         ...[-1, 1].flatMap((sd): Part[] => [
-          [tf(new SphereGeometry(0.085, 12, 8).scale(1, 1.1, 0.28), sd * 0.12, 0.14, -0.04, -0.2, sd * 0.35, -sd * 0.35), 'fur'],
-          [tf(new SphereGeometry(0.06, 10, 8).scale(1, 1.1, 0.2), sd * 0.122, 0.142, -0.022, -0.2, sd * 0.35, -sd * 0.35), 'pink'],
+          [tf(new SphereGeometry(0.13, 16, 10).scale(1, 1.12, 0.26), sd * 0.15, 0.17, -0.05, -0.25, sd * 0.4, -sd * 0.4), 'fur'],
+          [tf(new SphereGeometry(0.095, 14, 10).scale(1, 1.1, 0.18), sd * 0.153, 0.172, -0.026, -0.25, sd * 0.4, -sd * 0.4), 'pink'],
+          [tf(new CylinderGeometry(0.004, 0.003, 0.12, 3), sd * 0.155, 0.17, -0.018, -0.25, sd * 0.4, -sd * 0.4 + sd * 0.3), 'grime'],
+          [tf(new BoxGeometry(0.04, 0.03, 0.05), sd * 0.24, 0.26, -0.06, 0, 0, sd * 0.6), sd > 0 ? 'furDark' : 'fur'],
         ]),
+        // Matted tufts all over the skull, cheeks and neck in two shades, pointing back and out (placed from a fixed pattern).
+        ...Array.from({ length: 34 }, (_, n): Part => {
+          const u = (n * 0.618034) % 1, v = ((n * 0.381966 + 0.13) % 1);
+          const a = (u - 0.5) * Math.PI * 1.5, b = -0.3 + v * 1.25;
+          const r = 0.165;
+          const x = Math.sin(a) * Math.cos(b) * r, y = Math.sin(b) * r * 0.9, z = Math.cos(a) * Math.cos(b) * r * 1.2 - 0.03;
+          const len = 0.09 + ((n * 7) % 5) * 0.018;
+          return [tf(new ConeGeometry(0.03 + (n % 3) * 0.006, len, 4), x, y, z, -1.1 - b * 0.4, 0, -Math.sin(a) * 1.1), n % 3 === 0 ? 'furDark' : 'fur'];
+        }),
+        // Grime: a dark muzzle, dirt under the eyes, a scar across the snout, a chipped incisor.
+        [tf(new SphereGeometry(0.06, 10, 8).scale(1.1, 0.7, 1.6), 0, -0.05, 0.3), 'grime'],
+        ...[-1, 1].map((sd): Part => [tf(new SphereGeometry(0.03, 8, 6).scale(1.4, 0.6, 0.5), sd * 0.09, 0.02, 0.155), 'grime']),
+        [tf(new BoxGeometry(0.012, 0.008, 0.12), 0.03, 0.035, 0.27, 0, 0.5, 0), 'pink'],
+        [tf(new BoxGeometry(0.02, 0.025, 0.013), -0.013, -0.12, 0.358, -0.15), 'grime'],
         // Whiskers, three a side.
         ...[-1, 1].flatMap((sd) => [0.18, 0, -0.18].map((a): Part => [tf(new CylinderGeometry(0.003, 0.002, 0.24, 3), sd * 0.15, -0.03 + a * 0.12, 0.32, a, 0, sd * (Math.PI / 2 - 0.25)), 'white'])),
         // The crown: a brass band with five points and red stones.
@@ -1828,7 +1847,12 @@ export class EnemyView {
         const flare = sp && (sp.kind === 'flame' || sp.kind === 'ring') ? Math.min(1, e.stateT / sp.wind) : 0;
         const f = 0.9 + 0.18 * Math.sin(this.time * 17 + this.seed * 9) ** 2 + 0.1 * Math.sin(this.time * 41);
         const k = e.state === 'dead' ? 0.01 : f + 0.45 * flare;
-        fire.scale.set(k * (1 - 0.08 * Math.sin(this.time * 29)), k * (1 + 0.2 * Math.sin(this.time * 23)), k);
+        fire.scale.set(k * (1 - 0.08 * Math.sin(this.time * 29)), k * (1 + 0.28 * Math.sin(this.time * 23) + 0.12 * Math.sin(this.time * 61)), k);
+        // H3 (Johannes): the fire glows and licks: it sways and its glow pulses (one boss at a time, so the shared kit material is fine).
+        fire.rotation.z = 0.12 * Math.sin(this.time * 9 + this.seed) + 0.05 * Math.sin(this.time * 27);
+        const kit = gearKit(this.materials);
+        kit.fire.emissiveIntensity = e.state === 'dead' ? 0.4 : 2.8 + 1.6 * Math.abs(Math.sin(this.time * 13 + this.seed * 5)) + 2 * flare;
+        kit.flame.emissiveIntensity = e.state === 'dead' ? 0.4 : 3.5 + 2 * Math.abs(Math.sin(this.time * 19)) + 2 * flare;
       }
     } else if (this.kind === 'heuler') {
       const sac = this.gear.get('heuler')?.[0];

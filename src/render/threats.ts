@@ -259,6 +259,11 @@ export class ThreatView {
         const y = groundY(x, z) + 1.3 * e.def.scale;
         E.glow(x + R.range(-0.1, 0.1), y, z + R.range(-0.1, 0.1), R.range(-1.2, 1.2), R.range(1, 2.6), R.range(-1.2, 1.2), R.range(0.2, 0.45), 0.05, 6, 3.4, 1, 6);
       }
+      // H3: embers fly up off the Brandmeister's burning helmet.
+      if (e.kind === 'brandmeister' && R.next() < dt * 14) {
+        const y = groundY(x, z) + 1.95 * e.def.scale;
+        E.glow(x + R.range(-0.2, 0.2), y, z + R.range(-0.2, 0.2), R.range(-0.5, 0.5), R.range(1.2, 2.8), R.range(-0.5, 0.5), R.range(0.4, 0.8), 0.06, 6, 2.6, 0.6, -1);
+      }
       // Driven on by a howl or a bass ring: faint pink sparks rise off the body.
       if (e.buff > 0 && R.next() < dt * 5) E.glow(x + R.range(-0.3, 0.3), groundY(x, z) + R.range(0.8, 1.6), z + R.range(-0.3, 0.3), 0, R.range(0.6, 1.2), 0, R.range(0.4, 0.7), 0.08, 5, 1.4, 2.6, 0);
       // Dazed drones spark.
