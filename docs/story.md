@@ -86,7 +86,7 @@ implemented by these documents.
 
 - Camp NPCs come from different eras (Oma Gerda from 1989, Lin from the neon future, Jonas the Schwarzmarkt dealer from the 1920s, Ilse from the Kiezwache of the present ...). Write their one-liners from that (station quests and NPC lines, #36/#39).
 - Every district palette, enemy family and prop set follows its era; the shared post-apocalyptic wear from `docs/style-bible.md` stays on top of it.
-- Story artefacts per district (#14): a tape, a plaque or a timetable page from that era that explains one piece of the Stillstand.
+- Story artefacts per district (#14): a tape, a plaque or a timetable page from that era that explains one piece of the Stillstand. Built 2026-11-19 as four Kassetten per district; the draft lines are in `src/data/funde.ts` (Johannes may replace them).
 
 ## Discarded directions (2026-11-11)
 

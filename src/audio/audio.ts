@@ -190,7 +190,7 @@ export class GameAudio {
       case 'heal': if (event.source === 'trader') this.play('heal'); break;
       case 'secondWind': this.play('lvl'); break;
       case 'blessing': this.play('coin'); break;
-      case 'hidden': case 'shrine': this.play('legend'); break;
+      case 'hidden': case 'shrine': case 'fund': this.play('legend'); break;
       case 'trade': this.play('bell'); break;
       case 'buy': this.play('coin'); break;
       case 'streak': this.play('coin'); break;
