@@ -1,7 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { COURTYARD, courtyardColliders } from '../data/courtyard';
-import type { Collider } from './collide';
-import { FlowField } from './flowfield';
+import { generateLots, generateProps, mapLevel } from '../data/map';
+import { mitteMap } from '../data/mitte';
+import { colliderBounds, colliderDistance, type Collider } from './collide';
+import { FlowField, type Bounds } from './flowfield';
+import type { Level, WalkGrid } from './level';
+
+/** The blocked marking before the rasterised build: every cell against every collider. */
+function bruteBlocked(b: Bounds, colliders: readonly Collider[], ground: WalkGrid | null, cell = 0.5, clearance = 0.3): Uint8Array {
+  const cols = Math.ceil((b.maxX - b.minX) / cell);
+  const rows = Math.ceil((b.maxZ - b.minZ) / cell);
+  const out = new Uint8Array(cols * rows);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = b.minX + (c + 0.5) * cell;
+      const z = b.minZ + (r + 0.5) * cell;
+      if (ground?.at(x, z) || colliders.some((col) => colliderDistance(col, x, z) < clearance)) out[r * cols + c] = 1;
+    }
+  }
+  return out;
+}
+
+/** The window `focusFlow` builds around (x, z). */
+function windowAt(L: Level, x: number, z: number): Bounds {
+  return { minX: Math.max(L.bounds.minX, x - 30), maxX: Math.min(L.bounds.maxX, x + 30), minZ: Math.max(L.bounds.minZ, z - 30), maxZ: Math.min(L.bounds.maxZ, z + 30) };
+}
+
+function mitteLevel(): Level {
+  const def = mitteMap(1);
+  const lots = generateLots(def);
+  return mapLevel(def, lots, generateProps(def, lots));
+}
 
 describe('FlowField', () => {
   it('walks around a wall instead of into it', () => {
@@ -44,4 +73,38 @@ describe('FlowField', () => {
     expect(field.clearLine(-4, 0, 4, 0)).toBe(false);
     expect(field.clearLine(-4, 5, 4, 5)).toBe(true);
   });
+
+  it('marks the same cells as testing every collider (courtyard)', () => {
+    const field = new FlowField(COURTYARD.bounds, courtyardColliders());
+    expect(field.blocked).toEqual(bruteBlocked(COURTYARD.bounds, courtyardColliders(), null));
+  });
+
+  it('marks the same cells as testing every collider (Mitte, Pariser Platz)', () => {
+    const L = mitteLevel();
+    const b = windowAt(L, 32, -62);
+    const cols = L.inBox(b);
+    expect(cols.some((c) => c.kind === 'box' && c.rot % (Math.PI / 2) !== 0)).toBe(true);
+    const field = new FlowField(b, cols, 0.5, 0.3, L.ground);
+    const brute = bruteBlocked(b, cols, L.ground);
+    expect(brute.reduce((s, v) => s + v, 0)).toBeGreaterThan(1000);
+    expect(field.blocked).toEqual(brute);
+  });
+
+  it('patches a broken prop to the same cells as a new build', () => {
+    const L = mitteLevel();
+    const prop = L.breakables[0]!;
+    const b = windowAt(L, prop.x, prop.z);
+    const field = new FlowField(b, L.inBox(b), 0.5, 0.3, L.ground);
+    expect(field.blocked[field.cellAt(prop.x, prop.z)]).toBe(1);
+    field.setTarget(prop.x + 3, prop.z);
+    L.remove(prop.collider);
+    const area = colliderBounds(prop.collider);
+    field.patch(area, L.inBox(area));
+    expect(field.blocked).toEqual(bruteBlocked(b, L.inBox(b), L.ground));
+    expect(field.blocked[field.cellAt(prop.x, prop.z)]).toBe(0);
+    // The patch forces a new Dijkstra pass on the same target.
+    expect(field.setTarget(prop.x + 3, prop.z)).toBe(true);
+    L.restore();
+  });
 });
+

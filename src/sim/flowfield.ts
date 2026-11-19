@@ -1,5 +1,5 @@
 // Grid flow field toward one target (the player). One Dijkstra pass serves every enemy.
-import { colliderDistance, type Collider } from './collide';
+import { boxDistance, colliderBounds, type Collider } from './collide';
 import type { WalkGrid } from './level';
 
 export interface Bounds {
@@ -30,8 +30,8 @@ export class FlowField {
     readonly bounds: Bounds,
     colliders: readonly Collider[],
     cell = 0.5,
-    clearance = 0.3,
-    ground: WalkGrid | null = null,
+    readonly clearance = 0.3,
+    private readonly ground: WalkGrid | null = null,
   ) {
     this.cell = cell;
     this.cols = Math.ceil((bounds.maxX - bounds.minX) / cell);
@@ -42,19 +42,54 @@ export class FlowField {
     this.dirX = new Float32Array(n);
     this.dirZ = new Float32Array(n);
     this.heap = new Int32Array(n * 8);
-    for (let r = 0; r < this.rows; r++) {
-      for (let c = 0; c < this.cols; c++) {
-        const x = bounds.minX + (c + 0.5) * cell;
+    this.mark(0, 0, this.cols - 1, this.rows - 1, colliders);
+  }
+
+  /**
+   * Re-marks the cells within `clearance` of `area` after a collider left or joined the level (a broken
+   * prop, a barrier). `colliders` must hold every collider near the area. The next `setTarget` rebuilds.
+   */
+  patch(area: Bounds, colliders: readonly Collider[]): void {
+    const pad = this.clearance + this.cell;
+    const c0 = Math.max(0, Math.floor((area.minX - pad - this.bounds.minX) / this.cell));
+    const r0 = Math.max(0, Math.floor((area.minZ - pad - this.bounds.minZ) / this.cell));
+    const c1 = Math.min(this.cols - 1, Math.floor((area.maxX + pad - this.bounds.minX) / this.cell));
+    const r1 = Math.min(this.rows - 1, Math.floor((area.maxZ + pad - this.bounds.minZ) / this.cell));
+    if (c0 > c1 || r0 > r1) return;
+    this.mark(c0, r0, c1, r1, colliders);
+    this.targetCell = -1;
+  }
+
+  /**
+   * A cell is blocked when its center is on blocked ground or closer than `clearance` to a collider.
+   * Each collider only tests the cells of its own bounds grown by `clearance` (and one cell of margin).
+   */
+  private mark(c0: number, r0: number, c1: number, r1: number, colliders: readonly Collider[]): void {
+    const { bounds, cell, cols, blocked, ground, clearance } = this;
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        blocked[r * cols + c] = ground?.at(bounds.minX + (c + 0.5) * cell, bounds.minZ + (r + 0.5) * cell) ? 1 : 0;
+      }
+    }
+    const pad = clearance + cell;
+    for (const col of colliders) {
+      const e = colliderBounds(col);
+      const ca = Math.max(c0, Math.floor((e.minX - pad - bounds.minX) / cell));
+      const ra = Math.max(r0, Math.floor((e.minZ - pad - bounds.minZ) / cell));
+      const cb = Math.min(c1, Math.floor((e.maxX + pad - bounds.minX) / cell));
+      const rb = Math.min(r1, Math.floor((e.maxZ + pad - bounds.minZ) / cell));
+      if (ca > cb || ra > rb) continue;
+      const box = col.kind === 'box';
+      const cos = box ? Math.cos(col.rot) : 0;
+      const sin = box ? Math.sin(col.rot) : 0;
+      for (let r = ra; r <= rb; r++) {
         const z = bounds.minZ + (r + 0.5) * cell;
-        if (ground?.at(x, z)) {
-          this.blocked[r * this.cols + c] = 1;
-          continue;
-        }
-        for (const col of colliders) {
-          if (colliderDistance(col, x, z) < clearance) {
-            this.blocked[r * this.cols + c] = 1;
-            break;
-          }
+        for (let c = ca; c <= cb; c++) {
+          const i = r * cols + c;
+          if (blocked[i]) continue;
+          const x = bounds.minX + (c + 0.5) * cell;
+          const d = box ? boxDistance(col, cos, sin, x, z) : Math.hypot(x - col.x, z - col.z) - col.r;
+          if (d < clearance) blocked[i] = 1;
         }
       }
     }
