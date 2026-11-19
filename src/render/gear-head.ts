@@ -245,27 +245,27 @@ function outward(g: BufferGeometry, c: Vector3): BufferGeometry {
 
 /**
  * A brim from the shell's rim (elevation `e(a)`) outwards, level: `w(a)` m wide, the edge `drop(a)` m lower
- * (negative turns it up), `thick` m at the edge. One sheet (double-sided material) with an edge band.
+ * (`curve` 2 bends it down towards the edge, 1 a straight slope). One sheet (the material is double-sided)
+ * and, with `thick`, an edge band. `t0`..`t1` (fractions of the width) and `lift` make a line on a brim.
  */
-function brim(sh: Shell, o: { e: (a: number) => number; w: (a: number) => number; drop?: (a: number) => number; thick?: number; segs: number; a0?: number; a1?: number; rows?: number }): BufferGeometry {
-  const a0 = o.a0 ?? -Math.PI, a1 = o.a1 ?? Math.PI, rows = o.rows ?? 2, th = o.thick ?? 0.008;
+interface BrimOpts { e: (a: number) => number; w: (a: number) => number; drop?: (a: number) => number; curve?: number; thick?: number; segs: number; a0?: number; a1?: number; rows?: number; t0?: number; t1?: number; lift?: number }
+function brim(sh: Shell, o: BrimOpts): BufferGeometry {
+  const a0 = o.a0 ?? -Math.PI, a1 = o.a1 ?? Math.PI, rows = o.rows ?? 2, th = o.thick ?? 0, t0 = o.t0 ?? 0, t1 = o.t1 ?? 1, cv = o.curve ?? 2;
   const pos: number[] = [], uv: number[] = [], idx: number[] = [];
   const p = new Vector3(), h = new Vector3();
-  const W = o.segs + 1;
+  const R = rows + (th ? 2 : 1);
   for (let j = 0; j <= o.segs; j++) {
     const u = j / o.segs, a = mix(a0, a1, u);
     sh.point(o.e(a), a, -0.003, p);
     h.set(p.x - sh.map.c.x, 0, p.z - sh.map.c.z).normalize();
     const w = o.w(a), dr = o.drop?.(a) ?? 0;
-    for (let r = 0; r <= rows + 1; r++) {
-      const t = Math.min(1, r / rows), edge = r > rows ? th : 0;
-      pos.push(p.x + h.x * w * t, p.y - dr * t * t - edge, p.z + h.z * w * t);
-      uv.push(u, r / (rows + 1));
+    for (let r = 0; r < R; r++) {
+      const t = mix(t0, t1, Math.min(1, r / rows)), edge = r > rows ? th : 0;
+      pos.push(p.x + h.x * w * t, p.y - dr * t ** cv - edge + (o.lift ?? 0), p.z + h.z * w * t);
+      uv.push(u, r / (R - 1));
     }
   }
-  const R = rows + 2;
-  for (let j = 0; j < o.segs; j++) for (let r = 0; r < rows + 1; r++) { const a = j * R + r, b = a + R; idx.push(a, b, a + 1, b, b + 1, a + 1); }
-  void W;
+  for (let j = 0; j < o.segs; j++) for (let r = 0; r < R - 1; r++) { const a = j * R + r, b = a + R; idx.push(a, b, a + 1, b, b + 1, a + 1); }
   const g = mesh(pos, uv, idx);
   // Normals up (the sheet's top is what the camera sees).
   const n = g.attributes.normal!;
@@ -336,6 +336,3 @@ export const HEAD_GEAR: Readonly<Record<string, GearBuilder>> = {
   'hat-kiez': (k) => hardHat(k, 0x2f62b0, { stripe: 0xf08a24, lamp: 0xfff2b0, set: true }),
 };
 
-// Kept for the next builders (flat cap, beanie, mask, goggles, straw hat, Pickelhaube, great helm).
-void cloth; void ball; void cone; void flat;
-export type { Paint };
