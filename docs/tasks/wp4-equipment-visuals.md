@@ -50,7 +50,7 @@ Every weapon base, armor, hat, glove, boot, talisman, ring and implant shows on 
 - Glow colour: the element colour when the item has an element, else the base's signature colour (neon and legendary), else off.
 - Model key: base, plus the set id for set weapons that share a base (`brech` + `kiez`, `zwille` + `spree`): same geometry, set palette. `weaponModel(kind, base, set?)` falls back to the kind's default base.
 - The unused `pipe` model goes. `latte` (legacy saves) gets the nailed plank of its icon.
-- **Models follow the painted icons**; icons are not re-rendered from 3D in WP4 (that stays open question Q5). Exceptions go to Codex, see Step 1e.
+- Icons are rendered from the models (D10, Johannes 2026-11-19); the painted icons were the shape reference for look 1.
 
 ### D2 Equipment on the hero: three mechanisms, cheapest first
 
@@ -326,6 +326,80 @@ New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 
 
 ## Questions
 - None open for step 1. Gates G2 to G6 are listed above.
+
+## Johannes, 2026-11-19 (step 1 look 1) and what follows from it
+Verdict on the sheets: good overall. Notes are Fable's; they change D1 and add D8 to D10.
+
+### Step 1f Model fixes [Claude · Opus high]
+
+| Model | Change |
+|---|---|
+| Every weapon with a ribbon (I89, I06, I12 and the rest) | Ribbon thinner (about 2.5 cm) and wavy: a strip of 4 to 5 segments that hangs, not one stiff plane |
+| Holzlatte (I01) | More worn, dirtier, darker |
+| Hackmesser (I90, also the Kiezwache variant) | Blade half as long: a short, heavy cleaver |
+| Vorschlaghammer (I06) | Whole weapon a third shorter, head a third bigger. Same proportions for the other two-handed hammers (Werkhammer, Boxenhammer, Mauerbrecher, Plattenbrecher, Morgenstern) unless the sheet speaks against it |
+| Pflasterhammer (I07) | Half as long, one-handed, bigger head: hammer face on one side, a real pick on the other |
+| Rohrzange (I08) | Half as long, one-handed, jaw part thicker, handle widening toward the jaw as in the painted icon |
+| Jagdzwille (I09), Nagelwerfer (I10), all forks | Two thirds of the size; bands start exactly at the fork tips |
+| Steinschleuder (I11) | Shorter |
+| All slings | Bands and cords curved so they hang (a static sag built from segments, no physics) |
+| Rohrspeer (I12) | Shaft thicker: it is a pipe |
+| Fahnenstange (I13) | Flag lower on the pole and longer; tip longer |
+| Harpune (I14) | Point shorter, barbed blade wider (a real harpoon head); the line is a rope and longer |
+
+Done when: new sheets; hammer and spear left hand still on the shaft where the model is two-handed; `npm run check`.
+
+### D8 Size and strength per base (changes D1)
+The kind still sets clips and arcs, but a base may scale them. New table (plain data, read by `src/sim/stats.ts`, unit tested):
+
+| Base | Hands | Reach | Damage | Damage types |
+|---|---|---|---|---|
+| `brech` Hackmesser | 1 | × 0.75 | × 1.25 | Schnitt |
+| `pflaster` Pflasterhammer | 1 | × 0.75 | × 1.1 | Wucht and Stich |
+| `zange` Rohrzange | 1 | × 0.75 | × 1.15 | Wucht |
+| every other base | as its kind | × 1 | × 1 | as its kind |
+
+- Reach folds into `stats.reachFactor` (the smear follows it already), damage into `stats.damage` (so the Kampfkraft comparison sees it).
+- One-handed hammers: no left-hand grip, standing clip as the blade (`hands` decides, not the kind).
+- Two-handed hammers are a third shorter as models: hammer reach in `combat.ts` × 0.9. Hammer knockback × 1.5 on every hammer attack (Johannes: strong, slow, pushes enemies back; the stun on every hit stays).
+- All numbers are start values for Johannes' playtest.
+
+### D9 Weapon type against enemy type (new rule)
+Johannes: a reward for switching to the weapon that fits the enemy, about 30 to 50 %.
+
+| Damage type | Weapons | Strong against (`+40 %`) |
+|---|---|---|
+| Schnitt | Klinge | Untote, Pflanzen |
+| Wucht | Hammer | Maschinen |
+| Stich | Speer (and Pflasterhammer) | Menschen |
+| Geschoss | Werfer | Tiere (Fable's addition so the fourth kind has a niche; drop it if Johannes says so) |
+
+| Enemy class | Kinds (start assignment; a kind may have two classes) |
+|---|---|
+| Untote | walker, runner, brute, spitter, spreehexe; kabel and bass also count as Maschine |
+| Maschinen | drone, uhrwerk, uhrwerkgross, wachdrohne, weltzeituhr, volkskoloss, bassprediger; kabel, bass |
+| Pflanzen | wurzler, kernspeier, wurzelmutter |
+| Menschen | feldwebel, waechter, hauptmann, schaffner, grenzer, brandmeister, tuersteher, dirigent |
+| Tiere | raptor, rex, crow, rat, rattenmutter |
+
+- Bonus only, no malus: the wrong weapon plays as today (backlog B10: never frustrating). One number, `WEAPON.typeBonus = 0.4`.
+- Applied in `strike` to every hit dealt while that weapon is equipped (attacks, powers, procs); not to burn ticks.
+- Shown: the hit number of a boosted hit gets its own tint (`hit` event flag `effective`); the weapon card says `Stark gegen: Maschinen`; the Kodex entry of an enemy names its class.
+- Open, Johannes after playing: only bosses and guards are Menschen, so the spear's bonus shows mostly on bosses; whole districts lean to one class (Alexanderplatz Maschinen, Tiergarten Pflanzen), so the bonus can read as "weapon per district".
+- Not in this step: the balance bot choosing the weapon by enemy class (add to backlog P33), recalibrating clear times.
+
+### D10 Icons are rendered from the 3D models (answers Q5; replaces step 1e)
+Johannes, 2026-11-19: no painted item icons any more.
+- `tools/item-icons.mjs` (reuses `tools/item-sheet`): each model at a fixed three-quarter view, lying diagonally, fitted to the frame, studio light, transparent background, 256 px WebP into `assets/inventory/<id>.webp`.
+- Step 1: all 30 weapon icons replaced, plus I91 and I92 for the two set weapons; `itemIcon` looks up `base:set` before `base`.
+- Other slots keep their painted icon until their model exists; each later step renders its icons in the same PR (hats, gear, pickups). Nothing goes to Codex.
+- Rerun the tool after every model change. Done when: an inventory screenshot with rendered icons at 1280 × 720 and 844 × 390; icons readable at the cell size.
+
+### Step 1g Rules and icons [Claude · Opus high]
+1. D8 table and wiring, tests (reach, damage, hands per base; `power` sees the damage factor).
+2. D9: `EnemyDef.classes`, type table, `strike`, the `effective` flag, the three texts, tests (each type against each class; burn ticks excluded; two-class enemies get the bonus once).
+3. D10 icon tool and the replaced icons.
+4. `docs/status.md`, `docs/equipment-pipeline.md`, Playtest rows (weapon types, short weapons, hammer knockback).
 
 ## Handover step 1 (Opus 5.5, 2026-11-19)
 - Built: parts kit in `src/render/weapons.ts` (vertex-colour paint, merged into `metal`, `matte`, `glow`), 30 base models plus `brech:kiez` and `zwille:spree`, `weaponModel(kind, base, set?)`, glow rule `weaponGlow`; looks in `src/data/weapon-look.ts`; `paintGrain` atlas; `tools/item-sheet` `mode=weapons`. `pipe` is gone; grip tables stay keyed by kind.

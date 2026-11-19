@@ -60,6 +60,6 @@ Reached 2026-11-18 for Köpenick: map, loot, inventory, save, weapons, powers, b
 
 | # | Question | Default |
 |---|---|---|
-| Q5 | Menu art: keep ChatGPT icons and portraits or render 3D items? | Keep as placeholders |
+| Q5 | Menu art: keep ChatGPT icons and portraits or render 3D items? | Item icons: decided 2026-11-19, rendered from the 3D models (`docs/tasks/wp4-equipment-visuals.md` › D10). Portraits: keep as placeholders |
 | Q6 | Online save and telemetry (2D `js/sync.js`) | Decided 2026-11-16: reuse the 2D Google Sheet + Apps Script, no login, anonymous 8 character code, browser save stays primary. Built in M6 (`src/sync.ts`); needs a playtest against the live script. No new database |
 | Q9 | Tool for enemy and boss voices | Synthesis and CC0 in S2; tool in S3 |
