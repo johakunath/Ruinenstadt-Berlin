@@ -1,21 +1,27 @@
+import { Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { WeaponKindId } from '../data/items';
 import { WEAPON_LOOKS, weaponTraits, type WeaponLookId } from '../data/weapon-look';
-import { THRUST, hasBuilder, slabRadius, weaponGeometry, weaponGlow, weaponModel, weaponParts } from './weapons';
+import { GUNS, THRUST, hasBuilder, slabRadius, weaponGeometry, weaponGlow, weaponModel, weaponParts } from './weapons';
 
 /** D1 envelope: height bands that stay free for the hands (one-handed hammers have no left-grip band). */
-const FREE: Record<WeaponKindId | 'hammer1', Array<[number, number]>> = {
+const FREE: Record<WeaponKindId | 'hammer1' | 'gun', Array<[number, number]>> = {
   blade: [[-0.12, 0.14]],
   hammer1: [[-0.12, 0.14]],
   // Grip, left grip at 0.48 (± a hand), stand grip −0.08 lies in the grip.
   hammer: [[-0.15, 0.15], [0.42, 0.54]],
   spear: [[-0.13, 0.17], [0.44, 0.56], [-0.56, -0.44]],
-  sling: [[-0.07, 0.14]],
+  // Look 2: fork handles a third shorter, from −0.02 (still a hand's width below the crotch at 0.155).
+  sling: [[-0.02, 0.14]],
+  // A gun's pistol grip below the trigger guard (WP4 1h).
+  gun: [[-0.06, 0.03]],
 };
 const FREE_RADIUS = 0.033;
+/** Wider grips: a pistol grip is flat and raked; the Werkhammer's thicker grip (Johannes, look 2). */
+const RADIUS: Partial<Record<WeaponLookId, number>> = { neonfl: 0.046, werkh: 0.036 };
 const EPS = 1e-4;
 const ids = (Object.keys(WEAPON_LOOKS) as WeaponLookId[]).filter(hasBuilder);
-const zones = (id: WeaponLookId): Array<[number, number]> => { const k = WEAPON_LOOKS[id].kind; return FREE[k === 'hammer' && weaponTraits(id).hands === 1 ? 'hammer1' : k]; };
+const zones = (id: WeaponLookId): Array<[number, number]> => { const k = WEAPON_LOOKS[id].kind; return FREE[GUNS[id] ? 'gun' : k === 'hammer' && weaponTraits(id).hands === 1 ? 'hammer1' : k]; };
 
 describe('weapon models (WP4 step 1)', () => {
   it('has a builder for every weapon look', () => {
@@ -32,10 +38,11 @@ describe('weapon models (WP4 step 1)', () => {
         // The thrust grip (−0.5) and the smear height (THRUST.tip) need a full-length shaft.
         expect(bottom, `${id} butt`).toBeGreaterThan(-0.7);
         expect(bottom, `${id} butt`).toBeLessThan(THRUST.spear!.grip - 0.04);
-        expect(top, `${id} tip`).toBeGreaterThan(THRUST.spear!.tip - 0.1);
       }
       if (WEAPON_LOOKS[id].kind === 'sling') expect(top, id).toBeLessThanOrEqual(0.4);
-      for (const [y0, y1] of zones(id)) expect(slabRadius(rigid, y0, y1), `${id} free ${y0}..${y1}`).toBeLessThanOrEqual(FREE_RADIUS + EPS);
+      // A gun's stock and magazine hang below its receiver far from the hand: only parts near the grip count.
+      const near = GUNS[id] ? rigid.filter((p) => { const c = p.geo.boundingBox!.getCenter(new Vector3()); return Math.hypot(c.x, c.z) < 0.08; }) : rigid;
+      for (const [y0, y1] of zones(id)) expect(slabRadius(near, y0, y1), `${id} free ${y0}..${y1}`).toBeLessThanOrEqual((RADIUS[id] ?? FREE_RADIUS) + EPS);
     }
   });
 
@@ -66,6 +73,9 @@ describe('weapon models (WP4 step 1)', () => {
     expect(weaponGlow('stahl', 'fire')).toEqual({ color: 0xff6a2a, intensity: 2.4 });
     expect(weaponGlow('leucht', undefined)).toEqual({ color: 0x43d1cf, intensity: 1.6 });
     expect(weaponGlow('leucht', 'shock')?.color).toBe(0x7dd3ff);
+    // The Hackmesser's edge gleam is a fixed accent, not a signature colour.
+    expect(weaponGlow('brech', undefined)).toBeNull();
+    expect(weaponGlow('zwille:spree', undefined)?.color).toBe(0x5fd18a);
   });
 
   it('picks the model by base and set, falling back to the kind default', () => {

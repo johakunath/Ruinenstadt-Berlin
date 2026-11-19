@@ -54,7 +54,8 @@ const rack = new WeaponRack(materials);
 rack.show(weaponModel(weapon, look.split(':')[0]!, look.split(':')[1] as SetId | undefined), (q.get('el') as 'fire' | null) ?? undefined);
 model.getObjectByName('hand_r')?.add(rack.group);
 const ik = q.get('ik') === '1' ? new LeftHandIk(model, assets.heroClips.get(FIST_CLIP)) : null;
-const stance = Number(q.get('stance') ?? 0);
+// Guns always use the standing grip (as HeroView does).
+const stance = rack.gun ? 1 : Number(q.get('stance') ?? 0);
 const gripPos = new Vector3(), gripDir = new Vector3(), thrustDir = new Vector3();
 const thrustDef = q.get('thrust') ? weaponAttack(weapon, q.get('thrust') as AttackId) : null;
 const mixer = new AnimationMixer(model);

@@ -176,8 +176,20 @@ const WEAPON_ATTACKS: Record<WeaponKindId, Record<AttackId, AttackDef>> = {
 /** The last attack of a weapon's chain (2D: every third swing, every fourth shot). */
 export const finisherOf = (kind: WeaponKindId): AttackId => (kind === 'sling' ? 'light4' : 'light3');
 
-export function weaponAttack(kind: WeaponKindId, id: AttackId): AttackDef {
-  return { ...WEAPON_ATTACKS[kind][id] };
+/**
+ * Per-base clips (WP4 1h): only the clip and where the sim phases sit in it; timing, damage and shot rules
+ * stay the kind's. Neonflinte (an assault rifle): `Pistol_Shoot` kicks from its first frame (measured with
+ * clip-swing: the hand pitches 12° in the first 33 ms), so the aim pose holds through the wind-up, the shot
+ * leaves at 0.01 and the active frames cover the kick.
+ */
+export const BASE_CLIPS: Readonly<Record<string, Pick<AttackDef, 'clip' | 'clipStart' | 'clipSwing' | 'clipHit' | 'rec'>>> = {
+  neonfl: { clip: 'Pistol_Shoot', clipStart: 0, clipSwing: 0.01, clipHit: 0.06, rec: null },
+};
+
+/** An attack of a weapon kind; `look` (a weapon look id) swaps in the base's own clip. */
+export function weaponAttack(kind: WeaponKindId, id: AttackId, look?: string): AttackDef {
+  const own = look ? BASE_CLIPS[look] : undefined;
+  return { ...WEAPON_ATTACKS[kind][id], ...own };
 }
 
 /** Every attack shape, for the weapon smear geometry. */

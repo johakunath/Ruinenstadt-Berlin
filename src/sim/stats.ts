@@ -4,7 +4,7 @@ import { AFFIXES, ATTRIBUTE_STATS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, S
 import { BASES } from '../data/item-names';
 import { WEAPON_MODS, type MealId } from '../data/crafting';
 import { DRILL, type CampBuildingId, type CampUpgradeId, type PerkId, type SurvivorId } from '../data/progression';
-import { weaponLookId, weaponTraits, type DamageType } from '../data/weapon-look';
+import { weaponLookId, weaponTraits, type DamageType, type WeaponLookId } from '../data/weapon-look';
 import type { Item } from './items';
 
 export type Equipment = Partial<Record<SlotId, Item>>;
@@ -20,6 +20,8 @@ export interface StatContext {
 }
 export interface HeroStats {
   kind: WeaponKindId;
+  /** Look of the equipped weapon (`weapon-look.ts`): its own clips (`BASE_CLIPS`). */
+  look: WeaponLookId;
   /** D9 damage types of the equipped weapon (strong against some enemy classes). */
   types: readonly DamageType[];
   /** Legendary powers of the equipped items (2D `hasL`): the bases that have one. */
@@ -98,7 +100,7 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
   if (!w) throw new Error('heroStats requires an equipped weapon');
   const kind = w.kind as WeaponKindId, a = gearAffixes(eq, ctx);
   // D8: a shorter base reaches less and hits harder (reach and damage factors from its length).
-  const size = weaponTraits(weaponLookId(kind, w.base, w.set));
+  const look = weaponLookId(kind, w.base, w.set), size = weaponTraits(look);
   const pk = (id: PerkId): number => ctx.perks[id] ?? 0;
   const upg = (id: CampUpgradeId): number => ctx.upgrades[id] ?? 0;
   const mods = WEAPON_MODS; // Resolve in item order, as in 2D.
@@ -118,7 +120,7 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
   const cdr = clamp(a.cdr / 100, 0, .5), drill = ctx.drill ?? 0;
   // Hero level is fixed at 1: the 2D (lv - 1) damage/life terms vanish.
   return {
-    kind, types: size.types, affixes: a, elements,
+    kind, look, types: size.types, affixes: a, elements,
     legendary: SLOTS.flatMap((slot) => { const it = eq[slot]; const b = it ? baseOf(it) : ''; return b in LEGENDARY_POWERS ? [b as LegendaryId] : []; }),
     elementChance: wm.some(m => m.element) ? .5 : .3,
     eliteBonus: wm.reduce((n, m) => n + (m.eliteBossBonus ?? 0), 0),

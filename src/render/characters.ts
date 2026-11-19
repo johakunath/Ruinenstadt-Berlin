@@ -242,6 +242,10 @@ const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; t
   gully: { clip: 'Sword_Block', from: 0, at: 0, to: 0 },
 };
 
+/** A gun (WP4 1h) fires its Nagelsturm fan from the pistol clip instead of throwing it. */
+const GUN_CASTS: Partial<typeof CAST_CLIPS> = { nagel: { clip: 'Pistol_Shoot', from: 0, at: 0.01, to: 0.4 } };
+const castClip = (id: Cast['id'], gun: boolean): (typeof CAST_CLIPS)[Cast['id']] => (gun ? GUN_CASTS[id] : undefined) ?? CAST_CLIPS[id];
+
 /** Standing clip: two-handed weapons with their kind's pose, else the one-handed guard (D8: `hands` decides). */
 export function standClip(kind: WeaponKindId, guard: boolean, hands: 1 | 2 = KIND_HANDS[kind]): string {
   if (guard) return 'Idle_Shield_Loop';
@@ -308,7 +312,7 @@ export class HeroView {
     } else if (p.state === 'cast' && p.cast) {
       this.spinA = 0;
       const c = p.cast;
-      const k = CAST_CLIPS[c.id];
+      const k = castClip(c.id, !!this.rack.gun);
       // Before the effect the clip runs from `from` to `at`, after it on to `to`.
       const ct = c.fire <= 0 ? lerp(k.from, k.to, Math.min(1, t / Math.max(c.dur, 0.01)))
         : t <= c.fire ? lerp(k.from, k.at, t / c.fire) : lerp(k.at, k.to, Math.min(1, (t - c.fire) / Math.max(0.01, c.dur - c.fire)));
@@ -326,7 +330,7 @@ export class HeroView {
       const speed = Math.hypot(p.vx, p.vz);
       if (speed > 0.8) a.loop(pose.guard > 0 ? 'Jog_Fwd_Loop' : 'Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED) * (pose.guard > 0 ? 1.6 : 1));
       else {
-        const clip = standClip(pose.kind, pose.guard > 0, this.rack.twoHanded ? 2 : 1);
+        const clip = pose.guard <= 0 && this.rack.gun ? this.rack.gun.stand : standClip(pose.kind, pose.guard > 0, this.rack.twoHanded ? 2 : 1);
         standing = clip === TWO_HAND_STAND[pose.kind]?.clip;
         a.loop(clip, 0.16);
       }
@@ -393,10 +397,11 @@ export class HeroView {
     }
     this.root.updateMatrixWorld(true);
     if (!this.rack.leftGrip(gripPos, gripDir, this.stance)) return;
-    const throwing = p.state === 'cast' && p.cast !== null && CAST_CLIPS[p.cast.id].clip === 'OverhandThrow';
+    const throwing = p.state === 'cast' && p.cast !== null && castClip(p.cast.id, !!this.rack.gun).clip === 'OverhandThrow';
     const free = p.state !== 'dodge' && p.state !== 'dead' && !throwing && flinch === 0;
     // Aim every frame, also while letting go, so the hand follows the shaft on its way off.
-    const reach = this.ik.aim(gripPos, gripDir, this.stance);
+    // A gun is held in the pistol pose with stretched arms: always the standing grip (keep the clip's wrist, stretch).
+    const reach = this.ik.aim(gripPos, gripDir, this.rack.gun ? 1 : this.stance);
     const want = free ? reach : 0;
     const swinging = p.state === 'attack' && p.attack !== null && t < p.attack.windup + p.attack.active;
     if (!frozen) this.ikW = easeGrip(this.ikW, want, swinging, dt);

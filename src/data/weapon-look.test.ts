@@ -37,8 +37,22 @@ describe('weapon looks (WP4 D1)', () => {
     expect(weaponLookId('blade', 'brech', 'spree')).toBe('brech');
   });
 
-  it('gives a signature glow to neon and legendary bases and the Aufziehwerfer only', () => {
-    for (const [id, look] of Object.entries(WEAPON_LOOKS)) expect('glow' in look, id).toBe(look.family === 'neon' || look.family === 'legendary' || id === 'aufzieh');
+  it('gives a signature glow to neon and legendary bases, the Aufziehwerfer and the Spreegeist set only', () => {
+    for (const [id, look] of Object.entries(WEAPON_LOOKS)) expect('glow' in look, id).toBe(look.family === 'neon' || look.family === 'legendary' || id === 'aufzieh' || id === 'zwille:spree');
+  });
+
+  it('gives the edge gleam (a fixed accent, no signature) to the two Hackmesser only', () => {
+    for (const [id, look] of Object.entries(WEAPON_LOOKS)) expect('gleam' in look, id).toBe(id === 'brech' || id === 'brech:kiez');
+  });
+
+  it('holds the Neonflinte, a rifle, in both hands and gives it the pistol clip', () => {
+    expect(weaponTraits('neonfl')).toMatchObject({ hands: 2, reach: 1, damage: 1 });
+    const shot = weaponAttack('sling', 'light1', 'neonfl'), plain = weaponAttack('sling', 'light1');
+    expect(shot.clip).toBe('Pistol_Shoot');
+    // Only the clip and its phase times differ: the sim timing, damage and shot rules stay the Werfer's.
+    const { clip: _c, clipStart: _s, clipSwing: _w, clipHit: _h, rec: _r, ...rest } = shot;
+    const { clip: _c2, clipStart: _s2, clipSwing: _w2, clipHit: _h2, rec: _r2, ...base } = plain;
+    expect(rest).toEqual(base);
   });
 });
 
@@ -56,6 +70,9 @@ describe('weapon size and strength (WP4 D8)', () => {
     // A two-handed hammer a third shorter.
     expect(t('vorschlag')[0]).toBeGreaterThanOrEqual(0.85);
     expect(t('vorschlag')[0]).toBeLessThanOrEqual(0.9);
+    // Look 2: the shorter Mikroständer (tip 1.6).
+    expect(t('mikro')[0]).toBeCloseTo(0.95, 6);
+    expect(t('mikro')[1]).toBeCloseTo(1.05, 6);
   });
 
   it('adds up reach and damage to 2 for every melee base, steps of 0.05, never under 0.6; slings keep 1 and 1', () => {

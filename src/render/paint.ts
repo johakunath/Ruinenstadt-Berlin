@@ -475,6 +475,26 @@ export function paintCloth(base: string, o: PaintOptions, seed = 52): Surface {
   return { map: toTexture(c, true, o.anisotropy) };
 }
 
+/**
+ * Grey metal atlas for vertex-coloured weapon metal (WP4 look 2): left half `paintMetal` (chipped, rust
+ * blooms), right half clean brushed steel of the same mean tone, for blades that must read silvery.
+ */
+export function paintMetalAtlas(o: PaintOptions, tone = '#a0a0a0', seed = 73): Surface {
+  const S = 512;
+  const rng = new Rng(seed + 1);
+  const [c, ctx] = canvas(S * 2, S);
+  ctx.drawImage(paintMetal(tone, o, seed, 1).map.image as HTMLCanvasElement, 0, 0);
+  ctx.save();
+  ctx.translate(S, 0);
+  ctx.fillStyle = tone;
+  ctx.fillRect(0, 0, S, S);
+  strokes(ctx, rng, S, S, { count: 900, colors: [shade(tone, 0.3), shade(tone, -0.2)], len: [60, 220], width: [1, 3], alpha: [0.08, 0.22], angle: Math.PI / 2, spread: 0.03 });
+  mottle(ctx, rng, S, S, 6, [shade(tone, 0.15), shade(tone, -0.12)], [60, 160], 0.2);
+  ctx.restore();
+  flatten(ctx, S * 2, S, o.flatten);
+  return { map: toTexture(c, false, o.anisotropy) };
+}
+
 /** Mean sRGB tone of each `paintGrain` cell; weapon vertex colours are divided by it (WP4 D1). */
 export const GRAIN_TONE = [0xb4, 0xc4, 0xcc, 0xb8] as const;
 

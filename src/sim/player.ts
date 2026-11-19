@@ -117,7 +117,7 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   const p = sim.player;
   const kind = sim.stats.kind;
   const a = sim.abilities;
-  const def = weaponAttack(kind, id);
+  const def = weaponAttack(kind, id, sim.stats.look);
   const fin = id === finisherOf(kind);
   // Trommelfeuer: the finisher comes one swing earlier.
   if (pk(sim, 'combo') && id === 'light1') def.next = 'light3';

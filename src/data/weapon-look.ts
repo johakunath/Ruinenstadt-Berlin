@@ -14,6 +14,8 @@ export interface WeaponLook {
   readonly family: WeaponFamily;
   /** Signature glow (neon, legendary): lights the glow parts when the item has no element. */
   readonly glow?: string;
+  /** A fixed glow accent that is not a signature colour (Hackmesser edge gleam): the glow mesh shows without an element too. */
+  readonly gleam?: true;
   /** D8: tip height of the model in meters (checked against the built model); sets reach and damage. */
   readonly length: number;
   /** D8: hands and damage types of a base that differs from its kind. */
@@ -31,12 +33,12 @@ export const STRONG_AGAINST: Readonly<Record<DamageType, readonly EnemyClass[]>>
 };
 
 /** D8 short one-handed cleaver (Johannes, 2026-11-19). */
-const CLEAVER = { hands: 1, types: ['schnitt'] } as const;
+const CLEAVER = { hands: 1, types: ['schnitt'], gleam: true } as const;
 
 /** Keyed by base; set weapons that share a base with a normal one are keyed `base:set`. */
 export const WEAPON_LOOKS = {
   rohr: { kind: 'blade', family: 'normal', length: 1.07 },
-  latte: { kind: 'blade', family: 'normal', length: 0.95 },
+  latte: { kind: 'blade', family: 'normal', length: 0.8 },
   stahl: { kind: 'blade', family: 'normal', length: 1.11 },
   machete: { kind: 'blade', family: 'normal', length: 1.0 },
   brech: { kind: 'blade', family: 'normal', length: 0.53, ...CLEAVER },
@@ -51,8 +53,9 @@ export const WEAPON_LOOKS = {
   harpune: { kind: 'spear', family: 'normal', length: 1.81 },
   leucht: { kind: 'blade', family: 'neon', length: 0.79, glow: '#43d1cf' },
   boxh: { kind: 'hammer', family: 'neon', length: 0.88, glow: '#ff4fa3' },
-  neonfl: { kind: 'sling', family: 'neon', length: 0.31, glow: '#ff4fa3' },
-  mikro: { kind: 'spear', family: 'neon', length: 1.81, glow: '#ff4fa3' },
+  // Look 2: an assault rifle held in both hands, shooting from the pistol clips (`BASE_CLIPS` in combat.ts).
+  neonfl: { kind: 'sling', family: 'neon', length: 0.17, glow: '#43d1cf', hands: 2 },
+  mikro: { kind: 'spear', family: 'neon', length: 1.6, glow: '#ff4fa3' },
   sichel: { kind: 'blade', family: 'gdr', length: 0.71 },
   werkh: { kind: 'hammer', family: 'gdr', length: 0.85 },
   aufzieh: { kind: 'sling', family: 'gdr', length: 0.31, glow: '#e7982b' },
@@ -66,7 +69,7 @@ export const WEAPON_LOOKS = {
   siegsp: { kind: 'spear', family: 'legendary', length: 1.72, glow: '#f2d14b' },
   morgen: { kind: 'hammer', family: 'set', length: 0.9 },
   'brech:kiez': { kind: 'blade', family: 'set', length: 0.53, ...CLEAVER },
-  'zwille:spree': { kind: 'sling', family: 'set', length: 0.31 },
+  'zwille:spree': { kind: 'sling', family: 'set', length: 0.31, glow: '#5fd18a' },
 } as const satisfies Readonly<Record<string, WeaponLook>>;
 
 export type WeaponLookId = keyof typeof WEAPON_LOOKS;

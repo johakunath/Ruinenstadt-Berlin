@@ -8,7 +8,7 @@
 // triangle count and the meshes drawn (draw calls per pass). Left: the painted 2D icon when a copy sits in
 // `assets-src/painted-icons/` (git-ignored; `git show e2ed157:assets/inventory/<id>.webp`), right: the rendered icon.
 // Studio environment light, ACES tone mapping, no bloom.
-import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, Scene, Vector3, WebGLRenderer, type Mesh } from 'three';
+import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, Quaternion, Scene, Vector3, WebGLRenderer, type Mesh } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { BASES, GDR_WEAPON_NAMES, LEGENDARY_WEAPON_NAMES, NEON_WEAPON_NAMES, WEAPON_NAMES } from '../src/data/item-names';
 import { SETS, type ElementId, type SetId } from '../src/data/items';
@@ -16,7 +16,7 @@ import { WEAPON_LOOKS, weaponTraits, type WeaponLookId } from '../src/data/weapo
 import { LOOK } from '../src/render/looks';
 import { Materials } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
-import { WeaponRack, hasBuilder, weaponGeometry } from '../src/render/weapons';
+import { GUNS, WeaponRack, hasBuilder, weaponGeometry } from '../src/render/weapons';
 import { ITEM_ICONS } from '../src/ui/item-icons';
 
 const q = new URLSearchParams(location.search);
@@ -71,6 +71,8 @@ function frame(id: WeaponLookId, w: number, h: number, rot: [number, number, num
   rack.group.position.set(0, 0, 0);
   // Spin about the model's own axis first, then the tilt, then the diagonal.
   rack.group.rotation.set(rot[0], rot[1], rot[2], 'ZXY');
+  // A gun lies along its barrel (−Z): turn the barrel onto +Y, the grip below it.
+  if (GUNS[id]) rack.group.quaternion.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -Math.PI / 2).multiply(new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 2)));
   rack.group.scale.set(thick, 1, thick);
   rack.group.updateMatrixWorld(true);
   const shown = rack.group.children.find((g) => g.visible)!;
