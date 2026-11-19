@@ -370,7 +370,8 @@ export const BOSS = {
   feldwebel: { charge: [5, 7], summon: 9, adds: 3 },
   waechter: { barrage: 5, ring: 7.5, slam: 4.5, shots: 12, extra: 4 },
   rex: { charge: [4.2, 3], roar: 8, tail: 5, tailRadius: 110 * PX, tailWind: 0.8, raptorsEvery: 3 },
-  hauptmann: { slam: 3.6, ring: 5.5, summon: 9, adds: 3, shots: 16 },
+  // Playtest 2026-11-18 (too easy, boring): charges when the hero keeps away, a second ring in rage, four men per call.
+  hauptmann: { slam: 3.6, charge: [4, 5.5] as [number, number], chargeFrom: 6, ring: 5, ringGap: 0.7, summon: 9, adds: 4, shots: 16 },
   // M12b Xhain. Cooldowns in seconds (rage makes them tick ×1.35 faster, as for every boss).
   /** Barrage „Feuerstoß“ (one circle on the hero, `extra` around), a five-shot fan, „Alarm!“ calls two Hetzer. Keeps `near`..`far` away. */
   grenzer: {

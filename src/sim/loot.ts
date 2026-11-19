@@ -1,5 +1,6 @@
 // Loot in the world (M4, 2D js/loot.js + combat.js kill/breakProp). Drops pop out of kills and
 // broken props, land on walkable ground and are picked up by walking within 1.2 m (no magnet).
+import { ECONOMY } from '../data/progression';
 import { INGREDIENTS, type IngredientId, type MaterialId } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
@@ -127,7 +128,7 @@ export function spawnDrop(sim: Sim, x: number, z: number, content: DropContent, 
 const spread = (sim: Sim, m: number): number => sim.rng.range(-m, m);
 
 export function creditScrap(sim: Sim, amount: number, x: number, z: number, fromEnemy = false): void {
-  amount = Math.round(amount * difficultyOf(sim.difficulty).scrap * scrapFactor(sim, fromEnemy));
+  amount = Math.round(amount * ECONOMY.scrap * difficultyOf(sim.difficulty).scrap * scrapFactor(sim, fromEnemy));
   if (amount <= 0) return;
   sim.inventory.scrap += amount;
   sim.events.push({ type: 'scrap', amount, x, z });
@@ -154,7 +155,7 @@ export function killDrops(sim: Sim, e: Enemy): void {
   const big = !!DISTRICT_BOSS[kind];
   const il = lootLevel(sim);
   const c = lootContext(sim);
-  const mat = 1 + 0.5 * pk(sim, 'mat');
+  const mat = (1 + 0.5 * pk(sim, 'mat')) * ECONOMY.material;
   // Späti-Tüte (legendary): Döner and supplies twice as often.
   const cook = (sim.statContext.survivors.koechin ? 2 : 1) * (sim.stats.legendary.includes('spaeti') ? 2 : 1);
   creditScrap(sim, (SCRAP[kind] ?? 1) * (e.elite ? 4 : 1), e.x, e.z, true);
@@ -197,7 +198,7 @@ export function breakDrops(sim: Sim, b: Breakable): void {
     if (addConsumable(sim, id)) sim.events.push({ type: 'note', text: id === 'verband' ? '+1 Verband' : '+1 Molotow', color: '#8fd16a', x, z });
   }
   if (sim.rng.next() < 0.1) spawnDrop(sim, x, z, { kind: 'food' }, 0.33, 0);
-  if (sim.rng.next() < (inside ? 0.6 : 0.3) * (loot ? 1.6 : 1) * (1 + 0.5 * pk(sim, 'mat'))) spawnDrop(sim, x, z, { kind: 'material', id: sim.rng.pick(MATERIAL_IDS) }, -0.27, 0);
+  if (sim.rng.next() < (inside ? 0.6 : 0.3) * (loot ? 1.6 : 1) * (1 + 0.5 * pk(sim, 'mat')) * ECONOMY.material) spawnDrop(sim, x, z, { kind: 'material', id: sim.rng.pick(MATERIAL_IDS) }, -0.27, 0);
   if (sim.rng.next() < (inside ? 0.3 : 0.07)) spawnDrop(sim, x, z, { kind: 'item', item: makeItem(sim.rng, c, il, inside ? 1 : 0) });
   else if (sim.rng.next() < 0.12) spawnDrop(sim, x, z, { kind: 'heal' });
 }

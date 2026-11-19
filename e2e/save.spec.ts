@@ -63,7 +63,8 @@ test('M20: the walkable camp opens with the S3, spends Schrott at a station, kee
   await expect(page.locator('.camp-msg')).toHaveText('Schärfen · Stufe 1');
   await page.locator('#camp [data-close]').click();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.save')!));
-  expect(saved.profile.inventory.scrap).toBe(81);
+  // Workshop price × ECONOMY.campPrice (1.5): 15 × 1.25 × 1.5 = 28.
+  expect(saved.profile.inventory.scrap).toBe(72);
   expect(saved.profile.statContext.upgrades.dmg).toBe(1);
   expect(saved.run.index).toBe(1);
   // The train: the network map, Köpenick, and straight back into the waiting checkpoint.
@@ -84,7 +85,9 @@ test('M20: before the S3 the camp is out of reach', async ({ page }) => {
   await page.goto('/?profile=Leistung');
   await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });
   await expect(page.locator('#open-camp')).toBeHidden();
-  await expect(page.locator('#go-tunnel')).toBeVisible();
+  // Layout 2A: the network map on the title picks the S3 next, the main button names it.
+  await expect(page.locator('#title-net [data-line="0"]')).toBeVisible();
+  await expect(page.locator('#play')).toContainText('S3');
   await page.goto('/?profile=Leistung&map=lager');
   await page.waitForURL((u) => !/map=lager/.test(u.search), { timeout: 30_000 });
   await expect(page.locator('#play')).toBeEnabled({ timeout: 90_000 });

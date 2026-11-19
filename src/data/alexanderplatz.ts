@@ -311,8 +311,8 @@ export function alexMap(scale = 1): MapDef {
     for (const k of [-1, 1]) lights.push({ kind: 'fireBarrel', x: e.x + k * e.r * 0.55, z: e.z + (id === 'allee' ? 1 : k * 3) * s, rot: k, size: 1.2 });
   }
   // Corners the fill pass cannot reach (junctions beside landmarks and bridge heads).
-  for (const [kind, x, z] of [['workLamp', 113, -2], ['candles', 123, 24], ['candles', -160, 22], ['fireBarrel', -140, -42]] as Array<[Prop['kind'], number, number]>) lights.push({ kind, x: x * s, z: z * s, rot: 0.4, size: 0.9 });
-  lights.push({ kind: 'fireBarrel', x: -48 * s, z: 11 * s, rot: 0, size: 1.1 }, { kind: 'candles', x: -150 * s, z: -40 * s, rot: 0, size: 0.8 });
+  for (const [kind, x, z] of [['workLamp', 113, -2], ['stormLantern', 123, 24], ['beacon', -160, 22], ['fireBarrel', -140, -42]] as Array<[Prop['kind'], number, number]>) lights.push({ kind, x: x * s, z: z * s, rot: 0.4, size: 0.9 });
+  lights.push({ kind: 'fireBarrel', x: -48 * s, z: 11 * s, rot: 0, size: 1.1 }, { kind: 'stormLantern', x: -150 * s, z: -40 * s, rot: 0, size: 0.8 });
   // Flag poles with red banners down the middle of the Allee (2D `aBanners`), off the fights.
   const flags: Prop[] = [];
   {

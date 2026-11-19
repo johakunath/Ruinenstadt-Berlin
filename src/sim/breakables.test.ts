@@ -22,15 +22,13 @@ function simWith(defs: BreakableDef[], seed = 3): Sim {
 }
 
 describe('breakables', () => {
-  it('a crate breaks after 3 hits, a bin after 2, and the collider is gone', () => {
+  it('a crate breaks after 2 hits, a bin after 1, and the collider is gone', () => {
     const sim = simWith([def('crate', 5, 5), def('bin', -5, 5)]);
     const [crate, bin] = sim.breakables as [Sim['breakables'][number], Sim['breakables'][number]];
-    hitBreakable(sim, crate);
     hitBreakable(sim, crate);
     expect(crate.broken).toBe(false);
     hitBreakable(sim, crate);
     expect(crate.broken).toBe(true);
-    hitBreakable(sim, bin);
     expect(bin.broken).toBe(false);
     hitBreakable(sim, bin);
     expect(bin.broken).toBe(true);
@@ -47,11 +45,12 @@ describe('breakables', () => {
     const b = createSim({ level, empty: true });
     expect(level.colliders).toHaveLength(1);
     expect(b.breakables[0]!.broken).toBe(false);
-    expect(b.breakables[0]!.hp).toBe(3);
+    expect(b.breakables[0]!.hp).toBe(2);
   });
 
   it('a player swing hits a prop once per swing', () => {
     const sim = simWith([def('crate', 0, 1.2)]);
+    sim.breakables[0]!.hp = 3;
     sim.player.facing = 0;
     let hits = 0;
     for (let i = 0; i < 90; i++) {
@@ -65,7 +64,7 @@ describe('breakables', () => {
 
   it('enemies never break props', () => {
     const sim = simWith([def('crate', 0, 1.2)]);
-    expect(sim.breakables[0]!.hp).toBe(3);
+    expect(sim.breakables[0]!.hp).toBe(2);
     expect(createBreakables(sim.level.breakables)).toHaveLength(1);
   });
 

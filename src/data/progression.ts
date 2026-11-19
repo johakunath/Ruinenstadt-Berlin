@@ -304,6 +304,12 @@ export const CAMP_UPGRADES: readonly { readonly id: CampUpgradeId; readonly name
   { id: 'dash', name: 'Ausdauer', max: 5, baseCost: 25, perLevel: -8, unit: '%' },
   { id: 'luck', name: 'Spürnase', max: 5, baseCost: 30, perLevel: 1, unit: '' },
 ];
+/**
+ * Economy, first guess from Johannes' save after Köpenick and the S3 (2026-11-18: 3699 Schrott, 120 Stoff,
+ * nothing built; that paid for the whole camp to level 2). Schrott and materials down, camp prices up.
+ * The bot calibrates these in B2 (`docs/tasks/b2-economy-pacing.md`).
+ */
+export const ECONOMY = { scrap: 0.7, material: 0.5, campPrice: 1.5 } as const;
 /** 2D DRILL_D / DRILL_H. */
 export const DRILL = { damage: .02, life: .02 } as const;
 export type ShrineId = 'as' | 'res' | 'gold' | 'spd' | 'zap';

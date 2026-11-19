@@ -8,10 +8,10 @@ import { HIT_FEEL } from '../data/combat';
 
 export type BreakableKind = 'crate' | 'bin';
 
-/** Hit points and reach radius per kind (2D: crate 3, bin 2). */
+/** Hit points and reach radius per kind (2D: crate 3, bin 2; lowered on playtest feedback 2026-11-18). */
 export const BREAKABLE: Readonly<Record<BreakableKind, { hp: number; radius: number }>> = {
-  crate: { hp: 3, radius: 0.7 },
-  bin: { hp: 2, radius: 1.0 },
+  crate: { hp: 2, radius: 0.7 },
+  bin: { hp: 1, radius: 1.0 },
 };
 
 /** Static description, owned by the level. */

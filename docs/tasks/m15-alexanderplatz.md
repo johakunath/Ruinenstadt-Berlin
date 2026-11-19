@@ -29,7 +29,7 @@ Layout C "Großer Ring um den Turm" (Johannes, 2026-11-18). Concept, geography c
 | 5 | Buildings: Platte (WBS 70), Zuckerbäcker blocks, 60s pavilions, greenhouses, Xhain Altbau blocks; two lot types per zone | 2, #46 | Opus high | done 2026-11-18 (handover below; proof `docs/proof/m15-alex/buildings.jpg`) |
 | 6 | Enemy and boss spec (attacks, telegraphs, counters, wave mix, Weltzeituhr wake-up) | | Opus high (Fable only if Johannes dislikes a boss) | done 2026-11-18 (below) |
 | 7 | Enemy and boss build (models from the research, code parts, emblems) | 6 | Opus high | done 2026-11-18 (handover below); playtest and hardware checks 22, 23 open |
-| 8 | Textures: rows in `docs/asset-pipeline.md` for Codex | 4, 5 | Codex | open |
+| 8 | Textures: sign and material atlases | 4, 5 | Codex | built in [T7](t7-painted-districts.md). Hardware checks open |
 | 9 | Screenshots (street, fight, each landmark), PC and Tab S9 playtest (layout C is the largest map: 390 × 300 m) | all | Johannes | screenshots done (`docs/proof/m15-alex/`); playtest open |
 
 ## Layout C anchors (scale 1, meters, +X east, +Z south, origin map center)

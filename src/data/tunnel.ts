@@ -64,7 +64,10 @@ export function tunnelMap(line = 0): MapDef {
   const slot = (k: Stretch): readonly [number, number] => SLOTS[order.indexOf(k)]!;
 
   const track: Pt[] = [];
+  // Rails run from end wall to end wall (playtest 2026-11-18: they began 2 m inside the start station).
+  track.push(at(-12));
   for (let x = -10; x <= 440; x += 10) track.push(at(x));
+  track.push(at(442));
   const tubes: Tube[] = [
     { kind: 'track', pts: track, width: TUNNEL.trackWidth },
     { kind: 'station', pts: [at(-12), at(34)], width: 22 },
