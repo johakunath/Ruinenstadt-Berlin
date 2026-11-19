@@ -148,6 +148,8 @@ interface GearKit {
   garde: LitMaterial; officer: LitMaterial; navy: LitMaterial; turnout: LitMaterial; band: LitMaterial; helmet: LitMaterial;
   hair: LitMaterial; white: LitMaterial; fur: LitMaterial; rags: LitMaterial; pink: LitMaterial; eye: LitMaterial;
   tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial;
+  /** Shared vertex-coloured materials of the boss gear (`assemble` with `paint`). */
+  paint: LitMaterial; metal: LitMaterial;
 }
 let kit: GearKit | null = null;
 function gearKit(m: Materials): GearKit {
@@ -204,6 +206,8 @@ function gearKit(m: Materials): GearKit {
     beacon: m.surface({ color: 0x401008, emissive: 0xff3a1a, emissiveIntensity: 3, roughness: 0.4 }),
     // The Brandmeister's helmet fire: orange outer flames (less intense than the torch so they stay orange), yellow cores.
     fire: m.surface({ color: 0x6a1a04, emissive: 0xff4a0a, emissiveIntensity: 1.9, roughness: 0.5 }),
+    paint: m.surface({ color: 0xffffff, roughness: 0.85, vertexColors: true, doubleSided: true }),
+    metal: m.surface({ color: 0xffffff, roughness: 0.4, metalness: 0.8, vertexColors: true }),
   };
   return kit;
 }
@@ -216,12 +220,32 @@ const tf = (g: BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, 
 };
 
 /** Merges parts per material into a few meshes. */
-function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial): Group {
+function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial, paint = false): Group {
   const by = new Map<keyof GearKit | 'pulse', BufferGeometry[]>();
+  // WP5 step 3 (`paint`): the boss coats would cost one draw per material per bone. Unlit materials share one
+  // vertex-coloured mesh per bone; metal keeps its shine only where it is a large part of the bone's gear.
+  const family = (m: keyof GearKit | 'pulse'): keyof GearKit | 'pulse' => {
+    if (!paint || m === 'pulse') return m;
+    const mat = k[m];
+    const glow = mat.emissiveIntensity * Math.max(mat.emissive.r, mat.emissive.g, mat.emissive.b);
+    if (glow > 0.3) return m;
+    return mat.metalness >= 0.6 ? 'metal' : 'paint';
+  };
+  const tris = new Map<string, number>();
+  if (paint) for (const [g, m] of parts) { const f = family(m); tris.set(f, (tris.get(f) ?? 0) + (g.index?.count ?? g.attributes.position!.count)); }
+  const total = [...tris.values()].reduce((a, b) => a + b, 0);
   for (const [g, m] of parts) {
-    const list = by.get(m) ?? [];
-    list.push(g.index ? g.toNonIndexed() : g);
-    by.set(m, list);
+    let f = family(m);
+    if (f === 'metal' && (tris.get('metal') ?? 0) < total * 0.3) f = 'paint';
+    const flat = g.index ? g.toNonIndexed() : g;
+    if (f === 'paint' || f === 'metal') {
+      const c = k[m as keyof GearKit].color, n = flat.attributes.position!.count, col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+      flat.setAttribute('color', new Float32BufferAttribute(col, 3));
+    }
+    const list = by.get(f) ?? [];
+    list.push(flat);
+    by.set(f, list);
   }
   const group = new Group();
   for (const [m, list] of by) {
@@ -631,10 +655,12 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
   const bone = (n: string): Object3D | undefined => model.getObjectByName(n);
   const p = new Vector3();
   /** Builds parts in model space around a bone's rest position and hands them to the bone. */
+  /** WP5 step 3: the six bosses with fitted coats paint their unlit gear into one mesh per bone. */
+  const paint = kind === 'feldwebel' || kind === 'hauptmann' || kind === 'schaffner' || kind === 'brandmeister' || kind === 'rattenmutter' || kind === 'waechter';
   const mount = (name: string, parts: Part[], dy = 0, dz = 0, dx = 0): Object3D | undefined => {
     const b = bone(name);
     if (!b) return undefined;
-    const g = assemble(k, parts, castShadow, pulse);
+    const g = assemble(k, parts, castShadow, pulse, paint);
     b.getWorldPosition(p);
     model.worldToLocal(p);
     g.position.set(p.x + dx, p.y + dy, p.z + dz);
