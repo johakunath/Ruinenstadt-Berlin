@@ -92,7 +92,7 @@ export function freeSpot(level: Level, rng: Rng, x: number, z: number, near: num
     const sx = x + Math.sin(a) * d;
     const sz = z + Math.cos(a) * d;
     if (!reachable(level, sx, sz) || !reachable(level, sx + clear, sz) || !reachable(level, sx - clear, sz) || !reachable(level, sx, sz + clear) || !reachable(level, sx, sz - clear)) continue;
-    if (!ok(sx, sz)) continue;
+    if (level.noSpawnAt(sx, sz) || !ok(sx, sz)) continue;
     return { x: sx, z: sz };
   }
   return null;

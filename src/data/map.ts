@@ -181,6 +181,10 @@ export interface Terrace {
   base?: number;
   /** M15: a street bridge over a track field (render: deck on piers with railings, the ground stays below). */
   bridge?: boolean;
+  /** M16: a station platform on the brick Stadtbahn (Bahnhof Zoo); drawn by `charlottenburg-world.ts`, not as a concrete bridge. */
+  platform?: boolean;
+  /** M16: what stands on the deck and blocks (the arrived train): boxes in world space, collider frame as `Collider`. */
+  solid?: Array<{ x: number; z: number; hx: number; hz: number; rot: number }>;
 }
 
 export interface MapDef {
@@ -239,6 +243,8 @@ export interface MapDef {
    * Köpenick and Xhain until their playtests are done: switching it on regenerates all their lots.
    */
   strictLots?: boolean;
+  /** M16: ground where no enemy, event or drop is ever placed (the platform start of Charlottenburg). */
+  noSpawn?: Pt[][];
   /** M11d step 5: hand-placed buildings on the route; they take their space before the generator fills the rest. */
   handLots?: Array<Omit<Lot, 'seed' | 'kind'> & { kind: LotKind; seed?: number }>;
 }
@@ -1839,6 +1845,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     else if (l.hx > 0 && !l.walkUnder) colliders.push(...landmarkColliders(l));
   }
   for (const l of lots) colliders.push(...lotColliders(l));
+  for (const t of m.terraces) for (const q of t.solid ?? []) colliders.push({ kind: 'box', ...q });
   for (const w of m.camp?.walls ?? []) colliders.push({ kind: 'box', x: w.x, z: w.z, hx: w.hx, hz: w.hz, rot: 0 });
   for (const t of m.camp?.stations ?? []) {
     if (!t.solid) { colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot }); continue; }
@@ -1869,6 +1876,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   if (m.flavor) level.flavor = m.flavor;
   if (m.wet) level.wet = true;
   level.hiddenSpots = m.hiddenSpots ?? [];
+  level.noSpawn = (m.noSpawn ?? []).map((p) => p.map(([x, z]) => ({ x, z })));
   level.barriers = m.landmarks.filter((l) => l.kind === 'tor').flatMap(torBarriers);
   if (T) {
     level.gates = gates;

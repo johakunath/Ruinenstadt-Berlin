@@ -13,7 +13,7 @@
 import { THREAT, type BossKind, type EnemyKind } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
-import { ellipse, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street, type Viaduct, type Wall } from './map';
+import { ellipse, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Stair, type Street, type Terrace, type Viaduct, type Wall } from './map';
 import type { Prop } from './courtyard';
 import { lane } from './koepenick';
 
@@ -64,6 +64,13 @@ const ARCHES: Array<{ name: string; w: number }> = [
   { name: 'Kantstraße', w: 18 },
   { name: 'Hardenbergstraße', w: 16 },
 ];
+
+/**
+ * E8: the platform of Bahnhof Zoo on the viaduct (unscaled): deck length from the Hardenbergstraße arch
+ * north-east, deck width (the viaduct), the stair (from the deck's south-east edge, `stairAt` meters along
+ * the deck), the train's width and cars, the start `start` meters along the deck.
+ */
+export const PLATFORM = { len: 21, width: 10, h: 6.5, stairAt: 9.5, stair: { len: 13, width: 8 }, train: 3.4, cars: 3, start: 16 } as const;
 
 /**
  * The hedge maze (Irrgarten) in its own frame around the Rondell (unscaled offsets, the maze keeps its size):
@@ -147,8 +154,8 @@ export function charlottenburgMap(scale = 1): MapDef {
   ];
 
   const zones: ZoneDef[] = [
-    // Start on the Hardenbergplatz beside Bahnhof Zoo (the network's stop S+U Zoologischer Garten).
-    { id: 'zoo', name: 'Zoo', entry: { x: 76 * s, z: 100 * s } },
+    // Start on the platform of Bahnhof Zoo (E8; the network's stop S+U Zoologischer Garten), set below.
+    { id: 'zoo', name: 'Zoo', entry: { x: 0, z: 0 } },
     { id: 'kudamm', name: 'Kurfürstendamm', entry: { x: 84 * s, z: 163 * s } },
     { id: 'schlossgarten', name: 'Schlossgarten', entry: { x: -77 * s, z: 55 * s } },
     { id: 'spiegelschloss', name: 'Spiegelschloss', entry: { x: O.x + 0.5, z: C.z - 14 } },
@@ -235,13 +242,46 @@ export function charlottenburgMap(scale = 1): MapDef {
     return at;
   };
   const arches = ARCHES.map((a) => ({ ...a, at: crossing(a.name) })).sort((p, q) => p.at - q.at);
+  // E8 (Johannes 2026-11-19): the run starts on the platform level of Bahnhof Zoo. The platform deck is the
+  // viaduct itself from the Hardenbergstraße arch north-east (the deck's edge walls block like the brick
+  // runs), the arrived train on its north-west track, one wide stair down to the Hardenbergplatz.
+  const hb = arches.find((a) => a.name === 'Hardenbergstraße')!;
+  const deck0 = hb.at + hb.w / 2, deck1 = deck0 + PLATFORM.len;
   const viaducts: Viaduct[] = [];
   let from = 0;
   for (const a of arches) {
     viaducts.push({ name: 'Stadtbahn', kind: 'stadtbahn', width: 10, h: 6.5, pts: cut(from, a.at - a.w / 2) });
-    from = a.at + a.w / 2;
+    // The next run starts past the deck (half a meter under its end, so the seal has no seam).
+    from = a === hb ? deck1 - 0.5 : a.at + a.w / 2;
   }
   viaducts.push({ name: 'Stadtbahn', kind: 'stadtbahn', width: 10, h: 6.5, pts: cut(from, acc[acc.length - 1]!) });
+  /** Rail direction and the camera-side (south-east) normal at distance `d`. */
+  const dirAt = (d: number): { ux: number; uz: number; nx: number; nz: number } => {
+    const [ax, az] = railAt(d - 0.5), [bx, bz] = railAt(d + 0.5), l = Math.hypot(bx - ax, bz - az);
+    return { ux: (bx - ax) / l, uz: (bz - az) / l, nx: -(bz - az) / l, nz: (bx - ax) / l };
+  };
+  /** World point `d` along the rail, `off` meters to its south-east side. */
+  const railOff = (d: number, off: number): Pt => { const [x, z] = railAt(d), q = dirAt(d); return [x + q.nx * off, z + q.nz * off]; };
+  const deckPts = cut(deck0, deck1), deckD = [deck0, ...deckPts.slice(1, -1).map((p) => project(p[0], p[1]).at), deck1];
+  const half = PLATFORM.width / 2;
+  const platformPoly: Pt[] = [...deckD.map((d) => railOff(d, -half)), ...[...deckD].reverse().map((d) => railOff(d, half))];
+  const stairAt = deck0 + PLATFORM.stairAt, sd = dirAt(stairAt), [sx, sz] = railOff(stairAt, half - 0.5 + PLATFORM.stair.len / 2);
+  const platformStair: Stair = { x: sx, z: sz, rot: Math.atan2(-sd.nx, -sd.nz), width: PLATFORM.stair.width, len: PLATFORM.stair.len };
+  // The train: cars on the north-west track, flush with the deck edge, so nothing squeezes behind them.
+  const cars: NonNullable<Terrace['solid']> = [];
+  const carLen = (PLATFORM.len - 1) / PLATFORM.cars;
+  for (let i = 0; i < PLATFORM.cars; i++) {
+    const d = deck0 + 0.5 + carLen * (i + 0.5), q = dirAt(d), [x, z] = railOff(d, -half + PLATFORM.train / 2);
+    cars.push({ x, z, hx: PLATFORM.train / 2, hz: carLen / 2 + 0.3, rot: Math.atan2(q.ux, q.uz) });
+  }
+  const terraces: Terrace[] = [{ name: 'Bahnsteig Zoologischer Garten', h: PLATFORM.h, bridge: true, platform: true, stairs: [platformStair], poly: platformPoly, solid: cars }];
+  // No spawns on the deck and its stair (the stair's box plus a meter at each end and half a meter aside).
+  const su: Pt = [Math.sin(platformStair.rot), Math.cos(platformStair.rot)], sa: Pt = [Math.cos(platformStair.rot), -Math.sin(platformStair.rot)];
+  const sl = platformStair.len / 2 + 1, sw = platformStair.width / 2 + 0.5;
+  const stairPoly: Pt[] = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]): Pt => [sx + sa[0] * a! * sw + su[0] * b! * sl, sz + sa[1] * a! * sw + su[1] * b! * sl]);
+  const [startX, startZ] = railOff(deck0 + PLATFORM.start, 1.8);
+  const [stationX, stationZ] = railAt(deck0 + PLATFORM.len / 2), stationDir = dirAt(deck0 + PLATFORM.len / 2);
+  zones[0]!.entry = { x: startX, z: startZ };
 
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3, extra: Partial<Landmark> = {}): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear, ...extra });
   /** A landmark at world (x, z) (parts of the Schloss compound). */
@@ -253,7 +293,7 @@ export function charlottenburgMap(scale = 1): MapDef {
   const tor = LW('gartentor', gx, gz, 0, 4, 0.7, 0, { name: 'Gartentor' });
   const landmarks: Landmark[] = [
     // Zone 0. Bahnhof Zoo (1882) sits on the viaduct: lots keep off, the viaduct itself blocks.
-    L('zoobahnhof', 58, 96, 142.5 * DEG, 6, 14, 0, { walkUnder: true, name: 'Bahnhof Zoo' }),
+    LW('zoobahnhof', stationX, stationZ, Math.atan2(stationDir.ux, stationDir.uz), 6.5, 12.5, 0, { walkUnder: true, name: 'Bahnhof Zoo' }),
     loewentor, elefantentor, aquarium, capitol,
     L('musikpavillon', 124, 66, 0, 4, 4, 1, { name: 'Musikpavillon' }),
     L('antilopenhaus', 152, 67, 0, 7, 4.5, 1, { name: 'Antilopenhaus' }),
@@ -437,7 +477,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     zones,
     rail: null,
     hills: [],
-    terraces: [],
+    terraces,
+    noSpawn: [platformPoly, stairPoly],
     district: 4,
     strictLots: true,
     // Stand-in lot types stay few, so the Blockrand rows get the street fronts (step 7 picks the real ones).

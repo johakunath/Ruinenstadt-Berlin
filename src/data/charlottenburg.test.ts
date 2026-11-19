@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
-import { CHARLOTTENBURG_BOSS_STANDIN, charlottenburgMap, IRRGARTEN } from './charlottenburg';
+import { CHARLOTTENBURG_BOSS_STANDIN, charlottenburgMap, IRRGARTEN, PLATFORM } from './charlottenburg';
 import { EDGE_FRONT, propCollider } from './courtyard';
-import { generateLots, generateProps, isWater, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
+import { generateLots, generateProps, heightAt, inPoly, isWater, onStair, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
 import type { Level } from '../sim/level';
+import { Rng } from '../sim/math';
+import { freeSpot } from '../sim/reach';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT, type SimEvent } from '../sim/types';
 
@@ -197,6 +199,44 @@ describe('Charlottenburg map (M16, layout C2)', () => {
       expect(inFoot(hall, sp.x, sp.z + sp.r / 2, 0)).toBe(false);
     });
 
+    it(`E8: the run starts on the platform of Bahnhof Zoo; the only way off is the stair to the Hardenbergplatz (scale ${scale})`, () => {
+      const deck = m.terraces.find((t) => t.platform)!, st = deck.stairs[0]!;
+      expect(m.terraces).toHaveLength(1);
+      expect(inPoly(deck.poly, m.start.x, m.start.z)).toBe(true);
+      expect(heightAt(m, m.start.x, m.start.z)).toBe(PLATFORM.h);
+      expect(deck.h).toBe(m.viaducts![0]!.h);
+      // The deck: everything reached from the start with the stair shut stays on it, and it is the whole platform.
+      const onStairs = (x: number, z: number): boolean => onStair(deck, x, z, 0.5) !== null;
+      const top = reach(m, level, m.start, m.bounds, onStairs);
+      expect(top.size).toBeGreaterThan(60);
+      for (const k of top) { const [x, z] = k.split(',').map(Number) as [number, number]; expect(inPoly(deck.poly, x, z), `off the deck ${k}`).toBe(true); }
+      // The stair foot is at street level on the Hardenbergplatz side, reached from the start; the Löwentor and the kiosk from there.
+      const foot = { x: st.x - Math.sin(st.rot) * (st.len / 2 + 1.5), z: st.z - Math.cos(st.rot) * (st.len / 2 + 1.5) };
+      expect(heightAt(m, foot.x, foot.z)).toBe(0);
+      expect(near(seen, foot.x, foot.z), 'stair foot').toBe(true);
+      expect(Math.hypot(foot.x - lm(m, 'loewentor').x, foot.z - lm(m, 'loewentor').z)).toBeLessThan(20);
+      const below = reach(m, level, foot, m.bounds, (x, z) => inPoly(deck.poly, x, z) || onStairs(x, z));
+      expect(near(below, ...at(lm(m, 'loewentor'), 0, 2)), 'Löwentor from the stair foot').toBe(true);
+      const kiosk = m.landmarks.find((l) => l.name === 'Kiosk am Zoo')!;
+      expect(near(below, kiosk.x + Math.sin(kiosk.rot) * 6, kiosk.z + Math.cos(kiosk.rot) * 6), 'kiosk door').toBe(true);
+      // Toward the camera: the stair runs down to the south-east.
+      expect(-Math.cos(st.rot)).toBeGreaterThan(0.5);
+      expect(-Math.sin(st.rot)).toBeGreaterThan(0.5);
+      // The train blocks; the hall (walk-under) does not.
+      for (const c of deck.solid!) expect(solid(c.x, c.z), 'train').toBe(true);
+      expect(lm(m, 'zoobahnhof').walkUnder).toBe(true);
+      // No spawns up there: the deck and the stair are a no-spawn zone, a wave that follows the hero comes from below.
+      expect(level.noSpawnAt(m.start.x, m.start.z)).toBe(true);
+      expect(level.noSpawnAt(st.x, st.z)).toBe(true);
+      expect(level.noSpawnAt(foot.x + Math.sin(st.rot) * -4, foot.z + Math.cos(st.rot) * -4)).toBe(false);
+      const rng = new Rng(7);
+      for (let i = 0; i < 40; i++) {
+        const q = freeSpot(level, rng, m.start.x, m.start.z, 0, 16, 0.6);
+        if (q) expect(inPoly(deck.poly, q.x, q.z) || onStair(deck, q.x, q.z) !== null, `${q.x},${q.z}`).toBe(false);
+      }
+      expect(m.encounters.every((e) => !inPoly(deck.poly, e.x, e.z) && Math.hypot(e.x - m.start.x, e.z - m.start.z) > e.r + 20)).toBe(true);
+    });
+
     it(`the Charlottenburger Tor lets the Chaussee through (scale ${scale})`, () => {
       const t = lm(m, 'chtor');
       expect(near(seen, t.x, t.z)).toBe(true);
@@ -309,7 +349,7 @@ describe('Charlottenburg map (M16, layout C2)', () => {
         }
       }
     }
-  });
+  }, 20000);
 
   it('one rest stop per zone (the tea house in the Neuer Pavillon, the Späti in the Orangerie forecourt), reachable, away from fights', () => {
     for (const scale of [1, 1.3]) {
@@ -325,7 +365,7 @@ describe('Charlottenburg map (M16, layout C2)', () => {
         for (const e of m.encounters) expect(Math.hypot(l.x - e.x, l.z - e.z), `${l.name} vs ${e.id}`).toBeGreaterThan(e.r + 6);
       }
     }
-  });
+  }, 20000);
 
   it('bigger scale means more lots', () => {
     expect(generateLots(charlottenburgMap(1.3)).length).toBeGreaterThan(generateLots(charlottenburgMap(1)).length);

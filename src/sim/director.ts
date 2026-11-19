@@ -108,7 +108,7 @@ function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: n
     const rr = enc.r - radius - sim.rng.range(0.2, 1.2);
     const x = enc.x + Math.sin(a) * rr;
     const z = enc.z + Math.cos(a) * rr;
-    if (sim.level.blocked(x, z, radius)) continue;
+    if (sim.level.blocked(x, z, radius) || sim.level.noSpawnAt(x, z)) continue;
     if (sim.level.near(x, z, radius + 1).some((c) => colliderDistance(c, x, z) < radius + 0.2)) continue;
     // Never into a closed pocket (a yard boxed in by props): the wave could not reach the hero (review of PR 55).
     if (!reachable(sim.level, x, z)) continue;
