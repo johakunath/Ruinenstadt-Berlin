@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mitteMap } from '../data/mitte';
 import { mapLevel } from '../data/map';
-import { chain, STATUS, strike } from './combat';
+import { chain, hurtPlayer, STATUS, strike } from './combat';
 import { spawnEnemy } from './enemies';
 import { createSim } from './sim';
 import type { Sim } from './types';
@@ -56,5 +56,17 @@ describe('rain rule (M12c, 2D D.wet)', () => {
   it('Mitte is wet from the map; the courtyard is dry', () => {
     expect(createSim({ empty: true }).wet).toBe(false);
     expect(createSim({ empty: true, level: mapLevel(mitteMap(), [], []) }).wet).toBe(true);
+  });
+});
+
+describe('debug god mode', () => {
+  it('?god keeps the hero unhurt', () => {
+    const s = createSim({ empty: true });
+    s.god = true;
+    const hp = s.player.hp;
+    expect(hurtPlayer(s, null, 50, 1, 0)).toBe(false);
+    expect(s.player.hp).toBe(hp);
+    s.god = false;
+    expect(hurtPlayer(s, null, 50, 1, 0)).toBe(true);
   });
 });

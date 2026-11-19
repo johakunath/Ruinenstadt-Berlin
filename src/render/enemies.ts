@@ -955,8 +955,9 @@ export class EnemyView {
       }
     }
     const t = e.stateT + (frozen ? 0 : alpha * DT);
-    // M11c: hidden guards stay unseen until they wake (doorway, rubble).
-    this.root.visible = !(e.sleep && e.pose === 'hidden');
+    // M11c hidden guards wait in a doorway. Playtest 2026-11-18: no longer invisible until they wake (they
+    // seemed to pop in and strike at once); they stand still in sight until the hero comes close.
+    this.root.visible = true;
     const dt2 = frozen ? 0 : dt;
     if (this.body === 'crow') this.poseCrow(e, t);
     else if (this.body === 'rat') this.poseRat(e, t);

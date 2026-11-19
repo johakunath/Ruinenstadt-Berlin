@@ -483,7 +483,7 @@ body:has(.overlay:not([hidden])) #edges {
   pointer-events: none;
   text-shadow: 0 1px 2px #000;
 }
-#loot-chip {
+#loot-chip, #exit-chip {
   position: fixed;
   right: 16px;
   top: 64px;
@@ -606,7 +606,7 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 
 /* ---- phone and tablet HUD (playtest 2026-11-16): one pause button; the minimap sits top right as in 2D and opens the map. */
 #minimap { left: auto; right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
-#loot-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
+#loot-chip, #exit-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
 /* Every device (playtest 2026-11-17): map and inventory open from the pause menu or by key (M, I/Tab, pad Y). */
 #menu-btn { margin-left: auto; }
 @media (max-height: 500px) {
@@ -883,8 +883,9 @@ html, body { font-family: var(--f-ui); background: var(--ash); }
 #fsb { position: fixed; top: var(--gut-t); right: var(--gut-r); z-index: 70; }
 #fsb svg { width: 22px; height: 22px; display: block; }
 body:has(#hud:not([hidden])) #fsb, body:has(#menu:not([hidden])) #fsb, body:has(#optv:not([hidden])) #fsb, body:has(#camp:not([hidden])) #fsb, body:has(#trade:not([hidden])) #fsb { right: calc(var(--gut-r) + 52px); }
-/* The camp head keeps clear of the two corner buttons. */
-@media (max-width: 1240px) { .camp-panel .menu-head { padding-right: 104px; } }
+/* The camp head keeps clear of the two corner buttons and of the panel edge (playtest 2026-11-18: on a wide
+   tablet outside fullscreen the 1240 px query missed, and the title sat on the border). */
+.camp-panel > .menu-head { padding: 12px 104px 8px 16px; }
 
 /* ---- U3 options screen (2D #optv): own overlay, centered column, × top right. */
 #optv { z-index: 50; display: block; padding: 0; overflow-y: auto; overscroll-behavior: contain; background: #140e0a; }
@@ -1007,6 +1008,40 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 .net-card button.primary { background: #8b3a2b; border-color: #c2453a; } .net-card button:disabled { opacity: .4; }
 .net-card button:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
 .lbadge { display: inline-block; padding: 0 6px; color: #fff; font-size: 12px; margin-right: 4px; }
+/* Schwarzmarkt (playtest 2026-11-18): grids left, the tapped item's card right (below on narrow screens). */
+.camp-body > .stash-cols { grid-column: 1 / -1; }
+.stash-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: 12px; align-items: start; }
+.stash-card { display: flex; flex-direction: column; gap: 8px; }
+.inv-cell.sel { outline: 2px solid #ef9f27; outline-offset: 1px; }
+@media (max-width: 699px), (max-height: 500px) { .stash-cols { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); } }
+/* Camp layout 1A (Johannes 2026-11-18): head with name and level, keeper line, use left, next level right, resource bar below. */
+.camp-panel .menu-head { align-items: center; }
+.camp-lv { display: inline-flex; align-items: center; gap: 6px; color: #b5aa98; font-size: 14px; }
+.camp-who { margin: 0 0 10px; color: #b5aa98; font-style: italic; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.camp-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); gap: 12px; align-items: start; }
+.camp-main .camp-body { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.camp-next { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: #1d2120; border: 1px solid #ef9f27; border-radius: 6px; }
+.camp-next h3 { margin: 0; font-size: 12px; color: #ef9f27; letter-spacing: .06em; text-transform: uppercase; }
+.camp-next b { font-size: 14px; }
+.camp-next small.warn { color: #ef9f27; font-size: 12px; }
+.camp-next button { align-self: stretch; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px 2px 3px; border: 1px solid #3a342c; border-radius: 12px; font-size: 13px; background: #252924; }
+.chip.negative { color: #e5483a; border-color: #6a2e28; }
+.chip .mico, .camp-panel button .mico, .camp-res .mico { width: 18px; height: 18px; margin-right: 3px; vertical-align: -4px; }
+.camp-res { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 16px 10px; border-top: 1px solid #3a342c; font-size: 14px; color: #b5aa98; }
+.camp-res span { display: inline-flex; align-items: center; }
+.camp-res b { color: #ead9c0; font-weight: 600; }
+@media (max-width: 699px), (max-height: 500px) {
+  .camp-main { grid-template-columns: minmax(0, 1fr) minmax(180px, 220px); gap: 8px; }
+  .camp-res { padding: 5px 10px 6px; font-size: 13px; }
+}
+@media (max-width: 599px) and (orientation: portrait) { .camp-main { grid-template-columns: 1fr; } }
+.row-c > button, .row-b > button { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; flex: none; }
+/* Layout 2A (Johannes 2026-11-18): the network map on the title; the next place is picked, Losziehen rides there. */
+#title-net:empty { display: none; }
+.net-inline svg.net { max-height: 34vh; border: 1px solid #33443f; }
+@media (max-height: 500px) { .net-inline svg.net { max-height: 40vh; } .start-main h1 { font-size: 48px; } }
 
 .death-by { font-size: 17px; margin-bottom: 2px; }
 .death-recent { font-size: 13px; opacity: 0.8; margin-bottom: 8px; }

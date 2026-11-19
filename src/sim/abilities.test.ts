@@ -34,7 +34,7 @@ describe('M7 weapons', () => {
   it('keeps the 2D roles: reach, arc, weight and finisher ratios', () => {
     expect(weaponAttack('hammer', 'light1').weight).toBe('heavy');
     expect(weaponAttack('spear', 'light1').reach).toBeGreaterThan(weaponAttack('blade', 'light1').reach + 1);
-    expect(weaponAttack('spear', 'light1').to - weaponAttack('spear', 'light1').from).toBeLessThan(0.5);
+    expect(weaponAttack('spear', 'light1').to - weaponAttack('spear', 'light1').from).toBeLessThan(weaponAttack('blade', 'light1').to - weaponAttack('blade', 'light1').from);
     expect(weaponAttack('hammer', 'light3').damage / weaponAttack('hammer', 'light1').damage).toBeCloseTo(1.2);
     for (const k of ['blade', 'spear', 'sling'] as const) expect(weaponAttack(k, finisherOf(k)).damage / weaponAttack(k, 'light1').damage).toBeCloseTo(1.6);
     // Every weapon has its own clips.

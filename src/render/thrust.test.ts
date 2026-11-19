@@ -16,7 +16,7 @@ describe('thrustWeight (C1 spear thrust grip)', () => {
     expect(thrustWeight(a, a.clipHit + THRUST_HOLD + THRUST_RELEASE)).toBe(0);
   });
 
-  it('covers every spear light attack and the dash', () => {
-    for (const id of ['light1', 'light2', 'light3', 'dash'] as const) expect(weaponAttack('spear', id).style).toBe('thrust');
+  it('covers the spear thrusts and the dash (the finisher is a round sweep, playtest 2026-11-18)', () => {
+    for (const id of ['light1', 'light2', 'dash'] as const) expect(weaponAttack('spear', id).style).toBe('thrust');
   });
 });

@@ -6,7 +6,7 @@ import {
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
 import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
-import { FX_LAYER, isLargeProp } from './layers';
+import { FX_LAYER, isOccluderProp } from './layers';
 export { FX_LAYER } from './layers';
 import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
@@ -670,6 +670,30 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       b.light(new Vector3(p.x, 3.6, p.z), 0xffc890, 16, 11, 0.04, 4.5, { yaw: p.rot + Math.PI / 2, stretch: 1.8 });
       break;
     }
+    case 'stormLantern': {
+      // Playtest 2026-11-18 (variant A): a storm lantern hung from a bent rebar stake in a lump of rubble, 1.6 m.
+      b.geo(m.stucco, new DodecahedronGeometry(0.16, 0), at(p, 0, 0.06, 0, 0.3, rng.range(0, 3), 0.2), [0.55, 0.52, 0.5]);
+      b.geo(m.iron, new CylinderGeometry(0.018, 0.022, 1.6, 5), at(p, 0, 0.8, 0), [0.75, 0.55, 0.45]);
+      b.geo(m.iron, new CylinderGeometry(0.016, 0.016, 0.36, 5), at(p, 0.15, 1.62, 0, 0, 0, Math.PI / 2 - 0.15), [0.75, 0.55, 0.45]);
+      b.geo(m.iron, new CylinderGeometry(0.008, 0.008, 0.14, 4), at(p, 0.31, 1.58, 0), [0.4, 0.4, 0.4]);
+      b.geo(m.iron, new CylinderGeometry(0.06, 0.075, 0.03, 8), at(p, 0.31, 1.24, 0), [0.45, 0.45, 0.42]);
+      b.geo(m.lampGlass, new CylinderGeometry(0.055, 0.055, 0.15, 8), at(p, 0.31, 1.33, 0), [1.8, 1.2, 0.5]);
+      b.geo(m.iron, new ConeGeometry(0.075, 0.08, 8), at(p, 0.31, 1.45, 0), [0.45, 0.45, 0.42]);
+      for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) b.box(m.iron, at(p, 0.31 + Math.cos(a) * 0.058, 1.33, Math.sin(a) * 0.058), 0.008, 0.16, 0.008, [0.4, 0.4, 0.4]);
+      b.light(new Vector3(p.x, 1.4, p.z), 0xffaa55, 18 * p.size, 9 * Math.sqrt(p.size), 0.25, 5 * Math.sqrt(p.size), { halo: 0.5 });
+      b.shadowBox(at(p, 0, 0.8, 0), 0.05, 1.6, 0.05);
+      break;
+    }
+    case 'beacon': {
+      // Playtest 2026-11-18 (variant B): a red and white Absperrbake on its foot with an amber warning light.
+      b.box(m.iron, at(p, 0, 0.04, 0), 0.5, 0.08, 0.32, [0.25, 0.25, 0.25]);
+      for (let i = 0; i < 5; i++) b.box(m.plaster.cream ?? m.stucco, at(p, 0, 0.18 + i * 0.2, 0), 0.26, 0.2, 0.05, i % 2 ? [1.3, 1.25, 1.2] : [1.3, 0.3, 0.25]);
+      b.box(m.iron, at(p, 0, 1.12, 0), 0.06, 0.08, 0.06, [0.3, 0.3, 0.3]);
+      b.geo(m.lampGlass, new CylinderGeometry(0.09, 0.09, 0.07, 10), at(p, 0, 1.24, 0.02, Math.PI / 2), [1.9, 1.05, 0.25]);
+      b.light(new Vector3(p.x, 1.3, p.z), 0xff9a30, 16 * p.size, 8 * Math.sqrt(p.size), 0.1, 4.5 * Math.sqrt(p.size), { halo: 0.45 });
+      b.shadowBox(at(p, 0, 0.6, 0), 0.26, 1.2, 0.05);
+      break;
+    }
     case 'candles': {
       // Grave candles in red and white cups, as left at memorials across the ruined city.
       const n = 5 + rng.int(4);
@@ -1038,7 +1062,7 @@ export function buildWorld(materials: Materials): World {
   }
   const rng = new Rng(404);
   for (const p of COURTYARD.props) {
-    if (isLargeProp(p.kind)) b.solid.captureOccluder(() => buildProp(b, p, rng));
+    if (isOccluderProp(p.kind)) b.solid.captureOccluder(() => buildProp(b, p, rng));
     else buildProp(b, p, rng);
   }
   buildGreens(b);

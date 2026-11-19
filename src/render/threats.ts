@@ -114,7 +114,8 @@ export class ThreatView {
       this.waves.push(m);
     }
     for (let i = 0; i < OPEN; i++) {
-      const m = fx(flat(new Mesh(new RingGeometry(0.86, 1, 36, 1, 0, Math.PI * 1.7), add(0xf2d14b, 0.9))), 2);
+      // Punish window: white, not yellow (playtest 2026-11-18: yellow reads as an NPC talk ring).
+      const m = fx(flat(new Mesh(new RingGeometry(0.86, 1, 36, 1, 0, Math.PI * 1.7), add(0xf4f1ea, 0.9))), 2);
       this.group.add(m);
       this.open.push(m);
     }
@@ -330,7 +331,7 @@ export class ThreatView {
       b.fill.position.set(x - w / 2 + 0.02, y, z);
       b.back.scale.set(w, 0.13, 1);
       b.fill.scale.set(Math.max(0.01, (w - 0.04) * (e.hp / e.maxHp)), 0.085, 1);
-      (b.fill.material as SpriteMaterial).color.setHex(e.open > 0 ? 0xf2d14b : e.elite ? 0xc98cff : 0xd8452e);
+      (b.fill.material as SpriteMaterial).color.setHex(e.open > 0 ? 0xf4f1ea : e.elite ? 0xc98cff : 0xd8452e);
     }
     for (let i = nbar; i < BARS; i++) this.bars[i]!.back.visible = this.bars[i]!.fill.visible = false;
 

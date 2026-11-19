@@ -262,7 +262,7 @@ export function xhainMap(scale = 1): MapDef {
       }
     }
   }
-  // Light under the Hochbahn (fires and candles of people living under the viaduct, between the pillar
+  // Light under the Hochbahn (fires and storm lanterns of people living under the viaduct, between the pillar
   // pairs) and along the Warschauer Straße beside the tram, where the fill pass finds no free sidewalk.
   const lights: Prop[] = [];
   const along2 = (pts: readonly Pt[], step: number, first: number, off: (i: number) => number, kinds: Array<Prop['kind']>): void => {
@@ -278,8 +278,8 @@ export function xhainMap(scale = 1): MapDef {
     }
   };
   // Pillars stand every 15 m from 7.5 m on; the lights sit halfway between two pairs.
-  along2(viaducts[0]!.pts, 15, 15, () => 0, ['fireBarrel', 'candles', 'fireBarrel', 'workLamp']);
-  along2(streets[0]!.pts, 8, 4, (i) => (i % 2 ? 1 : -1) * 5, ['fireBarrel', 'candles', 'fireBarrel', 'workLamp']);
+  along2(viaducts[0]!.pts, 15, 15, () => 0, ['fireBarrel', 'stormLantern', 'fireBarrel', 'workLamp']);
+  along2(streets[0]!.pts, 8, 4, (i) => (i % 2 ? 1 : -1) * 5, ['fireBarrel', 'beacon', 'fireBarrel', 'workLamp']);
   // Tank traps (Panzersperren) in the death strip, off the arena and the breach.
   const traps: Prop[] = [];
   for (const [x, z] of [[-156, -98], [-160, -70], [-222, -80], [-236, -110], [-252, -84], [-268, -100], [-284, -82], [-298, -112]] as Array<[number, number]>) traps.push({ kind: 'tankTrap', x: x * s, z: z * s, rot: (x * 7 + z) % 3, size: 1 });
@@ -311,7 +311,7 @@ export function xhainMap(scale = 1): MapDef {
     guards: [{ ...endOf('Bahngraben', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 }],
     fixedProps: [
       { kind: 'crates', ...endOf('Speicherhof', 1.2, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Speicherhof', 3, -1.2), rot: 1, size: 1 }, { kind: 'crate', ...endOf('Speicherhof', 3, 1.2), rot: -0.3, size: 1 },
-      { kind: 'workLamp', ...endOf('Speicherhof', 5, 1.4), rot: -0.8, size: 1 }, { kind: 'candles', ...endOf('Hinterhof', 3.5, 1.2), rot: 0, size: 1 }, { kind: 'fireBarrel', ...endOf('Bahngraben', 5, -1.3), rot: 0, size: 1 },
+      { kind: 'workLamp', ...endOf('Speicherhof', 5, 1.4), rot: -0.8, size: 1 }, { kind: 'stormLantern', ...endOf('Hinterhof', 3.5, 1.2), rot: 0, size: 1 }, { kind: 'fireBarrel', ...endOf('Bahngraben', 5, -1.3), rot: 0, size: 1 },
       ...lane(streets.find((st) => st.name === 'Speicherhof')!, 'bauzaun'),
       ...lane(streets.find((st) => st.name === 'Hinterhof')!, 'fence'),
       ...lane(streets.find((st) => st.name === 'Bahngraben')!, 'bauzaun'),

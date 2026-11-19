@@ -20,6 +20,11 @@ export interface StationSpot {
   id: StationId; x: number; z: number; rot: number; w: number; d: number; inside: boolean;
   /** Floor height when it is not the hall (0) or the yard (YARD_H). */ y?: number;
   /** Where the keeper stands, in the station frame (x across the front, z toward the front). */ keeper: readonly [number, number];
+  /**
+   * Colliders of the furniture in the station frame (x, z, half x, half z), for stations that are mostly
+   * open floor; without it the whole w × d footprint blocks.
+   */
+  solid?: ReadonlyArray<readonly [number, number, number, number]>;
 }
 /** A ring that opens something when the hero stands in it. */
 export interface CampPlace { id: StationId | 'abfahrt'; x: number; z: number; r: number }
@@ -85,7 +90,11 @@ export const CAMP_LAYOUT: CampLayout = {
   ],
   stations: [
     { id: 'markt', x: 22, z: 20.5, rot: 0, w: 11, d: 4, inside: true, keeper: [1.5, 1.4] },
-    { id: 'laz', x: 7.5, z: 34, rot: 0, w: 10, d: 4, inside: true, keeper: [1.1, 1.0] },
+    // Playtest 2026-11-18: the 10 × 4 m footprint blocked the open room; only the furniture does now (all three levels).
+    { id: 'laz', x: 7.5, z: 34, rot: 0, w: 10, d: 4, inside: true, keeper: [1.1, 1.0], solid: [
+      [-2.6, -0.6, 2.3, 1.25], [3.2, -1.65, 1.3, 0.3], [0.4, -1.8, 1.05, 0.12], [1.6, -0.9, 0.45, 0.3],
+      [-4.6, 1.3, 0.3, 0.25], [2.6, 1.1, 0.18, 0.18], [1.4, 1.2, 0.45, 0.3], [-0.1, 0.3, 0.12, 0.12],
+    ] },
     // Johannes 2026-11-18: Hackerspace inside (old bakery), Imbiss outside in a viaduct arch, the
     // signal box on a raised loading ramp in the north, the freight car on the southern track.
     { id: 'hack', x: 21, z: 32.6, rot: 0, w: 10, d: 2.6, inside: true, keeper: [-1.3, 0.85] },
@@ -136,7 +145,7 @@ export function campMap(): MapDef {
   const c = CAMP_LAYOUT;
   const props: Prop[] = [
     // Hall: the campfire's indoor sibling (a barrel by the train), lamps along the platform, the market's string lights.
-    P('fireBarrel', 2.2, 29.4), P('workLamp', 30.5, 17.2, Math.PI), P('candles', 1.6, 17.2),
+    P('fireBarrel', 2.2, 29.4), P('workLamp', 30.5, 17.2, Math.PI), P('stormLantern', 1.6, 17.2),
     P('stringLights', 22, 23.6, 0, 12),
     // Yard: campfire with benches, a fire barrel by the stairs top, string lights from the viaduct, lamps.
     P('campfire', 50.5, 23.5), P('bench', 50.5, 20.9, 0), P('bench', 47.9, 24.1, Math.PI / 2), P('bench', 53.1, 24.1, -Math.PI / 2),

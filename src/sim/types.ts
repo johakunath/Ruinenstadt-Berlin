@@ -297,6 +297,8 @@ export interface RunState {
 }
 
 export interface Sim {
+  /** Debug (?god, ?tp): the hero takes no damage. */
+  god?: boolean;
   abilities: import('./abilities').Abilities;
   difficulty: DifficultyId;
   inventory: Inventory;
