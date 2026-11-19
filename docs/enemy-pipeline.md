@@ -36,7 +36,7 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 | Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0) | ok | E11 | yes | none | P1 |
 | Krähe | crow | normal | K X A M | code (body, wings, beak) | ok | E05 | yes | none | P1 |
 | Der Feldwebel | feldwebel | boss | K | zombie+gear (WP5 H2, pick A): Pickelhaube with gold eagle, high-collared greatcoat to the knee fitted to the body, gold epaulettes, moustache, sabre; parchment skin, Prussian-blue trousers | ok | X04 | yes (bust coat rust-brown, body Prussian blue as the mockup) | hardware look check | P1 |
-| Der Turmwächter | waechter | boss | K | zombie+gear (WP5 H2, pick A): Fernsehturm sphere helmet with lit cyan window ring and antenna, ribbed tower-shaft coat, flickering cyan sparks | ok | X03 | yes | hardware look check | P1 |
+| Der Turmwächter | waechter | boss | K | GLB `mech.glb` (Leela, CC0; H3 step 3): the Fernsehturm on her legs, head hull hidden, ribbed tapering shaft over torso and neck, steel sphere head with lit cyan window ring (flares in his volley and ring), red-white antenna with beacon, flickering cyan sparks; rust tint on the legs | ok | X03 | yes (bust has a face, the body is the tower) | hardware look check (row 36) | P1 |
 | Der Rex | rex | boss | K | GLB `rex.glb` (Quaternius CC0) | ok | E12 | yes | none | P1 |
 | Hauptmann von Köpenick | hauptmann | boss | K | zombie+gear (WP5 H2, pick B): Pickelhaube with gold eagle (no plume), white moustache, long officer's greatcoat, red cape, gold sash, epaulettes, sabre | ok | X01 | yes (cape and sash added per pick) | hardware look check | P1 |
 | Ratte | rat | normal (packs of 5) | X | code (body, ears, tail) | ok | E04 | yes | none | P2 |

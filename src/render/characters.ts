@@ -35,8 +35,11 @@ export interface CharacterAssets {
   rex: Object3D;
   raptorClips: Map<string, AnimationClip>;
   rexClips: Map<string, AnimationClip>;
-  /** M15 Quaternius mechs (Leela, Mike), loaded only for Alexanderplatz or `?spawn=` of their kinds. */
-  mech?: { small: Object3D; big: Object3D; smallClips: Map<string, AnimationClip>; bigClips: Map<string, AnimationClip> };
+  /**
+   * M15 Quaternius mechs (Leela, Mike), loaded only where their kinds can appear (H3: Leela also carries the
+   * Turmwächter, so Köpenick loads her alone; `big` only with Mike).
+   */
+  mech?: { small: Object3D; smallClips: Map<string, AnimationClip>; big?: Object3D; bigClips?: Map<string, AnimationClip> };
 }
 
 const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
@@ -101,10 +104,11 @@ function prepare(scene: Object3D, materials: Materials): void {
   });
 }
 
-export async function loadCharacters(materials: Materials, mechs = false): Promise<CharacterAssets> {
+/** `mechs`: true loads both mechs, 'small' only Leela (448 KB instead of 1.3 MB). */
+export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
-  const mechLoad = mechs ? Promise.all([mechUrl, mechBigUrl].map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF]> : null;
+  const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF];
   for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf]) prepare(g.scene, materials);
   for (const { name, texture } of await clothingLoad) {
@@ -130,8 +134,12 @@ export async function loadCharacters(materials: Materials, mechs = false): Promi
   if (mechLoad) {
     const [small, big] = await mechLoad;
     prepare(small.scene, materials);
-    prepare(big.scene, materials);
-    out.mech = { small: small.scene, big: big.scene, smallClips: named(small), bigClips: named(big) };
+    out.mech = { small: small.scene, smallClips: named(small) };
+    if (big) {
+      prepare(big.scene, materials);
+      out.mech.big = big.scene;
+      out.mech.bigClips = named(big);
+    }
   }
   return out;
 }

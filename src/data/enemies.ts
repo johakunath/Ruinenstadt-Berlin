@@ -186,8 +186,9 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
+  // H3 (Johannes, 2026-11-19): a robot, the Fernsehturm on Leela's legs (`towerGear` in src/render/enemies.ts).
   waechter: {
-    kind: 'waechter', name: 'Der Turmwächter', body: 'zombie', ai: 'waechter', res: 'turm', radius: 0.85, scale: 1.75, hp: 2000, speed: 1.7,
+    kind: 'waechter', name: 'Der Turmwächter', body: 'mech', ai: 'waechter', res: 'turm', radius: 0.85, scale: 1.3, hp: 2000, speed: 1.7,
     attackRange: 2.4, windup: 0.85, active: 0.16, recovery: 0.85,
     reach: 3.0, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
