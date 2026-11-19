@@ -5,7 +5,7 @@ const [out = 'items.png', query = 'mode=weapons'] = process.argv.slice(2);
 const p = new URLSearchParams(query);
 const cols = Number(p.get('cols') ?? 3);
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: cols * 456 + 16, height: 400 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: cols * 600 + 16, height: 400 }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
 await page.goto(`http://localhost:${process.env.PORT ?? 5173}/tools/item-sheet.html?` + query, { waitUntil: 'load' });
 await page.waitForFunction(() => document.title.startsWith('done'), null, { timeout: 180000 });

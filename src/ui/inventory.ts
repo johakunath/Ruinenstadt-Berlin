@@ -22,7 +22,11 @@ export const RES_ICON = { scrap: 'R05', stoff: 'R01', metall: 'R02', chemie: 'R0
 export const resIcon = (k: keyof typeof RES_ICON): string => `<img class="mico" src="${artUrl(RES_ICON[k])}" alt="" width="24" height="24">`;
 export const esc = (s: string): string => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const color = (i: Item): string => i.set ? '#75d68a' : RARITIES[i.rarity].color;
-export const itemIcon = (i: { base: string; slot: SlotId }): string => ITEM_ICONS[i.base] ? `<img src="${artUrl(ITEM_ICONS[i.base]!)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
+/** Icon of an item: `base:set` first (set weapons with their own icon, D10), then the base. */
+export const itemIcon = (i: { base: string; slot: SlotId; set?: string }): string => {
+  const id = (i.set ? ITEM_ICONS[`${i.base}:${i.set}`] : undefined) ?? ITEM_ICONS[i.base];
+  return id ? `<img src="${artUrl(id)}" alt="" draggable="false">` : `<span>${esc(SLOT_NAMES[i.slot])}</span>`;
+};
 const pct = (v: number): number => v * 100;
 /** 2D SINFO: icon and a one-line tooltip per stat row (hover on desktop, tap on touch). */
 const STAT_INFO: Record<string, [UiIcon, string]> = {
