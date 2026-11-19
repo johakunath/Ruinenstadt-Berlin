@@ -13,22 +13,28 @@ describe('M20 S+U network (2D js/ubahn.js)', () => {
     expect(campOpen([0])).toBe(false);
     expect(campOpen([0, LINE_FREED])).toBe(true);
   });
-  it('a line is ridden once its start is freed and its end has a map: the S3 and the U8 to the Alex (M15)', () => {
+  it('a line is ridden once its start is freed and its end has a map: the S3, the U8 to the Alex, the U2 to Mitte (M15)', () => {
     expect(linePlayable(0, [])).toBe(false);
     expect(linePlayable(0, [0])).toBe(true);
     expect(linePlayable(1, [0, LINE_FREED])).toBe(false);
     expect(linePlayable(1, [0, 1, LINE_FREED])).toBe(true);
-    expect(linePlayable(2, [0, 1, 2, LINE_FREED, LINE_FREED + 1])).toBe(false);
+    expect(linePlayable(2, [0, 1, LINE_FREED, LINE_FREED + 1])).toBe(false);
+    expect(linePlayable(2, [0, 1, 2, LINE_FREED, LINE_FREED + 1])).toBe(true);
+    expect(linePlayable(3, [0, 1, 2, 3, LINE_FREED, LINE_FREED + 1, LINE_FREED + 2])).toBe(false);
     expect(stopName(1)).toBe('Warschauer Straße');
+    expect(stopName(3)).toBe('Potsdamer Platz');
   });
 });
 
 describe('next destination (playtest 2026-11-18)', () => {
-  it('leads on: Köpenick, the S3, Xhain, the U8', async () => {
+  it('leads on: Köpenick, the S3, Xhain, the U8, the Alex, the U2, Mitte', async () => {
     const { nextDestination, LINE_FREED } = await import('./lines');
     expect(nextDestination([])).toEqual({ stop: 0 });
     expect(nextDestination([0])).toEqual({ line: 0 });
     expect(nextDestination([0, LINE_FREED])).toEqual({ stop: 1 });
     expect(nextDestination([0, LINE_FREED, 1])).toEqual({ line: 1 });
+    expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1])).toEqual({ stop: 2 });
+    expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2])).toEqual({ line: 2 });
+    expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2, LINE_FREED + 2])).toEqual({ stop: 3 });
   });
 });

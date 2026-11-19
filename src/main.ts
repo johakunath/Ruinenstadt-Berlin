@@ -1110,7 +1110,8 @@ const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
-  mechs: opts.spawn.some((k) => /^(uhrwerk|volkskoloss|weltzeituhr)/.test(k)),
+  // The mechs load for `?spawn=` of their kinds and for a map whose waves hold Uhrwerkläufer (M15 step 8: the U2 tunnel).
+  mechs: opts.spawn.some((k) => /^(uhrwerk|volkskoloss|weltzeituhr)/.test(k)) || !!map?.def.encounters.some((e) => e.waves.some((w) => (w.mix.uhrwerk ?? 0) > 0)),
 })
   .then((r) => {
     renderer = r;

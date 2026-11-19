@@ -10,7 +10,10 @@
 // Meters, +X towards the end station. Tunnel enemies carry +25 % life (2D rule).
 import type { EncounterDef, Point, WaveDef, ZoneDef } from '../sim/level';
 import { Rng } from '../sim/math';
+import { ALEX_TIER, alexWaveTier } from './alexanderplatz';
+import type { BossKind } from './enemies';
 import { waveTier } from './koepenick';
+import { mitteWaveTier } from './mitte';
 import { LINES, stopName } from './lines';
 import type { Prop } from './courtyard';
 import { lineDist, type MapDef, type Pt, type Tube, type TunnelGate } from './map';
@@ -38,8 +41,19 @@ export type Stretch = 'collapse' | 'flood' | 'wreck';
 /** Free stretches between the fights that take the three special stretches (x ranges). The collapse fits only the first and the last. */
 const SLOTS: ReadonlyArray<readonly [number, number]> = [[116, 152], [202, 236], [318, 350]];
 const STRETCH_NAME: Record<Stretch, string> = { collapse: 'Einsturz', flood: 'Geflutete Strecke', wreck: 'Zugwrack' };
-/** The followed Köpenick: tunnel waves start where the district's late waves were. */
-const G0 = 14;
+/**
+ * Wave tiers and enemy mix per line. A tunnel starts where its start district's late waves were
+ * (S3: Köpenick 14 … 19). 2D `tunSpecial`: the start district's own enemies come along. M15 step 8
+ * (Johannes, 2026-11-19: recycle the tunnel, change names and enemy types): the U2 carries the
+ * Alexanderplatz roster to the ghost station (no crows underground) and the Friedrichstraße roster of
+ * Mitte after it, where the eras grind against each other (no drones). The S3 and the U8 keep the
+ * Köpenick mix.
+ */
+export interface LineWaves { from: number; to: number; wave: (g: number, zone: number, bosses?: BossKind[]) => WaveDef }
+export function lineWaves(line: number): LineWaves {
+  if (line === 2) return { from: ALEX_TIER.to - 5, to: ALEX_TIER.to, wave: (g, zone, bosses = []) => (zone === 0 ? alexWaveTier(g, bosses, 2) : mitteWaveTier(g, bosses, 0)) };
+  return { from: 14, to: 19, wave: (g, _zone, bosses = []) => waveTier(g, bosses, 0) };
+}
 
 /**
  * Every line reuses the S3 tunnel as it is (Johannes, 2026-11-18: recycle it completely for now,
@@ -94,11 +108,12 @@ export function tunnelMap(line = 0): MapDef {
   const [wa, wb] = slot('wreck');
   const wx = wa + (wb - wa) * 0.625;
 
-  let g = G0;
-  const tier = (): WaveDef => { const w = waveTier(Math.min(19, g++), [], 0); return { ...w, hpMul: w.hpMul * TUNNEL.hp }; };
+  const W = lineWaves(line);
+  let g = W.from;
+  const tier = (zone: number): WaveDef => { const w = W.wave(Math.min(W.to, g++), zone); return { ...w, hpMul: w.hpMul * TUNNEL.hp }; };
   const enc = (id: string, name: string, zone: number, x: number, r: number, waves: number): EncounterDef => {
     const [ex, ez] = at(x);
-    return { id, name, zone, x: ex, z: ez, r, waves: Array.from({ length: waves }, tier), heal: 0.3 };
+    return { id, name, zone, x: ex, z: ez, r, waves: Array.from({ length: waves }, () => tier(zone)), heal: 0.3 };
   };
   const ghost = `Geisterbahnhof ${L.ghost}`;
   const from = stopName(line), to = stopName(line + 1);
@@ -109,7 +124,7 @@ export function tunnelMap(line = 0): MapDef {
   const hold: EncounterDef = {
     id: 'generator', name: `Generator ${to}`, zone: 1, x: hx, z: hz, r: 13, heal: 1,
     hold: { r: TUNNEL.hold.r, need: TUNNEL.hold.need, every: TUNNEL.hold.every, mouth: { x: mx, z: mz } },
-    waves: [tier(), { ...waveTier(19, ['schaffner'], 0), count: 4, maxAlive: 4, elite: 0, hpMul: waveTier(19).hpMul * TUNNEL.hp }],
+    waves: [tier(1), { ...W.wave(W.to, 1, ['schaffner']), count: 4, maxAlive: 4, elite: 0, hpMul: W.wave(W.to, 1).hpMul * TUNNEL.hp }],
   };
   const encounters: EncounterDef[] = [
     enc('mund', 'Tunnelmund', 0, 104, 9, 2),

@@ -8,7 +8,6 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 
 | Task | Owner | Status / start file |
 |---|---|---|
-| M15 Mitte step 8: U2 tunnel from Alexanderplatz to U Potsdamer Platz, title and victory links, network stop `map: 'mitte'`, bot `--map=mitte`, tier calibration | Claude · Opus medium | open: `docs/tasks/m15-mitte.md` |
 | M15 Alexanderplatz step 4 photo check for the landmarks built without a downloaded photo | Claude · Opus high | open: `docs/tasks/m15-alexanderplatz.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |
