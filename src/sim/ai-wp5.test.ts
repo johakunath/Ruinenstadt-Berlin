@@ -151,6 +151,19 @@ describe('Zünder (2D bomb)', () => {
     expect(s.threats.zones.some((z) => z.src === b.id && z.r === THREAT.fuse.deathRadius)).toBe(true);
   });
 
+  it('two Zünder that light on the same step blow up once each (Codex review)', () => {
+    const s = fresh();
+    const a = put(s, 'zuender', -0.6, 1.2);
+    const b = put(s, 'zuender', 0.6, 1.2);
+    run(s, 0.05);
+    expect(a.sp?.kind).toBe('fuse');
+    expect(b.sp?.kind).toBe('fuse');
+    const evs = run(s, THREAT.fuse.wind + THREAT.fuse.deathWind + 0.2);
+    const radii = evs.filter((q) => q.type === 'zoneHit' && q.kind === 'bomb').map((q) => (q as { r: number }).r);
+    expect(radii).toEqual([THREAT.fuse.radius, THREAT.fuse.radius]);
+    expect(a.blown && b.blown).toBe(true);
+  });
+
   it('a Zünder never turns elite', () => {
     const s = fresh();
     const e = put(s, 'zuender', 0, 6);

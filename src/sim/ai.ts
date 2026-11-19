@@ -301,7 +301,7 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
       break;
     }
     case 'fuse':
-      // The blast is the zone; the Zünder goes with it (no second blast on death).
+      // The blast is the zone (it kills the Zünder when it goes off); this only covers a zone that is gone.
       e.blown = true;
       killEnemy(sim, e);
       break;

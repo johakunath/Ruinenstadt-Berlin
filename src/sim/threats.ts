@@ -8,7 +8,7 @@
 import { PLAYER } from '../data/combat';
 import { BOSS, THREAT } from '../data/enemies';
 import { colliderDistance } from './collide';
-import { hurtPlayer, knock, strike } from './combat';
+import { hurtPlayer, killEnemy, knock, strike } from './combat';
 import { angleDiff, angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
 
@@ -172,7 +172,15 @@ export function updateThreats(sim: Sim): void {
     let hit = false;
     if (z.leave) addHazard(sim, { x: z.x, z: z.z, ...z.leave });
     // A blast throws the bodies around it too (after this loop: a Zünder killed by it changes the zone list).
-    if (z.blast) blasts.push(z);
+    // A Zünder goes with its own blast in the same step, so no other blast can kill it first and add a second one.
+    if (z.blast) {
+      const src = sim.enemies.find((e) => e.id === z.src && e.state === 'special' && e.sp?.kind === 'fuse');
+      if (src) {
+        src.blown = true;
+        killEnemy(sim, src);
+      }
+      blasts.push(z);
+    }
     // A zone with no damage only marks where its ground lands (the acid pool hurts by ticking).
     const inside = inZone(z, p.x, p.z, PLAYER.radius * 0.5);
     if ((z.damage > 0 || z.floor > 0) && inside) {
