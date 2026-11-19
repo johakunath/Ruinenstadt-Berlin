@@ -13,3 +13,4 @@ The 2D references were Köpenick wall, roof and Späti shopfront, plus the share
 
 - [Seam check, each tile repeated 2 × 2](wrap-comparisons.jpg). Top row, left to right, cream, ochre, oxblood, brick, stucco. Bottom row, roof, concrete, wood, painted metal, enamel.
 - Courtyard on Leistung. The Späti and wall are across the yard, wood and metal props in its centre, and the van in the foreground. [Painted](courtyard-leistung-painted.jpg) · [Fallback with image requests blocked](courtyard-leistung-fallback.jpg)
+- [Köpenick station frontage on Qualität](bahnhof-qualitaet-painted.jpg). Painted facade, shop windows and van. Chromium also loaded the roof tile and vehicle enamel images in this scene. The repeat sheet shows those textures up close.
