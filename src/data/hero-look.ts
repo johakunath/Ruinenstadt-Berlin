@@ -71,7 +71,9 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
   bvg: { roles: { coat: '#26304a', hem: '#f2c230', cuff: '#f2c230', trousers: '#222a40', leather: '#141620', brass: '#f2c230' } },
   // Körper: Alexanderplatz, Mitte
   blaumann: { roles: { vest: '#2463a5', cargo: '#2463a5', straps: '#1c4f86', belt: '#1c4f86', thigh: '#1c4f86', brass: '#b58a3d' } },
-  poncho: { roles: { coat: '#3a6070', hem: '#2e4c5a', cuff: '#2e4c5a', trousers: '#2a2c34', leather: '#22262c', brass: '#43d1cf' } },
+  // The mockup's lower glowing hem band, painted (the skirt bends with the legs: no rigid part there).
+  poncho: { roles: { coat: '#3a6070', hem: '#2e4c5a', cuff: '#2e4c5a', trousers: '#2a2c34', leather: '#22262c', brass: '#43d1cf' },
+    bands: [{ roles: COAT, axis: 'y', from: 0.78, to: 0.8, hex: '#2fa6a8' }] },
   kmantel: { roles: { coat: '#3e2c48', hem: '#bd2b77', cuff: '#bd2b77', trousers: '#24222a', leather: '#1a1820', brass: '#43d1cf' } },
   // Körper: sets
   'weste:kiez': { roles: { vest: '#2f62b0', straps: '#f08a24', belt: '#141a2a', thigh: '#141a2a', cargo: '#1e2a48', brass: '#f08a24' },
@@ -136,14 +138,14 @@ const PUFF = 0.012;
  */
 export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string, Wear>>>> = {
   a: {
-    mantel: { palette: 'mantel', gear: ['belt-tool'] },
+    mantel: { palette: 'mantel', puff: 0.02, gear: ['belt-tool'] },
     weste: { outfit: 'weste', gear: ['kneepads-dark'] },
-    leder: { cut: CUT.jacket, palette: 'leder', gear: ['studs', 'belt-studded', 'patches-punk', 'rips'] },
-    feuer: { cut: CUT.thigh, palette: 'feuer', gear: ['belt-fire'] },
-    bvg: { cut: CUT.hip, palette: 'bvg', gear: ['boards-bvg', 'badge-bvg', 'belt-bvg'] },
+    leder: { cut: CUT.jacket, palette: 'leder', puff: 0.016, gear: ['studs', 'belt-studded', 'patches-punk', 'rips'] },
+    feuer: { cut: CUT.thigh, palette: 'feuer', puff: 0.024, gear: ['belt-fire'] },
+    bvg: { cut: CUT.hip, palette: 'bvg', puff: 0.018, gear: ['boards-bvg', 'badge-bvg', 'belt-bvg'] },
     blaumann: { outfit: 'weste', palette: 'blaumann', gear: ['bib', 'patch-gear', 'wrench'] },
-    poncho: { palette: 'poncho', puff: 0.02, gear: ['poncho-bands', 'hood-roll'] },
-    kmantel: { palette: 'kmantel', gear: ['collar-high', 'cables', 'belt-led'] },
+    poncho: { palette: 'poncho', puff: 0.026, gear: ['poncho-bands', 'hood-roll'] },
+    kmantel: { palette: 'kmantel', puff: 0.018, gear: ['collar-high', 'cables', 'belt-led'] },
     spaeti: { palette: 'spaeti', scarf: 'scarf:gold', gear: ['caps', 'sign-spaeti', 'belt-caps'] },
     panzer: { palette: 'panzer', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },
     rattenmantel: { palette: 'rattenmantel', scarf: 'scarf:acid', puff: 0.018, gear: ['collar-fur', 'belt-rattails'] },

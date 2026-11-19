@@ -115,7 +115,7 @@ if (mode === 'icons') {
   renderer.setScissorTest(true);
   scene.background = new Color(0x1a130e);
   const cam = new PerspectiveCamera(zoom === 'body' ? 24 : 18, W / H, 0.1, 50);
-  const Z: Record<string, [number, number]> = { body: [0.93, 4.6], head: [1.65, 1.15], hands: [1.0, 1.6], feet: [0.25, 1.6], torso: [1.2, 2.2] };
+  const Z: Record<string, [number, number]> = { body: [0.93, 4.6], head: [1.65, 1.15], hands: [1.0, 1.6], feet: [0.25, 1.6], torso: [1.2, 2.2], hips: [1.0, 1.7], knees: [0.58, 1.6] };
   const [cy, dist] = Z[zoom] ?? Z.body!;
   const wrap = document.getElementById('wrap')!;
   looks.forEach((items, i) => {

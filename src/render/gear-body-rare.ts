@@ -237,7 +237,7 @@ function collarStand(k: GearKit): void {
   const foot: number[] = [];
   for (let j = 0; j <= segs; j++) { const a = a0 + ((a1 - a0) * j) / segs; foot.push(Math.max(R(1.41, a), R(1.44, a), R(1.47, a), R(1.5, a))); }
   const W: Field = (_t, a) => { const f = Math.min(segs, Math.max(0, ((a - a0) / (a1 - a0)) * segs)), j = Math.min(segs - 1, Math.floor(f)); return foot[j]! + (foot[j + 1]! - foot[j]!) * (f - j); };
-  const top = (u: number): number => 1.52 + 0.045 * Math.sin(Math.PI * u) ** 1.5;
+  const top = (u: number): number => 1.5 + 0.045 * Math.sin(Math.PI * u) ** 1.5;
   k.on('spine_03', () => {
     k.add(patch(s, W, (u, v) => [1.42 + (top(u) - 1.42) * v, a0 + (a1 - a0) * u], segs, 3, (_u, v) => 0.012 + 0.008 * v * v), plain(KIEZ.collar));
     k.add(patch(s, W, (u, v) => [top(u) - 0.012 + 0.014 * v, a0 + (a1 - a0) * u], segs, 1, 0.022), plain(KIEZ.orange));
@@ -312,7 +312,8 @@ function beltDuty(k: GearKit): void {
 
 // ---------------------------------------------------------------- Mantel des Spreegeists
 
-const SPREE = { reed: [0x5a9a5a, 0x7ab870, 0x447a46], base: 0x0e4a40, glow: 0x7fe0c8, sash: 0x2aa890, pearl: 0xe8f4ee } as const;
+// Glow inputs are deeper than the mockup's colours: the glow material emits 2.2 × the colour, so these read as #7fe0c8 and #ff6ad0.
+const SPREE = { reed: [0x5a9a5a, 0x7ab870, 0x447a46], base: 0x0e4a40, glow: 0x3cbc9e, sash: 0x2aa890, pearl: 0xe8f4ee } as const;
 
 /** A reed blade in the XY plane: `w` wide at the root, `h` tall, folded along its middle, curling out (+Z) and to the side. */
 function blade(w: number, h: number, curl: number, lean: number): BufferGeometry {
@@ -425,7 +426,7 @@ function beltKnight(k: GearKit, col: number, len: number, lift: number): void {
 
 // ---------------------------------------------------------------- Mantel des letzten Späti
 
-const SPAETI = { pink: 0xff6ad0, plate: 0x1a1420, gold: 0xf2d14b, belt: 0x2a1a1a } as const;
+const SPAETI = { pink: 0xe0409e, plate: 0x1a1420, gold: 0xf2d14b, belt: 0x2a1a1a } as const;
 const CAPS = [0xc8302a, 0xe8c838, 0x3a7ac0, 0xd8d8d0, 0x2f8a4a, 0xe07020] as const;
 
 /** A crown cap facing +Z: a crimped rim (every other edge vertex out) and a flat top. */

@@ -205,11 +205,11 @@ function beltTool(k: GearKit): void {
   const brass = metal(0xc9a34a), dark = plain(0x2e1c10), steel = bright(0xa4a8ae);
   k.on('pelvis', () => {
     k.frame(at(0), () => buckle(k, 0.076, 0.068, brass, plain(0x3a2414)));
-    for (const a of [0.46, 0.8]) k.frame(at(a, -0.026, 0.018), () => {
-      k.add(box(0.064, 0.084, 0.036), plain(0x5a3a22)).add(box(0.07, 0.034, 0.04), plain(0x4a2e1a), 0, 0.027, 0.003).add(cyl(0.006, 0.006, 0.006, 6), brass, 0, 0.016, 0.023, Math.PI / 2);
+    for (const a of [0.42, 0.72]) k.frame(at(a, -0.026, 0.018), () => {
+      k.add(box(0.058, 0.084, 0.036), plain(0x5a3a22)).add(box(0.064, 0.034, 0.04), plain(0x4a2e1a), 0, 0.027, 0.003).add(cyl(0.006, 0.006, 0.006, 6), brass, 0, 0.016, 0.023, Math.PI / 2);
     });
     // Hammer: the steel head rests on the loop's ring, the handle hangs down the hip.
-    k.frame(tilt(at(1.22, 0, 0.002), -0.26), () => {
+    k.frame(tilt(at(1.05, 0, 0.002), -0.26), () => {
       k.add(box(0.03, 0.07, 0.01), dark, 0, -0.045, 0).add(ring(0.017, 0.0035, 4, 10), metal(0x6a6c70), 0, -0.08, 0.02, Math.PI / 2);
       k.add(box(0.07, 0.038, 0.038), steel, 0.004, -0.06, 0.02).add(cyl(0.022, 0.022, 0.026, 8), steel, -0.042, -0.06, 0.02, 0, 0, Math.PI / 2)
         .add(box(0.056, 0.03, 0.015), steel, 0.058, -0.071, 0.02, 0, 0, -0.5);
@@ -240,9 +240,9 @@ function kneepads(cap: number, pad: number, strap: number): GearBuilder {
       };
       const top = sheet(0, 0.013, 0.009);
       k.on(`calf_${lr(s)}`, () => {
-        k.add(grid(8, 6, sheet(0.008, 0.007, 0.004)), plain(pad));
-        k.add(grid(8, 6, top), plain(cap)).add(edge(8, 6, top), plain(cap));
-        k.add(surface(leg, 0.47, 0.49, { segs: 16, rows: 1, offset: 0.006, median: 3 }), plain(strap));
+        k.add(grid(6, 4, sheet(0.008, 0.007, 0.004)), plain(pad));
+        k.add(grid(6, 5, top), plain(cap)).add(edge(6, 5, top), plain(cap));
+        k.add(surface(leg, 0.47, 0.49, { segs: 12, rows: 1, offset: 0.006, median: 3 }), plain(strap));
       });
     }
   };
@@ -270,10 +270,10 @@ function beltStudded(k: GearKit): void {
   const chrome = bright(0xd8dce0), core = coatCore(k);
   k.on('pelvis', () => {
     k.frame(at(0), () => buckle(k, 0.072, 0.056, chrome, plain(0x141012)));
-    for (let a = 0.36; a < Math.PI; a += 0.2) for (const sg of SIDES) k.frame(at(a * sg, 0, 0.001), () => stud(k, 0.0072, chrome));
+    for (let a = 0.36; a < Math.PI; a += 0.25) for (const sg of SIDES) k.frame(at(a * sg, 0, 0.001), () => stud(k, 0.0072, chrome));
     const end = (a: number): Vector3 => new Vector3().setFromMatrixPosition(at(a, -0.022, 0.005));
     const mid = (a: number, dy: number): Vector3 => core.point(y + dy, a, core.radius(y + dy, a, 0.012, 0.2) + 0.022);
-    k.add(tube([end(0.42), mid(0.6, -0.07), mid(0.85, -0.094), mid(1.08, -0.064), end(1.2)], 0.0038, 12, 4), chrome);
+    k.add(tube([end(0.42), mid(0.6, -0.07), mid(0.85, -0.094), mid(1.08, -0.064), end(1.2)], 0.0038, 10, 4), chrome);
   });
 }
 
@@ -296,8 +296,8 @@ function rips(k: GearKit): void {
     const leg = coatLeg(k, s), t = s > 0 ? 0.572 : 0.562, a = -s * 0.08;
     k.on(`thigh_${lr(s)}`, () => k.frame(fit(leg, t, a, 0.004), () => {
       const R = Math.max(0.05, leg.radius(t, a));
-      k.add(bend(flat(ragged(0.058, 0.044, 12, 0.18, s), 0.002), R), plain(0xbcc4d2)).add(bend(flat(ragged(0.046, 0.032, 10, 0.2, s + 2), 0.002), R), plain(0xb97a56), 0, 0, 0.0012);
-      for (const [dy, w, r] of [[-0.009, 0.05, 0.06], [0.003, 0.054, -0.04], [0.013, 0.044, 0.08]] as const) k.add(bend(box(w, 0.0034, 0.002), R + 0.003), plain(0xf2eee6), 0, dy, 0.003, 0, 0, r);
+      k.add(bend(flat(ragged(0.066, 0.05, 12, 0.18, s), 0.002), R), plain(0xbcc4d2)).add(bend(flat(ragged(0.052, 0.037, 10, 0.2, s + 2), 0.002), R), plain(0xb97a56), 0, 0, 0.0012);
+      for (const [dy, w, r] of [[-0.008, 0.058, 0.06], [0.01, 0.056, -0.05]] as const) k.add(bend(box(w, 0.0034, 0.002), R + 0.003), plain(0xf2eee6), 0, dy, 0.003, 0, 0, r);
     }));
   }
 }
@@ -313,7 +313,7 @@ function beltFire(k: GearKit): void {
     k.frame(at(0.55, -0.064, 0.008), () => {
       k.add(scaled(ring(0.017, 0.0045, 4, 12), 1, 1.45, 1), bright(0xc8ccd0)).add(box(0.005, 0.03, 0.005), metal(0x8a8e92), 0.016, 0, 0);
     });
-    k.frame(tilt(at(1.15, -0.02, 0.018), -0.28), () => {
+    k.frame(tilt(at(1.0, -0.02, 0.018), -0.28), () => {
       k.add(box(0.05, 0.11, 0.034), plain(0x2a2422), 0, -0.03, 0).add(box(0.054, 0.014, 0.038), plain(0x141012), 0, 0.012, 0).add(cyl(0.005, 0.005, 0.004, 6), steel, 0, -0.04, 0.018, Math.PI / 2);
       k.add(cyl(0.011, 0.012, 0.15, 6), wood(0x8a5a2a), 0, -0.16, 0);
       k.add(flat([[0.012, 0.016], [0.05, 0.006], [0.056, -0.002], [0.012, -0.016], [-0.03, -0.02], [-0.068, -0.04], [-0.074, 0.038], [-0.03, 0.02]], 0.014), plain(0xc03020), 0, -0.248, 0);
@@ -363,7 +363,7 @@ function beltBvg(k: GearKit): void {
 
 /** Lift of the Blaumann's bib over the vest (m); its pocket, buttons and patch sit on it. */
 const BIB_LIFT = 0.008;
-const BIB = { t0: 1.045, t1: 1.365, a: 0.47, segs: 8, rows: 8 } as const;
+const BIB = { t0: 1.045, t1: 1.365, a: 0.53, segs: 8, rows: 8 } as const;
 
 /**
  * The bib's shape over the vest: radii measured with a tall slab, then valleys filled round and up (the
@@ -400,7 +400,12 @@ function bib(k: GearKit): void {
     grid(n, m, (u, v) => at(ta + (tb - ta) * v, a0 + (a1 - a0) * u, lift));
   // One sheet up the front (rows of 4 cm), split over the spine bones it covers.
   const sheet = part(t0, t1, -a, a, segs, rows, 0);
-  ([[0, 3, 'spine_01'], [3, 5, 'spine_02'], [5, 8, 'spine_03']] as const).forEach(([r0, r1, bone]) => k.on(bone, () => k.add(rowsOf(sheet, segs, r0, r1), cloth(0x2a6db3))));
+  // Side walls down to the vest, so the bib does not read as a loose sheet from the side.
+  const walls = SIDES.map((sg) => grid(1, rows, (u, v) => { const t = t0 + (t1 - t0) * v; return u ? s.point(t, a * sg, s.radius(t, a * sg) + 0.002) : at(t, a * sg); }));
+  ([[0, 3, 'spine_01'], [3, 5, 'spine_02'], [5, 8, 'spine_03']] as const).forEach(([r0, r1, bone]) => k.on(bone, () => {
+    k.add(rowsOf(sheet, segs, r0, r1), cloth(0x2a6db3));
+    for (const w of walls) k.add(rowsOf(w, 1, r0, r1), seam);
+  }));
   k.on('spine_03', () => {
     k.add(part(t1 - 0.016, t1 + 0.002, -a - 0.01, a + 0.01, segs, 1, 0.003), seam);
     k.add(part(1.244, 1.312, -0.23, 0.23, 4, 1, 0.004), cloth(0x225f9f)).add(part(1.298, 1.318, -0.245, 0.245, 4, 1, 0.007), seam);
@@ -430,8 +435,8 @@ function bib(k: GearKit): void {
 /** Blaumann: yellow round patch with a red cog, on the bib left of the pocket (as drawn). */
 function patchGear(k: GearKit): void {
   const { frame } = bibShape(k);
-  k.on('spine_03', () => k.frame(frame(1.28, -0.066, 0.003), () => {
-    k.add(cyl(0.029, 0.029, 0.004, 14), plain(0xf3ce43), 0, 0, 0, Math.PI / 2).add(flat(cogShape(0.021, 7), 0.003, [[0, 0, 0.007]]), plain(0xb93432), 0, 0, 0.003);
+  k.on('spine_03', () => k.frame(frame(1.28, -0.068, 0.005), () => {
+    k.add(cyl(0.029, 0.029, 0.006, 14), plain(0xf3ce43), 0, 0, 0, Math.PI / 2).add(flat(cogShape(0.021, 7), 0.003, [[0, 0, 0.007]]), plain(0xb93432), 0, 0, 0.004);
   }));
 }
 
@@ -447,10 +452,10 @@ function wrench(k: GearKit): void {
 
 // ---------------------------------------------------------------- Mitte
 
-/** Regenponcho (until the Blender shell, B1): glowing cyan bands round the chest and on the belt. */
+/** Regenponcho (until the Blender shell, B1): glowing cyan bands round the chest under the bust and on the belt. */
 function ponchoBands(k: GearKit): void {
   const s = k.sampler(['a_mantel'], AXES.torso), cyan = glow(0x43d1cf);
-  k.on('spine_02', () => k.add(surface(s, 1.242, 1.258, { segs: 32, rows: 1, offset: 0.007, median: 9 }), cyan));
+  k.on('spine_02', () => k.add(surface(s, 1.188, 1.204, { segs: 32, rows: 1, offset: 0.007, median: 5 }), cyan));
   k.on('pelvis', () => k.add(surface(s, 1.072, 1.088, { segs: 32, rows: 1, offset: 0.012, median: 11 }), cyan));
 }
 
@@ -505,7 +510,7 @@ function collarHigh(k: GearKit): void {
     for (let i = 0; i <= 3; i++) rim.push(at(0, i / 3));
     for (let i = 1; i < 18; i++) rim.push(at(i / 18, 1));
     for (let i = 3; i >= 0; i--) rim.push(at(1, i / 3));
-    k.add(tube(rim, 0.0055, 26, 3), plain(0xe0559c));
+    k.add(tube(rim, 0.0055, 20, 3), plain(0xe0559c));
   });
 }
 
@@ -520,7 +525,7 @@ function cables(k: GearKit): void {
   ];
   k.on('spine_03', () => {
     const cable = (pts: Vector3[]): void => {
-      k.add(tube(pts, 0.0105, 8, 4), dark);
+      k.add(tube(pts, 0.0105, 7, 4), dark);
       const end = pts[pts.length - 1]!, dir = end.clone().sub(pts[pts.length - 2]!).normalize();
       k.add(along(cyl(0.0125, 0.011, 0.026, 6), dir, end.clone().addScaledVector(dir, 0.008)), tip);
     };

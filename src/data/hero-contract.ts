@@ -22,8 +22,9 @@ export const HERO_EXTRA_JOINTS: readonly string[] = [
 /** Limits for any look; both profiles use the same meshes. */
 export const HERO_BUDGET = {
   triangles: 32_000,
-  // 8 skinned meshes of the default look plus the three gear meshes (WP4 D3: matte, metal, glow).
-  skinnedDrawCalls: 11,
+  // Up to 9 skinned meshes of a piece look (the vest shows the bare arms) plus the three gear meshes
+  // (WP4 step 2: matte, metal, glow); D3 planned 11 with the coat's 8.
+  skinnedDrawCalls: 12,
   joints: 72,
   fileBytes: 3_000_000,
 } as const;

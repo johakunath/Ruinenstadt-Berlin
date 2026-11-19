@@ -9,8 +9,8 @@ import { readHeroGlb } from './hero-glb-node';
 
 const glb = readHeroGlb();
 const ids = [...new Set(Object.values(WEAR).flatMap((t) => Object.values(t).flatMap((w) => w.gear ?? [])))];
-/** Skinned meshes of the default look without gear (`hero-contract.test.ts`: 8). */
-const BODY_DRAWS = 8;
+/** Skinned meshes of the heaviest piece look without gear: the vest with bare arms (the coat's is 8). */
+const BODY_DRAWS = 9;
 
 describe('hero gear', () => {
   it('has a builder for every gear id a look names', () => {
@@ -26,7 +26,7 @@ describe('hero gear', () => {
     }
   });
 
-  it('keeps every combination of armor, hat, gloves and boots inside the gear budget and 11 draw calls', () => {
+  it('keeps every combination of armor, hat, gloves and boots inside the gear budget and the draw calls', () => {
     // Triangles add up per id (parts never merge across ids), so the worst look is the sum of the worst per slot.
     const per = new Map(ids.map((id) => [id, gearTriangles(gearGeometry(glb.source, glb.bones, [id]))]));
     const worst = (slot: 'a' | 'h' | 'g' | 'f'): { tris: number; glow: number; slots: Set<GearSlot>; key: string } => {
