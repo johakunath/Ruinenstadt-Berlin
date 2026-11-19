@@ -2,7 +2,7 @@
 
 Layout C2 „Spiegelschloss“ (Johannes, 2026-11-19). Concept, decisions C1 to C6, geography check, the 1920 table and 2D reuse: `docs/maps/charlottenburg.md`. Mockups: `docs/mockups/m16-charlottenburg-layouts.svg` (A, B, C), `docs/mockups/m16-charlottenburg-c2.svg` (the revision; schematic, the anchors below rule). Template: `docs/tasks/m15-mitte.md` and its code.
 
-Status: steps 0 and 1 done, step 2 open. Notes are short; whoever builds a step writes its handover here (at most 8 lines).
+Status: steps 0 to 2 done, steps 3a, 4 and 5 open. Notes are short; whoever builds a step writes its handover here (at most 8 lines).
 
 ## Steps (one session each unless noted)
 
@@ -10,7 +10,7 @@ Status: steps 0 and 1 done, step 2 open. Notes are short; whoever builds a step 
 |---|---|---|---|---|
 | 0 | Concept, geography check, decisions, plan | | Fable high | done 2026-11-19 |
 | 1 | Data `src/data/charlottenburg.ts` from the anchors below, invariant tests `src/data/charlottenburg.test.ts` at scale 1 and 1.3 (as `mitte.test.ts`, with the collider flood fill), map SVG `docs/maps/charlottenburg.svg` shown in chat. Stand-ins for bosses and district enemies; district 4, tier 32 to 54 (C4). Network data in `src/data/lines.ts` (C3) with `lines.test.ts`; `map` on the stop only in step 8 | 0 | Opus high | done 2026-11-19 |
-| 2 | Playable blockout `?map=charlottenburg`: wiring (`options.ts`, `ui/maps.ts`, `main.ts` banner „Charlottenburg · 1920“, bot `mapLevelOf`), landmark massing, Spree, Karpfenteich, Stadtbahn viaduct with arches, maze hedges, the two roofless halls, Zoo paths and gates, the locked Ehrenhof gate, smoke test | 1 | Opus high | open |
+| 2 | Playable blockout `?map=charlottenburg`: wiring (`options.ts`, `ui/maps.ts`, `main.ts` banner „Charlottenburg · 1920“, bot `mapLevelOf`), landmark massing, Spree, Karpfenteich, Stadtbahn viaduct with arches, maze hedges, the two roofless halls, Zoo paths and gates, the locked Ehrenhof gate, smoke test | 1 | Opus high | done 2026-11-19 (Handover › step 2) |
 | 3a | Sky per zone: spec (below, *Engine* E1). Which `Sky` fields blend as uniforms, what is baked today, cost, fallback | 1 (reads `sky.ts`, `renderer.ts`, `map-world.ts`, `weather.ts`) | Fable high | open |
 | 3b | Look in game: the four times of day (C2) and the street dressing below 5 m (bulb marquees and canopies, searchlight beams, poster columns, gas lanterns, shards, diamond dust, confetti). Johannes tunes each time of day. State the Leistung cost | 2, 3a | Opus high | open |
 | 4 | Landmarks from pre-1930 photos (`docs/maps/landmarks.md`; Wikimedia, look at the photos yourself), built worn. Three builders in parallel as in Mitte: City West (Bahnhof Zoo 1882, Löwentor, Elefantentor, Antilopenhaus, Musikpavillon, Aquarium, Ufa-Palast, Capitol shop row, Gedächtniskirche with five towers, Romanisches Café, Gloria-Palast, Marmorhaus, KaDeWe with Lichthof, U Wittenbergplatz hall, Café des Westens); Ku'damm to Oper (Revuepalast and Gläsernes Varieté from the board, Theater des Westens, Deutsches Opernhaus, Schiller-Theater, Technische Hochschule, Rathaus tower); Schloss (central block with dome, Ehrenhof and gate, Neuer Flügel, Orangerie ruin as mirror gallery, Neuer Pavillon, Stülerbauten, Belvedere, Mausoleum, maze pieces, statues). Correct the 1920 table in the map doc | 2 | Opus high | open |
@@ -23,7 +23,7 @@ Status: steps 0 and 1 done, step 2 open. Notes are short; whoever builds a step 
 
 ## Anchors (scale 1, meters, +X east, +Z south)
 
-Bounds x −135 … 185, z −195 … 215 (320 × 410). Start S+U Zoologischer Garten at the Hardenbergplatz (76, 100), beside the station (58, 96) so no generated lot lands on it. The church (112, 137) is the origin of the geography table.
+Bounds x −135 … 185, z −195 … 215 (320 × 410). Start S+U Zoologischer Garten at the Hardenbergplatz (76, 100), beside the station (58, 96) so no generated lot lands on it. Step 2 (E8): the start is on the platform deck and the station moved onto it (≈ 80, 76), north-east of the Hardenbergstraße arch (Handover › step 2). The church (112, 137) is the origin of the geography table.
 
 | Zone | Fights (id, x, z, waves) | Boss |
 |---|---|---|
@@ -105,6 +105,16 @@ Text drafts (Opus finalises): banner „Charlottenburg · 1920“; district card
 - Engine (opt-in, other maps unchanged): `Wall.kind` hedge or fence (`WALL_KIND`, `wallHalf`); `OPEN_PARTS` for loewentor, elefantentor, capitol, kadewe, orangerie, gartentor, chtor; 31 landmark kinds (`rathaus` reused for the Rathaus).
 - Stand-ins: bosses Dirigent, Feldwebel, Spreehexe, Bassprediger (`CHARLOTTENBURG_BOSS_STANDIN`); walkers, runners, Schildträger and crows for the board enemies; lot types hinterhof, markt, truemmer, parkplatz (capped); no `flavor`, dry (no `wet`).
 - Step 2: the Schloss, maze, KaDeWe and gates keep their size at every scale (offsets from one anchor, `C`, `O`, `M`). Walls with `kind` need their own renderer (hedge 2.2 m, fence 2 m), not the Berlin Wall; the Bahnhof Zoo is `walkUnder` on the viaduct; the Ehrenhof gate is a full collider; a Bauzaun on the bridge deck closes the backdrop bank. Only 11 tall Blockrand rows (test ≥ 10): the tall sides are mostly landmarks.
+
+## Handover 2026-11-19 (step 2) [Claude · Opus high]
+
+- `?map=charlottenburg` plays start to end (options, `MapId` with freed id 4, „Charlottenburg · 1920“, „Charlottenburg frei“, no title, victory or network links), bot `mapLevelOf('charlottenburg')` and `tools/balance.mjs --map=charlottenburg`, dry `CHARLOTTENBURG_WEATHER` (leaves in the Zoo and the garden), night sky; smoke test „M16: Charlottenburg loads on the platform …“. Render: `src/render/charlottenburg-world.ts` (massing per kind, colour table `C`; plain brick Stadtbahn through `buildStadtbahn(…, plain)` and `buildArches(…, ends, beam)`, platform, hedges, fences). Reveals: church, KaDeWe, Opernhaus, Schloss (`near` 50, from the Schloßstraße end), Belvedere. Proof: `docs/proof/m16-charlottenburg/`.
+- E8 deviation: the Hardenbergstraße arch is under the old station anchor, so the platform deck (`PLATFORM`, 21 × 10 m at 6.5 m, a `Terrace` with `platform` and the train as `solid` boxes) starts at that arch and runs north-east; Bahnhof Zoo moved from (58, 96) to the deck centre (≈ 80, 76), the start from (76, 100) onto the deck (≈ 85, 73.5). The 8 m stair lands 7 m from the Löwentor and 11 m from the kiosk. Still four viaduct runs.
+- Engine, opt-in: `Terrace.platform` and `solid`, `MapDef.noSpawn` → `Level.noSpawn` (`freeSpot` and rim spawns skip it: no enemy, event or drop on the deck), Xhain draws only walls without `kind` and no platform decks. Other maps unchanged. `Landmark.cut` not needed: the hero stays visible in both halls (low camera-side walls). The KaDeWe reveal looks from the camera side (the tall Tauentzien rows hide its street front from the north).
+- No new material: stucco, slate, enamel (copper, gilding), iron, brick, glass, concrete, mossy and ivy (hedges), car paint and glass (train), window atlas. Cloud readout, Leistung, default camera, with and without the step 2 code: platform 481 calls / 590k triangles (+65 / +31k), church square 441 / 534k (+42 / +17k), Ku'damm 493 / 634k (+29 / +6k), maze 316 / 456k (+61 / +39k). Mitte's start reads 481 / 696k in the same readout, so the 200 / 200k guideline is not met by either; the generated city is most of it (P1b).
+- Steps 3b and 4: `massing()` holds one case per kind, replace it kind by kind (as `buildMitteLandmark` asks its step 4 files first); `openHall` draws the two halls from `OPEN_PARTS`; the hall ribs and the train are placeholders; no lettering yet (KaDeWe, Capitol, cinemas). Wear from `landmark-wear.ts` already applies (it adds graffiti, wrong for 1920: step 4 decides).
+- Off-route land from the shots: the south-west Ku'damm stub is built up like any street (Blockrand, cars, a lot type) and reads as a dead end, not empty: content is enough there. The forest north-east of the Knie reads dark and empty: first remedy candidate is the barricade on the Chaussee east of the Technische Hochschule (review order). Size: check 39.
+- Also: two step 1 tests near the 5 s default got a 20 s timeout (they flaked once under load).
 
 ## Review 2026-11-19 (step 1) [Claude · Fable high]
 
