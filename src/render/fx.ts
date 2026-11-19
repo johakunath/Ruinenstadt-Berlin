@@ -330,6 +330,7 @@ export class Fx {
   private flashNext = 0;
   private emberDebt = 0;
   private flameDebt = 0;
+  private trailDebt = 0;
   private time = 0;
   private readonly abilities: AbilityView;
   private readonly threats: ThreatView;
@@ -387,7 +388,8 @@ export class Fx {
   }
 
   /** Hit sparks flying along the blow, plus an impact flash. */
-  sparks(x: number, y: number, z: number, dx: number, dz: number, heavy: boolean): void {
+  /** Hit sparks; `effective` (D9: the weapon fits the enemy's class) sparks cool white instead of orange. */
+  sparks(x: number, y: number, z: number, dx: number, dz: number, heavy: boolean, effective = false): void {
     const n = heavy ? 26 : 12;
     for (let i = 0; i < n; i++) {
       const spread = this.rng.range(-0.9, 0.9);
@@ -398,7 +400,7 @@ export class Fx {
         x, y: y + this.rng.range(-0.2, 0.2), z,
         vx: (dx * cs - dz * sn) * speed, vy: this.rng.range(0.5, 5), vz: (dz * cs + dx * sn) * speed,
         life: this.rng.range(0.14, 0.38), size: this.rng.range(0.05, heavy ? 0.12 : 0.09), grow: 0.3,
-        r: 6, g: 4.2, b: 1.8, gravity: 16, drag: 2.5,
+        r: effective ? 3.6 : 6, g: effective ? 5.6 : 4.2, b: effective ? 6.4 : 1.8, gravity: 16, drag: 2.5,
       });
     }
     // Dark droplets from the body.
@@ -474,6 +476,19 @@ export class Fx {
     // Fire and embers keep burning through hitstop: only the fight freezes.
     // Only fires near the hero burn (a map has dozens); each gets the same rate as the courtyard barrel.
     const p = sim.player;
+    // 2D #31 dash look: a low dust trail behind the roll (pooled particles, about 20 per dodge, no light).
+    if (p.state === 'dodge' && !frozen) {
+      this.trailDebt += dt * 60;
+      for (; this.trailDebt >= 1; this.trailDebt--) {
+        const s = this.rng.range(0.2, 0.7);
+        this.dust.spawn({
+          x: hx + this.rng.range(-0.2, 0.2), y: groundY(hx, hz) + 0.12, z: hz + this.rng.range(-0.2, 0.2),
+          vx: -p.vx * 0.12 + this.rng.range(-s, s), vy: this.rng.range(0.15, 0.6), vz: -p.vz * 0.12 + this.rng.range(-s, s),
+          life: this.rng.range(0.3, 0.55), size: this.rng.range(0.25, 0.45), grow: 1.8,
+          r: 0.38, g: 0.35, b: 0.3, gravity: -0.2, drag: 3,
+        });
+      }
+    } else this.trailDebt = 0;
     const near = this.fires.filter((f) => (f.x - p.x) ** 2 + (f.z - p.z) ** 2 < 35 * 35);
     this.flameDebt += dt * 34 * near.length;
     this.emberDebt += dt * (this.opts.embers / 3) * Math.min(near.length, 2);

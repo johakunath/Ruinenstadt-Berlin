@@ -14,7 +14,7 @@ Layout B2 "Vom Reichstag zum Bass" (Johannes, 2026-11-18). Concept, decisions M1
 | 5 | Enemy and boss spec: Kabelghul, Boxenkopf, Kabelbrocken skin, drones, Der Türsteher, Die Wachdrohne, the Neuer See mini-boss, Der Bassprediger; wave mix and tier; rain rule; Kodex lines | 0 (can run now, parallel to 1 to 4) | Opus xhigh (Johannes, 2026-11-18) | done 2026-11-18: `docs/tasks/m12c-mitte-enemies.md` |
 | 6 | Enemy and boss build (sim, bodies, sounds, Kodex) from `docs/tasks/m12c-mitte-enemies.md` | 5 | Opus high | done 2026-11-18: `docs/tasks/m12c-mitte-enemies.md` › Handover (step 6) |
 | 7 | Buildings and lot types: glass office blocks with lit lobbies, government stone and glass, Friedrichstadt Blockrand with neon shops, tents and beer garden in the Tiergarten; two lot types per zone, weather per zone (proposals below) | 3 | Opus high | Potsdamer Platz done 2026-11-18 (glass offices, Nachtmarkt, Containerdorf, two towers); other zones built 2026-11-18 (see Handover › step 7, other zones): mockup `docs/mockups/m15-mitte-lots.svg`, picked 2026-11-18 (Johannes: Claude's recommendation): A everywhere (Friedrichstadt Neonmarkt and Clubhof, Regierungsviertel Sperrzone and Autofriedhof, Tiergarten Zeltlager and Lichtung) and facade F-A Sandstein-Ministerium; the B variants are backlog ideas I4 to I8 |
-| 8 | Flow and balance: U2 tunnel from Alexanderplatz to U Potsdamer Platz, title and victory links, network map stop `map: 'mitte'`, bot `--map=mitte`, tier calibration | 2, 6, Alexanderplatz flow | Opus medium | open |
+| 8 | Flow and balance: U2 tunnel from Alexanderplatz to U Potsdamer Platz, title and victory links, network map stop `map: 'mitte'`, bot `--map=mitte`, tier calibration | 2, 6, Alexanderplatz flow | Opus medium | done 2026-11-19 (Handover › step 8) |
 | 9 | Wet asphalt, glass curtain wall, sandstone, neon sign atlas | 3, 4, 7 | Codex | Painted and integrated. [Visual review](../proof/asset-mitte/README.md) and hardware checks open. |
 | 10 | Screenshots (street at night, fight, each landmark), PC and Tab S9 playtest | all | Johannes | open |
 
@@ -142,6 +142,16 @@ Variant A of `docs/mockups/m15-mitte-lots.svg` and facade F-A (Johannes took the
 - Cost: no new material; one pooled light per club door, holo barrier, charging post and camera LED (the pool size is fixed). Hardware check 27 (`pt-hardware-checks.md`).
 - Proof: `docs/proof/m15-mitte/zones-fill.jpg` (Clubhof, Neonmarkt, Zeltlager, Lichtung). The Sperrzone holo band and the ministries were checked in cloud shots only; a close look is part of hardware check 27.
 - Open: the Regierungsviertel has few intact ministries (most lots roll ruin as everywhere); the holo band does not flicker in the geometry, only its light does.
+
+## Handover 2026-11-19 (step 8) [Claude · Opus high]
+
+- Flow: Alex won → „In die U2“ → U2 tunnel → „Weiter nach Mitte“ → back to Köpenick (`wonLink`, `titleLinks` in `src/ui/maps.ts`); Mitte stop `map: 'mitte'` in `src/data/lines.ts`, opened on the network board by the U2. Camp radio „Befreit“ lists every district and line to Mitte.
+- U2 (Johannes: recycle the tunnel, change names and enemy types): S3 layout as is, ghost Klosterstraße. `lineWaves` in `src/data/tunnel.ts`: Alex roster to the ghost station (no crows), Mitte Friedrichstraße roster after it (no drones), Schaffner at the generator, tier 33 … 38. U8 tier raised to 25 … 30 (Johannes). Mechs load for any map whose waves hold Uhrwerkläufer (`main.ts`).
+- Reused from 2D: `tunSpecial` (`js/ubahn.js`): a tunnel brings its start district's enemies.
+- Bot: `docs/balance.md` › Mitte with its own enemies. `MITTE_TIER` unchanged (P33).
+- Fix: the tunnel banner said „S3-Tunnel“ on every line, now „Richtung <Ziel>“.
+- Tests: U2 mix per half and tiers per line (`tunnel-m20.test.ts`), the chain to Mitte (`lines.test.ts`), smoke „M15 step 8: the U2 tunnel loads …“. Playtest row „Flow to Mitte“.
+- Open: Brigadeghul overalls stay Alex-only (walkers in the U2 wear the normal look); Charlottenburg's stop and line in `lines.ts` are 2D leftovers (U Platz der Luftbrücke, U6), for the Charlottenburg concept.
 
 ## Handover 2026-11-19 (step 9) [Codex]
 

@@ -9,12 +9,14 @@
 // M15 (Alexanderplatz): Wurzler roots, Kernspeier seed fans; the Wurzel-Mutter, the Großer
 // Uhrwerkläufer (charge, wound down, key), the Volkseigene Koloss (slabs, gear spiral) and the
 // Weltzeituhr (hour sectors, orbit spiral, minute hand, Stillstand).
+// WP5 (backlog P12): the Zünder lights its fuse and blows up, the Heuler keeps back and howls the others on.
 import { BOSS, ENEMIES, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
 import { freeSpot } from './reach';
 import { addHazard, addZone, fireShot, laserVolley, pushPlayer, threatHit, type Special, type SpecialKind } from './threats';
 import { DEG } from './math';
 import { PLAYER } from '../data/combat';
 import { aliveOf, spawnEnemy } from './enemies';
+import { killEnemy } from './combat';
 import { angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
 
@@ -64,6 +66,8 @@ const SPECIAL: Record<SpecialKind, { wind: number; go: number; open: number; spe
   slabs: { wind: 0.5, go: 0.3, open: 0 },
   sectors: { wind: BOSS.weltzeituhr.sectorWind, go: 0.3, open: 0 },
   hand: { wind: BOSS.weltzeituhr.handWind, go: BOSS.weltzeituhr.handTime, open: 1 },
+  fuse: { wind: THREAT.fuse.wind, go: 0.05, open: 0 },
+  howl: { wind: THREAT.howl.wind, go: 0.3, open: THREAT.howl.open },
 };
 
 /** Own timing of a shared block for one kind (M12c: the Bassprediger's charge, the Dirigent's Fortissimo, the Wachdrohne's volley). */
@@ -109,6 +113,12 @@ function begin(sim: Sim, e: Enemy, kind: SpecialKind, queued = false): void {
     e.sp.open = U.open;
   }
   switch (kind) {
+    case 'fuse': {
+      // The blast circle round the Zünder fills while the fuse burns; it goes off whatever happens (free).
+      const F = THREAT.fuse;
+      addZone(sim, { x: e.x, z: e.z, r: F.radius, t: k.wind, max: k.wind, damage: damageOf(e, F.damage), floor: F.floor, kind: 'bomb', src, free: true, blast: { share: F.enemyShare, knock: F.knock } });
+      break;
+    }
     case 'roots': {
       // A Wurzler: one field under the hero. The Wurzel-Mutter: one under, two beside (four in rage).
       const R = THREAT.roots;
@@ -290,6 +300,18 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
       for (const o of sim.enemies) if (o !== e && o.state !== 'dead' && Math.hypot(o.x - e.x, o.z - e.z) < B.buffRange) o.buff = B.buff;
       break;
     }
+    case 'fuse':
+      // The blast is the zone (it kills the Zünder when it goes off); this only covers a zone that is gone.
+      e.blown = true;
+      killEnemy(sim, e, false);
+      break;
+    case 'howl': {
+      // Heuler (2D `howl`): every other body within range is driven on; a harmless pink ring shows how far.
+      const H = THREAT.howl;
+      for (const o of sim.enemies) if (o !== e && o.state !== 'dead' && Math.hypot(o.x - e.x, o.z - e.z) < H.buffRange) o.buff = Math.max(o.buff, H.buff);
+      sim.threats.waves.push({ x: e.x, z: e.z, r: e.def.radius, max: H.buffRange, speed: BOSS.roar.speed, damage: 0, floor: 0, width: BOSS.roar.width, hit: true });
+      break;
+    }
     case 'beat': {
       // Takt: one ring on the beat.
       const D = BOSS.dirigent;
@@ -386,6 +408,7 @@ export function runSpecial(sim: Sim, e: Enemy, out: { x: number; z: number }): v
   if (!sp.fired) {
     sp.fired = true;
     release(sim, e, sp);
+    if (e.state === 'dead') return;
     if (sp.kind in RUSH) e.facing = angleOf(sp.dx, sp.dz);
   }
   // M12c Türsteher: holding the hero. A roll (or a leap away) breaks free; else the throw ends it.
@@ -496,7 +519,15 @@ export function passive(sim: Sim, e: Enemy): void {
     }
     return;
   }
-  if (e.kind === 'rattenmutter') {
+  if (e.kind === 'brandmeister') {
+    // H3: fire where he walks (2D boss trail), as the Rattenmutter's acid.
+    const M = BOSS.brandmeister;
+    e.trailT -= DT;
+    if (e.trailT <= 0 && e.speed > 0.3) {
+      e.trailT = M.trailEvery;
+      addHazard(sim, { x: e.x, z: e.z, r: M.trailRadius, t: M.trailTime, damage: damageOf(e, M.trailDamage), kind: 'fire' });
+    }
+  } else if (e.kind === 'rattenmutter') {
     const R = BOSS.rattenmutter;
     e.trailT -= DT;
     if (e.trailT <= 0 && e.speed > 0.3) {
@@ -685,6 +716,36 @@ export function think(sim: Sim, e: Enemy, dist: number, toX: number, toZ: number
         plan.x = uz * e.side;
         plan.z = -ux * e.side;
         plan.speed = 0.4;
+      }
+      break;
+    }
+    case 'zuender': {
+      // 2D `bomb`: walks up; within 2 m with a clear line it stops and lights the fuse.
+      const F = THREAT.fuse;
+      if (dist < F.range && sim.flow.clearLine(e.x, e.z, p.x, p.z)) {
+        begin(sim, e, 'fuse');
+        return plan;
+      }
+      break;
+    }
+    case 'heuler': {
+      // 2D `howl`: backs off when the hero comes close, strafes at mid range, howls on its cooldown.
+      const H = THREAT.howl;
+      if (e.elite && eliteThink(sim, e, e.elite, dist)) return plan;
+      if (e.cd[1] <= 0 && dist < H.range) {
+        e.cd[1] = range(sim, H.every);
+        begin(sim, e, 'howl');
+        return plan;
+      }
+      if (dist < H.near) {
+        plan.mode = 'dir';
+        plan.x = -ux;
+        plan.z = -uz;
+      } else if (dist < H.far) {
+        plan.mode = 'dir';
+        plan.x = uz * e.side;
+        plan.z = -ux * e.side;
+        plan.speed = H.strafe;
       }
       break;
     }
@@ -984,6 +1045,8 @@ export function initCooldowns(e: Enemy): void {
     case 'bassprediger': e.cd = [2.5, 0, 6]; break;
     case 'wurzler': e.cd = [0, r(2, 3.5, 2), 0]; break;
     case 'kernspeier': e.cd = [0, r(1.5, 2.5, 2), 0]; break;
+    case 'zuender': e.cd = [0, 0, 0]; break;
+    case 'heuler': e.cd = [r(THREAT.slam.first[0], THREAT.slam.first[1], 1), r(THREAT.howl.first[0], THREAT.howl.first[1], 2), 0]; break;
     case 'wurzelmutter': e.cd = [2, 6, 0]; break;
     case 'uhrwerkgross': e.cd = [2.5, 0, 0]; break;
     case 'volkskoloss': e.cd = [2, 0, 1]; break;

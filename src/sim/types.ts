@@ -189,6 +189,8 @@ export interface Enemy {
   queue?: { kind: SpecialKind; t: number };
   /** M12c: one-time boss calls already made (the Dirigent's Orchester). */
   calls?: number;
+  /** WP5 Zünder: it blew itself up (no second, smaller blast on death). */
+  blown?: boolean;
   /** M15 shield bearers: the guard stands open this long (a stun or shock opened it). */
   guardOpen?: number;
   /** Seconds until the next "geblockt" note may show. */
@@ -208,7 +210,7 @@ export interface Enemy {
 
 export type SimEvent =
   | { type: 'swing'; attack: AttackId; weight: HitWeight }
-  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean; element?: ElementId; quiet?: boolean; note?: string }
+  | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean; element?: ElementId; quiet?: boolean; note?: string; /** D9: the weapon fits the enemy's class. */ effective?: boolean }
   /** Burn damage summed over a short time (no hit feel). */
   | { type: 'dot'; id: number; x: number; z: number; damage: number; killed: boolean }
   | { type: 'ability'; id: import('../data/powers').PowerId; name: string; ultimate: boolean }
@@ -265,8 +267,12 @@ export type SimEvent =
   | { type: 'endlessWave'; n: number; done: boolean }
   /** U2: first kill of a kind or first find of a legendary or set base. */
   | { type: 'kodex'; name: string }
+  /** A Fund was picked up (2D #14, #27): banner title and line. */
+  | { type: 'fund'; kind: 'teil' | 'kassette'; x: number; z: number; title: string; line: string }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
   | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean }
+  /** P25 Türsteher neon bars at the Tor: strip lit (`wind`), bars shut, bars open; at the middle passage. */
+  | { type: 'barrier'; phase: 'wind' | 'shut' | 'open'; x: number; z: number }
   /** M20 tunnel: a grating opened after its fight was won (2D `openGate`). */
   | { type: 'gateOpen'; index: number; x: number; z: number }
   /** M20 tunnel: the hero reached the generator; hold the ring (2D GEN). */
@@ -344,6 +350,8 @@ export interface Sim {
   stress: number;
   /** M20 tunnel gratings (`level.gates`): sim time each one opened, Infinity while closed. */
   gateT: number[];
+  /** P25 Türsteher neon bars (`level.barriers`): phase, seconds left in it, the boss that set it. */
+  barrier: { state: 'idle' | 'wind' | 'shut'; t: number; src: number };
   /** M12c rain (2D `D.wet`, from the map; tunnels and the camp are dry): fire burns shorter, shock jumps further. */
   wet: boolean;
 }

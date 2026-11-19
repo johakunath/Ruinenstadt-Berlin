@@ -100,6 +100,7 @@ Status 2026-11-17: steps 1–5 built (PRs #36–#41). Pieces: `a_mantel` (knee-l
 | Base body and rig | Quaternius `Superhero_Female_FullBody` on the UAL skeleton (CC0), unchanged | The skeleton is copied from the source file and never passes through Blender |
 | Clothing | Modular meshes built by Blender scripts (`tools/blender/hero_clothes.py`), bound to the skeleton by joint name (coat, vest, scarf, boots, sneakers, gloves; district pieces later) | Swap = show or hide meshes; a visible piece hides the body region under it. Painted albedos over vertex colours and baked occlusion |
 | Weapons | Code-built models on `hand_r` (`src/render/weapons.ts`); left hand by IK | Same as the item system |
+| Rigid equipment (WP4, decided 2026-11-19) | Hats, plates, talisman, ring, implants: built in code, skinned rigidly to the bones at equip time, merged into one gear mesh; colours per item base by recolouring the pieces' vertex colours | No Blender, no change to `hero.glb`. Spec and budget: `docs/tasks/wp4-equipment-visuals.md` |
 | Animation | The 39 UAL clips in `anims.glb` (`Pistol_Idle_Loop` added for the hammer stance, H1 2b) | Extra joints (scarf, coat back panels) move by springs in `HeroModel.sway` |
 | Production | Claude on the PC, headless `blender -b --python tools/blender/...`; scripts committed, no `.blend` in git | Verified on the PC with Blender 5.3 (2026-11-17). Not verified: Blender in the cloud environment |
 

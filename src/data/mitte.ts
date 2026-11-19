@@ -31,15 +31,16 @@ export const MITTE_BOSSES: Record<'tor' | 'kanzleramt' | 'see' | 'sony', BossKin
  * Difficulty of wave `g` (24 … 46) in `zone` (M12c mix, 2D Mitte: spitter 0.14, brute 0.16, kabel 0.2, bass 0.07,
  * the rest ghouls). Kabelghule are the face of the Friedrichstraße, drones fly over the Regierungsviertel, the
  * Potsdamer Platz is the loudest (most Boxenköpfe, at most two alive by `EnemyDef.cap`). The Tiergarten is calm:
- * smaller waves, no elites, no Boxenkopf and no drones. Zünder and Schildträger stay in the backlog (P12).
+ * smaller waves, no elites, no Boxenkopf and no drones. WP5: Zünder (2D bomb 0.04) and Schildträger (shield 0.08)
+ * take back the share M12c had given to the Speier and the Brocken.
  */
 export function mitteWaveTier(g: number, bosses: BossKind[] = [], zone = 0): WaveDef {
   const calm = zone === 2;
   const MIX: Array<Partial<Record<EnemyKind, number>>> = [
-    { walker: 6, runner: 1 + g * 0.1, kabel: 2.2 + g * 0.06, spitter: 1 + g * 0.05, brute: 0.4 + g * 0.06, bass: 0.6 },
-    { walker: 6, kabel: 1.4, spitter: 1.2 + g * 0.05, brute: 0.5 + g * 0.06, bass: 0.5, drone: 1.2 },
+    { walker: 6, runner: 1 + g * 0.1, kabel: 2.2 + g * 0.06, spitter: 0.5 + g * 0.05, brute: g * 0.06 - 0.6, bass: 0.6, zuender: 0.5, schild: 1 },
+    { walker: 6, kabel: 1.4, spitter: 0.7 + g * 0.05, brute: g * 0.06 - 0.5, bass: 0.5, drone: 1.2, zuender: 0.5, schild: 1 },
     { walker: 6, kabel: 1, crow: 0.8, runner: 1 },
-    { walker: 6, kabel: 2, spitter: 1 + g * 0.05, brute: 0.6 + g * 0.08, bass: 1.1 },
+    { walker: 6, kabel: 2, spitter: 0.5 + g * 0.05, brute: g * 0.08 - 0.4, bass: 1.1, zuender: 0.5, schild: 1 },
   ];
   const mix = MIX[zone] ?? MIX[0]!;
   return {

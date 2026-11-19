@@ -6,12 +6,14 @@
 //   &size=0.35 zooms the camera (small bodies such as the rat)
 //   &elite=flink  &view=game|side|front  &open=1  &neon=1 (Mitte cables)  &wind=0.8&go=0.5 (special timing)
 //   &wake=strip (the Weltzeituhr waking up across the strip), &wake=0 (awake)
-import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+//   &base=human1|human2 (H3 step 2, temporary): the zombie bodies on a human base candidate (tools/build-human.mjs)
+import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer, type Mesh } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
 import { loadCharacters } from '../src/render/characters';
 import { EnemyView } from '../src/render/enemies';
 import { LOOK } from '../src/render/looks';
-import { Materials } from '../src/render/materials';
+import { Materials, type LitMaterial } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
 import { makeElite, spawnEnemy } from '../src/sim/enemies';
 import { createSim } from '../src/sim/sim';
@@ -29,6 +31,25 @@ renderer.setSize(W * n, H, false);
 canvas.style.width = `${W * n}px`;
 const materials = new Materials(LOOK, PROFILES.qualitaet);
 const assets = await loadCharacters(materials, true);
+const base = q.get('base');
+if (base === 'human1' || base === 'human2') {
+  // H3 step 2: a human body on the zombie's skeleton. human1 has the zombie's proportions (its clips fit as they
+  // are); human2 is the hero's body, so it takes the clips fitted to the hero.
+  const g = await new GLTFLoader().loadAsync(`/assets/characters/${base}.glb`);
+  g.scene.traverse((o) => {
+    const mesh = o as Mesh;
+    if (!mesh.isMesh) return;
+    const src = mesh.material as LitMaterial;
+    const mat = materials.fromGltf(src);
+    mat.name = src.name;
+    mesh.material = mat;
+    mesh.castShadow = true;
+    mesh.frustumCulled = false;
+  });
+  // Both bodies: the ghouls (zombie) and the male humanoid bosses (human) take the candidate.
+  assets.zombie = assets.human = g.scene;
+  if (base === 'human2') assets.zombieClips = new Map([...assets.zombieClips.keys()].map((k) => [k, assets.heroClips.get(k)!]));
+}
 const scene = new Scene();
 scene.background = new Color(0x26343a);
 scene.add(new HemisphereLight(0xdfeeff, 0x3a3020, 2.2));
@@ -67,7 +88,7 @@ for (let i = 0; i < n; i++) {
   // Let fades and springs settle on the pose.
   for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
   const size = Number(q.get('size') ?? 0) || Math.max(1, def.body === 'rex' ? 3.2 : def.body === 'raptor' ? 1.3 : def.kind === 'wachdrohne' ? 1.6 : def.scale);
-  if (view === 'front') cam.position.set(0, 1.3 * size, 6.2 * size); else if (view === 'game') cam.position.set(0, 7 * size, 6.6 * size); else cam.position.set(-4.6 * size, 2.2 * size, 4.2 * size);
+  if (view === 'front') cam.position.set(0, 1.3 * size, 6.2 * size); else if (view === 'back') cam.position.set(0, 1.3 * size, -6.2 * size); else if (view === 'profile') cam.position.set(6.2 * size, 1.3 * size, 0); else if (view === 'game') cam.position.set(0, 7 * size, 6.6 * size); else cam.position.set(-4.6 * size, 2.2 * size, 4.2 * size);
   cam.lookAt(0, 0.95 * size * (view === 'game' ? 0.5 : 1), 0.2);
   renderer.setViewport(i * W, 0, W, H);
   renderer.setScissor(i * W, 0, W, H);

@@ -627,7 +627,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : '');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : '');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -820,6 +820,11 @@ function drainEvents(): void {
         if (tip && kind && !tips[`sight:${kind}`]) { tips[`sight:${kind}`] = 1; lootUi.toast(`<span style="color:#7dd3ff">Tipp</span> · ${tip}`, 5); }
         break;
       }
+      case 'fund':
+        // 2D #14, #27: a Fund is kept for good, so the profile is written at once (the checkpoint stays).
+        ui.banner(ev.title, ev.line);
+        saveProfile();
+        break;
       case 'kodex':
         lootUi.toast(`Neu im Kodex · <span style="color:#ef9f27">${ev.name}</span>`);
         break;
@@ -1100,19 +1105,48 @@ window.__game = {
 // The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
 showTunnelButton();
 
+/**
+ * Which Quaternius mechs this run can meet: `?spawn=` kinds and the map's bosses (H3: the Turmwächter walks on
+ * Leela). A map without own bosses brings the default endless bosses, the Turmwächter among them.
+ */
+function mechsFor(): boolean | 'small' {
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  // M15 step 8: wave kinds too (the U2 tunnel brings Uhrwerkläufer under a Schaffner).
+  const waves = level?.encounters.flatMap((e) => e.waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix[k as keyof typeof w.mix] ?? 0) > 0))) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own, ...waves, ...(own.length === 0 && !isCamp ? ['waechter'] : [])];
+  const body = (k: string): string | undefined => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body;
+  if (kinds.some((k) => body(k) === 'mechBig' || /^(volkskoloss|weltzeituhr)/.test(k))) return true;
+  return kinds.some((k) => body(k) === 'mech') ? 'small' : false;
+}
+/** H3: the human boss base, where a male humanoid boss can appear (own bosses, `?spawn=`, maps without own bosses). */
+function humansFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
+  return own.length === 0 || kinds.some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'human');
+}
+/** H3: the female boss base (Spreehexe, Wurzel-Mutter), where one of them can appear. */
+function femalesFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  return [...opts.spawn.map((k) => k.split('+')[0]!), ...own].some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'female');
+}
+
 // M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.
 const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
-  mechs: opts.spawn.some((k) => /^(uhrwerk|volkskoloss|weltzeituhr)/.test(k)),
+  mechs: mechsFor(),
+  humans: humansFor(),
+  females: femalesFor(),
 })
   .then((r) => {
     renderer = r;
     r.setEco(opts.eco);
     r.reset(sim);
     // H1 step 5: the live, turnable hero replaces the painted portrait in the inventory doll.
-    const preview = r.heroPreview(() => ({ look: heroLook(sim.equipment), weapon: weaponModel(sim.stats.kind, sim.equipment.w?.base ?? 'rohr'), element: sim.stats.elements[0] }));
+    const preview = r.heroPreview(() => ({ look: heroLook(sim.equipment), weapon: weaponModel(sim.stats.kind, sim.equipment.w?.base ?? 'rohr', sim.equipment.w?.set), element: sim.stats.elements[0] }));
     void preview.warm().then(() => inventory.setPortrait(preview));
     window.addEventListener('resize', () => r.resize());
     ui.loaded();

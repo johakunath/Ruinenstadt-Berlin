@@ -236,7 +236,8 @@ describe('Xhain map (M15, concept B)', () => {
     expect(log.filter((e) => e.type === 'waveStart')).toHaveLength(31);
     expect(log.filter((e) => e.type === 'zoneClear').map((e) => (e as { zone: number }).zone)).toEqual([0, 1, 2, 3]);
     expect(log.at(-1)?.type).toBe('victory');
-  });
+    // A whole district run: about 2.5 s here, over 5 s on a busy CI runner (the Mitte run has the same budget).
+  }, 30000);
 
   it('Blockrand (M15, variant A): tall rows never stand on the camera side of their street', () => {
     const m = xhainMap(1), lots = generateLots(m).filter((l) => l.block);

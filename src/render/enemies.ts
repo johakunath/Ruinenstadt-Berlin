@@ -8,10 +8,12 @@
 // M15 Alexanderplatz: the Quaternius mechs (Uhrwerkläufer, Großer Uhrwerkläufer) with a clock-face
 // shield, the code-built Kernspeier and Koloss, the Weltzeituhr (the landmark's own rig on four legs),
 // Wurzler gear and the Brigadeghul's Blaumann (`enemies-alex.ts`, `clock.ts`).
+// WP5: bodies match their Kodex busts (Brocken's orange vest, the Kabelghul's cyan cables, the Speier's belly);
+// Zünder (dynamite and a lit fuse), Schildträger (riot helmet, shield that drops when the guard opens), Heuler.
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
-  BoxGeometry, CatmullRomCurve3, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
-  type AnimationClip, type BufferGeometry, type Object3D, type SkinnedMesh,
+  AnimationMixer, BoxGeometry, BufferGeometry, CatmullRomCurve3, Color, ExtrudeGeometry, Float32BufferAttribute, LatheGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
+  type AnimationClip, type Bone, type Object3D, type SkinnedMesh,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -50,15 +52,18 @@ const TINTS: Record<EnemyKind, number[]> = {
   spitter: [0xa9c77c, 0x9cbf86],
   raptor: [0xffffff, 0xe8f0d8, 0xf2e2d0],
   crow: [0xffffff],
-  feldwebel: [0x9fb0a0],
-  waechter: [0x8f8a80],
+  // WP5 step 3 (Johannes): skin per district. Köpenick 1906 garrison: pale parchment (board, busts X04, X01, X03).
+  feldwebel: [0xc2b296],
+  // H3: the Turmwächter is a mech (Leela); this tints her paint towards weathered rust-brown steel (bust X03).
+  waechter: [0xc8946c],
   rex: [0xffffff],
-  hauptmann: [0xb39a86],
-  schaffner: [0xa8a49a],
+  hauptmann: [0xc9b9a0],
+  // Tunnel: grey-yellow under the work lamps. Xhain 1981: pale grey (Grenzer), soot (Brandmeister), sewer grey-pink.
+  schaffner: [0xb8b29c],
   rat: [0xffffff],
-  grenzer: [0xb0b4a2],
-  brandmeister: [0xc4a08a],
-  rattenmutter: [0x9c9a7e],
+  grenzer: [0xbab8a8],
+  brandmeister: [0xb89480],
+  rattenmutter: [0xb0a094],
   spreehexe: [0xc8ccb8],
   // M12c Mitte (board: pale violet-grey skin under neon).
   kabel: [0xc4b8c0, 0xb8aeb8],
@@ -70,34 +75,43 @@ const TINTS: Record<EnemyKind, number[]> = {
   bassprediger: [0xa8989c],
   uhrwerk: [0xffffff], wurzler: [0x9aa878, 0xa8a070], kernspeier: [0xffffff],
   wurzelmutter: [0x8e9a6a], uhrwerkgross: [0xffffff], volkskoloss: [0xffffff], weltzeituhr: [0xffffff],
+  // WP5 (busts E07, E06, E08): grey-brown ghouls.
+  zuender: [0xb8b098, 0xaaa88e], schild: [0xa4aaa0], heuler: [0xbca6a0, 0xb4a0a6],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
-  spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x5a6f9a, waechter: 0x6a5a4a, hauptmann: 0x44588c, schaffner: 0x2e3f5c,
-  // M12b Xhain 1981: GDR border grey-green, riot red-orange, sewer brown-green, squat black.
-  grenzer: 0x6f7a5e, brandmeister: 0xb8482a, rattenmutter: 0x5e5a3a, spreehexe: 0x2e2834,
+  // WP5 step 3 (Johannes): trousers per district. Köpenick 1906: dark Prussian blue (the captain's near black);
+  // tunnel: the conductor's navy.
+  spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x3a4462, hauptmann: 0x2e3550, schaffner: 0x2a3248,
+  // Xhain 1981: GDR stone grey (Grenzer), sooty turnout trousers (Brandmeister), oxblood rags (Rattenmutter), squat black.
+  grenzer: 0x6c7060, brandmeister: 0x4a3e34, rattenmutter: 0x5a2a24, spreehexe: 0x2e2834,
   // M12c Mitte 2089: rags in violet-brown, the Boxenkopf's purple, black for the bouncer and the conductor.
   kabel: 0x6a5260, bass: 0x5a4a78, tuersteher: 0x2a2a30, dirigent: 0x26242a, bassprediger: 0x3e2c48,
   // M15 Alexanderplatz 1989: garden rags, the Brigadeghul's blue Blaumann.
   wurzler: 0x6a5634, wurzelmutter: 0x5a4a2a,
+  // WP5: brown rags (Zünder), dark grey under the armour (Schildträger), a faded red shirt (Heuler).
+  zuender: 0x6a5a44, schild: 0x4a5058, heuler: 0x9a3a30,
 };
 const CLOTH_BRIGADE = 0x34528e;
+/** WP5: rag tints for normal ghouls without own clothing colour (multiplies the painted rags), one per body. */
+const RAGS = [0xffffff, 0xd8b890, 0x8fa4c8, 0xc89880, 0x9cb088, 0xb49cc8, 0xe0d0a0, 0xa07868];
 
 /** Proportions by bone scale; children inherit, so a big chest needs a smaller head to match. */
 const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   runner: { upperarm_l: 1.12, upperarm_r: 1.12, Head: 0.94 },
   brute: { spine_02: 1.32, Head: 0.72 },
-  spitter: { spine_01: 1.3, spine_03: 0.78, Head: 1.12 },
+  // Bust E03: a bloated belly (the `belly` gear) under a narrow chest and a big head.
+  spitter: { spine_01: 1.3, spine_03: 0.8, Head: 1.1 },
   feldwebel: { spine_02: 1.14, Head: 0.9 },
-  waechter: { upperarm_l: 1.18, upperarm_r: 1.18, Head: 0.95 },
   hauptmann: { spine_02: 1.12, Head: 0.92 },
   schaffner: { spine_02: 1.18, Head: 0.9 },
   grenzer: { spine_02: 1.08, Head: 0.92 },
   brandmeister: { spine_02: 1.22, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.86 },
-  rattenmutter: { spine_01: 1.15, spine_03: 1.12, Head: 0.95 },
+  // WP5 step 3: the rat head replaces the skull (mounted on the neck).
+  rattenmutter: { spine_01: 1.15, spine_03: 1.12, Head: 0.05 },
   spreehexe: { upperarm_l: 0.92, upperarm_r: 0.92, Head: 0.96 },
   // Speaker heads: the skull shrinks into the box mounted on the neck.
   kabel: { spine_02: 0.82, upperarm_l: 1.12, upperarm_r: 1.12, Head: 1.06 },
@@ -105,29 +119,46 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   tuersteher: { spine_02: 1.3, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.74 },
   dirigent: { spine_02: 0.92, Head: 1.02 },
   bassprediger: { spine_02: 1.12, Head: 0.05 },
-  wurzler: { upperarm_l: 1.1, upperarm_r: 1.1 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.9 },
+  schild: { spine_02: 1.12, Head: 0.9 }, heuler: { spine_02: 0.9, Head: 1.12 },
+  wurzler: { upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.05 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
 const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
-  runner: [0.86, 1], brute: [1.12, 1], feldwebel: [1.1, 1], waechter: [0.9, 1.1], hauptmann: [1.1, 1],
+  runner: [0.86, 1], brute: [1.12, 1], spitter: [1.12, 0.97], schild: [1.08, 1], heuler: [0.9, 1.04], feldwebel: [1.1, 1], hauptmann: [1.1, 1],
   grenzer: [1, 1.04], brandmeister: [1.12, 1], rattenmutter: [1.15, 0.85], spreehexe: [0.86, 1.16],
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
 };
+/** H3: humanoid bosses stand upright (`EnemyView.straighten`); the Rattenmutter keeps her hunch. */
+const UPRIGHT: Partial<Record<EnemyKind, true>> = {
+  feldwebel: true, hauptmann: true, schaffner: true, grenzer: true, brandmeister: true, spreehexe: true,
+  tuersteher: true, dirigent: true, bassprediger: true, wurzelmutter: true,
+};
+/** The bones whose zombie-to-upright turn `straighten` applies. */
+const STRAIGHT = ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head', 'clavicle_l', 'clavicle_r'] as const;
+/** H3: arm bones, straightened only while walking or standing (strikes and specials keep their own arm motion). */
+const STRAIGHT_ARMS = ['upperarm_l', 'upperarm_r', 'lowerarm_l', 'lowerarm_r'] as const;
 /** Bent forward all the time (the Rattenmutter's hunch, the Kabelghul's crouch). */
-const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2, kabel: 0.28 };
+const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.34, kabel: 0.28, heuler: 0.12 };
 /** Eye glow per kind (zombie rig); bosses default to ember, the rest to the zombie green. */
-const EYES: Partial<Record<EnemyKind, number>> = { spitter: 0x97ff5a, kabel: 0xff4fa3, tuersteher: 0xff4fa3, dirigent: 0xff4fa3 };
+const EYES: Partial<Record<EnemyKind, number>> = { spitter: 0x97ff5a, kabel: 0x43d1cf, tuersteher: 0xff4fa3, dirigent: 0xff4fa3 };
 /** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
 const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, brute: true };
 
 // ---------------------------------------------------------------- gear
 
 interface GearKit {
-  steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; blue: LitMaterial; cloth: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial;
-  olive: LitMaterial; ember: LitMaterial; moss: LitMaterial; punk: LitMaterial; flame: LitMaterial;
+  steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial;
+  olive: LitMaterial; punk: LitMaterial; flame: LitMaterial;
   neon: LitMaterial; cyan: LitMaterial; violet: LitMaterial; speaker: LitMaterial; cone: LitMaterial; hazard: LitMaterial; paper: LitMaterial; jacket: LitMaterial; lining: LitMaterial;
+  vest: LitMaterial; reflect: LitMaterial; plate: LitMaterial; belly: LitMaterial; flesh: LitMaterial; riot: LitMaterial; visor: LitMaterial; spark: LitMaterial;
+  // WP5 step 3 (boss looks): coats per district, the Brandmeister's bands, the Rattenmutter's fur, the Turmwächter's tower.
+  garde: LitMaterial; officer: LitMaterial; navy: LitMaterial; turnout: LitMaterial; band: LitMaterial; helmet: LitMaterial;
+  hair: LitMaterial; white: LitMaterial; fur: LitMaterial; furDark: LitMaterial; grime: LitMaterial; rags: LitMaterial; pink: LitMaterial; eye: LitMaterial;
+  tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial; window: LitMaterial; helmFire: LitMaterial; helmFlame: LitMaterial; garden: LitMaterial;
+  /** Shared vertex-coloured materials of the boss gear (`assemble` with `paint`). */
+  paint: LitMaterial; metal: LitMaterial;
 }
 let kit: GearKit | null = null;
 function gearKit(m: Materials): GearKit {
@@ -137,14 +168,10 @@ function gearKit(m: Materials): GearKit {
     rust: m.surface({ color: 0x6e4a34, roughness: 0.7, metalness: 0.5 }),
     dark: m.surface({ color: 0x1c1d22, roughness: 0.6, metalness: 0.2 }),
     red: m.surface({ color: 0xa8281e, roughness: 0.9, doubleSided: true }),
-    blue: m.surface({ color: 0x2f3f6a, roughness: 0.9, doubleSided: true }),
-    cloth: m.surface({ color: 0x4a3c30, roughness: 0.95, doubleSided: true }),
     bone: m.surface({ color: 0xd9d2b4, roughness: 0.8 }),
     acid: m.surface({ color: 0x5a7a2a, emissive: 0x97c459, emissiveIntensity: 1.6, roughness: 0.4 }),
     lamp: m.surface({ color: 0x3a2a12, emissive: 0xffb04a, emissiveIntensity: 3, roughness: 0.4 }),
     olive: m.surface({ color: 0x55604a, roughness: 0.9, doubleSided: true }),
-    ember: m.surface({ color: 0xb03c1c, roughness: 0.85, doubleSided: true }),
-    moss: m.surface({ color: 0x4c4a2c, roughness: 0.95, doubleSided: true }),
     punk: m.surface({ color: 0x7a2ab8, emissive: 0x9a3ae0, emissiveIntensity: 0.6, roughness: 0.6 }),
     // Torch flame: emissive only, no light (the light count stays constant).
     flame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
@@ -158,7 +185,51 @@ function gearKit(m: Materials): GearKit {
     paper: m.surface({ color: 0xe4dccb, roughness: 0.9, doubleSided: true }),
     jacket: m.surface({ color: 0x2c3328, roughness: 0.75, doubleSided: true }),
     lining: m.surface({ color: 0xe1792a, roughness: 0.8, doubleSided: true }),
+    // WP5: the Brocken's high-vis vest with its reflective bands (bust E02), the Speier's belly in its skin tone,
+    // the Heuler's swollen throat, riot gear, the Zünder's fuse spark (emissive only, no light).
+    vest: m.surface({ color: 0xd8641c, roughness: 0.85, doubleSided: true }),
+    reflect: m.surface({ color: 0xc8ccbc, emissive: 0x3a3c34, emissiveIntensity: 0.6, roughness: 0.4, doubleSided: true }),
+    belly: m.surface({ color: 0x9cb478, roughness: 0.8 }),
+    flesh: m.surface({ color: 0xa86a62, roughness: 0.7 }),
+    riot: m.surface({ color: 0x3a4248, roughness: 0.55, metalness: 0.4 }),
+    plate: m.surface({ color: 0x8c8472, roughness: 0.6, metalness: 0.25 }),
+    visor: m.surface({ color: 0x6a7a80, roughness: 0.15, metalness: 0.6, doubleSided: true }),
+    spark: m.surface({ color: 0x5a2a04, emissive: 0xffc04a, emissiveIntensity: 4, roughness: 0.5 }),
+    // Köpenick 1906: Prussian blue greatcoats (the captain's darker), red collars and capes; tunnel: the conductor's navy.
+    garde: m.surface({ color: 0x34477a, roughness: 0.85, doubleSided: true }),
+    officer: m.surface({ color: 0x28355e, roughness: 0.8, doubleSided: true }),
+    navy: m.surface({ color: 0x232c44, roughness: 0.85, doubleSided: true }),
+    // Xhain 1981: a sooty turnout coat with yellow reflective bands, a leather fire helmet.
+    turnout: m.surface({ color: 0x3c3229, roughness: 0.9, doubleSided: true }),
+    band: m.surface({ color: 0xe0b428, emissive: 0x4a3a08, emissiveIntensity: 0.7, roughness: 0.45, doubleSided: true }),
+    helmet: m.surface({ color: 0x6a4224, roughness: 0.55, metalness: 0.15, doubleSided: true }),
+    hair: m.surface({ color: 0x4a4038, roughness: 0.9 }),
+    white: m.surface({ color: 0xdcd8cc, roughness: 0.9 }),
+    fur: m.surface({ color: 0x6e604e, roughness: 1, doubleSided: true }),
+    // H3: the Rattenmutter's matted, dirty fur (darker tufts, grime on the snout, a scar).
+    furDark: m.surface({ color: 0x3e342a, roughness: 1, doubleSided: true }),
+    grime: m.surface({ color: 0x2a221c, roughness: 1 }),
+    rags: m.surface({ color: 0x6a2e26, roughness: 0.95, doubleSided: true }),
+    pink: m.surface({ color: 0xc08478, roughness: 0.7 }),
+    eye: m.surface({ color: 0x401010, emissive: 0xff4030, emissiveIntensity: 2.6, roughness: 0.4 }),
+    // The Turmwächter: the Fernsehturm's steel sphere and its ribbed concrete shaft; the red beacon on the antenna.
+    tower: m.surface({ color: 0x8c8474, roughness: 0.4, metalness: 0.6 }),
+    shaft: m.surface({ color: 0x74685a, roughness: 0.85, doubleSided: true }),
+    beacon: m.surface({ color: 0x401008, emissive: 0xff3a1a, emissiveIntensity: 3, roughness: 0.4 }),
+    // H3: the sphere's window ring, its own material so it can flare while he fires (one Turmwächter at a time).
+    window: m.surface({ color: 0x0a3a3a, emissive: 0x43d1cf, emissiveIntensity: 2.4, roughness: 0.4 }),
+    // The Brandmeister's helmet fire: orange outer flames (less intense than the torch so they stay orange), yellow cores.
+    fire: m.surface({ color: 0x6a1a04, emissive: 0xff5a14, emissiveIntensity: 3.4, roughness: 0.5 }),
+    // H3: the Brandmeister's helmet fire has its own pair, so pulsing it leaves the Zünder's fuse flame alone (review fix).
+    // H3: the Wurzel-Mutter's garden dress on the female base.
+    garden: m.surface({ color: 0x4e5a30, roughness: 0.95, doubleSided: true }),
+    helmFire: m.surface({ color: 0x6a1a04, emissive: 0xff5a14, emissiveIntensity: 3.4, roughness: 0.5 }),
+    helmFlame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
+    paint: m.surface({ color: 0xffffff, roughness: 0.85, vertexColors: true, doubleSided: true }),
+    metal: m.surface({ color: 0xffffff, roughness: 0.4, metalness: 0.8, vertexColors: true }),
   };
+  // The intensity each material was made with (animated glows change theirs; `assemble` sorts by this one).
+  for (const mat of Object.values(kit)) mat.userData.baseEmissive ??= mat.emissiveIntensity;
   return kit;
 }
 
@@ -170,18 +241,41 @@ const tf = (g: BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, 
 };
 
 /** Merges parts per material into a few meshes. */
-function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial): Group {
+function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial, paint = false): Group {
   const by = new Map<keyof GearKit | 'pulse', BufferGeometry[]>();
+  // WP5 step 3 (`paint`): the boss coats would cost one draw per material per bone. Unlit materials share one
+  // vertex-coloured mesh per bone; metal keeps its shine only where it is a large part of the bone's gear.
+  const family = (m: keyof GearKit | 'pulse'): keyof GearKit | 'pulse' => {
+    if (!paint || m === 'pulse') return m;
+    const mat = k[m];
+    // By the intensity the material was made with: some glows are animated (the tower's window ring dims on
+    // death), and a body built meanwhile must still keep them as glows (review fix).
+    const base = (mat.userData.baseEmissive as number | undefined) ?? (mat.userData.baseEmissive = mat.emissiveIntensity);
+    const glow = base * Math.max(mat.emissive.r, mat.emissive.g, mat.emissive.b);
+    if (glow > 0.3) return m;
+    return mat.metalness >= 0.6 ? 'metal' : 'paint';
+  };
+  const tris = new Map<string, number>();
+  if (paint) for (const [g, m] of parts) { const f = family(m); tris.set(f, (tris.get(f) ?? 0) + (g.index?.count ?? g.attributes.position!.count)); }
+  const total = [...tris.values()].reduce((a, b) => a + b, 0);
   for (const [g, m] of parts) {
-    const list = by.get(m) ?? [];
-    list.push(g.index ? g.toNonIndexed() : g);
-    by.set(m, list);
+    let f = family(m);
+    if (f === 'metal' && (tris.get('metal') ?? 0) < total * 0.3) f = 'paint';
+    const flat = g.index ? g.toNonIndexed() : g;
+    if (f === 'paint' || f === 'metal') {
+      const c = k[m as keyof GearKit].color, n = flat.attributes.position!.count, col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+      flat.setAttribute('color', new Float32BufferAttribute(col, 3));
+    }
+    const list = by.get(f) ?? [];
+    list.push(flat);
+    by.set(f, list);
   }
   const group = new Group();
   for (const [m, list] of by) {
     const mesh = new Mesh(mergeGeometries(list), m === 'pulse' ? pulse ?? k.neon : k[m]);
     // Lit cables and rings cast no shadow (thin, emissive).
-    mesh.castShadow = castShadow && m !== 'neon' && m !== 'pulse' && m !== 'cyan';
+    mesh.castShadow = castShadow && m !== 'neon' && m !== 'pulse' && m !== 'cyan' && m !== 'fire' && m !== 'flame';
     group.add(mesh);
   }
   return group;
@@ -191,26 +285,312 @@ function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMat
 const cable = (pts: Array<[number, number, number]>, r = 0.014): BufferGeometry =>
   new TubeGeometry(new CatmullRomCurve3(pts.map(([x, y, z]) => new Vector3(x, y, z))), 10, r, 4, false);
 
-/** 2D `D.cyber` (and the Kabelghul): `n` pink cables from the skull base out and down to the shoulder blades (mounted on the neck). */
-function cables(n: number, spread: number, r = 0.014): Part[] {
+/** 2D `D.cyber` (and the Kabelghul): `n` lit cables from the skull base out and down to the shoulder blades (mounted on the neck). Pink; cyan on the Kabelghul (bust E13). */
+function cables(n: number, spread: number, r = 0.014, lit: 'neon' | 'cyan' = 'neon'): Part[] {
   const out: Part[] = [];
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) - 0.5 : 0;
-    out.push([cable([[t * 0.08, 0.07, -0.05], [t * spread * 0.8, 0.02, -0.17], [t * spread * 1.3, -0.13, -0.21], [t * spread * 1.7, -0.32, -0.15]], r), 'neon']);
+    out.push([cable([[t * 0.08, 0.07, -0.05], [t * spread * 0.8, 0.02, -0.17], [t * spread * 1.3, -0.13, -0.21], [t * spread * 1.7, -0.32, -0.15]], r), lit]);
   }
   return out;
 }
-/** Board E13 / Potsdamer Platz: thick cables that arch up off the back and plug into the skull, readable from the camera. */
-function arches(n: number, r: number): Part[] {
+/** A dark plug sleeve with a lit ring where a cable meets the body, aligned with the curve at `t` (0 or 1). */
+function plug(curve: CatmullRomCurve3, t: number, lit: 'neon' | 'cyan'): Part[] {
+  const at = curve.getPoint(t), dir = curve.getTangent(t);
+  const q = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir);
+  const place = (g: BufferGeometry, k: number): BufferGeometry => g.applyQuaternion(q).translate(at.x + dir.x * k, at.y + dir.y * k, at.z + dir.z * k);
+  const into = t === 0 ? 1 : -1;
+  return [
+    [place(new CylinderGeometry(0.022, 0.026, 0.05, 10), into * 0.018), 'dark'],
+    [place(new TorusGeometry(0.022, 0.006, 4, 12).rotateX(Math.PI / 2), into * 0.045), lit],
+  ];
+}
+/**
+ * WP5 Kabelghul (bust E13): five smooth cables that loop up off the skull and plug into the shoulder blades,
+ * each with a sleeve at both ends; the loops differ in height so they read as a tangle, not a comb.
+ */
+function kabelLoops(lit: 'neon' | 'cyan'): Part[] {
   const out: Part[] = [];
-  for (let i = 0; i < n; i++) {
-    const t = n > 1 ? i / (n - 1) - 0.5 : 0;
-    out.push([cable([[t * 0.1, 0.07, -0.05], [t * 0.3, 0.22, -0.2], [t * 0.42, 0.12, -0.36], [t * 0.36, -0.12, -0.3], [t * 0.3, -0.32, -0.18]], r), 'neon']);
+  const loops: Array<[number, number, number]> = [[-0.1, 0.11, 0.9], [-0.05, 0.17, 1.05], [0.005, 0.14, 1], [0.055, 0.18, 1.1], [0.1, 0.1, 0.85]];
+  for (const [x, h, w] of loops) {
+    const c = new CatmullRomCurve3([[x * 0.5, 0.1, -0.06], [x * 1.2, 0.1 + h * 0.7, -0.12], [x * 1.8, 0.1 + h, -0.2 * w], [x * 2.1, 0.04 + h * 0.4, -0.27 * w], [x * 1.9, -0.08, -0.23], [x * 1.6, -0.17, -0.13]].map(([a, b, d]) => new Vector3(a, b, d)));
+    out.push([new TubeGeometry(c, 28, 0.014, 7, false), lit], ...plug(c, 0, lit), ...plug(c, 1, lit));
   }
   return out;
 }
 /** Two lit implant dots on the temple and the cheek (mounted on the head). */
-const implants = (): Part[] => [[tf(new SphereGeometry(0.022, 6, 4), 0.08, 0.06, 0.07), 'neon'], [tf(new SphereGeometry(0.017, 6, 4), 0.09, 0.0, 0.07), 'neon']];
+const implants = (lit: 'neon' | 'cyan' = 'neon'): Part[] => [[tf(new SphereGeometry(0.022, 6, 4), 0.08, 0.06, 0.07), lit], [tf(new SphereGeometry(0.017, 6, 4), 0.09, 0.0, 0.07), lit]];
+
+/** Brocken vest profile (radius, height) from the waist to the shoulders, around spine_03. */
+const VEST: Array<[number, number]> = [[0.2, -0.34], [0.226, -0.24], [0.255, -0.12], [0.268, -0.02], [0.262, 0.06], [0.22, 0.13]];
+/** A lathed shell along `profile`, open by `gap` at the front, `grow` pushes it out (bands over the vest). */
+function vestShell(profile: Array<[number, number]>, gap: number, grow = 1): BufferGeometry {
+  const pts = profile.map(([r, y]) => new Vector2(r * grow, y));
+  return new LatheGeometry(pts, 24, gap / 2, Math.PI * 2 - gap).scale(1.2, 1, 0.98).translate(0, 0, 0.02);
+}
+
+
+// ---------------------------------------------------------------- WP5 step 3: clothes fitted to the body
+
+/**
+ * One cross-section of a fitted shell in model space: centre, the side axis `u`, the front axis `w` (+z in
+ * an upright body) and the two radii. Angle 0 on a ring is the front, positive towards +u.
+ */
+interface Ring { c: Vector3; u: Vector3; w: Vector3; ru: number; rw: number }
+
+/**
+ * The zombie body in the pose it holds while gear is built (the first idle frame, `inIdle`), in model space,
+ * with the bone that moves each vertex most. Clothes are fitted to it, so a coat follows this kind's
+ * proportions (SHAPE) instead of being a cylinder at a guessed place.
+ */
+class BodyFit {
+  readonly pts: Vector3[] = [];
+  readonly bone: string[] = [];
+  /** Centre between the eyes: faces (moustaches, snouts) are placed from it; the face looks down in idle. */
+  readonly eyes = new Vector3();
+  constructor(private readonly model: Object3D) {
+    let mesh: SkinnedMesh | undefined, eyes: SkinnedMesh | undefined;
+    model.traverse((o) => {
+      if (!(o as SkinnedMesh).isSkinnedMesh) return;
+      if (o.name === 'Eyes') eyes = o as SkinnedMesh; else mesh ??= o as SkinnedMesh;
+    });
+    const toModel = new Matrix4();
+    if (eyes) {
+      toModel.copy(model.matrixWorld).invert().multiply(eyes.matrixWorld);
+      const n = eyes.geometry.attributes.position!.count, v = new Vector3();
+      for (let i = 0; i < n; i++) this.eyes.add(eyes.getVertexPosition(i, v).applyMatrix4(toModel));
+      this.eyes.multiplyScalar(1 / Math.max(1, n));
+    }
+    if (!mesh) return;
+    const g = mesh.geometry, si = g.attributes.skinIndex!, sw = g.attributes.skinWeight!;
+    toModel.copy(model.matrixWorld).invert().multiply(mesh.matrixWorld);
+    for (let i = 0; i < g.attributes.position!.count; i++) {
+      let best = 0, bw = -1;
+      for (let j = 0; j < 4; j++) { const w = sw.getComponent(i, j); if (w > bw) { bw = w; best = si.getComponent(i, j); } }
+      this.bone.push(mesh.skeleton.bones[best]?.name ?? '');
+      this.pts.push(mesh.getVertexPosition(i, new Vector3()).applyMatrix4(toModel));
+    }
+  }
+  /** A bone's position in model space. */
+  at(name: string): Vector3 {
+    const v = new Vector3();
+    this.model.getObjectByName(name)?.getWorldPosition(v);
+    return this.model.worldToLocal(v);
+  }
+  /** Bounding box centre and size of the vertices of these bones. */
+  box(bones: string[]): { c: Vector3; min: Vector3; max: Vector3 } {
+    const set = new Set(bones), min = new Vector3(9, 9, 9), max = new Vector3(-9, -9, -9);
+    this.pts.forEach((p, i) => { if (set.has(this.bone[i]!)) { min.min(p); max.max(p); } });
+    return { c: min.clone().add(max).multiplyScalar(0.5), min, max };
+  }
+  /**
+   * `n + 1` rings along `from` → `to` (t 0..1, here `t0`..`t1`) round the vertices of `bones`: each ring is the
+   * smallest axis-aligned ellipse round the box of its slice that holds every vertex, plus `pad`.
+   */
+  rings(bones: string[], from: Vector3, to: Vector3, n: number, t0 = 0, t1 = 1, pad = 0.03): Ring[] {
+    const set = new Set(bones);
+    const axis = to.clone().sub(from);
+    const len = axis.length();
+    axis.normalize();
+    const u = new Vector3(1, 0, 0).addScaledVector(axis, -axis.x).normalize();
+    const w = new Vector3().crossVectors(u, axis);
+    const bins: Array<Array<[number, number]>> = Array.from({ length: n }, () => []);
+    const d = new Vector3();
+    this.pts.forEach((p, i) => {
+      if (!set.has(this.bone[i]!)) return;
+      d.copy(p).sub(from);
+      const t = d.dot(axis) / len;
+      if (t < t0 || t > t1) return;
+      bins[Math.min(n - 1, Math.floor(((t - t0) / (t1 - t0)) * n))]!.push([d.dot(u), d.dot(w)]);
+    });
+    const out: Ring[] = [];
+    for (let k = 0; k <= n; k++) {
+      const slice = [...(bins[k - 1] ?? []), ...(bins[k] ?? [])];
+      const t = t0 + ((t1 - t0) * k) / n;
+      let a = 9, b = -9, c = 9, e = -9;
+      for (const [x, y] of slice) { a = Math.min(a, x); b = Math.max(b, x); c = Math.min(c, y); e = Math.max(e, y); }
+      if (!slice.length) { a = c = -0.05; b = e = 0.05; }
+      const cu = (a + b) / 2, cw = (c + e) / 2;
+      let hu = Math.max(0.03, (b - a) / 2), hw = Math.max(0.03, (e - c) / 2);
+      let s = 0;
+      for (const [x, y] of slice) s = Math.max(s, Math.hypot((x - cu) / hu, (y - cw) / hw));
+      if (s > 1) { hu *= s; hw *= s; }
+      out.push({ c: from.clone().addScaledVector(axis, t * len).addScaledVector(u, cu).addScaledVector(w, cw), u: u.clone(), w: w.clone(), ru: hu + pad, rw: hw + pad });
+    }
+    // Smooth the radii a little (never below the fit), so the shell has no dents between slices.
+    for (let k = 1; k < out.length - 1; k++) {
+      const r = out[k]!, p = out[k - 1]!, q = out[k + 1]!;
+      r.ru = Math.max(r.ru, (p.ru + q.ru) / 2 - 0.005);
+      r.rw = Math.max(r.rw, (p.rw + q.rw) / 2 - 0.005);
+    }
+    return out;
+  }
+}
+
+/** A ring between `a` and `b` (`k` 0..1), or along a ring list at fractional index `f`. */
+function ringLerp(a: Ring, b: Ring, k: number): Ring {
+  return { c: a.c.clone().lerp(b.c, k), u: a.u.clone().lerp(b.u, k).normalize(), w: a.w.clone().lerp(b.w, k).normalize(), ru: lerp(a.ru, b.ru, k), rw: lerp(a.rw, b.rw, k) };
+}
+function ringAt(rings: Ring[], f: number): Ring {
+  const i = Math.max(0, Math.min(rings.length - 2, Math.floor(f)));
+  return ringLerp(rings[i]!, rings[i + 1]!, Math.max(0, Math.min(1, f - i)));
+}
+/** The same ring grown by `k` and `dr`, moved by (dx, dy, dz) in model space. */
+function ringGrow(r: Ring, k: number, dr = 0, dx = 0, dy = 0, dz = 0): Ring {
+  return { c: r.c.clone().add(new Vector3(dx, dy, dz)), u: r.u.clone(), w: r.w.clone(), ru: r.ru * k + dr, rw: r.rw * k + dr };
+}
+/** A level ring (model axes) under `r`: `dy` down, `dz` forward, with its own radii (a coat skirt). */
+function ringDrop(r: Ring, dy: number, dz: number, ru: number, rw: number, dx = 0): Ring {
+  return { c: r.c.clone().add(new Vector3(dx, -dy, dz)), u: new Vector3(1, 0, 0), w: new Vector3(0, 0, 1), ru, rw };
+}
+/** A point on a ring at angle `a` (0 = front), pushed out by `out`. */
+function ringPoint(r: Ring, a: number, out = 0): Vector3 {
+  return r.c.clone().addScaledVector(r.u, (r.ru + out) * Math.sin(a)).addScaledVector(r.w, (r.rw + out) * Math.cos(a));
+}
+
+/** Builds an indexed grid of `rows` × (`cols` + 1) vertices, faces turned outwards (away from `centre` of row 0), so one-sided materials show. */
+function grid(pos: number[], uv: number[], rows: number, cols: number, centre: Vector3): BufferGeometry {
+  const idx: number[] = [];
+  for (let i = 0; i < rows - 1; i++) for (let j = 0; j < cols; j++) {
+    const a = i * (cols + 1) + j, b = a + cols + 1;
+    idx.push(a, a + 1, b, a + 1, b + 1, b);
+  }
+  const v = (k: number): Vector3 => new Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]);
+  const [a, b, c] = [v(idx[0]!), v(idx[1]!), v(idx[2]!)];
+  const n = b.clone().sub(a).cross(c.clone().sub(a));
+  if (n.dot(a.clone().sub(centre)) < 0) for (let k = 0; k < idx.length; k += 3) [idx[k + 1], idx[k + 2]] = [idx[k + 2]!, idx[k + 1]!];
+  const g = new BufferGeometry();
+  g.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * A surface through `rings`, open by `gap` (radians, centred on the front; a number per ring for a coat that
+ * opens below the waist), relative to `origin` (the bone it is mounted on). `jag`: the last ring's edge is
+ * torn into points that hang this far (fur, rags).
+ */
+function shell(rings: Ring[], origin: Vector3, gap: number | number[] = 0, seg = 20, jag = 0): BufferGeometry {
+  const pos: number[] = [], uv: number[] = [];
+  rings.forEach((r, i) => {
+    const g = typeof gap === 'number' ? gap : gap[i] ?? 0;
+    for (let j = 0; j <= seg; j++) {
+      const a = g / 2 + (j / seg) * (Math.PI * 2 - g);
+      const p = ringPoint(r, a).sub(origin);
+      if (jag && i === rings.length - 1) p.y -= (j % 2) * jag * (0.6 + 0.4 * Math.sin(j * 2.3));
+      pos.push(p.x, p.y, p.z);
+      uv.push(j / seg, i / Math.max(1, rings.length - 1));
+    }
+  });
+  return grid(pos, uv, rings.length, seg, rings[0]!.c.clone().sub(origin));
+}
+/** A strip over `rings` from angle `a0` (first ring) to `a1` (last ring), `half` radians wide, `out` above the shell: sashes, trims, bands. */
+function strip(rings: Ring[], origin: Vector3, a0: number, a1: number, half: number, out = 0.012, seg = 4): BufferGeometry {
+  const pos: number[] = [], uv: number[] = [];
+  rings.forEach((r, i) => {
+    const m = rings.length > 1 ? i / (rings.length - 1) : 0;
+    const a = lerp(a0, a1, m);
+    for (let j = 0; j <= seg; j++) {
+      const p = ringPoint(r, a - half + (2 * half * j) / seg, out).sub(origin);
+      pos.push(p.x, p.y, p.z);
+      uv.push(j / seg, m);
+    }
+  });
+  return grid(pos, uv, rings.length, seg, rings[0]!.c.clone().sub(origin));
+}
+/** A band round the shell between fractional ring indices `f0` and `f1` (reflective bands, cuffs, belts). */
+const band = (rings: Ring[], origin: Vector3, f0: number, f1: number, out = 0.012, gap = 0): BufferGeometry =>
+  shell([ringGrow(ringAt(rings, f0), 1, out), ringGrow(ringAt(rings, f1), 1, out)], origin, gap);
+/** `g` placed on the shell at fractional ring `f`, angle `a`, facing out (+z of `g` along the surface normal). */
+function onShell(g: BufferGeometry, rings: Ring[], origin: Vector3, f: number, a: number, out = 0.008): BufferGeometry {
+  const r = ringAt(rings, f);
+  const p = ringPoint(r, a, out).sub(origin);
+  const n = r.u.clone().multiplyScalar(Math.sin(a) / r.ru).addScaledVector(r.w, Math.cos(a) / r.rw).normalize();
+  return g.applyQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), n)).translate(p.x, p.y, p.z);
+}
+
+/** How a fitted coat is cut. Heights are model meters (the zombie's knee is near 0.45, its calf near 0.3). */
+interface CoatCut {
+  mat: keyof GearKit;
+  /** Bulk over the chest and belly. */
+  pad?: number;
+  /** Hem height of the skirt (none: the coat ends at the waist), its extra width there and the front opening at the hem. */
+  hem?: number; flare?: number; open?: number;
+  /** Sleeves: to the wrist, to the elbow or none. */
+  sleeves?: 'full' | 'upper' | 'none';
+  /** A stand collar in this material. */
+  collar?: keyof GearKit;
+  /** Torn hems (fur, rags). */
+  jag?: number;
+}
+/** The rings of a fitted coat per part, and the parts to mount per bone (callers add buttons, bands and trims). */
+interface Coat {
+  chest: Ring[]; belly: Ring[]; skirt: Ring[]; arm: Record<'upperarm_l' | 'upperarm_r' | 'lowerarm_l' | 'lowerarm_r', Ring[]>; collar: Ring[];
+  /** Mount bone → its position (shell origin) and parts. */
+  parts: Map<string, Part[]>;
+  o(bone: string): Vector3;
+  add(bone: string, ...parts: Part[]): void;
+}
+/**
+ * WP5 step 3: a coat that follows this body (Johannes: the Brandmeister's clothes clipped through his body).
+ * Chest on spine_03, belly on spine_01 (overlapping, so the waist bends without a gap), the skirt on the pelvis
+ * hanging straight down and opening towards the front so the bent knees come out through it, sleeves on the
+ * arm bones, a stand collar on the chest.
+ */
+function fitCoat(fit: BodyFit, cut: CoatCut): Coat {
+  const pad = cut.pad ?? 0.03;
+  const parts = new Map<string, Part[]>();
+  const origins = new Map<string, Vector3>();
+  const o = (bone: string): Vector3 => { let v = origins.get(bone); if (!v) { v = fit.at(bone); origins.set(bone, v); } return v; };
+  const add = (bone: string, ...p: Part[]): void => { const list = parts.get(bone) ?? []; list.push(...p); parts.set(bone, list); };
+  const chest = fit.rings(['spine_02', 'spine_03', 'clavicle_l', 'clavicle_r'], o('spine_02'), o('neck_01'), 6, -0.35, 0.95, pad);
+  const belly = fit.rings(['pelvis', 'spine_01', 'spine_02'], o('pelvis'), o('spine_02'), 5, -0.25, 1.3, pad - 0.004);
+  const collar = fit.rings(['neck_01'], o('neck_01'), o('Head'), 2, -0.2, 0.55, 0.025);
+  // Close the chest over the shoulders onto the neck (no open ring round the neck).
+  const last = chest[chest.length - 1]!;
+  chest.push(ringLerp(ringGrow(last, 0.82, 0, 0, 0.02, 0), ringGrow(collar[0]!, 1.15), 0.5), ringGrow(collar[0]!, 1.12));
+  add('spine_03', [shell(chest, o('spine_03')), cut.mat]);
+  add('spine_01', [shell(belly, o('spine_01')), cut.mat]);
+  if (cut.collar) add('spine_03', [shell([ringGrow(collar[0]!, 1.1), ringGrow(collar[1]!, 1.08), ringGrow(collar[2]!, 1.1, 0.005)], o('spine_03'), 0.5), cut.collar]);
+  let skirt: Ring[] = [];
+  if (cut.hem !== undefined) {
+    const top = ringGrow(belly[0]!, 1, 0.01);
+    const drop = top.c.y - cut.hem, flare = cut.flare ?? 0.12, open = cut.open ?? 1.6;
+    const n = 5;
+    skirt = [top];
+    const gaps = [0.2];
+    for (let i = 1; i <= n; i++) {
+      const k = i / n;
+      skirt.push(ringDrop(top, drop * k, -0.04 * k, top.ru + flare * Math.sqrt(k), top.rw + flare * 0.9 * Math.sqrt(k)));
+      gaps.push(lerp(0.2, open, Math.sqrt(k)));
+    }
+    add('pelvis', [shell(skirt, o('pelvis'), gaps, 20, cut.jag ?? 0), cut.mat]);
+  }
+  const arm = {} as Coat['arm'];
+  for (const sd of ['l', 'r'] as const) {
+    const up = `upperarm_${sd}` as const, lo = `lowerarm_${sd}` as const;
+    arm[up] = fit.rings([up], o(up), o(lo), 3, -0.14, 1.06, 0.018);
+    arm[lo] = fit.rings([lo], o(lo), o(`hand_${sd}`), 3, -0.06, 0.92, 0.022);
+    if (cut.sleeves !== 'none') add(up, [shell(arm[up], o(up), 0, 14), cut.mat]);
+    if (cut.sleeves === 'full' || cut.sleeves === undefined) add(lo, [shell(arm[lo].map((r, i) => (i === arm[lo].length - 1 ? ringGrow(r, 1.12) : r)), o(lo), 0, 14), cut.mat]);
+  }
+  return { chest, belly, skirt, arm, collar, parts, o, add };
+}
+
+/** The Prussian eagle (Pickelhaube plate, `w` wide), extruded thin, facing +z. */
+function eagle(w: number): BufferGeometry {
+  const right: Array<[number, number]> = [[0, 1], [0.14, 0.9], [0.22, 0.95], [0.16, 0.72], [0.4, 0.78], [0.66, 1], [1, 0.86], [0.86, 0.6], [0.98, 0.44], [0.76, 0.3], [0.86, 0.08], [0.5, 0.06], [0.24, 0.16], [0.24, -0.32], [0.46, -0.6], [0.28, -0.62], [0.16, -0.46], [0.14, -0.78], [0, -1]];
+  const pts = [...right, ...right.slice(1, -1).reverse().map(([x, y]): [number, number] => [-x, y])];
+  const s = new Shape(pts.map(([x, y]) => new Vector2(x * w * 0.5, y * w * 0.45)));
+  return new ExtrudeGeometry(s, { depth: 0.006, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 1, curveSegments: 2 });
+}
+/** A moustache under the nose at `nose` (head mount space): two tubes, upturned (`up` > 0) or drooping. */
+function moustache(nose: Vector3, w: number, up: number, r: number, mat: keyof GearKit): Part[] {
+  const at = (x: number, y: number, z: number): [number, number, number] => [nose.x + x, nose.y + y, nose.z + z];
+  return [-1, 1].map((s): Part => [cable([at(0, 0, 0.004), at(s * w * 0.35, -0.012, -0.004), at(s * w * 0.75, -0.012 + up * 0.4, -0.02), at(s * w, up, -0.04)], r), mat]);
+}
 
 /** A speaker box head (Boxenkopf, Bassprediger), built on the neck: box, two cones with pulsing rings, a cyan eye strip. */
 function speakerHead(w: number, h: number, d: number): Part[] {
@@ -230,29 +610,51 @@ function speakerHead(w: number, h: number, d: number): Part[] {
   ];
 }
 
-/** Pickelhaube: dome, brim, spike, front plate. Built around the origin at the top of the skull. */
-function pickelhaube(gold: boolean): Part[] {
+/** Pickelhaube: dome, brim, peak, spike and the gold eagle plate. Built around the origin at the brow line. */
+/** `brim`: width of the band and the peaks (H3: the Feldwebel's narrower at the bottom, Johannes). */
+function pickelhaube(brim = 1): Part[] {
   const shell: keyof GearKit = 'dark';
   return [
-    [tf(new SphereGeometry(0.135, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0), shell],
-    [tf(new CylinderGeometry(0.15, 0.17, 0.025, 12), 0, 0, 0.012), shell],
-    [tf(new BoxGeometry(0.2, 0.02, 0.1), 0, -0.005, 0.15, 0.35), shell],
-    [tf(new ConeGeometry(0.022, 0.13, 8), 0, 0.19, 0), 'brass'],
-    [tf(new CylinderGeometry(0.035, 0.04, 0.03, 8), 0, 0.13, 0), 'brass'],
-    [tf(new BoxGeometry(0.1, 0.085, 0.012), 0, 0.055, 0.128, -0.25), gold ? 'brass' : 'steel'],
-    [tf(new TorusGeometry(0.148, 0.01, 4, 14), 0, 0.012, 0, Math.PI / 2), 'brass'],
+    [tf(new SphereGeometry(0.14, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.05, 1.1), 0, 0, 0), shell],
+    [tf(new CylinderGeometry(0.142, 0.142 + 0.008 * brim, 0.03, 16).scale(1, 1, 1.1), 0, 0.005, 0), shell],
+    [tf(new CylinderGeometry(0.11 * brim, 0.12 * brim, 0.012, 12, 1, false, -0.9, 1.8).scale(1, 1, 1.25), 0, -0.012, 0.03, 0.22), shell],
+    [tf(new CylinderGeometry(0.1 * brim, 0.11 * brim, 0.012, 12, 1, false, Math.PI - 1, 2).scale(1.1, 1, 1.2), 0, -0.004, -0.03, -0.25), shell],
+    [tf(new ConeGeometry(0.024, 0.15, 8), 0, 0.235, 0), 'brass'],
+    [tf(new CylinderGeometry(0.038, 0.045, 0.035, 10), 0, 0.152, 0), 'brass'],
+    [tf(new CylinderGeometry(0.06, 0.06, 0.01, 10), 0, 0.136, 0), 'brass'],
+    [tf(eagle(0.13), 0, 0.075, 0.145, -0.42), 'brass'],
+    [tf(new TorusGeometry(0.146, 0.008, 4, 18).scale(1, 1.1, 1), 0, 0.02, 0, Math.PI / 2), 'brass'],
   ];
 }
 
-/** Epaulettes on both shoulders; `fringe` for the captain. */
-function epaulettes(fringe: boolean): Part[] {
-  const out: Part[] = [];
-  for (const s of [-1, 1]) {
-    out.push([tf(new BoxGeometry(0.16, 0.025, 0.11), s * 0.21, 0, 0, 0, 0, -s * 0.15), 'brass']);
-    out.push([tf(new CylinderGeometry(0.06, 0.06, 0.03, 10), s * 0.28, -0.01, 0), 'brass']);
-    if (fringe) out.push([tf(new CylinderGeometry(0.062, 0.07, 0.07, 10, 1, true), s * 0.28, -0.055, 0), 'brass']);
-  }
-  return out;
+/**
+ * WP5 Schildträger riot shield, `w` × `h` m, hanging from its top edge (origin): a rounded plate with a bevel,
+ * a rim tube round it, a viewing window in the top third, rivets along the rim and two scratches.
+ */
+function riotShield(w: number, h: number): Part[] {
+  const r = 0.07, hw = w / 2;
+  const outline = new Shape();
+  outline.moveTo(-hw + r, 0);
+  outline.lineTo(hw - r, 0);
+  outline.quadraticCurveTo(hw, 0, hw, -r);
+  outline.lineTo(hw, -h + r);
+  outline.quadraticCurveTo(hw, -h, hw - r, -h);
+  outline.lineTo(-hw + r, -h);
+  outline.quadraticCurveTo(-hw, -h, -hw, -h + r);
+  outline.lineTo(-hw, -r);
+  outline.quadraticCurveTo(-hw, 0, -hw + r, 0);
+  const plate = new ExtrudeGeometry(outline, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.01, bevelSegments: 2, curveSegments: 6 });
+  plate.translate(0, 0, -0.01).rotateX(0.06);
+  const rimPts = outline.getSpacedPoints(48).map((q) => new Vector3(q.x, q.y, 0.02));
+  const rim = new TubeGeometry(new CatmullRomCurve3(rimPts, true), 96, 0.012, 6, true).rotateX(0.06);
+  const window: Part = [tf(new BoxGeometry(w * 0.62, 0.1, 0.01), 0, -h * 0.22, 0.024, 0.06), 'visor'];
+  const rivets: Part[] = [];
+  for (const q of outline.getSpacedPoints(18).slice(0, 18)) rivets.push([tf(new SphereGeometry(0.009, 6, 4), q.x * 0.9, q.y * 0.94 - h * 0.03, 0.028, 0.06), 'steel']);
+  const scratches: Part[] = [
+    [tf(new BoxGeometry(0.2, 0.008, 0.004), 0.06, -h * 0.55, 0.026, 0.06, 0, 0.5), 'dark'],
+    [tf(new BoxGeometry(0.14, 0.006, 0.004), -0.1, -h * 0.7, 0.026, 0.06, 0, -0.3), 'dark'],
+  ];
+  return [[plate, 'plate'], [rim, 'riot'], window, ...rivets, ...scratches];
 }
 
 /** Uniform tunic: a shell around the chest, collar, buttons. */
@@ -264,22 +666,139 @@ function tunic(coat: keyof GearKit, trim: keyof GearKit): Part[] {
   ];
 }
 
+/** A bone's rotation in model space from the local rotations (valid right after a mixer update, before matrices). */
+function modelQuat(b: Object3D, model: Object3D, out: Quaternion): Quaternion {
+  out.identity();
+  for (let o: Object3D | null = b; o && o !== model; o = o.parent) out.premultiply(o.quaternion);
+  return out;
+}
+const qa = new Quaternion(), qb = new Quaternion(), qc = new Quaternion(), qd = new Quaternion();
+
+/** H3: one kind's gear on a mech body; `bones` scales parts of the body away (Leela's head hull under the Turmwächter's tower). */
+interface MechSet { list: Object3D[]; shield: Object3D | null; key: Object3D | null; bones: Record<string, number>; sparks?: Object3D }
+/** H3: the Turmwächter hides Leela's head hull and slims her neck so the shaft can taper (gear mounted after keeps its size). */
+const TOWER_BONES: Record<string, number> = { Neck: 0.55, Head: 0.09 };
+
+/**
+ * H3 (Johannes, 2026-11-19): the Turmwächter on Leela, built as the Fernsehturm on two mech legs (bust X03, the
+ * H2 look): her head hull hidden, a ribbed shaft over torso and neck that tapers up, the steel sphere on top with
+ * its lit cyan window ring, the red-and-white antenna with the beacon, cyan sparks round the top of the shaft
+ * (`sparks`, they flicker). Built in Leela's rest pose (`EnemyView.inRest`), fitted to her torso and neck.
+ */
+function towerGear(model: Object3D, materials: Materials, castShadow: boolean): MechSet {
+  const k = gearKit(materials);
+  const fit = new BodyFit(model);
+  const list: Object3D[] = [];
+  const mount = (name: string, parts: Part[]): Object3D | undefined => {
+    const b = model.getObjectByName(name);
+    if (!b) return undefined;
+    const g = assemble(k, parts, castShadow, undefined, true);
+    const p = fit.at(name);
+    for (const c of g.children) (c as Mesh).geometry.translate(-p.x, -p.y, -p.z);
+    g.position.copy(p);
+    model.add(g);
+    b.attach(g);
+    list.push(g);
+    return g;
+  };
+  // The shaft: a lathe that tapers upwards and holds every torso and neck vertex at each height (never narrower
+  // below than above), ribbed like the tower's rings.
+  const torso = fit.box(['Torso', 'Chest']), neck = fit.box(['Neck']);
+  const cx = 0, cz = (torso.c.z + neck.c.z) / 2;
+  const inside = new Set(['Body', 'Torso', 'Chest', 'Neck']);
+  const need = (y: number): number => {
+    let r = 0;
+    fit.pts.forEach((q, i) => { if (inside.has(fit.bone[i]!) && Math.abs(q.y - y) < 0.07) r = Math.max(r, Math.hypot(q.x - cx, q.z - cz)); });
+    return r;
+  };
+  const y0 = torso.min.y - 0.06, top = neck.max.y + 0.42, N = 14;
+  const prof = Array.from({ length: N + 1 }, (_, i): [number, number] => { const y = lerp(y0, top + 0.05, i / N); return [Math.max(lerp(0.36, 0.2, i / N), need(y) + 0.03), y]; });
+  for (let i = N - 1; i >= 0; i--) prof[i]![0] = Math.max(prof[i]![0], prof[i + 1]![0]);
+  const rAt = (y: number): number => { const f = Math.min(N, Math.max(0, ((y - y0) / (top + 0.05 - y0)) * N)), i = Math.min(N - 1, Math.floor(f)); return lerp(prof[i]![0], prof[i + 1]![0], f - i); };
+  const section = (ya: number, yb: number, ribs: number): Part[] => {
+    const pts = prof.filter(([, y]) => y > ya && y < yb).map(([r, y]) => new Vector2(r, y));
+    pts.unshift(new Vector2(rAt(ya), ya));
+    pts.push(new Vector2(rAt(yb), yb));
+    const out: Part[] = [[new LatheGeometry(pts, 20).translate(cx, 0, cz), 'shaft']];
+    for (let i = 0; i < ribs; i++) {
+      const y = lerp(ya, yb, (i + 0.5) / ribs);
+      out.push([tf(new TorusGeometry(rAt(y) + 0.01, 0.016, 4, 22), cx, y, cz, Math.PI / 2), 'hair']);
+    }
+    return out;
+  };
+  // The lower shaft rides the torso (the legs come out of it like hips); the upper shaft and the sphere the neck.
+  const split = torso.max.y + 0.05;
+  mount('Torso', [
+    ...section(y0, split + 0.04, 4),
+    // A dark ring where the shaft meets the legs.
+    [tf(new TorusGeometry(rAt(y0) + 0.01, 0.035, 5, 22), cx, y0 + 0.02, cz, Math.PI / 2), 'dark'],
+  ]);
+  const r1 = rAt(top);
+  const R = Math.max(0.46, r1 * 2), cy = top + R * 0.72;
+  const eye = R * 0.12, er = Math.sqrt(R * R - eye * eye);
+  const sphere: Part[] = [
+    ...section(split, top + 0.05, 6),
+    [new SphereGeometry(R, 24, 16).translate(cx, cy, cz), 'tower'],
+    // The window ring just above the sphere's middle, split by dark frames; seams above and below it.
+    [tf(new CylinderGeometry(er + 0.012, er + 0.012, 0.1, 28, 1, true), cx, cy + eye, cz), 'window'],
+    ...Array.from({ length: 16 }, (_, n): Part => {
+      const a = (n / 16) * Math.PI * 2;
+      return [tf(new BoxGeometry(0.02, 0.11, 0.022), cx + Math.sin(a) * (er + 0.016), cy + eye, cz + Math.cos(a) * (er + 0.016), 0, a), 'dark'];
+    }),
+    ...[eye + 0.085, eye - 0.085, eye + 0.2, -R * 0.45].map((y): Part => [tf(new TorusGeometry(Math.sqrt(Math.max(0.01, R * R - y * y)) + 0.003, 0.009, 4, 28), cx, cy + y, cz, Math.PI / 2), 'dark']),
+    // The antenna: a drum on the cap, the mast with red-and-white sections, the lit beacon.
+    [tf(new CylinderGeometry(0.1, 0.13, 0.1, 14), cx, cy + R + 0.01, cz), 'tower'],
+    [tf(new CylinderGeometry(0.022, 0.034, 0.8, 6), cx, cy + R + 0.46, cz), 'white'],
+    ...[0.24, 0.42, 0.6].map((y): Part => [tf(new CylinderGeometry(0.032, 0.036, 0.09, 6), cx, cy + R + y, cz), 'red']),
+    [tf(new SphereGeometry(0.04, 8, 6), cx, cy + R + 0.88, cz), 'beacon'],
+  ];
+  mount('Neck', sphere);
+  // Cyan sparks jump round the top of the shaft under the sphere (their own mesh, they flicker: `sparks`).
+  const bolt = (pts: Array<[number, number, number]>): Part[] => pts.slice(1).map((q, n): Part => {
+    const a = new Vector3(...pts[n]!), b = new Vector3(...q), d = b.clone().sub(a);
+    const g = new CylinderGeometry(0.012, 0.012, d.length(), 4).applyQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), d.normalize()));
+    return [g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2), 'cyan'];
+  });
+  const zig = (a: number, y: number, h: number): Array<[number, number, number]> => [0, 1, 2, 3, 4].map((n): [number, number, number] => {
+    const r = rAt(y) + 0.06 + n * 0.05, b = a + (n % 2 ? 0.12 : -0.05);
+    return [cx + Math.sin(b) * r, y + h * (1 - n / 4), cz + Math.cos(b) * r];
+  });
+  const sparks = mount('Neck', [
+    ...bolt(zig(1.3, top - 0.35, 0.45)), ...bolt(zig(-1.4, top - 0.3, 0.5)), ...bolt(zig(2.6, top - 0.1, 0.35)), ...bolt(zig(-2.4, top - 0.2, 0.4)),
+  ]);
+  return { list, shield: null, key: null, bones: TOWER_BONES, sparks };
+}
+
 function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials, castShadow: boolean, pulse?: LitMaterial): Object3D[] {
   const k = gearKit(materials);
   const out: Object3D[] = [];
   const bone = (n: string): Object3D | undefined => model.getObjectByName(n);
   const p = new Vector3();
   /** Builds parts in model space around a bone's rest position and hands them to the bone. */
-  const mount = (name: string, parts: Part[], dy = 0, dz = 0): void => {
+  /** WP5 step 3: the bosses with fitted coats paint their unlit gear into one mesh per bone. */
+  const paint = kind === 'feldwebel' || kind === 'hauptmann' || kind === 'schaffner' || kind === 'brandmeister' || kind === 'rattenmutter';
+  const mount = (name: string, parts: Part[], dy = 0, dz = 0, dx = 0): Object3D | undefined => {
     const b = bone(name);
-    if (!b) return;
-    const g = assemble(k, parts, castShadow, pulse);
+    if (!b) return undefined;
+    const g = assemble(k, parts, castShadow, pulse, paint);
     b.getWorldPosition(p);
     model.worldToLocal(p);
-    g.position.set(p.x, p.y + dy, p.z + dz);
+    g.position.set(p.x + dx, p.y + dy, p.z + dz);
     model.add(g);
     b.attach(g);
     out.push(g);
+    return g;
+  };
+  /** WP5 step 3: this gear hangs (follows only part of its bone's turn, `EnemyView.hangSkirts`). */
+  const hangOn = (g: Object3D | undefined, hang: number): void => {
+    if (g?.parent) { g.userData.hang = hang; g.userData.hangQ = modelQuat(g.parent, model, new Quaternion()); }
+  };
+  /** A fitted coat; its skirt hangs. */
+  const mountCoat = (coat: Coat, hang = 0.5): void => {
+    for (const [b, list] of coat.parts) {
+      const g = mount(b, list);
+      if (b === 'pelvis') hangOn(g, hang);
+    }
   };
   /** M15: the same, with the Alexanderplatz kit. */
   const mountAlex = (name: string, parts: AlexPart[], dy = 0, dz = 0): void => {
@@ -296,14 +815,18 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
   switch (kind) {
     case 'wurzler': case 'wurzelmutter': case 'brigade':
       zombieAlexGear(kind, mountAlex);
+      // H3: on the female base the Wurzel-Mutter wears a torn moss-green garden dress fitted to her body.
+      if (kind === 'wurzelmutter') mountCoat(fitCoat(new BodyFit(model), { mat: 'garden', pad: 0.03, hem: 0.3, flare: 0.2, open: 0.9, sleeves: 'upper', jag: 0.08 }), 0.45);
       break;
     case 'brute':
-      // Boiler plate bolted over one shoulder, a rusted collar.
+      // Bust E02: an open orange high-vis vest with two reflective bands over the rags, a rusted collar.
+      // A lathed vest that follows the Brocken's chest (waist in, chest out), open at the front; straps over the shoulders.
       mount('spine_03', [
-        [tf(new SphereGeometry(0.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), -0.24, 0.1, 0, 0, 0, 0.5), 'rust'],
-        [tf(new TorusGeometry(0.13, 0.035, 5, 12), 0, 0.17, 0, Math.PI / 2), 'rust'],
-        [tf(new BoxGeometry(0.34, 0.2, 0.03), 0, -0.02, 0.15, -0.1), 'steel'],
-      ]);
+        [vestShell(VEST, 0.8), 'vest'],
+        [vestShell([[0.262, -0.1], [0.268, -0.04]], 0.8, 1.012), 'reflect'],
+        [vestShell([[0.232, -0.26], [0.244, -0.2]], 0.8, 1.012), 'reflect'],
+        ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(0.09, 0.025, 0.36), sd * 0.13, 0.11, 0, 0, 0, sd * 0.3), 'vest']),
+      ], 0.08);
       break;
     case 'spitter':
       // Swollen throat sac that glows before it spits, boils on the back.
@@ -312,41 +835,89 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
         [tf(new SphereGeometry(0.06, 8, 6), 0.09, -0.1, -0.1), 'acid'],
         [tf(new SphereGeometry(0.05, 8, 6), -0.07, -0.16, -0.12), 'acid'],
       ]);
+      // Bust E03: a bloated belly that hangs over the belt (after the sac: the sac is gear [0]).
+      mount('spine_01', [[tf(new SphereGeometry(0.21, 12, 9).scale(1.22, 1.05, 1.15), 0, 0.02, 0.09), 'belly']]);
       break;
-    case 'feldwebel':
-      mount('Head', pickelhaube(false), 0.12);
-      mount('spine_03', [...epaulettes(false), ...tunic('blue', 'red')], 0.08);
+    case 'feldwebel': case 'hauptmann': {
+      // Busts X04, X01 (Johannes 2026-11-19, A and B): Pickelhaube with the gold eagle, a high-collared greatcoat
+      // (the captain's longer, to the calf), gold epaulettes, a moustache (the captain's white); the captain also
+      // wears a red cape over the shoulders and a gold sash. The sabre comes from the weapon rack.
+      const fit = new BodyFit(model);
+      const cap = kind === 'hauptmann';
+      const coat = fitCoat(fit, { mat: cap ? 'officer' : 'garde', hem: cap ? 0.3 : 0.44, flare: cap ? 0.16 : 0.13, open: 1.7, collar: 'red' });
+      const o3 = coat.o('spine_03'), o1 = coat.o('spine_01');
+      for (const f of [1.6, 2.5, 3.4, 4.3]) coat.add('spine_03', [onShell(new SphereGeometry(0.017, 6, 4), coat.chest, o3, f, 0, 0.006), 'brass']);
+      for (const f of [2.6, 3.6]) coat.add('spine_01', [onShell(new SphereGeometry(0.017, 6, 4), coat.belly, o1, f, 0, 0.006), 'brass']);
+      // A belt over the waist.
+      coat.add('spine_01', [band(coat.belly, o1, 1.2, 1.7, 0.012), 'dark'], [onShell(new BoxGeometry(0.07, 0.055, 0.012), coat.belly, o1, 1.45, 0, 0.016), 'brass']);
+      for (const sd of ['l', 'r'] as const) {
+        // Epaulettes on top of the coat's shoulder (the chest shell's highest point over the arm), fringed.
+        const up = `upperarm_${sd}` as const, s = sd === 'l' ? 1 : -1;
+        const cl = fit.box([`clavicle_${sd}`]), arm = coat.o(up);
+        const top = new Vector3(arm.x - s * 0.03, cl.max.y + 0.035, (cl.c.z + arm.z) / 2).sub(arm);
+        // H3 (Johannes): the Feldwebel's epaulettes wider and bigger.
+        const ep = cap ? 1 : 1.35;
+        coat.add(up,
+          [tf(new BoxGeometry(0.14 * ep, 0.022, 0.11 * ep), top.x - s * 0.06 * ep, top.y + 0.005, top.z, 0, 0, s * 0.12), 'brass'],
+          [tf(new CylinderGeometry(0.07 * ep, 0.07 * ep, 0.03, 16), top.x + s * 0.03 * ep, top.y, top.z), 'brass'],
+          [tf(new CylinderGeometry(0.072 * ep, 0.09 * ep, 0.085 * ep, 16, 1, true), top.x + s * 0.03 * ep, top.y - 0.055 * ep, top.z), 'brass'],
+          [band(coat.arm[`lowerarm_${sd}`], coat.o(`lowerarm_${sd}`), 2.45, 3, 0.008), 'red'],
+        );
+      }
+      if (cap) {
+        // The cape hangs from the shoulders down the back to the knees, open at the front; the sash over the coat.
+        // It follows the coat's own rings from the shoulders down (held off it), so the coat never shows through.
+        const c = coat.chest, top = c.length - 1;
+        const cape = [ringGrow(c[top - 1]!, 1.05, 0.025), ringGrow(c[top - 2]!, 1.08, 0.04), ringGrow(c[top - 3]!, 1.08, 0.05), ringGrow(c[2]!, 1.06, 0.06),
+          ringGrow(coat.belly[3]!, 1.1, 0.07), ringGrow(coat.belly[0]!, 1.12, 0.08), ...[2, 3].map((i) => ringGrow(coat.skirt[i]!, 1.06, 0.07))];
+        coat.add('spine_03', [shell(cape, o3, cape.map((_, i) => lerp(2.3, 3.3, i / (cape.length - 1))), 22), 'red']);
+        coat.add('spine_03', [strip(coat.chest.slice(1), o3, -0.9, 0.5, 0.2, 0.014), 'brass']);
+        coat.add('spine_01', [strip(coat.belly.slice(2), o1, 0.75, 0.55, 0.2, 0.016), 'brass']);
+      }
+      mountCoat(coat);
+      // The helmet sits over the skull, tipped forward with the face; the moustache under the nose.
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      // H3 (Johannes): the Feldwebel's helmet sits higher and is narrower at the bottom.
+      const at = new Vector3(head.c.x, head.max.y - (cap ? 0.1 : 0.065), head.c.z - 0.01);
+      const lip = fit.eyes.clone().add(new Vector3(0, -0.045, 0.025)).sub(at);
+      const helm = pickelhaube(cap ? 1 : 0.82).map(([g, m]): Part => [g.rotateX(0.18), m]);
+      mount('Head', [...helm, ...moustache(lip, cap ? 0.075 : 0.065, cap ? -0.022 : 0.022, cap ? 0.019 : 0.011, cap ? 'white' : 'hair')], at.y - hp.y, at.z - hp.z, at.x - hp.x);
       break;
-    case 'waechter':
-      // Hooded keeper of the tower: wide hat, a lantern in the left hand, a chain of keys.
+    }
+    case 'schaffner': {
+      // Bust X05 (Johannes 2026-11-19, A): peaked cap with a brass badge, a long double-breasted coat (two rows of
+      // buttons), the signal disc (Kelle) held high in the right hand on a long handle.
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'navy', hem: 0.27, flare: 0.15, open: 1.45, collar: 'navy' });
+      const o3 = coat.o('spine_03'), o1 = coat.o('spine_01');
+      for (const a of [-0.36, 0.36]) {
+        for (const f of [1.5, 2.4, 3.3, 4.2]) coat.add('spine_03', [onShell(new SphereGeometry(0.018, 6, 4), coat.chest, o3, f, a * (1 + (f - 1.5) * 0.12), 0.006), 'brass']);
+        for (const f of [2.4, 3.6]) coat.add('spine_01', [onShell(new SphereGeometry(0.018, 6, 4), coat.belly, o1, f, a * 0.85, 0.006), 'brass']);
+      }
+      // The overlapping front edge and the lapels in a darker cloth, brass cuff buttons.
+      coat.add('spine_03', [strip(coat.chest.slice(1, 6), o3, 0.55, 0.12, 0.05, 0.01), 'dark']);
+      coat.add('spine_01', [strip(coat.belly.slice(1), o1, 0.12, 0.12, 0.035, 0.01), 'dark']);
+      for (const sd of ['l', 'r'] as const) coat.add(`lowerarm_${sd}`, [band(coat.arm[`lowerarm_${sd}`], coat.o(`lowerarm_${sd}`), 2.4, 3, 0.008), 'dark']);
+      mountCoat(coat);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.max.y - 0.075, head.c.z - 0.01);
       mount('Head', [
-        [tf(new CylinderGeometry(0.26, 0.28, 0.02, 14), 0, 0, 0), 'cloth'],
-        [tf(new CylinderGeometry(0.1, 0.13, 0.13, 10), 0, 0.07, 0), 'cloth'],
-        [tf(new TorusGeometry(0.125, 0.012, 4, 12), 0, 0.02, 0, Math.PI / 2), 'brass'],
-      ], 0.1);
-      mount('hand_l', [
-        [tf(new CylinderGeometry(0.07, 0.07, 0.16, 8), 0, -0.2, 0), 'lamp'],
-        [tf(new ConeGeometry(0.1, 0.07, 8), 0, -0.09, 0), 'rust'],
-        [tf(new CylinderGeometry(0.085, 0.085, 0.02, 8), 0, -0.29, 0), 'rust'],
-        [tf(new TorusGeometry(0.04, 0.008, 4, 10), 0, -0.03, 0), 'rust'],
-      ]);
-      mount('spine_03', tunic('cloth', 'rust'), 0.08);
-      mount('pelvis', [[tf(new CylinderGeometry(0.2, 0.3, 0.62, 10, 1, true), 0, -0.3, 0), 'cloth'], [tf(new TorusGeometry(0.2, 0.015, 4, 14), 0, 0.05, 0, Math.PI / 2), 'rust'], [tf(new BoxGeometry(0.03, 0.14, 0.01), 0.17, -0.04, 0.12), 'brass'], [tf(new BoxGeometry(0.03, 0.11, 0.01), 0.12, -0.03, 0.16), 'brass']]);
+        [tf(new CylinderGeometry(0.155, 0.138, 0.1, 16).scale(1, 1, 1.1), 0, 0.05, 0), 'navy'],
+        [tf(new CylinderGeometry(0.158, 0.158, 0.02, 16).scale(1, 1, 1.1), 0, 0.1, 0), 'navy'],
+        [tf(new CylinderGeometry(0.141, 0.141, 0.035, 16, 1, true).scale(1, 1, 1.1), 0, 0.018, 0), 'dark'],
+        [tf(new CylinderGeometry(0.14, 0.14, 0.012, 14, 1, false, -1.2, 2.4).scale(1, 1, 1.45), 0, -0.002, 0.012, 0.3), 'dark'],
+        [tf(new BoxGeometry(0.06, 0.03, 0.01), 0, 0.06, 0.168, -0.1), 'brass'],
+        [tf(new TorusGeometry(0.141, 0.006, 4, 18).scale(1, 1.1, 1), 0, 0.036, 0, Math.PI / 2), 'brass'],
+      ].map(([g, m]): Part => [(g as BufferGeometry).rotateX(0.16), m as keyof GearKit]), at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      // The Kelle: a long handle up from the fist, leaning out, the red disc with a white ring over the head.
+      mount('hand_r', [
+        [tf(new CylinderGeometry(0.014, 0.016, 0.95, 6), 0.0, 0.36, 0.03, 0, 0, 0.18), 'rust'],
+        [tf(new CylinderGeometry(0.115, 0.115, 0.02, 20), -0.15, 0.88, 0.04, Math.PI / 2), 'red'],
+        [tf(new TorusGeometry(0.1, 0.012, 4, 20), -0.15, 0.88, 0.052), 'white'],
+        [tf(new TorusGeometry(0.117, 0.008, 4, 20), -0.15, 0.88, 0.04), 'rust'],
+      ], -0.04, 0.02);
       break;
-    case 'schaffner':
-      // BVG-free conductor of the old S-Bahn: peaked cap with a brass badge, long coat, the signal disc (Kelle).
-      mount('Head', [
-        [tf(new CylinderGeometry(0.14, 0.13, 0.11, 12), 0, 0.06, 0), 'cloth'],
-        [tf(new BoxGeometry(0.2, 0.015, 0.12), 0, 0.005, 0.1), 'cloth'],
-        [tf(new BoxGeometry(0.05, 0.035, 0.01), 0, 0.07, 0.14), 'brass'],
-      ], 0.12);
-      mount('spine_03', tunic('blue', 'rust'), 0.08);
-      mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.32, 0.66, 10, 1, true), 0, -0.32, 0), 'blue']]);
-      mount('hand_l', [
-        [tf(new CylinderGeometry(0.012, 0.012, 0.22, 6), 0, -0.12, 0), 'rust'],
-        [tf(new CylinderGeometry(0.09, 0.09, 0.015, 14), 0, -0.26, 0, Math.PI / 2), 'red'],
-      ]);
-      break;
+    }
     case 'grenzer':
       // GDR border guard: peaked cap with a high crown, grey-green tunic, a rifle in the right hand.
       mount('Head', [
@@ -363,34 +934,114 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
         [tf(new BoxGeometry(0.035, 0.13, 0.05), 0, -0.13, 0.12, 0.3), 'dark'],
       ]);
       break;
-    case 'brandmeister':
-      // Riot fire chief: fire helmet with a brass comb and neck flap, red-orange coat, a burning torch.
+    case 'brandmeister': {
+      // Bust X10 (Johannes 2026-11-19, A): a burning fire helmet (the flames are gear [0] and flicker), a turnout
+      // coat with yellow reflective bands fitted to his body (it clipped through him before), a lamp on the chest.
+      const fit = new BodyFit(model);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.max.y - 0.09, head.c.z - 0.02);
+      const flames: Part[] = [];
+      for (const [x, z, h, r, lean] of [[0, 0.02, 0.34, 0.075, -0.15], [0.07, -0.05, 0.26, 0.06, -0.35], [-0.07, -0.04, 0.27, 0.06, -0.3], [0.1, 0.07, 0.18, 0.045, 0.1], [-0.1, 0.06, 0.2, 0.045, 0.15], [0, -0.13, 0.2, 0.055, -0.6], [0.16, -0.1, 0.13, 0.035, -0.4], [-0.15, -0.12, 0.14, 0.035, -0.5]] as const) {
+        // H3 (Johannes): the flames stand higher.
+        const hh = h * 1.65;
+        flames.push([tf(new ConeGeometry(r, hh, 7), x, 0.13 + hh / 2 - 0.02, z, lean, 0, x * 2), 'helmFire']);
+        flames.push([tf(new ConeGeometry(r * 0.5, hh * 0.6, 6), x, 0.13 + hh * 0.28, z + 0.01, lean, 0, x * 2), 'helmFlame']);
+      }
+      // The fire keeps burning upwards when he throws his head back.
+      hangOn(mount('Head', flames, at.y - hp.y, at.z - hp.z, at.x - hp.x), 0.75);
       mount('Head', [
-        [tf(new SphereGeometry(0.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0), 'dark'],
-        [tf(new BoxGeometry(0.03, 0.06, 0.32), 0, 0.15, 0), 'brass'],
-        [tf(new CylinderGeometry(0.16, 0.2, 0.12, 12, 1, true, Math.PI * 0.7, Math.PI * 1.6), 0, -0.06, 0), 'dark'],
-        [tf(new BoxGeometry(0.2, 0.018, 0.08), 0, 0.005, 0.15, 0.25), 'brass'],
-      ], 0.12);
-      // The torch rides on his back and burns over the left shoulder: upright in every clip.
-      mount('spine_03', [
-        ...tunic('ember', 'dark'), [tf(new BoxGeometry(0.44, 0.05, 0.32), 0, -0.36, 0), 'dark'],
-        [tf(new CylinderGeometry(0.025, 0.03, 0.95, 6), 0.19, 0.22, -0.2, -0.2, 0, -0.25), 'rust'],
-        [tf(new CylinderGeometry(0.055, 0.04, 0.1, 8), 0.31, 0.7, -0.1, -0.2, 0, -0.25), 'dark'],
-        [tf(new SphereGeometry(0.08, 8, 6), 0.33, 0.78, -0.08), 'lamp'],
-        [tf(new ConeGeometry(0.09, 0.32, 7), 0.37, 0.94, -0.05, -0.2, 0, -0.25), 'flame'],
-      ], 0.08);
-      mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.3, 0.5, 10, 1, true), 0, -0.25, 0), 'ember']]);
+        [tf(new SphereGeometry(0.15, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.95, 1.12), 0, 0, 0), 'helmet'],
+        // The long brim, wide at the back like an old leather fire helmet; the front shield with its badge; the comb.
+        [tf(new CylinderGeometry(0.2, 0.21, 0.014, 20).scale(1, 1, 1.35), 0, -0.004, -0.06, -0.12), 'helmet'],
+        [tf(new BoxGeometry(0.13, 0.11, 0.014), 0, 0.07, 0.17, -0.3), 'helmet'],
+        [tf(new BoxGeometry(0.08, 0.06, 0.008), 0, 0.072, 0.18, -0.3), 'brass'],
+        [tf(new BoxGeometry(0.025, 0.05, 0.3).scale(1, 1, 1), 0, 0.13, -0.02), 'brass'],
+        [tf(new TorusGeometry(0.152, 0.008, 4, 20).scale(1, 1.12, 1), 0, 0.01, 0, Math.PI / 2), 'brass'],
+      ].map(([g, m]): Part => [(g as BufferGeometry).rotateX(0.15), m as keyof GearKit]), at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      const coat = fitCoat(fit, { mat: 'turnout', pad: 0.035, hem: 0.5, flare: 0.1, open: 1.35, collar: 'turnout' });
+      const o3 = coat.o('spine_03'), o1 = coat.o('spine_01'), op = coat.o('pelvis');
+      // Two bands round the chest and the waist, one round the hem, two on each sleeve.
+      coat.add('spine_03', [band(coat.chest, o3, 1.0, 1.45, 0.012), 'band']);
+      coat.add('spine_01', [band(coat.belly, o1, 2.0, 2.5, 0.012), 'band']);
+      coat.add('pelvis', [shell([ringGrow(ringAt(coat.skirt, 4.0), 1, 0.012), ringGrow(ringAt(coat.skirt, 4.45), 1, 0.012)], op, [1.25, 1.3]), 'band']);
+      for (const sd of ['l', 'r'] as const) {
+        coat.add(`upperarm_${sd}`, [band(coat.arm[`upperarm_${sd}`], coat.o(`upperarm_${sd}`), 1.5, 1.85, 0.01), 'band']);
+        coat.add(`lowerarm_${sd}`, [band(coat.arm[`lowerarm_${sd}`], coat.o(`lowerarm_${sd}`), 2.2, 2.55, 0.01), 'band']);
+      }
+      // The lamp on the left of the chest: a brass housing, its lit lens, a strap; the coat's buckles.
+      coat.add('spine_03',
+        [onShell(tf(new CylinderGeometry(0.058, 0.065, 0.06, 14), 0, 0, 0.03, Math.PI / 2), coat.chest, o3, 2.6, 0.45, 0.004), 'brass'],
+        [onShell(tf(new CylinderGeometry(0.044, 0.044, 0.012, 14), 0, 0, 0.062, Math.PI / 2), coat.chest, o3, 2.6, 0.45, 0.004), 'lamp'],
+        [strip(coat.chest.slice(1, 6), o3, 0.45, 0.45, 0.06, 0.01), 'dark'],
+        ...[1.9, 3.3].map((f): Part => [onShell(new BoxGeometry(0.05, 0.022, 0.012), coat.chest, o3, f, 0.04, 0.008), 'steel']),
+      );
+      coat.add('spine_01', ...[1.5, 3.2].map((f): Part => [onShell(new BoxGeometry(0.05, 0.022, 0.012), coat.belly, o1, f, 0.04, 0.008), 'steel']));
+      mountCoat(coat);
       break;
-    case 'rattenmutter':
-      // Hunched in a long brown-green coat with a hood; a rat sits on her shoulder.
-      mount('Head', [[tf(new SphereGeometry(0.16, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), 0, -0.01, -0.06), 'moss']], 0.08);
-      mount('spine_03', [
-        ...tunic('moss', 'rust'),
-        [tf(new SphereGeometry(0.05, 6, 5).scale(0.8, 0.7, 1.6), 0.2, 0.1, 0), 'cloth'],
-        [tf(new SphereGeometry(0.035, 6, 5), 0.2, 0.12, 0.08), 'cloth'],
-      ], 0.08);
-      mount('pelvis', [[tf(new CylinderGeometry(0.23, 0.31, 0.72, 10, 1, true), 0, -0.34, 0), 'moss'], [tf(new TorusGeometry(0.24, 0.018, 4, 14), 0, 0.02, 0, Math.PI / 2), 'rust']]);
+    }
+    case 'rattenmutter': {
+      // Bust X06 (Johannes 2026-11-19, A): a giant rat head with a crown replaces the human head (the skull is
+      // shrunk away, SHAPE Head 0.05; mounted on the neck as the Wurzler's sunflower), a fur cloak over the shoulders
+      // and a long torn rag dress; strongly hunched (HUNCH), so the head is built tipped up.
+      const fit = new BodyFit(model);
+      const hd = fit.at('Head'), nk = fit.at('neck_01');
+      const rat: Part[] = [
+        [tf(new SphereGeometry(0.16, 16, 12).scale(1, 0.9, 1.25), 0, 0, 0), 'fur'],
+        [tf(new ConeGeometry(0.105, 0.3, 14).scale(1, 0.78, 1), 0, -0.03, 0.24, Math.PI / 2), 'fur'],
+        [tf(new SphereGeometry(0.036, 10, 8), 0, -0.035, 0.39), 'pink'],
+        // The open lower jaw, the long yellow incisors, a dark mouth.
+        [tf(new ConeGeometry(0.07, 0.24, 10).scale(1, 0.6, 1), 0, -0.1, 0.18, Math.PI / 2 + 0.28), 'fur'],
+        [tf(new BoxGeometry(0.09, 0.012, 0.16), 0, -0.075, 0.24, 0.12), 'dark'],
+        ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(0.02, 0.06, 0.012), sd * 0.013, -0.085, 0.355, -0.15), 'bone']),
+        ...[-1, 1].map((sd): Part => [tf(new SphereGeometry(0.026, 8, 6), sd * 0.085, 0.045, 0.15), 'eye']),
+        // H3 (Johannes): big round ears, half again the old size, pink inside with dark veins, one torn at the rim.
+        ...[-1, 1].flatMap((sd): Part[] => [
+          [tf(new SphereGeometry(0.13, 16, 10).scale(1, 1.12, 0.26), sd * 0.15, 0.17, -0.05, -0.25, sd * 0.4, -sd * 0.4), 'fur'],
+          [tf(new SphereGeometry(0.095, 14, 10).scale(1, 1.1, 0.18), sd * 0.153, 0.172, -0.026, -0.25, sd * 0.4, -sd * 0.4), 'pink'],
+          [tf(new CylinderGeometry(0.004, 0.003, 0.12, 3), sd * 0.155, 0.17, -0.018, -0.25, sd * 0.4, -sd * 0.4 + sd * 0.3), 'grime'],
+          [tf(new BoxGeometry(0.04, 0.03, 0.05), sd * 0.24, 0.26, -0.06, 0, 0, sd * 0.6), sd > 0 ? 'furDark' : 'fur'],
+        ]),
+        // Matted tufts all over the skull, cheeks and neck in two shades, pointing back and out (placed from a fixed pattern).
+        ...Array.from({ length: 34 }, (_, n): Part => {
+          const u = (n * 0.618034) % 1, v = ((n * 0.381966 + 0.13) % 1);
+          const a = (u - 0.5) * Math.PI * 1.5, b = -0.3 + v * 1.25;
+          const r = 0.165;
+          const x = Math.sin(a) * Math.cos(b) * r, y = Math.sin(b) * r * 0.9, z = Math.cos(a) * Math.cos(b) * r * 1.2 - 0.03;
+          const len = 0.09 + ((n * 7) % 5) * 0.018;
+          return [tf(new ConeGeometry(0.03 + (n % 3) * 0.006, len, 4), x, y, z, -1.1 - b * 0.4, 0, -Math.sin(a) * 1.1), n % 3 === 0 ? 'furDark' : 'fur'];
+        }),
+        // Grime: a dark muzzle, dirt under the eyes, a scar across the snout, a chipped incisor.
+        [tf(new SphereGeometry(0.06, 10, 8).scale(1.1, 0.7, 1.6), 0, -0.05, 0.3), 'grime'],
+        ...[-1, 1].map((sd): Part => [tf(new SphereGeometry(0.03, 8, 6).scale(1.4, 0.6, 0.5), sd * 0.09, 0.02, 0.155), 'grime']),
+        [tf(new BoxGeometry(0.012, 0.008, 0.12), 0.03, 0.035, 0.27, 0, 0.5, 0), 'pink'],
+        [tf(new BoxGeometry(0.02, 0.025, 0.013), -0.013, -0.12, 0.358, -0.15), 'grime'],
+        // Whiskers, three a side.
+        ...[-1, 1].flatMap((sd) => [0.18, 0, -0.18].map((a): Part => [tf(new CylinderGeometry(0.003, 0.002, 0.24, 3), sd * 0.15, -0.03 + a * 0.12, 0.32, a, 0, sd * (Math.PI / 2 - 0.25)), 'white'])),
+        // The crown: a brass band with five points and red stones.
+        [tf(new CylinderGeometry(0.1, 0.09, 0.06, 14, 1, true), 0, 0.15, 0.0), 'brass'],
+        ...[0, 1, 2, 3, 4].flatMap((n): Part[] => {
+          const a = (n / 5) * Math.PI * 2;
+          return [
+            [tf(new ConeGeometry(0.022, 0.08, 5), Math.sin(a) * 0.095, 0.21, Math.cos(a) * 0.095), 'brass'],
+            [tf(new SphereGeometry(0.014, 6, 4), Math.sin(a) * 0.1, 0.152, Math.cos(a) * 0.1), 'red'],
+          ];
+        }),
+        // A fur ruff where the head meets the neck.
+        ...[0, 1, 2, 3, 4, 5, 6].map((n): Part => {
+          const a = Math.PI * 0.55 + (n / 6) * Math.PI * 0.9;
+          return [tf(new ConeGeometry(0.05, 0.2, 6), Math.sin(a) * 0.12, -0.06, Math.cos(a) * 0.12 - 0.08, Math.cos(a) * 1.2 + 1.2, 0, -Math.sin(a) * 1.2), 'fur'];
+        }),
+      ];
+      mount('neck_01', rat.map(([g, m]): Part => [g.scale(1.5, 1.5, 1.5).rotateX(-0.7), m]), hd.y - nk.y + 0.1, hd.z - nk.z + 0.1, hd.x - nk.x);
+      const coat = fitCoat(fit, { mat: 'rags', pad: 0.03, hem: 0.22, flare: 0.17, open: 1.2, sleeves: 'upper', jag: 0.07 });
+      // The fur cloak: from the neck over the shoulders and the hump, torn, open a little at the front.
+      const c = coat.chest, top = c.length - 1;
+      const cloak = [ringGrow(c[top]!, 1.08, 0.015), ringGrow(c[top - 1]!, 1.02, 0.03), ringGrow(c[top - 2]!, 1.02, 0.04), ringGrow(c[top - 3]!, 1.02, 0.045), ringGrow(c[3]!, 1.02, 0.05), ringGrow(c[1]!, 1.03, 0.055)];
+      coat.add('spine_03', [shell(cloak, coat.o('spine_03'), cloak.map((_, i) => lerp(1.2, 2.1, i / (cloak.length - 1))), 24, 0.09), 'fur']);
+      coat.add('spine_01', [band(coat.belly, coat.o('spine_01'), 1.3, 1.7, 0.012), 'dark']);
+      mountCoat(coat, 0.45);
       break;
+    }
     case 'spreehexe':
       // Punk witch of the squats: a purple and green crest, a long black coat, acid glowing in her hand.
       mount('Head', [
@@ -406,9 +1057,64 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       mount('Head', implants());
       break;
     case 'kabel':
-      // Kabelghul (2D art, board E13): four lit cables from the skull to the back, implants on the temple.
-      mount('neck_01', [...arches(4, 0.026), ...cables(2, 0.2, 0.018)]);
-      mount('Head', implants());
+      // Kabelghul (bust E13): four cyan cables arching from the skull to the back, implants, a red scarf.
+      mount('neck_01', [...kabelLoops('cyan'), [tf(new TorusGeometry(0.085, 0.03, 6, 16).scale(1.2, 1, 1.1), 0, 0.0, 0.01, Math.PI / 2), 'red']]);
+      mount('Head', implants('cyan'));
+      break;
+    case 'zuender':
+      // Bust E07: dynamite strapped to the chest, a detonator with a dial, a fuse with its spark, a red scarf.
+      // The spark rides in its own group (gear [0]) so it can flicker; it flares while the fuse burns.
+      // The fuse burns at its tip: a spark and a small flame (gear [0], its origin at the tip so it can flicker in place).
+      mount('spine_03', [
+        [tf(new SphereGeometry(0.028, 8, 6), 0, 0, 0), 'spark'],
+        [tf(new ConeGeometry(0.035, 0.12, 8), 0, 0.06, 0), 'flame'],
+        [tf(new ConeGeometry(0.02, 0.08, 6), 0.015, 0.05, 0.01, 0, 0, -0.4), 'flame'],
+      ], 0.08 + 0.17, 0.25, 0.1);
+      mount('spine_03', [
+        ...[-0.105, -0.035, 0.035, 0.105].map((x): Part => [tf(new CylinderGeometry(0.034, 0.034, 0.3, 8), x, -0.1, 0.2), 'red']),
+        [tf(new BoxGeometry(0.3, 0.035, 0.08), 0, 0.0, 0.2), 'dark'],
+        [tf(new BoxGeometry(0.3, 0.035, 0.08), 0, -0.2, 0.2), 'dark'],
+        [tf(new BoxGeometry(0.13, 0.1, 0.06), -0.12, -0.3, 0.22), 'dark'],
+        [tf(new CylinderGeometry(0.03, 0.03, 0.012, 10), -0.12, -0.3, 0.255, Math.PI / 2), 'brass'],
+        [cable([[0.035, 0.05, 0.2], [0.06, 0.12, 0.23], [0.1, 0.17, 0.25]], 0.008), 'dark'],
+      ], 0.08);
+      mount('neck_01', [[tf(new TorusGeometry(0.1, 0.035, 5, 12).scale(1.2, 1, 1.1), 0, -0.06, 0.01, Math.PI / 2), 'red']]);
+      break;
+    case 'schild':
+      // Bust E06: riot gear. The shield is gear [0]: it hangs from its top edge on the chest and swings aside while
+      // the guard is open. Bevelled rounded plate with a rim, a viewing window, rivets and scratches.
+      mount('spine_03', riotShield(0.5, 0.82), 0.16, 0.34);
+      mount('Head', [
+        [tf(new SphereGeometry(0.152, 22, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), 0, -0.01, 0), 'riot'],
+        [tf(new CylinderGeometry(0.162, 0.166, 0.035, 24, 1, true), 0, -0.035, 0), 'riot'],
+        [tf(new TorusGeometry(0.163, 0.008, 6, 28), 0, -0.052, 0, Math.PI / 2), 'dark'],
+        // The visor: a curved strip of clear plastic swung up over the brow, with its two hinge bolts.
+        [tf(new CylinderGeometry(0.178, 0.178, 0.13, 20, 1, true, -0.95, 1.9), 0, 0.06, 0, -0.5), 'visor'],
+        ...[-1, 1].map((sd): Part => [tf(new CylinderGeometry(0.018, 0.018, 0.02, 10), sd * 0.165, 0.0, 0.0, 0, 0, Math.PI / 2), 'steel']),
+        [new TubeGeometry(new CatmullRomCurve3([new Vector3(-0.15, -0.04, 0.02), new Vector3(-0.08, -0.15, 0.07), new Vector3(0, -0.18, 0.09), new Vector3(0.08, -0.15, 0.07), new Vector3(0.15, -0.04, 0.02)]), 16, 0.008, 5, false), 'dark'],
+      ], 0.03);
+      // Chest armour in plates, layered shoulder pads.
+      mount('spine_03', [
+        [vestShell([[0.19, -0.3], [0.215, -0.2], [0.235, -0.08], [0.24, 0.02], [0.225, 0.1], [0.19, 0.15]], 0.25), 'riot'],
+        ...[-0.2, -0.08, 0.04].map((y): Part => [vestShell([[0.232 + y * 0.05, y - 0.012], [0.236 + y * 0.05, y + 0.012]], 0.25, 1.02), 'dark']),
+        ...[-1, 1].flatMap((sd): Part[] => [
+          [tf(new SphereGeometry(0.12, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.45).scale(1.05, 0.75, 1), sd * 0.24, 0.04, 0, 0, 0, -sd * 0.4), 'riot'],
+          [tf(new SphereGeometry(0.1, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.45).scale(1.05, 0.75, 1), sd * 0.29, -0.03, 0, 0, 0, -sd * 0.75), 'riot'],
+          [tf(new TorusGeometry(0.105, 0.006, 5, 24).scale(1.05, 1, 1), sd * 0.24, 0.05, 0, Math.PI / 2, 0, -sd * 0.4), 'dark'],
+        ]),
+      ], 0.08);
+      for (const sd of ['l', 'r']) {
+        mount(`calf_${sd}`, [[tf(new SphereGeometry(0.075, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5).scale(1, 1.2, 0.8), 0, 0.02, 0.05, Math.PI / 2), 'riot']]);
+        mount(`lowerarm_${sd}`, [[tf(new SphereGeometry(0.055, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5).scale(1, 1.1, 0.8), 0, 0, -0.04, -Math.PI / 2), 'riot']]);
+      }
+      break;
+    case 'heuler':
+      // Bust E08: a swollen throat (gear [0]) that bulges while it howls, the rest is rags.
+      mount('neck_01', [
+        [tf(new SphereGeometry(0.105, 16, 12).scale(1.25, 1.1, 1.05), 0, 0.0, 0.07), 'flesh'],
+        [tf(new SphereGeometry(0.055, 12, 8), 0.085, 0.03, 0.04), 'flesh'],
+        [tf(new SphereGeometry(0.05, 12, 8), -0.085, 0.02, 0.04), 'flesh'],
+      ]);
       break;
     case 'bass':
       // Boxenkopf (2D art, board E14): a speaker for a head, purple rags with a yellow hazard band.
@@ -457,16 +1163,6 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
         ...[0, 1, 2, 3, 4].map((i): Part => [tf(new BoxGeometry(0.035, 0.04 + (i % 3) * 0.03, 0.01), -0.12 + i * 0.06, -0.11, 0.27, -0.2), i % 2 ? 'cyan' : 'neon']),
       ], 0.08);
       mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.32, 0.78, 10, 1, true, Math.PI * 0.6, Math.PI * 1.8), 0, -0.36, 0), 'violet']]);
-      break;
-    case 'hauptmann':
-      mount('Head', [...pickelhaube(true), [tf(new ConeGeometry(0.05, 0.2, 6), 0, 0.3, -0.02, -0.25), 'red']], 0.12);
-      mount('spine_03', [
-        ...epaulettes(true), ...tunic('blue', 'red'),
-        // Sash across the chest.
-        [tf(new BoxGeometry(0.07, 0.56, 0.02), 0.03, -0.12, 0.2, 0, 0, 0.75), 'red'],
-      ], 0.08);
-      // Coat tails.
-      mount('pelvis', [[tf(new CylinderGeometry(0.2, 0.27, 0.4, 10, 1, true, Math.PI * 0.6, Math.PI * 1.8), 0, -0.2, 0), 'blue']]);
       break;
     default:
       break;
@@ -682,6 +1378,11 @@ export class EnemyView {
   /** Mech gear that moves: the shield (swings aside when the guard opens), the Großer Uhrwerkläufer's key. */
   private shield: Object3D | null = null;
   private key: Object3D | null = null;
+  /** H3: gear sets of a mech body per kind ('clock': the Uhrwerkläufer's, built at once; the Turmwächter's tower on first use). */
+  private readonly mechSets = new Map<'clock' | 'waechter', MechSet>();
+  private mechSet: MechSet | null = null;
+  /** H3: the mech's bones in their rest pose (`inRest`). */
+  private readonly rest: Array<[Object3D, Vector3, Quaternion]> = [];
   /** Skeleton the clips belong to (a mech falls back to the zombie when the mech pack is not loaded). */
   private readonly skin: 'zombie' | 'raptor' | 'rex' | 'mech' | 'mechBig' | null = null;
   private spinDrum = 0;
@@ -692,8 +1393,17 @@ export class EnemyView {
   private readonly glow: LitMaterial[] = [];
   private readonly seed = Math.random();
   private readonly gear = new Map<GearKey, Object3D[]>();
+  /** WP5 step 3: coat skirts of the worn gear that hang instead of turning fully with the pelvis. */
+  private hanging: Object3D[] = [];
   private readonly bones = new Map<string, Object3D>();
+  /** H3: this body stands upright (humanoid bosses): the zombie clips' hunch is taken out of the spine. */
+  private upright = false;
+  /** H3: per spine bone, the turn from the zombie idle pose to the upright idle pose (local space). */
+  private straight: Array<{ bone: Object3D; fix: Quaternion; arm: boolean; pre: Quaternion; post: Quaternion; set: boolean }> | null = null;
+  /** H3: how much of the arm fix applies (eases with the clip fade between walking and striking). */
+  private armK = 1;
   private readonly model: Object3D | null = null;
+  private readonly clips: Map<string, AnimationClip> | null = null;
   private rack: WeaponRack | null = null;
 
   /** `gdr`: Alexanderplatz (walkers wear the Brigadeghul's Blaumann); `clockRig`: the map's maker of Weltzeituhr rigs. */
@@ -736,16 +1446,17 @@ export class EnemyView {
     }
     if (body === 'drone') return;
     this.pulse = materials.surface({ color: 0x5a1034, emissive: 0xff4fa3, emissiveIntensity: 1.6, roughness: 0.5 });
-    const mech = body === 'mech' || body === 'mechBig' ? assets.mech : undefined;
+    const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
     this.skin = skin;
-    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big : skin === 'zombie' ? assets.zombie : skin === 'raptor' ? assets.raptor : assets.rex;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
     // (crow, rat and the code-built bodies returned above)
-    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips : skin === 'zombie' ? assets.zombieClips : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
+    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? (body === 'female' && assets.female ? assets.female.clips : assets.zombieClips) : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
     this.model = model;
     this.inner.add(model);
     this.anim = new Animator(model, clips);
+    this.clips = clips;
     const own = new Map<unknown, LitMaterial>();
     model.traverse((o) => {
       const mesh = o as SkinnedMesh;
@@ -774,7 +1485,9 @@ export class EnemyView {
       } else mesh.frustumCulled = false;
     });
     if (skin === 'mech' || skin === 'mechBig') {
-      this.mechGear(model, skin);
+      // H3: gear sets per kind are built in the rest pose the body has now (`inRest`); the clock gear at once.
+      model.traverse((o) => { if ((o as Bone).isBone) this.rest.push([o, o.position.clone(), o.quaternion.clone()]); });
+      this.mechSets.set('clock', this.mechGear(model, skin));
       return;
     }
     if (skin !== 'zombie') {
@@ -829,10 +1542,11 @@ export class EnemyView {
   }
 
   /** The clock-face shield on the chest, a dome and chimney (Uhrwerkläufer) or the wind-up key (Großer), the emblem plate, a glowing lens. */
-  private mechGear(model: Object3D, skin: 'mech' | 'mechBig'): void {
+  private mechGear(model: Object3D, skin: 'mech' | 'mechBig'): MechSet {
     const k = alexKit(this.materials);
     model.updateMatrixWorld(true);
     const p = new Vector3();
+    const list: Object3D[] = [];
     const at = (name: string, parts: AlexPart[], x: number, y: number, z: number): Object3D | null => {
       const b = model.getObjectByName(name);
       if (!b) return null;
@@ -842,6 +1556,7 @@ export class EnemyView {
       g.position.set(p.x + x, p.y + y, p.z + z);
       model.add(g);
       b.attach(g);
+      list.push(g);
       return g;
     };
     const big = skin === 'mechBig';
@@ -849,9 +1564,9 @@ export class EnemyView {
     const r = big ? 0.85 : 0.42;
     // Mike punches with the right: his shield sits on the left of the chest.
     const shield = at('Chest', shieldParts(r).map(([g, m]): AlexPart => [tfAlex(g, 0, -r, 0), m]), big ? 0.45 : 0, big ? 0.55 : 0.32, big ? 0.85 : 0.5);
-    this.shield = shield;
+    let key: Object3D | null = null;
     if (big) {
-      this.key = at('Chest', keyParts(1.1), 0, 0.2, -0.75);
+      key = at('Chest', keyParts(1.1), 0, 0.2, -0.75);
       at('Chest', emblemParts(0.45).map(([g, m]): AlexPart => [tfAlex(g, 0, 0, 0, 0, 0, 0), m]), 0.75, 0.45, 0.45);
       at('Head', [[tfAlex(new SphereGeometry(0.09, 8, 6), 0.16, 0.1, 0.42), 'lens'], [tfAlex(new SphereGeometry(0.09, 8, 6), -0.16, 0.1, 0.42), 'lens']], 0, 0, 0);
     } else {
@@ -860,6 +1575,80 @@ export class EnemyView {
       at('Head', [[tfAlex(new SphereGeometry(0.11, 10, 8), 0, 0.15, 0.45), 'lens']], 0, 0, 0);
     }
     this.glow.push(k.lens);
+    return { list, shield, key, bones: {} };
+  }
+
+  /** H3: the skeleton in its rest pose for building a gear set (as `inIdle` for the zombie), then back. */
+  private inRest<T>(build: () => T): T {
+    const now = this.rest.map(([b]) => [b.position.clone(), b.quaternion.clone()] as const);
+    for (const [b, p, q] of this.rest) { b.position.copy(p); b.quaternion.copy(q); }
+    this.model!.updateMatrixWorld(true);
+    const out = build();
+    this.rest.forEach(([b], i) => { b.position.copy(now[i]![0]); b.quaternion.copy(now[i]![1]); });
+    return out;
+  }
+
+  /**
+   * WP5 fix: gear is built upright in model space and handed to its bone, so it is aligned to the pose the
+   * skeleton holds at that moment. Views are pooled per body, so that used to be whatever the last kind left
+   * (often its death pose): helmets and shells came out tilted. Now the skeleton takes the first frame of the
+   * idle clip for the build and goes back afterwards (the temporary mixer restores the bones when it stops).
+   */
+  private inIdle<T>(build: () => T): T {
+    const clip = this.clips?.get('Zombie_Idle_Loop');
+    if (!clip || !this.model) return build();
+    const m = new AnimationMixer(this.model);
+    m.clipAction(clip).play();
+    m.update(0);
+    // H3: an upright boss gets its gear fitted in the straightened pose it will stand in.
+    if (this.upright) this.straighten(1, 1);
+    this.model.updateMatrixWorld(true);
+    const out = build();
+    m.stopAllAction();
+    m.uncacheRoot(this.model);
+    return out;
+  }
+
+  /**
+   * H3 (Johannes, 2026-11-19): the humanoid bosses lost the ghouls' hunch. The zombie and the upright clips share
+   * one skeleton, so the hunch is only in the spine: per spine bone the turn from the first frame of
+   * Zombie_Idle_Loop to the first frame of Idle_Loop, measured once, is applied after every animation update.
+   * The gait of every zombie clip stays, the back stands up.
+   */
+  /** `arms`: weight of the arm fix (0..1); `k`: how much zombie clips drive the pose. */
+  private straighten(arms: number, k: number): void {
+    if (!this.straight) {
+      this.straight = [];
+      const zi = this.clips?.get('Zombie_Idle_Loop'), ui = this.clips?.get('Idle_Loop');
+      if (!zi || !ui || !this.model) return;
+      const sample = (clip: AnimationClip): Map<string, Quaternion> => {
+        const m = new AnimationMixer(this.model!);
+        m.clipAction(clip).play();
+        m.update(0);
+        const out = new Map<string, Quaternion>();
+        for (const n of [...STRAIGHT, ...STRAIGHT_ARMS]) { const b = this.model!.getObjectByName(n); if (b) out.set(n, b.quaternion.clone()); }
+        m.stopAllAction();
+        m.uncacheRoot(this.model!);
+        return out;
+      };
+      const z = sample(zi), u = sample(ui);
+      for (const n of [...STRAIGHT, ...STRAIGHT_ARMS]) {
+        const b = this.model.getObjectByName(n), qz = z.get(n), qu = u.get(n);
+        if (b && qz && qu) this.straight.push({ bone: b, fix: qu.clone().multiply(qz.clone().invert()), arm: (STRAIGHT_ARMS as readonly string[]).includes(n), pre: new Quaternion(), post: new Quaternion(), set: false });
+      }
+    }
+    for (const s of this.straight) {
+      const q = s.bone.quaternion;
+      // The mixer writes a bone only when its value changes (hitstop, held poses): a bone still holding last
+      // frame's straightened value goes back to the mixer's value first, so the turn is never added twice (review fix).
+      if (s.set && q.equals(s.post)) q.copy(s.pre);
+      s.pre.copy(q);
+      const w = k * (s.arm ? arms : 1);
+      if (w >= 0.999) q.premultiply(s.fix);
+      else if (w > 0.001) q.premultiply(qd.identity().slerp(s.fix, w));
+      s.post.copy(q);
+      s.set = true;
+    }
   }
 
   /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. */
@@ -875,12 +1664,22 @@ export class EnemyView {
     this.root.scale.set(s * b[0], s * b[1], s * b[0]);
     const tints = TINTS[e.kind];
     const tint = tints[Math.floor(this.seed * tints.length)] as number;
+    // WP5 (Johannes): every normal ghoul looks a little different, skin and rags; bosses keep their colours.
+    const vary = this.skin === 'zombie' && !e.def.boss;
+    const r = (n: number): number => { const v = Math.sin((this.seed + e.id * 0.137) * 91.7 + n * 12.9) * 43758.5; return v - Math.floor(v) - 0.5; };
     for (const m of this.mats) {
-      if (m.name === 'skin') m.color.set(tint);
+      if (m.name === 'skin') {
+        m.color.set(tint);
+        if (vary) m.color.offsetHSL(r(1) * 0.12, r(2) * 0.3, r(3) * 0.22);
+      }
       m.emissive.setScalar(0);
     }
     const key: GearKey = this.opts.gdr && e.kind === 'walker' ? 'brigade' : e.kind;
-    for (const m of this.cloth) m.color.set(key === 'brigade' ? CLOTH_BRIGADE : CLOTH[e.kind] ?? 0xffffff);
+    for (const m of this.cloth) {
+      const own = key === 'brigade' ? CLOTH_BRIGADE : CLOTH[e.kind];
+      m.color.set(own ?? (vary ? RAGS[Math.floor((r(4) + 0.5) * RAGS.length)]! : 0xffffff));
+      if (vary) m.color.offsetHSL(r(5) * 0.08, r(6) * 0.2, r(7) * 0.2);
+    }
     if (this.body === 'drone') {
       const big = e.kind === 'wachdrohne';
       const d = (big ? this.drones.big : this.drones.small) ?? buildDrone(this.materials, this.castShadow, big);
@@ -895,6 +1694,28 @@ export class EnemyView {
       for (const m of this.mats) m.emissive.setScalar(0);
       this.inner.position.y = (big ? BOSS.wachdrohne.height : 1.8) / (this.root.scale.y || 1);
     }
+    if ((this.skin === 'mech' || this.skin === 'mechBig') && this.model) {
+      // H3: the Turmwächter wears his tower on Leela, every other mech the clock gear.
+      const id = e.kind === 'waechter' && this.skin === 'mech' ? 'waechter' : 'clock';
+      const scaled = (bones: Record<string, number>): void => {
+        for (const n of Object.keys(TOWER_BONES)) this.model!.getObjectByName(n)?.scale.setScalar(bones[n] ?? 1);
+      };
+      let set = this.mechSets.get(id);
+      if (!set) {
+        // Fitted to the slimmed body; `attach` keeps the gear at full size on the scaled bones.
+        scaled(TOWER_BONES);
+        set = this.inRest(() => towerGear(this.model!, this.materials, this.castShadow));
+        this.mechSets.set(id, set);
+      }
+      for (const o of this.mechSets.values()) for (const g of o.list) g.visible = o === set;
+      scaled(set.bones);
+      this.mechSet = set;
+      this.shield = set.shield;
+      this.key = set.key;
+    }
+    this.upright = this.skin === 'zombie' && !!UPRIGHT[e.kind];
+    this.armK = 1;
+    for (const st of this.straight ?? []) st.set = false;
     if (this.skin === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
@@ -902,20 +1723,21 @@ export class EnemyView {
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
       let gear = this.gear.get(key);
       if (!gear) {
-        gear = gearFor(key, this.model, this.materials, this.castShadow, this.pulse ?? undefined);
+        gear = this.inIdle(() => gearFor(key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
         this.gear.set(key, gear);
       }
       for (const g of gear) g.visible = true;
+      this.hanging = gear.filter((g) => g.userData.hang !== undefined);
       // Speaker heads start at rest size.
       for (const g of gear) g.scale.setScalar(g.userData.rest ??= g.scale.x);
       const cyber = neon && !!CYBER[e.kind];
-      if (cyber && !this.cyber) this.cyber = gearFor('cyber', this.model, this.materials, this.castShadow);
+      if (cyber && !this.cyber) this.cyber = this.inIdle(() => gearFor('cyber', this.model!, this.materials, this.castShadow));
       for (const g of this.cyber ?? []) g.visible = cyber;
       // Officers carry a saber.
       const armed = e.kind === 'feldwebel' || e.kind === 'hauptmann';
       if (armed && !this.rack) {
         this.rack = new WeaponRack(this.materials);
-        this.rack.show('blade', undefined);
+        this.rack.show('stahl', undefined);
         this.model.getObjectByName('hand_r')?.add(this.rack.group);
       }
       if (this.rack) this.rack.group.visible = armed;
@@ -981,8 +1803,31 @@ export class EnemyView {
       return;
     }
     this.skip = skip;
+    const step = this.pending;
     this.anim.update(this.pending);
     this.pending = 0;
+    // Only as much as zombie clips drive the pose: the upright clips (heavy swing, dash, throw, hits, death) stand already (review fix).
+    if (this.upright) {
+      // The arm fix eases in and out with the clip fade (about 0.15 s), so the arms do not snap at a strike (review fix).
+      this.armK += ((e.state === 'chase' ? 1 : 0) - this.armK) * Math.min(1, step / 0.15);
+      this.straighten(this.armK, this.anim.weightOf('Zombie_'));
+    }
+    if (this.hanging.length) this.hangSkirts(e.state === 'dead');
+  }
+
+  /**
+   * WP5 step 3: a long coat's skirt is rigid on the pelvis, so a clip that tips the pelvis far (the heavy swing)
+   * threw it out flat. It follows only part of the pelvis' turn away from the pose it was built in and hangs
+   * otherwise (fully follows once dead, so it falls with the body).
+   */
+  private hangSkirts(dead: boolean): void {
+    for (const g of this.hanging) {
+      const k = dead ? 1 : 1 - (g.userData.hang as number);
+      modelQuat(g.parent!, this.model!, qa);
+      qb.copy(g.userData.hangQ as Quaternion).invert().premultiply(qa);
+      qc.identity().slerp(qb, k);
+      g.quaternion.copy(qa).invert().multiply(qc);
+    }
   }
 
   private poseZombie(e: Enemy, t: number): void {
@@ -1029,6 +1874,17 @@ export class EnemyView {
             break;
           case 'slam': case 'stomp': case 'bossSlam': case 'flame':
             a.pose('Sword_Heavy_Combo', going ? lerp(2.66, 2.95, g) : lerp(2.3, 2.66, w * w), 0.1);
+            break;
+          case 'fuse':
+            // Zünder: stands hunched over the bundle and shakes while the fuse burns.
+            a.loop('Zombie_Idle_Loop', 0.1);
+            pitch = 0.22 * w;
+            this.inner.position.x = Math.sin(this.time * 55) * 0.025 * w;
+            break;
+          case 'howl':
+            // Heuler: throws the head back while the throat swells, then howls forward.
+            a.loop('Zombie_Idle_Loop', 0.1);
+            pitch = going ? lerp(-0.55, 0.1, g) : -0.55 * w;
             break;
           case 'bass':
             // Boxenkopf: rears back while the speaker swells, then thumps forward.
@@ -1085,6 +1941,42 @@ export class EnemyView {
         const head = this.gear.get(this.kind)?.[0];
         if (head) head.scale.setScalar((head.userData.rest as number) * (1 + 0.22 * ring + 0.025 * beat));
       }
+    }
+    if (!(e.state === 'special' && e.sp?.kind === 'fuse')) this.inner.position.x = 0;
+    // WP5: the Zünder's spark flickers and flares while the fuse burns; the Heuler's throat swells to howl;
+    // the Schildträger's shield swings aside while the guard stands open.
+    if (this.kind === 'zuender') {
+      const spark = this.gear.get('zuender')?.[0];
+      const lit = e.state === 'special' && e.sp?.kind === 'fuse' ? Math.min(1, e.stateT / e.sp.wind) : 0;
+      if (spark) {
+        // A flickering flame on the fuse that flares up while the fuse burns down.
+        const f = 0.85 + 0.3 * Math.sin(this.time * 31 + this.seed * 9) ** 2 + 0.15 * Math.sin(this.time * 53);
+        const k = e.state === 'dead' ? 0.01 : f + 1.6 * lit;
+        spark.scale.set(k * (1 - 0.15 * Math.sin(this.time * 47)), k * (1 + 0.25 * Math.sin(this.time * 37)), k);
+        spark.rotation.z = 0.15 * Math.sin(this.time * 23);
+      }
+    } else if (this.kind === 'brandmeister') {
+      // WP5 step 3: the helmet fire flickers like the Zünder's fuse and flares while he spits flame.
+      const fire = this.gear.get('brandmeister')?.[0];
+      if (fire) {
+        const sp = e.state === 'special' ? e.sp : null;
+        const flare = sp && (sp.kind === 'flame' || sp.kind === 'ring') ? Math.min(1, e.stateT / sp.wind) : 0;
+        const f = 0.9 + 0.18 * Math.sin(this.time * 17 + this.seed * 9) ** 2 + 0.1 * Math.sin(this.time * 41);
+        const k = e.state === 'dead' ? 0.01 : f + 0.45 * flare;
+        fire.scale.set(k * (1 - 0.08 * Math.sin(this.time * 29)), k * (1 + 0.28 * Math.sin(this.time * 23) + 0.12 * Math.sin(this.time * 61)), k);
+        // H3 (Johannes): the fire glows and licks: it sways and its glow pulses (one boss at a time, so the shared kit material is fine).
+        fire.rotation.z = 0.12 * Math.sin(this.time * 9 + this.seed) + 0.05 * Math.sin(this.time * 27);
+        const kit = gearKit(this.materials);
+        kit.helmFire.emissiveIntensity = e.state === 'dead' ? 0.4 : 2.8 + 1.6 * Math.abs(Math.sin(this.time * 13 + this.seed * 5)) + 2 * flare;
+        kit.helmFlame.emissiveIntensity = e.state === 'dead' ? 0.4 : 3.5 + 2 * Math.abs(Math.sin(this.time * 19)) + 2 * flare;
+      }
+    } else if (this.kind === 'heuler') {
+      const sac = this.gear.get('heuler')?.[0];
+      const sp = e.state === 'special' ? e.sp : null;
+      sac?.scale.setScalar(sp?.kind === 'howl' ? 1 + 0.8 * Math.min(1, e.stateT / sp.wind) : 1 + 0.05 * Math.sin(this.time * 3));
+    } else if (this.kind === 'schild') {
+      const sh = this.gear.get('schild')?.[0];
+      if (sh) sh.rotation.z += (((e.guardOpen ?? 0) > 0 || e.state === 'dead' ? 1.0 : 0) - sh.rotation.z) * 0.25;
     }
     // The spitter's throat swells while it winds up.
     if (this.kind === 'spitter') {
@@ -1275,12 +2167,13 @@ export class EnemyView {
     const a = this.anim!;
     const def = e.def;
     const lean = this.inner.rotation;
-    let pitch = 0;
+    let pitch = 0, sink = 0, spin = 0;
     const hitT = a.duration(k.strike) * k.hit, swipe = a.duration(k.strike) * k.swipe;
     switch (e.state) {
       case 'chase':
-        if (e.speed > k.run * 0.6) a.loop('Run', 0.15, Math.min(2, e.speed / k.run));
-        else if (e.speed > 0.15) a.loop('Walk', 0.2, Math.min(2.4, Math.max(0.6, e.speed / k.walk)));
+        // The clips' stride grows with the body (H3: the Turmwächter walks on Leela at 1.3).
+        if (e.speed > k.run * def.scale * 0.6) a.loop('Run', 0.15, Math.min(2, e.speed / (k.run * def.scale)));
+        else if (e.speed > 0.15) a.loop('Walk', 0.2, Math.min(2.4, Math.max(0.6, e.speed / (k.walk * def.scale))));
         else a.loop('Idle', 0.25);
         if (e.open > 0) pitch = 0.18;
         break;
@@ -1297,11 +2190,25 @@ export class EnemyView {
         const sp = e.sp;
         if (!sp) break;
         const w = Math.min(1, t / sp.wind), going = t >= sp.wind;
+        const g = Math.min(1, Math.max(0, (t - sp.wind) / sp.go));
         if (sp.kind === 'charge') {
           if (going) a.loop('Run', 0.06, 2.2);
           else { a.loop('Idle', 0.15); pitch = 0.25 * w; }
         } else if (sp.kind === 'key') a.loop('Yes', 0.15, 1.4);
-        else a.loop('Idle', 0.15);
+        else if (sp.kind === 'barrage') {
+          // H3 Turmwächter: the tower leans back while the sphere charges, then fires the volley from it (a jolt per shell).
+          a.loop('Idle', 0.15);
+          pitch = going ? lerp(-0.22, 0, g) + 0.07 * Math.abs(Math.sin(((t - sp.wind) / BOSS.barrage.step) * Math.PI)) : -0.22 * w * (2 - w);
+        } else if (sp.kind === 'ring') {
+          // Crouches into its legs while the ring charges, then rises and turns once as the shots fly out.
+          a.loop('Idle', 0.15);
+          sink = going ? lerp(0.16, 0, g) : 0.16 * w;
+          spin = going ? Math.PI * 2 * smooth(0, 1, g) : 0;
+        } else if (sp.kind === 'bossSlam') {
+          // Lifts a foot (the kick up to its peak) and stamps it down when the shock goes off, leaning into it.
+          a.pose(k.strike, going ? lerp(hitT, a.duration(k.strike), g) : lerp(0, hitT, w), going ? 0.03 : 0.1);
+          pitch = going ? lerp(0.2, 0, g) : -0.1 * w;
+        } else a.loop('Idle', 0.15);
         break;
       }
       case 'stagger':
@@ -1312,12 +2219,28 @@ export class EnemyView {
         break;
     }
     lean.x += (pitch - lean.x) * 0.3;
+    lean.y = spin;
+    this.inner.position.y += (-sink - this.inner.position.y) * 0.3;
+    if (this.mechSet?.sparks) this.towerFx(e, this.mechSet.sparks);
     // Guard open: the dial swings down and out of the way; a little sway otherwise.
     if (this.shield) {
       const open = e.state !== 'dead' && (e.guardOpen ?? 0) > 0;
       this.shield.rotation.x += ((open ? 1.25 : 0.05 * Math.sin(this.time * 2)) - this.shield.rotation.x) * 0.2;
     }
     if (this.key) this.key.rotation.z += dt * (e.state === 'special' && e.sp?.kind === 'key' ? 9 : 1.2);
+  }
+
+  /**
+   * H3 Turmwächter: the sparks jump (on and off, a new place round the shaft every few frames); the window ring
+   * flares while he charges a volley or a ring and dims when he dies.
+   */
+  private towerFx(e: Enemy, sparks: Object3D): void {
+    const step = Math.floor(this.time * 9 + this.seed * 7);
+    sparks.visible = e.state !== 'dead' && Math.sin(step * 12.9898 + this.seed) * 43758.5 % 1 > -0.6;
+    sparks.rotation.y = Math.sin(step * 7.31) * 0.5;
+    const sp = e.state === 'special' ? e.sp : null;
+    const charge = sp && (sp.kind === 'barrage' || sp.kind === 'ring') ? (e.stateT < sp.wind ? e.stateT / sp.wind : 1 - Math.min(1, (e.stateT - sp.wind) / sp.go) * 0.6) : 0;
+    gearKit(this.materials).window.emissiveIntensity = e.state === 'dead' ? 0.3 : 2.4 + 0.3 * Math.sin(this.time * 3) + 3.2 * charge;
   }
 
   /** Kernspeier: hops when it moves; plants (squashes, head back, mouth open), then snaps the head forward. */

@@ -2,7 +2,7 @@
 // the cache, the supply drop and the radio zone. Built in code; glows are unlit sprites (no lights).
 import {
   AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial,
-  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Object3D,
+  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, Vector3, type BufferGeometry, type Object3D, type Sphere,
 } from 'three';
 import type { RunContent } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
@@ -10,7 +10,8 @@ import { heroLook } from '../data/hero-look';
 import { Animator, type CharacterAssets } from './characters';
 import { HeroModel } from './hero-model';
 import { groundY } from './ground';
-import { FX_LAYER } from './layers';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { FX_LAYER, LOOT_LAYER, LOOT_SHOW } from './layers';
 import type { Materials } from './materials';
 import { paintGlow, paintWood } from './paint';
 
@@ -76,9 +77,35 @@ function posters(): CanvasTexture {
   return t;
 }
 
+/** Fund pieces, built once and shared by every run (no new GPU buffers per rebuild). */
+let FUND_PARTS: { gear: BufferGeometry; hub: BufferGeometry; box: BufferGeometry; tag: BufferGeometry; gold: MeshBasicMaterial; dark: MeshBasicMaterial; label: MeshBasicMaterial } | null = null;
+function fundParts(): NonNullable<typeof FUND_PARTS> {
+  if (FUND_PARTS) return FUND_PARTS;
+  // A gear: a thin wheel with eight teeth, merged into one geometry; a dark hub in the middle.
+  const wheel = new CylinderGeometry(0.22, 0.22, 0.06, 16).rotateX(Math.PI / 2);
+  const teeth = Array.from({ length: 8 }, (_, k) => {
+    const a = (k / 8) * Math.PI * 2;
+    return new BoxGeometry(0.08, 0.08, 0.06).rotateZ(a).translate(Math.cos(a) * 0.26, Math.sin(a) * 0.26, 0);
+  });
+  const gear = mergeGeometries([wheel, ...teeth])!;
+  for (const g of [wheel, ...teeth]) g.dispose();
+  FUND_PARTS = {
+    gear, hub: new CylinderGeometry(0.07, 0.07, 0.07, 10).rotateX(Math.PI / 2),
+    box: new BoxGeometry(0.36, 0.22, 0.06), tag: new BoxGeometry(0.28, 0.08, 0.065).translate(0, 0.04, 0),
+    gold: new MeshBasicMaterial({ color: 0xd9a940, fog: false }), dark: new MeshBasicMaterial({ color: 0x2a2622, fog: false }), label: new MeshBasicMaterial({ color: 0xe8dccb, fog: false }),
+  };
+  return FUND_PARTS;
+}
+
 export class ContentView {
   readonly group = new Group();
   private readonly hidden: Array<{ root: Group; shard: Mesh; glow: Sprite }> = [];
+  /** Funde (2D #14, #27): a gold gear (Uhrwerkteil) or a cassette, each with an unlit glow. */
+  private readonly funde: Array<{ root: Group; body: Group; glow: Sprite }> = [];
+  private readonly tmp = new Vector3();
+  private readonly cacheParts: Mesh[] = [];
+  private heroX = 0;
+  private heroZ = 0;
   private readonly shrines: Array<{ root: Group; glow: Sprite; halo: Mesh }> = [];
   private readonly cache = new Group();
   private readonly crate = new Group();
@@ -124,6 +151,8 @@ export class ContentView {
     const cg = glowSprite('rgba(255,215,100,0.9)', 'rgba(255,170,40,0)', 3.2);
     cg.position.y = 0.8;
     this.cache.add(body, lid, band, lock, cg);
+    // The cache's contour shows through buildings within 15 m too (the layer is switched in `update`).
+    this.cacheParts.push(body, lid, band, lock);
     // Supply drop: a strapped crate under a rag of parachute, with a beam to find it by.
     const box = new Mesh(new BoxGeometry(0.85, 0.7, 0.85), wood);
     box.position.y = 0.35;
@@ -156,12 +185,30 @@ export class ContentView {
   /** Hidden blessings and shrines of this run (positions are fixed for the run). */
   private build(c: RunContent): void {
     this.built = c;
-    for (const h of [...this.hidden, ...this.shrines]) this.group.remove(h.root);
-    this.hidden.length = this.shrines.length = 0;
+    for (const h of [...this.hidden, ...this.shrines, ...this.funde]) this.group.remove(h.root);
+    // The Fund glows own a painted texture each; the meshes share FUND_PARTS and are not freed.
+    for (const h of this.funde) { const m = h.glow.material as SpriteMaterial; m.map?.dispose(); m.dispose(); }
+    this.hidden.length = this.shrines.length = this.funde.length = 0;
+    const F = fundParts();
+    for (const f of c.funde ?? []) {
+      const root = new Group(), body = new Group();
+      // Shared, merged pieces (review of PR #58): an Uhrwerkteil is two draw calls, a cassette two.
+      if (f.kind === 'teil') body.add(new Mesh(F.gear, F.gold), new Mesh(F.hub, F.dark));
+      else body.add(new Mesh(F.box, F.dark), new Mesh(F.tag, F.label));
+      // FX layer, plus the find contour through buildings within 15 m (hero-outline.ts); the root hides beyond that.
+      body.traverse((o) => { o.layers.set(FX_LAYER); o.layers.enable(LOOT_LAYER); });
+      const glow = f.kind === 'teil' ? glowSprite('rgba(255,205,110,1)', 'rgba(255,150,40,0)', 2) : glowSprite('rgba(230,235,255,0.9)', 'rgba(150,170,255,0)', 1.6);
+      root.add(body, glow);
+      root.position.set(f.x, groundY(f.x, f.z), f.z);
+      this.group.add(root);
+      this.funde.push({ root, body, glow });
+    }
     for (const h of c.hidden) {
       const root = new Group();
       const shard = new Mesh(new OctahedronGeometry(0.2), new MeshBasicMaterial({ color: 0xffc46a, fog: false }));
       shard.layers.set(FX_LAYER);
+      // Its gold contour shows through buildings within 15 m (hero-outline.ts, LOOT_LAYER).
+      shard.layers.enable(LOOT_LAYER);
       const glow = glowSprite('rgba(255,190,90,1)', 'rgba(255,120,30,0)', 2.6);
       root.add(shard, glow);
       root.position.set(h.x, groundY(h.x, h.z), h.z);
@@ -232,16 +279,40 @@ export class ContentView {
     return { root, anim };
   }
 
+  /**
+   * Spheres round the hidden finds the hero is within 15 m of (shown blessing shards, the open cache), for
+   * their contour behind buildings. Returns how many it wrote.
+   */
+  lootSpheres(out: Sphere[]): number {
+    let n = 0;
+    for (const h of this.hidden) {
+      if (n >= out.length) return n;
+      if (!h.root.visible) continue;
+      out[n++]!.set(h.shard.getWorldPosition(this.tmp), 0.5);
+    }
+    for (const h of this.funde) {
+      if (n >= out.length) return n;
+      if (!h.root.visible) continue;
+      out[n++]!.set(h.body.getWorldPosition(this.tmp), 0.5);
+    }
+    if (n < out.length && this.cache.visible && Math.hypot(this.cache.position.x - this.heroX, this.cache.position.z - this.heroZ) < LOOT_SHOW) {
+      out[n++]!.set(this.tmp.copy(this.cache.position).setY(this.cache.position.y + 0.4), 0.9);
+    }
+    return n;
+  }
+
   update(s: Sim, dt: number, heroX: number, heroZ: number): void {
     this.time += dt;
+    this.heroX = heroX;
+    this.heroZ = heroZ;
     const c = s.content;
     // A new run has new places: compare the positions, the content object is replaced on restart.
-    if (!this.built || this.built.hidden.length !== c.hidden.length || this.built.hidden[0]?.x !== c.hidden[0]?.x || this.built.shrines[0]?.x !== c.shrines[0]?.x) this.build(c);
+    if (!this.built || this.built.hidden.length !== c.hidden.length || this.built.hidden[0]?.x !== c.hidden[0]?.x || this.built.shrines[0]?.x !== c.shrines[0]?.x || (this.built.funde?.length ?? 0) !== (c.funde?.length ?? 0)) this.build(c);
     this.built = c;
     this.hidden.forEach((h, i) => {
       const d = c.hidden[i]!;
-      // 2D rule: hidden blessings glow only up close.
-      const k = d.got ? 0 : Math.max(0, Math.min(1, (11 - Math.hypot(d.x - heroX, d.z - heroZ)) / 4));
+      // 2D rule: hidden blessings glow only up close (11 m); since 2026-11-19 they show from 15 m, through walls too.
+      const k = d.got ? 0 : Math.max(0, Math.min(1, (LOOT_SHOW - Math.hypot(d.x - heroX, d.z - heroZ)) / 4));
       h.root.visible = k > 0.01;
       if (!h.root.visible) return;
       h.shard.position.y = 0.9 + Math.sin(this.time * 2.2 + i) * 0.12;
@@ -249,6 +320,18 @@ export class ContentView {
       h.shard.scale.setScalar(k);
       h.glow.position.y = h.shard.position.y;
       (h.glow.material as SpriteMaterial).opacity = k * (0.7 + 0.3 * Math.sin(this.time * 5));
+    });
+    this.funde.forEach((h, i) => {
+      const f = c.funde?.[i];
+      // Seen from 15 m like the hidden blessings, then it fades in (they are hidden, not marked on the map).
+      const k = !f || f.got ? 0 : Math.max(0, Math.min(1, (LOOT_SHOW - Math.hypot(f.x - heroX, f.z - heroZ)) / 4));
+      h.root.visible = k > 0.01;
+      if (!h.root.visible) return;
+      h.body.position.y = 0.85 + Math.sin(this.time * 2 + i) * 0.08;
+      h.body.rotation.y = this.time * 1.4;
+      h.body.scale.setScalar(k);
+      h.glow.position.y = h.body.position.y;
+      (h.glow.material as SpriteMaterial).opacity = k * (0.6 + 0.25 * Math.sin(this.time * 4 + i));
     });
     this.shrines.forEach((h, i) => {
       const used = c.shrines[i]!.used;
@@ -264,6 +347,9 @@ export class ContentView {
       return !!o;
     };
     place(this.cache, c.cache);
+    // Only within 15 m, else the cache would get its contour whenever the pass runs for the hero or an enemy.
+    const near = !!c.cache && Math.hypot(c.cache.x - heroX, c.cache.z - heroZ) < LOOT_SHOW;
+    for (const m of this.cacheParts) { if (near) m.layers.enable(LOOT_LAYER); else m.layers.disable(LOOT_LAYER); }
     if (place(this.crate, c.crate)) (this.beam.material as MeshBasicMaterial).opacity = 0.22 + 0.1 * Math.sin(this.time * 4);
     if (place(this.zone, c.zone) && c.zone) {
       this.zoneRing.scale.setScalar(c.zone.r);

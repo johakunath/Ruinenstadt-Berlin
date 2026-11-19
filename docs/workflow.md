@@ -35,6 +35,7 @@ Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now 
 
 - Read only what the task needs: `CLAUDE.md`, the task, the files it names. Do not re-read whole docs to re-derive decisions already written down.
 - Codex reviews (Johannes, 2026-11-16): one per session and PR; another only after substantial new commits. Fix the findings, do not re-trigger after each push. Fewer sessions are better.
+- Claude reviews (Johannes, 2026-11-19): when Codex has no tokens left, Claude reviews the PR (`/code-review`). Claude fixes its findings right away in the same session, without asking first, on the PR's branch, and reports what it fixed. Exception: a branch another session is still working on gets the findings as a message instead of a push.
 - GitHub Actions minutes are limited: CI does not run per commit. Order: PR as draft, work, Codex review, fix, then mark ready (CI runs once on that head), then merge. A merge Johannes asks for does not wait for CI. Superseded runs are cancelled; `main` always runs (deploy).
 - Codex runs the checks a task names (`npm run check`, the e2e test once). No broad tuning or measurement passes; Claude does those.
 - Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule.

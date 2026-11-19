@@ -40,6 +40,10 @@ import type { BreakableDef } from '../sim/breakables';
 import { campPlaceAt, type CampLayout } from '../data/camp-map';
 import { campStates } from '../sim/camp';
 import { CampStationsView } from './camp-stations';
+import { BarrierView } from './barriers';
+
+/** 2D #43: a hit taking this share of max life or more is heavy (stronger flinch and shake). */
+const HEAVY_HIT = 0.15;
 
 export interface RendererOptions {
   profile: Profile;
@@ -58,8 +62,12 @@ export interface RendererOptions {
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
   map?: { def: MapDef; lots: Lot[]; props: Prop[]; breakables?: BreakableDef[] };
-  /** M15: load the mech bodies (Alexanderplatz, or `?spawn=` of a mech kind elsewhere). */
-  mechs?: boolean;
+  /** M15: load the mech bodies (Alexanderplatz, or `?spawn=` of a mech kind elsewhere); H3: 'small' only Leela (the Turmwächter). */
+  mechs?: boolean | 'small';
+  /** H3: load the human boss base (default true). */
+  humans?: boolean;
+  /** H3: load the female boss base (default true). */
+  females?: boolean;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -185,7 +193,7 @@ export class GameRenderer {
         o.radius = v.size * 1.3;
       }
       return n;
-    });
+    }, (out) => this.content.lootSpheres(out));
     this.resize();
   }
 
@@ -199,7 +207,7 @@ export class GameRenderer {
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
     const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
-    const assets = await loadCharacters(materials, opts.mechs || opts.map?.def.id === 'alex');
+    const assets = await loadCharacters(materials, opts.map?.def.id === 'alex' || (opts.mechs ?? false), opts.humans ?? true, opts.females ?? true);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
     // the first frame applies the real look.
@@ -275,7 +283,7 @@ export class GameRenderer {
         this.views.get(ev.id)?.hit();
         const feel = HIT_FEEL[ev.weight];
         // Procs and area ticks (quiet) spark a little and never shake the camera.
-        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical));
+        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical), !!ev.effective);
         if (!ev.quiet) this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1) * (ev.critical ? 1.25 : 1));
         if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
         break;
@@ -302,6 +310,9 @@ export class GameRenderer {
       case 'secondWind':
         this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 60, 8);
         break;
+      case 'fund':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 4.4, 1.4, 40, 5);
+        break;
       case 'hidden':
         this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 3.4, 1, 50, 6);
         break;
@@ -314,10 +325,13 @@ export class GameRenderer {
       case 'pickup':
         if (ev.what === 'food' || ev.what === 'heal') this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 0.9), sim.player.z, 1.6, 4.4, 1.2, 16, 3);
         break;
-      case 'playerHit':
-        this.cam.shake(ev.dx, ev.dz, 0.2);
-        this.fx.puff(ev.x, ev.z, 4, 0.6);
+      case 'playerHit': {
+        const heavy = ev.damage >= HEAVY_HIT * sim.stats.maxHp;
+        this.hero.hit(heavy);
+        this.cam.shake(ev.dx, ev.dz, heavy ? 0.32 : 0.2);
+        this.fx.puff(ev.x, ev.z, heavy ? 8 : 4, heavy ? 1 : 0.6);
         break;
+      }
       case 'dodge':
         this.fx.puff(sim.player.x, sim.player.z, 7);
         break;
@@ -369,6 +383,8 @@ export class GameRenderer {
 
   private heroX = 0;
   private heroZ = 0;
+  /** P25 Türsteher neon bars at the Tor; built on the first frame of a level that has them. */
+  private barriers: BarrierView | null = null;
 
   render(sim: Sim, alpha: number, dt: number): void {
     this.time += dt;
@@ -377,9 +393,11 @@ export class GameRenderer {
     this.world.update(this.time);
     this.world.sync?.(sim.time - DT * (1 - alpha));
     if (this.world.tunnel) this.world.tunnel.update(tunnelState(sim, sim.time - DT * (1 - alpha)), dt);
+    if (!this.barriers && sim.level.barriers.length) this.scene.add((this.barriers = new BarrierView(sim.level.barriers)).group);
+    this.barriers?.update(sim, dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
-    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', set: w?.set, element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();

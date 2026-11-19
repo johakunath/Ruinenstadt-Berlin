@@ -1,6 +1,9 @@
 import { ECONOMY } from '../data/progression';
 import { describe, it, expect } from 'vitest';
 import { koepenickMap } from '../data/koepenick';
+import { xhainMap } from '../data/xhain';
+import { alexMap } from '../data/alexanderplatz';
+import { mitteMap } from '../data/mitte';
 import { generateLots, generateProps, mapLevel } from '../data/map';
 import { SURVIVORS } from '../data/progression';
 import { spawnEnemy } from './enemies';
@@ -346,4 +349,66 @@ describe('run content in a checkpoint', () => {
     expect(next.stats.attackSpeed).toBeCloseTo(1);
     expect(next.stats.damage).toBeCloseTo(10);
   });
+});
+
+describe('Funde (2D #14, #27)', () => {
+  it('places six Uhrwerkteile and four Kassetten at the same reachable spots every run', () => {
+    const a = make(3).content.funde!, b = make(11).content.funde!;
+    expect(a.filter((f) => f.kind === 'teil')).toHaveLength(6);
+    expect(a.filter((f) => f.kind === 'kassette')).toHaveLength(4);
+    expect(b.map((f) => [f.id, f.x, f.z])).toEqual(a.map((f) => [f.id, f.x, f.z]));
+    for (const f of a) expect(reachable(level, f.x, f.z)).toBe(true);
+  });
+
+  it('a Fund is picked up once, raises the stats for good, and stays gone next run', () => {
+    const s = make(3), hp0 = s.stats.maxHp, dmg0 = s.stats.damage;
+    const teil0 = s.content.funde!.find((f) => f.id === 'd0:t0')!, teil1 = s.content.funde!.find((f) => f.id === 'd0:t1')!;
+    s.run.phase = 'travel';
+    walkTo(s, teil0); run(s, 1);
+    walkTo(s, teil1); run(s, 1);
+    expect(s.events.some((e) => e.type === 'fund')).toBe(true);
+    expect(s.statContext.funde).toEqual(['d0:t0', 'd0:t1']);
+    expect(s.stats.maxHp).toBe(hp0 + 5);
+    expect(s.stats.damage).toBeGreaterThan(dmg0);
+    run(s, 5);
+    expect(s.statContext.funde).toHaveLength(2);
+    const next = make(4, s.statContext);
+    expect(next.content.funde!.filter((f) => f.got).map((f) => f.id)).toEqual(['d0:t0', 'd0:t1']);
+    expect(next.content.funde!.filter((f) => !f.got)).toHaveLength(8);
+  });
+
+  it('a checkpoint older than a pickup: the taken Fund stays gone and the banner counts from the profile (review of PR #58)', () => {
+    const s = make(3);
+    s.run.phase = 'travel';
+    const old = parseSave(JSON.stringify(snapshot(s, def.name, true)))!;
+    const f0 = s.content.funde!.find((f) => f.id === 'd0:t0')!, f1 = s.content.funde!.find((f) => f.id === 'd0:t1')!;
+    walkTo(s, f0); run(s, 1);
+    walkTo(s, f1); run(s, 1);
+    // The profile is written at once; the checkpoint stays the old one.
+    const save = { ...old, profile: parseSave(JSON.stringify(snapshot(s, def.name, false)))!.profile };
+    const back = simFromSave(save, { seed: save.run!.rng, level }, true);
+    expect(back.content.funde!.filter((f) => f.got).map((f) => f.id)).toEqual(['d0:t0', 'd0:t1']);
+    back.run.phase = 'travel';
+    walkTo(back, back.content.funde!.find((f) => f.id === 'd0:t2')!);
+    back.events.length = 0;
+    run(back, 1);
+    expect(back.events.find((e) => e.type === 'fund')).toMatchObject({ title: 'Uhrwerkteil 3 von 6' });
+  });
+
+  it('a checkpoint from before Funde existed gets them on load', () => {
+    const s = make(3);
+    s.run.phase = 'travel';
+    const save = parseSave(JSON.stringify(snapshot(s, def.name, true)))!;
+    delete (save.run!.content as { funde?: unknown }).funde;
+    const back = simFromSave(save, { seed: save.run!.rng, level }, true);
+    expect(back.content.funde).toHaveLength(10);
+  });
+
+  it('every district map has all six Uhrwerkteile and four Kassetten', () => {
+    for (const m of [xhainMap(1), alexMap(1), mitteMap(1)]) {
+      const lots = generateLots(m), L = mapLevel(m, lots, generateProps(m, lots));
+      const f = createSim({ level: L, seed: 3 }).content.funde!;
+      expect([m.id, f.filter((q) => q.kind === 'teil').length, f.filter((q) => q.kind === 'kassette').length]).toEqual([m.id, 6, 4]);
+    }
+  }, 60000);
 });

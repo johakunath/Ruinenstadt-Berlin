@@ -38,6 +38,8 @@ export const FX = {
  growlWurz:[{w:4,f:210,m:KNOCK,d:.12,v:.35},{w:2,f:95,fe:70,a:.05,s:.1,d:.35,vd:.08,vs:9,v:.16}],
  growlKern:[{w:2,f:420,fe:900,a:.01,d:.08,v:.2},{w:4,f:520,m:KNOCK,dl:.06,d:.05,v:.25}],
  growlKoloss:[{w:2,f:70,fe:40,a:.06,s:.2,d:.55,v:.26},{w:3,f:420,fe:260,d:.45,q:6,am:.7,ams:24,v:.12}],
+ // WP5 Heuler: a rising wail (variation of growlHexe).
+ growlHowl:[{w:2,f:240,fe:520,a:.08,s:.25,d:.4,vd:.12,vs:6,v:.2},{w:3,f:900,fe:1600,a:.08,s:.2,d:.35,q:4,v:.1}],
  growlZeit:[{w:4,f:330,m:BELL,d:1.2,v:.3},{w:4,f:495,m:BELL,dl:.18,d:1,v:.22},{w:2,f:82,fe:60,a:.08,s:.2,d:.7,v:.18}],
  swing:[{w:3,f:380,fe:1700,a:.05,s:.01,d:.09,q:1.6,v:.5}],
  heavy:[{w:3,f:220,fe:950,a:.07,s:.02,d:.16,q:1.4,v:.6},{w:2,f:95,fe:42,dl:.07,d:.22,v:.5}],

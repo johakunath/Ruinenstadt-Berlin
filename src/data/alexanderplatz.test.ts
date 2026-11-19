@@ -248,7 +248,7 @@ describe('Alexanderplatz map (M15, layout C)', () => {
     expect(log.filter((e) => e.type === 'waveStart')).toHaveLength(31);
     expect(log.filter((e) => e.type === 'zoneClear').map((e) => (e as { zone: number }).zone)).toEqual([0, 1, 2, 3]);
     expect(log.at(-1)?.type).toBe('victory');
-  });
+  }, 30000);
 
   it('wave mix (2D MIX[2]): Uhrwerkläufer from the second wave, Wurzler from the third, Kernspeier instead of most spitters', () => {
     const waves = alexMap(1).encounters.flatMap((e) => e.waves).filter((w) => w.bosses.length === 0);

@@ -1,7 +1,8 @@
 // Damage resolution (2D js/combat.js `hit`, `chain`, `kill`, `hurt`): every hit on an enemy goes
 // through `strike`, every death through `killEnemy`, every hit on the hero through `hurtPlayer`.
 // Blessing and weapon-mod rules live here so a swing, a shot, a power and a burn all obey them.
-import { HIT_FEEL, PLAYER, type HitWeight } from '../data/combat';
+import { HIT_FEEL, PLAYER, WEAPON, type HitWeight } from '../data/combat';
+import { STRONG_AGAINST, type DamageType } from '../data/weapon-look';
 import { ENEMY_RESISTANCES, type ElementId, type LegendaryId } from '../data/items';
 import { ELITES, THREAT } from '../data/enemies';
 import { splitElite } from './enemies';
@@ -56,6 +57,8 @@ export function stun(e: Enemy, seconds: number): void {
   if (e.state === 'dead' || seconds <= 0 || (e.wake ?? 0) > 0) return;
   // A boss finishes what it marked; a rush in flight cannot be stopped.
   if (e.state === 'special' && e.sp && (e.def.boss || (e.sp.speed > 0 && e.stateT >= e.sp.wind))) return;
+  // WP5: a lit fuse burns on (2D: a stun only stops the Zünder walking).
+  if (e.state === 'special' && e.sp?.kind === 'fuse') return;
   e.sp = null;
   const t = seconds * (e.def.boss ? 0.15 : 1);
   if (e.state === 'stagger' && e.staggerDur - e.stateT >= t) return;
@@ -113,6 +116,11 @@ export function shieldFactor(s: Sim, e: Enemy, o: StrikeOpts, stuns = (o.stun ??
   return e.state === 'special' && e.sp?.kind === 'key' ? 0 : sh.front;
 }
 
+/** D9: the equipped weapon's damage types are strong against one of the enemy's classes (two classes count once). */
+export function effectiveAgainst(types: readonly DamageType[], e: Enemy): boolean {
+  return types.some((t) => STRONG_AGAINST[t].some((c) => e.def.classes.includes(c)));
+}
+
 /** One hit on an enemy. Returns the damage dealt. */
 export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): number {
   if (e.state === 'dead') return 0;
@@ -149,7 +157,12 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
     }
     damage *= w;
   }
-  damage = Math.max(1, Math.round(damage));
+  // D9: every hit dealt with the weapon that fits the enemy's class (attacks, powers, procs); burn ticks
+  // never come through here, and procs below start from the damage without it (no compounding).
+  const effective = effectiveAgainst(s.stats.types, e);
+  const typeK = effective ? 1 + WEAPON.typeBonus : 1;
+  damage = Math.max(1, Math.round(damage * typeK));
+  const procBase = damage / typeK;
   e.hp -= damage;
   e.lastCrit = crit;
 
@@ -171,13 +184,13 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
     const n = ++a.legHits;
     // Kiezbox: every fourth hit stuns. Bassarm: every fifth hit chains to four.
     if (hasL(s, 'kiezbox') && n % 4 === 0) stun(e, 0.5);
-    if (hasL(s, 'bassarm') && n % 5 === 0) chain(s, e, damage * 0.6, 4);
+    if (hasL(s, 'bassarm') && n % 5 === 0) chain(s, e, procBase * 0.6, 4);
     // Fernsehturm: a crit bursts into fire on the neighbors.
     if (crit && hasL(s, 'turm')) {
       for (const t of s.enemies) {
         if (t === e || t.state === 'dead' || Math.hypot(t.x - e.x, t.z - e.z) >= 75 * PX) continue;
-        strike(s, t, damage * 0.6, { knock: knock(220), noproc: true, feel: 'none', element: 'fire' });
-        ignite(s, t, damage * 0.3, 2);
+        strike(s, t, procBase * 0.6, { knock: knock(220), noproc: true, feel: 'none', element: 'fire' });
+        ignite(s, t, procBase * 0.3, 2);
       }
       s.events.push({ type: 'impact', x: e.x, z: e.z, radius: 75 * PX, kind: 'boom' });
     }
@@ -186,11 +199,11 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (!o.noproc) {
     for (const el of s.stats.elements) {
       if (!(crit && pk(s, 'd_kurz')) && s.rng.next() > s.stats.elementChance) continue;
-      if (el === 'fire') ignite(s, e, damage * STATUS.burnShare * s.stats.elementPower, burnTime(s) + pk(s, 'schwel'), pk(s, 'schwel') > 0);
+      if (el === 'fire') ignite(s, e, procBase * STATUS.burnShare * s.stats.elementPower, burnTime(s) + pk(s, 'schwel'), pk(s, 'schwel') > 0);
       else if (el === 'acid') { if (resist(e, 'acid') > 0) e.acid = STATUS.acidTime; }
-      else chain(s, e, damage * STATUS.chainShare * s.stats.elementPower, 2 + 2 * pk(s, 'chain'));
+      else chain(s, e, procBase * STATUS.chainShare * s.stats.elementPower, 2 + 2 * pk(s, 'chain'));
     }
-    if ((s.content.shrine.zap ?? 0) > 0 && s.rng.next() < 0.25) chain(s, e, damage * 0.45, 2);
+    if ((s.content.shrine.zap ?? 0) > 0 && s.rng.next() < 0.25) chain(s, e, procBase * 0.45, 2);
   }
   let note = o.note;
   if (pk(s, 'exec') && !e.def.boss && e.hp > 0 && e.hp < e.maxHp * STATUS.execShare) {
@@ -202,12 +215,17 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   s.events.push({
     type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius, dx, dz,
     weight: feel === 'none' ? 'light' : feel, killed, damage, critical: crit, element: o.element, quiet: feel === 'none', note,
+    ...(effective ? { effective: true } : {}),
   });
   if (killed) killEnemy(s, e);
   return damage;
 }
 
-export function killEnemy(s: Sim, e: Enemy): void {
+/**
+ * `byHero` false: the enemy died without the hero (a Zünder's blast, its own fuse). It still counts and drops,
+ * but feeds no kill effects: no streak, leech, cooldown cuts, Jagd, Sturmangriff, spread or boom (WP5 review).
+ */
+export function killEnemy(s: Sim, e: Enemy, byHero = true): void {
   if (e.state === 'dead') return;
   const p = s.player;
   const a = s.abilities;
@@ -223,12 +241,15 @@ export function killEnemy(s: Sim, e: Enemy): void {
   // M15: the Weltzeituhr stands on its base again; its colliders come back.
   if (e.stand) for (const c of e.stand.splice(0)) s.level.add(c);
   if (e.elite === 'spaltend') splitElite(s, e);
+  // WP5: a Zünder killed before its fuse ran out still goes off where it fell, smaller (2D `kill`).
+  if (e.def.ai === 'zuender' && !e.blown) deathBlast(s, e);
   s.kills++;
   if (kodexKill(s, e.def.kind)) s.events.push({ type: 'kodex', name: e.def.name });
   if (e.elite && kodexKill(s, `e:${e.elite}`)) s.events.push({ type: 'kodex', name: `Elite ${ELITES[e.elite].name}` });
+  killDrops(s, e);
+  if (!byHero) return;
   a.streak.n++;
   a.streak.t = STATUS.streakTime;
-  killDrops(s, e);
   if (p.state !== 'dead') p.hp = Math.min(s.stats.maxHp, p.hp + s.stats.leech + s.stats.maxHp * 0.01 * pk(s, 'leech') + (tough(e) && hasL(s, 'pickel') ? s.stats.maxHp * 0.15 : 0));
   // Schaffnerkelle: a kill shortens the dodge cooldown (2D 0.5 s of 1.4 s). Zitadellenklinge: one second off the power.
   if (hasL(s, 'schaffner')) p.dodgeCd = Math.max(0, p.dodgeCd - (0.5 / 1.4) * PLAYER.dodge.cooldown);
@@ -251,6 +272,32 @@ export function killEnemy(s: Sim, e: Enemy): void {
     }
   }
   if (pk(s, 'boom') && !e.def.boss) a.booms.push({ x: e.x, z: e.z });
+}
+
+/**
+ * WP5 review: a blast that hits an enemy (the Zünder's). Plain damage and a knock away from the blast: none of
+ * the hero's multipliers, procs, shield rules or executes apply, and a kill feeds no kill effects.
+ */
+export function blastHit(s: Sim, e: Enemy, damage: number, from: { x: number; z: number }, knockPx: number): void {
+  if (e.state === 'dead' || (e.wake ?? 0) > 0) return;
+  const dmg = Math.max(1, Math.round(damage));
+  e.hp -= dmg;
+  let dx = e.x - from.x, dz = e.z - from.z;
+  const d = Math.hypot(dx, dz) || 1;
+  dx /= d; dz /= d;
+  e.kx += dx * knock(knockPx) * e.def.knockbackTaken;
+  e.kz += dz * knock(knockPx) * e.def.knockbackTaken;
+  const killed = e.hp <= 0;
+  s.events.push({ type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius, dx, dz, weight: 'light', killed, damage: dmg, critical: false, quiet: true });
+  if (killed) killEnemy(s, e, false);
+}
+
+/** The Zünder's small blast when it dies before its fuse ran out: its lit fuse goes out, this one is marked shortly. */
+function deathBlast(s: Sim, e: Enemy): void {
+  const F = THREAT.fuse;
+  const z = s.threats.zones;
+  for (let i = z.length - 1; i >= 0; i--) if (z[i]!.src === e.id && z[i]!.blast) z.splice(i, 1);
+  z.push({ x: e.x, z: e.z, r: F.deathRadius, t: F.deathWind, max: F.deathWind, damage: e.def.damage * e.dmgMul * F.deathDamage, floor: F.floor, kind: 'bomb', src: e.id, free: true, blast: { share: F.enemyShare, knock: F.knock } });
 }
 
 /** Burn and acid timers. Burn damage has no hit feel; it reports as `dot` a few times a second. */

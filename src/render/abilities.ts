@@ -1,6 +1,7 @@
 // What powers, consumables and blessings put into the world (M8, M16): shots, shock rings, fire
 // fields, impact markers, thrown bottles, lightning, the banner, guard and spin. Everything is
 // pooled, unlit and on the FX layer: no lights, no shadows, the same cost on both profiles.
+import { GUNS } from './weapons';
 import {
   AdditiveBlending, BoxGeometry, BufferAttribute, BufferGeometry, CircleGeometry, Color, ConeGeometry, CylinderGeometry, DoubleSide, Group,
   InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial,
@@ -212,8 +213,10 @@ export class AbilityView {
 
     // Shots, interpolated between steps; a spark trail behind each.
     let ns = 0, nn = 0, np = 0;
+    // A gun's shots fly at its muzzle height (WP4 1h); the sim origin stays the Werfer's.
+    const shotY = GUNS[s.stats.look]?.muzzle ?? 1.05;
     for (const q of a.projectiles) {
-      const x = lerp(q.px, q.x, alpha), z = lerp(q.pz, q.z, alpha), y = groundY(x, z) + 1.05;
+      const x = lerp(q.px, q.x, alpha), z = lerp(q.pz, q.z, alpha), y = groundY(x, z) + shotY;
       m4.makeRotationY(q.angle).setPosition(x, y, z);
       if (q.kind === 'spear') this.spears.setMatrixAt(np++, m4);
       else if (q.kind === 'nail') this.nails.setMatrixAt(nn++, m4);

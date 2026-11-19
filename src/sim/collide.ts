@@ -23,8 +23,11 @@ export type Collider = CircleCollider | BoxCollider;
 /** Signed distance from a point to a collider edge (negative inside). */
 export function colliderDistance(c: Collider, x: number, z: number): number {
   if (c.kind === 'circle') return Math.hypot(x - c.x, z - c.z) - c.r;
-  const cos = Math.cos(c.rot);
-  const sin = Math.sin(c.rot);
+  return boxDistance(c, Math.cos(c.rot), Math.sin(c.rot), x, z);
+}
+
+/** `colliderDistance` for a box whose `cos`/`sin` of `rot` the caller already has (loops over many points). */
+export function boxDistance(c: BoxCollider, cos: number, sin: number, x: number, z: number): number {
   const dx = x - c.x;
   const dz = z - c.z;
   // World -> box local (inverse rotation about Y).
@@ -34,6 +37,19 @@ export function colliderDistance(c: Collider, x: number, z: number): number {
   const qz = Math.abs(lz) - c.hz;
   const outside = Math.hypot(Math.max(qx, 0), Math.max(qz, 0));
   return outside + Math.min(Math.max(qx, qz), 0);
+}
+
+/** Axis-aligned bounds of a collider on the ground plane. */
+export function colliderBounds(c: Collider): { minX: number; maxX: number; minZ: number; maxZ: number } {
+  let ex: number, ez: number;
+  if (c.kind === 'circle') ex = ez = c.r;
+  else {
+    const cos = Math.abs(Math.cos(c.rot));
+    const sin = Math.abs(Math.sin(c.rot));
+    ex = c.hx * cos + c.hz * sin;
+    ez = c.hx * sin + c.hz * cos;
+  }
+  return { minX: c.x - ex, maxX: c.x + ex, minZ: c.z - ez, maxZ: c.z + ez };
 }
 
 const out = { x: 0, z: 0 };

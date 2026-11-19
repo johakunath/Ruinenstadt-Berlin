@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { GROSSER_STERN, MITTE_BOSSES, mitteMap } from './mitte';
 import { EDGE_FRONT, propCollider } from './courtyard';
-import { areaAt, generateLots, generateProps, isWater, LAMP_CURB, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, type MapDef } from './map';
+import { areaAt, generateLots, generateProps, isWater, LAMP_CURB, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, TOR_BAR, TOR_PASSAGES, type MapDef } from './map';
 import type { Level } from '../sim/level';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT, type SimEvent } from '../sim/types';
@@ -71,6 +71,26 @@ describe('Mitte map (M15, layout B2)', () => {
         }
         expect(open / n, e.id).toBeGreaterThan(0.8);
         for (let a = 0; a < Math.PI * 2; a += 0.2) expect(isWater(m, e.x + Math.sin(a) * e.r, e.z + Math.cos(a) * e.r), `${e.id} water`).toBe(false);
+      }
+    });
+
+    it(`has five neon bars across the Tor passages, pier to pier, open at build time (P25, scale ${scale})`, () => {
+      const tor = m.landmarks.find((l) => l.kind === 'tor')!;
+      const c = Math.cos(tor.rot), sn = Math.sin(tor.rot);
+      expect(level.barriers).toHaveLength(5);
+      expect(level.barriers.map((b) => b.half)).toEqual(TOR_PASSAGES.map(([, h]) => h));
+      for (const [i, b] of level.barriers.entries()) {
+        expect(level.colliders).not.toContain(b.collider);
+        expect(level.isShut(b.collider)).toBe(false);
+        // Along the bar plane from pier centre to pier centre, a 0.3 m body overlaps the bar or a pier everywhere.
+        const [lx, half] = TOR_PASSAGES[i]!;
+        for (let a = lx - half - 1.3; a <= lx + half + 1.3; a += 0.05) {
+          const x = tor.x + c * a + sn * TOR_BAR.z, z = tor.z - sn * a + c * TOR_BAR.z;
+          const d = Math.min(colliderDistance(b.collider, x, z), ...level.near(x, z, 1).map((q) => colliderDistance(q, x, z)));
+          expect(d, `passage ${lx} at ${a.toFixed(2)}`).toBeLessThan(0.3);
+        }
+        // Open, the passage stays walkable at the bar.
+        expect(level.near(b.x, b.z, 1).every((q) => colliderDistance(q, b.x, b.z) > 0.4), `passage ${lx} open`).toBe(true);
       }
     });
 

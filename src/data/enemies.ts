@@ -7,27 +7,38 @@
 // rings and drive the others on (at most two alive), Drohnen circle and dive; four bosses.
 // M15 Alexanderplatz (2D `uhr`, `wurz`, `kern`, Koloss v8): the Uhrwerkläufer blocks from the front,
 // the Wurzler roots the hero, the Kernspeier spits a fan of seeds; four clockwork and garden bosses.
+// WP5 (backlog P12, 2D `bomb`, `shield`, `howl`): the Zünder runs up and blows itself up, the Schildträger
+// blocks from the front (the M15 shield rule), the Heuler stays back and howls the others on.
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
 export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner' | 'grenzer' | 'brandmeister' | 'rattenmutter' | 'spreehexe'
   | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
   | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr';
-export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier' | BossKind;
+export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
+  | 'zuender' | 'schild' | 'heuler' | BossKind;
 /**
  * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
  * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
- * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`).
+ * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`). H3: `human` is the male humanoid bosses' base
+ * (`human1.glb`, the zombie's body without the zombie repaint, same skeleton and clips); `female` the female ones
+ * (`human2.glb`, UBC Superhero_Female, the hero's proportions).
  */
-export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
+export type BodyKind = 'zombie' | 'human' | 'female' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
-export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | BossKind;
+export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
 export type EliteMod = 'flink' | 'brennend' | 'spaltend' | 'gepanzert';
+
+/** D9 enemy classes: each weapon damage type is strong against some (`STRONG_AGAINST` in weapon-look.ts). */
+export type EnemyClass = 'untote' | 'maschinen' | 'pflanzen' | 'menschen' | 'tiere';
+export const ENEMY_CLASS_NAME: Readonly<Record<EnemyClass, string>> = { untote: 'Untote', maschinen: 'Maschinen', pflanzen: 'Pflanzen', menschen: 'Menschen', tiere: 'Tiere' };
 
 export interface EnemyDef {
   kind: EnemyKind;
   name: string;
+  /** D9: one or two classes (start assignment, Johannes 2026-11-19; filled from `ENEMY_CLASSES`). */
+  classes: readonly EnemyClass[];
   body: BodyKind;
   ai: AiKind;
   /** Row of the 2D resistance table (`ENEMY_RESISTANCES`); `none`: every element counts once. */
@@ -74,7 +85,19 @@ export interface EnemyDef {
   wake?: number;
 }
 
-export const ENEMIES: Record<EnemyKind, EnemyDef> = {
+/** D9 start assignment of the classes (Johannes, 2026-11-19); Kabelghul and Boxenkopf are both. */
+export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> = {
+  walker: ['untote'], runner: ['untote'], brute: ['untote'], spitter: ['untote'], spreehexe: ['untote'],
+  // WP5 kinds (zombie bodies).
+  zuender: ['untote'], schild: ['untote'], heuler: ['untote'],
+  kabel: ['untote', 'maschinen'], bass: ['untote', 'maschinen'],
+  drone: ['maschinen'], uhrwerk: ['maschinen'], uhrwerkgross: ['maschinen'], wachdrohne: ['maschinen'], weltzeituhr: ['maschinen'], volkskoloss: ['maschinen'], bassprediger: ['maschinen'],
+  wurzler: ['pflanzen'], kernspeier: ['pflanzen'], wurzelmutter: ['pflanzen'],
+  feldwebel: ['menschen'], waechter: ['menschen'], hauptmann: ['menschen'], schaffner: ['menschen'], grenzer: ['menschen'], brandmeister: ['menschen'], tuersteher: ['menschen'], dirigent: ['menschen'],
+  raptor: ['tiere'], rex: ['tiere'], crow: ['tiere'], rat: ['tiere'], rattenmutter: ['tiere'],
+};
+
+const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   walker: {
     kind: 'walker', name: 'Schlurfer', body: 'zombie', ai: 'melee', res: 'ghoul', radius: 0.4, scale: 1, hp: 30, speed: 2.1,
     attackRange: 1.45, windup: 0.55, active: 0.12, recovery: 0.7,
@@ -155,14 +178,37 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     attackRange: 0, windup: 0.5, active: 0.1, recovery: 0.6,
     reach: 1.2, halfAngle: 40 * DEG, damage: 10, knockbackTaken: 1.2, poise: false, weight: 0,
   },
+  // WP5 (2D `bomb`: r 11 px, life 22, 74-84 px/s, hit 20) on the ghoul ratios: runs up, lights its fuse
+  // within 2 m and blows up (`THREAT.fuse`); killed first, it still goes off, smaller. No strike, never elite.
+  zuender: {
+    kind: 'zuender', name: 'Zünder', body: 'zombie', ai: 'zuender', res: 'bomb', radius: 0.38, scale: 0.95, hp: 33, speed: 2.2,
+    attackRange: 0, windup: 0.5, active: 0.1, recovery: 0.6,
+    reach: 1.4, halfAngle: 40 * DEG, damage: 34, knockbackTaken: 1.1, poise: false, weight: 0,
+  },
+  // 2D `shield` (r 13 px, life 52, 46 px/s, hit 13) on the brute ratios: a riot shield in front (2D `SHD`:
+  // ±1.2 rad, 20 % through, turns 1.6 rad/s, a stun or shock opens it for 2.2 s). Walk round it or bring the hammer.
+  schild: {
+    kind: 'schild', name: 'Schildträger', body: 'zombie', ai: 'melee', res: 'shield', radius: 0.48, scale: 1.08, hp: 62, speed: 1.5,
+    attackRange: 1.7, windup: 0.7, active: 0.12, recovery: 0.8,
+    reach: 2.0, halfAngle: 50 * DEG, damage: 19, knockbackTaken: 0.6, poise: false, weight: 0,
+    shield: { arc: 1.2, front: 0.2, turn: 1.6, open: 2.2 },
+  },
+  // 2D `howl` (r 11 px, life 34, 58 px/s, hit 6) on the ghoul ratios: keeps 6 to 8.7 m away and howls the
+  // others within 7.3 m on (`THREAT.howl`). Weak in melee; kill it first. One alive at a time.
+  heuler: {
+    kind: 'heuler', name: 'Heuler', body: 'zombie', ai: 'heuler', res: 'howl', radius: 0.36, scale: 0.95, hp: 51, speed: 1.6,
+    attackRange: 1.35, windup: 0.5, active: 0.1, recovery: 0.6,
+    reach: 1.5, halfAngle: 45 * DEG, damage: 10, knockbackTaken: 1.1, poise: false, weight: 0, cap: 1,
+  },
   // Zone bosses.
   feldwebel: {
-    kind: 'feldwebel', name: 'Der Feldwebel', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
+    kind: 'feldwebel', name: 'Der Feldwebel', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
+  // H3 (Johannes, 2026-11-19): a robot, the Fernsehturm on Leela's legs (`towerGear` in src/render/enemies.ts).
   waechter: {
-    kind: 'waechter', name: 'Der Turmwächter', body: 'zombie', ai: 'waechter', res: 'turm', radius: 0.85, scale: 1.75, hp: 2000, speed: 1.7,
+    kind: 'waechter', name: 'Der Turmwächter', body: 'mech', ai: 'waechter', res: 'turm', radius: 0.85, scale: 1.3, hp: 2000, speed: 1.7,
     attackRange: 2.4, windup: 0.85, active: 0.16, recovery: 0.85,
     reach: 3.0, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
@@ -172,27 +218,27 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     reach: 3.8, halfAngle: 50 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true,
   },
   hauptmann: {
-    kind: 'hauptmann', name: 'Hauptmann von Köpenick', body: 'zombie', ai: 'hauptmann', res: 'hauptmann', radius: 0.8, scale: 1.6, hp: 4400, speed: 2.9,
+    kind: 'hauptmann', name: 'Hauptmann von Köpenick', body: 'human', ai: 'hauptmann', res: 'hauptmann', radius: 0.8, scale: 1.6, hp: 4400, speed: 2.9,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 75 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
   // M19 tunnel boss (2D: Der Schaffner at the generator). Charges along the tracks like a train and
   // whistles up passengers: the Feldwebel's pattern (charge, call men), tunnel life +25 %.
   schaffner: {
-    kind: 'schaffner', name: 'Der Schaffner', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.75, scale: 1.55, hp: 2800, speed: 2.7,
+    kind: 'schaffner', name: 'Der Schaffner', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.75, scale: 1.55, hp: 2800, speed: 2.7,
     attackRange: 2.2, windup: 0.65, active: 0.14, recovery: 0.75,
     reach: 2.7, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
   // M12b Xhain (1981). Zone 1: the GDR border guard from the watchtower, the weakest. Shoots from a
   // distance, calls runners. Resistances of the 2D Volkseigener Koloss (GDR row: weak to shock).
   grenzer: {
-    kind: 'grenzer', name: 'Der Grenzer', body: 'zombie', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 950, speed: 2.3,
+    kind: 'grenzer', name: 'Der Grenzer', body: 'human', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 950, speed: 2.3,
     attackRange: 2.0, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.4, halfAngle: 60 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
   // Zone 2 (Mariannenplatz): the riots, burning barricades. Molotovs, fire ring, flame burst (2D `brand`).
   brandmeister: {
-    kind: 'brandmeister', name: 'Der Brandmeister', body: 'zombie', ai: 'brandmeister', res: 'brand', radius: 0.78, scale: 1.55, hp: 2100, speed: 2.4,
+    kind: 'brandmeister', name: 'Der Brandmeister', body: 'human', ai: 'brandmeister', res: 'brand', radius: 0.78, scale: 1.55, hp: 2100, speed: 2.4,
     attackRange: 2.3, windup: 0.75, active: 0.14, recovery: 0.85,
     reach: 2.8, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
@@ -204,14 +250,14 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // District boss on the Oberbaumbrücke: 2D Spreehexe (v 1). Hauptmann tier of life and damage.
   spreehexe: {
-    kind: 'spreehexe', name: 'Die Spreehexe', body: 'zombie', ai: 'spreehexe', res: 'hexe', radius: 0.8, scale: 1.7, hp: 4400, speed: 2.6,
+    kind: 'spreehexe', name: 'Die Spreehexe', body: 'female', ai: 'spreehexe', res: 'hexe', radius: 0.8, scale: 1.7, hp: 4400, speed: 2.6,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
   // M12c Mitte (2089). Zone 0, Pariser Platz: a Kabelbrocken in a bomber jacket holds the Tor like a club
   // door („Kein Einlass“). Shoves, grabs and holds, calls Kabelghule from the guest list.
   tuersteher: {
-    kind: 'tuersteher', name: 'Der Türsteher', body: 'zombie', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1000, speed: 2.4,
+    kind: 'tuersteher', name: 'Der Türsteher', body: 'human', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1000, speed: 2.4,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
   },
@@ -223,19 +269,19 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // Zone 2, Neuer See (mini-boss): a ghoul in a torn tailcoat on the band stand; beat rings, the Boxenköpfe follow him.
   dirigent: {
-    kind: 'dirigent', name: 'Der Dirigent', body: 'zombie', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 1400, speed: 2.2,
+    kind: 'dirigent', name: 'Der Dirigent', body: 'human', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 1400, speed: 2.2,
     attackRange: 2.1, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
   // District boss on the Sony Center stage: 2D Bassprediger (v 2). Shock charge, bass sermons, a congregation.
   bassprediger: {
-    kind: 'bassprediger', name: 'Der Bassprediger', body: 'zombie', ai: 'bassprediger', res: 'bass', radius: 0.85, scale: 1.7, hp: 4400, speed: 2.8,
+    kind: 'bassprediger', name: 'Der Bassprediger', body: 'human', ai: 'bassprediger', res: 'bass', radius: 0.85, scale: 1.7, hp: 4400, speed: 2.8,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
   // M15 Alexanderplatz. Zone 1: a Wurzler grown out of the Palast glass house, a crown of sunflowers.
   wurzelmutter: {
-    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'zombie', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
+    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'female', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
     attackRange: 2.6, windup: 0.75, active: 0.14, recovery: 0.85,
     reach: 3.2, halfAngle: 70 * DEG, damage: 26, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
@@ -259,6 +305,10 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     reach: 3, halfAngle: 70 * DEG, damage: 36, knockbackTaken: 0, poise: true, weight: 0, boss: true, wake: 3,
   },
 };
+
+export const ENEMIES: Record<EnemyKind, EnemyDef> = Object.fromEntries(
+  (Object.keys(DEFS) as EnemyKind[]).map((k) => [k, { ...DEFS[k], classes: ENEMY_CLASSES[k] }]),
+) as Record<EnemyKind, EnemyDef>;
 
 const PX = 1 / 30;
 
@@ -310,6 +360,18 @@ export const THREAT = {
   roots: { range: 320 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.95, radius: 1.5, damage: 0.6, hold: 0.8, immune: 2.5, open: 0.9, near: 120 * PX, nearSpeed: 0.7 },
   /** M15 Kernspeier (2D `kern`): keeps `near`..`far`, plants for `wind`, three seeds ±15° at 70 %. */
   seeds: { near: 5, far: 8, range: 400 * PX, every: [3, 3.8], wind: 0.7, spread: 15 * DEG, damage: 0.7, speed: 240 * PX, life: 2.6, radius: 0.2, open: 0.9 },
+  /**
+   * WP5 Zünder (2D `bomb`): within `range` with a clear line it stops and lights the fuse (`wind`, hits do not
+   * put it out), then blows up: r 84 px at 1.3 of its hit, floor 0.22 (2D `bigHit`). Killed before, it goes off
+   * where it fell: r 66 px at 0.6, marked for `deathWind` s (new for 3D; 2D burst at once). Every blast also hits
+   * the enemies inside at `enemyShare` of its damage with a 320 px knock (2D), so a Zünder can set off the next.
+   */
+  fuse: { range: 58 * PX, wind: 0.85, radius: 84 * PX, damage: 1.3, floor: 0.22, deathRadius: 66 * PX, deathDamage: 0.6, deathWind: 0.3, enemyShare: 1.5, knock: 320 },
+  /**
+   * WP5 Heuler (2D `howl`): backs off under `near`, strafes at `strafe` speed up to `far`; within `range` every
+   * 4.5-6 s a howl (wind-up new for 3D; 2D cast 0.24 s) drives every other body within `buffRange` for `buff` s.
+   */
+  howl: { near: 180 * PX, far: 260 * PX, strafe: 0.6, range: 460 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.5, buff: 4, buffRange: 220 * PX, open: 0.6 },
   /** M15 shield bearers (2D `SHD`): slower while the guard stands open; a "geblockt" note at most this often. */
   shield: { openSpeed: 0.4, note: 0.6 },
   /** Chance of an elite per normal spawn in wave g (2D: min(25 %, 2.2 % per wave pair), from the third wave). */
@@ -346,6 +408,8 @@ export const BOSS = {
     molotov: 4.6, ring: 6.5, flame: 4, close: 3, shots: 12,
     bottles: 3, wind: 1.0, step: 0.18, spread: 90 * PX, radius: 45 * PX, damage: 0.8, floor: 0.15,
     fireRadius: 40 * PX, fireTime: 4, fireDamage: 0.3,
+    /** H3 (Johannes): he leaves burning ground where he walks; the 2D boss trail (every 0.4 s, r 26 px, 4 s, 0.35 of his hit). */
+    trailEvery: 0.4, trailRadius: 26 * PX, trailTime: 4, trailDamage: 0.35,
   },
   /** 2D v 5: five rats every 3.8 s (2.6 s in rage, real time), acid trail while walking, the base slam. */
   rattenmutter: { summon: [3.8, 2.6], adds: 5, slam: 4.2, trailEvery: 0.5, trailRadius: 24 * PX, trailTime: 4, trailDamage: 0.3 },
@@ -368,6 +432,13 @@ export const BOSS = {
     shove: 3.2, shoveRange: 3.5, shoveAhead: 1.6, shoveRadius: 2.2, shoveWind: 0.7, shoveDamage: 1, shoveFloor: 0.15, push: 3 * 40 * PX, shoveOpen: 0.8, rageGap: 0.5,
     grab: 6, grabMin: 3.5, grabMax: 5.5, grabWind: 0.5, grabTime: 0.35, grabSpeed: 12, grabDamage: 0.5, hold: 1, throwDamage: 0.6, throwPush: 2, grabOpen: 1.2,
     summon: 10, adds: 2, rageAdds: 3,
+    /**
+     * P25 Neonschranke (rage only, its own timer, not scaled by the rage factor): with the hero within `barNear`
+     * of a Tor bar, the passages get a pink strip for `barWind` s, then shut for `barTime` s, then stay open
+     * `barEvery` s. Standing on the strip when it shuts: one hit (`barDamage` × his damage, floor `barFloor`).
+     * No wind-up while he is within `barClear` of a bar; a shut waits until he is off the bars.
+     */
+    barNear: 14, barWind: 0.8, barTime: 4, barEvery: 9, barDamage: 0.6, barFloor: 0.1, barClear: 1.5,
   },
   /**
    * Flies at `height`, keeps `near`..`far` away. Suchlicht (`Spot`): a lit circle that follows the hero; standing

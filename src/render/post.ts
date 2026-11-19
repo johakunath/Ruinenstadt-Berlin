@@ -131,6 +131,7 @@ export class Post {
     look: Look,
     heroBounds?: (out: Sphere) => Sphere,
     enemyBounds?: (out: Sphere[]) => number,
+    lootBounds?: (out: Sphere[]) => number,
   ) {
     const target = new WebGLRenderTarget(4, 4, { type: HalfFloatType, samples: profile.msaa });
     this.composer = new EffectComposer(renderer, target);
@@ -157,7 +158,7 @@ export class Post {
       u.far!.value = camera.far;
       this.composer.addPass(this.ink);
     }
-    this.heroOutline = new HeroOutline(scene, camera, heroBounds, enemyBounds);
+    this.heroOutline = new HeroOutline(scene, camera, heroBounds, enemyBounds, lootBounds);
     this.composer.addPass(this.heroOutline);
     this.bloom = new UnrealBloomPass(new Vector2(4, 4), 0.42 * profile.bloomStrength * look.bloom, 0.5, 1.0);
     this.composer.addPass(this.bloom);

@@ -13,6 +13,10 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import animsUrl from '../../assets/characters/anims.glb?url';
 import heroUrl from '../../assets/characters/hero.glb?url';
 import zombieUrl from '../../assets/characters/zombie.glb?url';
+// H3 (Johannes, 2026-11-19, base B): the male humanoid bosses on the UBC Superhero_Male without the zombie repaint.
+import humanUrl from '../../assets/characters/human1.glb?url';
+// H3 (Johannes, base C): the female humanoid bosses (Spreehexe, Wurzel-Mutter) on the UBC Superhero_Female.
+import femaleUrl from '../../assets/characters/human2.glb?url';
 import raptorUrl from '../../assets/characters/raptor.glb?url';
 import rexUrl from '../../assets/characters/rex.glb?url';
 import mechUrl from '../../assets/characters/mech.glb?url';
@@ -20,14 +24,19 @@ import mechBigUrl from '../../assets/characters/mechbig.glb?url';
 import { PLAYER, type AttackDef } from '../data/combat';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Cast, type Player } from '../sim/types';
-import type { ElementId, WeaponKindId } from '../data/items';
-import { THRUST, TWO_HAND_STAND, WeaponRack, thrustWeight, weaponModel, type WeaponModel } from './weapons';
+import type { ElementId, SetId, WeaponKindId } from '../data/items';
+import { KIND_HANDS } from '../data/weapon-look';
+import { THRUST, TWO_HAND_STAND, WeaponRack, thrustWeight, weaponModel } from './weapons';
 import { FIST_CLIP, LeftHandIk, easeGrip } from './hand-ik';
 import type { LitMaterial, Materials } from './materials';
 
 export interface CharacterAssets {
   hero: Object3D;
   zombie: Object3D;
+  /** H3: the human base of the male humanoid bosses (same skeleton and clips as the zombie). */
+  human?: Object3D;
+  /** H3: the base of the female humanoid bosses and its clips (hero proportions). */
+  female?: { body: Object3D; clips: Map<string, AnimationClip> };
   heroClips: Map<string, AnimationClip>;
   zombieClips: Map<string, AnimationClip>;
   /** Dinosaurs (M12): own skeletons and clips (Idle, Walk, Run, Attack, Jump, Death). */
@@ -35,8 +44,11 @@ export interface CharacterAssets {
   rex: Object3D;
   raptorClips: Map<string, AnimationClip>;
   rexClips: Map<string, AnimationClip>;
-  /** M15 Quaternius mechs (Leela, Mike), loaded only for Alexanderplatz or `?spawn=` of their kinds. */
-  mech?: { small: Object3D; big: Object3D; smallClips: Map<string, AnimationClip>; bigClips: Map<string, AnimationClip> };
+  /**
+   * M15 Quaternius mechs (Leela, Mike), loaded only where their kinds can appear (H3: Leela also carries the
+   * Turmwächter, so Köpenick loads her alone; `big` only with Mike).
+   */
+  mech?: { small: Object3D; smallClips: Map<string, AnimationClip>; big?: Object3D; bigClips?: Map<string, AnimationClip> };
 }
 
 const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
@@ -101,12 +113,14 @@ function prepare(scene: Object3D, materials: Materials): void {
   });
 }
 
-export async function loadCharacters(materials: Materials, mechs = false): Promise<CharacterAssets> {
+/** `mechs`: true loads both mechs, 'small' only Leela (448 KB instead of 1.3 MB). */
+export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
-  const mechLoad = mechs ? Promise.all([mechUrl, mechBigUrl].map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF]> : null;
-  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl].map((u) => loader.loadAsync(u))) as [GLTF, GLTF, GLTF, GLTF, GLTF];
-  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf]) prepare(g.scene, materials);
+  const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
+  // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
+  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
+  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf]) if (g) prepare(g.scene, materials);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
@@ -121,17 +135,24 @@ export async function loadCharacters(materials: Materials, mechs = false): Promi
   const src = hipLen(animGltf.scene);
   const heroClips = new Map<string, AnimationClip>();
   const zombieClips = new Map<string, AnimationClip>();
+  const femaleClips = new Map<string, AnimationClip>();
   for (const clip of animGltf.animations) {
     heroClips.set(clip.name, fitClip(clip, hipLen(heroGltf.scene) / src, false));
     // Enemies only get the clips they play: every clip costs bindings per body.
     if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
+    // The female base has the hero's proportions: the enemy clip set, fitted to her hips.
+    if (femaleGltf && ZOMBIE_CLIPS.test(clip.name)) femaleClips.set(clip.name, fitClip(clip, hipLen(femaleGltf.scene) / src, true));
   }
-  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
+  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, female: femaleGltf ? { body: femaleGltf.scene, clips: femaleClips } : undefined, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
   if (mechLoad) {
     const [small, big] = await mechLoad;
     prepare(small.scene, materials);
-    prepare(big.scene, materials);
-    out.mech = { small: small.scene, big: big.scene, smallClips: named(small), bigClips: named(big) };
+    out.mech = { small: small.scene, smallClips: named(small) };
+    if (big) {
+      prepare(big.scene, materials);
+      out.mech.big = big.scene;
+      out.mech.bigClips = named(big);
+    }
   }
   return out;
 }
@@ -197,6 +218,13 @@ export class Animator {
     const l = this.layer(name);
     l.action.paused = true;
     l.action.time = Math.min(Math.max(time, 0), l.action.getClip().duration - 0.001);
+  }
+
+  /** H3: the summed weight of the clips whose name starts with `prefix` (the zombie clips of an upright boss). */
+  weightOf(prefix: string): number {
+    let w = 0;
+    for (const [n, l] of this.layers) if (n.startsWith(prefix)) w += l.w;
+    return Math.min(1, w);
   }
 
   duration(name: string): number {
@@ -278,16 +306,22 @@ const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; t
   gully: { clip: 'Sword_Block', from: 0, at: 0, to: 0 },
 };
 
-/** Standing clip for a weapon model: two-handed models with their own pose, else the one-handed guard. */
-export function standClip(model: WeaponModel, guard: boolean): string {
+/** A gun (WP4 1h) fires its Nagelsturm fan from the pistol clip instead of throwing it. */
+const GUN_CASTS: Partial<typeof CAST_CLIPS> = { nagel: { clip: 'Pistol_Shoot', from: 0, at: 0.01, to: 0.4 } };
+const castClip = (id: Cast['id'], gun: boolean): (typeof CAST_CLIPS)[Cast['id']] => (gun ? GUN_CASTS[id] : undefined) ?? CAST_CLIPS[id];
+
+/** Standing clip: two-handed weapons with their kind's pose, else the one-handed guard (D8: `hands` decides). */
+export function standClip(kind: WeaponKindId, guard: boolean, hands: 1 | 2 = KIND_HANDS[kind]): string {
   if (guard) return 'Idle_Shield_Loop';
-  return TWO_HAND_STAND[model]?.clip ?? 'Sword_Idle';
+  return (hands === 2 ? TWO_HAND_STAND[kind]?.clip : undefined) ?? 'Sword_Idle';
 }
 
 /** Extra state the hero view needs beyond the player (weapon, power timers). */
 export interface HeroPose {
   kind: WeaponKindId;
   base: string;
+  /** Set of the weapon item: set variants of a base have their own palette (WP4 D1). */
+  set: SetId | undefined;
   element: ElementId | undefined;
   spin: number;
   guard: number;
@@ -295,6 +329,9 @@ export interface HeroPose {
   /** Clothing for the equipped items (`heroLook`). */
   look: HeroLook;
 }
+
+/** Flinch length of a heavy hit (2D #43); the clip is slowed to fit, control is never taken. */
+const HEAVY_FLINCH = 0.45;
 
 export class HeroView {
   readonly root = new Group();
@@ -309,6 +346,8 @@ export class HeroView {
   private thrustW = 0;
   private thrustYaw = 0;
   private thrustReach = 3;
+  /** 2D #43: the last hit was heavy (a stronger, longer flinch; still no forced stumble or stun). */
+  private heavyHit = false;
   /** Body, clothing pieces and spring chains. */
   readonly body: HeroModel;
 
@@ -318,10 +357,15 @@ export class HeroView {
     this.root.add(model);
     this.anim = new Animator(model, assets.heroClips);
     this.rack = new WeaponRack(materials);
-    this.rack.show('blade', undefined);
+    this.rack.show('stahl', undefined);
     model.getObjectByName('hand_r')?.add(this.rack.group);
     this.ik = new LeftHandIk(model, assets.heroClips.get(FIST_CLIP));
     this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
+  }
+
+  /** A hit landed: heavy ones (a large share of max life) flinch harder. */
+  hit(heavy: boolean): void {
+    this.heavyHit = heavy;
   }
 
   update(p: Player, alpha: number, dt: number, frozen: boolean, pose: HeroPose): void {
@@ -329,8 +373,7 @@ export class HeroView {
     const z = lerp(p.pz, p.z, alpha);
     this.root.position.set(x, groundY(x, z) + pose.leap, z);
     this.root.rotation.y = lerpAngle(p.pfacing, p.facing, alpha);
-    const model = weaponModel(pose.kind, pose.base);
-    this.rack.show(model, pose.element);
+    this.rack.show(weaponModel(pose.kind, pose.base, pose.set), pose.element);
     this.body.setLook(pose.look);
     let standing = false;
     const t = p.stateT + (frozen ? 0 : alpha * DT);
@@ -343,7 +386,7 @@ export class HeroView {
     } else if (p.state === 'cast' && p.cast) {
       this.spinA = 0;
       const c = p.cast;
-      const k = CAST_CLIPS[c.id];
+      const k = castClip(c.id, !!this.rack.gun);
       // Before the effect the clip runs from `from` to `at`, after it on to `to`.
       const ct = c.fire <= 0 ? lerp(k.from, k.to, Math.min(1, t / Math.max(c.dur, 0.01)))
         : t <= c.fire ? lerp(k.from, k.at, t / c.fire) : lerp(k.at, k.to, Math.min(1, (t - c.fire) / Math.max(0.01, c.dur - c.fire)));
@@ -361,17 +404,18 @@ export class HeroView {
       const speed = Math.hypot(p.vx, p.vz);
       if (speed > 0.8) a.loop(pose.guard > 0 ? 'Jog_Fwd_Loop' : 'Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED) * (pose.guard > 0 ? 1.6 : 1));
       else {
-        const clip = standClip(model, pose.guard > 0);
-        standing = clip === TWO_HAND_STAND[model]?.clip;
+        const clip = pose.guard <= 0 && this.rack.gun ? this.rack.gun.stand : standClip(pose.kind, pose.guard > 0, this.rack.twoHanded ? 2 : 1);
+        standing = clip === TWO_HAND_STAND[pose.kind]?.clip;
         a.loop(clip, 0.16);
       }
     }
-    const flinch = p.state !== 'dead' && p.hurtT < 0.3 ? 0.75 * (1 - p.hurtT / 0.3) : 0;
-    a.mix('Hit_Chest', p.hurtT, flinch);
+    const fd = this.heavyHit ? HEAVY_FLINCH : 0.3;
+    const flinch = p.state !== 'dead' && p.hurtT < fd ? (this.heavyHit ? 1 : 0.75) * (1 - p.hurtT / fd) : 0;
+    a.mix('Hit_Chest', p.hurtT * (0.3 / fd), flinch);
     // The mixer skips bones whose clip value did not change (hitstop, held keys): undo last frame's IK first.
     this.ik.restore();
     a.update(frozen ? 0 : dt);
-    this.thrust(p, t, dt, frozen, model);
+    this.thrust(p, t, dt, frozen, pose.kind);
     this.leftHand(p, t, dt, frozen, flinch, standing);
     this.body.sway(x, z, this.root.rotation.y, dt);
   }
@@ -386,8 +430,8 @@ export class HeroView {
    * direction (facing plus the arc, `thrustWeight` over clip time). Out of the attack the weight decays,
    * and a chained thrust picks up from where the last one left off.
    */
-  private thrust(p: Player, t: number, dt: number, frozen: boolean, model: WeaponModel): void {
-    const k = THRUST[model];
+  private thrust(p: Player, t: number, dt: number, frozen: boolean, kind: WeaponKindId): void {
+    const k = THRUST[kind];
     const a = p.state === 'attack' ? p.attack : null;
     let w = frozen ? this.thrustW : Math.max(0, this.thrustW - dt / THRUST_LET_GO);
     if (k && a && a.style === 'thrust') {
@@ -428,10 +472,11 @@ export class HeroView {
     }
     this.root.updateMatrixWorld(true);
     if (!this.rack.leftGrip(gripPos, gripDir, this.stance)) return;
-    const throwing = p.state === 'cast' && p.cast !== null && CAST_CLIPS[p.cast.id].clip === 'OverhandThrow';
+    const throwing = p.state === 'cast' && p.cast !== null && castClip(p.cast.id, !!this.rack.gun).clip === 'OverhandThrow';
     const free = p.state !== 'dodge' && p.state !== 'dead' && !throwing && flinch === 0;
     // Aim every frame, also while letting go, so the hand follows the shaft on its way off.
-    const reach = this.ik.aim(gripPos, gripDir, this.stance);
+    // A gun is held in the pistol pose with stretched arms: always the standing grip (keep the clip's wrist, stretch).
+    const reach = this.ik.aim(gripPos, gripDir, this.rack.gun ? 1 : this.stance);
     const want = free ? reach : 0;
     const swinging = p.state === 'attack' && p.attack !== null && t < p.attack.windup + p.attack.active;
     if (!frozen) this.ikW = easeGrip(this.ikW, want, swinging, dt);
