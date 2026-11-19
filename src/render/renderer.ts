@@ -379,7 +379,7 @@ export class GameRenderer {
     if (this.world.tunnel) this.world.tunnel.update(tunnelState(sim, sim.time - DT * (1 - alpha)), dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
-    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', set: w?.set, element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();

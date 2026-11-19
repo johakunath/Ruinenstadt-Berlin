@@ -20,8 +20,8 @@ import mechBigUrl from '../../assets/characters/mechbig.glb?url';
 import { PLAYER, type AttackDef } from '../data/combat';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Cast, type Player } from '../sim/types';
-import type { ElementId, WeaponKindId } from '../data/items';
-import { THRUST, TWO_HAND_STAND, WeaponRack, thrustWeight, weaponModel, type WeaponModel } from './weapons';
+import type { ElementId, SetId, WeaponKindId } from '../data/items';
+import { THRUST, TWO_HAND_STAND, WeaponRack, thrustWeight, weaponModel } from './weapons';
 import { FIST_CLIP, LeftHandIk, easeGrip } from './hand-ik';
 import type { LitMaterial, Materials } from './materials';
 
@@ -241,16 +241,18 @@ const CAST_CLIPS: Record<Cast['id'], { clip: string; from: number; at: number; t
   gully: { clip: 'Sword_Block', from: 0, at: 0, to: 0 },
 };
 
-/** Standing clip for a weapon model: two-handed models with their own pose, else the one-handed guard. */
-export function standClip(model: WeaponModel, guard: boolean): string {
+/** Standing clip for a weapon kind: two-handed kinds with their own pose, else the one-handed guard. */
+export function standClip(kind: WeaponKindId, guard: boolean): string {
   if (guard) return 'Idle_Shield_Loop';
-  return TWO_HAND_STAND[model]?.clip ?? 'Sword_Idle';
+  return TWO_HAND_STAND[kind]?.clip ?? 'Sword_Idle';
 }
 
 /** Extra state the hero view needs beyond the player (weapon, power timers). */
 export interface HeroPose {
   kind: WeaponKindId;
   base: string;
+  /** Set of the weapon item: set variants of a base have their own palette (WP4 D1). */
+  set: SetId | undefined;
   element: ElementId | undefined;
   spin: number;
   guard: number;
@@ -281,7 +283,7 @@ export class HeroView {
     this.root.add(model);
     this.anim = new Animator(model, assets.heroClips);
     this.rack = new WeaponRack(materials);
-    this.rack.show('blade', undefined);
+    this.rack.show('stahl', undefined);
     model.getObjectByName('hand_r')?.add(this.rack.group);
     this.ik = new LeftHandIk(model, assets.heroClips.get(FIST_CLIP));
     this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
@@ -292,8 +294,7 @@ export class HeroView {
     const z = lerp(p.pz, p.z, alpha);
     this.root.position.set(x, groundY(x, z) + pose.leap, z);
     this.root.rotation.y = lerpAngle(p.pfacing, p.facing, alpha);
-    const model = weaponModel(pose.kind, pose.base);
-    this.rack.show(model, pose.element);
+    this.rack.show(weaponModel(pose.kind, pose.base, pose.set), pose.element);
     this.body.setLook(pose.look);
     let standing = false;
     const t = p.stateT + (frozen ? 0 : alpha * DT);
@@ -324,8 +325,8 @@ export class HeroView {
       const speed = Math.hypot(p.vx, p.vz);
       if (speed > 0.8) a.loop(pose.guard > 0 ? 'Jog_Fwd_Loop' : 'Sprint_Loop', 0.1, Math.max(0.6, speed / RUN_CLIP_SPEED) * (pose.guard > 0 ? 1.6 : 1));
       else {
-        const clip = standClip(model, pose.guard > 0);
-        standing = clip === TWO_HAND_STAND[model]?.clip;
+        const clip = standClip(pose.kind, pose.guard > 0);
+        standing = clip === TWO_HAND_STAND[pose.kind]?.clip;
         a.loop(clip, 0.16);
       }
     }
@@ -334,7 +335,7 @@ export class HeroView {
     // The mixer skips bones whose clip value did not change (hitstop, held keys): undo last frame's IK first.
     this.ik.restore();
     a.update(frozen ? 0 : dt);
-    this.thrust(p, t, dt, frozen, model);
+    this.thrust(p, t, dt, frozen, pose.kind);
     this.leftHand(p, t, dt, frozen, flinch, standing);
     this.body.sway(x, z, this.root.rotation.y, dt);
   }
@@ -349,8 +350,8 @@ export class HeroView {
    * direction (facing plus the arc, `thrustWeight` over clip time). Out of the attack the weight decays,
    * and a chained thrust picks up from where the last one left off.
    */
-  private thrust(p: Player, t: number, dt: number, frozen: boolean, model: WeaponModel): void {
-    const k = THRUST[model];
+  private thrust(p: Player, t: number, dt: number, frozen: boolean, kind: WeaponKindId): void {
+    const k = THRUST[kind];
     const a = p.state === 'attack' ? p.attack : null;
     let w = frozen ? this.thrustW : Math.max(0, this.thrustW - dt / THRUST_LET_GO);
     if (k && a && a.style === 'thrust') {

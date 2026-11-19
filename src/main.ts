@@ -1112,7 +1112,7 @@ export const ready: Promise<boolean> = GameRenderer.create(canvas, {
     r.setEco(opts.eco);
     r.reset(sim);
     // H1 step 5: the live, turnable hero replaces the painted portrait in the inventory doll.
-    const preview = r.heroPreview(() => ({ look: heroLook(sim.equipment), weapon: weaponModel(sim.stats.kind, sim.equipment.w?.base ?? 'rohr'), element: sim.stats.elements[0] }));
+    const preview = r.heroPreview(() => ({ look: heroLook(sim.equipment), weapon: weaponModel(sim.stats.kind, sim.equipment.w?.base ?? 'rohr', sim.equipment.w?.set), element: sim.stats.elements[0] }));
     void preview.warm().then(() => inventory.setPortrait(preview));
     window.addEventListener('resize', () => r.resize());
     ui.loaded();

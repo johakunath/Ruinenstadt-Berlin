@@ -4,10 +4,11 @@ import { standClip } from './characters';
 import { coatSwing } from './hero-model';
 
 describe('standClip', () => {
-  it('gives the hammer its two-handed pose and keeps the spear and one-handed models on Sword_Idle', () => {
+  it('gives the hammer its two-handed pose and keeps the spear and one-handed kinds on Sword_Idle', () => {
     expect(standClip('hammer', false)).toBe('Pistol_Idle_Loop');
     expect(standClip('spear', false)).toBe('Sword_Idle');
-    expect(standClip('pipe', false)).toBe('Sword_Idle');
+    expect(standClip('blade', false)).toBe('Sword_Idle');
+    expect(standClip('sling', false)).toBe('Sword_Idle');
     expect(standClip('hammer', true)).toBe('Idle_Shield_Loop');
   });
 });

@@ -475,6 +475,55 @@ export function paintCloth(base: string, o: PaintOptions, seed = 52): Surface {
   return { map: toTexture(c, true, o.anisotropy) };
 }
 
+/** Mean sRGB tone of each `paintGrain` cell; weapon vertex colours are divided by it (WP4 D1). */
+export const GRAIN_TONE = [0xb4, 0xc4, 0xcc, 0xb8] as const;
+
+/**
+ * Neutral grey grain atlas for vertex-coloured matte parts (WP4 D1), 2 × 2 cells of 256 px:
+ * 0 wood (grain along v, 8 planks across u), 1 cloth weave, 2 plain (faint mottle), 3 concrete.
+ * Cell 0 sits top left in the canvas, i.e. at v 0.5..1 once flipped.
+ */
+export function paintGrain(o: PaintOptions, seed = 57): Surface {
+  const S = 256;
+  const rng = new Rng(seed);
+  const [c, ctx] = canvas(S * 2, S * 2);
+  const hex = (t: number): string => `#${t.toString(16).repeat(3)}`;
+  const cell = (i: number, draw: () => void): void => {
+    ctx.save();
+    ctx.translate((i % 2) * S, (i >> 1) * S);
+    ctx.beginPath();
+    ctx.rect(0, 0, S, S);
+    ctx.clip();
+    ctx.fillStyle = hex(GRAIN_TONE[i]!);
+    ctx.fillRect(0, 0, S, S);
+    draw();
+    ctx.restore();
+  };
+  cell(0, () => {
+    const t = hex(GRAIN_TONE[0]);
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = shade(t, rng.range(-0.18, 0.12));
+      ctx.fillRect(i * 32, 0, 31, S);
+    }
+    strokes(ctx, rng, S, S, { count: 700, colors: [shade(t, 0.3), shade(t, -0.35), '#5a5a5a'], len: [20, 90], width: [1, 3], alpha: [0.1, 0.35], angle: Math.PI / 2, spread: 0.06 });
+    ctx.fillStyle = 'rgba(20,20,20,0.6)';
+    for (let i = 0; i < 8; i++) ctx.fillRect(i * 32 + 30, 0, 2, S);
+  });
+  cell(1, () => {
+    const t = hex(GRAIN_TONE[1]);
+    strokes(ctx, rng, S, S, { count: 500, colors: [shade(t, 0.25), shade(t, -0.3)], len: [6, 20], width: [1, 3], alpha: [0.15, 0.4], angle: 0, spread: 0.08 });
+    strokes(ctx, rng, S, S, { count: 500, colors: [shade(t, 0.2), shade(t, -0.3)], len: [6, 20], width: [1, 3], alpha: [0.15, 0.4], angle: Math.PI / 2, spread: 0.08 });
+  });
+  cell(2, () => mottle(ctx, rng, S, S, 6, [shade(hex(GRAIN_TONE[2]), -0.15), shade(hex(GRAIN_TONE[2]), 0.1)], [30, 80], 0.25));
+  cell(3, () => {
+    const t = hex(GRAIN_TONE[3]);
+    mottle(ctx, rng, S, S, 14, [shade(t, -0.25), shade(t, 0.15)], [20, 70], 0.35);
+    strokes(ctx, rng, S, S, { count: 900, colors: ['#404040', '#e0e0e0'], len: [1, 4], width: [1, 3], alpha: [0.2, 0.5] });
+  });
+  flatten(ctx, S * 2, S * 2, o.flatten);
+  return { map: toTexture(c, false, o.anisotropy) };
+}
+
 /** Awning stripes, red and cream, sun-bleached and dirty. */
 export function paintAwning(o: PaintOptions): Surface {
   const W = 512;

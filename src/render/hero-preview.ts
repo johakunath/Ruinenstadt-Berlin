@@ -166,13 +166,14 @@ export class HeroPreview {
     const s = this.read();
     this.body.setLook(s.look);
     this.rack.show(s.weapon, s.element);
-    const clip = standClip(s.weapon, false);
+    const kind = this.rack.kind ?? 'blade';
+    const clip = standClip(kind, false);
     if (clip !== this.clip) { this.anim.loop(clip, this.clip ? 0.2 : 0); this.clip = clip; }
     this.turn.rotation.y = this.yaw;
     this.ik.restore();
     this.anim.update(dt);
     this.scene.updateMatrixWorld(true);
-    const stance = TWO_HAND_STAND[s.weapon] ? 1 : 0;
+    const stance = TWO_HAND_STAND[kind] ? 1 : 0;
     // Two-handed models: the left hand on the shaft as far as it reaches (weight = reach fade).
     if (this.rack.twoHanded && this.rack.leftGrip(gripPos, gripDir, stance)) this.ik.pose(this.ik.aim(gripPos, gripDir, stance));
     this.body.sway(0, 0, this.yaw, dt);

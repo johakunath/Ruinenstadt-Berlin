@@ -1,6 +1,7 @@
 // Dev tool page: renders one clip as a strip of poses with a weapon in the hand, to pick clips and
 // place attack timing (src/data/combat.ts). Never part of the game build.
 // /tools/clip-sheet.html?clip=Punch_Cross&weapon=spear&from=0&to=1&n=8&view=side|left|front|top&ik=1
+// weapon: a kind (its default model) or a weapon look id such as `pflaster` or `brech:kiez` (weapon-look.ts); default `rohr`.
 // ik=1: left hand on the grip of two-handed weapons at full weight, as in the game (hand-ik.ts);
 // stance=1 adds the two-handed standing pose (grip height, wrist roll, stretch; TWO_HAND_STAND).
 // pack=UAL1_Standard plays a clip straight from a source pack in assets-src/ (look before importing).
@@ -16,9 +17,10 @@ import { FIST_CLIP, LeftHandIk } from '../src/render/hand-ik';
 import { LOOK } from '../src/render/looks';
 import { Materials } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
-import { LEFT_GRIP, THRUST, WeaponRack, thrustWeight, type WeaponModel } from '../src/render/weapons';
+import { LEFT_GRIP, THRUST, WeaponRack, thrustWeight, weaponModel } from '../src/render/weapons';
+import { DEFAULT_LOOK, WEAPON_LOOKS, type WeaponLookId } from '../src/data/weapon-look';
 import { weaponAttack, type AttackId } from '../src/data/combat';
-import type { WeaponKindId } from '../src/data/items';
+import type { SetId, WeaponKindId } from '../src/data/items';
 
 const q = new URLSearchParams(location.search);
 const n = Number(q.get('n') ?? 8);
@@ -42,16 +44,19 @@ const body = new HeroModel(assets.hero);
 body.setLook(heroLook({ ...(la ? { a: { base: la } } : {}), ...(lf ? { f: { base: lf } } : {}), ...(lg ? { g: { base: lg } } : {}) }));
 const model = body.model;
 scene.add(model);
+const wq = q.get('weapon') ?? 'rohr';
+const look: WeaponLookId = wq in DEFAULT_LOOK ? DEFAULT_LOOK[wq as WeaponKindId] : wq as WeaponLookId;
+if (!WEAPON_LOOKS[look]) throw new Error(`No weapon ${wq}: ${Object.keys(WEAPON_LOOKS).join(', ')}`);
+const weapon = WEAPON_LOOKS[look].kind;
 // grip=0.4: try another left grip height (tuning LEFT_GRIP).
-if (q.get('grip')) (LEFT_GRIP as Partial<Record<WeaponModel, number>>)[(q.get('weapon') ?? 'pipe') as WeaponModel] = Number(q.get('grip'));
+if (q.get('grip')) (LEFT_GRIP as Partial<Record<WeaponKindId, number>>)[weapon] = Number(q.get('grip'));
 const rack = new WeaponRack(materials);
-rack.show((q.get('weapon') ?? 'pipe') as WeaponModel, (q.get('el') as 'fire' | null) ?? undefined);
+rack.show(weaponModel(weapon, look.split(':')[0]!, look.split(':')[1] as SetId | undefined), (q.get('el') as 'fire' | null) ?? undefined);
 model.getObjectByName('hand_r')?.add(rack.group);
 const ik = q.get('ik') === '1' ? new LeftHandIk(model, assets.heroClips.get(FIST_CLIP)) : null;
 const stance = Number(q.get('stance') ?? 0);
 const gripPos = new Vector3(), gripDir = new Vector3(), thrustDir = new Vector3();
-const weapon = (q.get('weapon') ?? 'pipe') as WeaponModel;
-const thrustDef = q.get('thrust') && weapon !== 'pipe' ? weaponAttack(weapon as WeaponKindId, q.get('thrust') as AttackId) : null;
+const thrustDef = q.get('thrust') ? weaponAttack(weapon, q.get('thrust') as AttackId) : null;
 const mixer = new AnimationMixer(model);
 const name = q.get('clip') ?? 'Sword_Regular_A';
 // Clip from a source pack, hip track fitted like `fitClip` in characters.ts.
