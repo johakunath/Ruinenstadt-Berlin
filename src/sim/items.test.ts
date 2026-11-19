@@ -112,6 +112,21 @@ describe('item generation', () => {
     expect(Array.from({ length: 100 }, () => makeItem(rng, ctx, 2)).some(x => x.slot === 'i')).toBe(true);
   });
 
+  it('drops the normal wear of its district: Köpenick only its own, Xhain both, later districts both (WP4 step 2)', () => {
+    const wear = (district: number): Set<string> => {
+      const rng = new Rng(31), ctx = context({ district });
+      const out = new Set<string>();
+      for (const slot of ['a', 'h', 'g', 'f'] as const) for (let i = 0; i < 400; i++) { const it = makeItem(rng, ctx, 5, 0, slot); if (it.rarity < 3) out.add(it.base); }
+      return out;
+    };
+    const xhain = ['leder', 'feuer', 'bvg', 'muetze', 'maske', 'bandage', 'turnsch'];
+    const k = wear(0), x = wear(1), a = wear(2);
+    for (const b of xhain) expect(k.has(b), b).toBe(false);
+    for (const b of ['mantel', 'weste', 'helm', 'schieber', 'handsch', 'schweiss', 'stiefel', 'gummi']) expect(k.has(b), b).toBe(true);
+    for (const b of xhain) { expect(x.has(b), b).toBe(true); expect(a.has(b), b).toBe(true); }
+    expect(x.has('mantel')).toBe(true);
+  });
+
   it('rolls every set piece as rare, without an element or district level bonus', () => {
     const rng = new Rng(11), ctx = context({ district: 6 }), seen = new Set<string>();
     for (let i = 0; i < 500; i++) {

@@ -10,7 +10,7 @@ Rule: a session that needs Blender adds a row here and does not wait; the code s
 
 | # | Step | For | Fallback until done | Budget | State |
 |---|---|---|---|---|---|
-| B1 | `a_poncho`: rain poncho shell from the shoulders to mid-thigh (hem about 0.69 m), arms under it, open sides; weights like the coat skirt (`skirt_weights`) on the lower rows, `spine_03` and `clavicle_*` on top. Neutral vertex colours (palette sets teal); cyan glow bands are code parts | Regenponcho (`poncho`, WP4 step 2) | Coat with the teal palette and glow bands | ≤ 2,500 triangles, replaces `a_mantel` (0 extra draw calls) | waits for Johannes' pick of `docs/mockups/wp4-clothes/alex-mitte.png` |
+| B1 | `a_poncho`: rain poncho shell from the shoulders to mid-thigh (hem about 0.69 m), arms under it, open sides; weights like the coat skirt (`skirt_weights`) on the lower rows, `spine_03` and `clavicle_*` on top. Neutral vertex colours (palette sets teal); cyan glow bands are code parts | Regenponcho (`poncho`, WP4 step 2) | Coat with the teal palette and glow bands | ≤ 2,500 triangles, replaces `a_mantel` (0 extra draw calls) | to do (Johannes, 2026-11-19: Blender) |
 
 Only if the code cut fails at build (a hem that cannot be cleaned on a skirt row):
 

@@ -120,4 +120,23 @@ export const GROUPS = [
         look: { boots: { kind: 'riding', col: '#1f2430', trim: '#3a6ad0' } }, showBoots: true },
     ],
   },
+
+  {
+    id: 'tunnel', title: 'Set der Tunnel: Tunnelläufer', sub: 'Vorschlag nach dem U-Bahn-Board: Stirnlampe, Drucktank, Manometer, Schlüssel mit U. Fällt nur in den Tunneln. Signal: Ocker und BVG-Gelb auf Oliv, Messing, Teal.',
+    swatches: ['#e0a020', '#6b6538', '#516a62', '#c9a34a', '#8b4a35', '#fff2b0'],
+    items: [
+      { name: 'Tunnelläufer komplett', base: 'Set', slot: '5 Teile', route: [], note: 'Mantel, Stirnlampe, Stiefel, Rohrzange und Schlüsselbund des Tunnelläufers.', combo: true,
+        look: { coat: '#7a6a34', hemCol: '#e0a020', cuff: '#e0a020', buttonCol: '#c9a34a', trousers: '#3a3c36', trouserKind: 'cargo', belt: { kind: 'pouches', col: '#3a2414', buckle: '#e0a020', pouch: '#5a4a30' }, extras: [{ kind: 'harness', tank: '#b87333', strap: '#3a2414', tag: '#e0a020' }, { kind: 'kneepads', col: '#516a62' }], hat: { kind: 'headlamp', brass: '#c9a34a', glow: '#fff2b0' }, gloves: { kind: 'work', col: '#5a4a30', cuff: '#e0a020' }, boots: { kind: 'puttee', col: '#3a2a1c', wrap: '#c8a860', toe: '#9aa0a8' } } },
+      { name: 'Mantel des Tunnelläufers', base: 'mantel+tunnel', slot: 'Körper', route: ['Farbe', 'Teil'], note: 'Ockeroliver Mantel, gelber Saum, Gurtzeug mit Kupfer-Drucktank auf dem Rücken, Manometer, Schlauch, Schlüsselmarke U.',
+        look: { coat: '#7a6a34', hemCol: '#e0a020', buttonCol: '#c9a34a', trousers: '#3a3c36', trouserKind: 'cargo', belt: { kind: 'pouches', col: '#3a2414', buckle: '#e0a020', pouch: '#5a4a30' }, extras: [{ kind: 'harness', tank: '#b87333', strap: '#3a2414', tag: '#e0a020' }, { kind: 'kneepads', col: '#516a62' }] } },
+      { name: 'Stirnlampe des Tunnelläufers', base: 'nbrille+tunnel', slot: 'Kopf', route: ['Teil', 'Glühen'], note: 'Stirnband mit Messinglampe, die warm leuchtet, Schutzbrille hochgeschoben. Haare bleiben.',
+        look: { hat: { kind: 'headlamp', brass: '#c9a34a', glow: '#fff2b0' } } },
+      { name: 'Stiefel des Tunnelläufers', base: 'stiefel+tunnel', slot: 'Füße', route: ['Farbe', 'Teil'], note: 'Schwere Stiefel, Wickelgamaschen bis zur Wade, Stahlkappen.',
+        look: { boots: { kind: 'puttee', col: '#3a2a1c', wrap: '#c8a860', toe: '#9aa0a8' } }, showBoots: true },
+      { name: 'Rohrzange des Tunnelläufers', base: 'zange+tunnel', slot: 'Waffe', route: ['Teil', 'Glühen'], note: 'Die Rohrzange in Messing, Manometer am Griff, kleine Laterne am Band.',
+        custom: `<g transform="translate(70,20) rotate(-35 80 130)"><rect x="70" y="60" width="22" height="190" rx="8" fill="#b08a3a" stroke="#140e0a" stroke-width="2"/><rect x="72" y="200" width="18" height="50" rx="5" fill="#3a2414"/><path d="M50,20 L112,20 L112,60 L60,60 Z" fill="#7a7c80" stroke="#140e0a" stroke-width="2"/><path d="M56,60 L100,60 L100,92 L56,86 Z" fill="#8a8c90" stroke="#140e0a" stroke-width="2"/><circle cx="81" cy="150" r="14" fill="#c9a34a" stroke="#140e0a" stroke-width="2"/><circle cx="81" cy="150" r="10" fill="#f0e2c0"/><path d="M81,150 L86,144" stroke="#140e0a" stroke-width="1.5"/><path d="M92,110 Q122,120 118,160" fill="none" stroke="#8b4a35" stroke-width="3"/><rect x="108" y="160" width="20" height="26" rx="4" fill="#3a3c40" stroke="#140e0a" stroke-width="2"/><circle cx="118" cy="173" r="7" fill="#fff2b0" filter="url(#glow)"/></g>` },
+      { name: 'Schlüsselbund des Tunnelläufers', base: 'kette+tunnel', slot: 'Talisman', route: ['Codex'], note: 'Bund alter Tunnelschlüssel mit gelber U-Marke. Gemaltes Icon (Codex), kein 3D.',
+        custom: `<g transform="translate(60,30)"><circle cx="90" cy="60" r="34" fill="none" stroke="#c9a34a" stroke-width="7"/><g stroke="#140e0a" stroke-width="2"><path d="M70,92 L52,200 L64,204 L68,188 L76,190 L80,176 L72,172 L80,96Z" fill="#b08a3a"/><path d="M96,94 L104,210 L116,208 L114,194 L122,192 L120,180 L112,180 L108,94Z" fill="#9aa0a8"/><rect x="118" y="86" width="44" height="56" rx="8" fill="#e0a020" transform="rotate(14 140 114)"/></g><text x="141" y="128" font-size="34" font-weight="700" fill="#1a1a1a" text-anchor="middle" font-family="DejaVu Sans, sans-serif" transform="rotate(14 140 114)">U</text></g>` },
+    ],
+  },
 ];

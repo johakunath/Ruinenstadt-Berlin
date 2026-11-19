@@ -50,6 +50,13 @@ export const ARMOR_NAMES: readonly string[] = [
   'BVG-Uniform',
 ];
 
+/**
+ * WP4 step 2 (Johannes, 2026-11-19): every normal wear base has a home district (the looks in
+ * docs/mockups/wp4-clothes/). Köpenick drops only its own; Xhain rolls its own at 40 %, else Köpenick's;
+ * later districts roll both (`wearNames` in src/sim/items.ts). These are the Xhain ones.
+ */
+export const XHAIN_WEAR_NAMES: ReadonlySet<string> = new Set(['Lederjacke', 'Feuerwehrjacke', 'BVG-Uniform', 'Wollmütze', 'Gasmaske', 'Boxbandagen', 'Turnschuhe']);
+
 /** 2D NAM. */
 export const NEON_ARMOR_NAMES: readonly string[] = [
   'Regenponcho',

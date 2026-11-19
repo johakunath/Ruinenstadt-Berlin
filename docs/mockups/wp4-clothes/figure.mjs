@@ -200,6 +200,11 @@ function boots(B) {
       for (let y = 222; y < 284; y += 9) o.push(line(`M${x - 8.5},${y} L${x + 8.5},${y + 5}`, B.wrap, 2));
       o.push(path(sp([[100 + s * 4, 214, 1], [100 + s * 12, 204], [100 + s * 26, 198, 1], [100 + s * 22, 212], [100 + s * 21, 216, 1]]), B.fin));
       if (B.glow) o.push(glow(line(`M${x - s * 6},226 L${x - s * 5},282`, B.glow, 1.2)));
+    } else if (B.kind === 'puttee') {
+      o.push(path(cap(100 + s * 11.8, 236, x, 287, 8.8, 8), B.col));
+      o.push(foot(B.col, 286), sole('#1e140c'));
+      for (let y = 240; y < 280; y += 6) o.push(line(`M${x - 8.6},${y} L${x + 8.6},${y + 3.5}`, B.wrap, 2.2));
+      o.push(path(sp([[xf - 9.5, 290, 1], [xf + 9.5, 290, 1], [xf + 10.5, 299, 1], [xf - 10.5, 299, 1]]), B.toe));
     } else if (B.kind === 'plate') {
       o.push(path(cap(100 + s * 12.6, 214, x, 286, 10, 8.2), B.col));
       o.push(line(`M${100 + s * 12.6},210 L${x},284`, shade(B.col, 1.5), 1.4));
@@ -526,6 +531,12 @@ function hat(H) {
       o.push(line('M86,22 Q87,38 94,47 M114,22 Q113,38 106,47', H.brass, 1.6, 'stroke-dasharray="1.6 1"'));
       if (H.glint) o.push(glow(circ(100, -10, 1.6, '#fff4c8')));
       break;
+    case 'headlamp':
+      // Goggles pushed up on the forehead, a headband with a brass lamp (U-Bahn board).
+      o.push(line('M83.5,19 Q100,13 116.5,19', '#2a2420', 3.6));
+      for (const x of [93, 107]) o.push(circ(x, 15.5, 4.2, '#5a4a30', `stroke="${INK}" stroke-width="1"`), circ(x, 15.5, 2.6, '#9fc8c8', 'opacity=".85"'));
+      o.push(path(sp([[96, 6, 1], [104, 6, 1], [105, 13, 1], [95, 13, 1]]), H.brass), glow(circ(100, 9.5, 3, H.glow)));
+      break;
     case 'greathelm':
       o.push(path(sp([[82, 4, 1], [100, 0], [118, 4, 1], [119, 50, 1], [100, 53], [81, 50, 1]]), c));
       o.push(flat('M84,25 L98,25 L98,29 L84,29Z M102,25 L116,25 L116,29 L102,29Z', '#0c0c0e'));
@@ -608,6 +619,14 @@ function gear(L, ex, exOf) {
           const y = L.hem + dy;
           o.push(line(`M${100 + s * 8},${y} q${s * 4},-3 ${s * 8},0 t${s * 8},0 t${s * 8},0 t${s * 8},0`, e.col, w));
         }
+        break;
+      case 'harness':
+        // Pressure tank on the back: its cap shows over the right shoulder, straps cross the chest, a gauge on the strap, a hose.
+        o.push(path(sp([[118, 40, 1], [130, 40, 1], [131, 66, 1], [117, 66, 1]]), e.tank), circ(124, 40, 3, '#7a7c80', `stroke="${INK}" stroke-width=".8"`));
+        o.push(line('M84,60 L114,118 M116,60 L86,118', e.strap, 3.4));
+        o.push(circ(106, 84, 5.4, fill('#c9a34a'), `stroke="${INK}" stroke-width="1"`), circ(106, 84, 3.8, '#f0e2c0'), line('M106,84 L108.5,81.5', INK, 0.8));
+        o.push(line('M126,64 Q140,96 118,112', '#3a3a36', 2.2));
+        o.push(path(sp([[86, 100, 1], [94, 98, 1], [95, 106, 1], [87, 108, 1]]), e.tag), `<text x="90.8" y="106" font-size="6" font-weight="700" fill="#1a1a1a" text-anchor="middle" font-family="DejaVu Sans, sans-serif">U</text>`);
         break;
       case 'radio':
         o.push(path(sp([[84, 74, 1], [92, 74, 1], [92, 86, 1], [84, 86, 1]]), '#2a2c30'), line('M86,74 L86,64', '#2a2c30', 1.4), glow(circ(90, 77, 1, '#ff3a2a')));

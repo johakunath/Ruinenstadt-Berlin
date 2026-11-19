@@ -38,11 +38,16 @@ function card(item, x, y) {
   o.push(`<text x="12" y="24" fill="#e8dccb" font-size="17" font-weight="700">${esc(item.name)}</text>`);
   o.push(`<text x="12" y="42" fill="#9a8f80" font-size="13">${esc(item.slot)}${item.base && !combo ? ' · ' + esc(item.base) : ''}</text>`);
   // Whole figure at the same scale on every card, so sizes compare; detail view on the right.
-  o.push(`<svg x="4" y="48" width="196" height="304" viewBox="0 -16 200 320">${figure(item.look)}</svg>`);
-  const vb = combo ? ZOOM_COMBO : ZOOM[item.slot] || ZOOM['Körper'];
-  o.push(`<rect x="200" y="52" width="120" height="170" rx="4" fill="#120e0b" stroke="#3a332b"/>`);
-  o.push(`<svg x="200" y="52" width="120" height="170" viewBox="${vb}">${figure(item.look)}</svg>`);
-  o.push(`<text x="260" y="238" fill="#6f665a" font-size="12" text-anchor="middle">Detail</text>`);
+  if (item.custom) {
+    // Pieces not worn on the figure (weapon, talisman): a drawing of their own.
+    o.push(`<svg x="10" y="52" width="310" height="290" viewBox="0 0 310 290">${item.custom}</svg>`);
+  } else {
+    o.push(`<svg x="4" y="48" width="196" height="304" viewBox="0 -16 200 320">${figure(item.look)}</svg>`);
+    const vb = combo ? ZOOM_COMBO : ZOOM[item.slot] || ZOOM['Körper'];
+    o.push(`<rect x="200" y="52" width="120" height="170" rx="4" fill="#120e0b" stroke="#3a332b"/>`);
+    o.push(`<svg x="200" y="52" width="120" height="170" viewBox="${vb}">${figure(item.look)}</svg>`);
+    o.push(`<text x="260" y="238" fill="#6f665a" font-size="12" text-anchor="middle">Detail</text>`);
+  }
   let cx = 12;
   const cy = 360;
   for (const r of item.route) {

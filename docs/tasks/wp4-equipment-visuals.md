@@ -292,6 +292,28 @@ Decided in this session (Opus 5.5; open points under Questions):
 | Codex | T9 in `docs/asset-pipeline.md`: tweed, denim, knit, straw, chainmail, patchwork, two decals; fur from T8 |
 | Icons | Every Körper, Kopf, Hände and Füße item gets a rendered icon (`tools/item-icons.mjs`): the piece on a hidden body, hats and boots alone |
 
+Johannes, 2026-11-19 (after the mockups): "Those look pretty great": build in 3D as drawn, with a little more volume round the shoulders (`puff`, default 12 mm), "just make them look good", rewarding to find. Then three decisions:
+
+| Topic | Decision |
+|---|---|
+| Regenponcho | Blender shell (B1 in `docs/blender-pipeline.md`); until it is done the coat in teal with glow bands and a hood roll |
+| Item pools | Split now, built: Köpenick drops only its own normal wear, Xhain its own at 40 % else Köpenick's, later districts both (`wearNames` in `src/sim/items.ts`, `XHAIN_WEAR_NAMES`; test in `src/sim/items.test.ts`). Weapons and the flavoured pools are unchanged; item values never depended on the base |
+| Tunnels | "Tunnels can have their own sets": proposal below, mockup `docs/mockups/wp4-clothes/tunnel.webp` |
+
+Tunnel set Tunnelläufer (proposal, start values; Opus 5.5, bonus numbers want a Fable or bot pass):
+
+| Piece | Base (set key) | Look |
+|---|---|---|
+| Mantel des Tunnelläufers | `mantel:tunnel` | Ochre-olive coat `#7a6a34`, BVG-yellow hem `#e0a020`, harness with a copper pressure tank on the back, gauge, hose, U key tag |
+| Stirnlampe des Tunnelläufers | `nbrille:tunnel` | Headband with a warm glowing brass lamp, goggles pushed up, hair stays |
+| Stiefel des Tunnelläufers | `stiefel:tunnel` | Heavy boots, puttee wraps to the calf, steel toe caps |
+| Rohrzange des Tunnelläufers | `zange:tunnel` | The Rohrzange in brass, gauge on the grip, a small lantern on a strap (weapon variant like `brech:kiez`) |
+| Schlüsselbund des Tunnelläufers | `kette:tunnel` (talisman) | Old tunnel keys with a yellow U tag; painted icon (Codex), no 3D |
+
+- Bonuses (start values): 2 pieces +20 % Abklingtempo; 3 pieces +50 % Schaden and +3 Leben pro Sekunde; 5 pieces +20 Glück and +120 Leben.
+- Drops: only in the tunnels; there a set drop is the Tunnelläufer at 60 %, else one of the three others. Outside the tunnels it never drops. One set for all lines now; a set per line can follow when more lines exist.
+- Build after Johannes' pick: `SETS.tunnel` and `SET_BONUSES.tunnel` in `src/data/items.ts`, the tunnel rule in `makeSetItem`, WEAR and gear (Stirnlampe, harness, puttees), the weapon variant and its icon, Codex: painted key ring icon; balance bot run.
+
 Budget: belts, hats and plates go into the gear mesh (2,500 triangles, D3). The heaviest look is the Rüstung des Zitadellenritters (chest plate, gorget, three-lame pauldrons, vambraces, tassets): count it first. Cut and Quaternius boots replace a piece, so 0 extra draw calls.
 
 ### Step 3 Pickups (P10) [Claude · Opus high]
@@ -348,8 +370,7 @@ New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 
 ## Questions
 - Gates G2 to G6 are listed above.
 - Step 2 looks (Johannes): which mockups to redo. Recommendation for the rest: build as drawn.
-- Step 2 looks: Köpenick and Xhain share one drop pool today (`ARMOR_NAMES` and the other normal name lists), so a Xhain look can drop in Köpenick. Option: a Xhain flavour that rolls the Xhain bases at 40 % there, like `gdr` and `neon` (small sim change, golden values in `src/sim/items.test.ts`). Recommendation: leave the pool until the Bedrohung or loot work (I9), the looks read by theme anyway.
-- Step 2 looks: Regenponcho as a Blender shell (B1) or as the coat with teal palette and glow bands. Recommendation: B1, it is the only Mitte armor with its own silhouette.
+- Tunnel set Tunnelläufer (below): Johannes picks the mockup and the bonus numbers before the build.
 - D9 hit numbers: the 3D game shows no damage numbers, so an effective hit is shown by cool white hit sparks (`fx.sparks`) instead of a tinted number. Damage numbers would be a separate decision.
 - D9 classes that may not fit their bodies (assignment kept): Rattenmutter (zombie body, Tiere only), Bassprediger (zombie body, Maschinen only, unlike Kabelghul and Boxenkopf), Wurzler and Wurzel-Mutter (zombie bodies under roots, Pflanzen only), the uniformed bosses (zombie bodies, Menschen: the blade gets no bonus on them).
 - D8: a two-handed hammer a third shorter comes out at reach 0.9, not 0.85 (length 0.86 to 0.9 against 1.16, light1 reach 2.47).
