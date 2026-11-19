@@ -5,6 +5,7 @@ import { ELITES, ELITE_MODS, ENEMIES, type EliteMod, type EnemyKind } from '../d
 import { BASES } from '../data/item-names';
 import { ELEMENTS, ENEMY_RESISTANCES, LEGENDARY_POWERS, RARITIES, SETS, SET_COLOR, type LegendaryId, type SetId, type SlotId } from '../data/items';
 import { STATIONS } from '../data/camp';
+import { FUNDE, FUNDE_TEILE, fundId } from '../data/funde';
 import { FAMILIES, PERKS, SURVIVORS, type PerkId, type SurvivorId } from '../data/progression';
 import { avgIl } from '../sim/items';
 import type { Sim } from '../sim/types';
@@ -257,6 +258,22 @@ const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 /** 2D Kodex tab (`js/panels.js` invTab 'kodex'): sections Gegner, Endgegner, Bewohner, Legendäre Funde,
  * Sets, Elite-Gegner; each entry a card with a 64 px portrait or icon. Entries fill on the first kill or
  * find (`sim.inventory.kodex`). */
+/** Kodex › Funde (2D #14, #27, mockup m16c): per district the Uhrwerkteile as rings and the Kassetten as text. */
+function fundeHtml(s: Sim): string {
+  const got = s.statContext.funde ?? [];
+  const all = FUNDE.reduce((n, d) => n + FUNDE_TEILE + d.kassetten.length, 0);
+  const rows = FUNDE.map((d, di) => {
+    const teile = Array.from({ length: FUNDE_TEILE }, (_, i) => got.includes(fundId(di, 'teil', i)));
+    const nT = teile.filter(Boolean).length, nK = d.kassetten.filter((_, i) => got.includes(fundId(di, 'kassette', i))).length;
+    if (!nT && !nK) return `<div class="kf dim"><div class="un">${esc(d.name)}</div><div class="ud">0 von ${FUNDE_TEILE} Uhrwerkteilen · 0 von ${d.kassetten.length} Kassetten</div></div>`;
+    const dmg = teile.filter((g, i) => g && i % 2 === 0).length, hp = teile.filter((g, i) => g && i % 2 === 1).length * 5;
+    const rings = teile.map(g => `<i class="kfr${g ? ' on' : ''}"></i>`).join('');
+    const kass = d.kassetten.map((k, i) => got.includes(fundId(di, 'kassette', i)) ? `<div class="kx kk"><div><div class="un">${esc(k.title)}</div><div class="ud">„${esc(k.text)}“</div></div></div>` : '<div class="kx kk dim"><div class="ud">??? · noch nicht gefunden</div></div>').join('');
+    return `<div class="kf"><div class="un">${esc(d.name)}</div><div class="kfrow">${rings}<span class="ud">${nT} von ${FUNDE_TEILE} Uhrwerkteilen${nT ? ` · +${dmg} % Schaden, +${hp} Leben` : ''}</span></div><div class="ud ${nT === FUNDE_TEILE ? 'ok' : ''}">Alle ${FUNDE_TEILE}: ${esc(d.bonus.name)} (${esc(d.bonus.text)})</div>${kass}</div>`;
+  }).join('');
+  return `<div class="lbl">Funde ${got.length} von ${all}</div><p class="hint">Versteckt in Ecken und Sackgassen. Jeder Fund zählt einmal. Was liegen bleibt, wartet beim nächsten Mal am selben Ort.</p>${rows}`;
+}
+
 export function kodexHtml(s: Sim): string {
   const k = s.inventory.kodex ?? { kills: {}, found: {} };
   const card = (img: string, name: string, nameColor: string, text: string, side = ''): string => `<div class="kx">${img}<div><div class="un"${nameColor ? ` style="color:${nameColor}"` : ''}>${name}</div><div class="ud">${text}</div></div>${side ? `<span class="ud">${side}</span>` : ''}</div>`;
@@ -271,5 +288,5 @@ export function kodexHtml(s: Sim): string {
   const sets = (Object.keys(SETS) as SetId[]).map(id => { const S = SETS[id], ps = Object.entries(S.pieces) as Array<[SlotId, { base: string }]>, n = ps.filter(([, p]) => k.found[p.base]).length; return card(`<span class="kset">${ps.map(([slot, p]) => kimg(itemIcon({ base: p.base, slot }), k.found[p.base] ? 'on' : 'dim', '', ' kitem')).join('')}</span>`, `${esc(S.name)} · ${n}/${ps.length} gefunden`, SET_COLOR, `(2) ${esc(S.bonusDescriptions[2])} · (3) ${esc(S.bonusDescriptions[3])} · (5) ${esc(S.bonusDescriptions[5])}`); }).join('');
   const elites = ELITE_MODS.map(m => { const o = !!k.kills[`e:${m}`], c = hex(ELITES[m].color); return card(kimg(kport(ELITE_PORTRAIT[m]), o ? 'on' : 'sil', o ? c : ''), o ? esc(ELITES[m].name) : unk, o ? c : DIM, o ? esc(ELITES[m].hint) : 'Noch nicht begegnet'); }).join('');
   const surv = SURVIVORS.filter(v => has(v.id)).length;
-  return `<div class="kodex"><div class="lbl">Gegner</div><div class="cols2">${enemies}</div><div class="lbl">Endgegner</div><div class="cols2">${bosses}</div><div class="lbl">Bewohner ${surv} von ${SURVIVORS.length}</div><p class="hint">Befreie Gefangene auf Expeditionen. Sie ziehen ins Lager, helfen dauerhaft und ermöglichen Stufe 2 ihrer Station.</p><div class="cols2">${survivors}</div><div class="lbl">Legendäre Funde ${nLeg} von ${legs.length}</div><div class="cols2">${legRows}</div><div class="lbl">Sets</div><div class="cols2">${sets}</div><div class="lbl">Elite-Gegner</div><div class="cols2">${elites}</div></div>`;
+  return `<div class="kodex"><div class="lbl">Gegner</div><div class="cols2">${enemies}</div><div class="lbl">Endgegner</div><div class="cols2">${bosses}</div>${fundeHtml(s)}<div class="lbl">Bewohner ${surv} von ${SURVIVORS.length}</div><p class="hint">Befreie Gefangene auf Expeditionen. Sie ziehen ins Lager, helfen dauerhaft und ermöglichen Stufe 2 ihrer Station.</p><div class="cols2">${survivors}</div><div class="lbl">Legendäre Funde ${nLeg} von ${legs.length}</div><div class="cols2">${legRows}</div><div class="lbl">Sets</div><div class="cols2">${sets}</div><div class="lbl">Elite-Gegner</div><div class="cols2">${elites}</div></div>`;
 }

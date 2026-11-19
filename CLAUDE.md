@@ -41,7 +41,7 @@ Folders, their rules and where each system lives: `docs/architecture.md` (read t
 - Geometry of the world is built in code and merged per material (`src/render/batch.ts`). Keep draw calls low; things that must not show in the normal/depth pre-pass go on `FX_LAYER`.
 - Keep the light count constant at runtime (a changing count recompiles every shader).
 - Critical visual or layout decisions: show clearly distinct alternatives first (look variants, mockups). Routine work inside an approved direction: build, show, continue.
-- Reviews and CI (Johannes, 2026-11-16): one Codex review per session and PR (again only after substantial new commits); CI is not run per commit but when the PR is marked ready after that review; cancel superseded runs. Details in `docs/workflow.md` › Token budget.
+- Reviews and CI (Johannes, 2026-11-16): one Codex review per session and PR (again only after substantial new commits); CI is not run per commit but when the PR is marked ready after that review; cancel superseded runs. Without Codex, Claude reviews and fixes its findings right away, without asking (Johannes, 2026-11-19). Details in `docs/workflow.md` › Token budget.
 - Anything Johannes must check on real hardware (fps, heat, a look decision, a hitch): add a row to `docs/tasks/pt-hardware-checks.md` (Johannes, 2026-11-18), not only to your task file; a built feature he must play goes into its Playtest table.
 - Build features in the order of `docs/migration.md`; do not start a step before the steps it needs. Not planned: Rapier, lightmaps.
 

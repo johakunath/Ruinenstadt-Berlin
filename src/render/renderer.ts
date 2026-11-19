@@ -41,6 +41,9 @@ import { campPlaceAt, type CampLayout } from '../data/camp-map';
 import { campStates } from '../sim/camp';
 import { CampStationsView } from './camp-stations';
 
+/** 2D #43: a hit taking this share of max life or more is heavy (stronger flinch and shake). */
+const HEAVY_HIT = 0.15;
+
 export interface RendererOptions {
   profile: Profile;
   look: Look;
@@ -302,6 +305,9 @@ export class GameRenderer {
       case 'secondWind':
         this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 1), sim.player.z, 6, 5, 1.6, 60, 8);
         break;
+      case 'fund':
+        this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 4.4, 1.4, 40, 5);
+        break;
       case 'hidden':
         this.fx.burst(ev.x, y(ev.x, ev.z, 0.9), ev.z, 6, 3.4, 1, 50, 6);
         break;
@@ -314,10 +320,13 @@ export class GameRenderer {
       case 'pickup':
         if (ev.what === 'food' || ev.what === 'heal') this.fx.burst(sim.player.x, y(sim.player.x, sim.player.z, 0.9), sim.player.z, 1.6, 4.4, 1.2, 16, 3);
         break;
-      case 'playerHit':
-        this.cam.shake(ev.dx, ev.dz, 0.2);
-        this.fx.puff(ev.x, ev.z, 4, 0.6);
+      case 'playerHit': {
+        const heavy = ev.damage >= HEAVY_HIT * sim.stats.maxHp;
+        this.hero.hit(heavy);
+        this.cam.shake(ev.dx, ev.dz, heavy ? 0.32 : 0.2);
+        this.fx.puff(ev.x, ev.z, heavy ? 8 : 4, heavy ? 1 : 0.6);
         break;
+      }
       case 'dodge':
         this.fx.puff(sim.player.x, sim.player.z, 7);
         break;

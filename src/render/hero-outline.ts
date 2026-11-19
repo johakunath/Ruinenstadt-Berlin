@@ -101,8 +101,8 @@ const bounds = new Sphere();
 const enemyRect = new Vector4();
 /** Enemy contours: at most this many, nearest first (the caller orders them). */
 export const ENEMY_OUTLINES = 24;
-/** Hidden finds with a contour at once (three hidden blessings and the cache). */
-export const LOOT_OUTLINES = 4;
+/** Hidden finds with a contour at once (hidden blessings, Funde and the cache near the hero). */
+export const LOOT_OUTLINES = 8;
 
 export class HeroOutline extends Pass {
   private readonly heroDepth = depthTarget();

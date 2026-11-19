@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="420" viewBox="0 0 1120 420" font-family="Barlow Condensed, Arial Narrow, sans-serif">
+  <rect width="1120" height="420" fill="#14100c"/>
+  <!-- Variant A -->
+  <text x="20" y="30" fill="#e9a23b" font-size="20" font-weight="700">A · Zwei Karten, Ultimativ als Zeile darunter</text>
+  <g transform="translate(20,48)">
+    <rect width="520" height="350" rx="6" fill="#1d1712" stroke="#4c453a"/>
+    <text x="16" y="26" fill="#9a8f80" font-size="13" letter-spacing="1">KRAFT · WÄHLE EINE</text>
+    <rect x="16" y="38" width="238" height="128" rx="4" fill="#2a1d12" stroke="#e9a23b" stroke-width="2"/>
+    <circle cx="44" cy="68" r="16" fill="none" stroke="#e8dccb"/><text x="70" y="66" fill="#e8dccb" font-size="17" font-weight="700">Kreissäge</text>
+    <text x="70" y="84" fill="#9a8f80" font-size="13">7 s · Taste E</text>
+    <text x="214" y="64" fill="#e9a23b" font-size="13" font-weight="700">AKTIV</text>
+    <text x="28" y="116" fill="#cfc4b4" font-size="14">1,2 s Wirbel, trifft alles</text><text x="28" y="134" fill="#cfc4b4" font-size="14">um dich.</text>
+    <rect x="266" y="38" width="238" height="128" rx="4" fill="#120d0a" stroke="#4c453a"/>
+    <circle cx="294" cy="68" r="16" fill="none" stroke="#9a8f80"/><text x="320" y="66" fill="#cfc4b4" font-size="17" font-weight="700">Fechtsprung</text>
+    <text x="320" y="84" fill="#9a8f80" font-size="13">6 s · antippen wählt</text>
+    <text x="278" y="116" fill="#9a8f80" font-size="14">Sprung durch Gegner,</text><text x="278" y="134" fill="#9a8f80" font-size="14">180 % Schaden. Kill lädt auf.</text>
+    <text x="16" y="196" fill="#9a8f80" font-size="13" letter-spacing="1">ULTIMATIV · IMMER DABEI</text>
+    <line x1="16" y1="204" x2="504" y2="204" stroke="#4c453a"/>
+    <circle cx="44" cy="234" r="16" fill="none" stroke="#c9a34a"/><text x="70" y="232" fill="#e8dccb" font-size="17" font-weight="700">Säbeltanz</text>
+    <text x="70" y="250" fill="#9a8f80" font-size="13">24 s · Taste R</text>
+    <text x="250" y="232" fill="#cfc4b4" font-size="14">5 s +80 % Angriffstempo,</text><text x="250" y="250" fill="#cfc4b4" font-size="14">jeder Treffer kritisch.</text>
+    <text x="16" y="300" fill="#6f665a" font-size="13">Ultimativ ist kein Knopf: kein Rahmen, kein Hover, nur Text.</text>
+    <text x="16" y="318" fill="#6f665a" font-size="13">Jede Kraft zeigt ihre eigene Beschreibung.</text>
+  </g>
+  <!-- Variant B -->
+  <text x="580" y="30" fill="#e9a23b" font-size="20" font-weight="700">B · Segment-Umschalter, Ultimativ als Kasten</text>
+  <g transform="translate(580,48)">
+    <rect width="520" height="350" rx="6" fill="#1d1712" stroke="#4c453a"/>
+    <text x="16" y="26" fill="#9a8f80" font-size="13" letter-spacing="1">KRAFT (E)</text>
+    <rect x="16" y="38" width="488" height="44" rx="22" fill="#120d0a" stroke="#4c453a"/>
+    <rect x="18" y="40" width="242" height="40" rx="20" fill="#e9a23b"/>
+    <text x="139" y="66" fill="#14100c" font-size="17" font-weight="700" text-anchor="middle">Kreissäge · 7 s</text>
+    <text x="382" y="66" fill="#cfc4b4" font-size="17" text-anchor="middle">Fechtsprung · 6 s</text>
+    <text x="16" y="110" fill="#cfc4b4" font-size="14">1,2 s Wirbel, trifft alles um dich.</text>
+    <text x="16" y="130" fill="#6f665a" font-size="13">Fechtsprung: Sprung durch Gegner, 180 % Schaden. Kill lädt sofort auf.</text>
+    <text x="16" y="178" fill="#9a8f80" font-size="13" letter-spacing="1">ULTIMATIV (R) · FEST AN DIESER WAFFE</text>
+    <rect x="16" y="188" width="488" height="72" rx="4" fill="none" stroke="#c9a34a" stroke-dasharray="0" stroke-opacity=".45"/>
+    <circle cx="48" cy="224" r="16" fill="none" stroke="#c9a34a"/><text x="76" y="218" fill="#e8dccb" font-size="17" font-weight="700">Säbeltanz · 24 s</text>
+    <text x="76" y="240" fill="#cfc4b4" font-size="14">5 s +80 % Angriffstempo, jeder Treffer kritisch.</text>
+    <text x="16" y="300" fill="#6f665a" font-size="13">Kompakter. Segment zeigt klar: eins von zwei.</text>
+    <text x="16" y="318" fill="#6f665a" font-size="13">Die abgewählte Kraft bleibt als graue Zeile lesbar.</text>
+  </g>
+</svg>
