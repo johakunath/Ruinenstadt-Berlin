@@ -208,21 +208,31 @@ export class BatchSet {
   /** Height offset handed to every batch (see Batch.lift). */
   lift = 0;
 
-  /** Classify geometry by the object being built, never by its shared material. */
-  captureOccluder(build: () => void): void {
-    if (this.capturing) { build(); return; }
+  /**
+   * Classify geometry by the object being built, never by its shared material. `into`: grow this box
+   * (returned by an earlier capture of this set) instead of adding one, so a long wall built in short
+   * pieces stays a handful of boxes for the outline's per-frame test.
+   */
+  captureOccluder(build: () => void, into?: Box3): Box3 | undefined {
+    if (this.capturing) { build(); return undefined; }
     const starts = this.starts();
     this.capturing = true;
     this.captureCuts.length = 0;
+    let out: Box3 | undefined;
     try { build(); } finally {
       this.capturing = false;
       const box = new Box3();
       for (const [material, batch] of this.map) batch.captureOccluderFrom(starts.get(material) ?? 0, box);
-      if (!box.isEmpty()) {
+      if (into && this.occluderBoxes.includes(into) && !this.captureCuts.length) {
+        into.union(box);
+        out = into;
+      } else if (!box.isEmpty()) {
+        out = box;
         for (const c of this.captureCuts) this.boxCuts.push({ box: this.occluderBoxes.length, part: c.part, y: c.y, top: box.max.y });
         this.occluderBoxes.push(box);
       }
     }
+    return out;
   }
 
   private starts(): Map<Material, number> {

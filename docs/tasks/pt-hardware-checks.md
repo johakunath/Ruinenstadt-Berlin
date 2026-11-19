@@ -1,10 +1,27 @@
-# PT Hardware and quality checks for Johannes (running list)
+# PT Playtest and hardware checks for Johannes (running list)
 
 Status: open, running list. Johannes checks these on real devices after the open PRs are merged (2026-11-18). Mostly performance, heat and look, not gameplay.
 
 **Every session:** when your work needs a check on real hardware (fps, heat, a look decision, a hitch), add a row here instead of leaving it only in your task file. Keep the row short, link the task file. Johannes fills in Result; the session that picks it up deletes the row once it is answered and acted on (findings go to `docs/playtests.md`).
 
 Cloud browsers have no real GPU: counts of draw calls and triangles are valid there (`node tools/passes.mjs`), fps and temperature are not.
+
+## Playtest
+
+Built features nobody has played yet. Delete a row once Johannes has played it; findings go to `docs/backlog.md` or a task file.
+
+| Area | What to try | Task file |
+|---|---|---|
+| Combat | Four weapons with finishers, powers and ultimates, blessings, Umbau cards (G1), spear thrusts (C1), Auto-Angriff, legendary powers | `combat-audio-migration.md`, `g1-build-variety.md`, `c1-spear-light.md` |
+| Enemies | Köpenick roster, elites and four bosses (M12); Xhain, Alexanderplatz and Mitte rosters and bosses; guards that lie on the ground get up before they strike | `m12-enemies.md`, `m12b-xhain-enemies.md`, `m15-alexanderplatz.md`, `m12c-mitte-enemies.md` |
+| Maps | Köpenick map realism (M11d), lot types and weather (M11c), side branches (M16b), Xhain, Alexanderplatz, Mitte; back yard cutaway and its height (V1) | `m11d-map-realism.md`, `docs/maps/*.md`, `v1-visibility.md` |
+| Run flow | S3 tunnel (M19), tunnels between the maps and the walkable camp (M20), endless mode, events, Späti trade with the worn-item comparison | `m20-tunnels-camp.md`, `docs/status.md` |
+| Menus | Portraits in the Kodex and camp station windows, illustrated intro, pause menu, inventory, Segen, options, controls graphics, start screen (U1 to U3); set-break warning on a swap (2D backlog 29, not confirmed) | `u1-pause-menu.md`, `u2-menu-tabs.md`, `u3-menu-2d.md` |
+| Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
+| Audio | Enemy sounds per type, listening test (A2) | `a2-audio-followups.md` |
+| Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
+
+## Hardware checks
 
 | # | Check | How | Device | From | Result |
 |---|---|---|---|---|---|
@@ -35,4 +52,9 @@ Cloud browsers have no real GPU: counts of draw calls and triangles are valid th
 | 25 | Türsteher grab readable? The hero is held (pink ring closes round the feet, „Festgehalten“) and must roll free; is it clear in time, is the hunched pose read as holding? Also the shove (4 m) | `?map=mitte&spawn=tuersteher`, let him grab you once, roll once | PC, Tab S9 | `docs/tasks/m12c-mitte-enemies.md` › Open | |
 | 26 | Wachdrohne searchlight and rotor whine: does the light read on the wet neon ground, is 0.6 s to lock fair, is the shared rotor sound pleasant or grating with eight drones | `?map=mitte&spawn=wachdrohne`, stand in the light, then walk out | PC, Tab S9 | `docs/tasks/m12c-mitte-enemies.md` | |
 | 27 | Mitte step 7 zones: do the Clubhof door, the Sperrzone holo band and the worn sandstone ministries read at play distance (soot, boarded and cyan windows, broken corners)? fps in the Regierungsviertel and the Tiergarten camp | `?map=mitte&debug=perf`, Friedrichstadt yards, Dorotheenstraße and Reichstagufer, Tiergarten east of the Hofjägerallee | PC, Tab S9 | `docs/tasks/m15-mitte.md` › step 7 other zones | |
-| 28 | Painted world textures (T3, T4, T7): first-load hitch, texture memory, readability and frame rate | From a cold load, walk past Köpenick storefronts and vehicles, Alexanderplatz landmarks, and S3 station and tube walls. Compare both profiles with `?debug=perf` | PC, Tab S9 | `docs/asset-pipeline.md` | |
+| 28 | Pinch zoom and pad zoom (P9): two fingers on the view step the zoom without moving the hero or firing buttons; right stick click cycles it | Any map, Tab S9 and pad | Tab S9, PC with pad | `docs/status.md` › Menu | |
+| 29 | Auto-Angriff (Optionen › Spiel): does it feel right with Klinge and Werfer on touch, should it default on for touch as in 2D? Spielstand kopieren on one device, laden on another | Optionen, any map | Tab S9, phone | `docs/backlog.md` › P26 | |
+| 30 | Contours behind trees and tall props (stalls, sheds, hedges, bushes): hero and enemies readable in the Köpenick parks; fps when several crowns cover the hero (crown instances render their depth into the scissored mask) | Köpenick, walk the Schlosspark and under street trees in a wave, `?debug=perf` | Tab S9, PC | `src/render/hero-outline.ts` | |
+| 31 | Playtest fixes 2026-11-18: no flicker on the Grünau ferry pier and the Lange Brücke; landmark reveal shows the city to the horizon (far plane 450 m, fps during the zoom); storm lanterns and beacons read as lights, not pickups | Köpenick: ferry Grünau, Lange Brücke (`?debug=perf` shows x, z), a landmark reveal | Tab S9 | PR #57 | |
+| 32 | Spear feel on the tablet: thrusts ±18° and 4 m, finisher a round sweep (350°, 3.4 m) with the lunge; easier to hit, still a spear? Compare with blade and hammer in a pack | Köpenick or `?map=hof&spawn=walker,walker,walker,runner`, spear equipped | Tab S9 | PR #57 | |
+| 33 | Painted world textures (T3, T4, T7): first-load hitch, texture memory, readability and frame rate | From a cold load, walk past Köpenick storefronts and vehicles, Alexanderplatz landmarks, and S3 station and tube walls. Compare both profiles with `?debug=perf` | PC, Tab S9 | `docs/asset-pipeline.md` | |

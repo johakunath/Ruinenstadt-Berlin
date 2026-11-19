@@ -26,6 +26,8 @@ export interface Options {
   showPerf: boolean;
   /** Send anonymous run and performance telemetry (Optionen, default on). */
   telemetry: boolean;
+  /** Auto-Angriff (2D `autoAtk`): swing when an enemy is in reach. Default off (2D: on for touch). */
+  autoAttack: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
   /** M11d landmark reveal shot: on in normal play, off for debug starts and automated browsers unless ?reveal. */
@@ -45,6 +47,10 @@ export interface Options {
   startAt: number;
   /** Debug: ?spawn=rex,raptor,walker+flink puts these kinds next to the hero (no other spawns in the courtyard). */
   spawn: string[];
+  /** Debug: ?tp=x,z beams the hero there at the start (coordinates from ?debug=perf); implies `god`. */
+  tp: { x: number; z: number } | null;
+  /** Debug: ?god (or ?tp) makes the hero take no damage. */
+  god: boolean;
 }
 
 const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'alex', 'mitte', 'lager'];
@@ -63,6 +69,7 @@ interface Stored {
   eco?: boolean;
   showPerf?: boolean;
   telemetry?: boolean;
+  autoAttack?: boolean;
 }
 
 function readStored(): Stored {
@@ -75,7 +82,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry };
+    const s: Stored = { profile: o.profile, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry, autoAttack: o.autoAttack };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -123,6 +130,7 @@ export function readOptions(): Options {
     eco: stored.eco ?? false,
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     telemetry: stored.telemetry ?? true,
+    autoAttack: stored.autoAttack ?? false,
     autostart: q.has('autostart'),
     reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),
@@ -133,7 +141,14 @@ export function readOptions(): Options {
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
+    tp: parseTp(q.get('tp')),
+    god: q.has('god') || q.has('tp'),
   };
+}
+
+function parseTp(v: string | null): Options['tp'] {
+  const [x, z] = (v ?? '').split(',').map(Number);
+  return v && Number.isFinite(x) && Number.isFinite(z) ? { x: x!, z: z! } : null;
 }
 
 function parseCut(v: string | null): Options['cut'] {

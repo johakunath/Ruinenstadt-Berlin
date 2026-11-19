@@ -4,7 +4,7 @@
 // Lamps are light *spots*; a fixed pool of point lights follows the hero (constant light count, no
 // shader recompiles).
 import {
-  BufferAttribute, BufferGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight,
+  Box3, BufferAttribute, BufferGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
   ShapeUtils, SphereGeometry, Vector2, Vector3, Euler, type Material, type Texture,
 } from 'three';
@@ -16,7 +16,7 @@ import { buildCampWorld, makeCampMats } from './camp-world';
 import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
 import {
-  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, isQuay, lineDist, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
+  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, lineDist, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
   type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
 } from '../data/map';
 import { EDGE_FRONT, propCollider, type Prop } from '../data/courtyard';
@@ -35,7 +35,7 @@ import { buildMinistryLot } from './mitte-zones';
 import { makeClockRig } from './clock';
 import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
-import { isLargeProp } from './layers';
+import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { paintTunnelAtlas, tunnelBoxGeo, TUNNEL_WALLS_URL } from './tunnel-textures';
 import { Materials, type LitMaterial } from './materials';
@@ -407,7 +407,9 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   // Under bridges the bed runs on, so decks span the water on their piers (M11d: no ground sheet beside the deck).
   // M15 bridge terraces (Warschauer Brücke) keep the ground below their deck; `xhain-world.ts` draws the deck.
   const underDeck = (x: number, z: number): boolean => m.terraces.some((t) => t.bridge && (inPoly(t.poly, x, z) || onStair(t, x, z) !== null));
-  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : heightAt(m, x, z));
+  // Under bridge decks and ferry piers on land the ground sinks below the deck: relief within a few cm of the
+  // deck top z-fought it (Lange Brücke and the Grünau pier, playtest 2026-11-18).
+  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : onBridge(m, x, z) ? Math.min(heightAt(m, x, z), -0.15) : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += GROUND_CHUNK) {
     for (let cx = B.minX; cx < B.maxX; cx += GROUND_CHUNK) {
       const n = Math.ceil(Math.min(GROUND_CHUNK, B.maxX - cx) / step);
@@ -792,7 +794,11 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         if (isWater(m, (x0 + x1) / 2, (z0 + z1) / 2) && !onBridge(m, (x0 + x1) / 2, (z0 + z1) / 2)) continue;
         const nx = -dz * (s.width / 2);
         const nz = dx * (s.width / 2);
-        const v = (x: number, z: number): Vector3 => new Vector3(x, y + surfaceAt(m, x, z), z);
+        // On a bridge the ribbon lies on the deck (top at DECK_TOP), never at the deck's own height.
+        const v = (x: number, z: number): Vector3 => {
+          const br = onBridge(m, x, z);
+          return new Vector3(x, y + (br && br.kind !== 'ferry' ? Math.max(surfaceAt(m, x, z), DECK_TOP) : surfaceAt(m, x, z)), z);
+        };
         const b = chunkOf((x0 + x1) / 2, (z0 + z1) / 2);
         const batch = b.solid.of(mat);
         // Point on the piece: u along (0..1), w across (-1..1).
@@ -938,6 +944,9 @@ function buildFerryBoat(mats: MapMats, width: number): Group {
   return g;
 }
 
+/** Top of a fixed bridge deck over the ground plane. */
+const DECK_TOP = 0.05;
+
 function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder, boats: Array<{ lane: FerryLane; group: Group }>): void {
   for (const br of m.bridges) {
     const b = chunkOf(br.x, br.z);
@@ -949,7 +958,8 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
       const pl = FERRY.pier + 0.5;
       for (const end of [-1, 1]) {
         const c = end * (br.len / 2 - pl / 2);
-        b.box(mats.wood, local(0, -0.1, c), br.width, 0.2, pl, [1.15, 1.05, 0.9]);
+        // Top 4 cm over the ground: flush with it, the planks z-fought the bank grass (Grünau, playtest 2026-11-18).
+        b.box(mats.wood, local(0, -0.06, c), br.width, 0.2, pl, [1.15, 1.05, 0.9]);
         for (const side of [-1, 1]) {
           for (const z of [c - pl / 2 + 0.3, c + pl / 2 - 0.3]) b.box(mats.wood, local(side * (br.width / 2 - 0.2), (BED_Y - 0.1) / 2, z), 0.3, -BED_Y - 0.1, 0.3, [0.55, 0.5, 0.45]);
           b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.5, c), 0.06, 0.06, pl);
@@ -961,7 +971,7 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
     }
     // Deck (top flush with the ground) on a stone body, piers down to the bed, abutments closing both
     // banks under the bridge heads (M11d: no ground sheet or gap beside the deck), railing, lamps.
-    b.box(mats.cobbles, local(0, -0.2, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
+    b.box(mats.cobbles, local(0, DECK_TOP - 0.25, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
     b.box(mats.stucco, local(0, -0.85, 0), br.width + 0.8, 0.8, br.len, [0.5, 0.5, 0.47]);
     for (const end of [-1, 1]) b.box(mats.stucco, local(0, (BED_Y + 0.05) / 2, end * (br.len / 2 - 1.2)), br.width + 1.4, 0.05 - BED_Y, 2.4, [0.48, 0.47, 0.44]);
     for (const side of [-1, 1]) {
@@ -1054,7 +1064,38 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
   const stripe = lineTint(m.tunnel!.color);
   /** Meters of wall built so far per tube kind and side: places ribs, niches and lamps along the run. */
   const wallRun = new Map<string, number>();
+  const wallBoxes = new Map<string, { b: ChunkBuilder; box: Box3 }>();
   for (const t of m.tunnel!.tubes) {
+    // Playtest 2026-11-18: a tube end that joins no other tube (station ends, side passages) gets a wall
+    // and a rubble pile, so it no longer looks like it runs on into the dark.
+    for (const [end, prev] of [[t.pts[0]!, t.pts[1]!], [t.pts[t.pts.length - 1]!, t.pts[t.pts.length - 2]!]] as Array<[Pt, Pt]>) {
+      const len = Math.hypot(end[0] - prev[0], end[1] - prev[1]);
+      if (len < 0.01) continue;
+      const ux = (end[0] - prev[0]) / len, uz = (end[1] - prev[1]) / len;
+      // Joins another tube (a junction, the track inside a station): that tube closes it, or nothing does.
+      const px = end[0] + ux * (t.width / 2 + 0.6), pz = end[1] + uz * (t.width / 2 + 0.6);
+      if (m.tunnel!.tubes.some((o) => o !== t && lineDist(o.pts, px, pz) <= o.width / 2)) continue;
+      const yaw = Math.atan2(ux, uz), thick = 3;
+      const cx = end[0] + ux * thick / 2, cz = end[1] + uz * thick / 2;
+      const b = chunkOf(end[0], end[1]);
+      b.solid.captureOccluder(() => b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick, [0.38, 0.36, 0.34]));
+      b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H + 0.05, cz), t.width + 1.4, 0.1, thick + 0.4, [0.08, 0.08, 0.09]);
+      b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick);
+      const rng = new Rng(Math.round(end[0] * 31 + end[1] * 17));
+      const n = Math.max(2, Math.round(t.width / 2.5));
+      for (let i = 0; i < n; i++) {
+        const across = ((i + 0.5) / n - 0.5) * t.width * 0.9;
+        const x = end[0] + uz * across - ux * rng.range(0, 0.6), z = end[1] - ux * across - uz * rng.range(0, 0.6);
+        buildProp(b, { kind: 'rubble', x, z, rot: rng.range(0, 6.28), size: rng.range(1.3, 2.2) }, rng);
+      }
+      if (t.kind === 'branch' || t.kind === 'bypass') {
+        const x = end[0] - ux * 0.8 + uz * t.width * 0.25, z = end[1] - uz * 0.8 - ux * t.width * 0.25;
+        // Render only, so no crate that looks breakable: fallen planks.
+        buildProp(b, { kind: 'planks', x, z, rot: rng.range(0, 6.28), size: 1.2 }, rng);
+      }
+    }
+  }
+  for (const [ti, t] of m.tunnel!.tubes.entries()) {
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
       if (len < 0.01) continue;
@@ -1086,7 +1127,10 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           const onFace = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(fx - nx * o, y, fz - nz * o);
           const segment = (run - 1) % 4;
           const variant = (Math.floor((run - 1) / 4) + (side > 0 ? 1 : 0)) % 3;
-          b.geo(mats.concrete, tunnelBoxGeo(thick + bump, h, 1.04, variant, segment, true), new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), [0.42 * tone, 0.4 * tone, 0.38 * tone]);
+          // Playtest 2026-11-18: characters behind a tunnel wall get their contour. One mask box per 8 m of wall and chunk.
+          const occKey = `${ti}:${side}:${(run / 8) | 0}`, occ = wallBoxes.get(occKey);
+          const occBox = b.solid.captureOccluder(() => b.geo(mats.concrete, tunnelBoxGeo(thick + bump, h, 1.04, variant, segment, true), new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), [0.42 * tone, 0.4 * tone, 0.38 * tone]), occ?.b === b ? occ.box : undefined);
+          if (occBox) wallBoxes.set(occKey, { b, box: occBox });
           if (h === H && t.kind !== 'station') {
             b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, 1.04, [0.2, 0.21, 0.19]);
             if (run % 8 === 0) b.box(mats.concrete, onFace(0.15, H / 2), 0.3, H, 0.55, [0.5 * tone, 0.48 * tone, 0.45 * tone]);
@@ -1957,6 +2001,8 @@ const limbGeos = new Map<string, BufferGeometry>();
 
 interface TreeBucket {
   crowns: Array<{ m: Matrix4; c: Color }>;
+  /** One world box per crown: the hero contour tests these (playtest 2026-11-18: trees hide her too). */
+  boxes: Box3[];
 }
 
 /**
@@ -1970,7 +2016,7 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     if (l.kind !== 'tree' || l.jungle) continue;
     const k = chunkKey(l.x, l.z);
     let bk = buckets.get(k);
-    if (!bk) buckets.set(k, (bk = { crowns: [] }));
+    if (!bk) buckets.set(k, (bk = { crowns: [], boxes: [] }));
     const rng = new Rng(l.seed);
     const ground = areaAt(m, l.x, l.z)?.ground ?? m.defaultGround;
     const sp = pickSpecies(rng, ground, streetDist(m, l.x, l.z).d < 5);
@@ -2011,6 +2057,7 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     // Crown: clumps on an ellipsoid around the crown center, the biggest on top.
     const n = shape.n[0] + rng.int(shape.n[1] - shape.n[0] + 1);
     const tintC = crownTint(sp, rng);
+    const crownBox = new Box3();
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + rng.range(-0.5, 0.5);
       const first = i === 0;
@@ -2024,10 +2071,13 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
       const mt = new Matrix4().compose(new Vector3(x, y, z), new Quaternion().setFromEuler(new Euler(rng.range(-0.3, 0.3), rng.range(0, 6), rng.range(-0.3, 0.3))), new Vector3(s, s * flat, s));
       const shade = rng.range(0.85, 1.12);
       bk.crowns.push({ m: mt, c: new Color(tintC[0] * shade, tintC[1] * shade, tintC[2] * shade) });
+      // The lumpy blob reaches 1.24 x its scale.
+      crownBox.union(new Box3().setFromCenterAndSize(new Vector3(x, y, z), new Vector3(s, s * flat, s).multiplyScalar(2.5)));
       fringe(b, IDENT, x, y, z, s, sp === 'kiefer' ? 1 : 2 + rng.int(2), tintC, rng);
     }
     // Birch: drooping leaf curtains under the clumps.
     if (sp === 'birke') for (let i = 0; i < 3; i++) fringe(b, IDENT, top.x, cy - R * 0.4, top.z, R * 0.45, 1, tintC, rng);
+    bk.boxes.push(crownBox);
   }
   const crownGeo = blobGeo(1);
   for (const bk of buckets.values()) {
@@ -2040,6 +2090,9 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     im.castShadow = true;
     im.receiveShadow = true;
     im.computeBoundingSphere();
+    // Crowns are contour occluders (hero and enemies behind a tree); their depth renders only when a box covers a character.
+    im.layers.enable(OCCLUDER_LAYER);
+    im.userData.boxes = bk.boxes;
     group.add(im);
   }
 }
@@ -2316,7 +2369,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       else if (mats.mitte && !l.shape && (l.kind === 'altbau' || l.kind === 'shop') && areaAt(m, l.x, l.z)?.id === 'regierung') b.on(y0, () => buildMinistryLot(b, l));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
-      else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
+      else if (l.kind === 'tree' && l.jungle) b.solid.captureOccluder(() => b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l)));
       if (l.wing) {
         // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
         const wing = { ...l, ...l.wing, wing: undefined, shape: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
@@ -2381,7 +2434,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     // Props on an M15 bridge deck stand on the deck itself (the terrain grid blends near its edges).
     const onDeck = m.terraces.some((t) => t.bridge && inPoly(t.poly, p.x, p.z));
     const build = (): void => b.on(onDeck ? heightAt(m, p.x, p.z) : surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
-    if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
+    if (isOccluderProp(p.kind)) b.solid.captureOccluder(build);
     else build();
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
@@ -2423,7 +2476,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   }
   for (const l of backdrop.trees) if (l.jungle) {
     const b = chunkOf(l.x, l.z);
-    b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
+    b.solid.captureOccluder(() => b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l)));
   }
   buildTrees(m, [...lots, ...backdrop.trees], mats, chunkKey, chunkOf, group);
 

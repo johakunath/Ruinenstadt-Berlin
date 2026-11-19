@@ -1,11 +1,16 @@
 // U3: focus navigation shared by the start screen, the options screen and the pause menu.
 // Arrow keys, D-pad and stick move to the nearest control in that direction; A presses, B goes back.
 
-const FOCUSABLE = 'button:not(:disabled),input,summary';
+// SVG places on the title's network map count too (Codex review, PR #57: no pad path to them).
+const FOCUSABLE = 'button:not(:disabled),input,summary,svg g[role=button]:not(.lock)';
 
-/** Visible controls inside `root`. */
+/** Visible controls inside `root` (SVG elements have no offsetParent: their boxes decide). */
 export function controls(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(b => b.offsetParent !== null && !b.closest('[hidden]'));
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(b => (b instanceof HTMLElement ? b.offsetParent !== null : (b as Element).getClientRects().length > 0) && !b.closest('[hidden]'));
+}
+/** Presses a control; SVG elements have no click(). */
+export function press(a: Element): void {
+  if (a instanceof HTMLElement) a.click(); else a.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 }
 
 /** Spatial focus move: nearest visible control in the direction, rows and columns alike. */
@@ -59,7 +64,7 @@ export class PadNav {
     this.down = down;
     if (!this.active()) return;
     if (edge(1) && this.back) { this.back(); return; }
-    if (edge(0)) { const a = document.activeElement as HTMLElement | null; if (a && this.root.contains(a) && a !== this.root) a.click(); else controls(this.root)[0]?.focus(); return; }
+    if (edge(0)) { const a = document.activeElement as HTMLElement | null; if (a && this.root.contains(a) && a !== this.root) press(a); else controls(this.root)[0]?.focus(); return; }
     if (now < this.next) return;
     const ax = pad.axes[0] ?? 0, ay = pad.axes[1] ?? 0;
     const dx = down[14] || ax < -.5 ? -1 : down[15] || ax > .5 ? 1 : 0, dy = down[12] || ay < -.5 ? -1 : down[13] || ay > .5 ? 1 : 0;

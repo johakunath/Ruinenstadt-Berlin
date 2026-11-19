@@ -10,6 +10,7 @@ import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { onFerryPier } from '../sim/ferry';
+import { snapReachable } from '../sim/reach';
 import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
 import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, type SpecialKind } from './lots';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
@@ -555,7 +556,7 @@ const LAMP_LIT = 0.3;
 /** Two lamps of crossing streets never stand closer than this. */
 const LAMP_MIN = 6;
 /** Two light sources of the same kind keep this distance (barrels may stand together). */
-export const SAME_KIND_GAP: Partial<Record<Prop['kind'], number>> = { campfire: 16, workLamp: 9, candles: 7, stringLights: 30 };
+export const SAME_KIND_GAP: Partial<Record<Prop['kind'], number>> = { campfire: 16, workLamp: 9, candles: 7, stormLantern: 7, beacon: 9, stringLights: 30 };
 
 /** Retaining walls and stair sides block; the stair runs stay open. */
 export function terraceWall(m: MapDef, x: number, z: number): boolean {
@@ -1403,8 +1404,8 @@ function inLot(l: Lot, x: number, z: number, pad: number): boolean {
   return inside(l.x, l.z, l.w, l.d) || (l.wing !== undefined && inside(l.wing.x, l.wing.z, l.wing.w, l.wing.d));
 }
 
-/** Light sources: working lamps, fires, construction lamps, grave candles, string lights. */
-export const LIGHT_PROPS: ReadonlySet<Prop['kind']> = new Set<Prop['kind']>(['lantern', 'fireBarrel', 'campfire', 'workLamp', 'candles', 'stringLights']);
+/** Light sources: working lamps, fires, construction lamps, storm lanterns, beacons, grave candles, string lights. */
+export const LIGHT_PROPS: ReadonlySet<Prop['kind']> = new Set<Prop['kind']>(['lantern', 'fireBarrel', 'campfire', 'workLamp', 'stormLantern', 'beacon', 'candles', 'stringLights']);
 /**
  * Light gap rule (Johannes 2026-11-16): where one light pool ends the next begins, but organic, not
  * on a grid. The allowed distance to the nearest light varies with a slow noise between
@@ -1452,14 +1453,15 @@ function stringLights(m: MapDef, props: Prop[], hit: (x: number, z: number, r: n
 /**
  * Light coverage pass: walks every street (not paths, not bridges) and, where no light source,
  * Späti or landmark is within the local `lightCover`, adds one beside the street at a random offset,
- * with a random strength, and sometimes a small cluster around it (a campfire with candles, a work
+ * with a random strength, and sometimes a small cluster around it (a campfire with storm lanterns, a work
  * lamp by a barrel). Mostly no-flame kinds, so flames stay special; same kinds keep SAME_KIND_GAP.
  */
 function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: number, r: number) => boolean, rng: Rng): void {
   const lit: Array<[number, number]> = props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => [p.x, p.z]);
   for (const l of m.landmarks) if (l.hx > 0) lit.push([l.x, l.z]);
   const dark = (x: number, z: number): boolean => !lit.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < lightCover(x, z));
-  const kinds: Array<Prop['kind']> = ['workLamp', 'workLamp', 'candles', 'candles', 'fireBarrel', 'fireBarrel', 'campfire'];
+  // Playtest 2026-11-18: no grave candles on the streets (they read as pickups); storm lanterns and beacons instead.
+  const kinds: Array<Prop['kind']> = ['workLamp', 'workLamp', 'stormLantern', 'beacon', 'fireBarrel', 'fireBarrel', 'campfire'];
   const inFight = (x: number, z: number): boolean => m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r * 0.6);
   const shuffled = <T>(xs: T[]): T[] => {
     for (let i = xs.length - 1; i > 0; i--) {
@@ -1492,7 +1494,7 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
         const tries: Array<[number, number, number]> = [];
         for (let k = 0; k < 24; k++) tries.push([rng.range(-6, 6), rng.pick([-1, 1]), rng.range(0.9, 4.2)]);
         let placed: [number, number] | null = null;
-        let kind: Prop['kind'] = 'candles';
+        let kind: Prop['kind'] = 'stormLantern';
         for (const [dt, side, extra] of tries) {
           const [x, z] = spot(dt, side, extra);
           if (onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.3 || inFight(x, z)) continue;
@@ -1507,7 +1509,7 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
         if (placed) {
           // Sometimes a small cluster: people gather where there is light.
           if (rng.next() < 0.4) {
-            const extraKinds: Array<Prop['kind']> = kind === 'workLamp' ? ['fireBarrel', 'candles'] : ['candles', 'candles', 'fireBarrel'];
+            const extraKinds: Array<Prop['kind']> = kind === 'workLamp' ? ['fireBarrel', 'beacon'] : ['stormLantern', 'stormLantern', 'fireBarrel'];
             for (let n = 1 + rng.int(2); n > 0; n--) {
               const a = rng.range(0, Math.PI * 2);
               const d = rng.range(1.6, 3.6);
@@ -1515,21 +1517,21 @@ function fillLight(m: MapDef, lots: Lot[], props: Prop[], hit: (x: number, z: nu
               const z = placed[1] + Math.cos(a) * d;
               const k = rng.pick(extraKinds);
               if (sameKindClash(props, k, x, z)) continue;
-              if (streetDist(m, x, z).d < 0.3 || isWater(m, x, z) || inFight(x, z) || edgeDist(m, x, z) < EDGE_CLEAR || (k !== 'candles' && hit(x, z, 0.5))) continue;
+              if (streetDist(m, x, z).d < 0.3 || isWater(m, x, z) || inFight(x, z) || edgeDist(m, x, z) < EDGE_CLEAR || (k !== 'stormLantern' && hit(x, z, 0.5))) continue;
               if (lots.some((l) => l.kind !== 'tree' && l.kind !== 'special' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
               add(k, x, z, rng.range(0.5, 0.9));
             }
           }
           continue;
         }
-        // Built-up stretch: grave candles at the curb. They do not block, so they only need to stay
-        // off building footprints, water and other props.
+        // Built-up stretch: a storm lantern on its stake at the curb. The thin stake does not block, so it
+        // only needs to stay off building footprints, water and other props.
         for (const dt of shuffled([0, 1.5, -1.5, 3, -3, 4.5, -4.5])) {
           const [x, z] = spot(dt, rng.pick([-1, 1]), rng.range(0.5, 0.8));
           if (isWater(m, x, z) || onBridge(m, x, z, 1) || streetDist(m, x, z).d < 0.2 || inFight(x, z) || edgeDist(m, x, z) < EDGE_CLEAR) continue;
           if (lots.some((l) => l.kind !== 'tree' && l.kind !== 'special' && inLot(l, x, z, 0.3)) || props.some((p) => Math.hypot(x - p.x, z - p.z) < 0.9)) continue;
-          // Candles keep their gap; a barrel can stand anywhere.
-          add(sameKindClash(props, 'candles', x, z) ? 'fireBarrel' : 'candles', x, z, rng.range(0.6, 1.1));
+          // Lanterns keep their gap; a barrel can stand anywhere.
+          add(sameKindClash(props, 'stormLantern', x, z) ? 'fireBarrel' : 'stormLantern', x, z, rng.range(0.6, 1.1));
           break;
         }
       }
@@ -1786,7 +1788,11 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   for (const l of lots) colliders.push(...lotColliders(l));
   for (const w of m.camp?.walls ?? []) colliders.push({ kind: 'box', x: w.x, z: w.z, hx: w.hx, hz: w.hz, rot: 0 });
-  for (const t of m.camp?.stations ?? []) colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot });
+  for (const t of m.camp?.stations ?? []) {
+    if (!t.solid) { colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot }); continue; }
+    const c = Math.cos(t.rot), sn = Math.sin(t.rot);
+    for (const [lx, lz, hx, hz] of t.solid) colliders.push({ kind: 'box', x: t.x + lx * c + lz * sn, z: t.z - lx * sn + lz * c, hx, hz, rot: t.rot });
+  }
   for (const f of m.camp?.decor ?? []) colliders.push({ kind: 'box', x: f.x, z: f.z, hx: f.w / 2, hz: f.d / 2, rot: 0 });
   colliders.push(...barrierColliders(m));
   if (m.rail) {
@@ -1816,9 +1822,12 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     level.traderSpot = { ...T.trader };
     if (T.flood) level.wade = { pts: T.flood.pts.map(([x, z]) => ({ x, z })), half: T.flood.width / 2, factor: T.flood.slow };
   }
-  level.guards = [...(m.guards ?? []), ...lots.flatMap((l) => l.content?.guards ?? [])];
+  // Lot guards and event spots are sampled before or between props; move the ones a prop covers to the
+  // nearest free ground (P21, P23). No random draws, so lots and props stay as they are.
+  const snap = <T extends { x: number; z: number }>(p: T): T => { const q = snapReachable(level, p.x, p.z); return q ? { ...p, x: q.x, z: q.z } : p; };
+  level.guards = [...(m.guards ?? []), ...lots.flatMap((l) => (l.content?.guards ?? []).map(snap))];
   level.spots = { rescue: [], trader: [], cache: [] };
-  for (const l of lots) for (const k of ['rescue', 'trader', 'cache'] as const) { const p = l.content?.spots[k]; if (p) level.spots[k].push({ x: p[0], z: p[1] }); }
+  for (const l of lots) for (const k of ['rescue', 'trader', 'cache'] as const) { const p = l.content?.spots[k]; if (p) level.spots[k].push(snap({ x: p[0], z: p[1] })); }
   return level;
 }
 
@@ -1862,9 +1871,9 @@ function tunnelProps(m: MapDef): Prop[] {
         acc = rng.range(-2, 2);
         const off = t.width / 2 - 0.8, x = ax + ux * d - uz * off * side, z = az + uz * d + ux * off * side;
         side = -side;
-        // Playtest 2026-11-18: the track and the bypass get lamps on their walls (render); here only candles there.
+        // Playtest 2026-11-18: the track and the bypass get lamps on their walls (render); here only storm lanterns there.
         const roll = rng.next(), walled = t.kind === 'track' || t.kind === 'bypass';
-        if ((!walled || roll >= 0.75) && free(x, z, 0.3)) props.push({ kind: roll < 0.75 ? 'workLamp' : 'candles', x, z, rot: Math.atan2(uz * side, -ux * side), size: 1 });
+        if ((!walled || roll >= 0.75) && free(x, z, 0.3)) props.push({ kind: roll < 0.75 ? 'workLamp' : 'stormLantern', x, z, rot: Math.atan2(uz * side, -ux * side), size: 1 });
         const cx = ax + ux * (d + 5) + uz * off * 0.6 * side, cz = az + uz * (d + 5) - ux * off * 0.6 * side;
         // The 4 m bypass stays clear of crates.
         if (rng.next() < 0.55 && t.kind !== 'bypass' && free(cx, cz, 0.8)) props.push({ kind: rng.pick(['crates', 'crate', 'rubble', 'planks', 'bins'] as const), x: cx, z: cz, rot: rng.range(0, Math.PI * 2), size: rng.range(0.8, 1.3) });

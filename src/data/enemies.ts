@@ -303,6 +303,8 @@ export const THREAT = {
   stomp: { radius: 70 * PX, damage: 1.3, open: 1.6 },
   flame: { range: 140 * PX, wind: 0.9, radius: 95 * PX, damage: 1.2, floor: 0.2, open: 1, trailEvery: 0.45, trailRadius: 20 * PX, trailTime: 3.5, trailDamage: 0.45 },
   split: { count: 2, hp: 0.4, scale: 0.7 },
+  /** M11c lying guards: seconds to get up after waking; no move or strike meanwhile (backlog P22). */
+  rise: 0.7,
   hazard: { tick: 0.5 },
   /** M15 Wurzler roots (2D `wurz`): marked under the hero, then held unless dodging; immune for a while after. */
   roots: { range: 320 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.95, radius: 1.5, damage: 0.6, hold: 0.8, immune: 2.5, open: 0.9, near: 120 * PX, nearSpeed: 0.7 },
@@ -331,7 +333,8 @@ export const BOSS = {
   feldwebel: { charge: [5, 7], summon: 9, adds: 3 },
   waechter: { barrage: 5, ring: 7.5, slam: 4.5, shots: 12, extra: 4 },
   rex: { charge: [4.2, 3], roar: 8, tail: 5, tailRadius: 110 * PX, tailWind: 0.8, raptorsEvery: 3 },
-  hauptmann: { slam: 3.6, ring: 5.5, summon: 9, adds: 3, shots: 16 },
+  // Playtest 2026-11-18 (too easy, boring): charges when the hero keeps away, a second ring in rage, four men per call.
+  hauptmann: { slam: 3.6, charge: [4, 5.5] as [number, number], chargeFrom: 6, ring: 5, ringGap: 0.7, summon: 9, adds: 4, shots: 16 },
   // M12b Xhain. Cooldowns in seconds (rage makes them tick ×1.35 faster, as for every boss).
   /** Barrage „Feuerstoß“ (one circle on the hero, `extra` around), a five-shot fan, „Alarm!“ calls two Hetzer. Keeps `near`..`far` away. */
   grenzer: {

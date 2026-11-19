@@ -26,6 +26,8 @@ import { GameRenderer } from './render/renderer';
 import { setLoadout } from './sim/loadout';
 import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
+import { autoAttackTarget } from './sim/player';
+import { deathSummary, logHit, type DeathSummary, type HitLog } from './sim/death';
 import { DT, NO_INPUT, type Sim, type SimInput } from './sim/types';
 import { Ui } from './ui/ui';
 import { koepenickMap } from './data/koepenick';
@@ -40,8 +42,9 @@ import { xhainMap } from './data/xhain';
 import { mitteMap } from './data/mitte';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor } from './render/sky';
-import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, showTitleLinks, wonLink, type MapId } from './ui/maps';
+import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, wonLink, type MapId } from './ui/maps';
 import { areaAt, generateLots, generateProps, mapLevel } from './data/map';
+import { pickIsHere, titleNet } from './ui/title-net';
 import { mapSvg } from './data/map-svg';
 import { EdgeMarkers, Minimap } from './ui/minimap';
 import { ENEMIES } from './data/enemies';
@@ -85,10 +88,21 @@ const map = opts.map !== 'hof' ? (() => {
   const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
-  // Dev showcase (`?props=crane,stall*4`): a row of props east of the start, for art work and screenshots.
+  // Dev showcase (`?props=crane,stall:1.5*4`, kind[:size][*count]): rows of six props near the start on the
+  // nearest free ground (no building, car or container within the block), all facing south (rot 0) so fronts compare.
   const show = new URLSearchParams(location.search).get('props');
-  if (show) show.split(',').flatMap((k) => { const [kind, n] = k.split('*'); return Array.from({ length: Number(n) || 1 }, () => kind as Prop['kind']); })
-    .forEach((kind, i) => props.push({ kind, x: def.start.x + 5 + (i % 6) * 5, z: def.start.z - 4 + Math.floor(i / 6) * 6, rot: i * 0.7, size: 1 }));
+  if (show) {
+    const items = show.split(',').flatMap((k) => { const [head = '', n] = k.split('*'); const [kind, size] = head.split(':'); return Array.from({ length: Number(n) || 1 }, () => ({ kind: kind as Prop['kind'], size: Number(size) || 1 })); });
+    const cols = Math.min(6, items.length), rows = Math.ceil(items.length / 6), span = (cols - 1) * 5 + 6, deep = (rows - 1) * 6 + 6;
+    const busy = (x0: number, z0: number): boolean => lots.some((l) => Math.abs(l.x - x0 - span / 2) < span / 2 + Math.max(l.w, l.d) / 2 && Math.abs(l.z - z0 - deep / 2) < deep / 2 + Math.max(l.w, l.d) / 2)
+      || props.some((p) => (p.kind === 'car' || p.kind === 'crane' || p.kind === 'container') && p.x > x0 - 3 && p.x < x0 + span && p.z > z0 - 3 && p.z < z0 + deep);
+    let ox = def.start.x + 5, oz = def.start.z - 4;
+    search: for (let r = 0; r < 30; r += 3) for (let a = 0; a < 16; a++) {
+      const x = def.start.x + 3 + Math.cos(a * Math.PI / 8) * r, z = def.start.z - 3 + Math.sin(a * Math.PI / 8) * r;
+      if (!busy(x, z)) { ox = x; oz = z; break search; }
+    }
+    items.forEach((it, i) => props.push({ kind: it.kind, x: ox + (i % 6) * 5, z: oz + Math.floor(i / 6) * 6, rot: 0, size: it.size }));
+  }
   return { def, lots, props, level: mapLevel(def, lots, props) };
 })() : null;
 const isTunnel = map?.def.tunnel !== undefined;
@@ -132,6 +146,8 @@ let afterLoot: 'again' | 'camp' | 'map' = 'again';
 const lootUi = new LootLabels();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
+const exitChip = document.getElementById('exit-chip') as HTMLButtonElement;
+exitChip.addEventListener('click', () => showWon());
 
 function finishLootExit(leave: boolean): void {
   lootWarn.hidden = true;
@@ -192,10 +208,16 @@ function checkpoint(): number {
 }
 /** M17 end screen: what the run brought (2D showEnd stats). */
 let runScrap0 = 0, runT0 = 0;
+/** Hits of the last seconds and the summary of the last death (death screen, telemetry). */
+const hitLog: HitLog[] = [];
+/** The running fight, for the reward line (P7). */
+const fight = { t: 0, kills: 0, dmg: 0 };
+let lastDeath: DeathSummary | null = null;
+const deathLine = (d: DeathSummary | null): string => d ? `<div class="death-by">Tod durch <b>${d.by}</b></div>${d.recent.length > 1 || d.recent[0]?.by !== d.by ? `<div class="death-recent">Zuletzt: ${d.recent.map((r) => `${r.by} ${Math.round(r.share * 100)} %`).join(' · ')}</div>` : ''}` : '';
 function endStats(won: boolean): string {
   const min = Math.max(1, Math.round((sim.time - runT0) / 60)), fights = Math.min(sim.run.index, level?.encounters.length ?? 0), best = sim.inventory.camp?.endlessBest ?? 0;
   const e = sim.run.endless;
-  return `${e !== undefined ? `<div>Endlos · Welle <b>${e}</b> · Rekord <b>${best}</b></div>` : level ? `<div>Kampf <b>${won ? level.encounters.length : fights}</b> von ${level.encounters.length}</div>` : ''}<div><b>${sim.kills}</b> Gegner besiegt · ${min} min</div><div>Schrott <b>+${Math.max(0, sim.inventory.scrap - runScrap0)}</b></div><p class="hint">Beute und Schrott bleiben. Segen verfallen.</p>`;
+  return `${e !== undefined ? `<div>Endlos · Welle <b>${e}</b> · Rekord <b>${best}</b></div>` : level ? `<div>Kampf <b>${won ? level.encounters.length : fights}</b> von ${level.encounters.length}</div>` : ''}<div><b>${sim.kills}</b> Gegner besiegt · ${min} min</div><div>Schrott <b>+${Math.max(0, sim.inventory.scrap - runScrap0)}</b></div><p class="hint">Beute und Schrott bleiben, Schrott baut das Lager aus. Segen verfallen.</p>`;
 }
 /** Seconds between the last boss's fall and the end screen. */
 const WON_DELAY = 6;
@@ -213,6 +235,12 @@ function showWon(): void {
   t.hidden = !level || !link;
   if (link) t.innerHTML = link.html;
   showCampButtons();
+  // Playtest 2026-11-18: the way on is the red button: the camp once it is open, else the next map;
+  // Weiter erkunden comes after it, Nochmal is gone.
+  const camp = document.getElementById('won-camp')!;
+  camp.classList.toggle('primary', !camp.hidden);
+  t.classList.toggle('primary', camp.hidden && !t.hidden);
+  exitChip.hidden = true;
 }
 /** `camp.freed` id of this map's victory: districts by index, a cleared line as LINE_FREED + line. */
 const FREED_ID = isTunnel ? LINE_FREED + line : MAP_FREED[mapId];
@@ -231,14 +259,19 @@ document.getElementById('won-tunnel')!.addEventListener('click', () => {
 });
 /** M19/M15: the title's map buttons (tunnel after Köpenick, Xhain after the tunnel). */
 function showTunnelButton(): void {
-  if (level) showTitleLinks(mapId, sim.inventory.camp?.freed ?? []);
+  // Layout 2A (Johannes 2026-11-18): the network map on the title replaces the map buttons.
+  titleNet().show(sim.inventory.camp?.freed ?? []);
+  startScreen().setTarget(titleNet().label() || null);
   showCampButtons();
 }
+
 for (const id of ['go-tunnel', 'go-xhain']) document.getElementById(id)!.addEventListener('click', (e) => goMap(((e.currentTarget as HTMLElement).dataset.to as MapId | undefined) ?? 'koepenick'));
 /** Stay in the freed district: walk, loot, break things, test the build. */
 function explore(): void {
   document.getElementById('won')!.hidden = true;
   document.getElementById('pause-finish')!.hidden = false;
+  // Playtest 2026-11-18: a visible way out while exploring (the loot chip takes its place while searching).
+  exitChip.hidden = lootExit === 'search';
   phase = 'play';
   wonFor = -1;
   input.enabled = true;
@@ -301,6 +334,7 @@ function playNow(): void {
 const intro = new IntroUi(() => sim, () => { if (phase === 'title') saveProfile(); });
 const ui = new Ui(opts, {
   onPlay: () => {
+    if (!pickIsHere()) { if (titleNet().canRide()) { saveProfile(); titleNet().rideSelected(); } return; }
     // M17: the intro cards come once, before the first run.
     if (!intro.seen('intro') && !opts.autostart) { intro.showIntro(() => playNow()); return; }
     playNow();
@@ -323,17 +357,6 @@ const ui = new Ui(opts, {
     sim = createSim({ difficulty: sim.difficulty, seed: (opts.seed += 1), stress: opts.stress, level, startAt: checkpoint(), equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
     renderer?.reset(sim);
     start();
-  },
-  onAgain: () => {
-    // Valuable loot still on the ground: ask once before the map is left.
-    if (importantDrops(sim).length > 0 && lootExit !== 'ask') {
-      lootExit = 'ask';
-      document.getElementById('won')!.hidden = true;
-      lootWarn.hidden = false;
-      document.getElementById('loot-find')?.focus();
-      return;
-    }
-    again();
   },
   onMenu: () => input.onMenu(),
 }, input);
@@ -431,6 +454,7 @@ function startCamp(): void {
   ui.setExpedition(false);
   ui.banner('S+U Warschauer Straße', 'Lager');
   audio.start();
+  if (opts.tp) { const p = sim.player; p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z; }
 }
 
 input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen) menu.toggle('karte'); };
@@ -488,6 +512,7 @@ document.getElementById('to-title')!.addEventListener('click', () => {
 // Zoom in three levels (playtest 2026-11-17): Z cycles, the mouse wheel steps.
 window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !e.repeat && phase === 'play') renderer?.zoom(0); });
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
+input.onZoom = (dir) => { if (phase === 'play') renderer?.zoom(dir); };
 input.onMenu = () => {
   if (optionsScreen().isOpen) optionsScreen().close();
   else if (menu.isOpen) menu.close();
@@ -504,11 +529,13 @@ if (map) {
   mapSource = () => {
     const p = sim.player;
     // Live marks (U2 legend): unused Litfaßsäulen and the enemies alive.
+    // Marks scale with the map (playtest 2026-11-18: in the 86 m camp the hero arrow covered a room).
+    const k = Math.min(1, Math.max(map.def.bounds.maxX - map.def.bounds.minX, map.def.bounds.maxZ - map.def.bounds.minZ) / 420);
     const marks = sim.content.shrines.filter(h => !h.used).map(h => `<circle cx="${h.x.toFixed(1)}" cy="${h.z.toFixed(1)}" r="3.2" fill="#7dd3ff" stroke="#14282b" stroke-width="0.8"/>`).join('')
       + sim.enemies.filter(e => e.state !== 'dead').map(e => `<circle cx="${e.x.toFixed(1)}" cy="${e.z.toFixed(1)}" r="${e.def.boss ? 3.5 : 1.8}" fill="#c23a2e"/>`).join('');
     const svg = mapSvg(map.def, map.lots, { trees: false, encounters: false }).replace('</svg>', `${marks}</svg>`);
     // The hero: the same arrow as on the minimap, in a ring so it is found at a glance (playtest 2026-11-17).
-    const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)})`;
+    const at = `translate(${p.x.toFixed(1)} ${p.z.toFixed(1)}) scale(${k.toFixed(2)})`;
     return svg.replace('</svg>', `<circle transform="${at}" r="9" fill="none" stroke="#f2d14b" stroke-width="1.2" opacity="0.8"/><polygon transform="${at} rotate(${(180 - (p.facing * 180) / Math.PI).toFixed(0)})" points="0,-7 5,5 0,2.5 -5,5" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg>`);
   };
   document.getElementById('title-sub')!.textContent = isTunnel && line > 0 ? `${map.def.name} · Richtung ${stopName(line + 1)}` : MAP_SUB[mapId];
@@ -587,6 +614,7 @@ document.getElementById('cloud-join')!.addEventListener('click', () => {
 function start(resumed = false): void {
   audio.start();
   document.getElementById('pause-finish')!.hidden = true;
+  exitChip.hidden = true;
   // Phones and tablets play in fullscreen (needs the tap that started the game; refused quietly elsewhere).
   if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement && !navigator.webdriver) void document.documentElement.requestFullscreen?.()?.catch(() => undefined);
   phase = 'play';
@@ -605,6 +633,15 @@ function start(resumed = false): void {
   input.enabled = true;
   ui.showGame();
   runScrap0 = sim.inventory.scrap; runT0 = sim.time;
+  // Debug: ?tp=x,z beams the hero to a reported spot, ?god keeps her alive while looking.
+  sim.god = opts.god;
+  if (opts.tp && !resumed) {
+    const p = sim.player;
+    p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z;
+  }
+  hitLog.length = 0;
+  // A checkpoint can resume mid-encounter (no encounterStart then): count the fight from here.
+  fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0;
   telemetry.begin(sim, { map: map ? map.def.name : 'Hof', profile: opts.profile, scale: opts.mapScale, startAt: sim.run.index, input: input.device });
 }
 
@@ -640,6 +677,16 @@ function readInput(): SimInput {
   simInput.ultimate = input.buffer.has('ultimate');
   simInput.verband = input.buffer.has('verband');
   simInput.molotow = input.buffer.has('molotow');
+  // Auto-Angriff (2D autoAtk): press for the player and aim at the target, unless they pressed anything
+  // themselves this step (a power or throw keeps the player's own aim).
+  if (opts.autoAttack && input.enabled && !simInput.attack && !simInput.dodge && !simInput.power && !simInput.ultimate && !simInput.verband && !simInput.molotow) {
+    const t = autoAttackTarget(sim);
+    if (t) {
+      const len = Math.hypot(t.x - p.x, t.z - p.z);
+      simInput.attack = true;
+      if (len > 0.05) { simInput.aimX = (t.x - p.x) / len; simInput.aimZ = (t.z - p.z) / len; simInput.aimAssist = false; }
+    }
+  }
   return simInput;
 }
 
@@ -648,6 +695,8 @@ function drainEvents(): void {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev, sim);
     telemetry.event(ev);
+    if (ev.type === 'playerHit') { logHit(hitLog, ev.by, ev.damage, sim.time); fight.dmg += ev.damage; }
+    else if (ev.type === 'encounterStart') { fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0; }
     // M20 tunnel: gratings opening, the generator and its power (2D messages).
     tunnelNotice(ev, map?.def, { banner: (t, s) => ui.banner(t, s), toast: (h, s) => lootUi.toast(h, s) });
     switch (ev.type) {
@@ -671,9 +720,13 @@ function drainEvents(): void {
         else ui.banner(ev.waves > 1 ? `Welle ${ev.wave + 1}/${ev.waves}` : enc.name, ev.waves > 1 ? enc.name : '');
         break;
       }
-      case 'encounterClear':
-        ui.banner('Geschafft', ev.heal > 0 ? `+${ev.heal} Leben` : '');
+      case 'encounterClear': {
+        // P7 reward moment: what the fight took, a nod for no hit, the heal.
+        const secs = Math.round(sim.time - fight.t), kills = sim.kills - fight.kills;
+        const line = [`${secs} s`, `${kills} besiegt`, fight.dmg === 0 ? 'ohne Treffer' : '', ev.heal > 0 ? `+${ev.heal} Leben` : ''].filter(Boolean).join(' · ');
+        ui.banner(fight.dmg === 0 ? 'Makellos' : 'Geschafft', line);
         break;
+      }
       case 'zoneClear': {
         const zone = level?.zones[ev.zone];
         if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
@@ -908,6 +961,8 @@ function frame(now: number): void {
     endExpedition(sim, false);
     saveProfile();
     input.enabled = false;
+    lastDeath = deathSummary(hitLog, sim.time, sim.stats.maxHp);
+    telemetry.died(lastDeath);
     telemetry.end('dead');
   }
   // Telemetry gets the real frame time; `dt` is clamped for the sim and would hide slow frames.
@@ -919,8 +974,8 @@ function frame(now: number): void {
       const endless = sim.run.endless !== undefined;
       ui.retryHint(endless ? '' : zone ? `Neustart: ${zone.name}` : '');
       ui.showDead(sim.kills);
-      document.getElementById('dead-stats')!.innerHTML = endStats(false);
-      document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Nochmal';
+      document.getElementById('dead-stats')!.innerHTML = deathLine(lastDeath) + endStats(false);
+      document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Ab Kontrollpunkt';
     }
   }
   if (wonFor >= 0 && phase === 'play') {
@@ -933,7 +988,7 @@ function frame(now: number): void {
       lootExit = 'off';
       lootChip.hidden = true;
     } else {
-      lootChip.hidden = false;
+      lootChip.hidden = false; exitChip.hidden = true;
       document.getElementById('loot-n')!.textContent = String(left);
       document.getElementById('loot-pad')!.hidden = input.device !== 'gamepad';
     }
@@ -957,7 +1012,7 @@ function frame(now: number): void {
     ui.setPerf(
       `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms\n` +
         `${pf.calls} draw calls · ${(pf.triangles / 1000).toFixed(0)}k Dreiecke · ${sim.enemies.length} Gegner\n` +
-        PROFILES[opts.profile].label,
+        `${PROFILES[opts.profile].label} · x ${sim.player.x.toFixed(1)} z ${sim.player.z.toFixed(1)}`,
     );
   }
 }

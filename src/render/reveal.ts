@@ -67,8 +67,8 @@ export function revealPose(l: Landmark, t: number, weight: number, out: RevealPo
   const th = Math.tan(Math.atan(Math.tan(((fov / 2) * Math.PI) / 180) * aspect) * 0.9);
   // A vertical half height h at the look point projects inside the view when
   // h cos(pitch) / (dist − h sin(pitch)) ≤ tan(half FOV); the width needs half / tan(half horizontal FOV).
-  // Capped inside the camera's far plane (120 m): a wide landmark on a portrait screen may then crop at the sides.
-  const dist = Math.min(105, Math.max(24, (h * Math.cos(PITCH)) / tv + h * Math.sin(PITCH), S.half / th + S.half * 0.5));
+  // Capped well inside the reveal far plane (camera.ts REVEAL_FAR).
+  const dist = Math.min(200, Math.max(24, (h * Math.cos(PITCH)) / tv + h * Math.sin(PITCH), S.half / th + S.half * 0.5));
   // Swing from 38° to 18° off the front axis.
   const side = ((38 - 20 * smooth((t - REVEAL_IN) / DRIFT)) * Math.PI) / 180;
   const yaw = l.rot + side;

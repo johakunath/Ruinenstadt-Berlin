@@ -2,6 +2,7 @@
 // setting with a short sub-line, switches and segment buttons, the controls graphics. Opens from the
 // start screen and from the cog in the pause menu; × top right closes. Built before the game loads;
 // main.ts wires the run actions and the cloud row by id.
+import { backupSave, loadSave, parseSaveCode, saveCode, writeSave } from '../save';
 import { DEVICE_SVG, type ControlDevice } from './controls-gfx';
 import { keyNav, PadNav } from './focus';
 import { profileSeg, row, segment, syncSettings, toggle, volumeRange } from './settings';
@@ -32,17 +33,20 @@ export class OptionsScreen {
     r.setAttribute('aria-label', 'Optionen');
     r.innerHTML = `<button type="button" class="tr-x" id="opt-close" aria-label="Zurück">×</button><div class="optbox">
       <div class="ohead"><h2>Optionen</h2></div>
+      <div class="osec">Spiel</div>
+      ${row('Auto-Angriff', 'Schlägt zu, wenn ein Gegner in Reichweite ist.', toggle('autoAttack', 'Auto-Angriff'))}
       <div class="osec">Bild und Ton</div>
       ${row('Grafik', 'Qualität für PC, Leistung für Tablet und Handy.', profileSeg(), ' id="opt-profile-row"')}
       ${row('Ton', '', toggle('sound', 'Ton'))}${row('Musik', '', toggle('music', 'Musik'))}${row('Lautstärke', '', volumeRange(), ' id="opt-volume-row"')}
       ${row('Vibration', 'Kurze Stöße bei Treffern.', toggle('rumble', 'Vibration'))}
       ${row('Akkusparen', '30 Bilder pro Sekunde, schont Akku und Wärme.', toggle('eco', 'Akkusparen'))}
-      ${row('Vollbild', 'Blendet die Browserleiste aus.', toggle('fullscreen', 'Vollbild'))}
       ${row('Leistungsanzeige', 'Bildrate unten links.', toggle('showPerf', 'Leistungsanzeige'))}
       <div class="osec">Steuerung</div><div class="ctl">${segment('dev', 'Gerät', DEVICES)}<div class="ctl-gfx"></div></div>
       <div class="osec">Spielstand</div>
       ${row('Online speichern', '<span id="cloud-info"></span>', '<span class="cloud-btns"><button id="cloud-copy" type="button" class="btn sm">Kopieren</button><button id="cloud-join" type="button" class="btn sm">Code eingeben</button><button id="cloud-toggle" type="button" class="btn sm"></button></span>', ' id="cloud-row" hidden')}
       ${row('Spieldaten senden', 'Anonyme Laufdaten für die Balance.', toggle('telemetry', 'Spieldaten senden'))}
+      ${row('Spielstand kopieren', 'Als Code, zum Sichern oder für ein anderes Gerät.', '<button id="save-copy" type="button" class="btn sm">Kopieren</button>')}
+      ${row('Spielstand laden', 'Einen kopierten Code einfügen.', '<button id="save-load" type="button" class="btn sm">Laden</button>', ' id="save-load-row"')}
       <div id="run-actions"><div class="osec">Expedition</div>
       ${row('Abschließen', 'Den befreiten Bezirk verlassen.', '<button type="button" class="btn sm">Abschließen</button>', ' id="pause-finish" hidden')}
       ${row('Hauptmenü', 'Gespeichert, Weiter möglich.', '<button id="to-title" type="button" class="btn sm">Hauptmenü</button>')}
@@ -54,6 +58,8 @@ export class OptionsScreen {
       const b = (e.target as Element).closest<HTMLButtonElement>('button[data-v]');
       if (b) { this.dev = b.dataset.v as ControlDevice; this.renderDevice(); }
     });
+    r.querySelector('#save-copy')!.addEventListener('click', e => void copySave(e.currentTarget as HTMLButtonElement));
+    r.querySelector('#save-load')!.addEventListener('click', loadSaveCode);
     r.addEventListener('click', e => { if (e.target === r) this.close(); });
     keyNav(r, () => this.close());
     this.pad = new PadNav(r, () => this.isOpen, () => this.close());
@@ -66,10 +72,13 @@ export class OptionsScreen {
     this.dev = null;
     this.renderDevice();
     syncSettings();
+    this.root.querySelector('#save-copy')!.textContent = 'Kopieren';
+    // Loading a code replaces the profile and reloads: only from the title, as in 2D.
+    (this.root.querySelector('#save-load-row') as HTMLElement).hidden = !!document.getElementById('title')?.hidden;
     this.root.hidden = false;
     this.root.querySelector('.optbox')!.scrollTop = 0;
     this.pad.reset();
-    this.root.querySelector<HTMLElement>('[data-opt="profile"] button.on, [data-opt="profile"] button')?.focus({ preventScroll: true });
+    this.root.querySelector<HTMLElement>('[data-opt="autoAttack"]')?.focus({ preventScroll: true });
   }
   close(): void {
     if (!this.isOpen) return;
@@ -84,6 +93,27 @@ export class OptionsScreen {
     for (const b of this.root.querySelectorAll<HTMLButtonElement>('[data-opt="dev"] button')) { const on = b.dataset.v === d; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
     this.root.querySelector('.ctl-gfx')!.innerHTML = DEVICE_SVG[d]();
   }
+}
+
+/** Spielstand kopieren (2D exportSave): the stored save as a code to the clipboard, else shown to copy by hand. */
+async function copySave(b: HTMLButtonElement): Promise<void> {
+  const save = loadSave();
+  if (!save) { b.textContent = 'Kein Spielstand'; return; }
+  const code = saveCode(save);
+  try { await navigator.clipboard.writeText(code); b.textContent = 'Kopiert'; } catch { prompt('Code kopieren:', code); }
+}
+
+/** Spielstand laden (2D importSave): replaces the save (the old one stays as backup) and restarts the page. */
+function loadSaveCode(): void {
+  const text = prompt('Spielstand-Code einfügen. Der aktuelle Spielstand wird ersetzt.')?.trim();
+  if (!text) return;
+  const save = parseSaveCode(text);
+  if (!save) { alert('Code ungültig oder unvollständig.'); return; }
+  const old = loadSave();
+  if (old) backupSave(old);
+  // Newer than any cloud copy, so online saving keeps the loaded state.
+  writeSave({ ...save, t: Date.now() });
+  location.reload();
 }
 
 let screen: OptionsScreen | null = null;

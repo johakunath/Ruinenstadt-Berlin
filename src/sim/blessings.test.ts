@@ -438,8 +438,8 @@ describe('G1 Umbau cards (3D additions)', () => {
     run(s, 70);
     expect(row.map(lost)).toEqual([18, 18, 18, 18, 0]);
   });
-  it('Fegestoß: thrusts become wide, shorter sweeps; the finisher stays a thrust', () => {
-    const s = fresh('spear', { m_fege: 1 }), side = dummy(s, 1.9, 1.3), far = dummy(s, 0, 3.9);
+  it('Fegestoß: thrusts become wide, shorter sweeps; the finisher stays the round sweep', () => {
+    const s = fresh('spear', { m_fege: 1 }), side = dummy(s, 1.9, 1.3), far = dummy(s, 0, 4.6);
     run(s, 1, { attack: true });
     expect(s.player.attack?.style).toBe('slash');
     run(s, 30);
@@ -447,7 +447,7 @@ describe('G1 Umbau cards (3D additions)', () => {
     expect(lost(far)).toBe(0);
     s.player.state = 'move'; s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
-    expect(s.player.attack?.style).toBe('thrust');
+    expect(s.player.attack!.to - s.player.attack!.from).toBeGreaterThan(5);
   });
   it('Sturmlanze: thrusts right after a dodge hit twice as hard and reach further', () => {
     const s = fresh('spear', { m_lanze: 1 });
@@ -459,7 +459,7 @@ describe('G1 Umbau cards (3D additions)', () => {
     s.player.chain = null;
     run(s, 1, { attack: true });
     expect(s.player.attack?.damage).toBe(20);
-    expect(s.player.attack?.reach).toBeCloseTo(3.27 * 1.5);
+    expect(s.player.attack?.reach).toBeCloseTo(4.0 * 1.5);
   });
   it('Querschläger: a shot jumps once to the nearest other enemy for 80%', () => {
     const s = fresh('sling', { m_quer: 1 }), a = dummy(s, 0, 5), b = dummy(s, 3, 5);

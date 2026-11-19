@@ -110,6 +110,9 @@ export const PLAYER = {
   /** Soft lock-on for gamepad and touch. */
   aimAssistCone: 25 * DEG,
   aimAssistRange: 4.5,
+  /** Auto-Angriff (2D `autoAtk`): swings when an awake enemy is this far past the first swing's reach; the Werfer within `autoRangeSling` (2D 360 px). */
+  autoMargin: 0.4,
+  autoRangeSling: 12,
   /** Extra kill hitstop and shake. */
   killHitstop: 0.03,
   hitByEnemyHitstop: 0.06,
@@ -145,12 +148,15 @@ const WEAPON_ATTACKS: Record<WeaponKindId, Record<AttackId, AttackDef>> = {
   },
   spear: {
     // Punch_Cross is a straight thrust; Melee_Hook a turning low lunge.
+    // Playtest 2026-11-18: the spear only hit what stood exactly in front (hard to aim on a tablet, weak
+    // against packs). Thrusts got wider and longer; the finisher is a round sweep with the shaft
+    // (Sword_Heavy_Combo 0.37 to 0.53 s turns the spear almost a full circle, measured with clip-swing).
     light1: { ...base.light1, clip: 'Punch_Cross', clipStart: 0.1, clipSwing: 0.19, clipHit: 0.28, rec: null, style: 'thrust',
-      windup: 0.1, active: 0.09, recovery: 0.3, from: -8 * DEG, to: 8 * DEG, width: 11 * DEG, reach: 3.27, damage: 10, knockback: 6.2, lunge: 0.45, next: 'light2' },
+      windup: 0.1, active: 0.09, recovery: 0.3, from: -18 * DEG, to: 18 * DEG, width: 12 * DEG, reach: 4.0, damage: 10, knockback: 6.2, lunge: 0.45, next: 'light2' },
     light2: { ...base.light2, clip: 'Punch_Cross', clipStart: 0.14, clipSwing: 0.2, clipHit: 0.28, rec: null, style: 'thrust',
-      windup: 0.09, active: 0.09, recovery: 0.3, from: 8 * DEG, to: -8 * DEG, width: 11 * DEG, reach: 3.27, damage: 10, knockback: 6.2, lunge: 0.45, next: 'light3' },
-    light3: { ...base.light3, clip: 'Melee_Hook', clipStart: 0.06, clipSwing: 0.2, clipHit: 0.29, rec: null, style: 'thrust',
-      windup: 0.16, active: 0.1, recovery: 0.42, from: -9 * DEG, to: 9 * DEG, width: 12 * DEG, reach: 3.9, damage: 16, knockback: 10.5, weight: 'heavy', lunge: 2, next: null },
+      windup: 0.09, active: 0.09, recovery: 0.3, from: 18 * DEG, to: -18 * DEG, width: 12 * DEG, reach: 4.0, damage: 10, knockback: 6.2, lunge: 0.45, next: 'light3' },
+    light3: { ...base.light3, clip: 'Sword_Heavy_Combo', clipStart: 0.2, clipSwing: 0.37, clipHit: 0.53, rec: null, style: 'slash',
+      windup: 0.17, active: 0.16, recovery: 0.42, from: -175 * DEG, to: 175 * DEG, width: 10 * DEG, reach: 3.4, damage: 16, knockback: 10.5, weight: 'heavy', lunge: 2, next: null },
     light4: { ...base.light4 },
     dash: { ...base.dash, clip: 'Melee_Hook', clipStart: 0.1, clipSwing: 0.2, clipHit: 0.29, style: 'thrust',
       from: -12 * DEG, to: 12 * DEG, width: 12 * DEG, reach: 3.9, damage: 15, lunge: 2.2 },

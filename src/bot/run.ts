@@ -25,6 +25,28 @@ export const koepenickLevel = (): Level => mapLevelOf('koepenick');
 
 export interface BalanceArgs { map?: 'koepenick' | 'xhain' | 'alex' | 'mitte'; runs: number; difficulty: DifficultyId; skill: BotSkill; seed: number; startAt?: number; until?: number }
 
+export type MapKey = 'koepenick' | 'xhain' | 'alex' | 'mitte';
+/** The campaign order of the districts (the tunnels between them are not played). */
+export const CHAIN: MapKey[] = ['koepenick', 'xhain', 'alex', 'mitte'];
+
+/** Plays the districts in order with one hero: gear, Schrott and camp carry over; a lost district ends the chain. */
+export function chain(a: Omit<BalanceArgs, 'map' | 'startAt' | 'until'>, onMap?: (run: number, map: MapKey, r: CampaignReport) => void): CampaignReport[][] {
+  const out: CampaignReport[][] = [];
+  for (let i = 0; i < a.runs; i++) {
+    const runs: CampaignReport[] = [];
+    let carry: CampaignReport['profile'] | undefined;
+    for (const [d, map] of CHAIN.entries()) {
+      const r = runCampaign({ level: mapLevelOf(map), seed: a.seed + i * 101 + d * 7, difficulty: a.difficulty, skill: a.skill, carry, district: mapLevelOf(map).district });
+      runs.push(r);
+      onMap?.(i, map, r);
+      if (!r.won) break;
+      carry = r.profile;
+    }
+    out.push(runs);
+  }
+  return out;
+}
+
 export function balance(a: BalanceArgs, onRun?: (i: number, r: CampaignReport) => void): CampaignReport[] {
   const out: CampaignReport[] = [];
   for (let i = 0; i < a.runs; i++) {

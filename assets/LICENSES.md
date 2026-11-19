@@ -129,6 +129,13 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `inventory/I89.webp` | OpenAI image generation, painted inventory icon | Codex for Johannes | Own work | Stahlklinge, leaf-spring blade with a wrench guard |
 | `inventory/I90.webp` | OpenAI image generation, painted inventory icon | Codex for Johannes | Own work | Hackmesser, weathered butcher’s cleaver |
 | `inventory/R05.webp` | Ruinenstadt 2D `assets/icons/R05.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Schrott icon in the menu header (U3) |
+| `inventory/R01.webp` | Ruinenstadt 2D `assets/icons/R01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Stoff icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/R02.webp` | Ruinenstadt 2D `assets/icons/R02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Metall icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/R03.webp` | Ruinenstadt 2D `assets/icons/R03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Chemie icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/R04.webp` | Ruinenstadt 2D `assets/icons/R04.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kabel icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/Z01.webp` | Ruinenstadt 2D `assets/icons/Z01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Fleisch icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/Z02.webp` | Ruinenstadt 2D `assets/icons/Z02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Gemüse icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/Z03.webp` | Ruinenstadt 2D `assets/icons/Z03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Gewürze icon in the camp and menu headers (playtest 2026-11-18) |
 | `inventory/survivor.webp` | Ruinenstadt 2D `assets/hero/H01a-H01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged inventory portrait placeholder |
 | `portraits/E01.webp` | Ruinenstadt 2D `assets/portraits/E01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Schlurfer |
 | `portraits/E02.webp` | Ruinenstadt 2D `assets/portraits/E02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Brocken |

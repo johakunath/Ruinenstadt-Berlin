@@ -3,6 +3,19 @@
 Decided by Johannes on 2026-11-16. This covers texture images for world surfaces and objects.
 Characters and animation (`assets/characters`, `npm run assets`) are out of scope here.
 
+Indexes with the status of every item and every enemy: `docs/equipment-pipeline.md`, `docs/enemy-pipeline.md`. Update them in the same PR whenever you add or change a model, icon, bust, texture or effect.
+
+## Which tool for which job (2026-11-18)
+
+| Job | Route | Who |
+|---|---|---|
+| Weapon, gear and prop geometry, colours, glow and particles | TypeScript in `src/render` (procedural meshes, vertex colours, code-painted canvas textures) | Claude |
+| UI glyphs, map icons, mockups | SVG in code | Claude |
+| Item icons and Kodex portraits that must match the 3D look | Render the in-game model (planned `tools/item-icons.mjs`, `tools/enemy-sheet.mjs` with portrait framing and key plus rim light) | Claude |
+| Converting CC0 model packs (FBX, glTF) | Node: `tools/build-creatures.mjs` (FBXLoader, glTF export) | Claude |
+| Painted textures, painted busts and icons where no 3D model exists yet | Image generation, first integration | Codex |
+| Skinning, rebinding a mesh to the skeleton, retargeting animations | Blender headless (`npm run assets:hero`); slow, use only for rigging | Claude on the PC |
+
 ## Roles and order
 
 Every new map, building type or prop goes through these steps in order. A step does not wait for later steps.
@@ -87,6 +100,10 @@ Painted busts for the Kodex (`src/ui/menu.ts`, `ENEMY_PORTRAIT`) and item icons.
 | P15 | Camp station keepers | `S01`–`S07` | Shared survivor portrait map in Kodex and station windows | Built, review open |
 
 The new portraits follow the existing 2D Kodex busts. The intro illustrations use the approved Köpenick style board. Six camp keepers reuse their Kodex art; Ilse has a new portrait. Station windows show portraits when the station is built and its keeper is present. [In-game screenshots](proof/asset-menu/README.md).
+
+| K2 | Starter Rostige Klinge (`rohr`): icon still shows a pipe, the hero holds a blade | `assets/inventory/I88.webp` | `src/ui/item-icons.ts` | Open. Skip if rendered icons come first (equipment pipeline › Icons from 3D renders) |
+| K3 | Zorn der Ringbahn (base `ring`, a sling) shows a spike on a chain; Arm des Basspredigers shares I58 with the Kabelarm; Kettenhemd der Zitadelle shows the bike chain I42 (base clash, code fix first) | `I32`, `I58`, `I57` | `src/ui/item-icons.ts`, `SETS` in `src/data/items.ts` | Open |
+| KP4 | Kodex busts for the 11 kinds with only a glyph (Grenzer, Spreehexe, Alexanderplatz roster, Türsteher, Dirigent, Drohne, Wachdrohne) | `assets/portraits/` | `ENEMY_PORTRAIT` | Open; prefer renders of the 3D bodies once they are final (enemy pipeline › Kodex from 3D renders) |
 
 ### K1 and KP1–KP3 handover
 

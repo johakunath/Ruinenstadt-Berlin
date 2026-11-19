@@ -179,6 +179,8 @@ export interface Enemy {
   sleep?: number;
   /** M11c: how a sleeping guard waits: playing dead on the ground or unseen in a doorway/under rubble. */
   pose?: 'lying' | 'hidden';
+  /** Lying guard getting up: seconds left (`THREAT.rise`); it neither moves nor strikes meanwhile. */
+  rise?: number;
   /** Index into `level.guards` for side passage guards (saved as defeated). */
   guardIndex?: number;
   /** The last hit was critical (kill effects). */
@@ -229,7 +231,7 @@ export type SimEvent =
   | { type: 'buy' }
   | { type: 'streak'; kills: number; scrap: number }
   | { type: 'dodge' }
-  | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number }
+  | { type: 'playerHit'; x: number; z: number; dx: number; dz: number; damage: number; /** What hit (enemy name, or the enemy and its attack), for the death summary. */ by: string }
   | { type: 'playerDie' }
   | { type: 'enemyWindup'; id: number }
   | { type: 'enemyStrike'; id: number }
@@ -295,6 +297,8 @@ export interface RunState {
 }
 
 export interface Sim {
+  /** Debug (?god, ?tp): the hero takes no damage. */
+  god?: boolean;
   abilities: import('./abilities').Abilities;
   difficulty: DifficultyId;
   inventory: Inventory;

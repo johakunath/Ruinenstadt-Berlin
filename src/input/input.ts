@@ -35,6 +35,11 @@ export class Input {
   onInventory: () => void = () => {};
   /** M, pad View: the map tab. */
   onMap: () => void = () => {};
+  /** Zoom step (P9): +1 farther, -1 nearer, 0 cycles. Pad: right stick click; touch: pinch on the view. */
+  onZoom: (dir: number) => void = () => {};
+  /** Touch pointers on the view, for the pinch (P9). */
+  private readonly pinch = new Map<number, { x: number; y: number }>();
+  private pinchBase = 0;
   /** Switch between the two regular powers. */
   onSwap: () => void = () => {};
   /** Talk to a trader or Späti keeper in reach (F, D-pad down; E and Y also do it while one is in reach). */
@@ -86,6 +91,24 @@ export class Input {
       if (e.button === 2) this.press('dodge', 'mouse');
     });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Pinch (P9): two fingers on the view; spreading them by a quarter steps nearer, closing farther.
+    const spread = (): number => { const [a, b] = [...this.pinch.values()]; return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0; };
+    target.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
+      this.pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this.pinchBase = this.pinch.size === 2 ? spread() : 0;
+    });
+    target.addEventListener('pointermove', (e) => {
+      const p = this.pinch.get(e.pointerId);
+      if (!p) return;
+      p.x = e.clientX; p.y = e.clientY;
+      if (this.pinch.size !== 2 || this.pinchBase <= 0) return;
+      const k = spread() / this.pinchBase;
+      if (k > 1.25 || k < 0.8) { this.onZoom(k > 1 ? -1 : 1); this.pinchBase = spread(); }
+    });
+    const lift = (e: PointerEvent): void => { if (this.pinch.delete(e.pointerId)) this.pinchBase = 0; };
+    target.addEventListener('pointerup', lift);
+    target.addEventListener('pointercancel', lift);
   }
 
   press(action: Action, device: Device): void {
@@ -153,6 +176,7 @@ export class Input {
       if (edge(12) && this.enabled) this.onSwap();
       if (edge(13) && this.enabled) this.onTalk();
       if (edge(8)) this.onMap();
+      if (edge(11) && this.enabled) this.onZoom(0);
       if (edge(PAD_MENU)) this.onMenu();
       this.padDown = down;
       break;

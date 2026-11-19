@@ -90,10 +90,20 @@ const HAZARD_CAP = 60;
  * A telegraphed or ranged hit on the hero. `floor` is the least share of max life it takes
  * (before armor and the per-hit cap). Returns false when the hero was invulnerable or just hit.
  */
-export function threatHit(sim: Sim, src: Enemy | null, raw: number, floor: number, dx: number, dz: number): boolean {
+export function threatHit(sim: Sim, src: Enemy | null, raw: number, floor: number, dx: number, dz: number, by?: string): boolean {
   const p = sim.player;
   if (p.state === 'dead' || p.invuln > 0 || p.hurtT < PLAYER.hitGrace) return false;
-  return hurtPlayer(sim, src, Math.max(raw, floor * sim.stats.maxHp), dx, dz);
+  return hurtPlayer(sim, src, Math.max(raw, floor * sim.stats.maxHp), dx, dz, by);
+}
+
+/** German name of what a threat is, with the enemy that made it when it still lives (death summary). */
+const THREAT_NAME: Record<ZoneKind | 'shot' | 'fire' | 'acid' | 'wave' | 'sweep', string> = {
+  slam: 'Stampfer', flame: 'Flammen', bomb: 'Sprengsatz', tail: 'Schwanzhieb', acid: 'Säure', shove: 'Stoß', land: 'Landung', root: 'Wurzeln', slab: 'Platte', hour: 'Stundenschlag',
+  shot: 'Geschoss', fire: 'Feuer', wave: 'Druckwelle', sweep: 'Zeiger',
+};
+function threatBy(sim: Sim, what: keyof typeof THREAT_NAME, src?: number): string {
+  const e = src === undefined ? undefined : sim.enemies.find((x) => x.id === src);
+  return e ? `${e.def.name} · ${THREAT_NAME[what]}` : THREAT_NAME[what];
 }
 
 export function addZone(sim: Sim, z: Zone): void {
@@ -162,7 +172,7 @@ export function updateThreats(sim: Sim): void {
       // A shove drives the hero away from its source (the Türsteher), not from the circle's centre.
       const src = z.push ? sim.enemies.find((e) => e.id === z.src) : undefined;
       const a = away(sim, src?.x ?? z.x, src?.z ?? z.z);
-      hit = threatHit(sim, null, z.damage, z.floor, a.dx, a.dz);
+      hit = threatHit(sim, null, z.damage, z.floor, a.dx, a.dz, threatBy(sim, z.kind, z.src));
       if (hit && z.push) pushPlayer(sim, a.dx, a.dz, z.push);
     }
     // Roots hold whoever stands in them, hurt or not, unless the hero is mid-roll or still immune (2D).
@@ -189,7 +199,7 @@ export function updateThreats(sim: Sim): void {
     if (!gone && Math.hypot(p.x - q.x, p.z - q.z) < q.r + PLAYER.radius && p.state !== 'dead' && p.invuln <= 0) {
       const l = Math.hypot(q.vx, q.vz) || 1;
       // A shot that meets the hero is spent, also inside the hit grace (no damage then).
-      threatHit(sim, null, q.damage, 0, q.vx / l, q.vz / l);
+      threatHit(sim, null, q.damage, 0, q.vx / l, q.vz / l, threatBy(sim, 'shot'));
       gone = true;
     }
     if (!gone && L.near(q.x, q.z, q.r + 0.5).some((c) => colliderDistance(c, q.x, q.z) < q.r)) gone = true;
@@ -206,7 +216,7 @@ export function updateThreats(sim: Sim): void {
     }
     if (h.tick <= 0 && Math.hypot(p.x - h.x, p.z - h.z) < h.r + PLAYER.radius * 0.5) {
       const a = away(sim, h.x, h.z);
-      if (threatHit(sim, null, h.damage, 0, a.dx, a.dz)) h.tick = THREAT.hazard.tick;
+      if (threatHit(sim, null, h.damage, 0, a.dx, a.dz, threatBy(sim, h.kind))) h.tick = THREAT.hazard.tick;
     }
   }
 
@@ -232,7 +242,7 @@ export function updateThreats(sim: Sim): void {
     if (ahead > Math.PI * 2 - pad) ahead -= Math.PI * 2;
     if (ahead < -pad || ahead > a1 - a0 + pad) continue;
     const a = away(sim, w.x, w.z);
-    if (threatHit(sim, null, w.damage, w.floor, a.dx, a.dz)) w.hit = true;
+    if (threatHit(sim, null, w.damage, w.floor, a.dx, a.dz, threatBy(sim, 'src' in w ? 'sweep' : 'wave', 'src' in w ? (w as { src: number }).src : undefined))) w.hit = true;
   }
 
   for (let i = T.waves.length - 1; i >= 0; i--) {
@@ -246,7 +256,7 @@ export function updateThreats(sim: Sim): void {
     if (Math.abs(Math.hypot(p.x - w.x, p.z - w.z) - w.r) < w.width + PLAYER.radius) {
       const a = away(sim, w.x, w.z);
       // Rolling through costs nothing; the ring stays armed for a later touch.
-      if (threatHit(sim, null, w.damage, w.floor, a.dx, a.dz)) w.hit = true;
+      if (threatHit(sim, null, w.damage, w.floor, a.dx, a.dz, threatBy(sim, 'src' in w ? 'sweep' : 'wave', 'src' in w ? (w as { src: number }).src : undefined))) w.hit = true;
     }
   }
 }
