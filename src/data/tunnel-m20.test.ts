@@ -85,9 +85,13 @@ describe('M20 tunnel generator (every line)', () => {
     expect([...kinds(1)]).toEqual(expect.arrayContaining(['kabel', 'bass']));
     for (const k of ['uhrwerk', 'wurzler', 'kernspeier']) expect(kinds(1).has(k), k).toBe(false);
     for (const k of ['crow', 'drone']) { expect(kinds(0).has(k), k).toBe(false); expect(kinds(1).has(k), k).toBe(false); }
-    // The S3 and the U8 keep the Köpenick mix; the U2 waves are harder than the S3's.
-    expect(tunnelMap(1).encounters.map((e) => e.waves)).toEqual(tunnelMap(0).encounters.map((e) => e.waves));
-    expect(u2.encounters[0]!.waves[0]!.hpMul).toBeGreaterThan(tunnelMap(0).encounters.at(-2)!.waves.at(-1)!.hpMul);
+    // The S3 and the U8 keep the Köpenick mix at the late tier of their start district (S3 14 … 19, U8 25 … 30).
+    const s3 = tunnelMap(0), u8 = tunnelMap(1), first = (t: typeof s3): number => t.encounters[0]!.waves[0]!.hpMul;
+    expect(u8.encounters.map((e) => e.waves.map((w) => Object.keys(w.mix)))).toEqual(s3.encounters.map((e) => e.waves.map((w) => Object.keys(w.mix))));
+    // The generator's first wave takes the line's first tier, so the Tunnelmund starts one above it.
+    expect(first(s3)).toBeCloseTo((1 + 15 * 0.13) * TUNNEL.hp);
+    expect(first(u8)).toBeCloseTo((1 + 26 * 0.13) * TUNNEL.hp);
+    expect(first(u2)).toBeCloseTo((1 + 34 * 0.13) * TUNNEL.hp);
     expect(u2.encounters.at(-1)!.waves[1]!.bosses).toEqual(['schaffner']);
   });
 

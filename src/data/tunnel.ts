@@ -13,6 +13,7 @@ import { Rng } from '../sim/math';
 import { ALEX_TIER, alexWaveTier } from './alexanderplatz';
 import type { BossKind } from './enemies';
 import { waveTier } from './koepenick';
+import { XHAIN_TIER } from './xhain';
 import { mitteWaveTier } from './mitte';
 import { LINES, stopName } from './lines';
 import type { Prop } from './courtyard';
@@ -47,12 +48,14 @@ const STRETCH_NAME: Record<Stretch, string> = { collapse: 'Einsturz', flood: 'Ge
  * (Johannes, 2026-11-19: recycle the tunnel, change names and enemy types): the U2 carries the
  * Alexanderplatz roster to the ghost station (no crows underground) and the Friedrichstraße roster of
  * Mitte after it, where the eras grind against each other (no drones). The S3 and the U8 keep the
- * Köpenick mix.
+ * Köpenick mix; the U8 starts at the Xhain late tier (Johannes, 2026-11-19: it was the S3's 14 … 19,
+ * easier than Xhain itself).
  */
 export interface LineWaves { from: number; to: number; wave: (g: number, zone: number, bosses?: BossKind[]) => WaveDef }
 export function lineWaves(line: number): LineWaves {
   if (line === 2) return { from: ALEX_TIER.to - 5, to: ALEX_TIER.to, wave: (g, zone, bosses = []) => (zone === 0 ? alexWaveTier(g, bosses, 2) : mitteWaveTier(g, bosses, 0)) };
-  return { from: 14, to: 19, wave: (g, _zone, bosses = []) => waveTier(g, bosses, 0) };
+  const to = line === 1 ? XHAIN_TIER.to : 19;
+  return { from: to - 5, to, wave: (g, _zone, bosses = []) => waveTier(g, bosses, 0) };
 }
 
 /**

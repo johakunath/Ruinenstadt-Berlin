@@ -142,3 +142,14 @@ Variant A of `docs/mockups/m15-mitte-lots.svg` and facade F-A (Johannes took the
 - Cost: no new material; one pooled light per club door, holo barrier, charging post and camera LED (the pool size is fixed). Hardware check 27 (`pt-hardware-checks.md`).
 - Proof: `docs/proof/m15-mitte/zones-fill.jpg` (Clubhof, Neonmarkt, Zeltlager, Lichtung). The Sperrzone holo band and the ministries were checked in cloud shots only; a close look is part of hardware check 27.
 - Open: the Regierungsviertel has few intact ministries (most lots roll ruin as everywhere); the holo band does not flicker in the geometry, only its light does.
+
+## Handover 2026-11-19 (step 8) [Claude · Opus high]
+
+- Flow: Alex won → „In die U2“ → U2 tunnel → „Weiter nach Mitte“ → back to Köpenick (`wonLink`, `titleLinks` in `src/ui/maps.ts`); Mitte stop `map: 'mitte'` in `src/data/lines.ts`, opened on the network board by the U2. Camp radio „Befreit“ lists every district and line to Mitte.
+- U2 (Johannes: recycle the tunnel, change names and enemy types): S3 layout as is, ghost Klosterstraße. `lineWaves` in `src/data/tunnel.ts`: Alex roster to the ghost station (no crows), Mitte Friedrichstraße roster after it (no drones), Schaffner at the generator, tier 33 … 38. U8 tier raised to 25 … 30 (Johannes). Mechs load for any map whose waves hold Uhrwerkläufer (`main.ts`).
+- Reused from 2D: `tunSpecial` (`js/ubahn.js`): a tunnel brings its start district's enemies.
+- Bot: `docs/balance.md` › Mitte with its own enemies. `MITTE_TIER` unchanged (P33).
+- Fix: the tunnel banner said „S3-Tunnel“ on every line, now „Richtung <Ziel>“.
+- Tests: U2 mix per half and tiers per line (`tunnel-m20.test.ts`), the chain to Mitte (`lines.test.ts`), smoke „M15 step 8: the U2 tunnel loads …“. Playtest row „Flow to Mitte“.
+- Open: Brigadeghul overalls stay Alex-only (walkers in the U2 wear the normal look); Charlottenburg's stop and line in `lines.ts` are 2D leftovers (U Platz der Luftbrücke, U6), for the Charlottenburg concept.
+
