@@ -470,6 +470,17 @@ describe('G1 Umbau cards (3D additions)', () => {
     expect(lost(a)).toBe(10);
     expect(lost(b)).toBe(8);
   });
+  it('Querschläger: the jump skips a reflection (M16 Spiegelbild) and goes to the next real body', () => {
+    const s = fresh('sling', { m_quer: 1 }), a = dummy(s, 0, 5), b = dummy(s, 3, 5);
+    // A reflection of `a` on the far side, closer than `b`, held in place (its centre halfway between the two).
+    const m = spawnEnemy(s, a.x - 1.5, a.z, 'spiegelbild');
+    m.mirrorOf = a.id;
+    m.mirror = { x: (a.x + m.x) / 2, z: (a.z + m.z) / 2 };
+    run(s, 1, { attack: true });
+    run(s, 80);
+    expect(lost(a)).toBe(10);
+    expect(lost(b)).toBe(8);
+  });
   it('Schnellfeuer: faster and weaker shots, the finisher is a fan of five', () => {
     const s = fresh('sling', { m_salve: 1 });
     expect(s.stats.attackSpeed).toBeCloseTo(1.4);

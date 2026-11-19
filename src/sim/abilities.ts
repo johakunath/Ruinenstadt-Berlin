@@ -592,7 +592,8 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
           let nd = 220 * PX;
           for (const o of s.enemies) {
             const dd = Math.hypot(o.x - e.x, o.z - e.z);
-            if (o !== e && o.state !== 'dead' && dd < nd) { nd = dd; nb = o; }
+            // M16: never to a reflection (the jumped shot would fly through it).
+            if (o !== e && o.state !== 'dead' && o.mirrorOf === undefined && dd < nd) { nd = dd; nb = o; }
           }
           if (nb) jumps.push({ x: e.x, z: e.z, px: e.x, pz: e.z, angle: angleOf(nb.x - e.x, nb.z - e.z), speed: WEAPON.sling.speed, life: 0.6, damage: q.damage * 0.8, crit: false, pierce: 0, extra: 0, hits: [e.id], kind: 'stone', wucht: false, jumped: true });
         }
