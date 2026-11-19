@@ -1,9 +1,9 @@
 // H3: human bases for the humanoid bosses, built like zombie.glb in tools/build-assets.mjs but without the zombie
 // repaint (`npm run assets:human`). Needs assets-src/ (tools/fetch-assets.sh). human1.glb ships (Johannes'
-// pick B, the male humanoid bosses); human2.glb is the candidate for female bosses, sheet tool only.
+// pick B, the male humanoid bosses); human2.glb ships for the female humanoid bosses (Spreehexe, Wurzel-Mutter; base C).
 //
 //   human1.glb  Superhero_Male body, simplified, natural skin, a plain shirt, trousers and boots.
-//   human2.glb  Superhero_Female body (the hero's body), the same way.
+//   human2.glb  Superhero_Female body (the hero's body), the same way (female bosses).
 //
 // Shown with `node tools/enemy-sheet.mjs out.png "kind=feldwebel&n=1&base=human1"`.
 import { simplify, weld } from '@gltf-transform/functions';

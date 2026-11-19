@@ -1399,7 +1399,9 @@ export class EnemyView {
   /** H3: this body stands upright (humanoid bosses): the zombie clips' hunch is taken out of the spine. */
   private upright = false;
   /** H3: per spine bone, the turn from the zombie idle pose to the upright idle pose (local space). */
-  private straight: Array<{ bone: Object3D; fix: Quaternion; arm: boolean }> | null = null;
+  private straight: Array<{ bone: Object3D; fix: Quaternion; arm: boolean; pre: Quaternion; post: Quaternion; set: boolean }> | null = null;
+  /** H3: how much of the arm fix applies (eases with the clip fade between walking and striking). */
+  private armK = 1;
   private readonly model: Object3D | null = null;
   private readonly clips: Map<string, AnimationClip> | null = null;
   private rack: WeaponRack | null = null;
@@ -1599,7 +1601,7 @@ export class EnemyView {
     m.clipAction(clip).play();
     m.update(0);
     // H3: an upright boss gets its gear fitted in the straightened pose it will stand in.
-    if (this.upright) this.straighten(true, 1);
+    if (this.upright) this.straighten(1, 1);
     this.model.updateMatrixWorld(true);
     const out = build();
     m.stopAllAction();
@@ -1613,7 +1615,8 @@ export class EnemyView {
    * Zombie_Idle_Loop to the first frame of Idle_Loop, measured once, is applied after every animation update.
    * The gait of every zombie clip stays, the back stands up.
    */
-  private straighten(arms: boolean, k: number): void {
+  /** `arms`: weight of the arm fix (0..1); `k`: how much zombie clips drive the pose. */
+  private straighten(arms: number, k: number): void {
     if (!this.straight) {
       this.straight = [];
       const zi = this.clips?.get('Zombie_Idle_Loop'), ui = this.clips?.get('Idle_Loop');
@@ -1631,14 +1634,20 @@ export class EnemyView {
       const z = sample(zi), u = sample(ui);
       for (const n of [...STRAIGHT, ...STRAIGHT_ARMS]) {
         const b = this.model.getObjectByName(n), qz = z.get(n), qu = u.get(n);
-        if (b && qz && qu) this.straight.push({ bone: b, fix: qu.clone().multiply(qz.clone().invert()), arm: (STRAIGHT_ARMS as readonly string[]).includes(n) });
+        if (b && qz && qu) this.straight.push({ bone: b, fix: qu.clone().multiply(qz.clone().invert()), arm: (STRAIGHT_ARMS as readonly string[]).includes(n), pre: new Quaternion(), post: new Quaternion(), set: false });
       }
     }
-    if (k <= 0.001) return;
     for (const s of this.straight) {
-      if (!arms && s.arm) continue;
-      if (k >= 0.999) s.bone.quaternion.premultiply(s.fix);
-      else s.bone.quaternion.premultiply(qd.identity().slerp(s.fix, k));
+      const q = s.bone.quaternion;
+      // The mixer writes a bone only when its value changes (hitstop, held poses): a bone still holding last
+      // frame's straightened value goes back to the mixer's value first, so the turn is never added twice (review fix).
+      if (s.set && q.equals(s.post)) q.copy(s.pre);
+      s.pre.copy(q);
+      const w = k * (s.arm ? arms : 1);
+      if (w >= 0.999) q.premultiply(s.fix);
+      else if (w > 0.001) q.premultiply(qd.identity().slerp(s.fix, w));
+      s.post.copy(q);
+      s.set = true;
     }
   }
 
@@ -1705,6 +1714,8 @@ export class EnemyView {
       this.key = set.key;
     }
     this.upright = this.skin === 'zombie' && !!UPRIGHT[e.kind];
+    this.armK = 1;
+    for (const st of this.straight ?? []) st.set = false;
     if (this.skin === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
@@ -1792,10 +1803,15 @@ export class EnemyView {
       return;
     }
     this.skip = skip;
+    const step = this.pending;
     this.anim.update(this.pending);
     this.pending = 0;
     // Only as much as zombie clips drive the pose: the upright clips (heavy swing, dash, throw, hits, death) stand already (review fix).
-    if (this.upright) this.straighten(e.state === 'chase', this.anim.weightOf('Zombie_'));
+    if (this.upright) {
+      // The arm fix eases in and out with the clip fade (about 0.15 s), so the arms do not snap at a strike (review fix).
+      this.armK += ((e.state === 'chase' ? 1 : 0) - this.armK) * Math.min(1, step / 0.15);
+      this.straighten(this.armK, this.anim.weightOf('Zombie_'));
+    }
     if (this.hanging.length) this.hangSkirts(e.state === 'dead');
   }
 
