@@ -6,6 +6,12 @@ import { SRGBColorSpace, TextureLoader, type CanvasTexture, type Texture } from 
 import { canvas, toTexture, type Ctx, type EmissiveSurface } from './paint';
 
 export const ATLAS_W = 2048, ATLAS_H = 1536;
+export const ALEX_TEXTURES = {
+  signs: new URL('../../assets/textures/alex/signs.webp', import.meta.url).href,
+  wbs70: new URL('../../assets/textures/alex/wbs70.webp', import.meta.url).href,
+  rathausBrick: new URL('../../assets/textures/alex/rathaus-brick.webp', import.meta.url).href,
+  stadtbahnBrick: new URL('../../assets/textures/alex/stadtbahn-brick.webp', import.meta.url).href,
+};
 /** Atlas regions in pixels (x, y from the top left, w, h). */
 export const ATLAS = {
   hours: [0, 0, 2048, 128],
@@ -171,6 +177,7 @@ export function paintAlexAtlas(): EmissiveSurface {
   // Glass fronts: a grid of panes (4 × 4 per region) with mullions, sky reflection and a few lit rooms.
   const grid = (key: AtlasKey, top: string, bottom: string, mull: string, lit: number, warm: string): void => {
     const [x0, y0, w, h] = ATLAS[key], cw = w / 4, ch = h / 4;
+    k.save(); k.beginPath(); k.rect(x0, y0, w, h); k.clip();
     let seed = x0 + 11;
     const rnd = (): number => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
@@ -197,17 +204,18 @@ export function paintAlexAtlas(): EmissiveSurface {
     k.fillStyle = mull;
     for (let i = 0; i <= 4; i++) k.fillRect(x0 + i * cw - 3, y0, 6, h);
     for (let j = 0; j <= 4; j++) k.fillRect(x0, y0 + j * ch - 4, w, 8);
+    k.restore();
   };
   // Plattenbau gable mural (the board's Pioneer face): red and cream sunburst, a face looking up, the red
   // neckerchief, in mosaic tiles.
   {
     const [x0, y0, w, h] = ATLAS.mural, cx = x0 + w * 0.15, cy = y0 + h * 0.9;
+    k.save(); k.beginPath(); k.rect(x0, y0, w, h); k.clip();
     for (let i = 0; i < 18; i++) {
       const a0 = -Math.PI / 2 - 0.1 + (i / 18) * Math.PI * 0.62, a1 = a0 + (Math.PI * 0.62) / 18;
       k.fillStyle = i % 2 ? RED : CREAM;
       k.beginPath(); k.moveTo(cx, cy); k.lineTo(cx + Math.cos(a0) * w * 1.6, cy + Math.sin(a0) * w * 1.6); k.lineTo(cx + Math.cos(a1) * w * 1.6, cy + Math.sin(a1) * w * 1.6); k.fill();
     }
-    k.save(); k.beginPath(); k.rect(x0, y0, w, h); k.clip();
     k.fillStyle = '#e0b48a';
     k.beginPath(); k.ellipse(x0 + w * 0.55, y0 + h * 0.42, w * 0.2, h * 0.25, -0.25, 0, Math.PI * 2); k.fill();
     k.fillRect(x0 + w * 0.47, y0 + h * 0.55, w * 0.16, h * 0.2);

@@ -148,9 +148,9 @@ export function buildClockParts(column: ChunkBuilder, drum: ChunkBuilder, orbit:
 /** Landmark models from reference photos (step 4). Heights compressed about like the footprints. */
 export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm, F = frameOf(l), w = l.hx * 2, d = l.hz * 2, rng = new Rng(Math.round(l.x * 31 + l.z * 17));
-  const cyl = (rt: number, rb: number, h: number, y: number, mat: Material = M.concrete, color: RGB = GREY, x = 0, z = 0, seg = 16): void => b.geo(mat, cached(`c${rt},${rb},${h},${seg}`, () => new CylinderGeometry(rt, rb, h, seg)), F(x, y + h / 2, z), color);
+  const cyl = (rt: number, rb: number, h: number, y: number, mat: Material = M.concrete, color: RGB = GREY, x = 0, z = 0, seg = 16): void => b.geo(mat, cached(`c${rt},${rb},${h},${seg}`, () => new CylinderGeometry(rt, rb, h, seg)), F(x, y + h / 2, z), color, color === COPPER ? 'copper' : undefined);
   const ball = (r: number, y: number, mat: Material = M.concrete, color: RGB = GREY, x = 0, z = 0, sy = 1): void => b.geo(mat, cached(`s${r}`, () => new SphereGeometry(r, 18, 12)), F(x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), color);
-  const dome = (r: number, y: number, mat: Material, color: RGB, x = 0, z = 0, sy = 1.15): void => b.geo(mat, cached(`d${r}`, () => new SphereGeometry(r, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2)), F(x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), color);
+  const dome = (r: number, y: number, mat: Material, color: RGB, x = 0, z = 0, sy = 1.15): void => b.geo(mat, cached(`d${r}`, () => new SphereGeometry(r, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2)), F(x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), color, color === COPPER ? 'copper' : undefined);
   switch (l.kind) {
     case 'weltzeituhr':
       // Only the compass-rose floor is part of the chunk; the clock itself is `buildClockParts`, its own
@@ -218,7 +218,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       b.box(M.brick, F(0, H / 2, 0), w, H, d, BRICK);
       for (const f of faces(F, w, d)) {
         windowRow(b, f.m, f.len - 2, 2.2, 1.3, 2.6, 3.3, rng, 0.08, true);
-        b.box(M.stucco, sub(f.m, 0, 4.4, 0.06), f.len, 0.9, 0.12, TERRACOTTA);
+        b.box(M.stucco, sub(f.m, 0, 4.4, 0.06), f.len, 0.9, 0.12, TERRACOTTA, undefined, 'terracotta');
         windowRow(b, f.m, f.len - 2, 7.2, 1.3, 3, 3.3, rng, 0.1, true);
         windowRow(b, f.m, f.len - 2, 11.6, 1.1, 2.4, 3.3, rng, 0.06, true);
         b.box(M.brick, sub(f.m, 0, H - 0.6, 0.15), f.len + 0.3, 1.2, 0.3, [0.95, 0.62, 0.5]);
@@ -273,8 +273,8 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       archWindow(b, F(0, 0, tz + 3.01), 1.6, 3.2, rng, 0, false);
       b.box(M.door, F(0, 1.4, tz + 3.02), 1.6, 2.8, 0.05);
       b.box(M.stucco, F(0, 18.3, tz), 6.8, 0.6, 6.4, CREAM);
-      b.box(M.stucco, F(0, 20.8, tz), 5.2, 4.4, 5.2, COPPER);
-      b.geo(M.stucco, cached('mkSpire', () => new CylinderGeometry(0.15, 3.7, 11, 4)), F(0, 26.5, tz, Math.PI / 4), COPPER);
+      b.box(M.stucco, F(0, 20.8, tz), 5.2, 4.4, 5.2, COPPER, undefined, 'copper');
+      b.geo(M.stucco, cached('mkSpire', () => new CylinderGeometry(0.15, 3.7, 11, 4)), F(0, 26.5, tz, Math.PI / 4), COPPER, 'copper');
       return;
     }
     case 'neptunbrunnen': {
@@ -310,7 +310,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       archWindow(b, F(0, 0, tz + 2.51), 1.4, 2.6, rng, 0, true);
       for (const x of [-1.7, 1.7]) {
         b.box(M.brick, F(x, 16, tz), 2.4, 4, 2.4, BRICK);
-        b.geo(M.stucco, cached('nkSpire', () => new CylinderGeometry(0.08, 1.5, 9, 8)), F(x, 22.5, tz), COPPER);
+        b.geo(M.stucco, cached('nkSpire', () => new CylinderGeometry(0.08, 1.5, 9, 8)), F(x, 22.5, tz), COPPER, 'copper');
       }
       return;
     }
@@ -434,7 +434,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
  * The brick Stadtbahn: a deck `h` meters up on piers, walls closed between the arches the streets pass
  * through (each piece of `MapDef.viaducts` is one closed run; its colliders are `barrierColliders`).
  */
-export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, mats: MapMats, v: Viaduct): void {
+export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, v: Viaduct): void {
   for (let i = 1; i < v.pts.length; i++) {
     const [ax, az] = v.pts[i - 1]!, [bx, bz] = v.pts[i]!, len = Math.hypot(bx - ax, bz - az);
     if (len < 0.5) continue;
@@ -442,6 +442,7 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
     for (let k = 0; k < n; k++) {
       const t0 = k / n, t1 = (k + 1) / n, cx = ax + (bx - ax) * (t0 + t1) / 2, cz = az + (bz - az) * (t0 + t1) / 2, seg = len / n;
       const b = chunkOf(cx, cz), m = new Matrix4().makeRotationY(ry).setPosition(cx, 0, cz);
+      const mats = b.mm;
       const at = (x: number, y: number, z: number): Matrix4 => m.clone().multiply(new Matrix4().setPosition(x, y, z));
       // Bricked-up arch (the wall the collider stands for) and the deck: as tall as a house, so an occluder.
       b.solid.captureOccluder(() => {
@@ -465,12 +466,13 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
 }
 
 /** Arch decks: where a street passes, the deck spans over it on two piers (no collider below). */
-export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, mats: MapMats, m: MapDef): void {
+export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, m: MapDef): void {
   const runs = (m.viaducts ?? []).filter((v) => v.kind === 'stadtbahn');
   for (let i = 1; i < runs.length; i++) {
     const a = runs[i - 1]!.pts[runs[i - 1]!.pts.length - 1]!, c = runs[i]!.pts[0]!, v = runs[i]!;
     const cx = (a[0] + c[0]) / 2, cz = (a[1] + c[1]) / 2, len = Math.hypot(c[0] - a[0], c[1] - a[1]), ry = Math.atan2(c[0] - a[0], c[1] - a[1]);
     const b = chunkOf(cx, cz), mm = new Matrix4().makeRotationY(ry).setPosition(cx, 0, cz);
+    const mats = b.mm;
     const at = (x: number, y: number, z: number): Matrix4 => mm.clone().multiply(new Matrix4().setPosition(x, y, z));
     // The deck over the street hides the hero walking under it: it joins the hero-contour occluders (Codex review).
     b.solid.captureOccluder(() => {

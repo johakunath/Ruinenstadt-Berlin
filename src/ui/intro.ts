@@ -1,11 +1,15 @@
 // M17: intro cards on the first start and one-time tutorial cards in the run (2D `ITUT`, `TUTS`,
 // js/panels.js v0.100/v0.101). Seen cards are kept in the profile (`inventory.tips`).
 import type { Sim } from '../sim/types';
+import standstillArt from '../../assets/ui/intro-standstill.webp?url';
+import streetArt from '../../assets/ui/intro-fight.webp?url';
+import koepenickArt from '../../assets/ui/intro-koepenick.webp?url';
+import controlsArt from '../../assets/ui/intro-controls.webp?url';
 
-const PAGES: ReadonlyArray<readonly [string, string]> = [
-  ['Berlin steht still', 'Die Weltzeituhr ist zerbrochen. Jeder Bezirk hängt in seiner eigenen Zeit fest, voller Zeitloser.'],
-  ['Kämpf dich durch', 'Der Pfeil führt zum nächsten Kampf. Danach wählst du einen Segen. Beute legst du im Inventar an.'],
-  ['Befreie Köpenick', 'Besiege den Hauptmann am Rathaus. Ausrüstung und Schrott bleiben, das Lager macht dich stärker.'],
+const PAGES: ReadonlyArray<readonly [string, string, string]> = [
+  ['Berlin steht still', 'Die Weltzeituhr ist zerbrochen. Jeder Bezirk hängt in seiner eigenen Zeit fest, voller Zeitloser.', standstillArt],
+  ['Kämpf dich durch', 'Der Pfeil führt zum nächsten Kampf. Danach wählst du einen Segen. Beute legst du im Inventar an.', streetArt],
+  ['Befreie Köpenick', 'Besiege den Hauptmann am Rathaus. Ausrüstung und Schrott bleiben, das Lager macht dich stärker.', koepenickArt],
 ];
 const controls = (): string => matchMedia('(pointer: coarse)').matches
   ? 'Am besten quer halten.<br><b>Links</b>: Daumen ziehen, du läufst.<br><b>Rechts</b>: Schlag, Rolle, Kraft.'
@@ -54,8 +58,8 @@ export class IntroUi {
   private open(): void { this.render(); this.root.hidden = false; this.root.querySelector<HTMLElement>('.primary')?.focus(); }
   private render(): void {
     if (this.tip) { const [t, b] = TUTORIALS[this.tip]; this.root.innerHTML = `<div class="panel intro"><h2 id="intro-title">${t}</h2><p class="lead">${b}</p><button type="button" class="primary" data-intro="done">Weiter</button></div>`; return; }
-    const last = this.page === PAGES.length, [t, b] = last ? ['Steuerung', controls()] : PAGES[this.page]!;
-    this.root.innerHTML = `<div class="panel intro"><h2 id="intro-title">${t}</h2><p class="lead">${b}</p><div class="idots">${Array.from({ length: PAGES.length + 1 }, (_, k) => `<i class="${k === this.page ? 'on' : ''}"></i>`).join('')}</div><button type="button" class="primary" data-intro="${last ? 'done' : 'next'}">${last ? (this.then ? 'Losziehen' : 'Verstanden') : 'Weiter'}</button>${last ? '' : '<button type="button" class="iskip" data-intro="done">Überspringen</button>'}</div>`;
+    const last = this.page === PAGES.length, [t, b, art] = last ? ['Steuerung', controls(), controlsArt] : PAGES[this.page]!;
+    this.root.innerHTML = `<div class="panel intro"><h2 id="intro-title">${t}</h2><img class="intro-art" src="${art}" alt="" draggable="false"><p class="lead">${b}</p><div class="idots">${Array.from({ length: PAGES.length + 1 }, (_, k) => `<i class="${k === this.page ? 'on' : ''}"></i>`).join('')}</div><button type="button" class="primary" data-intro="${last ? 'done' : 'next'}">${last ? (this.then ? 'Losziehen' : 'Verstanden') : 'Weiter'}</button>${last ? '' : '<button type="button" class="iskip" data-intro="done">Überspringen</button>'}</div>`;
   }
   private act(a: string): void {
     if (a === 'next' && !this.tip && this.page < PAGES.length) { this.page++; this.render(); this.root.querySelector<HTMLElement>('.primary')?.focus(); return; }

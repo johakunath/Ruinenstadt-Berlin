@@ -11,6 +11,7 @@ import type { Sim } from '../sim/types';
 import { perkIcon } from './abilities';
 import { esc, itemIcon, InventoryUi, resIcon } from './inventory';
 import { moveFocus } from './focus';
+import { KEEPER_PORTRAIT, portraitUrl } from './portraits';
 import { uiIcon } from './ui-icons';
 
 export type TabId = 'inv' | 'karte' | 'segen' | 'kodex';
@@ -211,24 +212,25 @@ export class Menu {
 }
 
 /** Kodex busts in `assets/portraits/`, including portraits imported from 2D (`js/items.js` PORTI). */
-const portraits = import.meta.glob('../../assets/portraits/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
-const portraitUrl = (id: string): string => portraits[`../../assets/portraits/${id}.webp`] ?? '';
-const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04', feldwebel: 'X04', schaffner: 'X05', waechter: 'X03', rex: 'E12', hauptmann: 'X01', brandmeister: 'X10', rattenmutter: 'X06', kabel: 'E13', bass: 'E14', bassprediger: 'X09' };
+const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
+  walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04',
+  kabel: 'E13', bass: 'E14', drone: 'E15', uhrwerk: 'E16', wurzler: 'E17', kernspeier: 'E18',
+  feldwebel: 'X04', waechter: 'X03', rex: 'E12', hauptmann: 'X01', schaffner: 'X05',
+  grenzer: 'X11', brandmeister: 'X10', rattenmutter: 'X06', spreehexe: 'X12',
+  wurzelmutter: 'X13', uhrwerkgross: 'X14', volkskoloss: 'X15', weltzeituhr: 'X16',
+  tuersteher: 'X17', wachdrohne: 'X18', dirigent: 'X19', bassprediger: 'X09',
+};
 const ELITE_PORTRAIT: Record<EliteMod, string> = { flink: 'L01', brennend: 'L02', spaltend: 'L03', gepanzert: 'L04' };
-const SURVIVOR_PORTRAIT: Record<SurvivorId, string> = { doktor: 'S01', schmied: 'S02', kurier: 'S03', koechin: 'S04', spaeher: 'S05', mechaniker: 'S06' };
-/** Code-painted fallbacks for bosses when portrait files are missing. */
+/** Line-art fallbacks when portrait files are missing. */
 const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
   feldwebel: '<path d="M5 8l7-4 7 4M5 13l7-4 7 4M5 18l7-4 7 4"/>',
   schaffner: '<path d="M3 16h18M5 16c0-5 3-8 7-8s7 3 7 8M9 12h6M12 8V6"/><circle cx="12" cy="19" r="1.5"/>',
-  // Watchtower; the 2D Spreehexe bust (river hag) does not match the 3D punk look, so a crest and a wave.
   grenzer: '<path d="M8 21l2-12h4l2 12M7 9h10l-1-4H8zM12 5V3M10 14h4"/>',
   spreehexe: '<path d="M8 11l1-7 1.5 5 1.5-6 1.5 6 1.5-5 1 7M7 12h10M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
-  // M12c until Codex busts: a door with a rope (Türsteher), a drone with its light cone, a baton over a stave; small drones too.
   tuersteher: '<path d="M7 21V4h10v17M10 12h1M3 14c2 2 4 2 6 0M15 14c2 2 4 2 6 0"/>',
   wachdrohne: '<path d="M4 7h4M16 7h4M6 7v2M18 7v2M8 9h8v3H8zM12 12l-5 8M12 12l5 8M7 20h10"/>',
   dirigent: '<path d="M3 9h18M3 13h18M3 17h18M6 20L18 4"/><circle cx="18" cy="4" r="1"/>',
   drone: '<path d="M4 8h5M15 8h5M6.5 8v3M17.5 8v3M8 11h8v3H8zM12 14v2"/>',
-  // M15 Alexanderplatz: no 2D busts for these, so line glyphs (clock face, roots, seed fan, slab, the clock).
   uhrwerk: '<circle cx="12" cy="11" r="6"/><path d="M12 11V7.5M12 11l2.5 1.5M9 17l-2 4M15 17l2 4"/>',
   wurzler: '<circle cx="12" cy="6" r="2.5"/><path d="M12 8.5v6M12 14.5l-4 6M12 14.5l4 6M12 14.5l-1 6M12 14.5l1.5 6M8 11c-2 0-3 2-4 1M16 11c2 0 3 2 4 1"/>',
   kernspeier: '<circle cx="12" cy="7" r="3"/><path d="M12 10v4M8 14h8l-1 7H9zM17 5l4-2M17 7h4M17 9l4 2"/>',
@@ -259,7 +261,7 @@ export function kodexHtml(s: Sim): string {
   const enemies = NORMAL.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? '' : DIM, o ? esc(ENEMY_TEXT[e] ?? '') : 'Noch nicht begegnet', o ? weak(e) : ''); }).join('');
   const bosses = BOSSES.map(e => { const o = !!k.kills[e]; return card(kimg(enemyArt(e), o ? 'on' : 'sil'), o ? esc(ENEMIES[e].name) : unk, o ? 'var(--ember)' : DIM, o ? `${esc(ENEMY_TEXT[e] ?? '')} Besiegt: ${k.kills[e]}` : 'Noch nicht besiegt', o ? weak(e) : ''); }).join('');
   const has = (id: SurvivorId): boolean => !!s.statContext.survivors[id];
-  const survivors = SURVIVORS.map(v => card(kimg(kport(SURVIVOR_PORTRAIT[v.id]), has(v.id) ? 'on' : 'dim'), has(v.id) ? esc(v.name) : unk, has(v.id) ? 'var(--good)' : DIM, esc(v.description), has(v.id) ? `<span class="ok">${esc(STATIONS.find(st => st.npc === v.id)?.name ?? 'Im Lager')}</span>` : 'Vermisst')).join('');
+  const survivors = SURVIVORS.map(v => card(kimg(kport(KEEPER_PORTRAIT[v.id]), has(v.id) ? 'on' : 'dim'), has(v.id) ? esc(v.name) : unk, has(v.id) ? 'var(--good)' : DIM, esc(v.description), has(v.id) ? `<span class="ok">${esc(STATIONS.find(st => st.npc === v.id)?.name ?? 'Im Lager')}</span>` : 'Vermisst')).join('');
   const legs = Object.keys(LEGENDARY_POWERS) as LegendaryId[], nLeg = legs.filter(b => k.found[b]).length;
   const legRows = legs.map(b => { const f = !!k.found[b]; return card(kimg(itemIcon({ base: b, slot: 'w' }), f ? 'on' : 'dim', '', ' kitem'), f ? esc(BASE_NAME[b] ?? b) : unk, f ? RARITIES[3].color : DIM, f ? esc(LEGENDARY_POWERS[b].description) : 'Noch nicht gefunden'); }).join('');
   const sets = (Object.keys(SETS) as SetId[]).map(id => { const S = SETS[id], ps = Object.entries(S.pieces) as Array<[SlotId, { base: string }]>, n = ps.filter(([, p]) => k.found[p.base]).length; return card(`<span class="kset">${ps.map(([slot, p]) => kimg(itemIcon({ base: p.base, slot }), k.found[p.base] ? 'on' : 'dim', '', ' kitem')).join('')}</span>`, `${esc(S.name)} · ${n}/${ps.length} gefunden`, SET_COLOR, `(2) ${esc(S.bonusDescriptions[2])} · (3) ${esc(S.bonusDescriptions[3])} · (5) ${esc(S.bonusDescriptions[5])}`); }).join('');
