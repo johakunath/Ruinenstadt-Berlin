@@ -78,6 +78,23 @@ describe('M20 tunnel generator (every line)', () => {
     }
   });
 
+  it('U2 (M15 step 8): Alexanderplatz enemies to the ghost station, Mitte enemies after it, the Alex late tier', () => {
+    const u2 = tunnelMap(2), kinds = (z: number): Set<string> => new Set(u2.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix as Record<string, number>)[k]! > 0))));
+    expect(u2.encounters.map((e) => e.name)).toEqual(['Tunnelmund', 'Einsturz', 'Geisterbahnhof Klosterstraße', 'Kehrgleis', 'Zugwrack', 'Generator Potsdamer Platz']);
+    expect([...kinds(0)]).toEqual(expect.arrayContaining(['uhrwerk', 'kernspeier']));
+    expect([...kinds(1)]).toEqual(expect.arrayContaining(['kabel', 'bass']));
+    for (const k of ['uhrwerk', 'wurzler', 'kernspeier']) expect(kinds(1).has(k), k).toBe(false);
+    for (const k of ['crow', 'drone']) { expect(kinds(0).has(k), k).toBe(false); expect(kinds(1).has(k), k).toBe(false); }
+    // The S3 and the U8 keep the Köpenick mix at the late tier of their start district (S3 14 … 19, U8 25 … 30).
+    const s3 = tunnelMap(0), u8 = tunnelMap(1), first = (t: typeof s3): number => t.encounters[0]!.waves[0]!.hpMul;
+    expect(u8.encounters.map((e) => e.waves.map((w) => Object.keys(w.mix)))).toEqual(s3.encounters.map((e) => e.waves.map((w) => Object.keys(w.mix))));
+    // The generator's first wave takes the line's first tier, so the Tunnelmund starts one above it.
+    expect(first(s3)).toBeCloseTo((1 + 15 * 0.13) * TUNNEL.hp);
+    expect(first(u8)).toBeCloseTo((1 + 26 * 0.13) * TUNNEL.hp);
+    expect(first(u2)).toBeCloseTo((1 + 34 * 0.13) * TUNNEL.hp);
+    expect(u2.encounters.at(-1)!.waves[1]!.bosses).toEqual(['schaffner']);
+  });
+
   for (const [k, L] of LINES.entries()) {
     it(`${L.id}: valid, sealed by its gratings and winnable`, () => {
       const { m: mm, level: lv } = build(k);

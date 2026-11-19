@@ -209,6 +209,18 @@ test('M19: the S3 tunnel loads, the first fight starts, the map shows the tubes'
   expect(errors).toEqual([]);
 });
 
+test('M15 step 8: the U2 tunnel loads with the mechs, its first fight brings Alexanderplatz enemies', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=tunnel&line=2&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Tunnelmund');
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; s.player.hp = 1e9; });
+  await page.waitForFunction(() => window.__game!.sim().enemies.some((e) => ['uhrwerk', 'wurzler', 'kernspeier'].includes(e.kind)), null, { timeout: 90_000 });
+  // A few rendered frames with the mechs on screen.
+  await page.waitForTimeout(1500);
+  expect(errors).toEqual([]);
+});
+
 test('M15: Xhain loads on the Warschauer Brücke, the first fight starts, the map opens', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?map=xhain&profile=Leistung&seed=7&autostart');
