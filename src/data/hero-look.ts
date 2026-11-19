@@ -78,7 +78,8 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
     bands: [{ roles: ['vest'], axis: 'y', from: 1.13, to: 1.16, hex: '#f08a24' }, { roles: ['vest'], axis: 'y', from: 1.19, to: 1.22, hex: '#f08a24' }] },
   'mantel:spree': { roles: { coat: '#1f7a6a', hem: '#0e4a40', cuff: '#0e4a40', trousers: '#1e3a36', leather: '#2aa890', brass: '#cfe8e0' },
     bands: [{ roles: COAT, axis: 'y', from: 0.6, to: 0.635, hex: '#7fe0c8', wave: 0.018 }, { roles: COAT, axis: 'y', from: 0.665, to: 0.69, hex: '#5ac8b0', wave: 0.018 }] },
-  'kette:zit': { roles: { coat: '#8a9098', hem: '#5a6068', cuff: '#5a6068', trousers: '#3a3c42', leather: '#5a2a1a', brass: '#e0b040' } },
+  // Steel darker than the mockup's base: there the mail ring pattern darkens it (texture from Codex later).
+  'kette:zit': { roles: { coat: '#6c727a', hem: '#4a5058', cuff: '#4a5058', trousers: '#3a3c42', leather: '#5a2a1a', brass: '#e0b040' } },
   // Körper: legendaries
   spaeti: { roles: { coat: '#5a2a78', hem: '#3a1a50', cuff: '#3a1a50', trousers: '#2a2430', leather: '#2a1a1a', brass: '#f2d14b' },
     spots: [
@@ -96,6 +97,7 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
     ] },
   ritter: { roles: { coat: '#383e48', hem: '#262a32', cuff: '#262a32', trousers: '#2a2e36', leather: '#22262e', brass: '#d8dce0' } },
   // Hände
+  arbeit: { roles: { glove: '#8a6a3a', cuff: '#6e5430' } },
   schweiss: { roles: { glove: '#5a3a24', cuff: '#6a4630' } },
   bandage: { roles: { glove: '#e8ddd0', cuff: '#e8ddd0' } },
   gartenh: { roles: { glove: '#5a8a3a', cuff: '#f3ce43' } },
@@ -162,12 +164,12 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     topfhelm: { gear: ['hat-greathelm'], hideHair: true },
   },
   g: {
-    handsch: {},
+    handsch: { palette: 'arbeit', gear: ['wrist-work'] },
     bandage: { palette: 'bandage', gear: ['wraps'] },
     schweiss: { palette: 'schweiss', gear: ['cuffs-welder'] },
-    gartenh: { palette: 'gartenh' },
+    gartenh: { palette: 'gartenh', gear: ['wrist-garden'] },
     kiezbox: { gloves: null, gear: ['boxing'], covers: ['hands'] },
-    kiezhand: { palette: 'kiezhand', gear: ['knuckles-kiez'] },
+    kiezhand: { palette: 'kiezhand', gear: ['knuckles-kiez', 'wrist-kiez'] },
   },
   f: {
     turnsch: { boots: 'turnsch', palette: 'turnsch', gear: ['sneaker-stripes'] },

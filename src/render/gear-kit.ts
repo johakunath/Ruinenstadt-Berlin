@@ -3,7 +3,7 @@
 // and tagged with the bone they ride on. Fitted parts measure the hero's own surfaces: a sampler collects
 // the bind positions of some mesh nodes round an axis, and `radius(t, angle)` is the outermost surface at
 // that height and angle, so belts, hats, shafts and plates hug the coat, the hair or the leg they cover.
-import { BufferAttribute, BufferGeometry, Matrix4, SphereGeometry, Vector3, type Object3D, type SkinnedMesh } from 'three';
+import { BufferAttribute, BufferGeometry, Matrix4, Vector3, type Object3D, type SkinnedMesh } from 'three';
 import { Parts, bright, cloth, metal, plain, wood, type Paint } from './weapons';
 
 export type { Paint };
@@ -263,47 +263,7 @@ export function onSurface(s: Sampler, t: number, a: number, lift = 0.006, r?: nu
   return basis(s.point(t, a, (r ?? s.radius(t, a)) + lift), side, up, out);
 }
 
-/** The head's size for hats: centre and half-sizes of the hair and skull from brow height `t0` up. */
-export interface HeadFit { c: Vector3; rx: number; front: number; back: number; top: number }
-
-export function headFit(k: GearKit, t0 = 1.66): HeadFit {
-  const s = k.sampler(['hair', 'body_head'], AXES.head);
-  let rx = 0, front = 0, back = 0;
-  for (let t = t0; t <= t0 + 0.08; t += 0.02) {
-    rx = Math.max(rx, s.radius(t, Math.PI / 2, 0.012, 0.25), s.radius(t, -Math.PI / 2, 0.012, 0.25));
-    front = Math.max(front, s.radius(t, 0, 0.012, 0.3));
-    back = Math.max(back, s.radius(t, Math.PI, 0.012, 0.3));
-  }
-  let top = t0;
-  const hair = k.src.meshes.get('hair');
-  if (hair) for (let i = 1; i < hair.length; i += 3) top = Math.max(top, hair[i]!);
-  return { c: new Vector3(AXES.head.o.x, t0, AXES.head.o.z), rx, front, back, top };
-}
-
-/**
- * Half an ellipsoid over the head from height `t0`: `lift` m outside the hair, front and back halves
- * with their own depth. Open at the bottom (a dome for hats); `squash` < 1 flattens the top.
- */
-export function dome(f: HeadFit, lift: number, squash = 1, w = 20, h = 8, cover?: Sampler): BufferGeometry {
-  const g = new SphereGeometry(1, w, h, 0, Math.PI * 2, 0, Math.PI / 2);
-  const p = g.attributes.position!;
-  const v = new Vector3();
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    v.set(f.c.x + x * (f.rx + lift), f.c.y + y * (f.top - f.c.y + lift) * squash, f.c.z + z * ((z > 0 ? f.front : f.back) + lift));
-    // Never inside the hair: push out to the measured surface + lift where the ellipsoid falls short.
-    if (cover && y < 0.97) {
-      const a = Math.atan2(v.x - cover.ax.o.x, v.z - cover.ax.o.z), r = Math.hypot(v.x - cover.ax.o.x, v.z - cover.ax.o.z);
-      const need = cover.radius(v.y, a, 0.01, Math.PI / 18) + lift;
-      if (need > r) { v.x = cover.ax.o.x + Math.sin(a) * need; v.z = cover.ax.o.z + Math.cos(a) * need; }
-    }
-    p.setXYZ(i, v.x, v.y, v.z);
-  }
-  g.computeVertexNormals();
-  return g;
-}
-
-/** Sampler of the hair and skull round the head axis (hats). */
+/** Sampler of the hair, skull and brows round the head axis (hat bands and visors; the hat shells use `HeadMap` in gear-head.ts). */
 export function headSampler(k: GearKit): Sampler {
-  return k.sampler(['hair', 'body_head'], AXES.head);
+  return k.sampler(['hair', 'body_head', 'Eyebrows'], AXES.head);
 }

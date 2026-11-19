@@ -47,6 +47,11 @@ describe('hero gear', () => {
     expect(glow).toBeLessThanOrEqual(GEAR_BUDGET.glow);
     // At most the three gear meshes on top of the body.
     expect(BODY_DRAWS + 3).toBeLessThanOrEqual(HERO_BUDGET.skinnedDrawCalls);
+    // The whole hero: the heaviest piece look (every mesh but the hidden body regions and the other outfit) plus the worst gear.
+    const tri = (n: string): number => { const g = glb.mesh(n).geometry; return g.index!.count / 3; };
+    const fixed = ['hair', 'Eyes', 'Eyebrows', 'scarf', 'body_head', 'f_stiefel', 'g_handsch'].reduce((s, n) => s + tri(n), 0);
+    const pieces = fixed + Math.max(tri('a_mantel'), tri('a_weste') + tri('body_arms'));
+    expect(pieces + tris).toBeLessThanOrEqual(HERO_BUDGET.triangles);
   });
 
   it('merges a look into at most three meshes, cached per id list', () => {

@@ -24,8 +24,12 @@ const WARM: GearBuilder = (k) => k.on('Head', () => {
 
 export const GEAR: Readonly<Record<string, GearBuilder>> = { warm: WARM, ...HEAD_GEAR, ...BODY_GEAR, ...BODY_RARE_GEAR, ...LIMB_GEAR };
 
-/** Triangle budget of all gear of one look (D3) and of its glow parts. */
-export const GEAR_BUDGET = { triangles: 2500, glow: 400 } as const;
+/**
+ * Triangle budget of all gear of one look and of its glow parts. D3 planned 2,500; raised to 3,200 for
+ * the richer set and legendary looks (Johannes, 2026-11-19: rewarding to find). The hero stays far under
+ * `HERO_BUDGET.triangles` (heaviest look without gear about 19,100; `gear.test.ts` checks the sum).
+ */
+export const GEAR_BUDGET = { triangles: 3200, glow: 400 } as const;
 
 const built = new WeakMap<HeroSource, Map<string, Partial<Record<GearSlot, BufferGeometry>>>>();
 
