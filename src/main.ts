@@ -1105,13 +1105,41 @@ window.__game = {
 // The map switch shows on the first title too (a save with Köpenick freed, or the tunnel page).
 showTunnelButton();
 
+/**
+ * Which Quaternius mechs this run can meet: `?spawn=` kinds and the map's bosses (H3: the Turmwächter walks on
+ * Leela). A map without own bosses brings the default endless bosses, the Turmwächter among them.
+ */
+function mechsFor(): boolean | 'small' {
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  // M15 step 8: wave kinds too (the U2 tunnel brings Uhrwerkläufer under a Schaffner).
+  const waves = level?.encounters.flatMap((e) => e.waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix[k as keyof typeof w.mix] ?? 0) > 0))) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own, ...waves, ...(own.length === 0 && !isCamp ? ['waechter'] : [])];
+  const body = (k: string): string | undefined => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body;
+  if (kinds.some((k) => body(k) === 'mechBig' || /^(volkskoloss|weltzeituhr)/.test(k))) return true;
+  return kinds.some((k) => body(k) === 'mech') ? 'small' : false;
+}
+/** H3: the human boss base, where a male humanoid boss can appear (own bosses, `?spawn=`, maps without own bosses). */
+function humansFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
+  return own.length === 0 || kinds.some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'human');
+}
+/** H3: the female boss base (Spreehexe, Wurzel-Mutter), where one of them can appear. */
+function femalesFor(): boolean {
+  if (isCamp) return false;
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  return [...opts.spawn.map((k) => k.split('+')[0]!), ...own].some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'female');
+}
+
 // M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.
 const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
-  // The mechs load for `?spawn=` of their kinds and for a map whose waves hold Uhrwerkläufer (M15 step 8: the U2 tunnel).
-  mechs: opts.spawn.some((k) => /^(uhrwerk|volkskoloss|weltzeituhr)/.test(k)) || !!map?.def.encounters.some((e) => e.waves.some((w) => (w.mix.uhrwerk ?? 0) > 0)),
+  mechs: mechsFor(),
+  humans: humansFor(),
+  females: femalesFor(),
 })
   .then((r) => {
     renderer = r;

@@ -2,7 +2,7 @@
 
 Index of every enemy, elite, boss and NPC with its 3D body and Kodex image, so gaps are visible at a glance.
 Rule: every session that touches enemy bodies, animations, Kodex art or textures updates this file.
-Legend: **zombie+gear** = `assets/characters/zombie.glb` rig with code gear and tints (`gearFor`, `TINTS`, `CLOTH`, `SHAPE` in `src/render/enemies.ts`); **GLB** = own converted model; **code** = built from primitives. Refined: `final` (accepted look), `ok` (own shape, reads right), `placeholder` (task file says so, or base body with a recolour). Status as of 2026-11-19 (WP5, `docs/tasks/wp5-enemies.md`).
+Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Female, the hero's proportions; Spreehexe, Wurzel-Mutter) with code gear; **human+gear** = `assets/characters/human1.glb` (H3: the zombie's body without the zombie repaint, boots; male humanoid bosses) with the same code gear; **zombie+gear** = `assets/characters/zombie.glb` rig with code gear and tints (`gearFor`, `TINTS`, `CLOTH`, `SHAPE` in `src/render/enemies.ts`); **GLB** = own converted model; **code** = built from primitives. Refined: `final` (accepted look), `ok` (own shape, reads right), `placeholder` (task file says so, or base body with a recolour). Status as of 2026-11-19 (WP5, `docs/tasks/wp5-enemies.md`).
 
 ## Summary
 
@@ -35,21 +35,21 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 | Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils, bloated belly | ok | E03 | yes | final skin pass (bust skin is browner) | P1 |
 | Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0) | ok | E11 | yes | none | P1 |
 | Krähe | crow | normal | K X A M | code (body, wings, beak) | ok | E05 | yes | none | P1 |
-| Der Feldwebel | feldwebel | boss | K | zombie+gear (WP5 H2, pick A): Pickelhaube with gold eagle, high-collared greatcoat to the knee fitted to the body, gold epaulettes, moustache, sabre; parchment skin, Prussian-blue trousers | ok | X04 | yes (bust coat rust-brown, body Prussian blue as the mockup) | hardware look check | P1 |
-| Der Turmwächter | waechter | boss | K | zombie+gear (WP5 H2, pick A): Fernsehturm sphere helmet with lit cyan window ring and antenna, ribbed tower-shaft coat, flickering cyan sparks | ok | X03 | yes | hardware look check | P1 |
+| Der Feldwebel | feldwebel | boss | K | human+gear (WP5 H2, pick A): Pickelhaube with gold eagle, high-collared greatcoat to the knee fitted to the body, gold epaulettes, moustache, sabre; parchment skin, Prussian-blue trousers | ok | X04 | yes (bust coat rust-brown, body Prussian blue as the mockup) | hardware look check | P1 |
+| Der Turmwächter | waechter | boss | K | GLB `mech.glb` (Leela, CC0; H3 step 3): the Fernsehturm on her legs, head hull hidden, ribbed tapering shaft over torso and neck, steel sphere head with lit cyan window ring (flares in his volley and ring), red-white antenna with beacon, flickering cyan sparks; rust tint on the legs | ok | X03 | yes (bust has a face, the body is the tower) | hardware look check (row 36) | P1 |
 | Der Rex | rex | boss | K | GLB `rex.glb` (Quaternius CC0) | ok | E12 | yes | none | P1 |
-| Hauptmann von Köpenick | hauptmann | boss | K | zombie+gear (WP5 H2, pick B): Pickelhaube with gold eagle (no plume), white moustache, long officer's greatcoat, red cape, gold sash, epaulettes, sabre | ok | X01 | yes (cape and sash added per pick) | hardware look check | P1 |
+| Hauptmann von Köpenick | hauptmann | boss | K | human+gear (WP5 H2, pick B): Pickelhaube with gold eagle (no plume), white moustache, long officer's greatcoat, red cape, gold sash, epaulettes, sabre | ok | X01 | yes (cape and sash added per pick) | hardware look check | P1 |
 | Ratte | rat | normal (packs of 5) | X | code (body, ears, tail) | ok | E04 | yes | none | P2 |
-| Der Grenzer | grenzer | boss | X | zombie+gear: peaked cap, olive tunic, rifle; WP5 H2: pale grey skin, GDR stone-grey trousers | placeholder | X11 | unverified | silhouette review | P2 |
-| Der Brandmeister | brandmeister | boss | X | zombie+gear (WP5 H2, pick A): leather fire helmet with flickering flames, turnout coat with yellow bands fitted to the body (no more clipping), chest lamp; torch removed | ok | X10 | yes | hardware look check | P2 |
+| Der Grenzer | grenzer | boss | X | human+gear: peaked cap, olive tunic, rifle; WP5 H2: pale grey skin, GDR stone-grey trousers | placeholder | X11 | unverified | silhouette review | P2 |
+| Der Brandmeister | brandmeister | boss | X | human+gear (WP5 H2, pick A): leather fire helmet with flickering flames, turnout coat with yellow bands fitted to the body (no more clipping), chest lamp; torch removed | ok | X10 | yes | hardware look check | P2 |
 | Die Rattenmutter | rattenmutter | boss | X | zombie+gear (WP5 H2, pick A): giant rat head with crown on the neck (skull shrunk away), fur cloak, torn oxblood rag dress, strong hunch | ok | X06 | yes | hardware look check | P2 |
-| Die Spreehexe | spreehexe | boss | X | zombie+gear: punk crest, black coat, acid hand | placeholder | X12 | unverified | silhouette review | P2 |
-| Der Schaffner | schaffner | boss | T | zombie+gear (WP5 H2, pick A): peaked cap with brass badge, long double-breasted navy coat, the Kelle held high in the right hand | ok | X05 | yes | hardware look check | P4 |
+| Die Spreehexe | spreehexe | boss | X | female+gear: punk crest, black coat, acid hand | placeholder | X12 | unverified | silhouette review | P2 |
+| Der Schaffner | schaffner | boss | T | human+gear (WP5 H2, pick A): peaked cap with brass badge, long double-breasted navy coat, the Kelle held high in the right hand | ok | X05 | yes | hardware look check | P4 |
 | Brigadeghul | walker (render) | normal | A | zombie+gear: Blaumann, cap, armband | ok | E01 (walker) | no, walker bust | none, shares walker | P4 |
 | Uhrwerkläufer | uhrwerk | normal | A | GLB `mech.glb` (Leela, CC0) + clock shield, dome, key | ok | E16 | unverified | compare portrait and body | P4 |
 | Wurzler | wurzler | special | A | zombie+gear: roots, apron, sunflower face | placeholder | E17 | unverified | silhouette review | P4 |
 | Kernspeier | kernspeier | special | A | code (clay pot, stem, toothed sunflower) | ok | E18 | unverified | compare portrait and body | P4 |
-| Die Wurzel-Mutter | wurzelmutter | boss | A | zombie+gear: roots, crown of sunflowers | placeholder | X13 | unverified | silhouette review | P4 |
+| Die Wurzel-Mutter | wurzelmutter | boss | A | female+gear: roots, crown of sunflowers | placeholder | X13 | unverified | silhouette review | P4 |
 | Der Große Uhrwerkläufer | uhrwerkgross | boss | A | GLB `mechbig.glb` (Mike, CC0) + key | ok | X14 | unverified | compare portrait and body | P4 |
 | Der Volkseigene Koloss | volkskoloss | boss | A | code (Plattenbau slab, clockwork legs, arms) | ok | X15 | unverified | compare portrait and body | P4 |
 | Die Weltzeituhr | weltzeituhr | boss | A | code (landmark rig `src/render/clock.ts` on four legs) | ok | X16 | unverified | compare portrait and body | P4 |
@@ -59,10 +59,10 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 | Heuler | heuler | special | X | zombie+gear: swollen throat that bulges on the howl | ok | E08 | yes | none | P2 |
 | Boxenkopf | bass | special | M | zombie+gear: speaker head, violet rags | ok | E14 | yes | none | P4 |
 | Drohne | drone | normal | M | code (`buildDrone`) | ok | E15 | unverified | compare portrait and body | P4 |
-| Der Türsteher | tuersteher | boss | M | zombie+gear: bomber jacket, glasses, clipboard; rage effect: neon bars across the Tor passages (`src/render/barriers.ts`, P25) | placeholder | X17 | unverified | silhouette review; bar look on hardware | P4 |
+| Der Türsteher | tuersteher | boss | M | human+gear: bomber jacket, glasses, clipboard; rage effect: neon bars across the Tor passages (`src/render/barriers.ts`, P25) | placeholder | X17 | unverified | silhouette review; bar look on hardware | P4 |
 | Die Wachdrohne | wachdrohne | boss | M | code (`buildDrone`, big) | ok | X18 | unverified | compare portrait and body | P4 |
-| Der Dirigent | dirigent | boss | M | zombie+gear: tailcoat, bow tie, baton, speaker | placeholder | X19 | unverified | silhouette review | P4 |
-| Der Bassprediger | bassprediger | boss | M | zombie+gear: speaker head, five cables, mixer | ok | X09 | yes | none | P4 |
+| Der Dirigent | dirigent | boss | M | human+gear: tailcoat, bow tie, baton, speaker | placeholder | X19 | unverified | silhouette review | P4 |
+| Der Bassprediger | bassprediger | boss | M | human+gear: speaker head, five cables, mixer | ok | X09 | yes | none | P4 |
 | Flink / Brennend / Spaltend / Gepanzert | elite mods | elite | all | host body ×1.15 plus a faint glow in the mod colour | placeholder | L01 to L04 | unverified | mod-specific gear | P1 |
 | Späti-Wirt | keeper | NPC | all expeditions | `hero.glb` in vest + flat cap, apron (`src/render/content.ts`) | placeholder | none | n/a | own look | P3 |
 | Händler | trader | NPC | expeditions | `hero.glb` + wide hat, pack, green lantern | placeholder | none | n/a | own look | P3 |
