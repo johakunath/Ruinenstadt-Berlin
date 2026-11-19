@@ -116,6 +116,13 @@ Text drafts (Opus finalises): banner „Charlottenburg · 1920“; district card
 - Off-route land from the shots: the south-west Ku'damm stub is built up like any street (Blockrand, cars, a lot type) and reads as a dead end, not empty: content is enough there. The forest north-east of the Knie reads dark and empty: first remedy candidate is the barricade on the Chaussee east of the Technische Hochschule (review order). Size: check 39.
 - Also: two step 1 tests near the 5 s default got a 20 s timeout (they flaked once under load).
 
+## Handover 2026-11-19 (blockout fixes) [Claude · Opus medium]
+
+- Forest north-east of the Knie closed (Johannes): area `hochschulviertel` „Hochschulviertel“ (was „Tiergarten“), fence `Hochschulzaun` from the Spree past the Rathaus and the Otto-Suhr-Allee, then behind the Chaussee's north sidewalk into the Tor colonnade; a street-end `barricade` prop (36 m, work lamp) east of the Charlottenburger Tor plus fence `Chausseesperre` to the viaduct; the area is also `noSpawn`. The Technische Hochschule turned to front the Chaussee (same place, inside its grounds). Test: nothing of it reached or placed in it, Knie, Allee and Tor open, at 1 and 1.3.
+- Ku'damm stub: fenced yard `Hof am Kurfürstendamm` (38 m from the Bleibtreustraße, about 27 m deep) with crates and a work lamp; the hidden-blessing Hinterhof was already west of the Bleibtreustraße. No fight added.
+- Wear: `WearOptions.graffiti` (opt-in, `CHARLOTTENBURG_WEAR`): soot where graffiti would go; other maps unchanged.
+- Step 4 prepared: `charlottenburg-citywest.ts`, `-kudamm.ts`, `-schloss.ts` (owned kinds in the headers, all return false), asked first by `buildCharlottenburgLandmark`; helpers and `C`, `Ctx` exported from `charlottenburg-world.ts`. The Rathaus is the shared `rathaus` builder, so no file owns it. Sheet: `npm run dev`, then `node tools/landmark-sheet.mjs out.png "kind=hochschule"` (all 31 kinds render). Proof `knie-fence.jpg` replaces `offroute-forest-knie.jpg`.
+
 ## Review 2026-11-19 (step 1) [Claude · Fable high]
 
 - Checked: `npm run check` green after the step, map image `docs/maps/charlottenburg-data.png`, engine changes in `map.ts` are opt-in, network routes and labels do not overlap on the schematic (not looked at in the game: step 8).

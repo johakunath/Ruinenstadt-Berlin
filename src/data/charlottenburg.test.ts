@@ -329,19 +329,35 @@ describe('Charlottenburg map (M16, layout C2)', () => {
     expect(new Set(props.filter((p) => LIGHT_PROPS.has(p.kind)).map((p) => p.size.toFixed(1))).size).toBeGreaterThan(5);
   });
 
-  it('M16b: two sleeping elites, the Capitol cache and a hidden blessing at reachable ends, off the route and off blocking landmarks', () => {
+  it('M16b: two sleeping elites, two caches (Capitol yard, Ku\'damm yard) and a hidden blessing at reachable ends, off the route and off blocking landmarks', () => {
     for (const scale of [1, 1.3]) {
       const m = charlottenburgMap(scale), lots = generateLots(m), level = mapLevel(m, lots, generateProps(m, lots)), seen = reach(m, level);
       expect(m.guards).toHaveLength(2);
       expect(m.hiddenSpots).toHaveLength(1);
       for (const h of m.hiddenSpots!) expect(near(seen, h.x, h.z), `blessing ${h.x},${h.z}`).toBe(true);
       for (const g of m.guards!) expect(near(seen, g.x, g.z), `guard ${g.x},${g.z}`).toBe(true);
-      const cache = m.fixedProps.find((p) => p.kind === 'crates')!;
-      expect([[2, 0], [-2, 0], [0, 2], [0, -2]].some(([a, b]) => near(seen, cache.x + a!, cache.z + b!)), 'cache').toBe(true);
+      // Two caches: the Capitol yard and the yard off the Ku'damm stub.
+      const caches = m.fixedProps.filter((p) => p.kind === 'crates');
+      expect(caches).toHaveLength(2);
+      for (const cache of caches) expect([[2, 0], [-2, 0], [0, 2], [0, -2]].some(([a, b]) => near(seen, cache.x + a!, cache.z + b!)), `cache ${cache.x.toFixed(0)},${cache.z.toFixed(0)}`).toBe(true);
+      // The Ku'damm yard: within about 40 m of the Bleibtreustraße junction, west of it (the dead-end stub), 20 to 30 m
+      // deep behind the street (scaled), lit at its end, no fight near; the Hinterhof blessing is on that side too.
+      const yard = m.streets.find((q) => q.name === 'Hof am Kurfürstendamm')!, kudamm = m.streets.find((q) => q.name === 'Kurfürstendamm')!, bleibtreu = m.streets.find((q) => q.name === 'Bleibtreustraße')!;
+      const junction = bleibtreu.pts[0]!, [yx, yz] = yard.pts[0]!, yEnd = yard.pts.at(-1)!;
+      expect(Math.hypot(yx - junction[0], yz - junction[1])).toBeLessThan(42 * scale);
+      expect(lineDist(kudamm.pts, yx, yz)).toBeLessThan(kudamm.width / 2);
+      for (const [x] of [...yard.pts, ...m.hiddenSpots!.map((h): [number, number] => [h.x, h.z])]) expect(x).toBeLessThan(junction[0]);
+      const deep = yard.pts.slice(1).reduce((a, p, i) => a + Math.hypot(p[0] - yard.pts[i]![0], p[1] - yard.pts[i]![1]), 0) - (kudamm.width / 2 + (kudamm.sidewalk ?? 0) - lineDist(kudamm.pts, yx, yz));
+      expect(deep).toBeGreaterThan(20);
+      expect(deep).toBeLessThan(30 * scale + 2);
+      const yardCache = caches.find((c) => Math.hypot(c.x - yEnd[0], c.z - yEnd[1]) < 3)!;
+      expect(yardCache).toBeDefined();
+      expect(m.fixedProps.some((p) => LIGHT_PROPS.has(p.kind) && Math.hypot(p.x - yardCache.x, p.z - yardCache.z) < 6), 'light at the yard end').toBe(true);
+      for (const e of m.encounters) expect(Math.hypot(e.x - yardCache.x, e.z - yardCache.z), e.id).toBeGreaterThan(e.r + 15);
       for (const e of m.encounters) for (const g of m.guards!) expect(Math.hypot(e.x - g.x, e.z - g.z)).toBeGreaterThan(e.r + 8);
       // Not inside anything that blocks: open landmarks (the Capitol yard) only by their parts.
-      for (const p of [...m.hiddenSpots!, ...m.guards!, cache]) {
-        expect(level.near(p.x, p.z, 1).some((c) => colliderDistance(c, p.x, p.z) <= 0) && p !== cache, `${p.x.toFixed(0)},${p.z.toFixed(0)}`).toBe(false);
+      for (const p of [...m.hiddenSpots!, ...m.guards!, ...caches]) {
+        expect(level.near(p.x, p.z, 1).some((c) => colliderDistance(c, p.x, p.z) <= 0) && !caches.includes(p as never), `${p.x.toFixed(0)},${p.z.toFixed(0)}`).toBe(false);
         for (const l of m.landmarks) {
           if (l.kind === 'spati' || l.walkUnder) continue;
           if (OPEN_PARTS[l.kind]) expect(landmarkColliders(l).some((c) => colliderDistance(c, p.x, p.z) < 0.5), `${l.kind}`).toBe(false);
@@ -350,6 +366,43 @@ describe('Charlottenburg map (M16, layout C2)', () => {
       }
     }
   }, 20000);
+
+  it('the Hochschulviertel north-east of the Knie is fenced-off backdrop: never reached, nothing placed or spawned in it', () => {
+    for (const scale of [1, 1.3]) {
+      const m = charlottenburgMap(scale), lots = generateLots(m), props = generateProps(m, lots), level = mapLevel(m, lots, props), seen = reach(m, level);
+      const area = m.areas.find((a) => a.id === 'hochschulviertel')!;
+      expect(area.name).toBe('Hochschulviertel');
+      const inside = (x: number, z: number): boolean => inPoly(area.poly, x, z);
+      // Not one reached cell lies in the quarter, nor on the Chaussee beyond the barricade.
+      let n = 0;
+      for (const k of seen) { const [x, z] = k.split(',').map(Number) as [number, number]; n++; expect(inside(x, z), `${scale}: ${k}`).toBe(false); }
+      expect(n).toBeGreaterThan(20000);
+      const bis = m.streets.find((q) => q.name === 'Bismarckstraße')!, [ex, ez] = bis.pts.at(-1)!;
+      for (const d of [6, 20, 40]) expect(near(seen, ex - d, ez + d * 0.35), `Chaussee ${d} m from the east end`).toBe(false);
+      // The Knie, the Otto-Suhr-Allee and the Charlottenburger Tor stay open.
+      const allee = m.streets.find((q) => q.name === 'Otto-Suhr-Allee')!;
+      for (let i = 1; i < allee.pts.length; i++) for (let t = 0; t <= 1; t += 0.1) {
+        const x = allee.pts[i - 1]![0] + (allee.pts[i]![0] - allee.pts[i - 1]![0]) * t, z = allee.pts[i - 1]![1] + (allee.pts[i]![1] - allee.pts[i - 1]![1]) * t;
+        expect(near(seen, x, z), `Allee ${x.toFixed(0)},${z.toFixed(0)}`).toBe(true);
+      }
+      expect(near(seen, bis.pts[2]![0], bis.pts[2]![1]), 'Knie').toBe(true);
+      expect(near(seen, lm(m, 'chtor').x, lm(m, 'chtor').z), 'Tor').toBe(true);
+      // The Hochschule stands inside its grounds, fronting the Chaussee.
+      const th = lm(m, 'hochschule');
+      expect(inside(...at(th, 0, -th.hz - 1))).toBe(true);
+      expect(streetDist(m, ...at(th, 0, th.hz + 0.5)).d).toBeGreaterThan(2);
+      // Nothing generated or placed in it: buildings, props (the closed map edge's fronts and fallen trees at
+      // the bound excepted), landmarks other than the Hochschule, side passages, run content; no spawns.
+      for (const l of lots) if (l.kind !== 'tree') expect(inside(l.x, l.z), `lot ${l.kind} ${l.x.toFixed(0)},${l.z.toFixed(0)}`).toBe(false);
+      for (const p of props) if (EDGE_FRONT[p.kind] === undefined && p.kind !== 'fallenTree') expect(inside(p.x, p.z), `prop ${p.kind} ${p.x.toFixed(0)},${p.z.toFixed(0)}`).toBe(false);
+      for (const l of m.landmarks) if (l.kind !== 'hochschule') expect(inside(l.x, l.z), l.kind).toBe(false);
+      for (const st of m.streets) if (st.kind === 'path') for (const [x, z] of st.pts) expect(inside(x, z), st.name).toBe(false);
+      for (const p of [...m.encounters, ...m.zones.map((zn) => zn.entry), ...(m.guards ?? []), ...(m.hiddenSpots ?? [])]) expect(inside(p.x, p.z)).toBe(false);
+      let cells = 0;
+      for (let x = m.bounds.minX; x < m.bounds.maxX; x += 4) for (let z = m.bounds.minZ; z < m.bounds.maxZ; z += 4) if (inside(x, z)) { cells++; expect(level.noSpawnAt(x, z), `spawn ${x},${z}`).toBe(true); }
+      expect(cells * 16).toBeGreaterThan(5000 * scale * scale);
+    }
+  }, 30000);
 
   it('one rest stop per zone (the tea house in the Neuer Pavillon, the Späti in the Orangerie forecourt), reachable, away from fights', () => {
     for (const scale of [1, 1.3]) {

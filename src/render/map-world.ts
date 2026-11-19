@@ -17,7 +17,7 @@ import { buildCampWorld, makeCampMats } from './camp-world';
 import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
 import { makeLandmarkFinishes } from './landmark-finishes';
-import { LandmarkWear, makeLandmarkWearMaterial } from './landmark-wear';
+import { LandmarkWear, makeLandmarkWearMaterial, type WearOptions } from './landmark-wear';
 import {
   BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, lineDist, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
   type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
@@ -37,7 +37,7 @@ import { ALEX_STONE_URL, alexStoneBoxGeo, alexStoneGeo, paintAlexStoneAtlas, typ
 import { buildMinistryLot } from './mitte-zones';
 import { makeClockRig } from './clock';
 import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
-import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_KINDS } from './charlottenburg-world';
+import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from './charlottenburg-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
@@ -136,10 +136,10 @@ export class ChunkBuilder extends Builder {
     super.geo(mat, this.mm.alexStoneAtlas && mat === this.mm.stucco ? alexStoneGeo(geometry, stone) : geometry, transform, color);
   }
 
-  wearLandmark(landmark: Landmark, build: () => void): void {
+  wearLandmark(landmark: Landmark, build: () => void, opts?: WearOptions): void {
     if (!this.mm.landmarkWear) { build(); return; }
     const previous = this.weathering;
-    const wear = new LandmarkWear(this, landmark);
+    const wear = new LandmarkWear(this, landmark, opts);
     this.weathering = wear;
     try { build(); wear.finish(); } finally { this.weathering = previous; }
   }
@@ -2453,7 +2453,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         else if (MITTE_KINDS.has(l.kind)) buildMitteLandmark(b, l);
         else if (CHARLOTTENBURG_KINDS.has(l.kind)) buildCharlottenburgLandmark(b, l);
         else buildLandmark(b, l);
-      });
+      }, m.id === 'charlottenburg' ? CHARLOTTENBURG_WEAR : undefined);
     });
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }

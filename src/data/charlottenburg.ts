@@ -208,6 +208,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     { name: 'Capitol-Passage', kind: 'path', width: 3.5, pts: [P(142, 126), [142 * s, 115 * s - 2], [142 * s + 10, 115 * s - 2]] },
     { name: 'Hinterhof Bleibtreustraße', kind: 'path', width: 4, pts: line([[-14, 170], [-28, 170], [-36, 166]]) },
     { name: 'Varietéhof', kind: 'path', width: 4, pts: line([[-49.5, 100], [-62, 100], [-72, 103]]) },
+    // A yard off the Ku'damm stub west of the Bleibtreustraße (cache), north through the row, west along the viaduct.
+    { name: 'Hof am Kurfürstendamm', kind: 'path', width: 3.5, pts: line([[-48, 180], [-48, 165], [-66, 165]]) },
   ];
 
   // The Stadtbahn on its brick viaduct, cut at the arches the streets pass through (as on the Alexanderplatz).
@@ -283,6 +285,25 @@ export function charlottenburgMap(scale = 1): MapDef {
   const [stationX, stationZ] = railAt(deck0 + PLATFORM.len / 2), stationDir = dirAt(deck0 + PLATFORM.len / 2);
   zones[0]!.entry = { x: startX, z: startZ };
 
+  // The Technische Hochschule quarter north-east of the Knie is fenced-off backdrop (Johannes 2026-11-19): an
+  // iron fence round the Hochschule grounds on the west (beside the Otto-Suhr-Allee, from the Spree) and the
+  // south (behind the Chaussee's north sidewalk), a barricade across the Chaussee east of the Charlottenburger
+  // Tor. Frame of the Chaussee: `u` meters east along it from the Knie, `v` meters to its north side.
+  const bis = streets.find((q) => q.name === 'Bismarckstraße')!, K = bis.pts[2]!, K1 = bis.pts[3]!;
+  const bl = Math.hypot(K1[0] - K[0], K1[1] - K[1]), du: Pt = [(K1[0] - K[0]) / bl, (K1[1] - K[1]) / bl], dv: Pt = [du[1], -du[0]];
+  const kv = (u: number, v: number): Pt => [K[0] + du[0] * u + dv[0] * v, K[1] + du[1] * u + dv[1] * v];
+  /** The fence line just behind the Chaussee's north sidewalk; the west fence keeps 1.5 m off the Allee's sidewalk. */
+  const fenceV = bis.width / 2 + (bis.sidewalk ?? 0) + 0.6, westU = 8.5;
+  const torU = (100 * s - K[0]) * du[0] + (38 * s - K[1]) * du[1], barU = torU + 2.5;
+  const hsV = 22, hsHz = 6;
+  // West fence from the Spree, round the Rathaus's east side, down beside the Otto-Suhr-Allee to the Chaussee.
+  const hsWest: Pt[] = [P(52, -48), [32 * s + 10, 8 * s + 10], kv(westU, hsV + hsHz + 1.5), kv(westU, fenceV)];
+  const [e0, e1] = [bis.pts[3]!, bis.pts[4]!], el = Math.hypot(e1[0] - e0[0], e1[1] - e0[1]);
+  /** Where the fence line of the Chaussee's east stretch meets the east bound. */
+  const eastZ = e1[1] - ((e1[0] - e0[0]) / el) * fenceV;
+  /** The sealed quarter (area `hochschulviertel`): the Spree, the east bound, the Chaussee's north side, the west fence. */
+  const sealed: Pt[] = [...line([[52, -48], [80, -38], [130, -30], [185, -24]]), [bounds.maxX, eastZ], kv(bl, fenceV), ...hsWest.slice(1).reverse()];
+
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3, extra: Partial<Landmark> = {}): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear, ...extra });
   /** A landmark at world (x, z) (parts of the Schloss compound). */
   const LW = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear: number, extra: Partial<Landmark> = {}): Landmark => ({ kind, x, z, rot, hx, hz, clear, ...extra });
@@ -312,7 +333,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     L('variete', -62, 112, 0, 7, 4, 1, { name: 'Gläsernes Varieté' }),
     L('opernhaus', -45, 45, 0, 14, 8, 2, { name: 'Deutsches Opernhaus' }),
     L('schillertheater', 5, 46, 0, 8, 5, 1, { name: 'Schiller-Theater' }),
-    L('hochschule', 56, 35, 0, 14, 6, 1, { name: 'Technische Hochschule' }),
+    // The Technische Hochschule fronts the Chaussee (turned with it), inside its fenced grounds.
+    LW('hochschule', ...kv(25 * s, hsV), Math.atan2(-dv[0], -dv[1]), 14, hsHz, 1, { name: 'Technische Hochschule' }),
     // The Chaussee passes through the Tor (only its two colonnades block); the Rathaus tower on the Otto-Suhr-Allee.
     L('chtor', 100, 38, Math.atan2(70, -28), 16, 3, 1, { name: 'Charlottenburger Tor' }),
     L('rathaus', 32, 8, -90 * DEG, 8, 6, 1, { name: 'Rathaus Charlottenburg' }),
@@ -354,6 +376,10 @@ export function charlottenburgMap(scale = 1): MapDef {
     // The garden fence from the Neuer Flügel to the gate pillars and on into the Spree.
     { name: 'Gartenzaun', kind: 'fence', pts: [[C.x + 65, gz], [gx - 3.2, gz]] },
     { name: 'Gartenzaun Spree', kind: 'fence', pts: [[gx + 3.2, gz], [riverX(gz), gz]] },
+    // The Hochschule grounds: west from the Spree, south behind the Chaussee's sidewalk into the Tor's north colonnade.
+    { name: 'Hochschulzaun', kind: 'fence', pts: [...hsWest, kv(torU - 1, fenceV)] },
+    // South of the Chaussee barricade a fence closes the strip to the Stadtbahn viaduct (it ends on the rail line).
+    { name: 'Chausseesperre', kind: 'fence', pts: [kv(barU + 2, -16.5), railAt(project(...kv(barU + 2, -16.5)).at)] },
     // The Irrgarten (E3): 2.2 m hedges.
     ...mazeHedges().map((h, i): Wall => ({ name: `Irrgarten ${i + 1}`, kind: 'hedge', pts: h.map(([x, z]): Pt => [M.x + x, M.z + z]) })),
   ];
@@ -377,16 +403,17 @@ export function charlottenburgMap(scale = 1): MapDef {
     // Beyond the Spree: the backdrop bank (power station, chimneys), never reached.
     { id: 'ostufer', name: 'Spreeufer', ground: 'asphalt', frontage: null, trees: 0.2, poly: line([[18, -195], [185, -195], ...SPREE.slice(0, 11)]) },
     { id: 'schlossgarten', name: 'Schlossgarten', ground: 'grass', frontage: null, trees: 0.45, poly: [[bounds.minX, bounds.minZ], P(-6, -195), ...line(SPREE.slice(5, 11).reverse()), [16 * s, C.z - 8], [bounds.minX, C.z - 8]] },
-    { id: 'tiergarten', name: 'Tiergarten', ground: 'forest', frontage: null, trees: 1, poly: line([[56, -46], [80, -38], [130, -30], [185, -24], [185, 4], [110, 30], [76, 40], [72, 10], [60, -20]]) },
+    // The Technische Hochschule quarter (the real Tiergarten starts east of the Charlottenburger Tor): fenced backdrop.
+    { id: 'hochschulviertel', name: 'Hochschulviertel', ground: 'forest', frontage: null, trees: 1, poly: sealed },
     // City: zone 0 east of the church, zone 1 along the Ku'damm and the Kantstraße (bounded by the Stadtbahn and a
     // line between the Kantstraße and the Bismarckstraße rows), the north (Bismarckstraße, Schloßstraße, Klausener
     // Kiez) last. Area borders keep off the building rows (a lot must stand in its street's area). Lot types are
     // stand-ins until step 7.
     { id: 'cityost', name: 'Tauentzien', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['parkplatz', 'hinterhof'], poly: [P(100, 97), P(104, 99), P(120, 107.5), at(capitol, -13.5, -5.2), at(capitol, 13.5, -5.2), at(elefantentor, 0, 0), at(aquarium, -3.4, 3), P(185, 116), P(185, 215), P(100, 215)] },
     { id: 'kudamm', name: 'Neuer Westen', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['hinterhof', 'markt'], poly: line([[-135, 96], [30, 98], [60, 96], [84, 72], [92, 68], [100, 88], [100, 215], [-135, 215]]) },
-    // The north, traced round the Schloss, the Luisenplatz, the Tiergarten and the Zoo.
+    // The north, traced round the Schloss, the Luisenplatz, the Hochschulviertel and the Zoo.
     { id: 'westend', name: 'Charlottenburg', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['hinterhof', 'truemmer'],
-      poly: [[bounds.minX, gateZ], [C.x + 29, gateZ], P(-20, -19), P(-20, -8), P(14, -8), P(14, -40), P(40, -40), P(60, -20), P(72, 10), P(76, 40), P(110, 30), P(185, 4), P(185, 30), P(125, 52), P(92, 68), P(84, 72), P(60, 96), P(30, 98), P(-135, 96)] },
+      poly: [[bounds.minX, gateZ], [C.x + 29, gateZ], P(-20, -19), P(-20, -8), P(14, -8), P(14, -40), P(40, -40), ...hsWest, kv(bl, fenceV), [bounds.maxX, eastZ], P(185, 30), P(125, 52), P(92, 68), P(84, 72), P(60, 96), P(30, 98), P(-135, 96)] },
   ];
 
   const endOf = (name: string, back: number, side: number): { x: number; z: number } => {
@@ -458,6 +485,14 @@ export function charlottenburgMap(scale = 1): MapDef {
     ...lane(streets.find((st) => st.name === 'Hinterhof Bleibtreustraße')!, 'fence'),
     ...lane(streets.find((st) => st.name === 'Varietéhof')!, 'fence'),
     { kind: 'bauzaun', x: br.x + Math.sin(br.rot) * 8, z: br.z + Math.cos(br.rot) * 8, rot: br.rot, size: br.width + 1.5 },
+    // The yard off the Ku'damm stub: crates and a work lamp at the end of a fenced lane.
+    { kind: 'crates', ...endOf('Hof am Kurfürstendamm', 1.5, 0), rot: -0.3, size: 1.1 }, { kind: 'crate', ...endOf('Hof am Kurfürstendamm', 3.5, -1.1), rot: 0.7, size: 1 },
+    { kind: 'workLamp', ...endOf('Hof am Kurfürstendamm', 4.5, 1.1), rot: 0.6, size: 1 },
+    ...lane(streets.find((st) => st.name === 'Hof am Kurfürstendamm')!, 'fence'),
+    // The Chaussee closed east of the Charlottenburger Tor (a street-end barricade, its face toward the Knie,
+    // wide enough to reach the Tor's colonnades and the viaduct), a work lamp in front.
+    { kind: 'barricade', x: kv(barU, 0)[0], z: kv(barU, 0)[1], rot: Math.atan2(-du[0], -du[1]), size: 36 },
+    { kind: 'workLamp', x: kv(barU - 1.2, 6)[0], z: kv(barU - 1.2, 6)[1], rot: Math.atan2(-du[0], -du[1]), size: 1 },
   ];
 
   return {
@@ -478,7 +513,7 @@ export function charlottenburgMap(scale = 1): MapDef {
     rail: null,
     hills: [],
     terraces,
-    noSpawn: [platformPoly, stairPoly],
+    noSpawn: [platformPoly, stairPoly, sealed],
     district: 4,
     strictLots: true,
     // Stand-in lot types stay few, so the Blockrand rows get the street fronts (step 7 picks the real ones).

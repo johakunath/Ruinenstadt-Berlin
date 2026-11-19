@@ -4,7 +4,8 @@
 // Landmarks: one massing model per kind in its real proportions (heights compressed about 0.75, as Mitte)
 // and 1920 colours: light stucco and sandstone, slate and copper-green roofs, the church in dark tuff with
 // five towers, the Schloss pale yellow under its green dome and figure, the station hall as bare iron
-// arches. Recognisable silhouette first; step 4 replaces the kinds with builders from pre-1930 photos.
+// arches. Recognisable silhouette first; step 4 replaces the kinds with builders from pre-1930 photos in
+// `charlottenburg-citywest.ts`, `-kudamm.ts` and `-schloss.ts` (asked first, the massing is the fallback).
 // District pieces (`buildCharlottenburgWorld`): the brick Stadtbahn (the Alexanderplatz renderer, plain, no
 // GDR dressing) with its street arches, the platform deck of Bahnhof Zoo with the arrived train and the stair,
 // the maze hedges and the iron fences of the Zoo and the garden.
@@ -19,6 +20,11 @@ import { buildArches, buildStadtbahn } from './alex-world';
 import { frustum, pane, sub, type RGB } from './landmarks';
 import { lm as lmShared, type ChunkBuilder, type MapMats } from './map-world';
 import type { LitMaterial } from './materials';
+import type { WearOptions } from './landmark-wear';
+export type { RGB } from './landmarks';
+import { buildCitywest } from './charlottenburg-citywest';
+import { buildKudamm } from './charlottenburg-kudamm';
+import { buildSchloss } from './charlottenburg-schloss';
 
 export const CHARLOTTENBURG_KINDS = new Set<LandmarkKind>([
   'zoobahnhof', 'loewentor', 'elefantentor', 'aquarium', 'musikpavillon', 'antilopenhaus', 'ufapalast', 'capitol', 'gedaechtniskirche',
@@ -27,46 +33,49 @@ export const CHARLOTTENBURG_KINDS = new Set<LandmarkKind>([
   'orangerie', 'gartentor', 'mausoleum', 'belvedere',
 ]);
 
+/** Landmark wear on this map: soot, cracks, broken windows and rubble, no graffiti (1920). */
+export const CHARLOTTENBURG_WEAR: WearOptions = { graffiti: false };
+
 /** 1920 tints on the light base materials (stucco, enamel) and the dark ones (iron, slate). */
-const C = {
+export const C = {
   stucco: [1.05, 1.0, 0.9], cream: [1.12, 1.05, 0.88], sand: [0.96, 0.86, 0.68], ochre: [1.02, 0.86, 0.6], white: [1.3, 1.27, 1.2],
   schloss: [1.18, 1.04, 0.64], tuff: [0.52, 0.47, 0.42], tuffDark: [0.4, 0.36, 0.33], slate: [0.75, 0.78, 0.85], copper: [0.42, 0.72, 0.6],
   gold: [1.2, 0.92, 0.42], iron: [0.55, 0.57, 0.6], brick: [1.0, 0.7, 0.58], green: [0.3, 0.45, 0.26], train: [0.28, 0.36, 0.3],
 } satisfies Record<string, RGB>;
 
 /** Landmark frame at local (x, y, z), turned by `ry` about that point (the shared `lm` turns the offset too). */
-function lm(l: Landmark, x = 0, y = 0, z = 0, ry = 0): Matrix4 {
+export function lm(l: Landmark, x = 0, y = 0, z = 0, ry = 0): Matrix4 {
   const m = lmShared(l, x, y, z);
   return ry ? m.multiply(new Matrix4().makeRotationY(ry)) : m;
 }
 
 const geos = new Map<string, BufferGeometry>();
-function cached(key: string, make: () => BufferGeometry): BufferGeometry {
+export function cached(key: string, make: () => BufferGeometry): BufferGeometry {
   let g = geos.get(key);
   if (!g) geos.set(key, (g = make()));
   return g;
 }
 
-/** What a massing builder gets: the chunk, the materials, the landmark and a seeded random. */
-interface Ctx { b: ChunkBuilder; M: MapMats; l: Landmark; rng: Rng }
+/** What a landmark builder gets: the chunk, the materials, the landmark and a seeded random. */
+export interface Ctx { b: ChunkBuilder; M: MapMats; l: Landmark; rng: Rng }
 
 /** Box standing on local y `y` (its bottom), centred at local (x, z). */
-function blk(c: Ctx, mat: Material, x: number, y: number, z: number, w: number, h: number, d: number, tint?: RGB, ry = 0): void {
+export function blk(c: Ctx, mat: Material, x: number, y: number, z: number, w: number, h: number, d: number, tint?: RGB, ry = 0): void {
   c.b.box(mat, lm(c.l, x, y + h / 2, z, ry), w, h, d, tint);
 }
-function cyl(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, r: number, h: number, tint?: RGB, seg = 12, top = r): void {
+export function cyl(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, r: number, h: number, tint?: RGB, seg = 12, top = r): void {
   c.b.geo(mat, cached(`cy${r.toFixed(2)},${top.toFixed(2)},${h.toFixed(2)},${seg}`, () => new CylinderGeometry(top, r, h, seg)), lm(c.l, x, y + h / 2, z), tint);
 }
 /** Half sphere (a dome) of radius r on local y `y`; `sy` stretches it up. */
-function dome(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, r: number, tint?: RGB, sy = 1): void {
+export function dome(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, r: number, tint?: RGB, sy = 1): void {
   c.b.geo(mat, cached(`dome${r.toFixed(2)}`, () => new SphereGeometry(r, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2)), lm(c.l, x, y, z).multiply(new Matrix4().makeScale(1, sy, 1)), tint);
 }
 /** Hip roof, mansard or spire (`frustum`): base w × d, top tw × td, height h. */
-function roof(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, w: number, d: number, h: number, tw: number, td: number, tint?: RGB, ry = 0): void {
+export function roof(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, w: number, d: number, h: number, tw: number, td: number, tint?: RGB, ry = 0): void {
   c.b.geo(mat, frustum(w, d, h, tw, td), lm(c.l, x, y, z, ry), tint);
 }
 /** Window panes on the faces of a local box (front +z, back −z, sides ±x), `rows` heights of the window centres. */
-function windows(c: Ctx, x: number, z: number, w: number, d: number, rows: number[], faces: { front?: boolean; back?: boolean; sides?: boolean } = { front: true, sides: true }, lit = 0.3, ww = 1.1, wh = 1.7, bay = 3.2): void {
+export function windows(c: Ctx, x: number, z: number, w: number, d: number, rows: number[], faces: { front?: boolean; back?: boolean; sides?: boolean } = { front: true, sides: true }, lit = 0.3, ww = 1.1, wh = 1.7, bay = 3.2): void {
   const put = (along: number, n: number, ry: number, ox: number, oz: number): void => {
     const k = Math.max(1, Math.floor(along / bay));
     for (let i = 0; i < k; i++) {
@@ -82,7 +91,7 @@ function windows(c: Ctx, x: number, z: number, w: number, d: number, rows: numbe
   if (faces.sides) { put(d, w / 2 + 0.01, Math.PI / 2, x, z); put(d, w / 2 + 0.01, -Math.PI / 2, x, z); }
 }
 /** A stucco block with windows and a roof: the Altbau massing of most sights. */
-function house(c: Ctx, x: number, z: number, w: number, d: number, h: number, tint: RGB, roofH = 3, roofMat?: LitMaterial, roofTint: RGB = C.slate, rows?: number[]): void {
+export function house(c: Ctx, x: number, z: number, w: number, d: number, h: number, tint: RGB, roofH = 3, roofMat?: LitMaterial, roofTint: RGB = C.slate, rows?: number[]): void {
   const M = c.M;
   blk(c, M.stucco, x, 0, z, w, h, d, tint);
   blk(c, M.stucco, x, h - 0.5, z, w + 0.4, 0.5, d + 0.4, tint);
@@ -90,17 +99,17 @@ function house(c: Ctx, x: number, z: number, w: number, d: number, h: number, ti
   if (roofH > 0) roof(c, roofMat ?? M.slate, x, h, z, w, d, roofH, Math.max(0.5, w - roofH * 1.6), Math.max(0.5, d - roofH * 1.6), roofTint);
 }
 /** Thin figure on a plinth (statues, the Schloss Fortuna): a stack of tapered blocks. */
-function figure(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, h: number, tint: RGB): void {
+export function figure(c: Ctx, mat: LitMaterial, x: number, y: number, z: number, h: number, tint: RGB): void {
   cyl(c, mat, x, y, z, h * 0.13, h * 0.55, tint, 6, h * 0.08);
   c.b.geo(mat, cached('fig-head', () => new SphereGeometry(1, 6, 4)), lm(c.l, x, y + h * 0.66, z).multiply(new Matrix4().makeScale(h * 0.1, h * 0.12, h * 0.1)), tint);
   blk(c, mat, x, y + h * 0.42, z, h * 0.55, h * 0.06, h * 0.08, tint);
 }
 /** A colonnade of `n` round columns from x0 to x1 at local z, height h. */
-function columns(c: Ctx, x0: number, x1: number, z: number, h: number, n: number, r = 0.35, tint: RGB = C.white): void {
+export function columns(c: Ctx, x0: number, x1: number, z: number, h: number, n: number, r = 0.35, tint: RGB = C.white): void {
   for (let i = 0; i < n; i++) cyl(c, c.M.stucco, x0 + ((x1 - x0) * i) / Math.max(1, n - 1), 0, z, r, h, tint, 8);
 }
 /** Iron bars between x0 and x1 at local z (fence infill), height h, from y. */
-function bars(c: Ctx, x0: number, x1: number, z: number, y: number, h: number, step = 0.28, tint: RGB = C.iron): void {
+export function bars(c: Ctx, x0: number, x1: number, z: number, y: number, h: number, step = 0.28, tint: RGB = C.iron): void {
   const n = Math.max(1, Math.round((x1 - x0) / step));
   for (let i = 0; i <= n; i++) blk(c, c.M.iron, x0 + ((x1 - x0) * i) / n, y, z, 0.04, h, 0.04, tint);
   for (const yy of [y + 0.15, y + h - 0.2]) blk(c, c.M.iron, (x0 + x1) / 2, yy, z, x1 - x0, 0.06, 0.06, tint);
@@ -111,7 +120,7 @@ function bars(c: Ctx, x0: number, x1: number, z: number, y: number, h: number, s
  * at `tall`, the side walls fall from it to `low` toward the camera, the camera-side wall stays below
  * `low` and broken; lintels close the door gaps of the north wall above `door`.
  */
-function openHall(c: Ctx, tall: number, low: number, door: number, tint: RGB): void {
+export function openHall(c: Ctx, tall: number, low: number, door: number, tint: RGB): void {
   const parts = OPEN_PARTS[c.l.kind] ?? [], M = c.M, hz = c.l.hz;
   const hAt = (z: number): number => low + (tall - low) * Math.max(0, Math.min(1, (hz - 1 - z) / (2 * hz - 2)));
   const north = parts.filter((p) => p.hz < 1 && p.z < 0), south = parts.filter((p) => p.hz < 1 && p.z > 0), sides = parts.filter((p) => p.hz >= 1);
@@ -435,9 +444,15 @@ function massing(c: Ctx): void {
   }
 }
 
-/** Builds one Charlottenburg landmark (inside `b.on` at its ground height; the station hall at street level). */
+/**
+ * Builds one Charlottenburg landmark (inside `b.on` at its ground height; the station hall at street level).
+ * Step 4: the three builder files are asked first (each returns true for the kinds it drew), the step 2
+ * massing is the fallback.
+ */
 export function buildCharlottenburgLandmark(b: ChunkBuilder, l: Landmark): void {
-  massing({ b, M: b.mm, l, rng: new Rng(Math.round(l.x * 31 + l.z * 17) + 1920) });
+  const c: Ctx = { b, M: b.mm, l, rng: new Rng(Math.round(l.x * 31 + l.z * 17) + 1920) };
+  if (buildCitywest(c) || buildKudamm(c) || buildSchloss(c)) return;
+  massing(c);
 }
 
 // ---------------------------------------------------------------- district pieces
