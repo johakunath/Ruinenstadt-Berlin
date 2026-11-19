@@ -58,6 +58,14 @@ export function setCount(eq: Equipment, set: SetId): number {
   return SLOTS.filter(slot => eq[slot]?.set === set).length;
 }
 
+/** 2D #29: set bonus tiers (2, 3, 5 pieces) that putting `item` on would lose. Empty when no tier is lost. */
+export function lostSetTiers(eq: Equipment, item: Item): { set: SetId; tiers: (2 | 3 | 5)[] } | null {
+  const old = eq[item.slot]?.set;
+  if (!old || old === item.set) return null;
+  const n = setCount(eq, old), tiers = ([2, 3, 5] as const).filter(t => n >= t && n - 1 < t);
+  return tiers.length ? { set: old, tiers } : null;
+}
+
 export function gearAffixes(eq: Equipment, ctx: StatContext): Record<AffixId, number> {
   const a = Object.fromEntries(Object.keys(AFFIXES).map(id => [id, 0])) as Record<AffixId, number>;
   for (const slot of SLOTS) {

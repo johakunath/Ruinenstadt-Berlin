@@ -6,7 +6,7 @@ import { POWERS } from '../data/powers';
 import { selectPower } from '../sim/abilities';
 import { BAG_SIZE, bulkCandidates, equipItem, salvageItem, setImplantMode, unequipItem } from '../sim/inventory';
 import { isUpgrade, scrapValue, shownLevel, type Item } from '../sim/items';
-import { heroStats, setCount, weaponDps, type Equipment, type HeroStats } from '../sim/stats';
+import { heroStats, lostSetTiers, setCount, weaponDps, type Equipment, type HeroStats } from '../sim/stats';
 import type { Sim } from '../sim/types';
 import { ITEM_ICONS } from './item-icons';
 import { POWER_GLYPHS } from './glyphs';
@@ -73,6 +73,12 @@ function cmpRows(it: Item | undefined, other: Item | undefined, diff: boolean): 
   }
   return h;
 }
+/** 2D #29: red line when putting `it` on breaks a set bonus of the worn piece. */
+function setLossLine(it: Item, eq: Equipment): string {
+  const lost = lostSetTiers(eq, it);
+  return lost ? `<div class="af negative">⚠ Set-Bonus geht verloren: ${lost.tiers.map(t => `(${t}) ${SETS[lost.set].bonusDescriptions[t]}`).join(' · ')}</div>` : '';
+}
+
 /** Set, legendary power, element, mods (2D extraLines). */
 function extraLines(i: Item, eq: Equipment): string {
   let h = '';
@@ -80,7 +86,7 @@ function extraLines(i: Item, eq: Equipment): string {
   const lp = LEGENDARY_POWERS[i.base as LegendaryId];
   if (i.rarity === 3 && lp) h += `<div class="af legend">${esc(lp.description)}</div>`;
   if (i.element) h += `<div class="af" style="color:${ELEMENTS[i.element].color}">Element: ${ELEMENTS[i.element].name}</div>`;
-  for (const id of i.mods ?? []) { const m = WEAPON_MODS.find(x => x.id === id); if (m) h += `<div class="af mod">${m.name} · ${m.description}</div>`; }
+  for (const id of i.mods ?? []) { const m = WEAPON_MODS.find(x => x.id === id); if (m) h += `<div class="af mod">Aufsatz ${m.name} · ${m.description}</div>`; }
   return h;
 }
 
@@ -227,7 +233,7 @@ export class InventoryUi {
   private cell(item: Item | undefined, attrs: string, label: string, slot: boolean): string {
     const sim = this.sim();
     if (!item) return slot ? `<button type="button" class="inv-cell empty" ${attrs} aria-label="${esc(label)}: leer"></button>` : `<div class="inv-cell empty" ${attrs} aria-hidden="true"></div>`;
-    return `<button type="button" class="inv-cell" ${attrs} aria-label="${esc(item.name)}" style="--rarity:${color(item)}">${itemIcon(item)}<small>${shownLevel(item)}</small>${item.locked ? '<b class="inv-lock">◆</b>' : ''}${!slot && isUpgrade(item, sim.equipment[item.slot]) ? '<b class="inv-up">▲</b>' : ''}${item.element ? `<i style="background:${ELEMENTS[item.element].color}"></i>` : ''}</button>`;
+    return `<button type="button" class="inv-cell" ${attrs} aria-label="${esc(item.name)}" style="--rarity:${color(item)}">${itemIcon(item)}<small>${shownLevel(item)}</small>${item.locked ? '<b class="inv-lock">◆</b>' : ''}${!slot && isUpgrade(item, sim.equipment[item.slot]) ? (lostSetTiers(sim.equipment, item) ? '<b class="inv-up inv-warn" title="Set-Bonus geht verloren">⚠</b>' : '<b class="inv-up">▲</b>') : ''}${item.element ? `<i style="background:${ELEMENTS[item.element].color}"></i>` : ''}</button>`;
   }
   render(preferredKey?: string): void {
     const active = document.activeElement as HTMLElement | null;
@@ -294,7 +300,7 @@ export class InventoryUi {
     const a = sim.stats, b = heroStats({ ...eqAll, [it.slot]: it }, sim.statContext);
     const all = STAT_ROWS.flatMap(([n, f, d, u, inv]) => { const x = fmt(f(a), d, u), y = fmt(f(b), d, u); if (x === y) return []; const good = inv ? f(b) < f(a) : f(b) > f(a); return [`<div class="cmp"><span>${n}</span><span>${x} → <b class="${good ? 'positive' : 'negative'}">${y}</b></span></div>`]; }).join('') || '<p class="inv-hint">Keine Veränderung</p>';
     const acts = `<div class="inv-actions"><button type="button" class="primary" data-action="equip" data-key="equip">Anlegen</button><button type="button" data-action="salvage" data-key="salvage" ${it.locked ? 'disabled' : ''}>Schrott +${scrapValue(it)}</button>${lock}</div>`;
-    return `<div class="cmp2"><article class="inv-card" style="--rarity:${color(it)}">${this.head(it, 'Ausgewählt', it.slot)}<div class="crows">${cmpRows(it, eq, true)}</div>${extraLines(it, eqAll)}${this.config(it)}<div class="cmp ckp"><span>Item Level</span><span>${eq ? `${il0} → ` : ''}<b class="${il1 > il0 ? 'positive' : il1 < il0 ? 'negative' : ''}">${il1}${il1 > il0 ? ' ▲' : ''}</b></span></div><details class="cdet"><summary>Alle Werte nach Wechsel</summary>${all}</details>${acts}</article><article class="inv-card ceq" style="--rarity:${eq ? color(eq) : '#4c453a'}">${this.head(eq, 'Angelegt', it.slot)}<div class="crows">${cmpRows(eq, it, false)}</div>${eq ? extraLines(eq, eqAll) : ''}</article></div>`;
+    return `<div class="cmp2"><article class="inv-card" style="--rarity:${color(it)}">${this.head(it, 'Ausgewählt', it.slot)}<div class="crows">${cmpRows(it, eq, true)}</div>${extraLines(it, eqAll)}${this.config(it)}<div class="cmp ckp"><span>Item Level</span><span>${eq ? `${il0} → ` : ''}<b class="${il1 > il0 ? 'positive' : il1 < il0 ? 'negative' : ''}">${il1}${il1 > il0 ? ' ▲' : ''}</b></span></div>${setLossLine(it, eqAll)}<details class="cdet"><summary>Alle Werte nach Wechsel</summary>${all}</details>${acts}</article><article class="inv-card ceq" style="--rarity:${eq ? color(eq) : '#4c453a'}">${this.head(eq, 'Angelegt', it.slot)}<div class="crows">${cmpRows(eq, it, false)}</div>${eq ? extraLines(eq, eqAll) : ''}</article></div>`;
   }
 }
 

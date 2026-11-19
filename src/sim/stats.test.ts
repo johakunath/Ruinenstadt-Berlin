@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SETS, type AffixId, type SetId, type SlotId } from '../data/items';
 import type { Item } from './items';
-import { gearAffixes, heroStats, power, setCount, type Equipment, type StatContext } from './stats';
+import { gearAffixes, heroStats, lostSetTiers, power, setCount, type Equipment, type StatContext } from './stats';
 
 const context = (change: Partial<StatContext> = {}): StatContext => ({ upgrades: {}, perks: {}, camp: {}, survivors: {}, ...change });
 const item = (change: Partial<Item> = {}): Item => ({ id: 1, slot: 'w', kind: 'blade', base: 'rohr', name: 'Rostige Klinge', rarity: 0, value: 10, itemLevel: 1, affixes: [], ...change });
@@ -35,6 +35,16 @@ describe('ported hero stats', () => {
       for (const key of Object.keys(a) as AffixId[]) expect(a[key]).toBe((e as Partial<Record<AffixId, number>>)[key] ?? 0);
       expect(heroStats(equipment, context()).elements).toEqual(set === 'spree' && n >= 3 ? ['shock'] : []);
     }
+  });
+
+  it('names the set bonus tiers a swap would lose (2D #29)', () => {
+    const piece = (slot: SlotId): Item => item({ slot, set: 'kiez', kind: slot === 't' ? 'krit' : 'blade' });
+    const three: Equipment = { w: piece('w'), a: piece('a'), t: piece('t') };
+    expect(lostSetTiers(three, item({ slot: 'a', kind: 'armor' }))).toEqual({ set: 'kiez', tiers: [3] });
+    expect(lostSetTiers({ w: piece('w'), a: piece('a') }, item({ slot: 'a', kind: 'armor' }))).toEqual({ set: 'kiez', tiers: [2] });
+    expect(lostSetTiers(three, piece('a'))).toBeNull();
+    expect(lostSetTiers(three, item({ slot: 'h', kind: 'head' }))).toBeNull();
+    expect(lostSetTiers({ w: piece('w') }, item())).toBeNull();
   });
 
   it('counts main stats, implicit, affixes and all implant modes', () => {

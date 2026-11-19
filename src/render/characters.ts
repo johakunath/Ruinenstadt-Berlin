@@ -259,6 +259,9 @@ export interface HeroPose {
   look: HeroLook;
 }
 
+/** Flinch length of a heavy hit (2D #43); the clip is slowed to fit, control is never taken. */
+const HEAVY_FLINCH = 0.45;
+
 export class HeroView {
   readonly root = new Group();
   readonly rack: WeaponRack;
@@ -272,6 +275,8 @@ export class HeroView {
   private thrustW = 0;
   private thrustYaw = 0;
   private thrustReach = 3;
+  /** 2D #43: the last hit was heavy (a stronger, longer flinch; still no forced stumble or stun). */
+  private heavyHit = false;
   /** Body, clothing pieces and spring chains. */
   readonly body: HeroModel;
 
@@ -285,6 +290,11 @@ export class HeroView {
     model.getObjectByName('hand_r')?.add(this.rack.group);
     this.ik = new LeftHandIk(model, assets.heroClips.get(FIST_CLIP));
     this.root.traverse(object => { if ((object as Mesh).isMesh) object.layers.enable(HERO_LAYER); });
+  }
+
+  /** A hit landed: heavy ones (a large share of max life) flinch harder. */
+  hit(heavy: boolean): void {
+    this.heavyHit = heavy;
   }
 
   update(p: Player, alpha: number, dt: number, frozen: boolean, pose: HeroPose): void {
@@ -329,8 +339,9 @@ export class HeroView {
         a.loop(clip, 0.16);
       }
     }
-    const flinch = p.state !== 'dead' && p.hurtT < 0.3 ? 0.75 * (1 - p.hurtT / 0.3) : 0;
-    a.mix('Hit_Chest', p.hurtT, flinch);
+    const fd = this.heavyHit ? HEAVY_FLINCH : 0.3;
+    const flinch = p.state !== 'dead' && p.hurtT < fd ? (this.heavyHit ? 1 : 0.75) * (1 - p.hurtT / fd) : 0;
+    a.mix('Hit_Chest', p.hurtT * (0.3 / fd), flinch);
     // The mixer skips bones whose clip value did not change (hitstop, held keys): undo last frame's IK first.
     this.ik.restore();
     a.update(frozen ? 0 : dt);
