@@ -13,12 +13,12 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | Area | What to try | Task file |
 |---|---|---|
 | Combat | Four weapons with finishers, powers and ultimates, blessings, Umbau cards (G1), spear thrusts (C1), Auto-Angriff, legendary powers | `combat-audio-migration.md`, `g1-build-variety.md`, `c1-spear-light.md` |
-| Enemies | Köpenick roster, elites and four bosses (M12); Xhain, Alexanderplatz and Mitte rosters and bosses; guards that lie on the ground get up before they strike | `m12-enemies.md`, `m12b-xhain-enemies.md`, `m15-alexanderplatz.md`, `m12c-mitte-enemies.md` |
+| Enemies | Köpenick roster, elites and four bosses (M12); Xhain, Alexanderplatz and Mitte rosters and bosses; guards that lie on the ground get up before they strike; WP5: Zünder, Schildträger, Heuler, Brocken vest, Speier belly, cyan Kabelghul, upright boss gear (`?map=hof&spawn=zuender,schild,heuler,brute`) | `m12-enemies.md`, `m12b-xhain-enemies.md`, `m15-alexanderplatz.md`, `m12c-mitte-enemies.md`, `wp5-enemies.md` |
 | Maps | Köpenick map realism (M11d), lot types and weather (M11c), side branches (M16b), Xhain, Alexanderplatz, Mitte; back yard cutaway and its height (V1) | `m11d-map-realism.md`, `docs/maps/*.md`, `v1-visibility.md` |
 | Run flow | S3 tunnel (M19), tunnels between the maps and the walkable camp (M20), endless mode, events, Späti trade with the worn-item comparison | `m20-tunnels-camp.md`, `docs/status.md` |
 | Menus | Portraits in the Kodex and camp station windows, illustrated intro, pause menu, inventory, Segen, options, controls graphics, start screen (U1 to U3); set-break warning on a swap (2D backlog 29, not confirmed) | `u1-pause-menu.md`, `u2-menu-tabs.md`, `u3-menu-2d.md` |
 | Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
-| Audio | Enemy sounds per type, listening test (A2) | `a2-audio-followups.md` |
+| Audio | Enemy sounds per type, listening test (A2); S3 boss voices: are the 48 lines clear, the right voice per boss, too loud or too often? (`?spawn=tuersteher`, `?spawn=weltzeituhr`) | `a2-audio-followups.md`, `wp5-enemies.md` › Step 4 |
 | Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
 
 ## Hardware checks

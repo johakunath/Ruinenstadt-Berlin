@@ -2,7 +2,7 @@
 // the cache, the supply drop and the radio zone. Built in code; glows are unlit sprites (no lights).
 import {
   AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial,
-  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Object3D,
+  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, Vector3, type Object3D, type Sphere,
 } from 'three';
 import type { RunContent } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
@@ -10,7 +10,7 @@ import { heroLook } from '../data/hero-look';
 import { Animator, type CharacterAssets } from './characters';
 import { HeroModel } from './hero-model';
 import { groundY } from './ground';
-import { FX_LAYER } from './layers';
+import { FX_LAYER, LOOT_LAYER, LOOT_SHOW } from './layers';
 import type { Materials } from './materials';
 import { paintGlow, paintWood } from './paint';
 
@@ -79,6 +79,10 @@ function posters(): CanvasTexture {
 export class ContentView {
   readonly group = new Group();
   private readonly hidden: Array<{ root: Group; shard: Mesh; glow: Sprite }> = [];
+  private readonly tmp = new Vector3();
+  private readonly cacheParts: Mesh[] = [];
+  private heroX = 0;
+  private heroZ = 0;
   private readonly shrines: Array<{ root: Group; glow: Sprite; halo: Mesh }> = [];
   private readonly cache = new Group();
   private readonly crate = new Group();
@@ -124,6 +128,8 @@ export class ContentView {
     const cg = glowSprite('rgba(255,215,100,0.9)', 'rgba(255,170,40,0)', 3.2);
     cg.position.y = 0.8;
     this.cache.add(body, lid, band, lock, cg);
+    // The cache's contour shows through buildings within 15 m too (the layer is switched in `update`).
+    this.cacheParts.push(body, lid, band, lock);
     // Supply drop: a strapped crate under a rag of parachute, with a beam to find it by.
     const box = new Mesh(new BoxGeometry(0.85, 0.7, 0.85), wood);
     box.position.y = 0.35;
@@ -162,6 +168,8 @@ export class ContentView {
       const root = new Group();
       const shard = new Mesh(new OctahedronGeometry(0.2), new MeshBasicMaterial({ color: 0xffc46a, fog: false }));
       shard.layers.set(FX_LAYER);
+      // Its gold contour shows through buildings within 15 m (hero-outline.ts, LOOT_LAYER).
+      shard.layers.enable(LOOT_LAYER);
       const glow = glowSprite('rgba(255,190,90,1)', 'rgba(255,120,30,0)', 2.6);
       root.add(shard, glow);
       root.position.set(h.x, groundY(h.x, h.z), h.z);
@@ -232,16 +240,35 @@ export class ContentView {
     return { root, anim };
   }
 
+  /**
+   * Spheres round the hidden finds the hero is within 15 m of (shown blessing shards, the open cache), for
+   * their contour behind buildings. Returns how many it wrote.
+   */
+  lootSpheres(out: Sphere[]): number {
+    let n = 0;
+    for (const h of this.hidden) {
+      if (n >= out.length) return n;
+      if (!h.root.visible) continue;
+      out[n++]!.set(h.shard.getWorldPosition(this.tmp), 0.5);
+    }
+    if (n < out.length && this.cache.visible && Math.hypot(this.cache.position.x - this.heroX, this.cache.position.z - this.heroZ) < LOOT_SHOW) {
+      out[n++]!.set(this.tmp.copy(this.cache.position).setY(this.cache.position.y + 0.4), 0.9);
+    }
+    return n;
+  }
+
   update(s: Sim, dt: number, heroX: number, heroZ: number): void {
     this.time += dt;
+    this.heroX = heroX;
+    this.heroZ = heroZ;
     const c = s.content;
     // A new run has new places: compare the positions, the content object is replaced on restart.
     if (!this.built || this.built.hidden.length !== c.hidden.length || this.built.hidden[0]?.x !== c.hidden[0]?.x || this.built.shrines[0]?.x !== c.shrines[0]?.x) this.build(c);
     this.built = c;
     this.hidden.forEach((h, i) => {
       const d = c.hidden[i]!;
-      // 2D rule: hidden blessings glow only up close.
-      const k = d.got ? 0 : Math.max(0, Math.min(1, (11 - Math.hypot(d.x - heroX, d.z - heroZ)) / 4));
+      // 2D rule: hidden blessings glow only up close (11 m); since 2026-11-19 they show from 15 m, through walls too.
+      const k = d.got ? 0 : Math.max(0, Math.min(1, (LOOT_SHOW - Math.hypot(d.x - heroX, d.z - heroZ)) / 4));
       h.root.visible = k > 0.01;
       if (!h.root.visible) return;
       h.shard.position.y = 0.9 + Math.sin(this.time * 2.2 + i) * 0.12;
@@ -264,6 +291,9 @@ export class ContentView {
       return !!o;
     };
     place(this.cache, c.cache);
+    // Only within 15 m, else the cache would get its contour whenever the pass runs for the hero or an enemy.
+    const near = !!c.cache && Math.hypot(c.cache.x - heroX, c.cache.z - heroZ) < LOOT_SHOW;
+    for (const m of this.cacheParts) { if (near) m.layers.enable(LOOT_LAYER); else m.layers.disable(LOOT_LAYER); }
     if (place(this.crate, c.crate)) (this.beam.material as MeshBasicMaterial).opacity = 0.22 + 0.1 * Math.sin(this.time * 4);
     if (place(this.zone, c.zone) && c.zone) {
       this.zoneRing.scale.setScalar(c.zone.r);
