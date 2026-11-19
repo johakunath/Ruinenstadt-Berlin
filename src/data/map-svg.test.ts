@@ -4,6 +4,7 @@ import { koepenickMap } from './koepenick';
 import { xhainMap } from './xhain';
 import { mitteMap } from './mitte';
 import { alexMap } from './alexanderplatz';
+import { charlottenburgMap } from './charlottenburg';
 import { generateLots } from './map';
 import { mapSvg } from './map-svg';
 
@@ -31,6 +32,12 @@ describe('map svg', () => {
     const svg = mapSvg(m, generateLots(m), { trees: true });
     expect(svg).toContain('Weltzeituhr');
     if (process.env.ALEX_SVG) writeFileSync(process.env.ALEX_SVG, svg);
+  });
+  it('draws the Charlottenburg map (CHARLOTTENBURG_SVG=path writes the review image)', () => {
+    const m = charlottenburgMap(Number(process.env.MAP_SCALE ?? 1));
+    const svg = mapSvg(m, generateLots(m), { trees: true });
+    expect(svg).toContain('Ehrenhof');
+    if (process.env.CHARLOTTENBURG_SVG) writeFileSync(process.env.CHARLOTTENBURG_SVG, svg);
   });
   it('in-game map has no fight circles, route or encounter names, and labels do not repeat', () => {
     const m = koepenickMap(1);

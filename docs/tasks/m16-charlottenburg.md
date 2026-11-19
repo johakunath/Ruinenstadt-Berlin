@@ -2,14 +2,14 @@
 
 Layout C2 „Spiegelschloss“ (Johannes, 2026-11-19). Concept, decisions C1 to C6, geography check, the 1920 table and 2D reuse: `docs/maps/charlottenburg.md`. Mockups: `docs/mockups/m16-charlottenburg-layouts.svg` (A, B, C), `docs/mockups/m16-charlottenburg-c2.svg` (the revision; schematic, the anchors below rule). Template: `docs/tasks/m15-mitte.md` and its code.
 
-Status: step 0 done, step 1 open. Notes are short; whoever builds a step writes its handover here (at most 8 lines).
+Status: steps 0 and 1 done, step 2 open. Notes are short; whoever builds a step writes its handover here (at most 8 lines).
 
 ## Steps (one session each unless noted)
 
 | # | Step | Needs | Model | State |
 |---|---|---|---|---|
 | 0 | Concept, geography check, decisions, plan | | Fable high | done 2026-11-19 |
-| 1 | Data `src/data/charlottenburg.ts` from the anchors below, invariant tests `src/data/charlottenburg.test.ts` at scale 1 and 1.3 (as `mitte.test.ts`, with the collider flood fill), map SVG `docs/maps/charlottenburg.svg` shown in chat. Stand-ins for bosses and district enemies; district 4, tier 32 to 54 (C4). Network data in `src/data/lines.ts` (C3) with `lines.test.ts`; `map` on the stop only in step 8 | 0 | Opus high | open |
+| 1 | Data `src/data/charlottenburg.ts` from the anchors below, invariant tests `src/data/charlottenburg.test.ts` at scale 1 and 1.3 (as `mitte.test.ts`, with the collider flood fill), map SVG `docs/maps/charlottenburg.svg` shown in chat. Stand-ins for bosses and district enemies; district 4, tier 32 to 54 (C4). Network data in `src/data/lines.ts` (C3) with `lines.test.ts`; `map` on the stop only in step 8 | 0 | Opus high | done 2026-11-19 |
 | 2 | Playable blockout `?map=charlottenburg`: wiring (`options.ts`, `ui/maps.ts`, `main.ts` banner „Charlottenburg · 1920“, bot `mapLevelOf`), landmark massing, Spree, Karpfenteich, Stadtbahn viaduct with arches, maze hedges, the two roofless halls, Zoo paths and gates, the locked Ehrenhof gate, smoke test | 1 | Opus high | open |
 | 3a | Sky per zone: spec (below, *Engine* E1). Which `Sky` fields blend as uniforms, what is baked today, cost, fallback | 1 (reads `sky.ts`, `renderer.ts`, `map-world.ts`, `weather.ts`) | Fable high | open |
 | 3b | Look in game: the four times of day (C2) and the street dressing below 5 m (bulb marquees and canopies, searchlight beams, poster columns, gas lanterns, shards, diamond dust, confetti). Johannes tunes each time of day. State the Leistung cost | 2, 3a | Opus high | open |
@@ -94,3 +94,13 @@ Text drafts (Opus finalises): banner „Charlottenburg · 1920“; district card
 - Proposed and not yet confirmed by Johannes: U2 with ghost station Bülowstraße (C3), tier 32 to 54 until M14/B2 (C4), Stadtbahn S-Bahn to the Fernsehturm finale (C5).
 - Facts marked „memory“ in the map doc are unverified (Wikipedia was rate limited); step 4 checks them with the photos.
 - Size: 320 × 410 m is 3 % more area than Mitte and the route about 10 % longer, on Johannes' request; the north-east (beyond Stadtbahn and Spree) is backdrop. Check it in the blockout on the Tab S9 before the landmarks are built.
+
+## Handover 2026-11-19 (step 1) [Claude · Opus high]
+
+- Built: `src/data/charlottenburg.ts` (15 fights, 30 waves 8/9/10/3, tier 32 to 54, 39 landmarks with 31 new kinds, 4 rest stops, 4 side passages, maze, Zoo fences), `charlottenburg.test.ts` (33 tests at scale 1 and 1.3 incl. Zoo only through its gates, maze without pockets, halls walk-through, Ehrenhof shut from the south, octants, scripted run), `docs/maps/charlottenburg.svg`, `lines.ts` (U2 to Zoologischer Garten at (105, 150) west-south-west of Mitte; badge 4 moved too). 2D reuse: none beyond the ported systems.
+- Moved for room or circles: KaDeWe and its fight (148, 197) (205 ran past the bound; 46 × 32, hall 44 × 30), kirche (106, 156), elefantentor (166, 129) (off the Capitol), belvedere fight (−48, −165) and Belvedere (−58, −183) (off the building and the Spree), Stadtbahn west (−135, 160), (−60, 155) (room for the Ku'damm Blockrand), Bismarck east end (185, 8) (off the viaduct), Spandauer Damm z −10, garden gate (−3.5, −62) and Schloßbrücke (16, −75) (gate south of the bridge, octant kept), kiosk (90, 100) (the Hardenberg and Budapester Straße run through (86, 118)).
+- Buildings set back from streets by 2 to 9 m: Café des Westens (54, 150), Revuepalast (24, 158), Marmorhaus (86, 180, also SW octant), Gloria (90, 148), Theater des Westens (58, 121), Varieté (−62, 112), Oper (−45, 45), Schiller (5, 46), TH (56, 35, further from the N/NW border), Stülerbauten (−92, 5) and (−58, 5), Capitol (142, 115), Aquarium (181, 112), Antilopenhaus (152, 67), pond (−74, −142).
+- Changed by decision: the Joachimsthaler Straße never meets the viaduct here (no arch); the Orangerie forecourt is fenced from the Spandauer Damm (else the Ehrenhof is reached round the shut gate), so the zone 4 Späti stands in the forecourt (O + (−5.5, 34)), not on the Klausenerplatz.
+- Engine (opt-in, other maps unchanged): `Wall.kind` hedge or fence (`WALL_KIND`, `wallHalf`); `OPEN_PARTS` for loewentor, elefantentor, capitol, kadewe, orangerie, gartentor, chtor; 31 landmark kinds (`rathaus` reused for the Rathaus).
+- Stand-ins: bosses Dirigent, Feldwebel, Spreehexe, Bassprediger (`CHARLOTTENBURG_BOSS_STANDIN`); walkers, runners, Schildträger and crows for the board enemies; lot types hinterhof, markt, truemmer, parkplatz (capped); no `flavor`, dry (no `wet`).
+- Step 2: the Schloss, maze, KaDeWe and gates keep their size at every scale (offsets from one anchor, `C`, `O`, `M`). Walls with `kind` need their own renderer (hedge 2.2 m, fence 2 m), not the Berlin Wall; the Bahnhof Zoo is `walkUnder` on the viaduct; the Ehrenhof gate is a full collider; a Bauzaun on the bridge deck closes the backdrop bank. Only 11 tall Blockrand rows (test ≥ 10): the tall sides are mostly landmarks.

@@ -89,7 +89,12 @@ export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'muegg
   | 'weltzeituhr' | 'brunnen' | 'hotelstadtberlin' | 'sbahnalex' | 'sbahnhackescher' | 'hausdeslehrers' | 'kongresshalle' | 'kino' | 'cafemoskau'
   // M15 Mitte (2089): Friedrichstadt, Regierungsviertel, Tiergarten, Kulturforum and the Potsdamer Platz.
   | 'ubahn' | 'tor' | 'mauerstuecke' | 'lafayette' | 'reichstag' | 'bundesbau' | 'kanzleramt' | 'siegessaeule' | 'sony' | 'stage' | 'bahntower' | 'kollhoff'
-  | 'verkehrsturm' | 'klinik' | 'philharmonie' | 'matthaeus' | 'stabi' | 'nng' | 'checkpoint' | 'pariser' | 'glasbau';
+  | 'verkehrsturm' | 'klinik' | 'philharmonie' | 'matthaeus' | 'stabi' | 'nng' | 'checkpoint' | 'pariser' | 'glasbau'
+  // M16 Charlottenburg (1920): City West around the Zoo and the Gedächtniskirche, the Ku'damm, the Schloss and its garden.
+  | 'zoobahnhof' | 'loewentor' | 'elefantentor' | 'aquarium' | 'musikpavillon' | 'antilopenhaus' | 'ufapalast' | 'capitol' | 'gedaechtniskirche'
+  | 'romanischescafe' | 'gloriapalast' | 'marmorhaus' | 'kadewe' | 'wittenbergplatz' | 'cafewestens' | 'revuepalast' | 'theaterwestens' | 'variete'
+  | 'opernhaus' | 'schillertheater' | 'hochschule' | 'chtor' | 'stuelerbau' | 'ehrenhoftor' | 'schlossmitte' | 'schlossfluegel' | 'neuerfluegel'
+  | 'orangerie' | 'gartentor' | 'mausoleum' | 'belvedere';
 
 export interface Landmark {
   kind: LandmarkKind;
@@ -245,9 +250,17 @@ export function inRailYard(m: MapDef, x: number, z: number, pad = 0): boolean {
   return (m.railYards ?? []).some((r) => lineDist(r.pts, x, z) < r.width / 2 + pad);
 }
 
-/** A run of Berlin Wall elements (3.6 m concrete with the pipe on top), 0.6 m thick. */
-export interface Wall { name: string; pts: Pt[] }
+/**
+ * A run of Berlin Wall elements (3.6 m concrete with the pipe on top), 0.6 m thick. M16 Charlottenburg:
+ * `kind` makes it a garden hedge (the maze) or an iron fence (Zoo, garden gate) with its own height and
+ * thickness; without `kind` it is the Wall, so the older maps stay as they are.
+ */
+export interface Wall { name: string; pts: Pt[]; kind?: 'hedge' | 'fence' }
 export const WALL = { height: 3.6, thick: 0.6 } as const;
+/** M16: hedges 2.2 m (the camera sees over them), iron fences 2 m. */
+export const WALL_KIND = { hedge: { height: 2.2, thick: 1 }, fence: { height: 2, thick: 0.4 } } as const;
+/** Half thickness of a wall run (its collider half width). */
+export const wallHalf = (w: Wall): number => (w.kind ? WALL_KIND[w.kind].thick : WALL.thick) / 2;
 
 export interface Viaduct {
   name: string;
@@ -286,7 +299,7 @@ function lineBoxes(pts: readonly Pt[], half: number): Collider[] {
 /** Wall and solid viaduct colliders of a map. */
 export function barrierColliders(m: MapDef): Collider[] {
   return [
-    ...(m.walls ?? []).flatMap((w) => lineBoxes(w.pts, WALL.thick / 2)),
+    ...(m.walls ?? []).flatMap((w) => lineBoxes(w.pts, wallHalf(w))),
     ...(m.viaducts ?? []).flatMap((v) => (v.kind === 'stadtbahn' ? lineBoxes(v.pts, v.width / 2) : hochbahnPillars(v).map(([x, z]): Collider => ({ kind: 'circle', x, z, r: HOCHBAHN_PILLAR.r })))),
   ];
 }
@@ -294,7 +307,7 @@ export function barrierColliders(m: MapDef): Collider[] {
 /** Distance to the nearest wall or solid viaduct edge (Infinity without any). */
 export function barrierDist(m: MapDef, x: number, z: number): number {
   let d = Infinity;
-  for (const w of m.walls ?? []) d = Math.min(d, lineDist(w.pts, x, z) - WALL.thick / 2);
+  for (const w of m.walls ?? []) d = Math.min(d, lineDist(w.pts, x, z) - wallHalf(w));
   for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') d = Math.min(d, lineDist(v.pts, x, z) - v.width / 2);
   return d;
 }
@@ -646,6 +659,28 @@ export const OPEN_PARTS: Partial<Record<LandmarkKind, ReadonlyArray<{ x: number;
   ],
   // Sony Center: six blocks on a 24 m ring around the forum, open between them (gaps face 30°, 90° … 330°).
   sony: [0, 60, 120, 180, 240, 300].map((d) => ({ x: Math.sin((d * Math.PI) / 180) * 24, z: Math.cos((d * Math.PI) / 180) * 24, hx: 7, hz: 5, rot: (d * Math.PI) / 180 })),
+  // M16 Charlottenburg. Zoo gates: two pillars round a 5 m passage (the fences are `MapDef.walls`).
+  loewentor: [-3.6, 3.6].map((x) => ({ x, z: 0, hx: 1.1, hz: 1.5, rot: 0 })),
+  elefantentor: [-4, 4].map((x) => ({ x, z: 0, hx: 1.4, hz: 1.5, rot: 0 })),
+  // Capitol shop row (28 × 10): two front blocks round a 4 m passage, end walls down to the Zoo fence,
+  // a 6 m yard behind the row (the side passage with the cache).
+  capitol: [{ x: -8, z: 3, hx: 6, hz: 2, rot: 0 }, { x: 8, z: 3, hx: 6, hz: 2, rot: 0 }, { x: -13.5, z: -2.2, hx: 0.5, hz: 3.2, rot: 0 }, { x: 13.5, z: -2.2, hx: 0.5, hz: 3.2, rot: 0 }],
+  // KaDeWe (46 × 32), roofless: two doors in the street front (local −13 … −8 and 6 … 11), closed sides and back.
+  kadewe: [
+    { x: -18, z: -15.5, hx: 5, hz: 0.5, rot: 0 }, { x: -1, z: -15.5, hx: 7, hz: 0.5, rot: 0 }, { x: 17, z: -15.5, hx: 6, hz: 0.5, rot: 0 },
+    { x: -22.5, z: 0, hx: 0.5, hz: 16, rot: 0 }, { x: 22.5, z: 0, hx: 0.5, hz: 16, rot: 0 }, { x: 0, z: 15.5, hx: 23, hz: 0.5, rot: 0 },
+  ],
+  // Orangerie ruin (29 × 24), roofless: a 5.5 m garden door in the north wall (local −2.5 … 3), the south
+  // front broken open between stubs (local −8.5 … 8.5) onto the forecourt.
+  orangerie: [
+    { x: -8.5, z: -11.5, hx: 6, hz: 0.5, rot: 0 }, { x: 8.75, z: -11.5, hx: 5.75, hz: 0.5, rot: 0 },
+    { x: -14, z: 0, hx: 0.5, hz: 12, rot: 0 }, { x: 14, z: 0, hx: 0.5, hz: 12, rot: 0 },
+    { x: -11.5, z: 11.5, hx: 3, hz: 0.5, rot: 0 }, { x: 11.5, z: 11.5, hx: 3, hz: 0.5, rot: 0 },
+  ],
+  // Garden gate east of the Neuer Flügel: two pillars round a 5 m passage (the fences are `MapDef.walls`).
+  gartentor: [-3.2, 3.2].map((x) => ({ x, z: 0, hx: 0.7, hz: 0.7, rot: 0 })),
+  // Charlottenburger Tor: two colonnade halves either side of the 20 m Chaussee.
+  chtor: [-13, 13].map((x) => ({ x, z: 0, hx: 2.5, hz: 3, rot: 0 })),
 };
 
 /**
