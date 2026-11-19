@@ -17,7 +17,7 @@ import { buildCampWorld, makeCampMats } from './camp-world';
 import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
 import { makeLandmarkFinishes } from './landmark-finishes';
-import { LandmarkWear, makeLandmarkWearMaterial } from './landmark-wear';
+import { LandmarkWear, makeLandmarkWearMaterial, type WearOptions } from './landmark-wear';
 import {
   BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, lineDist, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
   type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
@@ -37,6 +37,7 @@ import { ALEX_STONE_URL, alexStoneBoxGeo, alexStoneGeo, paintAlexStoneAtlas, typ
 import { buildMinistryLot } from './mitte-zones';
 import { makeClockRig } from './clock';
 import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
+import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from './charlottenburg-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
@@ -135,10 +136,10 @@ export class ChunkBuilder extends Builder {
     super.geo(mat, this.mm.alexStoneAtlas && mat === this.mm.stucco ? alexStoneGeo(geometry, stone) : geometry, transform, color);
   }
 
-  wearLandmark(landmark: Landmark, build: () => void): void {
+  wearLandmark(landmark: Landmark, build: () => void, opts?: WearOptions): void {
     if (!this.mm.landmarkWear) { build(); return; }
     const previous = this.weathering;
-    const wear = new LandmarkWear(this, landmark);
+    const wear = new LandmarkWear(this, landmark, opts);
     this.weathering = wear;
     try { build(); wear.finish(); } finally { this.weathering = previous; }
   }
@@ -2417,7 +2418,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   let clock: Group | undefined;
   for (const l of m.landmarks) {
     const b = chunkOf(l.x, l.z);
-    const y0 = base(l.x, l.z, Math.max(l.hx, l.hz));
+    // M16: the Bahnhof Zoo hall stands over its platform deck; it is built from street level.
+    const y0 = l.walkUnder && CHARLOTTENBURG_KINDS.has(l.kind) ? 0 : base(l.x, l.z, Math.max(l.hx, l.hz));
     if (l.kind === 'weltzeituhr') {
       const rig = makeClockRig(mats);
       rig.group.position.set(l.x, y0, l.z);
@@ -2449,8 +2451,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       b.wearLandmark(l, () => {
         if (ALEX_KINDS.has(l.kind)) buildAlexLandmark(b, l);
         else if (MITTE_KINDS.has(l.kind)) buildMitteLandmark(b, l);
+        else if (CHARLOTTENBURG_KINDS.has(l.kind)) buildCharlottenburgLandmark(b, l);
         else buildLandmark(b, l);
-      });
+      }, m.id === 'charlottenburg' ? CHARLOTTENBURG_WEAR : undefined);
     });
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
@@ -2481,6 +2484,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     dressAlexEdge(chunkOf, props, (x, z) => surfaceAt(m, x, z));
     buildStrausberger(chunkOf, m);
   }
+  // M16 Charlottenburg: the brick Stadtbahn, the Bahnhof Zoo platform, hedges and fences (`charlottenburg-world.ts`).
+  if (m.id === 'charlottenburg') buildCharlottenburgWorld(m, chunkOf, (x, z) => surfaceAt(m, x, z));
   // M15 Mitte: neon street dressing (`mitte-world.ts`).
   if (mats.mitte) buildMitteWorld(m, lots, props, mats.mitte, mats, wet, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
   if (m.tunnel) {

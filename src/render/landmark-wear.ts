@@ -59,6 +59,9 @@ function cell(index: number): [number, number, number, number] {
 
 const shard = boxGeo(1, 1, 1, 0.5);
 
+/** Per-map wear switches (opt-in): `graffiti: false` paints soot where a low facade would get graffiti (M16 Charlottenburg, 1920). */
+export interface WearOptions { graffiti?: boolean }
+
 export class LandmarkWear {
   private readonly rng: Rng;
   private walls = 0;
@@ -66,7 +69,7 @@ export class LandmarkWear {
   private panes = 0;
   private scaffold = false;
 
-  constructor(private readonly b: ChunkBuilder, private readonly landmark: Landmark) {
+  constructor(private readonly b: ChunkBuilder, private readonly landmark: Landmark, private readonly opts: WearOptions = {}) {
     this.rng = new Rng((Math.round(landmark.x * 799) ^ Math.round(landmark.z * 211) ^ landmark.kind.length) >>> 0);
     this.panes = this.rng.int(6);
   }
@@ -87,7 +90,7 @@ export class LandmarkWear {
       if (width < 2.4) continue;
       const f = transform.clone().multiply(new Matrix4().makeRotationY(face * Math.PI / 2));
       const low = floor < 0.8 && floor > -1;
-      const texture = low ? (this.walls + face) % 4 === 1 ? GRAFFITI : MOSS : (this.walls + face) % 2 ? SOOT : CRACK;
+      const texture = low ? (this.walls + face) % 4 === 1 ? this.opts.graffiti === false ? SOOT : GRAFFITI : MOSS : (this.walls + face) % 2 ? SOOT : CRACK;
       const span = Math.min(width * 0.46, low ? 4.6 : 3.6);
       const rise = Math.min(sy * 0.84, texture === MOSS ? 1.55 : texture === GRAFFITI ? Math.min(2.35, 3 - floor - 0.14) : 4.3);
       const x = (this.rng.next() - 0.5) * (width - span) * 0.85;

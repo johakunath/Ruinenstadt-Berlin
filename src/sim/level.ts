@@ -178,6 +178,19 @@ export class Level {
   /** M16b/M19 side passages: fixed hidden blessing spots (replace the random ones) and sleeping guards. */
   hiddenSpots: Point[] = [];
   guards: Array<{ x: number; z: number; kind: import('../data/enemies').EnemyKind; elite: boolean; wake: number; hp: number; pose?: 'lying' | 'hidden'; facing?: number }> = [];
+  /** M16: polygons where nothing is ever spawned or placed (the Bahnhof Zoo platform). */
+  noSpawn: Point[][] = [];
+  /** Inside a `noSpawn` polygon. */
+  noSpawnAt(x: number, z: number): boolean {
+    return this.noSpawn.some((poly) => {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const a = poly[i]!, b = poly[j]!;
+        if (a.z > z !== b.z > z && x < ((b.x - a.x) * (z - a.z)) / (b.z - a.z) + a.x) inside = !inside;
+      }
+      return inside;
+    });
+  }
   /** M20 tunnel: gratings between the sections, the flooded stretch (speed factor) and the trader on the start platform. */
   gates: GateDef[] = [];
   /** P25 Brandenburger Tor: the Türsteher's neon bars (`src/sim/barriers.ts`), open at build time. */

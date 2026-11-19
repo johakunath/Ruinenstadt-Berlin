@@ -1072,3 +1072,44 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 
 .death-by { font-size: 17px; margin-bottom: 2px; }
 .death-recent { font-size: 13px; opacity: 0.8; margin-bottom: 8px; }
+
+/* ---- M6b Konto card on the start screen (layout A): account name, code and sync state, three slots. */
+.acct { display: flex; flex-direction: column; gap: 5px; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; padding: 8px 10px; }
+.acct-head { display: flex; flex-direction: column; text-align: left; }
+.acct-head b { font: 600 19px/1.15 var(--f-ui); color: var(--bone); }
+.acct-head small { font-size: 14px; color: var(--dim); }
+.acct-head .st-on { color: var(--good); } .acct-head .st-slow, .acct-head .st-conflict { color: var(--ember); }
+.slots { display: flex; flex-direction: column; gap: 4px; }
+.slot { display: flex; align-items: stretch; gap: 4px; }
+.slot button.slot-pick { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 0; text-align: left; background: var(--ash); border: 1px solid var(--edge); border-radius: 3px; padding: 4px 10px; color: var(--bone); font: 500 15px/1.2 var(--f-ui); text-transform: none; letter-spacing: .02em; cursor: pointer; }
+.slot.on button.slot-pick { background: #3a2016; border: 2px solid var(--ember); padding: 3px 9px; }
+.slot.empty button.slot-pick { border-style: dashed; color: var(--dim); }
+.slot-pick i { font-style: normal; font-weight: 700; color: var(--dim); width: 12px; }
+.slot.on .slot-pick i { color: var(--ember); }
+.slot-pick span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.slot-pick b { font-weight: 600; }
+.slot-pick small { font-size: 13px; color: #cbbfae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-pick em { font-style: normal; display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.slot-pick em small { font-size: 12px; color: var(--dim); }
+.slot-pick em u { text-decoration: none; font-size: 12px; color: var(--ember); }
+.slot button.slot-name { width: 36px; min-height: 0; padding: 0; background: none; border: 1px solid var(--edge); border-radius: 3px; color: var(--dim); font-size: 15px; cursor: pointer; }
+.acct-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.acct-btns .btn.sm { padding: 5px 10px; font-size: 13px; }
+.acct-btns:not(:has(button:not([hidden]))) { display: none; }
+/* With the card the settings column is taller: shorter option rows. */
+.start-opts:has(.acct) .orow { min-height: 42px; padding: 4px 12px; }
+@media (max-height: 760px) { .start-opts .keys { display: none; } }
+@media (max-height: 500px) {
+  .acct { padding: 5px 8px; gap: 3px; }
+  .acct-head b { font-size: 15px; }
+  .acct-head small { font-size: 12px; }
+  .slot button.slot-pick { padding: 2px 8px; }
+  .slot-pick em small + small { display: none; }
+}
+@media (max-height: 620px) {
+  .start-opts:has(.acct) { gap: 4px; }
+  .start-opts:has(.acct) .orow { min-height: 36px; padding: 2px 10px; }
+  .start-opts:has(.acct) .osec { display: none; }
+  .slot-pick em small + small { display: none; }
+  .acct-head { flex-direction: row; align-items: baseline; gap: 10px; }
+}

@@ -8,6 +8,33 @@ describe('M20 S+U network (2D js/ubahn.js)', () => {
     expect(STOPS.length).toBe(LINES.length + 1);
     NET_ROUTES.forEach((r, k) => { expect(r[0]).toEqual(STOPS[k]!.at); expect(r.at(-1)).toEqual(STOPS[k + 1]!.at); });
   });
+  it('every route starts and ends at its two stops, runs straight or at 45° and passes no other stop (M16 C3)', () => {
+    NET_ROUTES.forEach((r, k) => {
+      expect(r[0], `line ${k} start`).toEqual(STOPS[k]!.at);
+      expect(r.at(-1), `line ${k} end`).toEqual(STOPS[k + 1]!.at);
+      for (let i = 1; i < r.length; i++) {
+        const dx = Math.abs(r[i]![0] - r[i - 1]![0]), dy = Math.abs(r[i]![1] - r[i - 1]![1]);
+        expect(dx === 0 || dy === 0 || dx === dy, `line ${k} segment ${i}`).toBe(true);
+      }
+      // Distance from every other stop to the route: clear of its 24 × 18 node.
+      for (const [j, st] of STOPS.entries()) {
+        if (j === k || j === k + 1) continue;
+        const [px, py] = st.at;
+        for (let i = 1; i < r.length; i++) {
+          const [ax, ay] = r[i - 1]!, [bx, by] = r[i]!, l2 = (bx - ax) ** 2 + (by - ay) ** 2, t = Math.max(0, Math.min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / l2));
+          expect(Math.hypot(px - ax - (bx - ax) * t, py - ay - (by - ay) * t), `line ${k} near ${st.name}`).toBeGreaterThan(16);
+        }
+      }
+    });
+  });
+  it('line 3 is the U2 on to Zoologischer Garten, west of Mitte (M16 C3)', () => {
+    expect(LINES[3]).toEqual({ id: 'U2', color: '#da421e', ghost: 'Bülowstraße' });
+    expect(LINES[2]!.id).toBe(LINES[3]!.id);
+    expect(STOPS[4]!.station).toBe('S+U Zoologischer Garten');
+    expect(STOPS[4]!.map).toBeUndefined();
+    expect(stopName(4)).toBe('Zoologischer Garten');
+    expect(STOPS[4]!.at[0]).toBeLessThan(STOPS[3]!.at[0] - 40);
+  });
   it('the camp opens with the S3, not with Köpenick (F1)', () => {
     expect(campOpen([])).toBe(false);
     expect(campOpen([0])).toBe(false);

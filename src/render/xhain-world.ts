@@ -1474,10 +1474,11 @@ export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm
   const decks = m.terraces.filter((t) => t.bridge);
   const low = (x: number, z: number): number => (decks.some((t) => inPoly(t.poly, x, z) || t.stairs.some((s) => Math.hypot(x - s.x, z - s.z) < s.len / 2 + s.width)) ? 0 : ground(x, z));
   const c: Ctx = { mm, X: xhainMats(materials), m, chunkOf, ground, low };
-  for (const w of m.walls ?? []) buildWall(c, w);
+  // M16: hedges, fences and the Zoo platform are Charlottenburg's (`charlottenburg-world.ts`); only the Wall is drawn here.
+  for (const w of m.walls ?? []) if (!w.kind) buildWall(c, w);
   for (const v of m.viaducts ?? []) if (v.kind === 'hochbahn') buildHochbahn(c, v);
   for (const r of m.railYards ?? []) buildRailYard(c, r);
-  for (const t of m.terraces) if (t.bridge) buildDeckBridge(c, t);
+  for (const t of m.terraces) if (t.bridge && !t.platform) buildDeckBridge(c, t);
   if (m.areas.some((a) => a.id === 'grenzstreifen')) buildGrenzstreifen(c);
   const base = (x: number, z: number, r: number): number => Math.min(ground(x, z), ground(x - r, z - r), ground(x + r, z - r), ground(x - r, z + r), ground(x + r, z + r));
   for (const l of land) {

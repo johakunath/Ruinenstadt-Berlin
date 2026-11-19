@@ -26,10 +26,16 @@ export class StartScreen {
         <button id="play" type="button" class="btn main"><b>Losziehen</b><small>${MAP_PLAY[opts.map]}</small></button>
         <div class="diff"><div id="title-diff" class="seg" role="group" aria-label="Schwierigkeit">${DIFFICULTIES.map(d => `<button type="button" data-id="${d.id}" aria-pressed="false">${d.label}</button>`).join('')}</div><small id="diff-hint"></small></div>
         <div class="start-row"><button id="go-tunnel" type="button" class="btn" hidden><b>S3-Tunnel</b><small>Köpenick → Warschauer Straße</small></button><button id="go-xhain" type="button" class="btn" hidden><b>Xhain</b><small>1981 · Über die Mauer</small></button><button id="open-camp" type="button" class="btn">Lager</button></div>
-        <button id="new-game" type="button" class="btn ghost"><b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small></button>
+        <button id="new-game" type="button" class="btn ghost"><b>Slot löschen</b><small>Nur dieser Slot: Ausrüstung, Schrott und Lager weg</small></button>
         <p id="loading" hidden>Lädt …</p>
       </section>
-      <section class="start-opts" aria-label="Einstellungen">
+      <section class="start-opts" aria-label="Konto und Einstellungen">
+        <div class="osec">Konto</div>
+        <div class="acct" id="acct">
+          <div class="acct-head"><b id="acct-name">Dieses Gerät</b><small id="acct-info"></small></div>
+          <div class="slots" id="acct-slots"></div>
+          <div class="acct-btns"><button id="acct-rename" type="button" class="btn sm" hidden>Umbenennen</button><button id="acct-copy" type="button" class="btn sm" hidden>Code kopieren</button><button id="acct-join" type="button" class="btn sm" hidden>Konto wechseln</button></div>
+        </div>
         <div class="osec">Einstellungen</div>
         ${row('Grafik', '', profileSeg())}
         ${row('Ton', '', toggle('sound', 'Ton'))}${row('Musik', '', toggle('music', 'Musik'))}

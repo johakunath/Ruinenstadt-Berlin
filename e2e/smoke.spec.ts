@@ -268,6 +268,36 @@ test('M15: Mitte loads at U Potsdamer Platz, the first fight starts, the map ope
   expect(errors).toEqual([]);
 });
 
+test('M16: Charlottenburg loads on the platform of Bahnhof Zoo, the hero walks down the stair, the first fight starts, the map opens', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=charlottenburg&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Konzertgarten');
+  // E8: the start is on the deck (its no-spawn zone); walk to the head of the stair, then down it to the square.
+  const walk = await page.evaluate(() => {
+    const g = window.__game!, s = g.sim(), p = s.player, L = s.level;
+    const onDeck = L.noSpawnAt(p.x, p.z), st = L.noSpawn[1]!;
+    const mid = (a: { x: number; z: number }, b: { x: number; z: number }): { x: number; z: number } => ({ x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 });
+    const go = (t: { x: number; z: number }, steps: number): void => {
+      for (let i = 0; i < steps && Math.hypot(t.x - p.x, t.z - p.z) > 0.6; i++) { const dx = t.x - p.x, dz = t.z - p.z, l = Math.hypot(dx, dz); g.step({ moveX: dx / l, moveZ: dz / l }, 1); }
+    };
+    g.hold(true);
+    const top = mid(st[2]!, st[3]!), foot = mid(st[0]!, st[1]!), l = Math.hypot(foot.x - top.x, foot.z - top.z);
+    go(top, 600);
+    // Two meters past the foot of the stair, onto the Hardenbergplatz.
+    go({ x: foot.x + ((foot.x - top.x) / l) * 2, z: foot.z + ((foot.z - top.z) / l) * 2 }, 900);
+    g.hold(false);
+    return { onDeck, down: !L.noSpawnAt(p.x, p.z), x: p.x, z: p.z };
+  });
+  expect(walk.onDeck).toBe(true);
+  expect(walk.down, `${walk.x.toFixed(1)},${walk.z.toFixed(1)}`).toBe(true);
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; });
+  await page.waitForFunction(() => window.__game!.sim().run.phase === 'fight', null, { timeout: 90_000 });
+  await page.keyboard.press('m');
+  await expect(page.locator('.map-svg svg')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('H1: the inventory doll shows the live hero and turns her on drag and keys', async ({ page }, testInfo) => {
   const errors = watchErrors(page);
   await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');

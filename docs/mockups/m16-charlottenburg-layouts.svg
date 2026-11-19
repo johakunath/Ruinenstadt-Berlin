@@ -1,0 +1,376 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2270" height="1200" viewBox="0 0 2270 1200" font-family="Inter,Segoe UI,Arial,sans-serif">
+<rect width="2270" height="1200" fill="#0e1416"/>
+<text x="40.0" y="50.0" fill="#f2e3c8" font-size="27" font-weight="700" text-anchor="start" >M16 Charlottenburg · 1920 · drei Layouts (Ursprung Gedächtniskirche, Richtungen nach OpenStreetMap, Finale immer im Ehrenhof des Schlosses)</text>
+<text x="40.0" y="80.0" fill="#b8c0c0" font-size="15.5" font-weight="400" text-anchor="start" >Norden oben, alle im selben Maßstab. Orange: Route · Kreise: Kämpfe (rot: Boss, groß: Die Diamantene Diva; gestrichelt: ruhig) · Gelb: Späti/Rast · Grüne Raute: Nebenweg · Violett: Revue-Meile · Grün: Park · Ziegelrot: Stadtbahn-Viadukt (Kartenrand mit Bögen)</text>
+<text x="40.0" y="128.0" fill="#f0a030" font-size="26" font-weight="700" text-anchor="start" >A · Boulevard</text>
+<text x="40.0" y="154.0" fill="#c8ccc8" font-size="15.5" font-weight="400" text-anchor="start" >Klein und breit: der ganze Ku'damm, das Schloss nur als Finale</text>
+<rect x="40" y="190" width="570.0" height="375.0" fill="#25232b"/>
+<clipPath id="c6"><rect x="40" y="190" width="570.0" height="375.0"/></clipPath><g clip-path="url(#c6)">
+<polygon points="40.0,404.5 610.0,317.5 610.0,190.0 242.5,190.0 242.5,422.5" fill="#15141a" fill-opacity="0.9" stroke="none"/>
+<polygon points="40.0,239.5 242.5,239.5 242.5,190.0 40.0,190.0" fill="#2f4f33" fill-opacity="0.9" stroke="none"/>
+<polygon points="505.0,392.5 610.0,362.5 610.0,317.5 505.0,347.5" fill="#2f4f33" fill-opacity="0.9" stroke="none"/>
+<polygon points="40.0,482.5 100.0,482.5 100.0,362.5 40.0,362.5" fill="#2f4f33" fill-opacity="0.6" stroke="none"/>
+<polygon points="40.0,464.5 64.0,460.0 61.0,380.5 40.0,385.0" fill="#2c6a80" fill-opacity="1.0" stroke="none"/>
+<polygon points="40.0,565.0 145.0,565.0 145.0,539.5 40.0,515.5" fill="#c9a8ff" fill-opacity="0.2" stroke="none"/>
+<polygon points="505.0,470.5 100.0,563.5 100.0,524.5 145.0,503.5 505.0,437.5" fill="#c9a8ff" fill-opacity="0.13" stroke="none"/>
+<polyline points="610.0,542.5 587.5,520.0 482.5,452.5" fill="none" stroke="#5b5661" stroke-width="27.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="482.5,452.5 427.0,464.5 370.0,481.0 265.0,508.0 197.5,506.5 145.0,521.5 40.0,554.5" fill="none" stroke="#5b5661" stroke-width="33.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="532.0,485.5 550.0,413.5 457.0,401.5 482.5,452.5" fill="none" stroke="#5b5661" stroke-width="19.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="76.0,545.5 76.0,467.5 79.0,404.5 145.0,344.5" fill="none" stroke="#5b5661" stroke-width="18.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="40.0,344.5 145.0,344.5 238.0,341.5" fill="none" stroke="#5b5661" stroke-width="30.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="145.0,344.5 145.0,251.5" fill="none" stroke="#5b5661" stroke-width="27.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="137.5,521.5 133.0,434.5 145.0,344.5" fill="none" stroke="#5b5661" stroke-width="16.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="610.0,335.5 457.0,382.0 385.0,410.5 295.0,422.5 133.0,434.5 40.0,443.5" fill="none" stroke="#8a4a3a" stroke-width="13.5" stroke-linejoin="round" stroke-linecap="butt" stroke-opacity="1"/>
+<polyline points="610.0,335.5 457.0,382.0 385.0,410.5 295.0,422.5 133.0,434.5 40.0,443.5" fill="none" stroke="#2a1c1a" stroke-width="3.3" stroke-linejoin="round" stroke-linecap="butt" stroke-opacity="1" stroke-dasharray="5 5"/>
+<rect x="62.5" y="220.8" width="165.0" height="13.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="128.5" y="211.8" width="33.0" height="22.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<polygon points="62.5,212.5 115.0,212.5 115.0,191.5 62.5,191.5" fill="#24482c" fill-opacity="1" stroke="none"/>
+<path d="M103.8,191.5 H115.0 V212.5 H62.5 V191.5 H88.8" fill="none" stroke="#6fae6a" stroke-width="2.2"/>
+<rect x="550.0" y="538.0" width="36.0" height="21.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="496.0" y="424.8" width="12.0" height="19.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="431.5" y="363.2" width="45.0" height="13.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="566.5" y="383.5" width="15.0" height="12.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="402.2" y="430.8" width="19.5" height="13.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="341.5" y="441.2" width="33.0" height="16.5" fill="#e2c8ff" stroke="#1a1412" stroke-width="1"/>
+<rect x="278.5" y="469.0" width="27.0" height="15.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="148.0" y="477.2" width="30.0" height="16.5" fill="#e2c8ff" stroke="#1a1412" stroke-width="1"/>
+<rect x="101.5" y="550.0" width="33.0" height="12.0" fill="#e2c8ff" stroke="#1a1412" stroke-width="1"/>
+<rect x="116.5" y="421.8" width="33.0" height="10.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="202.0" y="312.2" width="30.0" height="16.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<polyline points="587.5,520.0 550.0,497.5 532.0,485.5 550.0,413.5 457.0,404.5 482.5,458.5 427.0,467.5 370.0,484.0 265.0,509.5 148.0,523.0 76.0,542.5 77.5,410.5 145.0,344.5 145.0,295.0 145.0,248.5" fill="none" stroke="#f0a030" stroke-width="5" stroke-linejoin="round" stroke-opacity="0.95"/>
+<circle cx="550.0" cy="497.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="550.0" cy="413.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="457.0" cy="404.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="427.0" cy="467.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="370.0" cy="484.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="265.0" cy="509.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="76.0" cy="542.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="145.0" cy="295.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="77.5" cy="410.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5" stroke-dasharray="6 4"/>
+<circle cx="482.5" cy="458.5" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="148.0" cy="523.0" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="145.0" cy="344.5" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="145.0" cy="248.5" r="28.5" fill="#e85040" fill-opacity="0.45" stroke="#e85040" stroke-width="4"/>
+<rect x="463.0" y="496.5" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="316.0" y="514.5" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="100.0" y="466.5" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="169.0" y="280.5" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<path d="M397.0,437.5 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<path d="M226.0,530.5 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<path d="M112.0,305.5 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<polygon points="587.5,510.0 596.5,527.0 578.5,527.0" fill="#43d1cf" stroke="#0e2a2a"/>
+<text x="574.5" y="525.0" fill="#7ff0ee" font-size="12" font-weight="700" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Start</text>
+<circle cx="592.0" cy="470.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="592.0" y="475.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >1</text>
+<circle cx="325.0" cy="539.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="325.0" y="544.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >2</text>
+<circle cx="55.0" cy="491.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="55.0" y="496.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >3</text>
+<circle cx="190.0" cy="263.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="190.0" y="268.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >4</text>
+<text x="235.0" y="230.5" fill="#f4f0f6" font-size="12" font-weight="700" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Schloss</text>
+<text x="121.0" y="206.5" fill="#bfe6bf" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Irrgarten</text>
+<text x="547.0" y="554.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >KaDeWe</text>
+<text x="514.0" y="449.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Gedächtniskirche</text>
+<text x="454.0" y="359.2" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Bhf Zoo</text>
+<text x="574.0" y="374.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Elefantentor</text>
+<text x="412.0" y="425.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Kranzler</text>
+<text x="358.0" y="437.2" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Revuepalast</text>
+<text x="292.0" y="463.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Cumberland</text>
+<text x="163.0" y="473.2" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Universum-Kino</text>
+<text x="139.0" y="559.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Lunapark</text>
+<text x="157.0" y="430.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Bhf Charlottenburg</text>
+<text x="238.0" y="323.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Opernhaus (Kulisse)</text>
+<text x="430.0" y="251.5" fill="#8d8a96" font-size="13" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Kulisse hinter der Stadtbahn</text>
+<text x="430.0" y="272.5" fill="#8d8a96" font-size="12" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">(Knie, Technische Hochschule, Spree)</text>
+<text x="565.0" y="341.5" fill="#9fd0a0" font-size="12" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Zoo</text>
+<text x="53.5" y="452.5" fill="#cfeaf5" font-size="10.5" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic" transform="rotate(-90 53.5 452.5)">Lietzensee</text>
+</g>
+<polygon points="47.0,576.0 54.0,589.0 40.0,589.0" fill="#43d1cf"/>
+<text x="60.0" y="589.0" fill="#7ff0ee" font-size="14.5" font-weight="700" text-anchor="start" >Start U Wittenbergplatz · Karte 380 × 250 m</text>
+<circle cx="50.0" cy="608.0" r="10" fill="#ffd98a"/>
+<text x="50.0" y="613.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >1</text>
+<text x="65.0" y="613.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Tauentzien &amp; Zoo</text>
+<circle cx="223.6" cy="608.0" r="10" fill="#ffd98a"/>
+<text x="223.6" y="613.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >2</text>
+<text x="238.6" y="613.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Ku'damm</text>
+<circle cx="324.3" cy="608.0" r="10" fill="#ffd98a"/>
+<text x="324.3" y="613.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >3</text>
+<text x="339.3" y="613.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Lunapark &amp; Lietzensee</text>
+<circle cx="50.0" cy="634.0" r="10" fill="#ffd98a"/>
+<text x="50.0" y="639.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >4</text>
+<text x="65.0" y="639.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Schloss</text>
+<text x="40.0" y="673.0" fill="#f2e3c8" font-size="15.5" font-weight="700" text-anchor="start" >+ Die meiste Revue, die kürzeste Route</text>
+<text x="40.0" y="697.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Start U Wittenbergplatz (KaDeWe), Budapester Straße am Zoo entlang, Bahnhof</text>
+<text x="40.0" y="717.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Zoo, Gedächtniskirche, dann der Ku'damm als eine lange Bühne: Kranzler,</text>
+<text x="40.0" y="737.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Revuepalast, Olivaer Platz, Universum-Kino, Lunapark am Halensee. Am</text>
+<text x="40.0" y="757.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Lietzensee nach Norden, Schloßstraße, Finale.</text>
+<text x="40.0" y="781.0" fill="#e6e6e6" font-size="14.5" font-weight="400" text-anchor="start" >Route ≈ 680 m (Luftlinie zwischen den Kämpfen) · 9 Kämpfe + 4 Bosse, 25</text>
+<text x="40.0" y="801.0" fill="#e6e6e6" font-size="14.5" font-weight="400" text-anchor="start" >Wellen · keine Straße doppelt</text>
+<text x="40.0" y="821.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >− Offene Linie statt Runde. Vom Schloss nur Ehrenhof und ein kleiner</text>
+<text x="40.0" y="841.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >Irrgarten; keine Oper, kein Savignyplatz. Der Nordosten hinter der Stadtbahn</text>
+<text x="40.0" y="861.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >ist nur Kulisse (gut ein Drittel der Kartenfläche).</text>
+<text x="665.0" y="128.0" fill="#f0a030" font-size="26" font-weight="700" text-anchor="start" >B · Großer Ring</text>
+<text x="665.0" y="154.0" fill="#c8ccc8" font-size="15.5" font-weight="400" text-anchor="start" >Alles drin: Start mit Blick aufs Schloss, einmal rund um Charlottenburg</text>
+<rect x="665.0" y="190" width="540.0" height="600.0" fill="#25232b"/>
+<clipPath id="c114"><rect x="665.0" y="190" width="540.0" height="600.0"/></clipPath><g clip-path="url(#c114)">
+<polygon points="665.0,262.0 897.5,262.0 890.0,190.0 665.0,190.0" fill="#2f4f33" fill-opacity="0.9" stroke="none"/>
+<polygon points="1160.0,535.0 1205.0,520.0 1205.0,445.0 1137.5,482.5" fill="#2f4f33" fill-opacity="0.9" stroke="none"/>
+<polygon points="665.0,625.0 722.0,625.0 722.0,475.0 665.0,475.0" fill="#2f4f33" fill-opacity="0.6" stroke="none"/>
+<polygon points="665.0,607.0 684.5,602.5 681.5,508.0 665.0,512.5" fill="#2c6a80" fill-opacity="1.0" stroke="none"/>
+<polygon points="665.0,790.0 770.0,790.0 770.0,742.0 665.0,715.0" fill="#c9a8ff" fill-opacity="0.2" stroke="none"/>
+<polygon points="1182.5,598.0 732.5,730.0 732.5,763.0 1182.5,643.0" fill="#c9a8ff" fill-opacity="0.13" stroke="none"/>
+<polyline points="1205.0,332.5 1025.0,307.0 927.5,280.0 908.0,190.0" fill="none" stroke="#2c6a80" stroke-width="30.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="1"/>
+<polyline points="665.0,433.0 770.0,430.0 875.0,427.0 1010.0,424.0 1115.0,415.0 1205.0,410.5" fill="none" stroke="#5b5661" stroke-width="33.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="770.0,430.0 770.0,298.0" fill="none" stroke="#5b5661" stroke-width="27.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1010.0,424.0 1077.5,490.0 1137.5,550.0 1160.0,619.0" fill="none" stroke="#5b5661" stroke-width="21.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1160.0,619.0 1103.0,635.5 1032.5,655.0 950.0,677.5 897.5,691.0 830.0,686.5 777.5,707.5 695.0,748.0" fill="none" stroke="#5b5661" stroke-width="33.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1160.0,619.0 1205.0,655.0" fill="none" stroke="#5b5661" stroke-width="24.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1145.0,583.0 980.0,580.0 785.0,565.0 665.0,556.0" fill="none" stroke="#5b5661" stroke-width="19.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="695.0,748.0 695.0,655.0 698.0,557.5 710.0,433.0" fill="none" stroke="#5b5661" stroke-width="18.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="830.0,686.5 830.0,428.5" fill="none" stroke="#5b5661" stroke-width="18.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="980.0,580.0 968.0,673.0" fill="none" stroke="#5b5661" stroke-width="16.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="665.0,295.0 770.0,295.0 935.0,286.0" fill="none" stroke="#5b5661" stroke-width="21.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1010.0,424.0 950.0,347.5 927.5,289.0" fill="none" stroke="#5b5661" stroke-width="18.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1205.0,523.0 1137.5,544.0 1077.5,589.0 980.0,607.0 785.0,598.0 665.0,613.0" fill="none" stroke="#8a4a3a" stroke-width="13.5" stroke-linejoin="round" stroke-linecap="butt" stroke-opacity="1"/>
+<polyline points="1205.0,523.0 1137.5,544.0 1077.5,589.0 980.0,607.0 785.0,598.0 665.0,613.0" fill="none" stroke="#2a1c1a" stroke-width="3.3" stroke-linejoin="round" stroke-linecap="butt" stroke-opacity="1" stroke-dasharray="5 5"/>
+<rect x="687.5" y="264.2" width="180.0" height="13.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="752.0" y="255.2" width="36.0" height="22.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<polygon points="710.0,247.0 830.0,247.0 830.0,202.0 710.0,202.0" fill="#24482c" fill-opacity="1" stroke="none"/>
+<path d="M798.5,202.0 H830.0 V247.0 H710.0 V202.0 H783.5" fill="none" stroke="#6fae6a" stroke-width="2.2"/>
+<path d="M756.1,211.8 H820.2 V237.2 H719.8 V211.8 H741.1" fill="none" stroke="#6fae6a" stroke-width="2.2"/>
+<rect x="857.0" y="393.2" width="36.0" height="19.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1059.5" y="385.0" width="51.0" height="18.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1166.8" y="418.8" width="10.5" height="10.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="959.0" y="329.5" width="18.0" height="21.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1140.5" y="525.2" width="39.0" height="13.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1185.5" y="585.2" width="12.0" height="19.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1040.0" y="557.5" width="30.0" height="15.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1002.5" y="622.8" width="33.0" height="16.5" fill="#e2c8ff" stroke="#1a1412" stroke-width="1"/>
+<rect x="770.0" y="668.5" width="30.0" height="15.0" fill="#e2c8ff" stroke="#1a1412" stroke-width="1"/>
+<rect x="731.0" y="768.2" width="36.0" height="13.5" fill="#e2c8ff" stroke="#1a1412" stroke-width="1"/>
+<rect x="768.5" y="583.8" width="33.0" height="10.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<polyline points="770.0,430.0 875.0,427.0 1010.0,424.0 1077.5,487.0 1134.5,553.0 1160.0,622.0 1103.0,635.5 1028.0,656.5 897.5,691.0 777.5,707.5 695.0,748.0 696.5,557.5 710.0,433.0 770.0,430.0 770.0,362.5 770.0,295.0" fill="none" stroke="#f0a030" stroke-width="5" stroke-linejoin="round" stroke-opacity="0.95"/>
+<circle cx="875.0" cy="427.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1010.0" cy="424.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1134.5" cy="553.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1103.0" cy="635.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1028.0" cy="656.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="897.5" cy="691.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="777.5" cy="707.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="770.0" cy="362.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="696.5" cy="557.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5" stroke-dasharray="6 4"/>
+<circle cx="1077.5" cy="487.0" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="1160.0" cy="622.0" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="695.0" cy="748.0" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="770.0" cy="295.0" r="28.5" fill="#e85040" fill-opacity="0.45" stroke="#e85040" stroke-width="4"/>
+<rect x="941.0" y="396.0" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="1019.0" y="594.0" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="857.0" y="714.0" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="737.0" y="381.0" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<path d="M1073.0,580.0 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<path d="M968.0,658.0 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<path d="M957.5,346.0 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<polygon points="770.0,420.0 779.0,437.0 761.0,437.0" fill="#43d1cf" stroke="#0e2a2a"/>
+<text x="757.0" y="454.0" fill="#7ff0ee" font-size="12" font-weight="700" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Start</text>
+<circle cx="942.5" cy="457.0" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="942.5" y="462.0" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >1</text>
+<circle cx="1103.0" cy="502.0" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="1103.0" y="507.0" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >2</text>
+<circle cx="860.0" cy="739.0" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="860.0" y="744.0" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >3</text>
+<circle cx="710.0" cy="325.0" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="710.0" y="330.0" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >4</text>
+<text x="875.0" y="274.0" fill="#f4f0f6" font-size="12" font-weight="700" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Schloss</text>
+<text x="839.0" y="229.0" fill="#bfe6bf" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Irrgarten</text>
+<text x="875.0" y="389.2" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Opernhaus</text>
+<text x="1085.0" y="381.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Technische Hochschule</text>
+<text x="1202.0" y="445.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Charlottenburger Tor</text>
+<text x="983.0" y="343.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Rathaus</text>
+<text x="1160.0" y="517.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Bhf Zoo</text>
+<text x="1202.0" y="575.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Gedächtniskirche</text>
+<text x="1055.0" y="553.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Theater des Westens</text>
+<text x="1019.0" y="618.8" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Revuepalast</text>
+<text x="785.0" y="664.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Universum-Kino</text>
+<text x="773.0" y="779.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Lunapark</text>
+<text x="785.0" y="619.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Bhf Charlottenburg</text>
+<text x="674.0" y="598.0" fill="#cfeaf5" font-size="10.5" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic" transform="rotate(-90 674.0 598.0)">Lietzensee</text>
+<text x="1085.0" y="298.0" fill="#9fd0e0" font-size="12" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Spree</text>
+<text x="908.0" y="499.0" fill="#8d8a96" font-size="13" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Blockinneres: nicht begehbar</text>
+</g>
+<polygon points="672.0,801.0 679.0,814.0 665.0,814.0" fill="#43d1cf"/>
+<text x="685.0" y="814.0" fill="#7ff0ee" font-size="14.5" font-weight="700" text-anchor="start" >Start U Sophie-Charlotte-Platz · Karte 360 × 400 m</text>
+<circle cx="675.0" cy="833.0" r="10" fill="#ffd98a"/>
+<text x="675.0" y="838.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >1</text>
+<text x="690.0" y="838.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Oper &amp; Knie</text>
+<circle cx="808.1" cy="833.0" r="10" fill="#ffd98a"/>
+<text x="808.1" y="838.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >2</text>
+<text x="823.1" y="838.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Zoo</text>
+<circle cx="876.4" cy="833.0" r="10" fill="#ffd98a"/>
+<text x="876.4" y="838.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >3</text>
+<text x="891.4" y="838.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Ku'damm</text>
+<circle cx="977.1" cy="833.0" r="10" fill="#ffd98a"/>
+<text x="977.1" y="838.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >4</text>
+<text x="992.1" y="838.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Schloss</text>
+<text x="665.0" y="872.0" fill="#f2e3c8" font-size="15.5" font-weight="700" text-anchor="start" >+ Alle Sehenswürdigkeiten, echter Ring, Schloss von Anfang an</text>
+<text x="665.0" y="894.0" fill="#f2e3c8" font-size="15.5" font-weight="700" text-anchor="start" >als Ziel</text>
+<text x="665.0" y="918.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Start U Sophie-Charlotte-Platz: die Schloßstraße zeigt die Kuppel, das</text>
+<text x="665.0" y="938.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Tor ist zu. Bismarckstraße (Opernhaus), Knie, Hardenbergstraße, Bahnhof</text>
+<text x="665.0" y="958.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Zoo, Gedächtniskirche, der ganze Ku'damm bis zum Lunapark, am Lietzensee</text>
+<text x="665.0" y="978.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >zurück zum Start und die Schloßstraße hoch.</text>
+<text x="665.0" y="1002.0" fill="#e6e6e6" font-size="14.5" font-weight="400" text-anchor="start" >Route ≈ 990 m · 9 Kämpfe + 4 Bosse, 27 Wellen · keine Straße doppelt</text>
+<text x="665.0" y="1022.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >− Größte Karte (12 % mehr Fläche als Mitte) mit totem Blockinneren.</text>
+<text x="665.0" y="1042.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >Schloss und Garten bleiben ein Anhängsel; fünf Gegenden für vier Zonen.</text>
+<text x="1260.0" y="128.0" fill="#f0a030" font-size="26" font-weight="700" text-anchor="start" >C · Spiegelschloss</text>
+<text x="1260.0" y="154.0" fill="#c8ccc8" font-size="15.5" font-weight="400" text-anchor="start" >Halb Revue, halb Schloss: Runde durch den Garten</text>
+<rect x="1500.0" y="107" width="118" height="26" rx="13" fill="#f0a030"/>
+<text x="1559.0" y="125.0" fill="#151012" font-size="14.5" font-weight="700" text-anchor="middle" >Empfehlung</text>
+<rect x="1260.0" y="190" width="390.0" height="585.0" fill="#25232b"/>
+<clipPath id="c227"><rect x="1260.0" y="190" width="390.0" height="585.0"/></clipPath><g clip-path="url(#c227)">
+<polygon points="1260.0,404.5 1486.5,404.5 1492.5,332.5 1483.5,257.5 1438.5,212.5 1354.5,200.5 1260.0,203.5" fill="#2f4f33" fill-opacity="0.95" stroke="none"/>
+<polygon points="1522.5,437.5 1650.0,449.5 1650.0,190.0 1455.0,190.0 1507.5,257.5 1519.5,332.5" fill="#15141a" fill-opacity="0.9" stroke="none"/>
+<polygon points="1650.0,707.5 1432.5,740.5 1432.5,767.5 1650.0,740.5" fill="#c9a8ff" fill-opacity="0.14" stroke="none"/>
+<polygon points="1417.5,707.5 1260.0,722.5 1260.0,632.5 1417.5,640.0" fill="#6fb7b0" fill-opacity="0.1" stroke="none"/>
+<polyline points="1650.0,437.5 1567.5,425.5 1516.5,404.5 1506.0,332.5 1497.0,257.5 1447.5,206.5 1357.5,193.0 1260.0,196.0" fill="none" stroke="#2c6a80" stroke-width="30.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="1"/>
+<polyline points="1650.0,722.5 1612.5,727.0 1555.5,734.5 1500.0,743.5 1447.5,752.5 1260.0,770.5" fill="none" stroke="#5b5661" stroke-width="33.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1612.5,727.0 1650.0,755.5" fill="none" stroke="#5b5661" stroke-width="24.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1570.5,653.5 1612.5,722.5" fill="none" stroke="#5b5661" stroke-width="21.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1570.5,653.5 1555.5,734.5" fill="none" stroke="#5b5661" stroke-width="16.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1609.5,704.5 1522.5,689.5 1447.5,677.5 1395.0,671.5 1260.0,662.5" fill="none" stroke="#5b5661" stroke-width="19.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1447.5,752.5 1447.5,677.5" fill="none" stroke="#5b5661" stroke-width="16.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1395.0,671.5 1395.0,578.5" fill="none" stroke="#5b5661" stroke-width="18.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1650.0,581.5 1552.5,581.5 1395.0,575.5 1350.0,575.5 1260.0,569.5" fill="none" stroke="#5b5661" stroke-width="33.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1570.5,653.5 1552.5,581.5" fill="none" stroke="#5b5661" stroke-width="18.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1350.0,575.5 1350.0,449.5" fill="none" stroke="#5b5661" stroke-width="27.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1260.0,446.5 1350.0,446.5 1462.5,437.5 1495.5,419.5 1528.5,401.5" fill="none" stroke="#5b5661" stroke-width="22.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1552.5,581.5 1500.0,505.0 1462.5,437.5" fill="none" stroke="#5b5661" stroke-width="16.5" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.92"/>
+<polyline points="1650.0,620.5 1570.5,644.5 1522.5,686.5 1477.5,707.5 1447.5,712.0 1372.5,719.5 1260.0,728.5" fill="none" stroke="#8a4a3a" stroke-width="13.5" stroke-linejoin="round" stroke-linecap="butt" stroke-opacity="1"/>
+<polyline points="1650.0,620.5 1570.5,644.5 1522.5,686.5 1477.5,707.5 1447.5,712.0 1372.5,719.5 1260.0,728.5" fill="none" stroke="#2a1c1a" stroke-width="3.3" stroke-linejoin="round" stroke-linecap="butt" stroke-opacity="1" stroke-dasharray="5 5"/>
+<polyline points="1395.0,332.5 1414.5,290.5 1380.0,233.5" fill="none" stroke="#8a8068" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.8"/>
+<polyline points="1380.0,230.5 1324.5,242.5 1309.5,284.5 1306.5,398.5" fill="none" stroke="#8a8068" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.8"/>
+<polyline points="1350.0,332.5 1350.0,305.5" fill="none" stroke="#8a8068" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.8"/>
+<rect x="1327.5" y="403.0" width="45.0" height="21.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1375.5" y="407.5" width="75.0" height="12.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1263.0" y="407.5" width="63.0" height="12.0" fill="#cfe6f2" stroke="#1a1412" stroke-width="1"/>
+<polygon points="1324.5,449.5 1375.5,449.5 1375.5,424.0 1324.5,424.0" fill="#d8dce8" fill-opacity="0.18" stroke="#d8dce8"/>
+<polygon points="1300.5,389.5 1399.5,389.5 1399.5,332.5 1300.5,332.5" fill="#24482c" fill-opacity="1" stroke="none"/>
+<path d="M1374.3,332.5 H1399.5 V389.5 H1300.5 V332.5 H1359.3" fill="none" stroke="#6fae6a" stroke-width="2.2"/>
+<path d="M1341.4,342.2 H1389.8 V379.8 H1310.2 V342.2 H1326.4" fill="none" stroke="#6fae6a" stroke-width="2.2"/>
+<path d="M1366.5,352.0 H1380.0 V370.0 H1320.0 V352.0 H1351.5" fill="none" stroke="#6fae6a" stroke-width="2.2"/>
+<ellipse cx="1357.5" cy="284.5" rx="40.5" ry="19.5" fill="#2c6a80"/>
+<rect x="1368.8" y="214.8" width="13.5" height="13.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1267.5" y="274.0" width="12.0" height="15.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1465.5" y="392.5" width="12.0" height="12.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<text x="1413.0" y="418.0" fill="#201a22" font-size="11" font-weight="700" text-anchor="middle" >Schloss</text>
+<line x1="1279.5" y1="461.5" x2="1285.5" y2="422.5" stroke="#d8d4dc" stroke-width="1" stroke-opacity="0.8"/>
+<line x1="1537.5" y1="215.5" x2="1384.5" y2="220.0" stroke="#d8d4dc" stroke-width="1" stroke-opacity="0.8"/>
+<line x1="1537.5" y1="242.5" x2="1399.5" y2="338.5" stroke="#d8d4dc" stroke-width="1" stroke-opacity="0.8"/>
+<line x1="1537.5" y1="271.0" x2="1476.0" y2="392.5" stroke="#d8d4dc" stroke-width="1" stroke-opacity="0.8"/>
+<line x1="1537.5" y1="298.0" x2="1375.5" y2="431.5" stroke="#d8d4dc" stroke-width="1" stroke-opacity="0.8"/>
+<rect x="1624.5" y="695.5" width="12.0" height="18.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1567.5" y="631.0" width="42.0" height="12.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1531.5" y="709.0" width="18.0" height="12.0" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1468.5" y="714.2" width="36.0" height="16.5" fill="#e2c8ff" stroke="#1a1412" stroke-width="1"/>
+<rect x="1534.5" y="666.2" width="24.0" height="13.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1350.0" y="643.0" width="27.0" height="15.0" fill="#cfe6f2" stroke="#1a1412" stroke-width="1"/>
+<rect x="1377.0" y="543.2" width="36.0" height="19.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1578.0" y="552.2" width="45.0" height="16.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<rect x="1508.2" y="484.8" width="16.5" height="19.5" fill="#e9e4ee" stroke="#1a1412" stroke-width="1"/>
+<polyline points="1570.5,656.5 1612.5,724.0 1555.5,734.5 1500.0,743.5 1447.5,752.5 1447.5,680.5 1395.0,668.5 1395.0,581.5 1350.0,575.5 1350.0,512.5 1350.0,452.5 1459.5,437.5 1477.5,395.5 1350.0,362.5 1414.5,290.5 1380.0,233.5 1309.5,284.5 1303.5,392.5 1294.5,412.0 1350.0,436.0" fill="none" stroke="#f0a030" stroke-width="5" stroke-linejoin="round" stroke-opacity="0.95"/>
+<circle cx="1612.5" cy="724.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1555.5" cy="734.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1447.5" cy="680.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1395.0" cy="668.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1350.0" cy="512.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1459.5" cy="437.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1350.0" cy="362.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1294.5" cy="412.0" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5"/>
+<circle cx="1414.5" cy="290.5" r="21.8" fill="#f0a030" fill-opacity="0.3" stroke="#f0a030" stroke-width="2.5" stroke-dasharray="6 4"/>
+<circle cx="1500.0" cy="743.5" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="1395.0" cy="581.5" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="1380.0" cy="233.5" r="21.8" fill="#e85040" fill-opacity="0.3" stroke="#e85040" stroke-width="2.5"/>
+<circle cx="1350.0" cy="436.0" r="28.5" fill="#e85040" fill-opacity="0.45" stroke="#e85040" stroke-width="4"/>
+<rect x="1612.5" y="652.5" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="1453.5" y="718.5" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<rect x="1264.5" y="370.5" width="12" height="8" fill="#f2d14b" stroke="#2a2410"/>
+<path d="M1552.5,683.5 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<path d="M1420.5,731.5 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<path d="M1510.5,509.5 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<path d="M1273.5,296.5 l6,6 l-6,6 l-6,-6 z" fill="#8fe0a0" stroke="#12301a"/>
+<polygon points="1570.5,646.5 1579.5,663.5 1561.5,663.5" fill="#43d1cf" stroke="#0e2a2a"/>
+<text x="1557.5" y="650.5" fill="#7ff0ee" font-size="12" font-weight="700" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Start</text>
+<circle cx="1372.5" cy="746.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="1372.5" y="751.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >1</text>
+<circle cx="1312.5" cy="608.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="1312.5" y="613.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >2</text>
+<circle cx="1282.5" cy="332.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="1282.5" y="337.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >3</text>
+<circle cx="1294.5" cy="449.5" r="11" fill="#ffd98a" stroke="#1a1412" stroke-width="1.5"/>
+<text x="1294.5" y="454.5" fill="#1a1412" font-size="14" font-weight="700" text-anchor="middle" >4</text>
+<text x="1263.0" y="263.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Mausoleum</text>
+<text x="1261.5" y="470.5" fill="#bfe6f5" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Spiegelgalerie</text>
+<text x="1261.5" y="485.5" fill="#bfe6f5" font-size="10" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >(Orangerie-Ruine)</text>
+<text x="1357.5" y="289.0" fill="#9fd0e0" font-size="10" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Karpfenteich</text>
+<text x="1540.5" y="218.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Belvedere</text>
+<text x="1540.5" y="245.5" fill="#bfe6bf" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Irrgarten</text>
+<text x="1540.5" y="272.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Neuer Pavillon (Rast)</text>
+<text x="1540.5" y="299.5" fill="#ffb0a8" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Ehrenhof: Die Diva</text>
+<text x="1588.5" y="344.5" fill="#8d8a96" font-size="11.5" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Kulisse: Spreeufer,</text>
+<text x="1588.5" y="362.5" fill="#8d8a96" font-size="11.5" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Kraftwerk, Schornsteine</text>
+<text x="1537.5" y="389.5" fill="#9fd0e0" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" font-style="italic">Spree</text>
+<text x="1647.0" y="683.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Gedächtniskirche</text>
+<text x="1588.5" y="625.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Bhf Zoo</text>
+<text x="1540.5" y="704.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Kranzler</text>
+<text x="1486.5" y="709.0" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Revuepalast</text>
+<text x="1513.5" y="662.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Theater des Westens</text>
+<text x="1345.5" y="644.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Gläsernes</text>
+<text x="1345.5" y="659.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Varieté</text>
+<text x="1395.0" y="539.2" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Opernhaus</text>
+<text x="1600.5" y="542.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="middle" stroke="#17151b" stroke-width="3" paint-order="stroke" >Techn. Hochschule</text>
+<text x="1531.5" y="497.5" fill="#f4f0f6" font-size="11" font-weight="400" text-anchor="start" stroke="#17151b" stroke-width="3" paint-order="stroke" >Rathaus</text>
+<text x="1429.5" y="701.5" fill="#f4f0f6" font-size="10.5" font-weight="400" text-anchor="end" stroke="#17151b" stroke-width="3" paint-order="stroke" >Savignyplatz</text>
+</g>
+<polygon points="1267.0,786.0 1274.0,799.0 1260.0,799.0" fill="#43d1cf"/>
+<text x="1280.0" y="799.0" fill="#7ff0ee" font-size="14.5" font-weight="700" text-anchor="start" >Start S+U Zoo · Karte 260 × 390 m</text>
+<circle cx="1270.0" cy="818.0" r="10" fill="#ffd98a"/>
+<text x="1270.0" y="823.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >1</text>
+<text x="1285.0" y="823.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Ku'damm</text>
+<circle cx="1370.7" cy="818.0" r="10" fill="#ffd98a"/>
+<text x="1370.7" y="823.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >2</text>
+<text x="1385.7" y="823.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Savignyplatz &amp; Oper</text>
+<circle cx="1270.0" cy="844.0" r="10" fill="#ffd98a"/>
+<text x="1270.0" y="849.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >3</text>
+<text x="1285.0" y="849.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Schlossgarten</text>
+<circle cx="1419.3" cy="844.0" r="10" fill="#ffd98a"/>
+<text x="1419.3" y="849.0" fill="#1a1412" font-size="13" font-weight="700" text-anchor="middle" >4</text>
+<text x="1434.3" y="849.0" fill="#ffd98a" font-size="14.5" font-weight="700" text-anchor="start" >Spiegelschloss</text>
+<text x="1260.0" y="883.0" fill="#f2e3c8" font-size="15.5" font-weight="700" text-anchor="start" >+ Halb Revue, halb Spiegelschloss; das Schloss</text>
+<text x="1260.0" y="905.0" fill="#f2e3c8" font-size="15.5" font-weight="700" text-anchor="start" >ist der Drehpunkt</text>
+<text x="1260.0" y="929.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Start S+U Zoo, Gedächtniskirche, Ku'damm bis zum</text>
+<text x="1260.0" y="949.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Revuepalast, durch den Stadtbahnbogen zum</text>
+<text x="1260.0" y="969.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Savignyplatz, Opernhaus. Die Schloßstraße hoch auf</text>
+<text x="1260.0" y="989.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >die Kuppel zu: das Tor ist zu. Also außen herum:</text>
+<text x="1260.0" y="1009.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Luisenplatz, Irrgarten, Karpfenteich, Belvedere,</text>
+<text x="1260.0" y="1029.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >durch die ausgebrannte Orangerie voller Spiegel in</text>
+<text x="1260.0" y="1049.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >den Ehrenhof.</text>
+<text x="1260.0" y="1073.0" fill="#e6e6e6" font-size="14.5" font-weight="400" text-anchor="start" >20 % weniger Fläche als Mitte · Route ≈ 910 m · 9</text>
+<text x="1260.0" y="1093.0" fill="#e6e6e6" font-size="14.5" font-weight="400" text-anchor="start" >Kämpfe + 4 Bosse, 25 Wellen · keine Straße doppelt</text>
+<text x="1260.0" y="1113.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >− Ku'damm nur etwa 150 m: kein Lunapark, kein KaDeWe,</text>
+<text x="1260.0" y="1133.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >kein Lietzensee. Der Garten braucht Inhalt (Hecken,</text>
+<text x="1260.0" y="1153.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >Statuen, Pavillons, Bühnenreste), sonst wirkt er</text>
+<text x="1260.0" y="1173.0" fill="#f08a5a" font-size="14.5" font-weight="400" text-anchor="start" >leer. Das Ostufer der Spree ist Kulisse.</text>
+<text x="1705.0" y="128.0" fill="#b8c0c0" font-size="20" font-weight="700" text-anchor="start" >Zum Vergleich: Mitte</text>
+<text x="1705.0" y="154.0" fill="#8f9898" font-size="15.5" font-weight="400" text-anchor="start" >330 × 387 m · Route ≈ 1 km · 14 Kämpfe</text>
+<rect x="1705.0" y="190" width="495.0" height="580.5" fill="none" stroke="#5a6468" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="1952.5" y="480.2" fill="#5a6468" font-size="16" font-weight="700" text-anchor="middle" >Mitte (B2), gleicher Maßstab</text>
+<text x="1705.0" y="814.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Gleich in allen dreien:</text>
+<text x="1705.0" y="835.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Boss je Zone, zuletzt Die Diamantene Diva im Ehrenhof:</text>
+<text x="1705.0" y="856.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >  Fassade und Kuppel stehen als Bühne im Norden (Kamera).</text>
+<text x="1705.0" y="877.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Schloßstraße als Achse: die Kuppel wächst beim Gehen.</text>
+<text x="1705.0" y="898.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Stadtbahn-Viadukt als sichtbarer Kartenrand mit Bögen.</text>
+<text x="1705.0" y="919.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Ein Späti oder Rastplatz je Zone, 3 bis 4 Nebenwege.</text>
+<text x="1705.0" y="940.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Zeitlose überall, dazu Scherbentänzerin, Logenbrecher,</text>
+<text x="1705.0" y="961.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >  Spiegelsouffleur.</text>
+<text x="1705.0" y="982.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Irrgarten und Spiegelgalerie sind erfunden (Story);</text>
+<text x="1705.0" y="1003.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >  alles andere steht dort, wo es in Berlin steht.</text>
+</svg>

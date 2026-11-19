@@ -1,5 +1,5 @@
 // Balance runner (M14): the bot plays fresh Köpenick campaigns in Node, no browser.
-//   node tools/balance.mjs [runs=5] [difficulty=normal] [skill=johannes|good|weak] [seed=1] [--miss=0.3] [--react=0.25,0.5] [--at=4] [--until=6] [--map=xhain|alex|mitte]
+//   node tools/balance.mjs [runs=5] [difficulty=normal] [skill=johannes|good|weak] [seed=1] [--miss=0.3] [--react=0.25,0.5] [--at=4] [--until=6] [--map=xhain|alex|mitte|charlottenburg]
 //   node tools/balance.mjs 3 normal johannes 1 --chain   (one hero through Köpenick, Xhain, Alexanderplatz and Mitte; gear and camp carry over)
 // Prints one line per run and a table per encounter: tries, time, damage taken and lowest life.
 // Rerun after every balance change and compare with docs/balance.md.
@@ -31,8 +31,8 @@ try {
     console.log(`\n${done}/${all.length} chains finished all four districts (${((Date.now() - t0) / 1000).toFixed(0)} s wall time)`);
     process.exit(0);
   }
-  const map = ['xhain', 'alex', 'mitte'].includes(flag('map')) ? flag('map') : 'koepenick';
-  console.log(`${({ koepenick: 'Köpenick', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte' })[map]}, ${difficulty}, skill ${skillName} (miss ${skill.miss}, react ${skill.react.join('–')} s), ${runs} runs from seed ${seed}`);
+  const map = ['xhain', 'alex', 'mitte', 'charlottenburg'].includes(flag('map')) ? flag('map') : 'koepenick';
+  console.log(`${({ koepenick: 'Köpenick', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte', charlottenburg: 'Charlottenburg' })[map]}, ${difficulty}, skill ${skillName} (miss ${skill.miss}, react ${skill.react.join('–')} s), ${runs} runs from seed ${seed}`);
   const pct = (v) => `${Math.round(v * 100)}%`.padStart(4);
   const t0 = Date.now();
   const reports = balance({ map, runs, difficulty, skill, seed, startAt: flag('at') ? Number(flag('at')) : undefined, until: flag('until') ? Number(flag('until')) : undefined }, (i, r) => {

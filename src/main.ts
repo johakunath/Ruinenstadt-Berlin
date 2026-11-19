@@ -40,6 +40,7 @@ import { STATIONS } from './data/camp';
 import { siteLevel } from './sim/camp';
 import { xhainMap } from './data/xhain';
 import { mitteMap } from './data/mitte';
+import { charlottenburgMap } from './data/charlottenburg';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor } from './render/sky';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, wonLink, type MapId } from './ui/maps';
@@ -58,8 +59,8 @@ import { PERKS, SHRINES } from './data/progression';
 import { contentMarks, EVENT_TEXT, talkTo } from './sim/runcontent';
 import { TalkPrompt } from './ui/talk';
 import type { DifficultyId } from './data/difficulty';
-import { backupSave, clearSave, loadSave, writeSave } from './save';
-import { CloudSave, formatCode, type SyncState } from './sync';
+import { clearSave, deviceClass, loadSave, writeSave } from './save';
+import { cloudSave } from './cloud';
 import type { Prop } from './data/courtyard';
 import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
 
@@ -83,9 +84,9 @@ input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
 abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
-// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
+// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), Charlottenburg (M16, ?map=charlottenburg), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : koepenickMap(opts.mapScale);
+  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : opts.map === 'charlottenburg' ? charlottenburgMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall:1.5*4`, kind[:size][*count]): rows of six props near the start on the
@@ -124,13 +125,18 @@ if (foreignRun) save = { ...save!, run: null };
 /** Writes the save; with no run of this map, another map's waiting checkpoint stays in it. */
 function store(s: SaveV1): void {
   const out = !s.run && foreignRun ? { ...s, run: foreignRun } : s;
+  put(out);
+}
+/** Local save plus its cloud mirror; the device class goes on the slot card (M6b). */
+function put(s: SaveV1): void {
+  const out = { ...s, dev: deviceClass() };
   writeSave(out);
   cloud.queue(out);
 }
 // The start screen may have changed it before the game loaded; a waiting checkpoint keeps its own.
 let difficulty: DifficultyId = save?.run ? save.difficulty : startScreen().difficulty;
-// Cloud save (Q6): same Apps Script as 2D, no login. Not on localhost, in automated browsers or debug starts.
-const cloud = new CloudSave(persist && !navigator.webdriver && !/^(localhost|127\.|0\.0\.0\.0|$)/.test(location.hostname));
+// Cloud save (Q6/M6b): started by the boot on the title screen (`src/boot.ts`); the game only queues uploads.
+const cloud = cloudSave();
 function freshSim(): Sim {
   const base = { seed: opts.seed, stress: opts.stress, level, startAt: opts.startAt, spawn: opts.spawn };
   try { if (save) return simFromSave(save, base, false); } catch (err) { console.warn('Save unbrauchbar', err); save = null; clearSave(); }
@@ -296,7 +302,7 @@ export function newGame(): void {
   sim = createSim({ seed: (opts.seed += 1), stress: opts.stress, level, difficulty });
   renderer?.reset(sim);
   ui.setResume(null, difficulty);
-  if (persist) { save = snapshot(sim, mapName, false); writeSave(save); cloud.queue(save); }
+  if (persist) { save = snapshot(sim, mapName, false); put(save); }
   start();
 }
 /** U2 Expedition abbrechen: the run ends as a loss, back to the title; gear and Schrott stay. */
@@ -325,7 +331,7 @@ const telemetry = new Telemetry(opts.telemetry, opts.autostart);
 /** Title › Spielen: a new run keeps the hero's gear but drops the old checkpoint. */
 function playNow(): void {
   sim.difficulty = difficulty;
-  if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; writeSave(save); cloud.queue(save); ui.setResume(null, difficulty); }
+  if (save?.run) { save = { ...save, run: null, difficulty, t: Date.now() }; put(save); ui.setResume(null, difficulty); }
   // The run starts from the profile as it is now (camp purchases: garden, Lazarett, Funkmast act in createSim).
   sim = createSim({ difficulty, seed: (opts.seed += 1), stress: opts.stress, level, spawn: opts.spawn, equipment: sim.equipment, statContext: profileOf(sim).statContext, inventory: sim.inventory });
   renderer?.reset(sim);
@@ -502,10 +508,10 @@ document.getElementById('to-title')!.addEventListener('click', () => {
   const b = document.getElementById('new-game') as HTMLButtonElement;
   let armed = 0;
   b.addEventListener('click', () => {
-    const idle = '<b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small>';
+    const idle = '<b>Slot löschen</b><small>Nur dieser Slot: Ausrüstung, Schrott und Lager weg</small>';
     if (armed && performance.now() - armed < 4000) { b.innerHTML = idle; armed = 0; newGame(); return; }
     armed = performance.now();
-    b.innerHTML = '<b>Wirklich? Alles löschen</b><small>Nochmal tippen</small>';
+    b.innerHTML = '<b>Wirklich? Slot löschen</b><small>Nochmal tippen</small>';
     setTimeout(() => { if (armed && performance.now() - armed >= 3900) { b.innerHTML = idle; armed = 0; } }, 4000);
   });
 }
@@ -571,46 +577,6 @@ function resumeLabel(): string | null {
 }
 ui.setResume(resumeLabel(), difficulty);
 
-const cloudRow = document.getElementById('cloud-row') as HTMLDivElement;
-const cloudInfo = document.getElementById('cloud-info') as HTMLElement;
-const cloudToggle = document.getElementById('cloud-toggle') as HTMLButtonElement;
-function showCloud(s: SyncState = cloud.state): void {
-  const label: Record<SyncState, string> = { off: 'Aus auf diesem Gerät.', sync: 'Verbindet …', on: 'Synchron.', slow: 'Nicht erreichbar, speichert lokal.', conflict: 'Anderes Gerät war neuer. Beim nächsten Start geladen.' };
-  cloudInfo.textContent = cloud.code ? `Code ${formatCode(cloud.code)} · ${label[s]}` : label.off;
-  (document.getElementById('cloud-copy') as HTMLButtonElement).hidden = !cloud.code;
-  cloudToggle.textContent = cloud.code ? 'Ausschalten' : 'Aktivieren';
-}
-/** A cloud save replaces the local one: back it up, store the remote, reload into it. */
-function adoptRemote(remote: SaveV1): void {
-  if (save) backupSave(save);
-  writeSave(remote);
-  location.reload();
-}
-if (cloud.available) {
-  cloudRow.hidden = false;
-  cloud.onState = showCloud;
-  cloud.autoStart();
-  showCloud();
-  void cloud.pull(save).then((remote) => {
-    if (!remote) return;
-    if (phase === 'title') adoptRemote(remote); else cloud.hold();
-  });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) void cloud.flush(); });
-}
-document.getElementById('cloud-copy')!.addEventListener('click', () => { void navigator.clipboard?.writeText(formatCode(cloud.code)).catch(() => prompt('Online-Code:', formatCode(cloud.code))); });
-cloudToggle.addEventListener('click', () => {
-  if (cloud.code) { if (confirm(`Online-Speichern ausschalten? Code ${formatCode(cloud.code)} gut aufheben.`)) cloud.disable(); } else { cloud.enable(); if (save) cloud.queue(save, 0); }
-  showCloud();
-});
-document.getElementById('cloud-join')!.addEventListener('click', () => {
-  const raw = prompt('Online-Code eingeben (z. B. ABCD-1234). Der Stand auf diesem Gerät wird ersetzt, eine Sicherung bleibt.');
-  if (!raw) return;
-  void cloud.join(raw).then((r) => {
-    if ('save' in r) { adoptRemote(r.save); return; }
-    cloudInfo.textContent = { code: 'Ungültiger Code.', net: 'Server nicht erreichbar.', unknown: 'Code unbekannt.', damaged: 'Spielstand unbrauchbar.' }[r.error];
-  });
-});
-
 function start(resumed = false): void {
   audio.start();
   document.getElementById('pause-finish')!.hidden = true;
@@ -627,7 +593,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : '');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : mapId === 'charlottenburg' ? 'Charlottenburg · 1920' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : '');
   }
   input.buffer.clear();
   input.enabled = true;
