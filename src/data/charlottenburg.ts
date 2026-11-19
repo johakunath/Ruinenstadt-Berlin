@@ -327,8 +327,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     LW('kadewe', KDW.x, KDW.z, 0, 23, 16, 1, { name: 'KaDeWe' }),
     L('wittenbergplatz', 177, 198, 0, 4, 8, 1, { name: 'U Wittenbergplatz' }),
     // Zone 1. Cinemas, cafés and theatres along the Ku'damm and the Kantstraße; the opera on the Bismarckstraße.
-    L('gloriapalast', 90, 148, 0, 4, 3, 1, { name: 'Gloria-Palast' }),
-    L('marmorhaus', 86, 180, 180 * DEG, 7, 4, 1, { name: 'Marmorhaus' }),
+    L('gloriapalast', 90, 148, 0, 5.5, 3.5, 1, { name: 'Gloria-Palast' }),
+    L('marmorhaus', 86, 180, 180 * DEG, 7, 4, 1, { name: 'Marmorhaus', cut: { h: 4.3 } }),
     L('cafewestens', 54, 150, 0, 6, 4, 1, { name: 'Café des Westens' }),
     L('revuepalast', 24, 158, 0, 8, 4.5, 1, { name: 'Revuepalast' }),
     L('theaterwestens', 58, 121, 0, 6, 4, 1, { name: 'Theater des Westens' }),
