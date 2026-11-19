@@ -6,11 +6,15 @@
 // M15: hour sectors of the Weltzeituhr (ring slices), its minute hand (a turning strip), green root
 // circles and the roots round a held hero.
 // WP5: the pink ring under a howling Heuler, its harmless howl ring (half as bright), pink sparks over driven bodies.
+// M16: white-violet glass bursts with a shard spray (pooled particles), the Diva's prism strips (three slots), a
+// gold ring under a guarded Ringvater and a warm one under the real Spiegelpaar, the Conférencier's spotlight from
+// above. Each visible piece is one draw call; no lights.
 import {
   AdditiveBlending, CircleGeometry, Color, ConeGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, SphereGeometry, Sprite, SpriteMaterial,
   Vector3,
 } from 'three';
 import { BOSS, THREAT } from '../data/enemies';
+import { guarded } from '../sim/combat';
 import { lerp, Rng } from '../sim/math';
 import { sweepAngle } from '../sim/threats';
 import type { Sim, SimEvent } from '../sim/types';
@@ -22,8 +26,12 @@ import { paintGlow } from './paint';
 const BARS = 18;
 /** Where the life bar floats, per body. */
 const BAR_Y = { zombie: 2.05, human: 2.05, female: 2, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4, mech: 2.3, mechBig: 4, kern: 1.25, koloss: 6.5, clock: 9 } as const;
-const ZONES = 14, LINES = 6, SHOTS = 96, HAZARDS = 60, WAVES = 8, OPEN = 6, SPOTS = 2, PULSES = 6, SECTORS = 5, HANDS = 2;
-const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a, shove: 0xffa03a, land: 0x43d1cf, root: 0x97c459, slab: 0xffa03a, hour: 0xff3a2a } as const;
+const ZONES = 18, LINES = 6, SHOTS = 96, HAZARDS = 60, WAVES = 8, OPEN = 6, SPOTS = 2, PULSES = 6, SECTORS = 5, HANDS = 2, STRIPS = 3, MARKS = 2;
+const ZONE_COLOR = {
+  slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a, shove: 0xffa03a, land: 0x43d1cf, root: 0x97c459, slab: 0xffa03a, hour: 0xff3a2a,
+  // M16: white-violet shard bursts, the Logenbrecher's crimson blow, the prism ray, the gold applause.
+  shard: 0xd8b8ff, faust: 0xff3a5a, prism: 0xbfe8ff, applause: 0xffc84a,
+} as const;
 /** Hour sector geometry: inner radius as a share of the outer (3 of 9 m), one of 24 slices, centred on angle 0. */
 const SECTOR_IN = BOSS.weltzeituhr.r0 / BOSS.weltzeituhr.r1, SECTOR_HALF = Math.PI / 24;
 const up = new Vector3(0, 1, 0);
@@ -63,6 +71,9 @@ export class ThreatView {
   private readonly hands: Mesh[] = [];
   /** M15: the green roots round a hero a Wurzler holds. */
   private readonly roots: Mesh;
+  /** M16: the Diva's prism strips, and the rings that mark a guarded Ringvater and the real Spiegelpaar. */
+  private readonly strips: Mesh[] = [];
+  private readonly marks: Mesh[] = [];
   private time = 0;
 
   constructor(private readonly emit: Emitters) {
@@ -101,6 +112,17 @@ export class ThreatView {
     }
     this.roots = fx(flat(new Mesh(new RingGeometry(0.35, 0.62, 10, 1), add(0x97c459, 0.8))), 3);
     this.group.add(this.roots);
+    for (let i = 0; i < STRIPS; i++) {
+      const m = fx(new Mesh(new PlaneGeometry(1, 1), add(ZONE_COLOR.prism, 0.4)), 2);
+      m.visible = false;
+      this.group.add(m);
+      this.strips.push(m);
+    }
+    for (let i = 0; i < MARKS; i++) {
+      const m = fx(flat(new Mesh(new RingGeometry(0.88, 1, 40), add(0xf2d14b, 0.8))), 2);
+      this.group.add(m);
+      this.marks.push(m);
+    }
     for (let i = 0; i < LINES; i++) {
       const g = new PlaneGeometry(1, 1);
       g.translate(0, 0.5, 0);
@@ -156,7 +178,16 @@ export class ThreatView {
   onEvent(ev: SimEvent): void {
     const E = this.emit;
     const R = this.rng;
-    if (ev.type === 'zoneHit') {
+    if (ev.type === 'zoneHit' && (ev.kind === 'shard' || ev.kind === 'applause' || ev.kind === 'prism')) {
+      // M16: a glass burst throws white-violet shards up and out; applause gold sparks; the prism ray a white flash.
+      const y = groundY(ev.x, ev.z);
+      const n = ev.kind === 'prism' ? 10 : Math.round(16 + ev.r * 8);
+      const [r, g, b] = ev.kind === 'applause' ? [5, 3.6, 1.2] : ev.kind === 'prism' ? [3, 4.2, 5] : [3.6, 3, 5];
+      for (let i = 0; i < n; i++) {
+        const a = R.range(0, Math.PI * 2), d = Math.sqrt(R.next()) * ev.r * 0.6, s = R.range(1.5, 5);
+        E.glow(ev.x + Math.sin(a) * d, y + R.range(0.2, 1.2), ev.z + Math.cos(a) * d, Math.sin(a) * s, R.range(2, 6), Math.cos(a) * s, R.range(0.3, 0.7), R.range(0.05, 0.12), r, g, b, 14, 0.4);
+      }
+    } else if (ev.type === 'zoneHit') {
       const y = groundY(ev.x, ev.z);
       const fire = ev.kind === 'flame' || ev.kind === 'bomb';
       const n = Math.round(14 + ev.r * 8);
@@ -192,10 +223,23 @@ export class ThreatView {
     const R = this.rng;
 
     // Marked circles: the fill grows to the rim, then the circle goes off. Hour sectors are slices of a ring.
-    let nz = 0, ns = 0;
+    let nz = 0, ns = 0, nt = 0;
     for (const z of T.zones) {
       const k = 1 - Math.max(0, z.t) / z.max;
       const y = groundY(z.x, z.z) + 0.07;
+      if (z.line) {
+        // M16 prism ray: a thin strip on the ground while it winds up, the full width bright while it hits.
+        if (nt >= STRIPS) continue;
+        const m = this.strips[nt++]!;
+        m.visible = true;
+        m.position.set(z.x, y + 0.02, z.z);
+        m.rotation.set(Math.PI / 2, Math.atan2(z.line.dx, z.line.dz), 0, 'YXZ');
+        const live = z.t <= 0;
+        m.scale.set(live ? z.line.width : z.line.width * (0.15 + 0.35 * k), z.line.half * 2, 1);
+        (m.material as MeshBasicMaterial).opacity = live ? 0.85 : 0.18 + 0.3 * k + 0.1 * Math.sin(this.time * 30) ** 2;
+        (m.material as MeshBasicMaterial).color.setHex(live ? 0xffffff : ZONE_COLOR.prism);
+        continue;
+      }
       if (z.sector) {
         if (ns >= SECTORS) continue;
         const m = this.sectors[ns++]!;
@@ -215,6 +259,7 @@ export class ThreatView {
       this.drawZone(this.zones[nz++]!, z, k, y);
     }
     for (let i = nz; i < ZONES; i++) this.zones[i]!.rim.visible = this.zones[i]!.fill.visible = false;
+    for (let i = nt; i < STRIPS; i++) this.strips[i]!.visible = false;
     for (let i = ns; i < SECTORS; i++) this.sectors[i]!.rim.visible = this.sectors[i]!.fill.visible = false;
 
     // The minute hand: faint while it is only shown, bright while it sweeps.
@@ -240,11 +285,21 @@ export class ThreatView {
 
 
     // Rush lines while a pounce, lunge, dive or charge winds up; the gold ring under open bodies.
-    let nl = 0, no = 0, np = 0;
+    let nl = 0, no = 0, np = 0, nm = 0;
     for (const e of s.enemies) {
       if (e.state === 'dead') continue;
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
       const sp = e.sp;
+      // M16: a gold ring while the Ringvater's guard lives; a warm ring under the real Spiegelpaar (her reflection has none).
+      const mark = (e.kind === 'ringvater' && guarded(s, e)) || e.kind === 'spiegelpaar';
+      if (mark && nm < MARKS) {
+        const m = this.marks[nm++]!;
+        m.visible = true;
+        m.position.set(x, groundY(x, z) + 0.085, z);
+        m.scale.setScalar(e.def.radius * (e.kind === 'ringvater' ? 2.4 : 1.9));
+        (m.material as MeshBasicMaterial).color.setHex(e.kind === 'ringvater' ? 0xf2d14b : 0xff6a7a);
+        (m.material as MeshBasicMaterial).opacity = 0.55 + 0.25 * Math.sin(this.time * 4);
+      }
       // M12c: a pink ring fills under a body that winds up a bass ring or a beat.
       if (e.state === 'special' && sp && (sp.kind === 'bass' || sp.kind === 'beat' || sp.kind === 'howl') && e.stateT < sp.wind && np < PULSES) {
         const m = this.pulses[np++]!;
@@ -290,6 +345,7 @@ export class ThreatView {
     for (let i = nl; i < LINES; i++) this.lines[i]!.visible = false;
     for (let i = no; i < OPEN; i++) this.open[i]!.visible = false;
     for (let i = np; i < PULSES; i++) this.pulses[i]!.visible = false;
+    for (let i = nm; i < MARKS; i++) this.marks[i]!.visible = false;
 
     // M12c: held by the Türsteher.
     const hp = s.player;
@@ -321,13 +377,19 @@ export class ThreatView {
       // Beam from the source's lens down to the spot.
       const src = s.enemies.find((e) => e.id === q.src);
       if (!src) { m.beam.visible = false; return; }
-      const sx = lerp(src.px, src.x, alpha), sz = lerp(src.pz, src.z, alpha), sy = groundY(sx, sz) + 2.25;
+      // M16: the Conférencier's spotlight falls from high above the stage (warm white), not from a lens.
+      const stage = src.kind === 'conferencier';
+      if (stage && !lock) {
+        (m.rim.material as MeshBasicMaterial).color.setHex(0xfff0c8);
+        (m.fill.material as MeshBasicMaterial).color.setHex(0xffe0a0);
+      }
+      const sx = stage ? x - 1.5 : lerp(src.px, src.x, alpha), sz = stage ? z - 1 : lerp(src.pz, src.z, alpha), sy = stage ? y + 9 : groundY(sx, sz) + 2.25;
       dirV.set(x - sx, y - sy, z - sz);
       const len = dirV.length();
       m.beam.position.set(sx, sy, sz);
       m.beam.quaternion.setFromUnitVectors(up, dirV.multiplyScalar(-1 / (len || 1)));
       m.beam.scale.set(q.r, len, q.r);
-      (m.beam.material as MeshBasicMaterial).color.setHex(lock ? 0xff3a2a : 0x9ff0ea);
+      (m.beam.material as MeshBasicMaterial).color.setHex(lock ? 0xff3a2a : stage ? 0xffe0a0 : 0x9ff0ea);
     });
 
     // Life bars: only on bodies that took damage, nearest slots first come first served.

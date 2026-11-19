@@ -100,7 +100,8 @@ function nearest(s: Sim, range: number): Enemy | null {
   let best: Enemy | null = null;
   let bd = range;
   for (const e of s.enemies) {
-    if (e.state === 'dead') continue;
+    // M16: powers never pick the Spiegelbild.
+    if (e.state === 'dead' || e.mirrorOf !== undefined) continue;
     const d = Math.hypot(e.x - s.player.x, e.z - s.player.z) - e.def.radius;
     if (d < bd) {
       bd = d;
@@ -120,7 +121,7 @@ function aimOf(s: Sim, inp: SimInput, range: number): { angle: number; target: E
       let best: Enemy | null = null;
       let bs = 0.6;
       for (const e of s.enemies) {
-        if (e.state === 'dead' || Math.hypot(e.x - p.x, e.z - p.z) > range) continue;
+        if (e.state === 'dead' || e.mirrorOf !== undefined || Math.hypot(e.x - p.x, e.z - p.z) > range) continue;
         const off = Math.abs(Math.atan2(Math.sin(angleOf(e.x - p.x, e.z - p.z) - dir), Math.cos(angleOf(e.x - p.x, e.z - p.z) - dir)));
         if (off < bs) {
           bs = off;
@@ -290,7 +291,7 @@ function fire(s: Sim, c: Cast): void {
     case 'sperr': {
       const T = POWER.sperr;
       // Fisher-Yates on the seeded generator: the 2D shuffle, deterministic.
-      const targets = s.enemies.filter((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < T.aim);
+      const targets = s.enemies.filter((e) => e.state !== 'dead' && e.mirrorOf === undefined && Math.hypot(e.x - p.x, e.z - p.z) < T.aim);
       for (let i = targets.length - 1; i > 0; i--) {
         const j = s.rng.int(i + 1);
         [targets[i], targets[j]] = [targets[j]!, targets[i]!];
@@ -578,7 +579,8 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
         break;
       }
       for (const e of s.enemies) {
-        if (e.state === 'dead' || q.hits.includes(e.id) || Math.hypot(e.x - q.x, e.z - q.z) >= e.def.radius + 0.18) continue;
+        // M16: shots fly through a reflection.
+        if (e.state === 'dead' || e.mirrorOf !== undefined || q.hits.includes(e.id) || Math.hypot(e.x - q.x, e.z - q.z) >= e.def.radius + 0.18) continue;
         q.hits.push(e.id);
         const W = q.wucht ? WEAPON.wucht : null;
         strike(s, e, q.damage, { crit: q.crit, knock: knock(q.kind === 'spear' ? 300 : 120) * (W ? W.knock : 1), stun: W?.stun, feel: q.kind === 'spear' || q.crit ? 'heavy' : 'light', element: q.fire ? 'fire' : q.jumped ? 'shock' : undefined });
@@ -590,7 +592,8 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
           let nd = 220 * PX;
           for (const o of s.enemies) {
             const dd = Math.hypot(o.x - e.x, o.z - e.z);
-            if (o !== e && o.state !== 'dead' && dd < nd) { nd = dd; nb = o; }
+            // M16: never to a reflection (the jumped shot would fly through it).
+            if (o !== e && o.state !== 'dead' && o.mirrorOf === undefined && dd < nd) { nd = dd; nb = o; }
           }
           if (nb) jumps.push({ x: e.x, z: e.z, px: e.x, pz: e.z, angle: angleOf(nb.x - e.x, nb.z - e.z), speed: WEAPON.sling.speed, life: 0.6, damage: q.damage * 0.8, crit: false, pierce: 0, extra: 0, hits: [e.id], kind: 'stone', wucht: false, jumped: true });
         }

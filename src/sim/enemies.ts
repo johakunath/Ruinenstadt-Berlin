@@ -113,7 +113,8 @@ export function randomYardSpot(sim: Sim, minPlayerDist: number): { x: number; z:
 
 export function aliveCount(sim: Sim): number {
   let n = 0;
-  for (const e of sim.enemies) if (e.state !== 'dead' && e.sleep === undefined) n++; // Side passage guards (sleep set) never hold up a wave.
+  // Side passage guards (sleep set) never hold up a wave; nor does a reflection (M16, it dies with its host).
+  for (const e of sim.enemies) if (e.state !== 'dead' && e.sleep === undefined && e.mirrorOf === undefined) n++;
   return n;
 }
 
@@ -153,8 +154,8 @@ export function updateEnemies(sim: Sim): void {
     let vx = 0;
     let vz = 0;
 
-    // Bosses rage below half life: faster, and their specials come quicker (2D).
-    if (def.boss && !e.rage && e.state !== 'dead' && e.hp < e.maxHp * BOSS.rageAt) {
+    // Bosses rage below half life: faster, and their specials come quicker (2D). M16: not the Diva (her tiers are her escalation).
+    if (def.boss && !def.noRage && !e.rage && e.state !== 'dead' && e.hp < e.maxHp * BOSS.rageAt) {
       e.rage = true;
       e.def = { ...def, speed: def.speed * BOSS.rageSpeed };
       sim.events.push({ type: 'bossRage', id: e.id, name: def.name });
@@ -293,6 +294,11 @@ export function updateEnemies(sim: Sim): void {
         break;
       case 'dead':
         break;
+    }
+    // M16 Spiegelbild: faces the mirrored way of the one it reflects (outside its own Doppelpirouette).
+    if (e.mirrorOf !== undefined && e.state === 'chase') {
+      const host = sim.enemies.find((o) => o.id === e.mirrorOf);
+      if (host) e.facing = host.facing + Math.PI;
     }
 
     e.speed = Math.hypot(vx, vz);

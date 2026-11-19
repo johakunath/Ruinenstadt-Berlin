@@ -5,7 +5,7 @@ export type RarityId = 0 | 1 | 2 | 3;
 export type ElementId = 'fire' | 'acid' | 'shock';
 export type EnemyKind = 'raser' | 'ghoul' | 'brute' | 'spitter' | 'koloss' | 'brand' | 'hauptmann' | 'hexe' | 'turm'
   | 'flieger' | 'rat' | 'bomb' | 'shield' | 'crow' | 'howl' | 'ratten' | 'ritter' | 'platte'
-  | 'volk' | 'uhr' | 'wurz' | 'kern' | 'kabel' | 'bass';
+  | 'volk' | 'uhr' | 'wurz' | 'kern' | 'kabel' | 'bass' | 'glas' | 'rauchglas' | 'spiegel';
 export type AffixId = 'dmg' | 'as' | 'crit' | 'spd' | 'hp' | 'regen' | 'res' | 'el' | 'leech' | 'cdr' | 'luck';
 export type SlotId = 'w' | 'h' | 'a' | 'g' | 'f' | 't' | 'r' | 'i';
 export type WeaponKindId = 'blade' | 'hammer' | 'sling' | 'spear';
@@ -143,6 +143,10 @@ export const ENEMY_RESISTANCES: Readonly<Record<EnemyKind, EnemyResistance>> = {
   kern: { fire: 1.6, acid: 0.4, shock: 1.1 },
   kabel: { fire: 1.6, acid: 1, shock: 0.3 },
   bass: { fire: 1, acid: 1.6, shock: 0.5 },
+  // M16 Charlottenburg (new, no 2D rows): cut glass shatters under shock, smoked glass etches, mirrors burn.
+  glas: { fire: 1, acid: 0.5, shock: 1.6 },
+  rauchglas: { fire: 1, acid: 1.6, shock: 0.5 },
+  spiegel: { fire: 1.6, acid: 0.6, shock: 1 },
 };
 
 /** 2D AFX. */

@@ -36,8 +36,8 @@ Why the Ehrenhof: the camera looks north, so facade and dome stand behind the fi
 |---|---|---|
 | Bikini-Haus (1957) | Two-storey shop row with the cinema Capitol am Zoo (Poelzig, 1925), a passage as side branch. The walk-in store is the KaDeWe (1907): Lichthof with the glass roof in shards | Capitol: Wikipedia, checked. KaDeWe year: memory |
 | High-rises (Zoofenster, Upper West, Europa-Center) | None. Corner houses with domes and turrets, the two Romanische Häuser and the church towers are the skyline | „Romanisches Forum“ at the Auguste-Viktoria-Platz: Wikipedia, checked |
-| Gedächtniskirche ruin | Whole, five towers (1895), worn | memory |
-| Bahnhof Zoo (1930s hall) | The 1882 station on the Stadtbahn viaduct | memory; photos in step 4 |
+| Gedächtniskirche ruin | Whole, five towers (main tower, two at the west front, two at the choir), octagonal crossing roof, light grey-ochre stone, slate spires; worn | photos about 1890 to 1906 (step 4) |
+| Bahnhof Zoo (1930s hall) | The 1882 station on the Stadtbahn viaduct: gabled iron-and-glass hall, brick end walls, brick street arcades marked „EINGANG“ | photo 1907 (step 4) |
 | Zoo | Existed (1844): Löwentor at the station, Elefantentor (1899) on today's Budapester Straße, Antilopenhaus, concert garden with music pavilion | memory; photos in step 4 |
 | Zoo Palast | Ufa-Palast am Zoo, the leading premiere cinema | Wikipedia, checked |
 | Europa-Center | Romanisches Café, east of the church | Wikipedia, checked |
@@ -47,7 +47,7 @@ Why the Ehrenhof: the camera looks north, so facade and dome stand behind the fi
 | Gloria-Palast (1926), Marmorhaus (1913), Theater des Westens (1896), Schiller-Theater (1907), Rathaus Charlottenburg (1905) | As built; all fit the decade | Gloria-Palast named in the Capitol article; years: memory |
 | Großer Kurfürst statue in the Ehrenhof (there since 1952) | Left out: the court is the Diva's stage | memory |
 
-Step 4 researches each sight from pre-1930 photos (Wikimedia) and corrects this table.
+Step 4 (2026-11-19) checked the sights against photos. Added from it: the Schloss, its wings and the Neuer Flügel had red tile roofs about 1900 (built red); the Ehrenhof gate piers carry one lunging gladiator each; the Ufa-Palast sat in the neo-Romanesque Ausstellungshallen; period cards call the Elefantentor the „Haupteingang“, and no pre-1930 image of a Löwentor at the Hardenbergplatz was found (unverified whether it stood in 1920); the Schiller-Theater stood at the corner of Grolmanstraße and Bismarckstraße; a photo dated about 1925 already shows the Gloria-Palast name (the table's 1926 is approximate); in 1920 the Otto-Suhr-Allee was the Berliner Straße (memory). An aerial photo confirms the wing order: Orangerie west, Neuer Flügel east. Still unverified: the KaDeWe year 1907, the Theaterbau at the far west end, which side of the Kantstraße the Theater des Westens stands on.
 
 ## Geography check (OpenStreetMap Nominatim, 2026-11-19)
 

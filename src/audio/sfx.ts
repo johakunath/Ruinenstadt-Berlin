@@ -41,6 +41,20 @@ export const FX = {
  // WP5 Heuler: a rising wail (variation of growlHexe).
  growlHowl:[{w:2,f:240,fe:520,a:.08,s:.25,d:.4,vd:.12,vs:6,v:.2},{w:3,f:900,fe:1600,a:.08,s:.2,d:.35,q:4,v:.1}],
  growlZeit:[{w:4,f:330,m:BELL,d:1.2,v:.3},{w:4,f:495,m:BELL,dl:.18,d:1,v:.22},{w:2,f:82,fe:60,a:.08,s:.2,d:.7,v:.18}],
+ // M16 Charlottenburg (variations of the cues above): a glass chime on a burst (low for big bodies), the dancer's
+ // whirr, the Logenbrecher's creak, the Souffleur's whisper, a drum roll for the Nummer, applause, a cash-register
+ // bell for the Schutzgeld, a shimmer for the Tausch, a rising glass tone before the prism ray, a curtain thud.
+ glassChime:[{w:4,f:2900,m:BELL,d:.45,v:.22},{w:4,f:4300,m:CLINK,dl:.03,d:.3,v:.16},{w:3,f:7000,fe:3500,d:.12,q:.9,v:.12}],
+ glassLow:[{w:4,f:1500,m:BELL,d:.6,v:.26},{w:4,f:2250,m:CLINK,dl:.04,d:.4,v:.18},{w:3,f:4200,fe:1800,d:.18,q:.9,v:.14}],
+ whirr:[{w:3,f:900,fe:2600,a:.05,s:.25,d:.15,q:2.5,am:.6,ams:28,v:.3}],
+ creak:[{w:3,nt:1,f:300,fe:180,a:.1,s:.5,d:.3,q:6,am:.5,ams:9,v:.25},{w:2,f:70,fe:55,a:.1,s:.4,d:.3,v:.12}],
+ whisper:[{w:3,f:3200,fe:2600,a:.08,s:.3,d:.3,q:.7,am:.5,ams:7,v:.22}],
+ drumroll:[{w:3,nt:1,f:400,fe:300,a:.01,s:.6,d:.15,am:1,ams:26,v:.4},{w:2,f:90,fe:80,s:.6,d:.2,am:1,ams:26,v:.2}],
+ applause:[{w:3,f:2500,a:.05,s:.6,d:.5,q:.4,am:.9,ams:31,v:.35},{w:3,f:1200,dl:.02,a:.05,s:.5,d:.4,q:.5,am:.9,ams:23,v:.25}],
+ register:[{w:4,f:2100,m:BELL,d:.6,v:.3},{w:4,f:520,m:KNOCK,d:.06,v:.3}],
+ shimmer:[{w:4,f:1800,m:BELL,d:.8,v:.12},{w:4,f:2400,m:BELL,dl:.1,d:.8,v:.1},{w:4,f:3000,m:BELL,dl:.2,d:.7,v:.08}],
+ prismRise:[{w:2,f:700,fe:2800,a:.2,s:.5,d:.2,vd:.02,vs:11,v:.16},{w:4,f:1400,m:BELL,dl:.6,d:.4,v:.12}],
+ curtain:[{w:3,nt:1,f:200,fe:50,s:.1,d:.6,p:.5,v:.6},{w:2,f:60,fe:35,d:.5,v:.5}],
  swing:[{w:3,f:380,fe:1700,a:.05,s:.01,d:.09,q:1.6,v:.5}],
  heavy:[{w:3,f:220,fe:950,a:.07,s:.02,d:.16,q:1.4,v:.6},{w:2,f:95,fe:42,dl:.07,d:.22,v:.5}],
  sling:[{w:3,f:1800,fe:4200,a:.012,d:.07,q:2,v:.5},{w:4,f:430,m:[[1,1,1],[2.01,.6,.4]],d:.05,v:.25}],

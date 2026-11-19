@@ -78,7 +78,7 @@ export function autoAttackTarget(sim: Sim): Enemy | null {
   let bd = range;
   for (const e of sim.enemies) {
     // Sleeping guards and a boss still waking (untouchable) are not swung at.
-    if (e.state === 'dead' || e.sleep || (e.wake ?? 0) > 0) continue;
+    if (e.state === 'dead' || e.sleep || (e.wake ?? 0) > 0 || e.mirrorOf !== undefined) continue;
     const d = Math.hypot(e.x - p.x, e.z - p.z) - e.def.radius;
     if (d < bd) { bd = d; best = e; }
   }
@@ -95,7 +95,8 @@ function attackFacing(sim: Sim, inp: SimInput): number {
   let best = dir;
   let bestScore = Infinity;
   for (const e of sim.enemies) {
-    if (e.state === 'dead') continue;
+    // M16: a reflection is no target.
+    if (e.state === 'dead' || e.mirrorOf !== undefined) continue;
     const dx = e.x - p.x;
     const dz = e.z - p.z;
     const dist = Math.hypot(dx, dz);

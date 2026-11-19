@@ -4,7 +4,7 @@
 import { HIT_FEEL, PLAYER, WEAPON, type HitWeight } from '../data/combat';
 import { STRONG_AGAINST, type DamageType } from '../data/weapon-look';
 import { ENEMY_RESISTANCES, type ElementId, type LegendaryId } from '../data/items';
-import { ELITES, THREAT } from '../data/enemies';
+import { BOSS, ELITES, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { splitElite } from './enemies';
 import { PX } from '../data/powers';
 import type { PerkId } from '../data/progression';
@@ -54,7 +54,7 @@ const tough = (e: Enemy): boolean => !!e.def.boss || !!e.elite;
 export const resist = (e: Enemy, el: ElementId): number => (e.def.res === 'none' ? 1 : ENEMY_RESISTANCES[e.def.res][el]);
 
 export function stun(e: Enemy, seconds: number): void {
-  if (e.state === 'dead' || seconds <= 0 || (e.wake ?? 0) > 0) return;
+  if (e.state === 'dead' || seconds <= 0 || (e.wake ?? 0) > 0 || e.mirrorOf !== undefined) return;
   // A boss finishes what it marked; a rush in flight cannot be stopped.
   if (e.state === 'special' && e.sp && (e.def.boss || (e.sp.speed > 0 && e.stateT >= e.sp.wind))) return;
   // WP5: a lit fuse burns on (2D: a stun only stops the Zünder walking).
@@ -68,8 +68,8 @@ export function stun(e: Enemy, seconds: number): void {
 }
 
 export function ignite(s: Sim, e: Enemy, dps: number, time: number, stack = false): void {
-  // M15: nothing catches on the Weltzeituhr while it wakes up (Codex review).
-  if (e.state === 'dead' || (e.wake ?? 0) > 0) return;
+  // M15: nothing catches on the Weltzeituhr while it wakes up (Codex review); M16: nor on a reflection.
+  if (e.state === 'dead' || (e.wake ?? 0) > 0 || e.mirrorOf !== undefined) return;
   dps *= resist(e, 'fire');
   if (dps <= 0) return;
   const cur = e.burn > 0 ? e.bdps : 0;
@@ -82,7 +82,7 @@ export function ignite(s: Sim, e: Enemy, dps: number, time: number, stack = fals
 export function chain(s: Sim, src: Enemy, damage: number, jumps: number): void {
   const d = (t: Enemy): number => Math.hypot(t.x - src.x, t.z - src.z);
   const reach = s.wet ? STATUS.wetChainRange : STATUS.chainRange;
-  const targets = s.enemies.filter((t) => t !== src && t.state !== 'dead' && d(t) < reach).sort((a, b) => d(a) - d(b)).slice(0, jumps + (s.wet ? STATUS.wetJumps : 0));
+  const targets = s.enemies.filter((t) => t !== src && t.state !== 'dead' && t.mirrorOf === undefined && d(t) < reach).sort((a, b) => d(a) - d(b)).slice(0, jumps + (s.wet ? STATUS.wetJumps : 0));
   let x = src.x;
   let z = src.z;
   for (const t of targets) {
@@ -100,7 +100,8 @@ export function chain(s: Sim, src: Enemy, damage: number, jumps: number): void {
  */
 export function shieldFactor(s: Sim, e: Enemy, o: StrikeOpts, stuns = (o.stun ?? 0) > 0): number {
   const sh = e.def.shield;
-  if (!sh || (e.guardOpen ?? 0) > 0) return 1;
+  // M16 Logenbrecher: the glass front is down while he stands open after his blow.
+  if (!sh || (e.guardOpen ?? 0) > 0 || (sh.down && e.open > 0)) return 1;
   const p = s.player;
   if (Math.abs(angleDiff(e.facing, angleOf(p.x - e.x, p.z - e.z))) >= sh.arc) return 1;
   if (stuns || o.element === 'shock') {
@@ -116,6 +117,23 @@ export function shieldFactor(s: Sim, e: Enemy, o: StrikeOpts, stuns = (o.stun ??
   return e.state === 'special' && e.sp?.kind === 'key' ? 0 : sh.front;
 }
 
+/** M16 Leibwache: the kinds that guard a boss (the Ringvater's Logenbrecher). */
+const GUARDS: Partial<Record<EnemyKind, readonly EnemyKind[]>> = { ringvater: BOSS.ringvater.guards };
+/** M16: one of the boss's guards still lives, so it takes half damage (`THREAT.armored`). */
+export function guarded(s: Sim, e: Enemy): boolean {
+  const g = GUARDS[e.kind];
+  return !!g && s.enemies.some((o) => o.state !== 'dead' && g.includes(o.kind));
+}
+
+/** M16: a hit on the Spiegelbild only flashes it („Nur ein Spiegelbild“, at most every few seconds). */
+function mirrorTouched(s: Sim, e: Enemy): void {
+  if ((e.noteT ?? 0) <= 0) {
+    e.noteT = BOSS.spiegelpaar.note;
+    s.events.push({ type: 'note', text: 'Nur ein Spiegelbild', color: '#9fd8ff', x: e.x, z: e.z });
+  }
+  s.events.push({ type: 'hit', id: e.id, x: e.x, z: e.z, dx: 0, dz: 0, weight: 'light', killed: false, damage: 0, critical: false, quiet: true });
+}
+
 /** D9: the equipped weapon's damage types are strong against one of the enemy's classes (two classes count once). */
 export function effectiveAgainst(types: readonly DamageType[], e: Enemy): boolean {
   return types.some((t) => STRONG_AGAINST[t].some((c) => e.def.classes.includes(c)));
@@ -126,6 +144,8 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (e.state === 'dead') return 0;
   // M15: the Weltzeituhr is untouchable while it wakes up.
   if ((e.wake ?? 0) > 0) return 0;
+  // M16: the Spiegelpaar's reflection cannot be hurt.
+  if (e.mirrorOf !== undefined) { mirrorTouched(s, e); return 0; }
   const p = s.player;
   const a = s.abilities;
   const dist = Math.hypot(e.x - p.x, e.z - p.z);
@@ -143,6 +163,14 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   // M12: open bodies take more, armored elites half until they open; elemental hits meet the type's resistance.
   if (e.open > 0) damage *= THREAT.openBonus;
   else if (e.elite === 'gepanzert') damage *= THREAT.armored;
+  // M16 Leibwache: half damage while a guard lives; the note once per guard he has.
+  if (guarded(s, e)) {
+    damage *= THREAT.armored;
+    if (!e.guardNote) {
+      e.guardNote = true;
+      s.events.push({ type: 'note', text: '„Erst die Leibwache!“', color: '#f2d14b', x: e.x, z: e.z });
+    }
+  }
   // Every stun this hit brings opens a shield in front: the weapon's (hammer, Gegengewicht), the
   // crit-stun blessing and every fourth Kiezbox hit (those two stun further down; Codex review).
   const stuns = (o.stun ?? 0) > 0 || (crit && pk(s, 'stun') > 0) || (!o.noproc && hasL(s, 'kiezbox') && (a.legHits + 1) % 4 === 0);
@@ -243,6 +271,9 @@ export function killEnemy(s: Sim, e: Enemy, byHero = true): void {
   if (e.elite === 'spaltend') splitElite(s, e);
   // WP5: a Zünder killed before its fuse ran out still goes off where it fell, smaller (2D `kill`).
   if (e.def.ai === 'zuender' && !e.blown) deathBlast(s, e);
+  // M16: glass bursts („Glas splittert“); a reflection goes with the one it reflects.
+  glassBurst(s, e);
+  for (const o of s.enemies) if (o.mirrorOf === e.id && o.state !== 'dead') vanish(o);
   s.kills++;
   if (kodexKill(s, e.def.kind)) s.events.push({ type: 'kodex', name: e.def.name });
   if (e.elite && kodexKill(s, `e:${e.elite}`)) s.events.push({ type: 'kodex', name: `Elite ${ELITES[e.elite].name}` });
@@ -279,7 +310,7 @@ export function killEnemy(s: Sim, e: Enemy, byHero = true): void {
  * the hero's multipliers, procs, shield rules or executes apply, and a kill feeds no kill effects.
  */
 export function blastHit(s: Sim, e: Enemy, damage: number, from: { x: number; z: number }, knockPx: number): void {
-  if (e.state === 'dead' || (e.wake ?? 0) > 0) return;
+  if (e.state === 'dead' || (e.wake ?? 0) > 0 || e.mirrorOf !== undefined) return;
   const dmg = Math.max(1, Math.round(damage));
   e.hp -= dmg;
   let dx = e.x - from.x, dz = e.z - from.z;
@@ -290,6 +321,33 @@ export function blastHit(s: Sim, e: Enemy, damage: number, from: { x: number; z:
   const killed = e.hp <= 0;
   s.events.push({ type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius, dx, dz, weight: 'light', killed, damage: dmg, critical: false, quiet: true });
   if (killed) killEnemy(s, e, false);
+}
+
+/**
+ * M16 „Glas splittert“: a glass body that died bursts after a moment, a marked circle that hits the hero and
+ * every other body inside (`Zone.burst`). Off on maps without `shards`.
+ */
+export function glassBurst(s: Sim, e: Enemy): void {
+  if (!s.shards || !e.def.glass || e.mirrorOf !== undefined) return;
+  const S = THREAT.shards;
+  const base = ENEMIES[e.kind];
+  s.threats.zones.push({ x: e.x, z: e.z, r: S.radius, t: S.wind, max: S.wind, damage: base.damage * e.dmgMul * S.hit, floor: 0, kind: 'shard', src: e.id, free: true, burst: base.hp * e.hpMul * S.life });
+}
+
+/** M16: shards of a burst on an enemy: plain damage and a small knock; a boss takes at most `bossCap` of its life. A kill feeds no kill effects. */
+export function shardHit(s: Sim, e: Enemy, damage: number, from: { x: number; z: number }): void {
+  if (e.state === 'dead' || (e.wake ?? 0) > 0 || e.mirrorOf !== undefined) return;
+  const d = e.def.boss ? Math.min(damage, e.maxHp * THREAT.shards.bossCap) : damage;
+  blastHit(s, e, d, from, 120);
+}
+
+/** M16: a reflection leaves with its host: it falls like a body, but it was never one (no kill, no loot). */
+export function vanish(e: Enemy): void {
+  e.state = 'dead';
+  e.stateT = 0;
+  e.hp = 0;
+  e.sp = null;
+  e.open = 0;
 }
 
 /** The Zünder's small blast when it dies before its fuse ran out: its lit fuse goes out, this one is marked shortly. */

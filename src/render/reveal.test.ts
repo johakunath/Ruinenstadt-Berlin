@@ -7,9 +7,29 @@ const rathaus: Landmark = { kind: 'rathaus', x: 0, z: 0, rot: Math.PI / 2, hx: 1
 const spati: Landmark = { kind: 'spati', x: 100, z: 0, rot: 0, hx: 5, hz: 4, clear: 2 };
 
 describe('landmark reveal (M11d)', () => {
-  it('Charlottenburg reveals its five sights only; no Köpenick kind (the Rathaus is its own backdrop kind, M16)', () => {
+  it('Charlottenburg reveals its eight sights only; no Köpenick kind (the Rathaus is its own backdrop kind, M16)', () => {
     const shown = charlottenburgMap(1).landmarks.filter((l) => new LandmarkReveal([l]).update(0.1, l.x, l.z, true) !== null).map((l) => l.kind);
-    expect(shown.sort()).toEqual(['belvedere', 'gedaechtniskirche', 'kadewe', 'opernhaus', 'schlossmitte']);
+    expect(shown.sort()).toEqual(['belvedere', 'elefantentor', 'gedaechtniskirche', 'kadewe', 'opernhaus', 'revuepalast', 'schlossmitte', 'theaterwestens']);
+  });
+
+  it('Charlottenburg: the Schloss reveal starts at the end of the Schloßstraße and round into the Spandauer Damm (either sidewalk; at 1.3 the north one)', () => {
+    for (const scale of [1, 1.3]) {
+      const m = charlottenburgMap(scale), schloss = m.landmarks.find((l) => l.kind === 'schlossmitte')!;
+      // Not yet at the north rim of the Schloßstraße fight (never mid-fight there).
+      const e = m.encounters.find((q) => q.id === 'schlossstrasse')!;
+      expect(new LandmarkReveal([schloss]).update(0.1, e.x, e.z - e.r, true)).toBeNull();
+      const pts = [...m.streets.find((s) => s.name === 'Schloßstraße')!.pts, ...m.streets.find((s) => s.name === 'Spandauer Damm')!.pts.filter(([x]) => x > -76 * scale)];
+      for (const side of scale === 1 ? [-1, 1] : [-1, 0]) {
+        const r = new LandmarkReveal([schloss]);
+        let shown = false;
+        for (let i = 1; i < pts.length && !shown; i++) {
+          const [ax, az] = pts[i - 1]!, [bx, bz] = pts[i]!, len = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / len, nz = (bx - ax) / len;
+          // Walk the outer edge of the sidewalk on each side (Allee 18 m and Spandauer Damm 14 m, plus 3 m).
+          for (let t = 0; t <= len && !shown; t += 1) shown = r.update(0.1, ax + ((bx - ax) * t) / len + nx * side * 11, az + ((bz - az) * t) / len + nz * side * 11, true) !== null;
+        }
+        expect(shown, `scale ${scale} side ${side}`).toBe(true);
+      }
+    }
   });
 
   it('measures the distance to the rotated footprint', () => {

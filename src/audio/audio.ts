@@ -16,11 +16,13 @@ const VOICE: Partial<Record<EnemyKind, SfxId>> = {
   uhrwerk: 'growlUhr', uhrwerkgross: 'growlUhr', wurzler: 'growlWurz', wurzelmutter: 'growlWurz', kernspeier: 'growlKern', volkskoloss: 'growlKoloss', weltzeituhr: 'growlZeit',
   // WP5: the Schildträger grunts like a Brocken, the Heuler wails.
   schild: 'growlBrute', heuler: 'growlHowl',
+  // M16: the Logenbrecher creaks, the Souffleur whispers, the dancers whirr.
+  loge: 'creak', souffleur: 'whisper', scherbe: 'whirr',
 };
 /** M12c: specials with their own voice at the wind-up and the release (by special, then by kind). */
 // WP5 (2D): the Zünder's fuse hisses ('zap'), the Heuler wails and the horn sounds when the others are driven on.
-const WIND: Partial<Record<SpecialKind, SfxId>> = { leap: 'crackle', bass: 'growlBass', shove: 'growlTuer', grab: 'growlTuer', land: 'spin', fuse: 'zap', howl: 'growlHowl' };
-const GO: Partial<Record<SpecialKind, SfxId>> = { leap: 'dash', bass: 'thump', grab: 'dash', beat: 'tap', howl: 'horn' };
+const WIND: Partial<Record<SpecialKind, SfxId>> = { leap: 'crackle', bass: 'growlBass', shove: 'growlTuer', grab: 'growlTuer', land: 'spin', fuse: 'zap', howl: 'growlHowl', pirouette: 'whirr', faust: 'creak', swap: 'shimmer', prism: 'prismRise' };
+const GO: Partial<Record<SpecialKind, SfxId>> = { leap: 'dash', bass: 'thump', grab: 'dash', beat: 'tap', howl: 'horn', pirouette: 'dash', faust: 'crash' };
 
 export class GameAudio {
   private ctx: AudioContext | null = null;
@@ -214,6 +216,11 @@ export class GameAudio {
         if(event.phase==='wind'&&k==='charge'&&who==='bassprediger'){this.play('zap',0,pan,volume);break;}
         if(event.phase==='wind'&&k==='roar'&&who==='dirigent'){this.play('tap',0,pan,volume);break;}
         if(event.phase==='go'&&k==='volley'&&who==='wachdrohne'){this.play('laser',0,pan,volume);break;}
+        // M16: the Souffleur whispers his cue, the Conférencier's drum roll and applause, the Ringvater's register bell.
+        if(event.phase==='wind'&&k==='howl'&&who==='souffleur'){this.play('whisper',0,pan,volume);break;}
+        if(event.phase==='wind'&&k==='summon'&&who==='conferencier'){this.play('drumroll',0,pan,volume);break;}
+        if(event.phase==='go'&&k==='barrage'&&who==='conferencier'){this.play('applause',0,pan,volume);break;}
+        if(event.phase==='go'&&k==='summon'&&who==='ringvater'){this.play('register',0,pan,volume);break;}
         if(event.phase==='wind'&&WIND[k]){this.play(WIND[k]!,0,pan,volume);break;}
         if(event.phase==='go'&&GO[k]){this.play(GO[k]!,0,pan,volume);if(k==='beat')this.play('thump',0,pan,volume*.5);break;}
         // M15: roots creak (2D 'wood'), the seed fan spits, the hour sectors and the hand ring the clock's bell, slabs grind.
@@ -225,7 +232,12 @@ export class GameAudio {
       }
       case 'enemyShot': this.play('spit',0,pan,volume); break;
       case 'spotLock': this.play('lockBeep',0,pan,volume); break;
-      case 'zoneHit': this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':event.kind==='root'?'wood':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play(event.r>2?'boom':'pop',0,pan,volume); break;
+      case 'zoneHit':
+        // M16: glass bursts chime (lower for a big body), the prism ray rings.
+        if(event.kind==='shard'||event.kind==='prism'){const big=(sim?.enemies.find(e=>e.id===event.src)?.def.radius??0)>0.5;this.play(event.kind==='prism'||big?'glassLow':'glassChime',0,pan,volume*.8);break;}
+        if(event.kind==='applause')break;
+        this.play(event.kind==='flame'||event.kind==='bomb'?'ignite':event.kind==='acid'?'spit':event.kind==='root'?'wood':'boom',0,pan,volume*(event.r>2.5?1:.7)); if(event.kind==='bomb')this.play(event.r>2?'boom':'pop',0,pan,volume); break;
+      case 'divaTier': this.play('curtain',0,pan,volume); this.play('glassLow',0,pan,volume); break;
       case 'bossRage': this.play('roar'); this.play('horn'); break;
       case 'ability': {
         const cues:Record<string,SfxId>={Kreissäge:'spin',Fechtsprung:'dash',Säbeltanz:'spin',Fallhammer:'boom',Gullydeckel:'wood',Abrissbirne:'boom',Nagelsturm:'sling',Brandsatz:'ignite',Sperrfeuer:'heavy',Spießrute:'heavy',Stabhochsprung:'dash',Standarte:'legend'};

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
-import { CHARLOTTENBURG_BOSS_STANDIN, charlottenburgMap, IRRGARTEN, PLATFORM } from './charlottenburg';
+import { CHARLOTTENBURG_BOSSES, charlottenburgMap, IRRGARTEN, PLATFORM } from './charlottenburg';
 import { EDGE_FRONT, propCollider } from './courtyard';
 import { generateLots, generateProps, heightAt, inPoly, isWater, onStair, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
 import type { Level } from '../sim/level';
@@ -43,14 +43,29 @@ describe('Charlottenburg map (M16, layout C2)', () => {
       expect(normal(m)).toHaveLength(30);
       const perZone = [0, 1, 2, 3].map((z) => m.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves).filter((w) => w.bosses.length === 0).length);
       expect(perZone).toEqual([8, 9, 10, 3]);
-      const B = CHARLOTTENBURG_BOSS_STANDIN;
+      const B = CHARLOTTENBURG_BOSSES;
       expect(m.encounters.flatMap((e) => e.waves).flatMap((w) => w.bosses)).toEqual([B.kirche, B.oper, B.belvedere, B.diva]);
       for (const z of [0, 1, 2, 3]) expect(m.encounters.filter((e) => e.zone === z && e.waves.some((w) => w.bosses.length > 0)).map((e) => e.zone)).toEqual([z]);
       expect(m.encounters.map((e) => e.zone)).toEqual([...m.encounters.map((e) => e.zone)].sort((a, b) => a - b));
       expect(m.district).toBe(4);
-      expect(m.flavor).toBeUndefined();
+      expect(m.flavor).toBe('revue');
+      expect(m.shards).toBe(true);
       expect(m.encounters.length).toBe(15);
       expect(m.encounters.at(-1)!.id).toBe('ehrenhof');
+    });
+
+    it(`mixes the glass roster per zone (spec m12d): dancers first, the trio from zone 1, glass only in zone 3 (scale ${scale})`, () => {
+      const enc = (id: string) => m.encounters.find((e) => e.id === id)!;
+      const kinds = (id: string): string[] => [...new Set(enc(id).waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix as Record<string, number>)[k]! > 0)))].sort();
+      expect(kinds('konzertgarten')).not.toContain('souffleur');
+      expect(kinds('konzertgarten')).toContain('scherbe');
+      expect(kinds('westens')).toEqual(expect.arrayContaining(['scherbe', 'souffleur', 'loge']));
+      expect(kinds('spiegelgalerie')).toEqual(['loge', 'scherbe', 'souffleur', 'walker']);
+      expect(kinds('karpfenteich')).toEqual(['crow', 'runner', 'scherbe', 'walker']);
+      // The KaDeWe's mannequins: one more dancer weight than the Elefantentor wave of the same tier would have.
+      const k = enc('kadewe').waves[0]!, e = enc('elefantentor').waves.at(-1)!;
+      expect(k.mix.scherbe! - e.mix.scherbe!).toBeCloseTo(1 + (k.hpMul - e.hpMul) / 0.13 * 0.06, 5);
+      expect(m.encounters.flatMap((q) => q.waves).every((w) => !('schild' in w.mix) && !('zuender' in w.mix))).toBe(true);
     });
 
     it(`gets harder wave by wave from tier 32 to 54; the Karpfenteich is calm (scale ${scale})`, () => {

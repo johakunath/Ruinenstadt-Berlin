@@ -7,6 +7,7 @@
 //   &elite=flink  &view=game|side|front  &open=1  &neon=1 (Mitte cables)  &wind=0.8&go=0.5 (special timing)
 //   &wake=strip (the Weltzeituhr waking up across the strip), &wake=0 (awake)
 //   &base=human1|human2 (H3 step 2, temporary): the zombie bodies on a human base candidate (tools/build-human.mjs)
+//   &revue=1 (M16 Charlottenburg dress)  &tier=1|2 (the Diva's broken gown tiers)  &guard=0 (the Logenbrecher's front down)
 import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer, type Mesh } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
@@ -24,6 +25,7 @@ const q = new URLSearchParams(location.search);
 const kind = q.get('kind') as EnemyKind | null;
 const kinds = kind ? [kind] : (Object.keys(ENEMIES) as EnemyKind[]);
 const n = kind ? Number(q.get('n') ?? 6) : kinds.length;
+let tris = 0;
 const W = Number(q.get('w') ?? (kind ? 260 : 190)), H = Number(q.get('h') ?? 320);
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
@@ -80,10 +82,12 @@ for (let i = 0; i < n; i++) {
     e.speed = state === 'chase' ? Number(q.get('speed') ?? 0) : 0;
   }
   if (q.get('open')) e.open = 1;
+  if (q.get('tier')) e.still = Number(q.get('tier'));
+  if (q.get('guard') === '0') e.guardOpen = 2;
   if (q.get('wake') === 'strip') e.wake = (def.wake ?? 0) * (1 - f);
   else if (q.get('wake') !== null) e.wake = Number(q.get('wake'));
   const v = new EnemyView(assets, materials, def.body, false);
-  v.assign(e, q.get('neon') === '1');
+  v.assign(e, q.get('neon') === '1', q.get('revue') === '1');
   scene.add(v.root);
   // Let fades and springs settle on the pose.
   for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
@@ -93,7 +97,9 @@ for (let i = 0; i < n; i++) {
   renderer.setViewport(i * W, 0, W, H);
   renderer.setScissor(i * W, 0, W, H);
   renderer.render(scene, cam);
+  tris += renderer.info.render.triangles;
   scene.remove(v.root);
   sim.enemies.length = 0;
 }
-document.title = `done ${kinds.join(' ')}`;
+// Triangles drawn per view (all views summed; divide by n), for cost checks.
+document.title = `done ${kinds.join(' ')} tris=${Math.round(tris / Math.max(1, n))}`;

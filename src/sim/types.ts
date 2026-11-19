@@ -206,6 +206,15 @@ export interface Enemy {
   stand?: Collider[];
   /** Where it stood before it woke (the Weltzeituhr's base): render walks it back there when it dies. */
   home?: { x: number; z: number };
+  /** M16 Spiegelbild: the body it reflects (it cannot be hurt and dies with it) and the centre it is reflected through. */
+  mirrorOf?: number;
+  mirror?: { x: number; z: number };
+  /** M16 Spiegelpaar: the id of her reflection. */
+  pair?: number;
+  /** M16 Ringvater: „Erst die Leibwache!“ was shown for the guard he has now. */
+  guardNote?: boolean;
+  /** M16 Diva: fans still to throw after the first one: how many, seconds to the next, its aim and its index. */
+  fans?: { n: number; t: number; aim: number; k: number };
 }
 
 export type SimEvent =
@@ -240,10 +249,12 @@ export type SimEvent =
   /** A special attack starts its wind-up (`wind`) or is released (`go`). */
   | { type: 'enemySpecial'; id: number; kind: SpecialKind; phase: 'wind' | 'go'; x: number; z: number }
   /** A marked ground zone goes off. */
-  | { type: 'zoneHit'; kind: ZoneKind; x: number; z: number; r: number; hit: boolean }
+  | { type: 'zoneHit'; kind: ZoneKind; x: number; z: number; r: number; hit: boolean; /** M16: the zone's source (a glass burst: the body that broke). */ src?: number }
   | { type: 'enemyShot'; x: number; z: number; boss: boolean }
   /** M12c: a Wachdrohne searchlight locked onto the hero; the volley follows. */
   | { type: 'spotLock'; id: number; x: number; z: number }
+  /** M16: a gown tier of the Diva bursts (1 at 66 % life, 2 at 33 %). */
+  | { type: 'divaTier'; id: number; tier: number; x: number; z: number }
   | { type: 'bossRage'; id: number; name: string }
   | { type: 'summon'; id: number; x: number; z: number; count: number }
   | { type: 'spawn'; id: number }
@@ -354,4 +365,6 @@ export interface Sim {
   barrier: { state: 'idle' | 'wind' | 'shut'; t: number; src: number };
   /** M12c rain (2D `D.wet`, from the map; tunnels and the camp are dry): fire burns shorter, shock jumps further. */
   wet: boolean;
+  /** M16 „Glas splittert“ (from the map; other maps, tunnels and the camp: off): glass bodies burst when they die. */
+  shards: boolean;
 }

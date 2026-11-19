@@ -13,9 +13,10 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 | U-Bahn tunnels | 5 (4 normal, 1 boss) | 5 | 0 | 0 |
 | Alexanderplatz | 13 (9 normal, 4 bosses) | 7 | 2 (mech, mechBig) | 4 |
 | Mitte | 14 (10 normal, 4 bosses) | 11 | 0 | 3 (drone, wachdrohne, crow) |
+| Charlottenburg | 14 (9 normal, 4 bosses, the Spiegelbild) | 12 (6 zombie; Conférencier and Ringvater on `human1`; Scherbentänzerin, Spiegelpaar, Spiegelbild and Diva on `human2`) | 0 | 2 (crow, rat) |
 | Camp | 0 enemies, 7 keepers | 0 | 7 on `hero.glb` | 0 |
 
-- Roster: 33 kinds (16 normal or special, 17 bosses) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types.
+- Roster: 41 kinds (19 normal or special, 21 bosses, the Spiegelbild) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types. M16 (2026-11-19, `docs/tasks/m12d-charlottenburg-enemies.md`): three Charlottenburg kinds, four bosses and the reflection, all code gear (placeholder); 1920s dress for Schlurfer, Hetzer, Brocken and Speier on `revue` maps (render only). Kodex: glyphs, no busts yet (ids E19 to E21, X20 to X23 reserved); no boss voices yet.
 - Bodies: 22 kinds on the zombie rig (2 without own gear: walker, runner), 4 with an own GLB, 7 code-built. None is marked `final`.
 - WP5 fix: zombie-rig gear is now built in the idle pose (`EnemyView.inIdle`); before, it took the pose the pooled view held (often a death pose), so helmets, caps, speakers, torch and lantern sat tilted.
 - WP5 step 3 (H2): coats are fitted to the skinned body at build time (`BodyFit`, `fitCoat` in `src/render/enemies.ts`): ring shells per bone, skirts open at the front and hang (`hangSkirts`). Reuse them for any new coat on the zombie rig.
@@ -25,7 +26,7 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 
 ## Index
 
-Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes from `waveTier` per map file; tunnels reuse the Köpenick tier at zone 0 (no crow, no raptor).
+Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte, C Charlottenburg. Normal mixes from `waveTier` per map file; tunnels reuse the Köpenick tier at zone 0 (no crow, no raptor).
 
 | Name | Kind | Role | Maps | Body | Refined | Kodex | Matches 3D | Needs | Prio |
 |---|---|---|---|---|---|---|---|---|---|
@@ -63,6 +64,15 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 | Die Wachdrohne | wachdrohne | boss | M | code (`buildDrone`, big) | ok | X18 | unverified | compare portrait and body | P4 |
 | Der Dirigent | dirigent | boss | M | human+gear: tailcoat, bow tie, baton, speaker | placeholder | X19 | unverified | silhouette review | P4 |
 | Der Bassprediger | bassprediger | boss | M | human+gear: speaker head, five cables, mixer | ok | X09 | yes | none | P4 |
+| Scherbentänzerin | scherbe | normal | C | female+gear: glass corset and torn shard tutu, violet feather plume, glass tiara, porcelain half mask, pearls; spins (two turns) in the pirouette | placeholder | glyph (E19 reserved) | n/a | Codex bust; silhouette review | P5 |
+| Logenbrecher | loge | normal (2 alive) | C | zombie+gear (Brocken shape): torn tux with crimson collar and cape scrap, smoked-glass front on the chest (swings aside when the guard is down or he stands open), lit chandelier drops behind it, glass shards on shoulders, forearms and fists | placeholder | glyph (E20 reserved) | n/a | Codex bust; front readable at play distance | P5 |
+| Spiegelsouffleur | souffleur | special (2 alive) | C | zombie+gear (thin): long torn plum coat, white mirror mask, fan crest of eleven glass blades behind the head, violet ribbons; hovers 0.3 m (render only) | placeholder | glyph (E21 reserved) | n/a | Codex bust | P5 |
+| Zeitlose in 1920s dress | walker, runner, brute, spitter (render) | normal | C | zombie+gear on `flavor: 'revue'`: tails or an usher's jacket and cap (Schlurfer, by id), a page's uniform and pillbox (Hetzer), a stagehand's apron, flat cap and rope (Brocken, replaces the vest), a cigarette tray and pillbox (Speier) | placeholder | E01, E09, E02, E03 | no, base busts | none, share the base busts | P5 |
+| Der Conférencier | conferencier | boss | C | human+gear: tailcoat open at the front, shirt front with pearl studs, crimson bow tie, top hat, half mask of mirror shards, silver cane with a cut-glass knob | placeholder | glyph (X20 reserved) | n/a | Codex bust; voices | P5 |
+| Der Ringvater | ringvater | boss | C | human+gear (broad): long dark coat with a thick fur collar, the Ringverein's crimson sash with a brass badge, bowler, moustache, three signet rings per hand; gold ring at his feet while guarded (`src/render/threats.ts`) | placeholder | glyph (X21 reserved) | n/a | Codex bust; voices | P5 |
+| Das Spiegelpaar | spiegelpaar | boss | C | female+gear: the dancer's cut in silver glass, red sash, lit heart, violet plume; warm ring at her feet | placeholder | glyph (X22 reserved) | n/a | Codex bust; voices | P5 |
+| Spiegelbild | spiegelbild | boss part (cannot be hurt) | C | female+gear in cold frost glass, no sash, no heart, mirrored left to right (negative x scale); copies her animation | placeholder | none (not in the Kodex) | n/a | none | P5 |
+| Die Diamantene Diva | diva | district boss | C | female+gear: glass corset, a gown of three stepped tiers of overlapping pleated glass fan panels with silver ribs and pointed shard hems, crystal drops on the lowest (2026-11-19, replaced the stacked cones; the bottom tier breaks at 66 %, the middle at 33 %), violet cape to the floor, tall halo of violet feathers, glass spikes and diamonds, lit crystal heart, stage mask, four big glass fans floating round her (one merged mesh) | placeholder | glyph (X23 reserved) | n/a | Codex bust; voices; tier break effect | P5 |
 | Flink / Brennend / Spaltend / Gepanzert | elite mods | elite | all | host body ×1.15 plus a faint glow in the mod colour | placeholder | L01 to L04 | unverified | mod-specific gear | P1 |
 | Späti-Wirt | keeper | NPC | all expeditions | `hero.glb` in vest + flat cap, apron (`src/render/content.ts`) | placeholder | none | n/a | own look | P3 |
 | Händler | trader | NPC | expeditions | `hero.glb` + wide hat, pack, green lantern | placeholder | none | n/a | own look | P3 |
@@ -79,6 +89,7 @@ Sources: kinds and bodies `src/data/enemies.ts` (`ENEMIES[].body`), gear `gearFo
 | P1 | Köpenick enemies and bosses | Boss looks built (WP5 step 3, proof `docs/proof/wp5/bosses-h2.webp`); hardware look check; elite readability |
 | P2 | Xhain | Rattenmutter and Brandmeister built (WP5 step 3); compare Grenzer and Spreehexe with X11 and X12 |
 | P3 | NPCs | Späti-Wirt, Händler, captive and the 7 keepers all share the hero body: give each a distinct silhouette; check survivors against S01 to S06; Kodex entry for Ilse (her portrait is used in the camp) |
+| P5 | Charlottenburg | Codex busts for the seven Kodex entries (board `docs/style/charlottenburg.png`), boss voices (three lines each and `SIGNATURE`), look review of the code bodies (proof `docs/proof/m16-charlottenburg/enemies/`) |
 | P4 | Tunnels, Alexanderplatz, Mitte | Schaffner built (WP5 step 3); compare the new portraits with their bodies |
 
 ## Kodex from 3D renders

@@ -23,26 +23,27 @@ export const CHARLOTTENBURG_WAVES = 30;
 export const CHARLOTTENBURG_TIER = { from: 32, to: 54 } as const;
 
 /**
- * Stand-ins until the district bosses exist (task step 5 spec, step 6 build): the master of ceremonies at the
- * Gedächtniskirche (Der Dirigent), the Ringverein's head at the Opernhaus (Der Feldwebel: charge and summon),
- * the mirror pair at the Belvedere (Die Spreehexe: lines along the ground), Die Diamantene Diva in the
- * Ehrenhof (Der Bassprediger: rings and charges).
+ * The district bosses (step 6, `docs/tasks/m12d-charlottenburg-enemies.md`): the master of ceremonies at the
+ * Gedächtniskirche, the head of the Ringverein before the Opernhaus, the mirror pair at the Belvedere, Die
+ * Diamantene Diva in the Ehrenhof.
  */
-export const CHARLOTTENBURG_BOSS_STANDIN: Record<'kirche' | 'oper' | 'belvedere' | 'diva', BossKind> = { kirche: 'dirigent', oper: 'feldwebel', belvedere: 'spreehexe', diva: 'bassprediger' };
+export const CHARLOTTENBURG_BOSSES: Record<'kirche' | 'oper' | 'belvedere' | 'diva', BossKind> = { kirche: 'conferencier', oper: 'ringvater', belvedere: 'spiegelpaar', diva: 'diva' };
 
 /**
- * Difficulty of wave `g` (32 … 54) in `zone`. Stand-in mix until the board enemies exist: the walkers are the
- * Zeitlose in 1920s dress, runners stand in for the Scherbentänzerin, Schildträger for the Logenbrecher (a front
- * to break first), crows for the floating Spiegelsouffleur. The Karpfenteich is `calm`: smaller waves, no elites.
+ * Difficulty of wave `g` (32 … 54) in `zone` (spec m12d, walker weight 6 as elsewhere; the walkers are the Zeitlose
+ * in 1920s dress). Zone 0 introduces the dancers, zone 1 brings the full trio, zone 3 is glass only besides the
+ * walkers. The Karpfenteich is `calm`: smaller waves, no elites. `extra` adds weights (the KaDeWe's mannequins).
  */
-export function charlottenburgWaveTier(g: number, bosses: BossKind[] = [], zone = 0, calm = false): WaveDef {
+export function charlottenburgWaveTier(g: number, bosses: BossKind[] = [], zone = 0, calm = false, extra: Partial<Record<EnemyKind, number>> = {}): WaveDef {
   const MIX: Array<Partial<Record<EnemyKind, number>>> = [
-    { walker: 6, runner: 1.5, spitter: 0.6 + g * 0.03, brute: g * 0.05 - 0.8, crow: 0.8, schild: 0.8 },
-    { walker: 6, runner: 2, spitter: 0.8 + g * 0.03, brute: g * 0.05 - 0.6, schild: 1, zuender: 0.5 },
-    { walker: 6, runner: 1.2, crow: 1.2, spitter: 0.6 + g * 0.03, brute: g * 0.05 - 0.6, schild: 0.8 },
-    { walker: 6, runner: 2, crow: 1, spitter: 1 + g * 0.03, brute: g * 0.06 - 0.6, schild: 1.2, zuender: 0.5 },
+    { walker: 6, runner: 1.2 + g * 0.1, scherbe: 1.6 + g * 0.06, spitter: 0.8 + g * 0.05, brute: 0.4 + g * 0.05, crow: 0.6 },
+    { walker: 6, scherbe: 2.2 + g * 0.06, souffleur: 0.7, loge: 0.5 + g * 0.04, spitter: 1, runner: 1, rat: 0.5 },
+    { walker: 6, scherbe: 1.6, souffleur: 0.9, loge: 0.5, crow: 0.8, brute: 0.4 },
+    { walker: 6, scherbe: 2, souffleur: 1.1, loge: 0.9 },
   ];
-  const mix = calm ? { walker: 6, crow: 0.8, runner: 1 } : MIX[zone] ?? MIX[0]!;
+  const base = calm ? { walker: 6, crow: 1, runner: 1, scherbe: 1 } : MIX[zone] ?? MIX[0]!;
+  const mix: Partial<Record<EnemyKind, number>> = { ...base };
+  for (const [k, v] of Object.entries(extra) as Array<[EnemyKind, number]>) mix[k] = (mix[k] ?? 0) + v;
   return {
     count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1)),
     maxAlive: Math.min(12, 6 + Math.floor(g / 3)) - (calm ? 3 : 0),
@@ -119,9 +120,9 @@ export function charlottenburgMap(scale = 1): MapDef {
   let g = 0;
   const tier = (n: number): number => CHARLOTTENBURG_TIER.from + (n * (CHARLOTTENBURG_TIER.to - CHARLOTTENBURG_TIER.from)) / (CHARLOTTENBURG_WAVES - 1);
   /** An encounter at world (x, z) (already scaled). */
-  const encW = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number, calm = false): EncounterDef => {
+  const encW = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number, calm = false, extra: Partial<Record<EnemyKind, number>> = {}): EncounterDef => {
     const list: WaveDef[] = [];
-    for (let i = 0; i < waves; i++) list.push(charlottenburgWaveTier(tier(g++), [], zone, calm));
+    for (let i = 0; i < waves; i++) list.push(charlottenburgWaveTier(tier(g++), [], zone, calm, extra));
     return { id, name, zone, x, z, r, waves: list, heal: NORMAL_HEAL };
   };
   const enc = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number, calm = false): EncounterDef => encW(id, name, zone, x * s, z * s, r, waves, calm);
@@ -129,13 +130,14 @@ export function charlottenburgMap(scale = 1): MapDef {
     { id, name, zone, x, z, r, waves: [{ ...charlottenburgWaveTier(tier(Math.max(0, g - 1)), [kind], zone), count: adds, maxAlive: 4, elite: 0 }], heal: 1 }
   );
   const boss = (id: string, name: string, zone: number, x: number, z: number, r: number, kind: BossKind, adds: number): EncounterDef => bossW(id, name, zone, x * s, z * s, r, kind, adds);
-  const B = CHARLOTTENBURG_BOSS_STANDIN;
+  const B = CHARLOTTENBURG_BOSSES;
 
   const encounters: EncounterDef[] = [
     // Zone 0, Zoo & Tauentzien (8 waves, Blaue Stunde): the concert garden, out at the Elefantentor, the KaDeWe Lichthof.
     enc('konzertgarten', 'Konzertgarten', 0, 124, 86, 14, 2),
     enc('elefantentor', 'Elefantentor', 0, 166, 129, 13, 3),
-    encW('kadewe', 'KaDeWe', 0, KDW.x, KDW.z, 13, 3),
+    // The KaDeWe's mannequins come alive: one more Scherbentänzerin weight (spec m12d).
+    encW('kadewe', 'KaDeWe', 0, KDW.x, KDW.z, 13, 3, false, { scherbe: 1 }),
     boss('kirche', 'Gedächtniskirche', 0, 106, 156, 15, B.kirche, 3),
     // Zone 1, Ku'damm & Savignyplatz (9 waves, Premierennacht).
     enc('westens', 'Café des Westens', 1, 62, 167, 13, 3),
@@ -325,8 +327,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     LW('kadewe', KDW.x, KDW.z, 0, 23, 16, 1, { name: 'KaDeWe' }),
     L('wittenbergplatz', 177, 198, 0, 4, 8, 1, { name: 'U Wittenbergplatz' }),
     // Zone 1. Cinemas, cafés and theatres along the Ku'damm and the Kantstraße; the opera on the Bismarckstraße.
-    L('gloriapalast', 90, 148, 0, 4, 3, 1, { name: 'Gloria-Palast' }),
-    L('marmorhaus', 86, 180, 180 * DEG, 7, 4, 1, { name: 'Marmorhaus' }),
+    L('gloriapalast', 90, 148, 0, 5.5, 3.5, 1, { name: 'Gloria-Palast' }),
+    L('marmorhaus', 86, 180, 180 * DEG, 7, 4, 1, { name: 'Marmorhaus', cut: { h: 4.3 } }),
     L('cafewestens', 54, 150, 0, 6, 4, 1, { name: 'Café des Westens' }),
     L('revuepalast', 24, 158, 0, 8, 4.5, 1, { name: 'Revuepalast' }),
     L('theaterwestens', 58, 121, 0, 6, 4, 1, { name: 'Theater des Westens' }),
@@ -449,6 +451,9 @@ export function charlottenburgMap(scale = 1): MapDef {
   for (const name of ['Kurfürstendamm', 'Tauentzienstraße', 'Bismarckstraße', 'Schloßstraße', 'Spandauer Damm']) middle(name, 12 * Math.sqrt(s), 6, 2.5, ['fireBarrel', 'stormLantern', 'fireBarrel', 'beacon']);
   // Two storm lanterns either side of the centre of every fight (rim barrels alone leave the middle of a wide street dark).
   encounters.forEach((e, i) => { for (const k of [-4, 4]) lights.push({ kind: 'stormLantern', x: e.x + Math.sin(i * 2.3) * k, z: e.z + Math.cos(i * 2.3) * k, rot: 0, size: k > 0 ? 1.1 : 0.8 }); });
+  // Gas lanterns round the church square, on the rim of the boss fight (landmark lighting, 2026-11-19).
+  const kirche = encounters.find((e) => e.id === 'kirche')!;
+  for (const a of [0, 22, 135, 210]) lights.push({ kind: 'lantern', x: kirche.x + Math.sin(a * DEG) * (kirche.r + 1.2), z: kirche.z + Math.cos(a * DEG) * (kirche.r + 1.2), rot: 0, size: 0.9 });
   // Fires on the Knie, where the Hardenbergstraße leaves the roundabout for the Stadtbahn arch.
   lights.push({ kind: 'fireBarrel', x: 47 * s, z: 70 * s, rot: 0, size: 1.2 }, { kind: 'fireBarrel', x: 54 * s, z: 77 * s, rot: 0.5, size: 0.9 });
   // Fires in the arches (people living under the Stadtbahn).
@@ -515,6 +520,9 @@ export function charlottenburgMap(scale = 1): MapDef {
     terraces,
     noSpawn: [platformPoly, stairPoly, sealed],
     district: 4,
+    // Step 6: the Zeitlose wear 1920s dress (render only), and glass bursts when it dies.
+    flavor: 'revue',
+    shards: true,
     strictLots: true,
     // Stand-in lot types stay few, so the Blockrand rows get the street fronts (step 7 picks the real ones).
     specialMax: { hinterhof: 3, markt: 1, truemmer: 2, parkplatz: 1 },

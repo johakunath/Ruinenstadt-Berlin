@@ -9,14 +9,18 @@
 // the Wurzler roots the hero, the Kernspeier spits a fan of seeds; four clockwork and garden bosses.
 // WP5 (backlog P12, 2D `bomb`, `shield`, `howl`): the Zünder runs up and blows itself up, the Schildträger
 // blocks from the front (the M15 shield rule), the Heuler stays back and howls the others on.
+// M16 Charlottenburg (`docs/tasks/m12d-charlottenburg-enemies.md`; 2D has nothing for this district): glass bodies
+// that burst on maps with `shards`. The Scherbentänzerin spins along a line, the Logenbrecher blocks with a glass
+// front and slams a marked circle, the Spiegelsouffleur cues the others on and throws shard fans; four revue bosses.
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
 export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner' | 'grenzer' | 'brandmeister' | 'rattenmutter' | 'spreehexe'
   | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
-  | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr';
+  | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr'
+  | 'conferencier' | 'ringvater' | 'spiegelpaar' | 'diva';
 export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
-  | 'zuender' | 'schild' | 'heuler' | BossKind;
+  | 'zuender' | 'schild' | 'heuler' | 'scherbe' | 'loge' | 'souffleur' | 'spiegelbild' | BossKind;
 /**
  * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
  * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
@@ -26,7 +30,7 @@ export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | '
  */
 export type BodyKind = 'zombie' | 'human' | 'female' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
-export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | BossKind;
+export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | 'spiegelbild' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
 export type EliteMod = 'flink' | 'brennend' | 'spaltend' | 'gepanzert';
 
@@ -79,10 +83,15 @@ export interface EnemyDef {
   /**
    * M15: carries a shield in front (2D `SHD`): hits inside ±`arc` of its facing deal `front`; it turns
    * at `turn` rad/s. A stun or a shock hit opens the guard for `open` s. Never `gepanzert`.
+   * M16 `down`: the front is also down while the body stands open after its special (the Logenbrecher).
    */
-  shield?: { arc: number; front: number; turn: number; open: number };
+  shield?: { arc: number; front: number; turn: number; open: number; down?: boolean };
   /** M15: seconds it stands untouchable after it spawns (the Weltzeituhr wakes up). */
   wake?: number;
+  /** M16: a glass body; on maps with `shards` it bursts when it dies (`THREAT.shards`). */
+  glass?: boolean;
+  /** M16: a boss without the rage below half life (the Diva's gown tiers are her escalation). */
+  noRage?: boolean;
 }
 
 /** D9 start assignment of the classes (Johannes, 2026-11-19); Kabelghul and Boxenkopf are both. */
@@ -95,6 +104,9 @@ export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> =
   wurzler: ['pflanzen'], kernspeier: ['pflanzen'], wurzelmutter: ['pflanzen'],
   feldwebel: ['menschen'], waechter: ['menschen'], hauptmann: ['menschen'], schaffner: ['menschen'], grenzer: ['menschen'], brandmeister: ['menschen'], tuersteher: ['menschen'], dirigent: ['menschen'],
   raptor: ['tiere'], rex: ['tiere'], crow: ['tiere'], rat: ['tiere'], rattenmutter: ['tiere'],
+  // M16 Charlottenburg: the glass revue ghouls are Zeitlose (undead); the bosses are people of the revue.
+  scherbe: ['untote'], loge: ['untote'], souffleur: ['untote'],
+  conferencier: ['menschen'], ringvater: ['menschen'], spiegelpaar: ['menschen'], spiegelbild: ['menschen'], diva: ['menschen'],
 };
 
 const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
@@ -200,6 +212,35 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     attackRange: 1.35, windup: 0.5, active: 0.1, recovery: 0.6,
     reach: 1.5, halfAngle: 45 * DEG, damage: 10, knockbackTaken: 1.1, poise: false, weight: 0, cap: 1,
   },
+  // M16 Charlottenburg (1920). A glass revue dancer next to the Kabelghul (life 20, hit 10): spins through the hero
+  // along a marked line (`THREAT.pirouette`), then stands open. Shock shatters her.
+  scherbe: {
+    kind: 'scherbe', name: 'Scherbentänzerin', body: 'female', ai: 'pouncer', res: 'glas', radius: 0.3, scale: 0.95, hp: 20, speed: 3.6,
+    attackRange: 1.3, windup: 0.4, active: 0.1, recovery: 0.55,
+    reach: 1.5, halfAngle: 45 * DEG, damage: 10, knockbackTaken: 1.3, poise: false, weight: 0, glass: true,
+  },
+  // Above the Brocken (130, 30): a box-seat bruiser with a smoked-glass front (the Uhrwerkläufer's shield). No
+  // plain strike: only the slow Faustschlag on a marked circle (`THREAT.faust`); while open after it, the front is down.
+  loge: {
+    kind: 'loge', name: 'Logenbrecher', body: 'zombie', ai: 'brute', res: 'rauchglas', radius: 0.65, scale: 1.35, hp: 130, speed: 1.2,
+    attackRange: 0, windup: 0.9, active: 0.14, recovery: 0.9,
+    reach: 2.4, halfAngle: 60 * DEG, damage: 30, knockbackTaken: 0.35, poise: true, weight: 0, cap: 2, glass: true,
+    shield: { arc: 70 * DEG, front: 0.2, turn: 90 * DEG, open: 2.2, down: true },
+  },
+  // Near the Speier (34, 12): the prompter with a mirror mask. Keeps back, cues the others on (the Heuler's howl),
+  // throws a fan of five shards between two cues (`THREAT.cue`). Kill him first.
+  souffleur: {
+    kind: 'souffleur', name: 'Spiegelsouffleur', body: 'zombie', ai: 'heuler', res: 'spiegel', radius: 0.36, scale: 1.1, hp: 34, speed: 2.4,
+    attackRange: 1.35, windup: 0.5, active: 0.1, recovery: 0.6,
+    reach: 1.5, halfAngle: 45 * DEG, damage: 12, knockbackTaken: 1.1, poise: false, weight: 0, cap: 2, glass: true,
+  },
+  // Das Spiegelpaar's reflection: cannot be hurt, follows the point reflection of the real one (`mirrorOf`),
+  // joins her Doppelpirouette and dies with her. Glides through walls like a reflection would.
+  spiegelbild: {
+    kind: 'spiegelbild', name: 'Spiegelbild', body: 'female', ai: 'spiegelbild', res: 'glas', radius: 0.6, scale: 1.3, hp: 1, speed: 3,
+    attackRange: 0, windup: 0.6, active: 0.12, recovery: 0.7,
+    reach: 2.3, halfAngle: 60 * DEG, damage: 28, knockbackTaken: 0, poise: true, weight: 0, fly: true,
+  },
   // Zone bosses.
   feldwebel: {
     kind: 'feldwebel', name: 'Der Feldwebel', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
@@ -304,6 +345,32 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     attackRange: 0, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 3, halfAngle: 70 * DEG, damage: 36, knockbackTaken: 0, poise: true, weight: 0, boss: true, wake: 3,
   },
+  // M16 Charlottenburg. Zone 1, Auguste-Viktoria-Platz: the master of ceremonies announces the acts (the three
+  // kinds), keeps the hero in his spotlight (applause on a lock) and thrusts with his cane.
+  conferencier: {
+    kind: 'conferencier', name: 'Der Conférencier', body: 'human', ai: 'conferencier', res: 'spiegel', radius: 0.7, scale: 1.4, hp: 1000, speed: 2.6,
+    attackRange: 1.9, windup: 0.65, active: 0.14, recovery: 0.8,
+    reach: 2.4, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
+  },
+  // Zone 2, before the Opernhaus: the head of the Ringverein „Treue Hand“. Half damage while a Logenbrecher guards
+  // him (`guarded`), a charging blow, his collectors.
+  ringvater: {
+    kind: 'ringvater', name: 'Der Ringvater', body: 'human', ai: 'ringvater', res: 'brute', radius: 0.85, scale: 1.6, hp: 2200, speed: 2.3,
+    attackRange: 2.1, windup: 0.75, active: 0.14, recovery: 0.85,
+    reach: 2.7, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
+  },
+  // Zone 3, the Belvedere: a revue dancer and her reflection (`spiegelbild`); the real one wears the red sash.
+  spiegelpaar: {
+    kind: 'spiegelpaar', name: 'Das Spiegelpaar', body: 'female', ai: 'spiegelpaar', res: 'glas', radius: 0.6, scale: 1.3, hp: 3200, speed: 3,
+    attackRange: 1.9, windup: 0.6, active: 0.12, recovery: 0.7,
+    reach: 2.3, halfAngle: 60 * DEG, damage: 28, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
+  },
+  // District boss in the Ehrenhof: three gown tiers are three phases (no rage); fans, prism rays, encores.
+  diva: {
+    kind: 'diva', name: 'Die Diamantene Diva', body: 'female', ai: 'diva', res: 'glas', radius: 0.9, scale: 1.8, hp: 4400, speed: 2.4,
+    attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
+    reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
+  },
 };
 
 export const ENEMIES: Record<EnemyKind, EnemyDef> = Object.fromEntries(
@@ -374,6 +441,33 @@ export const THREAT = {
   howl: { near: 180 * PX, far: 260 * PX, strafe: 0.6, range: 460 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.5, buff: 4, buffRange: 220 * PX, open: 0.6 },
   /** M15 shield bearers (2D `SHD`): slower while the guard stands open; a "geblockt" note at most this often. */
   shield: { openSpeed: 0.4, note: 0.6 },
+  // M16 Charlottenburg (spec m12d; 2D has nothing for the district, every number sits on the 3D ladders).
+  /**
+   * Scherbentänzerin Pirouette (the Kabelghul's leap block): within `range` with a clear line, the line is marked
+   * `wind` s, she spins `time` s at `speed` (4.55 m) and hits once (×1), then stands open. Cooldown fixed per body.
+   */
+  pirouette: { range: 5, every: [2.4, 3.2], wind: 0.45, time: 0.35, speed: 13, damage: 1, open: 0.6 },
+  /**
+   * Logenbrecher Faustschlag: within `range`, fists raised `wind` s over a circle r `radius` whose centre stands
+   * `ahead` m in front of him, ×1.3 of his hit, floor 0.25; open `open` s with the glass front down.
+   * The spec gives no cooldown: every 3 to 4 s (first after 1.5 to 2.5 s), his only attack.
+   */
+  faust: { range: 3.2, every: [3, 4], first: [1.5, 2.5], wind: 1.1, ahead: 1.4, radius: 2.4, damage: 1.3, floor: 0.25, open: 1.6 },
+  /**
+   * Spiegelsouffleur: keeps `near`..`far`; the Stichwort is the Heuler's howl with these numbers (bodies within
+   * `buffRange` are driven on `buff` s); halfway to the next cue one Scherbenfächer of `shots` shards (`spread`
+   * apart, `speed`, ×`damage` each) when the hero is within `range` with a clear line.
+   */
+  cue: {
+    near: 6, far: 9, strafe: 0.6, range: 460 * PX, every: [5, 6.5], first: [2, 3.5], wind: 0.5, buff: 4, buffRange: 220 * PX, open: 0.6,
+    fanRange: 12, shots: 5, spread: 0.3, speed: 7.7, damage: 0.5, fanWind: 0.6, fanOpen: 1, life: 2.2,
+  },
+  /**
+   * District rule „Glas splittert“ (`MapDef.shards`): a glass body bursts `wind` s after it dies, a marked circle
+   * r `radius`. The hero takes `hit` × the dead kind's hit (floor 0); every other enemy inside `life` × the dead
+   * kind's base life × its wave life factor, a boss at most `bossCap` of its life per burst. Kills by shards burst too.
+   */
+  shards: { wind: 0.5, radius: 1.5, hit: 0.5, life: 0.4, bossCap: 0.02 },
   /** Chance of an elite per normal spawn in wave g (2D: min(25 %, 2.2 % per wave pair), from the third wave). */
   eliteChance: (g: number): number => (g < 3 ? 0 : Math.min(0.25, 0.011 * (g + 1))),
 } as const;
@@ -487,6 +581,53 @@ export const BOSS = {
     spin: 2.2, orbitEvery: 0.2, arms: 3, orbitSpeed: 160 * PX, orbitTurn: 1.9, orbitDamage: 0.55, orbitLife: 3,
     hand: 7, handWind: 0.8, handTime: 3.2, handFrom: 0.8, handTo: 3.2, handDamage: 1.1, handFloor: 0.25, handWidth: 0.45,
     still: [0.75, 0.5, 0.25], stillTime: 2, stillSlow: 0.5, adds: 2, stomp: 3.6, close: 3.5,
+  },
+  // M16 Charlottenburg (spec m12d). Distances in meters, cooldowns in seconds (rage ticks them ×1.35 faster).
+  /**
+   * Nummer every `summon` s: „Tanz“ (`dance` Scherbentänzerinnen) and „Kraftakt“ (`act` Logenbrecher) by turns, both
+   * in rage. Spotlicht (the Wachdrohne's `Spot`, one; two in rage): a lock throws Applaus, `applause` circles r
+   * `applauseRadius`, the first on the spot after `applauseWind`, the others `applauseRing` m round it `applauseStep`
+   * s apart. Stockstoß: a lunge from `lungeMin` to `lungeMax` m (0.35 s at 12 m/s covers 4.2 m plus contact).
+   */
+  conferencier: {
+    summon: 10, dance: 3, act: 1,
+    applause: 4, applauseWind: 0.6, applauseStep: 0.15, applauseRadius: 1.6, applauseRing: [2.8, 3.6], applauseDamage: 0.9, applauseFloor: 0.2,
+    lunge: 6, lungeMin: 3.5, lungeMax: 5.5, lungeWind: 0.5, lungeTime: 0.35, lungeSpeed: 12, lungeDamage: 1.1, lungeOpen: 1.2,
+  },
+  /**
+   * Leibwache: half damage (`THREAT.armored`) while one of `guards` lives; he enters with `escort` of them and calls
+   * `rageGuards` more once at half life. Ringschlag: the charge block with own numbers from 3 to `range` m (0.6 s at
+   * 16 m/s covers 9.6 m plus contact; the spec's 12 m would whiff), twice in rage `rageGap` s apart. Schutzgeld: `adds` Hetzer.
+   */
+  ringvater: {
+    guards: ['loge'] as readonly EnemyKind[], escort: 2, rageGuards: 1,
+    charge: 4.5, range: 11, wind: 0.75, time: 0.6, speed: 16, damage: 1.1, floor: 0.25, open: 1.3, rageGap: 0.6,
+    summon: 12, adds: 3,
+  },
+  /**
+   * The real one and her reflection (`spiegelbild`, the point reflection through the arena centre). Doppelpirouette
+   * every `lunge` s within `lungeRange` m: both mark a line at the hero; the reflection's speed is set so its line
+   * reaches the hero (at most `mirrorMax` m/s), its hit ×`mirrorDamage`; afterwards it glides back at `back` m/s.
+   * Scherbenregen every `rain` s: `drops` circles r `radius` round the hero, in rage the reflection's second set
+   * `mirrorDelay` s later. Tausch every `swap` s (rage: the second number, real seconds): the two change places.
+   */
+  spiegelpaar: {
+    lunge: 4, lungeRange: 5.5, wind: 0.55, time: 0.35, speed: 13, damage: 1, mirrorDamage: 0.7, open: 1, mirrorMax: 30, back: 7,
+    rain: 9, drops: 6, step: 0.12, radius: 1.4, rainDamage: 0.9, rainFloor: 0.2, mirrorDelay: 0.5,
+    swap: [12, 8], swapWind: 0.8, swapOpen: 0.6, note: 3,
+  },
+  /**
+   * Glides at `near`..`far`. Fächerschlag every `fan` s: `blades` blades over `cone` rad; phase 2 a second fan
+   * `fanGap` s later turned half a gap, phase 3 three fans turned −20°, 0, +20°. Prismenstrahl every `prism` s: strips
+   * `prismWidth` wide through the hero (`prismHalf` m each way), marked `prismWind` s, hitting `prismTime` s; phase 2
+   * two crossing at ±`cross`, phase 3 three `spread3` apart; open after. Zugabe: `adds` dancers (phase 3 a Souffleur
+   * too). Vorhang at `tiers` of life: one ring to `curtain` m, her blades in flight fall, open `curtainOpen` s.
+   */
+  diva: {
+    near: 4, far: 8,
+    fan: 3.5, blades: 7, cone: 0.5, bladeSpeed: 9, bladeDamage: 0.5, bladeLife: 1.8, fanWind: 0.6, fanGap: 0.4, turn3: 20 * DEG,
+    prism: 8, prismWind: 0.9, prismTime: 0.3, prismWidth: 1.2, prismHalf: 18, prismDamage: 1.2, prismFloor: 0.25, prismOpen: 1.5, cross: 45 * DEG, spread3: 25 * DEG,
+    summon: 12, adds: 3, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
   },
 } as const;
 

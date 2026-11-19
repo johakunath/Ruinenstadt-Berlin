@@ -22,15 +22,19 @@ const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: num
   tor: { top: 26, half: 20 }, reichstag: { top: 23, half: 14 }, kanzleramt: { top: 25, half: 14 }, siegessaeule: { top: 49, half: 6 },
   sony: { top: 39, half: 30 }, kollhoff: { top: 70, half: 12 }, philharmonie: { top: 23, half: 16 },
   // M16 Charlottenburg: the five sights of the step 2 blockout. The Schloss dome shows from the north end of
-  // the Schloßstraße (the gate is shut, the route turns there); the KaDeWe from the camera side, over its
-  // broken low wall into the hall (the tall Tauentzien rows hide its street front from the north).
+  // the Schloßstraße (the gate is shut, the route turns there; 66 m: north of the Schloßstraße fight, and still
+  // on the far sidewalk of the Spandauer Damm, also at ?mapscale=1.3 on its north side); the KaDeWe from the camera side, over its broken low wall into the hall (the tall
+  // Tauentzien rows hide its street front from the north). Step 4 and the lighting pass: the Elefantentor, the
+  // Revuepalast and the Theater des Westens (their fights or the Kantstraße pass within 12 m).
   gedaechtniskirche: { top: 61, half: 14 }, kadewe: { top: 18, half: 24 }, opernhaus: { top: 26, half: 15 },
-  schlossmitte: { top: 36, half: 30, near: 50 }, belvedere: { top: 19, half: 7 },
+  schlossmitte: { top: 36, half: 30, near: 66 }, belvedere: { top: 19, half: 7 },
+  elefantentor: { top: 10.5, half: 6.5 }, revuepalast: { top: 19, half: 8.5 }, theaterwestens: { top: 22, half: 7 },
 };
 /** German names for the hint while the view holds. */
 const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
   weltzeituhr: 'Weltzeituhr', fernsehturm: 'Fernsehturm', dom: 'Berliner Dom', palast: 'Palast der Republik', rotesrathaus: 'Rotes Rathaus', nikolaikirche: 'Nikolaikirche', hausdeslehrers: 'Haus des Lehrers', kino: 'Kino International',
-  gedaechtniskirche: 'Gedächtniskirche', kadewe: 'Kaufhaus des Westens', opernhaus: 'Deutsches Opernhaus', schlossmitte: 'Schloss Charlottenburg', belvedere: 'Belvedere' };
+  gedaechtniskirche: 'Gedächtniskirche', kadewe: 'Kaufhaus des Westens', opernhaus: 'Deutsches Opernhaus', schlossmitte: 'Schloss Charlottenburg', belvedere: 'Belvedere',
+  elefantentor: 'Elefantentor', revuepalast: 'Revuepalast', theaterwestens: 'Theater des Westens' };
 /** Start when the hero is this close to the footprint (also mid-fight: the game pauses). */
 export const REVEAL_NEAR = 12;
 export const REVEAL_IN = 1.0;

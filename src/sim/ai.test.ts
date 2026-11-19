@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
-import { ignite, knock, strike } from './combat';
-import { capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
+import { ignite, killEnemy, knock, strike } from './combat';
+import { aliveCount, capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
+import { inZone } from './threats';
 import { autoAttackTarget } from './player';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
@@ -27,6 +28,18 @@ function run(s: Sim, seconds: number, inp: Partial<typeof NO_INPUT> = {}, immort
   return out;
 }
 const has = (evs: SimEvent[], type: SimEvent['type']): boolean => evs.some((e) => e.type === type);
+const angleOfHero = (s: Sim, e: Enemy): number => Math.atan2(s.player.x - e.x, s.player.z - e.z);
+/** M16: a long fight with a boss that never dies, put back `apart` m from the hero every 3 s; the specials it began. */
+function fight(s: Sim, kind: EnemyKind, seconds: number, apart: number): SimEvent[] {
+  const e = put(s, kind, 0, apart);
+  e.hp = e.maxHp = 1e6;
+  const evs: SimEvent[] = [];
+  for (let t = 0; t < seconds; t += 3) {
+    if (e.state !== 'special') { e.state = 'chase'; e.x = e.px = s.player.x; e.z = e.pz = s.player.z + apart; }
+    evs.push(...run(s, 3));
+  }
+  return evs;
+}
 const specials = (evs: SimEvent[]): string[] => evs.filter((e) => e.type === 'enemySpecial' && e.phase === 'wind').map((e) => (e as { kind: string }).kind);
 
 describe('roster (M12)', () => {
@@ -1218,6 +1231,410 @@ describe('Mitte roster (M12c)', () => {
       const s = fresh();
       const e = spawnEnemy(s, s.player.x, s.player.z + 3, kind, 1, 10);
       e.hp = e.maxHp = 1e6;
+      let hits = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        s.hitstop = 0;
+        const before = s.player.hp;
+        stepSim(s, NO_INPUT);
+        for (const q of s.events) if (q.type === 'playerHit') {
+          hits++;
+          expect(q.damage, kind).toBeLessThanOrEqual(s.stats.maxHp * 0.45 + 1e-6);
+          expect(before - s.player.hp, kind).toBeLessThan(s.stats.maxHp * 0.46);
+        }
+        s.events.length = 0;
+        s.player.hp = s.stats.maxHp;
+      }
+      expect(hits, kind).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('Charlottenburg roster (M16, spec m12d)', () => {
+  const notes = (evs: SimEvent[]): string[] => evs.filter((q) => q.type === 'note').map((q) => (q as { text: string }).text);
+  const still = (e: Enemy): void => { e.def = { ...e.def, speed: 0 }; };
+  const alive = (s: Sim, kind: EnemyKind): number => s.enemies.filter((q) => q.kind === kind && q.state !== 'dead').length;
+  /** No weapon class bonus, so damage ratios are exact. */
+  const plain = (): Sim => { const s = fresh(); s.stats.types = []; return s; };
+
+  it('the Scherbentänzerin spins 4.55 m along a marked line, hits once, then stands open; her cooldown is fixed per body', () => {
+    const d = ENEMIES.scherbe;
+    expect([d.hp, d.damage, d.speed, d.radius, d.res, d.glass, d.body]).toEqual([20, 10, 3.6, 0.3, 'glas', true, 'female']);
+    const s = fresh();
+    const e = put(s, 'scherbe', 0, 4.8);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('pirouette');
+    const x0 = e.x, z0 = e.z;
+    run(s, THREAT.pirouette.wind - 0.05);
+    expect(Math.hypot(e.x - x0, e.z - z0)).toBeLessThan(0.05);
+    const evs = run(s, THREAT.pirouette.time + 0.1);
+    expect(Math.hypot(e.x - x0, e.z - z0)).toBeCloseTo(THREAT.pirouette.speed * THREAT.pirouette.time, 0);
+    expect(evs.filter((q) => q.type === 'playerHit')).toHaveLength(1);
+    expect(e.open).toBeGreaterThan(THREAT.pirouette.open - 0.15);
+    const P = THREAT.pirouette.every;
+    expect(e.cd[1]).toBeGreaterThan(P[0] - 0.6);
+    expect(e.cd[1]).toBeLessThanOrEqual(P[1]);
+    // A sidestep in the wind-up and the spin misses.
+    const m = fresh();
+    const f = put(m, 'scherbe', 0, 4.8);
+    f.cd[1] = 0;
+    stepSim(m, NO_INPUT);
+    m.player.x += 2.5;
+    expect(has(run(m, THREAT.pirouette.wind + THREAT.pirouette.time + 0.1), 'playerHit')).toBe(false);
+  });
+
+  it('the Logenbrecher blocks from the front, slams a marked circle in front of him and is open with the front down after it', () => {
+    const d = ENEMIES.loge;
+    expect([d.hp, d.damage, d.speed, d.cap, d.knockbackTaken, d.poise, d.attackRange]).toEqual([130, 30, 1.2, 2, 0.35, true, 0]);
+    const s = plain();
+    const e = put(s, 'loge', 0, 2.5);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    expect(strike(s, e, 100)).toBe(20);
+    e.cd[1] = 0;
+    s.hitstop = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('faust');
+    const z = s.threats.zones[0]!;
+    expect([z.kind, z.r]).toEqual(['faust', THREAT.faust.radius]);
+    expect(Math.hypot(z.x - e.x, z.z - e.z)).toBeCloseTo(THREAT.faust.ahead, 1);
+    const hp = s.player.hp;
+    run(s, THREAT.faust.wind + 0.05, {}, false);
+    expect(hp - s.player.hp).toBeGreaterThanOrEqual(s.stats.maxHp * THREAT.faust.floor - 1);
+    run(s, 0.35);
+    expect(e.open).toBeGreaterThan(THREAT.faust.open - 0.4);
+    // Open: the front is down (full damage and the open bonus from the front).
+    e.facing = angleOfHero(s, e);
+    expect(strike(s, e, 100)).toBe(Math.round(100 * THREAT.openBonus));
+    // Rolling out of the circle: no hit.
+    const r = fresh();
+    const b = put(r, 'loge', 0, 2.5);
+    still(b);
+    b.cd[1] = 0;
+    stepSim(r, NO_INPUT);
+    expect(has(run(r, THREAT.faust.wind + 0.1, { moveX: 1 }), 'playerHit')).toBe(false);
+    // At most two alive.
+    const c = createSim({ empty: true, spawn: ['loge', 'loge', 'loge'] });
+    expect(alive(c, 'loge')).toBe(2);
+  });
+
+  it('the Spiegelsouffleur keeps back, cues the others on and throws five shards between two cues', () => {
+    expect([ENEMIES.souffleur.hp, ENEMIES.souffleur.damage, ENEMIES.souffleur.cap, ENEMIES.souffleur.res]).toEqual([34, 12, 2, 'spiegel']);
+    const s = fresh();
+    const e = put(s, 'souffleur', 0, 3);
+    e.hp = e.maxHp = 1e6;
+    const w = put(s, 'walker', 2, 3);
+    run(s, 1.2);
+    expect(Math.hypot(e.x - s.player.x, e.z - s.player.z)).toBeGreaterThan(4);
+    // The cue: the walker beside him is driven on; a fan follows halfway to the next cue.
+    e.x = e.px = s.player.x; e.z = e.pz = s.player.z + 7;
+    w.x = w.px = e.x + 2; w.z = w.pz = e.z;
+    still(e);
+    e.cd[1] = 0;
+    let fan = -1, cue = -1, shots = 0;
+    for (let i = 0; i < 60 * 6 && fan < 0; i++) {
+      run(s, 1 / 60);
+      if (cue < 0 && e.sp?.kind === 'howl') cue = i;
+      if (e.sp?.kind === 'fan' && e.sp.fired && fan < 0) { fan = i; shots = s.threats.shots.length; }
+      if (cue >= 0 && w.state === 'dead') break;
+    }
+    expect(cue).toBeGreaterThanOrEqual(0);
+    expect(w.buff).toBeGreaterThan(0);
+    expect(fan).toBeGreaterThan(cue);
+    expect(shots).toBe(THREAT.cue.shots);
+    expect((fan - cue) / 60).toBeGreaterThan(THREAT.cue.every[0] / 2 - 0.2);
+  });
+
+  it('Der Conférencier calls „Tanz“ and „Kraftakt“ by turns (both in rage); his spotlight locks and throws applause', () => {
+    const s = fresh();
+    const e = put(s, 'conferencier', 0, 8);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    e.cd = [99, 99, 0];
+    const evs = run(s, BOSS.summon.wind + 0.6);
+    expect(alive(s, 'scherbe')).toBe(BOSS.conferencier.dance);
+    expect(alive(s, 'loge')).toBe(0);
+    expect(notes(evs)).toContain('„Die nächste Nummer!“');
+    e.cd[2] = 0;
+    run(s, BOSS.summon.wind + 1.6);
+    expect(alive(s, 'loge')).toBe(BOSS.conferencier.act);
+    const r = fresh();
+    const q = put(r, 'conferencier', 0, 8);
+    q.hp = q.maxHp * 0.4;
+    q.cd = [99, 99, 0];
+    still(q);
+    run(r, BOSS.summon.wind + 0.6);
+    expect([alive(r, 'scherbe'), alive(r, 'loge')]).toEqual([BOSS.conferencier.dance, BOSS.conferencier.act]);
+    expect(r.threats.spots.filter((p) => p.src === q.id)).toHaveLength(2);
+    // The spot: one, it follows, locks after 0.6 s, flashes, then four applause circles, the first on it.
+    const t = fresh();
+    const c = put(t, 'conferencier', 0, 9);
+    c.cd = [99, 99, 99];
+    still(c);
+    run(t, 1 / 60);
+    expect(t.threats.spots).toHaveLength(1);
+    const sp = t.threats.spots[0]!;
+    sp.x = t.player.x; sp.z = t.player.z;
+    expect(has(run(t, BOSS.wachdrohne.lock + 0.02), 'spotLock')).toBe(true);
+    run(t, BOSS.wachdrohne.flash);
+    const zones = t.threats.zones.filter((z) => z.kind === 'applause');
+    expect(zones).toHaveLength(BOSS.conferencier.applause);
+    expect(Math.hypot(zones[0]!.x - sp.x, zones[0]!.z - sp.z)).toBeLessThan(0.3);
+    expect(t.threats.shots).toHaveLength(0);
+    const hp = t.player.hp;
+    run(t, BOSS.conferencier.applauseWind + 0.6, {}, false);
+    expect(hp - t.player.hp).toBeGreaterThanOrEqual(t.stats.maxHp * BOSS.conferencier.applauseFloor - 1);
+    // Stockstoß from 4.5 m, open after.
+    expect(specials(fight(fresh(), 'conferencier', 24, 4.5))).toEqual(expect.arrayContaining(['summon', 'lunge']));
+  });
+
+  it('Der Ringvater enters with two Logenbrecher and takes half damage while one lives; at half life one more comes', () => {
+    const s = plain();
+    const e = put(s, 'ringvater', 0, 8);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    e.cd = [99, 99, 99];
+    const evs = run(s, BOSS.summon.wind + 0.6);
+    expect(alive(s, 'loge')).toBe(BOSS.ringvater.escort);
+    expect(notes(evs)).toContain('„Leibwache!“');
+    s.events.length = 0;
+    const half = strike(s, e, 100);
+    expect(half).toBe(Math.round(100 * THREAT.armored));
+    expect(notes(s.events)).toContain('„Erst die Leibwache!“');
+    s.events.length = 0;
+    strike(s, e, 100);
+    expect(notes(s.events)).not.toContain('„Erst die Leibwache!“');
+    for (const g of s.enemies) if (g.kind === 'loge') killEnemy(s, g);
+    expect(strike(s, e, 100)).toBe(100);
+    // At half life: one more Logenbrecher, guarded again.
+    e.hp = e.maxHp * 0.4;
+    run(s, BOSS.summon.wind + 2);
+    expect(e.calls).toBe(2);
+    expect(alive(s, 'loge')).toBe(BOSS.ringvater.rageGuards);
+    expect(strike(s, e, 100)).toBe(Math.round(100 * THREAT.armored));
+    // Schutzgeld: three Hetzer.
+    const r = fresh();
+    const q = put(r, 'ringvater', 0, 8);
+    q.calls = 1;
+    q.cd = [99, 99, 0];
+    still(q);
+    const out = run(r, BOSS.summon.wind + 0.6);
+    expect(alive(r, 'runner')).toBe(BOSS.ringvater.adds);
+    expect(notes(out)).toContain('„Schutzgeld!“');
+  });
+
+  it('Der Ringvater\'s Ringschlag covers 9.6 m along a marked line and comes twice in rage', () => {
+    const R = BOSS.ringvater;
+    const s = fresh();
+    const e = put(s, 'ringvater', 0, 9);
+    e.hp = e.maxHp = 1e6;
+    e.calls = 1;
+    e.cd = [0, 99, 99];
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('charge');
+    const z0 = e.z;
+    const evs = run(s, R.wind + R.time + 0.02, {}, false);
+    expect(z0 - e.z).toBeCloseTo(R.speed * R.time, 0);
+    expect(has(evs, 'playerHit')).toBe(true);
+    expect(e.open).toBeGreaterThan(R.open - 0.1);
+    const r = fresh();
+    const q = put(r, 'ringvater', 0, 9);
+    q.hp = q.maxHp * 0.4;
+    q.calls = 2;
+    q.cd = [0, 99, 99];
+    const out = run(r, R.wind + R.time + R.rageGap + 0.1);
+    expect(specials(out).filter((k) => k === 'charge')).toHaveLength(2);
+    // The first one has no opening; the second does.
+    run(r, R.wind + R.time + 0.05);
+    expect(q.open).toBeGreaterThan(R.open - 0.2);
+  });
+
+  it('Das Spiegelpaar: the reflection stands at the point reflection through the centre, cannot be hurt and dies with her', () => {
+    const s = plain();
+    const e = put(s, 'spiegelpaar', 0, 6);
+    e.hp = e.maxHp = 1e6;
+    e.cd = [99, 99, 99];
+    still(e);
+    run(s, 1 / 60);
+    const m = s.enemies.find((q) => q.kind === 'spiegelbild')!;
+    expect(m.mirrorOf).toBe(e.id);
+    expect(e.pair).toBe(m.id);
+    const c = m.mirror!;
+    expect(Math.hypot(m.x - (2 * c.x - e.x), m.z - (2 * c.z - e.z))).toBeLessThan(0.05);
+    // She moves; the reflection follows to the new point.
+    e.x += 3;
+    run(s, 1);
+    expect(Math.hypot(m.x - (2 * c.x - e.x), m.z - (2 * c.z - e.z))).toBeLessThan(0.1);
+    // No damage, a note at most every 3 s; no target for powers, no add, no wave holder.
+    s.events.length = 0;
+    expect(strike(s, m, 500)).toBe(0);
+    expect(strike(s, m, 500)).toBe(0);
+    expect(notes(s.events).filter((t) => t === 'Nur ein Spiegelbild')).toHaveLength(1);
+    expect(m.hp).toBe(m.maxHp);
+    expect(aliveCount(s)).toBe(1);
+    // Dies with her, without a kill.
+    const kills = s.kills;
+    killEnemy(s, e);
+    expect(m.state).toBe('dead');
+    expect(s.kills).toBe(kills + 1);
+  });
+
+  it('Das Spiegelpaar: both mark a line at the hero (Doppelpirouette); the Tausch swaps the two and keeps her life', () => {
+    const S = BOSS.spiegelpaar;
+    const s = fresh();
+    const e = put(s, 'spiegelpaar', 0, 4.5);
+    e.hp = e.maxHp = 1e6;
+    e.cd = [0, 99, 99];
+    still(e);
+    stepSim(s, NO_INPUT);
+    const m = s.enemies.find((q) => q.kind === 'spiegelbild')!;
+    expect(e.sp?.kind).toBe('lunge');
+    expect(m.sp?.kind).toBe('lunge');
+    expect(m.sp!.mul).toBe(S.mirrorDamage);
+    // Both lines point at the hero.
+    for (const b of [e, m]) {
+      const d = Math.hypot(s.player.x - b.x, s.player.z - b.z);
+      expect(b.sp!.dx * (s.player.x - b.x) / d + b.sp!.dz * (s.player.z - b.z) / d).toBeGreaterThan(0.99);
+    }
+    expect(has(run(s, S.wind + S.time + 0.1, {}, false), 'playerHit')).toBe(true);
+    // Tausch.
+    const t = fresh();
+    const a = put(t, 'spiegelpaar', 0, 6);
+    a.cd = [99, 99, 99];
+    still(a);
+    run(t, 1 / 60);
+    const b = t.enemies.find((q) => q.kind === 'spiegelbild')!;
+    a.hp = a.maxHp * 0.7;
+    const ha = a.hp, pa = { x: a.x, z: a.z }, pb = { x: b.x, z: b.z };
+    a.cd[2] = 0;
+    stepSim(t, NO_INPUT);
+    expect(a.sp?.kind).toBe('swap');
+    run(t, S.swapWind + 0.02);
+    expect(Math.hypot(a.x - pb.x, a.z - pb.z)).toBeLessThan(0.2);
+    expect(Math.hypot(b.x - pa.x, b.z - pa.z)).toBeLessThan(0.3);
+    expect(a.hp).toBe(ha);
+    // No swap onto blocked ground: she keeps her place.
+    const u = fresh();
+    const c = put(u, 'spiegelpaar', 0, 6);
+    c.cd = [99, 99, 99];
+    still(c);
+    run(u, 1 / 60);
+    const pc = { x: c.x, z: c.z };
+    const real = u.level.blocked.bind(u.level);
+    const d = u.enemies.find((q) => q.kind === 'spiegelbild')!;
+    u.level.blocked = (x: number, z: number, r: number): boolean => Math.hypot(x - d.x, z - d.z) < 1 || real(x, z, r);
+    c.cd[2] = 0;
+    stepSim(u, NO_INPUT);
+    expect(c.sp?.kind).toBe('swap');
+    run(u, S.swapWind + 0.02);
+    expect(Math.hypot(c.x - pc.x, c.z - pc.z)).toBeLessThan(0.3);
+    expect(specials(fight(fresh(), 'spiegelpaar', 30, 4.5))).toEqual(expect.arrayContaining(['lunge', 'barrage', 'swap']));
+  });
+
+  it('Die Diamantene Diva: no rage; a tier breaks at 66 and 33 % (one ring, her blades fall, open 2 s); one, two, three fans and lines', () => {
+    const D = BOSS.diva;
+    const s = fresh();
+    const e = put(s, 'diva', 0, 7);
+    still(e);
+    e.cd = [0, 99, 99];
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('fan');
+    run(s, D.fanWind + 0.02);
+    expect(s.threats.shots).toHaveLength(D.blades);
+    // Tier 1: blades fall, the curtain ring, open 2 s; the next fan comes twice.
+    e.hp = e.maxHp * 0.6;
+    run(s, 1 / 60);
+    expect(e.still).toBe(1);
+    expect(s.threats.shots.filter((q) => q.src === e.id)).toHaveLength(0);
+    expect(e.rage).toBe(false);
+    run(s, 1.6);
+    expect(s.threats.waves).toHaveLength(1);
+    expect(s.threats.waves[0]!.max).toBe(D.curtain);
+    run(s, 0.5);
+    expect(e.open).toBeGreaterThan(D.curtainOpen - 0.5);
+    const fans = (sim: Sim, q: Enemy): number => {
+      sim.threats.shots.length = 0;
+      q.state = 'chase'; q.open = 0; q.gap = 0; q.queue = undefined;
+      q.cd = [0, 99, 99];
+      // Fans thrown (a blade may already have hit a courtyard prop, so count the throws).
+      return run(sim, D.fanWind + 2 * D.fanGap + 0.1).filter((v) => v.type === 'enemyShot').length;
+    };
+    expect(fans(s, e)).toBe(2);
+    e.hp = e.maxHp * 0.3;
+    const out = run(s, 1 / 60);
+    expect(notes(out)).toContain('„Der Vorhang fällt“');
+    expect(fans(s, e)).toBe(3);
+    // Prism lines: one, an X, three.
+    const lines = (tier: number): number => {
+      const t = fresh();
+      const q = put(t, 'diva', 0, 7);
+      still(q);
+      q.hp = q.maxHp = 1e6;
+      q.still = tier;
+      q.cd = [99, 0, 99];
+      stepSim(t, NO_INPUT);
+      return t.threats.zones.filter((z) => z.kind === 'prism').length;
+    };
+    expect([lines(0), lines(1), lines(2)]).toEqual([1, 2, 3]);
+    // Zugabe: three dancers; in phase 3 a Souffleur too.
+    const z = fresh();
+    const v = put(z, 'diva', 0, 8);
+    v.hp = v.maxHp = 1e6;
+    v.still = 2;
+    v.cd = [99, 99, 0];
+    const zn = run(z, BOSS.summon.wind + 0.6);
+    expect([alive(z, 'scherbe'), alive(z, 'souffleur')]).toEqual([D.adds, 1]);
+    expect(notes(zn)).toContain('„Zugabe!“');
+  });
+
+  it('the prism ray hits only inside its strip, once, after its wind-up, and then she stands open', () => {
+    const D = BOSS.diva;
+    const s = fresh();
+    const e = put(s, 'diva', 0, 7);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    e.cd = [99, 0, 99];
+    stepSim(s, NO_INPUT);
+    const z = s.threats.zones.find((q) => q.kind === 'prism')!;
+    expect(z.line!.width).toBe(D.prismWidth);
+    // Far along the line, inside the strip: hit. Beside it: not.
+    expect(inZone(z, z.x + z.line!.dx * 12, z.z + z.line!.dz * 12, 0)).toBe(true);
+    expect(inZone(z, z.x + z.line!.dz * 1.2, z.z - z.line!.dx * 1.2, 0)).toBe(false);
+    expect(has(run(s, D.prismWind - 0.05, {}, false), 'playerHit')).toBe(false);
+    const hits = run(s, D.prismTime + 0.1, {}, false).filter((q) => q.type === 'playerHit');
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.damage).toBeGreaterThanOrEqual(s.stats.maxHp * D.prismFloor - 1);
+    run(s, 0.1);
+    expect(e.open).toBeGreaterThan(D.prismOpen - 0.4);
+    // Stepping 1.5 m sideways during the wind-up: no hit.
+    const t = fresh();
+    const q = put(t, 'diva', 0, 7);
+    still(q);
+    q.cd = [99, 0, 99];
+    stepSim(t, NO_INPUT);
+    t.player.x += 1.5;
+    expect(has(run(t, D.prismWind + D.prismTime + 0.1), 'playerHit')).toBe(false);
+  });
+
+  it('every Charlottenburg boss but the Diva rages below half life; life and hit sit on the ladder', () => {
+    for (const kind of ['conferencier', 'ringvater', 'spiegelpaar', 'diva'] as const) {
+      const s = fresh();
+      const e = put(s, kind, 0, 9);
+      e.hp = e.maxHp * 0.45;
+      expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(kind === 'diva' ? 0 : 1);
+    }
+    expect([ENEMIES.conferencier.hp, ENEMIES.ringvater.hp, ENEMIES.spiegelpaar.hp, ENEMIES.diva.hp]).toEqual([1000, 2200, 3200, 4400]);
+    expect([ENEMIES.conferencier.damage, ENEMIES.ringvater.damage, ENEMIES.spiegelpaar.damage, ENEMIES.diva.damage]).toEqual([26, 30, 28, 34]);
+  });
+
+  it('no Charlottenburg hit takes more than 45 % of max life, even at ten times the damage (the reflection too)', () => {
+    for (const kind of ['scherbe', 'loge', 'souffleur', 'conferencier', 'ringvater', 'spiegelpaar', 'diva'] as const) {
+      const s = fresh();
+      s.shards = true;
+      const e = spawnEnemy(s, s.player.x, s.player.z + (kind === 'souffleur' ? 7 : 3), kind, 1, 10);
+      e.hp = e.maxHp = 1e6;
+      // The Souffleur keeps back and strafes behind the courtyard props; here he stands in the open.
+      if (kind === 'souffleur') still(e);
       let hits = 0;
       for (let i = 0; i < 60 * 20; i++) {
         s.hitstop = 0;

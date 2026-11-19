@@ -112,6 +112,8 @@ export class ChunkBuilder extends Builder {
   readonly spots: LightSpot[] = [];
   readonly glows = new BatchSet();
   private readonly glowMats = new Map<number, Material>();
+  /** The glow material of a light colour in this chunk, if one exists (M16: facade washes share its draw call). */
+  glowMaterial(color: number): Material | undefined { return this.glowMats.get(color); }
   private readonly streakMats = new Map<number, Material>();
   private weathering?: LandmarkWear;
 
