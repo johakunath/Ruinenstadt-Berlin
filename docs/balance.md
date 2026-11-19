@@ -74,6 +74,8 @@ Damage taken is the winning try, as a share of max life (healing during the figh
 
 `node tools/balance.mjs 3 normal johannes 1 --map=mitte`, fresh gear, district roster and bosses: 3 of 3 campaigns won, 2.3 deaths and 20.3 min per campaign. Deaths at the Leipziger Straße (2.0 per run, 167 % damage taken: tier 24 against fresh gear, as the Alex Lustgarten) and the Friedrichstraße (0.3). Bosses: Türsteher 14 s, 26 %; Wachdrohne 36 s, 26 %; Dirigent 13 s, 27 %; Bassprediger 28 s, 21 %. Read: same shape as the Alex: a hard opening against fresh gear, then too easy. `MITTE_TIER` stays 24 … 46 until the P33 decision (tier against carried power).
 
+Chain rerun (`--chain`, 2026-11-19, same seed): 3 of 3 chains won all four districts; Mitte with carried gear (power 395 to 641 in): 0 deaths, 9 to 17 % damage per fight, bosses 7 to 36 s. P33 still stands.
+
 Tunnels (no bot run, the bot plays no tunnels): each line starts at the late tier of its start district, S3 14 … 19, U8 25 … 30 (was 14 … 19), U2 33 … 38.
 
 ## District chain with carried gear (2026-11-18)
