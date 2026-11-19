@@ -10,9 +10,14 @@
 // Wurzler gear and the Brigadeghul's Blaumann (`enemies-alex.ts`, `clock.ts`).
 // WP5: bodies match their Kodex busts (Brocken's orange vest, the Kabelghul's cyan cables, the Speier's belly);
 // Zünder (dynamite and a lit fuse), Schildträger (riot helmet, shield that drops when the guard opens), Heuler.
+// M16 Charlottenburg (board `docs/style/charlottenburg.png`): the Scherbentänzerin on the female base (glass tutu,
+// feathers, mask), the Logenbrecher (tux, a smoked-glass front that swings aside when open, a lit chandelier behind
+// it), the Spiegelsouffleur (mirror mask, glass fan crest, ribbons; hovers), four bosses on the human and female
+// bases, and 1920s dress for the plain Zeitlose on `revue` maps (tails or an usher's jacket, a page, a stagehand,
+// a cigarette girl), like the neon cables.
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
-  AnimationMixer, BoxGeometry, BufferGeometry, CatmullRomCurve3, Color, ExtrudeGeometry, Float32BufferAttribute, LatheGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
+  AnimationMixer, BoxGeometry, BufferGeometry, CatmullRomCurve3, Color, ExtrudeGeometry, Float32BufferAttribute, IcosahedronGeometry, LatheGeometry, OctahedronGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
   type AnimationClip, type Bone, type Object3D, type SkinnedMesh,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -83,6 +88,9 @@ const TINTS: Record<EnemyKind, number[]> = {
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
+/** M16: the 1920s dress of the plain Zeitlose on `revue` maps (render only, as the neon cables). */
+type RevueKey = 'revueTails' | 'revueUsher' | 'revuePage' | 'revueHand' | 'revueTray';
+const REVUE: Partial<Record<EnemyKind, readonly RevueKey[]>> = { walker: ['revueTails', 'revueUsher'], runner: ['revuePage'], brute: ['revueHand'], spitter: ['revueTray'] };
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
@@ -97,6 +105,8 @@ const CLOTH: Partial<Record<EnemyKind, number>> = {
   wurzler: 0x6a5634, wurzelmutter: 0x5a4a2a,
   // WP5: brown rags (Zünder), dark grey under the armour (Schildträger), a faded red shirt (Heuler).
   zuender: 0x6a5a44, schild: 0x4a5058, heuler: 0x9a3a30,
+  // M16 Charlottenburg 1920: tux black, plum, the Ringvater's dark suit, violet tights under the glass.
+  loge: 0x1e1c24, souffleur: 0x3a2244, scherbe: 0x8a6aa8, conferencier: 0x16141a, ringvater: 0x24222a, spiegelpaar: 0x6a5a8a, spiegelbild: 0x5a7aa0, diva: 0x4a2a58,
 };
 const CLOTH_BRIGADE = 0x34528e;
 /** WP5: rag tints for normal ghouls without own clothing colour (multiplies the painted rags), one per body. */
@@ -123,6 +133,9 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   dirigent: { spine_02: 0.92, Head: 1.02 },
   bassprediger: { spine_02: 1.12, Head: 0.05 },
   schild: { spine_02: 1.12, Head: 0.9 }, heuler: { spine_02: 0.9, Head: 1.12 },
+  // M16: the Logenbrecher has the Brocken's chest, the Souffleur is thin, the Ringvater broad.
+  loge: { spine_02: 1.3, upperarm_l: 1.12, upperarm_r: 1.12, Head: 0.74 }, souffleur: { spine_02: 0.88, Head: 1.02 },
+  conferencier: { spine_02: 0.96, Head: 0.98 }, ringvater: { spine_02: 1.26, upperarm_l: 1.12, upperarm_r: 1.12, Head: 0.84 },
   wurzler: { upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.05 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 },
 };
 
@@ -132,11 +145,13 @@ const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   grenzer: [1, 1.04], brandmeister: [1.12, 1], rattenmutter: [1.15, 0.85], spreehexe: [0.86, 1.16],
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
+  loge: [1.14, 1], souffleur: [0.86, 1.08], scherbe: [0.86, 1.04], conferencier: [0.9, 1.08], ringvater: [1.18, 1], spiegelpaar: [0.9, 1.04], spiegelbild: [0.9, 1.04], diva: [0.9, 1.06],
 };
 /** H3: humanoid bosses stand upright (`EnemyView.straighten`); the Rattenmutter keeps her hunch. */
 const UPRIGHT: Partial<Record<EnemyKind, true>> = {
   feldwebel: true, hauptmann: true, schaffner: true, grenzer: true, brandmeister: true, spreehexe: true,
   tuersteher: true, dirigent: true, bassprediger: true, wurzelmutter: true,
+  scherbe: true, conferencier: true, ringvater: true, spiegelpaar: true, spiegelbild: true, diva: true,
 };
 /** The bones whose zombie-to-upright turn `straighten` applies. */
 const STRAIGHT = ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head', 'clavicle_l', 'clavicle_r'] as const;
@@ -145,7 +160,11 @@ const STRAIGHT_ARMS = ['upperarm_l', 'upperarm_r', 'lowerarm_l', 'lowerarm_r'] a
 /** Bent forward all the time (the Rattenmutter's hunch, the Kabelghul's crouch). */
 const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.34, kabel: 0.28, heuler: 0.12 };
 /** Eye glow per kind (zombie rig); bosses default to ember, the rest to the zombie green. */
-const EYES: Partial<Record<EnemyKind, number>> = { spitter: 0x97ff5a, kabel: 0x43d1cf, tuersteher: 0xff4fa3, dirigent: 0xff4fa3 };
+const EYES: Partial<Record<EnemyKind, number>> = {
+  spitter: 0x97ff5a, kabel: 0x43d1cf, tuersteher: 0xff4fa3, dirigent: 0xff4fa3,
+  // M16: violet glass light in the revue ghouls; the reflection's eyes cold blue.
+  scherbe: 0xc88cff, loge: 0xc88cff, souffleur: 0xc88cff, conferencier: 0xe8b4ff, spiegelpaar: 0xff8aa8, spiegelbild: 0x8ad8ff, diva: 0xffb4e0,
+};
 /** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
 const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, brute: true };
 
@@ -162,6 +181,9 @@ interface GearKit {
   tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial; window: LitMaterial; helmFire: LitMaterial; helmFlame: LitMaterial; garden: LitMaterial;
   /** Shared vertex-coloured materials of the boss gear (`assemble` with `paint`). */
   paint: LitMaterial; metal: LitMaterial;
+  // M16 Charlottenburg (board `docs/style/charlottenburg.png`: silver-lilac cut glass, violet, crimson, pearls).
+  glass: LitMaterial; smoke: LitMaterial; frost: LitMaterial; mirror: LitMaterial; velvet: LitMaterial; plum: LitMaterial; tux: LitMaterial;
+  shirt: LitMaterial; feather: LitMaterial; pearl: LitMaterial; silver: LitMaterial; heart: LitMaterial; chandelier: LitMaterial; stagecloth: LitMaterial;
 }
 let kit: GearKit | null = null;
 function gearKit(m: Materials): GearKit {
@@ -230,6 +252,22 @@ function gearKit(m: Materials): GearKit {
     helmFlame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
     paint: m.surface({ color: 0xffffff, roughness: 0.85, vertexColors: true, doubleSided: true }),
     metal: m.surface({ color: 0xffffff, roughness: 0.4, metalness: 0.8, vertexColors: true }),
+    // M16: cut glass keeps a faint lilac inner glow (emissive only, no light), so it stays its own material in
+    // `paint` mode and reads as glass at night; smoked glass for the Logenbrecher, cold frost for the reflection.
+    glass: m.surface({ color: 0xd8d0f0, emissive: 0x8a7ac8, emissiveIntensity: 0.55, roughness: 0.12, metalness: 0.55, doubleSided: true }),
+    smoke: m.surface({ color: 0x8a84a4, emissive: 0x4a3a7a, emissiveIntensity: 0.7, roughness: 0.12, metalness: 0.6, doubleSided: true }),
+    frost: m.surface({ color: 0xb8d0ee, emissive: 0x5a8ac8, emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.55, doubleSided: true }),
+    mirror: m.surface({ color: 0xd8e0ea, roughness: 0.08, metalness: 0.95 }),
+    velvet: m.surface({ color: 0x8a1a34, roughness: 0.9, doubleSided: true }),
+    plum: m.surface({ color: 0x4e2258, roughness: 0.9, doubleSided: true }),
+    tux: m.surface({ color: 0x18161c, roughness: 0.6, doubleSided: true }),
+    shirt: m.surface({ color: 0xece8e0, roughness: 0.8, doubleSided: true }),
+    feather: m.surface({ color: 0xb478d8, roughness: 0.9, doubleSided: true }),
+    pearl: m.surface({ color: 0xf2eee6, roughness: 0.3, metalness: 0.2 }),
+    silver: m.surface({ color: 0xc8ccd6, roughness: 0.3, metalness: 0.85 }),
+    heart: m.surface({ color: 0x5a1020, emissive: 0xff5a6a, emissiveIntensity: 2.6, roughness: 0.3 }),
+    chandelier: m.surface({ color: 0x3a2a12, emissive: 0xffc878, emissiveIntensity: 2.2, roughness: 0.4 }),
+    stagecloth: m.surface({ color: 0x5a4a3a, roughness: 0.95, doubleSided: true }),
   };
   // The intensity each material was made with (animated glows change theirs; `assemble` sorts by this one).
   for (const mat of Object.values(kit)) mat.userData.baseEmissive ??= mat.emissiveIntensity;
@@ -669,6 +707,28 @@ function tunic(coat: keyof GearKit, trim: keyof GearKit): Part[] {
   ];
 }
 
+/** M16: a cut-glass shard, `w` wide and `h` long, pointing along +y from its base at the origin (a flat four-sided cone). */
+const shard = (w: number, h: number): BufferGeometry => new ConeGeometry(w, h, 4).scale(1, 1, 0.22).translate(0, h / 2, 0);
+/**
+ * M16: a fan of `n` glass blades from the origin, spread over `arc` radians round +y in the x-y plane (facing +z),
+ * each `len` long, with a silver rib per blade. Returns [glass, silver] parts.
+ */
+function glassFan(n: number, arc: number, len: number, w = 0.05): Part[] {
+  const out: Part[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = n > 1 ? (i / (n - 1) - 0.5) * arc : 0;
+    out.push([shard(w, len).rotateZ(-a), 'glass']);
+    out.push([new CylinderGeometry(0.004, 0.004, len * 0.9, 3).translate(0, len * 0.45, 0.006).rotateZ(-a), 'silver']);
+  }
+  return out;
+}
+/** M16: a 1920s top hat (crown, brim, band) built from the brow line. */
+const topHat = (h = 0.24, r = 0.12): Part[] => [
+  [tf(new CylinderGeometry(r, r * 0.94, h, 16), 0, h / 2 + 0.02, 0), 'tux'],
+  [tf(new CylinderGeometry(r * 1.7, r * 1.7, 0.014, 18).scale(1, 1, 1.12), 0, 0.02, 0), 'tux'],
+  [tf(new CylinderGeometry(r * 0.96, r * 0.96, 0.04, 16, 1, true), 0, 0.06, 0), 'velvet'],
+];
+
 /** A bone's rotation in model space from the local rotations (valid right after a mixer update, before matrices). */
 function modelQuat(b: Object3D, model: Object3D, out: Quaternion): Quaternion {
   out.identity();
@@ -772,14 +832,17 @@ function towerGear(model: Object3D, materials: Materials, castShadow: boolean): 
   return { list, shield: null, key: null, bones: TOWER_BONES, sparks };
 }
 
-function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials, castShadow: boolean, pulse?: LitMaterial): Object3D[] {
+function gearFor(kind: GearKey | RevueKey | 'cyber', model: Object3D, materials: Materials, castShadow: boolean, pulse?: LitMaterial): Object3D[] {
   const k = gearKit(materials);
   const out: Object3D[] = [];
   const bone = (n: string): Object3D | undefined => model.getObjectByName(n);
   const p = new Vector3();
   /** Builds parts in model space around a bone's rest position and hands them to the bone. */
   /** WP5 step 3: the bosses with fitted coats paint their unlit gear into one mesh per bone. */
-  const paint = kind === 'feldwebel' || kind === 'hauptmann' || kind === 'schaffner' || kind === 'brandmeister' || kind === 'rattenmutter';
+  const paint = kind === 'feldwebel' || kind === 'hauptmann' || kind === 'schaffner' || kind === 'brandmeister' || kind === 'rattenmutter'
+    // M16: every Charlottenburg body (glass and the glows keep their own material, the cloth merges).
+    || kind === 'scherbe' || kind === 'loge' || kind === 'souffleur' || kind === 'conferencier' || kind === 'ringvater' || kind === 'spiegelpaar' || kind === 'spiegelbild' || kind === 'diva'
+    || kind.startsWith('revue');
   const mount = (name: string, parts: Part[], dy = 0, dz = 0, dx = 0): Object3D | undefined => {
     const b = bone(name);
     if (!b) return undefined;
@@ -1167,6 +1230,228 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       ], 0.08);
       mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.32, 0.78, 10, 1, true, Math.PI * 0.6, Math.PI * 1.8), 0, -0.36, 0), 'violet']]);
       break;
+    case 'scherbe': case 'spiegelpaar': case 'spiegelbild': {
+      // M16 board: a revue dancer in cut glass. Scherbentänzerin: a glass bodice and a torn shard tutu, violet
+      // feathers, a porcelain half mask, pearls. Spiegelpaar: the same cut in silver glass with a red sash and a lit
+      // heart (the real one); the reflection in cold frost without either.
+      const fit = new BodyFit(model);
+      const real = kind === 'spiegelpaar', refl = kind === 'spiegelbild';
+      const mat: keyof GearKit = refl ? 'frost' : 'glass';
+      const coat = fitCoat(fit, { mat, pad: 0.014, hem: 0.62, flare: 0.3, open: 0.2, sleeves: 'none', jag: 0.09 });
+      const o3 = coat.o('spine_03'), op = coat.o('pelvis');
+      // A corset to the bust, the shoulders bare (the fitted chest shell would reach over the shoulders).
+      coat.parts.set('spine_03', [[band(coat.chest, o3, 0.2, 3.3, 0.004), mat]]);
+      // Shards stand out of the skirt's hem and the bodice, pointing down and out like a broken tutu.
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2 + 0.2;
+        coat.add('pelvis', [onShell(shard(0.035, 0.16 + (i % 3) * 0.04).rotateX(Math.PI * 0.62), coat.skirt, op, 4.2 + (i % 2) * 0.5, a, 0.006), mat]);
+      }
+      for (const a of [-0.7, -0.25, 0.25, 0.7]) coat.add('spine_03', [onShell(shard(0.03, 0.12).rotateX(-0.3), coat.chest, o3, 2.6, a, 0.004), mat]);
+      if (real) {
+        coat.add('spine_03', [strip(coat.chest.slice(1), o3, -0.9, 0.7, 0.16, 0.016), 'red']);
+        coat.add('spine_03', [onShell(new OctahedronGeometry(0.045, 0).scale(1, 1.25, 0.6), coat.chest, o3, 3.1, 0.35, 0.012), 'heart']);
+      }
+      mountCoat(coat, 0.35);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.max.y - 0.05, head.c.z - 0.02);
+      // The female base has no eye mesh: the mask sits on the front of the head box.
+      const eye = new Vector3(head.c.x, head.c.y - 0.005, head.max.z - 0.03).sub(at);
+      const plume: Part[] = [];
+      for (let i = 0; i < 5; i++) {
+        const a = (i - 2) * 0.32;
+        const len = 0.56 - Math.abs(i - 2) * 0.08;
+        plume.push([tf(new ConeGeometry(0.05, len, 5).scale(1, 1, 0.35).translate(0, len / 2, 0), Math.sin(a) * 0.05, 0.08, -0.06, -0.3, 0, -a * 1.4), refl ? 'silver' : 'feather']);
+      }
+      mount('Head', [
+        ...plume,
+        [tf(new TorusGeometry(0.12, 0.01, 4, 18), 0, 0.03, 0, Math.PI / 2 - 0.25), refl ? 'frost' : 'glass'],
+        ...[-1, 0, 1].map((k): Part => [tf(shard(0.022, 0.08), k * 0.06, 0.05, 0.1 - Math.abs(k) * 0.02, -0.4, 0, -k * 0.4), mat]),
+        // The porcelain half mask over the eyes.
+        [tf(new SphereGeometry(0.11, 12, 6, Math.PI / 2 - 1.1, 2.2, 1.15, 0.6), eye.x, eye.y - 0.02, eye.z - 0.085), refl ? 'frost' : 'shirt'],
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      mount('neck_01', [[tf(new TorusGeometry(0.075, 0.012, 5, 16).scale(1.1, 1, 1.05), 0, -0.04, 0.012, Math.PI / 2 + 0.3), 'pearl']]);
+      break;
+    }
+    case 'loge': {
+      // M16 board: a box-seat bruiser in a torn tux. The smoked-glass front on the chest is gear [0]: it hangs from its
+      // top edge and swings aside while his guard is down; a lit chandelier glows behind it. Glass shards on the shoulders
+      // and fists, a crimson cape scrap.
+      const plate = new Shape();
+      const W = 0.21, H = 0.44;
+      plate.moveTo(-W, 0); plate.lineTo(W, 0); plate.lineTo(W * 1.08, -H * 0.45); plate.lineTo(W * 0.6, -H); plate.lineTo(-W * 0.6, -H); plate.lineTo(-W * 1.08, -H * 0.45); plate.lineTo(-W, 0);
+      const pane = new ExtrudeGeometry(plate, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.012, bevelSegments: 1, curveSegments: 1 });
+      const facets: Part[] = [[pane, 'smoke']];
+      for (const [x, y, w, h, r] of [[-0.08, -0.13, 0.04, 0.14, 0.4], [0.09, -0.17, 0.035, 0.15, -0.5], [0, -0.3, 0.05, 0.12, 0.1], [-0.12, -0.33, 0.03, 0.08, -0.6], [0.14, -0.06, 0.03, 0.07, 0.9]] as const) facets.push([tf(shard(w, h), x, y, 0.03, 0, 0, r), 'glass']);
+      facets.push([new TubeGeometry(new CatmullRomCurve3(plate.getPoints(1).map((q) => new Vector3(q.x, q.y, 0.03)), true), 24, 0.01, 4, true), 'silver']);
+      mount('spine_03', facets, 0.06, 0.27);
+      mount('spine_03', [
+        // The chandelier inside his chest: three lit drops on a brass ring.
+        [tf(new TorusGeometry(0.08, 0.008, 4, 14), 0, -0.1, 0.24, Math.PI / 2), 'brass'],
+        ...[-1, 0, 1].map((k): Part => [tf(new OctahedronGeometry(0.03, 0).scale(1, 1.6, 1), k * 0.07, -0.16 - (k === 0 ? 0.04 : 0), 0.25), 'chandelier']),
+      ], 0.08);
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'tux', pad: 0.03, hem: 0.42, flare: 0.12, open: 1.5, collar: 'velvet', jag: 0.06 });
+      const o3 = coat.o('spine_03');
+      const c = coat.chest, top = c.length - 1;
+      coat.add('spine_03', [shell([ringGrow(c[top - 1]!, 1.06, 0.02), ringGrow(c[top - 3]!, 1.06, 0.03), ringGrow(c[1]!, 1.04, 0.04)], o3, [2.6, 3.4, 4.2], 14, 0.1), 'velvet']);
+      for (const sd of ['l', 'r'] as const) {
+        const up = `upperarm_${sd}` as const, lo = `lowerarm_${sd}` as const, s = sd === 'l' ? 1 : -1;
+        coat.add(up, ...[0, 1, 2].map((i): Part => [tf(shard(0.05, 0.16 - i * 0.03), s * 0.04, 0.02 - i * 0.03, -0.03 + i * 0.05, 0.3 - i * 0.3, 0, s * (1.1 + i * 0.2)), 'smoke']));
+        coat.add(lo, [band(coat.arm[lo], coat.o(lo), 1.6, 3, 0.012), 'smoke']);
+      }
+      mountCoat(coat, 0.5);
+      for (const sd of ['l', 'r']) mount(`hand_${sd}`, [0, 1, 2, 3].map((i): Part => [tf(shard(0.035, 0.1), (i - 1.5) * 0.03, -0.05, 0.03, Math.PI * 0.7, 0, (i - 1.5) * 0.3), i % 2 ? 'glass' : 'smoke']));
+      break;
+    }
+    case 'souffleur': {
+      // M16 board: the prompter in a long plum coat, a white mirror mask, a fan crest of glass behind the head, violet
+      // ribbons trailing from the shoulders. He hovers (`poseZombie`).
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'plum', pad: 0.025, hem: 0.3, flare: 0.18, open: 1.1, jag: 0.12 });
+      mountCoat(coat, 0.55);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.c.y, head.c.z);
+      const eye = fit.eyes.clone().sub(at);
+      mount('Head', [
+        ...glassFan(11, Math.PI * 1.15, 0.44, 0.05).map(([g, m]): Part => [g.rotateX(-0.35).translate(0, 0.0, -0.12), m]),
+        [tf(new SphereGeometry(0.115, 14, 10, Math.PI / 2 - 1.2, 2.4, 0.5, 1.9).scale(1, 1.12, 1), eye.x, eye.y - 0.02, eye.z - 0.085), 'shirt'],
+        ...[-1, 1].map((k): Part => [tf(new BoxGeometry(0.035, 0.012, 0.01), eye.x + k * 0.04, eye.y, eye.z + 0.035), 'mirror']),
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      mount('spine_03', [-1, -0.4, 0.4, 1].map((k): Part => [cable([[k * 0.14, 0.12, -0.12], [k * 0.22, -0.1, -0.22], [k * 0.26, -0.45, -0.18], [k * 0.3, -0.8, -0.26]], 0.014), 'feather']), 0.08);
+      break;
+    }
+    case 'conferencier': {
+      // M16: the master of ceremonies. Tailcoat open at the front, white shirt front and a crimson bow tie, a top hat,
+      // a half mask of mirror shards over the right eye, a cane with a cut-glass knob.
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'tux', pad: 0.025, hem: 0.36, flare: 0.08, open: 2.7, collar: 'tux' });
+      const o3 = coat.o('spine_03');
+      coat.add('spine_03', [strip(coat.chest.slice(1, 6), o3, 0, 0, 0.32, 0.006), 'shirt']);
+      for (const f of [2, 2.8, 3.6]) coat.add('spine_03', [onShell(new SphereGeometry(0.012, 6, 4), coat.chest, o3, f, 0, 0.014), 'pearl']);
+      mountCoat(coat, 0.45);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.max.y - 0.06, head.c.z - 0.01);
+      const eye = fit.eyes.clone().sub(at);
+      mount('Head', [
+        ...topHat(),
+        ...[[-0.045, 0.01, 0.4], [-0.07, -0.02, -0.3], [-0.03, -0.04, 1.2], [-0.075, 0.025, 2.2]].map(([x, y, r]): Part => [tf(shard(0.03, 0.06), eye.x + x!, eye.y + y!, eye.z + 0.01, 0.1, 0, r), 'mirror']),
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      mount('neck_01', [
+        [tf(new ConeGeometry(0.035, 0.07, 4), -0.035, -0.07, 0.1, 0, 0, Math.PI / 2), 'velvet'],
+        [tf(new ConeGeometry(0.035, 0.07, 4), 0.035, -0.07, 0.1, 0, 0, -Math.PI / 2), 'velvet'],
+      ]);
+      mount('hand_r', [
+        [tf(new CylinderGeometry(0.012, 0.012, 0.95, 6), 0, -0.4, 0.03), 'silver'],
+        [tf(new IcosahedronGeometry(0.05, 0), 0, 0.08, 0.03), 'glass'],
+        [tf(new CylinderGeometry(0.02, 0.014, 0.05, 6), 0, -0.88, 0.03), 'silver'],
+      ]);
+      break;
+    }
+    case 'ringvater': {
+      // M16: head of the Ringverein „Treue Hand“ (invented): a long dark coat with a thick fur collar, a bowler, the
+      // club's crimson sash with a brass hand badge, heavy signet rings, a moustache.
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'navy', pad: 0.035, hem: 0.3, flare: 0.14, open: 1.3 });
+      const o3 = coat.o('spine_03'), c = coat.chest, top = c.length - 1;
+      coat.add('spine_03', [shell([ringGrow(c[top]!, 1.25, 0.03), ringGrow(c[top - 1]!, 1.2, 0.04), ringGrow(c[top - 2]!, 1.1, 0.04)], o3, [0.9, 1.1, 1.6], 22, 0.07), 'fur']);
+      coat.add('spine_03', [strip(c.slice(1, top - 1), o3, -0.85, 0.75, 0.14, 0.02), 'velvet']);
+      coat.add('spine_03', [onShell(new CylinderGeometry(0.035, 0.035, 0.01, 12).rotateX(Math.PI / 2), c, o3, 2.2, -0.1, 0.03), 'brass']);
+      mountCoat(coat, 0.5);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.max.y - 0.07, head.c.z - 0.01);
+      const lip = fit.eyes.clone().add(new Vector3(0, -0.045, 0.025)).sub(at);
+      mount('Head', [
+        [tf(new SphereGeometry(0.13, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.95, 1.08), 0, 0.03, 0), 'dark'],
+        [tf(new CylinderGeometry(0.18, 0.18, 0.012, 18).scale(1, 1, 1.12), 0, 0.03, 0), 'dark'],
+        [tf(new CylinderGeometry(0.131, 0.131, 0.03, 16, 1, true), 0, 0.05, 0), 'velvet'],
+        ...moustache(lip, 0.07, -0.015, 0.016, 'hair'),
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      for (const sd of ['l', 'r']) mount(`hand_${sd}`, [0, 1, 2].flatMap((i): Part[] => [
+        [tf(new TorusGeometry(0.018, 0.007, 4, 10), (i - 1) * 0.022, -0.07, 0.01, Math.PI / 2), 'brass'],
+        [tf(new SphereGeometry(0.01, 6, 4), (i - 1) * 0.022, -0.07, 0.03), i === 1 ? 'red' : 'brass'],
+      ]));
+      break;
+    }
+    case 'diva': {
+      // M16 board: Die Diamantene Diva. A glass bodice, a gown of three cut-glass tiers (each its own mount with
+      // `userData.tier`: the bottom one breaks at 66 %, the middle at 33 %), a violet cape, a halo of feathers and
+      // diamonds, a lit crystal heart, a stage mask. The floating fans are their own group (`EnemyView.divaFans`).
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'glass', pad: 0.014, sleeves: 'none' });
+      const o3 = coat.o('spine_03');
+      coat.parts.set('spine_03', [[band(coat.chest, o3, 0.2, 3.4, 0.004), 'glass']]);
+      coat.add('spine_03', [onShell(new OctahedronGeometry(0.06, 0).scale(1, 1.3, 0.6), coat.chest, o3, 3.0, 0, 0.014), 'heart']);
+      const c = coat.chest, top = c.length - 1;
+      // The cape from the shoulders down the back, open at the front, to the floor.
+      const pel = fit.at('pelvis'), foot = fit.at('foot_l');
+      const cape = [ringGrow(c[top - 1]!, 1.12, 0.03), ringGrow(c[2]!, 1.1, 0.05), ringGrow(coat.belly[0]!, 1.2, 0.08),
+        ringDrop(coat.belly[0]!, (pel.y - foot.y) * 0.55, -0.06, 0.34, 0.3), ringDrop(coat.belly[0]!, pel.y - foot.y + 0.02, -0.1, 0.5, 0.46)];
+      coat.add('spine_03', [shell(cape, o3, [2.2, 2.6, 3.0, 3.3, 3.5], 22, 0.06), 'plum']);
+      mountCoat(coat, 0.4);
+      // Three tiers: lathed cones of glass from the hips, the lower ones longer and wider, shards along each hem.
+      const drop = pel.y - foot.y;
+      const tiers: Array<[number, number, number, number]> = [[0.05, 0.98, 0.2, 0.52], [0.05, 0.62, 0.19, 0.4], [0.02, 0.34, 0.18, 0.3]];
+      tiers.forEach(([y0, len, r0, r1], i) => {
+        const h = drop * len;
+        // Twelve flat facets: cut glass, not cloth.
+        const parts: Part[] = [[tf(new CylinderGeometry(r0, r1, h, 12, 1, true), 0, -y0 - h / 2, 0.02, 0, i * 0.26, 0), 'glass']];
+        for (let j = 0; j < 16; j++) {
+          const a = (j / 16) * Math.PI * 2 + i * 0.4;
+          parts.push([tf(shard(0.04, 0.14 + (j % 3) * 0.04).rotateX(Math.PI), Math.sin(a) * r1, -y0 - h + 0.04, Math.cos(a) * r1 + 0.02, 0, a, 0), j % 4 ? 'glass' : 'silver']);
+        }
+        parts.push([tf(new TorusGeometry(r1, 0.008, 4, 24), 0, -y0 - h, 0.02, Math.PI / 2), 'silver']);
+        const g = mount('pelvis', parts);
+        if (g) g.userData.tier = i + 1;
+        hangOn(g, 0.6);
+      });
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.c.y, head.c.z);
+      const eye = new Vector3(head.c.x, head.c.y - 0.005, head.max.z - 0.03).sub(at);
+      const halo: Part[] = [];
+      for (let i = 0; i < 11; i++) {
+        const a = (i / 10 - 0.5) * Math.PI * 1.25;
+        const feather = i % 2 === 0;
+        halo.push([tf((feather ? new ConeGeometry(0.05, 0.42, 5).scale(1, 1, 0.3).translate(0, 0.21, 0) : shard(0.03, 0.3)).rotateZ(-a), 0, 0.06, -0.09), feather ? 'feather' : 'glass']);
+      }
+      halo.push([tf(new TorusGeometry(0.2, 0.008, 4, 28, Math.PI * 1.3), 0, 0.06, -0.09, 0, 0, Math.PI * 0.5 - Math.PI * 0.65), 'silver']);
+      mount('Head', [
+        ...halo,
+        [tf(new SphereGeometry(0.115, 12, 6, Math.PI / 2 - 1.15, 2.3, 1.15, 0.55), eye.x, eye.y - 0.02, eye.z - 0.09), 'shirt'],
+        [tf(new TorusGeometry(0.11, 0.01, 4, 18), 0, 0.12, 0, Math.PI / 2 - 0.2), 'glass'],
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      mount('neck_01', [[tf(new TorusGeometry(0.075, 0.014, 5, 16).scale(1.1, 1, 1.05), 0, -0.05, 0.012, Math.PI / 2 + 0.3), 'pearl']]);
+      break;
+    }
+    // M16 1920s dress for the plain Zeitlose on `revue` maps.
+    case 'revueTails':
+      mount('spine_03', [...tunic('tux', 'tux'), [tf(new BoxGeometry(0.12, 0.3, 0.02), 0, 0.04, 0.2), 'shirt'],
+        [tf(new ConeGeometry(0.03, 0.06, 4), -0.03, 0.17, 0.19, 0, 0, Math.PI / 2), 'velvet'], [tf(new ConeGeometry(0.03, 0.06, 4), 0.03, 0.17, 0.19, 0, 0, -Math.PI / 2), 'velvet']], 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.21, 0.26, 0.6, 10, 1, true, Math.PI * 0.6, Math.PI * 0.8), 0, -0.28, 0), 'tux']]);
+      break;
+    case 'revueUsher':
+      mount('spine_03', [...tunic('velvet', 'brass'), [tf(new BoxGeometry(0.42, 0.04, 0.3), 0, -0.36, 0), 'brass']], 0.08);
+      mount('Head', [[tf(new CylinderGeometry(0.12, 0.12, 0.08, 12), 0, 0.05, 0), 'velvet'], [tf(new TorusGeometry(0.121, 0.008, 4, 14), 0, 0.03, 0, Math.PI / 2), 'brass']], 0.12);
+      break;
+    case 'revuePage':
+      mount('spine_03', [...tunic('velvet', 'brass')], 0.08);
+      mount('Head', [[tf(new CylinderGeometry(0.09, 0.09, 0.07, 12), 0.03, 0.05, 0, 0, 0, -0.25), 'velvet'], [tf(new CylinderGeometry(0.092, 0.092, 0.015, 12), 0.03, 0.08, 0, 0, 0, -0.25), 'brass']], 0.13);
+      break;
+    case 'revueHand':
+      // The stagehand: a leather apron, a flat cap, a coil of rope on the shoulder.
+      mount('spine_03', [[tf(new BoxGeometry(0.4, 0.5, 0.02), 0, -0.2, 0.25, 0.08), 'stagecloth'], [tf(new TorusGeometry(0.14, 0.03, 5, 14), 0.2, 0.08, -0.04, 0.3, 0.4, 1.3), 'paper']], 0.08);
+      mount('pelvis', [[tf(new BoxGeometry(0.42, 0.42, 0.02), 0, -0.22, 0.2, 0.12), 'stagecloth']]);
+      mount('Head', [[tf(new CylinderGeometry(0.14, 0.14, 0.05, 12).scale(1, 1, 1.1), 0, 0.04, -0.01), 'dark'], [tf(new BoxGeometry(0.2, 0.012, 0.09), 0, 0.02, 0.13, 0.15), 'dark']], 0.1);
+      break;
+    case 'revueTray':
+      // The cigarette girl: a tray on a strap in front of the belly, a pillbox hat.
+      mount('spine_01', [
+        [tf(new BoxGeometry(0.42, 0.03, 0.22), 0, 0.02, 0.36), 'velvet'],
+        [tf(new BoxGeometry(0.43, 0.05, 0.23), 0, 0.045, 0.36), 'brass'],
+        ...[-0.14, -0.05, 0.04, 0.13].map((x): Part => [tf(new BoxGeometry(0.06, 0.05, 0.08), x, 0.06, 0.36), 'shirt']),
+      ]);
+      mount('neck_01', [[cable([[-0.12, -0.02, 0.08], [-0.2, -0.3, 0.2], [-0.2, -0.55, 0.32]], 0.012), 'velvet'], [cable([[0.12, -0.02, 0.08], [0.2, -0.3, 0.2], [0.2, -0.55, 0.32]], 0.012), 'velvet']]);
+      mount('Head', [[tf(new CylinderGeometry(0.09, 0.09, 0.06, 12), -0.04, 0.05, 0, 0, 0, 0.3), 'velvet']], 0.13);
+      break;
     default:
       break;
   }
@@ -1374,6 +1659,9 @@ export class EnemyView {
   private drone: Drone | null = null;
   /** M12c: pink cables on neon maps (plain bodies), and the speaker rings of this body. */
   private cyber: Object3D[] | null = null;
+  /** M16: 1920s dress on `revue` maps, built per dress on first use; the Diva's floating fans (one merged mesh). */
+  private readonly revue = new Map<RevueKey, Object3D[]>();
+  private divaFans: Group | null = null;
   private readonly pulse: LitMaterial | null = null;
   private readonly kern: Kern | null = null;
   private readonly koloss: Koloss | null = null;
@@ -1654,8 +1942,8 @@ export class EnemyView {
     }
   }
 
-  /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. */
-  assign(e: Enemy, neon = false): void {
+  /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. M16 `revue`: they wear 1920s dress. */
+  assign(e: Enemy, neon = false, revue = false): void {
     this.id = e.id;
     this.kind = e.kind;
     this.flash = 0;
@@ -1664,7 +1952,8 @@ export class EnemyView {
     this.inner.position.set(0, 0, 0);
     const b = BUILD[e.kind] ?? [1, 1];
     const s = e.def.scale * (e.elite ? 1.15 : 1);
-    this.root.scale.set(s * b[0], s * b[1], s * b[0]);
+    // M16: the Spiegelbild is her mirror image, left to right.
+    this.root.scale.set(s * b[0] * (e.kind === 'spiegelbild' ? -1 : 1), s * b[1], s * b[0]);
     const tints = TINTS[e.kind];
     const tint = tints[Math.floor(this.seed * tints.length)] as number;
     // WP5 (Johannes): every normal ghoul looks a little different, skin and rags; bosses keep their colours.
@@ -1736,6 +2025,13 @@ export class EnemyView {
       const cyber = neon && !!CYBER[e.kind];
       if (cyber && !this.cyber) this.cyber = this.inIdle(() => gearFor('cyber', this.model!, this.materials, this.castShadow));
       for (const g of this.cyber ?? []) g.visible = cyber;
+      // M16 revue maps: one dress per plain kind (the walker's by its id: tails or an usher's jacket); the
+      // stagehand's apron replaces the Brocken's vest.
+      const dresses = revue ? REVUE[e.kind] : undefined;
+      const dress = dresses ? dresses[e.id % dresses.length]! : undefined;
+      if (dress && !this.revue.has(dress)) this.revue.set(dress, this.inIdle(() => gearFor(dress, this.model!, this.materials, this.castShadow)));
+      for (const [k, list] of this.revue) for (const g of list) g.visible = k === dress;
+      if (dress && e.kind === 'brute') for (const g of gear) g.visible = false;
       // Officers carry a saber.
       const armed = e.kind === 'feldwebel' || e.kind === 'hauptmann';
       if (armed && !this.rack) {
@@ -1751,6 +2047,18 @@ export class EnemyView {
       this.clock.legGroup.scale.setScalar(0.01);
       this.spinDrum = this.spinOrbit = 0;
     }
+    // M16: the Diva's fans float round her (built once per view).
+    if (e.kind === 'diva' && !this.divaFans) {
+      const k = gearKit(this.materials);
+      const parts: Part[] = [];
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2, r = 0.72;
+        for (const [g, m] of glassFan(7, 1.4, 0.34, 0.06)) parts.push([g.rotateY(a + Math.PI / 2).translate(Math.sin(a) * r, 1.15 + (i % 2) * 0.22, Math.cos(a) * r), m]);
+      }
+      this.divaFans = assemble(k, parts, false);
+      this.inner.add(this.divaFans);
+    }
+    if (this.divaFans) this.divaFans.visible = e.kind === 'diva';
     this.root.visible = true;
   }
 
@@ -1758,7 +2066,8 @@ export class EnemyView {
     this.flash = FLASH_TIME;
   }
 
-  update(e: Enemy, alpha: number, dt: number, frozen: boolean, skip: number): void {
+  /** `host`: for the Spiegelbild, the body it reflects (it copies her animation outside its own specials). */
+  update(e: Enemy, alpha: number, dt: number, frozen: boolean, skip: number, host?: Enemy): void {
     const ex = lerp(e.px, e.x, alpha);
     const ez = lerp(e.pz, e.z, alpha);
     this.root.position.set(ex, groundY(ex, ez), ez);
@@ -1773,7 +2082,13 @@ export class EnemyView {
     } else {
       // Burning bodies glow orange, corroded ones green, open ones gold, elites faintly in their color.
       const st = e.state === 'dead' ? 0 : e.burn > 0 ? 1 : e.acid > 0 ? 2 : e.open > 0 ? 3 : e.elite ? 4 : 0;
-      if (st !== this.status) {
+      // M16 Tausch: both the real one and her reflection shimmer white while it winds up.
+      const swap = (q: Enemy | undefined): number => (q && q.state === 'special' && q.sp?.kind === 'swap' && q.stateT < q.sp.wind ? q.stateT / q.sp.wind : 0);
+      const shimmer = Math.max(swap(e), swap(host));
+      if (shimmer > 0) {
+        this.status = -1;
+        for (const m of this.mats) m.emissive.setScalar((0.25 + 0.35 * Math.sin(this.time * 30) ** 2) * shimmer);
+      } else if (st !== this.status) {
         this.status = st;
         const hex = st === 1 ? 0x7a2a08 : st === 2 ? 0x2a4a10 : st === 3 ? 0x5a4408 : st === 4 ? new Color(ELITES[e.elite!].color).multiplyScalar(0.16).getHex() : 0x000000;
         for (const m of this.mats) m.emissive.setHex(hex);
@@ -1790,7 +2105,11 @@ export class EnemyView {
     else if (this.kern) this.poseKern(e, t);
     else if (this.koloss) this.poseKoloss(e, t, dt2);
     else if (this.clock) this.poseClock(e, t, dt2, alpha);
-    else if (this.skin === 'zombie') this.poseZombie(e, t);
+    else if (this.skin === 'zombie') {
+      // M16: the reflection walks, strikes and winds up with her; its own Doppelpirouette is its own.
+      const pe = e.kind === 'spiegelbild' && host && host.state !== 'dead' && e.state === 'chase' ? host : e;
+      this.poseZombie(pe, pe === e ? t : pe.stateT + (frozen ? 0 : alpha * DT));
+    }
     else if (this.skin === 'mech' || this.skin === 'mechBig') this.poseMech(e, t, MECH[this.skin], dt2);
     else this.poseDino(e, t, DINO[this.skin as 'raptor' | 'rex']);
     if (e.state === 'dead' && !this.clock) {
@@ -1845,10 +2164,12 @@ export class EnemyView {
     const def = e.def;
     const lean = this.inner.rotation;
     let pitch = 0;
+    let spin = 0;
     switch (e.state) {
       case 'chase':
-        if (e.speed > 0.2) a.loop('Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * def.scale))));
-        else a.loop('Zombie_Idle_Loop', 0.25);
+        // M16: the Diva glides (stands in her pose while she moves).
+        if (e.speed > 0.2 && e.kind !== 'diva') a.loop('Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * def.scale))));
+        else a.loop(e.kind === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop', 0.25);
         // Open: bent over, catching breath.
         if (e.open > 0) pitch = 0.32;
         break;
@@ -1875,8 +2196,14 @@ export class EnemyView {
             a.loop('Zombie_Idle_Loop', 0.1);
             pitch = going ? lerp(0.5, 0, g) : -0.38 * w;
             break;
-          case 'slam': case 'stomp': case 'bossSlam': case 'flame':
+          case 'slam': case 'stomp': case 'bossSlam': case 'flame': case 'faust':
+            // M16 Faustschlag: the Brocken's overhead blow over the longer 1.1 s wind-up (clip sheet: the arm is up from
+            // about 0.7 of the wind-up and comes down at its end, when the circle goes off).
             a.pose('Sword_Heavy_Combo', going ? lerp(2.66, 2.95, g) : lerp(2.3, 2.66, w * w), 0.1);
+            break;
+          case 'pirouette':
+            // M16 Scherbentänzerin: rises on the wind-up, then the dash clip with two full turns while she spins.
+            if (going) { a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05); spin = g * Math.PI * 4; } else { a.pose('Zombie_Scratch', lerp(0.05, 0.3, w), 0.12); pitch = -0.15 * w; }
             break;
           case 'fuse':
             // Zünder: stands hunched over the bundle and shakes while the fuse burns.
@@ -1934,6 +2261,10 @@ export class EnemyView {
     }
     if (e.state !== 'dead') pitch += HUNCH[this.kind] ?? 0;
     lean.x += (pitch - lean.x) * 0.35;
+    lean.y = spin;
+    // M16: the Souffleur hovers 0.3 m (render only; walls stop him in the sim), the Diva floats a little.
+    const hover = this.kind === 'souffleur' ? 0.3 + 0.05 * Math.sin(this.time * 2.2 + this.seed * 6) : this.kind === 'diva' ? 0.08 + 0.04 * Math.sin(this.time * 1.6) : 0;
+    this.inner.position.y = e.state === 'dead' ? 0 : hover / (Math.abs(this.root.scale.y) || 1);
     // M12c speakers swell while a ring winds up and throb with the bass otherwise.
     if (this.pulse) {
       const sp = e.state === 'special' ? e.sp : null;
@@ -1977,9 +2308,15 @@ export class EnemyView {
       const sac = this.gear.get('heuler')?.[0];
       const sp = e.state === 'special' ? e.sp : null;
       sac?.scale.setScalar(sp?.kind === 'howl' ? 1 + 0.8 * Math.min(1, e.stateT / sp.wind) : 1 + 0.05 * Math.sin(this.time * 3));
-    } else if (this.kind === 'schild') {
-      const sh = this.gear.get('schild')?.[0];
-      if (sh) sh.rotation.z += (((e.guardOpen ?? 0) > 0 || e.state === 'dead' ? 1.0 : 0) - sh.rotation.z) * 0.25;
+    } else if (this.kind === 'schild' || this.kind === 'loge') {
+      // M16: the Logenbrecher's glass front also swings aside while he stands open after his blow.
+      const sh = this.gear.get(this.kind)?.[0];
+      const down = (e.guardOpen ?? 0) > 0 || e.state === 'dead' || (this.kind === 'loge' && e.open > 0);
+      if (sh) sh.rotation.z += ((down ? 1.0 : 0) - sh.rotation.z) * 0.25;
+    } else if (this.kind === 'diva') {
+      // M16: a gown tier is gone once it broke; the fans circle slowly.
+      for (const g of this.gear.get('diva') ?? []) if (g.userData.tier) g.visible = (g.userData.tier as number) > (e.still ?? 0);
+      if (this.divaFans) this.divaFans.rotation.y = this.time * 0.45;
     }
     // The spitter's throat swells while it winds up.
     if (this.kind === 'spitter') {

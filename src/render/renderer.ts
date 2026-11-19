@@ -409,7 +409,7 @@ export class GameRenderer {
       if (!view) {
         view = this.pool.get(e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows, { gdr: this.opts.map?.def.id === 'alex', clockRig: this.world.clockRig });
         if (!view.root.parent) this.scene.add(view.root);
-        view.assign(e, sim.level.flavor === 'neon');
+        view.assign(e, sim.level.flavor === 'neon', sim.level.flavor === 'revue');
         view.root.traverse((o) => { if ((o as Mesh).isMesh) o.layers.enable(ENEMY_LAYER); });
         this.views.set(e.id, view);
       }
@@ -418,7 +418,7 @@ export class GameRenderer {
         const d = Math.hypot(e.x - p.x, e.z - p.z);
         skip = d > profile.animThirdRateFrom ? 2 : d > profile.animHalfRateFrom ? 1 : 0;
       }
-      view.update(e, alpha, dt, frozen, skip);
+      view.update(e, alpha, dt, frozen, skip, e.mirrorOf !== undefined ? sim.enemies.find((q) => q.id === e.mirrorOf) : undefined);
       if (e.state !== 'dead') {
         const b = e.def.body;
         live.push({ root: view.root, size: b === 'rex' ? 2.4 : b === 'raptor' ? 1.1 : b === 'crow' ? 0.6 : b === 'rat' ? 0.35 : b === 'drone' ? (e.def.boss ? 1 : 0.4) : e.def.scale, d: Math.hypot(e.x - p.x, e.z - p.z) });
