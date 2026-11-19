@@ -38,10 +38,14 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   uhrwerk: 'Zifferblatt vorn. Von hinten treffen, Strom bringt das Werk aus dem Takt.',
   wurzler: 'Wurzeln halten fest. In Bewegung bleiben.',
   kernspeier: 'Spuckt Kerne im Fächer. Ran, solange er pflanzt.',
+  // WP5 (2D tips).
+  zuender: 'Explodiert. Abstand halten oder aus der Ferne treffen.',
+  schild: 'Blockt von vorn. Umgehen oder mit dem Hammer betäuben.',
+  heuler: 'Treibt die anderen an. Zuerst ausschalten.',
   wurzelmutter: 'Wuchs aus dem Glashaus des Palasts.', uhrwerkgross: 'Nach dem Ansturm läuft er ab.',
   volkskoloss: 'Ein Stück Platte auf Uhrwerkbeinen.', weltzeituhr: 'Sie stand still. Bis du kamst.',
 };
-const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone'];
+const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone', 'zuender', 'schild', 'heuler'];
 const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
@@ -210,7 +214,7 @@ export class Menu {
 /** Kodex busts in `assets/portraits/`, including portraits imported from 2D (`js/items.js` PORTI). */
 const portraits = import.meta.glob('../../assets/portraits/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const portraitUrl = (id: string): string => portraits[`../../assets/portraits/${id}.webp`] ?? '';
-const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04', feldwebel: 'X04', schaffner: 'X05', waechter: 'X03', rex: 'E12', hauptmann: 'X01', brandmeister: 'X10', rattenmutter: 'X06', kabel: 'E13', bass: 'E14', bassprediger: 'X09' };
+const ENEMY_PORTRAIT: Partial<Record<EnemyKind, string>> = { walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04', feldwebel: 'X04', schaffner: 'X05', waechter: 'X03', rex: 'E12', hauptmann: 'X01', brandmeister: 'X10', rattenmutter: 'X06', kabel: 'E13', bass: 'E14', bassprediger: 'X09', schild: 'E06', zuender: 'E07', heuler: 'E08' };
 const ELITE_PORTRAIT: Record<EliteMod, string> = { flink: 'L01', brennend: 'L02', spaltend: 'L03', gepanzert: 'L04' };
 const SURVIVOR_PORTRAIT: Record<SurvivorId, string> = { doktor: 'S01', schmied: 'S02', kurier: 'S03', koechin: 'S04', spaeher: 'S05', mechaniker: 'S06' };
 /** Code-painted fallbacks for bosses when portrait files are missing. */

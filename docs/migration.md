@@ -14,6 +14,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |
 | Textures (Codex): T1b rail follow-up and texture performance, T6 Xhain, T7 tunnel walls, Mitte step 9, Alexanderplatz step 8, H1 step 6 hero textures | Codex | open: `docs/asset-pipeline.md` › Texture queue, task files linked there |
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals, P24 worn landmarks | Claude · Opus high | open: `docs/backlog.md` |
+| WP5 enemies and bosses: step 3 H2 boss models (after Johannes picks the looks in `docs/mockups/wp5-boss-looks.html`), step 4 S3 voices (after he picks the tool), step 5 P25 neon barriers (Fable decision on dynamic colliders first) | Claude · Opus high (step 5: Fable high first) | open: `docs/tasks/wp5-enemies.md` |
 | Next district Charlottenburg (Q8), concept first | Claude · Fable high (concept), Opus high (build) | not started: `docs/maps/guidelines.md` |
 
 Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.

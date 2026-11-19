@@ -2,22 +2,23 @@
 
 Index of every enemy, elite, boss and NPC with its 3D body and Kodex image, so gaps are visible at a glance.
 Rule: every session that touches enemy bodies, animations, Kodex art or textures updates this file.
-Legend: **zombie+gear** = `assets/characters/zombie.glb` rig with code gear and tints (`gearFor`, `TINTS`, `CLOTH`, `SHAPE` in `src/render/enemies.ts`); **GLB** = own converted model; **code** = built from primitives. Refined: `final` (accepted look), `ok` (own shape, reads right), `placeholder` (task file says so, or base body with a recolour). Status as of 2026-11-18.
+Legend: **zombie+gear** = `assets/characters/zombie.glb` rig with code gear and tints (`gearFor`, `TINTS`, `CLOTH`, `SHAPE` in `src/render/enemies.ts`); **GLB** = own converted model; **code** = built from primitives. Refined: `final` (accepted look), `ok` (own shape, reads right), `placeholder` (task file says so, or base body with a recolour). Status as of 2026-11-19 (WP5, `docs/tasks/wp5-enemies.md`).
 
 ## Summary
 
 | Map | Kinds | On zombie rig | Own GLB | Code-built |
 |---|---|---|---|---|
 | Köpenick | 10 (6 normal, 4 bosses) | 7 | 2 (raptor, rex) | 1 (crow) |
-| Xhain | 10 (6 normal, 4 bosses) | 8 | 0 | 2 (rat, crow) |
+| Xhain | 12 (8 normal, 4 bosses) | 10 | 0 | 2 (rat, crow) |
 | U-Bahn tunnels | 5 (4 normal, 1 boss) | 5 | 0 | 0 |
-| Alexanderplatz | 12 (8 normal, 4 bosses) | 6 | 2 (mech, mechBig) | 4 |
-| Mitte | 12 (8 normal, 4 bosses) | 9 | 0 | 3 (drone, wachdrohne, crow) |
+| Alexanderplatz | 13 (9 normal, 4 bosses) | 7 | 2 (mech, mechBig) | 4 |
+| Mitte | 14 (10 normal, 4 bosses) | 11 | 0 | 3 (drone, wachdrohne, crow) |
 | Camp | 0 enemies, 7 keepers | 0 | 7 on `hero.glb` | 0 |
 
-- Roster: 30 kinds (13 normal or special, 17 bosses) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types.
-- Bodies: 19 kinds on the zombie rig (2 without own gear: walker, runner), 4 with an own GLB, 7 code-built. None is marked `final`.
-- Kodex: 17 kinds have a painted 2D bust, 13 a code SVG glyph (`BOSS_GLYPH`). Of the 17 busts: 8 match the 3D body, 4 partly, 5 do not. No Kodex image is a render of the 3D model.
+- Roster: 33 kinds (16 normal or special, 17 bosses) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types.
+- Bodies: 22 kinds on the zombie rig (2 without own gear: walker, runner), 4 with an own GLB, 7 code-built. None is marked `final`.
+- WP5 fix: zombie-rig gear is now built in the idle pose (`EnemyView.inIdle`); before, it took the pose the pooled view held (often a death pose), so helmets, caps, speakers, torch and lantern sat tilted.
+- Kodex: 20 kinds have a painted 2D bust, 13 a code SVG glyph (`BOSS_GLYPH`). Of the 20 busts: 14 match the 3D body, 4 partly, 2 do not (Turmwächter, Rattenmutter). No Kodex image is a render of the 3D model.
 - Elite tiers in every map: an elite Brocken guards one side passage (`guards` in each map file; the tunnel "mini-boss" is this guard).
 
 ## Index
@@ -28,8 +29,8 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 |---|---|---|---|---|---|---|---|---|---|
 | Schlurfer | walker | normal | K X T A M | zombie, no gear (cyber cables on M) | ok | E01 | yes | final skin pass | P1 |
 | Hetzer | runner | normal | K X T A M | zombie, longer arms (cyber on M) | ok | E09 | yes | final skin pass | P1 |
-| Brocken | brute | normal, elite guard | K X T A M | zombie+gear: boiler plate, collar | placeholder | E02 | no, bust has vest | orange vest or new bust | P1 |
-| Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils | placeholder | E03 | no, bust bloated | bloated belly shape | P1 |
+| Brocken | brute | normal, elite guard | K X T A M | zombie+gear: open orange high-vis vest with reflective bands, collar | ok | E02 | yes | final skin pass | P1 |
+| Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils, bloated belly | ok | E03 | yes | final skin pass (bust skin is browner) | P1 |
 | Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0) | ok | E11 | yes | none | P1 |
 | Krähe | crow | normal | K X A M | code (body, wings, beak) | ok | E05 | yes | none | P1 |
 | Der Feldwebel | feldwebel | boss | K | zombie+gear: Pickelhaube, blue tunic, epaulettes | placeholder | X04 | partly, helmet unverified vs bust | own silhouette, check helmet | P1 |
@@ -50,7 +51,10 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte. Normal mixes f
 | Der Große Uhrwerkläufer | uhrwerkgross | boss | A | GLB `mechbig.glb` (Mike, CC0) + key | ok | glyph | no bust | bust or render | P4 |
 | Der Volkseigene Koloss | volkskoloss | boss | A | code (Plattenbau slab, clockwork legs, arms) | ok | glyph | no bust | bust or render | P4 |
 | Die Weltzeituhr | weltzeituhr | boss | A | code (landmark rig `src/render/clock.ts` on four legs) | ok | glyph | no bust | bust or render | P4 |
-| Kabelghul | kabel | normal | M | zombie+gear: lit pink cable arches, implants, crouch | placeholder | E13 | no, bust cables cyan | cable colour decision | P4 |
+| Kabelghul | kabel | normal | M | zombie+gear: lit cyan cable arches, cyan implants and eyes, red scarf, crouch | ok | E13 | yes | none | P4 |
+| Zünder | zuender | special | X A M | zombie+gear: dynamite bundle, detonator, fuse spark, red scarf | ok | E07 | yes | none | P2 |
+| Schildträger | schild | normal | M | zombie+gear: riot helmet with visor, shoulder plates, shield (swings aside when the guard opens) | ok | E06 | yes | none | P4 |
+| Heuler | heuler | special | X | zombie+gear: swollen throat that bulges on the howl | ok | E08 | yes | none | P2 |
 | Boxenkopf | bass | special | M | zombie+gear: speaker head, violet rags | ok | E14 | yes | none | P4 |
 | Drohne | drone | normal | M | code (`buildDrone`) | ok | glyph | no bust | bust or render | P4 |
 | Der Türsteher | tuersteher | boss | M | zombie+gear: bomber jacket, glasses, clipboard | placeholder | glyph | no bust | bust or render | P4 |
@@ -70,10 +74,10 @@ Sources: kinds and bodies `src/data/enemies.ts` (`ENEMIES[].body`), gear `gearFo
 
 | Prio | Scope | First jobs |
 |---|---|---|
-| P1 | Köpenick enemies and bosses | Turmwächter tower head; Brocken vest; Speier belly; Feldwebel and Hauptmann silhouettes beyond the shared rig; check helmets against X04 and X01 in a head close-up; elite readability |
+| P1 | Köpenick enemies and bosses | Turmwächter tower head; Feldwebel and Hauptmann silhouettes beyond the shared rig (WP5 step 3, mockups first); elite readability |
 | P2 | Xhain | Rattenmutter rat head; Brandmeister silhouette; busts or renders for Grenzer and Spreehexe |
 | P3 | NPCs | Späti-Wirt, Händler, captive and the 7 keepers all share the hero body: give each a distinct silhouette; check survivors against S01 to S06; Kodex entry for Ilse |
-| P4 | Tunnels, Alexanderplatz, Mitte | Schaffner silhouette; Kabelghul cable colour (pink 3D, cyan bust); Kodex images for the 11 glyph-only kinds |
+| P4 | Tunnels, Alexanderplatz, Mitte | Schaffner silhouette; Kodex images for the 11 glyph-only kinds |
 
 ## Kodex from 3D renders
 

@@ -40,6 +40,8 @@ export function alexWaveTier(g: number, bosses: BossKind[] = [], zone = 0): Wave
     wurzler: t < 1.5 ? 0 : 0.7 + t * 0.03 + (zone === 0 ? 0.3 : 0),
     kernspeier: 0.9 + t * 0.03 + (zone === 0 ? 0.3 : 0),
     crow: zone === 0 ? 0.6 : 0,
+    // WP5: 2D `MIX[2]` bomb 0.03, from the third wave of the district.
+    zuender: t < 1.5 ? 0 : 0.35,
   };
   return {
     count: Math.round(5 + g * 0.45),

@@ -8,9 +8,11 @@
 // M15 Alexanderplatz: the Quaternius mechs (Uhrwerkläufer, Großer Uhrwerkläufer) with a clock-face
 // shield, the code-built Kernspeier and Koloss, the Weltzeituhr (the landmark's own rig on four legs),
 // Wurzler gear and the Brigadeghul's Blaumann (`enemies-alex.ts`, `clock.ts`).
+// WP5: bodies match their Kodex busts (Brocken's orange vest, the Kabelghul's cyan cables, the Speier's belly);
+// Zünder (dynamite and a lit fuse), Schildträger (riot helmet, shield that drops when the guard opens), Heuler.
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
-  BoxGeometry, CatmullRomCurve3, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
+  AnimationMixer, BoxGeometry, CatmullRomCurve3, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
   type AnimationClip, type BufferGeometry, type Object3D, type SkinnedMesh,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -70,6 +72,8 @@ const TINTS: Record<EnemyKind, number[]> = {
   bassprediger: [0xa8989c],
   uhrwerk: [0xffffff], wurzler: [0x9aa878, 0xa8a070], kernspeier: [0xffffff],
   wurzelmutter: [0x8e9a6a], uhrwerkgross: [0xffffff], volkskoloss: [0xffffff], weltzeituhr: [0xffffff],
+  // WP5 (busts E07, E06, E08): grey-brown ghouls.
+  zuender: [0xb8b098, 0xaaa88e], schild: [0xa4aaa0], heuler: [0xc0aaa0, 0xb4a49a],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
@@ -83,6 +87,8 @@ const CLOTH: Partial<Record<EnemyKind, number>> = {
   kabel: 0x6a5260, bass: 0x5a4a78, tuersteher: 0x2a2a30, dirigent: 0x26242a, bassprediger: 0x3e2c48,
   // M15 Alexanderplatz 1989: garden rags, the Brigadeghul's blue Blaumann.
   wurzler: 0x6a5634, wurzelmutter: 0x5a4a2a,
+  // WP5: brown rags (Zünder), dark grey under the armour (Schildträger), a faded red shirt (Heuler).
+  zuender: 0x6a5a44, schild: 0x4a5058, heuler: 0x8a5048,
 };
 const CLOTH_BRIGADE = 0x34528e;
 
@@ -90,7 +96,8 @@ const CLOTH_BRIGADE = 0x34528e;
 const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   runner: { upperarm_l: 1.12, upperarm_r: 1.12, Head: 0.94 },
   brute: { spine_02: 1.32, Head: 0.72 },
-  spitter: { spine_01: 1.3, spine_03: 0.78, Head: 1.12 },
+  // Bust E03: a bloated belly (the `belly` gear) under a narrow chest and a big head.
+  spitter: { spine_01: 1.3, spine_03: 0.8, Head: 1.1 },
   feldwebel: { spine_02: 1.14, Head: 0.9 },
   waechter: { upperarm_l: 1.18, upperarm_r: 1.18, Head: 0.95 },
   hauptmann: { spine_02: 1.12, Head: 0.92 },
@@ -105,20 +112,21 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   tuersteher: { spine_02: 1.3, upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.74 },
   dirigent: { spine_02: 0.92, Head: 1.02 },
   bassprediger: { spine_02: 1.12, Head: 0.05 },
+  schild: { spine_02: 1.12, Head: 0.9 }, heuler: { spine_02: 0.9, Head: 1.12 },
   wurzler: { upperarm_l: 1.1, upperarm_r: 1.1 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.9 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
 const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
-  runner: [0.86, 1], brute: [1.12, 1], feldwebel: [1.1, 1], waechter: [0.9, 1.1], hauptmann: [1.1, 1],
+  runner: [0.86, 1], brute: [1.12, 1], spitter: [1.12, 0.97], schild: [1.08, 1], heuler: [0.9, 1.04], feldwebel: [1.1, 1], waechter: [0.9, 1.1], hauptmann: [1.1, 1],
   grenzer: [1, 1.04], brandmeister: [1.12, 1], rattenmutter: [1.15, 0.85], spreehexe: [0.86, 1.16],
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
 };
 /** Bent forward all the time (the Rattenmutter's hunch, the Kabelghul's crouch). */
-const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2, kabel: 0.28 };
+const HUNCH: Partial<Record<EnemyKind, number>> = { rattenmutter: 0.2, kabel: 0.28, heuler: 0.12 };
 /** Eye glow per kind (zombie rig); bosses default to ember, the rest to the zombie green. */
-const EYES: Partial<Record<EnemyKind, number>> = { spitter: 0x97ff5a, kabel: 0xff4fa3, tuersteher: 0xff4fa3, dirigent: 0xff4fa3 };
+const EYES: Partial<Record<EnemyKind, number>> = { spitter: 0x97ff5a, kabel: 0x43d1cf, tuersteher: 0xff4fa3, dirigent: 0xff4fa3 };
 /** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
 const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, brute: true };
 
@@ -128,6 +136,7 @@ interface GearKit {
   steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; blue: LitMaterial; cloth: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial;
   olive: LitMaterial; ember: LitMaterial; moss: LitMaterial; punk: LitMaterial; flame: LitMaterial;
   neon: LitMaterial; cyan: LitMaterial; violet: LitMaterial; speaker: LitMaterial; cone: LitMaterial; hazard: LitMaterial; paper: LitMaterial; jacket: LitMaterial; lining: LitMaterial;
+  vest: LitMaterial; reflect: LitMaterial; plate: LitMaterial; belly: LitMaterial; flesh: LitMaterial; riot: LitMaterial; visor: LitMaterial; spark: LitMaterial;
 }
 let kit: GearKit | null = null;
 function gearKit(m: Materials): GearKit {
@@ -158,6 +167,16 @@ function gearKit(m: Materials): GearKit {
     paper: m.surface({ color: 0xe4dccb, roughness: 0.9, doubleSided: true }),
     jacket: m.surface({ color: 0x2c3328, roughness: 0.75, doubleSided: true }),
     lining: m.surface({ color: 0xe1792a, roughness: 0.8, doubleSided: true }),
+    // WP5: the Brocken's high-vis vest with its reflective bands (bust E02), the Speier's belly in its skin tone,
+    // the Heuler's swollen throat, riot gear, the Zünder's fuse spark (emissive only, no light).
+    vest: m.surface({ color: 0xd8641c, roughness: 0.85, doubleSided: true }),
+    reflect: m.surface({ color: 0xc8ccbc, emissive: 0x3a3c34, emissiveIntensity: 0.6, roughness: 0.4, doubleSided: true }),
+    belly: m.surface({ color: 0x9cb478, roughness: 0.8 }),
+    flesh: m.surface({ color: 0xa86a62, roughness: 0.7 }),
+    riot: m.surface({ color: 0x3a4248, roughness: 0.55, metalness: 0.4 }),
+    plate: m.surface({ color: 0x8c8472, roughness: 0.6, metalness: 0.25 }),
+    visor: m.surface({ color: 0x6a7a80, roughness: 0.15, metalness: 0.6, doubleSided: true }),
+    spark: m.surface({ color: 0x5a2a04, emissive: 0xffc04a, emissiveIntensity: 4, roughness: 0.5 }),
   };
   return kit;
 }
@@ -191,26 +210,30 @@ function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMat
 const cable = (pts: Array<[number, number, number]>, r = 0.014): BufferGeometry =>
   new TubeGeometry(new CatmullRomCurve3(pts.map(([x, y, z]) => new Vector3(x, y, z))), 10, r, 4, false);
 
-/** 2D `D.cyber` (and the Kabelghul): `n` pink cables from the skull base out and down to the shoulder blades (mounted on the neck). */
-function cables(n: number, spread: number, r = 0.014): Part[] {
+/** 2D `D.cyber` (and the Kabelghul): `n` lit cables from the skull base out and down to the shoulder blades (mounted on the neck). Pink; cyan on the Kabelghul (bust E13). */
+function cables(n: number, spread: number, r = 0.014, lit: 'neon' | 'cyan' = 'neon'): Part[] {
   const out: Part[] = [];
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) - 0.5 : 0;
-    out.push([cable([[t * 0.08, 0.07, -0.05], [t * spread * 0.8, 0.02, -0.17], [t * spread * 1.3, -0.13, -0.21], [t * spread * 1.7, -0.32, -0.15]], r), 'neon']);
+    out.push([cable([[t * 0.08, 0.07, -0.05], [t * spread * 0.8, 0.02, -0.17], [t * spread * 1.3, -0.13, -0.21], [t * spread * 1.7, -0.32, -0.15]], r), lit]);
   }
   return out;
 }
 /** Board E13 / Potsdamer Platz: thick cables that arch up off the back and plug into the skull, readable from the camera. */
-function arches(n: number, r: number): Part[] {
+function arches(n: number, r: number, lit: 'neon' | 'cyan' = 'neon'): Part[] {
   const out: Part[] = [];
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) - 0.5 : 0;
-    out.push([cable([[t * 0.1, 0.07, -0.05], [t * 0.3, 0.22, -0.2], [t * 0.42, 0.12, -0.36], [t * 0.36, -0.12, -0.3], [t * 0.3, -0.32, -0.18]], r), 'neon']);
+    out.push([cable([[t * 0.1, 0.07, -0.05], [t * 0.3, 0.22, -0.2], [t * 0.42, 0.12, -0.36], [t * 0.36, -0.12, -0.3], [t * 0.3, -0.32, -0.18]], r), lit]);
   }
   return out;
 }
 /** Two lit implant dots on the temple and the cheek (mounted on the head). */
-const implants = (): Part[] => [[tf(new SphereGeometry(0.022, 6, 4), 0.08, 0.06, 0.07), 'neon'], [tf(new SphereGeometry(0.017, 6, 4), 0.09, 0.0, 0.07), 'neon']];
+const implants = (lit: 'neon' | 'cyan' = 'neon'): Part[] => [[tf(new SphereGeometry(0.022, 6, 4), 0.08, 0.06, 0.07), lit], [tf(new SphereGeometry(0.017, 6, 4), 0.09, 0.0, 0.07), lit]];
+
+/** An open-front shell round the chest (vest, jacket): `gap` radians left open at the front, centred on +z. */
+const shell = (rt: number, rb: number, h: number, gap: number, y: number, sx = 1.2, sz = 0.92): BufferGeometry =>
+  tf(new CylinderGeometry(rt, rb, h, 12, 1, true, gap / 2, Math.PI * 2 - gap).scale(sx, 1, sz), 0, y, 0.01);
 
 /** A speaker box head (Boxenkopf, Bassprediger), built on the neck: box, two cones with pulsing rings, a cyan eye strip. */
 function speakerHead(w: number, h: number, d: number): Part[] {
@@ -253,6 +276,11 @@ function epaulettes(fringe: boolean): Part[] {
     if (fringe) out.push([tf(new CylinderGeometry(0.062, 0.07, 0.07, 10, 1, true), s * 0.28, -0.055, 0), 'brass']);
   }
   return out;
+}
+
+/** WP5 Schildträger: hard plates over both shoulders. */
+function epauletteBoxes(): Part[] {
+  return [-1, 1].map((s): Part => [tf(new SphereGeometry(0.11, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.1, 0.7, 1), s * 0.24, 0.02, 0, 0, 0, -s * 0.35), 'riot']);
 }
 
 /** Uniform tunic: a shell around the chest, collar, buttons. */
@@ -298,12 +326,13 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       zombieAlexGear(kind, mountAlex);
       break;
     case 'brute':
-      // Boiler plate bolted over one shoulder, a rusted collar.
+      // Bust E02: an open orange high-vis vest with two reflective bands over the rags, a rusted collar.
       mount('spine_03', [
-        [tf(new SphereGeometry(0.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), -0.24, 0.1, 0, 0, 0, 0.5), 'rust'],
+        [shell(0.24, 0.2, 0.46, 0.9, -0.12), 'vest'],
+        [shell(0.243, 0.226, 0.045, 0.9, -0.06), 'reflect'],
+        [shell(0.226, 0.207, 0.045, 0.9, -0.24), 'reflect'],
         [tf(new TorusGeometry(0.13, 0.035, 5, 12), 0, 0.17, 0, Math.PI / 2), 'rust'],
-        [tf(new BoxGeometry(0.34, 0.2, 0.03), 0, -0.02, 0.15, -0.1), 'steel'],
-      ]);
+      ], 0.08);
       break;
     case 'spitter':
       // Swollen throat sac that glows before it spits, boils on the back.
@@ -312,6 +341,8 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
         [tf(new SphereGeometry(0.06, 8, 6), 0.09, -0.1, -0.1), 'acid'],
         [tf(new SphereGeometry(0.05, 8, 6), -0.07, -0.16, -0.12), 'acid'],
       ]);
+      // Bust E03: a bloated belly that hangs over the belt (after the sac: the sac is gear [0]).
+      mount('spine_01', [[tf(new SphereGeometry(0.21, 12, 9).scale(1.22, 1.05, 1.15), 0, 0.02, 0.09), 'belly']]);
       break;
     case 'feldwebel':
       mount('Head', pickelhaube(false), 0.12);
@@ -406,9 +437,46 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       mount('Head', implants());
       break;
     case 'kabel':
-      // Kabelghul (2D art, board E13): four lit cables from the skull to the back, implants on the temple.
-      mount('neck_01', [...arches(4, 0.026), ...cables(2, 0.2, 0.018)]);
-      mount('Head', implants());
+      // Kabelghul (bust E13): four cyan cables arching from the skull to the back, implants, a red scarf.
+      mount('neck_01', [...arches(4, 0.026, 'cyan'), ...cables(2, 0.2, 0.018, 'cyan'), [tf(new TorusGeometry(0.1, 0.035, 5, 12).scale(1.2, 1, 1.1), 0, -0.06, 0.01, Math.PI / 2), 'red']]);
+      mount('Head', implants('cyan'));
+      break;
+    case 'zuender':
+      // Bust E07: dynamite strapped to the chest, a detonator with a dial, a fuse with its spark, a red scarf.
+      // The spark rides in its own group (gear [0]) so it can flicker; it flares while the fuse burns.
+      mount('spine_03', [[tf(new SphereGeometry(0.03, 6, 4), 0.1, 0.17, 0.25), 'spark']], 0.08);
+      mount('spine_03', [
+        ...[-0.105, -0.035, 0.035, 0.105].map((x): Part => [tf(new CylinderGeometry(0.034, 0.034, 0.3, 8), x, -0.1, 0.2), 'red']),
+        [tf(new BoxGeometry(0.3, 0.035, 0.08), 0, 0.0, 0.2), 'dark'],
+        [tf(new BoxGeometry(0.3, 0.035, 0.08), 0, -0.2, 0.2), 'dark'],
+        [tf(new BoxGeometry(0.13, 0.1, 0.06), -0.12, -0.3, 0.22), 'dark'],
+        [tf(new CylinderGeometry(0.03, 0.03, 0.012, 10), -0.12, -0.3, 0.255, Math.PI / 2), 'brass'],
+        [cable([[0.035, 0.05, 0.2], [0.06, 0.12, 0.23], [0.1, 0.17, 0.25]], 0.008), 'dark'],
+      ], 0.08);
+      mount('neck_01', [[tf(new TorusGeometry(0.1, 0.035, 5, 12).scale(1.2, 1, 1.1), 0, -0.06, 0.01, Math.PI / 2), 'red']]);
+      break;
+    case 'schild':
+      // Bust E06: riot helmet with a raised visor, shoulder plates, a scratched riot shield on the left of the chest.
+      // The shield is gear [0]: it hangs from its top edge and swings aside while the guard stands open.
+      mount('spine_03', [
+        [tf(new BoxGeometry(0.5, 0.8, 0.03), 0, -0.4, 0, 0.06), 'plate'],
+        [tf(new BoxGeometry(0.54, 0.04, 0.05), 0, 0, 0), 'riot'],
+        [tf(new BoxGeometry(0.54, 0.04, 0.05), 0, -0.8, 0.05), 'riot'],
+        [tf(new BoxGeometry(0.28, 0.06, 0.012), 0, -0.18, 0.02), 'visor'],
+      ], 0.16, 0.34);
+      mount('Head', [
+        [tf(new SphereGeometry(0.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0), 'riot'],
+        [tf(new CylinderGeometry(0.155, 0.16, 0.05, 12, 1, true), 0, -0.02, 0), 'riot'],
+        [tf(new BoxGeometry(0.26, 0.13, 0.012), 0, 0.07, 0.15, -0.55), 'visor'],
+      ], 0.03);
+      mount('spine_03', [
+        ...epauletteBoxes(),
+        [shell(0.22, 0.19, 0.4, 0.2, -0.1, 1.18, 0.95), 'riot'],
+      ], 0.08);
+      break;
+    case 'heuler':
+      // Bust E08: a swollen throat (gear [0]) that bulges while it howls, the rest is rags.
+      mount('neck_01', [[tf(new SphereGeometry(0.1, 10, 8).scale(1.15, 1, 1), 0, -0.05, 0.08), 'flesh']]);
       break;
     case 'bass':
       // Boxenkopf (2D art, board E14): a speaker for a head, purple rags with a yellow hazard band.
@@ -694,6 +762,7 @@ export class EnemyView {
   private readonly gear = new Map<GearKey, Object3D[]>();
   private readonly bones = new Map<string, Object3D>();
   private readonly model: Object3D | null = null;
+  private readonly clips: Map<string, AnimationClip> | null = null;
   private rack: WeaponRack | null = null;
 
   /** `gdr`: Alexanderplatz (walkers wear the Brigadeghul's Blaumann); `clockRig`: the map's maker of Weltzeituhr rigs. */
@@ -746,6 +815,7 @@ export class EnemyView {
     this.model = model;
     this.inner.add(model);
     this.anim = new Animator(model, clips);
+    this.clips = clips;
     const own = new Map<unknown, LitMaterial>();
     model.traverse((o) => {
       const mesh = o as SkinnedMesh;
@@ -862,6 +932,25 @@ export class EnemyView {
     this.glow.push(k.lens);
   }
 
+  /**
+   * WP5 fix: gear is built upright in model space and handed to its bone, so it is aligned to the pose the
+   * skeleton holds at that moment. Views are pooled per body, so that used to be whatever the last kind left
+   * (often its death pose): helmets and shells came out tilted. Now the skeleton takes the first frame of the
+   * idle clip for the build and goes back afterwards (the temporary mixer restores the bones when it stops).
+   */
+  private inIdle<T>(build: () => T): T {
+    const clip = this.clips?.get('Zombie_Idle_Loop');
+    if (!clip || !this.model) return build();
+    const m = new AnimationMixer(this.model);
+    m.clipAction(clip).play();
+    m.update(0);
+    this.model.updateMatrixWorld(true);
+    const out = build();
+    m.stopAllAction();
+    m.uncacheRoot(this.model);
+    return out;
+  }
+
   /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. */
   assign(e: Enemy, neon = false): void {
     this.id = e.id;
@@ -902,14 +991,14 @@ export class EnemyView {
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
       let gear = this.gear.get(key);
       if (!gear) {
-        gear = gearFor(key, this.model, this.materials, this.castShadow, this.pulse ?? undefined);
+        gear = this.inIdle(() => gearFor(key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
         this.gear.set(key, gear);
       }
       for (const g of gear) g.visible = true;
       // Speaker heads start at rest size.
       for (const g of gear) g.scale.setScalar(g.userData.rest ??= g.scale.x);
       const cyber = neon && !!CYBER[e.kind];
-      if (cyber && !this.cyber) this.cyber = gearFor('cyber', this.model, this.materials, this.castShadow);
+      if (cyber && !this.cyber) this.cyber = this.inIdle(() => gearFor('cyber', this.model!, this.materials, this.castShadow));
       for (const g of this.cyber ?? []) g.visible = cyber;
       // Officers carry a saber.
       const armed = e.kind === 'feldwebel' || e.kind === 'hauptmann';
@@ -1029,6 +1118,17 @@ export class EnemyView {
           case 'slam': case 'stomp': case 'bossSlam': case 'flame':
             a.pose('Sword_Heavy_Combo', going ? lerp(2.66, 2.95, g) : lerp(2.3, 2.66, w * w), 0.1);
             break;
+          case 'fuse':
+            // Zünder: stands hunched over the bundle and shakes while the fuse burns.
+            a.loop('Zombie_Idle_Loop', 0.1);
+            pitch = 0.22 * w;
+            this.inner.position.x = Math.sin(this.time * 55) * 0.025 * w;
+            break;
+          case 'howl':
+            // Heuler: throws the head back while the throat swells, then howls forward.
+            a.loop('Zombie_Idle_Loop', 0.1);
+            pitch = going ? lerp(-0.55, 0.1, g) : -0.55 * w;
+            break;
           case 'bass':
             // Boxenkopf: rears back while the speaker swells, then thumps forward.
             a.loop('Zombie_Idle_Loop', 0.1);
@@ -1084,6 +1184,21 @@ export class EnemyView {
         const head = this.gear.get(this.kind)?.[0];
         if (head) head.scale.setScalar((head.userData.rest as number) * (1 + 0.22 * ring + 0.025 * beat));
       }
+    }
+    if (!(e.state === 'special' && e.sp?.kind === 'fuse')) this.inner.position.x = 0;
+    // WP5: the Zünder's spark flickers and flares while the fuse burns; the Heuler's throat swells to howl;
+    // the Schildträger's shield swings aside while the guard stands open.
+    if (this.kind === 'zuender') {
+      const spark = this.gear.get('zuender')?.[0];
+      const lit = e.state === 'special' && e.sp?.kind === 'fuse' ? Math.min(1, e.stateT / e.sp.wind) : 0;
+      spark?.scale.setScalar(e.state === 'dead' ? 0.01 : 0.8 + 0.4 * Math.sin(this.time * 40 + this.seed * 9) ** 2 + 2.2 * lit);
+    } else if (this.kind === 'heuler') {
+      const sac = this.gear.get('heuler')?.[0];
+      const sp = e.state === 'special' ? e.sp : null;
+      sac?.scale.setScalar(sp?.kind === 'howl' ? 1 + 0.8 * Math.min(1, e.stateT / sp.wind) : 1 + 0.05 * Math.sin(this.time * 3));
+    } else if (this.kind === 'schild') {
+      const sh = this.gear.get('schild')?.[0];
+      if (sh) sh.rotation.z += (((e.guardOpen ?? 0) > 0 || e.state === 'dead' ? 1.0 : 0) - sh.rotation.z) * 0.25;
     }
     // The spitter's throat swells while it winds up.
     if (this.kind === 'spitter') {

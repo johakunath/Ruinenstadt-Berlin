@@ -4,16 +4,18 @@
 // M12c: zones that shove the hero (`Zone.push`) and the Wachdrohne's searchlight (`Spot`).
 // M15: root zones hold the hero (`Player.root`), hour sectors of a ring (the Weltzeituhr's Zeitzonen),
 // and the minute hand: a line that sweeps round its centre and hurts unless the hero rolls through.
+// WP5: blasts (`Zone.blast`, the Zünder) also hit the enemies inside, through `strike`.
 import { PLAYER } from '../data/combat';
 import { BOSS, THREAT } from '../data/enemies';
 import { colliderDistance } from './collide';
-import { hurtPlayer } from './combat';
+import { hurtPlayer, knock, strike } from './combat';
 import { angleDiff, angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
 
 export type SpecialKind = 'spit' | 'fan' | 'pounce' | 'lunge' | 'dive' | 'slam' | 'stomp' | 'flame' | 'charge' | 'summon' | 'ring' | 'roar' | 'barrage' | 'tail' | 'bossSlam' | 'volley' | 'molotov'
   | 'leap' | 'bass' | 'shove' | 'grab' | 'land' | 'beat'
-  | 'roots' | 'seeds' | 'rootRing' | 'key' | 'slabs' | 'sectors' | 'hand';
+  | 'roots' | 'seeds' | 'rootRing' | 'key' | 'slabs' | 'sectors' | 'hand'
+  | 'fuse' | 'howl';
 
 /** A running special: `wind` seconds of telegraph, then `go` seconds of action, then `open` seconds of standing open. */
 export interface Special {
@@ -47,6 +49,8 @@ export interface Zone {
   root?: number;
   /** M15 hour sector: only the part of the circle from `r0` out and within `half` of angle `a` counts. */
   sector?: { r0: number; a: number; half: number };
+  /** WP5 Zünder blast: also hits every enemy inside at `share` of `damage`, with a knock of `knock` 2D px. */
+  blast?: { share: number; knock: number };
 }
 export interface EnemyShot { x: number; z: number; px: number; pz: number; vx: number; vz: number; r: number; damage: number; life: number; boss: boolean }
 export interface Hazard { x: number; z: number; r: number; t: number; max: number; damage: number; tick: number; kind: 'fire' | 'acid' }
@@ -157,6 +161,7 @@ export function updateThreats(sim: Sim): void {
   const p = sim.player;
   const L = sim.level;
 
+  const blasts: Zone[] = [];
   for (let i = T.zones.length - 1; i >= 0; i--) {
     const z = T.zones[i]!;
     z.t -= DT;
@@ -166,6 +171,8 @@ export function updateThreats(sim: Sim): void {
     if (!z.free && !sim.enemies.some((e) => e.id === z.src && e.state === 'special')) continue;
     let hit = false;
     if (z.leave) addHazard(sim, { x: z.x, z: z.z, ...z.leave });
+    // A blast throws the bodies around it too (after this loop: a Zünder killed by it changes the zone list).
+    if (z.blast) blasts.push(z);
     // A zone with no damage only marks where its ground lands (the acid pool hurts by ticking).
     const inside = inZone(z, p.x, p.z, PLAYER.radius * 0.5);
     if ((z.damage > 0 || z.floor > 0) && inside) {
@@ -186,6 +193,11 @@ export function updateThreats(sim: Sim): void {
       const m = (z.sector.r0 + z.r) / 2;
       sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x + Math.sin(z.sector.a) * m, z: z.z + Math.cos(z.sector.a) * m, r: (z.r - z.sector.r0) * 0.3, hit });
     } else sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x, z: z.z, r: z.r, hit });
+  }
+  // 2D `run.blasts`: every body inside takes its share; a Zünder caught in it goes off in turn (next step).
+  for (const z of blasts) for (const e of sim.enemies) {
+    if (e.state === 'dead' || e.id === z.src || Math.hypot(e.x - z.x, e.z - z.z) >= z.r + e.def.radius) continue;
+    strike(sim, e, z.damage * z.blast!.share, { knock: knock(z.blast!.knock), noproc: true, feel: 'none', from: { x: z.x, z: z.z } });
   }
 
   for (let i = T.shots.length - 1; i >= 0; i--) {

@@ -75,7 +75,8 @@ export function spawnPack(sim: Sim, x: number, z: number, kind: EnemyKind, hpMul
 
 /** Turns a body into an elite (2D: ×2.6 life, bigger, Flink is faster). Crows and rats stay plain (2D). */
 export function makeElite(sim: Sim, e: Enemy, mod: EliteMod = sim.rng.pick(ELITE_MODS)): void {
-  if (e.def.boss || e.def.fly || e.def.pack) return;
+  // WP5: a Zünder stays plain (2D: no elite tactic for `bomb`).
+  if (e.def.boss || e.def.fly || e.def.pack || e.def.ai === 'zuender') return;
   // M15: a shield bearer already blocks; it never comes armored as well.
   if (mod === 'gepanzert' && e.def.shield) mod = 'brennend';
   e.elite = mod;

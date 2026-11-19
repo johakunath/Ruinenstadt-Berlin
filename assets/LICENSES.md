@@ -121,6 +121,9 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `portraits/E03.webp` | Ruinenstadt 2D `assets/portraits/E03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Speier |
 | `portraits/E04.webp` | Ruinenstadt 2D `assets/portraits/E04.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Ratte (M12b) |
 | `portraits/E05.webp` | Ruinenstadt 2D `assets/portraits/E05.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Krähe |
+| `portraits/E06.webp` | Ruinenstadt 2D `assets/portraits/E06.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Schildträger (WP5) |
+| `portraits/E07.webp` | Ruinenstadt 2D `assets/portraits/E07.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Zünder (WP5) |
+| `portraits/E08.webp` | Ruinenstadt 2D `assets/portraits/E08.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Heuler (WP5) |
 | `portraits/E09.webp` | Ruinenstadt 2D `assets/portraits/E09.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Hetzer (2D Raser) |
 | `portraits/E11.webp` | Ruinenstadt 2D `assets/portraits/E11.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Raptor |
 | `portraits/E12.webp` | Ruinenstadt 2D `assets/portraits/E12.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Der Rex |

@@ -37,7 +37,11 @@ What is in the game now. Updated 2026-11-18. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-18)
+## Latest (2026-11-19)
+
+- WP5 enemies: Zünder (runs up, lights its fuse, explodes; also when killed, smaller), Schildträger (riot shield in front, the hammer opens it), Heuler (stays back, howls the others on) in Xhain, Alexanderplatz and Mitte; Brocken in an orange vest, a fat Speier, cyan cables on the Kabelghul; boss helmets, caps and speaker heads sit upright (`docs/tasks/wp5-enemies.md`).
+
+## 2026-11-18
 
 - M15 Mitte (in progress): `?map=mitte` plays end to end; neon night (Johannes' mix of the three variants), landmarks from photos, the Pariser Platz framed, the Potsdamer Platz filled with glass offices, a Nachtmarkt and container villages (`docs/tasks/m15-mitte.md`). Enemies and bosses are stand-ins until steps 5 and 6.
 - M15 Alexanderplatz enemies: Uhrwerkläufer, Wurzler, Kernspeier and Brigadeghule; Wurzel-Mutter, Großer Uhrwerkläufer, Volkseigener Koloss; the Weltzeituhr wakes up, walks on four clockwork legs and settles back on its base (`docs/tasks/m15-alexanderplatz.md` › step 7).

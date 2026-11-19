@@ -45,6 +45,8 @@ export interface StrikeOpts {
   noproc?: boolean;
   element?: ElementId;
   note?: string;
+  /** WP5: the knock pushes away from this point instead of the hero (a Zünder's blast). */
+  from?: { x: number; z: number };
 }
 
 const tough = (e: Enemy): boolean => !!e.def.boss || !!e.elite;
@@ -56,6 +58,8 @@ export function stun(e: Enemy, seconds: number): void {
   if (e.state === 'dead' || seconds <= 0 || (e.wake ?? 0) > 0) return;
   // A boss finishes what it marked; a rush in flight cannot be stopped.
   if (e.state === 'special' && e.sp && (e.def.boss || (e.sp.speed > 0 && e.stateT >= e.sp.wind))) return;
+  // WP5: a lit fuse burns on (2D: a stun only stops the Zünder walking).
+  if (e.state === 'special' && e.sp?.kind === 'fuse') return;
   e.sp = null;
   const t = seconds * (e.def.boss ? 0.15 : 1);
   if (e.state === 'stagger' && e.staggerDur - e.stateT >= t) return;
@@ -153,8 +157,8 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   e.hp -= damage;
   e.lastCrit = crit;
 
-  let dx = e.x - p.x;
-  let dz = e.z - p.z;
+  let dx = e.x - (o.from?.x ?? p.x);
+  let dz = e.z - (o.from?.z ?? p.z);
   const d = Math.hypot(dx, dz) || 1;
   dx /= d;
   dz /= d;
@@ -222,6 +226,8 @@ export function killEnemy(s: Sim, e: Enemy): void {
   // M15: the Weltzeituhr stands on its base again; its colliders come back.
   if (e.stand) for (const c of e.stand.splice(0)) s.level.add(c);
   if (e.elite === 'spaltend') splitElite(s, e);
+  // WP5: a Zünder killed before its fuse ran out still goes off where it fell, smaller (2D `kill`).
+  if (e.def.ai === 'zuender' && !e.blown) deathBlast(s, e);
   s.kills++;
   if (kodexKill(s, e.def.kind)) s.events.push({ type: 'kodex', name: e.def.name });
   if (e.elite && kodexKill(s, `e:${e.elite}`)) s.events.push({ type: 'kodex', name: `Elite ${ELITES[e.elite].name}` });
@@ -250,6 +256,14 @@ export function killEnemy(s: Sim, e: Enemy): void {
     }
   }
   if (pk(s, 'boom') && !e.def.boss) a.booms.push({ x: e.x, z: e.z });
+}
+
+/** The Zünder's small blast when it dies before its fuse ran out: its lit fuse goes out, this one is marked shortly. */
+function deathBlast(s: Sim, e: Enemy): void {
+  const F = THREAT.fuse;
+  const z = s.threats.zones;
+  for (let i = z.length - 1; i >= 0; i--) if (z[i]!.src === e.id && z[i]!.blast) z.splice(i, 1);
+  z.push({ x: e.x, z: e.z, r: F.deathRadius, t: F.deathWind, max: F.deathWind, damage: e.def.damage * e.dmgMul * F.deathDamage, floor: F.floor, kind: 'bomb', src: e.id, free: true, blast: { share: F.enemyShare, knock: F.knock } });
 }
 
 /** Burn and acid timers. Burn damage has no hit feel; it reports as `dot` a few times a second. */
