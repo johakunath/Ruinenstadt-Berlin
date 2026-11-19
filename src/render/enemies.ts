@@ -202,7 +202,7 @@ function gearKit(m: Materials): GearKit {
     eye: m.surface({ color: 0x401010, emissive: 0xff4030, emissiveIntensity: 2.6, roughness: 0.4 }),
     // The Turmwächter: the Fernsehturm's steel sphere and its ribbed concrete shaft; the red beacon on the antenna.
     tower: m.surface({ color: 0x8c8474, roughness: 0.4, metalness: 0.6 }),
-    shaft: m.surface({ color: 0x847a68, roughness: 0.85, doubleSided: true }),
+    shaft: m.surface({ color: 0x74685a, roughness: 0.85, doubleSided: true }),
     beacon: m.surface({ color: 0x401008, emissive: 0xff3a1a, emissiveIntensity: 3, roughness: 0.4 }),
     // The Brandmeister's helmet fire: orange outer flames (less intense than the torch so they stay orange), yellow cores.
     fire: m.surface({ color: 0x6a1a04, emissive: 0xff4a0a, emissiveIntensity: 1.9, roughness: 0.5 }),
@@ -800,11 +800,11 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       const coat = fitCoat(fit, { mat: 'shaft', pad: 0.035, hem: 0.36, flare: 0.12, open: 1.4, collar: 'shaft' });
       // Ribs like the tower shaft's rings, round the chest, the belly, the skirt and the sleeves.
       const o1 = coat.o('spine_01'), op = coat.o('pelvis');
-      for (const f of [0.7, 1.6, 2.5, 3.4, 4.3, 5.2]) coat.add('spine_03', [band(coat.chest, o3, f, f + 0.22, 0.012), 'rust']);
-      for (const f of [0.6, 1.6, 2.6, 3.6]) coat.add('spine_01', [band(coat.belly, o1, f, f + 0.25, 0.012), 'rust']);
-      for (const f of [0.8, 1.8, 2.8, 3.8, 4.7]) coat.add('pelvis', [shell([ringGrow(ringAt(coat.skirt, f), 1, 0.012), ringGrow(ringAt(coat.skirt, f + 0.2), 1, 0.012)], op, [lerp(0.2, 1.4, Math.sqrt(f / 5)) + 0.05, lerp(0.2, 1.4, Math.sqrt((f + 0.2) / 5)) + 0.05]), 'rust']);
+      for (const f of [0.7, 1.6, 2.5, 3.4, 4.3, 5.2]) coat.add('spine_03', [band(coat.chest, o3, f, f + 0.22, 0.012), 'hair']);
+      for (const f of [0.6, 1.6, 2.6, 3.6]) coat.add('spine_01', [band(coat.belly, o1, f, f + 0.25, 0.012), 'hair']);
+      for (const f of [0.8, 1.8, 2.8, 3.8, 4.7]) coat.add('pelvis', [shell([ringGrow(ringAt(coat.skirt, f), 1, 0.012), ringGrow(ringAt(coat.skirt, f + 0.2), 1, 0.012)], op, [lerp(0.2, 1.4, Math.sqrt(f / 5)) + 0.05, lerp(0.2, 1.4, Math.sqrt((f + 0.2) / 5)) + 0.05]), 'hair']);
       for (const sd of ['l', 'r'] as const) for (const b of [`upperarm_${sd}`, `lowerarm_${sd}`] as const) {
-        for (const f of [0.8, 1.9]) coat.add(b, [band(coat.arm[b], coat.o(b), f, f + 0.25, 0.01), 'rust']);
+        for (const f of [0.8, 1.9]) coat.add(b, [band(coat.arm[b], coat.o(b), f, f + 0.25, 0.01), 'hair']);
       }
       mountCoat(coat, 0.5);
       break;
@@ -1768,7 +1768,7 @@ export class EnemyView {
       const sparks = this.gear.get('waechter')?.[0];
       if (sparks) {
         const step = Math.floor(this.time * 9 + this.seed * 7);
-        const on = e.state !== 'dead' && Math.sin(step * 12.9898 + this.seed) * 43758.5 % 1 > -0.35;
+        const on = e.state !== 'dead' && Math.sin(step * 12.9898 + this.seed) * 43758.5 % 1 > -0.6;
         sparks.visible = on;
         sparks.rotation.y = Math.sin(step * 7.31) * 0.35;
         sparks.scale.setScalar(0.65 + 0.3 * Math.abs(Math.sin(step * 3.7)));
