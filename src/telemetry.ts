@@ -9,7 +9,7 @@ import type { Sim, SimEvent } from './sim/types';
 const URL = 'https://script.google.com/macros/s/AKfycbyUCf3slojkaYJhVemGU54EBidrXFhj2FoOANlOZQQdIxhO4YIWTW1kF9FPv3hVDXQ/exec';
 const QUEUE = 'ruinenstadt-berlin.tlq';
 const PID = 'ruinenstadt-berlin.pid';
-export const VERSION = '3d-0.1.0';
+export const VERSION = `3d-0.1.0+${__BUILD__}`;
 
 export type RunEnd = 'win' | 'dead' | 'quit';
 
@@ -24,6 +24,9 @@ interface EncounterLog {
   p95?: number;
   calls?: number;
   alive?: number;
+  /** Max life at the fight's start and the lowest life during it, so `dmg` reads as a share like `docs/balance.md`. */
+  hp?: number;
+  low?: number;
 }
 
 export interface RunRecord {
@@ -55,6 +58,8 @@ export interface RunRecord {
   dmg: number;
   rests: number;
   enc: EncounterLog[];
+  /** 1: no fight started and under 20 s (a test start or a reload), filter it out before analysis. */
+  test?: 1;
   /** Death summary: killing hit and the worst sources of the last seconds (share of max life). */
   death?: { by: string; recent: Array<{ by: string; share: number; hits: number }> };
 }
@@ -161,6 +166,11 @@ export class Telemetry {
     this.encAlive = Math.max(this.encAlive, alive);
     r.kills = sim.kills;
     r.wave = Math.max(r.wave, sim.run.index);
+    const e = r.enc[r.enc.length - 1];
+    if (e && e.clear === null) {
+      e.hp = Math.max(e.hp ?? 0, Math.round(sim.stats.maxHp));
+      e.low = Math.min(e.low ?? Infinity, Math.max(0, Math.round(sim.player.hp)));
+    }
   }
 
   event(ev: SimEvent): void {
@@ -210,6 +220,7 @@ export class Telemetry {
     r.low1 = Math.round(1000 / Math.max(1, this.frames.quantile(0.99)));
     r.calls = this.maxCalls;
     r.tris = this.maxTris;
+    if (r.enc.length === 0 && r.t < 20) r.test = 1;
     const e = r.enc[r.enc.length - 1];
     if (e && e.clear === null) this.closeEnc(e);
     const q = store<RunRecord[]>(QUEUE) ?? [];
