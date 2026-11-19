@@ -1,6 +1,6 @@
 # M11c Textures for the new lot types and plants [Codex]
 
-Status: initial image integration built. Performance review and hardware playtest open. See [the repeat and atlas checks](../proof/m11c-textures/README.md), [the texture pipeline](../asset-pipeline.md) and [the Köpenick look](../style/koepenick.png).
+Status: initial image integration built. Performance review and hardware playtest open. See [gameplay captures, repeat and atlas checks](../proof/m11c-textures/README.md), [the texture pipeline](../asset-pipeline.md) and [the Köpenick look](../style/koepenick.png).
 
 The asphalt image and its `asphalt` and `tar` hooks shipped in [T2](t2-street-textures.md).
 
