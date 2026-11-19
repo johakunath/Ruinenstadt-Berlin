@@ -325,7 +325,10 @@ Name the chroma classes after a look at a render (which of `a_mantel`'s three is
 New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 3D (Q5), painted textures per item base, enemy and boss models (H2, P30), a fifth weapon kind, an off-hand slot, more implant legendaries, changes to hit arcs or clip timing of the four kinds, the Neonflinte as a rifle class.
 
 ## Questions
-- None open for step 1. Gates G2 to G6 are listed above.
+- Gates G2 to G6 are listed above.
+- D9 hit numbers: the 3D game shows no damage numbers, so an effective hit is shown by cool white hit sparks (`fx.sparks`) instead of a tinted number. Damage numbers would be a separate decision.
+- D9 classes that may not fit their bodies (assignment kept): Rattenmutter (zombie body, Tiere only), Bassprediger (zombie body, Maschinen only, unlike Kabelghul and Boxenkopf), Wurzler and Wurzel-Mutter (zombie bodies under roots, Pflanzen only), the uniformed bosses (zombie bodies, Menschen: the blade gets no bonus on them).
+- D8: a two-handed hammer a third shorter comes out at reach 0.9, not 0.85 (length 0.86 to 0.9 against 1.16, light1 reach 2.47).
 
 ## Johannes, 2026-11-19 (step 1 look 1) and what follows from it
 Verdict on the sheets: good overall. Notes are Fable's; they change D1 and add D8 to D10.
@@ -432,3 +435,14 @@ Johannes, 2026-11-19: no painted item icons any more.
 - Models follow the icons where the spec text differs: Werkhammer and Aufziehwerfer blue enamel with brass gear, Zeigerlanze blue shaft; Hackmesser and Sichel are blade-envelope long (0.9 m); Nagelwerfer's nails sit on the arm (grip zone free).
 - Reused from 2D: `WM` colours (`js/art.js`) as paint start values and the painted side views for proportions.
 - Not verified: look on real hardware and at the phone camera; glow strength with bloom on both profiles (Playtest row in `pt-hardware-checks.md`).
+
+## Handover step 1f and 1g (Opus 5.5, 2026-11-19)
+- 1f: every model rebuilt after look 1 (ribbons, hanging fork bands from the tips, forks two thirds, two-handed hammers a third shorter with a third bigger head via a head frame, one-handed Pflasterhammer and Rohrzange, short Hackmesser, shard white glow through a vertex-coloured glow material, cogs on Aufziehwerfer and Zeigerlanze); neon and GDR up to 1,400 triangles. Draw calls unchanged (232).
+- D8: `length` per base in `weapon-look.ts`; `weaponTraits` gives hands, reach (rule, steps 0.05, floor 0.6) and damage = 2 − reach; `heroStats` folds them in, the card shows the scaled damage and DPS. Hammer knockback × 1.5 in `combat.ts`; reach values untouched.
+- D9: `ENEMY_CLASSES` and `EnemyDef.classes`, `STRONG_AGAINST`, `WEAPON.typeBonus` 0.4 in `strike` (procs start from the unboosted damage, burn ticks never get it), hit flag `effective`, card line `Stark gegen`, class in the Kodex.
+- D10: `tools/item-icons.mjs` renders all 32 weapon icons (I91, I92 new); `itemIcon` looks up `base:set`. Spears and blades are drawn thicker across in the icon only.
+- Tests: envelope against length, D8 rule and sums, D9 per type and class, burn excluded, two classes once. Golden values of hammer tests rose by 1.1 (shorter default hammer); rule test dummies are classless.
+- Deviations: effective hits tint the sparks (no hit numbers exist); Siegessäule shortened from the tip (1.72) so the thrust grip stays on the shaft.
+- Reused from 2D: icon proportions as before; class names German as in the spec.
+- Not verified: feel of the bonus, the reach changes and the knockback in play; icon readability on a real phone (Playtest rows).
+

@@ -19,7 +19,10 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | Menus | Pause menu, inventory, Segen, Kodex, options, controls graphics, start screen (U1 to U3); set-break warning on a swap (2D backlog 29, not confirmed) | `u1-pause-menu.md`, `u2-menu-tabs.md`, `u3-menu-2d.md` |
 | Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
 | Audio | Enemy sounds per type, listening test (A2) | `a2-audio-followups.md` |
-| Weapons | Weapon looks per base (WP4 step 1): equip several per kind (Späti, drops, stash); does each read at the game camera, does the glow of neon and legendary weapons read without and with an element, on both profiles | `wp4-equipment-visuals.md` |
+| Weapons | Weapon looks per base (WP4 step 1): equip several per kind (Späti, drops, stash); does each read at the game camera, does the glow of neon and legendary weapons read without and with an element, on both profiles; rendered icons readable in the bag on the phone | `wp4-equipment-visuals.md` |
+| Weapon types | D9: +40 % for the fitting weapon (Klinge on Untote and Pflanzen, Hammer on Maschinen, Speer on Menschen, Werfer on Tiere); worth switching, do the white sparks and `Stark gegen` read; Kodex class | `wp4-equipment-visuals.md` |
+| Short weapons | D8: Hackmesser, Pflasterhammer, Rohrzange one-handed, reach 75 to 80 %, damage 120 to 125 %; the shorter two-handed hammers, Leuchtröhre, Sichel and legendary blades lose 10 to 20 % reach and gain the same in damage; does reach still fit the model | `wp4-equipment-visuals.md` |
+| Hammer knockback | Every hammer attack pushes 1.5× as far (stun on every hit stays); does it feel strong without pushing enemies out of the next swing | `wp4-equipment-visuals.md` |
 | Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
 
 ## Hardware checks

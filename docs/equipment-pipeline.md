@@ -10,7 +10,8 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Topic | Finding |
 |---|---|
 | Bases | 87 `BaseId`s (`src/data/items.ts`); names map to bases in `BASES` (`src/data/item-names.ts`). Set pieces carry their base in `SETS` |
-| Weapons (2026-11-19) | One model per base (30) plus 2 set variants (`brech:kiez`, `zwille:spree`), `weaponModel(kind, base, set)`; sheets in `docs/proof/wp4/` |
+| Weapons (2026-11-19) | One model per base (30) plus 2 set variants (`brech:kiez`, `zwille:spree`), `weaponModel(kind, base, set)`; sheets in `docs/proof/wp4/`. Length per base in `weapon-look.ts` sets reach and damage (D8); damage type per base (D9) |
+| Weapon icons (2026-11-19) | Rendered from the models (`node tools/item-icons.mjs`, D10), 32 files incl. I91, I92; rerun after every weapon model change. Painted originals: `git show e2ed157:assets/inventory/<id>.webp` |
 | Element (2026-11-19) | Element lights the weapon's glow parts (`ELEMENT_GLOW`, 2.4); without one, neon and legendary bases glow in their signature colour (1.6); else the glow mesh is hidden. No particles yet (step 5) |
 | Hero look | `heroLook`: armor `mantel`/`weste` own, `leder`/`blaumann` → vest, every other armor and no armor → coat. Any glove → `g_handsch`. Feet `turnsch` own, else `stiefel`. `hat` is always `null` (no `h_` piece) |
 | Not on the hero | Head, talisman, ring, implant: nothing in 3D |
@@ -25,7 +26,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 
 | Slot | Bases | Own 3D model | Changes hero | Icon yes / partly / no |
 |---|---|---|---|---|
-| Waffe (w) | 30 | 30 + 2 set variants | 30 | 26 / 3 / 3 (32 rows) |
+| Waffe (w) | 30 | 30 + 2 set variants | 30 | 32 / 0 / 0 (rendered) |
 | Körper (a) | 12 (+ Kettenhemd on `kette`) | 2 pieces | 3 (vest); 1 same | 2 / 3 / 8 |
 | Kopf (h) | 9 | 0 | 0 | n/a |
 | Hände (g) | 6 | 1 piece (generic) | 6 (all one glove) | 1 / 3 / 2 |
@@ -39,38 +40,38 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 
 | Name | Base | Slot | Family | 3D | Hero | Icon | Icon matches | Needs | P |
 |---|---|---|---|---|---|---|---|---|---|
-| Rostige Klinge | rohr | w | starter (also normal) | model:rohr | yes | I88 | no: shows a pipe (model: rusty blade) | I | 1 |
-| Holzlatte | latte | w | legacy | model:latte | yes | I01 | yes: nailed plank | none (not dropped) | 4 |
-| Stahlklinge | stahl | w | normal | model:stahl | yes | I89 | yes: wrench crossguard | none | 2 |
-| Machete | machete | w | normal | model:machete | yes | I04 | yes: wide blade, dark grip | none | 2 |
-| Hackmesser | brech | w | normal | model:brech | yes | I90 | yes: cleaver (model longer: blade envelope) | none | 2 |
-| Vorschlaghammer | vorschlag | w | normal | model:vorschlag | yes | I06 | yes: banded sledge | none | 2 |
-| Pflasterhammer | pflaster | w | normal | model:pflaster | yes | I07 | yes: face and pick | none | 2 |
-| Rohrzange | zange | w | normal | model:zange | yes | I08 | yes: pipe wrench | none | 2 |
-| Jagdzwille | zwille | w | normal | model:zwille | yes | I09 | yes: forked slingshot | none | 2 |
-| Nagelwerfer | nagel | w | normal | model:nagel | yes | I10 | yes: nail pouch (on the arm) | none | 2 |
-| Steinschleuder | stein | w | normal | model:stein | yes | I11 | yes: rope sling, stone | none | 2 |
-| Rohrspeer | rspeer | w | normal | model:rspeer | yes | I12 | yes: bayonet on a pipe | none | 2 |
-| Fahnenstange | fahne | w | normal | model:fahne | yes | I13 | yes: flag rag | none | 2 |
-| Harpune | harpune | w | normal | model:harpune | yes | I14 | yes: barbs, line | none | 2 |
-| Leuchtröhre | leucht | w | neon | model:leucht | yes | I59 | yes: neon tube (glows) | none | 4 |
-| Boxenhammer | boxh | w | neon | model:boxh | yes | I60 | yes: speaker head (glows) | none | 4 |
-| Neonflinte | neonfl | w | neon | model:neonfl | yes | I61 | no: icon a rifle, model a neon fork | I | 4 |
-| Mikroständer | mikro | w | neon | model:mikro | yes | I62 | yes: mic stand (glows) | none | 4 |
-| Sichel | sichel | w | GDR | model:sichel | yes | I71 | yes: sickle | none | 4 |
-| Werkhammer | werkh | w | GDR | model:werkh | yes | I72 | yes: blue head, gear | none | 4 |
-| Aufziehwerfer | aufzieh | w | GDR | model:aufzieh | yes | I73 | yes: gear key | none | 4 |
-| Zeigerlanze | zeiger | w | GDR | model:zeiger | yes | I74 | yes: clock hand | none | 4 |
-| Fernsehturm-Splitter | turm | w | legendary | model:turm | yes | I15 | yes: glass shard | E | 3 |
-| Klinge der Zitadelle | zitklinge | w | legendary | model:zitklinge | yes | I51 | yes: knight sword (gem cyan) | E | 3 |
-| Mauerbrecher | mauer | w | legendary | model:mauer | yes | I16 | yes: concrete head | E | 3 |
-| Plattenbrecher | pbrecher | w | legendary | model:pbrecher | yes | I52 | yes: slab, windows glow | E | 3 |
-| Zorn der Ringbahn | ring | w | legendary | model:ring | yes | I32 | no: spike on chain (model: orange fork, ring) | I, E | 3 |
-| Krähenschleuder | kraehe | w | legendary | model:kraehe | yes | I53 | yes: skull, feathers | E | 3 |
-| Speer der Siegessäule | siegsp | w | legendary | model:siegsp | yes | I56 | partly: wings and laurel, no figure | E | 3 |
-| Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: spiked ball | E | 3 |
-| Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I90 | partly: icon is the plain cleaver | I (I91) | 3 |
-| Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I09 | partly: icon is the plain Jagdzwille | I (I92) | 3 |
+| Rostige Klinge | rohr | w | starter (also normal) | model:rohr | yes | I88 | yes: rendered from the model | none | 1 |
+| Holzlatte | latte | w | legacy | model:latte | yes | I01 | yes: rendered from the model | none (not dropped) | 4 |
+| Stahlklinge | stahl | w | normal | model:stahl | yes | I89 | yes: rendered from the model | none | 2 |
+| Machete | machete | w | normal | model:machete | yes | I04 | yes: rendered from the model | none | 2 |
+| Hackmesser | brech | w | normal | model:brech | yes | I90 | yes: rendered from the model | none | 2 |
+| Vorschlaghammer | vorschlag | w | normal | model:vorschlag | yes | I06 | yes: rendered from the model | none | 2 |
+| Pflasterhammer | pflaster | w | normal | model:pflaster | yes | I07 | yes: rendered from the model | none | 2 |
+| Rohrzange | zange | w | normal | model:zange | yes | I08 | yes: rendered from the model | none | 2 |
+| Jagdzwille | zwille | w | normal | model:zwille | yes | I09 | yes: rendered from the model | none | 2 |
+| Nagelwerfer | nagel | w | normal | model:nagel | yes | I10 | yes: rendered from the model | none | 2 |
+| Steinschleuder | stein | w | normal | model:stein | yes | I11 | yes: rendered from the model | none | 2 |
+| Rohrspeer | rspeer | w | normal | model:rspeer | yes | I12 | yes: rendered from the model | none | 2 |
+| Fahnenstange | fahne | w | normal | model:fahne | yes | I13 | yes: rendered from the model | none | 2 |
+| Harpune | harpune | w | normal | model:harpune | yes | I14 | yes: rendered from the model | none | 2 |
+| Leuchtröhre | leucht | w | neon | model:leucht | yes | I59 | yes: rendered from the model | none | 4 |
+| Boxenhammer | boxh | w | neon | model:boxh | yes | I60 | yes: rendered from the model | none | 4 |
+| Neonflinte | neonfl | w | neon | model:neonfl | yes | I61 | yes: rendered from the model | none | 4 |
+| Mikroständer | mikro | w | neon | model:mikro | yes | I62 | yes: rendered from the model | none | 4 |
+| Sichel | sichel | w | GDR | model:sichel | yes | I71 | yes: rendered from the model | none | 4 |
+| Werkhammer | werkh | w | GDR | model:werkh | yes | I72 | yes: rendered from the model | none | 4 |
+| Aufziehwerfer | aufzieh | w | GDR | model:aufzieh | yes | I73 | yes: rendered from the model | none | 4 |
+| Zeigerlanze | zeiger | w | GDR | model:zeiger | yes | I74 | yes: rendered from the model | none | 4 |
+| Fernsehturm-Splitter | turm | w | legendary | model:turm | yes | I15 | yes: rendered from the model | E | 3 |
+| Klinge der Zitadelle | zitklinge | w | legendary | model:zitklinge | yes | I51 | yes: rendered from the model | E | 3 |
+| Mauerbrecher | mauer | w | legendary | model:mauer | yes | I16 | yes: rendered from the model | E | 3 |
+| Plattenbrecher | pbrecher | w | legendary | model:pbrecher | yes | I52 | yes: rendered from the model | E | 3 |
+| Zorn der Ringbahn | ring | w | legendary | model:ring | yes | I32 | yes: rendered from the model | E | 3 |
+| Krähenschleuder | kraehe | w | legendary | model:kraehe | yes | I53 | yes: rendered from the model | E | 3 |
+| Speer der Siegessäule | siegsp | w | legendary | model:siegsp | yes | I56 | yes: rendered from the model | E | 3 |
+| Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: rendered from the model | E | 3 |
+| Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | E | 3 |
+| Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | E | 3 |
 | Lederjacke | leder | a | normal | piece:vest | yes | I17 | no: jacket vs vest | M | 2 |
 | Arbeitsmantel | mantel | a | normal | piece:coat | same | I18 | yes: long coat | T | 2 |
 | Schutzweste | weste | a | normal | piece:vest | yes | I19 | yes: vest | T | 2 |
