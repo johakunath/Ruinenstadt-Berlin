@@ -2,6 +2,17 @@
 
 Backlog P25, step 5 of `docs/tasks/wp5-enemies.md`. Origin: `docs/tasks/m12c-mitte-enemies.md` › Der Türsteher ("Dropped: neon barriers"). Decision pass 2026-11-19, no code changed. Build spec below is for one Opus session.
 
+**Status: built** (2026-11-19, Claude · Opus high). Proof `docs/proof/p25/barriers.webp` (Qualität; Leistung looked the same).
+
+## Handover
+
+- 2D: nothing to reuse; the 2D repo has no Türsteher and no barrier or door rule (`js/` grep for Türsteher, barrier, Schranke, Tor, Einlass). Reused from 3D: the tunnel grating pattern (bar box half depth 0.3, `level.gates`), `FlowField.patch` from PR #61, `threatHit`, the `zap` cue, the boss's pink `0xff4fa3`.
+- Built as specified: `BOSS.tuersteher` bar numbers (14 m, 0.8 s, 4 s, 9 s, 0.6 / 0.1, 1.5 m), `TOR_PASSAGES` / `torBarriers` (`src/data/map.ts`), `Level.shut` / `open` / `isShut`, `reachGrid` skips shut colliders, `src/sim/barriers.ts` after `updateThreats`, `Sim.barrier`, event `barrier` (with x, z of the middle bar for the sound), death summary „Der Türsteher · Neonschranke“. One flow patch over the union of the five bars instead of five.
+- Render: `src/render/barriers.ts`, hooked into `renderer.ts` (built on the first frame of a level with bars). Strip 1.36 m deep (the hit band), three tubes r 0.07 at 0.5 / 1.2 / 1.9 m; they read well from the follow camera, no thickening needed.
+- Cost: 2 instanced draw calls while shown (5 strips, 15 open 8-sided tubes, about 250 triangles), 0 when idle; unlit, additive, FX_LAYER, no lights, no shadows. Sim: one patch of about 300 flow cells per shut and open.
+- Tests (15): `src/sim/barriers.test.ts` (10), `src/sim/level.test.ts` (2), `flowfield.test.ts` (+1), `src/data/mitte.test.ts` (+1 per scale).
+- Bot, one Mitte run (seed 1): Pariser Platz won, 1 death; no baseline to compare. Not done: the `?spawn=tuersteher,brute` settle check in an outer mouth. The look shot used `?map=mitte&autostart&at=3&spawn=tuersteher` (Pariser Platz is encounter 3) and `window.__game` to place the hero and set rage.
+
 ## Decision
 
 1. **Build it, small.** Real blocking barriers, not a damage line. The reason it was dropped ("dynamic colliders in the level hash are new work") no longer holds: the hash already takes inserts and removals at runtime (`Level.add` / `Level.remove`; shrines, tunnel gratings, Weltzeituhr base).

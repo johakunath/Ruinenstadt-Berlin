@@ -101,11 +101,11 @@ export function threatHit(sim: Sim, src: Enemy | null, raw: number, floor: numbe
 }
 
 /** German name of what a threat is, with the enemy that made it when it still lives (death summary). */
-const THREAT_NAME: Record<ZoneKind | 'shot' | 'fire' | 'acid' | 'wave' | 'sweep', string> = {
+const THREAT_NAME: Record<ZoneKind | 'shot' | 'fire' | 'acid' | 'wave' | 'sweep' | 'barrier', string> = {
   slam: 'Stampfer', flame: 'Flammen', bomb: 'Sprengsatz', tail: 'Schwanzhieb', acid: 'Säure', shove: 'Stoß', land: 'Landung', root: 'Wurzeln', slab: 'Platte', hour: 'Stundenschlag',
-  shot: 'Geschoss', fire: 'Feuer', wave: 'Druckwelle', sweep: 'Zeiger',
+  shot: 'Geschoss', fire: 'Feuer', wave: 'Druckwelle', sweep: 'Zeiger', barrier: 'Neonschranke',
 };
-function threatBy(sim: Sim, what: keyof typeof THREAT_NAME, src?: number): string {
+export function threatBy(sim: Sim, what: keyof typeof THREAT_NAME, src?: number): string {
   const e = src === undefined ? undefined : sim.enemies.find((x) => x.id === src);
   return e ? `${e.def.name} · ${THREAT_NAME[what]}` : THREAT_NAME[what];
 }

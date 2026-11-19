@@ -405,6 +405,13 @@ export const BOSS = {
     shove: 3.2, shoveRange: 3.5, shoveAhead: 1.6, shoveRadius: 2.2, shoveWind: 0.7, shoveDamage: 1, shoveFloor: 0.15, push: 3 * 40 * PX, shoveOpen: 0.8, rageGap: 0.5,
     grab: 6, grabMin: 3.5, grabMax: 5.5, grabWind: 0.5, grabTime: 0.35, grabSpeed: 12, grabDamage: 0.5, hold: 1, throwDamage: 0.6, throwPush: 2, grabOpen: 1.2,
     summon: 10, adds: 2, rageAdds: 3,
+    /**
+     * P25 Neonschranke (rage only, its own timer, not scaled by the rage factor): with the hero within `barNear`
+     * of a Tor bar, the passages get a pink strip for `barWind` s, then shut for `barTime` s, then stay open
+     * `barEvery` s. Standing on the strip when it shuts: one hit (`barDamage` × his damage, floor `barFloor`).
+     * No wind-up while he is within `barClear` of a bar; a shut waits until he is off the bars.
+     */
+    barNear: 14, barWind: 0.8, barTime: 4, barEvery: 9, barDamage: 0.6, barFloor: 0.1, barClear: 1.5,
   },
   /**
    * Flies at `height`, keeps `near`..`far` away. Suchlicht (`Spot`): a lit circle that follows the hero; standing

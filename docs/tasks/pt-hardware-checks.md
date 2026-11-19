@@ -23,6 +23,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
 | Audio | Enemy sounds per type, listening test (A2); S3 boss voices: are the 48 lines clear, the right voice per boss, too loud or too often? (`?spawn=tuersteher`, `?spawn=weltzeituhr`) | `a2-audio-followups.md`, `wp5-enemies.md` › Step 4 |
 | Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
+| Mitte Tor fight in rage | Der Türsteher below half life, fight near the Brandenburger Tor: did the neon bars ever shut? Pink strip readable in time to step off? Bars visible in both profiles, also with the Tor cut away? Bodies pop out of a closing bar? (`?map=mitte&at=3&spawn=tuersteher,brute`) | `p25-neon-barriers.md` |
 
 ## Hardware checks
 
@@ -62,3 +63,4 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | 32 | Spear feel on the tablet: thrusts ±18° and 4 m, finisher a round sweep (350°, 3.4 m) with the lunge; easier to hit, still a spear? Compare with blade and hammer in a pack | Köpenick or `?map=hof&spawn=walker,walker,walker,runner`, spear equipped | Tab S9 | PR #57 | |
 | 33 | Painted world textures (T3, T4, T7): first-load hitch, texture memory, readability and frame rate | From a cold load, walk past Köpenick storefronts and vehicles, Alexanderplatz landmarks, and S3 station and tube walls. Compare both profiles with `?debug=perf` | PC, Tab S9 | `docs/asset-pipeline.md` | |
 | 34 | Flow field rebuild while kiting: no hitch every few seconds when the hero runs from a pack, nor when a crate breaks mid-fight. Cloud CPU: window build 49.6 → 0.4 ms | Mitte, Pariser Platz wave: kite in circles of 15 m and more, smash crates; `?debug=perf` frame graph | PC, Tab S9 | `src/sim/flowfield.ts`, PR (flow field build) | |
+| 35 | H2 boss looks (WP5): Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter in their new models, district colours, ghoul colour variety; coats in motion (seam between chest and belly shells in strong twists?), first-spawn hitch (gear build about 10 ms) | `?map=hof&spawn=feldwebel,hauptmann,schaffner,brandmeister,rattenmutter,waechter`; then each in its district | PC, Tab S9 | `docs/tasks/wp5-enemies.md`, `docs/proof/wp5/bosses-h2.webp` | |

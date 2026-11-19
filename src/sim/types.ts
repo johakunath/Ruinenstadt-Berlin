@@ -271,6 +271,8 @@ export type SimEvent =
   | { type: 'fund'; kind: 'teil' | 'kassette'; x: number; z: number; title: string; line: string }
   | { type: 'breakableHit'; id: number; kind: BreakableKind; x: number; z: number; hp: number }
   | { type: 'breakableBreak'; id: number; kind: BreakableKind; x: number; z: number; inside: boolean }
+  /** P25 Türsteher neon bars at the Tor: strip lit (`wind`), bars shut, bars open; at the middle passage. */
+  | { type: 'barrier'; phase: 'wind' | 'shut' | 'open'; x: number; z: number }
   /** M20 tunnel: a grating opened after its fight was won (2D `openGate`). */
   | { type: 'gateOpen'; index: number; x: number; z: number }
   /** M20 tunnel: the hero reached the generator; hold the ring (2D GEN). */
@@ -348,6 +350,8 @@ export interface Sim {
   stress: number;
   /** M20 tunnel gratings (`level.gates`): sim time each one opened, Infinity while closed. */
   gateT: number[];
+  /** P25 Türsteher neon bars (`level.barriers`): phase, seconds left in it, the boss that set it. */
+  barrier: { state: 'idle' | 'wind' | 'shut'; t: number; src: number };
   /** M12c rain (2D `D.wet`, from the map; tunnels and the camp are dry): fire burns shorter, shock jumps further. */
   wet: boolean;
 }

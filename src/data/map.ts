@@ -5,7 +5,7 @@
 // One source for sim (colliders, walkability, encounters) and renderer (meshes).
 import type { Collider } from '../sim/collide';
 import type { Bounds } from '../sim/flowfield';
-import { Level, WalkGrid, type EncounterDef, type Point, type ZoneDef } from '../sim/level';
+import { Level, WalkGrid, type BarrierDef, type EncounterDef, type Point, type ZoneDef } from '../sim/level';
 import { Rng } from '../sim/math';
 import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
@@ -647,6 +647,23 @@ export const OPEN_PARTS: Partial<Record<LandmarkKind, ReadonlyArray<{ x: number;
   // Sony Center: six blocks on a 24 m ring around the forum, open between them (gaps face 30°, 90° … 330°).
   sony: [0, 60, 120, 180, 240, 300].map((d) => ({ x: Math.sin((d * Math.PI) / 180) * 24, z: Math.cos((d * Math.PI) / 180) * 24, hx: 7, hz: 5, rot: (d * Math.PI) / 180 })),
 };
+
+/**
+ * P25: the five passages of the Brandenburger Tor (local x centre, half width): the gaps between the
+ * pillar walls of `OPEN_PARTS.tor`. The Türsteher's neon bars close them in rage (`Level.barriers`).
+ */
+export const TOR_PASSAGES: ReadonlyArray<readonly [number, number]> = [[-13.725, 1.9], [-7.325, 1.9], [0, 2.825], [7.325, 1.9], [13.725, 1.9]];
+/** Bar plane in the Tor frame (local +z, the Pariser Platz side, flush with the pier faces); bar half depth and reach into the piers. */
+export const TOR_BAR = { z: 4.2, hz: 0.3, into: 0.6 } as const;
+
+/** Bars across the Tor passages, in world space; their colliders are not in the level until shut. */
+export function torBarriers(l: Landmark): BarrierDef[] {
+  const c = Math.cos(l.rot), sn = Math.sin(l.rot);
+  return TOR_PASSAGES.map(([lx, half]) => {
+    const x = l.x + c * lx + sn * TOR_BAR.z, z = l.z - sn * lx + c * TOR_BAR.z;
+    return { x, z, rot: l.rot, half, collider: { kind: 'box' as const, x, z, hx: half + TOR_BAR.into, hz: TOR_BAR.hz, rot: l.rot } };
+  });
+}
 
 /** Every blocking box of a landmark: the footprint plus the parts of figures that reach past it (or only the parts of an open one). */
 export function landmarkColliders(l: Landmark): Collider[] {
@@ -1817,6 +1834,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   if (m.flavor) level.flavor = m.flavor;
   if (m.wet) level.wet = true;
   level.hiddenSpots = m.hiddenSpots ?? [];
+  level.barriers = m.landmarks.filter((l) => l.kind === 'tor').flatMap(torBarriers);
   if (T) {
     level.gates = gates;
     level.traderSpot = { ...T.trader };

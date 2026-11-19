@@ -2,7 +2,7 @@
 
 Work package WP5 (Johannes, 2026-11-19): P30 quick wins, P12 remaining 2D enemies, H2 own boss models, S3 voices, P25 neon barriers. Order as listed; P25 waits for a Fable decision on dynamic colliders.
 
-Status 2026-11-19: steps 1, 2 and 4 built (PR on `ccr-d099d58b-xmy2l2`). Step 3 waits for Johannes' pick of the mockup looks, step 5 for a Fable pass.
+Status 2026-11-19: steps 1 to 4 built (PR on `ccr-d099d58b-xmy2l2`; step 3 from Johannes' mockup picks). Step 5 built after the Fable pass (`docs/tasks/p25-neon-barriers.md`).
 
 ## Steps
 
@@ -10,9 +10,9 @@ Status 2026-11-19: steps 1, 2 and 4 built (PR on `ccr-d099d58b-xmy2l2`). Step 3 
 |---|---|---|
 | 1 | P30 quick wins: Brocken orange vest, Kabelghul cyan cables, Speier belly (bodies match busts E02, E13, E03) | built |
 | 2 | P12: Zünder, Schildträger, Heuler (Ratte was built in M12b) | built |
-| 3 | H2: own models in code for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter, matching busts X04, X01, X05, X10, X06, X03 | mockup round open |
+| 3 | H2: own models in code for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter, matching busts X04, X01, X05, X10, X06, X03 | built |
 | 4 | S3: short spoken lines for human and robot enemies and bosses | built (bosses only) |
-| 5 | P25: Türsteher neon barriers | needs a Fable decision (dynamic colliders in the level hash) |
+| 5 | P25: Türsteher neon barriers | built (decision, spec and handover: `docs/tasks/p25-neon-barriers.md`) |
 
 ## Handover (steps 1 and 2)
 
@@ -25,6 +25,16 @@ Status 2026-11-19: steps 1, 2 and 4 built (PR on `ccr-d099d58b-xmy2l2`). Step 3 
 - **Bug fixed on the way:** zombie-rig gear was aligned to whatever pose the pooled view held when a kind first appeared on it (often the last body's death pose; in the sheet tool the GLB rest pose), so helmets, caps, speaker heads, the Brandmeister's torch and the Turmwächter's lantern came out tilted. `EnemyView.inIdle` now builds gear in the first frame of the idle clip. Every boss on the zombie rig looks different (upright) after this; before/after sheets in the PR.
 - Cost: no lights, no new draw calls beyond the gear meshes (merged per material, 3 to 5 per kind as for the other kinds), a few pooled particles over driven bodies.
 - Not done: hardware look check (playtest row), balance bot run with the new kinds.
+
+## Handover (step 3)
+
+- Picks (Johannes 2026-11-19, `docs/mockups/wp5-boss-looks.html`): Feldwebel A, Hauptmann B, Schaffner A, Brandmeister A, Rattenmutter A, Turmwächter A; proof `docs/proof/wp5/bosses-h2.webp` (busts X04, X01, X05, X10, X06, X03 next to the bodies). Reused from 2D: only the busts (2D has no body drawings for these bosses).
+- New in `src/render/enemies.ts`: `BodyFit` reads the skinned body in the idle frame; `fitCoat` builds ring shells that follow it (chest on spine_03, belly on spine_01, sleeves on the arm bones, skirt on the pelvis open at the front so the bent knees come through). Fixes the Brandmeister's clipping and fits every coat to its SHAPE.
+- `EnemyView.hangSkirts`: skirts follow half of the pelvis' turn (the heavy swing threw them out flat), the Brandmeister's helmet fire a quarter of the head's; both follow fully once dead.
+- Animated: Brandmeister flames flicker and flare on `flame`/`ring`; Turmwächter sparks jump. Removed: Hauptmann plume, Brandmeister torch, Turmwächter hat and lantern, the shoulder rat. Rattenmutter: SHAPE Head 0.05, rat head on neck_01, HUNCH 0.34.
+- Colours (TINTS skin, CLOTH trousers): Köpenick parchment skin with Prussian-blue trousers (Turmwächter olive-brown), tunnel navy, Xhain pale grey with stone grey (Grenzer), soot (Brandmeister), oxblood (Rattenmutter). Xhain has no board: tones taken from the shared palette family.
+- Cost: no lights; emissive only for glows. Unlit gear shares one vertex-coloured mesh per bone (`assemble` with `paint`), so 7 to 12 gear meshes per boss (was about 5 to 9), about 2.4k to 4.1k triangles, about 10 ms to build at first spawn.
+- Open: Johannes' look check on the PC and the Tab S9 (needs a row in `docs/tasks/pt-hardware-checks.md`); chest and belly shells can show a thin seam in strong twists.
 
 ## Step 3 plan (after the mockup pick)
 
