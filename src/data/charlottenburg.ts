@@ -451,6 +451,9 @@ export function charlottenburgMap(scale = 1): MapDef {
   for (const name of ['Kurfürstendamm', 'Tauentzienstraße', 'Bismarckstraße', 'Schloßstraße', 'Spandauer Damm']) middle(name, 12 * Math.sqrt(s), 6, 2.5, ['fireBarrel', 'stormLantern', 'fireBarrel', 'beacon']);
   // Two storm lanterns either side of the centre of every fight (rim barrels alone leave the middle of a wide street dark).
   encounters.forEach((e, i) => { for (const k of [-4, 4]) lights.push({ kind: 'stormLantern', x: e.x + Math.sin(i * 2.3) * k, z: e.z + Math.cos(i * 2.3) * k, rot: 0, size: k > 0 ? 1.1 : 0.8 }); });
+  // Gas lanterns round the church square, on the rim of the boss fight (landmark lighting, 2026-11-19).
+  const kirche = encounters.find((e) => e.id === 'kirche')!;
+  for (const a of [0, 22, 135, 210]) lights.push({ kind: 'lantern', x: kirche.x + Math.sin(a * DEG) * (kirche.r + 1.2), z: kirche.z + Math.cos(a * DEG) * (kirche.r + 1.2), rot: 0, size: 0.9 });
   // Fires on the Knie, where the Hardenbergstraße leaves the roundabout for the Stadtbahn arch.
   lights.push({ kind: 'fireBarrel', x: 47 * s, z: 70 * s, rot: 0, size: 1.2 }, { kind: 'fireBarrel', x: 54 * s, z: 77 * s, rot: 0.5, size: 0.9 });
   // Fires in the arches (people living under the Stadtbahn).

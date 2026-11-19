@@ -25,6 +25,7 @@ export type { RGB } from './landmarks';
 import { buildCitywest } from './charlottenburg-citywest';
 import { buildKudamm } from './charlottenburg-kudamm';
 import { buildSchloss } from './charlottenburg-schloss';
+import { lightCharlottenburgLandmarks } from './charlottenburg-lights';
 
 export const CHARLOTTENBURG_KINDS = new Set<LandmarkKind>([
   'zoobahnhof', 'loewentor', 'elefantentor', 'aquarium', 'musikpavillon', 'antilopenhaus', 'ufapalast', 'capitol', 'gedaechtniskirche',
@@ -596,5 +597,7 @@ export function buildCharlottenburgWorld(m: MapDef, chunkOf: (x: number, z: numb
     if (w.kind === 'hedge') buildHedge(chunkOf, ground, w);
     else if (w.kind === 'fence') buildFence(chunkOf, ground, w);
   }
+  // Landmark lighting (Johannes 2026-11-19): lamps, washes and lantern bodies per sight (`charlottenburg-lights.ts`).
+  lightCharlottenburgLandmarks(m, chunkOf, ground);
 }
 
