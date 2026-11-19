@@ -14,6 +14,13 @@ export function titleNet(): NetBoard {
   }, () => undefined, document.getElementById('title-net')!);
 }
 
+/** A ride just arrived (GO_KEY): pick this page's own map, so the main button starts it (Codex review, PR #57). */
+export function selectHere(): void {
+  if (opts.map === 'tunnel') { titleNet().select({ line: opts.line }); return; }
+  const i = STOPS.findIndex((s) => s.map === opts.map);
+  if (i >= 0) titleNet().select({ stop: i });
+}
+
 /** The pick is this page's own map (play here), not another one (ride there). */
 export function pickIsHere(): boolean {
   const s = titleNet().selection;

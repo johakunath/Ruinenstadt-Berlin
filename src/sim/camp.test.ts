@@ -128,6 +128,9 @@ describe('Späti upgrades (playtest 2026-11-18)', () => {
     expect(buySpatiUpgrade(s, 'dmg').ok).toBe(false);
     expect(s.statContext.upgrades.dmg).toBe(SPATI_UPGRADE.max);
     expect(buySpatiUpgrade(s, 'hp').ok).toBe(true);
+    // They do not build the Zeughaus or the Hackerspace (Codex review, PR #57).
+    expect(stationBuilt(s, 'zeug')).toBe(false);
+    expect(stationBuilt(s, 'hack')).toBe(false);
   });
 });
 

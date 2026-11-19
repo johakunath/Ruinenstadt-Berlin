@@ -28,9 +28,10 @@ export const SITE_COST: Readonly<Partial<Record<StationId, Partial<Record<Materi
 };
 export function stationBuilt(s: Sim, id: StationId): boolean {
   if (OPEN_STATIONS.includes(id) || (campOf(s).stations[id] ?? 0) >= 1) return true;
-  const u = s.statContext.upgrades;
-  return id === 'zeug' ? (u.dmg ?? 0) > 0 || Object.values(s.inventory.mods).some((n) => (n ?? 0) > 0)
-    : id === 'hack' ? (u.hp ?? 0) > 0
+  const u = s.statContext.upgrades, bought = campOf(s).spati ?? {};
+  // Legacy saves: a workshop upgrade means the station was used. Levels bought at a Späti do not count (Codex review, PR #57).
+  return id === 'zeug' ? (u.dmg ?? 0) - (bought.dmg ?? 0) > 0 || Object.values(s.inventory.mods).some((n) => (n ?? 0) > 0)
+    : id === 'hack' ? (u.hp ?? 0) - (bought.hp ?? 0) > 0
     : id === 'exer' ? (u.dash ?? 0) > 0 || (u.luck ?? 0) > 0 || (s.statContext.drill ?? 0) > 0
     : false;
 }
@@ -71,6 +72,8 @@ export function buySpatiUpgrade(s: Sim, id: 'dmg' | 'hp'): Result {
   if (l >= SPATI_UPGRADE.max) return no('Mehr geht nur im Lager.');
   if (s.inventory.scrap < c) return no(`Dir fehlen ${c - s.inventory.scrap} Schrott.`);
   s.inventory.scrap -= c;
+  const camp = campOf(s);
+  camp.spati = { ...camp.spati, [id]: (camp.spati?.[id] ?? 0) + 1 };
   setLoadout(s, s.equipment, { ...s.statContext, upgrades: { ...s.statContext.upgrades, [id]: l + 1 } });
   return ok(`${CAMP_UPGRADES.find(u => u.id === id)!.name} · Stufe ${l + 1}`);
 }

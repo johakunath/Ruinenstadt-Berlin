@@ -39,6 +39,7 @@ export class NetBoard {
       this.sel = g.dataset.stop !== undefined ? { stop: +g.dataset.stop } : { line: +g.dataset.line! };
       this.render();
       this.onSelect();
+      if (this.inline) { this.focusSel(); return; }
       this.root.querySelector<HTMLElement>('[data-ride]:not(:disabled)')?.focus();
     });
     if (!this.inline) keyNav(this.root, () => this.close());
@@ -72,6 +73,14 @@ export class NetBoard {
   /** Short label of the picked place for the title button. */
   label(): string { const s = this.sel; return !s ? '' : 'stop' in s ? STOPS[s.stop]!.name : `${LINES[s.line]!.id} · ${stopName(s.line)} → ${stopName(s.line + 1)}`; }
   rideSelected(): void { this.ride(); }
+  /** Picks a place (inline: the page a ride just arrived at). */
+  select(sel: { stop: number } | { line: number }): void { this.sel = sel; this.render(); }
+  /** Inline: keeps the pad and keyboard focus on the picked place after a re-render. */
+  private focusSel(): void {
+    const s = this.sel;
+    if (!s) return;
+    this.root.querySelector<SVGGElement>('stop' in s ? `[data-stop="${s.stop}"]` : `[data-line="${s.line}"]`)?.focus();
+  }
 
   /** Pad: D-pad/stick moves between the stops, lines and buttons, A presses, B closes. */
   pollPad(now: number): void {

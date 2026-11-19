@@ -13,7 +13,7 @@ import { campOpen, LINES, stopName } from './data/lines';
 import { optionsScreen } from './ui/options-screen';
 import { bindSettings, initFullscreenButton, opts } from './ui/settings';
 import { MAP_NAME, MAP_SUB, type MapId } from './ui/maps';
-import { pickIsHere, titleNet } from './ui/title-net';
+import { pickIsHere, selectHere, titleNet } from './ui/title-net';
 import { startScreen } from './ui/start';
 
 const SAVE_KEY = 'ruinenstadt-berlin.save';
@@ -103,7 +103,9 @@ if (opts.map === 'lager') {
 } else if (resumeNow && run) {
   void loadGame().then(m => { if (m) document.getElementById('resume')!.click(); });
 } else if (goNow) {
-  // From the camp's network map: straight into the expedition (a waiting checkpoint goes on).
+  // From a network map: straight into the expedition here (a waiting checkpoint goes on).
+  selectHere();
+  start.setTarget(titleNet().label() || null);
   void loadGame().then(m => { if (m) document.getElementById(run ? 'resume' : 'play')!.click(); });
 } else {
   start.root.querySelector<HTMLElement>(run ? '#resume' : '#play')?.focus({ preventScroll: true });
