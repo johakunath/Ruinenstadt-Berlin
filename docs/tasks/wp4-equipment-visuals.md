@@ -1,6 +1,6 @@
 # WP4 Hero, weapons and loot visuals [Claude · Fable high (spec) · Opus high (build) · Codex (icons)]
 
-Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Steps 1 to 6 open. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
+Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
 
 ## Goal
 Every weapon base, armor, hat, glove, boot, talisman, ring and implant shows on the hero, legendaries and sets have their own look, ground loot shows what it is, and daggers come in as dual wield. Draw calls on the hero go down, not up.
@@ -229,7 +229,7 @@ Shapes are start values. Look at `assets/inventory/<icon>.webp` and the 2D side 
 | I93, I94 | Weste der Kiezwache, Mantel des Spreegeists | New: set-coloured versions of I19 and I18 |
 | I95, I96 | Abzeichen der Kiezwache, Kiesel des Spreegeists | New: set versions of I44 and I39 |
 | I97 | Arm des Basspredigers | New: own icon (shares I58 with Kabelarm today) |
-| I61 | Neonflinte | Only if step 1c falls back to the neon fork |
+| I61 | Neonflinte | Repaint as the neon fork of the model (step 1c fell back to the fork, 2026-11-19) |
 
 Code side of the icons [Opus, step 2]: `itemIcon` looks up `base:set` before `base`; slot a with base `kette` uses `khemd` (I57). Holzlatte needs no icon change: the model follows I01.
 
@@ -326,3 +326,13 @@ New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 
 
 ## Questions
 - None open for step 1. Gates G2 to G6 are listed above.
+
+## Handover step 1 (Opus 5.5, 2026-11-19)
+- Built: parts kit in `src/render/weapons.ts` (vertex-colour paint, merged into `metal`, `matte`, `glow`), 30 base models plus `brech:kiez` and `zwille:spree`, `weaponModel(kind, base, set?)`, glow rule `weaponGlow`; looks in `src/data/weapon-look.ts`; `paintGrain` atlas; `tools/item-sheet` `mode=weapons`. `pipe` is gone; grip tables stay keyed by kind.
+- Numbers: weapon draw calls per pass 10 → 2 (3 with a glow); `passes.mjs` total 264 → 232 (`docs/proof/wp4/README.md`); 174 to 830 triangles per model. `clip-swing` output and `ik=1` weights unchanged.
+- Tests: `src/data/weapon-look.test.ts` (every weapon name in `BASES` and every set weapon resolves), `src/render/weapons.test.ts` (D1 envelope with exact slab radius, budget, glow rule). Soft parts (ribbons, bands, cords, flags, feathers) are outside the envelope check; the sling's rubber bands reach 0.47 as before WP4.
+- Envelope fixes to the pre-WP4 models: Stahlklinge wrench ring 2 cm up, Jagdzwille arms 1 cm up (both reached into the grip zone); Klinge der Zitadelle guard at 0.168.
+- Neonflinte: the one-hand launcher (barrel along −Z, where `Pistol_Idle_Loop` points it) is swung overhead and points at the ground on the `OverhandThrow` release, so it is a neon fork; I61 goes to Codex (1e table).
+- Models follow the icons where the spec text differs: Werkhammer and Aufziehwerfer blue enamel with brass gear, Zeigerlanze blue shaft; Hackmesser and Sichel are blade-envelope long (0.9 m); Nagelwerfer's nails sit on the arm (grip zone free).
+- Reused from 2D: `WM` colours (`js/art.js`) as paint start values and the painted side views for proportions.
+- Not verified: look on real hardware and at the phone camera; glow strength with bloom on both profiles (Playtest row in `pt-hardware-checks.md`).

@@ -19,6 +19,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | Menus | Pause menu, inventory, Segen, Kodex, options, controls graphics, start screen (U1 to U3); set-break warning on a swap (2D backlog 29, not confirmed) | `u1-pause-menu.md`, `u2-menu-tabs.md`, `u3-menu-2d.md` |
 | Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
 | Audio | Enemy sounds per type, listening test (A2) | `a2-audio-followups.md` |
+| Weapons | Weapon looks per base (WP4 step 1): equip several per kind (Späti, drops, stash); does each read at the game camera, does the glow of neon and legendary weapons read without and with an element, on both profiles | `wp4-equipment-visuals.md` |
 | Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
 
 ## Hardware checks
