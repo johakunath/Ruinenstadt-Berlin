@@ -12,7 +12,7 @@
 // Zünder (dynamite and a lit fuse), Schildträger (riot helmet, shield that drops when the guard opens), Heuler.
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
-  AnimationMixer, BoxGeometry, CatmullRomCurve3, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
+  AnimationMixer, BoxGeometry, CatmullRomCurve3, Color, ExtrudeGeometry, LatheGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
   type AnimationClip, type BufferGeometry, type Object3D, type SkinnedMesh,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -219,21 +219,41 @@ function cables(n: number, spread: number, r = 0.014, lit: 'neon' | 'cyan' = 'ne
   }
   return out;
 }
-/** Board E13 / Potsdamer Platz: thick cables that arch up off the back and plug into the skull, readable from the camera. */
-function arches(n: number, r: number, lit: 'neon' | 'cyan' = 'neon'): Part[] {
+/** A dark plug sleeve with a lit ring where a cable meets the body, aligned with the curve at `t` (0 or 1). */
+function plug(curve: CatmullRomCurve3, t: number, lit: 'neon' | 'cyan'): Part[] {
+  const at = curve.getPoint(t), dir = curve.getTangent(t);
+  const q = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir);
+  const place = (g: BufferGeometry, k: number): BufferGeometry => g.applyQuaternion(q).translate(at.x + dir.x * k, at.y + dir.y * k, at.z + dir.z * k);
+  const into = t === 0 ? 1 : -1;
+  return [
+    [place(new CylinderGeometry(0.022, 0.026, 0.05, 10), into * 0.018), 'dark'],
+    [place(new TorusGeometry(0.022, 0.006, 4, 12).rotateX(Math.PI / 2), into * 0.045), lit],
+  ];
+}
+/**
+ * WP5 Kabelghul (bust E13): five smooth cables that loop up off the skull and plug into the shoulder blades,
+ * each with a sleeve at both ends; the loops differ in height so they read as a tangle, not a comb.
+ */
+function kabelLoops(lit: 'neon' | 'cyan'): Part[] {
   const out: Part[] = [];
-  for (let i = 0; i < n; i++) {
-    const t = n > 1 ? i / (n - 1) - 0.5 : 0;
-    out.push([cable([[t * 0.1, 0.07, -0.05], [t * 0.3, 0.22, -0.2], [t * 0.42, 0.12, -0.36], [t * 0.36, -0.12, -0.3], [t * 0.3, -0.32, -0.18]], r), lit]);
+  const loops: Array<[number, number, number]> = [[-0.1, 0.11, 0.9], [-0.05, 0.17, 1.05], [0.005, 0.14, 1], [0.055, 0.18, 1.1], [0.1, 0.1, 0.85]];
+  for (const [x, h, w] of loops) {
+    const c = new CatmullRomCurve3([[x * 0.5, 0.1, -0.06], [x * 1.2, 0.1 + h * 0.7, -0.12], [x * 1.8, 0.1 + h, -0.2 * w], [x * 2.1, 0.04 + h * 0.4, -0.27 * w], [x * 1.9, -0.08, -0.23], [x * 1.6, -0.17, -0.13]].map(([a, b, d]) => new Vector3(a, b, d)));
+    out.push([new TubeGeometry(c, 28, 0.014, 7, false), lit], ...plug(c, 0, lit), ...plug(c, 1, lit));
   }
   return out;
 }
 /** Two lit implant dots on the temple and the cheek (mounted on the head). */
 const implants = (lit: 'neon' | 'cyan' = 'neon'): Part[] => [[tf(new SphereGeometry(0.022, 6, 4), 0.08, 0.06, 0.07), lit], [tf(new SphereGeometry(0.017, 6, 4), 0.09, 0.0, 0.07), lit]];
 
-/** An open-front shell round the chest (vest, jacket): `gap` radians left open at the front, centred on +z. */
-const shell = (rt: number, rb: number, h: number, gap: number, y: number, sx = 1.2, sz = 0.92): BufferGeometry =>
-  tf(new CylinderGeometry(rt, rb, h, 12, 1, true, gap / 2, Math.PI * 2 - gap).scale(sx, 1, sz), 0, y, 0.01);
+/** Brocken vest profile (radius, height) from the waist to the shoulders, around spine_03. */
+const VEST: Array<[number, number]> = [[0.2, -0.34], [0.226, -0.24], [0.255, -0.12], [0.268, -0.02], [0.262, 0.06], [0.22, 0.13]];
+/** A lathed shell along `profile`, open by `gap` at the front, `grow` pushes it out (bands over the vest). */
+function vestShell(profile: Array<[number, number]>, gap: number, grow = 1): BufferGeometry {
+  const pts = profile.map(([r, y]) => new Vector2(r * grow, y));
+  return new LatheGeometry(pts, 24, gap / 2, Math.PI * 2 - gap).scale(1.2, 1, 0.98).translate(0, 0, 0.02);
+}
+
 
 /** A speaker box head (Boxenkopf, Bassprediger), built on the neck: box, two cones with pulsing rings, a cyan eye strip. */
 function speakerHead(w: number, h: number, d: number): Part[] {
@@ -278,9 +298,34 @@ function epaulettes(fringe: boolean): Part[] {
   return out;
 }
 
-/** WP5 Schildträger: hard plates over both shoulders. */
-function epauletteBoxes(): Part[] {
-  return [-1, 1].map((s): Part => [tf(new SphereGeometry(0.11, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.1, 0.7, 1), s * 0.24, 0.02, 0, 0, 0, -s * 0.35), 'riot']);
+/**
+ * WP5 Schildträger riot shield, `w` × `h` m, hanging from its top edge (origin): a rounded plate with a bevel,
+ * a rim tube round it, a viewing window in the top third, rivets along the rim and two scratches.
+ */
+function riotShield(w: number, h: number): Part[] {
+  const r = 0.07, hw = w / 2;
+  const outline = new Shape();
+  outline.moveTo(-hw + r, 0);
+  outline.lineTo(hw - r, 0);
+  outline.quadraticCurveTo(hw, 0, hw, -r);
+  outline.lineTo(hw, -h + r);
+  outline.quadraticCurveTo(hw, -h, hw - r, -h);
+  outline.lineTo(-hw + r, -h);
+  outline.quadraticCurveTo(-hw, -h, -hw, -h + r);
+  outline.lineTo(-hw, -r);
+  outline.quadraticCurveTo(-hw, 0, -hw + r, 0);
+  const plate = new ExtrudeGeometry(outline, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.01, bevelSegments: 2, curveSegments: 6 });
+  plate.translate(0, 0, -0.01).rotateX(0.06);
+  const rimPts = outline.getSpacedPoints(48).map((q) => new Vector3(q.x, q.y, 0.02));
+  const rim = new TubeGeometry(new CatmullRomCurve3(rimPts, true), 96, 0.012, 6, true).rotateX(0.06);
+  const window: Part = [tf(new BoxGeometry(w * 0.62, 0.1, 0.01), 0, -h * 0.22, 0.024, 0.06), 'visor'];
+  const rivets: Part[] = [];
+  for (const q of outline.getSpacedPoints(18).slice(0, 18)) rivets.push([tf(new SphereGeometry(0.009, 6, 4), q.x * 0.9, q.y * 0.94 - h * 0.03, 0.028, 0.06), 'steel']);
+  const scratches: Part[] = [
+    [tf(new BoxGeometry(0.2, 0.008, 0.004), 0.06, -h * 0.55, 0.026, 0.06, 0, 0.5), 'dark'],
+    [tf(new BoxGeometry(0.14, 0.006, 0.004), -0.1, -h * 0.7, 0.026, 0.06, 0, -0.3), 'dark'],
+  ];
+  return [[plate, 'plate'], [rim, 'riot'], window, ...rivets, ...scratches];
 }
 
 /** Uniform tunic: a shell around the chest, collar, buttons. */
@@ -298,13 +343,13 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
   const bone = (n: string): Object3D | undefined => model.getObjectByName(n);
   const p = new Vector3();
   /** Builds parts in model space around a bone's rest position and hands them to the bone. */
-  const mount = (name: string, parts: Part[], dy = 0, dz = 0): void => {
+  const mount = (name: string, parts: Part[], dy = 0, dz = 0, dx = 0): void => {
     const b = bone(name);
     if (!b) return;
     const g = assemble(k, parts, castShadow, pulse);
     b.getWorldPosition(p);
     model.worldToLocal(p);
-    g.position.set(p.x, p.y + dy, p.z + dz);
+    g.position.set(p.x + dx, p.y + dy, p.z + dz);
     model.add(g);
     b.attach(g);
     out.push(g);
@@ -327,11 +372,12 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       break;
     case 'brute':
       // Bust E02: an open orange high-vis vest with two reflective bands over the rags, a rusted collar.
+      // A lathed vest that follows the Brocken's chest (waist in, chest out), open at the front; straps over the shoulders.
       mount('spine_03', [
-        [shell(0.24, 0.2, 0.46, 0.9, -0.12), 'vest'],
-        [shell(0.243, 0.226, 0.045, 0.9, -0.06), 'reflect'],
-        [shell(0.226, 0.207, 0.045, 0.9, -0.24), 'reflect'],
-        [tf(new TorusGeometry(0.13, 0.035, 5, 12), 0, 0.17, 0, Math.PI / 2), 'rust'],
+        [vestShell(VEST, 0.8), 'vest'],
+        [vestShell([[0.262, -0.1], [0.268, -0.04]], 0.8, 1.012), 'reflect'],
+        [vestShell([[0.232, -0.26], [0.244, -0.2]], 0.8, 1.012), 'reflect'],
+        ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(0.09, 0.025, 0.36), sd * 0.13, 0.11, 0, 0, 0, sd * 0.3), 'vest']),
       ], 0.08);
       break;
     case 'spitter':
@@ -438,13 +484,18 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       break;
     case 'kabel':
       // Kabelghul (bust E13): four cyan cables arching from the skull to the back, implants, a red scarf.
-      mount('neck_01', [...arches(4, 0.026, 'cyan'), ...cables(2, 0.2, 0.018, 'cyan'), [tf(new TorusGeometry(0.1, 0.035, 5, 12).scale(1.2, 1, 1.1), 0, -0.06, 0.01, Math.PI / 2), 'red']]);
+      mount('neck_01', [...kabelLoops('cyan'), [tf(new TorusGeometry(0.085, 0.03, 6, 16).scale(1.2, 1, 1.1), 0, 0.0, 0.01, Math.PI / 2), 'red']]);
       mount('Head', implants('cyan'));
       break;
     case 'zuender':
       // Bust E07: dynamite strapped to the chest, a detonator with a dial, a fuse with its spark, a red scarf.
       // The spark rides in its own group (gear [0]) so it can flicker; it flares while the fuse burns.
-      mount('spine_03', [[tf(new SphereGeometry(0.03, 6, 4), 0.1, 0.17, 0.25), 'spark']], 0.08);
+      // The fuse burns at its tip: a spark and a small flame (gear [0], its origin at the tip so it can flicker in place).
+      mount('spine_03', [
+        [tf(new SphereGeometry(0.028, 8, 6), 0, 0, 0), 'spark'],
+        [tf(new ConeGeometry(0.035, 0.12, 8), 0, 0.06, 0), 'flame'],
+        [tf(new ConeGeometry(0.02, 0.08, 6), 0.015, 0.05, 0.01, 0, 0, -0.4), 'flame'],
+      ], 0.08 + 0.17, 0.25, 0.1);
       mount('spine_03', [
         ...[-0.105, -0.035, 0.035, 0.105].map((x): Part => [tf(new CylinderGeometry(0.034, 0.034, 0.3, 8), x, -0.1, 0.2), 'red']),
         [tf(new BoxGeometry(0.3, 0.035, 0.08), 0, 0.0, 0.2), 'dark'],
@@ -456,23 +507,32 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       mount('neck_01', [[tf(new TorusGeometry(0.1, 0.035, 5, 12).scale(1.2, 1, 1.1), 0, -0.06, 0.01, Math.PI / 2), 'red']]);
       break;
     case 'schild':
-      // Bust E06: riot helmet with a raised visor, shoulder plates, a scratched riot shield on the left of the chest.
-      // The shield is gear [0]: it hangs from its top edge and swings aside while the guard stands open.
-      mount('spine_03', [
-        [tf(new BoxGeometry(0.5, 0.8, 0.03), 0, -0.4, 0, 0.06), 'plate'],
-        [tf(new BoxGeometry(0.54, 0.04, 0.05), 0, 0, 0), 'riot'],
-        [tf(new BoxGeometry(0.54, 0.04, 0.05), 0, -0.8, 0.05), 'riot'],
-        [tf(new BoxGeometry(0.28, 0.06, 0.012), 0, -0.18, 0.02), 'visor'],
-      ], 0.16, 0.34);
+      // Bust E06: riot gear. The shield is gear [0]: it hangs from its top edge on the chest and swings aside while
+      // the guard is open. Bevelled rounded plate with a rim, a viewing window, rivets and scratches.
+      mount('spine_03', riotShield(0.5, 0.82), 0.16, 0.34);
       mount('Head', [
-        [tf(new SphereGeometry(0.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0), 'riot'],
-        [tf(new CylinderGeometry(0.155, 0.16, 0.05, 12, 1, true), 0, -0.02, 0), 'riot'],
-        [tf(new BoxGeometry(0.26, 0.13, 0.012), 0, 0.07, 0.15, -0.55), 'visor'],
+        [tf(new SphereGeometry(0.152, 22, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), 0, -0.01, 0), 'riot'],
+        [tf(new CylinderGeometry(0.162, 0.166, 0.035, 24, 1, true), 0, -0.035, 0), 'riot'],
+        [tf(new TorusGeometry(0.163, 0.008, 6, 28), 0, -0.052, 0, Math.PI / 2), 'dark'],
+        // The visor: a curved strip of clear plastic swung up over the brow, with its two hinge bolts.
+        [tf(new CylinderGeometry(0.178, 0.178, 0.13, 20, 1, true, -0.95, 1.9), 0, 0.06, 0, -0.5), 'visor'],
+        ...[-1, 1].map((sd): Part => [tf(new CylinderGeometry(0.018, 0.018, 0.02, 10), sd * 0.165, 0.0, 0.0, 0, 0, Math.PI / 2), 'steel']),
+        [new TubeGeometry(new CatmullRomCurve3([new Vector3(-0.15, -0.04, 0.02), new Vector3(-0.08, -0.15, 0.07), new Vector3(0, -0.18, 0.09), new Vector3(0.08, -0.15, 0.07), new Vector3(0.15, -0.04, 0.02)]), 16, 0.008, 5, false), 'dark'],
       ], 0.03);
+      // Chest armour in plates, layered shoulder pads.
       mount('spine_03', [
-        ...epauletteBoxes(),
-        [shell(0.22, 0.19, 0.4, 0.2, -0.1, 1.18, 0.95), 'riot'],
+        [vestShell([[0.19, -0.3], [0.215, -0.2], [0.235, -0.08], [0.24, 0.02], [0.225, 0.1], [0.19, 0.15]], 0.25), 'riot'],
+        ...[-0.2, -0.08, 0.04].map((y): Part => [vestShell([[0.232 + y * 0.05, y - 0.012], [0.236 + y * 0.05, y + 0.012]], 0.25, 1.02), 'dark']),
+        ...[-1, 1].flatMap((sd): Part[] => [
+          [tf(new SphereGeometry(0.12, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.45).scale(1.05, 0.75, 1), sd * 0.24, 0.04, 0, 0, 0, -sd * 0.4), 'riot'],
+          [tf(new SphereGeometry(0.1, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.45).scale(1.05, 0.75, 1), sd * 0.29, -0.03, 0, 0, 0, -sd * 0.75), 'riot'],
+          [tf(new TorusGeometry(0.105, 0.006, 5, 24).scale(1.05, 1, 1), sd * 0.24, 0.05, 0, Math.PI / 2, 0, -sd * 0.4), 'dark'],
+        ]),
       ], 0.08);
+      for (const sd of ['l', 'r']) {
+        mount(`calf_${sd}`, [[tf(new SphereGeometry(0.075, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5).scale(1, 1.2, 0.8), 0, 0.02, 0.05, Math.PI / 2), 'riot']]);
+        mount(`lowerarm_${sd}`, [[tf(new SphereGeometry(0.055, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5).scale(1, 1.1, 0.8), 0, 0, -0.04, -Math.PI / 2), 'riot']]);
+      }
       break;
     case 'heuler':
       // Bust E08: a swollen throat (gear [0]) that bulges while it howls, the rest is rags.
@@ -1191,7 +1251,13 @@ export class EnemyView {
     if (this.kind === 'zuender') {
       const spark = this.gear.get('zuender')?.[0];
       const lit = e.state === 'special' && e.sp?.kind === 'fuse' ? Math.min(1, e.stateT / e.sp.wind) : 0;
-      spark?.scale.setScalar(e.state === 'dead' ? 0.01 : 0.8 + 0.4 * Math.sin(this.time * 40 + this.seed * 9) ** 2 + 2.2 * lit);
+      if (spark) {
+        // A flickering flame on the fuse that flares up while the fuse burns down.
+        const f = 0.85 + 0.3 * Math.sin(this.time * 31 + this.seed * 9) ** 2 + 0.15 * Math.sin(this.time * 53);
+        const k = e.state === 'dead' ? 0.01 : f + 1.6 * lit;
+        spark.scale.set(k * (1 - 0.15 * Math.sin(this.time * 47)), k * (1 + 0.25 * Math.sin(this.time * 37)), k);
+        spark.rotation.z = 0.15 * Math.sin(this.time * 23);
+      }
     } else if (this.kind === 'heuler') {
       const sac = this.gear.get('heuler')?.[0];
       const sp = e.state === 'special' ? e.sp : null;
