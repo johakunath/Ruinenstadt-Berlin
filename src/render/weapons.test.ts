@@ -16,8 +16,8 @@ const EPS = 1e-4;
 const ids = (Object.keys(WEAPON_LOOKS) as WeaponLookId[]).filter(hasBuilder);
 
 describe('weapon models (WP4 step 1)', () => {
-  it('has a builder for every normal weapon look and both set variants', () => {
-    for (const [id, look] of Object.entries(WEAPON_LOOKS)) if (look.family === 'normal' || id.includes(':')) expect(hasBuilder(id as WeaponLookId), id).toBe(true);
+  it('has a builder for every weapon look', () => {
+    for (const id of Object.keys(WEAPON_LOOKS)) expect(hasBuilder(id as WeaponLookId), id).toBe(true);
   });
 
   it('keeps every model inside its kind envelope (tip height, free grip zones)', () => {
