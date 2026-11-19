@@ -98,7 +98,7 @@ if (mode === 'icons') {
     cam.updateProjectionMatrix();
     renderer.render(scene, cam);
     const icon = ITEM_ICONS[it.set ? `${it.base}:${it.set}` : it.base] ?? ITEM_ICONS[it.base]!;
-    out[it.set && ITEM_ICONS[`${it.base}:${it.set}`] === undefined ? `${it.base}-${it.set}` : icon] = renderer.domElement.toDataURL('image/webp', 0.92);
+    out[icon] = renderer.domElement.toDataURL('image/webp', 0.92);
     for (const o of shown) o.visible = true;
     body.model.rotation.y = 0;
   }

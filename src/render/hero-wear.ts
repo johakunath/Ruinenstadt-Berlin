@@ -43,9 +43,11 @@ export interface PieceInfo {
 const infos = new WeakMap<BufferGeometry, PieceInfo>();
 const _c = new Color();
 
-/** Roles of a piece's vertices (cached per source geometry). `piece` is the node name. */
-export function pieceInfo(mesh: SkinnedMesh, piece: string): PieceInfo {
-  const geo = mesh.geometry;
+/**
+ * Roles of a piece's vertices (cached per source geometry). `piece` is the node name; `geo` the source
+ * geometry (not `mesh.geometry`, which is the current look's variant once a look was set).
+ */
+export function pieceInfo(mesh: SkinnedMesh, piece: string, geo: BufferGeometry = mesh.geometry): PieceInfo {
   let info = infos.get(geo);
   if (info) return info;
   const pos = geo.attributes.position!, col = geo.attributes.color;
@@ -179,7 +181,7 @@ export function pieceVariant(mesh: SkinnedMesh, piece: string, source: BufferGeo
   const key = `${paletteId}|${cut}|${puff}`;
   let geo = byKey.get(key);
   if (geo) return geo;
-  const info = pieceInfo(mesh, piece);
+  const info = pieceInfo(mesh, piece, source);
   geo = new BufferGeometry();
   for (const [name, attr] of Object.entries(source.attributes)) geo.setAttribute(name, attr);
   geo.setIndex(cut ? cutIndex(source, info, cut) : source.index);
