@@ -9,6 +9,8 @@ import type { Sim, SimEvent } from './sim/types';
 const URL = 'https://script.google.com/macros/s/AKfycbyUCf3slojkaYJhVemGU54EBidrXFhj2FoOANlOZQQdIxhO4YIWTW1kF9FPv3hVDXQ/exec';
 const QUEUE = 'ruinenstadt-berlin.tlq';
 const PID = 'ruinenstadt-berlin.pid';
+/** Quits shorter than this (s) are not recorded. */
+export const QUIT_MIN = 60;
 export const VERSION = `3d-0.1.0+${__BUILD__}`;
 
 export type RunEnd = 'win' | 'dead' | 'quit';
@@ -58,8 +60,6 @@ export interface RunRecord {
   dmg: number;
   rests: number;
   enc: EncounterLog[];
-  /** 1: no fight started and under 20 s (a test start or a reload), filter it out before analysis. */
-  test?: 1;
   /** Death summary: killing hit and the worst sources of the last seconds (share of max life). */
   death?: { by: string; recent: Array<{ by: string; share: number; hits: number }> };
 }
@@ -211,7 +211,8 @@ export class Telemetry {
     const r = this.run;
     if (!r) return;
     this.run = null;
-    if (r.t < 5 || !this.allowed || !this.enabled) return; // a click through the title, not a run
+    // A quit within the first minute is a test start or a reload (Johannes, 2026-11-19); deaths and wins always count.
+    if (r.t < (end === 'quit' ? QUIT_MIN : 5) || !this.allowed || !this.enabled) return;
     r.end = end;
     r.t = Math.round(r.t);
     r.dmg = Math.round(r.dmg);
@@ -220,7 +221,6 @@ export class Telemetry {
     r.low1 = Math.round(1000 / Math.max(1, this.frames.quantile(0.99)));
     r.calls = this.maxCalls;
     r.tris = this.maxTris;
-    if (r.enc.length === 0 && r.t < 20) r.test = 1;
     const e = r.enc[r.enc.length - 1];
     if (e && e.clear === null) this.closeEnc(e);
     const q = store<RunRecord[]>(QUEUE) ?? [];
