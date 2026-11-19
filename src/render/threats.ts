@@ -21,7 +21,7 @@ import { paintGlow } from './paint';
 
 const BARS = 18;
 /** Where the life bar floats, per body. */
-const BAR_Y = { zombie: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4, mech: 2.3, mechBig: 4, kern: 1.25, koloss: 6.5, clock: 9 } as const;
+const BAR_Y = { zombie: 2.05, human: 2.05, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4, mech: 2.3, mechBig: 4, kern: 1.25, koloss: 6.5, clock: 9 } as const;
 const ZONES = 14, LINES = 6, SHOTS = 96, HAZARDS = 60, WAVES = 8, OPEN = 6, SPOTS = 2, PULSES = 6, SECTORS = 5, HANDS = 2;
 const ZONE_COLOR = { slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a, shove: 0xffa03a, land: 0x43d1cf, root: 0x97c459, slab: 0xffa03a, hour: 0xff3a2a } as const;
 /** Hour sector geometry: inner radius as a share of the outer (3 of 9 m), one of 24 slices, centred on angle 0. */
@@ -337,7 +337,7 @@ export class ThreatView {
       if (e.state === 'dead' || e.def.boss || e.hp >= e.maxHp) continue;
       const b = this.bars[nbar++]!;
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
-      const w = Math.min(1.5, 0.7 + e.def.radius * 0.6), y = groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' || e.def.body === 'mech' ? e.def.scale : 1);
+      const w = Math.min(1.5, 0.7 + e.def.radius * 0.6), y = groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' || e.def.body === 'human' || e.def.body === 'mech' ? e.def.scale : 1);
       b.back.visible = b.fill.visible = true;
       // Sprites face the camera; the left edge is the anchor, so shift half a width to the camera's left (screen x = world x here).
       b.back.position.set(x - w / 2, y, z);

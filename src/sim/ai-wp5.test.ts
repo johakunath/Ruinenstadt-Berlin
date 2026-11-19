@@ -1,7 +1,7 @@
 // WP5 (backlog P12): Zünder, Schildträger and Heuler. Numbers from 2D `mkEnemy` (`bomb`, `shield`, `howl`)
 // on the ghoul and brute ratios; every rule below has its test.
 import { describe, it, expect } from 'vitest';
-import { ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
+import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { alexWaveTier, ALEX_TIER } from '../data/alexanderplatz';
 import { mitteWaveTier } from '../data/mitte';
 import { xhainWaveTier } from '../data/xhain';
@@ -307,5 +307,31 @@ describe('WP5 wave mixes', () => {
     expect(xhainWaveTier(26, [], 2).mix!.heuler).toBeGreaterThan(0);
     expect(alexWaveTier(ALEX_TIER.from, [], 0).mix!.zuender).toBe(0);
     expect(alexWaveTier(ALEX_TIER.from + 3, [], 0).mix!.zuender).toBeGreaterThan(0);
+  });
+});
+
+describe('H3 Brandmeister fire trail (2D boss trail)', () => {
+  it('leaves burning ground every 0.4 s while he walks, none while he stands; it burns the hero', () => {
+    const s = fresh();
+    const e = put(s, 'brandmeister', 0, 9);
+    e.cd = [99, 99, 99];
+    run(s, 2);
+    const fires = s.threats.hazards.filter((h) => h.kind === 'fire');
+    expect(fires.length).toBeGreaterThanOrEqual(3);
+    expect(fires.length).toBeLessThanOrEqual(Math.ceil(2 / BOSS.brandmeister.trailEvery) + 1);
+    expect(fires[0]!.r).toBeCloseTo(BOSS.brandmeister.trailRadius);
+    expect(fires[0]!.damage).toBeCloseTo(ENEMIES.brandmeister.damage * e.dmgMul * BOSS.brandmeister.trailDamage);
+    // Standing: no new fire.
+    const s2 = fresh();
+    const b = pin(put(s2, 'brandmeister', 0, 9));
+    b.cd = [99, 99, 99];
+    run(s2, 2);
+    expect(s2.threats.hazards.filter((h) => h.kind === 'fire')).toHaveLength(0);
+    // The hero standing in it is hurt.
+    const s3 = fresh();
+    s3.threats.hazards.push({ x: s3.player.x, z: s3.player.z, r: BOSS.brandmeister.trailRadius, t: 4, max: 4, damage: 10, tick: 0, kind: 'fire' });
+    const hp = (s3.player.hp = s3.stats.maxHp);
+    run(s3, 0.6, false);
+    expect(s3.player.hp).toBeLessThan(hp);
   });
 });

@@ -20,9 +20,10 @@ export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | '
 /**
  * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
  * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
- * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`).
+ * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`). H3: `human` is the male humanoid bosses' base
+ * (`human1.glb`, the zombie's body without the zombie repaint, same skeleton and clips).
  */
-export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
+export type BodyKind = 'zombie' | 'human' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
 export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
@@ -182,7 +183,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // Zone bosses.
   feldwebel: {
-    kind: 'feldwebel', name: 'Der Feldwebel', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
+    kind: 'feldwebel', name: 'Der Feldwebel', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
@@ -198,27 +199,27 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     reach: 3.8, halfAngle: 50 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true,
   },
   hauptmann: {
-    kind: 'hauptmann', name: 'Hauptmann von Köpenick', body: 'zombie', ai: 'hauptmann', res: 'hauptmann', radius: 0.8, scale: 1.6, hp: 4400, speed: 2.9,
+    kind: 'hauptmann', name: 'Hauptmann von Köpenick', body: 'human', ai: 'hauptmann', res: 'hauptmann', radius: 0.8, scale: 1.6, hp: 4400, speed: 2.9,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 75 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
   // M19 tunnel boss (2D: Der Schaffner at the generator). Charges along the tracks like a train and
   // whistles up passengers: the Feldwebel's pattern (charge, call men), tunnel life +25 %.
   schaffner: {
-    kind: 'schaffner', name: 'Der Schaffner', body: 'zombie', ai: 'feldwebel', res: 'koloss', radius: 0.75, scale: 1.55, hp: 2800, speed: 2.7,
+    kind: 'schaffner', name: 'Der Schaffner', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.75, scale: 1.55, hp: 2800, speed: 2.7,
     attackRange: 2.2, windup: 0.65, active: 0.14, recovery: 0.75,
     reach: 2.7, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
   // M12b Xhain (1981). Zone 1: the GDR border guard from the watchtower, the weakest. Shoots from a
   // distance, calls runners. Resistances of the 2D Volkseigener Koloss (GDR row: weak to shock).
   grenzer: {
-    kind: 'grenzer', name: 'Der Grenzer', body: 'zombie', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 950, speed: 2.3,
+    kind: 'grenzer', name: 'Der Grenzer', body: 'human', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 950, speed: 2.3,
     attackRange: 2.0, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.4, halfAngle: 60 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
   // Zone 2 (Mariannenplatz): the riots, burning barricades. Molotovs, fire ring, flame burst (2D `brand`).
   brandmeister: {
-    kind: 'brandmeister', name: 'Der Brandmeister', body: 'zombie', ai: 'brandmeister', res: 'brand', radius: 0.78, scale: 1.55, hp: 2100, speed: 2.4,
+    kind: 'brandmeister', name: 'Der Brandmeister', body: 'human', ai: 'brandmeister', res: 'brand', radius: 0.78, scale: 1.55, hp: 2100, speed: 2.4,
     attackRange: 2.3, windup: 0.75, active: 0.14, recovery: 0.85,
     reach: 2.8, halfAngle: 70 * DEG, damage: 30, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
@@ -237,7 +238,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   // M12c Mitte (2089). Zone 0, Pariser Platz: a Kabelbrocken in a bomber jacket holds the Tor like a club
   // door („Kein Einlass“). Shoves, grabs and holds, calls Kabelghule from the guest list.
   tuersteher: {
-    kind: 'tuersteher', name: 'Der Türsteher', body: 'zombie', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1000, speed: 2.4,
+    kind: 'tuersteher', name: 'Der Türsteher', body: 'human', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1000, speed: 2.4,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
   },
@@ -249,13 +250,13 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   },
   // Zone 2, Neuer See (mini-boss): a ghoul in a torn tailcoat on the band stand; beat rings, the Boxenköpfe follow him.
   dirigent: {
-    kind: 'dirigent', name: 'Der Dirigent', body: 'zombie', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 1400, speed: 2.2,
+    kind: 'dirigent', name: 'Der Dirigent', body: 'human', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 1400, speed: 2.2,
     attackRange: 2.1, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
   // District boss on the Sony Center stage: 2D Bassprediger (v 2). Shock charge, bass sermons, a congregation.
   bassprediger: {
-    kind: 'bassprediger', name: 'Der Bassprediger', body: 'zombie', ai: 'bassprediger', res: 'bass', radius: 0.85, scale: 1.7, hp: 4400, speed: 2.8,
+    kind: 'bassprediger', name: 'Der Bassprediger', body: 'human', ai: 'bassprediger', res: 'bass', radius: 0.85, scale: 1.7, hp: 4400, speed: 2.8,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
@@ -384,6 +385,8 @@ export const BOSS = {
     molotov: 4.6, ring: 6.5, flame: 4, close: 3, shots: 12,
     bottles: 3, wind: 1.0, step: 0.18, spread: 90 * PX, radius: 45 * PX, damage: 0.8, floor: 0.15,
     fireRadius: 40 * PX, fireTime: 4, fireDamage: 0.3,
+    /** H3 (Johannes): he leaves burning ground where he walks; the 2D boss trail (every 0.4 s, r 26 px, 4 s, 0.35 of his hit). */
+    trailEvery: 0.4, trailRadius: 26 * PX, trailTime: 4, trailDamage: 0.35,
   },
   /** 2D v 5: five rats every 3.8 s (2.6 s in rage, real time), acid trail while walking, the base slam. */
   rattenmutter: { summon: [3.8, 2.6], adds: 5, slam: 4.2, trailEvery: 0.5, trailRadius: 24 * PX, trailTime: 4, trailDamage: 0.3 },

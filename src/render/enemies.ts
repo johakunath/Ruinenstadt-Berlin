@@ -601,13 +601,14 @@ function speakerHead(w: number, h: number, d: number): Part[] {
 }
 
 /** Pickelhaube: dome, brim, peak, spike and the gold eagle plate. Built around the origin at the brow line. */
-function pickelhaube(): Part[] {
+/** `brim`: width of the band and the peaks (H3: the Feldwebel's narrower at the bottom, Johannes). */
+function pickelhaube(brim = 1): Part[] {
   const shell: keyof GearKit = 'dark';
   return [
     [tf(new SphereGeometry(0.14, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.05, 1.1), 0, 0, 0), shell],
-    [tf(new CylinderGeometry(0.142, 0.15, 0.03, 16).scale(1, 1, 1.1), 0, 0.005, 0), shell],
-    [tf(new CylinderGeometry(0.11, 0.12, 0.012, 12, 1, false, -0.9, 1.8).scale(1, 1, 1.25), 0, -0.012, 0.03, 0.22), shell],
-    [tf(new CylinderGeometry(0.1, 0.11, 0.012, 12, 1, false, Math.PI - 1, 2).scale(1.1, 1, 1.2), 0, -0.004, -0.03, -0.25), shell],
+    [tf(new CylinderGeometry(0.142, 0.142 + 0.008 * brim, 0.03, 16).scale(1, 1, 1.1), 0, 0.005, 0), shell],
+    [tf(new CylinderGeometry(0.11 * brim, 0.12 * brim, 0.012, 12, 1, false, -0.9, 1.8).scale(1, 1, 1.25), 0, -0.012, 0.03, 0.22), shell],
+    [tf(new CylinderGeometry(0.1 * brim, 0.11 * brim, 0.012, 12, 1, false, Math.PI - 1, 2).scale(1.1, 1, 1.2), 0, -0.004, -0.03, -0.25), shell],
     [tf(new ConeGeometry(0.024, 0.15, 8), 0, 0.235, 0), 'brass'],
     [tf(new CylinderGeometry(0.038, 0.045, 0.035, 10), 0, 0.152, 0), 'brass'],
     [tf(new CylinderGeometry(0.06, 0.06, 0.01, 10), 0, 0.136, 0), 'brass'],
@@ -842,10 +843,12 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
         const up = `upperarm_${sd}` as const, s = sd === 'l' ? 1 : -1;
         const cl = fit.box([`clavicle_${sd}`]), arm = coat.o(up);
         const top = new Vector3(arm.x - s * 0.03, cl.max.y + 0.035, (cl.c.z + arm.z) / 2).sub(arm);
+        // H3 (Johannes): the Feldwebel's epaulettes wider and bigger.
+        const ep = cap ? 1 : 1.35;
         coat.add(up,
-          [tf(new BoxGeometry(0.14, 0.02, 0.11), top.x - s * 0.06, top.y + 0.005, top.z, 0, 0, s * 0.12), 'brass'],
-          [tf(new CylinderGeometry(0.07, 0.07, 0.028, 14), top.x + s * 0.02, top.y, top.z), 'brass'],
-          [tf(new CylinderGeometry(0.072, 0.09, 0.085, 14, 1, true), top.x + s * 0.02, top.y - 0.055, top.z), 'brass'],
+          [tf(new BoxGeometry(0.14 * ep, 0.022, 0.11 * ep), top.x - s * 0.06 * ep, top.y + 0.005, top.z, 0, 0, s * 0.12), 'brass'],
+          [tf(new CylinderGeometry(0.07 * ep, 0.07 * ep, 0.03, 16), top.x + s * 0.03 * ep, top.y, top.z), 'brass'],
+          [tf(new CylinderGeometry(0.072 * ep, 0.09 * ep, 0.085 * ep, 16, 1, true), top.x + s * 0.03 * ep, top.y - 0.055 * ep, top.z), 'brass'],
           [band(coat.arm[`lowerarm_${sd}`], coat.o(`lowerarm_${sd}`), 2.45, 3, 0.008), 'red'],
         );
       }
@@ -862,9 +865,10 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       mountCoat(coat);
       // The helmet sits over the skull, tipped forward with the face; the moustache under the nose.
       const head = fit.box(['Head']), hp = fit.at('Head');
-      const at = new Vector3(head.c.x, head.max.y - 0.1, head.c.z - 0.01);
+      // H3 (Johannes): the Feldwebel's helmet sits higher and is narrower at the bottom.
+      const at = new Vector3(head.c.x, head.max.y - (cap ? 0.1 : 0.065), head.c.z - 0.01);
       const lip = fit.eyes.clone().add(new Vector3(0, -0.045, 0.025)).sub(at);
-      const helm = pickelhaube().map(([g, m]): Part => [g.rotateX(0.18), m]);
+      const helm = pickelhaube(cap ? 1 : 0.82).map(([g, m]): Part => [g.rotateX(0.18), m]);
       mount('Head', [...helm, ...moustache(lip, cap ? 0.075 : 0.065, cap ? -0.022 : 0.022, cap ? 0.019 : 0.011, cap ? 'white' : 'hair')], at.y - hp.y, at.z - hp.z, at.x - hp.x);
       break;
     }
@@ -926,8 +930,10 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       const at = new Vector3(head.c.x, head.max.y - 0.09, head.c.z - 0.02);
       const flames: Part[] = [];
       for (const [x, z, h, r, lean] of [[0, 0.02, 0.34, 0.075, -0.15], [0.07, -0.05, 0.26, 0.06, -0.35], [-0.07, -0.04, 0.27, 0.06, -0.3], [0.1, 0.07, 0.18, 0.045, 0.1], [-0.1, 0.06, 0.2, 0.045, 0.15], [0, -0.13, 0.2, 0.055, -0.6], [0.16, -0.1, 0.13, 0.035, -0.4], [-0.15, -0.12, 0.14, 0.035, -0.5]] as const) {
-        flames.push([tf(new ConeGeometry(r, h, 7), x, 0.13 + h / 2 - 0.02, z, lean, 0, x * 2), 'fire']);
-        flames.push([tf(new ConeGeometry(r * 0.5, h * 0.6, 6), x, 0.13 + h * 0.28, z + 0.01, lean, 0, x * 2), 'flame']);
+        // H3 (Johannes): the flames stand higher.
+        const hh = h * 1.65;
+        flames.push([tf(new ConeGeometry(r, hh, 7), x, 0.13 + hh / 2 - 0.02, z, lean, 0, x * 2), 'fire']);
+        flames.push([tf(new ConeGeometry(r * 0.5, hh * 0.6, 6), x, 0.13 + hh * 0.28, z + 0.01, lean, 0, x * 2), 'flame']);
       }
       // The fire keeps burning upwards when he throws his head back.
       hangOn(mount('Head', flames, at.y - hp.y, at.z - hp.z, at.x - hp.x), 0.75);
@@ -1429,7 +1435,7 @@ export class EnemyView {
     const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
     this.skin = skin;
-    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? assets.zombie : skin === 'raptor' ? assets.raptor : assets.rex;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
     // (crow, rat and the code-built bodies returned above)
     const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? assets.zombieClips : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
