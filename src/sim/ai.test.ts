@@ -1513,6 +1513,21 @@ describe('Charlottenburg roster (M16, spec m12d)', () => {
     expect(Math.hypot(a.x - pb.x, a.z - pb.z)).toBeLessThan(0.2);
     expect(Math.hypot(b.x - pa.x, b.z - pa.z)).toBeLessThan(0.3);
     expect(a.hp).toBe(ha);
+    // No swap onto blocked ground: she keeps her place.
+    const u = fresh();
+    const c = put(u, 'spiegelpaar', 0, 6);
+    c.cd = [99, 99, 99];
+    still(c);
+    run(u, 1 / 60);
+    const pc = { x: c.x, z: c.z };
+    const real = u.level.blocked.bind(u.level);
+    const d = u.enemies.find((q) => q.kind === 'spiegelbild')!;
+    u.level.blocked = (x: number, z: number, r: number): boolean => Math.hypot(x - d.x, z - d.z) < 1 || real(x, z, r);
+    c.cd[2] = 0;
+    stepSim(u, NO_INPUT);
+    expect(c.sp?.kind).toBe('swap');
+    run(u, S.swapWind + 0.02);
+    expect(Math.hypot(c.x - pc.x, c.z - pc.z)).toBeLessThan(0.3);
     expect(specials(fight(fresh(), 'spiegelpaar', 30, 4.5))).toEqual(expect.arrayContaining(['lunge', 'barrage', 'swap']));
   });
 

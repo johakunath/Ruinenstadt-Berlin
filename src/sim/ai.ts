@@ -321,7 +321,8 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
     case 'swap': {
       // M16 Tausch: the real one and her reflection change places (the sash and the ring go with her).
       const m = sim.enemies.find((o) => o.id === e.pair && o.state !== 'dead');
-      if (m) {
+      // The reflection flies; she walks. No swap onto ground she cannot stand on (water, a wall): she keeps her place.
+      if (m && !sim.level.blocked(m.x, m.z, e.def.radius)) {
         const x = e.x, z = e.z;
         e.x = e.px = m.x;
         e.z = e.pz = m.z;
