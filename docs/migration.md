@@ -17,7 +17,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals | Claude · Opus high | open: `docs/backlog.md` |
 | H3 humanoid boss bases: step 2 human base mesh (comparison first), step 3 Turmwächter on the mech; Codex T8 boss textures | Claude · Opus high | open: `docs/tasks/h3-humanoid-bosses.md` |
 | M16 Charlottenburg step 4: landmarks from pre-1930 photos, built worn, three builders in parallel (City West; Ku'damm to Oper; Schloss) replacing the step 2 massing | Claude · Opus high | open: `docs/tasks/m16-charlottenburg.md` › step 4 and Handover step 2, `src/render/charlottenburg-world.ts` |
-| M16 Charlottenburg step 5: enemy and boss spec (Scherbentänzerin, Logenbrecher, Spiegelsouffleur, three zone bosses, Die Diamantene Diva, district rule, maze riddles, loot); can run parallel to step 1 | Claude · Fable high | open: `docs/tasks/m16-charlottenburg.md` › Input for step 5 |
+| M16 Charlottenburg step 6: enemy and boss build from the spec (three kinds, four bosses, shard rule); then 6c maze riddles | Claude · Opus high | in work: `docs/tasks/m12d-charlottenburg-enemies.md` |
 | M16 Charlottenburg step 3a: sky per zone (evening to morning along the route), spec before the look is built | Claude · Fable high | open, after step 1: `docs/tasks/m16-charlottenburg.md` › Engine notes E1 |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
 
