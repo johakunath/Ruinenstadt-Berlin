@@ -47,6 +47,10 @@ export interface Options {
   startAt: number;
   /** Debug: ?spawn=rex,raptor,walker+flink puts these kinds next to the hero (no other spawns in the courtyard). */
   spawn: string[];
+  /** Debug: ?tp=x,z beams the hero there at the start (coordinates from ?debug=perf); implies `god`. */
+  tp: { x: number; z: number } | null;
+  /** Debug: ?god (or ?tp) makes the hero take no damage. */
+  god: boolean;
 }
 
 const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'alex', 'mitte', 'lager'];
@@ -137,7 +141,14 @@ export function readOptions(): Options {
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
     mapScale: Math.max(0.6, Math.min(2.5, Number(q.get('mapscale') ?? 1) || 1)),
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
+    tp: parseTp(q.get('tp')),
+    god: q.has('god') || q.has('tp'),
   };
+}
+
+function parseTp(v: string | null): Options['tp'] {
+  const [x, z] = (v ?? '').split(',').map(Number);
+  return v && Number.isFinite(x) && Number.isFinite(z) ? { x: x!, z: z! } : null;
 }
 
 function parseCut(v: string | null): Options['cut'] {

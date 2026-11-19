@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
-import { ignite, strike } from './combat';
+import { ignite, knock, strike } from './combat';
 import { capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { autoAttackTarget } from './player';
 import { createSim, stepSim } from './sim';
@@ -294,6 +294,20 @@ describe('bosses (2D patterns)', () => {
     const { s, evs } = fight('hauptmann', 60);
     expect(specials(evs)).toEqual(expect.arrayContaining(['bossSlam', 'ring', 'summon']));
     expect(s.enemies.filter((q) => q.state !== 'dead' && !q.def.boss).length).toBeLessThanOrEqual(BOSS.summon.maxAdds);
+  });
+
+  it('Hauptmann charges a hero who keeps away, fires two rings in rage, never staggers (playtest 2026-11-18)', () => {
+    const { evs } = fight('hauptmann', 40, true);
+    expect(specials(evs)).toContain('charge');
+    const s = fresh();
+    const h = put(s, 'hauptmann', 0, 6);
+    h.hp = h.maxHp = 1e6; h.rage = true; h.cd = [9, 0, 9];
+    const out = run(s, 4);
+    expect(out.filter((q) => q.type === 'enemySpecial' && q.kind === 'ring' && q.phase === 'go').length).toBe(2);
+    const s2 = fresh();
+    const b = put(s2, 'hauptmann', 0, 2);
+    strike(s2, b, 10, { knock: knock(240), feel: 'heavy' });
+    expect(b.state).not.toBe('stagger');
   });
 
   it('a boss rages below half life, once, and gets faster', () => {

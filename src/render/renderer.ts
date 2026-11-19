@@ -428,7 +428,7 @@ export class GameRenderer {
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
     if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows);
     else this.world.follow?.(px, pz, shadows);
-    (this.scene.fog as FogExp2).density = this.sky.fogDensity * (1 - 0.7 * (reveal?.weight ?? 0));
+    (this.scene.fog as FogExp2).density = this.sky.fogDensity * (1 - 0.9 * (reveal?.weight ?? 0));
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
     this.content.update(sim, dt, px, pz);

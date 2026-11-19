@@ -1,6 +1,7 @@
+import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { createSim } from './sim';
-import { OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
+import { drillCost, buySpatiUpgrade, SPATI_UPGRADE, spatiUpgradeCost, OPEN_STATIONS, SITE_COST, siteLevel, stationBuilt, buildMod, buildStation, buyDrill, buyUpgrade, cookMeal, craftConsumable, endExpedition, fromStash, installMod, nextLevel, removeMod, stashMax, stationLevel, toStash, upgradeCost, upgradeMax } from './camp';
 import { parseSave, simFromSave, snapshot } from './save';
 
 const rich = (built = true) => { const s = createSim({ seed: 5 }); s.inventory.scrap = 5000; s.inventory.materials = { metall: 40, stoff: 40, kabel: 40, chemie: 40 }; if (built) s.inventory.camp = { stations: { zeug: 1, hack: 1, imbiss: 1, exer: 1 }, stash: [], freed: [] }; return s; };
@@ -19,7 +20,7 @@ describe('M20 build sites', () => {
     const scrap = s.inventory.scrap, metall = s.inventory.materials.metall!;
     expect(nextLevel(s, 'zeug')).toMatchObject({ level: 1, ok: true });
     expect(buildStation(s, 'zeug')).toEqual({ ok: true, text: 'Zeughaus gebaut' });
-    expect(s.inventory.scrap).toBe(scrap - SITE_COST.zeug!.scrap!);
+    expect(s.inventory.scrap).toBe(scrap - Math.round(SITE_COST.zeug!.scrap! * ECONOMY.campPrice));
     expect(s.inventory.materials.metall).toBe(metall - SITE_COST.zeug!.metall!);
     expect(siteLevel(s, 'zeug')).toBe(1);
     expect(buyUpgrade(s, 'dmg').ok).toBe(true);
@@ -43,7 +44,7 @@ describe('M20 build sites', () => {
 describe('M13 camp', () => {
   it('upgrades cost 2D prices and stop at the station cap', () => {
     const s = rich();
-    expect(upgradeCost(s, 'dmg')).toBe(19);
+    expect(upgradeCost(s, 'dmg')).toBe(Math.round(15 * 1.25 * ECONOMY.campPrice));
     for (let i = 0; i < 5; i++) expect(buyUpgrade(s, 'dmg').ok).toBe(true);
     expect(upgradeMax(s, 'dmg')).toBe(5);
     expect(buyUpgrade(s, 'dmg').ok).toBe(false);
@@ -110,5 +111,35 @@ describe('M13 camp', () => {
     s.inventory.camp!.stash.push({ id: 999, slot: 'h', kind: 'head', base: 'helm', name: 'Helm', rarity: 0, value: 5, itemLevel: 1, affixes: [] });
     const t = createSim({ seed: 2, inventory: s.inventory, equipment: s.equipment, statContext: s.statContext });
     expect(t.lootCtx.itemId).toBeGreaterThanOrEqual(999);
+  });
+});
+
+describe('Späti upgrades (playtest 2026-11-18)', () => {
+  it('sharpen and armor at a Späti only, up to the cap, dearer than the workshop, and they stay', () => {
+    const s = rich(false);
+    expect(buySpatiUpgrade(s, 'dmg').ok).toBe(false);
+    s.content.tradeAt = 0;
+    expect(spatiUpgradeCost(s, 'dmg')).toBe(upgradeCost(s, 'dmg') * SPATI_UPGRADE.markup);
+    const before = s.stats.damage, scrap = s.inventory.scrap, cost = spatiUpgradeCost(s, 'dmg');
+    expect(buySpatiUpgrade(s, 'dmg').ok).toBe(true);
+    expect(s.inventory.scrap).toBe(scrap - cost);
+    expect(s.stats.damage).toBeGreaterThan(before);
+    for (let i = 1; i < SPATI_UPGRADE.max; i++) expect(buySpatiUpgrade(s, 'dmg').ok).toBe(true);
+    expect(buySpatiUpgrade(s, 'dmg').ok).toBe(false);
+    expect(s.statContext.upgrades.dmg).toBe(SPATI_UPGRADE.max);
+    expect(buySpatiUpgrade(s, 'hp').ok).toBe(true);
+    // They do not build the Zeughaus or the Hackerspace (Codex review, PR #57).
+    expect(stationBuilt(s, 'zeug')).toBe(false);
+    expect(stationBuilt(s, 'hack')).toBe(false);
+  });
+});
+
+describe('drill price (Johannes 2026-11-18)', () => {
+  it('starts at 400 and grows 40 % per rank', () => {
+    const s = rich();
+    expect(drillCost(s)).toBe(400);
+    s.statContext.drill = 1; expect(drillCost(s)).toBe(560);
+    s.statContext.drill = 5; expect(drillCost(s)).toBe(2150);
+    s.statContext.drill = 10; expect(drillCost(s)).toBe(11570);
   });
 });

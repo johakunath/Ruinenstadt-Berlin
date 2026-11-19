@@ -296,6 +296,8 @@ export function updateEnemies(sim: Sim): void {
     }
 
     e.speed = Math.hypot(vx, vz);
+    // WP5 review: a burning Zünder stands its ground, so it blows up inside the circle it marked.
+    if (e.state === 'special' && e.sp?.kind === 'fuse') e.kx = e.kz = 0;
     e.x += (vx + e.kx) * DT;
     e.z += (vz + e.kz) * DT;
     const damp = Math.exp(-KNOCK_DAMP * DT);

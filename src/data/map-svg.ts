@@ -2,6 +2,7 @@
 // review image (`MAP_SVG=docs/maps/koepenick.svg npx vitest run src/data/map-svg.test.ts`).
 import type { EncounterDef } from '../sim/level';
 import { lotOutline, type GroundKind, type Lot, type MapDef, type Pt } from './map';
+import { STATIONS } from './camp';
 
 const GROUND: Record<GroundKind, string> = {
   cobbles: '#4a4238',
@@ -55,6 +56,26 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     const { rubble: r, flood: f } = m.tunnel;
     if (r) out.push(`<path d="${path(r.pts)}" fill="none" stroke="#6b5a48" stroke-width="${r.width - 1}" stroke-linecap="round"/>`);
     if (f) out.push(`<path d="${path(f.pts)}" fill="none" stroke="#2f6a86" stroke-width="${f.width}" stroke-linecap="butt" opacity="0.85"/>`);
+  }
+  // M20 camp (playtest 2026-11-18: the big map showed no stations): rock, the walkable floor, walls,
+  // the train, every station with its name and its ring.
+  if (m.camp) {
+    const c = m.camp;
+    out.push(`<rect x="${B.minX}" y="${B.minZ}" width="${w}" height="${h}" fill="#141414"/>`);
+    for (const f of c.floor) out.push(`<polygon points="${poly(f)}" fill="#5a554c"/>`);
+    out.push(`<rect x="${c.train.x - c.train.len / 2}" y="${c.train.z - 1.6}" width="${c.train.len}" height="3.2" rx="0.6" fill="#c8a24a" stroke="#14282b" stroke-width="0.3"/>`);
+    for (const wl of c.walls) out.push(`<rect x="${wl.x - wl.hx}" y="${wl.z - wl.hz}" width="${wl.hx * 2}" height="${wl.hz * 2}" fill="${wl.kind === 'glass' ? '#7fb3bd' : '#a89e8c'}"/>`);
+    for (const s of c.stations) {
+      const deg = (-s.rot * 180) / Math.PI;
+      out.push(`<rect x="${-s.w / 2}" y="${-s.d / 2}" width="${s.w}" height="${s.d}" fill="#8c6a50" stroke="#f0b27a" stroke-width="0.4" transform="translate(${s.x} ${s.z}) rotate(${deg})"/>`);
+    }
+    for (const p of c.places) out.push(`<circle cx="${p.x}" cy="${p.z}" r="${p.r + 0.3}" fill="#f2d14b" fill-opacity="0.35" stroke="#f2d14b" stroke-width="0.35"/>`);
+    for (const s of c.stations) {
+      const name = STATIONS.find((t) => t.id === s.id)?.name ?? s.id;
+      out.push(`<text x="${s.x}" y="${s.z + 0.7}" font-size="2" font-weight="700" text-anchor="middle" fill="#f0e2c8" paint-order="stroke" stroke="#14282b" stroke-width="0.6">${name}</text>`);
+    }
+    const door = c.places.find((p) => p.id === 'abfahrt');
+    if (door) out.push(`<text x="${c.train.x}" y="${c.train.z + 0.9}" font-size="2" font-weight="700" text-anchor="middle" fill="#14282b">Zug · Abfahrt</text>`);
   }
   for (const s of m.streets) {
     const col = s.kind === 'path' ? '#6a5d45' : '#6f6656';
@@ -122,8 +143,8 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
       if (o.labels !== false) out.push(`<text x="${e.x}" y="${e.z - e.r - 3}" font-size="7" text-anchor="middle" fill="#f0e2c8" paint-order="stroke" stroke="#14282b" stroke-width="2">${e.name}</text>`);
     });
   }
-  out.push(`<rect x="${m.start.x - 4}" y="${m.start.z - 4}" width="8" height="8" fill="#43d1cf"/>`);
-  if (o.labels !== false) {
+  if (!m.camp) out.push(`<rect x="${m.start.x - 4}" y="${m.start.z - 4}" width="8" height="8" fill="#43d1cf"/>`);
+  if (o.labels !== false && !m.camp) {
     // Few labels, never overlapping: big districts first, each name once, rivers where there is room.
     const boxes: Array<[number, number, number, number]> = [];
     const place = (x: number, z: number, text: string, size: number, anchor: 'middle' | 'start'): boolean => {

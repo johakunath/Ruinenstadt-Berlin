@@ -12,6 +12,20 @@ Sounds are generated in code (`src/audio`), except the boss voice lines in `voic
 | `textures/koepenick/litter.webp` | OpenAI image generation; transparent 2 × 2 puddle, leaves, paper/cans and rubble atlas; Köpenick style board as image reference | Codex (for Johannes) | own work | Alpha retained; resized from 1254 to 1024 px, WebP quality 85 |
 | `textures/koepenick/asphalt.webp` | OpenAI image generation, worn asphalt with muted aggregate and hairline cracks, using 2D Köpenick asphalt as a style reference | Codex (for Johannes) | own work | Seam-matched 1024 px albedo, WebP quality 85 |
 | `textures/common/cobbles.webp` | OpenAI image generation, staggered Berlin granite setts with moss in the joints, using the 2D Köpenick plaza for its palette | Codex (for Johannes) | own work | Seam-matched 1024 px albedo, WebP quality 85 |
+| `textures/common/plaster-cream.webp` | OpenAI image generation using the 2D Köpenick facade references | Codex (for Johannes) | own work | Worn cream Altbau plaster, seam-matched 1024 px WebP |
+| `textures/common/plaster-ochre.webp` | OpenAI image generation using the 2D Köpenick facade references | Codex (for Johannes) | own work | Chipped ochre Altbau plaster, seam-matched 1024 px WebP |
+| `textures/common/plaster-oxblood.webp` | OpenAI image generation using the 2D Köpenick facade references | Codex (for Johannes) | own work | Weathered oxblood Altbau plaster, seam-matched 1024 px WebP |
+| `textures/common/brick.webp` | OpenAI image generation using the 2D shared brick as a reference | Codex (for Johannes) | own work | Varied terracotta masonry, seam-matched 1024 px WebP |
+| `textures/common/stucco.webp` | OpenAI image generation using the 2D Köpenick facade references | Codex (for Johannes) | own work | Pale, fine-cracked stucco, seam-matched 1024 px WebP |
+| `textures/common/concrete.webp` | OpenAI image generation, weathered concrete with formwork joints | Codex (for Johannes) | own work | Seam-matched 1024 px WebP |
+| `textures/common/roof-tiles.webp` | OpenAI image generation using the 2D Köpenick clay roof tile reference | Codex (for Johannes) | own work | Weathered terracotta roof tiles, seam-matched 1024 px WebP |
+| `textures/common/shopfront.webp` | OpenAI image generation using the 2D Köpenick Späti shopfront reference | Codex (for Johannes) | own work | Shelves and cooler behind cracked glass, 1024 × 512 WebP |
+| `textures/common/wood.webp` | OpenAI image generation using the 2D shared wood reference | Codex (for Johannes) | own work | Weathered vertical boards, seam-matched 512 px WebP |
+| `textures/common/painted-metal.webp` | OpenAI image generation, chipped rust-brown paint over metal | Codex (for Johannes) | own work | Seam-matched 512 px WebP |
+| `textures/common/car-enamel.webp` | OpenAI image generation, chipped and scuffed neutral vehicle enamel | Codex (for Johannes) | own work | Tintable tile shared by cars, buses and trams, seam-matched 512 px WebP |
+| `textures/common/van-side.webp` | OpenAI image generation, ochre enamel over existing code-painted van UV layout | Codex (for Johannes) | own work | Retains the authored windows and lettering, 1024 × 512 WebP |
+| `textures/common/van-front.webp` | OpenAI image generation, ochre enamel over existing code-painted van UV layout | Codex (for Johannes) | own work | Retains the authored windscreen, lights and route board, 512 px WebP |
+| `textures/common/van-roof.webp` | OpenAI image generation, ochre enamel over existing code-painted van UV layout | Codex (for Johannes) | own work | Weathered roof with existing paint tint, 512 px WebP |
 | `textures/alex/posters.webp` | Ruinenstadt 2D `assets/buildings/gdr-banner-red.webp`, `gdr-banner-blue.webp`, `gdr-mural-pioneer.webp` (Codex task 11, Alexanderplatz Pioneer direction, v0.69) | Codex (for Johannes) | own work | Packed into one 768 × 384 atlas (red banner, blue banner, Pioneer poster), alpha kept, WebP quality 86 |
 | `characters/hero.glb` | [Universal Base Characters [Standard]](https://quaternius.itch.io/universal-base-characters): `Superhero_Female_FullBody`, `Hair_Long` | Quaternius | CC0 1.0 | Base color only at 1024 px, clothing regions painted as vertex colors, code-built coat skirt, belt, pouches and scarf (3 extra scarf bones), hair recolored. Meshes pass through Blender 5.3 unchanged and are rebound to the source skeleton (`npm run assets:hero`) |
 | `characters/zombie.glb` | [Universal Base Characters [Standard]](https://quaternius.itch.io/universal-base-characters): `Superhero_Male_FullBody` | Quaternius | CC0 1.0 | Simplified to about 5k triangles, skin recolored at 512 px, rags as vertex colors, eyebrows removed |
@@ -119,6 +133,13 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `inventory/I89.webp` | OpenAI image generation, painted inventory icon | Codex for Johannes | Own work | Stahlklinge, leaf-spring blade with a wrench guard |
 | `inventory/I90.webp` | OpenAI image generation, painted inventory icon | Codex for Johannes | Own work | Hackmesser, weathered butcher’s cleaver |
 | `inventory/R05.webp` | Ruinenstadt 2D `assets/icons/R05.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Schrott icon in the menu header (U3) |
+| `inventory/R01.webp` | Ruinenstadt 2D `assets/icons/R01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Stoff icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/R02.webp` | Ruinenstadt 2D `assets/icons/R02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Metall icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/R03.webp` | Ruinenstadt 2D `assets/icons/R03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Chemie icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/R04.webp` | Ruinenstadt 2D `assets/icons/R04.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kabel icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/Z01.webp` | Ruinenstadt 2D `assets/icons/Z01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Fleisch icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/Z02.webp` | Ruinenstadt 2D `assets/icons/Z02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Gemüse icon in the camp and menu headers (playtest 2026-11-18) |
+| `inventory/Z03.webp` | Ruinenstadt 2D `assets/icons/Z03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Gewürze icon in the camp and menu headers (playtest 2026-11-18) |
 | `inventory/survivor.webp` | Ruinenstadt 2D `assets/hero/H01a-H01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged inventory portrait placeholder |
 | `portraits/E01.webp` | Ruinenstadt 2D `assets/portraits/E01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Schlurfer |
 | `portraits/E02.webp` | Ruinenstadt 2D `assets/portraits/E02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Brocken |
@@ -150,3 +171,33 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `portraits/S04.webp` | Ruinenstadt 2D `assets/portraits/S04.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Oma Gerda |
 | `portraits/S05.webp` | Ruinenstadt 2D `assets/portraits/S05.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Späherin Lin |
 | `portraits/S06.webp` | Ruinenstadt 2D `assets/portraits/S06.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged; Kodex portrait: Kalle |
+| `portraits/E15.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Drohne, compact scout quadcopter and pink lens; 256 px WebP |
+| `portraits/E16.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Uhrwerkläufer, brass and cobalt clockwork guard; 256 px WebP |
+| `portraits/E17.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Wurzler, root-wrapped sunflower gardener; 256 px WebP |
+| `portraits/E18.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Kernspeier, toothed sunflower in a cracked clay pot; 256 px WebP |
+| `portraits/X11.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Der Grenzer, Cold War olive field uniform; 256 px WebP |
+| `portraits/X12.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Die Spreehexe, punk mohawk and acid-green vial; 256 px WebP |
+| `portraits/X13.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Die Wurzel-Mutter, knotted roots and sunflower crown; 256 px WebP |
+| `portraits/X14.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Der Große Uhrwerkläufer, heavy winding key and dial shield; 256 px WebP |
+| `portraits/X15.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Der Volkseigene Koloss, Plattenbau torso on clockwork legs; 256 px WebP |
+| `portraits/X16.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Die Weltzeituhr, animated drum and orbital sculpture; 256 px WebP |
+| `portraits/X17.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Der Türsteher, pink-cabled bomber jacket and clipboard; 256 px WebP |
+| `portraits/X18.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Die Wachdrohne, armored quadcopter and searchlight; 256 px WebP |
+| `portraits/X19.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Der Dirigent, tailcoat, rebar baton and speaker; 256 px WebP |
+| `portraits/S07.webp` | OpenAI image generation; painted bust using 2D portrait style references | Codex for Johannes | Own work | Ilse, Kommandantur keeper with a field radio; 256 px WebP |
+| `ui/intro-standstill.webp` | OpenAI image generation; narrative painting using the Köpenick style board | Codex for Johannes | Own work | Berlin steht still: broken Weltzeituhr at dusk; 768 × 512 WebP |
+| `ui/intro-fight.webp` | OpenAI image generation; narrative painting using the Köpenick style board | Codex for Johannes | Own work | Kämpf dich durch: hero meets a Zeitloser in the street; 768 × 512 WebP |
+| `ui/intro-koepenick.webp` | OpenAI image generation; narrative painting using the Köpenick style board | Codex for Johannes | Own work | Befreie Köpenick: confrontation at Rathaus Köpenick; 768 × 512 WebP |
+| `ui/intro-controls.webp` | OpenAI image generation; narrative painting using the Köpenick style board | Codex for Johannes | Own work | Steuerung: hero crouched to dodge in a courtyard; 768 × 512 WebP |
+| `textures/hero/coat.webp` | OpenAI image generation, 2D survivor outfit board reference | Codex for Johannes | Own work | Rubbed trench-coat leather, neutral albedo, 1024 px |
+| `textures/hero/vest.webp` | OpenAI image generation, 2D survivor outfit board reference | Codex for Johannes | Own work | Worn utility vest canvas, neutral albedo, 1024 px |
+| `textures/hero/boots.webp` | OpenAI image generation | Codex for Johannes | Own work | Cracked boot leather, neutral albedo, 512 px |
+| `textures/hero/sneakers.webp` | OpenAI image generation | Codex for Johannes | Own work | Worn sneaker canvas, neutral albedo, 512 px |
+| `textures/hero/gloves.webp` | OpenAI image generation | Codex for Johannes | Own work | Rubbed glove leather, neutral albedo, 512 px |
+| `textures/hero/scarf.webp` | OpenAI image generation | Codex for Johannes | Own work | Scarf knit, neutral albedo, 512 px |
+| `textures/alex/signs.webp` | OpenAI image generation, Pioneer palette and 2D GDR art reference | Codex for Johannes | Own work | Painted mosaics, enamel, brushed aluminum and glazing packed around existing exact signage, 2048 × 1536 WebP |
+| `textures/alex/stone-atlas.webp` | OpenAI image generation, 2D Alexanderplatz limestone, copper and relief references | Codex for Johannes | Own work | Sandstone, verdigris copper and terracotta frieze, 2048 × 2048 WebP |
+| `textures/alex/wbs70.webp` | OpenAI image generation, East Berlin precast concrete | Codex for Johannes | Own work | WBS 70 panel albedo, 1024 px WebP |
+| `textures/alex/rathaus-brick.webp` | OpenAI image generation, 2D Alexanderplatz Rathaus reference | Codex for Johannes | Own work | Red-orange Flemish bond brick, 1024 px WebP |
+| `textures/alex/stadtbahn-brick.webp` | OpenAI image generation, 2D Alexanderplatz rail brick reference | Codex for Johannes | Own work | Weathered brown viaduct brick with ivy, 1024 px WebP |
+| `textures/tunnel/walls.webp` | OpenAI image generation, S3 tunnel palette from the game | Codex for Johannes | Own work | Three concrete variations and an ivory ceramic tile band in a four-cell 2048 px atlas |

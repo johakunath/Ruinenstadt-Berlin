@@ -45,8 +45,6 @@ export interface StrikeOpts {
   noproc?: boolean;
   element?: ElementId;
   note?: string;
-  /** WP5: the knock pushes away from this point instead of the hero (a Zünder's blast). */
-  from?: { x: number; z: number };
 }
 
 const tough = (e: Enemy): boolean => !!e.def.boss || !!e.elite;
@@ -157,8 +155,8 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   e.hp -= damage;
   e.lastCrit = crit;
 
-  let dx = e.x - (o.from?.x ?? p.x);
-  let dz = e.z - (o.from?.z ?? p.z);
+  let dx = e.x - p.x;
+  let dz = e.z - p.z;
   const d = Math.hypot(dx, dz) || 1;
   dx /= d;
   dz /= d;
@@ -167,7 +165,8 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   e.kz += dz * kb * e.def.knockbackTaken;
 
   const feel = o.feel ?? 'light';
-  if (feel !== 'none' && kb > 0 && (!e.def.poise || feel === 'heavy')) stun(e, HIT_FEEL[feel].stagger / (e.def.boss ? 0.15 : 1));
+  // Bosses never stagger from a hit (playtest 2026-11-18: the Hauptmann tumbled on every heavy blow); stuns still work, shortened.
+  if (feel !== 'none' && kb > 0 && !e.def.boss && (!e.def.poise || feel === 'heavy')) stun(e, HIT_FEEL[feel].stagger);
   if (o.stun) stun(e, o.stun);
   if (crit && pk(s, 'stun')) stun(e, STATUS.critStun);
   if (!o.noproc) {
@@ -210,7 +209,11 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   return damage;
 }
 
-export function killEnemy(s: Sim, e: Enemy): void {
+/**
+ * `byHero` false: the enemy died without the hero (a Zünder's blast, its own fuse). It still counts and drops,
+ * but feeds no kill effects: no streak, leech, cooldown cuts, Jagd, Sturmangriff, spread or boom (WP5 review).
+ */
+export function killEnemy(s: Sim, e: Enemy, byHero = true): void {
   if (e.state === 'dead') return;
   const p = s.player;
   const a = s.abilities;
@@ -231,9 +234,10 @@ export function killEnemy(s: Sim, e: Enemy): void {
   s.kills++;
   if (kodexKill(s, e.def.kind)) s.events.push({ type: 'kodex', name: e.def.name });
   if (e.elite && kodexKill(s, `e:${e.elite}`)) s.events.push({ type: 'kodex', name: `Elite ${ELITES[e.elite].name}` });
+  killDrops(s, e);
+  if (!byHero) return;
   a.streak.n++;
   a.streak.t = STATUS.streakTime;
-  killDrops(s, e);
   if (p.state !== 'dead') p.hp = Math.min(s.stats.maxHp, p.hp + s.stats.leech + s.stats.maxHp * 0.01 * pk(s, 'leech') + (tough(e) && hasL(s, 'pickel') ? s.stats.maxHp * 0.15 : 0));
   // Schaffnerkelle: a kill shortens the dodge cooldown (2D 0.5 s of 1.4 s). Zitadellenklinge: one second off the power.
   if (hasL(s, 'schaffner')) p.dodgeCd = Math.max(0, p.dodgeCd - (0.5 / 1.4) * PLAYER.dodge.cooldown);
@@ -256,6 +260,24 @@ export function killEnemy(s: Sim, e: Enemy): void {
     }
   }
   if (pk(s, 'boom') && !e.def.boss) a.booms.push({ x: e.x, z: e.z });
+}
+
+/**
+ * WP5 review: a blast that hits an enemy (the Zünder's). Plain damage and a knock away from the blast: none of
+ * the hero's multipliers, procs, shield rules or executes apply, and a kill feeds no kill effects.
+ */
+export function blastHit(s: Sim, e: Enemy, damage: number, from: { x: number; z: number }, knockPx: number): void {
+  if (e.state === 'dead' || (e.wake ?? 0) > 0) return;
+  const dmg = Math.max(1, Math.round(damage));
+  e.hp -= dmg;
+  let dx = e.x - from.x, dz = e.z - from.z;
+  const d = Math.hypot(dx, dz) || 1;
+  dx /= d; dz /= d;
+  e.kx += dx * knock(knockPx) * e.def.knockbackTaken;
+  e.kz += dz * knock(knockPx) * e.def.knockbackTaken;
+  const killed = e.hp <= 0;
+  s.events.push({ type: 'hit', id: e.id, x: e.x - dx * e.def.radius, z: e.z - dz * e.def.radius, dx, dz, weight: 'light', killed, damage: dmg, critical: false, quiet: true });
+  if (killed) killEnemy(s, e, false);
 }
 
 /** The Zünder's small blast when it dies before its fuse ran out: its lit fuse goes out, this one is marked shortly. */
@@ -318,7 +340,7 @@ export function incomingDamage(s: Sim, raw: number): number {
 /** An enemy's melee hit on the hero. Returns false when it did not land. */
 export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz: number, by?: string): boolean {
   const p = s.player;
-  if (p.state === 'dead' || p.invuln > 0) return false;
+  if (p.state === 'dead' || p.invuln > 0 || s.god) return false;
   // Panzerplatte: one hit in five is blocked outright.
   if (hasL(s, 'panzer') && s.rng.next() < 0.2) {
     p.invuln = 0.3;

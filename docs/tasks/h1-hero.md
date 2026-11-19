@@ -1,6 +1,6 @@
 # H1 Custom hero: real clothing, outfits, inventory preview [PC · Blender · Opus high; spec Fable high]
 
-Status: steps 1–5 built and merged 2026-11-17 (PRs #36–#41). Open: step 6 painted textures (Codex), step 7 measurement (Johannes), the chest shape, and more distinct equipment (Johannes: later). Decided and specified 2026-11-17 (Fable 5.2 high, confirmed by Johannes).
+Status: steps 1–5 built and merged 2026-11-17 (PRs #36–#41). Step 6 painted albedos integrated 2026-11-18. Open: step 7 hardware measurement, the chest shape, and later equipment variety. Decided and specified 2026-11-17 (Fable 5.2 high, confirmed by Johannes).
 
 ## Goal
 The hero keeps her body, face, skeleton and all clips (39 since step 2b), and gets real clothing instead of paint on the skin. Clothing and equipment change her look, she can be turned in the inventory tab, and the left hand holds two-handed weapons.
@@ -320,6 +320,12 @@ A new body or head, authored clips or retargeting (importing more clips from the
 - e2e `H1: the inventory doll …`: the doll is not blank, it changes after a mouse drag, and the arrow keys turn it with no page errors.
 - Pictures in `docs/proof/h1-hero/step5/`: `doll-1280x800.png` (start view) and `doll-844x390-turned.png` (after a drag).
 - Not checked: touch and pad on a real device (Tab S9, controller). Playwright drives the mouse only.
+
+## Handover step 6 (Codex, 2026-11-18)
+
+- Generated six neutral albedos from the 2D hero outfit direction: worn coat leather, utility-vest canvas, scuffed boot leather, sneaker canvas, rubbed glove leather and scarf knit. The GLB's UVs, vertex colours and baked occlusion supply the fit and palette.
+- The world hero and inventory doll share the same maps. A failed image leaves its piece in the original vertex colours. The outfits are 1024 px and the accessories are 512 px. The six albedos total 650 kB compressed and approximately 16 MiB decoded with mipmaps.
+- [Screenshots and fallback comparison](../proof/h1-hero/step6/README.md). Profile optimization and step 7 hardware measurement remain open.
 
 ## Questions
 - Johannes: look at the doll (step 5 "Johannes looks").

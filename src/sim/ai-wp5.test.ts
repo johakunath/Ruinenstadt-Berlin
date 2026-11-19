@@ -136,6 +136,39 @@ describe('Zünder (2D bomb)', () => {
     expect(far.hp).toBe(1e4);
   });
 
+  it('a blast kill is not the hero\'s: no hero bonuses, no execute, no leech or streak (review of PR #60)', () => {
+    const s = fresh();
+    s.statContext.perks = { exec: 1, kimme: 3 };
+    s.stats.leech = 5;
+    const e = put(s, 'zuender', 0, 1.2);
+    const near = pin(put(s, 'brute', 1.5, 1.2));
+    const tough = pin(put(s, 'brute', -1.2, 1.2));
+    near.hp = 1;
+    tough.hp = tough.maxHp = 1e4;
+    near.cd = tough.cd = [99, 99, 99];
+    run(s, 0.05);
+    const raw = s.threats.zones.find((q) => q.src === e.id)!.damage;
+    s.player.hp = 50;
+    const streak = s.abilities.streak.n;
+    run(s, THREAT.fuse.wind + 0.05, false);
+    expect(near.state).toBe('dead');
+    // Plain damage: no Kimme, and no Gnadenstoß on the big one.
+    expect(1e4 - tough.hp).toBe(Math.round(raw * THREAT.fuse.enemyShare));
+    expect(s.abilities.streak.n).toBe(streak);
+    expect(s.player.hp).toBeLessThanOrEqual(50);
+  });
+
+  it('a burning Zünder is not knocked out of its circle: it dies where the blast goes off', () => {
+    const s = fresh();
+    const e = put(s, 'zuender', 0, 1.2);
+    run(s, 0.05);
+    expect(e.sp?.kind).toBe('fuse');
+    const z = s.threats.zones.find((q) => q.src === e.id)!;
+    strike(s, e, 1, { knock: 6 });
+    run(s, 0.3);
+    expect(Math.hypot(e.x - z.x, e.z - z.z)).toBeLessThan(0.05);
+  });
+
   it('one Zünder sets off the next: the second dies in the blast and goes off in turn', () => {
     const s = fresh();
     const a = put(s, 'zuender', 0, 1.2);

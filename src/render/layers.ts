@@ -16,3 +16,16 @@ export function isLargeProp(kind: PropKind): boolean {
     // M11d closed edge: building rows, collapsed houses and street-end barricades.
     || kind === 'brandwand' || kind === 'rubbleWall' || kind === 'barricade';
 }
+
+/**
+ * Props that hide the hero and enemies enough to need their contour (playtest 2026-11-18: everything
+ * but very small things). Large props plus stalls, sheds, tents, walls, hedges and other tall plants.
+ * Crates, bins, benches, lamps, rubble, candles and loot stay out.
+ */
+const MID_OCCLUDERS: ReadonlySet<PropKind> = new Set<PropKind>([
+  'crane', 'scaffold', 'shed', 'stall', 'stallBroken', 'tent', 'greenhouse', 'wall', 'thicket', 'overgrowth',
+  'edgeHedge', 'fallenTree', 'hedge', 'topiary', 'bush', 'climber', 'sunflowers', 'reeds',
+]);
+export function isOccluderProp(kind: PropKind): boolean {
+  return isLargeProp(kind) || MID_OCCLUDERS.has(kind);
+}

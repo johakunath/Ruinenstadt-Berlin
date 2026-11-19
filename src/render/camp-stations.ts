@@ -883,10 +883,10 @@ export class CampStationsView {
     for (const place of layout.places) {
       const station = layout.stations.find((s) => s.id === place.id);
       const y = (station ? floorY(station) : 0) + 0.06;
-      // Johannes 2026-11-18: a footprint-sized, dim disc with a very faint rim, at the person's feet.
+      // Johannes 2026-11-18: a footprint-sized, dim disc at the person's feet; playtest 2026-11-18 (later): with a clear rim again.
       const color = place.id === 'abfahrt' ? 0x5aa8c8 : 0xc08a3a;
-      const mat = new MeshBasicMaterial({ color, transparent: true, opacity: 0.12, depthWrite: false });
-      const mesh = new Mesh(new RingGeometry(place.r - 0.05, place.r, 32), mat);
+      const mat = new MeshBasicMaterial({ color, transparent: true, opacity: 0.6, depthWrite: false });
+      const mesh = new Mesh(new RingGeometry(place.r - 0.07, place.r, 40), mat);
       mesh.add(new Mesh(new CircleGeometry(place.r - 0.05, 32), new MeshBasicMaterial({ color, transparent: true, opacity: 0.16, depthWrite: false })));
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(place.x, y, place.z);
@@ -958,7 +958,7 @@ export class CampStationsView {
     }
     for (const r of this.rings) {
       const on = r.place.id === near;
-      r.mat.opacity = on ? 0.3 + 0.08 * Math.sin(time * 4) : 0.12;
+      r.mat.opacity = on ? 0.9 + 0.1 * Math.sin(time * 4) : 0.6;
       (r.mesh.children[0] as Mesh<CircleGeometry, MeshBasicMaterial>).material.opacity = on ? 0.3 : 0.16;
     }
   }

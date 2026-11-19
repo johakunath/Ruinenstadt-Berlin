@@ -1,4 +1,5 @@
-import { RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from 'three';
+import type { Texture } from 'three';
+import { loadPaintedTexture } from './surface-textures';
 
 // Vite fingerprints these URLs and keeps them relative to the deployed game (GitHub Pages).
 const urls = {
@@ -13,10 +14,5 @@ const urls = {
 
 /** Leave the painted fallback installed until the image is decoded; failures keep it in place. */
 export function loadGroundTexture(surface: keyof typeof urls, anisotropy: number, swap: (texture: Texture) => void): void {
-  const pending = new TextureLoader().load(urls[surface], texture => {
-    texture.colorSpace = SRGBColorSpace;
-    texture.wrapS = texture.wrapT = RepeatWrapping;
-    texture.anisotropy = anisotropy;
-    swap(texture);
-  }, undefined, () => pending.dispose());
+  loadPaintedTexture(urls[surface], anisotropy, swap);
 }

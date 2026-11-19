@@ -303,7 +303,7 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
     case 'fuse':
       // The blast is the zone (it kills the Zünder when it goes off); this only covers a zone that is gone.
       e.blown = true;
-      killEnemy(sim, e);
+      killEnemy(sim, e, false);
       break;
     case 'howl': {
       // Heuler (2D `howl`): every other body within range is driven on; a harmless pink ring shows how far.
@@ -458,6 +458,8 @@ function finish(sim: Sim, e: Enemy, sp: Special): void {
     open = 0;
   }
   if (sp.kind === 'charge' && e.kind === 'bassprediger' && (++e.cycle % BOSS.bassprediger.sermonEvery === 0 || e.rage)) e.queue = { kind: 'roar', t: 0 };
+  // Playtest 2026-11-18: in rage the Hauptmann fires a second ring right after the first.
+  if (sp.kind === 'ring' && e.kind === 'hauptmann' && e.rage && !sp.queued) e.queue = { kind: 'ring', t: BOSS.hauptmann.ringGap };
   if (sp.kind === 'dive') e.rest = THREAT.dive.rest;
   else if (open > 0) {
     e.open = open;
@@ -991,6 +993,10 @@ function bossThink(sim: Sim, e: Enemy, dist: number): void {
       } else if (e.cd[1] <= 0) {
         e.cd[1] = H.ring;
         begin(sim, e, 'ring');
+      } else if (e.cd[0] <= 0 && dist > H.chargeFrom && dist < BOSS.charge.range && sight()) {
+        // „Sturmangriff!“ (playtest 2026-11-18): kiting him no longer works.
+        e.cd[0] = range(sim, H.charge);
+        begin(sim, e, 'charge');
       } else if (e.cd[0] <= 0 && dist < BOSS.slam.range) {
         e.cd[0] = H.slam;
         begin(sim, e, 'bossSlam');

@@ -26,7 +26,7 @@ export function npcPerson(assets: CharacterAssets): { root: Group; anim: Animato
   body.setLook(NPC_LOOK);
   const model = body.model;
   root.add(model);
-  const anim = new Animator(model, new Map([...assets.heroClips].filter(([n]) => n === 'Idle_Loop' || n === 'Interact')));
+  const anim = new Animator(model, new Map([...assets.heroClips].filter(([n]) => n === 'Idle_Loop' || n === 'Interact' || n === 'Jog_Fwd_Loop')));
   anim.loop('Idle_Loop', 0);
   return { root, anim, attach: (bone, o) => { model.getObjectByName(bone)?.add(o); } };
 }
@@ -92,6 +92,9 @@ export class ContentView {
   private readonly people = new Group();
   private trader: { root: Group; anim: Animator } | null = null;
   private captive: { root: Group; anim: Animator; ring: Mesh } | null = null;
+  /** Playtest 2026-11-18: a freed captive no longer vanishes; they walk off toward the camp for a few seconds. */
+  private leaving: { t: number; dx: number; dz: number } | null = null;
+  private wasFree = false;
   /** One Späti keeper, standing behind the counter of the nearest Späti. */
   private keeper: { root: Group; anim: Animator } | null = null;
   /** Talk spots (playtest 2026-11-17): a ring on the ground where the trade can start; it brightens in reach. */
@@ -353,6 +356,25 @@ export class ContentView {
       (t.ring.material as MeshBasicMaterial).color.setHex(c.captive.free ? 0x8fd16a : 0xe05050);
       (t.ring.material as MeshBasicMaterial).opacity = 0.45 + 0.25 * Math.sin(this.time * 4);
       t.anim.update(dt);
+      this.wasFree = c.captive.free;
+      this.leaving = null;
+    } else if (this.captive && this.wasFree && !this.leaving && this.captive.root.visible) {
+      // Just rescued: turn away from the hero and walk off, the ring goes.
+      const r = this.captive.root, dx = r.position.x - heroX, dz = r.position.z - heroZ, d = Math.hypot(dx, dz) || 1;
+      this.leaving = { t: 0, dx: dx / d, dz: dz / d };
+      this.captive.ring.visible = false;
+      this.captive.anim.loop('Jog_Fwd_Loop', 0.25, 0.7);
+      r.rotation.y = Math.atan2(dx, dz);
+    } else if (this.captive && this.leaving) {
+      const L = this.leaving, r = this.captive.root;
+      L.t += dt;
+      // A short pause (the thank-you line), then off at a walking pace; gone after five seconds.
+      if (L.t > 0.8) {
+        r.position.x += L.dx * 2.2 * dt; r.position.z += L.dz * 2.2 * dt;
+        r.position.y = groundY(r.position.x, r.position.z);
+      }
+      this.captive.anim.update(dt);
+      if (L.t > 5) { r.visible = false; this.leaving = null; this.wasFree = false; this.captive.ring.visible = true; this.captive.anim.loop('Idle_Loop', 0); }
     } else if (this.captive) this.captive.root.visible = false;
   }
 }
