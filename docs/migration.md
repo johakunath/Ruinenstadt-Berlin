@@ -13,6 +13,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |
 | Textures (Codex): T1b rail follow-up and texture performance, T6 Xhain, T7 tunnel walls, Mitte step 9, Alexanderplatz step 8, H1 step 6 hero textures | Codex | open: `docs/asset-pipeline.md` › Texture queue, task files linked there |
+| WP4 Hero, weapons and loot visuals: weapon model per base (P29), equipment on the hero (P32), pickups per kind (P10), legendary and set looks (P31), 2D #2 close-out, daggers (2D #38) | Claude · Opus high (spec: Fable high, done); icons Codex | open, step 1 first: `docs/tasks/wp4-equipment-visuals.md` (gates G2 to G4 need Johannes before steps 3, 5, 6b) |
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals, P24 worn landmarks | Claude · Opus high | open: `docs/backlog.md` |
 | Next district Charlottenburg (Q8), concept first | Claude · Fable high (concept), Opus high (build) | not started: `docs/maps/guidelines.md` |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |

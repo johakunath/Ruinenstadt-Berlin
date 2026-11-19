@@ -2,6 +2,7 @@
 
 Index of every equipment base and named item with its 3D model, hero look, inventory icon and what is missing.
 Rule: every session that touches equipment art, models, icons or effects updates this file in the same PR.
+**Plan (2026-11-19): `docs/tasks/wp4-equipment-visuals.md`** decides how every row below gets its model (one weapon model per base, rigid gear built in code, palettes per base, pickups per kind, legendary effects) and in which order. The index stays the status; the task file is the plan.
 Legend: 3D `kind:blade` = shared weapon kind model (`src/render/weapons.ts`, `weaponModel` ignores the base); `piece:x` = hero.glb node from `src/data/hero-look.ts`; `none` = nothing in 3D. Hero `yes` = equipping changes the hero mesh, `same` = shows the no-item default, `-` = not shown. Icon `yes/partly/no` compares the painted icon (`src/ui/item-icons.ts`, `assets/inventory/*.webp`) with what the game shows. Needs: M model or piece, I icon re-render, E effect, T texture.
 
 ## Facts checked in code (2026-11-18)
@@ -16,6 +17,8 @@ Legend: 3D `kind:blade` = shared weapon kind model (`src/render/weapons.ts`, `we
 | Ground drops | `src/render/loot.ts`: one instanced crystal in rarity colour, beam for rare and up. Same for every item (backlog P10) |
 | Starter | `starterEquipment()` (`src/sim/loadout.ts`): only `Rostige Klinge`, base `rohr`, kind `blade`. No armor, gloves, boots: hero starts in coat, boots, bare hands |
 | Legacy | `Holzlatte` (`latte`, I01) and `Rostiges Rohr` exist only in `BASES` for old saves; no drop pool rolls them |
+| Weapon cost | Each kind model is 9 to 10 unmerged meshes, so 9 to 10 draw calls per pass (WP4 step 1a merges to at most 3) |
+| Head, hand, foot, ring legendaries and set pieces (2D #2) | Data, drop tables and powers are ported and tested; only their looks are missing |
 | Base clash | `Kettenhemd der Zitadelle` uses base `kette` (same as `Fahrradkette`): icon I42 (bike chain); the chainmail icon I57 sits under key `khemd`, which no base uses |
 
 ## Summary
@@ -135,6 +138,8 @@ Icon judgements are from the 128 px icons against the model code and the piece n
 
 ## Priorities (owner order)
 
+Order and scope are now set in `docs/tasks/wp4-equipment-visuals.md` › D7 (all 30 weapon bases in step 1, both built districts' families included). The list below stays as the source of the per-item ideas.
+
 1. **P1 starter.** Rostige Klinge: re-render I88 from the blade model, or give `rohr` its own model; the unused `pipe` model in `weapons.ts` can go or become the Holzlatte. The starting look (coat, boots, bare hands) has no icon.
 2. **P2 normal Köpenick drops.** Own weapon models per base, starting with mismatches (Rohrzange, Steinschleuder, Hackmesser, Machete). Armor: a jacket piece (Lederjacke, Feuerwehrjacke, BVG-Uniform, by colour first). First hat pieces (`h_` node, hides `hair`): Bauhelm, Schiebermütze, Wollmütze, Gasmaske. Boxbandagen as wraps. 2D lists 14 outfits, 6 hats, 4 gloves, 3 boots in `tools/build_hero.py` (reference).
 3. **P3 legendaries and sets.** Each needs a look and an effect (cost stated for Leistung, constant light count):
@@ -161,6 +166,8 @@ Icon judgements are from the 128 px icons against the model code and the piece n
 
 ## Icons from 3D renders
 
+Not part of WP4: there the models follow the painted icons, and Codex repaints the few that are wrong (WP4 step 1e). Rendering icons from the models stays open question Q5.
+
 - Recommendation: yes, render icons from the in-game models for every item whose look is code-built; only a render of the shipped model guarantees that icon and hero match.
 - Build `tools/item-icons.mjs` (not implemented): like `tools/enemy-sheet.mjs`, Playwright plus a page `tools/item-icons.html` that builds `WeaponRack` models or hero pieces offscreen, puts each on a slow turntable at a fixed 3/4 angle, lights it with a 3-point rig (warm key, cool fill, rim), transparent background, and writes `assets/inventory/<id>.webp` at 256 px. Cloud SwiftShader is enough; no GPU timing involved.
 - The H1 inventory portrait already renders the 3D hero with the game renderer, so the code path for an offscreen render exists.
@@ -176,5 +183,7 @@ Icon judgements are from the 128 px icons against the model code and the piece n
 | UI glyphs, set marks | Code: SVG |
 | Effects (glow, trails, flashes) | Code: emissive parts, instanced sprites on `FX_LAYER`, no new lights |
 | Painted texture images, painted icons | Codex generates and does the first integration; Claude does the performance integration (`docs/asset-pipeline.md`) |
-| Hero clothing pieces, retargeting | Blender, only for rigging or skinning to the UAL skeleton, rebinding the hero mesh (`npm run assets:hero`, `tools/blender/`) or retargeting animations |
+| Rigid hero equipment (hats, plates, cuffs, talisman, ring, implants) | Code: parts skinned rigidly to the bones at equip time and merged into one gear mesh (`src/render/gear.ts`, WP4 D2) |
+| Colours per item base on existing pieces | Code: palette that recolours the piece's vertex colours (WP4 D2) |
+| Hero clothing shells that deform (jacket with sleeves, poncho), retargeting | Blender on the PC, only for skinning to the UAL skeleton, rebinding the hero mesh (`npm run assets:hero`, `tools/blender/`) or retargeting animations |
 | Converting CC0 packs | Node: `tools/build-creatures.mjs` (FBXLoader plus glTF export, gltf-transform). The owner found Blender slow; use Node where no skinning work is needed |

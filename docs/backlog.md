@@ -6,7 +6,7 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 
 | 2D # | Item | With step |
 |---|---|---|
-| 2 | Legendaries and set pieces for head, hands, feet, ring | L2 |
+| 2 | Legendaries and set pieces for head, hands, feet, ring: data and powers are ported; looks and close-out in `docs/tasks/wp4-equipment-visuals.md` steps 2, 4, 5 | WP4 |
 | 13 | Multi-level interiors | M15 |
 | 14, 27 | Story artefacts (tapes, notes), collectibles with permanent power | M16b |
 | 16, 37, 30 | Camp as a place, stations with levels and NPCs, stash purpose | After M13 |
@@ -20,7 +20,7 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | 28 | Line of sight | Not planned |
 | 29 | Warning instead of ▲ when a swap breaks a set | U1 |
 | 31, 43, 44 | Dash look, hit flinch, death animation | H1 |
-| 38 | Daggers and dual wield | After G1 |
+| 38 | Daggers and dual wield: options and recommendation in `docs/tasks/wp4-equipment-visuals.md` › D6 | WP4 step 6 |
 | 41 | Quests | After M13 |
 
 | # | Item | Source | Earliest |
@@ -37,7 +37,7 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P3 | Cars as recognizable models (Trabi, Wartburg, BVG bus) instead of boxes | Playtest 2026-11-17 | PC or Codex models |
 | P7 | A reward moment after a won fight (short line, drop shower or dialogue) before the blessing cards; the 1.3 s pause is in | Playtest 2026-11-17 | M17 |
 | P8 | Contour behind buildings also for enemies (red) and NPCs (green), hero stays amber | Playtest 2026-11-17 | After R1 (built 2026-11-17; Johannes' measurement first) |
-| P10 | Pickups: own model per item type (weapon kinds, armor slots, materials, food) instead of one bag | Playtest 2026-11-17 | L2 |
+| P10 | Pickups: own model per item kind. Scheduled: `docs/tasks/wp4-equipment-visuals.md` step 3 | Playtest 2026-11-17 | WP4 |
 | P11 | Ground audit after the surface fix: walk every zone on hardware and note remaining clipping (terrace edges and stairs, banks, bridge ramps, building foundations on slopes) | Playtest 2026-11-17 | Next PC session |
 | P13 | Bot for the new systems: endless waves (M18 numbers are first guesses), camp upgrades and meals in the campaign bot (M14) | Session 2026-11-17 | M14 |
 | P14 | Tunnel follow-ups: the 2D generator charge (hold the platform while waves come out of the tunnel mouth) before Der Schaffner; flooded stretch and bypass of 2D route A; one tunnel per later line | Session 2026-11-17, 2D `js/ubahn.js` | After the M19 playtest |
@@ -51,10 +51,10 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P18 | Ambient animals: ducks on ponds, pigeons on plazas (fly off), rats near bins and in the tunnel. Research done (Gobkit CC0 GLBs). Refined task: `docs/tasks/m11c-animals.md` | Playtest 2026-11-17 (split off the M11c session) | Next session |
 | P19 | Painted textures for the lot types and plants (Codex). Task: `docs/tasks/m11c-textures.md`; reconcile its material keys with the merged M11c art first | Session 2026-11-17 | After M11c art merge |
 | P20 | M11c art follow-ups (agents stopped early to save tokens): look at scaffold, clothesline, gravestones, walls, slabs, girders, crane and Rohbau close up; jetty over the real pond; Jägerzaun and long fences; Platte loggias (no Platte district yet); tree and bush tints and jungle frond brightness after the last fix; greenery scatter density (bushes hiding enemies?); brick seam on broken wall tops | Session 2026-11-17 (M11c) | Next session, PC check |
-| P29 | Weapon looks: every weapon kind has one 3D model (`src/render/weapons.ts` `weaponModel` ignores the base), while the inventory icons show 30 different weapons (Machete, Sichel, Rohrzange, Boxenhammer, Harpune, Neonflinte, Morgenstern …). Build a model per base, or at least per family (normal, neon, GDR, legendary). Icon fixes: Rostige Klinge (I88) still shows a pipe, Zorn der Ringbahn (I32, a sling) shows a spike on a chain, the starter Holzlatte shows a nailed plank but holds a blade | Session 2026-11-18 (contact sheet) | After the playtest; models Claude, icons Codex |
+| P29 | Weapon looks: one model per base, icon fixes by Codex. Scheduled: `docs/tasks/wp4-equipment-visuals.md` step 1 | Session 2026-11-18 (contact sheet) | WP4 |
 | P30 | Kodex portraits vs bodies: bosses and elites from 2D (Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter) are the zombie body with a coloured coat, while their busts show helmets, a rat head, a tower head; the Speier bust is bloated, the body slim; the Brute bust wears an orange vest the body lacks; the Kabelghul cables are pink in 3D, cyan in the bust. Fits: walker, runner, raptor, Rex, crow, rat, Boxenkopf, Bassprediger. Own boss models are H2 | Session 2026-11-18 (contact sheet) | With H2; quick wins (vest, cable colour, Speier belly) any time |
-| P31 | Legendary and set visuals: each legendary weapon and set piece gets its own look in 3D (glow edge, particles, a changed mesh part); ideas per item in `docs/equipment-pipeline.md` › Priorities | Johannes, 2026-11-18 | After the starter and Köpenick items (equipment pipeline P1, P2) |
-| P32 | Equipment on the hero: the head slot never shows (no hat or helmet piece), 9 of 12 armors show the default coat, talisman, ring and implant have nothing in 3D. Build pieces per base in code first; Blender only to skin them (`docs/equipment-pipeline.md`) | Session 2026-11-18 | With P29 |
+| P31 | Legendary and set visuals (glow edge, particles, a changed mesh part). Scheduled: `docs/tasks/wp4-equipment-visuals.md` step 5 | Johannes, 2026-11-18 | WP4 |
+| P32 | Equipment on the hero: head, the armors that show the default coat, talisman, ring, implant. Scheduled: `docs/tasks/wp4-equipment-visuals.md` step 2 | Session 2026-11-18 | WP4 |
 | P33 | Balance bot plays every system: today it picks blessings, equips by power, salvages, uses powers, Verband and Molotow. Missing: Späti and trader purchases, camp upgrades and meals, smith and Aufsätze, Umbau cards (G1), shrines, hidden blessings and events, the tunnels between districts. Then calibrate the curve over the district chain (`node tools/balance.mjs 3 normal johannes 1 --chain`) to Johannes' telemetry (B9, B10) | Session 2026-11-18 | Next balance session (Fable high) |
 | P34 | Touch controls are harder than the pad (Johannes, 2026-11-18): compare deaths and fight times per input in telemetry (`inp`, `death`), then options such as a larger dodge button, aim assist strength on touch, a stick that follows the thumb, Auto-Angriff on by default for touch | Johannes, 2026-11-18 | After a few runs with the new telemetry |
 | P24 | Landmarks look too clean and intact for a ruined city: every sight (Rathaus, Tor, Reichstag, Sony Center, Fernsehturm, …) gets wear: soot streaks, cracks, broken and boarded windows, missing pieces, rubble and trash at the foot, rust and moss, graffiti up to 3 m, scaffolding or tarps on some. Shape stays recognizable. All four districts; code first (geometry breaks, vertex-colour grime), dirt and grime textures via Codex | Johannes, 2026-11-18 | Before the next district playtest; new landmarks are built worn from now on |
