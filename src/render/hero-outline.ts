@@ -3,6 +3,8 @@
 // hero's screen rectangle in front of her. Then only the masks with such boxes render their depth,
 // both depth renders and the contour are scissored to her rectangle, and the contour is blended onto
 // the read buffer (no full-screen copy).
+// Finds (2026-11-19): one more depth render of the few LOOT_LAYER meshes (hidden blessing shards, the cache),
+// scissored like the others and only on frames the pass already runs; same small cost on both profiles.
 import {
   Box3, Color, DepthTexture, MeshDepthMaterial, NearestFilter, NoBlending, NormalBlending, RedFormat, ShaderMaterial,
   Sphere, UniformsUtils, Vector2, Vector3, Vector4, WebGLRenderTarget, type Mesh, type Object3D, type PerspectiveCamera, type Scene,

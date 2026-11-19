@@ -80,6 +80,7 @@ export class ContentView {
   readonly group = new Group();
   private readonly hidden: Array<{ root: Group; shard: Mesh; glow: Sprite }> = [];
   private readonly tmp = new Vector3();
+  private readonly cacheParts: Mesh[] = [];
   private heroX = 0;
   private heroZ = 0;
   private readonly shrines: Array<{ root: Group; glow: Sprite; halo: Mesh }> = [];
@@ -127,8 +128,8 @@ export class ContentView {
     const cg = glowSprite('rgba(255,215,100,0.9)', 'rgba(255,170,40,0)', 3.2);
     cg.position.y = 0.8;
     this.cache.add(body, lid, band, lock, cg);
-    // The cache's contour shows through buildings within 15 m too.
-    for (const m of [body, lid, band, lock]) m.layers.enable(LOOT_LAYER);
+    // The cache's contour shows through buildings within 15 m too (the layer is switched in `update`).
+    this.cacheParts.push(body, lid, band, lock);
     // Supply drop: a strapped crate under a rag of parachute, with a beam to find it by.
     const box = new Mesh(new BoxGeometry(0.85, 0.7, 0.85), wood);
     box.position.y = 0.35;
@@ -290,6 +291,9 @@ export class ContentView {
       return !!o;
     };
     place(this.cache, c.cache);
+    // Only within 15 m, else the cache would get its contour whenever the pass runs for the hero or an enemy.
+    const near = !!c.cache && Math.hypot(c.cache.x - heroX, c.cache.z - heroZ) < LOOT_SHOW;
+    for (const m of this.cacheParts) { if (near) m.layers.enable(LOOT_LAYER); else m.layers.disable(LOOT_LAYER); }
     if (place(this.crate, c.crate)) (this.beam.material as MeshBasicMaterial).opacity = 0.22 + 0.1 * Math.sin(this.time * 4);
     if (place(this.zone, c.zone) && c.zone) {
       this.zoneRing.scale.setScalar(c.zone.r);
