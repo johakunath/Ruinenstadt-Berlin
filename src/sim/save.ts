@@ -10,7 +10,7 @@ import type { Equipment, StatContext } from './stats';
 import { createSim, type SimOptions } from './sim';
 import { createAbilities } from './abilities';
 import { setLoadout } from './loadout';
-import { spawnGuards } from './runcontent';
+import { placeFunde, spawnGuards } from './runcontent';
 import type { Sim } from './types';
 
 export const SAVE_VERSION = 1;
@@ -106,6 +106,10 @@ export function simFromSave(save: SaveV1, opts: Omit<SimOptions, 'inventory' | '
   if (run.abilities) sim.abilities = { ...createAbilities(), ...structuredClone(run.abilities) };
   if (run.content) {
     sim.content = { ...sim.content, ...structuredClone(run.content) };
+    // Funde: a checkpoint can be older than a pickup (the profile is written at once, the checkpoint stays),
+    // and one from before Funde existed has none; the profile decides what is still lying there.
+    const found = sim.statContext.funde ?? [];
+    sim.content.funde = sim.content.funde ? sim.content.funde.map((f) => ({ ...f, got: f.got || found.includes(f.id) })) : placeFunde(sim);
     for (const h of sim.content.shrines) sim.level.add({ kind: 'circle', x: h.x, z: h.z, r: 0.5 });
     // Enemies are not saved: an unfinished rescue gets its guards back, or the captive would be free at once.
     spawnGuards(sim);

@@ -2,7 +2,7 @@
 // the cache, the supply drop and the radio zone. Built in code; glows are unlit sprites (no lights).
 import {
   AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial,
-  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, Vector3, type Object3D, type Sphere,
+  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, Vector3, type BufferGeometry, type Object3D, type Sphere,
 } from 'three';
 import type { RunContent } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
@@ -10,6 +10,7 @@ import { heroLook } from '../data/hero-look';
 import { Animator, type CharacterAssets } from './characters';
 import { HeroModel } from './hero-model';
 import { groundY } from './ground';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FX_LAYER, LOOT_LAYER, LOOT_SHOW } from './layers';
 import type { Materials } from './materials';
 import { paintGlow, paintWood } from './paint';
@@ -74,6 +75,26 @@ function posters(): CanvasTexture {
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   return t;
+}
+
+/** Fund pieces, built once and shared by every run (no new GPU buffers per rebuild). */
+let FUND_PARTS: { gear: BufferGeometry; hub: BufferGeometry; box: BufferGeometry; tag: BufferGeometry; gold: MeshBasicMaterial; dark: MeshBasicMaterial; label: MeshBasicMaterial } | null = null;
+function fundParts(): NonNullable<typeof FUND_PARTS> {
+  if (FUND_PARTS) return FUND_PARTS;
+  // A gear: a thin wheel with eight teeth, merged into one geometry; a dark hub in the middle.
+  const wheel = new CylinderGeometry(0.22, 0.22, 0.06, 16).rotateX(Math.PI / 2);
+  const teeth = Array.from({ length: 8 }, (_, k) => {
+    const a = (k / 8) * Math.PI * 2;
+    return new BoxGeometry(0.08, 0.08, 0.06).rotateZ(a).translate(Math.cos(a) * 0.26, Math.sin(a) * 0.26, 0);
+  });
+  const gear = mergeGeometries([wheel, ...teeth])!;
+  for (const g of [wheel, ...teeth]) g.dispose();
+  FUND_PARTS = {
+    gear, hub: new CylinderGeometry(0.07, 0.07, 0.07, 10).rotateX(Math.PI / 2),
+    box: new BoxGeometry(0.36, 0.22, 0.06), tag: new BoxGeometry(0.28, 0.08, 0.065).translate(0, 0.04, 0),
+    gold: new MeshBasicMaterial({ color: 0xd9a940, fog: false }), dark: new MeshBasicMaterial({ color: 0x2a2622, fog: false }), label: new MeshBasicMaterial({ color: 0xe8dccb, fog: false }),
+  };
+  return FUND_PARTS;
 }
 
 export class ContentView {
@@ -165,29 +186,15 @@ export class ContentView {
   private build(c: RunContent): void {
     this.built = c;
     for (const h of [...this.hidden, ...this.shrines, ...this.funde]) this.group.remove(h.root);
+    // The Fund glows own a painted texture each; the meshes share FUND_PARTS and are not freed.
+    for (const h of this.funde) { const m = h.glow.material as SpriteMaterial; m.map?.dispose(); m.dispose(); }
     this.hidden.length = this.shrines.length = this.funde.length = 0;
-    const gold = new MeshBasicMaterial({ color: 0xd9a940, fog: false }), dark = new MeshBasicMaterial({ color: 0x2a2622, fog: false }), label = new MeshBasicMaterial({ color: 0xe8dccb, fog: false });
+    const F = fundParts();
     for (const f of c.funde ?? []) {
       const root = new Group(), body = new Group();
-      if (f.kind === 'teil') {
-        // A gear: a thin wheel with eight teeth and a hub hole look (dark centre).
-        const wheel = new Mesh(new CylinderGeometry(0.22, 0.22, 0.06, 16), gold);
-        wheel.rotation.x = Math.PI / 2;
-        body.add(wheel);
-        for (let k = 0; k < 8; k++) {
-          const t = new Mesh(new BoxGeometry(0.08, 0.08, 0.06), gold), a = (k / 8) * Math.PI * 2;
-          t.position.set(Math.cos(a) * 0.26, Math.sin(a) * 0.26, 0);
-          t.rotation.z = a;
-          body.add(t);
-        }
-        const hub = new Mesh(new CylinderGeometry(0.07, 0.07, 0.07, 10), dark);
-        hub.rotation.x = Math.PI / 2;
-        body.add(hub);
-      } else {
-        const box = new Mesh(new BoxGeometry(0.36, 0.22, 0.06), dark), tag = new Mesh(new BoxGeometry(0.28, 0.08, 0.065), label);
-        tag.position.y = 0.04;
-        body.add(box, tag);
-      }
+      // Shared, merged pieces (review of PR #58): an Uhrwerkteil is two draw calls, a cassette two.
+      if (f.kind === 'teil') body.add(new Mesh(F.gear, F.gold), new Mesh(F.hub, F.dark));
+      else body.add(new Mesh(F.box, F.dark), new Mesh(F.tag, F.label));
       // FX layer, plus the find contour through buildings within 15 m (hero-outline.ts); the root hides beyond that.
       body.traverse((o) => { o.layers.set(FX_LAYER); o.layers.enable(LOOT_LAYER); });
       const glow = f.kind === 'teil' ? glowSprite('rgba(255,205,110,1)', 'rgba(255,150,40,0)', 2) : glowSprite('rgba(230,235,255,0.9)', 'rgba(150,170,255,0)', 1.6);
