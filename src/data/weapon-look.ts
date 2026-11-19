@@ -70,6 +70,8 @@ export const WEAPON_LOOKS = {
   morgen: { kind: 'hammer', family: 'set', length: 0.9 },
   'brech:kiez': { kind: 'blade', family: 'set', length: 0.53, ...CLEAVER },
   'zwille:spree': { kind: 'sling', family: 'set', length: 0.31, glow: '#5fd18a' },
+  // Tunnelläufer: the Rohrzange in brass; its lantern glows warm without an element.
+  'zange:tunnel': { kind: 'hammer', family: 'set', length: 0.66, hands: 1, types: ['wucht'], glow: '#fff2b0' },
 } as const satisfies Readonly<Record<string, WeaponLook>>;
 
 export type WeaponLookId = keyof typeof WEAPON_LOOKS;

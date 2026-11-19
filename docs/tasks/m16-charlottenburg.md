@@ -137,7 +137,7 @@ Text drafts (Opus finalises): banner „Charlottenburg · 1920“; district card
 - New materials: two sign atlases (City West 1024 × 1280, Ku'damm 1024²; lettering, marquee bulbs, lit interiors, posters), each one draw call per chunk where a sign shows. No lights added. Schloss: no new material (mirrors on the shared glossy steel with the sky reflection).
 - Data changes: Gloria-Palast footprint 11 × 7 m (was 8 × 6); Marmorhaus has `cut` at 4.3 m (it stands on the camera side of the Ku'damm). Nothing else moved.
 - Triangles per landmark 0.5k to 9.2k (KaDeWe 9.2k, Schloss centre 6.1k, church 5.3k, station 4.9k, Varieté 4.8k).
-- Open: no reveal entries for the new sights beyond the five of step 2 (candidates: Elefantentor, Revuepalast, Theater des Westens); the Schloss reveal down the Schloßstraße was never seen running and the dome is dim at night in the cloud render (hardware check 42); the KaDeWe street front is never seen from the north by any camera; the stucco base reads warm, so grey stone looks tan in daylight sheets (step 3b).
+- Open: no reveal entries for the new sights beyond the five of step 2 (candidates: Elefantentor, Revuepalast, Theater des Westens); the Schloss reveal down the Schloßstraße was never seen running and the dome is dim at night in the cloud render (hardware check 43); the KaDeWe street front is never seen from the north by any camera; the stucco base reads warm, so grey stone looks tan in daylight sheets (step 3b).
 
 ## Handover 2026-11-19 (landmark lighting) [Claude · Opus high]
 
@@ -145,7 +145,7 @@ Text drafts (Opus finalises): banner „Charlottenburg · 1920“; district card
 - Colours: BULB `0xfff2ea` (marquees, Ehrenhof stage) and PINK `0xff58c8` (Revuepalast, Varieté) added; a chunk with sights holds at most two lamp colours. Washes reuse the chunk's glow material through `ChunkBuilder.glowMaterial`.
 - Data: four gas lanterns (`lantern`, fixed props) on the rim of the church fight. Reveals: Elefantentor, Revuepalast, Theater des Westens added; Schloss `near` 50 → 66 (test: fires north of the Schloßstraße fight and on both sidewalks of the Spandauer Damm; at `?mapscale=1.3` on its north side only).
 - Cost (Leistung, cloud, `seed=7`, same spot): Ku'damm at the Revuepalast +4 draw calls / +0.2k triangles, church square +3 / +2.7k, Ehrenhof +5 / +2.9k. No new light, pass or shadow.
-- Proof: `docs/proof/m16-charlottenburg/lighting/` (before/after pairs, three new reveals). Hardware check 43.
+- Proof: `docs/proof/m16-charlottenburg/lighting/` (before/after pairs, three new reveals). Hardware check 44.
 - Open for 3b: the KaDeWe street front (shop-window spills) is never in a game camera; the glow texture is warm, so BULB pools read pale amber and PINK berry-red (a neutral texture would cost one more material per chunk); the zone skies (3a) will need `GAIN` and the per-sight strengths retuned; the dome lantern's crossed-card flare looks like a star up close.
 
 ## Handover 2026-11-19 (worn surfaces, Diva gown) [Claude · Opus high]

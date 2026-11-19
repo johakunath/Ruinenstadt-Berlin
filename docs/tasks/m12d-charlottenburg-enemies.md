@@ -210,7 +210,7 @@ Cloud readout (`node tools/passes.mjs`, courtyard, Leistung, all passes / main p
 | Das Spiegelpaar with its reflection (two bodies) | +5.5 / +2.5 against two Spreehexen | +44.5 / +15.5 |
 | Die Diamantene Diva | +19.5 / +6.5 over the Spreehexe | +39 / +13 |
 
-Boss rows may include an add or two called in before the frame was measured. Telegraphs: a glass burst ring is two draws (rim, fill) while marked, at most 18 zones shown; the shard spray uses the pooled glow particles (no draw of its own); a prism strip one draw (three slots), the guard and real-one rings one each (two slots), the stage spotlight the Wachdrohne's three. No lights, no shadow from glass glows or telegraphs. Fps only on hardware (`docs/tasks/pt-hardware-checks.md` rows 40, 41).
+Boss rows may include an add or two called in before the frame was measured. Telegraphs: a glass burst ring is two draws (rim, fill) while marked, at most 18 zones shown; the shard spray uses the pooled glow particles (no draw of its own); a prism strip one draw (three slots), the guard and real-one rings one each (two slots), the stage spotlight the Wachdrohne's three. No lights, no shadow from glass glows or telegraphs. Fps only on hardware (`docs/tasks/pt-hardware-checks.md` rows 41, 41).
 
 ### Bot
 `node tools/balance.mjs --map=charlottenburg` (normal, johannes, five fresh campaigns, tier 32 to 54): 5/5 won, 3.6 deaths and 24.1 min per campaign. Every death is in the first fight (Konzertgarten, fresh gear, power 132, 73 % damage taken); from the Elefantentor on nothing kills: bosses fall in 44 s (Conférencier), 35 s (Ringvater), 47 s (Spiegelpaar), 38 s (Diva), lowest life 81 to 86 %; the calm Karpfenteich takes 2 %. The same shape as Mitte (start too hard on fresh gear, the rest too easy, bosses short): calibration of tier start and boss life stays step 8.
@@ -220,4 +220,4 @@ Boss rows may include an add or two called in before the frame was measured. Tel
 - Maze riddles (6c) and the loot (Ornat des Letzten Vorhangs, Schlussapplaus, Kristall) not built.
 - The Diva's stage lights following her phases and the dawn per phase (render ties) not built.
 - Pitch of the burst chime is by body size in two steps (`glassChime`, `glassLow`), not continuous.
-- Check: `?map=charlottenburg&autostart&spawn=scherbe,loge,souffleur`, `?spawn=conferencier` (and `ringvater`, `spiegelpaar`, `diva`); `PORT=5184 node tools/enemy-sheet.mjs out.png "kind=diva&n=3&tier=1"`, `"kind=walker&n=2&revue=1"`. Johannes rows: `docs/tasks/pt-hardware-checks.md` › Playtest (Charlottenburg roster), hardware 40 and 41.
+- Check: `?map=charlottenburg&autostart&spawn=scherbe,loge,souffleur`, `?spawn=conferencier` (and `ringvater`, `spiegelpaar`, `diva`); `PORT=5184 node tools/enemy-sheet.mjs out.png "kind=diva&n=3&tier=1"`, `"kind=walker&n=2&revue=1"`. Johannes rows: `docs/tasks/pt-hardware-checks.md` › Playtest (Charlottenburg roster), hardware 40 and 42.

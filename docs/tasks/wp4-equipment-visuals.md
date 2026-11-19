@@ -1,6 +1,6 @@
 # WP4 Hero, weapons and loot visuals [Claude · Fable high (spec) · Opus high (build) · Codex (icons)]
 
-Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
+Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Step 2 (clothing) and step 4 (2D #2 close-out) built 2026-11-19 (handover at the end); tunnel set waits for Johannes' pick. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
 
 ## Goal
 Every weapon base, armor, hat, glove, boot, talisman, ring and implant shows on the hero, legendaries and sets have their own look, ground loot shows what it is, and daggers come in as dual wield. Draw calls on the hero go down, not up.
@@ -231,6 +231,8 @@ Shapes are start values. Look at `assets/inventory/<icon>.webp` and the 2D side 
 | I97 | Arm des Basspredigers | New: own icon (shares I58 with Kabelarm today) |
 | I61 | Neonflinte | Repaint as the neon fork of the model (step 1c fell back to the fork, 2026-11-19) |
 
+Status 2026-11-19: superseded by D10 and step 2. I61, I88, I32, I91 to I94 are rendered from the models; the painted ones left (I95, I96, I97 and the Tunnelläufer key ring I102) are K4 in `docs/asset-pipeline.md`.
+
 Code side of the icons [Opus, step 2]: `itemIcon` looks up `base:set` before `base`; slot a with base `kette` uses `khemd` (I57). Holzlatte needs no icon change: the model follows I01.
 
 ### Step 2 Hero equipment (P32) [Claude · Opus high]
@@ -241,7 +243,7 @@ Code side of the icons [Opus, step 2]: `itemIcon` looks up `base:set` before `ba
 | 2b | Hats (9) | Sheet `looks-head.png`, front, side, back |
 | 2c | Armor (12 bases, Kettenhemd, 2 set variants): palettes and parts | Sheet `looks-armor.png`; strips of sprint, hammer combo and roll with `panzer` and `ritter` show no plate through the body |
 | 2d | Gloves (6), boots (6) | Sheet |
-| 2e | Talisman (9 + 2 set), implant (7), ring (8), in this order | Sheet at doll size and game camera; G5 |
+| 2e | Dropped (2026-11-19): talisman, ring and implant keep their painted icons, no 3D | – |
 
 Name the chroma classes after a look at a render (which of `a_mantel`'s three is coat, trousers, strap). Colours from 2D; start values.
 
@@ -272,6 +274,51 @@ Name the chroma classes after a look at a render (which of `a_mantel`'s three is
 | Talisman | `kiesel` pebble · `stueck` Wall chunk with a paint patch · `feder` black feather · `kette` loop of bike chain · `beutel` herb pouch · `abzeichen` round badge (kiez: blue) · `herz` teal heart, glow · `auge` cyan eye, glow · `wappen` shield crest; `kiesel` + spree: green pebble |
 | Ring | `siegel` gold, red seal · `totenk` silver skull · `mutter` steel hex nut · `draht` copper wire, two turns · `ehe` plain gold · `kupfer` copper · `weltuhr` dial disc, glow · `spreering` green |
 | Implantat | `nauge` lens over the left eye · `zchip` chip at the temple · `karm` forearm bracer with cables · `reflex` coupler on the upper arm · `bherz` pump on the chest · `npumpe` unit on the back with a tube · `bassarm` speaker-cone bracer, magenta glow |
+
+### Step 2 looks: mockup and decisions (Johannes, 2026-11-19) [Claude · Opus high]
+Brief (Johannes): redo every wearable item that shows in 3D; at least one look per district in map order (Köpenick, Xhain, Alexanderplatz, Mitte), sets more elaborate, brighter and matching, legendaries their own look; simple items may be a palette on the existing pieces, hats, belts and some boots get own geometry; icons rendered from the 3D models for everything visible; one mockup per item, he then picks what to redo.
+
+Mockup: `docs/mockups/wp4-clothes/` (`koepenick`, `xhain`, `alex-mitte`, `sets`, `legendary` as SVG and WebP; rebuild with `node docs/mockups/wp4-clothes/build.mjs`). `items.mjs` holds every look's colours, parts and route: these are the start values for the build, and they replace the colour table above where they differ. 36 items plus 4 district and 3 set combinations.
+
+Decided in this session (Opus 5.5; open points under Questions):
+
+| Topic | Decision |
+|---|---|
+| Belt, trousers | Not slots (2D has none either). Each Körper item sets its trouser colour and brings its own belt part (tool belt, studs, fire hook belt, duty belt, sash, rat tails, LED belt). A new slot would touch save, loot, doll, stats and bot |
+| Gloves | Stay in scope: palette plus small parts, cheap |
+| Talisman, ring, implant | No 3D; the painted icons stay (Johannes: some items need no model). Answers G5; step 2e is dropped. Legendary talismans and rings can still get a proc flash in step 5 |
+| District grouping | By theme, map order. Köpenick: Arbeitsmantel, Schutzweste, Bauhelm, Schiebermütze, Arbeits- and Schweißerhandschuhe, Arbeits- and Gummistiefel. Xhain: Lederjacke, Feuerwehrjacke, BVG-Uniform, Wollmütze, Gasmaske, Boxbandagen, Turnschuhe. Alexanderplatz: the GDR bases. Mitte: the neon bases. Drops are unchanged (see Questions) |
+| D2 mechanism 4: cut | A jacket is `a_mantel` without the skirt, cut in code at load (one more index range, 0 draw calls). Checked in `hero.glb`: skirt 228 vertices, 324 triangles (coat colour, below 1.09 m, dominant joint `thigh_*`, `coat_b*` or `pelvis`); the torso shell ends at 1.04 m under the belt; the trousers are a full shell under the skirt (0.052 to 1.076 m). Skirt rows at 0.98, 0.88, 0.79, 0.69, 0.59, 0.50 m; a mid-length coat cuts on a row (Feuerwehrjacke 0.79, Kettenhemd 0.69). Blender fallbacks B2, B3 in `docs/blender-pipeline.md` |
+| CC0 pieces | Quaternius "Modular Character Outfits - Fantasy" Standard (CC0, free, itch.io slug `modular-character-outfits-fantasy`, same 65-joint skeleton as UBC and the hero): only Peasant and Ranger. Used: Ranger boots for the Stiefel des Spreegeists, recoloured, simplified in Node from 9,172 to ≤ 2,000 triangles (`@gltf-transform/functions` simplify), replacing `f_stiefel`. Not used: hood, pauldrons, bracers, belts (code parts match the weapon style and cost less). UBC Standard itself has no clothing. poly.pizza and kenney.nl are blocked by Cloudflare from the cloud |
+| Blender | Only the Regenponcho shell (B1). Everything else is code or Node |
+| Codex | T9 in `docs/asset-pipeline.md`: tweed, denim, knit, straw, chainmail, patchwork, two decals; fur from T8 |
+| Icons | Every Körper, Kopf, Hände and Füße item gets a rendered icon (`tools/item-icons.mjs`): the piece on a hidden body, hats and boots alone |
+
+Johannes, 2026-11-19 (after the mockups): "Those look pretty great": build in 3D as drawn, with a little more volume round the shoulders (`puff`, default 12 mm), "just make them look good", rewarding to find. Then three decisions:
+
+| Topic | Decision |
+|---|---|
+| Regenponcho | Blender shell (B1 in `docs/blender-pipeline.md`); until it is done the coat in teal with glow bands and a hood roll |
+| Item pools | Split now, built: Köpenick drops only its own normal wear, Xhain its own at 40 % else Köpenick's, later districts both (`wearNames` in `src/sim/items.ts`, `XHAIN_WEAR_NAMES`; test in `src/sim/items.test.ts`). Weapons and the flavoured pools are unchanged; item values never depended on the base |
+| Tunnels | "Tunnels can have their own sets": proposal below, mockup `docs/mockups/wp4-clothes/tunnel.webp` |
+
+Tunnel set Tunnelläufer (proposal, start values; Opus 5.5, bonus numbers want a Fable or bot pass):
+
+| Piece | Base (set key) | Look |
+|---|---|---|
+| Mantel des Tunnelläufers | `mantel:tunnel` | Ochre-olive coat `#7a6a34`, BVG-yellow hem `#e0a020`, harness with a copper pressure tank on the back, gauge, hose, U key tag |
+| Stirnlampe des Tunnelläufers | `nbrille:tunnel` | Headband with a warm glowing brass lamp, goggles pushed up, hair stays |
+| Stiefel des Tunnelläufers | `stiefel:tunnel` | Heavy boots, puttee wraps to the calf, steel toe caps |
+| Rohrzange des Tunnelläufers | `zange:tunnel` | The Rohrzange in brass, gauge on the grip, a small lantern on a strap (weapon variant like `brech:kiez`) |
+| Schlüsselbund des Tunnelläufers | `kette:tunnel` (talisman) | Old tunnel keys with a yellow U tag; painted icon (Codex), no 3D |
+
+- Bonuses (start values, built): 2 pieces −20 % Abklingzeiten; 3 pieces +50 % Schaden and +2 Leben pro Sekunde; 5 pieces +8 Beuteglück and +120 Leben (the proposal said +3 and +20; scaled to the affix ranges: regen 0.3 to 1, luck 1 to 2 per item).
+- Drops: only in the tunnels; there a set drop is the Tunnelläufer at 60 %, else one of the three others. Outside the tunnels it never drops. One set for all lines now; a set per line can follow when more lines exist.
+- Build after Johannes' pick: `SETS.tunnel` and `SET_BONUSES.tunnel` in `src/data/items.ts`, the tunnel rule in `makeSetItem`, WEAR and gear (Stirnlampe, harness, puttees), the weapon variant and its icon, Codex: painted key ring icon; balance bot run.
+
+Scarf (Johannes, 2026-11-19): the red scarf only with the coats (starter, Arbeitsmantel); the Späti and Rattenmutter coats keep their coloured scarves; every other armor has none (`scarf: 'none'`). Hats never hide it (the coats' neckline under the scarf is unfinished, the fur collar sits on its ring). Neck parts refitted to sit on the bare neck (collars low at the back: the neck tilts back 33 to 46° in every clip), new `collar-fire`, neck bands on the tabard, BVG and Panzer.
+
+Budget: belts, hats and plates go into the gear mesh (2,500 triangles, D3). The heaviest look is the Rüstung des Zitadellenritters (chest plate, gorget, three-lame pauldrons, vambraces, tassets): count it first. Cut and Quaternius boots replace a piece, so 0 extra draw calls.
 
 ### Step 3 Pickups (P10) [Claude · Opus high]
 1. Mockup of G2 (SVG, three variants, example drops of each rarity) to the chat; Johannes chooses.
@@ -326,6 +373,8 @@ New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 
 
 ## Questions
 - Gates G2 to G6 are listed above.
+- Step 2 looks (Johannes): which mockups to redo. Recommendation for the rest: build as drawn.
+- Tunnelläufer: approved ("Tunnelläufer ist fein", 2026-11-19) and built; bonus numbers scaled to the item affix sizes (5 pieces: +8 Beuteglück, not +20; 3 pieces: +2 Leben pro Sekunde, not +3), to be checked by the balance bot (P33).
 - D9 hit numbers: the 3D game shows no damage numbers, so an effective hit is shown by cool white hit sparks (`fx.sparks`) instead of a tinted number. Damage numbers would be a separate decision.
 - D9 classes that may not fit their bodies (assignment kept): Rattenmutter (zombie body, Tiere only), Bassprediger (zombie body, Maschinen only, unlike Kabelghul and Boxenkopf), Wurzler and Wurzel-Mutter (zombie bodies under roots, Pflanzen only), the uniformed bosses (zombie bodies, Menschen: the blade gets no bonus on them).
 - D8: a two-handed hammer a third shorter comes out at reach 0.9, not 0.85 (length 0.86 to 0.9 against 1.16, light1 reach 2.47).
@@ -473,4 +522,14 @@ Johannes, 2026-11-19: no painted item icons any more.
 - Models: Hackmesser silvery with an edge gleam (fixed accent `gleam`, not a signature), Kiezwache shinier with a ribbon, Sichel and Werkhammer clean metal (metal atlas with a brushed half), Holzlatte wood, Rohrzange end, fork handles a third shorter (sling grip zone now −0.02 to 0.14), Spreegeist green glow, Boxenhammer sides, Mikroständer shorter (reach 0.95), Mauer- and Plattenbrecher chipped paint, fragments, cracks.
 - Review fix: `thrustTipY` uses the shown spear's `length` (no unit test covers it: the rack needs a canvas).
 - Proof: `neonfl-shot.png`, `neonfl-game.png`; icons, the three sheets and both inventory screenshots rerun after the last model change.
+
+## Handover step 2 and 4 (Opus 5.5, 2026-11-19)
+- Built: `WEAR` and `PALETTES` (`src/data/hero-look.ts`), piece variants with roles, palettes, bands, spots, coat cut and shoulder `puff` (`src/render/hero-wear.ts`), fitted rigid gear merged into ≤ 3 skinned meshes (`gear-kit.ts`, `gear.ts`, builders `gear-head.ts`, `gear-body.ts`, `gear-body-rare.ts`, `gear-limbs.ts`, four parallel Opus builders), `HeroModel` swaps variants and gear in `setLook`; NPCs get no gear.
+- Numbers: gear ≤ 3,200 triangles per full look (D3 2,500 raised), glow ≤ 400; hero ≤ 12 skinned draw calls (vest + 3 gear); heaviest hero about 22,300 triangles; gear build 3 to 11 ms per item on first equip, then cached. Puff per armor 12 to 26 mm.
+- Tests: `hero-look.test.ts` (every wear base, palettes, cuts, set keys, step 4 legendaries and sets differ), `hero-wear.test.ts` (roles in hero.glb, cut, tint, puff, caching), `gear.test.ts` (builders, bones, budget of every combination, hero total), `items.test.ts` (district wear pools).
+- Icons: 36 rendered (`PAGES=wear node tools/item-icons.mjs`, `tools/look-sheet.html?mode=icons`); new I93 Weste der Kiezwache, I94 Mantel des Spreegeists, I57 Kettenhemd (`kette:zit`). Sheets: `node tools/look-sheet.mjs out.png "group=sets"`; proof in `docs/proof/wp4/step2/`.
+- Deviations: Spreegeist boots in code (no Quaternius); brims higher and level (the idle head tilts down); glow colours deeper than the mockup (the glow material emits 2.2×); torso plates split over spine_01..03 (sprint); tassets and jeans rips on the thighs; Kettenhemd grey darker until the T9 mail texture; Arbeitshandschuhe tan (`arbeit` palette).
+- Reused from 2D: `HEADL`, `GLOVE`, `BOOT`, `LOOK` colours as palette start values; the Pickelhaube eagle outline from the Hauptmann boss.
+- Not verified: hardware cost and hitch (row 39 in `pt-hardware-checks.md`), look at the phone camera; known clipping: straw brim vs a raised arm, gas-mask canister and helm edge into the scarf with the chin down, collars stand off a raised shoulder.
+- Addendum (same day): scarf rule (red only with the coats, `scarf: 'none'` elsewhere, hats never hide it), neck parts refitted (`neckOf`, `collarShell`, `yoke`, `neckBand`, `coatCollar` in `gear-body.ts`; new `collar-fire`); Tunnelläufer built: `SETS.tunnel`, `SET_BONUSES.tunnel` (start values), `LootContext.tunnel` from `MapDef.tunnel`, `makeSetItem` 60 % in tunnels, never outside; gear in `gear-tunnel.ts` (1,942 triangles for the set), weapon `zange:tunnel`; icons I98 to I101 rendered, I102 (key ring) is Codex K4. Look sheet group `tunnel`.
 

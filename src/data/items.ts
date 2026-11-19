@@ -11,7 +11,7 @@ export type SlotId = 'w' | 'h' | 'a' | 'g' | 'f' | 't' | 'r' | 'i';
 export type WeaponKindId = 'blade' | 'hammer' | 'sling' | 'spear';
 export type AttributeKindId = 'krit' | 'tempo' | 'heil';
 export type ItemKindId = WeaponKindId | AttributeKindId | 'armor' | 'head' | 'hand' | 'feet';
-export type SetId = 'kiez' | 'spree' | 'zit';
+export type SetId = 'kiez' | 'spree' | 'zit' | 'tunnel';
 export type SetThreshold = 2 | 3 | 5;
 export type BaseId = 'latte' | 'rohr' | 'stahl' | 'machete' | 'brech' | 'vorschlag' | 'pflaster' | 'zange' | 'zwille'
   | 'nagel' | 'stein' | 'turm' | 'mauer' | 'ring' | 'leder' | 'helm' | 'mantel' | 'weste'
@@ -235,6 +235,15 @@ export const SETS: Readonly<Record<SetId, SetDefinition>> = {
        h: { name: 'Topfhelm der Zitadelle', kind: 'head', base: 'topfhelm' },
        f: { name: 'Eisenstiefel der Zitadelle', kind: 'feet', base: 'eisenstief' } },
     bonusDescriptions: { '2': '+120 Leben', '3': '+55% Schaden und +20% Widerstand', '5': '+200 Leben und +4 Leben pro Kill' } },
+  // Johannes, 2026-11-19: the tunnels have their own set (WP4 step 2, docs/mockups/wp4-clothes/tunnel.webp); drops only there.
+  tunnel: { name: 'Tunnelläufer',
+    pieces:
+     { w: { name: 'Rohrzange des Tunnelläufers', kind: 'hammer', base: 'zange' },
+       a: { name: 'Mantel des Tunnelläufers', kind: 'armor', base: 'mantel' },
+       t: { name: 'Schlüsselbund des Tunnelläufers', kind: 'heil', base: 'kette' },
+       h: { name: 'Stirnlampe des Tunnelläufers', kind: 'head', base: 'nbrille' },
+       f: { name: 'Stiefel des Tunnelläufers', kind: 'feet', base: 'stiefel' } },
+    bonusDescriptions: { '2': '−20% Abklingzeiten', '3': '+50% Schaden und +2 Leben pro Sekunde', '5': '+8 Beuteglück und +120 Leben' } },
 };
 
 /** 2D SETB. */
@@ -248,6 +257,10 @@ export const SET_BONUSES: Readonly<Record<SetId, readonly SetBonus[]>> = {
   zit: [ { pieces: 2, affixes: { hp: 120 } },
     { pieces: 3, affixes: { dmg: 55, res: 20 } },
     { pieces: 5, affixes: { hp: 200, leech: 4 } } ],
+  // Start values (WP4 step 2), to be checked by the balance bot.
+  tunnel: [ { pieces: 2, affixes: { cdr: 20 } },
+    { pieces: 3, affixes: { dmg: 50, regen: 2 } },
+    { pieces: 5, affixes: { luck: 8, hp: 120 } } ],
 };
 
 /** 2D SETC. */

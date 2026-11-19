@@ -169,6 +169,8 @@ export class Level {
   /** L2: district index for loot (2D `D.lvl`: item level +3 per district) and item name flavor. Köpenick 0. */
   district = 0;
   flavor?: 'neon' | 'gdr' | 'revue';
+  /** U-Bahn tunnel map (M19/M20): the tunnel set drops here. */
+  tunnel?: boolean;
   /** M12c rain (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
   wet?: boolean;
   /** M16 „Glas splittert“: glass bodies burst when they die. */

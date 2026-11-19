@@ -1877,6 +1877,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   level.district = m.district ?? 0;
   level.camp = !!m.camp;
   if (m.flavor) level.flavor = m.flavor;
+  if (m.tunnel) level.tunnel = true;
   if (m.wet) level.wet = true;
   if (m.shards) level.shards = true;
   level.hiddenSpots = m.hiddenSpots ?? [];

@@ -26,7 +26,7 @@ describe('ported item and progression data', () => {
     // Duplicate object keys are rejected by TypeScript; counts also catch omissions.
     for (const [table, count] of [
       [items.AFFIXES, 11], [items.ELEMENTS, 3], [items.ENEMY_RESISTANCES, 27],
-      [items.IMPLICITS, 26], [items.SETS, 3], [items.SET_BONUSES, 3],
+      [items.IMPLICITS, 26], [items.SETS, 4], [items.SET_BONUSES, 4],
       [items.LEGENDARY_POWERS, 18], [items.LEGENDARY_ELEMENTS, 7],
       [items.WEAPON_KINDS, 4], [names.BASES, 94 /* 91 from 2D + three Klinge names */],
       [crafting.MATERIALS, 4], [crafting.INGREDIENTS, 3],

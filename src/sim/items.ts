@@ -33,6 +33,8 @@ export interface LootContext {
   /** Effective wave (2D wE()), or 1 outside a run. */
   wave: number;
   flavor?: 'neon' | 'gdr';
+  /** An U-Bahn tunnel map: its own set drops here (`makeSetItem`). */
+  tunnel?: boolean;
   /** Caller-owned last allocated id. Share one context per sim; persist with its state. */
   itemId?: number;
 }
@@ -44,6 +46,17 @@ export function rollRarity(rng: Rng, ctx: LootContext, minRarity = 0): RarityId 
   let x = rng.next() * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < 4; i++) if ((x -= weights[i]!) < 0) return i as RarityId;
   return minRarity as RarityId;
+}
+
+/**
+ * Normal wear names of a district (WP4 step 2): Köpenick (0) only its own bases, Xhain (1) its own at
+ * 40 % else Köpenick's, every later district both. Consumes one random number in Xhain only.
+ */
+function wearNames(rng: Rng, ctx: LootContext, all: readonly string[]): readonly string[] {
+  if (ctx.district >= 2) return all;
+  const xhain = all.filter((n) => N.XHAIN_WEAR_NAMES.has(n)), home = all.filter((n) => !N.XHAIN_WEAR_NAMES.has(n));
+  if (ctx.district === 1 && xhain.length && rng.next() < .4) return xhain;
+  return home.length ? home : all;
 }
 
 export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarity = 0, forcedSlot?: SlotId): Item {
@@ -65,16 +78,16 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
     value = Math.round((4 + itemLevel * 1.6) * WEAPON_KINDS[weapon].damageFactor * m);
   } else if (slot === 'a') {
     kind = 'armor';
-    name = rng.pick(rarity === 3 ? N.LEGENDARY_ARMOR_NAMES : cy && rng.next() < .4 ? N.NEON_ARMOR_NAMES : gd && rng.next() < .4 ? N.GDR_ARMOR_NAMES : N.ARMOR_NAMES);
+    name = rng.pick(rarity === 3 ? N.LEGENDARY_ARMOR_NAMES : cy && rng.next() < .4 ? N.NEON_ARMOR_NAMES : gd && rng.next() < .4 ? N.GDR_ARMOR_NAMES : wearNames(rng, ctx, N.ARMOR_NAMES));
     value = Math.round((12 + itemLevel * 6) * m);
   } else if (slot === 'h') {
     kind = 'head';
-    name = rng.pick(rarity === 3 ? N.LEGENDARY_HEAD_NAMES : cy && rng.next() < .4 ? N.NEON_HEAD_NAMES : gd && rng.next() < .4 ? N.GDR_HEAD_NAMES : N.HEAD_NAMES);
+    name = rng.pick(rarity === 3 ? N.LEGENDARY_HEAD_NAMES : cy && rng.next() < .4 ? N.NEON_HEAD_NAMES : gd && rng.next() < .4 ? N.GDR_HEAD_NAMES : wearNames(rng, ctx, N.HEAD_NAMES));
     value = Math.round((2 + itemLevel * .12) * m);
   } else if (slot === 'g' || slot === 'f') {
     kind = slot === 'g' ? 'hand' : 'feet';
     name = rng.pick(rarity === 3 ? slot === 'g' ? N.LEGENDARY_HAND_NAMES : N.LEGENDARY_FOOT_NAMES
-      : slot === 'g' ? gd && rng.next() < .4 ? N.GDR_HAND_NAMES : N.HAND_NAMES : N.FOOT_NAMES);
+      : slot === 'g' ? gd && rng.next() < .4 ? N.GDR_HAND_NAMES : wearNames(rng, ctx, N.HAND_NAMES) : wearNames(rng, ctx, N.FOOT_NAMES));
     value = Math.round((3 + itemLevel * .12) * m);
   } else if (slot === 'i') {
     const attribute = rarity === 3 ? 'tempo' : rng.pick<AttributeKindId>(['krit', 'tempo', 'heil']);
@@ -97,7 +110,8 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
 }
 
 export function makeSetItem(rng: Rng, ctx: LootContext, itemLevel: number): Item {
-  const set = rng.pick<SetId>(['kiez', 'spree', 'zit']);
+  // The Tunnelläufer drops only in the tunnels, there in 60 % of set drops (Johannes, 2026-11-19).
+  const set = ctx.tunnel && rng.next() < .6 ? 'tunnel' : rng.pick<SetId>(['kiez', 'spree', 'zit']);
   const slot = rng.pick(Object.keys(SETS[set].pieces) as SlotId[]);
   const { name, kind, base } = SETS[set].pieces[slot]!;
   let value: number;
@@ -106,6 +120,8 @@ export function makeSetItem(rng: Rng, ctx: LootContext, itemLevel: number): Item
   else if (slot === 'a') value = Math.round((12 + itemLevel * 6) * 1.8);
   else if (slot === 'h') value = Math.round((2 + itemLevel * .12) * 1.8);
   else if (slot === 'g' || slot === 'f') value = Math.round((3 + itemLevel * .12) * 1.8);
+  // The Tunnelläufer key ring heals (Codex review): the normal talisman formula, one decimal like `makeItem`.
+  else if (kind === 'heil') value = +((.5 + itemLevel * .12) * 1.8).toFixed(1);
   else value = Math.round({ krit: 3 + itemLevel * .35, tempo: 4 + itemLevel * .3 }[kind as 'krit' | 'tempo'] * 1.8);
   const item: Item = { id: nextId(ctx), slot, kind, base, name, rarity: 2, value, itemLevel, affixes: [], set };
   rollAffixes(rng, item);

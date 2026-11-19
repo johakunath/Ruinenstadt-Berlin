@@ -94,6 +94,7 @@ T1 is done (PR #14). The T1b paving and leaf images are built, with performance 
 | P24 | Shared landmark weathering: soot, cracks, moss and graffiti on an alpha atlas | Procedurally painted decal atlas | Sized to each facade | Built, [P24/T5 review and performance open](tasks/p24-t5-landmark-weathering.md) |
 | M15 Mitte step 9 | Wet asphalt, curtain wall glazing, sandstone and neon signs | Shared street, existing glass and sandstone materials, and authored Mitte sign atlas | Existing UV scale | Built, [Mitte proof and handover](proof/asset-mitte/README.md) |
 | M11c | Lot and plant textures, including paving marks, rubble, structures and vegetation | Code-painted lot and plant materials | Per surface | Built, [review and performance open](tasks/m11c-textures.md) |
+| T9 | Hero clothing materials (WP4 step 2, after Johannes picks the mockups in `docs/mockups/wp4-clothes/`): neutral, tileable albedos that multiply the palette colours, like the H1 piece maps: tweed (Schiebermütze), denim with worn knees (Lederjacke jeans), coarse knit (Wollmütze), straw weave (Strohhut), chainmail rings (Kettenhemd der Zitadelle), patchwork squares (Mantel des letzten Späti). Decals with alpha: back print "KIEZWACHE" (vest back), Zitadelle crest (tabard). Fur: reuse the T8 matted fur for the Mantel der Rattenmutter | flat vertex colours of the palettes and gear parts (`src/render/gear.ts`, built in WP4 step 2) | 0.3 to 0.5 m (cloth), decals 0.25 m | `docs/tasks/wp4-equipment-visuals.md` › Step 2 looks |
 
 Claude adds a row and a task file whenever step 1 finishes for a new surface.
 
@@ -115,8 +116,9 @@ Painted busts for the Kodex (`src/ui/menu.ts`, `ENEMY_PORTRAIT`) and item icons.
 
 The new portraits follow the existing 2D Kodex busts. The intro illustrations use the approved Köpenick style board. Six camp keepers reuse their Kodex art; Ilse has a new portrait. Station windows show portraits when the station is built and its keeper is present. [In-game screenshots](proof/asset-menu/README.md).
 
-| K2 | Starter Rostige Klinge (`rohr`): icon still shows a pipe, the hero holds a blade | `assets/inventory/I88.webp` | `src/ui/item-icons.ts` | Open. Skip if rendered icons come first (equipment pipeline › Icons from 3D renders) |
-| K3 | Zorn der Ringbahn (base `ring`, a sling) shows a spike on a chain; Arm des Basspredigers shares I58 with the Kabelarm; Kettenhemd der Zitadelle shows the bike chain I42 (base clash, code fix first) | `I32`, `I58`, `I57` | `src/ui/item-icons.ts`, `SETS` in `src/data/items.ts` | Open |
+| K2 | Starter Rostige Klinge (`rohr`): icon still shows a pipe, the hero holds a blade | `assets/inventory/I88.webp` | `src/ui/item-icons.ts` | Done: rendered from the 3D model (WP4 D10) |
+| K3 | Zorn der Ringbahn, Kettenhemd der Zitadelle | `I32`, `I57` | `src/ui/item-icons.ts` | Done: rendered from the 3D models (WP4 D10 and step 2); the Bassprediger arm moved to K4 |
+| K4 | Painted icons for the items without a 3D model (WP4 step 2: talisman, ring and implant stay painted): I95 Abzeichen der Kiezwache (I44 in Kiezwache blue and orange), I96 Kiesel des Spreegeists (I39 in Spreegeist green with a teal glint), I97 Arm des Basspredigers (own icon; shares I58 with the Kabelarm today), I102 Schlüsselbund des Tunnelläufers (old tunnel keys on a brass ring with a yellow U tag, U-Bahn board; mockup `docs/mockups/wp4-clothes/tunnel.webp`) | `assets/inventory/I95.webp`, `I96`, `I97`, `I102` | Add `'abzeichen:kiez': 'I95'`, `'kiesel:spree': 'I96'`, `'bassarm': 'I97'`, `'kette:tunnel': 'I102'` to `src/ui/item-icons.ts` with the files | Open |
 | KP4 | Kodex busts for the 11 kinds with only a glyph (Grenzer, Spreehexe, Alexanderplatz roster, Türsteher, Dirigent, Drohne, Wachdrohne) | `assets/portraits/` | `ENEMY_PORTRAIT` | Open; prefer renders of the 3D bodies once they are final (enemy pipeline › Kodex from 3D renders) |
 
 ### K1 and KP1–KP3 handover

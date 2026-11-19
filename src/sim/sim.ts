@@ -79,7 +79,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     breakables: createBreakables(level.breakables),
     lootWaves: 0,
     // M16: `revue` has no loot table yet (render only), so the loot sees no flavor there.
-    lootCtx: { district: level.district, ...(level.flavor && level.flavor !== 'revue' ? { flavor: level.flavor } : {}), luck: stats.luck, wave: 1, itemId: 0 },
+    lootCtx: { district: level.district, ...(level.flavor && level.flavor !== 'revue' ? { flavor: level.flavor } : {}), ...(level.tunnel ? { tunnel: true } : {}), luck: stats.luck, wave: 1, itemId: 0 },
     bagFullT: 0,
     kills: 0,
     spawnT: opts.empty || level.camp || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,

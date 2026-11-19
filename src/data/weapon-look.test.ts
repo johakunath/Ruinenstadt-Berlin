@@ -28,6 +28,7 @@ describe('weapon looks (WP4 D1)', () => {
     }
     expect(weaponLookId('blade', 'brech', 'kiez')).toBe('brech:kiez');
     expect(weaponLookId('sling', 'zwille', 'spree')).toBe('zwille:spree');
+    expect(weaponLookId('hammer', 'zange', 'tunnel')).toBe('zange:tunnel');
     expect(weaponLookId('hammer', 'morgen', 'zit')).toBe('morgen');
   });
 
@@ -37,8 +38,8 @@ describe('weapon looks (WP4 D1)', () => {
     expect(weaponLookId('blade', 'brech', 'spree')).toBe('brech');
   });
 
-  it('gives a signature glow to neon and legendary bases, the Aufziehwerfer and the Spreegeist set only', () => {
-    for (const [id, look] of Object.entries(WEAPON_LOOKS)) expect('glow' in look, id).toBe(look.family === 'neon' || look.family === 'legendary' || id === 'aufzieh' || id === 'zwille:spree');
+  it('gives a signature glow to neon and legendary bases, the Aufziehwerfer and the Spreegeist and Tunnelläufer sets only', () => {
+    for (const [id, look] of Object.entries(WEAPON_LOOKS)) expect('glow' in look, id).toBe(look.family === 'neon' || look.family === 'legendary' || id === 'aufzieh' || id === 'zwille:spree' || id === 'zange:tunnel');
   });
 
   it('gives the edge gleam (a fixed accent, no signature) to the two Hackmesser only', () => {
