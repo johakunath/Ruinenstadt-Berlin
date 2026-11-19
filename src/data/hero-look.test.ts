@@ -35,13 +35,13 @@ describe('heroLook', () => {
 
   it('names only palettes that exist', () => {
     for (const slot of ['a', 'h', 'g', 'f'] as const) for (const [key, w] of Object.entries(WEAR[slot])) {
-      for (const p of [w.palette, w.scarf]) if (p) expect(PALETTES[p], `${slot} ${key}: ${p}`).toBeDefined();
+      for (const p of [w.palette, w.scarf]) if (p && p !== 'none') expect(PALETTES[p], `${slot} ${key}: ${p}`).toBeDefined();
     }
   });
 
   it('keeps the 2D rule: the starter coat by default, the vest for the short outfits, bare hands without gloves', () => {
     const d = heroLook({});
-    expect(d).toMatchObject({ outfit: 'mantel', cut: 0, boots: 'stiefel', gloves: null, gear: [], hideHair: false });
+    expect(d).toMatchObject({ outfit: 'mantel', cut: 0, boots: 'stiefel', gloves: null, gear: [], hideHair: false, hideScarf: false });
     expect(d.tint).toEqual({ outfit: '', boots: '', gloves: '', scarf: '' });
     expect(heroLook({ a: { base: 'weste' } }).outfit).toBe('weste');
     expect(heroLook({ a: { base: 'blaumann' } }).outfit).toBe('weste');
@@ -80,6 +80,17 @@ describe('heroLook', () => {
     expect(box.gloves).toBeNull();
     expect(hiddenRegions(box).has('hands')).toBe(true);
     expect(heroLook({ h: { base: 'topfhelm' } }).hideHair).toBe(true);
+  });
+
+  it('keeps the red scarf only with the coats, the coloured ones of the legendary coats, none where a collar or neck piece is worn (Johannes, 2026-11-19)', () => {
+    expect(heroLook({}).hideScarf).toBe(false);
+    expect(heroLook({ a: { base: 'mantel' } }).hideScarf).toBe(false);
+    for (const base of ['weste', 'leder', 'feuer', 'bvg', 'blaumann', 'poncho', 'kmantel', 'panzer', 'ritter']) expect(heroLook({ a: { base } }).hideScarf, base).toBe(true);
+    for (const [base, set] of [['weste', 'kiez'], ['mantel', 'spree'], ['kette', 'zit'], ['mantel', 'tunnel']] as const) expect(heroLook({ a: { base, set } }).hideScarf, `${base}:${set}`).toBe(true);
+    expect(heroLook({ a: { base: 'spaeti' } })).toMatchObject({ hideScarf: false, tint: { scarf: 'scarf:gold' } });
+    expect(heroLook({ a: { base: 'rattenmantel' } }).tint.scarf).toBe('scarf:acid');
+    expect(heroLook({ h: { base: 'maske' } }).hideScarf).toBe(true);
+    expect(heroLook({ h: { base: 'topfhelm' } }).hideScarf).toBe(true);
   });
 
   it('sorts gear ids, so the same items always share one merged gear mesh', () => {

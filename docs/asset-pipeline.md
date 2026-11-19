@@ -106,8 +106,9 @@ Painted busts for the Kodex (`src/ui/menu.ts`, `ENEMY_PORTRAIT`) and item icons.
 
 The new portraits follow the existing 2D Kodex busts. The intro illustrations use the approved Köpenick style board. Six camp keepers reuse their Kodex art; Ilse has a new portrait. Station windows show portraits when the station is built and its keeper is present. [In-game screenshots](proof/asset-menu/README.md).
 
-| K2 | Starter Rostige Klinge (`rohr`): icon still shows a pipe, the hero holds a blade | `assets/inventory/I88.webp` | `src/ui/item-icons.ts` | Open. Skip if rendered icons come first (equipment pipeline › Icons from 3D renders) |
-| K3 | Zorn der Ringbahn (base `ring`, a sling) shows a spike on a chain; Arm des Basspredigers shares I58 with the Kabelarm; Kettenhemd der Zitadelle shows the bike chain I42 (base clash, code fix first) | `I32`, `I58`, `I57` | `src/ui/item-icons.ts`, `SETS` in `src/data/items.ts` | Open |
+| K2 | Starter Rostige Klinge (`rohr`): icon still shows a pipe, the hero holds a blade | `assets/inventory/I88.webp` | `src/ui/item-icons.ts` | Done: rendered from the 3D model (WP4 D10) |
+| K3 | Zorn der Ringbahn, Kettenhemd der Zitadelle | `I32`, `I57` | `src/ui/item-icons.ts` | Done: rendered from the 3D models (WP4 D10 and step 2); the Bassprediger arm moved to K4 |
+| K4 | Painted icons for the items without a 3D model (WP4 step 2: talisman, ring and implant stay painted): I95 Abzeichen der Kiezwache (I44 in Kiezwache blue and orange), I96 Kiesel des Spreegeists (I39 in Spreegeist green with a teal glint), I97 Arm des Basspredigers (own icon; shares I58 with the Kabelarm today), I102 Schlüsselbund des Tunnelläufers (old tunnel keys on a brass ring with a yellow U tag, U-Bahn board; mockup `docs/mockups/wp4-clothes/tunnel.webp`) | `assets/inventory/I95.webp`, `I96`, `I97`, `I102` | Add `'abzeichen:kiez': 'I95'`, `'kiesel:spree': 'I96'`, `'bassarm': 'I97'`, `'kette:tunnel': 'I102'` to `src/ui/item-icons.ts` with the files | Open |
 | KP4 | Kodex busts for the 11 kinds with only a glyph (Grenzer, Spreehexe, Alexanderplatz roster, Türsteher, Dirigent, Drohne, Wachdrohne) | `assets/portraits/` | `ENEMY_PORTRAIT` | Open; prefer renders of the 3D bodies once they are final (enemy pipeline › Kodex from 3D renders) |
 
 ### K1 and KP1–KP3 handover

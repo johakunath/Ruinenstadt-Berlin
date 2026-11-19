@@ -231,6 +231,8 @@ Shapes are start values. Look at `assets/inventory/<icon>.webp` and the 2D side 
 | I97 | Arm des Basspredigers | New: own icon (shares I58 with Kabelarm today) |
 | I61 | Neonflinte | Repaint as the neon fork of the model (step 1c fell back to the fork, 2026-11-19) |
 
+Status 2026-11-19: superseded by D10 and step 2. I61, I88, I32, I91 to I94 are rendered from the models; the painted ones left (I95, I96, I97 and the Tunnelläufer key ring I102) are K4 in `docs/asset-pipeline.md`.
+
 Code side of the icons [Opus, step 2]: `itemIcon` looks up `base:set` before `base`; slot a with base `kette` uses `khemd` (I57). Holzlatte needs no icon change: the model follows I01.
 
 ### Step 2 Hero equipment (P32) [Claude · Opus high]
@@ -310,9 +312,11 @@ Tunnel set Tunnelläufer (proposal, start values; Opus 5.5, bonus numbers want a
 | Rohrzange des Tunnelläufers | `zange:tunnel` | The Rohrzange in brass, gauge on the grip, a small lantern on a strap (weapon variant like `brech:kiez`) |
 | Schlüsselbund des Tunnelläufers | `kette:tunnel` (talisman) | Old tunnel keys with a yellow U tag; painted icon (Codex), no 3D |
 
-- Bonuses (start values): 2 pieces +20 % Abklingtempo; 3 pieces +50 % Schaden and +3 Leben pro Sekunde; 5 pieces +20 Glück and +120 Leben.
+- Bonuses (start values, built): 2 pieces −20 % Abklingzeiten; 3 pieces +50 % Schaden and +2 Leben pro Sekunde; 5 pieces +8 Beuteglück and +120 Leben (the proposal said +3 and +20; scaled to the affix ranges: regen 0.3 to 1, luck 1 to 2 per item).
 - Drops: only in the tunnels; there a set drop is the Tunnelläufer at 60 %, else one of the three others. Outside the tunnels it never drops. One set for all lines now; a set per line can follow when more lines exist.
 - Build after Johannes' pick: `SETS.tunnel` and `SET_BONUSES.tunnel` in `src/data/items.ts`, the tunnel rule in `makeSetItem`, WEAR and gear (Stirnlampe, harness, puttees), the weapon variant and its icon, Codex: painted key ring icon; balance bot run.
+
+Scarf (Johannes, 2026-11-19): the red scarf only with the coats (starter, Arbeitsmantel); the Späti and Rattenmutter coats keep their coloured scarves; every other armor has none (`scarf: 'none'`), the gas mask and the Topfhelm hide it too (`hideScarf`). Neck parts refitted to sit on the bare neck.
 
 Budget: belts, hats and plates go into the gear mesh (2,500 triangles, D3). The heaviest look is the Rüstung des Zitadellenritters (chest plate, gorget, three-lame pauldrons, vambraces, tassets): count it first. Cut and Quaternius boots replace a piece, so 0 extra draw calls.
 
@@ -370,7 +374,7 @@ New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 
 ## Questions
 - Gates G2 to G6 are listed above.
 - Step 2 looks (Johannes): which mockups to redo. Recommendation for the rest: build as drawn.
-- Tunnel set Tunnelläufer (below): Johannes picks the mockup and the bonus numbers before the build.
+- Tunnelläufer: approved ("Tunnelläufer ist fein", 2026-11-19) and built; bonus numbers scaled to the item affix sizes (5 pieces: +8 Beuteglück, not +20; 3 pieces: +2 Leben pro Sekunde, not +3), to be checked by the balance bot (P33).
 - D9 hit numbers: the 3D game shows no damage numbers, so an effective hit is shown by cool white hit sparks (`fx.sparks`) instead of a tinted number. Damage numbers would be a separate decision.
 - D9 classes that may not fit their bodies (assignment kept): Rattenmutter (zombie body, Tiere only), Bassprediger (zombie body, Maschinen only, unlike Kabelghul and Boxenkopf), Wurzler and Wurzel-Mutter (zombie bodies under roots, Pflanzen only), the uniformed bosses (zombie bodies, Menschen: the blade gets no bonus on them).
 - D8: a two-handed hammer a third shorter comes out at reach 0.9, not 0.85 (length 0.86 to 0.9 against 1.16, light1 reach 2.47).

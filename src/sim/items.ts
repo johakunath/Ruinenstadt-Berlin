@@ -33,6 +33,8 @@ export interface LootContext {
   /** Effective wave (2D wE()), or 1 outside a run. */
   wave: number;
   flavor?: 'neon' | 'gdr';
+  /** An U-Bahn tunnel map: its own set drops here (`makeSetItem`). */
+  tunnel?: boolean;
   /** Caller-owned last allocated id. Share one context per sim; persist with its state. */
   itemId?: number;
 }
@@ -108,7 +110,8 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
 }
 
 export function makeSetItem(rng: Rng, ctx: LootContext, itemLevel: number): Item {
-  const set = rng.pick<SetId>(['kiez', 'spree', 'zit']);
+  // The Tunnelläufer drops only in the tunnels, there in 60 % of set drops (Johannes, 2026-11-19).
+  const set = ctx.tunnel && rng.next() < .6 ? 'tunnel' : rng.pick<SetId>(['kiez', 'spree', 'zit']);
   const slot = rng.pick(Object.keys(SETS[set].pieces) as SlotId[]);
   const { name, kind, base } = SETS[set].pieces[slot]!;
   let value: number;

@@ -187,7 +187,7 @@ Real-world hook: Spreepark Plänterwald (next to Köpenick in Treptow-Köpenick)
 | Spreepark zone in Köpenick (Ferris wheel, dinosaur figures, jungle lot type) | Real place next door, matches the board |
 | Zombie raptor: fast pack enemy with a telegraphed pounce | Uses existing Raser / Flink patterns, gives Köpenick its own enemy |
 | Zombie T-rex as Köpenick mid-boss or elite, Hauptmann stays district boss | Big readable threat, keeps the Köpenick lore |
-| Red scarf as the player's signature on every gear look | Board identity. **Done**: code-drawn player wears a red scarf unless the armour sets its own colour |
+| Red scarf as the player's signature on every gear look | Board identity. **Changed (Johannes, 2026-11-19):** the red scarf only with the coats (starter coat, Arbeitsmantel); the Späti and Rattenmutter coats wear their own coloured scarf; every look with a collar or neck piece, and the sets, wear none (`WEAR` `scarf: 'none'`, gas mask and Topfhelm hide it) |
 | U-Bahn station as an authored set piece with a market (safe room like the Späti) | Board scene, roadmap #8 |
 | Lamp gun as a weapon that lights dark zones | Board weapon, ties into the torch rule |
 | District palette per biome in code (ground, walls, light tint) taken from the swatches | Quick visual alignment before painted assets exist. Needs a mockup first |

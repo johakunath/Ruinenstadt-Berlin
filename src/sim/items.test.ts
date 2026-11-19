@@ -127,6 +127,19 @@ describe('item generation', () => {
     expect(x.has('mantel')).toBe(true);
   });
 
+  it('drops the Tunnelläufer only in the tunnels, there in about 60 % of set drops', () => {
+    const sets = (tunnel: boolean): Record<string, number> => {
+      const rng = new Rng(5), ctx = context(tunnel ? { tunnel: true } : {}), n: Record<string, number> = {};
+      for (let i = 0; i < 2000; i++) { const s = makeSetItem(rng, ctx, 5).set!; n[s] = (n[s] ?? 0) + 1; }
+      return n;
+    };
+    expect(sets(false).tunnel).toBeUndefined();
+    const t = sets(true);
+    expect(t.tunnel! / 2000).toBeGreaterThan(0.55);
+    expect(t.tunnel! / 2000).toBeLessThan(0.65);
+    expect(t.kiez).toBeGreaterThan(0);
+  });
+
   it('rolls every set piece as rare, without an element or district level bonus', () => {
     const rng = new Rng(11), ctx = context({ district: 6 }), seen = new Set<string>();
     for (let i = 0; i < 500; i++) {

@@ -25,6 +25,8 @@ export interface HeroLook {
   /** Rigid gear parts (`GEAR` ids in src/render/gear.ts), sorted. */
   gear: readonly string[];
   hideHair: boolean;
+  /** No scarf: the look has its own collar or neck piece, or the scarf does not fit (Johannes, 2026-11-19). */
+  hideScarf: boolean;
   /** Body regions under gear (boxing gloves cover the hands). */
   covers: readonly BodyRegion[];
 }
@@ -113,6 +115,9 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
   // Scarves of the legendary coats
   'scarf:gold': { roles: { scarf: '#f2d14b' } },
   'scarf:acid': { roles: { scarf: '#97c459' } },
+  // Tunnelläufer (mockup `tunnel`): ochre-olive coat, BVG-yellow hem and cuffs, cargo trousers; heavy boots.
+  'mantel:tunnel': { roles: { coat: '#7a6a34', hem: '#e0a020', cuff: '#e0a020', trousers: '#3a3c36', leather: '#3a2414', brass: '#e0a020' } },
+  'stiefel:tunnel': { roles: { boot: '#3a2a1c', sole: '#1e140c' } },
 };
 
 /** What one item base puts on the hero. Every field is optional; the slot's default fills the rest. */
@@ -122,10 +127,13 @@ interface Wear {
   boots?: 'stiefel' | 'turnsch';
   gloves?: 'handsch' | null;
   palette?: string;
+  /** Scarf palette, or 'none' for no scarf. Without an entry the red scarf stays (the coats). */
   scarf?: string;
   puff?: number;
   gear?: readonly string[];
   hideHair?: boolean;
+  /** A hat that covers the neck (gas mask, great helm): no scarf. */
+  hideScarf?: boolean;
   covers?: readonly BodyRegion[];
 }
 
@@ -139,31 +147,33 @@ const PUFF = 0.012;
 export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string, Wear>>>> = {
   a: {
     mantel: { palette: 'mantel', puff: 0.02, gear: ['belt-tool'] },
-    weste: { outfit: 'weste', gear: ['kneepads-dark'] },
-    leder: { cut: CUT.jacket, palette: 'leder', puff: 0.016, gear: ['studs', 'belt-studded', 'patches-punk', 'rips'] },
-    feuer: { cut: CUT.thigh, palette: 'feuer', puff: 0.024, gear: ['belt-fire'] },
-    bvg: { cut: CUT.hip, palette: 'bvg', puff: 0.018, gear: ['boards-bvg', 'badge-bvg', 'belt-bvg'] },
-    blaumann: { outfit: 'weste', palette: 'blaumann', gear: ['bib', 'patch-gear', 'wrench'] },
-    poncho: { palette: 'poncho', puff: 0.026, gear: ['poncho-bands', 'hood-roll'] },
-    kmantel: { palette: 'kmantel', puff: 0.018, gear: ['collar-high', 'cables', 'belt-led'] },
+    weste: { outfit: 'weste', scarf: 'none', gear: ['kneepads-dark'] },
+    leder: { cut: CUT.jacket, palette: 'leder', scarf: 'none', puff: 0.016, gear: ['studs', 'belt-studded', 'patches-punk', 'rips'] },
+    feuer: { cut: CUT.thigh, palette: 'feuer', scarf: 'none', puff: 0.024, gear: ['belt-fire'] },
+    bvg: { cut: CUT.hip, palette: 'bvg', scarf: 'none', puff: 0.018, gear: ['boards-bvg', 'badge-bvg', 'belt-bvg'] },
+    blaumann: { outfit: 'weste', palette: 'blaumann', scarf: 'none', gear: ['bib', 'patch-gear', 'wrench'] },
+    poncho: { palette: 'poncho', scarf: 'none', puff: 0.026, gear: ['poncho-bands', 'hood-roll'] },
+    kmantel: { palette: 'kmantel', scarf: 'none', puff: 0.018, gear: ['collar-high', 'cables', 'belt-led'] },
     spaeti: { palette: 'spaeti', scarf: 'scarf:gold', gear: ['caps', 'sign-spaeti', 'belt-caps'] },
-    panzer: { palette: 'panzer', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },
+    panzer: { palette: 'panzer', scarf: 'none', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },
     rattenmantel: { palette: 'rattenmantel', scarf: 'scarf:acid', puff: 0.018, gear: ['collar-fur', 'belt-rattails'] },
-    ritter: { palette: 'ritter', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'] },
-    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'kneepads-orange'] },
-    'mantel:spree': { palette: 'mantel:spree', gear: ['collar-reed', 'seams-spree', 'belt-sash'] },
-    'kette:zit': { cut: CUT.knee, palette: 'kette:zit', gear: ['tabard', 'belt-knight-short'] },
+    ritter: { palette: 'ritter', scarf: 'none', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'] },
+    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'kneepads-orange'] },
+    'mantel:spree': { palette: 'mantel:spree', scarf: 'none', gear: ['collar-reed', 'seams-spree', 'belt-sash'] },
+    'kette:zit': { cut: CUT.knee, palette: 'kette:zit', scarf: 'none', gear: ['tabard', 'belt-knight-short'] },
+    'mantel:tunnel': { palette: 'mantel:tunnel', scarf: 'none', gear: ['harness', 'kneepads-teal', 'belt-tunnel'] },
   },
   h: {
     helm: { gear: ['hat-hard'] },
     schieber: { gear: ['hat-flatcap'] },
     muetze: { gear: ['hat-beanie'] },
-    maske: { gear: ['hat-gasmask'] },
+    maske: { gear: ['hat-gasmask'], hideScarf: true },
     nbrille: { gear: ['hat-goggles'] },
     stroh: { gear: ['hat-straw'] },
     pickel: { gear: ['hat-pickel'] },
     kiezhelm: { gear: ['hat-kiez'] },
-    topfhelm: { gear: ['hat-greathelm'], hideHair: true },
+    topfhelm: { gear: ['hat-greathelm'], hideHair: true, hideScarf: true },
+    'nbrille:tunnel': { gear: ['hat-headlamp'] },
   },
   g: {
     handsch: { palette: 'arbeit', gear: ['wrist-work'] },
@@ -180,6 +190,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     schaffner: { palette: 'schaffner', gear: ['shaft-riding'] },
     spreestief: { palette: 'spreestief', gear: ['shaft-wrapped'] },
     eisenstief: { palette: 'eisenstief', gear: ['greaves'] },
+    'stiefel:tunnel': { palette: 'stiefel:tunnel', gear: ['puttees'] },
   },
 };
 
@@ -202,10 +213,11 @@ export function heroLook(equipment: Readonly<Partial<Record<SlotId, Equipped>>>)
     cut: outfit === 'mantel' ? a?.cut ?? 0 : 0,
     boots: f?.boots ?? 'stiefel',
     gloves: equipment.g ? (g && 'gloves' in g ? g.gloves ?? null : 'handsch') : null,
-    tint: { outfit: a?.palette ?? '', boots: f?.palette ?? '', gloves: g?.palette ?? '', scarf: a?.scarf ?? '' },
+    tint: { outfit: a?.palette ?? '', boots: f?.palette ?? '', gloves: g?.palette ?? '', scarf: a?.scarf && a.scarf !== 'none' ? a.scarf : '' },
     puff: a?.puff ?? PUFF,
     gear,
     hideHair: !!h?.hideHair,
+    hideScarf: a?.scarf === 'none' || !!h?.hideScarf,
     covers: [...(g?.covers ?? [])],
   };
 }
@@ -221,7 +233,7 @@ export function hiddenRegions(look: HeroLook): Set<BodyRegion> {
 }
 
 export function sameLook(a: HeroLook, b: HeroLook): boolean {
-  return a.outfit === b.outfit && a.cut === b.cut && a.boots === b.boots && a.gloves === b.gloves && a.puff === b.puff && a.hideHair === b.hideHair
+  return a.outfit === b.outfit && a.cut === b.cut && a.boots === b.boots && a.gloves === b.gloves && a.puff === b.puff && a.hideHair === b.hideHair && a.hideScarf === b.hideScarf
     && a.tint.outfit === b.tint.outfit && a.tint.boots === b.tint.boots && a.tint.gloves === b.tint.gloves && a.tint.scarf === b.tint.scarf
     && a.gear.length === b.gear.length && a.gear.every((id, i) => id === b.gear[i]) && a.covers.join() === b.covers.join();
 }

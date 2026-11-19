@@ -20,12 +20,13 @@ describe('ported hero stats', () => {
     expect(() => heroStats({}, ctx)).toThrow('weapon');
   });
 
-  it.each(['kiez', 'spree', 'zit'] as SetId[])('%s thresholds apply cumulatively at 2/3/5 pieces only', set => {
+  it.each(['kiez', 'spree', 'zit', 'tunnel'] as SetId[])('%s thresholds apply cumulatively at 2/3/5 pieces only', set => {
     // No main stats/implicits: isolate the set contributions.
     const expected = {
       kiez: [{}, { res: 25 }, { res: 25, dmg: 60 }, { res: 25, dmg: 60, crit: 15, hp: 100 }],
       spree: [{}, { as: 25 }, { as: 25, el: 80 }, { as: 25, el: 130, spd: 10 }],
       zit: [{}, { hp: 120 }, { hp: 120, dmg: 55, res: 20 }, { hp: 320, dmg: 55, res: 20, leech: 4 }],
+      tunnel: [{}, { cdr: 20 }, { cdr: 20, dmg: 50, regen: 2 }, { cdr: 20, dmg: 50, regen: 2, luck: 8, hp: 120 }],
     }[set];
     for (const n of [1, 2, 3, 4, 5]) {
       const equipment: Equipment = {};

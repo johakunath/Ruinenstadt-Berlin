@@ -9,6 +9,7 @@ import { HEAD_GEAR } from './gear-head';
 import { BODY_GEAR } from './gear-body';
 import { BODY_RARE_GEAR } from './gear-body-rare';
 import { LIMB_GEAR } from './gear-limbs';
+import { TUNNEL_GEAR } from './gear-tunnel';
 import type { LitMaterial, Materials } from './materials';
 import { paintGrain, paintMetalAtlas } from './paint';
 import { box } from './weapons';
@@ -22,7 +23,7 @@ const WARM: GearBuilder = (k) => k.on('Head', () => {
   k.add(box(0.001, 0.001, 0.001), plain(0x808080), 0, 1.6, 0).add(box(0.001, 0.001, 0.001), metal(0x808080), 0, 1.6, 0).add(box(0.001, 0.001, 0.001), glow(0x101010), 0, 1.6, 0);
 });
 
-export const GEAR: Readonly<Record<string, GearBuilder>> = { warm: WARM, ...HEAD_GEAR, ...BODY_GEAR, ...BODY_RARE_GEAR, ...LIMB_GEAR };
+export const GEAR: Readonly<Record<string, GearBuilder>> = { warm: WARM, ...HEAD_GEAR, ...BODY_GEAR, ...BODY_RARE_GEAR, ...LIMB_GEAR, ...TUNNEL_GEAR };
 
 /**
  * Triangle budget of all gear of one look and of its glow parts. D3 planned 2,500; raised to 3,200 for

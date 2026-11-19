@@ -42,6 +42,7 @@ export class HeroModel {
   /** Source geometry of each tinted mesh (pieces and scarf), before any variant. */
   private readonly sourceGeo = new Map<SkinnedMesh, BufferGeometry>();
   private readonly hair: Object3D | undefined;
+  private readonly scarfMesh: Object3D | undefined;
   /** Gear meshes per slot (only with `materials`: NPCs wear no gear). */
   private readonly gear = new Map<GearSlot, SkinnedMesh>();
   private readonly src: HeroSource;
@@ -60,6 +61,7 @@ export class HeroModel {
       if (o?.isSkinnedMesh) this.sourceGeo.set(o, o.geometry);
     }
     this.hair = m.getObjectByName('hair');
+    this.scarfMesh = m.getObjectByName('scarf');
     const anchor = m.getObjectByName('a_mantel') as SkinnedMesh | undefined;
     if (anchor?.isSkinnedMesh) {
       this.boneNames = anchor.skeleton.bones.map((b) => b.name);
@@ -96,6 +98,7 @@ export class HeroModel {
     for (const o of this.pieces.values()) o.visible = true;
     for (const o of this.regions.values()) o.visible = true;
     if (this.hair) this.hair.visible = true;
+    if (this.scarfMesh) this.scarfMesh.visible = true;
     this.showGear(['warm']);
     this.look = null;
   }
@@ -111,6 +114,7 @@ export class HeroModel {
     for (const [node, o] of this.pieces) o.visible = shown.has(node);
     for (const [r, o] of this.regions) o.visible = !hidden.has(r);
     if (this.hair) this.hair.visible = !look.hideHair;
+    if (this.scarfMesh) this.scarfMesh.visible = !look.hideScarf;
     const outfit = PIECES[look.outfit]?.node, boots = PIECES[look.boots]?.node, gloves = look.gloves ? PIECES[look.gloves]?.node : undefined;
     for (const [mesh, geo] of this.sourceGeo) {
       const n = mesh.name;
