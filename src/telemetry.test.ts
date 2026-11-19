@@ -74,12 +74,14 @@ describe('telemetry fight log', () => {
     tick(60);
     sim.player.hp = sim.stats.maxHp;
     tick(600);
+    // A hit drained between frames (e.g. the killing blow) still counts.
+    t.event({ type: 'playerHit', x: 0, z: 0, dx: 0, dz: 0, damage: 90, hp: 5, by: 'Ratte' });
     t.event({ type: 'encounterClear', index: 0, heal: 0 });
     t.end('win');
     const q = JSON.parse(mem.get('ruinenstadt-berlin.tlq')!) as Array<{ v: string; end: string; enc: Array<{ hp?: number; low?: number }> }>;
     expect(q.map((r) => r.end)).toEqual(['dead', 'win']);
     expect(q[1]!.enc[0]!.hp).toBe(Math.round(sim.stats.maxHp));
-    expect(q[1]!.enc[0]!.low).toBe(Math.round(sim.stats.maxHp * 0.4));
+    expect(q[1]!.enc[0]!.low).toBe(5);
     expect(VERSION).toMatch(/^3d-0\.1\.0\+\w+$/);
     vi.useRealTimers();
     vi.unstubAllGlobals();

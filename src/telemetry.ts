@@ -179,7 +179,11 @@ export class Telemetry {
     if (ev.type === 'playerHit') {
       r.dmg += ev.damage;
       const e = r.enc[r.enc.length - 1];
-      if (e && e.clear === null) e.dmg += ev.damage;
+      if (e && e.clear === null) {
+        e.dmg += ev.damage;
+        // The lethal hit (and the last one before a clear) happens after the last frame sample.
+        e.low = Math.min(e.low ?? Infinity, Math.round(ev.hp));
+      }
     } else if (ev.type === 'encounterStart') {
       this.encFrames = new FrameStats();
       this.encCalls = this.encAlive = 0;
