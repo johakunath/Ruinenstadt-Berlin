@@ -89,8 +89,8 @@ title.addEventListener('click', e => {
     // Asks once: the second tap within a few seconds wipes the save (main.ts newGame).
     if (armed && performance.now() - armed < 4000) { armed = 0; void loadGame().then(m => m?.newGame()); return; }
     armed = performance.now();
-    b.innerHTML = '<b>Wirklich? Alles löschen</b><small>Nochmal tippen</small>';
-    setTimeout(() => { if (armed && performance.now() - armed >= 3900) { armed = 0; b.innerHTML = '<b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small>'; } }, 4000);
+    b.innerHTML = '<b>Wirklich? Slot löschen</b><small>Nochmal tippen</small>';
+    setTimeout(() => { if (armed && performance.now() - armed >= 3900) { armed = 0; b.innerHTML = '<b>Slot löschen</b><small>Nur dieser Slot: Ausrüstung, Schrott und Lager weg</small>'; } }, 4000);
   }
 }, true);
 

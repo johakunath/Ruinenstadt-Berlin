@@ -507,10 +507,10 @@ document.getElementById('to-title')!.addEventListener('click', () => {
   const b = document.getElementById('new-game') as HTMLButtonElement;
   let armed = 0;
   b.addEventListener('click', () => {
-    const idle = '<b>Spielstand löschen</b><small>Ausrüstung, Schrott und Lager weg</small>';
+    const idle = '<b>Slot löschen</b><small>Nur dieser Slot: Ausrüstung, Schrott und Lager weg</small>';
     if (armed && performance.now() - armed < 4000) { b.innerHTML = idle; armed = 0; newGame(); return; }
     armed = performance.now();
-    b.innerHTML = '<b>Wirklich? Alles löschen</b><small>Nochmal tippen</small>';
+    b.innerHTML = '<b>Wirklich? Slot löschen</b><small>Nochmal tippen</small>';
     setTimeout(() => { if (armed && performance.now() - armed >= 3900) { b.innerHTML = idle; armed = 0; } }, 4000);
   });
 }

@@ -1,9 +1,11 @@
 // M6b: account and save slots on the title screen, before the game loads. Starts the cloud sync of all
 // three slots, adopts newer remote saves (the active slot only on the title, else it holds until the
-// next load), joins an account by code, and fills the Optionen row "Online speichern".
+// next load), joins an account by code, and fills the title's Konto card (layout A, Johannes 2026-11-19)
+// and the Optionen row "Online speichern".
 import { cloudSave } from '../cloud';
 import { activeSlot, backupSave, clearSave, loadSave, setActiveSlot, SLOTS, writeSave, type Slot } from '../save';
 import type { SaveV1 } from '../sim/save-format';
+import { LINE_FREED, STOPS } from '../data/lines';
 import { formatCode, type SyncState } from '../sync';
 
 export const SYNC_LABEL: Record<SyncState, string> = { off: 'Aus auf diesem Gerät.', sync: 'Verbindet …', on: 'Synchron.', slow: 'Nicht erreichbar, speichert lokal.', conflict: 'Anderes Gerät war neuer. Beim nächsten Start geladen.' };
@@ -30,6 +32,7 @@ export function pickSlot(slot: Slot): void {
 export function initAccount(onTitle: () => boolean): void {
   const cloud = cloudSave();
   bindOptionsRow();
+  bindCard();
   if (!cloud.available) return;
   cloud.onChange = changed;
   cloud.autoStart();
@@ -88,6 +91,71 @@ function bindOptionsRow(): void {
   });
   document.getElementById('cloud-join')?.addEventListener('click', () => {
     const raw = prompt('Online-Code eingeben (z. B. ABCD-1234). Alle Slots auf diesem Gerät werden ersetzt, Sicherungen bleiben.');
+    if (!raw) return;
+    void joinAccount(raw).then((err) => { if (err) info.textContent = err; });
+  });
+}
+
+const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+const hm = (d: Date): string => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+/** "heute 14:02", "gestern 21:40", "12.11." */
+export function when(t: number, now = Date.now()): string {
+  if (!t) return '';
+  const d = new Date(t), day = (x: Date): number => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(new Date(now)) - day(d)) / 86400000);
+  return diff === 0 ? `heute ${hm(d)}` : diff === 1 ? `gestern ${hm(d)}` : `${d.getDate()}.${d.getMonth() + 1}.`;
+}
+/** One line of progress: furthest district freed, legendaries owned, an open checkpoint. */
+export function slotSummary(s: SaveV1): string {
+  const freed = (s.profile.inventory.camp?.freed ?? []).filter((k) => k < LINE_FREED);
+  const far = freed.length ? STOPS[Math.max(...freed)]?.name : undefined;
+  const inv = s.profile.inventory;
+  const items = [...inv.bag, ...Object.values(s.profile.equipment), ...(inv.camp?.stash ?? [])];
+  const leg = items.filter((i) => i && i.rarity >= 3).length;
+  return [far ? `${far} frei` : 'Köpenick', leg ? `${leg} Legendäre` : '', s.run ? `Kampf ${s.run.index + 1} offen` : ''].filter(Boolean).join(' · ');
+}
+
+function bindCard(): void {
+  const cloud = cloudSave();
+  const card = document.getElementById('acct');
+  const list = document.getElementById('acct-slots');
+  if (!card || !list) return;
+  const name = document.getElementById('acct-name')!, info = document.getElementById('acct-info')!;
+  const rename = document.getElementById('acct-rename') as HTMLButtonElement, copy = document.getElementById('acct-copy') as HTMLButtonElement, join = document.getElementById('acct-join') as HTMLButtonElement;
+  const show = (): void => {
+    const on = cloud.available && !!cloud.code;
+    name.textContent = !cloud.available ? 'Dieses Gerät' : cloud.name || 'Konto ohne Namen';
+    info.innerHTML = !cloud.available ? 'Nur lokal gespeichert' : !cloud.code ? 'Online aus · in Optionen einschalten'
+      : `Code ${formatCode(cloud.code)} · <span class="st-${cloud.state}">● ${SYNC_LABEL[cloud.state].replace(/\.$/, '')}</span>`;
+    rename.hidden = copy.hidden = !on;
+    join.hidden = !cloud.available;
+    const act = activeSlot();
+    list.innerHTML = SLOTS.map((s) => {
+      const v = loadSave(s), label = esc(cloud.slotNames[s - 1] || (v ? `Slot ${s}` : 'Leer'));
+      const sub = v ? esc(slotSummary(v)) : 'Tippen: neues Spiel hier';
+      const meta = v ? [v.dev, when(v.t)].filter(Boolean).map((x) => `<small>${esc(x!)}</small>`).join('') : '';
+      return `<div class="slot${s === act ? ' on' : ''}${v ? '' : ' empty'}"><button type="button" class="slot-pick" data-slot="${s}" aria-pressed="${s === act}">`
+        + `<i>${s}</i><span><b>${label}</b><small>${sub}</small></span>${meta || s === act ? `<em>${s === act ? '<u>aktiv</u>' : ''}${meta}</em>` : ''}</button>`
+        + (on ? `<button type="button" class="slot-name" data-slot="${s}" aria-label="Slot ${s} umbenennen">✎</button>` : '') + '</div>';
+    }).join('');
+  };
+  onAccount(show);
+  show();
+  list.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>('button[data-slot]');
+    if (!b) return;
+    const s = Number(b.dataset.slot) as Slot;
+    if (b.classList.contains('slot-pick')) { pickSlot(s); return; }
+    const n = prompt(`Name für Slot ${s}:`, cloud.slotNames[s - 1] ?? '');
+    if (n !== null) void cloud.renameSlot(s, n);
+  });
+  rename.addEventListener('click', () => { const n = prompt('Name des Kontos:', cloud.name); if (n !== null) void cloud.rename(n); });
+  copy.addEventListener('click', () => {
+    const c = formatCode(cloud.code);
+    void (navigator.clipboard?.writeText(c) ?? Promise.reject()).then(() => { copy.textContent = 'Kopiert'; setTimeout(() => { copy.textContent = 'Code kopieren'; }, 2000); }, () => prompt('Online-Code:', c));
+  });
+  join.addEventListener('click', () => {
+    const raw = prompt('Code des Kontos eingeben (z. B. ABCD-1234). Alle drei Slots auf diesem Gerät werden ersetzt, Sicherungen bleiben.');
     if (!raw) return;
     void joinAccount(raw).then((err) => { if (err) info.textContent = err; });
   });
