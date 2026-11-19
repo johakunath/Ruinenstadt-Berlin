@@ -12,9 +12,12 @@ import type { Facade, FacadeFeature, PlasterTone } from '../data/courtyard';
 import { FERRY, ferryPos, type FerryLane } from '../sim/ferry';
 import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
+import { makeLotGroundMats, type LotGroundMats } from './lot-textures';
 import { buildCampWorld, makeCampMats } from './camp-world';
 import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
+import { makeLandmarkFinishes } from './landmark-finishes';
+import { LandmarkWear, makeLandmarkWearMaterial } from './landmark-wear';
 import {
   BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, lineDist, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
   type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
@@ -64,7 +67,7 @@ interface LightSpot {
   phase: number;
 }
 
-export interface MapMats extends Mats {
+export interface MapMats extends Mats, LotGroundMats {
   railSteel: LitMaterial;
   ground: LitMaterial;
   /** Ground scatter atlas (puddles, leaves, trash, rubble). */
@@ -85,6 +88,8 @@ export interface MapMats extends Mats {
   frond: LitMaterial;
   // M11d landmarks.
   slate: LitMaterial;
+  landmarkFinishes?: ReturnType<typeof makeLandmarkFinishes>;
+  landmarkWear?: LitMaterial;
   clock: LitMaterial;
   sRoundel: LitMaterial;
   stationName: LitMaterial;
@@ -107,12 +112,16 @@ export class ChunkBuilder extends Builder {
   readonly glows = new BatchSet();
   private readonly glowMats = new Map<number, Material>();
   private readonly streakMats = new Map<number, Material>();
+  private weathering?: LandmarkWear;
 
   constructor(readonly mm: MapMats) {
     super(mm);
   }
 
   override box(mat: Material, transform: Matrix4, sx: number, sy: number, sz: number, color?: RGB, uvScale = 0.5, stone?: AlexStone): void {
+    this.weathering?.wall(mat, transform, sx, sy, sz);
+    const finishes = this.mm.landmarkFinishes;
+    if (finishes && (mat === finishes.brick || mat === finishes.plaster || mat === finishes.granite)) uvScale = 1 / 3;
     if (this.mm.tunnelConcrete && mat === this.mm.concrete) {
       this.geo(mat, tunnelBoxGeo(sx, sy, sz), transform, color);
     } else if (this.mm.alexStoneAtlas && mat === this.mm.stucco) {
@@ -124,6 +133,18 @@ export class ChunkBuilder extends Builder {
 
   override geo(mat: Material, geometry: BufferGeometry, transform: Matrix4, color?: RGB, stone?: AlexStone): void {
     super.geo(mat, this.mm.alexStoneAtlas && mat === this.mm.stucco ? alexStoneGeo(geometry, stone) : geometry, transform, color);
+  }
+
+  wearLandmark(landmark: Landmark, build: () => void): void {
+    if (!this.mm.landmarkWear) { build(); return; }
+    const previous = this.weathering;
+    const wear = new LandmarkWear(this, landmark);
+    this.weathering = wear;
+    try { build(); wear.finish(); } finally { this.weathering = previous; }
+  }
+
+  wearWindow(m: Matrix4, w: number, h: number, board = false): boolean {
+    return this.weathering?.window(m, w, h, board) ?? false;
   }
 
   private lift = 0;
@@ -251,14 +272,15 @@ export function emissive(materials: Materials, t: { map: Texture; emissiveMap: T
   return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
 }
 
-export function makeMapMats(materials: Materials, district?: 'alex' | 'tunnel'): MapMats {
-  const base = makeMats(materials, district);
+export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 'tunnel'): MapMats {
+  const base = makeMats(materials, district === 'mitte' ? undefined : district);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
   const asphalt = paintAsphalt(o).map;
   const uDirt = { value: dirt };
   const m: MapMats = {
     ...base,
+    ...makeLotGroundMats(materials, dirt, district !== 'tunnel'),
     railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
@@ -296,7 +318,7 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'tunnel'):
     m.litter.map?.dispose();
     m.litter.map = texture;
   });
-  loadGroundTexture('asphalt', o.anisotropy, texture => {
+  loadGroundTexture(district === 'mitte' ? 'mitteAsphalt' : 'asphalt', o.anisotropy, texture => {
     m.asphalt.map = m.tar.map = texture;
     asphalt.dispose();
   });
@@ -1567,9 +1589,9 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
     const i = rng.pick(backs), run = runs[i] as Run, s = rng.range(1.2, run.len - 1.2);
     const ht = Math.max((tops[i] as { top: (s: number) => number }).top(s) + rng.range(0.6, 2), H * rng.range(0.6, 0.85));
     const soot: RGB = [0.5, 0.43, 0.4];
-    b.box(b.mm.brick, run.mat(s, ht / 2, -wall - 0.27), 0.95, ht, 0.55, soot);
-    b.box(b.mm.brick, run.mat(s, ht + 0.07, -wall - 0.27), 1.1, 0.14, 0.7, [0.42, 0.37, 0.35]);
-    if (rng.next() < 0.6) b.box(b.mm.brick, run.mat(s + rng.range(-0.25, 0.25), ht + 0.32, -wall - 0.27, 0, rng.range(-0.2, 0.2)), 0.3, 0.42, 0.3, [0.45, 0.4, 0.38]);
+    b.box(b.mm.brickRuin, run.mat(s, ht / 2, -wall - 0.27), 0.95, ht, 0.55, soot);
+    b.box(b.mm.brickRuin, run.mat(s, ht + 0.07, -wall - 0.27), 1.1, 0.14, 0.7, [0.42, 0.37, 0.35]);
+    if (rng.next() < 0.6) b.box(b.mm.brickRuin, run.mat(s + rng.range(-0.25, 0.25), ht + 0.32, -wall - 0.27, 0, rng.range(-0.2, 0.2)), 0.3, 0.42, 0.3, [0.45, 0.4, 0.38]);
   }
   // A broken cross wall between front and back (Altbau): the shell no longer reads as an empty box.
   const hw = l.w / 2, hd = l.d / 2, ch = l.shape?.chamfer;
@@ -1598,15 +1620,15 @@ function buildRuin(b: ChunkBuilder, l: Lot): void {
   }
   outer.flush(b, plaster);
   inner.flush(b, plaster);
-  masonry.flush(b, b.mm.brick);
+  masonry.flush(b, b.mm.brickRuin);
   // Rubble: big heaps under the collapsed corners, smaller ones along the walls, loose bricks.
   const heap = (at: Matrix4, r: number, h: number): void => {
     const g = rng.range(0.55, 0.8);
     const geo = new IcosahedronGeometry(1, 0);
-    b.geo(b.mm.brick, geo, at.clone().multiply(new Matrix4().makeRotationY(rng.range(0, 6)).setPosition(0, -h * 0.25, 0)).multiply(tmpScale.makeScale(r, h, r * rng.range(0.7, 1))), [g, g * 0.9, g * 0.85]);
+    b.geo(b.mm.brickRuin, geo, at.clone().multiply(new Matrix4().makeRotationY(rng.range(0, 6)).setPosition(0, -h * 0.25, 0)).multiply(tmpScale.makeScale(r, h, r * rng.range(0.7, 1))), [g, g * 0.9, g * 0.85]);
     for (let k = 0; k < 4; k++) {
       const a = rng.range(0, Math.PI * 2), d = r * rng.range(0.4, 1.0);
-      b.box(rng.next() < 0.7 ? b.mm.brick : plaster, at.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rng.range(-0.5, 0.5), rng.range(0, 3), rng.range(-0.5, 0.5))).setPosition(Math.cos(a) * d, h * 0.35 * rng.next(), Math.sin(a) * d)),
+      b.box(rng.next() < 0.7 ? b.mm.brickRuin : plaster, at.clone().multiply(new Matrix4().makeRotationFromEuler(new Euler(rng.range(-0.5, 0.5), rng.range(0, 3), rng.range(-0.5, 0.5))).setPosition(Math.cos(a) * d, h * 0.35 * rng.next(), Math.sin(a) * d)),
         rng.range(0.3, 0.8), rng.range(0.15, 0.35), rng.range(0.25, 0.5), [g, g * 0.92, g * 0.88]);
     }
   };
@@ -2283,10 +2305,13 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const sky = opts.sky ?? NIGHT_SKY;
   glowScale = sky.lamps;
   wet = sky.wet;
-  const mats = makeMapMats(materials, m.tunnel ? 'tunnel' : m.id === 'alex' ? 'alex' : undefined);
+  const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' ? m.id : undefined);
+  const mats = makeMapMats(materials, district);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
   let railMats: MapMats | undefined;
+  if (m.id === 'koepenick') mats.landmarkFinishes = makeLandmarkFinishes(materials, mats.slate);
+  if (!m.tunnel && !m.camp) mats.landmarkWear = makeLandmarkWearMaterial(materials);
   if (m.id === 'alex') {
     const anisotropy = materials.profile.anisotropy;
     mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
@@ -2419,7 +2444,14 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     // Xhain landmarks are built and cut in `buildXhainWorld`.
     const cut = XHAIN_KINDS.has(l.kind) ? undefined : landmarkCut.get(l);
     // M15 Alexanderplatz and Mitte landmarks live in `alex-world.ts` and `mitte-world.ts`.
-    const build = (): void => b.on(y0, () => (ALEX_KINDS.has(l.kind) ? buildAlexLandmark(b, l) : MITTE_KINDS.has(l.kind) ? buildMitteLandmark(b, l) : buildLandmark(b, l)));
+    const build = (): void => b.on(y0, () => {
+      if (XHAIN_KINDS.has(l.kind)) return;
+      b.wearLandmark(l, () => {
+        if (ALEX_KINDS.has(l.kind)) buildAlexLandmark(b, l);
+        else if (MITTE_KINDS.has(l.kind)) buildMitteLandmark(b, l);
+        else buildLandmark(b, l);
+      });
+    });
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
   const rng = new Rng(m.seed);
