@@ -13,7 +13,11 @@
 // Cost: no new material. Everything is merged into existing chunk batches (stucco, slate, enamel for copper
 // and gilding, iron, brick, glass, concrete, mossy and ivy for hedges, car paint and car glass for the
 // train, the window atlas), so a chunk gains at most the batches of those it did not use yet.
-import { CylinderGeometry, Matrix4, SphereGeometry, type BufferGeometry, type Material } from 'three';
+//
+// Worn surfaces (2026-11-19, Johannes: too even, too clean): `weather` runs after each sight's builder over the walls
+// it drew (recipes `GRIME` in the three builder files), the damage dressing (`shutter`, `props`, `sandbags`, `battens`,
+// `tarp`, `scaffold`) and the period posters (`paintPosters`) are opt-in helpers only these builders call.
+import { BufferAttribute, BufferGeometry, CylinderGeometry, Matrix4, SphereGeometry, Vector3, type Material } from 'three';
 import { OPEN_PARTS, type Landmark, type LandmarkKind, type MapDef, type Pt, type Terrace, type Wall, WALL_KIND } from '../data/map';
 import { Rng } from '../sim/math';
 import { buildArches, buildStadtbahn } from './alex-world';
@@ -22,9 +26,9 @@ import { lm as lmShared, type ChunkBuilder, type MapMats } from './map-world';
 import type { LitMaterial } from './materials';
 import type { WearOptions } from './landmark-wear';
 export type { RGB } from './landmarks';
-import { buildCitywest } from './charlottenburg-citywest';
-import { buildKudamm } from './charlottenburg-kudamm';
-import { buildSchloss } from './charlottenburg-schloss';
+import { buildCitywest, GRIME as CITYWEST_GRIME } from './charlottenburg-citywest';
+import { buildKudamm, GRIME as KUDAMM_GRIME } from './charlottenburg-kudamm';
+import { buildSchloss, GRIME as SCHLOSS_GRIME } from './charlottenburg-schloss';
 
 export const CHARLOTTENBURG_KINDS = new Set<LandmarkKind>([
   'zoobahnhof', 'loewentor', 'elefantentor', 'aquarium', 'musikpavillon', 'antilopenhaus', 'ufapalast', 'capitol', 'gedaechtniskirche',
@@ -453,12 +457,576 @@ function massing(c: Ctx): void {
 /**
  * Builds one Charlottenburg landmark (inside `b.on` at its ground height; the station hall at street level).
  * Step 4: the three builder files are asked first (each returns true for the kinds it drew), the step 2
- * massing is the fallback.
+ * massing is the fallback. Then the worn-surface pass (`weather`) runs over the walls the builder drew, with
+ * the recipe of the builder file (`GRIME` there).
  */
 export function buildCharlottenburgLandmark(b: ChunkBuilder, l: Landmark): void {
   const c: Ctx = { b, M: b.mm, l, rng: new Rng(Math.round(l.x * 31 + l.z * 17) + 1920) };
-  if (buildCitywest(c) || buildKudamm(c) || buildSchloss(c)) return;
-  massing(c);
+  const recipe = CITYWEST_GRIME[l.kind] ?? KUDAMM_GRIME[l.kind] ?? SCHLOSS_GRIME[l.kind];
+  const rec = recipe ? recordWalls(b) : undefined;
+  try {
+    if (!(buildCitywest(c) || buildKudamm(c) || buildSchloss(c))) massing(c);
+  } finally {
+    rec?.stop();
+  }
+  if (rec && recipe) weather(c, rec, recipe);
+}
+
+// ---------------------------------------------------------------- worn surfaces (2026-11-19)
+
+/**
+ * Recipe of the worn-surface pass for one sight (Johannes 2026-11-19: the walls were too even and too clean).
+ * Every layer is a sheet of triangles in the wall's own material (stucco or brick) a few millimetres in front
+ * of the box face, behind windows, trims and signs, with the wall's UVs and per-vertex colours: a vertex in
+ * the wall tint is invisible, so stains fade into the wall without alpha or a new material. Values are
+ * strengths; 0 or a missing value leaves a layer out.
+ */
+export interface Grime {
+  /** Triangle budget of the pass (about a tenth of the sight; hand details in the builder come on top). */
+  tris: number;
+  /** Tone drift between bays and storeys (0.05 calm stone … 0.25 patchy render). */
+  drift: number;
+  /** Bay width of the drift grid in m. */
+  bay?: number;
+  /** Damp plinth: height in m (dark and greenish at the foot, fading up). */
+  damp: number;
+  /** Lichen and moss green in the damp band and the low stains (0 … 1). */
+  moss?: number;
+  /** Soot falling from cornices and wall tops (0 … 1.2). */
+  soot: number;
+  /** Share of window bays with soot rising from burnt rooms above the window. */
+  sootBays?: number;
+  /** Soft stains (water, damp, grime, a few lighter) per 10 m of face, mostly below 6 m. */
+  stains?: number;
+  /** Rain streaks per 10 m of face (one in six a rust run). */
+  streaks?: number;
+  /** Fallen-plaster patches per 10 m of street face (brick shows); 0 on stone sights. */
+  spall?: number;
+  /** Patched, mismatched repairs per 10 m (cement grey, fresher or yellower render). */
+  patch?: number;
+  /** Ghosts of pasted-off posters per 10 m (cleaner rectangles at street level). */
+  ghosts?: number;
+}
+
+interface WallRec { t: Matrix4; inv: Matrix4; sx: number; sy: number; sz: number; tint: RGB; mat: Material }
+interface HoleRec { t: Matrix4; w: number; h: number }
+interface Recording { walls: WallRec[]; holes: HoleRec[]; stop(): void }
+/** Sights that draw no brick get their fallen-plaster cores in brick-red stucco (no extra batch in the chunk). */
+const BRICK_RED: RGB = [1.05, 0.56, 0.42];
+
+/**
+ * Records the stucco and brick boxes (walls) and the window and door rectangles a builder draws, by wrapping
+ * `b.box` and `b.wearWindow` on this builder instance only while one Charlottenburg sight is built (opt-in:
+ * other maps never call it).
+ */
+function recordWalls(b: ChunkBuilder): Recording {
+  const walls: WallRec[] = [], holes: HoleRec[] = [], M = b.mm;
+  const box = b.box, wearWindow = b.wearWindow;
+  const own = b as { box: ChunkBuilder['box']; wearWindow: ChunkBuilder['wearWindow'] };
+  own.box = (mat, t, sx, sy, sz, color, ...rest) => {
+    if (mat === M.stucco || mat === M.brick) walls.push({ t: t.clone(), inv: t.clone().invert(), sx, sy, sz, tint: color ?? [1, 1, 1], mat });
+    else if ((mat === M.dark || mat === M.door || mat === M.shop || mat === M.glass) && sz < 0.2) holes.push({ t: t.clone(), w: sx, h: sy });
+    box.call(b, mat, t, sx, sy, sz, color, ...rest);
+  };
+  own.wearWindow = (m, w, h, board) => {
+    holes.push({ t: m.clone(), w, h });
+    return wearWindow.call(b, m, w, h, board);
+  };
+  return { walls, holes, stop: () => { Reflect.deleteProperty(b, 'box'); Reflect.deleteProperty(b, 'wearWindow'); } };
+}
+
+/** A wall face: frame `m` at the bottom centre of the face (+z out of the wall), width, height, tint, material. */
+export interface Face { m: Matrix4; w: number; h: number; tint: RGB; mat: Material; low?: boolean }
+
+/** A face for hand-placed wear: frame at the bottom centre of a wall face (+z out), its size, tint and material (stucco by default). */
+export function wallFace(c: Ctx, m: Matrix4, w: number, h: number, tint: RGB = [1, 1, 1], mat: Material = c.M.stucco): Face {
+  return { m, w, h, tint, mat, low: true };
+}
+
+/**
+ * Tint `t` shaded by `s` (and hue `h`) so the change reads the same on every wall: bright tints (the Ku'damm
+ * stone is tinted 2 to 4 times the stucco) sit in the flat top of the tone curve, so darkening is raised to a
+ * power that grows with the tint's luminance on the stucco base (#b9a88c); brightening is damped.
+ */
+export function shade(t: RGB, s: number, h: RGB = [1, 1, 1]): RGB {
+  const lum = 0.3 * t[0] * 0.485 + 0.59 * t[1] * 0.39 + 0.11 * t[2] * 0.26, p = Math.max(1.2, Math.min(4, lum / 0.18));
+  const f = (v: number): number => (v < 1 ? v ** p : 1 + (v - 1) * 0.7);
+  const k = f(s);
+  return [t[0] * k * f(h[0]), t[1] * k * f(h[1]), t[2] * k * f(h[2])];
+}
+
+/** Layer depths in front of the wall face (m): all behind window panes (≥ 0.01) and trims. */
+const Z = { grid: 0.004, stain: 0.0052, streak: 0.0062, patch: 0.0072, core: 0.0084, lath: 0.0094 } as const;
+
+/** Triangles on one face in one material, in face-local metres; UVs as the wall boxes (metres × 0.5). */
+class Sheet {
+  readonly pos: number[] = [];
+  readonly col: number[] = [];
+  readonly idx: number[] = [];
+  constructor(readonly f: Face, readonly mat: Material) {}
+  v(x: number, y: number, z: number, c: RGB): number {
+    this.pos.push(x, y, z);
+    this.col.push(c[0], c[1], c[2]);
+    return this.pos.length / 3 - 1;
+  }
+  tri(a: number, b: number, c: number): void { this.idx.push(a, b, c); }
+  quad(p: ReadonlyArray<readonly [number, number]>, z: number, c: readonly RGB[]): void {
+    const i = p.map(([x, y], k) => this.v(x, y, z, c[k] ?? c[0]!));
+    this.tri(i[0]!, i[1]!, i[2]!);
+    this.tri(i[0]!, i[2]!, i[3]!);
+  }
+  get tris(): number { return this.idx.length / 3; }
+  flush(b: ChunkBuilder): void {
+    if (!this.idx.length) return;
+    const g = new BufferGeometry(), n = this.pos.length / 3, uv = new Float32Array(n * 2), nor = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { uv[i * 2] = (this.pos[i * 3]! + this.f.w / 2) * 0.5; uv[i * 2 + 1] = this.pos[i * 3 + 1]! * 0.5; nor[i * 3 + 2] = 1; }
+    g.setAttribute('position', new BufferAttribute(new Float32Array(this.pos), 3));
+    g.setAttribute('normal', new BufferAttribute(nor, 3));
+    g.setAttribute('uv', new BufferAttribute(uv, 2));
+    g.setAttribute('color', new BufferAttribute(new Float32Array(this.col), 3));
+    g.setIndex(this.idx);
+    b.solid.of(this.mat).add(g, this.f.m);
+  }
+}
+
+/** The sheets of one face: the wall's own material and the few others the details need (brick, dark, lath). */
+class FaceWork {
+  private readonly sheets = new Map<Material, Sheet>();
+  constructor(readonly b: ChunkBuilder, readonly f: Face, readonly rng: Rng, readonly at: (x: number, y: number) => RGB = () => f.tint, readonly brick = true) {}
+  of(mat: Material = this.f.mat): Sheet {
+    let s = this.sheets.get(mat);
+    if (!s) this.sheets.set(mat, (s = new Sheet(this.f, mat)));
+    return s;
+  }
+  get tris(): number { let n = 0; for (const s of this.sheets.values()) n += s.tris; return n; }
+  flush(): void { for (const s of this.sheets.values()) s.flush(this.b); }
+}
+
+/**
+ * Worn details on one wall face, for the pass below and for builders that place them by hand. x, y: centre on
+ * the face (streak, rust: the top centre, `h` the length down; soot: the foot centre, `h` the rise).
+ * - stain: a soft blot (dark centre, `tone` < 1, or a lighter one > 1, tinted by `hue`) fading into the wall, 6 triangles;
+ * - streak, rust: a run narrowing toward its foot, soft sides, 4 triangles; soot: a plume widening upward;
+ * - spall: fallen render showing brick (`lath`: bare lath on a dark ground), a lighter broken edge;
+ * - patch: a repair in another tone; ghost: the clean rectangle of a pasted-off poster.
+ */
+export function wornSpot(w: FaceWork, kind: 'stain' | 'streak' | 'rust' | 'soot' | 'spall' | 'lath' | 'patch' | 'ghost', x: number, y: number, sw: number, sh: number, tone = 0.72, hue: RGB = [1, 1, 1]): void {
+  const { b, f, rng, at } = w, M = b.mm, j = (): number => rng.range(-0.18, 0.18);
+  if (kind === 'stain') {
+    const s = w.of(), n = 6, cx = x + j() * sw * 0.2, cyy = y + j() * sh * 0.2;
+    const centre = s.v(cx, cyy, Z.stain, shade(at(cx, cyy), tone, hue));
+    const rim = Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * Math.PI * 2, r = 0.5 * (0.75 + rng.next() * 0.5);
+      const px = Math.max(-f.w / 2, Math.min(f.w / 2, x + Math.cos(a) * sw * r)), py = Math.max(0, Math.min(f.h, y + Math.sin(a) * sh * r));
+      return s.v(px, py, Z.stain, at(px, py));
+    });
+    for (let i = 0; i < n; i++) s.tri(centre, rim[i]!, rim[(i + 1) % n]!);
+    return;
+  }
+  if (kind === 'streak' || kind === 'rust' || kind === 'soot') {
+    const s = w.of(), up = kind === 'soot', y0 = up ? y : y - sh, y1 = up ? y + sh : y;
+    const wDark = up ? sw : sw, wFade = up ? sw * 1.8 : sw * 0.35, yd = up ? y0 : y1, yf = up ? y1 : y0;
+    const dark = kind === 'rust' ? shade(at(x, yd), 0.7, [1.2, 0.78, 0.52]) : shade(at(x, yd), up ? 0.34 : 0.52);
+    const lean = j() * 0.25;
+    const L = s.v(x - wDark / 2, yd, Z.streak, at(x - wDark / 2, yd)), C2 = s.v(x, yd, Z.streak, dark), R2 = s.v(x + wDark / 2, yd, Z.streak, at(x + wDark / 2, yd));
+    const xf = x + lean, l2 = s.v(xf - wFade / 2, yf, Z.streak, at(xf - wFade / 2, yf)), c3 = s.v(xf, yf, Z.streak, up ? shade(at(xf, yf), 0.85) : at(xf, yf)), r3 = s.v(xf + wFade / 2, yf, Z.streak, at(xf + wFade / 2, yf));
+    // Two strips (left and right of the dark middle line) of two triangles each, wound toward +z.
+    const strip = (a: number, bb: number, c: number, d: number): void => { if (up) { s.tri(a, bb, d); s.tri(a, d, c); } else { s.tri(c, d, bb); s.tri(c, bb, a); } };
+    strip(L, C2, l2, c3);
+    strip(C2, R2, c3, r3);
+    return;
+  }
+  const pts = (k: number): Array<[number, number]> => [[x - (sw / 2) * k + j() * sw * 0.4, y - (sh / 2) * k + j() * sh * 0.3], [x + (sw / 2) * k + j() * sw * 0.4, y - (sh / 2) * k + j() * sh * 0.5], [x + (sw / 2) * k + j() * sw * 0.3, y + (sh / 2) * k + j() * sh * 0.3], [x - (sw / 2) * k + j() * sw * 0.5, y + (sh / 2) * k + j() * sh * 0.4]];
+  if (kind === 'patch' || kind === 'ghost') {
+    const t: RGB = kind === 'ghost' ? [1.12, 1.1, 1.06] : rng.pick<RGB>([[0.84, 0.88, 0.95], [1.1, 1.07, 0.98], [1.08, 0.98, 0.8], [0.9, 0.88, 0.84]]);
+    const s = shade(at(x, y), kind === 'ghost' ? 1.08 : rng.range(0.9, 1.05), t);
+    const r: Array<[number, number]> = kind === 'ghost' ? [[x - sw / 2, y - sh / 2], [x + sw / 2, y - sh / 2], [x + sw / 2, y + sh / 2], [x - sw / 2, y + sh / 2]] : pts(1);
+    w.of().quad(r, Z.patch, [s]);
+    return;
+  }
+  // The broken edge of the render is lighter (fresh lime), the core is brick, or bare lath on a dark ground: two
+  // ragged seven-sided fans (14 triangles), the edge a little larger than the hole.
+  if (kind === 'spall') {
+    const n = 7, rr = Array.from({ length: n }, () => rng.range(0.62, 1.0)), a0 = rng.range(0, 1);
+    const fan = (s: Sheet, k: number, z: number, c: RGB): void => {
+      const centre = s.v(x, y, z, c);
+      const rim = rr.map((r, i) => { const a = a0 + (i / n) * Math.PI * 2; return s.v(x + Math.cos(a) * (sw / 2) * r * k, Math.max(0.02, y + Math.sin(a) * (sh / 2) * r * k), z, c); });
+      for (let i = 0; i < n; i++) s.tri(centre, rim[i]!, rim[(i + 1) % n]!);
+    };
+    const red = rng.pick<RGB>([[0.86, 0.62, 0.52], [0.74, 0.5, 0.42], [0.95, 0.72, 0.6]]);
+    fan(w.of(), 1.16, Z.patch, shade(at(x, y), 1.12, [1.02, 1.0, 0.95]));
+    if (f.mat === M.brick) fan(w.of(M.dark), 1, Z.core, [1, 1, 1]);
+    else if (w.brick) fan(w.of(M.brick), 1, Z.core, red);
+    else fan(w.of(M.stucco), 1, Z.core, [BRICK_RED[0] * red[0], BRICK_RED[1] * red[1], BRICK_RED[2] * red[2]]);
+    return;
+  }
+  w.of().quad(pts(1.2), Z.patch, [shade(at(x, y), 1.12, [1.02, 1.0, 0.95])]);
+  w.of(M.dark).quad(pts(1), Z.core, [[1, 1, 1]]);
+  const n = Math.max(2, Math.round(sh / 0.2));
+  for (let i = 0; i < n; i++) {
+    const yy = y - sh / 2 + ((i + 0.5) * sh) / n;
+    w.of(M.darkWood).quad([[x - sw / 2, yy - 0.04], [x + sw / 2, yy - 0.04], [x + sw / 2, yy + 0.04], [x - sw / 2, yy + 0.04]], Z.lath, [[0.8, 0.66, 0.52]]);
+  }
+}
+
+/** Hand-placed wear on one face: `fn` gets the face's work sheet; returns the triangles added. */
+export function wornFace(c: Ctx, f: Face, fn: (w: FaceWork) => void, seed = 1): number {
+  const w = new FaceWork(c.b, f, new Rng(seed * 7477 + Math.round(f.w * 100)));
+  fn(w);
+  const n = w.tris;
+  w.flush();
+  return n;
+}
+export type { FaceWork };
+
+/**
+ * A shade field over a face: drift per column and row, damp at the foot, soot from the top; `at(x, y)` gives
+ * the interpolated colour, so stains and streaks fade into it exactly.
+ */
+function field(f: Face, g: Grime, rng: Rng): { xs: number[]; ys: number[]; col: RGB[][]; at(x: number, y: number): RGB } {
+  const { w, h } = f, nx = Math.max(1, Math.min(10, Math.round(w / (g.bay ?? 3))));
+  const xs = Array.from({ length: nx + 1 }, (_, i) => -w / 2 + (w * i) / nx + (i > 0 && i < nx ? rng.range(-0.2, 0.2) * (w / nx) : 0));
+  const ys = [0];
+  const damp = f.low && g.damp > 0 ? Math.min(h * 0.4, g.damp * rng.range(0.75, 1.25)) : 0;
+  if (damp) ys.push(damp);
+  for (const y of [2.8, 6.5]) if (y > ys[ys.length - 1]! + 0.7 && y < h - 1.3) ys.push(y + rng.range(-0.4, 0.4));
+  if (h > 4 && g.soot > 0) ys.push(h - Math.min(1.5, h * 0.2));
+  ys.push(h);
+  const colA = xs.map(() => rng.range(-1, 1)), rowA = ys.map(() => rng.range(-1, 1)), sootCol = xs.map(() => rng.range(0.3, 1.3));
+  const moss = g.moss ?? 0, green: RGB = [1 - 0.16 * moss, 1, 1 - 0.28 * moss];
+  const col = xs.map((_, i) => ys.map((y, j) => {
+    let s = 1 + g.drift * (0.55 * colA[i]! + 0.3 * rowA[j]! + 0.45 * rng.range(-1, 1));
+    let hue: RGB = [1, 1, 1];
+    // Damp and street grime: dark and green at the foot, darker up to the damp line, a little dirtier to 2.5 m.
+    if (damp && j === 0) { s *= 1 - 0.7 * Math.min(1, g.damp); hue = green; }
+    else if (damp && j === 1) { s *= 1 - 0.28 * Math.min(1, g.damp); hue = [1 - 0.08 * moss, 1, 1 - 0.12 * moss]; }
+    else if (f.low && y < 2.6) s *= 1 - 0.08 * Math.min(1, g.damp);
+    if (g.soot > 0 && j === ys.length - 1) s *= 1 - 0.6 * Math.min(1.25, g.soot * sootCol[i]!);
+    else if (g.soot > 0 && j === ys.length - 2 && h > 4) s *= 1 - 0.1 * g.soot * sootCol[i]!;
+    return shade(f.tint, Math.max(0.3, s), hue);
+  }));
+  const at = (x: number, y: number): RGB => {
+    let i = 0, j = 0;
+    while (i < xs.length - 2 && x > xs[i + 1]!) i++;
+    while (j < ys.length - 2 && y > ys[j + 1]!) j++;
+    const u = Math.max(0, Math.min(1, (x - xs[i]!) / (xs[i + 1]! - xs[i]!))), v = Math.max(0, Math.min(1, (y - ys[j]!) / (ys[j + 1]! - ys[j]!)));
+    const a = col[i]![j]!, b2 = col[i + 1]![j]!, c2 = col[i]![j + 1]!, d = col[i + 1]![j + 1]!;
+    return [0, 1, 2].map((k) => (a[k]! * (1 - u) + b2[k]! * u) * (1 - v) + (c2[k]! * (1 - u) + d[k]! * u) * v) as unknown as RGB;
+  };
+  return { xs, ys, col, at };
+}
+
+/** Faces of a recorded box (0 front +z, 1 +x, 2 back, 3 −x), framed at their bottom centre. */
+function facesOf(r: WallRec): Face[] {
+  const out: Face[] = [], floor = r.t.elements[13]! - r.sy / 2;
+  for (let face = 0; face < 4; face++) {
+    const w = face % 2 ? r.sz : r.sx, depth = face % 2 ? r.sx : r.sz;
+    const m = r.t.clone().multiply(new Matrix4().makeRotationY((face * Math.PI) / 2)).multiply(new Matrix4().makeTranslation(0, -r.sy / 2, depth / 2));
+    out.push({ m, w, h: r.sy, tint: r.tint, mat: r.mat, low: floor < 0.7 && floor > -1.5 });
+  }
+  return out;
+}
+
+/**
+ * The worn-surface pass: tone drift, damp plinth and soot on every visible wall face (south, east and west in
+ * the world: the camera looks north), soft stains and streaks, soot plumes over some windows, fallen plaster,
+ * repairs and poster ghosts at street level, within the recipe's triangle budget, most of it below 6 m. Faces
+ * and cells hidden inside other walls are skipped; details keep off windows and doors.
+ */
+function weather(c: Ctx, rec: Recording, g: Grime): void {
+  const b = c.b, rng = new Rng((c.l.kind.length * 7919 + Math.round(c.l.x * 13) * 31 + Math.round(c.l.z * 7)) >>> 0);
+  const tmp = new Vector3();
+  const inside = (p: Vector3, self: WallRec): boolean => rec.walls.some((o) => {
+    if (o === self) return false;
+    tmp.copy(p).applyMatrix4(o.inv);
+    return Math.abs(tmp.x) < o.sx / 2 - 0.02 && Math.abs(tmp.y) < o.sy / 2 && Math.abs(tmp.z) < o.sz / 2 - 0.02;
+  });
+  const faces: Array<{ f: Face; wall: WallRec; score: number }> = [], hasBrick = rec.walls.some((w) => w.mat === b.mm.brick);
+  for (const wall of rec.walls) {
+    if (Math.abs(wall.t.elements[5]! - 1) > 0.02) continue;
+    for (const f of facesOf(wall)) {
+      if (f.w < 2.0 || f.h < (f.low ? 0.45 : 2.2)) continue;
+      const nz = f.m.elements[10]!;
+      if (nz < -0.45) continue;
+      faces.push({ f, wall, score: f.w * Math.min(f.h, 7) * (0.5 + nz) * (f.low ? 1.6 : 1) });
+    }
+  }
+  faces.sort((a, z) => z.score - a.score);
+  const total = faces.reduce((n, q) => n + q.score, 0);
+  // Hole rectangles in each face's frame, so details keep off windows and doors.
+  const onFace = (f: Face): Array<[number, number, number, number]> => {
+    const inv = f.m.clone().invert(), out: Array<[number, number, number, number]> = [];
+    for (const h of rec.holes) {
+      const p = new Vector3().setFromMatrixPosition(h.t).applyMatrix4(inv);
+      if (Math.abs(p.z) < 0.5 && Math.abs(p.x) < f.w / 2 + 1) out.push([p.x - h.w / 2 - 0.12, p.y - h.h / 2 - 0.12, p.x + h.w / 2 + 0.12, p.y + h.h / 2 + 0.12]);
+    }
+    return out;
+  };
+  let used = 0;
+  for (const { f, wall, score } of faces) {
+    if (used >= g.tris) break;
+    // Each face gets a share of the budget by its weight (big, low, south faces first), the rest rolls on.
+    const cap = Math.min(g.tris, used + Math.max(24, (g.tris * score) / total * 1.3));
+    const fl = field(f, g, rng), holes = onFace(f), w = new FaceWork(b, f, rng, fl.at, hasBrick);
+    const left = (): boolean => used + w.tris < cap;
+    // The drift grid, cell by cell; cells whose middle lies inside another wall are hidden and skipped.
+    const grid = w.of();
+    for (let i = 0; i < fl.xs.length - 1; i++) for (let j = 0; j < fl.ys.length - 1 && left(); j++) {
+      const x0 = fl.xs[i]!, x1 = fl.xs[i + 1]!, y0 = fl.ys[j]!, y1 = fl.ys[j + 1]!;
+      if (inside(new Vector3((x0 + x1) / 2, Math.min((y0 + y1) / 2, y0 + 1.2), 0.2).applyMatrix4(f.m), wall)) continue;
+      grid.quad([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], Z.grid, [fl.col[i]![j]!, fl.col[i + 1]![j]!, fl.col[i + 1]![j + 1]!, fl.col[i]![j + 1]!]);
+    }
+    const per = (n = 0, scale = f.w): number => { const v = (n * scale) / 10; return Math.floor(v) + (rng.next() < v % 1 ? 1 : 0); };
+    const visible = (x: number, y: number): boolean => !inside(new Vector3(x, y, 0.2).applyMatrix4(f.m), wall);
+    const free = (x: number, y: number, sw: number, sh: number): boolean => Math.abs(x) + sw / 2 < f.w / 2 - 0.1 && y - sh / 2 > 0.05 && y + sh / 2 < f.h - 0.1 &&
+      !holes.some(([a, bb, cc, d]) => x + sw / 2 > a && x - sw / 2 < cc && y + sh / 2 > bb && y - sh / 2 < d) && visible(x, y);
+    const place = (sw: number, sh: number, ymin: number, ymax: number): [number, number] | undefined => {
+      for (let k = 0; k < 6; k++) {
+        const x = rng.range(-f.w / 2 + sw / 2 + 0.2, f.w / 2 - sw / 2 - 0.2), y = rng.range(ymin, Math.max(ymin, Math.min(ymax, f.h - sh / 2 - 0.2)));
+        if (free(x, y, sw, sh)) return [x, y];
+      }
+      return undefined;
+    };
+    // Soot plumes over some windows (burnt rooms), on the upper storeys.
+    for (const [a, bb, cc, d] of holes) {
+      if (!left() || bb < 2.5 || d > f.h - 0.5 || rng.next() > (g.sootBays ?? 0)) continue;
+      const x = (a + cc) / 2;
+      if (Math.abs(x) < f.w / 2 - 0.3 && visible(x, d)) wornSpot(w, 'soot', x, d - 0.1, Math.min(1.6, cc - a), Math.min(2.4, f.h - d - 0.1));
+    }
+    // Soft stains: dark damp and grime blots low, a few lighter washed patches, fewer higher up.
+    for (let n = per(g.stains, f.w * Math.min(1.6, f.h / 5)); n > 0 && left(); n--) {
+      const low = rng.next() < 0.7, sw = Math.min(f.w * 0.8, rng.range(1.0, 3.2)), sh = Math.min(f.h * 1.2, sw * rng.range(0.5, 1.1));
+      const x = rng.range(-f.w / 2 + 0.4, f.w / 2 - 0.4), y = low || f.h < 5 ? rng.range(Math.min(0.5, f.h * 0.3), Math.max(0.2, Math.min(f.h - 0.2, 4.5))) : rng.range(4.5, Math.max(4.6, f.h - 0.5));
+      if (y > f.h || !visible(x, Math.min(y, f.h * 0.5))) continue;
+      wornSpot(w, 'stain', x, y, sw, sh, rng.next() < 0.2 ? rng.range(1.12, 1.25) : rng.range(0.34, 0.66), low && y < 1.5 && (g.moss ?? 0) > 0 ? [1 - 0.15 * g.moss!, 1, 1 - 0.3 * g.moss!] : [1, 1, 1]);
+    }
+    for (let n = f.h < 2.6 ? 0 : per(g.streaks); n > 0 && left(); n--) {
+      const x = rng.range(-f.w / 2 + 0.3, f.w / 2 - 0.3), top = rng.range(2.2, Math.min(f.h - 0.15, 9)), len = Math.min(top - 0.2, rng.range(1.2, 3.6));
+      if (visible(x, top - len / 2)) wornSpot(w, rng.next() < 0.16 ? 'rust' : 'streak', x, top, rng.range(0.16, 0.45), len);
+    }
+    if (f.low) {
+      for (let n = per(g.spall); n > 0 && left(); n--) {
+        const sw = rng.range(0.7, 2.2), sh = rng.range(0.5, 1.4), p = place(sw, sh, 0.9, 5.2);
+        if (p) wornSpot(w, 'spall', p[0], p[1], sw, sh);
+      }
+      for (let n = per(g.patch); n > 0 && left(); n--) {
+        const sw = rng.range(0.9, 2.4), sh = rng.range(0.6, 1.8), p = place(sw, sh, 0.8, 4.5);
+        if (p) wornSpot(w, 'patch', p[0], p[1], sw, sh);
+      }
+      for (let n = per(g.ghosts); n > 0 && left(); n--) {
+        const sw = rng.range(0.6, 0.9), sh = sw * rng.range(1.3, 1.5), p = place(sw, sh, 1.4, 2.2);
+        if (p) wornSpot(w, 'ghost', p[0], p[1], sw, sh);
+      }
+    }
+    used += w.tris;
+    w.flush();
+  }
+}
+
+// ---------------------------------------------------------------- damage dressing (2026-11-19)
+// Shared, opt-in pieces for the builders (only Charlottenburg calls them): all thin, merged into existing batches
+// (dark wood, burlap, rust, dark, roof or slate), placed by the builders inside the footprint.
+
+const TIMBER: RGB = [0.62, 0.5, 0.4];
+
+/** A wooden shutter hanging askew from its top hinge beside a window (frame `m` at the window centre, +z out). */
+export function shutter(c: Ctx, m: Matrix4, w: number, h: number, side = 1, tint: RGB = [0.55, 0.62, 0.5]): void {
+  const sw = Math.min(0.85, w * 0.55), hinge = sub(m, side * (w / 2 + 0.03), h / 2, 0.07, 0, 0, -side * 0.38);
+  c.b.box(c.M.darkWood, sub(hinge, (side * sw) / 2, -h / 2, 0), sw, h, 0.05, tint);
+  for (const f of [0.22, 0.78]) c.b.box(c.M.darkWood, sub(hinge, (side * sw) / 2, -h * f, 0.03), sw * 0.92, 0.07, 0.03, [tint[0] * 0.7, tint[1] * 0.7, tint[2] * 0.7]);
+}
+
+/** Timber props shoring a wall (frame `m` on the wall face at ground, +z out): from the ground `out` m before it up to `top`. */
+export function props(c: Ctx, m: Matrix4, x: number, top: number, out: number, n = 2): void {
+  const len = Math.hypot(top, out), ang = Math.atan2(out, top);
+  for (let i = 0; i < n; i++) {
+    const dx = x + (i - (n - 1) / 2) * 0.7;
+    c.b.box(c.M.darkWood, sub(m, dx, top / 2, out / 2 + 0.08, 0, -ang), 0.16, len, 0.16, TIMBER);
+    c.b.box(c.M.darkWood, sub(m, dx, 0.05, out + 0.05), 0.3, 0.1, 0.5, TIMBER);
+  }
+  c.b.box(c.M.darkWood, sub(m, x, top, 0.06), 0.7 * n, 0.22, 0.1, TIMBER);
+}
+
+/** Sandbags stacked against a wall or in an opening (frame `m` at the foot, +z out), `w` wide, `rows` high. */
+export function sandbags(c: Ctx, m: Matrix4, w: number, rows: number, rng: Rng): void {
+  for (let r = 0; r < rows; r++) {
+    const n = Math.max(1, Math.round(w / 0.62) - (r % 2));
+    for (let i = 0; i < n; i++) {
+      const x = -w / 2 + (i + 0.5 + (r % 2) * 0.5) * (w / Math.max(1, Math.round(w / 0.62)));
+      c.b.box(c.M.burlap, sub(m, x, r * 0.24 + 0.12, 0.22, rng.range(-0.12, 0.12)), 0.58, 0.24, 0.38, [0.82 + rng.range(-0.06, 0.06), 0.74, 0.58]);
+    }
+  }
+}
+
+/** Frame on a roof slope: eave centre at local (x, y0, z0) of the sight, the slope rising `rise` over `run` inward, at `t` (0 eave … 1 ridge). */
+export function slope(c: Ctx, x: number, y0: number, z0: number, run: number, rise: number, t: number, ry = 0): Matrix4 {
+  return sub(lm(c.l, 0, 0, 0, ry), x, y0 + rise * t, z0 - run * t, 0, -Math.atan2(run, rise));
+}
+
+/** A slipped roof patch on a slope frame `m`: the dark hole, bare battens and rafters, a few tiles slid down. */
+export function battens(c: Ctx, m: Matrix4, w: number, h: number, tile: LitMaterial, tint: RGB): void {
+  const b = c.b, M = c.M;
+  b.box(M.dark, sub(m, 0, 0, 0.02), w, h, 0.03);
+  for (let i = 0; i < 4; i++) b.box(M.darkWood, sub(m, 0, -h / 2 + ((i + 0.5) * h) / 4, 0.07), w + 0.2, 0.05, 0.04, TIMBER);
+  for (const x of [-w * 0.3, w * 0.3]) b.box(M.darkWood, sub(m, x, 0, 0.04), 0.09, h + 0.2, 0.08, [0.5, 0.4, 0.32]);
+  for (let i = 0; i < 3; i++) b.box(tile, sub(m, (i - 1) * w * 0.35, -h / 2 - 0.25 - i * 0.12, 0.06, 0, 0, (i - 1) * 0.4), 0.32, 0.22, 0.03, tint);
+}
+
+/** A tarp hung over a wall or a hole (frame `m` at its top centre, +z out), sagging in two folds. */
+export function tarp(c: Ctx, m: Matrix4, w: number, h: number, tint: RGB = [0.66, 0.66, 0.56]): void {
+  const q = c.b.solid.of(c.M.burlap), p = (x: number, y: number, z: number): Vector3 => new Vector3(x, y, z).applyMatrix4(m);
+  q.quad([p(-w / 2, -h * 0.55, 0.16), p(w / 2, -h * 0.5, 0.12), p(w / 2, 0, 0.05), p(-w / 2, 0, 0.05)], [0, 0.45, 1, 1], [tint]);
+  q.quad([p(-w / 2 + 0.1, -h, 0.1), p(w / 2 - 0.25, -h * 0.92, 0.08), p(w / 2, -h * 0.5, 0.12), p(-w / 2, -h * 0.55, 0.16)], [0, 0, 1, 0.45], [[tint[0] * 0.88, tint[1] * 0.88, tint[2] * 0.86]]);
+}
+
+/** A timber scaffold against a wall (frame `m` on the wall face at ground, +z out), `w` wide, `h` high, with a tarp on top. */
+export function scaffold(c: Ctx, m: Matrix4, w: number, h: number, out = 0.7): void {
+  const b = c.b, M = c.M, n = Math.max(2, Math.round(w / 2.2) + 1);
+  for (let i = 0; i < n; i++) for (const z of [0.15, out]) b.box(M.darkWood, sub(m, -w / 2 + (i * w) / (n - 1), h / 2, z), 0.1, h, 0.1, TIMBER);
+  for (let y = 1.9; y < h; y += 1.9) {
+    b.box(M.darkWood, sub(m, 0, y, (0.15 + out) / 2), w, 0.06, out + 0.1, [0.72, 0.6, 0.46]);
+    b.box(M.darkWood, sub(m, 0, y + 0.95, out), w, 0.06, 0.06, TIMBER);
+  }
+  b.box(M.darkWood, sub(m, 0, h * 0.5, out + 0.06, 0, 0, Math.atan2(h * 0.8, w)), Math.hypot(w, h * 0.8), 0.07, 0.05, TIMBER);
+  tarp(c, sub(m, w * 0.15, h, out + 0.05), w * 0.6, Math.min(2.6, h * 0.45));
+}
+
+// ---------------------------------------------------------------- period posters (2026-11-19)
+
+/** The eight posters of `paintPosters`, in cell order: what Johannes liked, more of it (1920, German, short). */
+export const POSTERS = ['revue', 'kino', 'kabarett', 'variete', 'zoo', 'weissewoche', 'boxen', 'sechstage'] as const;
+/** Cell size of the poster strip in pixels (8 cells: 1024 × 256). */
+export const POSTER_CELL = { w: 128, h: 256 } as const;
+
+/**
+ * Eight peeling period posters in a 1024 × 256 strip at (x0, y0) of a sign atlas (City West and Ku'damm both
+ * paint it into their own atlas, no new material): a revue, a film (Madame Dubarry, Ufa-Palast 1919), the
+ * cabaret Schall und Rauch, the Wintergarten Varieté, a Zoo concert, the KaDeWe white week, a boxing night and
+ * the six-day race at the Sportpalast. Each is faded, torn at an edge to the plaster with a scrap of an older
+ * bill under it, glue-stained. `glow` paints the emissive map: posters are unlit (black).
+ */
+export function paintPosters(g: CanvasRenderingContext2D, x0: number, y0: number, glow: boolean): void {
+  const { w: W, h: H } = POSTER_CELL;
+  g.fillStyle = '#000';
+  g.fillRect(x0, y0, W * 8, H);
+  if (glow) return;
+  const rng = new Rng(1920_11_19);
+  const font = (px: number, f = 'bold %px "Arial Narrow", Arial, sans-serif'): string => f.replace('%', String(px));
+  const text = (t: string, x: number, y: number, maxW: number, px: number, col: string, f?: string): void => {
+    let s = px;
+    g.font = font(s, f);
+    while (g.measureText(t).width > maxW && s > 8) g.font = font(--s, f);
+    g.fillStyle = col;
+    g.fillText(t, x, y);
+  };
+  const SERIF = 'bold %px Georgia, "Times New Roman", serif', ITAL = 'italic bold %px Georgia, serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  const poly = (pts: number[], col: string): void => { g.fillStyle = col; g.beginPath(); g.moveTo(pts[0]!, pts[1]!); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i]!, pts[i + 1]!); g.closePath(); g.fill(); };
+  const disc = (x: number, y: number, r: number, col: string): void => { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+  POSTERS.forEach((kind, i) => {
+    const x = x0 + i * W, cx = x + W / 2, y = y0;
+    g.save();
+    g.beginPath(); g.rect(x, y, W, H); g.clip();
+    // The plaster behind and an older bill's scrap, then the poster.
+    g.fillStyle = '#a3967e'; g.fillRect(x, y, W, H);
+    g.fillStyle = rng.pick(['#5c7484', '#8a5a3a', '#6a6a4a', '#7a3a44']); g.fillRect(x + rng.range(-20, 40), y + rng.range(120, 200), 110, 90);
+    const m = 5, px0 = x + m, py0 = y + m, pw = W - 2 * m, ph = H - 2 * m;
+    const bg: Record<typeof kind, string> = { revue: '#8c1c3c', kino: '#e4dccb', kabarett: '#1a1a1e', variete: '#2c1c4a', zoo: '#d8c48a', weissewoche: '#eeeae0', boxen: '#c8a040', sechstage: '#24467a' };
+    g.fillStyle = bg[kind]; g.fillRect(px0, py0, pw, ph);
+    switch (kind) {
+      case 'revue':
+        // A dancer with a fan, the title over her, the house at the foot.
+        disc(cx - 4, y + 92, 13, '#f2d8cc');
+        poly([cx - 14, y + 108, cx + 8, y + 108, cx + 26, y + 196, cx - 34, y + 196], '#f6e2d6');
+        for (let k = 0; k < 7; k++) { const a = -2.6 + k * 0.3; poly([cx + 10, y + 112, cx + 10 + Math.cos(a) * 52, y + 112 + Math.sin(a) * 52, cx + 10 + Math.cos(a + 0.24) * 52, y + 112 + Math.sin(a + 0.24) * 52], k % 2 ? '#e8e4ee' : '#c8c0d8'); }
+        text('GROSSE', cx, y + 26, pw - 10, 22, '#fbe6d2', SERIF);
+        text('REVUE', cx, y + 52, pw - 8, 34, '#fbe6d2', SERIF);
+        text('TÄGLICH 8 UHR', cx, y + 222, pw - 12, 15, '#fbe6d2');
+        break;
+      case 'kino':
+        // A profile in a powdered wig, MADAME DUBARRY, the Ufa-Palast.
+        g.fillStyle = '#2a2026'; g.beginPath(); g.ellipse(cx + 6, y + 104, 30, 40, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#f0e8e0'; g.beginPath(); g.ellipse(cx - 2, y + 112, 22, 30, 0.1, 0, Math.PI * 2); g.fill();
+        poly([cx - 24, y + 112, cx - 32, y + 120, cx - 22, y + 124], '#f0e8e0');
+        g.fillStyle = '#d8d0cc'; g.beginPath(); g.ellipse(cx + 8, y + 76, 32, 22, 0, 0, Math.PI * 2); g.fill();
+        text('MADAME', cx, y + 170, pw - 12, 26, '#7a1a28', SERIF);
+        text('DUBARRY', cx, y + 196, pw - 10, 26, '#7a1a28', SERIF);
+        text('UFA-PALAST AM ZOO', cx, y + 228, pw - 10, 12, '#2a2026');
+        break;
+      case 'kabarett':
+        // A white mask and a red mouth on black: Schall und Rauch.
+        g.fillStyle = '#ece6dc'; g.beginPath(); g.ellipse(cx, y + 100, 32, 42, 0, 0, Math.PI * 2); g.fill();
+        disc(cx - 12, y + 92, 6, '#1a1a1e'); disc(cx + 12, y + 92, 6, '#1a1a1e');
+        g.fillStyle = '#c8203a'; g.beginPath(); g.ellipse(cx, y + 120, 12, 5, 0, 0, Math.PI * 2); g.fill();
+        text('KABARETT', cx, y + 30, pw - 10, 24, '#ece6dc');
+        text('Schall und Rauch', cx, y + 176, pw - 10, 18, '#e8b8c0', ITAL);
+        text('11 UHR NACHTS', cx, y + 222, pw - 14, 14, '#ece6dc');
+        break;
+      case 'variete':
+        // Stars and a juggler's balls over a stage arc: Wintergarten.
+        for (let k = 0; k < 9; k++) disc(x + 18 + rng.range(0, pw - 20), y + 20 + rng.range(0, 60), rng.range(1.5, 3.5), '#ffe6a0');
+        for (let k = 0; k < 4; k++) disc(cx - 24 + k * 16, y + 100 - Math.abs(k - 1.5) * 14, 7, ['#e8405a', '#f0c040', '#40a8c8', '#f0f0f0'][k]!);
+        poly([cx - 6, y + 120, cx + 6, y + 120, cx + 12, y + 170, cx - 12, y + 170], '#e8d0e0');
+        disc(cx, y + 112, 8, '#e8d0e0');
+        text('VARIETÉ', cx, y + 196, pw - 8, 28, '#ffd8ec', SERIF);
+        text('WINTERGARTEN', cx, y + 226, pw - 10, 14, '#ffe6a0');
+        break;
+      case 'zoo':
+        // An elephant in silhouette: the Sunday concert in the Zoo.
+        g.fillStyle = '#3a3226'; g.beginPath(); g.ellipse(cx - 4, y + 112, 38, 26, 0, 0, Math.PI * 2); g.fill();
+        disc(cx + 30, y + 98, 17, '#3a3226');
+        poly([cx + 40, y + 104, cx + 50, y + 150, cx + 42, y + 152, cx + 34, y + 110], '#3a3226');
+        for (const dx of [-30, -14, 8, 22]) g.fillRect(cx + dx, y + 128, 10, 30);
+        text('ZOO', cx, y + 42, pw - 10, 40, '#3a3226', SERIF);
+        text('KONZERT', cx, y + 188, pw - 10, 22, '#6a2a1a');
+        text('SONNTAGS 4 UHR', cx, y + 222, pw - 12, 14, '#3a3226');
+        break;
+      case 'weissewoche':
+        // The white week: folded linen in a pile, the house name.
+        for (let k = 0; k < 5; k++) { g.fillStyle = k % 2 ? '#d8d4ca' : '#fbfaf6'; g.fillRect(cx - 34 + k * 2, y + 140 - k * 16, 68 - k * 4, 15); g.strokeStyle = '#a8a296'; g.lineWidth = 1; g.strokeRect(cx - 34 + k * 2, y + 140 - k * 16, 68 - k * 4, 15); }
+        text('WEISSE', cx, y + 30, pw - 10, 30, '#1c4a6a', SERIF);
+        text('WOCHE', cx, y + 60, pw - 10, 30, '#1c4a6a', SERIF);
+        text('KAUFHAUS', cx, y + 190, pw - 10, 16, '#1c2a3a');
+        text('DES WESTENS', cx, y + 210, pw - 10, 16, '#1c2a3a');
+        break;
+      case 'boxen':
+        // Two boxers squaring up, the Sportpalast.
+        for (const s of [-1, 1]) {
+          const bx = cx + s * 22;
+          disc(bx, y + 78, 10, '#2a1a12');
+          poly([bx - 12, y + 90, bx + 12, y + 90, bx + 10, y + 140, bx - 10, y + 140], '#2a1a12');
+          disc(bx - s * 16, y + 96, 8, '#a01818');
+          poly([bx - 10, y + 140, bx - 2, y + 140, bx - 8, y + 184, bx - 16, y + 184], '#2a1a12');
+          poly([bx + 2, y + 140, bx + 10, y + 140, bx + 16, y + 184, bx + 8, y + 184], '#2a1a12');
+        }
+        text('BOXKAMPF', cx, y + 30, pw - 8, 26, '#a01818');
+        text('SPORTPALAST', cx, y + 204, pw - 10, 16, '#2a1a12');
+        text('SONNABEND', cx, y + 226, pw - 12, 14, '#2a1a12');
+        break;
+      case 'sechstage':
+        // Two wheels and a rider bent low: the six-day race.
+        for (const dx of [-26, 26]) { g.strokeStyle = '#f0e8d0'; g.lineWidth = 4; g.beginPath(); g.arc(cx + dx, y + 140, 20, 0, Math.PI * 2); g.stroke(); }
+        g.strokeStyle = '#f0e8d0'; g.lineWidth = 4; g.beginPath(); g.moveTo(cx - 26, y + 140); g.lineTo(cx, y + 116); g.lineTo(cx + 26, y + 140); g.moveTo(cx, y + 116); g.lineTo(cx + 18, y + 112); g.stroke();
+        poly([cx - 8, y + 108, cx + 20, y + 96, cx + 24, y + 104, cx - 4, y + 116], '#e8402a');
+        disc(cx + 26, y + 94, 7, '#f0d8c0');
+        text('SECHSTAGE', cx, y + 34, pw - 8, 24, '#f0e8d0');
+        text('RENNEN', cx, y + 60, pw - 8, 26, '#f0c040');
+        text('SPORTPALAST', cx, y + 214, pw - 10, 15, '#f0e8d0');
+        break;
+    }
+    // Wear: faded paper, glue stains, a torn edge down to the plaster with the older bill showing.
+    g.fillStyle = `rgba(232,222,200,${rng.range(0.1, 0.28)})`; g.fillRect(px0, py0, pw, ph);
+    for (let k = 0; k < 7; k++) { g.fillStyle = `rgba(70,58,40,${rng.range(0.06, 0.18)})`; g.fillRect(x + rng.range(0, W), y + rng.range(0, H), rng.range(3, 14), rng.range(10, 60)); }
+    const corner = rng.int(4), tw = rng.range(26, 70), th = rng.range(40, 110);
+    const tx = corner % 2 ? x + W : x, ty = corner < 2 ? y + H : y, sx = corner % 2 ? -1 : 1, sy = corner < 2 ? -1 : 1;
+    const tear = [tx, ty, tx + sx * tw, ty, tx + sx * tw * 0.55, ty + sy * th * 0.35, tx + sx * tw * 0.7, ty + sy * th * 0.6, tx + sx * tw * 0.2, ty + sy * th * 0.75, tx, ty + sy * th];
+    poly(tear, '#9c8f78');
+    g.fillStyle = 'rgba(240,232,214,0.85)';
+    for (let k = 2; k < tear.length - 2; k += 2) g.fillRect(tear[k]! - 2, tear[k + 1]! - 2, 4, 4);
+    if (rng.next() < 0.6) { g.fillStyle = 'rgba(40,32,26,0.35)'; g.fillRect(x, y + rng.range(30, 200), W, rng.range(2, 4)); }
+    g.restore();
+  });
 }
 
 // ---------------------------------------------------------------- district pieces

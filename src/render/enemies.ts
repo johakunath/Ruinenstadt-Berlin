@@ -1388,18 +1388,42 @@ function gearFor(kind: GearKey | RevueKey | 'cyber', model: Object3D, materials:
         ringDrop(coat.belly[0]!, (pel.y - foot.y) * 0.55, -0.06, 0.34, 0.3), ringDrop(coat.belly[0]!, pel.y - foot.y + 0.02, -0.1, 0.5, 0.46)];
       coat.add('spine_03', [shell(cape, o3, [2.2, 2.6, 3.0, 3.3, 3.5], 22, 0.06), 'plum']);
       mountCoat(coat, 0.4);
-      // Three tiers: lathed cones of glass from the hips, the lower ones longer and wider, shards along each hem.
+      // Three tiers of overlapping fan-shaped glass panels (board, 2026-11-19: no longer stacked cones that read as
+      // lampshades). The tiers step down the body, each starting under the hem of the one above: a ring of pleated
+      // fans, narrow at the top, flaring out and down to a hem of pointed shards, silver ribs on two folds,
+      // crystal drops on the lowest hem. Tier 1 is the bottom one (breaks at 66 %), tier 3 the top (stays).
       const drop = pel.y - foot.y;
-      const tiers: Array<[number, number, number, number]> = [[0.05, 0.98, 0.2, 0.52], [0.05, 0.62, 0.19, 0.4], [0.02, 0.34, 0.18, 0.3]];
-      tiers.forEach(([y0, len, r0, r1], i) => {
-        const h = drop * len;
-        // Twelve flat facets: cut glass, not cloth.
-        const parts: Part[] = [[tf(new CylinderGeometry(r0, r1, h, 12, 1, true), 0, -y0 - h / 2, 0.02, 0, i * 0.26, 0), 'glass']];
-        for (let j = 0; j < 16; j++) {
-          const a = (j / 16) * Math.PI * 2 + i * 0.4;
-          parts.push([tf(shard(0.04, 0.14 + (j % 3) * 0.04).rotateX(Math.PI), Math.sin(a) * r1, -y0 - h + 0.04, Math.cos(a) * r1 + 0.02, 0, a, 0), j % 4 ? 'glass' : 'silver']);
+      const tiers: Array<[number, number, number, number, number]> = [[0.56, 1.0, 0.32, 0.62, 13], [0.3, 0.72, 0.25, 0.5, 11], [0.03, 0.44, 0.19, 0.38, 9]];
+      tiers.forEach(([f0, f1, r0, r1, n], i) => {
+        const y0 = drop * f0, y1 = drop * f1, blades = 6, wide = (Math.PI / n) * 1.32, narrow = (Math.PI / n) * (i === 2 ? 1.08 : 0.55);
+        const parts: Part[] = [];
+        for (let p = 0; p < n; p++) {
+          const th = (p / n) * Math.PI * 2 + i * 0.3, lift = (p % 2) * 0.012, pos: number[] = [], idx: number[] = [];
+          // A pleated fan: blade edges from the narrow top to the wide hem; folds alternate in and out, tips and notches.
+          for (let j = 0; j <= blades; j++) {
+            const t = j / blades - 0.5, fold = j % 2 ? -0.035 : 0.03, tip = j % 2 ? 0.09 : 0;
+            const at = th + t * 2 * narrow, ab = th + t * 2 * wide;
+            pos.push(Math.sin(at) * (r0 + lift), -y0, Math.cos(at) * (r0 + lift) + 0.02);
+            pos.push(Math.sin(ab) * (r1 + lift + fold), -y1 + tip, Math.cos(ab) * (r1 + lift + fold) + 0.02);
+          }
+          for (let j = 0; j < blades; j++) { const a = j * 2, b = a + 1, c2 = a + 2, d = a + 3; idx.push(a, b, d, a, d, c2); }
+          // Unshared vertices (flat facets: each blade catches the light on its own), indexed like the other parts.
+          const flat = idx.flatMap((k) => [pos[k * 3]!, pos[k * 3 + 1]!, pos[k * 3 + 2]!]), g = new BufferGeometry();
+          g.setAttribute('position', new Float32BufferAttribute(flat, 3));
+          g.setAttribute('uv', new Float32BufferAttribute(new Float32Array((flat.length / 3) * 2), 2));
+          g.setIndex(idx.map((_, k) => k));
+          g.computeVertexNormals();
+          parts.push([g, 'glass']);
+          // Silver ribs on the outward folds, from the top to the hem.
+          for (const j of [2, 4]) {
+            const top = new Vector3(pos[j * 6]!, pos[j * 6 + 1]!, pos[j * 6 + 2]!), hem = new Vector3(pos[j * 6 + 3]!, pos[j * 6 + 4]!, pos[j * 6 + 5]!);
+            const len = top.distanceTo(hem), mid = top.clone().add(hem).multiplyScalar(0.5);
+            const rib = new CylinderGeometry(0.0045, 0.0045, len, 3, 1, true);
+            rib.applyQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), hem.clone().sub(top).normalize()));
+            parts.push([rib.translate(mid.x, mid.y, mid.z), 'silver']);
+          }
+          if (i === 0) parts.push([tf(new OctahedronGeometry(0.03, 0).scale(1, 1.8, 1), Math.sin(th) * (r1 + 0.03), -y1 - 0.05, Math.cos(th) * (r1 + 0.03) + 0.02), p % 3 ? 'glass' : 'silver']);
         }
-        parts.push([tf(new TorusGeometry(r1, 0.008, 4, 24), 0, -y0 - h, 0.02, Math.PI / 2), 'silver']);
         const g = mount('pelvis', parts);
         if (g) g.userData.tier = i + 1;
         hangOn(g, 0.6);
@@ -1408,11 +1432,14 @@ function gearFor(kind: GearKey | RevueKey | 'cyber', model: Object3D, materials:
       const at = new Vector3(head.c.x, head.c.y, head.c.z);
       const eye = new Vector3(head.c.x, head.c.y - 0.005, head.max.z - 0.03).sub(at);
       const halo: Part[] = [];
-      for (let i = 0; i < 11; i++) {
-        const a = (i / 10 - 0.5) * Math.PI * 1.25;
+      // The halo (board: tall): plumes of violet feathers, the middle ones tallest, glass spikes between them, diamonds
+      // on the silver arc.
+      for (let i = 0; i < 13; i++) {
+        const a = (i / 12 - 0.5) * Math.PI * 1.25, rise = 1 - Math.abs(i / 12 - 0.5) * 0.9;
         const feather = i % 2 === 0;
-        halo.push([tf((feather ? new ConeGeometry(0.05, 0.42, 5).scale(1, 1, 0.3).translate(0, 0.21, 0) : shard(0.03, 0.3)).rotateZ(-a), 0, 0.06, -0.09), feather ? 'feather' : 'glass']);
+        halo.push([tf((feather ? new ConeGeometry(0.055, 0.62 * rise, 5).scale(1, 1, 0.3).translate(0, 0.31 * rise, 0) : shard(0.03, 0.44 * rise)).rotateZ(-a), 0, 0.06, -0.09), feather ? 'feather' : 'glass']);
       }
+      for (let i = 0; i < 5; i++) { const a = (i / 4 - 0.5) * Math.PI * 1.1; halo.push([tf(new OctahedronGeometry(0.03, 0).scale(1, 1.4, 0.6), -Math.sin(a) * 0.21, 0.06 + Math.cos(a) * 0.21, -0.07), 'silver']); }
       halo.push([tf(new TorusGeometry(0.2, 0.008, 4, 28, Math.PI * 1.3), 0, 0.06, -0.09, 0, 0, Math.PI * 0.5 - Math.PI * 0.65), 'silver']);
       mount('Head', [
         ...halo,
@@ -2053,7 +2080,8 @@ export class EnemyView {
       const parts: Part[] = [];
       for (let i = 0; i < 4; i++) {
         const a = (i / 4) * Math.PI * 2, r = 0.72;
-        for (const [g, m] of glassFan(7, 1.4, 0.34, 0.06)) parts.push([g.rotateY(a + Math.PI / 2).translate(Math.sin(a) * r, 1.15 + (i % 2) * 0.22, Math.cos(a) * r), m]);
+        // Board: big open fans of glass blades (2026-11-19: larger, two more blades).
+        for (const [g, m] of glassFan(9, 1.7, 0.44, 0.065)) parts.push([g.rotateY(a + Math.PI / 2).translate(Math.sin(a) * r, 1.15 + (i % 2) * 0.22, Math.cos(a) * r), m]);
       }
       this.divaFans = assemble(k, parts, false);
       this.inner.add(this.divaFans);
