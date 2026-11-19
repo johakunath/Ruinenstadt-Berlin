@@ -303,7 +303,7 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
     case 'fuse':
       // The blast is the zone (it kills the Zünder when it goes off); this only covers a zone that is gone.
       e.blown = true;
-      killEnemy(sim, e);
+      killEnemy(sim, e, false);
       break;
     case 'howl': {
       // Heuler (2D `howl`): every other body within range is driven on; a harmless pink ring shows how far.

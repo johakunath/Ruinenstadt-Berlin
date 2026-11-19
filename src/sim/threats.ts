@@ -8,7 +8,7 @@
 import { PLAYER } from '../data/combat';
 import { BOSS, THREAT } from '../data/enemies';
 import { colliderDistance } from './collide';
-import { hurtPlayer, killEnemy, knock, strike } from './combat';
+import { blastHit, hurtPlayer, killEnemy } from './combat';
 import { angleDiff, angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
 
@@ -177,7 +177,7 @@ export function updateThreats(sim: Sim): void {
       const src = sim.enemies.find((e) => e.id === z.src && e.state === 'special' && e.sp?.kind === 'fuse');
       if (src) {
         src.blown = true;
-        killEnemy(sim, src);
+        killEnemy(sim, src, false);
       }
       blasts.push(z);
     }
@@ -205,7 +205,7 @@ export function updateThreats(sim: Sim): void {
   // 2D `run.blasts`: every body inside takes its share; a Zünder caught in it goes off in turn (next step).
   for (const z of blasts) for (const e of sim.enemies) {
     if (e.state === 'dead' || e.id === z.src || Math.hypot(e.x - z.x, e.z - z.z) >= z.r + e.def.radius) continue;
-    strike(sim, e, z.damage * z.blast!.share, { knock: knock(z.blast!.knock), noproc: true, feel: 'none', from: { x: z.x, z: z.z } });
+    blastHit(sim, e, z.damage * z.blast!.share, z, z.blast!.knock);
   }
 
   for (let i = T.shots.length - 1; i >= 0; i--) {
