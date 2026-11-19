@@ -23,7 +23,8 @@ export const XHAIN_TIER = { from: 8, to: 30 } as const;
 /**
  * Difficulty of wave `g` (8 … 30) in `zone`. Xhain teaches rats (2D: „Ratten kommen im Rudel“):
  * a few packs behind the Wall, more in the squats, the most around Görli. More spitters than
- * Köpenick (2D spit 0.28 against 0.16).
+ * Köpenick (2D spit 0.28 against 0.16). WP5: Zünder from the riots on (2D `MIX[1]` bomb 0.05); the Heuler
+ * around Kotti and Görli (2D has it only in Spandau and Marzahn, not built yet; one alive at a time).
  */
 export function xhainWaveTier(g: number, bosses: BossKind[] = [], zone = 0): WaveDef {
   const mix: Partial<Record<EnemyKind, number>> = {
@@ -33,6 +34,8 @@ export function xhainWaveTier(g: number, bosses: BossKind[] = [], zone = 0): Wav
     brute: g < 10 ? 0 : 0.3 + g * 0.09,
     rat: zone === 0 ? (g < 9 ? 0 : 0.8) : zone === 1 ? 1.2 + (g - 15) * 0.05 : 1.8 + (g - 22) * 0.1,
     crow: zone === 2 ? 0.6 : 0,
+    zuender: zone === 0 ? 0 : 0.6,
+    heuler: zone === 2 ? 0.6 : 0,
   };
   return {
     count: Math.round(5 + g * 0.45),

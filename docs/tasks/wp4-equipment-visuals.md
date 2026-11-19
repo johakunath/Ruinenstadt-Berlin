@@ -423,7 +423,7 @@ Johannes: a reward for switching to the weapon that fits the enemy, about 30 to 
 
 | Enemy class | Kinds (start assignment; a kind may have two classes) |
 |---|---|
-| Untote | walker, runner, brute, spitter, spreehexe; kabel and bass also count as Maschine |
+| Untote | walker, runner, brute, spitter, spreehexe, zuender, schild, heuler (the last three came in with WP5); kabel and bass also count as Maschine |
 | Maschinen | drone, uhrwerk, uhrwerkgross, wachdrohne, weltzeituhr, volkskoloss, bassprediger; kabel, bass |
 | Pflanzen | wurzler, kernspeier, wurzelmutter |
 | Menschen | feldwebel, waechter, hauptmann, schaffner, grenzer, brandmeister, tuersteher, dirigent |

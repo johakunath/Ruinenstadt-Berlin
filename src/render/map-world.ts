@@ -29,15 +29,18 @@ import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexEdge, dressAlexLots } from './alex-world';
-import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
+import { ALEX_TEXTURES, loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
+import { ALEX_STONE_URL, alexStoneBoxGeo, alexStoneGeo, paintAlexStoneAtlas, type AlexStone } from './alex-stone';
 import { buildMinistryLot } from './mitte-zones';
 import { makeClockRig } from './clock';
 import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
+import { paintTunnelAtlas, tunnelBoxGeo, TUNNEL_WALLS_URL } from './tunnel-textures';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
+import { swapPaintedMap } from './surface-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
@@ -88,8 +91,12 @@ export interface MapMats extends Mats {
   ratskeller: LitMaterial;
   /** M15 Alexanderplatz sign atlas (`alex-paint.ts`), only on that map. */
   alex?: LitMaterial;
+  /** The Alexanderplatz world remaps its existing stucco batch to the stone atlas. */
+  alexStoneAtlas?: boolean;
   /** M15 Alexanderplatz painted banners and Pioneer poster (2D art, alpha-tested), only on that map. */
   posters?: LitMaterial;
+  /** Tunnel concrete uses an atlas within the original single concrete batch. */
+  tunnelConcrete?: boolean;
   /** M15 Mitte materials (`mitte-world.ts`), only on that map. */
   mitte?: MitteMats;
 }
@@ -103,6 +110,20 @@ export class ChunkBuilder extends Builder {
 
   constructor(readonly mm: MapMats) {
     super(mm);
+  }
+
+  override box(mat: Material, transform: Matrix4, sx: number, sy: number, sz: number, color?: RGB, uvScale = 0.5, stone?: AlexStone): void {
+    if (this.mm.tunnelConcrete && mat === this.mm.concrete) {
+      this.geo(mat, tunnelBoxGeo(sx, sy, sz), transform, color);
+    } else if (this.mm.alexStoneAtlas && mat === this.mm.stucco) {
+      super.geo(mat, alexStoneBoxGeo(sx, sy, sz, stone), transform, color);
+    } else {
+      super.box(mat, transform, sx, sy, sz, color, uvScale);
+    }
+  }
+
+  override geo(mat: Material, geometry: BufferGeometry, transform: Matrix4, color?: RGB, stone?: AlexStone): void {
+    super.geo(mat, this.mm.alexStoneAtlas && mat === this.mm.stucco ? alexStoneGeo(geometry, stone) : geometry, transform, color);
   }
 
   private lift = 0;
@@ -230,8 +251,8 @@ export function emissive(materials: Materials, t: { map: Texture; emissiveMap: T
   return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
 }
 
-export function makeMapMats(materials: Materials): MapMats {
-  const base = makeMats(materials);
+export function makeMapMats(materials: Materials, district?: 'alex' | 'tunnel'): MapMats {
+  const base = makeMats(materials, district);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
   const asphalt = paintAsphalt(o).map;
@@ -245,7 +266,6 @@ export function makeMapMats(materials: Materials): MapMats {
     path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
     roof: materials.surface({ map: paintRoofTiles(o).map, roughness: 0.8, vertexColors: true }),
     tar: materials.surface({ map: asphalt, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
-    concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
     mossy: materials.surface({ map: paintConcrete(o, '#6f7a5c').map, roughness: 0.9, vertexColors: true }),
     // M11d: rippled, reflective water; the normal map scrolls in `update` (Qualität only: one extra texture read on water pixels).
     water: materials.surface({ color: 0x1a5560, emissive: 0x0a2228, roughness: 0.08, metalness: 0.55, normalMap: o.normalMaps ? (() => { const t = paintWaterNormal(); t.repeat.set(70, 70); return t; })() : null }),
@@ -280,6 +300,8 @@ export function makeMapMats(materials: Materials): MapMats {
     m.asphalt.map = m.tar.map = texture;
     asphalt.dispose();
   });
+  const roofUrl = new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href;
+  swapPaintedMap([m.roof], roofUrl, o.anisotropy);
   return m;
 }
 
@@ -1103,9 +1125,11 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           const mx = ex + nx * (thick - bump) / 2, mz = ez + nz * (thick - bump) / 2;
           const fx = ex - nx * bump, fz = ez - nz * bump;
           const onFace = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(fx - nx * o, y, fz - nz * o);
+          const segment = (run - 1) % 4;
+          const variant = (Math.floor((run - 1) / 4) + (side > 0 ? 1 : 0)) % 3;
           // Playtest 2026-11-18: characters behind a tunnel wall get their contour. One mask box per 8 m of wall and chunk.
           const occKey = `${ti}:${side}:${(run / 8) | 0}`, occ = wallBoxes.get(occKey);
-          const occBox = b.solid.captureOccluder(() => b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick + bump, h, 1.04, [0.42 * tone, 0.4 * tone, 0.38 * tone]), occ?.b === b ? occ.box : undefined);
+          const occBox = b.solid.captureOccluder(() => b.geo(mats.concrete, tunnelBoxGeo(thick + bump, h, 1.04, variant, segment, true), new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), [0.42 * tone, 0.4 * tone, 0.38 * tone]), occ?.b === b ? occ.box : undefined);
           if (occBox) wallBoxes.set(occKey, { b, box: occBox });
           if (h === H && t.kind !== 'station') {
             b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, 1.04, [0.2, 0.21, 0.19]);
@@ -1131,8 +1155,11 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04);
           if (t.kind === 'station') {
             // Tiled band at eye height (cream tiles), as on the old S-Bahn halls; M20: a stripe in the line color.
-            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.02, 1.6, ez + nz * 0.02), 0.08, 1.8, 1.04, [0.86, 0.82, 0.7]);
-            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.01, 2.25, ez + nz * 0.01), 0.1, 0.24, 1.04, stripe);
+            const band = (width: number, height: number, offset: number, y: number, tint: RGB): void => {
+              b.geo(mats.concrete, tunnelBoxGeo(width, height, 1.04, 3, segment, true), onFace(offset, y), tint);
+            };
+            band(0.08, 1.8, 0.01, 1.6, [0.86, 0.82, 0.7]);
+            band(0.1, 0.24, 0.02, 2.25, stripe);
           }
         }
       }
@@ -2256,14 +2283,36 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const sky = opts.sky ?? NIGHT_SKY;
   glowScale = sky.lamps;
   wet = sky.wet;
-  const mats = makeMapMats(materials);
+  const mats = makeMapMats(materials, m.tunnel ? 'tunnel' : m.id === 'alex' ? 'alex' : undefined);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
+  let railMats: MapMats | undefined;
   if (m.id === 'alex') {
+    const anisotropy = materials.profile.anisotropy;
     mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
+    swapPaintedMap([mats.alex], ALEX_TEXTURES.signs, anisotropy, false);
+    swapPaintedMap([mats.concrete], ALEX_TEXTURES.wbs70, anisotropy);
+    const stucco = mats.stucco.map!;
+    mats.stucco.map = paintAlexStoneAtlas(stucco, anisotropy);
+    mats.alexStoneAtlas = true;
+    stucco.dispose();
+    swapPaintedMap([mats.stucco], ALEX_STONE_URL, anisotropy, false);
+    // Railway chunks reuse their one brick batch, with a different base map from the Rathaus.
+    const railBrick = mats.brick.clone();
+    railBrick.map = railBrick.map?.clone() ?? null;
+    railMats = { ...mats, brick: railBrick };
+    swapPaintedMap([mats.brick], ALEX_TEXTURES.rathausBrick, anisotropy);
+    swapPaintedMap([railBrick], ALEX_TEXTURES.stadtbahnBrick, anisotropy);
     const posters = materials.surface({ map: paintPosterFallback(), alphaTest: 0.5, doubleSided: true, roughness: 0.85 });
     mats.posters = posters;
+    railMats.posters = posters;
     loadPosters(materials.profile.anisotropy, (t) => { posters.map = t; posters.needsUpdate = true; });
+  }
+  if (m.tunnel) {
+    mats.tunnelConcrete = true;
+    mats.concrete.map?.dispose();
+    mats.concrete.map = paintTunnelAtlas({ flatten: materials.look.flatten, normalMaps: false, anisotropy: materials.profile.anisotropy });
+    swapPaintedMap([mats.concrete], TUNNEL_WALLS_URL, materials.profile.anisotropy, false);
   }
   if (m.id === 'mitte') mats.mitte = mitteMats(materials);
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
@@ -2280,10 +2329,16 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   group.name = m.id;
   const chunks = new Map<string, ChunkBuilder>();
   const chunkKey = (x: number, z: number): string => `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`;
+  const railRuns = m.viaducts?.filter(v => v.kind === 'stadtbahn') ?? [];
   const chunkOf = (x: number, z: number): ChunkBuilder => {
     const k = chunkKey(x, z);
     let b = chunks.get(k);
-    if (!b) chunks.set(k, (b = new ChunkBuilder(mats)));
+    if (!b) {
+      const cx = (Math.floor(x / CHUNK) + 0.5) * CHUNK, cz = (Math.floor(z / CHUNK) + 0.5) * CHUNK;
+      const chosen = railMats && railRuns.some(v => lineDist(v.pts, cx, cz) <= CHUNK * Math.SQRT1_2 + v.width / 2)
+        ? railMats : mats;
+      chunks.set(k, (b = new ChunkBuilder(chosen)));
+    }
     return b;
   };
 
@@ -2388,8 +2443,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
   // M15 Alexanderplatz: the brick Stadtbahn with open arches (Xhain draws only its U1 Hochbahn).
   if (m.id === 'alex') {
-    for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') buildStadtbahn(chunkOf, mats, v);
-    buildArches(chunkOf, mats, m);
+    for (const v of railRuns) buildStadtbahn(chunkOf, v);
+    buildArches(chunkOf, m);
     dressAlexLots(chunkOf, lots, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
     dressAlexEdge(chunkOf, props, (x, z) => surfaceAt(m, x, z));
     buildStrausberger(chunkOf, m);

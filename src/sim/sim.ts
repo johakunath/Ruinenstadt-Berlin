@@ -2,6 +2,7 @@ import { createAbilities, updateAbilities } from './abilities';
 import { hurtPlayer, strike, updateStatuses } from './combat';
 import { createContent, updateContent } from './runcontent';
 import { createThreats, updateThreats } from './threats';
+import { updateBarriers } from './barriers';
 import { createInventory, type Inventory } from './inventory';
 import { createBreakables, sweepBreakables } from './breakables';
 import { updateDrops } from './loot';
@@ -83,6 +84,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     spawnT: opts.empty || level.camp || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
     stress: opts.stress ?? 0,
     gateT: level.gates.map(() => Infinity),
+    barrier: { state: 'idle', t: 0, src: 0 },
     wet: !!level.wet,
   };
   sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...(sim.inventory.camp?.stash ?? []), ...Object.values(equipment)].map((i) => i?.id ?? 0));
@@ -163,6 +165,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   updateDrops(sim);
   enemyStrikes(sim);
   updateThreats(sim);
+  updateBarriers(sim);
   removeCorpses(sim);
   if (sim.level.camp) { /* M20: the camp is peaceful */ }
   else if (sim.level.expedition && sim.stress === 0) updateDirector(sim);

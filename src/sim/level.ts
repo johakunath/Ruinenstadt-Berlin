@@ -62,6 +62,17 @@ export interface GateDef {
   collider: Collider;
 }
 
+/** P25 Türsteher neon bar across a Tor passage: open (not in the level) until `Level.shut`. */
+export interface BarrierDef {
+  x: number;
+  z: number;
+  /** Facing of the Tor; the bar runs along its local x. */
+  rot: number;
+  /** Half the width of the passage it closes (the collider reaches 0.6 m further, into the piers). */
+  half: number;
+  collider: Collider;
+}
+
 /** A band along a polyline (flooded track bed); flat ends, so it stops where it is drawn. */
 export interface Ribbon {
   pts: Point[];
@@ -167,6 +178,8 @@ export class Level {
   guards: Array<{ x: number; z: number; kind: import('../data/enemies').EnemyKind; elite: boolean; wake: number; hp: number; pose?: 'lying' | 'hidden'; facing?: number }> = [];
   /** M20 tunnel: gratings between the sections, the flooded stretch (speed factor) and the trader on the start platform. */
   gates: GateDef[] = [];
+  /** P25 Brandenburger Tor: the Türsteher's neon bars (`src/sim/barriers.ts`), open at build time. */
+  barriers: BarrierDef[] = [];
   wade: (Ribbon & { factor: number }) | null = null;
   traderSpot: Point | null = null;
 
@@ -193,17 +206,44 @@ export class Level {
     });
   }
 
-  /** Takes a collider out of the level (a broken prop). `restore` puts it back for the next run. */
-  remove(c: Collider): void {
+  /** Out of `colliders` and the hash; false when it was not in the level. */
+  private unhash(c: Collider): boolean {
     const i = this.colliders.indexOf(c);
-    if (i < 0) return;
+    if (i < 0) return false;
     this.colliders.splice(i, 1);
     this.cells(c, (k) => {
       const list = this.hash.get(k);
       const j = list ? list.indexOf(c) : -1;
       if (list && j >= 0) list.splice(j, 1);
     });
-    this.removed.push(c);
+    return true;
+  }
+
+  /** Takes a collider out of the level (a broken prop). `restore` puts it back for the next run. */
+  remove(c: Collider): void {
+    if (this.unhash(c)) this.removed.push(c);
+  }
+
+  private readonly shutSet = new Set<Collider>();
+
+  /**
+   * P25: puts a toggled collider (a neon bar) into the level, outside the `add` / `remove` journal so a
+   * bar that opens and closes many times never confuses `restore`. Idempotent.
+   */
+  shut(c: Collider): void {
+    if (this.shutSet.has(c)) return;
+    this.shutSet.add(c);
+    this.colliders.push(c);
+    this.insert(c);
+  }
+
+  /** Takes a shut collider out again. Idempotent. */
+  open(c: Collider): void {
+    if (this.shutSet.delete(c)) this.unhash(c);
+  }
+
+  isShut(c: Collider): boolean {
+    return this.shutSet.has(c);
   }
 
   private readonly added: Collider[] = [];
@@ -217,6 +257,7 @@ export class Level {
 
   /** Puts every removed collider back; a new sim starts on an intact map. */
   restore(): void {
+    for (const c of [...this.shutSet]) this.open(c);
     for (const c of this.added.splice(0)) {
       this.remove(c);
       this.removed.pop();

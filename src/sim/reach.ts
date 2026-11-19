@@ -16,6 +16,7 @@ export interface ReachGrid {
   ok: Uint8Array;
 }
 
+// P25: shut neon bars do not count, so a grid first built during a shut still reaches the Tor passages.
 const cache = new WeakMap<Level, ReachGrid>();
 
 export function reachGrid(level: Level): ReachGrid {
@@ -31,7 +32,7 @@ export function reachGrid(level: Level): ReachGrid {
     if (free[i] !== -1) return free[i] === 1;
     const x = b.minX + (c + 0.5) * CELL;
     const z = b.minZ + (r + 0.5) * CELL;
-    const f = !level.blocked(x, z, BODY) && !level.near(x, z, BODY + 0.1).some((k) => colliderDistance(k, x, z) < BODY);
+    const f = !level.blocked(x, z, BODY) && !level.near(x, z, BODY + 0.1).some((k) => !level.isShut(k) && colliderDistance(k, x, z) < BODY);
     free[i] = f ? 1 : 0;
     return f;
   };

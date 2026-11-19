@@ -1,0 +1,70 @@
+# WP5 Enemies and bosses [Claude · Opus high]
+
+Work package WP5 (Johannes, 2026-11-19): P30 quick wins, P12 remaining 2D enemies, H2 own boss models, S3 voices, P25 neon barriers. Order as listed; P25 waits for a Fable decision on dynamic colliders.
+
+Status 2026-11-19: steps 1 to 4 built (PR on `ccr-d099d58b-xmy2l2`; step 3 from Johannes' mockup picks). Step 5 built after the Fable pass (`docs/tasks/p25-neon-barriers.md`).
+
+## Steps
+
+| # | Step | State |
+|---|---|---|
+| 1 | P30 quick wins: Brocken orange vest, Kabelghul cyan cables, Speier belly (bodies match busts E02, E13, E03) | built |
+| 2 | P12: Zünder, Schildträger, Heuler (Ratte was built in M12b) | built |
+| 3 | H2: own models in code for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter, matching busts X04, X01, X05, X10, X06, X03 | built |
+| 4 | S3: short spoken lines for human and robot enemies and bosses | built (bosses only) |
+| 5 | P25: Türsteher neon barriers | built (decision, spec and handover: `docs/tasks/p25-neon-barriers.md`) |
+
+## Handover (steps 1 and 2)
+
+- Reused from 2D: `mkEnemy` rows `bomb`, `shield`, `howl` (radius, life, speed, hit, Schrott), the `js/update.js` rules (fuse at 58 px for 0.85 s, self blast r 84 px at ×1.3, death blast r 66 px at ×0.6, `bigHit` floor 0.22, blasts hit enemies at ×1.5 with 320 px knock; `SHD` front block ±1.2 rad at 20 %, turn 1.6 rad/s, hammer stun opens 2.2 s; howl backs off under 180 px, strafes to 260 px at 0.6, howls every 4.5 to 6 s within 460 px, drives bodies within 220 px for 4 s), `RES` rows, `EMAT`, `EZUT`, drop chances, the Kodex tips, busts E06, E07, E08, sounds (`zap` for the fuse, `horn` for the howl).
+- Ratios: Zünder and Heuler on the ghoul ratios (life ×1.5, hit ×1.7, speed ×0.027), Schildträger on the brute ratios (life ×1.2, hit ×1.44, speed ×0.032).
+- New for 3D: the Zünder's death blast is marked 0.3 s (2D went off at once); a stun does not put out a lit fuse; the howl has a 0.5 s wind-up and a 0.6 s open window; at most one Heuler alive (`cap: 1`); Zünder never elite; howl ring is harmless and drawn at half brightness; driven bodies show faint pink sparks.
+- Code: data `src/data/enemies.ts` (`zuender`, `schild`, `heuler`, `THREAT.fuse`, `THREAT.howl`), brains `src/sim/ai.ts` (`fuse`, `howl`), blasts `Zone.blast` in `src/sim/threats.ts` (hits enemies through `strike` after the zone loop), death blast `killEnemy` in `src/sim/combat.ts`, the shield bearer reuses the M15 `EnemyDef.shield` rule. Tests: `src/sim/ai-wp5.test.ts` (17).
+- Wave mix: Xhain Zünder from zone 1 (2D 0.05), Heuler only in zone 2 (Kotti, Görli); Alexanderplatz Zünder from the third wave (2D 0.03); Mitte Zünder 0.5 and Schildträger 1 in zones 0, 1, 3, taken back from Speier and Brocken (2D 0.04 and 0.08). **Decision to confirm:** 2D had the Heuler only in Spandau and Marzahn (not built); Xhain zone 2 is my pick so it appears at all.
+- Bodies (zombie rig, gear in code): Brocken open orange vest with two reflective bands (shoulder plate and chest plate removed), Speier belly sphere in its skin tone, Kabelghul cyan cables, implants, eyes and a red scarf; Zünder four dynamite sticks, detonator with dial, fuse spark that flares while the fuse burns, red scarf; Schildträger riot helmet with visor, shoulder plates, a shield that swings aside while the guard is open; Heuler swollen throat that bulges on the howl, head thrown back.
+- **Bug fixed on the way:** zombie-rig gear was aligned to whatever pose the pooled view held when a kind first appeared on it (often the last body's death pose; in the sheet tool the GLB rest pose), so helmets, caps, speaker heads, the Brandmeister's torch and the Turmwächter's lantern came out tilted. `EnemyView.inIdle` now builds gear in the first frame of the idle clip. Every boss on the zombie rig looks different (upright) after this; before/after sheets in the PR.
+- Cost: no lights, no new draw calls beyond the gear meshes (merged per material, 3 to 5 per kind as for the other kinds), a few pooled particles over driven bodies.
+- Not done: hardware look check (playtest row), balance bot run with the new kinds.
+
+## Handover (step 3)
+
+- Picks (Johannes 2026-11-19, `docs/mockups/wp5-boss-looks.html`): Feldwebel A, Hauptmann B, Schaffner A, Brandmeister A, Rattenmutter A, Turmwächter A; proof `docs/proof/wp5/bosses-h2.webp` (busts X04, X01, X05, X10, X06, X03 next to the bodies). Reused from 2D: only the busts (2D has no body drawings for these bosses).
+- New in `src/render/enemies.ts`: `BodyFit` reads the skinned body in the idle frame; `fitCoat` builds ring shells that follow it (chest on spine_03, belly on spine_01, sleeves on the arm bones, skirt on the pelvis open at the front so the bent knees come through). Fixes the Brandmeister's clipping and fits every coat to its SHAPE.
+- `EnemyView.hangSkirts`: skirts follow half of the pelvis' turn (the heavy swing threw them out flat), the Brandmeister's helmet fire a quarter of the head's; both follow fully once dead.
+- Animated: Brandmeister flames flicker and flare on `flame`/`ring`; Turmwächter sparks jump. Removed: Hauptmann plume, Brandmeister torch, Turmwächter hat and lantern, the shoulder rat. Rattenmutter: SHAPE Head 0.05, rat head on neck_01, HUNCH 0.34.
+- Colours (TINTS skin, CLOTH trousers): Köpenick parchment skin with Prussian-blue trousers (Turmwächter olive-brown), tunnel navy, Xhain pale grey with stone grey (Grenzer), soot (Brandmeister), oxblood (Rattenmutter). Xhain has no board: tones taken from the shared palette family.
+- Cost: no lights; emissive only for glows. Unlit gear shares one vertex-coloured mesh per bone (`assemble` with `paint`), so 7 to 12 gear meshes per boss (was about 5 to 9), about 2.4k to 4.1k triangles, about 10 ms to build at first spawn.
+- Open: Johannes' look check on the PC and the Tab S9 (needs a row in `docs/tasks/pt-hardware-checks.md`); chest and belly shells can show a thin seam in strong twists.
+
+## Step 3 plan (after the mockup pick)
+
+Bosses stay on the zombie rig and keep their clips; the new silhouette comes from heads and bodies built in code and mounted on bones (route `docs/enemy-pipeline.md` › Route per job). Each boss: what the bust shows that the body lacks today.
+
+| Boss | Bust | Body today | Needs |
+|---|---|---|---|
+| Der Feldwebel | X04: Pickelhaube with eagle plate, gold epaulettes, high collar greatcoat | Pickelhaube, blue tunic, epaulettes | Eagle plate, greatcoat with collar and skirt, moustache |
+| Hauptmann von Köpenick | X01: Pickelhaube gold eagle, white moustache, epaulettes, greatcoat | Pickelhaube with plume, sash | Greatcoat, moustache; drop the plume (not in the bust) |
+| Der Schaffner | X05: peaked cap with badge, long double-breasted coat, signal disc held up | Cap, coat, disc | Raised disc in the right hand, longer coat, buttons |
+| Der Brandmeister | X10: burning fire helmet, turnout coat with yellow bands, lamp on the chest | Fire helmet, ember coat, torch | Flames on the helmet, yellow reflective bands, chest lamp |
+| Die Rattenmutter | X06: rat head with a crown, fur | Hood, moss coat, shoulder rat | Rat head (snout, ears, whiskers, teeth) and crown replacing the human head |
+| Der Turmwächter | X03: Fernsehturm sphere as a helmet with a lit visor ring, tower-segment body, sparks | Wide hat, lantern, keys, robe | Tower-sphere head with cyan window ring, ribbed tower body |
+
+## Handover (step 4)
+
+- Approved proposal (below), built for bosses only: 16 bosses × 3 lines (start, rage, signature special) = 48 Ogg Opus clips, 178 KB, in `assets/voices/`; no Rex, no normal kinds. Nothing reused from 2D (it has no voices); texts reuse the sim notes („Antreten!“, „Alarm!“, „Nicht auf der Liste!“, „Gemeinde!“, „Fortissimo!“, „Stillstand“).
+- Generator `tools/voices.mjs` (`npm run assets:voices [kind|kind-trigger …]`): line table, Piper 1.8.0 voices Thorsten (robots), Thorsten emotional `angry`/`neutral` (men), Kerstin (women), ffmpeg chain per body (undead pitch and soft clip, hall, ring mod and bitcrush, chorus, clock echo). Models download to `assets-src/voices/` (gitignored).
+- Play `src/audio/voices.ts` (`BossVoices`, hooked in `GameAudio.onEvent`): clips load on the boss's `spawn`; `start` on its first wind-up or special in earshot (within 8 s of it), `rage` on `bossRage`, `special` on the first `SIGNATURE` special (on `go` where a note shows the same words). One line at a time, 4 s per boss, a line that could not play is tried next time.
+- Through the effects master and `spatialAudio` (volume, pan); no ducking, no render work, no lights. Tests: 4 in `src/audio/audio.test.ts` (clip set, trigger, gap, retry and start window).
+- Open: Johannes' listening check (Playtest row, `pt-hardware-checks.md`); older Safari versions may not decode Ogg Opus (the lines then stay silent, nothing breaks).
+
+## Step 4 proposal (before anything is generated)
+
+| Point | Proposal |
+|---|---|
+| Tool | Piper TTS (OHF-Voice `piper1-gpl`, GPL-3.0) offline on the PC or here, as a build tool only; nothing of Piper ships in the game |
+| Voices | `de_DE-thorsten-medium` (male, CC0), `de_DE-thorsten_emotional-medium` (8 emotions incl. angry and whisper, CC0), `de_DE-kerstin-low` (female, CC0). Avoid the M-AILABS voices (karlsson, ramona, eva_k): their model card only says "see URL" |
+| Licence check | Per model card on Hugging Face `rhasspy/piper-voices` (2026-11-19): Thorsten and Kerstin datasets CC0. Piper itself grants no voice licence (`docs/COMMERCIAL_USE.md`); ship each `MODEL_CARD` in `assets/LICENSES.md` |
+| Processing | ffmpeg per kind: pitch down and distortion for zombie bosses, radio band and bitcrush for robots (Wachdrohne, Uhrwerk, Koloss), reverb for the Weltzeituhr; Ogg Opus mono, about 5 to 10 KB per line |
+| Scope | Bosses: 2 to 3 lines each (rage, special, death), humans and robots only (not ghouls or animals): about 17 bosses × 3 = 50 files, under 0.5 MB |
+| Play | `enemySpecial` and `bossRage` events in `src/audio/audio.ts`, at most one line every few seconds per boss, ducking the music |
+| Alternative | espeak-ng for robots only (very robotic, GPL tool, output free); or Johannes records the lines himself |
