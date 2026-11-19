@@ -133,9 +133,13 @@ export const INPUT_BUFFER = 0.18;
  * Clip times are measured with `tools/clip-sheet.mjs` and `tools/clip-swing.mjs`.
  */
 const base = ATTACKS;
+/** Hammer knockback × 1.5 on every hammer attack (Johannes, 2026-11-19: strong, slow, pushes enemies back). */
+const HAMMER_KNOCK = 1.5;
+const pushes = (chain: Record<AttackId, AttackDef>): Record<AttackId, AttackDef> =>
+  Object.fromEntries(Object.entries(chain).map(([id, a]) => [id, { ...a, knockback: a.knockback * HAMMER_KNOCK }])) as Record<AttackId, AttackDef>;
 const WEAPON_ATTACKS: Record<WeaponKindId, Record<AttackId, AttackDef>> = {
   blade: { ...base, light3: { ...base.light3, damage: 16 } },
-  hammer: {
+  hammer: pushes({
     // Sword_Heavy_Combo: two wide swings, then a leaping overhead slam.
     light1: { ...base.light1, clip: 'Sword_Heavy_Combo', clipStart: 0.13, clipSwing: 0.3, clipHit: 0.52, rec: null, style: 'slash',
       windup: 0.2, active: 0.13, recovery: 0.42, from: -90 * DEG, to: 80 * DEG, width: 10 * DEG, reach: 2.47, damage: 10, knockback: 9, weight: 'heavy', lunge: 0.35, next: 'light2' },
@@ -145,7 +149,7 @@ const WEAPON_ATTACKS: Record<WeaponKindId, Record<AttackId, AttackDef>> = {
       windup: 0.26, active: 0.1, recovery: 0.55, from: -50 * DEG, to: 50 * DEG, width: 10 * DEG, reach: 2.9, damage: 12, knockback: 15, weight: 'heavy', lunge: 1.1, next: null },
     light4: { ...base.light4 },
     dash: { ...base.dash, damage: 15, knockback: 12, reach: 2.7 },
-  },
+  }),
   spear: {
     // Punch_Cross is a straight thrust; Melee_Hook a turning low lunge.
     // Playtest 2026-11-18: the spear only hit what stood exactly in front (hard to aim on a tablet, weak
@@ -194,4 +198,6 @@ export const WEAPON = {
   /** Gegengewicht: sure crit, double knockback, short stun. */
   wucht: { stun: 0.35, knock: 2 },
   finisherKnock: 1.7,
+  /** D9: damage bonus of a weapon against the enemy classes its damage type is strong against (no malus). */
+  typeBonus: 0.4,
 } as const;

@@ -268,7 +268,8 @@ describe('hit and kill blessings', () => {
   });
   it('Dampfhammer: slower, +70% damage, every swing sends a small ring; Schrotladung: three shots at 55%', () => {
     const s = fresh('hammer', { m_dampf: 1 }), e = dummy(s, 0, 3.6);
-    expect(s.stats.damage).toBeCloseTo(17);
+    // 10 × 1.7, × 1.1 for the shorter default hammer (D8).
+    expect(s.stats.damage).toBeCloseTo(18.7);
     expect(s.stats.attackSpeed).toBeCloseTo(1 / 1.3);
     run(s, 1, { attack: true });
     run(s, 50);
@@ -423,7 +424,7 @@ describe('G1 Umbau cards (3D additions)', () => {
     s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
     run(s, 50);
-    expect(lost(far)).toBe(7);
+    expect(lost(far)).toBe(8);
     expect(far.staggerDur).toBeCloseTo(1);
     const n = fresh('hammer'), out = dummy(n, 0, 8);
     n.player.chain = 'light3'; n.player.chainT = 1;
@@ -436,7 +437,7 @@ describe('G1 Umbau cards (3D additions)', () => {
     s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
     run(s, 70);
-    expect(row.map(lost)).toEqual([18, 18, 18, 18, 0]);
+    expect(row.map(lost)).toEqual([20, 20, 20, 20, 0]);
   });
   it('Fegestoß: thrusts become wide, shorter sweeps; the finisher stays the round sweep', () => {
     const s = fresh('spear', { m_fege: 1 }), side = dummy(s, 1.9, 1.3), far = dummy(s, 0, 4.6);

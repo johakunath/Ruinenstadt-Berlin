@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { weaponAttack } from './combat';
 import { BASES, GDR_WEAPON_NAMES, LEGENDARY_WEAPON_NAMES, NEON_WEAPON_NAMES, WEAPON_NAMES } from './item-names';
 import { SETS, type SetId, type WeaponKindId } from './items';
 import { DEFAULT_LOOK, WEAPON_LOOKS, strongAgainst, weaponLookId, weaponTraits, type WeaponLookId } from './weapon-look';
@@ -81,5 +82,15 @@ describe('weapon size and strength (WP4 D8)', () => {
     expect(strongAgainst('pflaster')).toEqual(['maschinen', 'menschen']);
     expect(strongAgainst('rspeer')).toEqual(['menschen']);
     expect(strongAgainst('zwille')).toEqual(['tiere']);
+  });
+});
+
+describe('hammer knockback (WP4 D8)', () => {
+  it('pushes 1.5× as far as before on every hammer attack, reach unchanged', () => {
+    expect(weaponAttack('hammer', 'light1').knockback).toBeCloseTo(13.5);
+    expect(weaponAttack('hammer', 'light3').knockback).toBeCloseTo(22.5);
+    expect(weaponAttack('hammer', 'dash').knockback).toBeCloseTo(18);
+    expect(weaponAttack('hammer', 'light1').reach).toBe(2.47);
+    expect(weaponAttack('blade', 'light1').knockback).toBe(5);
   });
 });

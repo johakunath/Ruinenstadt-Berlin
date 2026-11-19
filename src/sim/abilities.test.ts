@@ -57,14 +57,15 @@ describe('M7 weapons', () => {
     const s = fresh('hammer'), e = dummy(s, 0, 1.6), far = dummy(s, 0, 5);
     run(s, 1, { attack: true });
     run(s, 24);
-    expect(lost(e)).toBe(10);
+    // D8: the default hammer (Vorschlaghammer) is a third shorter, so it hits 1.1×.
+    expect(lost(e)).toBe(11);
     expect(e.state).toBe('stagger');
     expect(e.staggerDur).toBeCloseTo(0.6);
     s.player.state = 'move'; s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
     run(s, 40);
-    // Out of the swing's reach, inside the ring (70% damage).
-    expect(lost(far)).toBe(7);
+    // Out of the swing's reach, inside the ring (70% of the 1.1× damage).
+    expect(lost(far)).toBe(8);
   });
   it('the spear finisher lunges; Wurfspieße adds a thrown spear through four bodies', () => {
     const s = fresh('spear', { m_spiess: 1 });
@@ -152,7 +153,7 @@ describe('M8 powers', () => {
     run(s, 10);
     expect(lost(e)).toBe(0);
     run(s, 50);
-    expect(lost(e)).toBe(25);
+    expect(lost(e)).toBe(28);
     expect(lost(out)).toBe(0);
     expect(s.player.state).toBe('move');
   });
@@ -163,7 +164,7 @@ describe('M8 powers', () => {
     hurtPlayer(s, null, 20, 1, 0);
     expect(hp - s.player.hp).toBeCloseTo(6);
     run(s, 200);
-    expect(lost(e)).toBe(16);
+    expect(lost(e)).toBe(18);
   });
   it('Abrissbirne leaps to the target and lands with 400%', () => {
     const s = fresh('hammer'), e = dummy(s, 0, 6);
@@ -172,7 +173,7 @@ describe('M8 powers', () => {
     expect(s.player.invuln).toBeGreaterThan(0);
     run(s, 40);
     expect(Math.hypot(s.player.x - e.x, s.player.z - e.z)).toBeLessThan(2);
-    expect(lost(e)).toBe(40);
+    expect(lost(e)).toBe(44);
   });
   it('Nagelsturm fans nine shots; Brandsatz leaves a burning field', () => {
     const s = fresh('sling');

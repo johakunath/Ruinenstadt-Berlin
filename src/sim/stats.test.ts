@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SETS, type AffixId, type SetId, type SlotId } from '../data/items';
+import { weaponTraits } from '../data/weapon-look';
 import type { Item } from './items';
 import { gearAffixes, heroStats, power, setCount, type Equipment, type StatContext } from './stats';
 
@@ -62,7 +63,10 @@ describe('ported hero stats', () => {
     expect(s.eliteBonus).toBe(.2);
     expect(s.weight).toBe(4);
     expect(s.damage).toBe(12);
-    expect(heroStats(eq({ w: item({ kind: 'hammer' }) }), context({ perks: { m_dampf: 1 } }))).toMatchObject({ damage: 17, attackSpeed: 1 / 1.3 });
+    // 10 × 1.7, × 1.1 for the shorter default hammer (D8).
+    const d = heroStats(eq({ w: item({ kind: 'hammer' }) }), context({ perks: { m_dampf: 1 } }));
+    expect(d.damage).toBeCloseTo(18.7);
+    expect(d.attackSpeed).toBe(1 / 1.3);
   });
 
   it.each([['suppe', 135, 142], ['curry', 12.5, 13], ['kaffee', 1.18, 1.216], ['soljanka', 3, 3.6], ['gurke', 4, 5]] as const)('ports %s and Imbiss level 3', (meal, normal, stronger) => {
@@ -85,9 +89,9 @@ describe('ported hero stats', () => {
     // 20*(1+.14+.15+.20+.10)=31.8; round(140*1.2*1.1)=185.
     const a = heroStats(eq({ w: item({ value: 20, mods: ['nagel'] }), a: item({ slot: 'a', kind: 'armor', base: 'leder', value: 40 }) }), context({ upgrades: { dmg: 2, hp: 2 }, perks: { dmg: 1, hp: 1 }, drill: 5 }));
     expect(a.damage).toBeCloseTo(31.8); expect(a.maxHp).toBe(185); expect(a.moveSpeed).toBe(1.04);
-    // 30*(1+.06+.30)*1.7=69.36; as=(1+.24)/1.3; res=(8+10+8)/100+.12+.25=.63.
+    // 30*(1+.06+.30)*1.7=69.36, × 1.15 for the shorter Werkhammer (D8); as=(1+.24)/1.3; res=(8+10+8)/100+.12+.25=.63.
     const b = heroStats(eq({ w: item({ kind: 'hammer', base: 'werkh', value: 30, mods: ['dorn'] }), i: item({ slot: 'i', kind: 'krit', value: 5, implantMode: 2 }) }), context({ camp: { turm: true }, perks: { dmg: 2, rate: 2, res: 2, m_dampf: 1 }, shrines: { res: true } }));
-    expect(b.damage).toBeCloseTo(69.36); expect(b.attackSpeed).toBeCloseTo(1.24 / 1.3); expect(b.res).toBeCloseTo(.63); expect(b.crit).toBeCloseTo(.13); expect(b.leech).toBe(5);
+    expect(b.damage).toBeCloseTo(69.36 * 1.15); expect(b.attackSpeed).toBeCloseTo(1.24 / 1.3); expect(b.res).toBeCloseTo(.63); expect(b.crit).toBeCloseTo(.13); expect(b.leech).toBe(5);
     // 40*(1+.07+.30+.04)=56.4; HP=round(150*1.15*1.04*1.42)=255; cooldown=.6*.8=.48.
     const c = heroStats(eq({ w: item({ value: 40, element: 'fire', mods: ['batt'] }), a: item({ slot: 'a', kind: 'armor', base: 'mantel', value: 50 }), r: item({ slot: 'r', kind: 'tempo', value: 8, affixes: [{ id: 'cdr', value: 20 }] }) }), context({ upgrades: { dmg: 1, hp: 3 }, perks: { dmg: 2, rate: 1, reach: 2, skill: 2 }, meal: 'suppe', imbissLevel: 3, drill: 2, survivors: { spaeher: true } }));
     expect(c.damage).toBeCloseTo(56.4); expect(c.maxHp).toBe(255); expect(c.attackSpeed).toBe(1.12); expect(c.moveSpeed).toBe(1.08); expect(c.regen).toBe(.5); expect(c.luck).toBe(1); expect(c.cooldownFactor).toBeCloseTo(.48); expect(c.reachFactor).toBe(1.4);
@@ -96,8 +100,22 @@ describe('ported hero stats', () => {
   });
   it('power compares weapon kinds by damage per second, as 2D pwParts', () => {
     const of = (kind: string, value: number): number => power(heroStats({ w: { id: 1, slot: 'w', kind, base: 'x', name: 'x', rarity: 0, value, itemLevel: 1, affixes: [] } }, { upgrades: {}, perks: {}, camp: {}, survivors: {} }));
-    // Same item level: a hammer hits 2.3× as hard and 2.27× as slowly as a blade.
-    expect(of('hammer', 23) / of('blade', 10)).toBeCloseTo(1, 1);
+    // Same item level: a hammer hits 2.3× as hard and 2.27× as slowly as a blade (before the D8 size factor).
+    expect(of('hammer', 23 / weaponTraits('vorschlag').damage) / of('blade', 10)).toBeCloseTo(1, 1);
     expect(of('spear', 14.5) / of('blade', 10)).toBeCloseTo(Math.sqrt(1.45 * 0.3 / 0.5), 1);
+  });
+
+  it('folds the size of the base into reach and damage (WP4 D8), slings keep theirs', () => {
+    const of = (change: Partial<Item>, ctx = context()) => heroStats(eq({ w: item(change) }), ctx);
+    expect(of({ base: 'stahl' })).toMatchObject({ damage: 10, reachFactor: 1 });
+    const cleaver = of({ base: 'brech' });
+    expect(cleaver.damage).toBeCloseTo(12.5);
+    expect(cleaver.reachFactor).toBeCloseTo(0.75);
+    // The Weitblick blessing (+20 % reach per level) multiplies with it.
+    expect(of({ base: 'brech' }, context({ perks: { reach: 1 } })).reachFactor).toBeCloseTo(0.9);
+    expect(of({ kind: 'hammer', base: 'pflaster' }).reachFactor).toBeCloseTo(0.8);
+    expect(of({ kind: 'sling', base: 'zwille' })).toMatchObject({ damage: 10, reachFactor: 1 });
+    expect(of({ kind: 'hammer', base: 'pflaster' }).types).toEqual(['wucht', 'stich']);
+    expect(of({ base: 'brech', set: 'kiez' }).reachFactor).toBeCloseTo(0.75);
   });
 });
