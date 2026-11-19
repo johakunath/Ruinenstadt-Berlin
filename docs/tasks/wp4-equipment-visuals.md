@@ -372,6 +372,26 @@ Johannes, 2026-11-19 (third message): reach fits the weapon's length roughly, fo
 
 Done when: new sheets; hammer and spear left hand still on the shaft where the model is two-handed; `npm run check`.
 
+### Step 1h Look 2 fixes (Johannes, 2026-11-19) [Claude · Opus high]
+Verdict: rendered icons are fine as they are; the review is done by Claude, then the PR goes to ready. Remaining model points:
+
+| Model | Change |
+|---|---|
+| Holzlatte (I01) | Must read as wood: wood colour and grain, board shorter, nails longer |
+| Hackmesser (I90) | Too dark: silvery steel, and a faint cold-white gleam on the edge (Fable's reading of "give it a glow": low emissive on the edge only; ask again if he meant more) |
+| Hackmesser der Kiezwache (I91) | Blade shinier, a ribbon on the handle |
+| Rohrzange (I08) | Handle a little wider at its end |
+| Every fork: Jagdzwille (I09), Nagelwerfer (I10), Aufziehwerfer (I73), Zorn der Ringbahn (I32), Krähenschleuder (I53), Zwille des Spreegeists (I92) | Handle a third shorter |
+| Zwille des Spreegeists (I92) | Green glow (set signature); sparkle comes with step 5 |
+| Boxenhammer (I60) | More detail on the sides of the cabinet |
+| Neonflinte (I61) | **Not a fork: a gun**, an assault rifle in the AK shape (stock, receiver, curved magazine, barrel) with a neon coil. Needs gun clips, see below |
+| Mikroständer (I62) | Shorter; the mic head wider |
+| Sichel (I71) | Blade shinier, more silvery |
+| Werkhammer (I72) | Shinier; more detail on the striking faces; thicker grip |
+| Mauerbrecher (I16), Plattenbrecher (I52) | Finer detail in the coloured parts: chipped paint, smaller fragments, cracks |
+
+Neonflinte as a gun (Fable): the throw clips point a gun at the ground (step 1c finding), so this base gets its own clips. `Pistol_Shoot` (UAL1, not imported yet) for its shots, `Pistol_Idle_Loop` (imported) for standing, left hand by IK on the handguard. The attack definition may differ per base in clip name and clip times only; sim timing, damage and shot rules of the Werfer stay. Measure with the combat-animation skill; state the new `anims.glb` size. If no pack clip holds the rifle along the shot line, stop and write it under Questions.
+
 ### D8 Size and strength per base (changes D1)
 The kind still sets clips and arcs, but a base may scale them. New table (plain data, read by `src/sim/stats.ts`, unit tested):
 
