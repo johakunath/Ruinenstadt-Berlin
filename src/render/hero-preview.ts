@@ -60,7 +60,7 @@ export class HeroPreview {
     this.canvas.tabIndex = 0;
     this.canvas.setAttribute('role', 'img');
     this.canvas.setAttribute('aria-label', 'Figur drehen');
-    this.body = new HeroModel(assets.hero);
+    this.body = new HeroModel(assets.hero, materials);
     this.turn.add(this.body.model);
     this.scene.add(this.turn);
     this.anim = new Animator(this.body.model, assets.heroClips);

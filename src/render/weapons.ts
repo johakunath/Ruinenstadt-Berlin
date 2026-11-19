@@ -94,18 +94,18 @@ export function weaponGlow(model: WeaponModel, element: ElementId | undefined): 
 
 export type WeaponSlot = 'metal' | 'matte' | 'glow';
 /** Matte grain cell of `paintGrain`: wood, cloth, plain, concrete. */
-type Grain = 0 | 1 | 2 | 3;
-interface Paint { slot: WeaponSlot; hex: number; grain: Grain }
+export type Grain = 0 | 1 | 2 | 3;
+export interface Paint { slot: WeaponSlot; hex: number; grain: Grain }
 
 /** Mean sRGB tone of the grey metal map; metal vertex colours are divided by it. */
 const METAL_TONE = 0xa0;
-const metal = (hex: number): Paint => ({ slot: 'metal', hex, grain: 0 });
+export const metal = (hex: number): Paint => ({ slot: 'metal', hex, grain: 0 });
 /** Clean, silvery metal: the brushed half of the metal atlas (look 2: Sichel, Hackmesser, Werkhammer). */
-const bright = (hex: number): Paint => ({ slot: 'metal', hex, grain: 1 });
-const wood = (hex: number): Paint => ({ slot: 'matte', hex, grain: 0 });
-const cloth = (hex: number): Paint => ({ slot: 'matte', hex, grain: 1 });
-const plain = (hex: number): Paint => ({ slot: 'matte', hex, grain: 2 });
-const stone = (hex: number): Paint => ({ slot: 'matte', hex, grain: 3 });
+export const bright = (hex: number): Paint => ({ slot: 'metal', hex, grain: 1 });
+export const wood = (hex: number): Paint => ({ slot: 'matte', hex, grain: 0 });
+export const cloth = (hex: number): Paint => ({ slot: 'matte', hex, grain: 1 });
+export const plain = (hex: number): Paint => ({ slot: 'matte', hex, grain: 2 });
+export const stone = (hex: number): Paint => ({ slot: 'matte', hex, grain: 3 });
 /** Glow parts: the element or signature colour; `GLOW_WHITE` glows a faint white whatever the colour (D1, Fernsehturm-Splitter). */
 const GLOW: Paint = { slot: 'glow', hex: 0x000000, grain: 2 };
 const GLOW_WHITE: Paint = { slot: 'glow', hex: 0xffffff, grain: 2 };
@@ -126,8 +126,8 @@ const P = {
   enamel: metal(0x34588c),
 } as const;
 
-/** One part, already in model space. `soft`: cloth, cords and bands, outside the envelope check. */
-export interface WeaponPart { geo: BufferGeometry; slot: WeaponSlot; soft: boolean }
+/** One part, already in model space. `soft`: cloth, cords and bands, outside the envelope check. `tag`: the hero gear's bone (WP4 step 2). */
+export interface WeaponPart { geo: BufferGeometry; slot: WeaponSlot; soft: boolean; tag: string }
 
 const _m = new Matrix4();
 const _e = new Euler();
@@ -136,8 +136,11 @@ const _p = new Vector3();
 const _s = new Vector3(1, 1, 1);
 const _c = new Color();
 
-class Parts {
+/** The parts kit, shared by the weapons and the hero's gear (`src/render/gear-kit.ts`). */
+export class Parts {
   readonly list: WeaponPart[] = [];
+  /** Copied onto every part added (the gear's bone). */
+  tag = '';
   /** Extra transform for the parts added inside `frame` (a scaled hammer head). */
   private xf: Matrix4 | null = null;
 
@@ -175,20 +178,20 @@ class Parts {
       const u0 = (paint.grain % 2) * 0.5, v0 = paint.grain < 2 ? 0.5 : 0, pad = 2 / 512, k = 0.5 - 2 * pad;
       for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + pad + Math.min(1, Math.max(0, uv.getX(i))) * k, v0 + pad + Math.min(1, Math.max(0, uv.getY(i))) * k);
     }
-    this.list.push({ geo: g, slot: paint.slot, soft });
+    this.list.push({ geo: g, slot: paint.slot, soft, tag: this.tag });
     return this;
   }
 }
 
-const box = (w: number, h: number, d: number): BufferGeometry => new BoxGeometry(w, h, d);
-const cyl = (rt: number, rb: number, h: number, s = 8, open = false): BufferGeometry => new CylinderGeometry(rt, rb, h, s, 1, open);
-const cone = (r: number, h: number, s = 4, open = false): BufferGeometry => new ConeGeometry(r, h, s, 1, open);
-const ball = (r: number, w = 8, h = 6): BufferGeometry => new SphereGeometry(r, w, h);
-const ring = (R: number, r: number, rs = 6, ts = 10): BufferGeometry => new TorusGeometry(R, r, rs, ts);
-const scaled = (g: BufferGeometry, x: number, y: number, z: number): BufferGeometry => g.scale(x, y, z);
+export const box = (w: number, h: number, d: number): BufferGeometry => new BoxGeometry(w, h, d);
+export const cyl = (rt: number, rb: number, h: number, s = 8, open = false): BufferGeometry => new CylinderGeometry(rt, rb, h, s, 1, open);
+export const cone = (r: number, h: number, s = 4, open = false): BufferGeometry => new ConeGeometry(r, h, s, 1, open);
+export const ball = (r: number, w = 8, h = 6): BufferGeometry => new SphereGeometry(r, w, h);
+export const ring = (R: number, r: number, rs = 6, ts = 10): BufferGeometry => new TorusGeometry(R, r, rs, ts);
+export const scaled = (g: BufferGeometry, x: number, y: number, z: number): BufferGeometry => g.scale(x, y, z);
 
 /** A flat part from an outline in the model's XY plane (blades, jaws, flags), `depth` thick, centred on z = 0. */
-function flat(pts: ReadonlyArray<readonly [number, number]>, depth: number, holes: ReadonlyArray<readonly [number, number, number]> = []): BufferGeometry {
+export function flat(pts: ReadonlyArray<readonly [number, number]>, depth: number, holes: ReadonlyArray<readonly [number, number, number]> = []): BufferGeometry {
   const s = new Shape(pts.map(([x, y]) => new Vector2(x, y)));
   for (const [x, y, r] of holes) s.holes.push(new Path().absarc(x, y, r, 0, Math.PI * 2, true));
   const g = new ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 6 });
@@ -218,7 +221,7 @@ function ribbon(b: Parts, y: number, len = 0.28, r = 0.028, paint: Paint = P.red
 const _a = new Vector3(), _b = new Vector3(), _d = new Vector3();
 
 /** A cord or band from `a` to `c` that sags by `sag` in its middle (a static curve of `n` segments, soft). */
-function cord(b: Parts, a: readonly [number, number, number], c: readonly [number, number, number], sag: number, r: number, paint: Paint, n = 5): void {
+export function cord(b: Parts, a: readonly [number, number, number], c: readonly [number, number, number], sag: number, r: number, paint: Paint, n = 5): void {
   const mid = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2 - sag, (a[2] + c[2]) / 2];
   const at = (t: number, out: Vector3): Vector3 => out.set(
     (1 - t) ** 2 * a[0] + 2 * t * (1 - t) * mid[0]! + t * t * c[0], (1 - t) ** 2 * a[1] + 2 * t * (1 - t) * mid[1]! + t * t * c[1], (1 - t) ** 2 * a[2] + 2 * t * (1 - t) * mid[2]! + t * t * c[2]);
@@ -239,7 +242,7 @@ function teeth(b: Parts, paint: Paint, x: number, y: number, z: number, r: numbe
 }
 
 /** A cog facing ±z: rim, teeth, hub and spokes. */
-function cog(b: Parts, paint: Paint, x: number, y: number, z: number, r: number, n: number, hub?: Paint): void {
+export function cog(b: Parts, paint: Paint, x: number, y: number, z: number, r: number, n: number, hub?: Paint): void {
   b.add(ring(r, r * 0.2, 4, Math.max(10, n)), paint, x, y, z);
   teeth(b, paint, x, y, z, r * 1.28, n, r * 0.32, r * 0.3);
   b.add(cyl(r * 0.32, r * 0.32, r * 0.35, 8), hub ?? paint, x, y, z, Math.PI / 2);

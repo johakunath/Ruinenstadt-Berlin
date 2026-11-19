@@ -1,10 +1,16 @@
 // One hero body (H1 step 4): a clone of hero.glb with its clothing pieces and body regions found by
 // node name, the look switch, and the spring chains (scarf tail, coat back panels). The game's
-// HeroView and the inventory preview each own one; geometry and materials are shared.
-import { Quaternion, Vector3, type Object3D } from 'three';
+// HeroView and the inventory preview each own one; geometry and materials are shared. WP4 step 2:
+// a look also picks each piece's variant (palette, coat cut, shoulder volume; `hero-wear.ts`) and
+// the rigid gear meshes (`gear.ts`), and can hide the hair.
+import { BufferGeometry, Quaternion, SkinnedMesh, Vector3, type Mesh, type Object3D } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { HERO_REGIONS, type BodyRegion } from '../data/hero-contract';
 import { PIECES, hiddenRegions, lookNodes, sameLook, type HeroLook } from '../data/hero-look';
+import { GEAR_SLOTS, gearGeometry, gearMaterials, type GearSlot } from './gear';
+import { heroSource, type HeroSource } from './gear-kit';
+import { pieceVariant } from './hero-wear';
+import type { Materials } from './materials';
 
 const q = new Quaternion();
 const X = new Vector3(1, 0, 0);
@@ -33,13 +39,43 @@ export class HeroModel {
   private prevX = 0;
   private prevZ = 0;
   private time = 0;
+  /** Source geometry of each tinted mesh (pieces and scarf), before any variant. */
+  private readonly sourceGeo = new Map<SkinnedMesh, BufferGeometry>();
+  private readonly hair: Object3D | undefined;
+  /** Gear meshes per slot (only with `materials`: NPCs wear no gear). */
+  private readonly gear = new Map<GearSlot, SkinnedMesh>();
+  private readonly src: HeroSource;
+  private readonly boneNames: string[] = [];
 
-  constructor(source: Object3D) {
+  constructor(source: Object3D, materials?: Materials) {
     this.model = cloneSkinned(source);
+    this.src = heroSource(source);
     const m = this.model;
     for (const p of Object.values(PIECES)) {
       const o = m.getObjectByName(p.node);
       if (o) this.pieces.set(p.node, o);
+    }
+    for (const name of [...Object.values(PIECES).map((p) => p.node), 'scarf']) {
+      const o = m.getObjectByName(name) as SkinnedMesh | undefined;
+      if (o?.isSkinnedMesh) this.sourceGeo.set(o, o.geometry);
+    }
+    this.hair = m.getObjectByName('hair');
+    const anchor = m.getObjectByName('a_mantel') as SkinnedMesh | undefined;
+    if (anchor?.isSkinnedMesh) {
+      this.boneNames = anchor.skeleton.bones.map((b) => b.name);
+      if (materials) {
+        const mat = gearMaterials(materials);
+        for (const slot of GEAR_SLOTS) {
+          const g = new SkinnedMesh(new BufferGeometry(), mat[slot]);
+          g.name = `gear_${slot}`;
+          g.castShadow = true;
+          g.frustumCulled = false;
+          g.visible = false;
+          g.bind(anchor.skeleton, anchor.bindMatrix);
+          anchor.parent!.add(g);
+          this.gear.set(slot, g);
+        }
+      }
     }
     for (const r of HERO_REGIONS) {
       const o = m.getObjectByName(`body_${r}`);
@@ -55,22 +91,49 @@ export class HeroModel {
     }
   }
 
-  /** Every piece and region visible: for one shader compile at load, so no swap ever compiles. */
+  /** Every piece, region and gear material visible: for one shader compile at load, so no swap ever compiles. */
   showAll(): void {
     for (const o of this.pieces.values()) o.visible = true;
     for (const o of this.regions.values()) o.visible = true;
+    if (this.hair) this.hair.visible = true;
+    this.showGear(['warm']);
     this.look = null;
   }
 
-  /** Shows the look's pieces and hides the body regions under them. Returns false if nothing changed. */
+  /**
+   * Shows the look's pieces in their variant (palette, cut, shoulder volume), its gear, and hides the
+   * body regions under them. Returns false if nothing changed.
+   */
   setLook(look: HeroLook): boolean {
     if (this.look && sameLook(this.look, look)) return false;
     const shown = new Set(lookNodes(look));
     const hidden = hiddenRegions(look);
     for (const [node, o] of this.pieces) o.visible = shown.has(node);
     for (const [r, o] of this.regions) o.visible = !hidden.has(r);
-    this.look = { ...look };
+    if (this.hair) this.hair.visible = !look.hideHair;
+    const outfit = PIECES[look.outfit]?.node, boots = PIECES[look.boots]?.node, gloves = look.gloves ? PIECES[look.gloves]?.node : undefined;
+    for (const [mesh, geo] of this.sourceGeo) {
+      const n = mesh.name;
+      const tint = n === outfit ? look.tint.outfit : n === boots ? look.tint.boots : n === gloves ? look.tint.gloves : n === 'scarf' ? look.tint.scarf : '';
+      mesh.geometry = pieceVariant(mesh, n, geo, tint, n === outfit ? look.cut : 0, n === outfit ? look.puff : 0);
+    }
+    this.showGear(look.gear);
+    this.look = { ...look, gear: [...look.gear], covers: [...look.covers] };
     return true;
+  }
+
+  /** Puts the merged gear of `ids` on the gear meshes (hidden when a slot has no part). */
+  private showGear(ids: readonly string[]): void {
+    if (this.gear.size === 0) return;
+    const geo = gearGeometry(this.src, this.boneNames, ids);
+    const layers = (this.hair as Mesh | undefined)?.layers.mask;
+    for (const [slot, mesh] of this.gear) {
+      const g = geo[slot];
+      mesh.visible = !!g;
+      if (g) mesh.geometry = g;
+      // Same layers as the body (hero contour, `HeroView` sets them after construction).
+      if (layers !== undefined) mesh.layers.mask = layers;
+    }
   }
 
   /**

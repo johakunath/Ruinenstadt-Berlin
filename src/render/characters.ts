@@ -352,7 +352,7 @@ export class HeroView {
   readonly body: HeroModel;
 
   constructor(assets: CharacterAssets, materials: Materials) {
-    this.body = new HeroModel(assets.hero);
+    this.body = new HeroModel(assets.hero, materials);
     const model = this.body.model;
     this.root.add(model);
     this.anim = new Animator(model, assets.heroClips);
