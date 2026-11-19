@@ -1,3 +1,4 @@
+import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { BAG_SIZE, collectItem } from './inventory';
 import { makeItem } from './items';
@@ -35,7 +36,7 @@ describe('kill drops', () => {
       }
     }
     expect(ing / n).toBeCloseTo(0.03, 1);
-    expect(mat / n).toBeCloseTo(0.22, 1);
+    expect(mat / n).toBeCloseTo(0.22 * ECONOMY.material, 1);
     expect(item / n).toBeCloseTo(0.78 * 0.15 * 0.4, 1);
     expect(heal / n).toBeCloseTo(0.78 * 0.94 * 0.06, 1);
     expect(item / n).toBeGreaterThan(0.03);
@@ -45,7 +46,7 @@ describe('kill drops', () => {
   it('credits scrap at once', () => {
     const sim = flat();
     killDrops(sim, spawnEnemy(sim, 2, 2, 'brute'));
-    expect(sim.inventory.scrap).toBe(4);
+    expect(sim.inventory.scrap).toBe(Math.round(4 * ECONOMY.scrap));
   });
 
   it('bosses always drop their items; the Hauptmann drops a legendary', () => {
@@ -54,14 +55,14 @@ describe('kill drops', () => {
     const items = sim.drops.filter((d) => d.content.kind === 'item');
     expect(items.length).toBeGreaterThanOrEqual(2);
     expect(sim.drops.some((d) => d.content.kind === 'heal')).toBe(true);
-    expect(sim.inventory.scrap).toBe(40);
+    expect(sim.inventory.scrap).toBe(Math.round(40 * ECONOMY.scrap));
     for (let s = 0; s < 5; s++) {
       const sm = createSim({ empty: true, seed: s + 1 });
       killDrops(sm, spawnEnemy(sm, 2, 2, 'hauptmann'));
       const legendary = sm.drops.filter((d) => d.content.kind === 'item' && d.content.item.rarity === 3);
       expect(legendary.length).toBeGreaterThanOrEqual(1);
       expect(sm.events.some((e) => e.type === 'legendary')).toBe(true);
-      expect(sm.inventory.scrap).toBe(70);
+      expect(sm.inventory.scrap).toBe(Math.round(70 * ECONOMY.scrap));
     }
   });
 
@@ -81,12 +82,12 @@ describe('kill drops', () => {
       const sm = flat();
       killDrops(sm, spawnEnemy(sm, 2, 2, kind));
       expect(sm.drops.filter((d) => d.content.kind === 'item').length, kind).toBeGreaterThanOrEqual(2);
-      expect(sm.inventory.scrap, kind).toBe(40);
+      expect(sm.inventory.scrap, kind).toBe(Math.round(40 * ECONOMY.scrap));
     }
     const sm = flat();
     killDrops(sm, spawnEnemy(sm, 2, 2, 'spreehexe'));
     expect(sm.drops.some((d) => d.content.kind === 'item' && d.content.item.rarity === 3)).toBe(true);
-    expect(sm.inventory.scrap).toBe(70);
+    expect(sm.inventory.scrap).toBe(Math.round(70 * ECONOMY.scrap));
   });
 
   it('item ids stay unique', () => {

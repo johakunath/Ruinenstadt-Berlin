@@ -200,11 +200,13 @@ export function zombieAlexGear(kind: 'wurzler' | 'wurzelmutter' | 'brigade', mou
     return;
   }
   const big = kind === 'wurzelmutter';
-  // A sunflower in place of the face; the mother wears a crown of small ones.
-  mount('Head', [
-    ...sunflowerParts(0.2, false).map(([g, m]): Part => [tf(g, 0, 0.1, 0.22), m]),
-    ...(big ? [0, 1, 2, 3, 4].flatMap((i): Part[] => sunflowerParts(0.07, false).map(([g, m]): Part => [tf(g, Math.sin(i * 1.26 - 2.5) * 0.15, 0.2 + Math.cos(i * 1.26 - 2.5) * 0.04, -0.02, -0.5, i * 1.26 - 2.5), m])) : []),
-  ], 0.05);
+  // WP5 (Johannes): the sunflower IS the head, twice the old size; the skull is shrunk away (SHAPE Head 0.05).
+  // Mounted on the neck with a short stem; the mother wears a crown of small ones round its rim.
+  mount('neck_01', [
+    [tf(new CylinderGeometry(0.035, 0.05, 0.16, 8), 0, 0.08, 0), 'root'],
+    ...sunflowerParts(0.4, false).map(([g, m]): Part => [tf(g, 0, 0.26, 0.06), m]),
+    ...(big ? [0, 1, 2, 3, 4].flatMap((i): Part[] => sunflowerParts(0.09, false).map(([g, m]): Part => [tf(g, Math.sin(i * 1.26 - 2.5) * 0.34, 0.26 + Math.cos(i * 1.26 - 2.5) * 0.34, 0.02, 0, 0, 0), m])) : []),
+  ], 0.02);
   mount('pelvis', [[tf(new BoxGeometry(0.36, 0.5, 0.02), 0, -0.22, 0.17, 0.1), 'apron'], [tf(new TorusGeometry(0.2, 0.012, 4, 14), 0, 0.02, 0, Math.PI / 2), 'root']]);
   mount('spine_03', [[tf(new BoxGeometry(0.28, 0.2, 0.02), 0, -0.08, 0.18), 'apron'], ...rootParts(0.4, 3, 1).map(([g, m]): Part => [tf(g, 0.12, 0.1, -0.12, 0.3), m])], 0.08);
   for (const side of ['l', 'r']) mount(`lowerarm_${side}`, rootParts(big ? 0.55 : 0.42, 4, side === 'l' ? 0 : 1.3));

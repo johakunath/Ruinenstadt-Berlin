@@ -189,6 +189,8 @@ export interface Enemy {
   queue?: { kind: SpecialKind; t: number };
   /** M12c: one-time boss calls already made (the Dirigent's Orchester). */
   calls?: number;
+  /** WP5 Zünder: it blew itself up (no second, smaller blast on death). */
+  blown?: boolean;
   /** M15 shield bearers: the guard stands open this long (a stun or shock opened it). */
   guardOpen?: number;
   /** Seconds until the next "geblockt" note may show. */
@@ -299,6 +301,8 @@ export interface RunState {
 }
 
 export interface Sim {
+  /** Debug (?god, ?tp): the hero takes no damage. */
+  god?: boolean;
   abilities: import('./abilities').Abilities;
   difficulty: DifficultyId;
   inventory: Inventory;

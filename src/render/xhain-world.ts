@@ -681,8 +681,32 @@ function buildDeckBridge(c: Ctx, t: Terrace): void {
       b0.box(M.concrete, sub(mid, 0, h - 2.6, z), W - 0.4, 0.6, 1.4, [0.9, 0.88, 0.84]);
       for (const x of [-W / 2 + 1.2, 0, W / 2 - 1.2]) b0.box(M.concrete, sub(mid, x, (h - 2.9) / 2, z), 0.9, h - 2.9, 0.9, [0.85, 0.83, 0.8]);
     }
-    b0.box(M.concrete, sub(mid, 0, h / 2 - 0.5, -L / 2 + 1), W, h - 1, 2, [0.8, 0.78, 0.75]);
+    // Playtest 2026-11-18: the north end was a clean wall. Now a broken-off span: a last, shattered pier
+    // under the deck end, torn slabs hanging over the gap, rebar, a fallen deck slab and rubble below.
+    b0.box(M.concrete, sub(mid, 0, h - 2.6, -L / 2 + 1.2), W - 0.4, 0.6, 1.4, [0.82, 0.8, 0.76]);
+    for (const x of [-W / 2 + 1.2, W / 2 - 1.2]) b0.box(M.concrete, sub(mid, x, (h - 2.9) / 2, -L / 2 + 1.2), 0.9, h - 2.9, 0.9, [0.8, 0.78, 0.74]);
+    b0.box(M.concrete, sub(mid, 0, (h - 4.5) / 2, -L / 2 + 1.2, 0.3), 0.9, h - 4.5, 0.9, [0.78, 0.76, 0.72]);
   });
+  const rng = new Rng(1945);
+  // Torn deck slabs over the gap, ragged, sagging outward (render only: the terrace edge still stops the hero).
+  const n = Math.max(4, Math.round(W / 2.2));
+  for (let i = 0; i < n; i++) {
+    const x = -W / 2 + (i + 0.5) * (W / n), len = rng.range(0.6, 2.6), sag = rng.range(0.1, 0.55);
+    b0.box(M.concrete, sub(mid, x, h - 0.5 - Math.sin(sag) * len / 2, -L / 2 - Math.cos(sag) * len / 2 + 0.1, rng.range(-0.08, 0.08), -sag, rng.range(-0.1, 0.1)), W / n + 0.05, 0.5, len, [0.62, 0.6, 0.56]);
+    for (let r = 0; r < 2; r++) b0.box(M.iron, sub(mid, x + rng.range(-0.6, 0.6), h - 0.5 - rng.range(0, 0.3), -L / 2 - len - rng.range(0.1, 0.6), rng.range(-0.4, 0.4), rng.range(0.2, 0.9)), 0.03, 0.03, rng.range(0.6, 1.4), [0.45, 0.32, 0.25]);
+  }
+  // Debris heaped on the deck end, low enough to see over, so the break reads from the game camera.
+  for (let i = 0; i < 16; i++) {
+    const s = rng.range(0.35, 1.0);
+    b0.box(M.concrete, sub(mid, rng.range(-W / 2 + 0.6, W / 2 - 0.6), h + s * 0.25, -L / 2 + rng.range(0.1, 1.1), rng.range(0, 3), rng.range(-0.6, 0.6), rng.range(-0.6, 0.6)), s, s * 0.55, s * rng.range(0.7, 1.4), [0.7, 0.68, 0.64]);
+  }
+  for (const s of [-1, 1]) b0.box(M.railSteel, sub(mid, s * 2.2 + rng.range(-0.5, 0.5), h + 0.3, -L / 2 - 0.3, rng.range(-0.5, 0.5), -0.5), 0.1, 0.06, 2.4, [0.55, 0.5, 0.45]);
+  // A fallen span piece leaning from the track bed against the last pier, chunks and rubble around it.
+  b0.box(M.concrete, sub(mid, rng.range(-1.5, 1.5), h * 0.35, -L / 2 - 2.4, 0.15, -0.75), W * 0.55, 0.6, 7, [0.8, 0.78, 0.74]);
+  for (let i = 0; i < 18; i++) {
+    const s = rng.range(0.4, 1.4);
+    b0.box(M.concrete, sub(mid, rng.range(-W / 2 - 1, W / 2 + 1), s * 0.3, -L / 2 - rng.range(-1, 6), rng.range(0, 3), rng.range(-0.5, 0.5), rng.range(-0.5, 0.5)), s, s * 0.6, s * rng.range(0.8, 1.6), [0.75, 0.73, 0.7]);
+  }
   // Lamp posts on the parapet, dark.
   for (const z of [-L / 4, L / 4]) for (const s of [-1, 1]) {
     b0.box(M.iron, sub(mid, s * (W / 2 - 0.2), h + 2.8, z), 0.12, 4.6, 0.12, [0.7, 0.7, 0.7]);

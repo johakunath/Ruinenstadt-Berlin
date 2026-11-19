@@ -111,3 +111,52 @@ it('beats under 30 % life every 0.9 s (2D heartbeat)', async()=>{
   for(let i=0;i<180;i++){const h=heartbeat(t,1/60,.2);t=h.timer;if(h.beat)n++;}
   expect(n).toBe(4);
 });
+
+describe('S3 boss voices', async () => {
+  const { pickVoice, markVoice, voiceMemory, voiceTrigger, SIGNATURE, VOICE_URL, VOICE_TRIGGERS, VOICE_GAP, START_WINDOW } = await import('./voices');
+  const wind = (kind: string, id = 1): SimEvent => ({ type: 'enemySpecial', id, kind: kind as never, phase: 'wind', x: 0, z: 0 });
+  const go = (kind: string, id = 1): SimEvent => ({ type: 'enemySpecial', id, kind: kind as never, phase: 'go', x: 0, z: 0 });
+  const windup = (id = 1): SimEvent => ({ type: 'enemyWindup', id });
+  const rage = (id = 1): SimEvent => ({ type: 'bossRage', id, name: '' });
+  const ready = () => true;
+
+  it('has all three clips for every boss with a signature special, and no stray clips', () => {
+    const kinds = Object.keys(SIGNATURE);
+    expect(kinds.length).toBe(16);
+    expect(Object.keys(VOICE_URL).sort()).toEqual(kinds.flatMap(k => VOICE_TRIGGERS.map(t => `${k}-${t}`)).sort());
+  });
+
+  it('asks for start on the first act, then the signature special in its phase, rage once', () => {
+    expect(voiceTrigger(windup(), 'tuersteher', new Set())).toBe('start');
+    expect(voiceTrigger(wind('summon'), 'tuersteher', new Set())).toBe('start');
+    const said = new Set(['start'] as const);
+    expect(voiceTrigger(wind('summon'), 'tuersteher', said)).toBeNull(); // Spoken with the note on `go`.
+    expect(voiceTrigger(go('summon'), 'tuersteher', said)).toBe('special');
+    expect(voiceTrigger(go('shove'), 'tuersteher', said)).toBeNull();
+    expect(voiceTrigger(wind('charge'), 'schaffner', said)).toBe('special');
+    expect(voiceTrigger(rage(), 'tuersteher', said)).toBe('rage');
+    expect(voiceTrigger(rage(), 'tuersteher', new Set(['start', 'rage'] as const))).toBeNull();
+    expect(voiceTrigger({ type: 'spawn', id: 1 }, 'tuersteher', new Set())).toBeNull();
+  });
+
+  it('keeps 4 s per boss, one line at a time, each trigger once', () => {
+    const m = voiceMemory();
+    expect(pickVoice(m, 1, 'grenzer', windup(), 0, ready)).toBe('start'); markVoice(m, 1, 'start', 0, 1.5);
+    expect(pickVoice(m, 1, 'grenzer', go('summon'), 2, ready)).toBeNull(); // Under VOICE_GAP.
+    expect(pickVoice(m, 2, 'tuersteher', windup(2), 1, ready)).toBeNull(); // Another boss still speaking.
+    expect(pickVoice(m, 2, 'tuersteher', windup(2), 1.6, ready)).toBe('start'); markVoice(m, 2, 'start', 1.6, 1.4);
+    expect(pickVoice(m, 1, 'grenzer', go('summon'), VOICE_GAP, ready)).toBe('special'); markVoice(m, 1, 'special', VOICE_GAP, 1);
+    expect(pickVoice(m, 1, 'grenzer', go('summon'), 20, ready)).toBeNull(); // Said once.
+    expect(pickVoice(m, 1, 'grenzer', windup(), 20, ready)).toBeNull();
+    expect(pickVoice(m, 1, 'grenzer', rage(), 21, ready)).toBe('rage');
+  });
+
+  it('retries a line that could not play; drops a late start; skips clips not loaded', () => {
+    const m = voiceMemory();
+    expect(pickVoice(m, 1, 'dirigent', windup(), 0, () => false)).toBeNull(); // Clip still loading.
+    expect(pickVoice(m, 1, 'dirigent', windup(), START_WINDOW + 0.1, ready)).toBeNull(); // Start too late now.
+    expect(pickVoice(m, 1, 'dirigent', go('roar'), START_WINDOW + 0.2, ready)).toBe('special');
+    expect(pickVoice(m, 3, 'feldwebel', { type: 'spawn', id: 3 }, 0, ready)).toBeNull();
+    expect(pickVoice(m, 3, 'feldwebel', windup(3), 30, ready)).toBe('start'); // The window opens at the first act, not the spawn.
+  });
+});

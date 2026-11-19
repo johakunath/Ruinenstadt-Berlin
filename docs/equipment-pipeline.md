@@ -131,7 +131,7 @@ Legend: 3D `kind:blade` = shared weapon kind model (`src/render/weapons.ts`, `we
 | Nanopumpe | npumpe | i | neon | none | - | I70 | n/a | - | 4 |
 | Arm des Basspredigers | bassarm | i | legendary | none | - | I58 | n/a: shared with Kabelarm | I, E | 3 |
 
-Icon judgements are from the 128 px icons against the model code and the piece names; colours and textures of the hero pieces were not compared in a render (unverified).
+Icon judgements are from the 128 px icons against the model code and the piece names; individual item looks still need comparison. The shared H1 coat, vest, boots, sneakers, gloves and scarf have [painted albedos and review captures](proof/h1-hero/step6/README.md). Item-specific `T` entries track variants beyond those shared textures.
 
 ## Priorities (owner order)
 

@@ -2,7 +2,7 @@
 // the cache, the supply drop and the radio zone. Built in code; glows are unlit sprites (no lights).
 import {
   AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial,
-  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Object3D,
+  OctahedronGeometry, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, Vector3, type Object3D, type Sphere,
 } from 'three';
 import type { RunContent } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
@@ -10,7 +10,7 @@ import { heroLook } from '../data/hero-look';
 import { Animator, type CharacterAssets } from './characters';
 import { HeroModel } from './hero-model';
 import { groundY } from './ground';
-import { FX_LAYER } from './layers';
+import { FX_LAYER, LOOT_LAYER, LOOT_SHOW } from './layers';
 import type { Materials } from './materials';
 import { paintGlow, paintWood } from './paint';
 
@@ -26,7 +26,7 @@ export function npcPerson(assets: CharacterAssets): { root: Group; anim: Animato
   body.setLook(NPC_LOOK);
   const model = body.model;
   root.add(model);
-  const anim = new Animator(model, new Map([...assets.heroClips].filter(([n]) => n === 'Idle_Loop' || n === 'Interact')));
+  const anim = new Animator(model, new Map([...assets.heroClips].filter(([n]) => n === 'Idle_Loop' || n === 'Interact' || n === 'Jog_Fwd_Loop')));
   anim.loop('Idle_Loop', 0);
   return { root, anim, attach: (bone, o) => { model.getObjectByName(bone)?.add(o); } };
 }
@@ -81,6 +81,10 @@ export class ContentView {
   private readonly hidden: Array<{ root: Group; shard: Mesh; glow: Sprite }> = [];
   /** Funde (2D #14, #27): a gold gear (Uhrwerkteil) or a cassette, each with an unlit glow. */
   private readonly funde: Array<{ root: Group; body: Group; glow: Sprite }> = [];
+  private readonly tmp = new Vector3();
+  private readonly cacheParts: Mesh[] = [];
+  private heroX = 0;
+  private heroZ = 0;
   private readonly shrines: Array<{ root: Group; glow: Sprite; halo: Mesh }> = [];
   private readonly cache = new Group();
   private readonly crate = new Group();
@@ -91,6 +95,9 @@ export class ContentView {
   private readonly people = new Group();
   private trader: { root: Group; anim: Animator } | null = null;
   private captive: { root: Group; anim: Animator; ring: Mesh } | null = null;
+  /** Playtest 2026-11-18: a freed captive no longer vanishes; they walk off toward the camp for a few seconds. */
+  private leaving: { t: number; dx: number; dz: number } | null = null;
+  private wasFree = false;
   /** One Späti keeper, standing behind the counter of the nearest Späti. */
   private keeper: { root: Group; anim: Animator } | null = null;
   /** Talk spots (playtest 2026-11-17): a ring on the ground where the trade can start; it brightens in reach. */
@@ -123,6 +130,8 @@ export class ContentView {
     const cg = glowSprite('rgba(255,215,100,0.9)', 'rgba(255,170,40,0)', 3.2);
     cg.position.y = 0.8;
     this.cache.add(body, lid, band, lock, cg);
+    // The cache's contour shows through buildings within 15 m too (the layer is switched in `update`).
+    this.cacheParts.push(body, lid, band, lock);
     // Supply drop: a strapped crate under a rag of parachute, with a beam to find it by.
     const box = new Mesh(new BoxGeometry(0.85, 0.7, 0.85), wood);
     box.position.y = 0.35;
@@ -179,7 +188,8 @@ export class ContentView {
         tag.position.y = 0.04;
         body.add(box, tag);
       }
-      body.traverse((o) => o.layers.set(FX_LAYER));
+      // FX layer, plus the find contour through buildings within 15 m (hero-outline.ts); the root hides beyond that.
+      body.traverse((o) => { o.layers.set(FX_LAYER); o.layers.enable(LOOT_LAYER); });
       const glow = f.kind === 'teil' ? glowSprite('rgba(255,205,110,1)', 'rgba(255,150,40,0)', 2) : glowSprite('rgba(230,235,255,0.9)', 'rgba(150,170,255,0)', 1.6);
       root.add(body, glow);
       root.position.set(f.x, groundY(f.x, f.z), f.z);
@@ -190,6 +200,8 @@ export class ContentView {
       const root = new Group();
       const shard = new Mesh(new OctahedronGeometry(0.2), new MeshBasicMaterial({ color: 0xffc46a, fog: false }));
       shard.layers.set(FX_LAYER);
+      // Its gold contour shows through buildings within 15 m (hero-outline.ts, LOOT_LAYER).
+      shard.layers.enable(LOOT_LAYER);
       const glow = glowSprite('rgba(255,190,90,1)', 'rgba(255,120,30,0)', 2.6);
       root.add(shard, glow);
       root.position.set(h.x, groundY(h.x, h.z), h.z);
@@ -260,16 +272,40 @@ export class ContentView {
     return { root, anim };
   }
 
+  /**
+   * Spheres round the hidden finds the hero is within 15 m of (shown blessing shards, the open cache), for
+   * their contour behind buildings. Returns how many it wrote.
+   */
+  lootSpheres(out: Sphere[]): number {
+    let n = 0;
+    for (const h of this.hidden) {
+      if (n >= out.length) return n;
+      if (!h.root.visible) continue;
+      out[n++]!.set(h.shard.getWorldPosition(this.tmp), 0.5);
+    }
+    for (const h of this.funde) {
+      if (n >= out.length) return n;
+      if (!h.root.visible) continue;
+      out[n++]!.set(h.body.getWorldPosition(this.tmp), 0.5);
+    }
+    if (n < out.length && this.cache.visible && Math.hypot(this.cache.position.x - this.heroX, this.cache.position.z - this.heroZ) < LOOT_SHOW) {
+      out[n++]!.set(this.tmp.copy(this.cache.position).setY(this.cache.position.y + 0.4), 0.9);
+    }
+    return n;
+  }
+
   update(s: Sim, dt: number, heroX: number, heroZ: number): void {
     this.time += dt;
+    this.heroX = heroX;
+    this.heroZ = heroZ;
     const c = s.content;
     // A new run has new places: compare the positions, the content object is replaced on restart.
     if (!this.built || this.built.hidden.length !== c.hidden.length || this.built.hidden[0]?.x !== c.hidden[0]?.x || this.built.shrines[0]?.x !== c.shrines[0]?.x || (this.built.funde?.length ?? 0) !== (c.funde?.length ?? 0)) this.build(c);
     this.built = c;
     this.hidden.forEach((h, i) => {
       const d = c.hidden[i]!;
-      // 2D rule: hidden blessings glow only up close.
-      const k = d.got ? 0 : Math.max(0, Math.min(1, (11 - Math.hypot(d.x - heroX, d.z - heroZ)) / 4));
+      // 2D rule: hidden blessings glow only up close (11 m); since 2026-11-19 they show from 15 m, through walls too.
+      const k = d.got ? 0 : Math.max(0, Math.min(1, (LOOT_SHOW - Math.hypot(d.x - heroX, d.z - heroZ)) / 4));
       h.root.visible = k > 0.01;
       if (!h.root.visible) return;
       h.shard.position.y = 0.9 + Math.sin(this.time * 2.2 + i) * 0.12;
@@ -280,8 +316,8 @@ export class ContentView {
     });
     this.funde.forEach((h, i) => {
       const f = c.funde?.[i];
-      // Seen from about 16 m, then it fades in (they are hidden, not marked on the map).
-      const k = !f || f.got ? 0 : Math.max(0, Math.min(1, (16 - Math.hypot(f.x - heroX, f.z - heroZ)) / 5));
+      // Seen from 15 m like the hidden blessings, then it fades in (they are hidden, not marked on the map).
+      const k = !f || f.got ? 0 : Math.max(0, Math.min(1, (LOOT_SHOW - Math.hypot(f.x - heroX, f.z - heroZ)) / 4));
       h.root.visible = k > 0.01;
       if (!h.root.visible) return;
       h.body.position.y = 0.85 + Math.sin(this.time * 2 + i) * 0.08;
@@ -304,6 +340,9 @@ export class ContentView {
       return !!o;
     };
     place(this.cache, c.cache);
+    // Only within 15 m, else the cache would get its contour whenever the pass runs for the hero or an enemy.
+    const near = !!c.cache && Math.hypot(c.cache.x - heroX, c.cache.z - heroZ) < LOOT_SHOW;
+    for (const m of this.cacheParts) { if (near) m.layers.enable(LOOT_LAYER); else m.layers.disable(LOOT_LAYER); }
     if (place(this.crate, c.crate)) (this.beam.material as MeshBasicMaterial).opacity = 0.22 + 0.1 * Math.sin(this.time * 4);
     if (place(this.zone, c.zone) && c.zone) {
       this.zoneRing.scale.setScalar(c.zone.r);
@@ -370,6 +409,25 @@ export class ContentView {
       (t.ring.material as MeshBasicMaterial).color.setHex(c.captive.free ? 0x8fd16a : 0xe05050);
       (t.ring.material as MeshBasicMaterial).opacity = 0.45 + 0.25 * Math.sin(this.time * 4);
       t.anim.update(dt);
+      this.wasFree = c.captive.free;
+      this.leaving = null;
+    } else if (this.captive && this.wasFree && !this.leaving && this.captive.root.visible) {
+      // Just rescued: turn away from the hero and walk off, the ring goes.
+      const r = this.captive.root, dx = r.position.x - heroX, dz = r.position.z - heroZ, d = Math.hypot(dx, dz) || 1;
+      this.leaving = { t: 0, dx: dx / d, dz: dz / d };
+      this.captive.ring.visible = false;
+      this.captive.anim.loop('Jog_Fwd_Loop', 0.25, 0.7);
+      r.rotation.y = Math.atan2(dx, dz);
+    } else if (this.captive && this.leaving) {
+      const L = this.leaving, r = this.captive.root;
+      L.t += dt;
+      // A short pause (the thank-you line), then off at a walking pace; gone after five seconds.
+      if (L.t > 0.8) {
+        r.position.x += L.dx * 2.2 * dt; r.position.z += L.dz * 2.2 * dt;
+        r.position.y = groundY(r.position.x, r.position.z);
+      }
+      this.captive.anim.update(dt);
+      if (L.t > 5) { r.visible = false; this.leaving = null; this.wasFree = false; this.captive.ring.visible = true; this.captive.anim.loop('Idle_Loop', 0); }
     } else if (this.captive) this.captive.root.visible = false;
   }
 }

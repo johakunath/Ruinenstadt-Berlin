@@ -1,3 +1,4 @@
+import { ECONOMY } from '../data/progression';
 import { describe, it, expect } from 'vitest';
 import { koepenickMap } from '../data/koepenick';
 import { generateLots, generateProps, mapLevel } from '../data/map';
@@ -50,17 +51,17 @@ describe('run plan', () => {
     const s = make(4, { camp: { funk: true } });
     expect(s.content.plan.filter((k) => k && k !== 'crate')).toHaveLength(7);
   });
-  it('three hidden blessings and three shrines lie on reachable ground, far apart, outside fights', () => {
+  it('five hidden blessings and three shrines lie on reachable ground, far apart, outside fights', () => {
     for (let seed = 1; seed <= 6; seed++) {
       const s = make(seed);
-      expect(s.content.hidden).toHaveLength(3);
+      expect(s.content.hidden).toHaveLength(CONTENT.hidden);
       expect(s.content.shrines).toHaveLength(3);
       for (const h of [...s.content.hidden, ...s.content.shrines]) {
         expect(reachable(level, h.x, h.z)).toBe(true);
         expect(level.encounters.some((e) => Math.hypot(h.x - e.x, h.z - e.z) < e.r)).toBe(false);
       }
-      const [a, b, c] = s.content.hidden;
-      expect(Math.min(Math.hypot(a!.x - b!.x, a!.z - b!.z), Math.hypot(a!.x - c!.x, a!.z - c!.z), Math.hypot(b!.x - c!.x, b!.z - c!.z))).toBeGreaterThan(40);
+      const h = s.content.hidden;
+      for (let i = 0; i < h.length; i++) for (let j = i + 1; j < h.length; j++) expect(Math.hypot(h[i]!.x - h[j]!.x, h[i]!.z - h[j]!.z)).toBeGreaterThan(40);
     }
   });
 });
@@ -109,6 +110,19 @@ describe('events', () => {
     run(h, 2);
     expect(h.enemies.length).toBeGreaterThanOrEqual(8);
     expect(h.enemies.every((e) => e.kind === 'runner')).toBe(true);
+  });
+  it('trader: an enemy far off (a sleeping guard) does not keep him silent, one close by does', () => {
+    const s = make();
+    onLeg(s, 'trader');
+    run(s, 2);
+    const T = s.content.trader!;
+    const far = spawnEnemy(s, T.x + 40, T.z, 'walker', 1, 1);
+    walkTo(s, T);
+    run(s, 1);
+    expect(s.content.talk).toBe(-1);
+    far.x = s.player.x + 3; far.z = s.player.z;
+    run(s, 1);
+    expect(s.content.talk).toBeNull();
   });
   it('trader: opens on a talk press within reach, sells for Schrott, heals, leaves after a minute', () => {
     const s = make();
@@ -168,7 +182,7 @@ describe('events', () => {
     expect(s.content.cache).toBeNull();
     expect(s.drops.filter((d) => d.content.kind === 'item')).toHaveLength(2);
     expect(s.drops.filter((d) => d.content.kind === 'material')).toHaveLength(3);
-    expect(s.inventory.scrap).toBe(scrap + CONTENT.cache.scrap);
+    expect(s.inventory.scrap).toBe(scrap + Math.round(CONTENT.cache.scrap * ECONOMY.scrap));
     const l = make();
     onLeg(l, 'cache');
     run(l, 51 * 60);
@@ -288,7 +302,7 @@ describe('events', () => {
     // Through the normal kill path.
     return import('./combat').then(({ killEnemy }) => {
       killEnemy(s, e);
-      expect(s.inventory.scrap).toBe(scrap + 4);
+      expect(s.inventory.scrap).toBe(scrap + Math.round(4 * ECONOMY.scrap));
       expect(s.drops.some((d) => d.content.kind === 'item')).toBe(true);
     });
   });

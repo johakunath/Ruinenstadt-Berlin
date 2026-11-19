@@ -4,7 +4,7 @@
 // Lamps are light *spots*; a fixed pool of point lights follows the hero (constant light count, no
 // shader recompiles).
 import {
-  BufferAttribute, BufferGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight,
+  Box3, BufferAttribute, BufferGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight,
   Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion,
   ShapeUtils, SphereGeometry, Vector2, Vector3, Euler, type Material, type Texture,
 } from 'three';
@@ -16,7 +16,7 @@ import { buildCampWorld, makeCampMats } from './camp-world';
 import { onCampFloor } from '../data/camp-map';
 import { buildLandmark } from './landmarks';
 import {
-  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
+  BED_Y, WATER_Y, areaAt, edgeBackdrop, edgeRuns, heightAt, inPoly, lineDist, isQuay, lotBoxesLocal, lotColliders, lotOutlineLocal, lotPieces, lotToWorld, polyEdgeDist, sidePt, wobble, isWater, isWaterPlain, onBridge, onStair, streetDist, terraceWall,
   type EdgeBlock, type EdgeRun, type GroundKind, type Landmark, type Lot, type LotFrame, type MapDef, type Pt, inTunnel, type Street,
 } from '../data/map';
 import { EDGE_FRONT, propCollider, type Prop } from '../data/courtyard';
@@ -29,15 +29,18 @@ import { Cutaway } from './cutaway';
 import { cutPlan, lotBodies, rectPoly, type CutPart } from '../data/cut';
 import { buildXhainWorld, XHAIN_KINDS } from './xhain-world';
 import { ALEX_KINDS, buildAlexLandmark, buildAlexPlatte, buildArches, buildStadtbahn, buildStrausberger, dressAlexEdge, dressAlexLots } from './alex-world';
-import { loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
+import { ALEX_TEXTURES, loadPosters, paintAlexAtlas, paintPosterFallback } from './alex-paint';
+import { ALEX_STONE_URL, alexStoneBoxGeo, alexStoneGeo, paintAlexStoneAtlas, type AlexStone } from './alex-stone';
 import { buildMinistryLot } from './mitte-zones';
 import { makeClockRig } from './clock';
 import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
-import { isLargeProp } from './layers';
+import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
+import { paintTunnelAtlas, tunnelBoxGeo, TUNNEL_WALLS_URL } from './tunnel-textures';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
+import { swapPaintedMap } from './surface-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
 import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
@@ -88,8 +91,12 @@ export interface MapMats extends Mats {
   ratskeller: LitMaterial;
   /** M15 Alexanderplatz sign atlas (`alex-paint.ts`), only on that map. */
   alex?: LitMaterial;
+  /** The Alexanderplatz world remaps its existing stucco batch to the stone atlas. */
+  alexStoneAtlas?: boolean;
   /** M15 Alexanderplatz painted banners and Pioneer poster (2D art, alpha-tested), only on that map. */
   posters?: LitMaterial;
+  /** Tunnel concrete uses an atlas within the original single concrete batch. */
+  tunnelConcrete?: boolean;
   /** M15 Mitte materials (`mitte-world.ts`), only on that map. */
   mitte?: MitteMats;
 }
@@ -103,6 +110,20 @@ export class ChunkBuilder extends Builder {
 
   constructor(readonly mm: MapMats) {
     super(mm);
+  }
+
+  override box(mat: Material, transform: Matrix4, sx: number, sy: number, sz: number, color?: RGB, uvScale = 0.5, stone?: AlexStone): void {
+    if (this.mm.tunnelConcrete && mat === this.mm.concrete) {
+      this.geo(mat, tunnelBoxGeo(sx, sy, sz), transform, color);
+    } else if (this.mm.alexStoneAtlas && mat === this.mm.stucco) {
+      super.geo(mat, alexStoneBoxGeo(sx, sy, sz, stone), transform, color);
+    } else {
+      super.box(mat, transform, sx, sy, sz, color, uvScale);
+    }
+  }
+
+  override geo(mat: Material, geometry: BufferGeometry, transform: Matrix4, color?: RGB, stone?: AlexStone): void {
+    super.geo(mat, this.mm.alexStoneAtlas && mat === this.mm.stucco ? alexStoneGeo(geometry, stone) : geometry, transform, color);
   }
 
   private lift = 0;
@@ -230,8 +251,8 @@ export function emissive(materials: Materials, t: { map: Texture; emissiveMap: T
   return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
 }
 
-export function makeMapMats(materials: Materials): MapMats {
-  const base = makeMats(materials);
+export function makeMapMats(materials: Materials, district?: 'alex' | 'tunnel'): MapMats {
+  const base = makeMats(materials, district);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
   const asphalt = paintAsphalt(o).map;
@@ -245,7 +266,6 @@ export function makeMapMats(materials: Materials): MapMats {
     path: materials.surface({ map: dirt, color: 0xc0b0a0, roughness: 0.95, vertexColors: true }),
     roof: materials.surface({ map: paintRoofTiles(o).map, roughness: 0.8, vertexColors: true }),
     tar: materials.surface({ map: asphalt, color: 0x5a5650, roughness: 0.9, vertexColors: true }),
-    concrete: materials.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
     mossy: materials.surface({ map: paintConcrete(o, '#6f7a5c').map, roughness: 0.9, vertexColors: true }),
     // M11d: rippled, reflective water; the normal map scrolls in `update` (Qualität only: one extra texture read on water pixels).
     water: materials.surface({ color: 0x1a5560, emissive: 0x0a2228, roughness: 0.08, metalness: 0.55, normalMap: o.normalMaps ? (() => { const t = paintWaterNormal(); t.repeat.set(70, 70); return t; })() : null }),
@@ -280,6 +300,8 @@ export function makeMapMats(materials: Materials): MapMats {
     m.asphalt.map = m.tar.map = texture;
     asphalt.dispose();
   });
+  const roofUrl = new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href;
+  swapPaintedMap([m.roof], roofUrl, o.anisotropy);
   return m;
 }
 
@@ -385,7 +407,9 @@ function buildGround(m: MapDef, mats: MapMats, group: Group): void {
   // Under bridges the bed runs on, so decks span the water on their piers (M11d: no ground sheet beside the deck).
   // M15 bridge terraces (Warschauer Brücke) keep the ground below their deck; `xhain-world.ts` draws the deck.
   const underDeck = (x: number, z: number): boolean => m.terraces.some((t) => t.bridge && (inPoly(t.poly, x, z) || onStair(t, x, z) !== null));
-  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : heightAt(m, x, z));
+  // Under bridge decks and ferry piers on land the ground sinks below the deck: relief within a few cm of the
+  // deck top z-fought it (Lange Brücke and the Grünau pier, playtest 2026-11-18).
+  const height = (x: number, z: number): number => (isWater(m, x, z) ? BED_Y : underDeck(x, z) ? 0 : onBridge(m, x, z) ? Math.min(heightAt(m, x, z), -0.15) : heightAt(m, x, z));
   for (let cz = B.minZ; cz < B.maxZ; cz += GROUND_CHUNK) {
     for (let cx = B.minX; cx < B.maxX; cx += GROUND_CHUNK) {
       const n = Math.ceil(Math.min(GROUND_CHUNK, B.maxX - cx) / step);
@@ -770,7 +794,11 @@ function buildStreets(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) 
         if (isWater(m, (x0 + x1) / 2, (z0 + z1) / 2) && !onBridge(m, (x0 + x1) / 2, (z0 + z1) / 2)) continue;
         const nx = -dz * (s.width / 2);
         const nz = dx * (s.width / 2);
-        const v = (x: number, z: number): Vector3 => new Vector3(x, y + surfaceAt(m, x, z), z);
+        // On a bridge the ribbon lies on the deck (top at DECK_TOP), never at the deck's own height.
+        const v = (x: number, z: number): Vector3 => {
+          const br = onBridge(m, x, z);
+          return new Vector3(x, y + (br && br.kind !== 'ferry' ? Math.max(surfaceAt(m, x, z), DECK_TOP) : surfaceAt(m, x, z)), z);
+        };
         const b = chunkOf((x0 + x1) / 2, (z0 + z1) / 2);
         const batch = b.solid.of(mat);
         // Point on the piece: u along (0..1), w across (-1..1).
@@ -916,6 +944,9 @@ function buildFerryBoat(mats: MapMats, width: number): Group {
   return g;
 }
 
+/** Top of a fixed bridge deck over the ground plane. */
+const DECK_TOP = 0.05;
+
 function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder, boats: Array<{ lane: FerryLane; group: Group }>): void {
   for (const br of m.bridges) {
     const b = chunkOf(br.x, br.z);
@@ -927,7 +958,8 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
       const pl = FERRY.pier + 0.5;
       for (const end of [-1, 1]) {
         const c = end * (br.len / 2 - pl / 2);
-        b.box(mats.wood, local(0, -0.1, c), br.width, 0.2, pl, [1.15, 1.05, 0.9]);
+        // Top 4 cm over the ground: flush with it, the planks z-fought the bank grass (Grünau, playtest 2026-11-18).
+        b.box(mats.wood, local(0, -0.06, c), br.width, 0.2, pl, [1.15, 1.05, 0.9]);
         for (const side of [-1, 1]) {
           for (const z of [c - pl / 2 + 0.3, c + pl / 2 - 0.3]) b.box(mats.wood, local(side * (br.width / 2 - 0.2), (BED_Y - 0.1) / 2, z), 0.3, -BED_Y - 0.1, 0.3, [0.55, 0.5, 0.45]);
           b.box(mats.iron, local(side * (br.width / 2 + 0.05), 0.5, c), 0.06, 0.06, pl);
@@ -939,7 +971,7 @@ function buildBridges(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder
     }
     // Deck (top flush with the ground) on a stone body, piers down to the bed, abutments closing both
     // banks under the bridge heads (M11d: no ground sheet or gap beside the deck), railing, lamps.
-    b.box(mats.cobbles, local(0, -0.2, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
+    b.box(mats.cobbles, local(0, DECK_TOP - 0.25, 0), br.width, 0.5, br.len, [0.75, 0.72, 0.7]);
     b.box(mats.stucco, local(0, -0.85, 0), br.width + 0.8, 0.8, br.len, [0.5, 0.5, 0.47]);
     for (const end of [-1, 1]) b.box(mats.stucco, local(0, (BED_Y + 0.05) / 2, end * (br.len / 2 - 1.2)), br.width + 1.4, 0.05 - BED_Y, 2.4, [0.48, 0.47, 0.44]);
     for (const side of [-1, 1]) {
@@ -1032,7 +1064,38 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
   const stripe = lineTint(m.tunnel!.color);
   /** Meters of wall built so far per tube kind and side: places ribs, niches and lamps along the run. */
   const wallRun = new Map<string, number>();
+  const wallBoxes = new Map<string, { b: ChunkBuilder; box: Box3 }>();
   for (const t of m.tunnel!.tubes) {
+    // Playtest 2026-11-18: a tube end that joins no other tube (station ends, side passages) gets a wall
+    // and a rubble pile, so it no longer looks like it runs on into the dark.
+    for (const [end, prev] of [[t.pts[0]!, t.pts[1]!], [t.pts[t.pts.length - 1]!, t.pts[t.pts.length - 2]!]] as Array<[Pt, Pt]>) {
+      const len = Math.hypot(end[0] - prev[0], end[1] - prev[1]);
+      if (len < 0.01) continue;
+      const ux = (end[0] - prev[0]) / len, uz = (end[1] - prev[1]) / len;
+      // Joins another tube (a junction, the track inside a station): that tube closes it, or nothing does.
+      const px = end[0] + ux * (t.width / 2 + 0.6), pz = end[1] + uz * (t.width / 2 + 0.6);
+      if (m.tunnel!.tubes.some((o) => o !== t && lineDist(o.pts, px, pz) <= o.width / 2)) continue;
+      const yaw = Math.atan2(ux, uz), thick = 3;
+      const cx = end[0] + ux * thick / 2, cz = end[1] + uz * thick / 2;
+      const b = chunkOf(end[0], end[1]);
+      b.solid.captureOccluder(() => b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick, [0.38, 0.36, 0.34]));
+      b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H + 0.05, cz), t.width + 1.4, 0.1, thick + 0.4, [0.08, 0.08, 0.09]);
+      b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick);
+      const rng = new Rng(Math.round(end[0] * 31 + end[1] * 17));
+      const n = Math.max(2, Math.round(t.width / 2.5));
+      for (let i = 0; i < n; i++) {
+        const across = ((i + 0.5) / n - 0.5) * t.width * 0.9;
+        const x = end[0] + uz * across - ux * rng.range(0, 0.6), z = end[1] - ux * across - uz * rng.range(0, 0.6);
+        buildProp(b, { kind: 'rubble', x, z, rot: rng.range(0, 6.28), size: rng.range(1.3, 2.2) }, rng);
+      }
+      if (t.kind === 'branch' || t.kind === 'bypass') {
+        const x = end[0] - ux * 0.8 + uz * t.width * 0.25, z = end[1] - uz * 0.8 - ux * t.width * 0.25;
+        // Render only, so no crate that looks breakable: fallen planks.
+        buildProp(b, { kind: 'planks', x, z, rot: rng.range(0, 6.28), size: 1.2 }, rng);
+      }
+    }
+  }
+  for (const [ti, t] of m.tunnel!.tubes.entries()) {
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
       if (len < 0.01) continue;
@@ -1062,7 +1125,12 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           const mx = ex + nx * (thick - bump) / 2, mz = ez + nz * (thick - bump) / 2;
           const fx = ex - nx * bump, fz = ez - nz * bump;
           const onFace = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(fx - nx * o, y, fz - nz * o);
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick + bump, h, 1.04, [0.42 * tone, 0.4 * tone, 0.38 * tone]);
+          const segment = (run - 1) % 4;
+          const variant = (Math.floor((run - 1) / 4) + (side > 0 ? 1 : 0)) % 3;
+          // Playtest 2026-11-18: characters behind a tunnel wall get their contour. One mask box per 8 m of wall and chunk.
+          const occKey = `${ti}:${side}:${(run / 8) | 0}`, occ = wallBoxes.get(occKey);
+          const occBox = b.solid.captureOccluder(() => b.geo(mats.concrete, tunnelBoxGeo(thick + bump, h, 1.04, variant, segment, true), new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), [0.42 * tone, 0.4 * tone, 0.38 * tone]), occ?.b === b ? occ.box : undefined);
+          if (occBox) wallBoxes.set(occKey, { b, box: occBox });
           if (h === H && t.kind !== 'station') {
             b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, 1.04, [0.2, 0.21, 0.19]);
             if (run % 8 === 0) b.box(mats.concrete, onFace(0.15, H / 2), 0.3, H, 0.55, [0.5 * tone, 0.48 * tone, 0.45 * tone]);
@@ -1087,8 +1155,11 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
           b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04);
           if (t.kind === 'station') {
             // Tiled band at eye height (cream tiles), as on the old S-Bahn halls; M20: a stripe in the line color.
-            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.02, 1.6, ez + nz * 0.02), 0.08, 1.8, 1.04, [0.86, 0.82, 0.7]);
-            b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(ex + nx * 0.01, 2.25, ez + nz * 0.01), 0.1, 0.24, 1.04, stripe);
+            const band = (width: number, height: number, offset: number, y: number, tint: RGB): void => {
+              b.geo(mats.concrete, tunnelBoxGeo(width, height, 1.04, 3, segment, true), onFace(offset, y), tint);
+            };
+            band(0.08, 1.8, 0.01, 1.6, [0.86, 0.82, 0.7]);
+            band(0.1, 0.24, 0.02, 2.25, stripe);
           }
         }
       }
@@ -1930,6 +2001,8 @@ const limbGeos = new Map<string, BufferGeometry>();
 
 interface TreeBucket {
   crowns: Array<{ m: Matrix4; c: Color }>;
+  /** One world box per crown: the hero contour tests these (playtest 2026-11-18: trees hide her too). */
+  boxes: Box3[];
 }
 
 /**
@@ -1943,7 +2016,7 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     if (l.kind !== 'tree' || l.jungle) continue;
     const k = chunkKey(l.x, l.z);
     let bk = buckets.get(k);
-    if (!bk) buckets.set(k, (bk = { crowns: [] }));
+    if (!bk) buckets.set(k, (bk = { crowns: [], boxes: [] }));
     const rng = new Rng(l.seed);
     const ground = areaAt(m, l.x, l.z)?.ground ?? m.defaultGround;
     const sp = pickSpecies(rng, ground, streetDist(m, l.x, l.z).d < 5);
@@ -1984,6 +2057,7 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     // Crown: clumps on an ellipsoid around the crown center, the biggest on top.
     const n = shape.n[0] + rng.int(shape.n[1] - shape.n[0] + 1);
     const tintC = crownTint(sp, rng);
+    const crownBox = new Box3();
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + rng.range(-0.5, 0.5);
       const first = i === 0;
@@ -1997,10 +2071,13 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
       const mt = new Matrix4().compose(new Vector3(x, y, z), new Quaternion().setFromEuler(new Euler(rng.range(-0.3, 0.3), rng.range(0, 6), rng.range(-0.3, 0.3))), new Vector3(s, s * flat, s));
       const shade = rng.range(0.85, 1.12);
       bk.crowns.push({ m: mt, c: new Color(tintC[0] * shade, tintC[1] * shade, tintC[2] * shade) });
+      // The lumpy blob reaches 1.24 x its scale.
+      crownBox.union(new Box3().setFromCenterAndSize(new Vector3(x, y, z), new Vector3(s, s * flat, s).multiplyScalar(2.5)));
       fringe(b, IDENT, x, y, z, s, sp === 'kiefer' ? 1 : 2 + rng.int(2), tintC, rng);
     }
     // Birch: drooping leaf curtains under the clumps.
     if (sp === 'birke') for (let i = 0; i < 3; i++) fringe(b, IDENT, top.x, cy - R * 0.4, top.z, R * 0.45, 1, tintC, rng);
+    bk.boxes.push(crownBox);
   }
   const crownGeo = blobGeo(1);
   for (const bk of buckets.values()) {
@@ -2013,6 +2090,9 @@ function buildTrees(m: MapDef, lots: Lot[], mats: MapMats, chunkKey: (x: number,
     im.castShadow = true;
     im.receiveShadow = true;
     im.computeBoundingSphere();
+    // Crowns are contour occluders (hero and enemies behind a tree); their depth renders only when a box covers a character.
+    im.layers.enable(OCCLUDER_LAYER);
+    im.userData.boxes = bk.boxes;
     group.add(im);
   }
 }
@@ -2203,14 +2283,36 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const sky = opts.sky ?? NIGHT_SKY;
   glowScale = sky.lamps;
   wet = sky.wet;
-  const mats = makeMapMats(materials);
+  const mats = makeMapMats(materials, m.tunnel ? 'tunnel' : m.id === 'alex' ? 'alex' : undefined);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
+  let railMats: MapMats | undefined;
   if (m.id === 'alex') {
+    const anisotropy = materials.profile.anisotropy;
     mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
+    swapPaintedMap([mats.alex], ALEX_TEXTURES.signs, anisotropy, false);
+    swapPaintedMap([mats.concrete], ALEX_TEXTURES.wbs70, anisotropy);
+    const stucco = mats.stucco.map!;
+    mats.stucco.map = paintAlexStoneAtlas(stucco, anisotropy);
+    mats.alexStoneAtlas = true;
+    stucco.dispose();
+    swapPaintedMap([mats.stucco], ALEX_STONE_URL, anisotropy, false);
+    // Railway chunks reuse their one brick batch, with a different base map from the Rathaus.
+    const railBrick = mats.brick.clone();
+    railBrick.map = railBrick.map?.clone() ?? null;
+    railMats = { ...mats, brick: railBrick };
+    swapPaintedMap([mats.brick], ALEX_TEXTURES.rathausBrick, anisotropy);
+    swapPaintedMap([railBrick], ALEX_TEXTURES.stadtbahnBrick, anisotropy);
     const posters = materials.surface({ map: paintPosterFallback(), alphaTest: 0.5, doubleSided: true, roughness: 0.85 });
     mats.posters = posters;
+    railMats.posters = posters;
     loadPosters(materials.profile.anisotropy, (t) => { posters.map = t; posters.needsUpdate = true; });
+  }
+  if (m.tunnel) {
+    mats.tunnelConcrete = true;
+    mats.concrete.map?.dispose();
+    mats.concrete.map = paintTunnelAtlas({ flatten: materials.look.flatten, normalMaps: false, anisotropy: materials.profile.anisotropy });
+    swapPaintedMap([mats.concrete], TUNNEL_WALLS_URL, materials.profile.anisotropy, false);
   }
   if (m.id === 'mitte') mats.mitte = mitteMats(materials);
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
@@ -2227,10 +2329,16 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   group.name = m.id;
   const chunks = new Map<string, ChunkBuilder>();
   const chunkKey = (x: number, z: number): string => `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`;
+  const railRuns = m.viaducts?.filter(v => v.kind === 'stadtbahn') ?? [];
   const chunkOf = (x: number, z: number): ChunkBuilder => {
     const k = chunkKey(x, z);
     let b = chunks.get(k);
-    if (!b) chunks.set(k, (b = new ChunkBuilder(mats)));
+    if (!b) {
+      const cx = (Math.floor(x / CHUNK) + 0.5) * CHUNK, cz = (Math.floor(z / CHUNK) + 0.5) * CHUNK;
+      const chosen = railMats && railRuns.some(v => lineDist(v.pts, cx, cz) <= CHUNK * Math.SQRT1_2 + v.width / 2)
+        ? railMats : mats;
+      chunks.set(k, (b = new ChunkBuilder(chosen)));
+    }
     return b;
   };
 
@@ -2261,7 +2369,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       else if (mats.mitte && !l.shape && (l.kind === 'altbau' || l.kind === 'shop') && areaAt(m, l.x, l.z)?.id === 'regierung') b.on(y0, () => buildMinistryLot(b, l));
       else if (l.kind === 'altbau' || l.kind === 'platte' || l.kind === 'shop') b.on(y0, () => buildAltbauLot(b, l, m));
       else if (l.kind === 'house') b.on(y0, () => buildHouse(b, l));
-      else if (l.kind === 'tree' && l.jungle) b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
+      else if (l.kind === 'tree' && l.jungle) b.solid.captureOccluder(() => b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l)));
       if (l.wing) {
         // Back wing of the L: one floor lower (Seitenflügel) or a single-storey annex.
         const wing = { ...l, ...l.wing, wing: undefined, shape: undefined, floors: Math.max(0, l.floors - 1), seed: l.seed + 1, inner: true };
@@ -2326,7 +2434,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     // Props on an M15 bridge deck stand on the deck itself (the terrain grid blends near its edges).
     const onDeck = m.terraces.some((t) => t.bridge && inPoly(t.poly, p.x, p.z));
     const build = (): void => b.on(onDeck ? heightAt(m, p.x, p.z) : surfaceAt(m, p.x, p.z), () => buildProp(b, p, rng));
-    if (isLargeProp(p.kind)) b.solid.captureOccluder(build);
+    if (isOccluderProp(p.kind)) b.solid.captureOccluder(build);
     else build();
   });
   const breakableView = breakables.length > 0 ? buildBreakables(mats, m, props, breakables, group) : undefined;
@@ -2335,8 +2443,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   buildXhainWorld(materials, m, lots, mats, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => landmarkCut.get(l), (l) => lotCutAt.get(l));
   // M15 Alexanderplatz: the brick Stadtbahn with open arches (Xhain draws only its U1 Hochbahn).
   if (m.id === 'alex') {
-    for (const v of m.viaducts ?? []) if (v.kind === 'stadtbahn') buildStadtbahn(chunkOf, mats, v);
-    buildArches(chunkOf, mats, m);
+    for (const v of railRuns) buildStadtbahn(chunkOf, v);
+    buildArches(chunkOf, m);
     dressAlexLots(chunkOf, lots, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
     dressAlexEdge(chunkOf, props, (x, z) => surfaceAt(m, x, z));
     buildStrausberger(chunkOf, m);
@@ -2368,7 +2476,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   }
   for (const l of backdrop.trees) if (l.jungle) {
     const b = chunkOf(l.x, l.z);
-    b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l));
+    b.solid.captureOccluder(() => b.on(surfaceAt(m, l.x, l.z), () => buildPalm(b, l)));
   }
   buildTrees(m, [...lots, ...backdrop.trees], mats, chunkKey, chunkOf, group);
 

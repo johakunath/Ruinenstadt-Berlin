@@ -1,5 +1,6 @@
 // Loot in the world (M4, 2D js/loot.js + combat.js kill/breakProp). Drops pop out of kills and
 // broken props, land on walkable ground and are picked up by walking within 1.2 m (no magnet).
+import { ECONOMY } from '../data/progression';
 import { INGREDIENTS, type IngredientId, type MaterialId } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
@@ -30,8 +31,8 @@ export const LOOT = {
 export const INGREDIENT_IDS: readonly IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
 /** 2D EZUT by role: ghoul and brute meat, spitter vegetables, the rest spices. */
 // M15: 2D EMAT and EZUT for uhr (metall, gemuese), wurz (stoff, gemuese), kern (chemie, gemuese).
-const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel', rat: 'stoff', kabel: 'kabel', bass: 'metall', drone: 'kabel', uhrwerk: 'metall', wurzler: 'stoff', kernspeier: 'chemie' };
-const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese', rat: 'fleisch', uhrwerk: 'gemuese', wurzler: 'gemuese', kernspeier: 'gemuese' };
+const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel', rat: 'stoff', kabel: 'kabel', bass: 'metall', drone: 'kabel', uhrwerk: 'metall', wurzler: 'stoff', kernspeier: 'chemie', zuender: 'chemie', schild: 'metall', heuler: 'kabel' };
+const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese', rat: 'fleisch', uhrwerk: 'gemuese', wurzler: 'gemuese', kernspeier: 'gemuese', schild: 'gemuese', heuler: 'fleisch' };
 export const MATERIAL_IDS: readonly MaterialId[] = ['stoff', 'metall', 'chemie', 'kabel'];
 
 export type DropContent =
@@ -127,18 +128,18 @@ export function spawnDrop(sim: Sim, x: number, z: number, content: DropContent, 
 const spread = (sim: Sim, m: number): number => sim.rng.range(-m, m);
 
 export function creditScrap(sim: Sim, amount: number, x: number, z: number, fromEnemy = false): void {
-  amount = Math.round(amount * difficultyOf(sim.difficulty).scrap * scrapFactor(sim, fromEnemy));
+  amount = Math.round(amount * ECONOMY.scrap * difficultyOf(sim.difficulty).scrap * scrapFactor(sim, fromEnemy));
   if (amount <= 0) return;
   sim.inventory.scrap += amount;
   sim.events.push({ type: 'scrap', amount, x, z });
 }
 
-// 2D drop chances and Schrott by role (ghoul, raser, brute, spitter, crow; M12c kabel 0.12, bass 0.45, drones as crows).
-const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15, uhrwerk: 0.4, wurzler: 0.3, kernspeier: 0.2 };
+// 2D drop chances and Schrott by role (ghoul, raser, brute, spitter, crow; M12c kabel 0.12, bass 0.45, drones as crows; WP5 bomb 0.22, shield 0.4, howl 0.45).
+const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15, uhrwerk: 0.4, wurzler: 0.3, kernspeier: 0.2, zuender: 0.22, schild: 0.4, heuler: 0.45 };
 const SCRAP: Partial<Record<EnemyKind, number>> = {
   walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, crow: 1, rat: 0, kabel: 1, bass: 4, drone: 1, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70, schaffner: 60,
   grenzer: 40, brandmeister: 40, rattenmutter: 40, spreehexe: 70, tuersteher: 40, wachdrohne: 40, dirigent: 40, bassprediger: 70,
-  uhrwerk: 4, wurzler: 3, kernspeier: 2, wurzelmutter: 40, uhrwerkgross: 40, volkskoloss: 40, weltzeituhr: 70,
+  uhrwerk: 4, wurzler: 3, kernspeier: 2, zuender: 3, schild: 4, heuler: 4, wurzelmutter: 40, uhrwerkgross: 40, volkskoloss: 40, weltzeituhr: 70,
 };
 /** 2D: rats drop material and ingredients rarely (8 % and 1 % instead of 22 % and 3 %). */
 const MAT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.08 };
@@ -154,7 +155,7 @@ export function killDrops(sim: Sim, e: Enemy): void {
   const big = !!DISTRICT_BOSS[kind];
   const il = lootLevel(sim);
   const c = lootContext(sim);
-  const mat = 1 + 0.5 * pk(sim, 'mat');
+  const mat = (1 + 0.5 * pk(sim, 'mat')) * ECONOMY.material;
   // Späti-Tüte (legendary): Döner and supplies twice as often.
   const cook = (sim.statContext.survivors.koechin ? 2 : 1) * (sim.stats.legendary.includes('spaeti') ? 2 : 1);
   creditScrap(sim, (SCRAP[kind] ?? 1) * (e.elite ? 4 : 1), e.x, e.z, true);
@@ -197,7 +198,7 @@ export function breakDrops(sim: Sim, b: Breakable): void {
     if (addConsumable(sim, id)) sim.events.push({ type: 'note', text: id === 'verband' ? '+1 Verband' : '+1 Molotow', color: '#8fd16a', x, z });
   }
   if (sim.rng.next() < 0.1) spawnDrop(sim, x, z, { kind: 'food' }, 0.33, 0);
-  if (sim.rng.next() < (inside ? 0.6 : 0.3) * (loot ? 1.6 : 1) * (1 + 0.5 * pk(sim, 'mat'))) spawnDrop(sim, x, z, { kind: 'material', id: sim.rng.pick(MATERIAL_IDS) }, -0.27, 0);
+  if (sim.rng.next() < (inside ? 0.6 : 0.3) * (loot ? 1.6 : 1) * (1 + 0.5 * pk(sim, 'mat')) * ECONOMY.material) spawnDrop(sim, x, z, { kind: 'material', id: sim.rng.pick(MATERIAL_IDS) }, -0.27, 0);
   if (sim.rng.next() < (inside ? 0.3 : 0.07)) spawnDrop(sim, x, z, { kind: 'item', item: makeItem(sim.rng, c, il, inside ? 1 : 0) });
   else if (sim.rng.next() < 0.12) spawnDrop(sim, x, z, { kind: 'heal' });
 }

@@ -31,15 +31,16 @@ export const MITTE_BOSSES: Record<'tor' | 'kanzleramt' | 'see' | 'sony', BossKin
  * Difficulty of wave `g` (24 … 46) in `zone` (M12c mix, 2D Mitte: spitter 0.14, brute 0.16, kabel 0.2, bass 0.07,
  * the rest ghouls). Kabelghule are the face of the Friedrichstraße, drones fly over the Regierungsviertel, the
  * Potsdamer Platz is the loudest (most Boxenköpfe, at most two alive by `EnemyDef.cap`). The Tiergarten is calm:
- * smaller waves, no elites, no Boxenkopf and no drones. Zünder and Schildträger stay in the backlog (P12).
+ * smaller waves, no elites, no Boxenkopf and no drones. WP5: Zünder (2D bomb 0.04) and Schildträger (shield 0.08)
+ * take back the share M12c had given to the Speier and the Brocken.
  */
 export function mitteWaveTier(g: number, bosses: BossKind[] = [], zone = 0): WaveDef {
   const calm = zone === 2;
   const MIX: Array<Partial<Record<EnemyKind, number>>> = [
-    { walker: 6, runner: 1 + g * 0.1, kabel: 2.2 + g * 0.06, spitter: 1 + g * 0.05, brute: 0.4 + g * 0.06, bass: 0.6 },
-    { walker: 6, kabel: 1.4, spitter: 1.2 + g * 0.05, brute: 0.5 + g * 0.06, bass: 0.5, drone: 1.2 },
+    { walker: 6, runner: 1 + g * 0.1, kabel: 2.2 + g * 0.06, spitter: 0.5 + g * 0.05, brute: g * 0.06 - 0.6, bass: 0.6, zuender: 0.5, schild: 1 },
+    { walker: 6, kabel: 1.4, spitter: 0.7 + g * 0.05, brute: g * 0.06 - 0.5, bass: 0.5, drone: 1.2, zuender: 0.5, schild: 1 },
     { walker: 6, kabel: 1, crow: 0.8, runner: 1 },
-    { walker: 6, kabel: 2, spitter: 1 + g * 0.05, brute: 0.6 + g * 0.08, bass: 1.1 },
+    { walker: 6, kabel: 2, spitter: 0.5 + g * 0.05, brute: g * 0.08 - 0.4, bass: 1.1, zuender: 0.5, schild: 1 },
   ];
   const mix = MIX[zone] ?? MIX[0]!;
   return {
@@ -224,7 +225,7 @@ export function mitteMap(scale = 1): MapDef {
     return { x: ex - ux * back + uz * side, z: ez - uz * back - ux * side };
   };
   // Lights where the fill pass finds no free sidewalk: people camping along the 17. Juni through the
-  // Tiergarten (candles and fires on the verge, alternating sides), work lamps beside the Reichstag.
+  // Tiergarten (lanterns, beacons and fires on the verge, alternating sides), work lamps beside the Reichstag.
   const lights: Prop[] = [];
   const verge = (pts: readonly Pt[], step: number, first: number, off: number, kinds: Array<Prop['kind']>): void => {
     let acc = first, i = 0;
@@ -238,8 +239,8 @@ export function mitteMap(scale = 1): MapDef {
       acc -= len;
     }
   };
-  verge(streets.find((st) => st.name === 'Straße des 17. Juni')!.pts, 11, 4, 8.2, ['candles', 'fireBarrel', 'candles', 'workLamp']);
-  for (const [x, z, kind] of [[0, -116, 'workLamp'], [-1, -134, 'fireBarrel'], [-15, -126, 'candles'], [-69, 161.5, 'fireBarrel'], [-82, 178.5, 'workLamp'], [63, 166, 'fireBarrel'], [-100, -92, 'candles'],
+  verge(streets.find((st) => st.name === 'Straße des 17. Juni')!.pts, 11, 4, 8.2, ['stormLantern', 'fireBarrel', 'beacon', 'workLamp']);
+  for (const [x, z, kind] of [[0, -116, 'workLamp'], [-1, -134, 'fireBarrel'], [-15, -126, 'stormLantern'], [-69, 161.5, 'fireBarrel'], [-82, 178.5, 'workLamp'], [63, 166, 'fireBarrel'], [-100, -92, 'beacon'],
     // Curb lanterns where the street lamps leave gaps (Friedrichstraße, Unter den Linden, Ebertstraße, 17. Juni, Dorotheenstraße, canal).
     [156.5, 25, 'lantern'], [143.5, -22, 'lantern'], [84, 84, 'lantern'], [86.5, 46, 'lantern'], [134, -53, 'lantern'], [-3.5, 35, 'lantern'],
     [-24, -55.5, 'lantern'], [36, -106.5, 'lantern'], [-80, 167, 'lantern'], [-6, 168.5, 'lantern'], [121, 3.5, 'lantern']] as Array<[number, number, Prop['kind']]>) lights.push({ kind, x: x * s, z: z * s, rot: 0, size: 1 });
@@ -250,7 +251,7 @@ export function mitteMap(scale = 1): MapDef {
   const beer: Prop[] = [
     { kind: 'stringLights', x: -137 * s, z: 27 * s, rot: 0, size: 1 },
     { kind: 'bench', x: -144 * s, z: 27 * s, rot: 0.1, size: 1 }, { kind: 'bench', x: -132 * s, z: 26 * s, rot: -0.2, size: 1 },
-    { kind: 'bench', x: -146 * s, z: 36 * s, rot: 1.5, size: 1 }, { kind: 'candles', x: -128 * s, z: 37 * s, rot: 0, size: 1 },
+    { kind: 'bench', x: -146 * s, z: 36 * s, rot: 1.5, size: 1 }, { kind: 'stormLantern', x: -128 * s, z: 37 * s, rot: 0, size: 1 },
     { kind: 'lantern', x: -124 * s, z: 18 * s, rot: 0, size: 1 },
   ];
   return {
@@ -289,7 +290,7 @@ export function mitteMap(scale = 1): MapDef {
     fixedProps: [
       { kind: 'crates', ...endOf('Checkpoint Charlie', 1.5, 0), rot: 0.4, size: 1.2 }, { kind: 'crate', ...endOf('Checkpoint Charlie', 3.5, -1.4), rot: 1, size: 1 },
       { kind: 'sandbags', ...endOf('Checkpoint Charlie', 4, 2), rot: 0, size: 1 }, { kind: 'workLamp', ...endOf('Checkpoint Charlie', 6, 1.6), rot: -0.8, size: 1 },
-      { kind: 'candles', ...endOf('Hinterhof', 3.5, 1.2), rot: 0, size: 1 }, { kind: 'fireBarrel', ...endOf('Arkadenhof', 5, -1.3), rot: 0, size: 1 },
+      { kind: 'stormLantern', ...endOf('Hinterhof', 3.5, 1.2), rot: 0, size: 1 }, { kind: 'fireBarrel', ...endOf('Arkadenhof', 5, -1.3), rot: 0, size: 1 },
       ...lane(streets.find((st) => st.name === 'Checkpoint Charlie')!, 'bauzaun'),
       ...lane(streets.find((st) => st.name === 'Hinterhof')!, 'fence'),
       ...lane(streets.find((st) => st.name === 'Arkadenhof')!, 'bauzaun'),

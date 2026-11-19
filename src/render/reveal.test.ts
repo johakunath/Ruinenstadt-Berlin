@@ -61,7 +61,7 @@ describe('reveal framing (Codex review)', () => {
       for (const l of m.landmarks.filter((k) => tops[k.kind] !== undefined)) {
         const base = heightAt(m, l.x, l.z);
         const p = revealPose(l, 3, 1, { weight: 0, pos: new Vector3(), look: new Vector3() }, base, aspect);
-        const cam = new PerspectiveCamera(FOV, aspect, 1, 120);
+        const cam = new PerspectiveCamera(FOV, aspect, 1, 450); // camera.ts REVEAL_FAR
         cam.position.copy(p.pos);
         cam.lookAt(p.look);
         cam.updateMatrixWorld();

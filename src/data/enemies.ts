@@ -7,13 +7,16 @@
 // rings and drive the others on (at most two alive), Drohnen circle and dive; four bosses.
 // M15 Alexanderplatz (2D `uhr`, `wurz`, `kern`, Koloss v8): the Uhrwerkläufer blocks from the front,
 // the Wurzler roots the hero, the Kernspeier spits a fan of seeds; four clockwork and garden bosses.
+// WP5 (backlog P12, 2D `bomb`, `shield`, `howl`): the Zünder runs up and blows itself up, the Schildträger
+// blocks from the front (the M15 shield rule), the Heuler stays back and howls the others on.
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
 export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner' | 'grenzer' | 'brandmeister' | 'rattenmutter' | 'spreehexe'
   | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
   | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr';
-export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier' | BossKind;
+export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
+  | 'zuender' | 'schild' | 'heuler' | BossKind;
 /**
  * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
  * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
@@ -21,7 +24,7 @@ export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | '
  */
 export type BodyKind = 'zombie' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
-export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | BossKind;
+export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
 export type EliteMod = 'flink' | 'brennend' | 'spaltend' | 'gepanzert';
 
@@ -154,6 +157,28 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     kind: 'kernspeier', name: 'Kernspeier', body: 'kern', ai: 'kernspeier', res: 'kern', radius: 0.34, scale: 1, hp: 26, speed: 1.8,
     attackRange: 0, windup: 0.5, active: 0.1, recovery: 0.6,
     reach: 1.2, halfAngle: 40 * DEG, damage: 10, knockbackTaken: 1.2, poise: false, weight: 0,
+  },
+  // WP5 (2D `bomb`: r 11 px, life 22, 74-84 px/s, hit 20) on the ghoul ratios: runs up, lights its fuse
+  // within 2 m and blows up (`THREAT.fuse`); killed first, it still goes off, smaller. No strike, never elite.
+  zuender: {
+    kind: 'zuender', name: 'Zünder', body: 'zombie', ai: 'zuender', res: 'bomb', radius: 0.38, scale: 0.95, hp: 33, speed: 2.2,
+    attackRange: 0, windup: 0.5, active: 0.1, recovery: 0.6,
+    reach: 1.4, halfAngle: 40 * DEG, damage: 34, knockbackTaken: 1.1, poise: false, weight: 0,
+  },
+  // 2D `shield` (r 13 px, life 52, 46 px/s, hit 13) on the brute ratios: a riot shield in front (2D `SHD`:
+  // ±1.2 rad, 20 % through, turns 1.6 rad/s, a stun or shock opens it for 2.2 s). Walk round it or bring the hammer.
+  schild: {
+    kind: 'schild', name: 'Schildträger', body: 'zombie', ai: 'melee', res: 'shield', radius: 0.48, scale: 1.08, hp: 62, speed: 1.5,
+    attackRange: 1.7, windup: 0.7, active: 0.12, recovery: 0.8,
+    reach: 2.0, halfAngle: 50 * DEG, damage: 19, knockbackTaken: 0.6, poise: false, weight: 0,
+    shield: { arc: 1.2, front: 0.2, turn: 1.6, open: 2.2 },
+  },
+  // 2D `howl` (r 11 px, life 34, 58 px/s, hit 6) on the ghoul ratios: keeps 6 to 8.7 m away and howls the
+  // others within 7.3 m on (`THREAT.howl`). Weak in melee; kill it first. One alive at a time.
+  heuler: {
+    kind: 'heuler', name: 'Heuler', body: 'zombie', ai: 'heuler', res: 'howl', radius: 0.36, scale: 0.95, hp: 51, speed: 1.6,
+    attackRange: 1.35, windup: 0.5, active: 0.1, recovery: 0.6,
+    reach: 1.5, halfAngle: 45 * DEG, damage: 10, knockbackTaken: 1.1, poise: false, weight: 0, cap: 1,
   },
   // Zone bosses.
   feldwebel: {
@@ -310,6 +335,18 @@ export const THREAT = {
   roots: { range: 320 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.95, radius: 1.5, damage: 0.6, hold: 0.8, immune: 2.5, open: 0.9, near: 120 * PX, nearSpeed: 0.7 },
   /** M15 Kernspeier (2D `kern`): keeps `near`..`far`, plants for `wind`, three seeds ±15° at 70 %. */
   seeds: { near: 5, far: 8, range: 400 * PX, every: [3, 3.8], wind: 0.7, spread: 15 * DEG, damage: 0.7, speed: 240 * PX, life: 2.6, radius: 0.2, open: 0.9 },
+  /**
+   * WP5 Zünder (2D `bomb`): within `range` with a clear line it stops and lights the fuse (`wind`, hits do not
+   * put it out), then blows up: r 84 px at 1.3 of its hit, floor 0.22 (2D `bigHit`). Killed before, it goes off
+   * where it fell: r 66 px at 0.6, marked for `deathWind` s (new for 3D; 2D burst at once). Every blast also hits
+   * the enemies inside at `enemyShare` of its damage with a 320 px knock (2D), so a Zünder can set off the next.
+   */
+  fuse: { range: 58 * PX, wind: 0.85, radius: 84 * PX, damage: 1.3, floor: 0.22, deathRadius: 66 * PX, deathDamage: 0.6, deathWind: 0.3, enemyShare: 1.5, knock: 320 },
+  /**
+   * WP5 Heuler (2D `howl`): backs off under `near`, strafes at `strafe` speed up to `far`; within `range` every
+   * 4.5-6 s a howl (wind-up new for 3D; 2D cast 0.24 s) drives every other body within `buffRange` for `buff` s.
+   */
+  howl: { near: 180 * PX, far: 260 * PX, strafe: 0.6, range: 460 * PX, every: [4.5, 6], first: [2, 3.5], wind: 0.5, buff: 4, buffRange: 220 * PX, open: 0.6 },
   /** M15 shield bearers (2D `SHD`): slower while the guard stands open; a "geblockt" note at most this often. */
   shield: { openSpeed: 0.4, note: 0.6 },
   /** Chance of an elite per normal spawn in wave g (2D: min(25 %, 2.2 % per wave pair), from the third wave). */
@@ -333,7 +370,8 @@ export const BOSS = {
   feldwebel: { charge: [5, 7], summon: 9, adds: 3 },
   waechter: { barrage: 5, ring: 7.5, slam: 4.5, shots: 12, extra: 4 },
   rex: { charge: [4.2, 3], roar: 8, tail: 5, tailRadius: 110 * PX, tailWind: 0.8, raptorsEvery: 3 },
-  hauptmann: { slam: 3.6, ring: 5.5, summon: 9, adds: 3, shots: 16 },
+  // Playtest 2026-11-18 (too easy, boring): charges when the hero keeps away, a second ring in rage, four men per call.
+  hauptmann: { slam: 3.6, charge: [4, 5.5] as [number, number], chargeFrom: 6, ring: 5, ringGap: 0.7, summon: 9, adds: 4, shots: 16 },
   // M12b Xhain. Cooldowns in seconds (rage makes them tick ×1.35 faster, as for every boss).
   /** Barrage „Feuerstoß“ (one circle on the hero, `extra` around), a five-shot fan, „Alarm!“ calls two Hetzer. Keeps `near`..`far` away. */
   grenzer: {

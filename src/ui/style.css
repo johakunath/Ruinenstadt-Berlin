@@ -483,7 +483,7 @@ body:has(.overlay:not([hidden])) #edges {
   pointer-events: none;
   text-shadow: 0 1px 2px #000;
 }
-#loot-chip {
+#loot-chip, #exit-chip {
   position: fixed;
   right: 16px;
   top: 64px;
@@ -606,7 +606,7 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 
 /* ---- phone and tablet HUD (playtest 2026-11-16): one pause button; the minimap sits top right as in 2D and opens the map. */
 #minimap { left: auto; right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
-#loot-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
+#loot-chip, #exit-chip { right: auto; left: 50%; transform: translateX(-50%); top: 52px; }
 /* Every device (playtest 2026-11-17): map and inventory open from the pause menu or by key (M, I/Tab, pad Y). */
 #menu-btn { margin-left: auto; }
 @media (max-height: 500px) {
@@ -837,7 +837,8 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .stl.on { border-color: #ef9f27; background: #2e2a1e; }
 .camp-st { overflow-y: auto; padding: 10px 14px; overscroll-behavior: contain; }
 .camp-st h3 { margin: 12px 0 6px; font-size: 13px; color: #b5aa98; letter-spacing: .06em; }
-.sthead p { margin: 4px 0; }
+.camp-keeper { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.st-portrait { flex: none; border: 1px solid var(--edge); border-radius: 4px; object-fit: cover; }
 .camp-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }
 .camp-body h3, .camp-body .inv-grid, .camp-body .inv-hint { grid-column: 1 / -1; }
 .row-c { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; background: #202520; border: 1px solid #3a342c; border-radius: 4px; }
@@ -849,12 +850,18 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
   .camp-cols { grid-template-columns: 150px minmax(0, 1fr); }
   .camp-panel button { min-height: 38px; padding: 4px 8px; font-size: 12px; }
   .camp-st { padding: 6px 8px; } .row-c { padding: 5px 7px; } .camp-body { grid-template-columns: 1fr; }
+  .st-portrait { width: 38px; height: 38px; }
 }
 @media (max-width: 599px) and (orientation: portrait) { .camp-cols { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .camp-list { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #3a342c; } }
 /* ---- M17 intro and tutorial cards, end screen stats. */
 #intro { z-index: 60; }
 .panel.intro { flex-direction: column; gap: 12px; text-align: center; text-transform: none; letter-spacing: .02em; }
 .panel.intro .lead { font-size: 16px; line-height: 1.45; margin: 0; }
+.intro-art { width: 100%; height: clamp(90px, 32dvh, 200px); flex: none; object-fit: cover; border: 1px solid var(--edge); border-radius: 4px; }
+@media (max-height: 500px) {
+  .panel.intro { gap: 7px; }
+  .intro-art { height: clamp(72px, 29dvh, 125px); }
+}
 .idots { display: flex; justify-content: center; gap: 6px; } .idots i { width: 8px; height: 8px; border-radius: 50%; background: #4c453a; } .idots i.on { background: #ef9f27; }
 .iskip { background: none; border: 0; color: #b5aa98; text-decoration: underline; }
 .end-stats { display: flex; flex-direction: column; gap: 4px; text-transform: none; letter-spacing: .02em; font-size: 14px; margin: 4px 0 8px; }
@@ -903,8 +910,9 @@ html, body { font-family: var(--f-ui); background: var(--ash); }
 #fsb { position: fixed; top: var(--gut-t); right: var(--gut-r); z-index: 70; }
 #fsb svg { width: 22px; height: 22px; display: block; }
 body:has(#hud:not([hidden])) #fsb, body:has(#menu:not([hidden])) #fsb, body:has(#optv:not([hidden])) #fsb, body:has(#camp:not([hidden])) #fsb, body:has(#trade:not([hidden])) #fsb { right: calc(var(--gut-r) + 52px); }
-/* The camp head keeps clear of the two corner buttons. */
-@media (max-width: 1240px) { .camp-panel .menu-head { padding-right: 104px; } }
+/* The camp head keeps clear of the two corner buttons and of the panel edge (playtest 2026-11-18: on a wide
+   tablet outside fullscreen the 1240 px query missed, and the title sat on the border). */
+.camp-panel > .menu-head { padding: 12px 104px 8px 16px; }
 
 /* ---- U3 options screen (2D #optv): own overlay, centered column, × top right. */
 #optv { z-index: 50; display: block; padding: 0; overflow-y: auto; overscroll-behavior: contain; background: #140e0a; }
@@ -1027,6 +1035,40 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 .net-card button.primary { background: #8b3a2b; border-color: #c2453a; } .net-card button:disabled { opacity: .4; }
 .net-card button:focus-visible { outline: 3px solid #ef9f27; outline-offset: 2px; }
 .lbadge { display: inline-block; padding: 0 6px; color: #fff; font-size: 12px; margin-right: 4px; }
+/* Schwarzmarkt (playtest 2026-11-18): grids left, the tapped item's card right (below on narrow screens). */
+.camp-body > .stash-cols { grid-column: 1 / -1; }
+.stash-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: 12px; align-items: start; }
+.stash-card { display: flex; flex-direction: column; gap: 8px; }
+.inv-cell.sel { outline: 2px solid #ef9f27; outline-offset: 1px; }
+@media (max-width: 699px), (max-height: 500px) { .stash-cols { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); } }
+/* Camp layout 1A (Johannes 2026-11-18): head with name and level, keeper line, use left, next level right, resource bar below. */
+.camp-panel .menu-head { align-items: center; }
+.camp-lv { display: inline-flex; align-items: center; gap: 6px; color: #b5aa98; font-size: 14px; }
+.camp-who { margin: 0; color: #b5aa98; font-style: italic; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.camp-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); gap: 12px; align-items: start; }
+.camp-main .camp-body { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.camp-next { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: #1d2120; border: 1px solid #ef9f27; border-radius: 6px; }
+.camp-next h3 { margin: 0; font-size: 12px; color: #ef9f27; letter-spacing: .06em; text-transform: uppercase; }
+.camp-next b { font-size: 14px; }
+.camp-next small.warn { color: #ef9f27; font-size: 12px; }
+.camp-next button { align-self: stretch; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px 2px 3px; border: 1px solid #3a342c; border-radius: 12px; font-size: 13px; background: #252924; }
+.chip.negative { color: #e5483a; border-color: #6a2e28; }
+.chip .mico, .camp-panel button .mico, .camp-res .mico { width: 18px; height: 18px; margin-right: 3px; vertical-align: -4px; }
+.camp-res { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 16px 10px; border-top: 1px solid #3a342c; font-size: 14px; color: #b5aa98; }
+.camp-res span { display: inline-flex; align-items: center; }
+.camp-res b { color: #ead9c0; font-weight: 600; }
+@media (max-width: 699px), (max-height: 500px) {
+  .camp-main { grid-template-columns: minmax(0, 1fr) minmax(180px, 220px); gap: 8px; }
+  .camp-res { padding: 5px 10px 6px; font-size: 13px; }
+}
+@media (max-width: 599px) and (orientation: portrait) { .camp-main { grid-template-columns: 1fr; } }
+.row-c > button, .row-b > button { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; flex: none; }
+/* Layout 2A (Johannes 2026-11-18): the network map on the title; the next place is picked, Losziehen rides there. */
+#title-net:empty { display: none; }
+.net-inline svg.net { max-height: 34vh; border: 1px solid #33443f; }
+@media (max-height: 500px) { .net-inline svg.net { max-height: 40vh; } .start-main h1 { font-size: 48px; } }
 
 .death-by { font-size: 17px; margin-bottom: 2px; }
 .death-recent { font-size: 13px; opacity: 0.8; margin-bottom: 8px; }

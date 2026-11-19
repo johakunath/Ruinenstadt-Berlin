@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Matrix4, MeshBasicMaterial, Raycaster, Vector3 } from 'three';
 import { BatchSet, boxGeo } from './batch';
-import { isLargeProp, OCCLUDER_LAYER } from './layers';
+import { isLargeProp, isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { Builder, buildAltbau, type Mats } from './world';
 import { buildAltbauLot } from './map-world';
 import { koepenickMap } from '../data/koepenick';
@@ -60,6 +60,10 @@ describe('large object occlusion geometry', () => {
   it('classifies vehicles without opting crates, trees, lamps or loot into the effect', () => {
     for (const kind of ['tram', 'bus', 'van', 'car', 'rohbau', 'container'] as const) expect(isLargeProp(kind)).toBe(true);
     for (const kind of ['crates', 'bins', 'lantern', 'lampBroken', 'bench', 'fence', 'rubble'] as const) expect(isLargeProp(kind)).toBe(false);
+  });
+  it('lets tall props hide characters too, never very small things (playtest 2026-11-18)', () => {
+    for (const kind of ['tram', 'stall', 'shed', 'tent', 'wall', 'hedge', 'bush', 'thicket'] as const) expect(isOccluderProp(kind)).toBe(true);
+    for (const kind of ['crates', 'crate', 'bins', 'lantern', 'bench', 'rubble', 'candles', 'gnome', 'flowers', 'bollard'] as const) expect(isOccluderProp(kind)).toBe(false);
   });
   it('keeps nested small attachments out while retaining the surrounding building geometry', () => {
     const batches = new BatchSet(), material = new MeshBasicMaterial(), box = boxGeo(2, 2, 2);

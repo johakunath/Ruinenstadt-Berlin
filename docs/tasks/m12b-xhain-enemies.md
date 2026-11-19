@@ -20,7 +20,7 @@ Status: built 2026-11-18 (parallel to the Xhain map session). Johannes playtest 
 All bosses: rage below 50 % (speed ×1.3, cooldowns ×1.35); every hit through `threatHit`/`hurtPlayer`, so the 45 % cap holds (tested at ten times the damage).
 
 ## Open points
-- Bodies are placeholders on the zombie rig (H2). Spreehexe and Grenzer show a Kodex glyph: the 2D Spreehexe bust (X02, river hag) contradicts the punk look; no Grenzer bust exists.
+- Bodies are placeholders on the zombie rig (H2). The Kodex now uses painted Grenzer and punk Spreehexe portraits.
 - `ENDLESS_BOSSES` in `director.ts` still lists the Köpenick bosses; it should follow the district.
 - Rats count against `BOSS.summon.maxAdds` (8) one by one, so a second Rattenmutter pack is partial.
 - Not rerun: balance bot (no Xhain map in it yet), hardware cost (six draws per rat, no lights).

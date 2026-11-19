@@ -3,7 +3,7 @@
 // `sim.statContext` (upgrades, camp flags, meal, drill). The UI is `src/ui/camp.ts`.
 import { STATIONS, type StationDef, type StationId } from '../data/camp';
 import { CONSUMABLES, MATERIALS, MEALS, WEAPON_MODS, type ConsumableId, type MaterialId, type MealId, type WeaponModId } from '../data/crafting';
-import { CAMP_UPGRADES, SURVIVORS, type CampUpgradeId } from '../data/progression';
+import { CAMP_UPGRADES, ECONOMY, SURVIVORS, type CampUpgradeId } from '../data/progression';
 import { CONSUMABLE } from './abilities';
 import { BAG_SIZE, type CampState } from './inventory';
 import type { Item } from './items';
@@ -28,9 +28,10 @@ export const SITE_COST: Readonly<Partial<Record<StationId, Partial<Record<Materi
 };
 export function stationBuilt(s: Sim, id: StationId): boolean {
   if (OPEN_STATIONS.includes(id) || (campOf(s).stations[id] ?? 0) >= 1) return true;
-  const u = s.statContext.upgrades;
-  return id === 'zeug' ? (u.dmg ?? 0) > 0 || Object.values(s.inventory.mods).some((n) => (n ?? 0) > 0)
-    : id === 'hack' ? (u.hp ?? 0) > 0
+  const u = s.statContext.upgrades, bought = campOf(s).spati ?? {};
+  // Legacy saves: a workshop upgrade means the station was used. Levels bought at a Späti do not count (Codex review, PR #57).
+  return id === 'zeug' ? (u.dmg ?? 0) - (bought.dmg ?? 0) > 0 || Object.values(s.inventory.mods).some((n) => (n ?? 0) > 0)
+    : id === 'hack' ? (u.hp ?? 0) - (bought.hp ?? 0) > 0
     : id === 'exer' ? (u.dash ?? 0) > 0 || (u.luck ?? 0) > 0 || (s.statContext.drill ?? 0) > 0
     : false;
 }
@@ -49,7 +50,7 @@ export function upgradeMax(s: Sim, id: CampUpgradeId): number {
   return st ? st.up![id]![stationLevel(s, st.id) - 1]! : def.max;
 }
 /** 2D upCost: base × 1.25 × 1.65^level. */
-export const upgradeCost = (s: Sim, id: CampUpgradeId): number => Math.round(CAMP_UPGRADES.find(u => u.id === id)!.baseCost * 1.25 * 1.65 ** (s.statContext.upgrades[id] ?? 0));
+export const upgradeCost = (s: Sim, id: CampUpgradeId): number => Math.round(CAMP_UPGRADES.find(u => u.id === id)!.baseCost * 1.25 * 1.65 ** (s.statContext.upgrades[id] ?? 0) * ECONOMY.campPrice);
 export function buyUpgrade(s: Sim, id: CampUpgradeId): Result {
   const l = s.statContext.upgrades[id] ?? 0, c = upgradeCost(s, id);
   if (l >= upgradeMax(s, id)) return no('Station ausbauen.');
@@ -58,8 +59,30 @@ export function buyUpgrade(s: Sim, id: CampUpgradeId): Result {
   setLoadout(s, s.equipment, { ...s.statContext, upgrades: { ...s.statContext.upgrades, [id]: l + 1 } });
   return ok(`${CAMP_UPGRADES.find(u => u.id === id)!.name} · Stufe ${l + 1}`);
 }
-/** 2D drillCost: endless Schrott sink, +2 % damage and life per rank. */
-export const drillCost = (s: Sim): number => 300 + 60 * (s.statContext.drill ?? 0);
+/**
+ * Playtest 2026-11-18: Schärfen and Panzerung at a Späti, so Schrott is worth something before the camp
+ * opens. Capped (`max` levels in all; the Zeughaus and Hackerspace take it further) and dearer than the
+ * workshop (`markup`).
+ */
+export const SPATI_UPGRADE = { ids: ['dmg', 'hp'] as const, max: 2, markup: 3 };
+export const spatiUpgradeCost = (s: Sim, id: 'dmg' | 'hp'): number => upgradeCost(s, id) * SPATI_UPGRADE.markup;
+export function buySpatiUpgrade(s: Sim, id: 'dmg' | 'hp'): Result {
+  const l = s.statContext.upgrades[id] ?? 0, c = spatiUpgradeCost(s, id);
+  if (s.content.tradeAt < 0) return no('Nur im Späti.');
+  if (l >= SPATI_UPGRADE.max) return no('Mehr geht nur im Lager.');
+  if (s.inventory.scrap < c) return no(`Dir fehlen ${c - s.inventory.scrap} Schrott.`);
+  s.inventory.scrap -= c;
+  const camp = campOf(s);
+  camp.spati = { ...camp.spati, [id]: (camp.spati?.[id] ?? 0) + 1 };
+  setLoadout(s, s.equipment, { ...s.statContext, upgrades: { ...s.statContext.upgrades, [id]: l + 1 } });
+  return ok(`${CAMP_UPGRADES.find(u => u.id === id)!.name} · Stufe ${l + 1}`);
+}
+/**
+ * Drill: endless Schrott sink, +2 % damage and life per rank. Johannes 2026-11-18: each rank much dearer
+ * and the step growing fast (2D was 300 + 60 per rank): 400, 560, 780, 1100, 1540, ... ×1.4 per rank.
+ */
+export const DRILL_COST = { base: 400, growth: 1.4 } as const;
+export const drillCost = (s: Sim): number => Math.round(DRILL_COST.base * DRILL_COST.growth ** (s.statContext.drill ?? 0) / 10) * 10;
 export function buyDrill(s: Sim): Result {
   const c = drillCost(s);
   if (!stationBuilt(s, 'exer')) return no('Erst den Exerzierplatz bauen.');
@@ -68,12 +91,14 @@ export function buyDrill(s: Sim): Result {
   setLoadout(s, s.equipment, { ...s.statContext, drill: (s.statContext.drill ?? 0) + 1 });
   return ok(`Drill · Rang ${s.statContext.drill}`);
 }
+/** Schrott part of a station price × `ECONOMY.campPrice` (materials stay). */
+const priced = (c: Partial<Record<MaterialId | 'scrap', number>>): Partial<Record<MaterialId | 'scrap', number>> => (c.scrap ? { ...c, scrap: Math.round(c.scrap * ECONOMY.campPrice) } : c);
 const have = (s: Sim, k: MaterialId | 'scrap'): number => k === 'scrap' ? s.inventory.scrap : s.inventory.materials[k] ?? 0;
 /** 2D cNext: the next level, what it costs and what blocks it. */
 export function nextLevel(s: Sim, id: StationId): { level: number; text: string; cost: Partial<Record<MaterialId | 'scrap', number>>; needs: string[]; missing: string[]; ok: boolean } | null {
   const st = station(id);
   if (!stationBuilt(s, id)) {
-    const cost = SITE_COST[id] ?? {};
+    const cost = priced(SITE_COST[id] ?? {});
     const missing = (Object.entries(cost) as Array<[MaterialId | 'scrap', number]>).filter(([k, v]) => have(s, k) < v).map(([k, v]) => `${v - have(s, k)} ${k === 'scrap' ? 'Schrott' : MATERIALS[k].name}`);
     return { level: 1, text: st.levels[0].text, cost, needs: [], missing, ok: !missing.length };
   }
@@ -83,7 +108,7 @@ export function nextLevel(s: Sim, id: StationId): { level: number; text: string;
   if (!npcHere(s, st)) needs.push(`${npcName(st)} befreien`);
   // Level 3 waits for the next planned district (2D LVREQ: Alexanderplatz); the camp itself opens after Köpenick.
   if (l + 1 >= 3 && !campOf(s).freed.includes(LEVEL3_DISTRICT)) needs.push('Alexanderplatz befreien');
-  const cost = L.cost ?? {};
+  const cost = priced(L.cost ?? {});
   const missing = (Object.entries(cost) as Array<[MaterialId | 'scrap', number]>).filter(([k, v]) => have(s, k) < v).map(([k, v]) => `${v - have(s, k)} ${k === 'scrap' ? 'Schrott' : MATERIALS[k].name}`);
   return { level: l + 1, text: L.text, cost, needs, missing, ok: !needs.length && !missing.length };
 }

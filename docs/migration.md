@@ -12,9 +12,12 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | M15 Alexanderplatz step 4 photo check for the landmarks built without a downloaded photo | Claude · Opus high | open: `docs/tasks/m15-alexanderplatz.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |
-| Textures (Codex): T1b rail follow-up and texture performance, T6 Xhain, T7 tunnel walls, Mitte step 9, Alexanderplatz step 8, H1 step 6 hero textures | Codex | open: `docs/asset-pipeline.md` › Texture queue, task files linked there |
+| Painted textures: M11c lot types and plants, T5 Köpenick landmarks, T6 Xhain, Mitte step 9 | Codex | open: `docs/asset-pipeline.md` › Texture queue and `docs/tasks/m15-mitte.md` |
+| Texture performance and rail follow-up: T1b, plus profile checks for the new painted batches | Claude and Johannes | open: `docs/tasks/t1b-ground-polish.md`, `docs/tasks/pt-hardware-checks.md` |
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals, P24 worn landmarks | Claude · Opus high | open: `docs/backlog.md` |
+| WP5 enemies and bosses: step 3 H2 boss models (after Johannes picks the looks in `docs/mockups/wp5-boss-looks.html`), step 4 S3 voices (after he picks the tool), step 5 P25 neon barriers (Fable decision on dynamic colliders first) | Claude · Opus high (step 5: Fable high first) | open: `docs/tasks/wp5-enemies.md` |
 | Next district Charlottenburg (Q8), concept first | Claude · Fable high (concept), Opus high (build) | not started: `docs/maps/guidelines.md` |
+| B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
 
 Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.
 
@@ -33,7 +36,7 @@ Reached 2026-11-18 for Köpenick: map, loot, inventory, save, weapons, powers, b
 | Enemies | Roles, resistances, ratios ported; behavior rebuilt |
 | Maps, tunnels, camp place | Rebuilt from scratch |
 | Menus | Rebuilt as DOM UI after a mockup |
-| Menu art (icons, portraits) | 2D files as placeholders (Q5) |
+| Menu art (icons, portraits) | Painted icons, Kodex and camp portraits, illustrated intro; compare against evolved 3D bodies (Q5) |
 | In-world sprites | Not copied |
 | Save | New versioned format, no 2D import |
 | Audio | Ported (S1), new enemy and boss sounds |
