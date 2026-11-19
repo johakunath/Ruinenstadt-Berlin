@@ -52,15 +52,17 @@ const TINTS: Record<EnemyKind, number[]> = {
   spitter: [0xa9c77c, 0x9cbf86],
   raptor: [0xffffff, 0xe8f0d8, 0xf2e2d0],
   crow: [0xffffff],
-  feldwebel: [0x9fb0a0],
-  waechter: [0x8f8a80],
+  // WP5 step 3 (Johannes): skin per district. Köpenick 1906 garrison: pale parchment (board, busts X04, X01, X03).
+  feldwebel: [0xc2b296],
+  waechter: [0xb0a088],
   rex: [0xffffff],
-  hauptmann: [0xb39a86],
-  schaffner: [0xa8a49a],
+  hauptmann: [0xc9b9a0],
+  // Tunnel: grey-yellow under the work lamps. Xhain 1981: pale grey (Grenzer), soot (Brandmeister), sewer grey-pink.
+  schaffner: [0xb8b29c],
   rat: [0xffffff],
-  grenzer: [0xb0b4a2],
-  brandmeister: [0xc4a08a],
-  rattenmutter: [0x9c9a7e],
+  grenzer: [0xbab8a8],
+  brandmeister: [0xb89480],
+  rattenmutter: [0xb0a094],
   spreehexe: [0xc8ccb8],
   // M12c Mitte (board: pale violet-grey skin under neon).
   kabel: [0xc4b8c0, 0xb8aeb8],
@@ -80,9 +82,11 @@ type GearKey = EnemyKind | 'brigade';
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
-  spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x5a6f9a, waechter: 0x6a5a4a, hauptmann: 0x44588c, schaffner: 0x2e3f5c,
-  // M12b Xhain 1981: GDR border grey-green, riot red-orange, sewer brown-green, squat black.
-  grenzer: 0x6f7a5e, brandmeister: 0xb8482a, rattenmutter: 0x5e5a3a, spreehexe: 0x2e2834,
+  // WP5 step 3 (Johannes): trousers per district. Köpenick 1906: dark Prussian blue (the captain's near black), the
+  // Turmwächter olive-brown; tunnel: the conductor's navy.
+  spitter: 0x9aa878, brute: 0xb8a898, feldwebel: 0x3a4462, waechter: 0x6a5e44, hauptmann: 0x2e3550, schaffner: 0x2a3248,
+  // Xhain 1981: GDR stone grey (Grenzer), sooty turnout trousers (Brandmeister), oxblood rags (Rattenmutter), squat black.
+  grenzer: 0x6c7060, brandmeister: 0x4a3e34, rattenmutter: 0x5a2a24, spreehexe: 0x2e2834,
   // M12c Mitte 2089: rags in violet-brown, the Boxenkopf's purple, black for the bouncer and the conductor.
   kabel: 0x6a5260, bass: 0x5a4a78, tuersteher: 0x2a2a30, dirigent: 0x26242a, bassprediger: 0x3e2c48,
   // M15 Alexanderplatz 1989: garden rags, the Brigadeghul's blue Blaumann.
@@ -136,8 +140,8 @@ const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, br
 // ---------------------------------------------------------------- gear
 
 interface GearKit {
-  steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; blue: LitMaterial; cloth: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial;
-  olive: LitMaterial; ember: LitMaterial; moss: LitMaterial; punk: LitMaterial; flame: LitMaterial;
+  steel: LitMaterial; brass: LitMaterial; rust: LitMaterial; dark: LitMaterial; red: LitMaterial; bone: LitMaterial; acid: LitMaterial; lamp: LitMaterial;
+  olive: LitMaterial; punk: LitMaterial; flame: LitMaterial;
   neon: LitMaterial; cyan: LitMaterial; violet: LitMaterial; speaker: LitMaterial; cone: LitMaterial; hazard: LitMaterial; paper: LitMaterial; jacket: LitMaterial; lining: LitMaterial;
   vest: LitMaterial; reflect: LitMaterial; plate: LitMaterial; belly: LitMaterial; flesh: LitMaterial; riot: LitMaterial; visor: LitMaterial; spark: LitMaterial;
   // WP5 step 3 (boss looks): coats per district, the Brandmeister's bands, the Rattenmutter's fur, the Turmwächter's tower.
@@ -153,14 +157,10 @@ function gearKit(m: Materials): GearKit {
     rust: m.surface({ color: 0x6e4a34, roughness: 0.7, metalness: 0.5 }),
     dark: m.surface({ color: 0x1c1d22, roughness: 0.6, metalness: 0.2 }),
     red: m.surface({ color: 0xa8281e, roughness: 0.9, doubleSided: true }),
-    blue: m.surface({ color: 0x2f3f6a, roughness: 0.9, doubleSided: true }),
-    cloth: m.surface({ color: 0x4a3c30, roughness: 0.95, doubleSided: true }),
     bone: m.surface({ color: 0xd9d2b4, roughness: 0.8 }),
     acid: m.surface({ color: 0x5a7a2a, emissive: 0x97c459, emissiveIntensity: 1.6, roughness: 0.4 }),
     lamp: m.surface({ color: 0x3a2a12, emissive: 0xffb04a, emissiveIntensity: 3, roughness: 0.4 }),
     olive: m.surface({ color: 0x55604a, roughness: 0.9, doubleSided: true }),
-    ember: m.surface({ color: 0xb03c1c, roughness: 0.85, doubleSided: true }),
-    moss: m.surface({ color: 0x4c4a2c, roughness: 0.95, doubleSided: true }),
     punk: m.surface({ color: 0x7a2ab8, emissive: 0x9a3ae0, emissiveIntensity: 0.6, roughness: 0.6 }),
     // Torch flame: emissive only, no light (the light count stays constant).
     flame: m.surface({ color: 0x5a1a04, emissive: 0xff6a1a, emissiveIntensity: 4, roughness: 0.5 }),
@@ -200,7 +200,7 @@ function gearKit(m: Materials): GearKit {
     eye: m.surface({ color: 0x401010, emissive: 0xff4030, emissiveIntensity: 2.6, roughness: 0.4 }),
     // The Turmwächter: the Fernsehturm's steel sphere and its ribbed concrete shaft; the red beacon on the antenna.
     tower: m.surface({ color: 0x8c8474, roughness: 0.4, metalness: 0.6 }),
-    shaft: m.surface({ color: 0x9a948a, roughness: 0.9, doubleSided: true }),
+    shaft: m.surface({ color: 0x847a68, roughness: 0.85, doubleSided: true }),
     beacon: m.surface({ color: 0x401008, emissive: 0xff3a1a, emissiveIntensity: 3, roughness: 0.4 }),
     // The Brandmeister's helmet fire: orange outer flames (less intense than the torch so they stay orange), yellow cores.
     fire: m.surface({ color: 0x6a1a04, emissive: 0xff4a0a, emissiveIntensity: 1.9, roughness: 0.5 }),
@@ -623,7 +623,7 @@ function modelQuat(b: Object3D, model: Object3D, out: Quaternion): Quaternion {
   for (let o: Object3D | null = b; o && o !== model; o = o.parent) out.premultiply(o.quaternion);
   return out;
 }
-const qa = new Quaternion(), qb = new Quaternion();
+const qa = new Quaternion(), qb = new Quaternion(), qc = new Quaternion();
 
 function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials, castShadow: boolean, pulse?: LitMaterial): Object3D[] {
   const k = gearKit(materials);
@@ -733,22 +733,56 @@ function gearFor(kind: GearKey | 'cyber', model: Object3D, materials: Materials,
       mount('Head', [...helm, ...moustache(lip, cap ? 0.075 : 0.065, cap ? -0.022 : 0.022, cap ? 0.019 : 0.011, cap ? 'white' : 'hair')], at.y - hp.y, at.z - hp.z, at.x - hp.x);
       break;
     }
-    case 'waechter':
-      // Hooded keeper of the tower: wide hat, a lantern in the left hand, a chain of keys.
-      mount('Head', [
-        [tf(new CylinderGeometry(0.26, 0.28, 0.02, 14), 0, 0, 0), 'cloth'],
-        [tf(new CylinderGeometry(0.1, 0.13, 0.13, 10), 0, 0.07, 0), 'cloth'],
-        [tf(new TorusGeometry(0.125, 0.012, 4, 12), 0, 0.02, 0, Math.PI / 2), 'brass'],
-      ], 0.1);
-      mount('hand_l', [
-        [tf(new CylinderGeometry(0.07, 0.07, 0.16, 8), 0, -0.2, 0), 'lamp'],
-        [tf(new ConeGeometry(0.1, 0.07, 8), 0, -0.09, 0), 'rust'],
-        [tf(new CylinderGeometry(0.085, 0.085, 0.02, 8), 0, -0.29, 0), 'rust'],
-        [tf(new TorusGeometry(0.04, 0.008, 4, 10), 0, -0.03, 0), 'rust'],
+    case 'waechter': {
+      // Bust X03 (Johannes 2026-11-19, A): the Fernsehturm's sphere as a helmet with its lit window ring (cyan,
+      // emissive, no light) and the antenna with the red beacon, a ribbed coat like the tower shaft, cyan sparks
+      // round the shoulders (gear [0], they flicker).
+      const fit = new BodyFit(model);
+      const bolt = (pts: Array<[number, number, number]>): Part[] => pts.slice(1).map((q, n): Part => {
+        const a = new Vector3(...pts[n]!), b = new Vector3(...q), d = b.clone().sub(a);
+        const g = new CylinderGeometry(0.008, 0.008, d.length(), 4).applyQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), d.normalize()));
+        return [g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2), 'cyan'];
+      });
+      const zig = (x: number, y: number, z: number, sx: number, h: number): Array<[number, number, number]> =>
+        [0, 1, 2, 3, 4].map((n): [number, number, number] => [x + sx * (n % 2 ? 0.05 : -0.02) + sx * n * 0.025, y + h * (1 - n / 4), z + (n % 2 ? 0.02 : -0.02)]);
+      const o3 = fit.at('spine_03');
+      const sh = (sd: 'l' | 'r'): Vector3 => fit.box([`clavicle_${sd}`]).max.clone().sub(o3);
+      const l = sh('l'), r = sh('r');
+      mount('spine_03', [
+        ...bolt(zig(l.x + 0.12, l.y + 0.02, l.z - 0.05, 1, 0.3)), ...bolt(zig(r.x - 0.12, r.y + 0.04, r.z - 0.05, -1, 0.34)),
+        ...bolt(zig(l.x + 0.05, l.y + 0.3, l.z - 0.12, 1, 0.22)), ...bolt(zig(r.x - 0.06, r.y + 0.36, r.z - 0.1, -1, 0.2)),
       ]);
-      mount('spine_03', tunic('cloth', 'rust'), 0.08);
-      mount('pelvis', [[tf(new CylinderGeometry(0.2, 0.3, 0.62, 10, 1, true), 0, -0.3, 0), 'cloth'], [tf(new TorusGeometry(0.2, 0.015, 4, 14), 0, 0.05, 0, Math.PI / 2), 'rust'], [tf(new BoxGeometry(0.03, 0.14, 0.01), 0.17, -0.04, 0.12), 'brass'], [tf(new BoxGeometry(0.03, 0.11, 0.01), 0.12, -0.03, 0.16), 'brass']]);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = head.c.clone().add(new Vector3(0, 0.015, 0));
+      const R = Math.max(head.max.x - head.min.x, head.max.y - head.min.y, head.max.z - head.min.z) * 0.5 + 0.05;
+      const eye = fit.eyes.y - at.y + 0.005, er = Math.sqrt(Math.max(0.01, R * R - eye * eye));
+      const helm: Part[] = [
+        [new SphereGeometry(R, 24, 16), 'tower'],
+        // The window ring at eye height, split by dark frames; seams above and below it.
+        [tf(new CylinderGeometry(er + 0.008, er + 0.008, 0.06, 28, 1, true), 0, eye, 0), 'cyan'],
+        ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n): Part => [tf(new BoxGeometry(0.012, 0.07, 0.014), Math.sin((n / 12) * Math.PI * 2) * (er + 0.012), eye, Math.cos((n / 12) * Math.PI * 2) * (er + 0.012), 0, (n / 12) * Math.PI * 2), 'dark']),
+        ...[eye + 0.06, eye - 0.06, eye + 0.12].map((y): Part => [tf(new TorusGeometry(Math.sqrt(Math.max(0.01, R * R - y * y)) + 0.002, 0.006, 4, 28), 0, y, 0, Math.PI / 2), 'dark']),
+        // The antenna: a drum on the cap, the mast with red-and-white sections, the lit beacon.
+        [tf(new CylinderGeometry(0.06, 0.08, 0.06, 14), 0, R + 0.01, 0), 'tower'],
+        [tf(new CylinderGeometry(0.014, 0.02, 0.4, 6), 0, R + 0.24, 0), 'white'],
+        ...[0.14, 0.26].map((y): Part => [tf(new CylinderGeometry(0.019, 0.021, 0.06, 6), 0, R + y, 0), 'red']),
+        [tf(new SphereGeometry(0.022, 8, 6), 0, R + 0.45, 0), 'beacon'],
+        // The shaft runs down into the collar.
+        [tf(new CylinderGeometry(0.08, 0.1, 0.14, 14, 1, true), 0, -R + 0.02, -0.03, 0.3), 'shaft'],
+      ];
+      mount('Head', helm.map(([g, m]): Part => [g.rotateX(0.18), m]), at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      const coat = fitCoat(fit, { mat: 'shaft', pad: 0.035, hem: 0.36, flare: 0.12, open: 1.4, collar: 'shaft' });
+      // Ribs like the tower shaft's rings, round the chest, the belly, the skirt and the sleeves.
+      const o1 = coat.o('spine_01'), op = coat.o('pelvis');
+      for (const f of [0.7, 1.6, 2.5, 3.4, 4.3, 5.2]) coat.add('spine_03', [band(coat.chest, o3, f, f + 0.22, 0.012), 'rust']);
+      for (const f of [0.6, 1.6, 2.6, 3.6]) coat.add('spine_01', [band(coat.belly, o1, f, f + 0.25, 0.012), 'rust']);
+      for (const f of [0.8, 1.8, 2.8, 3.8, 4.7]) coat.add('pelvis', [shell([ringGrow(ringAt(coat.skirt, f), 1, 0.012), ringGrow(ringAt(coat.skirt, f + 0.2), 1, 0.012)], op, [lerp(0.2, 1.4, Math.sqrt(f / 5)) + 0.05, lerp(0.2, 1.4, Math.sqrt((f + 0.2) / 5)) + 0.05]), 'rust']);
+      for (const sd of ['l', 'r'] as const) for (const b of [`upperarm_${sd}`, `lowerarm_${sd}`] as const) {
+        for (const f of [0.8, 1.9]) coat.add(b, [band(coat.arm[b], coat.o(b), f, f + 0.25, 0.01), 'rust']);
+      }
+      mountCoat(coat, 0.5);
       break;
+    }
     case 'schaffner': {
       // Bust X05 (Johannes 2026-11-19, A): peaked cap with a brass badge, a long double-breasted coat (two rows of
       // buttons), the signal disc (Kelle) held high in the right hand on a long handle.
@@ -1573,8 +1607,8 @@ export class EnemyView {
       const k = dead ? 1 : 1 - (g.userData.hang as number);
       modelQuat(g.parent!, this.model!, qa);
       qb.copy(g.userData.hangQ as Quaternion).invert().premultiply(qa);
-      qb.slerpQuaternions(new Quaternion(), qb, k);
-      g.quaternion.copy(qa).invert().multiply(qb);
+      qc.identity().slerp(qb, k);
+      g.quaternion.copy(qa).invert().multiply(qc);
     }
   }
 
@@ -1702,6 +1736,16 @@ export class EnemyView {
         const k = e.state === 'dead' ? 0.01 : f + 1.6 * lit;
         spark.scale.set(k * (1 - 0.15 * Math.sin(this.time * 47)), k * (1 + 0.25 * Math.sin(this.time * 37)), k);
         spark.rotation.z = 0.15 * Math.sin(this.time * 23);
+      }
+    } else if (this.kind === 'waechter') {
+      // WP5 step 3: the sparks jump: on and off, a new place round the shoulders every few frames.
+      const sparks = this.gear.get('waechter')?.[0];
+      if (sparks) {
+        const step = Math.floor(this.time * 9 + this.seed * 7);
+        const on = e.state !== 'dead' && Math.sin(step * 12.9898 + this.seed) * 43758.5 % 1 > -0.35;
+        sparks.visible = on;
+        sparks.rotation.y = Math.sin(step * 7.31) * 0.35;
+        sparks.scale.setScalar(0.65 + 0.3 * Math.abs(Math.sin(step * 3.7)));
       }
     } else if (this.kind === 'brandmeister') {
       // WP5 step 3: the helmet fire flickers like the Zünder's fuse and flares while he spits flame.
