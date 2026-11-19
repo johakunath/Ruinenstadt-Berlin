@@ -43,6 +43,13 @@ export const MITTE_WEATHER: Readonly<Record<string, WeatherKind>> = {
   potsdamer: 'rain', kulturforum: 'rain', tilla: 'rain',
   tiergarten: 'fog', stern: 'fog', biergarten: 'fog',
 };
+/**
+ * Charlottenburg 1920 (M16 blockout): dry, no rain. Leaves drift in the Zoo and the Schlossgarten, every
+ * street stays clear. Step 3b sets the look per time of day (dusk to dawn) and its diamond dust and confetti.
+ */
+export const CHARLOTTENBURG_WEATHER: Readonly<Record<string, WeatherKind>> = {
+  zoo: 'leaves', schlossgarten: 'leaves', schlossvorplatz: 'leaves', luisenplatz: 'leaves',
+};
 /** Fog density per weather (scene default 0.017). */
 const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, leaves: 0.014, clear: 0.014 };
 const W = 36, D = 30, H = 14;

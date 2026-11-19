@@ -2,7 +2,7 @@
 // with open arches, and massing for the district landmarks (silhouette, height and colour only). The
 // landmarks get their real models from photos in step 4; this keeps the layout readable until then.
 import { CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometry, TorusGeometry, type BufferGeometry, type Material } from 'three';
-import type { Landmark, Lot, MapDef, Viaduct } from '../data/map';
+import type { Landmark, Lot, MapDef, Pt, Viaduct } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { blockFacades } from './map-world';
 import { FLOOR_H, GROUND_H, PARAPET, Run } from './world';
@@ -443,7 +443,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
  * The brick Stadtbahn: a deck `h` meters up on piers, walls closed between the arches the streets pass
  * through (each piece of `MapDef.viaducts` is one closed run; its colliders are `barrierColliders`).
  */
-export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, v: Viaduct): void {
+export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, v: Viaduct, plain = false): void {
   for (let i = 1; i < v.pts.length; i++) {
     const [ax, az] = v.pts[i - 1]!, [bx, bz] = v.pts[i]!, len = Math.hypot(bx - ax, bz - az);
     if (len < 0.5) continue;
@@ -460,6 +460,8 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
       });
       for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, seg, BRICK);
       for (const s of [-1, 1]) b.box(mats.railSteel, at(s * 1.6, v.h + 0.4, 0), 0.12, 0.15, seg);
+      // M16 Charlottenburg (`plain`): 1920, bare brick with blind arches and no GDR dressing.
+      if (plain) { blindArches(b, at, v, seg); continue; }
       // Ivy over the bricks on every second bay (the district grew wild), posters pasted on the others.
       if (k % 2 === 0) b.box(mats.ivy, at(v.width / 2 + 0.05, v.h / 2, 0), 0.1, v.h * 0.7, seg * 0.6, GREEN);
       // Poster walls: the same Pioneer poster side by side over whole bays, a slogan band, cameras.
@@ -474,11 +476,30 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
   }
 }
 
-/** Arch decks: where a street passes, the deck spans over it on two piers (no collider below). */
-export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, m: MapDef): void {
+/**
+ * M16 Charlottenburg: the bricked arches of the 1920 viaduct read as recessed bays (a dark arch panel and
+ * a lighter pier band on both faces of each 8 m segment). Render only, in the brick batch.
+ */
+function blindArches(b: ChunkBuilder, at: (x: number, y: number, z: number) => Matrix4, v: Viaduct, seg: number): void {
+  const M = b.mm;
+  for (const s of [-1, 1]) {
+    const x = s * (v.width / 2 + 0.02);
+    b.box(M.brick, at(x, v.h - 1.5, 0), 0.08, 0.5, seg, [0.95, 0.72, 0.62]);
+    b.box(M.brick, at(x, (v.h - 1.8) / 2, 0), 0.06, v.h - 1.8, seg - 2.2, [0.52, 0.36, 0.32]);
+    b.box(M.brick, at(x, v.h - 0.6, 0), 0.12, 0.25, seg, [0.95, 0.72, 0.62]);
+  }
+}
+
+/**
+ * Arch decks: where a street passes, the deck spans over it on two piers (no collider below). `ends`
+ * (M16) gives the run ends to span between instead of consecutive runs (a platform deck may sit in the gap);
+ * `beam` the colours of the iron beam over the street (default GDR blue and yellow).
+ */
+export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, m: MapDef, ends?: Array<[Pt, Pt]>, beam: [RGB, RGB] = [BLUE, YELLOW]): void {
   const runs = (m.viaducts ?? []).filter((v) => v.kind === 'stadtbahn');
-  for (let i = 1; i < runs.length; i++) {
-    const a = runs[i - 1]!.pts[runs[i - 1]!.pts.length - 1]!, c = runs[i]!.pts[0]!, v = runs[i]!;
+  const spans: Array<[Pt, Pt]> = ends ?? runs.slice(1).map((r, i) => [runs[i]!.pts[runs[i]!.pts.length - 1]!, r.pts[0]!]);
+  for (const [a, c] of spans) {
+    const v = runs[0]!;
     const cx = (a[0] + c[0]) / 2, cz = (a[1] + c[1]) / 2, len = Math.hypot(c[0] - a[0], c[1] - a[1]), ry = Math.atan2(c[0] - a[0], c[1] - a[1]);
     const b = chunkOf(cx, cz), mm = new Matrix4().makeRotationY(ry).setPosition(cx, 0, cz);
     const mats = b.mm;
@@ -488,7 +509,7 @@ export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, m: 
       b.box(mats.brick, at(0, v.h - 0.6, 0), v.width + 0.6, 1.8, len + 0.2, [0.85, 0.62, 0.55]);
       for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, len, BRICK);
       // A painted iron beam over the street: GDR blue with a yellow stripe.
-      for (const s of [-1, 1]) b.box(mats.iron, at(s * (v.width / 2 + 0.05), v.h - 1.1, 0), 0.12, 0.8, len, s < 0 ? BLUE : YELLOW);
+      for (const s of [-1, 1]) b.box(mats.iron, at(s * (v.width / 2 + 0.05), v.h - 1.1, 0), 0.12, 0.8, len, s < 0 ? beam[0] : beam[1]);
     });
   }
 }
