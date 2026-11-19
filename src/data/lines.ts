@@ -2,7 +2,10 @@
 // NETB). Line k runs from district k to k + 1 and is the gate between them: free district k, clear its
 // line, then district k + 1 opens. The 3D district list (migration Q8) differs from 2D after
 // Alexanderplatz; the camp is at S+U Warschauer Straße in Xhain (district 1). A cleared line is stored in
-// `camp.freed` as LINE_FREED + k (M19).
+// `camp.freed` as LINE_FREED + k (M19). M16 (decision C3): line 3 is the U2 running on from U Potsdamer
+// Platz to S+U Zoologischer Garten (ghost station Bülowstraße), so lines 2 and 3 both carry the U2 badge
+// (ids are labels only); Charlottenburg sits west of Mitte on the schematic. Stops 5 and 6 and lines 4 and 5
+// are still the 2D ones (C5 proposes the Fernsehturm finale instead).
 export interface LineDef {
   /** Badge: S3, U8, ... */
   readonly id: string;
@@ -16,7 +19,7 @@ export const LINES: readonly LineDef[] = [
   { id: 'S3', color: '#2a8a3a', ghost: 'Rummelsburg' },
   { id: 'U8', color: '#224f86', ghost: 'Heinrich-Heine-Straße' },
   { id: 'U2', color: '#da421e', ghost: 'Klosterstraße' },
-  { id: 'U6', color: '#8c6dab', ghost: 'Französische Straße' },
+  { id: 'U2', color: '#da421e', ghost: 'Bülowstraße' },
   { id: 'U7', color: '#528dba', ghost: 'Mierendorffplatz' },
   { id: 'S5', color: '#e3801c', ghost: 'Biesdorf' },
 ];
@@ -28,7 +31,7 @@ export const STOPS: readonly NetStop[] = [
   { name: 'Xhain', station: 'S+U Warschauer Straße', map: 'xhain', at: [250, 140] },
   { name: 'Alexanderplatz', station: 'U Alexanderplatz', map: 'alex', at: [215, 90] },
   { name: 'Mitte', station: 'U Potsdamer Platz', map: 'mitte', at: [165, 115] },
-  { name: 'Charlottenburg', station: 'U Platz der Luftbrücke', at: [190, 185] },
+  { name: 'Charlottenburg', station: 'S+U Zoologischer Garten', at: [105, 150] },
   { name: 'Spandau', station: 'U Rathaus Spandau', at: [45, 120] },
   { name: 'Marzahn', station: 'S Marzahn', at: [330, 60] },
 ];
@@ -37,11 +40,11 @@ export const NET_ROUTES: ReadonlyArray<ReadonlyArray<readonly [number, number]>>
   [[340, 190], [300, 190], [250, 140]],
   [[250, 140], [250, 125], [215, 90]],
   [[215, 90], [190, 90], [165, 115]],
-  [[165, 115], [165, 160], [190, 185]],
-  [[190, 185], [110, 185], [45, 120]],
+  [[165, 115], [130, 150], [105, 150]],
+  [[105, 150], [80, 125], [50, 125], [45, 120]],
   [[45, 120], [45, 40], [310, 40], [330, 60]],
 ];
-export const NET_BADGES: ReadonlyArray<readonly [number, number]> = [[301, 202], [265, 120], [193, 76], [148, 140], [120, 197], [180, 32]];
+export const NET_BADGES: ReadonlyArray<readonly [number, number]> = [[301, 202], [265, 120], [193, 76], [160, 147], [68, 113], [180, 32]];
 
 /** `camp.freed` holds districts (0 Köpenick) and cleared lines as LINE_FREED + k. */
 export const LINE_FREED = 100;

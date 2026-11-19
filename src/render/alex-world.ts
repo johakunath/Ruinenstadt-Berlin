@@ -2,7 +2,7 @@
 // with open arches, and massing for the district landmarks (silhouette, height and colour only). The
 // landmarks get their real models from photos in step 4; this keeps the layout readable until then.
 import { CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometry, TorusGeometry, type BufferGeometry, type Material } from 'three';
-import type { Landmark, Lot, MapDef, Viaduct } from '../data/map';
+import type { Landmark, Lot, MapDef, Pt, Viaduct } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { blockFacades } from './map-world';
 import { FLOOR_H, GROUND_H, PARAPET, Run } from './world';
@@ -65,7 +65,11 @@ function atlasBand(b: ChunkBuilder, m: Matrix4, r: number, h: number, seg: numbe
 /** A glass front: atlas panes tiled over len × h from height y0 (frame `m` at the face centre, z out). */
 function glassFace(b: ChunkBuilder, m: Matrix4, len: number, y0: number, h: number, key: AtlasKey, cell = 6): void {
   const nx = Math.max(1, Math.round(len / cell)), ny = Math.max(1, Math.round(h / cell)), cw = len / nx, ch = h / ny;
-  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) atlasPlane(b, sub(m, (i + 0.5) * cw - len / 2, y0 + (j + 0.5) * ch, 0.03), cw, ch, key);
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const pane = sub(m, (i + 0.5) * cw - len / 2, y0 + (j + 0.5) * ch, 0.03);
+    if (cw <= 5 && ch <= 5 && b.wearWindow(pane, cw, ch)) continue;
+    atlasPlane(b, pane, cw, ch, key);
+  }
 }
 
 /** All four faces of a w × d glass box from y0 to y0 + h, with a dark core so no face is empty. */
@@ -132,7 +136,12 @@ export function buildClockParts(column: ChunkBuilder, drum: ChunkBuilder, orbit:
   atlasBand(drum, F(0, y0 + 1.37, 0, Math.PI / 24), R + 0.03, 0.74, 24, 'hours');
   atlasBand(drum, F(0, y0 + 2.2, 0, Math.PI / 12), R, 0.9, 24, 'cities');
   drum.geo(M.dark, cached('wzBot', () => new CircleGeometry(R - 0.05, 24)), F(0, y0 + 0.01, 0).multiply(new Matrix4().makeRotationX(Math.PI / 2)));
-  for (let k = 0; k < 24; k++) drum.box(M.iron, F(Math.sin((k * Math.PI) / 12) * (R - 0.15), y0 - 0.12, Math.cos((k * Math.PI) / 12) * (R - 0.15), (k * Math.PI) / 12), 0.28, 0.22, 0.32, BRASS);
+  for (let k = 0; k < 24; k++) {
+    if (M.landmarkWear && (k === 5 || k === 16)) continue;
+    const angle = k * Math.PI / 12;
+    const tarnished = M.landmarkWear && k % 4 === 0;
+    drum.box(M.iron, F(Math.sin(angle) * (R - 0.15), y0 - 0.12, Math.cos(angle) * (R - 0.15), angle), 0.28, 0.22, 0.32, tarnished ? [0.53, 0.46, 0.36] : BRASS);
+  }
   // Mast and orbit sculpture.
   cyl(orbit, 0.13, 0.16, 2.4, y0 + 2.78, M.iron, [0.6, 0.6, 0.62]);
   const c = CLOCK.orbit;
@@ -434,7 +443,7 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
  * The brick Stadtbahn: a deck `h` meters up on piers, walls closed between the arches the streets pass
  * through (each piece of `MapDef.viaducts` is one closed run; its colliders are `barrierColliders`).
  */
-export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, v: Viaduct): void {
+export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, v: Viaduct, plain = false): void {
   for (let i = 1; i < v.pts.length; i++) {
     const [ax, az] = v.pts[i - 1]!, [bx, bz] = v.pts[i]!, len = Math.hypot(bx - ax, bz - az);
     if (len < 0.5) continue;
@@ -451,6 +460,8 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
       });
       for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, seg, BRICK);
       for (const s of [-1, 1]) b.box(mats.railSteel, at(s * 1.6, v.h + 0.4, 0), 0.12, 0.15, seg);
+      // M16 Charlottenburg (`plain`): 1920, bare brick with blind arches and no GDR dressing.
+      if (plain) { blindArches(b, at, v, seg); continue; }
       // Ivy over the bricks on every second bay (the district grew wild), posters pasted on the others.
       if (k % 2 === 0) b.box(mats.ivy, at(v.width / 2 + 0.05, v.h / 2, 0), 0.1, v.h * 0.7, seg * 0.6, GREEN);
       // Poster walls: the same Pioneer poster side by side over whole bays, a slogan band, cameras.
@@ -465,11 +476,30 @@ export function buildStadtbahn(chunkOf: (x: number, z: number) => ChunkBuilder, 
   }
 }
 
-/** Arch decks: where a street passes, the deck spans over it on two piers (no collider below). */
-export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, m: MapDef): void {
+/**
+ * M16 Charlottenburg: the bricked arches of the 1920 viaduct read as recessed bays (a dark arch panel and
+ * a lighter pier band on both faces of each 8 m segment). Render only, in the brick batch.
+ */
+function blindArches(b: ChunkBuilder, at: (x: number, y: number, z: number) => Matrix4, v: Viaduct, seg: number): void {
+  const M = b.mm;
+  for (const s of [-1, 1]) {
+    const x = s * (v.width / 2 + 0.02);
+    b.box(M.brick, at(x, v.h - 1.5, 0), 0.08, 0.5, seg, [0.95, 0.72, 0.62]);
+    b.box(M.brick, at(x, (v.h - 1.8) / 2, 0), 0.06, v.h - 1.8, seg - 2.2, [0.52, 0.36, 0.32]);
+    b.box(M.brick, at(x, v.h - 0.6, 0), 0.12, 0.25, seg, [0.95, 0.72, 0.62]);
+  }
+}
+
+/**
+ * Arch decks: where a street passes, the deck spans over it on two piers (no collider below). `ends`
+ * (M16) gives the run ends to span between instead of consecutive runs (a platform deck may sit in the gap);
+ * `beam` the colours of the iron beam over the street (default GDR blue and yellow).
+ */
+export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, m: MapDef, ends?: Array<[Pt, Pt]>, beam: [RGB, RGB] = [BLUE, YELLOW]): void {
   const runs = (m.viaducts ?? []).filter((v) => v.kind === 'stadtbahn');
-  for (let i = 1; i < runs.length; i++) {
-    const a = runs[i - 1]!.pts[runs[i - 1]!.pts.length - 1]!, c = runs[i]!.pts[0]!, v = runs[i]!;
+  const spans: Array<[Pt, Pt]> = ends ?? runs.slice(1).map((r, i) => [runs[i]!.pts[runs[i]!.pts.length - 1]!, r.pts[0]!]);
+  for (const [a, c] of spans) {
+    const v = runs[0]!;
     const cx = (a[0] + c[0]) / 2, cz = (a[1] + c[1]) / 2, len = Math.hypot(c[0] - a[0], c[1] - a[1]), ry = Math.atan2(c[0] - a[0], c[1] - a[1]);
     const b = chunkOf(cx, cz), mm = new Matrix4().makeRotationY(ry).setPosition(cx, 0, cz);
     const mats = b.mm;
@@ -479,7 +509,7 @@ export function buildArches(chunkOf: (x: number, z: number) => ChunkBuilder, m: 
       b.box(mats.brick, at(0, v.h - 0.6, 0), v.width + 0.6, 1.8, len + 0.2, [0.85, 0.62, 0.55]);
       for (const s of [-1, 1]) b.box(mats.brick, at(s * (v.width / 2 + 0.15), v.h + 0.8, 0), 0.3, 1, len, BRICK);
       // A painted iron beam over the street: GDR blue with a yellow stripe.
-      for (const s of [-1, 1]) b.box(mats.iron, at(s * (v.width / 2 + 0.05), v.h - 1.1, 0), 0.12, 0.8, len, s < 0 ? BLUE : YELLOW);
+      for (const s of [-1, 1]) b.box(mats.iron, at(s * (v.width / 2 + 0.05), v.h - 1.1, 0), 0.12, 0.8, len, s < 0 ? beam[0] : beam[1]);
     });
   }
 }

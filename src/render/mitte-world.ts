@@ -16,6 +16,7 @@ import { footprintDist } from './reveal';
 import { Materials, type LitMaterial } from './materials';
 import type { PaintOptions } from './paint';
 import { bladeCell, NEON_BLADES, NEON_WORDS, neonCell, paintCurtain, paintGoldPanels, paintNeonAtlas, paintSandstone } from './mitte-paint';
+import { loadPaintedTexture, swapPaintedMap } from './surface-textures';
 import { blockFacades, lm, lp, walls, type ChunkBuilder, type MapMats } from './map-world';
 import { frustum } from './landmarks';
 import type { Wet } from './sky';
@@ -47,16 +48,29 @@ export interface MitteMats {
   neon: MeshBasicMaterial;
 }
 
+const TEXTURES = {
+  sandstone: new URL('../../assets/textures/mitte/sandstone.webp', import.meta.url).href,
+  curtain: new URL('../../assets/textures/mitte/curtain-glass.webp', import.meta.url).href,
+  neon: new URL('../../assets/textures/mitte/neon-signs.webp', import.meta.url).href,
+};
+
 export function mitteMats(materials: Materials): MitteMats {
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const cw = paintCurtain();
-  return {
+  const mats: MitteMats = {
     materials,
     sandstone: materials.surface({ map: paintSandstone(o).map, roughness: 0.9, vertexColors: true }),
     curtain: materials.surface({ map: cw.map, emissiveMap: cw.emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.7, roughness: 0.2, metalness: 0.5, vertexColors: true }),
     gold: materials.surface({ map: paintGoldPanels(o).map, roughness: 0.45, metalness: 0.55, vertexColors: true }),
     neon: new MeshBasicMaterial({ map: paintNeonAtlas(), vertexColors: true }),
   };
+  swapPaintedMap([mats.sandstone], TEXTURES.sandstone, o.anisotropy);
+  swapPaintedMap([mats.curtain], TEXTURES.curtain, o.anisotropy);
+  loadPaintedTexture(TEXTURES.neon, o.anisotropy, texture => {
+    mats.neon.map?.dispose();
+    mats.neon.map = texture;
+  }, false);
+  return mats;
 }
 
 /** What a Mitte landmark builder gets. */

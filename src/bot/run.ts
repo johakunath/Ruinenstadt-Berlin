@@ -4,6 +4,7 @@ import { koepenickMap } from '../data/koepenick';
 import { xhainMap } from '../data/xhain';
 import { mitteMap } from '../data/mitte';
 import { alexMap } from '../data/alexanderplatz';
+import { charlottenburgMap } from '../data/charlottenburg';
 import { generateLots, generateProps, mapLevel } from '../data/map';
 import type { Level } from '../sim/level';
 import { runCampaign, SKILL_DEFAULT, SKILL_GOOD, SKILL_WEAK, type BotSkill, type CampaignReport } from './bot';
@@ -11,10 +12,10 @@ import { runCampaign, SKILL_DEFAULT, SKILL_GOOD, SKILL_WEAK, type BotSkill, type
 export const SKILLS: Record<string, BotSkill> = { johannes: SKILL_DEFAULT, good: SKILL_GOOD, weak: SKILL_WEAK };
 
 const cached = new Map<string, Level>();
-export function mapLevelOf(map: 'koepenick' | 'xhain' | 'alex' | 'mitte' = 'koepenick'): Level {
+export function mapLevelOf(map: MapKey | 'charlottenburg' = 'koepenick'): Level {
   let level = cached.get(map);
   if (!level) {
-    const def = map === 'xhain' ? xhainMap(1) : map === 'alex' ? alexMap(1) : map === 'mitte' ? mitteMap(1) : koepenickMap(1);
+    const def = map === 'xhain' ? xhainMap(1) : map === 'alex' ? alexMap(1) : map === 'mitte' ? mitteMap(1) : map === 'charlottenburg' ? charlottenburgMap(1) : koepenickMap(1);
     const lots = generateLots(def);
     level = mapLevel(def, lots, generateProps(def, lots));
     cached.set(map, level);
@@ -23,7 +24,7 @@ export function mapLevelOf(map: 'koepenick' | 'xhain' | 'alex' | 'mitte' = 'koep
 }
 export const koepenickLevel = (): Level => mapLevelOf('koepenick');
 
-export interface BalanceArgs { map?: 'koepenick' | 'xhain' | 'alex' | 'mitte'; runs: number; difficulty: DifficultyId; skill: BotSkill; seed: number; startAt?: number; until?: number }
+export interface BalanceArgs { map?: MapKey | 'charlottenburg'; runs: number; difficulty: DifficultyId; skill: BotSkill; seed: number; startAt?: number; until?: number }
 
 export type MapKey = 'koepenick' | 'xhain' | 'alex' | 'mitte';
 /** The campaign order of the districts (the tunnels between them are not played). */

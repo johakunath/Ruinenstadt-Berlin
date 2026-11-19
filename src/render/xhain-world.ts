@@ -360,7 +360,9 @@ function ringGeo(r: number, t: number): BufferGeometry {
 
 /** An arched opening on a face: dark (or glazed) fill and a lighter ring. `m` sits at the opening's base centre, facing out. */
 function archOpening(b: ChunkBuilder, m: Matrix4, w: number, h: number, fill: Material, fillColor: RGB, ring: Material | null, ringColor: RGB = [1, 1, 1]): void {
-  b.geo(fill, archGeo(w, h), m, fillColor);
+  const glassBroken = fill === b.mm.glass && b.wearWindow(sub(m, 0, (h - w / 2) / 2, 0), w, h - w / 2);
+  if (!glassBroken) b.geo(fill, archGeo(w, h), m, fillColor);
+  else b.geo(b.mm.dark, archGeo(w, h), m);
   if (ring) b.geo(ring, ringGeo(w / 2, Math.min(0.45, w * 0.18)), sub(m, 0, h - w / 2, 0.02), ringColor);
 }
 
@@ -1472,16 +1474,17 @@ export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm
   const decks = m.terraces.filter((t) => t.bridge);
   const low = (x: number, z: number): number => (decks.some((t) => inPoly(t.poly, x, z) || t.stairs.some((s) => Math.hypot(x - s.x, z - s.z) < s.len / 2 + s.width)) ? 0 : ground(x, z));
   const c: Ctx = { mm, X: xhainMats(materials), m, chunkOf, ground, low };
-  for (const w of m.walls ?? []) buildWall(c, w);
+  // M16: hedges, fences and the Zoo platform are Charlottenburg's (`charlottenburg-world.ts`); only the Wall is drawn here.
+  for (const w of m.walls ?? []) if (!w.kind) buildWall(c, w);
   for (const v of m.viaducts ?? []) if (v.kind === 'hochbahn') buildHochbahn(c, v);
   for (const r of m.railYards ?? []) buildRailYard(c, r);
-  for (const t of m.terraces) if (t.bridge) buildDeckBridge(c, t);
+  for (const t of m.terraces) if (t.bridge && !t.platform) buildDeckBridge(c, t);
   if (m.areas.some((a) => a.id === 'grenzstreifen')) buildGrenzstreifen(c);
   const base = (x: number, z: number, r: number): number => Math.min(ground(x, z), ground(x - r, z - r), ground(x + r, z - r), ground(x - r, z + r), ground(x + r, z + r));
   for (const l of land) {
     const b = chunkOf(l.x, l.z);
     const y0 = l.walkUnder || l.kind === 'oberbaum' ? 0 : base(l.x, l.z, Math.max(l.hx, l.hz));
-    const cut = cutOf(l), build = (): void => b.on(y0, () => buildXLandmark(c, b, l));
+    const cut = cutOf(l), build = (): void => b.on(y0, () => b.wearLandmark(l, () => buildXLandmark(c, b, l)));
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, landmarkCaps(l)) : build);
     if (l.kind === 'goerlitzer') buildGoerliYard(c, l);
   }

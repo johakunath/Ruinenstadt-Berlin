@@ -11,12 +11,14 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | M15 Alexanderplatz step 4 photo check for the landmarks built without a downloaded photo | Claude · Opus high | open: `docs/tasks/m15-alexanderplatz.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |
-| Painted textures: M11c lot types and plants, T5 Köpenick landmarks, T6 Xhain, Mitte step 9 | Codex | open: `docs/asset-pipeline.md` › Texture queue and `docs/tasks/m15-mitte.md` |
+| Painted textures: T6 Xhain | Codex | open: `docs/asset-pipeline.md` › Texture queue and `docs/tasks/m15-mitte.md` |
 | Texture performance and rail follow-up: T1b, plus profile checks for the new painted batches | Claude and Johannes | open: `docs/tasks/t1b-ground-polish.md`, `docs/tasks/pt-hardware-checks.md` |
 | WP4 Hero, weapons and loot visuals: equipment on the hero (P32), pickups per kind (P10), legendary and set looks (P31), 2D #2 close-out, daggers (2D #38). Step 1 (weapon model per base, weapon types, rendered icons) is built | Claude · Opus high (spec: Fable high, done) | open, step 2 next: `docs/tasks/wp4-equipment-visuals.md` (gates G2 to G4 need Johannes before steps 3, 5, 6b) |
-| Backlog ready to build: P17 Spreepark dinos, P18 ambient animals, P24 worn landmarks | Claude · Opus high | open: `docs/backlog.md` |
+| Backlog ready to build: P17 Spreepark dinos, P18 ambient animals | Claude · Opus high | open: `docs/backlog.md` |
 | H3 humanoid boss bases: step 2 human base mesh (comparison first), step 3 Turmwächter on the mech; Codex T8 boss textures | Claude · Opus high | open: `docs/tasks/h3-humanoid-bosses.md` |
-| Next district Charlottenburg (Q8), concept first | Claude · Fable high (concept), Opus high (build) | not started: `docs/maps/guidelines.md` |
+| M16 Charlottenburg step 4: landmarks from pre-1930 photos, built worn, three builders in parallel (City West; Ku'damm to Oper; Schloss) replacing the step 2 massing | Claude · Opus high | open: `docs/tasks/m16-charlottenburg.md` › step 4 and Handover step 2, `src/render/charlottenburg-world.ts` |
+| M16 Charlottenburg step 5: enemy and boss spec (Scherbentänzerin, Logenbrecher, Spiegelsouffleur, three zone bosses, Die Diamantene Diva, district rule, maze riddles, loot); can run parallel to step 1 | Claude · Fable high | open: `docs/tasks/m16-charlottenburg.md` › Input for step 5 |
+| M16 Charlottenburg step 3a: sky per zone (evening to morning along the route), spec before the look is built | Claude · Fable high | open, after step 1: `docs/tasks/m16-charlottenburg.md` › Engine notes E1 |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
 
 Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.

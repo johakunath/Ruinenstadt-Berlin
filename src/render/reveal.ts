@@ -21,10 +21,16 @@ const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: num
   // M15 Mitte: the seven sights of the route (Kollhoff-Tower shows the Bahntower beside it).
   tor: { top: 26, half: 20 }, reichstag: { top: 23, half: 14 }, kanzleramt: { top: 25, half: 14 }, siegessaeule: { top: 49, half: 6 },
   sony: { top: 39, half: 30 }, kollhoff: { top: 70, half: 12 }, philharmonie: { top: 23, half: 16 },
+  // M16 Charlottenburg: the five sights of the step 2 blockout. The Schloss dome shows from the north end of
+  // the Schloßstraße (the gate is shut, the route turns there); the KaDeWe from the camera side, over its
+  // broken low wall into the hall (the tall Tauentzien rows hide its street front from the north).
+  gedaechtniskirche: { top: 61, half: 14 }, kadewe: { top: 18, half: 24 }, opernhaus: { top: 26, half: 15 },
+  schlossmitte: { top: 36, half: 30, near: 50 }, belvedere: { top: 19, half: 7 },
 };
 /** German names for the hint while the view holds. */
 const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
-  weltzeituhr: 'Weltzeituhr', fernsehturm: 'Fernsehturm', dom: 'Berliner Dom', palast: 'Palast der Republik', rotesrathaus: 'Rotes Rathaus', nikolaikirche: 'Nikolaikirche', hausdeslehrers: 'Haus des Lehrers', kino: 'Kino International' };
+  weltzeituhr: 'Weltzeituhr', fernsehturm: 'Fernsehturm', dom: 'Berliner Dom', palast: 'Palast der Republik', rotesrathaus: 'Rotes Rathaus', nikolaikirche: 'Nikolaikirche', hausdeslehrers: 'Haus des Lehrers', kino: 'Kino International',
+  gedaechtniskirche: 'Gedächtniskirche', kadewe: 'Kaufhaus des Westens', opernhaus: 'Deutsches Opernhaus', schlossmitte: 'Schloss Charlottenburg', belvedere: 'Belvedere' };
 /** Start when the hero is this close to the footprint (also mid-fight: the game pauses). */
 export const REVEAL_NEAR = 12;
 export const REVEAL_IN = 1.0;

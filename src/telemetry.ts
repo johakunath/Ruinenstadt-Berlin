@@ -10,7 +10,9 @@ import { activeSlot } from './save';
 const URL = 'https://script.google.com/macros/s/AKfycbyUCf3slojkaYJhVemGU54EBidrXFhj2FoOANlOZQQdIxhO4YIWTW1kF9FPv3hVDXQ/exec';
 const QUEUE = 'ruinenstadt-berlin.tlq';
 const PID = 'ruinenstadt-berlin.pid';
-export const VERSION = '3d-0.1.0';
+/** Quits shorter than this (s) are not recorded. */
+export const QUIT_MIN = 60;
+export const VERSION = `3d-0.1.0+${__BUILD__}`;
 
 export type RunEnd = 'win' | 'dead' | 'quit';
 
@@ -25,6 +27,9 @@ interface EncounterLog {
   p95?: number;
   calls?: number;
   alive?: number;
+  /** Max life at the fight's start and the lowest life during it, so `dmg` reads as a share like `docs/balance.md`. */
+  hp?: number;
+  low?: number;
 }
 
 export interface RunRecord {
@@ -164,6 +169,11 @@ export class Telemetry {
     this.encAlive = Math.max(this.encAlive, alive);
     r.kills = sim.kills;
     r.wave = Math.max(r.wave, sim.run.index);
+    const e = r.enc[r.enc.length - 1];
+    if (e && e.clear === null) {
+      e.hp = Math.max(e.hp ?? 0, Math.round(sim.stats.maxHp));
+      e.low = Math.min(e.low ?? Infinity, Math.max(0, Math.round(sim.player.hp)));
+    }
   }
 
   event(ev: SimEvent): void {
@@ -172,7 +182,11 @@ export class Telemetry {
     if (ev.type === 'playerHit') {
       r.dmg += ev.damage;
       const e = r.enc[r.enc.length - 1];
-      if (e && e.clear === null) e.dmg += ev.damage;
+      if (e && e.clear === null) {
+        e.dmg += ev.damage;
+        // The lethal hit (and the last one before a clear) happens after the last frame sample.
+        e.low = Math.min(e.low ?? Infinity, Math.round(ev.hp));
+      }
     } else if (ev.type === 'encounterStart') {
       this.encFrames = new FrameStats();
       this.encCalls = this.encAlive = 0;
@@ -204,7 +218,8 @@ export class Telemetry {
     const r = this.run;
     if (!r) return;
     this.run = null;
-    if (r.t < 5 || !this.allowed || !this.enabled) return; // a click through the title, not a run
+    // A quit within the first minute is a test start or a reload (Johannes, 2026-11-19); deaths and wins always count.
+    if (r.t < (end === 'quit' ? QUIT_MIN : 5) || !this.allowed || !this.enabled) return;
     r.end = end;
     r.t = Math.round(r.t);
     r.dmg = Math.round(r.dmg);
