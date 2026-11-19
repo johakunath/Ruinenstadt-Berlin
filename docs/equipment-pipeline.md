@@ -56,7 +56,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Harpune | harpune | w | normal | model:harpune | yes | I14 | yes: rendered from the model | none | 2 |
 | Leuchtröhre | leucht | w | neon | model:leucht | yes | I59 | yes: rendered from the model | none | 4 |
 | Boxenhammer | boxh | w | neon | model:boxh | yes | I60 | yes: rendered from the model | none | 4 |
-| Neonflinte | neonfl | w | neon | model:neonfl | yes | I61 | yes: rendered from the model | none | 4 |
+| Neonflinte | neonfl | w | neon | model:neonfl (assault rifle, 2 hands, pistol clips) | yes | I61 | yes: rendered from the model | none | 4 |
 | Mikroständer | mikro | w | neon | model:mikro | yes | I62 | yes: rendered from the model | none | 4 |
 | Sichel | sichel | w | GDR | model:sichel | yes | I71 | yes: rendered from the model | none | 4 |
 | Werkhammer | werkh | w | GDR | model:werkh | yes | I72 | yes: rendered from the model | none | 4 |

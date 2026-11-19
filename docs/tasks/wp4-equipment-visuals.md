@@ -329,6 +329,8 @@ New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 
 - D9 hit numbers: the 3D game shows no damage numbers, so an effective hit is shown by cool white hit sparks (`fx.sparks`) instead of a tinted number. Damage numbers would be a separate decision.
 - D9 classes that may not fit their bodies (assignment kept): Rattenmutter (zombie body, Tiere only), Bassprediger (zombie body, Maschinen only, unlike Kabelghul and Boxenkopf), Wurzler and Wurzel-Mutter (zombie bodies under roots, Pflanzen only), the uniformed bosses (zombie bodies, Menschen: the blade gets no bonus on them).
 - D8: a two-handed hammer a third shorter comes out at reach 0.9, not 0.85 (length 0.86 to 0.9 against 1.16, light1 reach 2.47).
+- 1h Neonflinte: `Pistol_Shoot` and `Pistol_Idle_Loop` hold the arms fully stretched, so the left hand cannot reach the handguard proper; it holds the rear of the handguard (model z −0.09, stretched standing grip, IK weight 1 through the shot). Werfer powers other than Nagelsturm (Brandsatz, Sperrfeuer, Molotow) still play the overhand throw with the rifle in hand; its shots are still drawn as stones (at muzzle height).
+- 1h Werkhammer grip 0.036 (Johannes: thicker) is wider than the D1 free radius 0.033; the envelope test allows it for this base only.
 
 ## Johannes, 2026-11-19 (step 1 look 1) and what follows from it
 Verdict on the sheets: good overall. Notes are Fable's; they change D1 and add D8 to D10.
@@ -465,4 +467,10 @@ Johannes, 2026-11-19: no painted item icons any more.
 - Deviations: effective hits tint the sparks (no hit numbers exist); Siegessäule shortened from the tip (1.72) so the thrust grip stays on the shaft.
 - Reused from 2D: icon proportions as before; class names German as in the spec.
 - Not verified: feel of the bonus, the reach changes and the knockback in play; icon readability on a real phone (Playtest rows).
+
+## Handover step 1h (Opus 5.5, 2026-11-19)
+- Neonflinte as an AK-shaped rifle (920 triangles, 3 draw calls), two-handed, `BASE_CLIPS` swaps only clip and clip times (`Pistol_Shoot`: shot at 0.01, kick to 0.06, measured); mount tilt −11° lays the barrel level; Nagelsturm fires from the pistol clip; shots drawn at muzzle height; `anims.glb` +13.7 KB.
+- Models: Hackmesser silvery with an edge gleam (fixed accent `gleam`, not a signature), Kiezwache shinier with a ribbon, Sichel and Werkhammer clean metal (metal atlas with a brushed half), Holzlatte wood, Rohrzange end, fork handles a third shorter (sling grip zone now −0.02 to 0.14), Spreegeist green glow, Boxenhammer sides, Mikroständer shorter (reach 0.95), Mauer- and Plattenbrecher chipped paint, fragments, cracks.
+- Review fix: `thrustTipY` uses the shown spear's `length` (no unit test covers it: the rack needs a canvas).
+- Proof: `neonfl-shot.png`, `neonfl-game.png`; icons, the three sheets and both inventory screenshots rerun after the last model change.
 
