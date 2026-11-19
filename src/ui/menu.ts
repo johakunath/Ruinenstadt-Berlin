@@ -46,9 +46,17 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   heuler: 'Treibt die anderen an. Zuerst ausschalten.',
   wurzelmutter: 'Wuchs aus dem Glashaus des Palasts.', uhrwerkgross: 'Nach dem Ansturm läuft er ab.',
   volkskoloss: 'Ein Stück Platte auf Uhrwerkbeinen.', weltzeituhr: 'Sie stand still. Bis du kamst.',
+  // M16 Charlottenburg (spec m12d).
+  scherbe: 'Dreht sich durch dich hindurch. Zerspringt und trifft alle ringsum.',
+  loge: 'Vorn aus Glas, schlägt langsam und hart. Ausweichen, dann zuschlagen.',
+  souffleur: 'Flüstert den anderen ihr Stichwort zu. Zuerst erledigen.',
+  conferencier: 'Sagt die Nummern an. Raus aus dem Spotlicht.',
+  ringvater: 'Lässt sich schützen. Erst die Leibwache.',
+  spiegelpaar: 'Nur eine ist echt: die mit der roten Schärpe.',
+  diva: 'Fächer, Prismen, drei Vorhänge. Nach dem Strahl ist sie offen.',
 };
-const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone', 'zuender', 'schild', 'heuler'];
-const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger'];
+const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone', 'zuender', 'schild', 'heuler', 'scherbe', 'loge', 'souffleur'];
+const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger', 'conferencier', 'ringvater', 'spiegelpaar', 'diva'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
 export interface MenuHost {
@@ -224,6 +232,9 @@ const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
   grenzer: 'X11', brandmeister: 'X10', rattenmutter: 'X06', spreehexe: 'X12',
   wurzelmutter: 'X13', uhrwerkgross: 'X14', volkskoloss: 'X15', weltzeituhr: 'X16',
   tuersteher: 'X17', wachdrohne: 'X18', dirigent: 'X19', bassprediger: 'X09',
+  // M16: no busts yet (Codex art); the ids are reserved, the glyphs below show meanwhile.
+  scherbe: 'E19', loge: 'E20', souffleur: 'E21', spiegelbild: 'X22',
+  conferencier: 'X20', ringvater: 'X21', spiegelpaar: 'X22', diva: 'X23',
 };
 const ELITE_PORTRAIT: Record<EliteMod, string> = { flink: 'L01', brennend: 'L02', spaltend: 'L03', gepanzert: 'L04' };
 /** Line-art fallbacks when portrait files are missing. */
@@ -243,6 +254,14 @@ const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
   uhrwerkgross: '<circle cx="11" cy="11" r="7"/><path d="M11 11V6.5M11 11l3 2M19 9h3M20.5 7.5v3M7 18l-2 3M15 18l2 3"/>',
   volkskoloss: '<rect x="6" y="3" width="12" height="12"/><path d="M9 6h2M13 6h2M9 9h2M13 9h2M9 12h6M9 15l-2 6M15 15l2 6M18 6h3v6"/>',
   weltzeituhr: '<path d="M4 9h16v5H4zM12 9V4M8 4h8M6 14l-2 7M18 14l2 7M10 14l-1 7M14 14l1 7M7 11.5h10"/>',
+  // M16 Charlottenburg: a dancer on her toes, a glass front, a mirror mask, a top hat, a ring, two mirrored dancers, a fan.
+  scherbe: '<circle cx="12" cy="4" r="2"/><path d="M12 6v6M12 8l-6-2M12 8l6-3M8 12h8l-2 4h-4zM11 16l-1 5M13 16l2 4"/>',
+  loge: '<path d="M6 4h12v11H6zM6 4l6 5 6-5M6 15l6-5 6 5M8 15v6M16 15v6"/>',
+  souffleur: '<path d="M7 5c0-2 10-2 10 0v6c0 3-2 5-5 5s-5-2-5-5zM9.5 9h1.5M13 9h1.5M10 13c1 .8 3 .8 4 0M5 18l3 2M19 18l-3 2"/>',
+  conferencier: '<path d="M8 3h8v6H8zM5 9h14M9 13h6M12 16v5M6 21l12-9"/><circle cx="18" cy="12" r="1.2"/>',
+  ringvater: '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/><path d="M9 5l3-3 3 3"/>',
+  spiegelpaar: '<path d="M12 2v20M7 5a1.5 1.5 0 1 1 0 .1M17 5a1.5 1.5 0 1 1 0 .1M7 7v6l-3 7M7 9l-3-2M17 7v6l3 7M17 9l3-2"/>',
+  diva: '<path d="M12 21L4 9M12 21l-4-13M12 21V7M12 21l4-13M12 21l8-12M4 9c2-2 14-2 16 0"/><circle cx="12" cy="4" r="1.5"/>',
 };
 /** 2D `kImg`: portrait, greyed (`dim`) or a black silhouette with "?" (`sil`). */
 const kimg = (inner: string, state: 'on' | 'dim' | 'sil', ring = '', cls = ''): string => state === 'sil'

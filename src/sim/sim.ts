@@ -78,7 +78,8 @@ export function createSim(opts: SimOptions = {}): Sim {
     drops: [],
     breakables: createBreakables(level.breakables),
     lootWaves: 0,
-    lootCtx: { district: level.district, ...(level.flavor ? { flavor: level.flavor } : {}), luck: stats.luck, wave: 1, itemId: 0 },
+    // M16: `revue` has no loot table yet (render only), so the loot sees no flavor there.
+    lootCtx: { district: level.district, ...(level.flavor && level.flavor !== 'revue' ? { flavor: level.flavor } : {}), luck: stats.luck, wave: 1, itemId: 0 },
     bagFullT: 0,
     kills: 0,
     spawnT: opts.empty || level.camp || opts.spawn?.length || (level.expedition && !opts.stress) ? Infinity : 1.5,
@@ -86,6 +87,7 @@ export function createSim(opts: SimOptions = {}): Sim {
     gateT: level.gates.map(() => Infinity),
     barrier: { state: 'idle', t: 0, src: 0 },
     wet: !!level.wet,
+    shards: !!level.shards,
   };
   sim.lootCtx.itemId = Math.max(0, ...[...sim.inventory.bag, ...(sim.inventory.camp?.stash ?? []), ...Object.values(equipment)].map((i) => i?.id ?? 0));
   sim.player.hp = stats.maxHp;

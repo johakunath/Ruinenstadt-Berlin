@@ -215,9 +215,12 @@ export interface MapDef {
   seed: number;
   /** L2: district index (Köpenick 0) and item name flavor for the loot of this map. */
   district?: number;
-  flavor?: 'neon' | 'gdr';
+  /** M16 `revue` (Charlottenburg): render only for now, the Zeitlose wear 1920s dress; no loot table yet. */
+  flavor?: 'neon' | 'gdr' | 'revue';
   /** M12c rain rule (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
   wet?: boolean;
+  /** M16 district rule „Glas splittert“: glass bodies burst when they die (`THREAT.shards`). */
+  shards?: boolean;
   /** M19 U-Bahn tunnel: only these tubes are walkable, everything else is rock (no lots, no streets). M20: line, gratings, collapse, flood, trader, generator, signs. */
   tunnel?: TunnelDef;
   /** M20 walkable camp: floor polygons, walls, stations and rings (`src/data/camp-map.ts`). */
@@ -1875,6 +1878,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   level.camp = !!m.camp;
   if (m.flavor) level.flavor = m.flavor;
   if (m.wet) level.wet = true;
+  if (m.shards) level.shards = true;
   level.hiddenSpots = m.hiddenSpots ?? [];
   level.noSpawn = (m.noSpawn ?? []).map((p) => p.map(([x, z]) => ({ x, z })));
   level.barriers = m.landmarks.filter((l) => l.kind === 'tor').flatMap(torBarriers);

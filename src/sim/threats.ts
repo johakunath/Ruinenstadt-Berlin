@@ -5,17 +5,20 @@
 // M15: root zones hold the hero (`Player.root`), hour sectors of a ring (the Weltzeituhr's Zeitzonen),
 // and the minute hand: a line that sweeps round its centre and hurts unless the hero rolls through.
 // WP5: blasts (`Zone.blast`, the Zünder) also hit the enemies inside, through `strike`.
+// M16: glass bursts (`Zone.burst`, the rule „Glas splittert“) hit the hero and every enemy inside; line zones
+// (`Zone.line`, the Diva's prism ray) stay active for `act` s; the Conférencier's spotlight throws applause.
 import { PLAYER } from '../data/combat';
 import { BOSS, THREAT } from '../data/enemies';
 import { colliderDistance } from './collide';
-import { blastHit, hurtPlayer, killEnemy } from './combat';
+import { blastHit, hurtPlayer, killEnemy, shardHit } from './combat';
 import { angleDiff, angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
 
 export type SpecialKind = 'spit' | 'fan' | 'pounce' | 'lunge' | 'dive' | 'slam' | 'stomp' | 'flame' | 'charge' | 'summon' | 'ring' | 'roar' | 'barrage' | 'tail' | 'bossSlam' | 'volley' | 'molotov'
   | 'leap' | 'bass' | 'shove' | 'grab' | 'land' | 'beat'
   | 'roots' | 'seeds' | 'rootRing' | 'key' | 'slabs' | 'sectors' | 'hand'
-  | 'fuse' | 'howl';
+  | 'fuse' | 'howl'
+  | 'pirouette' | 'faust' | 'prism' | 'swap';
 
 /** A running special: `wind` seconds of telegraph, then `go` seconds of action, then `open` seconds of standing open. */
 export interface Special {
@@ -33,9 +36,12 @@ export interface Special {
   hit: boolean;
   /** M12c: started from `Enemy.queue` (the second shove in rage does not queue a third). */
   queued?: boolean;
+  /** M16: a rush's own hit (× the body's hit) and floor (the Stockstoß, the Ringschlag, the Doppelpirouette). */
+  mul?: number;
+  floor?: number;
 }
 
-export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail' | 'acid' | 'shove' | 'land' | 'root' | 'slab' | 'hour';
+export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail' | 'acid' | 'shove' | 'land' | 'root' | 'slab' | 'hour' | 'shard' | 'faust' | 'prism' | 'applause';
 /** A marked circle: fills for `max` seconds, then hits the hero inside it. */
 export interface Zone {
   x: number; z: number; r: number; t: number; max: number; damage: number; floor: number; kind: ZoneKind; src: number;
@@ -51,8 +57,16 @@ export interface Zone {
   sector?: { r0: number; a: number; half: number };
   /** WP5 Zünder blast: also hits every enemy inside at `share` of `damage`, with a knock of `knock` 2D px. */
   blast?: { share: number; knock: number };
+  /** M16 glass burst: also hits every other enemy inside for this much (a boss at most `THREAT.shards.bossCap` of its life). */
+  burst?: number;
+  /** M16 line zone: a strip through (x, z) along (dx, dz), `half` m each way, `width` wide (`r` is unused then). */
+  line?: { dx: number; dz: number; half: number; width: number };
+  /** M16: once marked, it stays active this many seconds and hits once whoever is inside (the prism ray); `on` from then. */
+  act?: number;
+  on?: boolean;
 }
-export interface EnemyShot { x: number; z: number; px: number; pz: number; vx: number; vz: number; r: number; damage: number; life: number; boss: boolean }
+/** `src`: the enemy that threw it (M16: the Diva's blades fall when a gown tier breaks). */
+export interface EnemyShot { x: number; z: number; px: number; pz: number; vx: number; vz: number; r: number; damage: number; life: number; boss: boolean; src?: number }
 export interface Hazard { x: number; z: number; r: number; t: number; max: number; damage: number; tick: number; kind: 'fire' | 'acid' }
 /** An expanding ring; `r` may start negative (a second ring that follows the first). */
 export interface Wave { x: number; z: number; r: number; max: number; speed: number; damage: number; floor: number; width: number; hit: boolean }
@@ -73,8 +87,17 @@ export interface Sweep { x: number; z: number; r: number; r0: number; a: number;
 export interface Threats { zones: Zone[]; shots: EnemyShot[]; hazards: Hazard[]; waves: Wave[]; spots: Spot[]; sweeps: Sweep[] }
 export const createThreats = (): Threats => ({ zones: [], shots: [], hazards: [], waves: [], spots: [], sweeps: [] });
 
-/** The hero (center `x`, `z`) is inside zone `z` (a circle, or its hour sector). */
+/** Distance of (x, z) from a line zone's middle line (Infinity past its ends). */
+export function lineOffset(z: Zone, x: number, zz: number): number {
+  const L = z.line!;
+  const ax = x - z.x, az = zz - z.z;
+  if (Math.abs(ax * L.dx + az * L.dz) > L.half) return Infinity;
+  return Math.abs(ax * L.dz - az * L.dx);
+}
+
+/** The hero (center `x`, `z`) is inside zone `z` (a circle, its hour sector, or a line strip). */
 export function inZone(z: Zone, x: number, zz: number, pad: number): boolean {
+  if (z.line) return lineOffset(z, x, zz) < z.line.width / 2 + pad;
   const d = Math.hypot(x - z.x, zz - z.z);
   if (d >= z.r + pad) return false;
   if (!z.sector) return true;
@@ -103,6 +126,7 @@ export function threatHit(sim: Sim, src: Enemy | null, raw: number, floor: numbe
 /** German name of what a threat is, with the enemy that made it when it still lives (death summary). */
 const THREAT_NAME: Record<ZoneKind | 'shot' | 'fire' | 'acid' | 'wave' | 'sweep' | 'barrier', string> = {
   slam: 'Stampfer', flame: 'Flammen', bomb: 'Sprengsatz', tail: 'Schwanzhieb', acid: 'Säure', shove: 'Stoß', land: 'Landung', root: 'Wurzeln', slab: 'Platte', hour: 'Stundenschlag',
+  shard: 'Scherben', faust: 'Faustschlag', prism: 'Prismenstrahl', applause: 'Applaus',
   shot: 'Geschoss', fire: 'Feuer', wave: 'Druckwelle', sweep: 'Zeiger', barrier: 'Neonschranke',
 };
 export function threatBy(sim: Sim, what: keyof typeof THREAT_NAME, src?: number): string {
@@ -119,7 +143,21 @@ export function fireShot(sim: Sim, e: Enemy, angle: number, speed: number, damag
   const start = e.def.radius * 0.6;
   const x = e.x + Math.sin(angle) * start;
   const z = e.z + Math.cos(angle) * start;
-  sim.threats.shots.push({ x, z, px: x, pz: z, vx: Math.sin(angle) * speed, vz: Math.cos(angle) * speed, r: radius, damage, life, boss });
+  sim.threats.shots.push({ x, z, px: x, pz: z, vx: Math.sin(angle) * speed, vz: Math.cos(angle) * speed, r: radius, damage, life, boss, src: e.id });
+}
+
+/** M16 Applaus: the Conférencier's marked circles on and round a locked spotlight. */
+export function applause(sim: Sim, e: Enemy, x: number, z: number): void {
+  const C = BOSS.conferencier;
+  const raw = e.def.damage * e.dmgMul * C.applauseDamage;
+  const a0 = sim.rng.range(0, Math.PI * 2);
+  for (let i = 0; i < C.applause; i++) {
+    const t = C.applauseWind + i * C.applauseStep;
+    const d = i ? sim.rng.range(C.applauseRing[0], C.applauseRing[1]) : 0;
+    const a = a0 + ((i - 1) * Math.PI * 2) / (C.applause - 1);
+    addZone(sim, { x: x + Math.sin(a) * d, z: z + Math.cos(a) * d, r: C.applauseRadius, t, max: t, damage: raw, floor: C.applauseFloor, kind: 'applause', src: e.id, free: true });
+  }
+  sim.events.push({ type: 'enemySpecial', id: e.id, kind: 'barrage', phase: 'go', x, z });
 }
 
 export function addHazard(sim: Sim, h: Omit<Hazard, 'tick' | 'max'>): void {
@@ -162,10 +200,23 @@ export function updateThreats(sim: Sim): void {
   const L = sim.level;
 
   const blasts: Zone[] = [];
+  const bursts: Zone[] = [];
   for (let i = T.zones.length - 1; i >= 0; i--) {
     const z = T.zones[i]!;
     z.t -= DT;
     if (z.t > 0) continue;
+    // M16 line zone: marked, then active for `act` s (one hit on whoever is inside), then gone.
+    if (z.act) {
+      if (!z.on) {
+        z.on = true;
+        sim.events.push({ type: 'zoneHit', kind: z.kind, x: z.x, z: z.z, r: z.line ? z.line.width : z.r, hit: false });
+      }
+      const a = z.line ? { dx: z.line.dz, dz: -z.line.dx } : away(sim, z.x, z.z);
+      if (z.line) { const side = (p.x - z.x) * z.line.dz - (p.z - z.z) * z.line.dx; if (side < 0) { a.dx = -a.dx; a.dz = -a.dz; } }
+      const hit = inZone(z, p.x, p.z, PLAYER.radius * 0.5) && threatHit(sim, null, z.damage, z.floor, a.dx, a.dz, threatBy(sim, z.kind, z.src));
+      if (hit || z.t <= -z.act) T.zones.splice(i, 1);
+      continue;
+    }
     T.zones.splice(i, 1);
     // Interrupted or killed during the wind-up: the marked attack never lands.
     if (!z.free && !sim.enemies.some((e) => e.id === z.src && e.state === 'special')) continue;
@@ -173,6 +224,7 @@ export function updateThreats(sim: Sim): void {
     if (z.leave) addHazard(sim, { x: z.x, z: z.z, ...z.leave });
     // A blast throws the bodies around it too (after this loop: a Zünder killed by it changes the zone list).
     // A Zünder goes with its own blast in the same step, so no other blast can kill it first and add a second one.
+    if (z.burst) bursts.push(z);
     if (z.blast) {
       const src = sim.enemies.find((e) => e.id === z.src && e.state === 'special' && e.sp?.kind === 'fuse');
       if (src) {
@@ -206,6 +258,11 @@ export function updateThreats(sim: Sim): void {
   for (const z of blasts) for (const e of sim.enemies) {
     if (e.state === 'dead' || e.id === z.src || Math.hypot(e.x - z.x, e.z - z.z) >= z.r + e.def.radius) continue;
     blastHit(sim, e, z.damage * z.blast!.share, z, z.blast!.knock);
+  }
+  // M16 glass bursts: every other body inside takes the shards; one killed by them bursts in turn (a chain, 0.5 s a link).
+  for (const z of bursts) for (const e of sim.enemies) {
+    if (e.state === 'dead' || e.mirrorOf !== undefined || Math.hypot(e.x - z.x, e.z - z.z) >= z.r + e.def.radius) continue;
+    shardHit(sim, e, z.burst!, z);
   }
 
   for (let i = T.shots.length - 1; i >= 0; i--) {
@@ -312,7 +369,11 @@ function updateSpots(sim: Sim): void {
       s.flash -= DT;
       if (s.flash <= 0) {
         s.cool = W.spotCool;
-        if (p.state !== 'dead') laserVolley(sim, e);
+        // M16: the Conférencier's spotlight throws applause on itself instead of a laser volley.
+        if (p.state !== 'dead') {
+          if (e.kind === 'conferencier') applause(sim, e, s.x, s.z);
+          else laserVolley(sim, e);
+        }
       }
       continue;
     }

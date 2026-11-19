@@ -77,6 +77,9 @@ const TINTS: Record<EnemyKind, number[]> = {
   wurzelmutter: [0x8e9a6a], uhrwerkgross: [0xffffff], volkskoloss: [0xffffff], weltzeituhr: [0xffffff],
   // WP5 (busts E07, E06, E08): grey-brown ghouls.
   zuender: [0xb8b098, 0xaaa88e], schild: [0xa4aaa0], heuler: [0xbca6a0, 0xb4a0a6],
+  // M16 Charlottenburg 1920 (board: porcelain pale skin under violet light; the glass parts are gear).
+  scherbe: [0xe6dce4, 0xdcd4e0], loge: [0x8c8494], souffleur: [0xd8d0dc],
+  conferencier: [0xd8cec4], ringvater: [0xb8a494], spiegelpaar: [0xecdcdc], spiegelbild: [0xc8d8ec], diva: [0xf0e4e4],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
