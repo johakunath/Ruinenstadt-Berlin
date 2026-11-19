@@ -161,5 +161,36 @@ describe('cloud save', () => {
     expect(r).toEqual({ saves: {} });
     expect(await new CloudSave(true, deps(srv)).join('ZZZZ2222')).toEqual({ error: 'unknown' });
   });
+  it('M6b: a held remote save (run in progress) keeps no server time, so the next load still adopts it', async () => {
+    const srv = server();
+    const a = new CloudSave(true, deps(srv));
+    a.enable(); a.queue(save(200), 1, 0); await tick();
+    const mem = { v: JSON.stringify({ c: a.code }) };
+    const b = new CloudSave(true, deps(srv, mem));
+    const stored: number[] = [];
+    await b.start({ 1: save(100) }, (_s, r) => { stored.push(JSON.parse(mem.v!).b?.[1] ?? 0); stored.push(r.t); return false; });
+    expect(b.slotState(1)).toBe('conflict');
+    expect(stored).toEqual([0, 200]);
+    const next = new CloudSave(true, deps(srv, mem));
+    expect((await next.start({ 1: save(100) }))[1]?.t).toBe(200);
+  });
+  it('M6b: a rename made offline is sent on the next start and survives an edit from another device', async () => {
+    const srv = server();
+    const a = new CloudSave(true, deps(srv));
+    a.enable(); await a.rename('Alt');
+    const mem = { v: JSON.stringify({ c: a.code }) };
+    const off = new CloudSave(true, { ...deps(srv, mem), fetch: async () => { throw new Error('offline'); } });
+    await off.start({});
+    await off.renameSlot(2, 'Frisch');
+    expect(JSON.parse(mem.v!).md).toEqual({ s: { 1: 'Frisch' } });
+    await a.rename('Johannes');
+    const back = new CloudSave(true, deps(srv, mem));
+    await back.start({}); await tick();
+    expect([back.name, back.slotNames[1]]).toEqual(['Johannes', 'Frisch']);
+    expect(JSON.parse(mem.v!).md).toBeUndefined();
+    const c = new CloudSave(true, deps(srv));
+    await c.join(a.code!);
+    expect([c.name, c.slotNames[1]]).toEqual(['Johannes', 'Frisch']);
+  });
 });
 const tick = () => new Promise((r) => setTimeout(r, 5));

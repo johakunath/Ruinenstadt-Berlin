@@ -12,9 +12,14 @@ const SLOT_KEY = 'ruinenstadt-berlin.slot';
 export const isSlot = (v: unknown): v is Slot => v === 1 || v === 2 || v === 3;
 export const slotKey = (slot: Slot): string => (slot === 1 ? KEY : `${KEY}.${slot}`);
 
+/** Read once per page: another tab that switches slots must not move this tab's saves (Codex review). */
+let pageSlot: Slot | null = null;
 export function activeSlot(): Slot {
-  try { const n = Number(localStorage.getItem(SLOT_KEY)); return isSlot(n) ? n : 1; } catch { return 1; }
+  if (pageSlot) return pageSlot;
+  try { const n = Number(localStorage.getItem(SLOT_KEY)); pageSlot = isSlot(n) ? n : 1; } catch { pageSlot = 1; }
+  return pageSlot;
 }
+/** Stores the device's slot for the next page load; callers reload right after. */
 export function setActiveSlot(slot: Slot): void {
   try { localStorage.setItem(SLOT_KEY, String(slot)); } catch { /* stays on slot 1 */ }
 }

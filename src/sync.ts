@@ -41,6 +41,12 @@ export const slotCode = (acct: string, slot: Slot): string => (slot === 1 ? acct
 export const metaCode = (acct: string): string => derive(`${acct}:konto`);
 
 interface Meta { k: 'konto'; v: 1; n: string; s: string[] }
+function withEdit(m: Meta, e: MetaEdit | null): Meta {
+  if (!e) return m;
+  const s = [...m.s];
+  for (const [i, v] of Object.entries(e.s ?? {})) if (+i >= 0 && +i < s.length) s[+i] = cleanName(String(v));
+  return { ...m, n: e.n !== undefined ? cleanName(e.n) : m.n, s };
+}
 function parseMeta(text: string | null | undefined): Meta | null {
   try {
     const m = JSON.parse(text ?? 'null') as Partial<Meta> | null;
@@ -49,7 +55,9 @@ function parseMeta(text: string | null | undefined): Meta | null {
   } catch { return null; }
 }
 
-interface Stored { c?: string; n?: string; sn?: string[]; b?: number | Partial<Record<Slot, number>>; mb?: number; s?: number; off?: boolean }
+/** Name edits not yet confirmed by the server (sent again on the next start). */
+interface MetaEdit { n?: string; s?: Record<number, string> }
+interface Stored { c?: string; n?: string; sn?: string[]; b?: number | Partial<Record<Slot, number>>; mb?: number; md?: MetaEdit; s?: number; off?: boolean }
 export interface SyncDeps {
   fetch: (url: string, init: { method: 'POST'; body: string; signal?: AbortSignal }) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
   store: { get(): string | null; set(v: string | null): void };
@@ -81,7 +89,12 @@ class Channel {
   set(s: SyncState): void { this.state = s; this.cs.changed(); }
   reset(): void { this.base = 0; this.pending = null; clearTimeout(this.timer); this.busy = false; }
 
-  async pull(local: SaveV1 | null): Promise<SaveV1 | null> {
+  /**
+   * `take` stores a newer remote save locally and returns true, or returns false to hold it (a run is
+   * being played). The server time is stored only after `take` (Codex review: a reload in between must
+   * not leave the old local save next to the acknowledged remote time).
+   */
+  async pull(local: SaveV1 | null, take: (remote: SaveV1) => boolean): Promise<SaveV1 | null> {
     const c = this.cs.code;
     if (!c || this.busy) return null;
     this.busy = true;
@@ -91,7 +104,11 @@ class Channel {
     if (!r?.ok) { this.set('slow'); return null; }
     if (r.s && (r.t !== this.base || !local)) {
       const remote = parseSave(r.s);
-      if (remote && (!local || remote.t > local.t)) { this.base = r.t ?? 0; this.cs.keep(); this.set('on'); return remote; }
+      if (remote && (!local || remote.t > local.t)) {
+        if (take(remote)) { this.base = r.t ?? 0; this.cs.keep(); this.set('on'); }
+        else { this.base = 0; this.cs.keep(); this.set('conflict'); }
+        return remote;
+      }
       // Remote unusable or older: the local save replaces it (the old remote stays in the sheet's history only).
       this.base = r.t ?? 0; this.cs.keep();
     }
@@ -141,6 +158,7 @@ export class CloudSave {
   onChange: () => void = () => {};
   private readonly ch: Record<Slot, Channel>;
   private metaBase = 0;
+  private metaEdit: MetaEdit | null = null;
   private disabled = false;
 
   /** `allowed` false (localhost, automated browsers, debug starts): nothing is read, sent or stored. */
@@ -158,6 +176,7 @@ export class CloudSave {
         const b = typeof j.b === 'number' ? { 1: j.b } : j.b ?? {};
         for (const s of SLOTS) { this.ch[s].base = Number(b[s]) || 0; this.ch[s].state = 'sync'; }
         this.metaBase = Number(j.mb) || 0;
+        this.metaEdit = j.md && typeof j.md === 'object' ? j.md : null;
         this.saved = Number(j.s) || 0;
       }
     } catch { /* damaged entry: start clean */ }
@@ -173,7 +192,7 @@ export class CloudSave {
   keep(): void {
     if (!this.allowed) return;
     const st: Stored = this.code
-      ? { c: this.code, n: this.name, sn: this.slotNames, b: { 1: this.ch[1].base, 2: this.ch[2].base, 3: this.ch[3].base }, mb: this.metaBase, s: this.saved }
+      ? { c: this.code, n: this.name, sn: this.slotNames, b: { 1: this.ch[1].base, 2: this.ch[2].base, 3: this.ch[3].base }, mb: this.metaBase, ...(this.metaEdit ? { md: this.metaEdit } : {}), s: this.saved }
       : { off: true };
     this.deps.store.set(JSON.stringify(st));
   }
@@ -194,7 +213,7 @@ export class CloudSave {
       const r = this.deps.random(8);
       this.code = [...r].map((x) => ALPHABET[x % ALPHABET.length]).join('');
       for (const s of SLOTS) { this.ch[s].reset(); this.ch[s].state = 'sync'; }
-      this.metaBase = 0; this.saved = 0; this.disabled = false;
+      this.metaBase = 0; this.metaEdit = null; this.saved = 0; this.disabled = false;
       this.keep();
       this.changed();
     }
@@ -203,7 +222,7 @@ export class CloudSave {
   /** First run on a public game: switch on unless the player turned it off before. */
   autoStart(): void { if (this.allowed && !this.code && !this.disabled) this.enable(); }
   disable(): void {
-    this.code = null; this.metaBase = 0; this.saved = 0; this.name = ''; this.slotNames = SLOTS.map(() => '');
+    this.code = null; this.metaBase = 0; this.metaEdit = null; this.saved = 0; this.name = ''; this.slotNames = SLOTS.map(() => '');
     for (const s of SLOTS) { this.ch[s].reset(); this.ch[s].state = 'off'; }
     this.disabled = true;
     this.keep();
@@ -215,9 +234,9 @@ export class CloudSave {
    * device wrote since this one last synced, and it is newer than the local copy). Pushes local saves
    * the server has nothing newer for.
    */
-  async start(locals: Partial<Record<Slot, SaveV1 | null>>): Promise<Partial<Record<Slot, SaveV1>>> {
+  async start(locals: Partial<Record<Slot, SaveV1 | null>>, take: (slot: Slot, remote: SaveV1) => boolean = () => true): Promise<Partial<Record<Slot, SaveV1>>> {
     if (!this.allowed || !this.code) return {};
-    const [, ...got] = await Promise.all([this.pullMeta(), ...SLOTS.map((s) => this.ch[s].pull(locals[s] ?? null))]);
+    const [, ...got] = await Promise.all([this.pullMeta(), ...SLOTS.map((s) => this.ch[s].pull(locals[s] ?? null, (r) => take(s, r)))]);
     const out: Partial<Record<Slot, SaveV1>> = {};
     SLOTS.forEach((s, i) => { const g = got[i]; if (g) out[s] = g; });
     return out;
@@ -230,8 +249,8 @@ export class CloudSave {
   hold(slot: Slot = this.active): void { this.ch[slot].base = 0; this.keep(); this.ch[slot].set('conflict'); }
 
   /** Account name, shown on every device with this code. */
-  rename(name: string): Promise<void> { const n = cleanName(name); return this.pushMeta((m) => { m.n = n; }); }
-  renameSlot(slot: Slot, name: string): Promise<void> { const n = cleanName(name); return this.pushMeta((m) => { m.s[slot - 1] = n; }); }
+  rename(name: string): Promise<void> { return this.pushMeta({ n: cleanName(name) }); }
+  renameSlot(slot: Slot, name: string): Promise<void> { return this.pushMeta({ s: { [slot - 1]: cleanName(name) } }); }
 
   private meta(): Meta { return { k: 'konto', v: 1, n: this.name, s: [...this.slotNames] }; }
   private adoptMeta(m: Meta, t: number): void { this.name = m.n; this.slotNames = m.s; this.metaBase = t; this.keep(); this.changed(); }
@@ -241,27 +260,30 @@ export class CloudSave {
     const r = await this.call({ a: 'get', c: metaCode(c) });
     if (this.code !== c || !r?.ok) return;
     const m = parseMeta(r.s);
-    if (m && r.t !== this.metaBase) this.adoptMeta(m, r.t ?? 0);
-    // Named on this device while the record was missing or unreachable: send it.
-    else if (!r.s && (this.name || this.slotNames.some(Boolean))) void this.pushMeta(() => {});
+    if (m && r.t !== this.metaBase) this.adoptMeta(withEdit(m, this.metaEdit), r.t ?? 0);
+    // A rename that never reached the server, or names given while the record was missing: send them.
+    if (this.metaEdit || (!r.s && (this.name || this.slotNames.some(Boolean)))) void this.pushMeta({});
   }
-  /** Applies a change locally at once, then writes the record; a newer remote record is merged first. */
-  private async pushMeta(change: (m: Meta) => void): Promise<void> {
+  /**
+   * Applies an edit locally at once, keeps it as pending, then writes the record; a newer remote record
+   * is merged first. The pending edit is cleared only once the server confirmed it (Codex review).
+   */
+  private async pushMeta(edit: MetaEdit): Promise<void> {
     const c = this.code;
     if (!this.allowed || !c) return;
-    let m = this.meta();
-    change(m);
+    this.metaEdit = { n: edit.n ?? this.metaEdit?.n, s: { ...this.metaEdit?.s, ...edit.s } };
+    if (this.metaEdit.n === undefined) delete this.metaEdit.n;
+    let m = withEdit(this.meta(), this.metaEdit);
     this.name = m.n; this.slotNames = m.s; this.keep(); this.changed();
     for (let tries = 0; tries < 2; tries++) {
       const t = Math.max(this.deps.now(), this.metaBase + 1);
       const r = await this.call({ a: 'put', c: metaCode(c), s: JSON.stringify(m), t, b: this.metaBase });
       if (this.code !== c) return;
-      if (r?.ok) { this.metaBase = r.t ?? t; this.keep(); return; }
+      if (r?.ok) { this.metaBase = r.t ?? t; this.metaEdit = null; this.keep(); return; }
       if (!r?.newer) return;
       const g = await this.call({ a: 'get', c: metaCode(c) });
       if (this.code !== c || !g?.ok) return;
-      m = parseMeta(g.s) ?? this.meta();
-      change(m);
+      m = withEdit(parseMeta(g.s) ?? this.meta(), this.metaEdit);
       this.adoptMeta(m, g.t ?? 0);
     }
   }
@@ -276,7 +298,7 @@ export class CloudSave {
     const saves: Partial<Record<Slot, SaveV1>> = {};
     SLOTS.forEach((s, i) => { const v = parseSave(rs[i]!.s ?? null); if (v) saves[s] = v; });
     if (!m && !Object.keys(saves).length) return { error: rs.some((r) => r!.s) ? 'damaged' : 'unknown' };
-    this.code = c; this.saved = 0; this.disabled = false;
+    this.code = c; this.saved = 0; this.disabled = false; this.metaEdit = null;
     SLOTS.forEach((s, i) => { this.ch[s].reset(); this.ch[s].base = rs[i]!.t ?? 0; this.ch[s].state = 'on'; });
     if (m) this.adoptMeta(m, meta.t ?? 0); else { this.name = ''; this.slotNames = SLOTS.map(() => ''); this.metaBase = 0; this.keep(); this.changed(); }
     return { saves };

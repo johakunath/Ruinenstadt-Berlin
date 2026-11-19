@@ -39,17 +39,16 @@ export function initAccount(onTitle: () => boolean): void {
   changed();
   const locals: Partial<Record<Slot, SaveV1 | null>> = {};
   for (const s of SLOTS) locals[s] = loadSave(s);
-  void cloud.start(locals).then((got) => {
-    let reload = false;
-    for (const s of SLOTS) {
-      const r = got[s];
-      if (!r) continue;
-      if (s !== cloud.active) adopt(r, s);
-      else if (onTitle()) { adopt(r, s); reload = true; }
-      else cloud.hold(s);
-    }
-    if (reload) location.reload(); else changed();
-  });
+  let reload = false;
+  // Each newer remote save is stored as soon as its request returns, before its server time is (Codex review).
+  const take = (s: Slot, r: SaveV1): boolean => {
+    if (s !== cloud.active) { adopt(r, s); return true; }
+    if (!onTitle()) return false;
+    adopt(r, s);
+    reload = true;
+    return true;
+  };
+  void cloud.start(locals, take).then(() => { if (reload) location.reload(); else changed(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) void cloud.flush(); });
 }
 
