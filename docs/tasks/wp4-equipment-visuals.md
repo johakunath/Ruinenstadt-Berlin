@@ -1,6 +1,6 @@
 # WP4 Hero, weapons and loot visuals [Claude · Fable high (spec) · Opus high (build) · Codex (icons)]
 
-Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
+Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Step 2 looks: mockups shown 2026-11-19, waiting for Johannes' pick (› Step 2 looks). Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
 
 ## Goal
 Every weapon base, armor, hat, glove, boot, talisman, ring and implant shows on the hero, legendaries and sets have their own look, ground loot shows what it is, and daggers come in as dual wield. Draw calls on the hero go down, not up.
@@ -241,7 +241,7 @@ Code side of the icons [Opus, step 2]: `itemIcon` looks up `base:set` before `ba
 | 2b | Hats (9) | Sheet `looks-head.png`, front, side, back |
 | 2c | Armor (12 bases, Kettenhemd, 2 set variants): palettes and parts | Sheet `looks-armor.png`; strips of sprint, hammer combo and roll with `panzer` and `ritter` show no plate through the body |
 | 2d | Gloves (6), boots (6) | Sheet |
-| 2e | Talisman (9 + 2 set), implant (7), ring (8), in this order | Sheet at doll size and game camera; G5 |
+| 2e | Dropped (2026-11-19): talisman, ring and implant keep their painted icons, no 3D | – |
 
 Name the chroma classes after a look at a render (which of `a_mantel`'s three is coat, trousers, strap). Colours from 2D; start values.
 
@@ -272,6 +272,27 @@ Name the chroma classes after a look at a render (which of `a_mantel`'s three is
 | Talisman | `kiesel` pebble · `stueck` Wall chunk with a paint patch · `feder` black feather · `kette` loop of bike chain · `beutel` herb pouch · `abzeichen` round badge (kiez: blue) · `herz` teal heart, glow · `auge` cyan eye, glow · `wappen` shield crest; `kiesel` + spree: green pebble |
 | Ring | `siegel` gold, red seal · `totenk` silver skull · `mutter` steel hex nut · `draht` copper wire, two turns · `ehe` plain gold · `kupfer` copper · `weltuhr` dial disc, glow · `spreering` green |
 | Implantat | `nauge` lens over the left eye · `zchip` chip at the temple · `karm` forearm bracer with cables · `reflex` coupler on the upper arm · `bherz` pump on the chest · `npumpe` unit on the back with a tube · `bassarm` speaker-cone bracer, magenta glow |
+
+### Step 2 looks: mockup and decisions (Johannes, 2026-11-19) [Claude · Opus high]
+Brief (Johannes): redo every wearable item that shows in 3D; at least one look per district in map order (Köpenick, Xhain, Alexanderplatz, Mitte), sets more elaborate, brighter and matching, legendaries their own look; simple items may be a palette on the existing pieces, hats, belts and some boots get own geometry; icons rendered from the 3D models for everything visible; one mockup per item, he then picks what to redo.
+
+Mockup: `docs/mockups/wp4-clothes/` (`koepenick`, `xhain`, `alex-mitte`, `sets`, `legendary` as SVG and WebP; rebuild with `node docs/mockups/wp4-clothes/build.mjs`). `items.mjs` holds every look's colours, parts and route: these are the start values for the build, and they replace the colour table above where they differ. 36 items plus 4 district and 3 set combinations.
+
+Decided in this session (Opus 5.5; open points under Questions):
+
+| Topic | Decision |
+|---|---|
+| Belt, trousers | Not slots (2D has none either). Each Körper item sets its trouser colour and brings its own belt part (tool belt, studs, fire hook belt, duty belt, sash, rat tails, LED belt). A new slot would touch save, loot, doll, stats and bot |
+| Gloves | Stay in scope: palette plus small parts, cheap |
+| Talisman, ring, implant | No 3D; the painted icons stay (Johannes: some items need no model). Answers G5; step 2e is dropped. Legendary talismans and rings can still get a proc flash in step 5 |
+| District grouping | By theme, map order. Köpenick: Arbeitsmantel, Schutzweste, Bauhelm, Schiebermütze, Arbeits- and Schweißerhandschuhe, Arbeits- and Gummistiefel. Xhain: Lederjacke, Feuerwehrjacke, BVG-Uniform, Wollmütze, Gasmaske, Boxbandagen, Turnschuhe. Alexanderplatz: the GDR bases. Mitte: the neon bases. Drops are unchanged (see Questions) |
+| D2 mechanism 4: cut | A jacket is `a_mantel` without the skirt, cut in code at load (one more index range, 0 draw calls). Checked in `hero.glb`: skirt 228 vertices, 324 triangles (coat colour, below 1.09 m, dominant joint `thigh_*`, `coat_b*` or `pelvis`); the torso shell ends at 1.04 m under the belt; the trousers are a full shell under the skirt (0.052 to 1.076 m). Skirt rows at 0.98, 0.88, 0.79, 0.69, 0.59, 0.50 m; a mid-length coat cuts on a row (Feuerwehrjacke 0.79, Kettenhemd 0.69). Blender fallbacks B2, B3 in `docs/blender-pipeline.md` |
+| CC0 pieces | Quaternius "Modular Character Outfits - Fantasy" Standard (CC0, free, itch.io slug `modular-character-outfits-fantasy`, same 65-joint skeleton as UBC and the hero): only Peasant and Ranger. Used: Ranger boots for the Stiefel des Spreegeists, recoloured, simplified in Node from 9,172 to ≤ 2,000 triangles (`@gltf-transform/functions` simplify), replacing `f_stiefel`. Not used: hood, pauldrons, bracers, belts (code parts match the weapon style and cost less). UBC Standard itself has no clothing. poly.pizza and kenney.nl are blocked by Cloudflare from the cloud |
+| Blender | Only the Regenponcho shell (B1). Everything else is code or Node |
+| Codex | T9 in `docs/asset-pipeline.md`: tweed, denim, knit, straw, chainmail, patchwork, two decals; fur from T8 |
+| Icons | Every Körper, Kopf, Hände and Füße item gets a rendered icon (`tools/item-icons.mjs`): the piece on a hidden body, hats and boots alone |
+
+Budget: belts, hats and plates go into the gear mesh (2,500 triangles, D3). The heaviest look is the Rüstung des Zitadellenritters (chest plate, gorget, three-lame pauldrons, vambraces, tassets): count it first. Cut and Quaternius boots replace a piece, so 0 extra draw calls.
 
 ### Step 3 Pickups (P10) [Claude · Opus high]
 1. Mockup of G2 (SVG, three variants, example drops of each rarity) to the chat; Johannes chooses.
@@ -326,6 +347,9 @@ New skinned clothing meshes or any `hero.glb` rebuild (G6), icons rendered from 
 
 ## Questions
 - Gates G2 to G6 are listed above.
+- Step 2 looks (Johannes): which mockups to redo. Recommendation for the rest: build as drawn.
+- Step 2 looks: Köpenick and Xhain share one drop pool today (`ARMOR_NAMES` and the other normal name lists), so a Xhain look can drop in Köpenick. Option: a Xhain flavour that rolls the Xhain bases at 40 % there, like `gdr` and `neon` (small sim change, golden values in `src/sim/items.test.ts`). Recommendation: leave the pool until the Bedrohung or loot work (I9), the looks read by theme anyway.
+- Step 2 looks: Regenponcho as a Blender shell (B1) or as the coat with teal palette and glow bands. Recommendation: B1, it is the only Mitte armor with its own silhouette.
 - D9 hit numbers: the 3D game shows no damage numbers, so an effective hit is shown by cool white hit sparks (`fx.sparks`) instead of a tinted number. Damage numbers would be a separate decision.
 - D9 classes that may not fit their bodies (assignment kept): Rattenmutter (zombie body, Tiere only), Bassprediger (zombie body, Maschinen only, unlike Kabelghul and Boxenkopf), Wurzler and Wurzel-Mutter (zombie bodies under roots, Pflanzen only), the uniformed bosses (zombie bodies, Menschen: the blade gets no bonus on them).
 - D8: a two-handed hammer a third shorter comes out at reach 0.9, not 0.85 (length 0.86 to 0.9 against 1.16, light1 reach 2.47).

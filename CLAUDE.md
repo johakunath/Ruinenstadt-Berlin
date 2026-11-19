@@ -9,6 +9,7 @@
 - Vision: `docs/vision.md`. Story: `docs/story.md`. Roles, token rules and task format for Claude and Codex: `docs/workflow.md`.
 - Art: `docs/style-bible.md` and the boards in `docs/style/` are the source of truth (Köpenick = default look). Check them before any visual work.
 - Asset status: `docs/equipment-pipeline.md` (every item: 3D model, hero look, icon) and `docs/enemy-pipeline.md` (every enemy, boss and NPC: body, Kodex). **Whoever touches an item or enemy model, icon, bust, texture or effect (Claude or Codex) updates these indexes in the same PR.**
+- Blender steps for Johannes' PC are collected in `docs/blender-pipeline.md`; add a row there instead of waiting.
 - Textures: `docs/asset-pipeline.md`. Claude builds objects in code with code-painted placeholder textures; **only Codex** generates texture images and does their first integration; Claude then does the performance integration.
 - Stack: Three.js (WebGL 2), TypeScript strict, Vite, Vitest, Playwright. Versions are pinned exactly in `package.json`. No React, no ECS, no physics engine.
 - Game text is German, short: a few words or one line. Code, comments and docs are English.

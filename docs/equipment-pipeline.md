@@ -3,6 +3,7 @@
 Index of every equipment base and named item with its 3D model, hero look, inventory icon and what is missing.
 Rule: every session that touches equipment art, models, icons or effects updates this file in the same PR.
 **Plan (2026-11-19): `docs/tasks/wp4-equipment-visuals.md`** decides how every row below gets its model (one weapon model per base, rigid gear built in code, palettes per base, pickups per kind, legendary effects) and in which order. The index stays the status; the task file is the plan.
+**Clothing looks (2026-11-19):** one mockup per Körper, Kopf, Hände and Füße item in `docs/mockups/wp4-clothes/` (start values in `items.mjs`), decisions in the task file › Step 2 looks. Talisman, ring and implant stay icon-only. The Needs column below changes when Johannes has picked.
 Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key from `src/data/weapon-look.ts`); `piece:x` = hero.glb node from `src/data/hero-look.ts`; `none` = nothing in 3D. Hero `yes` = equipping changes the hero mesh, `same` = shows the no-item default, `-` = not shown. Icon `yes/partly/no` compares the painted icon (`src/ui/item-icons.ts`, `assets/inventory/*.webp`) with what the game shows. Needs: M model or piece, I icon re-render, E effect, T texture.
 
 ## Facts checked in code (2026-11-18)
