@@ -47,10 +47,29 @@
 import { CircleGeometry, ConeGeometry, CylinderGeometry, LatheGeometry, Matrix4, Quaternion, SphereGeometry, TorusGeometry, Vector2, Vector3, type Material } from 'three';
 import { OPEN_PARTS, type LandmarkKind } from '../data/map';
 import { archHead, frustum, pane, sub, type RGB } from './landmarks';
-import { cached, lm, roof, type Ctx } from './charlottenburg-world';
+import { Rng } from '../sim/math';
+import { battens, cached, lm, roof, sandbags, shade, shutter, slope, wallFace, wornFace, wornSpot, type Ctx, type Grime } from './charlottenburg-world';
 
 /** The kinds this file owns (one builder each once step 4 is done). */
 export const SCHLOSS_KINDS: ReadonlySet<LandmarkKind> = new Set<LandmarkKind>(['stuelerbau', 'ehrenhoftor', 'schlossmitte', 'schlossfluegel', 'neuerfluegel', 'orangerie', 'gartentor', 'mausoleum', 'belvedere']);
+
+/**
+ * Worn surfaces per sight (Johannes 2026-11-19: too even, too clean): the recipe of the shared pass in
+ * `charlottenburg-world.ts` (`weather`). The yellow plaster of the Schloss and its wings drifts and loses
+ * render to the brick (the wings more than the centre, whose portal stays clean); the burnt Orangerie is black
+ * with soot; the garden stone (gate, Mausoleum) is green and streaked.
+ */
+export const GRIME: Partial<Record<LandmarkKind, Grime>> = {
+  stuelerbau: { tris: 180, drift: 0.24, bay: 2.4, damp: 0.9, moss: 0.6, soot: 0.5, stains: 2.6, streaks: 2, spall: 0.8 },
+  ehrenhoftor: { tris: 120, drift: 0.18, bay: 1.4, damp: 1.1, moss: 0.9, soot: 0.4, stains: 4, streaks: 1 },
+  schlossmitte: { tris: 560, drift: 0.24, bay: 2.6, damp: 0.9, moss: 0.4, soot: 0.6, sootBays: 0.2, stains: 2.6, streaks: 2, spall: 0.9, patch: 0.8 },
+  schlossfluegel: { tris: 62, drift: 0.33, bay: 2.4, damp: 1.0, moss: 0.4, soot: 0.5, sootBays: 0.3, stains: 1.9, streaks: 1, spall: 1.3, patch: 1.0 },
+  neuerfluegel: { tris: 210, drift: 0.27, bay: 2.6, damp: 0.9, moss: 0.5, soot: 0.6, sootBays: 0.25, stains: 2.6, streaks: 2, spall: 0.9, patch: 0.5 },
+  orangerie: { tris: 380, drift: 0.24, bay: 2.2, damp: 0.7, soot: 1.3, sootBays: 0.85, stains: 2.6, streaks: 2, spall: 1.3 },
+  gartentor: { tris: 60, drift: 0.18, bay: 1.2, damp: 1.1, moss: 1.0, soot: 0.4, stains: 4.8, streaks: 1 },
+  mausoleum: { tris: 100, drift: 0.15, bay: 1.8, damp: 1.0, moss: 1.0, soot: 0.4, stains: 4, streaks: 3 },
+  belvedere: { tris: 170, drift: 0.24, bay: 2.2, damp: 0.7, moss: 0.5, soot: 0.5, stains: 2.6, streaks: 2, spall: 0.7 },
+};
 
 // Colours (own: this module is imported by `charlottenburg-world.ts`, so its `C` is not ready at load).
 /** Linear channel of an sRGB byte. */
@@ -137,7 +156,9 @@ function face(c: Ctx, m: Matrix4, len: number, n: number, rows: Row[], pil = 0, 
     const x = -len / 2 + (i + 0.5) * st;
     for (const r of rows) {
       const w = r.w ?? Math.min(1.5, st * 0.46), mm = sub(m, x, r.y, 0);
-      quad(c, M.stucco, mm, 0, 0, 0.03, w + 0.34, r.h + 0.3, trim);
+      // Worn surrounds (2026-11-19): each a little greyer or sootier, the lower ones dirtier; from the position, not `c.rng`.
+      const hsh = Math.abs(Math.sin(x * 12.9898 + r.y * 78.233 + len) * 43758.5453) % 1;
+      quad(c, M.stucco, mm, 0, 0, 0.03, w + 0.34, r.h + 0.3, shade(trim, 0.9 + 0.12 * hsh - (r.y < 3 ? 0.06 : 0) - (hsh > 0.85 ? 0.14 : 0)));
       pane(c.b, sub(mm, 0, 0, 0.02), w, r.h, c.rng, lit);
       if (r.arch) {
         archHead(c.b, M.stucco, sub(mm, 0, r.h / 2 + 0.15, 0), w + 0.34, false, 0.045, trim);
@@ -283,6 +304,11 @@ function schlossmitte(c: Ctx): void {
   // Balustrade with vases over the centre front, the hipped tile roof behind it.
   for (const s of [-1, 1]) balustrade(c, F(c, s * 11.5, 0, FZ - 0.1), 11, H, 3.7, false);
   roof(c, M.roof, 0, H, -0.75, 33.6, 14.2, 3.6, 26, 6.5, RED);
+  // 2026-11-19: slipped patches showing the battens on the main roof and the west link's mansard (reveal), a shutter
+  // hanging off the east link's upper window (the portal and the mirror arches stay clean).
+  battens(c, slope(c, -9, H, -0.75 + 7.1, 3.85, 3.6, 0.42), 2.4, 1.4, M.roof, RED);
+  battens(c, slope(c, -23, LH, 8.15, 2.15, 2.8, 0.72), 1.4, 0.9, M.roof, RED);
+  shutter(c, F(c, 23 + 4.5, 6.4, 8.03), 1.38, 2.4, 1);
   rubble(c, 8.5, 7.6, 0.9);
   rubble(c, -14, 7.2, 0.7, undefined, false);
   tower(c);
@@ -400,6 +426,8 @@ function schlossfluegel(c: Ctx): void {
   roof(c, M.roof, 0, H, 0, W + 0.3, D + 0.3, 2.8, W - 2.6, D - 2.6, RED);
   const nd = Math.round(D / 3.3);
   for (let i = 0; i < nd; i++) dormer(c, F(c, side * (l.hx - 0.5), H + 0.2, -l.hz + (i + 0.5) * (D / nd), (side * Math.PI) / 2));
+  // 2026-11-19: a shutter hanging off an upper window of the outer face.
+  { const st = D / Math.max(2, Math.round(D / 3.6)); shutter(c, F(c, -side * (l.hx + 0.03), 6.6, -side * (-D / 2 + 1.5 * st), (-side * Math.PI) / 2), Math.min(1.5, st * 0.46), 2.4, 1); }
   rubble(c, side * (l.hx + 0.2), c.rng.range(-l.hz + 2, l.hz - 2), 0.6, undefined, false);
 }
 
@@ -449,6 +477,9 @@ function neuerfluegel(c: Ctx): void {
   // Red hipped tile roof (photo 1987; the shape is the old one), dormers toward the court.
   roof(c, M.roof, 0, H, -1.0, W + 0.3, D - 1.7, 3.6, W - 7, 1.0, RED);
   roof(c, M.roof, 0, H + 1.0, FZ - 1.2, 13.4, 3.5, 2.6, 13.4, 0.2, RED);
+  // 2026-11-19: sandbags in one colonnade opening, a shutter off an upper window of the east part.
+  sandbags(c, sub(P, 2.6, 0, 0.05), 1.5, 3, new Rng(1746));
+  shutter(c, F(c, 12.75 + 4.69, 6.9, FZ + 0.03), 1.4, 3.2, 1);
   rubble(c, -8, FZ + 1.2, 0.8);
   rubble(c, 4.2, FZ + 1.6, 0.5, undefined, false);
 }
@@ -573,6 +604,12 @@ function ehrenhoftor(c: Ctx): void {
     if (a === -GP) continue;
     run(a + (a === GP ? 1.1 : 0.45), q - (q === -GP ? 1.1 : 0.45), 2.4);
   }
+  // 2026-11-19: rust runs from the railing feet down the sandstone bases (the court side, +z).
+  for (let i = 1; i < ends.length; i++) {
+    const a = ends[i - 1]!, q = ends[i]!;
+    if (a === -GP || q - a < 2) continue;
+    wornFace(c, wallFace(c, sub(G, (a + q) / 2, 0, 0.351), q - a - 1, 0.55, SAND), (w) => { for (let x = -(q - a) / 2 + 1; x < (q - a) / 2 - 1; x += 1.7) wornSpot(w, 'rust', x, 0.55, 0.12, 0.42 + 0.1 * Math.sin(x * 3)); }, i);
+  }
   // The shut gate: two leaves, taller bars, a gilded crown and scrolls over the middle.
   for (let i = 0; i <= 28; i++) {
     const x = -3.0 + (6.0 * i) / 28;
@@ -654,6 +691,8 @@ function stuelerbau(c: Ctx): void {
   cy(c, M.stucco, T, 0, 4.2, 0, 2.75, 0.5, TRIM, 14);
   c.b.geo(M.slate, cached('sc-sdome', () => new SphereGeometry(2.45, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2)), sub(T, 0, 4.7, 0).multiply(new Matrix4().makeScale(1, 0.85, 1)), SLATE);
   cy(c, M.slate, T, 0, 6.7, 0, 0.32, 0.4, SLATE, 8, 0.18);
+  // 2026-11-19: a shutter hanging off an upper window of the street front.
+  shutter(c, F(c, W / 5, 8.8, FZ + 0.03), Math.min(1.5, (W / 5) * 0.46), 1.6, -1);
   rubble(c, l.variant ? 2.6 : -2.6, FZ + 0.5, 0.5, undefined, false);
 }
 
@@ -668,6 +707,14 @@ function gartentor(c: Ctx): void {
     for (const s of [-1, 1]) bb(c, M.stucco, G, p.x, 1.0, p.z + s * (p.hz - 0.07), 0.7, 1.6, 0.04, TRIM);
     bb(c, M.stucco, G, p.x, PH, p.z, p.hx * 2 + 0.15, 0.25, p.hz * 2 + 0.15, TRIM);
     urn(c, G, p.x, PH + 0.25, p.z, 1.1, SAND);
+  }
+  // 2026-11-19: lichen and rain streaks on the narrow pier faces (too narrow for the surface pass).
+  for (const [k, p] of parts.entries()) for (const z of [-1, 1]) {
+    const fm = sub(G, p.x, 0.4, p.z + z * (p.hz - 0.075), z > 0 ? 0 : Math.PI);
+    wornFace(c, wallFace(c, fm, p.hx * 2 - 0.15, PH - 0.4, YEL), (w) => {
+      wornSpot(w, 'stain', 0.15 * z, 0.5, 1.2, 1.0, 0.62, [0.82, 1, 0.7]);
+      wornSpot(w, 'streak', -0.3 * z, PH - 0.5, 0.3, 1.8);
+    }, k * 2 + z + 5);
   }
   const r = parts[1] ? parts[1].x - parts[1].hx : 2.5;
   for (let i = 0; i < 8; i++) {

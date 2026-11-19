@@ -12,11 +12,14 @@
 //
 // Cost: one new material, the sign atlas (`paintSigns`: 1024 × 1280 colour plus emissive map, about 14 MB of GPU
 // memory with mipmaps, made once per map), for the period lettering, the bulb letters of the cinemas, film
-// billboards, shop fascias, the Aquarium reliefs and the Ufa emblems; it adds one draw call in each chunk that
+// billboards, shop fascias, the Aquarium reliefs and the Ufa emblems, and since 2026-11-19 the eight peeling period posters
+// (`paintPosters`, two more rows: 1024 × 1536, about 17 MB); it adds one draw call in each chunk that
 // shows a sign (the sights sit in about eight chunks), glows by its emissive map, no light. Everything else merges into the shared batches (stucco, brick, slate, enamel, iron, glass, concrete, dark wood, linen,
 // lamp glass, window atlas). No lights. Triangles (measured on the landmark sheet, wear included): Bahnhof Zoo
 // 4.9k, Löwentor 1.4k, Elefantentor 2.1k, Aquarium 0.5k, Musikpavillon 1.5k, Antilopenhaus 3.8k, Ufa-Palast 1.2k,
-// Capitol 1.9k, Gedächtniskirche 5.3k, Romanisches Café 2.6k, KaDeWe 9.2k, Wittenbergplatz 1.0k. Only type imports from `charlottenburg-world.ts` (it imports this file).
+// Capitol 1.9k, Gedächtniskirche 5.3k, Romanisches Café 2.6k, KaDeWe 9.2k, Wittenbergplatz 1.0k (before the worn-surface pass of
+// 2026-11-19; totals after it in `docs/tasks/m16-charlottenburg.md`). From `charlottenburg-world.ts` (it imports this file) only
+// types and functions called while building (`paintPosters`, `wallFace`, `wornFace`, `wornSpot`), never at load.
 import { CircleGeometry, ConeGeometry, CylinderGeometry, Matrix4, MeshStandardMaterial, RingGeometry, SphereGeometry, TorusGeometry, Vector3, type BufferGeometry, type Material, type Texture } from 'three';
 import { OPEN_PARTS, type LandmarkKind } from '../data/map';
 import { Rng } from '../sim/math';
@@ -24,10 +27,30 @@ import { archHead, cached, ENDS, frameOf, frustum, pane, SLOPES, sub, type Frame
 import type { MapMats } from './map-world';
 import type { LitMaterial } from './materials';
 import { canvas, toTexture } from './paint';
-import type { Ctx, RGB } from './charlottenburg-world';
+import { battens, paintPosters, POSTERS, sandbags, scaffold, shutter, slope, tarp, wallFace, wornFace, wornSpot, type Ctx, type Grime, type RGB } from './charlottenburg-world';
 
 /** The kinds this file owns (one builder each once step 4 is done). */
 export const CITYWEST_KINDS: ReadonlySet<LandmarkKind> = new Set<LandmarkKind>(['zoobahnhof', 'loewentor', 'elefantentor', 'aquarium', 'musikpavillon', 'antilopenhaus', 'ufapalast', 'capitol', 'gedaechtniskirche', 'romanischescafe', 'kadewe', 'wittenbergplatz']);
+
+/**
+ * Worn surfaces per sight (Johannes 2026-11-19: too even, too clean): the recipe of the shared pass in
+ * `charlottenburg-world.ts` (`weather`), tuned per sight. Stone sights get damp, moss and soot but no fallen
+ * plaster; rendered ones lose plaster to the brick; the burnt KaDeWe is the sootiest.
+ */
+export const GRIME: Partial<Record<LandmarkKind, Grime>> = {
+  zoobahnhof: { tris: 120, drift: 0.24, bay: 2.6, damp: 0.8, soot: 0.9, stains: 3.2, streaks: 2 },
+  loewentor: { tris: 130, drift: 0.18, bay: 1.2, damp: 1.1, moss: 1.0, soot: 0.6, stains: 4.8, streaks: 2 },
+  elefantentor: { tris: 60, drift: 0.18, bay: 1.4, damp: 1.0, moss: 0.8, soot: 0.5, stains: 3.2 },
+  aquarium: { tris: 34, drift: 0.3, bay: 2.4, damp: 1.0, moss: 0.7, soot: 0.6, stains: 2.4, streaks: 1, spall: 0.8 },
+  musikpavillon: { tris: 40, drift: 0.18, damp: 0.8, moss: 0.6, soot: 0.4, stains: 3.2 },
+  antilopenhaus: { tris: 330, drift: 0.24, bay: 2.0, damp: 0.9, moss: 0.6, soot: 0.8, sootBays: 0.3, stains: 2.4, streaks: 1, spall: 0.6 },
+  ufapalast: { tris: 130, drift: 0.27, bay: 2.6, damp: 0.8, soot: 1.0, sootBays: 0.4, stains: 2.4, streaks: 3, patch: 0.4, ghosts: 0.8 },
+  capitol: { tris: 200, drift: 0.33, bay: 2.4, damp: 0.7, soot: 0.5, stains: 2.4, streaks: 2, spall: 0.9, patch: 1.0, ghosts: 1.2 },
+  gedaechtniskirche: { tris: 360, drift: 0.18, bay: 2.2, damp: 1.1, moss: 0.8, soot: 1.1, sootBays: 0.3, stains: 2.9, streaks: 2.5 },
+  romanischescafe: { tris: 260, drift: 0.22, bay: 2.2, damp: 1.0, moss: 0.5, soot: 0.9, sootBays: 0.45, stains: 2.9, streaks: 2, ghosts: 0.5 },
+  kadewe: { tris: 850, drift: 0.3, bay: 3.0, damp: 0.9, moss: 0.3, soot: 1.2, sootBays: 0.6, stains: 2.6, streaks: 3, spall: 0.7, patch: 0.3 },
+  wittenbergplatz: { tris: 110, drift: 0.3, bay: 2.4, damp: 0.8, soot: 0.5, stains: 1.9, streaks: 1.5, spall: 0.8, patch: 0.7, ghosts: 1.4 },
+};
 
 // ---------------------------------------------------------------- colours (on the shared base materials)
 
@@ -42,9 +65,9 @@ const T = {
 
 // ---------------------------------------------------------------- sign atlas
 
-/** Rows of the 1024 × 1280 atlas (10 rows of 128 px); `cell` splits a row. */
-const ROW = { kadewe: 0, ufa: 1, station: 2, cafe: 3, pair: 4, ubahn: 5, posters: 6, shops: 7, reliefs: 8, emblems: 9 } as const;
-const ROWS = 10;
+/** Rows of the 1024 × 1536 atlas (12 rows of 128 px); `cell` splits a row; rows 10 and 11 hold the period posters (`posterUV`). */
+const ROW = { kadewe: 0, ufa: 1, station: 2, cafe: 3, pair: 4, ubahn: 5, posters: 6, shops: 7, reliefs: 8, emblems: 9, bills: 10 } as const;
+const ROWS = 12;
 
 function fit(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, size: number, font: string): void {
   let s = size;
@@ -235,6 +258,7 @@ function paintSigns(glow: boolean): Texture {
     }
     g.globalAlpha = 1;
   }
+  paintPosters(g, 0, ROW.bills * H, glow);
   return toTexture(c, true, 4);
 }
 
@@ -247,6 +271,15 @@ function signMat(M: MapMats): LitMaterial {
     signMats.set(M, m);
   }
   return m;
+}
+
+/**
+ * UV rect of period poster `p` (`POSTERS`), or of a torn scrap of it: `part` [x0, y0, x1, y1] in 0 … 1 of the
+ * poster (y down from its top).
+ */
+function posterUV(p: (typeof POSTERS)[number], part: readonly [number, number, number, number] = [0, 0, 1, 1]): [number, number, number, number] {
+  const i = POSTERS.indexOf(p), top = 1 - ROW.bills / ROWS, span = 2 / ROWS;
+  return [(i + part[0]) / 8 + 0.001, top - span * part[3] + 0.002, (i + part[2]) / 8 - 0.001, top - span * part[1] - 0.002];
 }
 
 /** UV rect of cell `i` of `n` in atlas row `r`. */
@@ -355,6 +388,19 @@ function mannequin(k: K, m: Matrix4, t: RGB, fallen = false): void {
   blob(k, M.enamel, sub(f, 0, 1.78, 0), 0.11, 0.14, 0.12, T.pearl, 6);
 }
 
+// ---------------------------------------------------------------- posters and hand wear (2026-11-19)
+
+type Poster = (typeof POSTERS)[number];
+/** Period posters pasted on a wall (frame `m` on the face, +z out): [poster, x, y (centre), height, tilt]; later ones lie on top. */
+function bills(k: K, m: Matrix4, list: ReadonlyArray<readonly [Poster, number, number, number, number?]>): void {
+  list.forEach(([p, x, y, h, rz = 0], i) => sign(k, sub(m, x, y, i * 0.004, 0, 0, rz), h * 0.5, h, posterUV(p)));
+}
+/** Torn scraps of older posters (and their ghosts come from the surface pass): [poster, x, y, w, h, part of the poster]. */
+function scraps(k: K, m: Matrix4, list: ReadonlyArray<readonly [Poster, number, number, number, number, readonly [number, number, number, number]]>): void {
+  // The tilt comes from the position, not from `k.rng`, so the builder's own random layout stays as it was.
+  for (const [p, x, y, w, h, part] of list) sign(k, sub(m, x, y, -0.004, 0, 0, Math.sin(x * 12.9 + y * 7.1) * 0.08), w, h, posterUV(p, part));
+}
+
 // ---------------------------------------------------------------- Bahnhof Zoologischer Garten (1882)
 
 /**
@@ -455,6 +501,10 @@ function zoobahnhof(k: K): void {
   opening(k, k.F(fx - 0.02, 0, 8, -Math.PI / 2), 2.4, 3.6, { mat: M.stucco, t: T.sand });
   sign(k, k.F(fx - 0.14, 3.95, 8, -Math.PI / 2), 2.4, 0.42, cell(ROW.shops, 4, 6));
   sign(k, k.F(fx - 0.22, 5.15, -8.5, -Math.PI / 2), 4.4, 0.62, cell(ROW.station));
+  // A bill wall between the booking-hall windows (2026-11-19): period posters, torn scraps.
+  const wf = k.F(fx - 0.02, 0, 0, -Math.PI / 2);
+  bills(k, wf, [['sechstage', -5.8, 1.75, 1.3], ['boxen', -5.1, 1.7, 1.3, 0.03], ['kino', -4.35, 1.8, 1.3], ['revue', 1.2, 1.75, 1.3], ['zoo', 1.95, 1.7, 1.3, -0.04], ['variete', 2.7, 1.8, 1.3], ['weissewoche', 3.45, 1.72, 1.3, 0.02]]);
+  scraps(k, wf, [['kabarett', -3.55, 1.5, 0.5, 0.7, [0, 0.4, 0.8, 1]], ['revue', -2.9, 2.0, 0.45, 0.4, [0.1, 0, 0.9, 0.4]], ['boxen', 0.3, 1.4, 0.4, 0.6, [0.2, 0.5, 1, 1]], ['kino', -0.4, 2.1, 0.5, 0.35, [0, 0.1, 1, 0.4]]]);
   b.shadowBox(k.F(0, Y + P + 1.5, 0), 2 * X, 3, 2 * L);
 }
 
@@ -515,6 +565,13 @@ function loewentor(k: K): void {
   }
   bx(k, M.iron, 0, 4.85, 0, ix * 2, 0.1, 0.1, T.ironDark);
   sign(k, k.F(0, 5.22, 0), 3.8, 0.42, cell(ROW.ubahn, 1, 2), true);
+  // 2026-11-19: bills on the outer pillar faces (local ±x, the camera sees +x), moss on the lions' backs.
+  for (const s of [-1, 1]) {
+    const om = k.F(s * (3.6 + 1.1 + 0.02), 0, 0, (s * Math.PI) / 2);
+    bills(k, om, s > 0 ? [['zoo', -0.5, 2.1, 1.3], ['sechstage', 0.35, 2.0, 1.2, 0.04]] : [['kabarett', 0.2, 2.1, 1.2]]);
+    scraps(k, om, [['boxen', s > 0 ? 0.95 : -0.6, 2.5, 0.4, 0.5, [0, 0, 0.8, 0.5]]]);
+    blob(k, M.stucco, k.F(s * 3.6, H + 1.32, -0.3), 0.36, 0.12, 0.6, [0.52, 0.66, 0.42], 6);
+  }
   rubble(k, -5, -2.6, -1.4, 1.4, 6, T.sand);
 }
 
@@ -591,6 +648,10 @@ function elefantentor(k: K): void {
   b.box(LQ, k.F(-3.8, top(-3.8) + 0.4, rz, 0, 0, 0.5), 0.25, 0.8, 0.22, T.red);
   b.box(LQ, k.F(-4.05, top(-3.8) + 0.85, rz, 0, 0, -0.6), 0.2, 0.45, 0.2, T.gold);
   b.box(LQ, k.F(4.2, 0.15, 1.1, 0.7, 0, 1.4), 0.25, 0.8, 0.22, T.red);
+  // 2026-11-19: the lacquer flakes off the pillars (lighter faded ochre, raw grey wood).
+  for (const p of OPEN_PARTS.elefantentor!) for (const [dx, y, w, h, t] of [[-0.12, 3.4, 0.3, 0.42, [1.05, 0.66, 0.42]], [0.18, 4.1, 0.22, 0.3, [0.52, 0.46, 0.4]], [0.05, 2.5, 0.36, 0.22, [1.0, 0.6, 0.38]], [-0.2, 5.0, 0.2, 0.3, [0.5, 0.44, 0.38]]] as const) {
+    quad(k, LQ, k.F(p.x + dx * (p.x > 0 ? -1 : 1), y, p.z - 0.35 + 0.37), w, h, [0, 0, 1, 1], t as unknown as RGB);
+  }
   rubble(k, 3.0, 5.4, 0.4, 1.4, 4, TILE);
 }
 
@@ -636,6 +697,9 @@ function musikpavillon(k: K): void {
     post(k, M.iron, x * 0.7, BASE, z * 0.7 + 0.1, 0.02, 1.1, T.ironDark, 4);
     k.b.box(M.linen, k.F(x * 0.7, BASE + 1.15, z * 0.7 + 0.1, a, -0.5), 0.45, 0.32, 0.02, T.pearl);
   }
+  // 2026-11-19: a tarp thrown over the east railing, a loose roof sheet on the floor.
+  { const a = Math.PI * 0.5, r = R * Math.cos(Math.PI / 8) + 0.05; tarp(k, k.F(Math.sin(a) * r, BASE + 0.98, Math.cos(a) * r, a), 1.9, 0.82, [0.6, 0.62, 0.5]); }
+  k.b.box(M.slate, k.F(-1.2, BASE + 0.04, -1.0, 0.7), 1.1, 0.03, 0.8, ZINC);
   for (let i = 0; i < 6; i++) k.b.box(M.linen, k.F(k.rng.range(-2, 2), BASE + 0.14, k.rng.range(-2, 2), k.rng.range(0, 3)), 0.3, 0.01, 0.42, T.pearl);
 }
 
@@ -674,6 +738,13 @@ function aquarium(k: K): void {
   bx(k, M.stucco, px, H, cz - 0.4, 2.2, 3.0, D - 1.2, LT);
   pane(b, k.F(px, H + 1.5, FZ - 0.59), 0.9, 1.4, k.rng, 0.3);
   b.geo(M.slate, frustum(2.5, D - 0.9, 2.6, 0.2, 0.3), k.F(px, H + 3.0, cz - 0.4), T.slate);
+  // 2026-11-19: boards nailed over the fallen-out panel, a Zoo bill on each side wall below the panes.
+  for (let i = 0; i < 3; i++) b.box(M.darkWood, k.F(2.27, 2.55 + i * 0.36, FZ + 0.06, 0, 0, [0.08, -0.1, 0.05][i]!), 1.7, 0.2, 0.04, T.wood);
+  for (const s of [-1, 1]) {
+    const sm = k.F(s * (l.hx + 0.01), 0, -1.5, (s * Math.PI) / 2);
+    bills(k, sm, [[s > 0 ? 'zoo' : 'variete', 0, 1.55, 1.2]]);
+    scraps(k, sm, [['zoo', 0.65, 1.3, 0.35, 0.55, [0.1, 0.45, 0.9, 1]]]);
+  }
   rubble(k, -3.2, -1.2, FZ + 0.3, l.hz - 0.1, 4);
 }
 
@@ -740,6 +811,8 @@ function antilopenhaus(k: K): void {
   }
   post(k, M.iron, 0, y1 + R - 0.1, dz, 0.35, 0.5, T.iron, 8);
   blob(k, M.enamel, k.F(0, y1 + R + 0.6, dz), 0.3, 0.38, 0.3, T.copper, 8);
+  // 2026-11-19: a timber scaffold with a tarp on the west wing front (inside the footprint), never on the portal.
+  scaffold(k, k.F(-(CX + l.hx - 0.6) / 2, 0, D / 2 + 0.02), 3.6, WH + 0.6, 0.62);
   rubble(k, -l.hx + 1, l.hx - 1, D / 2 + 0.3, l.hz - 0.1, 7, T.cream);
 }
 
@@ -824,6 +897,11 @@ function ufapalast(k: K): void {
   }
   for (const [a, c] of [[-3.6, -1.8], [0.2, 2.0]] as const) bx(k, M.linen, (a + c) / 2, 0.75, l.hz - 0.25, c - a, 0.07, 0.07, T.berry);
   b.box(M.linen, k.F(-0.8, 0.04, l.hz - 0.25), 2, 0.07, 0.07, T.berry);
+  // 2026-11-19: bills on the tower foot and beside the doors, rust run from the canopy hangers.
+  bills(k, k.F(tx, 0, tz + (2 * l.hz - 1.2) / 2 + 0.01), [['kino', -0.3, 1.75, 1.25], ['boxen', 0.35, 1.65, 1.15, -0.04]]);
+  bills(k, k.F(2.55, 0, FZ + 0.01), [['revue', 0, 1.7, 1.25]]);
+  scraps(k, k.F(2.55, 0, FZ + 0.01), [['kabarett', 0.55, 2.3, 0.35, 0.4, [0, 0, 1, 0.45]]]);
+  wornFace(k, wallFace(k, k.F(-0.8, 0, FZ), W, H, ST), (w) => { for (const x of [-0.9, 0.9, 3.2]) wornSpot(w, 'rust', x, 3.3, 0.22, 1.6); }, 3);
   rubble(k, -l.hx + 0.4, -l.hx + 2, FZ + 0.6, l.hz - 0.3, 4, ST);
 }
 
@@ -884,6 +962,12 @@ function capitol(k: K): void {
   // The ticket window in the passage wall (east side), a poster case opposite.
   bx(k, M.darkWood, 1.97, 0.9, 2.2, 0.06, 1.6, 1.3, [0.45, 0.3, 0.3]);
   b.box(M.shop, k.F(1.93, 1.6, 2.2, -Math.PI / 2), 1.0, 0.7, 0.02);
+  // 2026-11-19: bills on the outer faces of the brick end walls.
+  for (const s of [-1, 1]) {
+    const em = k.F(s * 14.01, 0, -2.2, (s * Math.PI) / 2);
+    bills(k, em, s > 0 ? [['weissewoche', -1.2, 1.35, 1.15], ['boxen', -0.55, 1.3, 1.1, 0.04], ['sechstage', 0.15, 1.35, 1.15]] : [['revue', 0.9, 1.35, 1.15], ['kino', 1.55, 1.3, 1.1, -0.03]]);
+    scraps(k, em, [['variete', s * 0.9, 1.1, 0.4, 0.6, [0.1, 0.4, 1, 1]], ['zoo', s * -2.0, 1.6, 0.45, 0.35, [0, 0, 1, 0.35]]]);
+  }
   rubble(k, -13, -9, 4.4, 4.8, 5);
 }
 
@@ -1030,6 +1114,12 @@ function gedaechtniskirche(k: K): void {
   bx(k, M.enamel, MX, GY + 27.3, 0, 0.7, 0.12, 0.12, T.gold);
   // Steps before the south portals, rubble at the foot of the south side.
   for (let i = 0; i < 3; i++) bx(k, M.stucco, TX, 0, l.hz - 0.35 - i * 0.12, 4.6 - i * 0.5, 0.1 * (i + 1), 0.6 - i * 0.24, DK);
+  // 2026-11-19: sandbags half up the south portal, a scaffold with a tarp on the nave's south wall, a step slab
+  // broken out and tipped, a slipped patch on the nave roof showing the battens.
+  sandbags(k, k.F(TX, 0, TD / 2 + 0.2), 1.7, 3, new Rng(1895));
+  scaffold(k, k.F(-2.0, 1.0, NW / 2 + 0.02), 3.4, 7.2, 0.7);
+  b.box(M.stucco, k.F(TX + 1.6, 0.12, l.hz - 0.45, 0.25, 0.2), 0.9, 0.18, 0.5, DK);
+  battens(k, slope(k, -3.2, NH, NW / 2 + 0.2, NW / 2 + 0.1, 4.2, 0.42), 1.6, 1.3, M.slate, SL);
   rubble(k, -12.5, 12, l.hz - 0.6, l.hz - 0.05, 12, ST);
   rubble(k, -2, 1.5, NW / 2 + 0.2, NW / 2 + 1.2, 5, T.slate);
 }
@@ -1097,6 +1187,13 @@ function romanischescafe(k: K): void {
   }
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.geo(M.slate, cached('cw-rc-pin', () => new ConeGeometry(0.22, 1.2, 6)), k.F(tx + sx * (TW / 2 - 0.15), TH + 0.6, tz + sz * (TW / 2 - 0.15)), T.slate);
   b.geo(M.slate, frustum(TW, TW, 4.2, 0.1, 0.1), k.F(tx, TH, tz), T.slate);
+  // 2026-11-19: a shutter hanging from one hinge, bills on the outer arcade piers.
+  shutter(k, k.F(3.78, 9.45, l.hz + 0.02), 0.6, 1.7, 1);
+  for (const s of [-1, 1]) {
+    const pm = k.F(s * 4.5, 0, l.hz + 0.01);
+    bills(k, pm, [[s > 0 ? 'kabarett' : 'kino', 0, 1.6, 1.15]]);
+    scraps(k, pm, [['revue', s * 0.25, 2.45, 0.4, 0.35, [0, 0, 1, 0.35]]]);
+  }
   rubble(k, -l.hx + 0.3, l.hx - 0.3, l.hz - 0.25, l.hz - 0.05, 5, ST);
 }
 
@@ -1237,6 +1334,16 @@ function kadewe(k: K): void {
   bx(k, M.iron, 0, TALL - 0.2, ni + 0.3, 2 * l.hx - 2, 0.2, 0.25, T.iron);
   for (let i = 0; i < 40; i++) b.box(M.glass, k.F(k.rng.range(-l.hx + 2, l.hx - 2), 0.02, k.rng.range(-hz + 2, hz - 2), k.rng.range(0, 3)), k.rng.range(0.12, 0.45), 0.02, k.rng.range(0.12, 0.45));
   // Rubble from the fallen roof along the inner walls, a heap in the south-west corner.
+  // 2026-11-19: the white-week posters still on the side walls toward the side streets, older bills torn under them,
+  // a tarp hung over the east wall top into the hall.
+  for (const s of [-1, 1]) {
+    const om = k.F(s * (l.hx + 0.01), 0, 0, (s * Math.PI) / 2);
+    const z = (zz: number): number => -s * zz;
+    // Between the shop-window panes (one every 2 m, 1.3 wide): one poster per pier.
+    bills(k, om, [['weissewoche', z(6.0), 1.7, 1.2], ['weissewoche', z(8.0), 1.72, 1.2, 0.03], ['revue', z(10.0), 1.6, 1.2], ['boxen', z(12.0), 1.55, 1.2, -0.04]]);
+    scraps(k, om, [['weissewoche', z(14.0), 1.3, 0.45, 0.7, [0, 0.3, 0.9, 1]], ['sechstage', z(8.0), 2.55, 0.4, 0.32, [0.1, 0, 1, 0.4]]]);
+  }
+  tarp(k, k.F(l.hx - 1.01, 7.8, -6, -Math.PI / 2), 3.2, 3.0, [0.62, 0.6, 0.5]);
   rubble(k, -l.hx + 1.5, l.hx - 1.5, -hz + 2.2, -hz + 3.4, 12, ST);
   rubble(k, -l.hx + 1.2, -l.hx + 5, hz - 4, hz - 1.2, 10, ST);
   rubble(k, l.hx - 4, l.hx - 1.2, hz - 3, hz - 1.2, 6, ST);
@@ -1299,6 +1406,12 @@ function wittenbergplatz(k: K): void {
   // The north end: the same pediment, one door.
   b.geo(M.stucco, frustum(W + 0.6, 0.4, 1.5, 0.2, 0.4), k.F(0, H + 0.35, -fz - 0.2), LT);
   b.box(M.door, k.F(0, 1.35, -fz - 0.02, Math.PI), 1.4, 2.7, 0.04);
+  // 2026-11-19: the station walls are a bill board: posters and torn scraps under the windows on both arms.
+  for (const s of [-1, 1]) {
+    const am = k.F(s * (W / 2 + 0.08), 0, 0, (s * Math.PI) / 2), z = (zz: number): number => -s * zz;
+    bills(k, am, [['sechstage', z(-5.6), 1.65, 1.2], ['boxen', z(-4.95), 1.6, 1.15, 0.03], ['kino', z(3.3), 1.65, 1.2], ['weissewoche', z(3.95), 1.62, 1.15, -0.03], ['variete', z(5.7), 1.65, 1.2]]);
+    scraps(k, am, [['revue', z(-1.8), 1.4, 0.45, 0.7, [0, 0.35, 0.9, 1]], ['zoo', z(-0.9), 1.9, 0.4, 0.4, [0, 0, 1, 0.4]], ['kabarett', z(1.8), 1.5, 0.4, 0.55, [0.1, 0.45, 1, 1]]]);
+  }
   rubble(k, -l.hx + 0.2, -1.5, l.hz - 0.5, l.hz - 0.05, 5, ST);
 }
 

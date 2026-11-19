@@ -82,4 +82,7 @@ views.forEach((v, i) => {
   renderer.setScissor(i * W, 0, W, H);
   renderer.render(scene, cam);
 });
-document.title = `done ${kind}`;
+// Triangles of the landmark (solid and card batches), for budget checks: read from the title.
+const tris = [...b.solid.meshes(), ...b.cards.meshes()].reduce((n, m) => n + (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute('position').count) / 3, 0);
+const draws = b.solid.meshes().length + b.cards.meshes().length;
+document.title = `done ${kind} tris=${tris} draws=${draws}`;

@@ -13,14 +13,15 @@
 // stucco boxes; here: boarded and broken windows, missing pieces, rubble and shards at the foot.
 // Cues per kind (* = below 5 m, what the game camera sees) are listed at each builder.
 //
-// Cost: one new material, the Ku'damm sign atlas (`atlas`, 1024², map + emissive map: lettering, white and pink marquee
-// bulbs, the lit foyer and Varieté hall, posters, velvet, fan glass and marble), cached per map materials; one draw call
+// Cost: one new material, the Ku'damm sign atlas (`atlas`, 1024 × 1280 since 2026-11-19, map + emissive map: lettering, white
+// and pink marquee bulbs, the lit foyer and Varieté hall, posters, velvet, fan glass and marble, the strip of eight peeling
+// period posters from `paintPosters` at the foot), cached per map materials; one draw call
 // per chunk where it is in view. No lights: bulbs and lit foyers are emissive atlas cells. Everything else is merged
 // into the shared batches (stucco, slate, enamel, iron, glass, dark, darkWood, lampGlass, clock, ivy cards).
 import { BufferGeometry, CircleGeometry, CylinderGeometry, Matrix4, MeshStandardMaterial, PlaneGeometry, SphereGeometry, TorusGeometry, type Material } from 'three';
 import { OPEN_PARTS, type LandmarkKind } from '../data/map';
 import { Rng } from '../sim/math';
-import { C, cached, type Ctx, type RGB } from './charlottenburg-world';
+import { battens, C, cached, paintPosters, POSTERS, POSTER_CELL, sandbags, scaffold, shutter, slope, tarp, type Ctx, type Grime, type RGB } from './charlottenburg-world';
 import { archHead, ENDS, frameOf, frustum, pane, sub, type Frame } from './landmarks';
 import type { MapMats } from './map-world';
 import type { LitMaterial } from './materials';
@@ -28,6 +29,25 @@ import { canvas, toTexture } from './paint';
 
 /** The kinds this file owns (one builder each once step 4 is done). */
 export const KUDAMM_KINDS: ReadonlySet<LandmarkKind> = new Set<LandmarkKind>(['gloriapalast', 'marmorhaus', 'cafewestens', 'revuepalast', 'theaterwestens', 'variete', 'opernhaus', 'schillertheater', 'hochschule', 'chtor', 'chrathaus']);
+
+/**
+ * Worn surfaces per sight (Johannes 2026-11-19: too even, too clean): the recipe of the shared pass in
+ * `charlottenburg-world.ts` (`weather`). The cinemas and theatres keep their fronts readable (soot high up,
+ * grime low); the Café des Westens and the Schiller-Theater are the shabbiest render; stone gets moss.
+ */
+export const GRIME: Partial<Record<LandmarkKind, Grime>> = {
+  gloriapalast: { tris: 260, drift: 0.21, bay: 2.4, damp: 0.9, moss: 0.6, soot: 0.8, sootBays: 0.25, stains: 2.9, streaks: 2, ghosts: 0.5 },
+  marmorhaus: { tris: 100, drift: 0.24, bay: 2.2, damp: 0.7, soot: 0.6, stains: 2.4, streaks: 3, spall: 0.6 },
+  cafewestens: { tris: 240, drift: 0.39, bay: 2.4, damp: 0.9, soot: 0.8, sootBays: 0.45, stains: 2.9, streaks: 1.5, spall: 1.1, patch: 1.0, ghosts: 0.8 },
+  revuepalast: { tris: 210, drift: 0.27, bay: 2.6, damp: 0.7, soot: 0.6, stains: 2.2, streaks: 1.5, spall: 0.6, ghosts: 0.4 },
+  theaterwestens: { tris: 340, drift: 0.24, bay: 2.2, damp: 0.8, moss: 0.4, soot: 0.9, sootBays: 0.35, stains: 2.6, streaks: 2.5, spall: 0.5, patch: 0.5 },
+  variete: { tris: 40, drift: 0.18, damp: 0.8, moss: 0.6, soot: 0.3, stains: 1.6 },
+  opernhaus: { tris: 320, drift: 0.18, bay: 2.6, damp: 1.0, moss: 0.4, soot: 0.8, sootBays: 0.3, stains: 3.2, streaks: 3, patch: 0.6 },
+  schillertheater: { tris: 190, drift: 0.33, bay: 2.4, damp: 0.8, soot: 0.7, sootBays: 0.35, stains: 2.6, streaks: 1.5, spall: 1.1, patch: 0.7, ghosts: 1.0 },
+  hochschule: { tris: 220, drift: 0.21, bay: 2.6, damp: 0.9, moss: 0.7, soot: 0.6, sootBays: 0.2, stains: 2.6, streaks: 2, patch: 0.4 },
+  chtor: { tris: 170, drift: 0.18, bay: 1.8, damp: 1.1, moss: 0.9, soot: 0.5, stains: 4, streaks: 2 },
+  chrathaus: { tris: 240, drift: 0.22, bay: 2.4, damp: 0.9, moss: 0.4, soot: 0.8, sootBays: 0.25, stains: 2.6, streaks: 2.5, spall: 0.5, ghosts: 0.8 },
+};
 
 // ---------------------------------------------------------------- sign atlas (the one new material)
 
@@ -42,6 +62,13 @@ const R = {
   vault: [512, 848, 256, 128], posterB: [768, 848, 128, 128], vcafe: [896, 848, 128, 128],
   billard: [0, 976, 256, 48], spiel: [256, 976, 256, 48], lGloria: [512, 976, 256, 48], lPalast: [768, 976, 256, 48],
 } as const satisfies Record<string, Region>;
+/** Atlas height: the 1024² sign atlas plus the 256 px poster strip under it (`POSTER_CELL.h`; a literal, as that module is not ready at load). */
+const AH = 1024 + 256;
+/** Region of period poster `p` (`POSTERS`), or of a torn scrap of it (`part` in 0 … 1 of the poster, y down). */
+function bill(p: (typeof POSTERS)[number], part: readonly [number, number, number, number] = [0, 0, 1, 1]): Region {
+  const x = POSTERS.indexOf(p) * POSTER_CELL.w, { w, h } = POSTER_CELL;
+  return [x + part[0] * w + 1, 1024 + part[1] * h + 1, (part[2] - part[0]) * w - 2, (part[3] - part[1]) * h - 2];
+}
 
 const SERIF = 'bold %px Georgia, "Times New Roman", serif';
 const DECO = 'bold %px "Futura", "Century Gothic", "Trebuchet MS", "DejaVu Sans", sans-serif';
@@ -300,9 +327,11 @@ const atlases = new WeakMap<MapMats, LitMaterial>();
 function atlas(c: Ctx): LitMaterial {
   let a = atlases.get(c.M);
   if (!a) {
-    const [c1, g1] = canvas(1024, 1024), [c2, g2] = canvas(1024, 1024);
+    const [c1, g1] = canvas(1024, AH), [c2, g2] = canvas(1024, AH);
     paintAtlas(g1, false);
     paintAtlas(g2, true);
+    paintPosters(g1, 0, 1024, false);
+    paintPosters(g2, 0, 1024, true);
     a = new MeshStandardMaterial({ map: toTexture(c1, false, c.M.profile.anisotropy), emissiveMap: toTexture(c2, false, 4), emissive: 0xffffff, emissiveIntensity: 1, roughness: 0.6 });
     atlases.set(c.M, a);
   }
@@ -310,7 +339,7 @@ function atlas(c: Ctx): LitMaterial {
 }
 
 function remap(g: BufferGeometry, r: Region): BufferGeometry {
-  const uv = g.getAttribute('uv'), u0 = r[0] / 1024, u1 = (r[0] + r[2]) / 1024, v1 = 1 - r[1] / 1024, v0 = 1 - (r[1] + r[3]) / 1024;
+  const uv = g.getAttribute('uv'), u0 = r[0] / 1024, u1 = (r[0] + r[2]) / 1024, v1 = 1 - r[1] / AH, v0 = 1 - (r[1] + r[3]) / AH;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
   return g;
 }
@@ -418,6 +447,21 @@ function rope(c: Ctx, F: Frame, x0: number, x1: number, z: number): void {
   c.b.box(M.linen, F((mx + x1) / 2, 0.9 - sag / 2, z, 0, 0, ang), Math.hypot(half, sag), 0.06, 0.06, BERRY);
 }
 
+type Poster = (typeof POSTERS)[number];
+/** Period posters pasted on a wall (frame `m` on the face, +z out): [poster, x, y (centre), height, tilt]; later ones lie on top. */
+function bills(c: Ctx, m: Matrix4, list: ReadonlyArray<readonly [Poster, number, number, number, number?]>): void {
+  list.forEach(([p, x, y, h, rz = 0], i) => plate(c, bill(p), sub(m, x, y, 0.012 + i * 0.004, 0, 0, rz), h * 0.5, h));
+}
+/** Torn scraps of older posters: [poster, x, y, w, h, part of the poster]; the tilt comes from the position (not `c.rng`). */
+function scraps(c: Ctx, m: Matrix4, list: ReadonlyArray<readonly [Poster, number, number, number, number, readonly [number, number, number, number]]>): void {
+  for (const [p, x, y, w, h, part] of list) plate(c, bill(p, part), sub(m, x, y, 0.008, 0, 0, Math.sin(x * 12.9 + y * 7.1) * 0.08), w, h);
+}
+/** Rust running down white iron (a thin strip on a column face), x, top y, length. */
+function rustRun(c: Ctx, m: Matrix4, x: number, y: number, len: number): void {
+  c.b.box(c.M.rust, sub(m, x, y - len / 2, 0.005), 0.05, len, 0.01, [0.9, 0.62, 0.42]);
+}
+const TIMBER_POST: RGB = [0.62, 0.5, 0.4];
+
 /** Stone tints on the warm stucco texture: pale sandstone, its shadowed courses, a light trim; the opera's grey limestone. */
 const SAND: RGB = [1.4, 1.8, 2.2], SAND_D: RGB = [1.1, 1.4, 1.75], SAND_L: RGB = [1.6, 2.05, 2.5], LIME: RGB = [1.3, 1.95, 3.9], LIME_D: RGB = [1.0, 1.5, 3.0];
 const OPEN_PARTS_CHTOR = OPEN_PARTS.chtor ?? [];
@@ -506,6 +550,9 @@ function revuepalast(c: Ctx): void {
   bx(c, M.stucco, F, 6.2, 0, 3.4, 2.6, 0.5, 0.7, DARK, 0.35);
   rubble(c, F, 4.6, 7.6, 3.0, 1.2, 9, STONE, 8);
   rubble(c, F, -7.5, -6.2, 3.3, 0.8, 4, STONE, 3);
+  // 2026-11-19: bills pasted over the boarded right window, torn scraps on the pilasters (the REVUE sign stays clean).
+  bills(c, F(0, 0, FZ + 0.08), [['revue', 5.25, 2.35, 1.2], ['boxen', 5.95, 2.3, 1.15, 0.04], ['kino', 6.6, 2.4, 1.1, -0.03]]);
+  scraps(c, F(0, 0, FZ + 0.3), [['variete', 3.9, 1.5, 0.45, 0.6, [0.1, 0.4, 0.9, 1]], ['revue', 7.7, 2.1, 0.45, 0.4, [0, 0, 1, 0.4]], ['kabarett', -3.9, 1.8, 0.4, 0.55, [0, 0.45, 0.9, 1]]]);
   creeper(c, F, -8, -6.6, 5, 13, FZ + 0.3, 18, WISTERIA);
   creeper(c, F, 6.8, 8, 8, 13, FZ + 0.3, 10);
   c.b.shadowBox(F(0, H / 2, -0.4), 16, H, 3.6);
@@ -618,6 +665,11 @@ function variete(c: Ctx): void {
   // Wear: shards and a fallen vault rib in front, ivy and wisteria up the iron.
   rubble(c, F, X0 + 0.5, X1, Z1 + 0.9, 0.7, 4, [0.85, 0.82, 0.86], 26);
   c.b.box(M.enamel, F(1.4, 0.12, 3.2, 0.3, 0, 0.12), 3.2, 0.1, 0.1, WHITE_IRON);
+  // 2026-11-19: a few lights patched with paper, rust running down the white iron columns.
+  for (const [x, y, w, h] of [[X0 + 0.5 * bw - 0.25 * (bw - 0.3), 1.85, (bw - 0.4) / 2, 1.5], [X0 + 4.5 * bw + 0.25 * (bw - 0.3), 1.85, (bw - 0.4) / 2, 1.5], [X0 + 1.5 * bw + 0.25 * (bw - 0.3), 3.2, (bw - 0.4) / 2, 1.0]] as const) {
+    c.b.box(M.linen, F(x, y, Z1 + 0.025, 0, 0, 0.03), w * 0.96, h * 0.92, 0.01, [0.92, 0.88, 0.76]);
+  }
+  for (let i = 0; i <= bays; i++) if (i % 2 === 0 || i === 3) rustRun(c, F(X0 + i * bw, 0, Z1 + 0.11), 0.02 * (i - 2.5), EAVE - 0.5 - (i % 3) * 0.7, 1.2 + (i % 2) * 1.3);
   creeper(c, F, X0, X0 + 2.2, 1.5, EAVE + 0.5, Z1 + 0.18, 7);
   creeper(c, F, X1 - 1.6, X1 + 0.1, 1, EAVE, Z1 + 0.18, 6);
   creeper(c, F, kx - 1.2, kx + 0.2, 0.8, 3, kz + KR + 0.1, 3);
@@ -688,6 +740,9 @@ function hochschule(c: Ctx): void {
   for (let i = 0; i < 6; i++) bx(c, M.stucco, F, 4.6 + i * 0.55 + c.rng.range(-0.1, 0.1), 0, FZ + 1.6 + c.rng.range(0, 1.2), 0.25, 0.25, 0.9, ST, c.rng.range(0, 3), Math.PI / 2);
   rubble(c, F, 3.5, 9, FZ + 1.4, 0.8, 8, ST);
   rubble(c, F, -12, -9, FZ + 1.2, 0.6, 4, ST);
+  // 2026-11-19: sandbags in the left portal arch, a scaffold with a tarp on the west corner projection.
+  sandbags(c, F(-2.5, 0, pz + 0.02), 1.8, 3, new Rng(1884));
+  scaffold(c, F(-12.3, 0, FZ + 0.72), 3.0, 7.6, 0.7);
   c.b.wearWindow(F(2.5, 1.9, pz + 0.03), 1.9, 3.3, true);
   c.b.shadowBox(F(0, H / 2, cz), 28, H, dep);
 }
@@ -766,6 +821,18 @@ function opernhaus(c: Ctx): void {
   // Wear: rubble from the attic, the missing statue's plinth, shards.
   rubble(c, F, -3, 0.8, FZ + 2.2, 0.5, 6, LIME, 4);
   rubble(c, F, 8, 11, FZ + 2.2, 0.5, 7, LIME);
+  // 2026-11-19: a timber post shores the entablature over the broken column, with braces; two step slabs broken out
+  // and tipped; bills beside the poster cases of the side wings.
+  bx(c, M.darkWood, F, 6.05, 7.5, FZ + 0.1, 0.28, H - 0.8 - 7.5, 0.28, TIMBER_POST);
+  for (const s of [-1, 1]) c.b.box(M.darkWood, F(6.05 + s * 0.55, H - 2.2, FZ + 0.1, 0, 0, s * 0.62), 0.12, 2.4, 0.12, TIMBER_POST);
+  bx(c, M.stucco, F, -6.4, 0.12, FZ + 1.9, 1.1, 0.22, 0.55, LIME_D, 0.3, 0.12);
+  bx(c, M.dark, F, -6.4, 0.2, FZ + 2.31, 0.9, 0.14, 0.02);
+  bx(c, M.stucco, F, 2.8, 0.42, FZ + 1.1, 0.8, 0.18, 0.5, LIME_D, -0.4, -0.15);
+  for (const s of [-1, 1]) {
+    const wm = F(s * 12.4, 0, FZ - 0.8 + 0.01);
+    bills(c, wm, [[s > 0 ? 'variete' : 'kino', -1.2, 1.6, 1.05], [s > 0 ? 'sechstage' : 'revue', 1.2, 1.65, 1.05, 0.03]]);
+    scraps(c, wm, [['boxen', 1.25, 2.55, 0.4, 0.32, [0, 0, 1, 0.35]]]);
+  }
   creeper(c, F, -11, -9.6, 1.5, 7, FZ + 0.65, 8);
   c.b.shadowBox(F(0, H / 2 + 1, FZ - 3.4), 22, H + 3, 6.8);
   c.b.shadowBox(F(0, 10, -4.8), 21, 20, 6.4);
@@ -855,6 +922,10 @@ function theaterwestens(c: Ctx): void {
   figure(c, 1.6, 0.25, FZ + 1.2, 1.4, CRD);
   rubble(c, F, 0.6, 2.8, FZ + 1.1, 0.5, 6, CR, 3);
   rubble(c, F, 4, 5.8, FZ + 1.0, 0.6, 4, CR);
+  // 2026-11-19: small bills beside the right pavilion's door, a slipped patch on the stage-house roof (reveal).
+  bills(c, F(4.9, 0, FZ + 0.21), [['variete', -0.82, 1.6, 0.9], ['kabarett', 0.82, 1.62, 0.9, 0.04]]);
+  scraps(c, F(0, 0, FZ + 0.01), [['revue', -3.42, 0.95, 0.35, 0.4, [0, 0.55, 1, 1]], ['boxen', 0.48, 0.9, 0.3, 0.35, [0.1, 0.6, 1, 1]]]);
+  battens(c, slope(c, -3, 15, -l.hz + 1.7 + 1.8, 1.7, 3.2, 0.45), 1.8, 1.2, M.slate, C.slate);
   creeper(c, F, -6, -4.8, 1, 9, FZ + 0.35, 8);
   c.b.shadowBox(F(-0.4, 7, FZ - 2.6), 12, 14, 5.6);
   c.b.shadowBox(F(0, 8.5, -l.hz + 1.7), 11, 17, 3.4);
@@ -923,6 +994,13 @@ function gloriapalast(c: Ctx): void {
     if (s < 0) cy(c, M.slate, F(tx, 15.3 + 2.3, tz), 0.03, TR + 0.1, 4.6, 12, C.slate);
     else { cy(c, M.slate, F(tx, 15.3 + 1.4, tz), 0.45, TR + 0.1, 2.8, 12, C.slate); bx(c, M.iron, F, tx + 0.2, 18, tz, 0.06, 1.0, 0.06, C.iron, 0, 0, 0.4); }
   }
+  // 2026-11-19: film posters on both side walls, a slipped patch of the steep slate roof beside the gable.
+  for (const s of [-1, 1]) {
+    const sm = F(s * (hx - 0.2 + 0.01), 0, -1.0, (s * Math.PI) / 2), z = (zz: number): number => -s * zz;
+    bills(c, sm, [['kino', z(-0.9), 1.65, 1.2], [s > 0 ? 'revue' : 'boxen', z(-0.25), 1.6, 1.15, 0.03], ['sechstage', z(0.45), 1.65, 1.2]]);
+    scraps(c, sm, [['kabarett', z(1.2), 1.4, 0.45, 0.6, [0, 0.4, 0.9, 1]]]);
+  }
+  battens(c, slope(c, 3.5, H + 0.3, FZ, 2.7, 4.6, 0.3), 1.1, 1.0, M.slate, C.slate);
   // Wear: rubble from the broken terrace and the spire, the lost letter on the pavement.
   rubble(c, F, 2.2, 3.8, l.hz - 0.6, 0.3, 6, GR, 2);
   rubble(c, F, -hx + 0.4, -hx + 1.8, FZ + 0.8, 0.4, 3, GR);
@@ -983,6 +1061,11 @@ function marmorhaus(c: Ctx): void {
   plate(c, R.marmor, sub(sm, 0, 0.3, 0.06), 6.4, 1.1);
   plate(c, R.marmor, sub(sm, 0, 0.3, -0.06, Math.PI), 6.4, 1.1);
   bulbs(c, sub(sm, 0, -0.32, -0.08, Math.PI), 6.4, R.bulbW, 0.14);
+  // 2026-11-19: the back wall of the cinema hall is a bill board (the camera side); a shutter hangs off its back window.
+  const back = F(0, 0, -hz - 0.03, Math.PI);
+  bills(c, back, [['kino', 2.3, 1.6, 1.2], ['revue', 1.6, 1.58, 1.15, -0.03], ['boxen', -1.4, 1.62, 1.2], ['variete', -4.4, 1.6, 1.15, 0.04], ['sechstage', -5.1, 1.62, 1.2]]);
+  scraps(c, back, [['kabarett', 3.0, 1.3, 0.45, 0.6, [0, 0.4, 0.9, 1]], ['kino', -2.1, 2.1, 0.4, 0.35, [0, 0, 1, 0.4]]]);
+  shutter(c, F(1, 4.8, -hz - 0.04, Math.PI), 1.2, 1.4, 1);
   // Wear: fallen marble panels and rubble at both feet.
   rubble(c, F, -hx + 1, -1.5, FZ + 0.12, 0.08, 5, WH, 3);
   for (let i = 0; i < 3; i++) c.b.geo(atlas(c), regionGeo(R.marble), F(c.rng.range(2, hx - 1), 0.05, FZ + c.rng.range(0.8, 1.6), c.rng.range(0, 3), -Math.PI / 2).multiply(new Matrix4().makeScale(1.0, 0.8, 1)));
@@ -1066,6 +1149,10 @@ function cafewestens(c: Ctx): void {
   bx(c, M.darkWood, F, -2.4, 0, (FZ + gz) / 2 + 0.4, 0.45, 0.45, 0.45, [0.4, 0.28, 0.22], 0.6, 0, 1.4);
   bx(c, M.stucco, F, 4.2, 0, FZ + 1.2, 2.4, 0.3, 1.1, SD, 0.3);
   rubble(c, F, 3.2, hx - 0.4, FZ + 1.1, 0.6, 8, ST, 3);
+  // 2026-11-19: cabaret bills by the door and the corner, timber props under the left bay window (its balcony fell).
+  bills(c, F(0, 0, FZ + 0.01), [['kabarett', -1.0, 1.7, 1.2], ['variete', 4.4, 1.7, 1.2, 0.03], ['revue', 5.1, 1.65, 1.15, -0.03]]);
+  scraps(c, F(0, 0, FZ + 0.01), [['kabarett', -0.3, 1.25, 0.4, 0.55, [0.1, 0.45, 1, 1]], ['boxen', -0.35, 2.35, 0.4, 0.3, [0, 0, 1, 0.3]]]);
+  for (const dx of [-0.95, -0.35]) c.b.box(M.darkWood, F(-3.2 + dx, 2.4, FZ + 0.8, 0, 0.18), 0.16, 4.9, 0.16, TIMBER_POST);
   creeper(c, F, -hx + 0.2, -hx + 1.4, 1.5, 6, FZ + 0.3, 7);
   c.b.shadowBox(F(0, H / 2, cz), hx * 2, H, FZ + hz);
 }
@@ -1120,6 +1207,10 @@ function schillertheater(c: Ctx): void {
   // Wear: the broken column's drum and rubble; ivy.
   cy(c, M.stucco, F(2.4, 0.25, FZ + 0.4).multiply(new Matrix4().makeRotationZ(Math.PI / 2)), 0.22, 0.22, 1.4, 8, PL);
   rubble(c, F, 1.2, 4, hz - 0.3, 0.3, 6, PL, 2);
+  // 2026-11-19: bills between the doors and the windows, a tarp hung where the loggia column broke.
+  bills(c, F(0, 0, FZ + 0.01), [['boxen', -2.75, 1.6, 1.15], ['sechstage', -3.45, 1.62, 1.15, 0.03], ['variete', 2.75, 1.6, 1.15, -0.03], ['kino', 3.45, 1.62, 1.15], ['revue', -7.65, 1.6, 1.0], ['zoo', 7.65, 1.62, 1.0]]);
+  scraps(c, F(0, 0, FZ + 0.01), [['kabarett', -7.7, 2.45, 0.4, 0.35, [0, 0, 1, 0.35]], ['weissewoche', 7.7, 0.95, 0.4, 0.4, [0, 0.6, 1, 1]]]);
+  tarp(c, F(4.08, 8.6, FZ + 0.1), 1.25, 2.7);
   creeper(c, F, hx - 1.6, hx - 0.2, 1, 8, FZ + 0.1, 8);
   c.b.shadowBox(F(0, H / 2, FZ - 2.4), hx * 2, H, 4.8);
   c.b.shadowBox(F(0, 8, -hz + 2.4), hx * 2 - 1.4, 17, 4.8);
@@ -1179,6 +1270,12 @@ function chtor(c: Ctx): void {
     for (let i = 0; i < 4; i++) c.b.box(M.dark, F(px - s * 0.71, c.rng.range(7.2, 9), p.z + c.rng.range(-p.hz + 0.6, p.hz - 0.6)), 0.05, 0.25, 0.25);
     rubble(c, F, p.x - p.hx + 0.3, p.x + p.hx - 0.3, p.z - p.hz + 0.3, 0.2, 4, SS);
   });
+  // 2026-11-19: race and boxing bills pasted low on the plinths (the faces toward the Chaussee's south side).
+  for (const [k, p] of OPEN_PARTS_CHTOR.entries()) {
+    const pm = F(p.x, 0, p.z - p.hz - 0.01, Math.PI);
+    bills(c, pm, k ? [['sechstage', -0.8, 0.82, 1.0], ['boxen', 0.0, 0.8, 0.95, 0.04]] : [['zoo', 0.6, 0.82, 1.0], ['sechstage', 1.3, 0.8, 0.95, -0.03]]);
+    scraps(c, pm, [['kino', k ? 1.1 : -0.9, 0.75, 0.45, 0.6, [0, 0.4, 0.9, 1]]]);
+  }
   c.b.shadowBox(F(-13, 5, 0), 5, 10, 6);
   c.b.shadowBox(F(13, 5, 0), 5, 10, 6);
 }
@@ -1246,6 +1343,10 @@ function chrathaus(c: Ctx): void {
   cy(c, M.enamel, F(tx, TH + 10.6, tz), 0.03, 0.75, 4.4, 8, C.copper);
   // Lamp posts before the portal; wear.
   for (const x of [wx - 2.6, tx + 3.2]) { cy(c, M.iron, F(x, 1.8, hz - 0.5), 0.07, 0.12, 3.6, 6, C.iron); c.b.geo(M.lampGlass, cached('kd-lantern', () => new CylinderGeometry(0.16, 0.12, 0.42, 6)), F(x, 3.8, hz - 0.5)); }
+  // 2026-11-19: the blank end wall toward the camera (local +x faces south) is papered with bills and torn scraps.
+  const ew = F(hx + 0.01, 0, -0.6, Math.PI / 2);
+  bills(c, ew, [['weissewoche', -2.6, 1.7, 1.2], ['boxen', -1.9, 1.65, 1.15, 0.03], ['sechstage', -1.2, 1.7, 1.2], ['kino', 1.0, 1.68, 1.2, -0.03], ['zoo', 1.7, 1.7, 1.15], ['revue', 2.4, 1.65, 1.2, 0.02]]);
+  scraps(c, ew, [['variete', -0.4, 1.4, 0.45, 0.65, [0.1, 0.35, 1, 1]], ['kabarett', 0.3, 2.0, 0.4, 0.4, [0, 0, 1, 0.4]], ['boxen', 3.2, 1.2, 0.35, 0.5, [0.2, 0.5, 1, 1]]]);
   rubble(c, F, wx - 2, wx + 2, FZ + 0.75, 0.3, 7, SS, 2);
   rubble(c, F, -hx + 0.6, -hx + 3, FZ + 0.8, 0.4, 4, SS);
   c.b.shadowBox(F(0, H / 2, cz), hx * 2, H, D);
