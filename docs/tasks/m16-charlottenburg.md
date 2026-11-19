@@ -104,3 +104,10 @@ Text drafts (Opus finalises): banner „Charlottenburg · 1920“; district card
 - Engine (opt-in, other maps unchanged): `Wall.kind` hedge or fence (`WALL_KIND`, `wallHalf`); `OPEN_PARTS` for loewentor, elefantentor, capitol, kadewe, orangerie, gartentor, chtor; 31 landmark kinds (`rathaus` reused for the Rathaus).
 - Stand-ins: bosses Dirigent, Feldwebel, Spreehexe, Bassprediger (`CHARLOTTENBURG_BOSS_STANDIN`); walkers, runners, Schildträger and crows for the board enemies; lot types hinterhof, markt, truemmer, parkplatz (capped); no `flavor`, dry (no `wet`).
 - Step 2: the Schloss, maze, KaDeWe and gates keep their size at every scale (offsets from one anchor, `C`, `O`, `M`). Walls with `kind` need their own renderer (hedge 2.2 m, fence 2 m), not the Berlin Wall; the Bahnhof Zoo is `walkUnder` on the viaduct; the Ehrenhof gate is a full collider; a Bauzaun on the bridge deck closes the backdrop bank. Only 11 tall Blockrand rows (test ≥ 10): the tall sides are mostly landmarks.
+
+## Review 2026-11-19 (step 1) [Claude · Fable high]
+
+- Checked: `npm run check` green after the step, map image `docs/maps/charlottenburg-data.png`, engine changes in `map.ts` are opt-in, network routes and labels do not overlap on the schematic (not looked at in the game: step 8).
+- Off-route land, the price of an L-shaped route in a rectangle: the south-west blocks along the Ku'damm and the Kantstraße west of the Bleibtreustraße (about 105 × 115 m, the Ku'damm runs 120 m on as a dead end), the forest north-east of the Knie (about 130 × 85 m; it is the Technische Hochschule quarter, the real Tiergarten starts east of the Charlottenburger Tor), the Klausenerplatz corner.
+- Step 2 decides with the minimap and the Tab S9, before landmarks are built. Order of remedies: first put content there (the Hinterhof blessing, a rest stop, a lot type on the Ku'damm stub); if it still reads empty, close the Chaussee east of the Technische Hochschule with a barricade so the forest is backdrop; only then an inner closed edge for the south-west (a new opt-in edge line for `edgeProps`, spec it before building).
+
