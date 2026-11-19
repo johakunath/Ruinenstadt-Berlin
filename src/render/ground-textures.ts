@@ -9,6 +9,7 @@ const urls = {
   leaves: new URL('../../assets/textures/koepenick/leaves.webp', import.meta.url).href,
   litter: new URL('../../assets/textures/koepenick/litter.webp', import.meta.url).href,
   asphalt: new URL('../../assets/textures/koepenick/asphalt.webp', import.meta.url).href,
+  mitteAsphalt: new URL('../../assets/textures/mitte/wet-asphalt.webp', import.meta.url).href,
   cobbles: new URL('../../assets/textures/common/cobbles.webp', import.meta.url).href,
 };
 

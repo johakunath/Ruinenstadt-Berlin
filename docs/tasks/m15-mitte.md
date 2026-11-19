@@ -15,7 +15,7 @@ Layout B2 "Vom Reichstag zum Bass" (Johannes, 2026-11-18). Concept, decisions M1
 | 6 | Enemy and boss build (sim, bodies, sounds, Kodex) from `docs/tasks/m12c-mitte-enemies.md` | 5 | Opus high | done 2026-11-18: `docs/tasks/m12c-mitte-enemies.md` › Handover (step 6) |
 | 7 | Buildings and lot types: glass office blocks with lit lobbies, government stone and glass, Friedrichstadt Blockrand with neon shops, tents and beer garden in the Tiergarten; two lot types per zone, weather per zone (proposals below) | 3 | Opus high | Potsdamer Platz done 2026-11-18 (glass offices, Nachtmarkt, Containerdorf, two towers); other zones built 2026-11-18 (see Handover › step 7, other zones): mockup `docs/mockups/m15-mitte-lots.svg`, picked 2026-11-18 (Johannes: Claude's recommendation): A everywhere (Friedrichstadt Neonmarkt and Clubhof, Regierungsviertel Sperrzone and Autofriedhof, Tiergarten Zeltlager and Lichtung) and facade F-A Sandstein-Ministerium; the B variants are backlog ideas I4 to I8 |
 | 8 | Flow and balance: U2 tunnel from Alexanderplatz to U Potsdamer Platz, title and victory links, network map stop `map: 'mitte'`, bot `--map=mitte`, tier calibration | 2, 6, Alexanderplatz flow | Opus medium | open |
-| 9 | Textures: rows in `docs/asset-pipeline.md` (wet asphalt, glass curtain wall, sandstone, neon sign atlas) | 3, 4, 7 | Codex | open |
+| 9 | Wet asphalt, glass curtain wall, sandstone, neon sign atlas | 3, 4, 7 | Codex | Painted and integrated. [Visual review](../proof/asset-mitte/README.md) and hardware checks open. |
 | 10 | Screenshots (street at night, fight, each landmark), PC and Tab S9 playtest | all | Johannes | open |
 
 ## Anchors (scale 1, meters, +X east, +Z south, from mockup B2; the built positions are in `src/data/mitte.ts`)
@@ -142,3 +142,10 @@ Variant A of `docs/mockups/m15-mitte-lots.svg` and facade F-A (Johannes took the
 - Cost: no new material; one pooled light per club door, holo barrier, charging post and camera LED (the pool size is fixed). Hardware check 27 (`pt-hardware-checks.md`).
 - Proof: `docs/proof/m15-mitte/zones-fill.jpg` (Clubhof, Neonmarkt, Zeltlager, Lichtung). The Sperrzone holo band and the ministries were checked in cloud shots only; a close look is part of hardware check 27.
 - Open: the Regierungsviertel has few intact ministries (most lots roll ruin as everywhere); the holo band does not flicker in the geometry, only its light does.
+
+## Handover 2026-11-19 (step 9) [Codex]
+
+- Four 1024 px WebPs replace the diffuse maps on Mitte's asphalt, curtain, sandstone and neon materials. The asphalt follows the street UVs and picks up wet reflections from the district lighting.
+- The panes retain the existing lit-office emissive map. The neon signs use the original German words, solid tube cell, vertex colours and atlas coordinates with a painted plate layer.
+- The existing material batches load the WebPs over procedural fallback maps.
+- Visual reference from 2D: `assets/buildings/mitte-{curtain,glass,sandstone,plaza}.webp`. [Review captures and repeat tests](../proof/asset-mitte/README.md).

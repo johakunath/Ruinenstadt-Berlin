@@ -1,8 +1,8 @@
 # M11c Textures for the new lot types and plants [Codex]
 
-Status: open. Pipeline, style and technical rules: `docs/asset-pipeline.md` (read it first), `docs/style-bible.md`, board `docs/style/koepenick.png`. Follows T1 (`t1-ground-textures.md`) and T1b (`t1b-ground-polish.md`); same loader pattern.
+Status: initial image integration built. Performance review and hardware playtest open. See [the repeat and atlas checks](../proof/m11c-textures/README.md), [the texture pipeline](../asset-pipeline.md) and [the Köpenick look](../style/koepenick.png).
 
-The asphalt image and its `asphalt` and `tar` hooks are built in [T2](t2-street-textures.md). The next image is the markings atlas (#1b).
+The asphalt image and its `asphalt` and `tar` hooks shipped in [T2](t2-street-textures.md).
 
 ## Goal
 
@@ -69,8 +69,12 @@ KTX2, normal or height maps, new geometry, other districts' colors, hardware mea
 
 ## Questions
 
-(Codex writes blocking questions here and stops.)
+- The marks atlas includes the full approved decal set. The existing parking dividers use its dash. Corners, junctions, additional signage, crossings and stencils can be placed when they have map consumers.
+- The merged vegetation code uses one 4 × 2 atlas. Summer foliage, fern, broad leaves, a cattail and sedge card and the four existing wildflower palettes fit its current consumers. Dry variation uses existing vertex tints. Lily pads have no geometry hook.
+- The merged allotment has a gravel path. The cemetery and Hinterhof use separate ground types. Additional gravel path geometry would need an authored route for each lot.
 
 ## Handover
 
-(Codex: PR link, what was generated, file sizes, what was reused from the 2D repo `assets/buildings/` as reference, deviations.)
+- Parking dividers use the painted dash with slope-following positions preserved. Allotment gravel, wall ruins, Rohbau and slab concrete, cemetery stone and corrugated containers each use a dedicated albedo.
+- The scaffold and market tarp canvases retain their authored colours, bands and cutouts, with the generated woven cloth blended onto them. Existing plant geometries, atlas coordinates and procedural fallbacks are preserved.
+- Used the 2D Köpenick path, ivy and damage textures as references for tone and surface wear. Ten WebPs total 898 kB. Direct textures total about 22.7 MiB decoded with mipmaps, plus about 1.7 MiB for the two replacement cloth canvases at their existing resolution. Both profiles currently load the same images. Confirm available memory and per-chunk draw counts on PC and Tab S9.

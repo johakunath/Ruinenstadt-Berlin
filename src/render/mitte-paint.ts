@@ -1,5 +1,5 @@
-// M15 Mitte (2089) code-painted placeholder textures (no image files; Codex replaces them in step 9 of
-// `docs/tasks/m15-mitte.md`). Sandstone ashlar (Reichstag, Brandenburger Tor), a glass curtain wall
+// M15 Mitte (2089) code-painted fallback textures (`docs/tasks/m15-mitte.md` step 9).
+// Sandstone ashlar (Reichstag, Brandenburger Tor), a glass curtain wall
 // with mullions and lit floors (Potsdamer Platz towers, Bundestag buildings) and gold aluminium panels
 // (Philharmonie, Staatsbibliothek). All are light bases: the vertex tint gives the final colour.
 import type { Texture } from 'three';

@@ -360,7 +360,9 @@ function ringGeo(r: number, t: number): BufferGeometry {
 
 /** An arched opening on a face: dark (or glazed) fill and a lighter ring. `m` sits at the opening's base centre, facing out. */
 function archOpening(b: ChunkBuilder, m: Matrix4, w: number, h: number, fill: Material, fillColor: RGB, ring: Material | null, ringColor: RGB = [1, 1, 1]): void {
-  b.geo(fill, archGeo(w, h), m, fillColor);
+  const glassBroken = fill === b.mm.glass && b.wearWindow(sub(m, 0, (h - w / 2) / 2, 0), w, h - w / 2);
+  if (!glassBroken) b.geo(fill, archGeo(w, h), m, fillColor);
+  else b.geo(b.mm.dark, archGeo(w, h), m);
   if (ring) b.geo(ring, ringGeo(w / 2, Math.min(0.45, w * 0.18)), sub(m, 0, h - w / 2, 0.02), ringColor);
 }
 
@@ -1481,7 +1483,7 @@ export function buildXhainWorld(materials: Materials, m: MapDef, lots: Lot[], mm
   for (const l of land) {
     const b = chunkOf(l.x, l.z);
     const y0 = l.walkUnder || l.kind === 'oberbaum' ? 0 : base(l.x, l.z, Math.max(l.hx, l.hz));
-    const cut = cutOf(l), build = (): void => b.on(y0, () => buildXLandmark(c, b, l));
+    const cut = cutOf(l), build = (): void => b.on(y0, () => b.wearLandmark(l, () => buildXLandmark(c, b, l)));
     b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, landmarkCaps(l)) : build);
     if (l.kind === 'goerlitzer') buildGoerliYard(c, l);
   }

@@ -415,7 +415,8 @@ function reichstag(k: K): void {
     bx(k, N.sandstone, x, TT + 0.5, tz, 5.8, 1.3, 5.8, RT);
     for (const px of [-2.95, 2.95]) for (const pz of [-2.95, 2.95]) {
       bx(k, N.sandstone, x + px, G, tz + pz, 0.8, C - G, 0.8, RL);
-      bx(k, N.sandstone, x + px, TT + 0.5, tz + pz, 0.7, 1.9, 0.7, RT);
+      const broken = b.mm.landmarkWear && sx === 1 && tz === 6 && px === -2.95;
+      bx(k, N.sandstone, x + px, TT + 0.5, tz + pz, 0.7, broken ? 0.46 : 1.9, 0.7, broken ? RB : RT);
     }
     b.shadowBox(F(x, TT / 2, tz), 6.9, TT, 6.9);
   }

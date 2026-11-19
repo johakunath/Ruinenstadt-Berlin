@@ -37,6 +37,10 @@ What is in the game now. Updated 2026-11-18. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
+## Latest (2026-11-19)
+
+- Named landmarks across Köpenick, Xhain, Alexanderplatz and Mitte have a first weathering pass. Köpenick landmarks have five dedicated materials, Mitte has painted asphalt, glass, sandstone and neon signs, and Köpenick lot types have painted surfaces and plants. See `docs/asset-pipeline.md`.
+
 ## Latest (2026-11-18)
 
 - M15 Mitte (in progress): `?map=mitte` plays end to end; neon night (Johannes' mix of the three variants), landmarks from photos, the Pariser Platz framed, the Potsdamer Platz filled with glass offices, a Nachtmarkt and container villages (`docs/tasks/m15-mitte.md`). Enemies and bosses are stand-ins until steps 5 and 6.

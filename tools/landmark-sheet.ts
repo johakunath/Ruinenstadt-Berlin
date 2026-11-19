@@ -11,6 +11,8 @@ import { mitteMap } from '../src/data/mitte';
 import { buildMitteLandmark, MITTE_KINDS, mitteMats } from '../src/render/mitte-world';
 import type { LandmarkKind } from '../src/data/map';
 import { buildLandmark } from '../src/render/landmarks';
+import { makeLandmarkFinishes } from '../src/render/landmark-finishes';
+import { makeLandmarkWearMaterial } from '../src/render/landmark-wear';
 import { LOOK } from '../src/render/looks';
 import { ChunkBuilder, makeMapMats } from '../src/render/map-world';
 import { Materials } from '../src/render/materials';
@@ -30,15 +32,23 @@ const materials = new Materials(LOOK, PROFILES.qualitaet);
 const mm = makeMapMats(materials);
 if (ALEX_KINDS.has(kind)) { const t = paintAlexAtlas(); mm.alex = materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe0a0, emissiveIntensity: 0.8, roughness: 0.6 }); }
 if (MITTE_KINDS.has(kind)) mm.mitte = mitteMats(materials);
+if (!q.has('clean')) {
+  mm.landmarkWear = makeLandmarkWearMaterial(materials);
+  if (!ALEX_KINDS.has(kind) && !MITTE_KINDS.has(kind)) mm.landmarkFinishes = makeLandmarkFinishes(materials, mm.slate);
+}
 const b = new ChunkBuilder(mm);
-if (ALEX_KINDS.has(kind)) buildAlexLandmark(b, l); else if (MITTE_KINDS.has(kind)) buildMitteLandmark(b, l); else buildLandmark(b, l);
+b.wearLandmark(l, () => {
+  if (ALEX_KINDS.has(kind)) buildAlexLandmark(b, l);
+  else if (MITTE_KINDS.has(kind)) buildMitteLandmark(b, l);
+  else buildLandmark(b, l);
+});
 const scene = new Scene();
 scene.background = new Color(0x9fb4c0);
 scene.add(new HemisphereLight(0xe8f0ff, 0x5a5040, 2.0));
 const sun = new DirectionalLight(0xfff0d8, 2.6);
 sun.position.set(-30, 50, 40);
 scene.add(sun, new GridHelper(80, 40, 0x50606a, 0x6a7a80));
-for (const m of b.solid.meshes()) scene.add(m);
+for (const m of [...b.solid.meshes(), ...b.cards.meshes()]) scene.add(m);
 // Let the async ground/paint textures arrive.
 await new Promise((r) => setTimeout(r, 1500));
 const size = Math.max(l.hx, l.hz, 6);
