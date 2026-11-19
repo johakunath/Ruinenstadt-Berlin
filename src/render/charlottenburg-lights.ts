@@ -338,10 +338,8 @@ export function landmarkLightPlan(m: MapDef): Array<{ landmark: Landmark; light:
 
 /** The glow material of `color` in this chunk (the one its lamp decals use), made through `light` if missing. */
 function glowMat(b: ChunkBuilder, color: number): Material {
-  // `glowMats` is the chunk's private colour → material map; sharing it keeps washes in the decals' draw call.
-  const mats = (b as unknown as { glowMats: Map<number, Material> }).glowMats;
-  if (!mats.has(color)) b.light(new Vector3(0, -50, 0), color, 0, 0, 0, 0);
-  return mats.get(color)!;
+  if (!b.glowMaterial(color)) b.light(new Vector3(0, -50, 0), color, 0, 0, 0, 0);
+  return b.glowMaterial(color)!;
 }
 
 const CROSSED = [[0, 0], [0, HALF], [-HALF, 0]] as const, FLAT = [[-HALF, 0]] as const;
