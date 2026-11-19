@@ -2,7 +2,7 @@
 
 Work package WP5 (Johannes, 2026-11-19): P30 quick wins, P12 remaining 2D enemies, H2 own boss models, S3 voices, P25 neon barriers. Order as listed; P25 waits for a Fable decision on dynamic colliders.
 
-Status 2026-11-19: steps 1 and 2 built (PR on `ccr-d099d58b-xmy2l2`). Step 3 waits for Johannes' pick of the mockup looks, step 4 for his pick of the voice tool, step 5 for a Fable pass.
+Status 2026-11-19: steps 1, 2 and 4 built (PR on `ccr-d099d58b-xmy2l2`). Step 3 waits for Johannes' pick of the mockup looks, step 5 for a Fable pass.
 
 ## Steps
 
@@ -11,7 +11,7 @@ Status 2026-11-19: steps 1 and 2 built (PR on `ccr-d099d58b-xmy2l2`). Step 3 wai
 | 1 | P30 quick wins: Brocken orange vest, Kabelghul cyan cables, Speier belly (bodies match busts E02, E13, E03) | built |
 | 2 | P12: Zünder, Schildträger, Heuler (Ratte was built in M12b) | built |
 | 3 | H2: own models in code for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter, Turmwächter, matching busts X04, X01, X05, X10, X06, X03 | mockup round open |
-| 4 | S3: short spoken lines for human and robot enemies and bosses | tool proposal open |
+| 4 | S3: short spoken lines for human and robot enemies and bosses | built (bosses only) |
 | 5 | P25: Türsteher neon barriers | needs a Fable decision (dynamic colliders in the level hash) |
 
 ## Handover (steps 1 and 2)
@@ -38,6 +38,14 @@ Bosses stay on the zombie rig and keep their clips; the new silhouette comes fro
 | Der Brandmeister | X10: burning fire helmet, turnout coat with yellow bands, lamp on the chest | Fire helmet, ember coat, torch | Flames on the helmet, yellow reflective bands, chest lamp |
 | Die Rattenmutter | X06: rat head with a crown, fur | Hood, moss coat, shoulder rat | Rat head (snout, ears, whiskers, teeth) and crown replacing the human head |
 | Der Turmwächter | X03: Fernsehturm sphere as a helmet with a lit visor ring, tower-segment body, sparks | Wide hat, lantern, keys, robe | Tower-sphere head with cyan window ring, ribbed tower body |
+
+## Handover (step 4)
+
+- Approved proposal (below), built for bosses only: 16 bosses × 3 lines (start, rage, signature special) = 48 Ogg Opus clips, 178 KB, in `assets/voices/`; no Rex, no normal kinds. Nothing reused from 2D (it has no voices); texts reuse the sim notes („Antreten!“, „Alarm!“, „Nicht auf der Liste!“, „Gemeinde!“, „Fortissimo!“, „Stillstand“).
+- Generator `tools/voices.mjs` (`npm run assets:voices [kind|kind-trigger …]`): line table, Piper 1.8.0 voices Thorsten (robots), Thorsten emotional `angry`/`neutral` (men), Kerstin (women), ffmpeg chain per body (undead pitch and soft clip, hall, ring mod and bitcrush, chorus, clock echo). Models download to `assets-src/voices/` (gitignored).
+- Play `src/audio/voices.ts` (`BossVoices`, hooked in `GameAudio.onEvent`): clips load on the boss's `spawn`; `start` on its first wind-up or special in earshot (within 8 s of it), `rage` on `bossRage`, `special` on the first `SIGNATURE` special (on `go` where a note shows the same words). One line at a time, 4 s per boss, a line that could not play is tried next time.
+- Through the effects master and `spatialAudio` (volume, pan); no ducking, no render work, no lights. Tests: 4 in `src/audio/audio.test.ts` (clip set, trigger, gap, retry and start window).
+- Open: Johannes' listening check (Playtest row, `pt-hardware-checks.md`); older Safari versions may not decode Ogg Opus (the lines then stay silent, nothing breaks).
 
 ## Step 4 proposal (before anything is generated)
 

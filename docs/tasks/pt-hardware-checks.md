@@ -18,7 +18,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 | Run flow | S3 tunnel (M19), tunnels between the maps and the walkable camp (M20), endless mode, events, Späti trade with the worn-item comparison | `m20-tunnels-camp.md`, `docs/status.md` |
 | Menus | Pause menu, inventory, Segen, Kodex, options, controls graphics, start screen (U1 to U3); set-break warning on a swap (2D backlog 29, not confirmed) | `u1-pause-menu.md`, `u2-menu-tabs.md`, `u3-menu-2d.md` |
 | Save | Checkpoints and difficulty (M6), online save against the live script (Q6), Spielstand kopieren/laden | `docs/migration.md` › Open |
-| Audio | Enemy sounds per type, listening test (A2) | `a2-audio-followups.md` |
+| Audio | Enemy sounds per type, listening test (A2); S3 boss voices: are the 48 lines clear, the right voice per boss, too loud or too often? (`?spawn=tuersteher`, `?spawn=weltzeituhr`) | `a2-audio-followups.md`, `wp5-enemies.md` › Step 4 |
 | Balance | Clear times and the power curve against the bot (M14, B9, B10) | `docs/balance.md` |
 
 ## Hardware checks

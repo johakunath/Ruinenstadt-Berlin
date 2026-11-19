@@ -1,6 +1,6 @@
 # Backlog (3D)
 
-Open items only; delete a row when it is done (the PR and `docs/status.md` keep the record). Done: P12 remaining 2D enemies (Zünder, Schildträger, Heuler; Ratte in M12b), WP5 2026-11-19; B3 heights (hills, terraces with stairs, M11b), B6 finishers (M7), M6 wave checkpoints; P1 controls table and pad layout; P4 equip by second tap; P5 trader comparison, P9 pad and pinch zoom, P21 and P23 reachable lot spots, P22 guard get-up (2026-11-18); prototype controller feel/rumble, PC performance and hero outline (Johannes, 2026-11-16). Scheduled work lives in `docs/migration.md` (steps M1 to M19, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`.
+Open items only; delete a row when it is done (the PR and `docs/status.md` keep the record). Done: P12 remaining 2D enemies (Zünder, Schildträger, Heuler; Ratte in M12b) and 2D #18 enemy voices (S3 boss lines), WP5 2026-11-19; B3 heights (hills, terraces with stairs, M11b), B6 finishers (M7), M6 wave checkpoints; P1 controls table and pad layout; P4 equip by second tap; P5 trader comparison, P9 pad and pinch zoom, P21 and P23 reachable lot spots, P22 guard get-up (2026-11-18); prototype controller feel/rumble, PC performance and hero outline (Johannes, 2026-11-16). Scheduled work lives in `docs/migration.md` (steps M1 to M19, H1, H2); items here are pulled in when a step needs them. Owner tags as in `docs/workflow.md`.
 
 Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, not before:
 
@@ -11,7 +11,6 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | 14, 27 | Story artefacts (tapes, notes), collectibles with permanent power | M16b |
 | 16, 37, 30 | Camp as a place, stations with levels and NPCs, stash purpose | After M13 |
 | 17, 34 | Umschmieden with control, smith and enchanter | M13 |
-| 18 | Enemy voices | S3 |
 | 19 | Authored arena spots with a special reward (dark zone replacement) | M16b |
 | 22 | Loot pacing check | M14 |
 | 24 | Save slots | After M17 |

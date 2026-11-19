@@ -1,10 +1,11 @@
-// Sound, generated with WebAudio: no audio files. Hits play on the exact sim step of the damage frame.
+// Sound, generated with WebAudio; only the S3 boss lines are files (voices.ts). Hits play on the exact sim step of the damage frame.
 import type { HitWeight } from '../data/combat';
 import type { EnemyKind } from '../data/enemies';
 import type { Sim, SimEvent } from '../sim/types';
 import type { SpecialKind } from '../sim/threats';
 import { SoundEffects, Synth, type SfxId } from './sfx';
 import { Music, type MusicState } from './music';
+import { BossVoices } from './voices';
 
 /** Wind-up voice per kind (S2); other bosses growl, other bodies use the walker's. */
 const VOICE: Partial<Record<EnemyKind, SfxId>> = {
@@ -33,6 +34,7 @@ export class GameAudio {
   private eco = false;
   private room: GainNode | null = null;
   private cancelPrewarm: (() => void) | null = null;
+  private voices: BossVoices | null = null;
 
   /** Must be called from a user gesture (the Spielen button). */
   start(): void {
@@ -65,6 +67,7 @@ export class GameAudio {
     this.effects = new SoundEffects(synth); this.effects.setEco(this.eco);
     this.cancelPrewarm = this.effects.prewarm();
     this.music = new Music(synth);
+    this.voices = new BossVoices(this.ctx, this.master);
     if (this.musicEnabled && this.volume > 0) this.music.start();
     const len = this.ctx.sampleRate;
     this.noise = this.ctx.createBuffer(1, len, len);
@@ -163,6 +166,11 @@ export class GameAudio {
     if (sim) {
       const source = 'x' in event ? event : 'id' in event ? sim.enemies.find(e=>e.id===event.id) : undefined;
       if(source) ({volume,pan}=spatialAudio(source.x-sim.player.x,source.z-sim.player.z));
+      // S3: boss lines (spawn loads them; first act, rage and the signature special speak).
+      if (this.voices && this.volume > 0 && (event.type === 'spawn' || event.type === 'enemyWindup' || event.type === 'enemySpecial' || event.type === 'bossRage')) {
+        const boss = sim.enemies.find(e => e.id === event.id);
+        if (boss?.def.boss) this.voices.onEvent(event, boss.id, boss.kind, volume, pan);
+      }
     }
     // Out of earshot: no voices, and the hit throttle stays free for audible hits (2D returns early).
     if (sim && volume <= 0.02 && (event.type === 'hit' || event.type === 'dot' || event.type === 'bolt' || event.type === 'ignite' || event.type === 'impact' || event.type === 'shock')) return;
@@ -259,7 +267,7 @@ export class GameAudio {
   dispose(): void {
     this.cancelPrewarm?.(); this.music?.stop();
     if (this.ctx) void this.ctx.close();
-    this.ctx = null; this.master = null; this.effects = null; this.music = null; this.rotorGain = null;
+    this.ctx = null; this.master = null; this.effects = null; this.music = null; this.rotorGain = null; this.voices = null;
   }
 
   /** 2D initAudio ambient wind. */

@@ -19,6 +19,7 @@ Legend: **zombie+gear** = `assets/characters/zombie.glb` rig with code gear and 
 - Bodies: 22 kinds on the zombie rig (2 without own gear: walker, runner), 4 with an own GLB, 7 code-built. None is marked `final`.
 - WP5 fix: zombie-rig gear is now built in the idle pose (`EnemyView.inIdle`); before, it took the pose the pooled view held (often a death pose), so helmets, caps, speakers, torch and lantern sat tilted.
 - Kodex: 20 kinds have a painted 2D bust, 13 a code SVG glyph (`BOSS_GLYPH`). Of the 20 busts: 14 match the 3D body, 4 partly, 2 do not (Turmwächter, Rattenmutter). No Kodex image is a render of the 3D model.
+- Voices (S3, WP5 step 4): the 16 human, robot and machine bosses each say three lines (`assets/voices/<kind>-<trigger>.ogg`: start, rage, signature special; table in `tools/voices.mjs`, rules in `src/audio/voices.ts`). No voice: the Rex and every normal kind. New boss: add its three lines and its `SIGNATURE` entry.
 - Elite tiers in every map: an elite Brocken guards one side passage (`guards` in each map file; the tunnel "mini-boss" is this guard).
 
 ## Index
