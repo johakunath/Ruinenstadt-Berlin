@@ -140,6 +140,11 @@ describe('item generation', () => {
     expect(t.kiez).toBeGreaterThan(0);
   });
 
+  it('gives every set piece a finite value, the healing key ring too', () => {
+    const rng = new Rng(9), ctx = context({ tunnel: true });
+    for (let i = 0; i < 400; i++) expect(Number.isFinite(makeSetItem(rng, ctx, 6).value)).toBe(true);
+  });
+
   it('rolls every set piece as rare, without an element or district level bonus', () => {
     const rng = new Rng(11), ctx = context({ district: 6 }), seen = new Set<string>();
     for (let i = 0; i < 500; i++) {

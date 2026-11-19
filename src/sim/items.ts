@@ -120,6 +120,8 @@ export function makeSetItem(rng: Rng, ctx: LootContext, itemLevel: number): Item
   else if (slot === 'a') value = Math.round((12 + itemLevel * 6) * 1.8);
   else if (slot === 'h') value = Math.round((2 + itemLevel * .12) * 1.8);
   else if (slot === 'g' || slot === 'f') value = Math.round((3 + itemLevel * .12) * 1.8);
+  // The Tunnelläufer key ring heals (Codex review): the normal talisman formula, one decimal like `makeItem`.
+  else if (kind === 'heil') value = +((.5 + itemLevel * .12) * 1.8).toFixed(1);
   else value = Math.round({ krit: 3 + itemLevel * .35, tempo: 4 + itemLevel * .3 }[kind as 'krit' | 'tempo'] * 1.8);
   const item: Item = { id: nextId(ctx), slot, kind, base, name, rarity: 2, value, itemLevel, affixes: [], set };
   rollAffixes(rng, item);
