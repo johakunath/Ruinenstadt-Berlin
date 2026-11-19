@@ -264,27 +264,34 @@ export class CloudSave {
     // A rename that never reached the server, or names given while the record was missing: send them.
     if (this.metaEdit || (!r.s && (this.name || this.slotNames.some(Boolean)))) void this.pushMeta({});
   }
+  /** Name writes run one after another, so two quick renames never send the same base (Codex review). */
+  private metaQueue: Promise<void> = Promise.resolve();
   /**
-   * Applies an edit locally at once, keeps it as pending, then writes the record; a newer remote record
-   * is merged first. The pending edit is cleared only once the server confirmed it (Codex review).
+   * Applies an edit locally at once and keeps it as pending, then writes the record; a newer remote record
+   * is merged first. Pending edits are cleared only when the server confirmed exactly what was sent.
    */
-  private async pushMeta(edit: MetaEdit): Promise<void> {
-    const c = this.code;
-    if (!this.allowed || !c) return;
+  private pushMeta(edit: MetaEdit): Promise<void> {
+    if (!this.allowed || !this.code) return Promise.resolve();
     this.metaEdit = { n: edit.n ?? this.metaEdit?.n, s: { ...this.metaEdit?.s, ...edit.s } };
     if (this.metaEdit.n === undefined) delete this.metaEdit.n;
-    let m = withEdit(this.meta(), this.metaEdit);
+    const m = withEdit(this.meta(), this.metaEdit);
     this.name = m.n; this.slotNames = m.s; this.keep(); this.changed();
+    const c = this.code;
+    return this.metaQueue = this.metaQueue.then(() => this.sendMeta(c));
+  }
+  private async sendMeta(c: string): Promise<void> {
     for (let tries = 0; tries < 2; tries++) {
+      if (this.code !== c || !this.metaEdit) return;
+      const sent = JSON.stringify(this.metaEdit);
+      const m = withEdit(this.meta(), this.metaEdit);
       const t = Math.max(this.deps.now(), this.metaBase + 1);
       const r = await this.call({ a: 'put', c: metaCode(c), s: JSON.stringify(m), t, b: this.metaBase });
       if (this.code !== c) return;
-      if (r?.ok) { this.metaBase = r.t ?? t; this.metaEdit = null; this.keep(); return; }
+      if (r?.ok) { this.metaBase = r.t ?? t; if (JSON.stringify(this.metaEdit) === sent) this.metaEdit = null; this.keep(); return; }
       if (!r?.newer) return;
       const g = await this.call({ a: 'get', c: metaCode(c) });
       if (this.code !== c || !g?.ok) return;
-      m = withEdit(parseMeta(g.s) ?? this.meta(), this.metaEdit);
-      this.adoptMeta(m, g.t ?? 0);
+      this.adoptMeta(withEdit(parseMeta(g.s) ?? this.meta(), this.metaEdit), g.t ?? 0);
     }
   }
 

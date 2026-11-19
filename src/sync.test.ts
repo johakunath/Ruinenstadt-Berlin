@@ -192,5 +192,15 @@ describe('cloud save', () => {
     await c.join(a.code!);
     expect([c.name, c.slotNames[1]]).toEqual(['Johannes', 'Frisch']);
   });
+  it('M6b: two quick renames are sent one after another and both stay', async () => {
+    const srv = server();
+    const a = new CloudSave(true, deps(srv));
+    a.enable(); await a.rename('Erst');
+    await Promise.all([a.rename('Konto'), a.renameSlot(2, 'Zweiter')]);
+    const b = new CloudSave(true, deps(srv));
+    await b.join(a.code!);
+    expect([b.name, b.slotNames[1]]).toEqual(['Konto', 'Zweiter']);
+    expect([a.name, a.slotNames[1]]).toEqual(['Konto', 'Zweiter']);
+  });
 });
 const tick = () => new Promise((r) => setTimeout(r, 5));
