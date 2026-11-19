@@ -15,7 +15,9 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | Painted textures: M11c lot types and plants, T5 Köpenick landmarks, T6 Xhain, Mitte step 9 | Codex | open: `docs/asset-pipeline.md` › Texture queue and `docs/tasks/m15-mitte.md` |
 | Texture performance and rail follow-up: T1b, plus profile checks for the new painted batches | Claude and Johannes | open: `docs/tasks/t1b-ground-polish.md`, `docs/tasks/pt-hardware-checks.md` |
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals, P24 worn landmarks | Claude · Opus high | open: `docs/backlog.md` |
-| Next district Charlottenburg (Q8), concept first | Claude · Fable high (concept), Opus high (build) | not started: `docs/maps/guidelines.md` |
+| M16 Charlottenburg step 1: data `src/data/charlottenburg.ts` from the anchors (layout C2), invariant tests, map SVG, network data in `lines.ts` (U2, S+U Zoologischer Garten) | Claude · Opus high | open: `docs/tasks/m16-charlottenburg.md`, concept `docs/maps/charlottenburg.md` |
+| M16 Charlottenburg step 5: enemy and boss spec (Scherbentänzerin, Logenbrecher, Spiegelsouffleur, three zone bosses, Die Diamantene Diva, district rule, maze riddles, loot); can run parallel to step 1 | Claude · Fable high | open: `docs/tasks/m16-charlottenburg.md` › Input for step 5 |
+| M16 Charlottenburg step 3a: sky per zone (evening to morning along the route), spec before the look is built | Claude · Fable high | open, after step 1: `docs/tasks/m16-charlottenburg.md` › Engine notes E1 |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
 
 Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.
