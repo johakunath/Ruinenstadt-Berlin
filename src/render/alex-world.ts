@@ -65,7 +65,11 @@ function atlasBand(b: ChunkBuilder, m: Matrix4, r: number, h: number, seg: numbe
 /** A glass front: atlas panes tiled over len × h from height y0 (frame `m` at the face centre, z out). */
 function glassFace(b: ChunkBuilder, m: Matrix4, len: number, y0: number, h: number, key: AtlasKey, cell = 6): void {
   const nx = Math.max(1, Math.round(len / cell)), ny = Math.max(1, Math.round(h / cell)), cw = len / nx, ch = h / ny;
-  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) atlasPlane(b, sub(m, (i + 0.5) * cw - len / 2, y0 + (j + 0.5) * ch, 0.03), cw, ch, key);
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const pane = sub(m, (i + 0.5) * cw - len / 2, y0 + (j + 0.5) * ch, 0.03);
+    if (cw <= 5 && ch <= 5 && b.wearWindow(pane, cw, ch)) continue;
+    atlasPlane(b, pane, cw, ch, key);
+  }
 }
 
 /** All four faces of a w × d glass box from y0 to y0 + h, with a dark core so no face is empty. */
@@ -132,7 +136,12 @@ export function buildClockParts(column: ChunkBuilder, drum: ChunkBuilder, orbit:
   atlasBand(drum, F(0, y0 + 1.37, 0, Math.PI / 24), R + 0.03, 0.74, 24, 'hours');
   atlasBand(drum, F(0, y0 + 2.2, 0, Math.PI / 12), R, 0.9, 24, 'cities');
   drum.geo(M.dark, cached('wzBot', () => new CircleGeometry(R - 0.05, 24)), F(0, y0 + 0.01, 0).multiply(new Matrix4().makeRotationX(Math.PI / 2)));
-  for (let k = 0; k < 24; k++) drum.box(M.iron, F(Math.sin((k * Math.PI) / 12) * (R - 0.15), y0 - 0.12, Math.cos((k * Math.PI) / 12) * (R - 0.15), (k * Math.PI) / 12), 0.28, 0.22, 0.32, BRASS);
+  for (let k = 0; k < 24; k++) {
+    if (M.landmarkWear && (k === 5 || k === 16)) continue;
+    const angle = k * Math.PI / 12;
+    const tarnished = M.landmarkWear && k % 4 === 0;
+    drum.box(M.iron, F(Math.sin(angle) * (R - 0.15), y0 - 0.12, Math.cos(angle) * (R - 0.15), angle), 0.28, 0.22, 0.32, tarnished ? [0.53, 0.46, 0.36] : BRASS);
+  }
   // Mast and orbit sculpture.
   cyl(orbit, 0.13, 0.16, 2.4, y0 + 2.78, M.iron, [0.6, 0.6, 0.62]);
   const c = CLOCK.orbit;

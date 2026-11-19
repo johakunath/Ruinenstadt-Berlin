@@ -2,11 +2,12 @@
 // pieces the map uses for scatter and trees (`map-world.ts`). Footprints: `propCollider` in
 // `src/data/courtyard.ts` (only hedges block). Everything is cheap: low-poly foliage blobs merged
 // per material, alpha-tested cards from one painted atlas (`paintPlants`), no per-instance materials.
-import { BufferAttribute, CylinderGeometry, Euler, IcosahedronGeometry, Matrix4, PlaneGeometry, Quaternion, Vector3, type BufferGeometry, type Texture } from 'three';
+import { BufferAttribute, CylinderGeometry, Euler, IcosahedronGeometry, Matrix4, PlaneGeometry, Quaternion, Vector3, type BufferGeometry } from 'three';
 import type { PlantPropKind, Prop } from '../data/courtyard';
 import type { Rng } from '../sim/math';
 import type { LitMaterial } from './materials';
 import { paintBark, paintFoliage, paintPlants, PLANT_CELL } from './paint';
+import { swapPaintedMap } from './surface-textures';
 import { at, type Builder, type Mats } from './world';
 
 type RGB = readonly [number, number, number];
@@ -24,23 +25,31 @@ export interface PlantMats {
   bark: LitMaterial;
 }
 
-let tex: { plants: Texture; foliage: Texture; bark: Texture } | null = null;
 const matCache = new WeakMap<Mats, PlantMats>();
+// Same 4 × 2 order as PLANT_CELL: leaf spray, fern, big leaves, cattails;
+// then red, yellow, white and purple flower cards.
+const plantCards = new URL('../../assets/textures/common/plant-cards.webp', import.meta.url).href;
+const foliageTile = new URL('../../assets/textures/common/foliage-solid.webp', import.meta.url).href;
+const barkTile = new URL('../../assets/textures/common/bark.webp', import.meta.url).href;
 
 /** Plant materials for a material set (cloned from fern/wood so they follow the profile). */
 export function plantMats(m: Mats): PlantMats {
   let p = matCache.get(m);
   if (p) return p;
-  tex ??= { plants: paintPlants(), foliage: paintFoliage(), bark: paintBark() };
+  const { anisotropy, id } = m.profile;
+  const performance = id === 'leistung';
   const leaf = m.fern.clone();
-  leaf.map = tex.plants;
+  leaf.map = paintPlants();
   const foliage = m.wood.clone();
-  foliage.map = tex.foliage;
+  foliage.map = paintFoliage();
   foliage.roughness = 0.9;
   const bark = m.wood.clone();
-  bark.map = tex.bark;
+  bark.map = paintBark();
   bark.roughness = 0.95;
   matCache.set(m, (p = { leaf, foliage, bark }));
+  swapPaintedMap([leaf], plantCards, anisotropy, false, performance ? 512 : 1024);
+  swapPaintedMap([foliage], foliageTile, anisotropy, true, performance ? 256 : 512);
+  swapPaintedMap([bark], barkTile, anisotropy, true, performance ? 256 : 512);
   return p;
 }
 

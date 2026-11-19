@@ -12,6 +12,7 @@ import { COURTYARD, type Facade, type Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
 import { loadGroundTexture } from './ground-textures';
+import { loadLotPropTextures } from './lot-textures';
 import { swapPaintedMap } from './surface-textures';
 import { Materials, type LitMaterial } from './materials';
 import {
@@ -128,6 +129,7 @@ export class Run {
 }
 
 export interface Mats {
+  profile: Materials['profile'];
   plaster: Record<string, LitMaterial>;
   brick: LitMaterial;
   stucco: LitMaterial;
@@ -162,6 +164,9 @@ export interface Mats {
   enamel: LitMaterial;
   corrugated: LitMaterial;
   concrete: LitMaterial;
+  roughConcrete: LitMaterial;
+  stoneMoss: LitMaterial;
+  brickRuin: LitMaterial;
   linen: LitMaterial;
   lattice: LitMaterial;
   tarp: LitMaterial;
@@ -187,9 +192,11 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
   const sign = paintSign();
   const wood = paintWood(o);
   const rust = paintMetal('#7b4a2e', o, 31, 1.4);
+  const concrete = paintConcrete(o).map;
   const ivyTex = paintIvy();
   const corr = paintCorrugated(o);
   const mats: Mats = {
+    profile: m.profile,
     plaster,
     brick: m.surface({ map: brick.map, normalMap: brick.normalMap, roughness: 0.9, vertexColors: true }),
     stucco: m.surface({ map: paintStucco(o).map, roughness: 0.85, vertexColors: true }),
@@ -220,7 +227,10 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
     carGlass: m.surface({ color: 0x4d6266, emissive: 0x0c1416, roughness: 0.18, metalness: 0.05, vertexColors: true }),
     enamel: m.surface({ map: paintMetal('#e2ddd0', o, 61, 0.8).map, roughness: 0.65, metalness: 0.2, vertexColors: true }),
     corrugated: m.surface({ map: corr.map, normalMap: corr.normalMap, roughness: 0.7, metalness: 0.2, vertexColors: true }),
-    concrete: m.surface({ map: paintConcrete(o).map, roughness: 0.9, vertexColors: true }),
+    concrete: m.surface({ map: concrete, roughness: 0.9, vertexColors: true }),
+    roughConcrete: m.surface({ map: concrete.clone(), roughness: 0.9, vertexColors: true }),
+    stoneMoss: m.surface({ map: concrete.clone(), roughness: 0.9, vertexColors: true }),
+    brickRuin: m.surface({ map: brick.map.clone(), normalMap: brick.normalMap, roughness: 0.9, vertexColors: true }),
     linen: m.surface({ map: paintCloth('#e4e0d4', o, 57).map, roughness: 0.95, doubleSided: true, vertexColors: true }),
     lattice: m.surface({ map: paintLattice(), alphaTest: 0.5, doubleSided: true, roughness: 0.7, metalness: 0.2, vertexColors: true }),
     tarp: m.surface({ map: paintTarp(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
@@ -245,6 +255,7 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
   );
   if (!district) sources.push([new URL('../../assets/textures/common/concrete.webp', import.meta.url).href, [mats.concrete]]);
   for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat);
+  if (district !== 'tunnel') loadLotPropTextures(mats);
   return mats;
 }
 

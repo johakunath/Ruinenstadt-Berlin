@@ -449,6 +449,7 @@ function sonyBlock(c: MCtx, F: Matrix4, front: readonly P2[], outer: readonly P2
     for (let i = 0; i < 4; i++) batch.quad([P(front[i]!, 0.1), P(front[i + 1]!, 0.1), P(front[i + 1]!, G - 0.6), P(front[i]!, G - 0.6)]);
   }
   for (const [i, s] of segs(F, front).entries()) {
+    if (i === 1 && (d === 60 || d === 240)) b.wearWindow(sub(s.m, 0, G + 1.65, 0.02), Math.min(s.len * 0.8, 2.25), 2.15, true);
     b.box(M.iron, sub(s.m, 0, G - 0.3, 0.12), s.len + 0.05, 0.6, 0.3, DARK);
     b.box(M.enamel, sub(s.m, 0, G + 0.05, 0.8), s.len + 0.1, 0.2, 1.5, WHITE);
     neon(c, led, sub(s.m, 0, G - 0.06, 1.56), s.len + 0.1, 0.08, 0.06);

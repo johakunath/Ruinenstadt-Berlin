@@ -40,6 +40,8 @@ What is in the game now. Updated 2026-11-19. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-19)
 
+- Named landmarks across Köpenick, Xhain, Alexanderplatz and Mitte have a first weathering pass. Köpenick landmarks have five dedicated materials, Mitte has painted asphalt, glass, sandstone and neon signs, and Köpenick lot types have painted surfaces and plants. See `docs/asset-pipeline.md`.
+
 - WP5 finished: own looks for Feldwebel, Hauptmann, Schaffner, Brandmeister, Rattenmutter and Turmwächter; spoken boss lines (start, rage, signature special); Der Türsteher shuts the Tor passages with neon bars in rage; hidden blessings and the cache show through walls within 15 m; every normal ghoul in its own colours.
 - Funde (Uhrwerkteile and Kassetten) in all four districts, Kodex › Funde; inventory Kraft section as two cards to switch plus a fixed ultimate line (U4 A); ⚠ on set-breaking swaps; dust trail on the roll; heavier flinch on big hits.
 - WP5 enemies: Zünder (runs up, lights its fuse, explodes; also when killed, smaller), Schildträger (riot shield in front, the hammer opens it), Heuler (stays back, howls the others on) in Xhain, Alexanderplatz and Mitte; Brocken in an orange vest, a fat Speier, cyan cables on the Kabelghul; boss helmets, caps and speaker heads sit upright (`docs/tasks/wp5-enemies.md`).
