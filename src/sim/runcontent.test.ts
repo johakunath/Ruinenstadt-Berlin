@@ -114,6 +114,20 @@ describe('events', () => {
     expect(h.enemies.length).toBeGreaterThanOrEqual(8);
     expect(h.enemies.every((e) => e.kind === 'runner')).toBe(true);
   });
+  it('ambush and horde never place an enemy in a no-spawn zone (M16 platform)', () => {
+    for (const kind of ['ambush', 'horde'] as const) for (const seed of [3, 5, 8]) {
+      const s = make(seed);
+      onLeg(s, kind);
+      const p = s.player;
+      // The east half around the hero, where half the ambush ring would stand.
+      level.noSpawn = [[{ x: p.x, z: p.z - 40 }, { x: p.x + 40, z: p.z - 40 }, { x: p.x + 40, z: p.z + 40 }, { x: p.x, z: p.z + 40 }]];
+      try {
+        run(s, 1);
+        expect(s.enemies.length, `${kind} ${seed}`).toBeGreaterThanOrEqual(2);
+        for (const e of s.enemies) expect(level.noSpawnAt(e.x, e.z), `${kind} ${seed} ${e.x.toFixed(1)},${e.z.toFixed(1)}`).toBe(false);
+      } finally { level.noSpawn = []; }
+    }
+  });
   it('trader: an enemy far off (a sleeping guard) does not keep him silent, one close by does', () => {
     const s = make();
     onLeg(s, 'trader');

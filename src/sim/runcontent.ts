@@ -257,7 +257,8 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
         const a = (i / n) * Math.PI * 2;
         let x = p.x + Math.sin(a) * CONTENT.ambush.ring;
         let z = p.z + Math.cos(a) * CONTENT.ambush.ring;
-        if (!reachable(L, x, z)) {
+        // M16: a ring point in a no-spawn zone (the Bahnhof Zoo platform) moves like an unreachable one.
+        if (!reachable(L, x, z) || L.noSpawnAt(x, z)) {
           const q = spot(5, 8.7, 0.5);
           if (!q) continue;
           x = q.x;

@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { Landmark } from '../data/map';
 import { footprintDist, LandmarkReveal, REVEAL_IN, REVEAL_NEAR, REVEAL_OUT } from './reveal';
+import { charlottenburgMap } from '../data/charlottenburg';
 
 const rathaus: Landmark = { kind: 'rathaus', x: 0, z: 0, rot: Math.PI / 2, hx: 13, hz: 15, clear: 3 };
 const spati: Landmark = { kind: 'spati', x: 100, z: 0, rot: 0, hx: 5, hz: 4, clear: 2 };
 
 describe('landmark reveal (M11d)', () => {
+  it('Charlottenburg reveals its five sights only; no Köpenick kind (the Rathaus is its own backdrop kind, M16)', () => {
+    const shown = charlottenburgMap(1).landmarks.filter((l) => new LandmarkReveal([l]).update(0.1, l.x, l.z, true) !== null).map((l) => l.kind);
+    expect(shown.sort()).toEqual(['belvedere', 'gedaechtniskirche', 'kadewe', 'opernhaus', 'schlossmitte']);
+  });
+
   it('measures the distance to the rotated footprint', () => {
     expect(footprintDist(rathaus, 0, 0)).toBe(0);
     // Rotated a quarter turn: the 15 m half depth runs along x.
