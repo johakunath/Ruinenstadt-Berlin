@@ -20,7 +20,7 @@ const DIM = 0.72;
 
 type Kind = 'hit' | 'crit' | 'quiet' | 'taken' | 'heal' | 'tick';
 
-interface Num { el: HTMLDivElement; on: boolean; t: number; life: number; x: number; y: number; z: number; jx: number; val: number; kind: Kind }
+interface Num { el: HTMLDivElement; on: boolean; t: number; life: number; x: number; y: number; z: number; jx: number; dy: number; sx: number; sy: number; val: number; kind: Kind }
 interface Req { text: string; color: string; kind: Kind; x: number; y: number; z: number; val: number }
 /** Summed ticks of one target; `hero`: follows the hero, else stays at the enemy's last spot. */
 interface Bucket { amount: number; t: number; window: number; color: string; hero: boolean; x: number; y: number; z: number }
@@ -43,7 +43,7 @@ export class DamageNumbers {
       el.className = 'dmg-num';
       el.hidden = true;
       root.appendChild(el);
-      this.nums.push({ el, on: false, t: 0, life: 0, x: 0, y: 0, z: 0, jx: 0, val: 0, kind: 'hit' });
+      this.nums.push({ el, on: false, t: 0, life: 0, x: 0, y: 0, z: 0, jx: 0, dy: 0, sx: 0, sy: 0, val: 0, kind: 'hit' });
     }
   }
 
@@ -64,13 +64,13 @@ export class DamageNumbers {
         break;
       case 'playerHit': {
         const d = Math.round(ev.damage);
-        if (d >= 1) this.reqs.push({ text: `-${d}`, color: COL.taken, kind: 'taken', x: p.x, y: 1.9, z: p.z, val: HERO + d });
+        if (d >= 1) this.reqs.push({ text: `-${d}`, color: COL.taken, kind: 'taken', x: p.x, y: 2.0, z: p.z, val: HERO + d });
         break;
       }
       case 'heal': {
-        if (ev.tick) { this.add(ev.source === 'regen' ? 'regen' : 'heal', ev.amount, ev.source === 'regen' ? REGEN_MERGE : MERGE, COL.heal, true, p.x, 2.3, p.z, false); break; }
+        if (ev.tick) { this.add(ev.source === 'regen' ? 'regen' : 'heal', ev.amount, ev.source === 'regen' ? REGEN_MERGE : MERGE, COL.heal, true, p.x, 2.4, p.z, false); break; }
         const h = Math.round(ev.amount);
-        if (h >= 1) this.reqs.push({ text: `+${h} Leben`, color: COL.heal, kind: 'heal', x: p.x, y: 2.3, z: p.z, val: HERO + h });
+        if (h >= 1) this.reqs.push({ text: `+${h} Leben`, color: COL.heal, kind: 'heal', x: p.x, y: 2.6, z: p.z, val: HERO + h });
         break;
       }
       default:
@@ -96,6 +96,8 @@ export class DamageNumbers {
 
   update(sim: Sim, dt: number, screenOf: ScreenOf, visible: boolean): void {
     if (!visible) { this.clear(); return; }
+    // After a hitch (tab switch, a long frame) new numbers still show instead of expiring at once.
+    dt = Math.min(dt, 0.1);
     const p = sim.player;
     for (const [key, b] of this.buckets) {
       b.t += dt;
@@ -103,11 +105,11 @@ export class DamageNumbers {
       // Below 1 the sum keeps growing (slow regen shows as +1 now and then, never as 0).
       if (b.amount < 1) { b.t = 0; continue; }
       const v = Math.round(b.amount);
-      if (b.hero) this.reqs.push({ text: `+${v}`, color: b.color, kind: 'tick', x: p.x, y: 2.3, z: p.z, val: HERO + v });
+      if (b.hero) this.reqs.push({ text: `+${v}`, color: b.color, kind: 'tick', x: p.x, y: 2.4, z: p.z, val: HERO + v });
       else this.reqs.push({ text: `${v}`, color: b.color, kind: 'quiet', x: b.x, y: b.y, z: b.z, val: v * 0.5 });
       this.buckets.delete(key);
     }
-    if (this.reqs.length) this.place();
+    if (this.reqs.length) this.place(screenOf);
     for (const n of this.nums) {
       if (!n.on) continue;
       n.t += dt;
@@ -116,14 +118,16 @@ export class DamageNumbers {
       const left = n.life - n.t;
       // 2D pop: crits start half again as big and settle in ~0.2 s, plain hits a little.
       const pop = n.kind === 'crit' ? 1 + Math.max(0, 0.18 - n.t) * 3 : n.kind === 'hit' ? 1 + Math.max(0, 0.18 - n.t) * 1.2 : 1;
-      n.el.style.transform = `translate(${(s.x + n.jx).toFixed(0)}px, ${(s.y - n.t * RISE).toFixed(0)}px) translate(-50%, -100%) scale(${pop.toFixed(2)})`;
+      n.sx = s.x + n.jx;
+      n.sy = s.y + n.dy - n.t * RISE;
+      n.el.style.transform = `translate(${n.sx.toFixed(0)}px, ${n.sy.toFixed(0)}px) translate(-50%, -100%) scale(${pop.toFixed(2)})`;
       // Fades over the last half second; quiet ticks stay dimmer.
       n.el.style.opacity = (Math.min(1, left * 2) * (n.kind === 'quiet' || n.kind === 'tick' ? DIM : 1)).toFixed(2);
     }
   }
 
   /** Biggest first; with no free slot a number replaces the smallest one on screen if it is bigger. */
-  private place(): void {
+  private place(screenOf: ScreenOf): void {
     this.reqs.sort((a, b) => b.val - a.val);
     for (const r of this.reqs) {
       let slot: Num | null = null;
@@ -136,7 +140,14 @@ export class DamageNumbers {
       slot.t = 0;
       slot.life = r.kind === 'heal' ? HEAL_LIFE : LIFE;
       slot.x = r.x; slot.y = r.y; slot.z = r.z;
-      slot.jx = r.kind === 'hit' || r.kind === 'crit' || r.kind === 'quiet' ? (Math.random() - 0.5) * 20 : 0;
+      // Dealt numbers jitter a little (2D); at the hero, taken damage sits right and heal ticks left of the +X Leben line.
+      slot.jx = r.kind === 'taken' ? 26 : r.kind === 'tick' ? -34 : r.kind === 'heal' ? 0 : (Math.random() - 0.5) * 20;
+      // Numbers born at the same spot stack upward instead of covering each other (a pack around the hero).
+      const s = screenOf(r.x, r.y, r.z);
+      slot.sx = s.x + slot.jx;
+      slot.dy = 0;
+      for (let k = 0; k < 4 && this.nums.some((n) => n !== slot && n.on && n.t < 0.4 && Math.abs(n.sx - slot!.sx) < 44 && Math.abs(n.sy - (s.y + slot!.dy)) < 18); k++) slot.dy -= 20;
+      slot.sy = s.y + slot.dy;
       slot.val = r.val;
       slot.kind = r.kind;
       slot.el.textContent = r.text;
