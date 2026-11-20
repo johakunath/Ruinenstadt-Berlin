@@ -72,17 +72,25 @@ function bindOptionsRow(): void {
   const toggle = document.getElementById('cloud-toggle') as HTMLButtonElement | null;
   const copy = document.getElementById('cloud-copy') as HTMLButtonElement | null;
   if (!row || !info || !toggle || !copy) return;
+  const name = document.getElementById('cloud-name');
+  const rename = document.getElementById('cloud-rename') as HTMLButtonElement | null;
+  // Same card as the title's Konto (Johannes 2026-11-20): name, then code and sync state with its dot.
   const show = (): void => {
-    const who = cloud.name ? `${cloud.name} · ` : '';
-    info.textContent = cloud.code ? `${who}Code ${formatCode(cloud.code)} · ${SYNC_LABEL[cloud.state]}` : SYNC_LABEL.off;
+    if (name) name.textContent = cloud.code ? cloud.name || 'Konto ohne Namen' : 'Dieses Gerät';
+    info.innerHTML = cloud.code ? `Code ${formatCode(cloud.code)} · <span class="st-${cloud.state}">● ${SYNC_LABEL[cloud.state].replace(/\.$/, '')}</span>` : SYNC_LABEL.off;
     copy.hidden = !cloud.code;
+    if (rename) rename.hidden = !cloud.code;
     toggle.textContent = cloud.code ? 'Ausschalten' : 'Aktivieren';
   };
   if (!cloud.available) return;
   row.hidden = false;
   onAccount(show);
   show();
-  copy.addEventListener('click', () => { void navigator.clipboard?.writeText(formatCode(cloud.code)).catch(() => prompt('Online-Code:', formatCode(cloud.code))); });
+  rename?.addEventListener('click', () => { const n = prompt('Name des Kontos:', cloud.name); if (n !== null) void cloud.rename(n); });
+  copy.addEventListener('click', () => {
+    const c = formatCode(cloud.code);
+    void (navigator.clipboard?.writeText(c) ?? Promise.reject()).then(() => { copy.textContent = 'Kopiert'; setTimeout(() => { copy.textContent = 'Code kopieren'; }, 2000); }, () => prompt('Online-Code:', c));
+  });
   toggle.addEventListener('click', () => {
     if (cloud.code) { if (confirm(`Online-Speichern ausschalten? Code ${formatCode(cloud.code)} gut aufheben.`)) cloud.disable(); return; }
     cloud.enable();

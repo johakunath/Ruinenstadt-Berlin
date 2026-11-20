@@ -27,6 +27,7 @@ import type { Look } from './looks';
 import { Materials } from './materials';
 import { Post } from './post';
 import { ShadowClock } from './shadow-rate';
+import { DynamicResolution } from './dyn-res';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
@@ -137,8 +138,10 @@ export class GameRenderer {
   private readonly heroLight = new PointLight(0xffe2bd, 9, 7, 1.4);
   private time = 0;
   private height = 720;
-  /** Sun shadow map rate (profile `shadowInterval`). */
+  /** Sun shadow map rate (profile `shadowEvery`). */
   private readonly shadowClock: ShadowClock;
+  /** Q1: render scale under the pixel ratio while frames run late (profile `minScale`). */
+  private readonly dynRes: DynamicResolution;
 
   private constructor(
     private readonly renderer: WebGLRenderer,
@@ -147,7 +150,8 @@ export class GameRenderer {
     private readonly materials: Materials,
     private readonly opts: RendererOptions,
   ) {
-    this.shadowClock = new ShadowClock(opts.profile.shadowInterval);
+    this.shadowClock = new ShadowClock(opts.profile.shadowEvery);
+    this.dynRes = new DynamicResolution({ min: opts.profile.minScale });
     const Y = COURTYARD.yard;
     const B = opts.map?.def.bounds;
     this.cam = new FollowCamera(
@@ -206,7 +210,7 @@ export class GameRenderer {
     renderer.shadowMap.autoUpdate = false;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
-    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
+    const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows || opts.profile.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
     const assets = await loadCharacters(materials, opts.map?.def.id === 'alex' || (opts.mechs ?? false), opts.humans ?? true, opts.females ?? true);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
@@ -232,7 +236,7 @@ export class GameRenderer {
   resize(): void {
     const w = Math.max(1, window.innerWidth);
     const h = Math.max(1, window.innerHeight);
-    const dpr = Math.min(window.devicePixelRatio || 1, this.eco ? 1 : this.opts.profile.maxDpr);
+    const dpr = Math.min(window.devicePixelRatio || 1, this.eco ? 1 : this.opts.profile.maxDpr) * this.dynRes.scale;
     this.height = h * dpr;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
@@ -265,6 +269,17 @@ export class GameRenderer {
     const list = this.pool.get(view.body) ?? [];
     list.push(view);
     this.pool.set(view.body, list);
+  }
+
+  /**
+   * A drawn frame's real interval while the game runs (`targetMs` = the frame cap). Lowers or
+   * raises the render scale on the profiles that allow it.
+   */
+  frameTime(ms: number, targetMs: number): void {
+    if (this.dynRes.frame(ms, targetMs)) {
+      this.perf.scale = this.dynRes.scale;
+      this.resize();
+    }
   }
 
   /** Ground point under a pointer position, for mouse aim. */
@@ -387,6 +402,7 @@ export class GameRenderer {
   private barriers: BarrierView | null = null;
 
   render(sim: Sim, alpha: number, dt: number): void {
+    const t0 = performance.now();
     this.time += dt;
     const frozen = sim.hitstop > 0;
     const p = sim.player;
@@ -442,7 +458,7 @@ export class GameRenderer {
     const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead', this.cam.camera.aspect) ?? null;
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py, reveal);
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
-    const shadows = this.shadowClock.tick(dt);
+    const shadows = this.shadowClock.tick();
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
     if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows);
     else this.world.follow?.(px, pz, shadows);
@@ -459,6 +475,8 @@ export class GameRenderer {
     this.post.render(dt, shadows);
     this.perf.calls = this.renderer.info.render.calls;
     this.perf.triangles = this.renderer.info.render.triangles;
+    // CPU only: WebGL work runs on after this returns (GPU-bound frames show as late frames, not here).
+    this.perf.renderMs = performance.now() - t0;
   }
 }
 

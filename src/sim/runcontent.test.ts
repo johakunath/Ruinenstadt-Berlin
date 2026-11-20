@@ -237,6 +237,49 @@ describe('events', () => {
     const save = parseSave(JSON.stringify(snapshot(s, def.name, false)))!;
     expect(save.profile.statContext.survivors[C.survivor]).toBe(true);
   });
+  it('event enemies only bring types the waves ahead already bring (review 2026-11-20)', () => {
+    // Leg 1 (Köpenick, before any Brocken wave and before elites): no Brocken, the rescue's elite is a Läufer.
+    expect(level.encounters[1]!.waves[0]!.mix.brute ?? 0).toBe(0);
+    for (let seed = 1; seed <= 6; seed++) {
+      const r = make(seed);
+      onLeg(r, 'rescue', 1);
+      run(r, 2);
+      const guards = r.enemies.filter((e) => e.guard);
+      expect(guards).toHaveLength(3);
+      expect(guards.some((e) => e.kind === 'brute')).toBe(false);
+      expect(guards.filter((e) => e.elite).map((e) => e.kind)).toEqual(['walker']);
+      const a = make(seed);
+      onLeg(a, 'ambush', 1);
+      run(a, 2);
+      expect(a.enemies.length).toBeGreaterThanOrEqual(4);
+      expect(a.enemies.some((e) => e.kind === 'brute')).toBe(false);
+    }
+    // Leg 2: Brocken and elites are in the mix, so the elite guard is a Brocken and ambushes bring them.
+    expect(level.encounters[2]!.waves[0]!.mix.brute ?? 0).toBeGreaterThan(0);
+    const r = make(3);
+    onLeg(r, 'rescue', 2);
+    run(r, 2);
+    expect(r.enemies.filter((e) => e.guard && e.elite).map((e) => e.kind)).toEqual(['brute']);
+    let brutes = 0;
+    for (let seed = 1; seed <= 6; seed++) {
+      const a = make(seed);
+      onLeg(a, 'ambush', 2);
+      run(a, 2);
+      brutes += a.enemies.filter((e) => e.kind === 'brute').length;
+    }
+    expect(brutes).toBeGreaterThan(0);
+  });
+  it('zone: no adds and no progress while an encounter runs (review 2026-11-20)', () => {
+    const s = make();
+    onLeg(s, 'zone');
+    run(s, 2);
+    const Z = s.content.zone!;
+    s.run.phase = 'fight';
+    for (let i = 0; i < 4 * 60; i++) { s.hitstop = 0; s.player.invuln = 1; walkTo(s, Z); stepSim(s, NO_INPUT); }
+    // The director may run the fight; nothing came from the zone.
+    expect(s.enemies.filter((e) => e.enc === undefined)).toHaveLength(0);
+    expect(Z.p).toBe(0);
+  });
   it('rescue becomes a cache when everybody is home', () => {
     const s = make(3, { survivors: Object.fromEntries(SURVIVORS.map((v) => [v.id, true])) });
     onLeg(s, 'rescue');

@@ -38,7 +38,8 @@ Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now 
 - Claude reviews (Johannes, 2026-11-19): when Codex has no tokens left, Claude reviews the PR (`/code-review`). Claude fixes its findings right away in the same session, without asking first, on the PR's branch, and reports what it fixed. Exception: a branch another session is still working on gets the findings as a message instead of a push.
 - GitHub Actions minutes are limited: CI does not run per commit. Order: PR as draft, work, Codex review, fix, then mark ready (CI runs once on that head), then merge. A merge Johannes asks for does not wait for CI. Superseded runs are cancelled; `main` always runs (deploy).
 - Codex runs the checks a task names (`npm run check`, the e2e test once). No broad tuning or measurement passes; Claude does those.
-- Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule.
+- Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule. A task file over 20 KB gets its finished steps collapsed to one line each when the next step starts (2026-11-20).
+- Source files: split a file past about 80 KB along its sections when you next work in it; agents read whole files (backlog P36).
 - Model choice: `CLAUDE.md` › Model routing (Fable 5.2 decides and plans, Opus 5.5 builds); repo specifics in plan-3d.md › Model.
 
 ## Lessons (session 2026-11-16/17)

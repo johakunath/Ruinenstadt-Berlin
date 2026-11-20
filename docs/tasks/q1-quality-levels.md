@@ -1,6 +1,17 @@
 # Q1 Three quality levels [Claude · Fable high: contents after the measurements; Claude · Opus high: build]
 
-Status: backlog (Johannes, 2026-11-18). Do not build before the checks 1 to 4 in `docs/tasks/pt-hardware-checks.md` are answered: they decide what the lowest level has to give up.
+Status: built 2026-11-20 (Johannes asked for it after the review, before checks 1 to 4); the lowest level's contents are a first guess, Johannes checks on the phone and Tab S9 (`pt-hardware-checks.md`).
+
+## Built (2026-11-20)
+| Level | Contents (`src/render/profile.ts`) | Default on |
+|---|---|---|
+| Qualität | Unchanged | PC |
+| Ausgewogen | The former Leistung; shadow map every 2nd frame (counted in frames now), dynamic resolution down to 0.75 | Tablets (coarse pointer, short screen side ≥ 500 CSS px) |
+| Leistung | Pixel ratio 1, caster-box shadows every 2nd frame, pre-pass 0.5, bloom at half size, distant enemies animate at reduced rate from 4 m, 30 embers, dynamic resolution down to 0.6 | Phones (short side < 500) |
+
+A stored `leistung` from before (no `pv: 2` in the options) loads as Ausgewogen. Dynamic resolution (`src/render/dyn-res.ts`) judges the mean of half-second windows against the frame cap (60 or 30 with Akkusparen), steps down 0.1 after 2 s late and up 0.05 after 6 s on time. On Ausgewogen at the lowest scale, 20 s under 40 fps show one hint per session. Not built: less decoration on Leistung (backlog P38).
+
+Cloud counts (`tools/passes.mjs`-style, mean of 4 frames, seed 7): Köpenick start Qualität 458 calls / 348k triangles (494k before the crate fix), Ausgewogen 358 / 279k (old Leistung 455 / 494k), Leistung 281 / 236k; Xhain start Ausgewogen 294 / 168k (old Leistung 378 / 553k), Leistung 238 / 145k.
 
 ## Idea (Johannes)
 | Level | For | Today |

@@ -209,6 +209,8 @@ export interface Enemy {
   /** M16 Spiegelbild: the body it reflects (it cannot be hurt and dies with it) and the centre it is reflected through. */
   mirrorOf?: number;
   mirror?: { x: number; z: number };
+  /** The encounter (`run.index`) whose waves brought it; only these hold a fight open (`encounterAlive`). Endless waves use the encounter count. */
+  enc?: number;
   /** M16 Spiegelpaar: the id of her reflection. */
   pair?: number;
   /** M16 Ringvater: „Erst die Leibwache!“ was shown for the guard he has now. */
@@ -216,6 +218,9 @@ export interface Enemy {
   /** M16 Diva: fans still to throw after the first one: how many, seconds to the next, its aim and its index. */
   fans?: { n: number; t: number; aim: number; k: number };
 }
+
+/** What healed the hero (`healPlayer` in heal.ts). */
+export type HealSource = 'regen' | 'rest' | 'verband' | 'banner' | 'leech' | 'kill' | 'pickel' | 'breath' | 'pickup' | 'food' | 'trader' | 'encounter' | 'endless' | 'blessing' | 'secondWind';
 
 export type SimEvent =
   | { type: 'swing'; attack: AttackId; weight: HitWeight }
@@ -229,7 +234,8 @@ export type SimEvent =
   | { type: 'bolt'; x0: number; z0: number; x1: number; z1: number }
   | { type: 'impact'; x: number; z: number; radius: number; kind: 'strike' | 'molotov' | 'boom' }
   | { type: 'ignite'; id: number; x: number; z: number }
-  | { type: 'heal'; amount: number; source: 'verband' | 'food' | 'breath' | 'banner' | 'trader' }
+  /** Life restored (`healPlayer`): exact, may be fractional. `tick`: a small repeated heal (regen, Verband, leech). */
+  | { type: 'heal'; amount: number; source: HealSource; tick?: true }
   | { type: 'consumable'; id: 'verband' | 'molotow'; left: number }
   | { type: 'note'; text: string; color: string; x: number; z: number }
   | { type: 'secondWind' }
@@ -258,7 +264,7 @@ export type SimEvent =
   | { type: 'bossRage'; id: number; name: string }
   | { type: 'summon'; id: number; x: number; z: number; count: number }
   | { type: 'spawn'; id: number }
-  | { type: 'encounterStart'; index: number }
+  | { type: 'encounterStart'; index: number; /** The hero's life as the fight starts (telemetry `h0`). */ hp: number }
   | { type: 'waveStart'; index: number; wave: number; waves: number }
   | { type: 'encounterClear'; index: number; heal: number }
   | { type: 'zoneClear'; zone: number }

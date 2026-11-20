@@ -2664,6 +2664,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     follow(x: number, z: number, shadow: boolean): void {
       hx = x;
       hz = z;
+      breakableView?.near(x, z);
       for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
       cutaway.update(x, z);
       // The light moves only with a fresh shadow map, or static shadows would swim between renders.
@@ -2680,13 +2681,20 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
 /**
  * Crates and bins as instanced meshes: one draw call per kind (crate cluster, single crate, bin
  * row). A broken prop gets a zero-scale matrix; a hit prop flashes and shakes for a moment.
+ * Only props within `NEAR` of the hero fill the instance slots (`near`): the camera never sees
+ * farther than about 40 m, and one mesh per kind spans the whole map, so it cannot be culled.
+ * Before this, every crate of the map went through all three passes (review 2026-11-20: about
+ * 170k of 640k triangles a frame in Köpenick, 350k of 550k on the Xhain start).
  */
+const NEAR = 45;
 function buildBreakables(mm: MapMats, m: MapDef, props: Prop[], defs: BreakableDef[], group: Group): BreakableView {
   type Kind = Prop['kind'];
   const kinds: Kind[] = ['crates', 'crate', 'bins'];
-  const sets = new Map<Kind, { mesh: InstancedMesh; ids: number[] }>();
+  const sets: Array<{ mesh: InstancedMesh; ids: number[] }> = [];
   const base: Matrix4[] = [];
-  const slot: Array<{ kind: Kind; index: number }> = [];
+  const setOf: Array<{ mesh: InstancedMesh; ids: number[] }> = [];
+  /** Instance slot of each prop, -1 while it is far or broken. */
+  const slotOf = new Int32Array(defs.length).fill(-1);
   for (const kind of kinds) {
     const ids = defs.map((_, i) => i).filter((i) => props[defs[i]!.prop]!.kind === kind);
     if (ids.length === 0) continue;
@@ -2700,41 +2708,59 @@ function buildBreakables(mm: MapMats, m: MapDef, props: Prop[], defs: BreakableD
     inst.castShadow = true;
     inst.receiveShadow = true;
     inst.frustumCulled = false;
-    ids.forEach((id, index) => {
+    const set = { mesh: inst, ids };
+    for (const id of ids) {
       const p = props[defs[id]!.prop]!;
-      const mat = new Matrix4().makeRotationY(p.rot).setPosition(p.x, surfaceAt(m, p.x, p.z), p.z);
-      base[id] = mat;
-      slot[id] = { kind, index };
-      inst.setMatrixAt(index, mat);
-      inst.setColorAt(index, new Color(1, 1, 1));
-    });
-    inst.instanceMatrix.needsUpdate = true;
+      base[id] = new Matrix4().makeRotationY(p.rot).setPosition(p.x, surfaceAt(m, p.x, p.z), p.z);
+      setOf[id] = set;
+    }
+    // The color buffer exists before the first compile, so the shader variant never changes.
+    for (let i = 0; i < ids.length; i++) inst.setColorAt(i, new Color(1, 1, 1));
+    inst.count = 0;
     group.add(inst);
-    sets.set(kind, { mesh: inst, ids });
+    sets.push(set);
   }
   const flash = new Map<number, number>();
   const hidden = new Set<number>();
   const m4 = new Matrix4();
   const wobble = new Matrix4();
+  const tilt = new Matrix4();
   const white = new Color(1, 1, 1);
   const hot = new Color(3.2, 2.8, 2.4);
+  const col = new Color();
+  const FLASH = 0.16;
   const apply = (id: number, t: number): void => {
-    const s = slot[id];
-    if (!s) return;
-    const set = sets.get(s.kind)!;
-    if (hidden.has(id)) {
-      set.mesh.setMatrixAt(s.index, m4.makeScale(0, 0, 0));
-    } else {
-      // A hit prop jolts: a quick damped shake around its base.
-      const k = Math.max(0, t / FLASH) ** 2;
-      wobble.makeRotationZ(Math.sin(t * 90) * 0.07 * k).multiply(new Matrix4().makeRotationX(Math.cos(t * 70) * 0.05 * k));
-      set.mesh.setMatrixAt(s.index, m4.copy(base[id]!).multiply(wobble));
-    }
-    set.mesh.setColorAt(s.index, t > 0 ? hot.clone().lerp(white, 1 - t / FLASH) : white);
+    const set = setOf[id];
+    const index = slotOf[id]!;
+    if (!set || index < 0) return;
+    // A hit prop jolts: a quick damped shake around its base.
+    const k = Math.max(0, t / FLASH) ** 2;
+    wobble.makeRotationZ(Math.sin(t * 90) * 0.07 * k).multiply(tilt.makeRotationX(Math.cos(t * 70) * 0.05 * k));
+    set.mesh.setMatrixAt(index, m4.copy(base[id]!).multiply(wobble));
+    set.mesh.setColorAt(index, t > 0 ? col.copy(hot).lerp(white, 1 - t / FLASH) : white);
     set.mesh.instanceMatrix.needsUpdate = true;
     if (set.mesh.instanceColor) set.mesh.instanceColor.needsUpdate = true;
   };
-  const FLASH = 0.16;
+  // Last fill position; NaN forces the first fill.
+  let fx = NaN;
+  let fz = NaN;
+  const fill = (x: number, z: number): void => {
+    fx = x;
+    fz = z;
+    slotOf.fill(-1);
+    for (const set of sets) {
+      let n = 0;
+      for (const id of set.ids) {
+        if (hidden.has(id)) continue;
+        const e = base[id]!.elements;
+        if ((e[12]! - x) ** 2 + (e[14]! - z) ** 2 > NEAR * NEAR) continue;
+        slotOf[id] = n++;
+        apply(id, flash.get(id) ?? 0);
+      }
+      set.mesh.count = n;
+      set.mesh.instanceMatrix.needsUpdate = true;
+    }
+  };
   return {
     hit(id: number): void {
       flash.set(id, FLASH);
@@ -2743,12 +2769,16 @@ function buildBreakables(mm: MapMats, m: MapDef, props: Prop[], defs: BreakableD
     broke(id: number): void {
       hidden.add(id);
       flash.delete(id);
-      apply(id, 0);
+      if (slotOf[id]! >= 0 && !Number.isNaN(fx)) fill(fx, fz);
     },
     reset(): void {
       hidden.clear();
       flash.clear();
-      for (let id = 0; id < defs.length; id++) apply(id, 0);
+      if (!Number.isNaN(fx)) fill(fx, fz);
+    },
+    near(x: number, z: number): void {
+      // Refill after 3 m of walking: props enter at 45 m, far outside the view.
+      if (Number.isNaN(fx) || (x - fx) ** 2 + (z - fz) ** 2 > 9) fill(x, z);
     },
     update(dt: number): void {
       for (const [id, t] of flash) {

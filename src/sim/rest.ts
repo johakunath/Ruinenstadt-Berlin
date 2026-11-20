@@ -2,6 +2,7 @@
 // zone. Fights lock the hero into the encounter circle and nothing spawns between encounters, so the
 // 2D safe-room rule (60 s calm per wave) does not apply: inside a Späti the hero heals while travelling.
 // A trader moves in later (backlog B13, migration M13b).
+import { healPlayer } from './heal';
 import { DT, type Sim } from './types';
 
 export interface RestArea {
@@ -47,5 +48,5 @@ export function updateRest(sim: Sim): void {
     if (i >= 0) sim.rest.seen[i] = true;
   }
   if (i < 0 || sim.run.phase === 'fight' || sim.run.phase === 'pause' || sim.run.phase === 'hold') return;
-  p.hp = Math.min(sim.stats.maxHp, p.hp + sim.stats.maxHp * REST.healPerSec * DT);
+  healPlayer(sim, sim.stats.maxHp * REST.healPerSec * DT, 'rest');
 }

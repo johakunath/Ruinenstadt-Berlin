@@ -36,8 +36,8 @@ const barkTile = new URL('../../assets/textures/common/bark.webp', import.meta.u
 export function plantMats(m: Mats): PlantMats {
   let p = matCache.get(m);
   if (p) return p;
-  const { anisotropy, id } = m.profile;
-  const performance = id === 'leistung';
+  const { anisotropy, smallTextures } = m.profile;
+  const performance = smallTextures;
   const leaf = m.fern.clone();
   leaf.map = paintPlants();
   const foliage = m.wood.clone();

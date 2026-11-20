@@ -36,9 +36,9 @@ Folders, their rules and where each system lives: `docs/architecture.md` (read t
 
 ## Rules
 
-- **First step of any task: look in the 2D repo (`johakunath/Ruinenstadt`, read-only; clone it with `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1`) for existing code, data and rules.** Migrate and reuse as much as possible (numbers, rules, data, drawing code as reference) and develop from there; build new only where 2D has nothing or 3D needs it. Say in the task handover what was reused.
+- **First step of a task that ports or extends something the 2D game had: look in the 2D repo (`johakunath/Ruinenstadt`, read-only; clone it with `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1`) for existing code, data and rules.** Migrate and reuse as much as possible (numbers, rules, data, drawing code as reference) and develop from there; build new only where 2D has nothing or 3D needs it. Say in the task handover what was reused. Skip the clone for 3D-only work (rendering, performance, Charlottenburg sights, gear meshes).
 - Collision is 2D on the ground plane with real shapes (plan 3D6). New attacks get their hit arc and clip timing in `src/data/combat.ts`; measure clips with `node tools/clip-swing.mjs <clip>` and look at them with `node tools/clip-sheet.mjs out.png "clip=<clip>&weapon=hammer"`.
-- Two render profiles (`src/render/profile.ts`) must keep working. The look is fixed in `src/render/looks.ts` (chosen after gate 1); change it only on Johannes' feedback. New effects state their cost for Leistung.
+- Three render profiles (`src/render/profile.ts`: Qualität, Ausgewogen, Leistung) must keep working. The look is fixed in `src/render/looks.ts` (chosen after gate 1); change it only on Johannes' feedback. New effects state their cost for Ausgewogen and Leistung.
 - Geometry of the world is built in code and merged per material (`src/render/batch.ts`). Keep draw calls low; things that must not show in the normal/depth pre-pass go on `FX_LAYER`.
 - Keep the light count constant at runtime (a changing count recompiles every shader).
 - Critical visual or layout decisions: show clearly distinct alternatives first (look variants, mockups). Routine work inside an approved direction: build, show, continue.
@@ -57,6 +57,6 @@ Folders, their rules and where each system lives: `docs/architecture.md` (read t
 | `npm run assets:human` | Rebuild `assets/characters/human1.glb` and `human2.glb` (human boss bases) from `assets-src/` |
 | `npm run assets:hero` | Rebuild `assets/characters/hero.glb` through headless Blender (`$BLENDER`, PATH or the Windows default path; `docs/tasks/h1-hero.md`) |
 
-URL options: `?profile=Qualität|Leistung`, `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero), `?shadows=boxes` (A/B: only caster boxes shadow, not map chunks), `?map=tunnel&line=1`, `?sky=a|b|c` (Alexanderplatz light), `?cut=off|4.3` (V1 B cutaway), `?props=stall:1.5*4,crane` (prop showcase near the start, rot 0).
+URL options: `?profile=Qualität|Ausgewogen|Leistung` (Ausgewogen is the Leistung of before 2026-11-20), `?debug=hit,perf,flow`, `?stress=40`, `?seed=7`, `?autostart`, `?cam=distance,pitch`, `?map=hof`, `?mapscale=1.3`, `?at=4` (start at encounter 4), `?spawn=rex,raptor,walker+flink` (these kinds next to the hero), `?shadows=boxes` (A/B: only caster boxes shadow, not map chunks), `?map=tunnel&line=1`, `?sky=a|b|c` (Alexanderplatz light), `?cut=off|4.3` (V1 B cutaway), `?props=stall:1.5*4,crane` (prop showcase near the start, rot 0).
 
 CI runs type check, unit tests, build and the smoke test once a PR is marked ready (not per commit, Rules › Reviews and CI) and on `main`, which it deploys to GitHub Pages. Cloud browsers have no real GPU: measure performance only on the PC and the Tab S9.

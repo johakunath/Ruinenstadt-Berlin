@@ -10,7 +10,8 @@ import { collectItem, BAG_SIZE } from './inventory';
 import { isUpgrade, lootItem, makeItem, type Item } from './items';
 import type { Breakable } from './breakables';
 import { DT, type Enemy, type Sim } from './types';
-import { addConsumable, CONSUMABLE, healPlayer } from './abilities';
+import { addConsumable, CONSUMABLE } from './abilities';
+import { healPlayer } from './heal';
 import { pk } from './combat';
 import { scrapFactor } from './runcontent';
 
@@ -239,11 +240,10 @@ export function updateDrops(sim: Sim): void {
     const c = d.content;
     if (c.kind === 'heal') {
       if (p.hp >= sim.stats.maxHp) continue;
-      const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * LOOT.healFraction));
-      p.hp += heal;
+      const heal = Math.round(healPlayer(sim, Math.round(sim.stats.maxHp * LOOT.healFraction), 'pickup'));
       sim.events.push({ type: 'pickup', id: d.id, what: 'heal', x: d.x, z: d.z, rarity: -1, amount: heal });
     } else if (c.kind === 'food') {
-      const heal = Math.round(healPlayer(sim, Math.round(sim.stats.maxHp * CONSUMABLE.food.heal)));
+      const heal = Math.round(healPlayer(sim, Math.round(sim.stats.maxHp * CONSUMABLE.food.heal), 'food'));
       sim.abilities.fed = CONSUMABLE.food.fed;
       sim.events.push({ type: 'pickup', id: d.id, what: 'food', x: d.x, z: d.z, rarity: -1, amount: heal });
     } else if (c.kind === 'ingredient') {

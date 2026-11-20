@@ -8,11 +8,13 @@ import { offerBlessings } from './blessings';
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES, type BossKind, type EnemyKind } from '../data/enemies';
 import { colliderDistance } from './collide';
-import { aliveCount, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
+import { encounterAlive, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { freeSpot, reachable } from './reach';
+import { clearThreats } from './threats';
 import { FlowField, type Bounds } from './flowfield';
 import type { EncounterDef } from './level';
 import { spawnDrop } from './loot';
+import { healPlayer } from './heal';
 import { DT, type Enemy, type Sim } from './types';
 
 /** The player triggers an encounter this far inside its circle. */
@@ -121,6 +123,11 @@ function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: n
   return best;
 }
 
+/** Tags every body added since `from` (a pack, a boss) as part of the current encounter (`Enemy.enc`). */
+function tagSince(sim: Sim, from: number): void {
+  for (let i = from; i < sim.enemies.length; i++) sim.enemies[i]!.enc = sim.run.index;
+}
+
 export function updateDirector(sim: Sim): void {
   const run = sim.run;
   const p = sim.player;
@@ -141,11 +148,11 @@ export function updateDirector(sim: Sim): void {
       run.phase = 'hold';
       run.hold = { p: 0, need: enc.hold.need, inside: false, sp: 1, elite: false };
       if (enc.waves[0]!.bosses.length === 0) sim.lootWaves++;
-      sim.events.push({ type: 'encounterStart', index: run.index }, { type: 'holdStart', index: run.index, x: enc.x, z: enc.z });
+      sim.events.push({ type: 'encounterStart', index: run.index, hp: p.hp }, { type: 'holdStart', index: run.index, x: enc.x, z: enc.z });
       return;
     }
     run.phase = 'fight';
-    sim.events.push({ type: 'encounterStart', index: run.index });
+    sim.events.push({ type: 'encounterStart', index: run.index, hp: p.hp });
     startWave(sim, enc);
     return;
   }
@@ -169,8 +176,11 @@ export function updateDirector(sim: Sim): void {
   if (!w) return;
   const df = difficultyOf(sim.difficulty);
   run.spawnT -= DT;
-  if (run.spawnT <= 0 && (run.bossesToSpawn.length > 0 || (run.toSpawn > 0 && aliveCount(sim) < w.maxAlive))) {
+  // Only this encounter's own bodies count (review 2026-11-20): captive guards and event adds never hold a fight open.
+  const alive = (): number => encounterAlive(sim, run.index);
+  if (run.spawnT <= 0 && (run.bossesToSpawn.length > 0 || (run.toSpawn > 0 && alive() < w.maxAlive))) {
     run.spawnT = SPAWN_GAP;
+    const n0 = sim.enemies.length;
     // M15: while the Weltzeituhr wakes up, the wave waits.
     const waking = sim.enemies.some((e) => e.state !== 'dead' && (e.wake ?? 0) > 0);
     const boss = waking ? undefined : run.bossesToSpawn.shift();
@@ -196,8 +206,9 @@ export function updateDirector(sim: Sim): void {
       if (w.elite && sim.rng.next() < w.elite) makeElite(sim, e);
       run.toSpawn--;
     }
+    tagSince(sim, n0);
   }
-  if (run.toSpawn > 0 || run.bossesToSpawn.length > 0 || aliveCount(sim) > 0) return;
+  if (run.toSpawn > 0 || run.bossesToSpawn.length > 0 || alive() > 0) return;
 
   run.wave++;
   if (run.wave < enc.waves.length) {
@@ -212,14 +223,14 @@ export function updateDirector(sim: Sim): void {
     openGates(sim, run.index);
     focusFlow(sim, p.x, p.z);
   }
-  const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * enc.heal));
-  p.hp += heal;
+  const heal = healPlayer(sim, Math.round(sim.stats.maxHp * enc.heal), 'encounter');
   sim.events.push({ type: 'encounterClear', index: run.index, heal });
   const next = sim.level.encounters[run.index + 1];
   if (!next || next.zone !== enc.zone) sim.events.push({ type: 'zoneClear', zone: enc.zone });
   run.index++;
   if (!next) {
     run.phase = 'won';
+    clearThreats(sim);
     sim.events.push({ type: 'victory' });
   } else {
     run.phase = 'travel';
@@ -245,12 +256,14 @@ function updateHold(sim: Sim, enc: EncounterDef): void {
     const df = difficultyOf(sim.difficulty);
     const out = (kind: EnemyKind): Enemy => {
       const q = freeSpot(sim.level, sim.rng, H.mouth.x, H.mouth.z, 0, 3, ENEMIES[kind].radius + 0.2) ?? H.mouth;
-      return spawnEnemy(sim, q.x, q.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      const e = spawnEnemy(sim, q.x, q.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      e.enc = sim.run.index;
+      return e;
     };
     if (!h.elite && h.p >= H.need / 2) {
       h.elite = true;
       makeElite(sim, out('brute'));
-    } else if (aliveCount(sim) < w.maxAlive) {
+    } else if (encounterAlive(sim, sim.run.index) < w.maxAlive) {
       const e = out(pickKind(sim, w.mix));
       if (w.elite && sim.rng.next() < w.elite) makeElite(sim, e);
     }
@@ -313,22 +326,23 @@ function updateEndless(sim: Sim): void {
   if (run.phase !== 'fight') return;
   const w = endlessWave(sim, n + 1);
   run.spawnT -= DT;
-  if (run.spawnT <= 0 && (run.bossesToSpawn.length > 0 || (run.toSpawn > 0 && aliveCount(sim) < w.maxAlive))) {
+  if (run.spawnT <= 0 && (run.bossesToSpawn.length > 0 || (run.toSpawn > 0 && encounterAlive(sim, run.index) < w.maxAlive))) {
     run.spawnT = SPAWN_GAP;
+    const n0 = sim.enemies.length;
     const boss = run.bossesToSpawn.shift();
     const kind = boss ?? pickKind(sim, w.mix);
     const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, ENEMIES[kind].radius + 0.2) ?? { x: p.x + 12, z: p.z };
     const e = spawnPack(sim, q.x, q.z, kind, w.hpMul * df.hp * (boss ? 0.8 : 1), w.dmgMul * df.dmg);
     if (!boss) { if (sim.rng.next() < w.elite) makeElite(sim, e); run.toSpawn--; }
+    tagSince(sim, n0);
   }
   followFlow(sim);
-  if (run.toSpawn > 0 || run.bossesToSpawn.length > 0 || aliveCount(sim) > 0) return;
+  if (run.toSpawn > 0 || run.bossesToSpawn.length > 0 || encounterAlive(sim, run.index) > 0) return;
   run.endless = n + 1;
   sim.lootWaves++;
   const camp = sim.inventory.camp ??= { stations: {}, stash: [], freed: [] };
   camp.endlessBest = Math.max(camp.endlessBest ?? 0, n + 1);
-  const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * 0.15));
-  p.hp += heal;
+  healPlayer(sim, Math.round(sim.stats.maxHp * 0.15), 'endless');
   sim.events.push({ type: 'endlessWave', n: n + 1, done: true });
   if ((n + 1) % ENDLESS.blessingEvery === 0) sim.abilities.rewardT = REWARD_DELAY;
   run.phase = 'pause';

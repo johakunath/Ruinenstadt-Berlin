@@ -52,6 +52,7 @@ import { ENEMIES } from './data/enemies';
 import type { Level } from './sim/level';
 import { Telemetry, VERSION } from './telemetry';
 import { LootLabels, rarityColor } from './ui/loot-labels';
+import { DamageNumbers } from './ui/damage-numbers';
 import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
@@ -71,7 +72,7 @@ const canvas = document.getElementById('game') as HTMLCanvasElement;
 const audio = new GameAudio();
 audio.setVolume(opts.sound ? opts.volume : 0);
 audio.setMusic(opts.music);
-audio.setEco(opts.profile === 'leistung');
+audio.setEco(opts.profile !== 'qualitaet');
 const input = new Input(canvas);
 const abilitiesUi = new AbilitiesUi(input);
 /** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
@@ -150,6 +151,7 @@ let lootExit: 'off' | 'ask' | 'search' = 'off';
 /** Where the exit warning leads after "Weiterziehen". */
 let afterLoot: 'again' | 'camp' | 'map' = 'again';
 const lootUi = new LootLabels();
+const dmgNums = new DamageNumbers();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
 const exitChip = document.getElementById('exit-chip') as HTMLButtonElement;
@@ -234,8 +236,10 @@ function showWon(): void {
   input.enabled = false;
   input.clear();
   ui.showWon(sim.kills);
-  document.getElementById('won-stats')!.innerHTML = endStats(true);
-  (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined;
+  const fell = sim.player.state === 'dead';
+  document.getElementById('won-stats')!.innerHTML = (fell ? '<div class="death-by">Nach dem Sieg gefallen</div>' : '') + endStats(true);
+  (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined || fell;
+  document.getElementById('won-explore')!.hidden = fell;
   document.getElementById('won-title')!.textContent = winText;
   const t = document.getElementById('won-tunnel')!, link = wonLink(mapId, line);
   t.hidden = !level || !link;
@@ -259,7 +263,7 @@ function showCampButtons(): void {
 }
 // Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
 document.getElementById('won-tunnel')!.addEventListener('click', () => {
-  if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
+  if (importantDrops(sim).length > 0 && lootExit !== 'ask' && sim.player.state !== 'dead') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
   const link = wonLink(mapId, line);
   goMap(link?.to ?? 'koepenick', link?.line ?? 0);
 });
@@ -409,7 +413,7 @@ const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLab
 document.getElementById('open-camp')!.addEventListener('click', () => { if (isCamp) startCamp(); else goMap('lager'); });
 document.getElementById('won-camp')!.addEventListener('click', () => {
   // Leaving the freed district for the camp ends the run (same loot warning as Nochmal).
-  if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'camp'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
+  if (importantDrops(sim).length > 0 && lootExit !== 'ask' && sim.player.state !== 'dead') { lootExit = 'ask'; afterLoot = 'camp'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
   toCamp();
 });
 /** Back to the title with the camp open: a fresh run waits, gear and Schrott stay. */
@@ -661,6 +665,7 @@ function drainEvents(): void {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev, sim);
     telemetry.event(ev);
+    if (opts.damageNumbers) dmgNums.onEvent(ev, sim);
     if (ev.type === 'playerHit') { logHit(hitLog, ev.by, ev.damage, sim.time); fight.dmg += ev.damage; }
     else if (ev.type === 'encounterStart') { fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0; }
     // M20 tunnel: gratings opening, the generator and its power (2D messages).
@@ -726,8 +731,7 @@ function drainEvents(): void {
       case 'pickup':
         if (ev.what === 'item' && persist && !intro.seen('loot')) intro.showTip('loot', () => input.clear());
         if (ev.what === 'item') lootUi.toast(`<span style="color:${rarityColor(ev.rarity, ev.set)}">${ev.name}</span>${ev.upgrade ? ' <span style="color:#8fd16a">▲</span>' : ''}`);
-        else if (ev.what === 'heal') lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
-        else if (ev.what === 'food') { lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s'); if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z); }
+        else if (ev.what === 'food') lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s');
         else if (ev.ingredient) lootUi.float(`+1 ${INGREDIENTS[ev.ingredient].name}`, INGREDIENTS[ev.ingredient].color, sim.player.x, 1.8, sim.player.z);
         else if (ev.material) lootUi.float(`+1 ${MATERIALS[ev.material].name}`, MATERIALS[ev.material].color, sim.player.x, 1.8, sim.player.z);
         break;
@@ -740,9 +744,6 @@ function drainEvents(): void {
         break;
       case 'note':
         lootUi.float(ev.text, ev.color, ev.x, 2.2, ev.z);
-        break;
-      case 'heal':
-        if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
         break;
       case 'secondWind':
         ui.banner('Zweiter Atem');
@@ -926,7 +927,15 @@ function frame(now: number): void {
   // Paused screens (trade, camp, menu) can still raise events, e.g. the coin of a purchase (A2).
   if (!running && sim.events.length) drainEvents();
 
-  if (phase === 'play' && sim.player.state === 'dead') {
+  // The hero fell: the loot search ends with them (review 2026-11-20).
+  if (sim.player.state === 'dead' && lootExit === 'search') { lootExit = 'off'; lootChip.hidden = true; }
+  if (phase === 'play' && sim.player.state === 'dead' && sim.run.phase === 'won' && sim.run.endless === undefined) {
+    // Fallen after the victory (review 2026-11-20): the run stays won (telemetry already sent 'win'), so the
+    // end screen follows after the fall, never the death screen or a retry of the boss.
+    input.enabled = false;
+    exitChip.hidden = true;
+    if (wonFor < WON_DELAY - 1.4) wonFor = WON_DELAY - 1.4;
+  } else if (phase === 'play' && sim.player.state === 'dead') {
     phase = 'dead';
     // A fall ends the expedition (2D): the meal is eaten, the retry starts without it.
     endExpedition(sim, false);
@@ -968,7 +977,9 @@ function frame(now: number): void {
   else if (isCamp) { minimap?.show(phase === 'play' && !camp.isOpen && !netBoard.isOpen); minimap?.update(dt, sim.player, [], []); }
   pollLootPad();
   // Heights are above the local ground (hills and terraces).
-  lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !menu.isOpen);
+  const screenOf = (x: number, y: number, z: number) => renderer!.screenOf(x, y + groundY(x, z), z);
+  lootUi.update(sim, dt, screenOf, phase === 'play' && !menu.isOpen);
+  dmgNums.update(sim, dt, screenOf, phase === 'play' && !menu.isOpen && opts.damageNumbers);
 
   // Behind a still overlay (trade, blessing choice, cards) the world only idles: draw at about 10 fps
   // instead of full rate (playtest 2026-11-17: the tablet runs hot). The open menu draws nothing.
@@ -977,15 +988,31 @@ function frame(now: number): void {
   const draw = !menu.isOpen && (!still || --stillSkip <= 0);
   if (still && draw) stillSkip = Math.max(1, Math.round(100 / FRAME_MS));
   if (draw) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, renderer.reveal?.active ? 0.1 : 1 / 30));
+  // Q1: dynamic resolution judges only frames of the running game (overlays draw at 10 fps on purpose).
+  if (draw && running) {
+    renderer.frameTime(frameMs, FRAME_MS);
+    slowHint(frameMs);
+  }
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
     ui.setPerf(
-      `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms\n` +
+      `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms · render ${pf.renderMs.toFixed(1)} ms\n` +
         `${pf.calls} draw calls · ${(pf.triangles / 1000).toFixed(0)}k Dreiecke · ${sim.enemies.length} Gegner\n` +
-        `${PROFILES[opts.profile].label} · x ${sim.player.x.toFixed(1)} z ${sim.player.z.toFixed(1)}`,
+        `${PROFILES[opts.profile].label}${pf.scale < 1 ? ` ${Math.round(pf.scale * 100)} %` : ''} · x ${sim.player.x.toFixed(1)} z ${sim.player.z.toFixed(1)}`,
     );
   }
+}
+
+/** Q1: on Ausgewogen, after 20 s of play under 40 fps at the lowest render scale, one hint per session. */
+let slowFor = 0;
+let slowShown = false;
+function slowHint(frameMs: number): void {
+  if (slowShown || opts.profile !== 'ausgewogen' || !renderer || renderer.perf.scale > PROFILES.ausgewogen.minScale) return;
+  slowFor = frameMs > 25 ? slowFor + frameMs / 1000 : Math.max(0, slowFor - frameMs / 2000);
+  if (slowFor < 20) return;
+  slowShown = true;
+  lootUi.toast('Ruckelt es? <span style="color:#ef9f27">Optionen › Grafik › Leistung</span>', 6);
 }
 
 function expeditionHud(dt: number): void {

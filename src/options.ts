@@ -28,6 +28,8 @@ export interface Options {
   telemetry: boolean;
   /** Auto-Angriff (2D `autoAtk`): swing when an enemy is in reach. Default off (2D: on for touch). */
   autoAttack: boolean;
+  /** Schadenszahlen (2D `nums`): damage dealt, taken and healing as rising numbers. Default on. */
+  damageNumbers: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
   /** M11d landmark reveal shot: on in normal play, off for debug starts and automated browsers unless ?reveal. */
@@ -62,6 +64,8 @@ export const RESUME_KEY = 'ruinenstadt-berlin.resume';
 
 interface Stored {
   profile?: ProfileId;
+  /** Profile ids version: 2 since the three levels (2026-11-20). Before, `leistung` meant today's Ausgewogen. */
+  pv?: number;
   volume?: number;
   sound?: boolean;
   music?: boolean;
@@ -70,6 +74,7 @@ interface Stored {
   showPerf?: boolean;
   telemetry?: boolean;
   autoAttack?: boolean;
+  damageNumbers?: boolean;
 }
 
 function readStored(): Stored {
@@ -82,7 +87,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry, autoAttack: o.autoAttack };
+    const s: Stored = { profile: o.profile, pv: 2, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry, autoAttack: o.autoAttack, damageNumbers: o.damageNumbers };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -95,14 +100,24 @@ function parseProfile(v: string | null): ProfileId | null {
   if (!v) return null;
   const n = norm(v);
   if (n.startsWith('q')) return 'qualitaet';
+  if (n.startsWith('a') || n.startsWith('b')) return 'ausgewogen';
   if (n.startsWith('l') || n.startsWith('p')) return 'leistung';
   return null;
 }
 
-/** Tablets and phones start on Leistung, everything else on Qualität. */
+/** A stored profile; a `leistung` saved before the three levels is today's Ausgewogen (Q1). */
+export function storedProfile(s: { profile?: string; pv?: number }): ProfileId | null {
+  if (!s.profile || !(s.profile in PROFILES)) return null;
+  if (s.profile === 'leistung' && (s.pv ?? 1) < 2) return 'ausgewogen';
+  return s.profile as ProfileId;
+}
+
+/** Phones start on Leistung, tablets on Ausgewogen, everything else on Qualität. */
 function defaultProfile(): ProfileId {
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-  return coarse || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? 'leistung' : 'qualitaet';
+  if (!coarse && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) return 'qualitaet';
+  // Phone: the short screen side under 500 CSS px (phones about 360 to 430, the Tab S9 747).
+  return Math.min(screen.width, screen.height) < 500 ? 'leistung' : 'ausgewogen';
 }
 
 function parseCam(v: string | null): { distance: number; pitch: number } | undefined {
@@ -115,7 +130,7 @@ export function readOptions(): Options {
   const q = new URLSearchParams(location.search);
   const stored = readStored();
   const debug = (q.get('debug') ?? '').split(',');
-  const profile = parseProfile(q.get('profile')) ?? (stored.profile && stored.profile in PROFILES ? stored.profile : defaultProfile());
+  const profile = parseProfile(q.get('profile')) ?? (storedProfile(stored) ?? defaultProfile());
   return {
     profile,
     debugHit: debug.includes('hit'),
@@ -131,6 +146,7 @@ export function readOptions(): Options {
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     telemetry: stored.telemetry ?? true,
     autoAttack: stored.autoAttack ?? false,
+    damageNumbers: stored.damageNumbers ?? true,
     autostart: q.has('autostart'),
     reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),

@@ -8,12 +8,13 @@ import { FUNDE, FUNDE_TEILE, fundId, TEIL_BONUS, type FundKind } from '../data/f
 import { PX } from '../data/powers';
 import { SHRINES, SURVIVORS, type ShrineId, type SurvivorId } from '../data/progression';
 import { offerBlessings } from './blessings';
-import { ELITE_MODS } from '../data/enemies';
+import { ELITE_MODS, type EnemyKind } from '../data/enemies';
 import { pk } from './combat';
-import { makeElite, spawnEnemy } from './enemies';
+import { makeElite, pickKind, spawnEnemy } from './enemies';
+import { healPlayer } from './heal';
 import { BAG_SIZE } from './inventory';
 import { lootItem, makeItem, price, type Item } from './items';
-import type { Level } from './level';
+import type { Level, WaveDef } from './level';
 import { setLoadout } from './loadout';
 import { creditScrap, lootContext, lootLevel, MATERIAL_IDS, spawnDrop } from './loot';
 import { Rng } from './math';
@@ -212,16 +213,39 @@ export function createContent(s: Sim, seed: number): RunContent {
   return c;
 }
 
+/** The first wave of the encounter ahead: event enemies take its strength and its mix. */
+const aheadWave = (s: Sim): WaveDef | undefined => s.level.encounters[Math.min(s.run.index, s.level.encounters.length - 1)]?.waves[0];
+
+/**
+ * An event enemy of `kind` if the waves ahead already bring that type, else one drawn from their mix
+ * (the director's `pickKind`). Review 2026-11-20: an ambush or a rescue at leg 1 brought Brocken (an
+ * elite Spaltend one among them) before any Brocken wave, which killed fresh heroes.
+ */
+export function eventKind(s: Sim, rng: Rng, kind: EnemyKind): EnemyKind {
+  const mix = aheadWave(s)?.mix;
+  return !mix || (mix[kind] ?? 0) > 0 ? kind : pickKind(s, mix, rng);
+}
+
 /** Wave strength for event enemies: the tier of the encounter ahead. */
 function tier(s: Sim): { hp: number; dmg: number } {
-  const enc = s.level.encounters[Math.min(s.run.index, s.level.encounters.length - 1)];
-  const w = enc?.waves[0];
+  const w = aheadWave(s);
   const df = difficultyOf(s.difficulty);
   return { hp: (w?.hpMul ?? 1) * df.hp, dmg: (w?.dmgMul ?? 1) * df.dmg };
 }
 
 const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;
 export const healPrice = (s: Sim): number => 20 + Math.round(waveE(s) * 4);
+
+/**
+ * The captive's elite guard: a Brocken once the waves ahead bring Brocken and elites, before that a
+ * Läufer or Hetzer; the weakest (Läufer) while the waves have no elites yet (the rescue always has one).
+ */
+export function guardLead(s: Sim, rng: Rng): EnemyKind {
+  const w = aheadWave(s), mix = w?.mix ?? { walker: 1 };
+  if (!(w?.elite ?? 0)) return 'walker';
+  if ((mix.brute ?? 0) > 0) return 'brute';
+  return (mix.runner ?? 0) > 0 ? rng.pick(['walker', 'runner'] as const) : 'walker';
+}
 
 /** The three guards of the captive (one elite). Also called when a checkpoint with an unfinished rescue is loaded. */
 export function spawnGuards(s: Sim, rng: Rng = new Rng(s.content.rng)): void {
@@ -231,7 +255,7 @@ export function spawnGuards(s: Sim, rng: Rng = new Rng(s.content.rng)): void {
   const T = tier(s);
   for (let i = 0; i < 3; i++) {
     const q = freeSpot(L, rng, C.x, C.z, 1.2, 2.6, 0.5, (x, z) => !inFight(L, x, z, 3) && restAt(L.rests, x, z) < 0) ?? C;
-    const g = spawnEnemy(s, q.x, q.z, i === 0 ? 'brute' : rng.pick(['walker', 'walker', 'runner'] as const), T.hp, T.dmg);
+    const g = spawnEnemy(s, q.x, q.z, i === 0 ? guardLead(s, rng) : eventKind(s, rng, rng.pick(['walker', 'walker', 'runner'] as const)), T.hp, T.dmg);
     if (i === 0) makeElite(s, g, rng.pick(ELITE_MODS));
     g.guard = true;
   }
@@ -264,7 +288,7 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
           x = q.x;
           z = q.z;
         }
-        spawnEnemy(s, x, z, rng.next() < 0.7 ? 'walker' : 'brute', T.hp, T.dmg);
+        spawnEnemy(s, x, z, eventKind(s, rng, rng.next() < 0.7 ? 'walker' : 'brute'), T.hp, T.dmg);
       }
       break;
     }
@@ -411,6 +435,7 @@ export function updateContent(s: Sim): void {
   }
 
   const travel = s.run.phase === 'travel';
+  const fighting = s.run.phase === 'fight' || s.run.phase === 'pause' || s.run.phase === 'hold';
   const leg = s.run.index;
   if (travel && c.plan[leg] && !c.done[leg] && !s.abilities.offers.length && restAt(L.rests, p.x, p.z) < 0) {
     c.timer -= DT;
@@ -492,7 +517,8 @@ export function updateContent(s: Sim): void {
   if (c.zone) {
     const Z = c.zone;
     if (travel) Z.t -= DT;
-    if (near(Z, Z.r)) {
+    // Review 2026-11-20: the zone waits while an encounter runs (its adds would join the fight).
+    if (!fighting && near(Z, Z.r)) {
       Z.p += DT;
       Z.sp -= DT;
       if (Z.sp <= 0) {
@@ -500,7 +526,7 @@ export function updateContent(s: Sim): void {
         const T = tier(s);
         for (let i = 0; i < 2; i++) {
           const q = freeSpot(L, rng, p.x, p.z, 220 * PX, 320 * PX, 0.5);
-          if (q) spawnEnemy(s, q.x, q.z, rng.next() < 0.75 ? 'walker' : 'runner', T.hp, T.dmg);
+          if (q) spawnEnemy(s, q.x, q.z, eventKind(s, rng, rng.next() < 0.75 ? 'walker' : 'runner'), T.hp, T.dmg);
         }
       }
     }
@@ -567,9 +593,7 @@ export function buyHeal(s: Sim): { ok: boolean; text: string } {
   if (s.player.hp >= s.stats.maxHp) return { ok: false, text: 'Du bist unverletzt.' };
   if (s.inventory.scrap < cost) return { ok: false, text: `Dir fehlen ${cost - s.inventory.scrap} Schrott.` };
   s.inventory.scrap -= cost;
-  const amount = Math.round(s.stats.maxHp - s.player.hp);
-  s.player.hp = s.stats.maxHp;
-  s.events.push({ type: 'heal', amount, source: 'trader' });
+  healPlayer(s, s.stats.maxHp, 'trader');
   s.events.push({ type: 'buy' });
   return { ok: true, text: 'Geheilt.' };
 }
