@@ -18,8 +18,8 @@ export interface SettingHooks {
 }
 export const settingHooks: SettingHooks = {};
 
-type BoolKey = 'sound' | 'music' | 'rumble' | 'eco' | 'showPerf' | 'telemetry' | 'autoAttack';
-const BOOL: BoolKey[] = ['sound', 'music', 'rumble', 'eco', 'showPerf', 'telemetry', 'autoAttack'];
+type BoolKey = 'sound' | 'music' | 'rumble' | 'eco' | 'showPerf' | 'telemetry' | 'autoAttack' | 'damageNumbers';
+const BOOL: BoolKey[] = ['sound', 'music', 'rumble', 'eco', 'showPerf', 'telemetry', 'autoAttack', 'damageNumbers'];
 
 export const canFullscreen = (): boolean => typeof document.documentElement.requestFullscreen === 'function';
 export function toggleFullscreen(): void {
