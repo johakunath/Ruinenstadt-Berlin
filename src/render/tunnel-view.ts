@@ -42,8 +42,8 @@ export function lineTint(color: string): RGB {
 }
 
 /**
- * Static tunnel extras into the map chunks: name plates, water ribbon, bypass floor and pipes, rubble
- * dust, the generator body. `materials` makes the three sign materials.
+ * Static tunnel extras into the map chunks: name plates, bypass floor and pipes, the generator body.
+ * `materials` makes the three sign materials.
  */
 export function buildTunnelExtras(m: MapDef, mats: TunnelMats, materials: Materials, chunkOf: (x: number, z: number) => Chunk): void {
   const T = m.tunnel!;
@@ -61,16 +61,8 @@ export function buildTunnelExtras(m: MapDef, mats: TunnelMats, materials: Materi
     b.box(mats.iron, f.clone().multiply(new Matrix4().makeTranslation(0, 0, -0.03)), 2.95, 0.66, 0.05, [0.6, 0.6, 0.6]);
     b.geo(mat, plate, f.clone().multiply(new Matrix4().makeTranslation(0, 0, 0.005)));
   }
-  // Flooded stretch: the water itself is one mesh in the view (`buildTunnelView`); here the wet rims.
-  if (T.flood) {
-    const pts = T.flood.pts, half = T.flood.width / 2;
-    // Wet dark rims along the walls where the water laps.
-    for (const s of [-1, 1]) for (let i = 1; i < pts.length; i++) {
-      const [ax, az] = pts[i - 1]!, [bx, bz] = pts[i]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
-      const x = (ax + bx) / 2 + uz * (half + 0.15) * s, z = (az + bz) / 2 - ux * (half + 0.15) * s;
-      chunkOf(x, z).box(mats.concrete, new Matrix4().makeRotationY(Math.atan2(ux, uz)).setPosition(x, 0.45, z), 0.06, 0.9, len + 0.05, [0.14, 0.17, 0.17]);
-    }
-  }
+  // Flooded stretch: the water itself is one mesh in the view (`buildTunnelView`); the wet foot of the
+  // walls is drawn on the wall faces (map-world `buildTunnel`; the loose rims stood free at the station cap).
   // Maintenance bypass: a concrete walkway with a yellow edge and two pipes on the outer wall.
   for (const t of T.tubes) {
     if (t.kind !== 'bypass') continue;

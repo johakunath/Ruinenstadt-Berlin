@@ -22,6 +22,7 @@ import { starterEquipment, statContext } from './loadout';
 import { heroStats, type Equipment, type StatContext } from './stats';
 import { updateRest } from './rest';
 import { createPlayer, releaseSwing, updatePlayer } from './player';
+import { syncCampSolids } from './camp';
 import { DT, type Sim, type SimInput } from './types';
 
 export interface SimOptions {
@@ -169,7 +170,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   updateThreats(sim);
   updateBarriers(sim);
   removeCorpses(sim);
-  if (sim.level.camp) { /* M20: the camp is peaceful */ }
+  if (sim.level.camp) syncCampSolids(sim); // M20: the camp is peaceful; station furniture follows the levels
   else if (sim.level.expedition && sim.stress === 0) updateDirector(sim);
   else updateSpawner(sim);
   updateRest(sim);

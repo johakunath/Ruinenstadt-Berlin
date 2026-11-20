@@ -41,6 +41,7 @@ import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_K
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
+import { tunnelWalls } from '../data/tunnel';
 import { paintTunnelAtlas, tunnelBoxGeo, TUNNEL_WALLS_URL } from './tunnel-textures';
 import { Materials, type LitMaterial } from './materials';
 import { loadGroundTexture } from './ground-textures';
@@ -1097,18 +1098,17 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
     const h = w.low ? LOW : H;
     const b = chunkOf(w.x, w.z);
     const rot = (x: number, y: number, z: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(x, y, z);
-    // The top cap overhangs the face by 0.2 m; a shared divider's cap stops at its half of the rock.
+    // The top cap overhangs the (swollen) face; a shared divider's cap stops at its half of the rock.
     const cap = (tint: RGB): void => {
-      const back = w.shared ? 0 : 0.2, cw = thick + 0.2 + back, co = (thick + back - 0.2) / 2;
-      b.box(mats.concrete, rot(w.x + nx * co, h + 0.05, w.z + nz * co), cw, 0.1, w.len + 0.04, tint);
+      const front = -w.bump / 2 - 0.2, back = thick + (w.shared ? 0 : 0.2), co = (front + back) / 2;
+      b.box(mats.concrete, rot(w.x + nx * co, h + 0.05, w.z + nz * co), back - front, 0.1, w.len + 0.04, tint);
     };
     if (w.side === 0 || w.fill) {
       // End walls (playtest 2026-11-18: a tube end that joins no other tube) and bend wedges: plain rock faces.
       const mx = w.x + nx * thick / 2, mz = w.z + nz * thick / 2;
-      // The end walls are the dark rock faces of before (an end is one box, the shading of its run).
-      b.solid.captureOccluder(() => b.box(mats.concrete, rot(mx, h / 2, mz), w.len + 0.04, h, thick, w.fill ? [0.4, 0.38, 0.36] : [0.38, 0.36, 0.34]));
+      b.solid.captureOccluder(() => b.box(mats.concrete, rot(mx, h / 2, mz), thick, h, w.len + 0.04, w.fill ? [0.4, 0.38, 0.36] : [0.38, 0.36, 0.34]));
       cap(h < H ? [0.3, 0.29, 0.27] : [0.08, 0.08, 0.09]);
-      b.shadowBox(rot(mx, h / 2, mz), w.len, h, thick);
+      b.shadowBox(rot(mx, h / 2, mz), thick, h, w.len);
       if (w.side !== 0 || w.len < 2) continue;
       // Rubble along the foot, and on a closed side passage or bypass end fallen planks (render only, so no crate that looks breakable).
       const rng = new Rng(Math.round(w.x * 31 + w.z * 17));
