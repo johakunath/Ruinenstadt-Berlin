@@ -3,9 +3,10 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'e2e',
   timeout: 240_000,
-  // Tests are independent (own page each), so they spread over workers and CI shards; CI runners have 4 vCPUs.
+  // Tests are independent (own page each), so they spread over the three CI shards.
+  // SwiftShader renders on the CPU: one browser per runner avoids competing for quality frames and screenshots.
   fullyParallel: true,
-  workers: process.env.CI ? 3 : 2,
+  workers: process.env.CI ? 1 : 2,
   retries: process.env.CI ? 1 : 0,
   outputDir: 'test-results',
   use: {
