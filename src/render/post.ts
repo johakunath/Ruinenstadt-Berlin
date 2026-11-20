@@ -185,6 +185,8 @@ export class Post {
     this.heroOutline.resizeMasks(width, height, dpr, this.profile.gbufferScale);
     const w = Math.round(width * dpr);
     const h = Math.round(height * dpr);
+    // Leistung: the bloom chain at half size (the composer just sized it to the frame).
+    if (this.profile.bloomScale < 1) this.bloom.setSize(Math.round(w * this.profile.bloomScale), Math.round(h * this.profile.bloomScale));
     if (this.gbuffer) {
       const s = this.profile.gbufferScale;
       this.gbuffer.setSize(Math.round(w * s), Math.round(h * s));

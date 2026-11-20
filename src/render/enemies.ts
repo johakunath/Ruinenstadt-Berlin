@@ -1797,10 +1797,15 @@ export class EnemyView {
       };
       mesh.material = Array.isArray(mesh.material) ? (mesh.material as LitMaterial[]).map(one) : one(mesh.material as LitMaterial);
       mesh.castShadow = castShadow;
-      if (skin === 'zombie') {
-        mesh.frustumCulled = true;
-        mesh.boundingSphere = new Sphere(new Vector3(0, 0.9, 0), 1.7);
-      } else mesh.frustumCulled = false;
+      mesh.frustumCulled = true;
+      if (skin === 'zombie') mesh.boundingSphere = new Sphere(new Vector3(0, 0.9, 0), 1.7);
+      else {
+        // Dinos and mechs (review 2026-11-20: they were drawn in every pass even off screen): the
+        // bind pose bounds, doubled for strides, lunges and the mechs' raised legs.
+        if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
+        const b = mesh.geometry.boundingSphere!;
+        mesh.boundingSphere = new Sphere(b.center.clone(), b.radius * 2);
+      }
     });
     if (skin === 'mech' || skin === 'mechBig') {
       // H3: gear sets per kind are built in the rest pose the body has now (`inRest`); the clock gear at once.

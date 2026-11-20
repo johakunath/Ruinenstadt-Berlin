@@ -58,6 +58,8 @@ export interface BreakableView {
   broke(id: number): void;
   /** A new sim: every prop is whole again. */
   reset(): void;
+  /** Hero position: only props near it are drawn (map worlds call it from `follow`). */
+  near(x: number, z: number): void;
   update(dt: number): void;
 }
 

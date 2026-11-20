@@ -57,8 +57,8 @@ function weatherCloth(material: LitMaterial, albedo: CanvasImageSource, anisotro
 }
 
 export function loadLotPropTextures(mats: Mats): void {
-  const { anisotropy, id } = mats.profile;
-  const performance = id === 'leistung';
+  const { anisotropy, smallTextures } = mats.profile;
+  const performance = smallTextures;
   swapPaintedMap([mats.corrugated], urls.corrugated, anisotropy, true, performance ? 256 : 512);
   swapPaintedMap([mats.roughConcrete], urls.concrete, anisotropy, true, 512);
   swapPaintedMap([mats.stoneMoss], urls.stone, anisotropy);

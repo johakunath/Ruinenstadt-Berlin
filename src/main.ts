@@ -71,7 +71,7 @@ const canvas = document.getElementById('game') as HTMLCanvasElement;
 const audio = new GameAudio();
 audio.setVolume(opts.sound ? opts.volume : 0);
 audio.setMusic(opts.music);
-audio.setEco(opts.profile === 'leistung');
+audio.setEco(opts.profile !== 'qualitaet');
 const input = new Input(canvas);
 const abilitiesUi = new AbilitiesUi(input);
 /** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
@@ -977,15 +977,31 @@ function frame(now: number): void {
   const draw = !menu.isOpen && (!still || --stillSkip <= 0);
   if (still && draw) stillSkip = Math.max(1, Math.round(100 / FRAME_MS));
   if (draw) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, renderer.reveal?.active ? 0.1 : 1 / 30));
+  // Q1: dynamic resolution judges only frames of the running game (overlays draw at 10 fps on purpose).
+  if (draw && running) {
+    renderer.frameTime(frameMs, FRAME_MS);
+    slowHint(frameMs);
+  }
   ui.hud(sim.player.hp, sim.stats.maxHp, sim.kills);
   if (opts.showPerf) {
     const pf = renderer.perf;
     ui.setPerf(
-      `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms\n` +
+      `${pf.fps.toFixed(0)} fps · p95 ${pf.p95.toFixed(1)} ms · sim ${pf.simMs.toFixed(2)} ms · render ${pf.renderMs.toFixed(1)} ms\n` +
         `${pf.calls} draw calls · ${(pf.triangles / 1000).toFixed(0)}k Dreiecke · ${sim.enemies.length} Gegner\n` +
-        `${PROFILES[opts.profile].label} · x ${sim.player.x.toFixed(1)} z ${sim.player.z.toFixed(1)}`,
+        `${PROFILES[opts.profile].label}${pf.scale < 1 ? ` ${Math.round(pf.scale * 100)} %` : ''} · x ${sim.player.x.toFixed(1)} z ${sim.player.z.toFixed(1)}`,
     );
   }
+}
+
+/** Q1: on Ausgewogen, after 20 s of play under 40 fps at the lowest render scale, one hint per session. */
+let slowFor = 0;
+let slowShown = false;
+function slowHint(frameMs: number): void {
+  if (slowShown || opts.profile !== 'ausgewogen' || !renderer || renderer.perf.scale > PROFILES.ausgewogen.minScale) return;
+  slowFor = frameMs > 25 ? slowFor + frameMs / 1000 : Math.max(0, slowFor - frameMs / 2000);
+  if (slowFor < 20) return;
+  slowShown = true;
+  lootUi.toast('Ruckelt es? <span style="color:#ef9f27">Optionen › Grafik › Leistung</span>', 6);
 }
 
 function expeditionHud(dt: number): void {

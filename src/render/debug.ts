@@ -135,6 +135,10 @@ export class PerfStats {
   calls = 0;
   triangles = 0;
   simMs = 0;
+  /** CPU time of the last `render` call (scene update and all passes submitted), ms. */
+  renderMs = 0;
+  /** Dynamic resolution scale (1 = full). */
+  scale = 1;
 
   frame(ms: number): void {
     this.frames[this.i] = ms;

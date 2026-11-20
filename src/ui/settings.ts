@@ -33,7 +33,7 @@ export const segment = (key: string, label: string, items: Array<[string, string
 /** One setting as a card with a short sub-line (2D `row`). */
 export const row = (name: string, sub: string, control: string, attrs = ''): string => `<div class="orow"${attrs}><div class="ot"><div class="oname">${name}</div>${sub ? `<div class="odesc">${sub}</div>` : ''}</div><div class="oc">${control}</div></div>`;
 
-export const profileSeg = (): string => segment('profile', 'Grafik', [['qualitaet', PROFILES.qualitaet.label], ['leistung', PROFILES.leistung.label]]);
+export const profileSeg = (): string => segment('profile', 'Grafik', [['qualitaet', PROFILES.qualitaet.label], ['ausgewogen', PROFILES.ausgewogen.label], ['leistung', PROFILES.leistung.label]]);
 export const volumeRange = (): string => '<input type="range" min="0" max="100" data-opt="volume" aria-label="Lautstärke" />';
 
 /** Puts every view in the page on the current values. */
