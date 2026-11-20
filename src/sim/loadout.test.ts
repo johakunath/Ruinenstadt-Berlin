@@ -4,6 +4,7 @@ import type { Item } from './items';
 import { setLoadout, starterEquipment } from './loadout';
 import { spawnEnemy } from './enemies';
 import { createSim, stepSim } from './sim';
+import { HERO_TEMPO } from './player';
 import { DT, NO_INPUT, type Sim, type SimEvent, type SimInput } from './types';
 import type { Equipment, StatContext } from './stats';
 
@@ -68,14 +69,14 @@ describe('equipment in the 3D simulation', () => {
     for (const value of [10, 20]) {
       const sim = arena(gear({ value })); const e = target(sim);
       const log = hits(swing(sim));
-      expect(log).toHaveLength(1); expect(log[0]!.damage).toBe(value);
-      expect(e.hp).toBe(10000 - value);
+      expect(log).toHaveLength(1); expect(log[0]!.damage).toBe(value * 0.9);
+      expect(e.hp).toBe(10000 - value * 0.9);
     }
     const sim = arena(gear({ value: 20 }));
     // Dash attacks retain their 1.5x multiplier.
     sim.player.strikeT = 1;
     target(sim);
-    expect(hits(swing(sim))[0]!.damage).toBe(30);
+    expect(hits(swing(sim))[0]!.damage).toBe(27);
   });
 
   it('snapshots a swing, so equipment changes affect the next attack', () => {
@@ -84,10 +85,10 @@ describe('equipment in the 3D simulation', () => {
     const first = sim.player.attack;
     setLoadout(sim, gear({ value: 30, affixes: [{ id: 'as', value: 100 }, { id: 'crit', value: -8 }] }));
     expect(sim.player.attack).toBe(first);
-    expect(hits(run(sim, 50))[0]!.damage).toBe(10);
-    expect(sim.player.attackSpeed).toBe(1);
-    expect(hits(swing(sim))[0]!.damage).toBe(30);
-    expect(sim.player.attackSpeed).toBe(2);
+    expect(hits(run(sim, 50))[0]!.damage).toBe(9);
+    expect(sim.player.attackSpeed).toBe(HERO_TEMPO);
+    expect(hits(swing(sim))[0]!.damage).toBe(27);
+    expect(sim.player.attackSpeed).toBeCloseTo(2 * HERO_TEMPO);
     expect(ATTACKS.light1.windup).toBe(.08); expect(ATTACKS.light1.damage).toBe(10);
   });
 
@@ -100,8 +101,8 @@ describe('equipment in the 3D simulation', () => {
       expect(new Set(log.map(e => e.critical)).size).toBe(1);
       return log.map(e => ({ damage: e.damage, critical: e.critical }));
     };
-    expect(play(1)).toEqual([{ damage: 20, critical: true }, { damage: 20, critical: true }]);
-    expect(play(4)).toEqual([{ damage: 10, critical: false }, { damage: 10, critical: false }]);
+    expect(play(1)).toEqual([{ damage: 18, critical: true }, { damage: 18, critical: true }]);
+    expect(play(4)).toEqual([{ damage: 9, critical: false }, { damage: 9, critical: false }]);
     expect(play(1)).toEqual(play(1));
   });
 
@@ -134,9 +135,9 @@ describe('equipment in the 3D simulation', () => {
     for (const speed of [1, 2]) {
       const sim = arena(gear({ affixes: [{ id: 'as', value: (speed - 1) * 100 }, { id: 'crit', value: -8 }] }));
       run(sim, 1, { ...NO_INPUT, attack: true });
-      expect(sim.player.attack!.windup).toBeCloseTo(ATTACKS.light1.windup / speed);
-      expect(sim.player.attack!.active).toBeCloseTo(ATTACKS.light1.active / speed);
-      expect(sim.player.attack!.recovery).toBeCloseTo(ATTACKS.light1.recovery / speed);
+      expect(sim.player.attack!.windup).toBeCloseTo(ATTACKS.light1.windup / speed / HERO_TEMPO);
+      expect(sim.player.attack!.active).toBeCloseTo(ATTACKS.light1.active / speed / HERO_TEMPO);
+      expect(sim.player.attack!.recovery).toBeCloseTo(ATTACKS.light1.recovery / speed / HERO_TEMPO);
       let n = 0;
       while (sim.player.attack?.id === 'light1' && n++ < 100) run(sim, 1, { ...NO_INPUT, attack: true });
       expect(sim.player.attack?.id).toBe('light2'); times.push(n * DT);

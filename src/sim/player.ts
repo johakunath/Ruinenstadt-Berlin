@@ -41,10 +41,10 @@ export function releaseSwing(sim: Sim): void {
     const H = WEAPON.hammer;
     // Erdbeben: the finisher ring is twice as wide and stuns for a second.
     const beben = pk(sim, 'm_beben') > 0;
-    if (fin) shock(sim, p.x + fx * H.shock.ahead, p.z + fz * H.shock.ahead, H.shock.radius * (beben ? WEAPON.umbau.bebenRadius : 1), { mul: H.shock.damage, stun: beben ? WEAPON.umbau.bebenStun : H.shock.stun, knock: knock(260), kind: beben ? 'earth' : 'small' });
+    if (fin) shock(sim, p.x + fx * H.shock.ahead, p.z + fz * H.shock.ahead, H.shock.radius * (beben ? WEAPON.umbau.bebenRadius : 1), { mul: H.shock.damage * WEAPON.normalDamage, stun: beben ? WEAPON.umbau.bebenStun : H.shock.stun, knock: knock(260), kind: beben ? 'earth' : 'small' });
     // Wurfhammer: the finisher also throws the hammer through three bodies.
     if (fin && pk(sim, 'm_wurf')) { const W = WEAPON.umbau.wurf; shoot(sim, { angle: p.facing, damage: a.damage * W.damage, crit: p.critical, speed: W.speed, life: W.life, pierce: W.pierce, kind: 'spear' }); }
-    if (pk(sim, 'm_dampf')) shock(sim, p.x + fx * H.dampf.ahead, p.z + fz * H.dampf.ahead, H.dampf.radius, { mul: H.dampf.damage, stun: 0, knock: knock(140), kind: 'small' });
+    if (pk(sim, 'm_dampf')) shock(sim, p.x + fx * H.dampf.ahead, p.z + fz * H.dampf.ahead, H.dampf.radius, { mul: H.dampf.damage * WEAPON.normalDamage, stun: 0, knock: knock(140), kind: 'small' });
   }
   if (kind === 'spear' && fin && pk(sim, 'm_spiess')) {
     const T = WEAPON.spear.spiess;
@@ -54,6 +54,8 @@ export function releaseSwing(sim: Sim): void {
 
 /** Gap between the last active frame and the earliest chained attack. */
 const CHAIN_GAP = 0.04;
+/** Base swing tempo under 100 % Angriffstempo (playtest 2026-11-20: the hero out-paced every enemy telegraph). */
+export const HERO_TEMPO = 0.85;
 
 export function createPlayer(level: Level, at = level.start): Player {
   const { x, z } = at;
@@ -148,7 +150,8 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   p.stateT = 0;
   p.cast = null;
   // Keep pose, hitbox, lunge and damage on one immutable swing snapshot.
-  const speed = sim.stats.attackSpeed * (frenzy ? POWER.saebel.speed : 1) * (1 + STATUS.jagdStep * a.jagd.n);
+  // HERO_TEMPO: every swing (wind-up, active, recovery and the clip) plays slower than the stat (playtest 2026-11-20).
+  const speed = sim.stats.attackSpeed * HERO_TEMPO * (frenzy ? POWER.saebel.speed : 1) * (1 + STATUS.jagdStep * a.jagd.n);
   p.attackSpeed = speed;
   // Gegengewicht: every n-th attack is a Wucht hit (sure crit, double knockback, short stun).
   p.wucht = sim.stats.weight > 0 && ++a.swings % sim.stats.weight === 0;
@@ -157,14 +160,14 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   const armed = a.dcrit;
   a.dcrit = false;
   p.critical = p.wucht || frenzy || armed || (fin && pk(sim, 'pauke') > 0) || sim.rng.next() < sim.stats.crit;
-  const mul = (p.critical ? 2 : 1) * (a.fed > 0 ? CONSUMABLE.food.damage : 1) * (a.hus > 0 ? 1 + 0.4 * pk(sim, 'husar') : 1) * (a.ret ? 2 : 1);
+  const mul = (p.critical ? 2 : 1) * (a.fed > 0 ? CONSUMABLE.food.damage : 1) * (a.hus > 0 ? 1 + 0.2 * pk(sim, 'husar') : 1) * (a.ret ? 1.5 : 1);
   if (a.ret) sim.events.push({ type: 'note', text: 'Retourkutsche', color: '#9aa4b0', x: p.x, z: p.z });
   if (p.wucht) sim.events.push({ type: 'note', text: 'Wucht', color: '#f2a04b', x: p.x, z: p.z });
   a.ret = false;
   p.attack = { ...def, windup: def.windup / speed, active: def.active / speed, recovery: def.recovery / speed,
     reach: def.reach * sim.stats.reachFactor,
     knockback: def.knockback * (fin ? WEAPON.finisherKnock : 1) * (p.wucht ? WEAPON.wucht.knock : 1),
-    damage: def.damage * mul * sim.stats.damage / STARTER_DAMAGE };
+    damage: def.damage * mul * sim.stats.damage / STARTER_DAMAGE * (frenzy ? POWER.saebel.attackDamage : WEAPON.normalDamage) };
   p.swing++;
   p.hits.length = 0;
   p.propHits.length = 0;

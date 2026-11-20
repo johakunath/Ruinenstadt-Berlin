@@ -199,6 +199,8 @@ export function allWeaponAttacks(): Array<{ kind: WeaponKindId; def: AttackDef }
 
 /** Per weapon (2D `KIND`, `attack()`): stun on every hit, finisher extras, shots. Distances in meters. */
 export const WEAPON = {
+  /** Playtest 2026-11-20: basic attacks hit 10% less; powers keep their own weapon-damage ratios. */
+  normalDamage: 0.9,
   hammer: { stun: 0.6, shock: { ahead: 40 / 30, radius: 95 / 30, damage: 0.7, stun: 0.5 }, dampf: { ahead: 46 / 30, radius: 75 / 30, damage: 0.5 } },
   sling: { speed: 560 / 30, life: 0.7, finLife: 0.9, finSpeed: 1.3, finPierce: 3, schrot: { spread: 0.18, damage: 0.55, life: 0.42, finLife: 0.55, finPierce: 2 } },
   spear: { spiess: { speed: 640 / 30, life: 0.6, damage: 0.9, pierce: 4 } },

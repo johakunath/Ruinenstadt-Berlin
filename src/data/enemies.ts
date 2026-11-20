@@ -373,8 +373,11 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   },
 };
 
+/** Life of every normal (non-boss) kind against the table above (playtest 2026-11-20: blessed heroes one-shot
+ * too much). Bosses keep their table value. */
+export const NORMAL_HP = 2;
 export const ENEMIES: Record<EnemyKind, EnemyDef> = Object.fromEntries(
-  (Object.keys(DEFS) as EnemyKind[]).map((k) => [k, { ...DEFS[k], classes: ENEMY_CLASSES[k] }]),
+  (Object.keys(DEFS) as EnemyKind[]).map((k) => [k, { ...DEFS[k], hp: DEFS[k].boss ? DEFS[k].hp : DEFS[k].hp * NORMAL_HP, classes: ENEMY_CLASSES[k] }]),
 ) as Record<EnemyKind, EnemyDef>;
 
 const PX = 1 / 30;

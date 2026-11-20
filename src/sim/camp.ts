@@ -211,3 +211,18 @@ export function endExpedition(s: Sim, won: boolean, district = 0): void {
 export function campStates(s: Sim): Record<StationId, { level: number; npc: boolean }> {
   return Object.fromEntries(STATIONS.map((st) => [st.id, { level: siteLevel(s, st.id), npc: stationBuilt(s, st.id) && npcHere(s, st) }])) as Record<StationId, { level: number; npc: boolean }>;
 }
+
+/**
+ * M20 walkable camp (playtest 2026-11-20): each station blocks only the furniture of its level, a build
+ * site its whole taped-off footprint. Run every step in the camp, so a station built or upgraded at the
+ * counter gets its new colliders at once; a new sim (`Level.restore`) starts with none until the first step.
+ */
+export function syncCampSolids(s: Sim): void {
+  const lv = s.level, levels = new Map<string, number>();
+  for (const e of lv.campSolids) {
+    let l = levels.get(e.station);
+    if (l === undefined) levels.set(e.station, (l = siteLevel(s, e.station as StationId)));
+    if (l >= e.lo && l <= e.hi) lv.shut(e.collider);
+    else lv.open(e.collider);
+  }
+}

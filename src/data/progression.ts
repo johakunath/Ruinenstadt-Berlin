@@ -46,11 +46,11 @@ export interface CampBuildingDefinition {
 
 /** 2D PERKS. */
 export const PERKS: readonly PerkDefinition[] = [
-  { id: 'dmg', name: 'Kiezwut', description: '+15% Schaden', max: 5 },
+  { id: 'dmg', name: 'Kiezwut', description: '+8% Schaden', max: 5 },
   { id: 'hp', name: 'Dickes Fell', description: '+10% maximales Leben', max: 5, families: [ 'boll' ] },
   { id: 'spd', name: 'Fersengeld', description: '+10% Lauftempo', max: 3, families: [ 'sprint' ] },
-  { id: 'crit', name: 'Adlerblick', description: '+8% Krit-Chance', max: 4, families: [ 'krit' ] },
-  { id: 'rate', name: 'Akkordarbeit', description: '+12% Angriffstempo', max: 4, families: [ 'serie' ] },
+  { id: 'crit', name: 'Adlerblick', description: '+5% Krit-Chance', max: 4, families: [ 'krit' ] },
+  { id: 'rate', name: 'Akkordarbeit', description: '+8% Angriffstempo', max: 4, families: [ 'serie' ] },
   { id: 'reach',
     name: 'Langer Kerl',
     description: '+20% Reichweite und Geschossgeschwindigkeit',
@@ -120,7 +120,7 @@ export const PERKS: readonly PerkDefinition[] = [
     families: [ 'el' ] },
   { id: 'elp',
     name: 'Pulverfass',
-    description: '+25% Elementarschaden',
+    description: '+15% Elementarschaden',
     max: 3,
     requires: 'any',
     families: [ 'el' ] },
@@ -136,7 +136,7 @@ export const PERKS: readonly PerkDefinition[] = [
     max: 1 },
   { id: 'breaker',
     name: 'Dicke Bertha',
-    description: '+25% Schaden gegen Schildträger, Elite-Gegner und Endgegner',
+    description: '+15% Schaden gegen Schildträger, Elite-Gegner und Endgegner',
     max: 2,
     families: [ 'boll' ] },
   { id: 'blast',
@@ -163,12 +163,12 @@ export const PERKS: readonly PerkDefinition[] = [
     families: [ 'krit' ] },
   { id: 'husar',
     name: 'Husarenritt',
-    description: 'Nach einem Sprint 1 s lang +40% Schaden je Stufe',
+    description: 'Nach einem Sprint 1 s lang +20% Schaden je Stufe',
     max: 2,
     families: [ 'sprint' ] },
   { id: 'jagd',
     name: 'Jagdfieber',
-    description: 'Jeder Kill: +6% Angriffstempo für 3 s, bis zu 5-mal',
+    description: 'Jeder Kill: +4% Angriffstempo für 3 s, bis zu 5-mal',
     max: 1,
     families: [ 'serie' ] },
   { id: 'schwel',
@@ -190,7 +190,7 @@ export const PERKS: readonly PerkDefinition[] = [
     families: [ 'boll' ] },
   { id: 'retour',
     name: 'Retourkutsche',
-    description: 'Wirst du getroffen, macht dein nächster Angriff doppelten Schaden',
+    description: 'Wirst du getroffen, macht dein nächster Angriff 50% mehr Schaden',
     max: 1,
     families: [ 'boll' ] },
   { id: 'kimme',
@@ -309,7 +309,8 @@ export const CAMP_UPGRADES: readonly { readonly id: CampUpgradeId; readonly name
  * nothing built; that paid for the whole camp to level 2). Schrott and materials down, camp prices up.
  * The bot calibrates these in B2 (`docs/tasks/b2-economy-pacing.md`).
  */
-export const ECONOMY = { scrap: 0.7, material: 0.5, campPrice: 1.5 } as const;
+/** `items`: equipment drop rate (playtest 2026-11-20: half of what dropped before). */
+export const ECONOMY = { scrap: 0.7, material: 0.5, campPrice: 1.5, items: 0.5 } as const;
 /** 2D DRILL_D / DRILL_H. */
 export const DRILL = { damage: .02, life: .02 } as const;
 export type ShrineId = 'as' | 'res' | 'gold' | 'spd' | 'zap';

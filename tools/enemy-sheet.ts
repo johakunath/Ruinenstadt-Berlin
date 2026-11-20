@@ -8,9 +8,12 @@
 //   &wake=strip (the Weltzeituhr waking up across the strip), &wake=0 (awake)
 //   &base=human1|human2 (H3 step 2, temporary): the zombie bodies on a human base candidate (tools/build-human.mjs)
 //   &revue=1 (M16 Charlottenburg dress)  &tier=1|2 (the Diva's broken gown tiers)  &guard=0 (the Logenbrecher's front down)
-import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer, type Mesh } from 'three';
+//   &portrait=1&kinds=walker,rex,brute+flink   Kodex portraits (tools/kodex-portraits.mjs): one square per kind,
+//     framed on the top of the body's bounding box (PORTRAIT overrides), warm key and cool rim light, Kodex card
+//     background; `kind+mod` renders the kind as that elite. PNG data URLs land in `window.portraits`.
+import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer, type InstancedMesh, type Mesh, type Object3D, type SkinnedMesh } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
+import { ELITES, ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
 import { loadCharacters } from '../src/render/characters';
 import { EnemyView } from '../src/render/enemies';
 import { LOOK } from '../src/render/looks';
@@ -22,6 +25,127 @@ import type { SpecialKind } from '../src/sim/threats';
 import type { EnemyState } from '../src/sim/types';
 
 const q = new URLSearchParams(location.search);
+
+/** Kodex portrait framing per kind: `top` share of the body's height from its top (default 0.42; 1 = whole body),
+ * `yaw` camera angle from the front in degrees (default 28), `pitch` camera height (default 0.04, hunched ghouls -0.08 to see their faces), `zoom` (>1 closer), `lift` shifts the frame up (share of the frame). */
+const PORTRAIT: Partial<Record<EnemyKind, { top?: number; yaw?: number; pitch?: number; zoom?: number; lift?: number }>> = {
+  rat: { top: 1, yaw: 40 }, crow: { top: 1, yaw: 65, pitch: 0.25 }, kernspeier: { top: 1 },
+  // Flat drones from above, so they fill the square.
+  drone: { top: 1, pitch: 0.55, zoom: 1.15 }, wachdrohne: { top: 1, pitch: 0.55, zoom: 1.15 },
+  // The shield from its open side.
+  schild: { yaw: -30 },
+  // Thin bodies under tall plumes and crests, the Diva inside her feather fans: closer, a little lower.
+  scherbe: { zoom: 1.4, lift: -0.1 }, spreehexe: { zoom: 1.3, lift: -0.08 }, spiegelpaar: { zoom: 1.4, lift: -0.1 }, diva: { zoom: 2.3, lift: -0.08, yaw: 8 },
+};
+
+/** Bounding box of the visible meshes, skinned ones in their current pose. */
+function visibleBox(root: Object3D): Box3 {
+  const box = new Box3(), b = new Box3();
+  root.updateMatrixWorld(true);
+  root.traverseVisible((o) => {
+    const m = o as Mesh;
+    if (!m.isMesh) return;
+    const mat = Array.isArray(m.material) ? m.material[0] : m.material;
+    if (mat && (mat.blending === 2 || mat.depthWrite === false)) return; // additive glows and flat decals
+    // Skinned and instanced meshes bound their posed or instanced geometry.
+    const own = (m as SkinnedMesh).isSkinnedMesh || (m as unknown as InstancedMesh).isInstancedMesh ? (m as SkinnedMesh) : null;
+    if (own) { own.computeBoundingBox(); b.copy(own.boundingBox!); }
+    else { if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); b.copy(m.geometry.boundingBox!); }
+    box.union(b.applyMatrix4(m.matrixWorld));
+  });
+  return box;
+}
+
+async function portraits(): Promise<void> {
+  const S = Number(q.get('size') ?? 512);
+  const tokens = (q.get('kinds') ?? Object.keys(ENEMIES).join(',')).split(',').filter(Boolean);
+  const canvas = document.getElementById('c') as HTMLCanvasElement;
+  const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setSize(S, S, false);
+  renderer.setClearColor(0x000000, 0);
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = Number(q.get('exposure') ?? 1.5);
+  canvas.style.display = 'none';
+  const materials = new Materials(LOOK, PROFILES.qualitaet);
+  const assets = await loadCharacters(materials, true);
+  const scene = new Scene();
+  const fill = new HemisphereLight(0x9aa8c0, 0x2a1e14, 1.1);
+  const key = new DirectionalLight(0xffd3a0, 3.6);
+  const rim = new DirectionalLight(0x86b4ff, 7);
+  scene.add(fill, key, rim, key.target, rim.target);
+  const sim = createSim({ empty: true });
+  const fov = 26, t = Math.tan((fov / 2) * Math.PI / 180);
+  const cam = new PerspectiveCamera(fov, 1, 0.05, 200);
+  const out: Record<string, string> = {};
+  for (const token of tokens) {
+    const [k, mod] = token.split('+') as [EnemyKind, EliteMod | undefined];
+    const def = ENEMIES[k];
+    const e = spawnEnemy(sim, 0, 0, k);
+    if (mod) makeElite(sim, e, mod);
+    e.facing = e.pfacing = 0;
+    e.state = 'chase';
+    e.speed = 0;
+    if (def.wake) e.wake = 0;
+    const v = new EnemyView(assets, materials, def.body, false);
+    v.assign(e, false, false);
+    scene.add(v.root);
+    for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
+    const o = PORTRAIT[k] ?? {};
+    const box = visibleBox(v.root);
+    const h = box.max.y - box.min.y;
+    const region = box.clone();
+    region.min.y = box.max.y - h * (o.top ?? 0.42);
+    // Long bodies (the Rex, mechs, the Weltzeituhr): only the front part, as deep as the frame is high.
+    const rh = region.max.y - region.min.y;
+    if (region.max.z - region.min.z > rh) region.min.z = region.max.z - rh;
+    const c = region.getCenter(new Vector3());
+    const yaw = ((o.yaw ?? 28) * Math.PI) / 180;
+    // Camera slightly above the frame centre, turned to the body's left (its right side lit by the key).
+    const d = new Vector3(Math.sin(yaw), o.pitch ?? (def.body === 'zombie' ? -0.08 : 0.04), Math.cos(yaw)).normalize();
+    const up = new Vector3(0, 1, 0), r = new Vector3().crossVectors(up, d).normalize(), u = new Vector3().crossVectors(d, r);
+    let dist = 0;
+    for (let i = 0; i < 8; i++) {
+      const p = new Vector3(i & 1 ? region.max.x : region.min.x, i & 2 ? region.max.y : region.min.y, i & 4 ? region.max.z : region.min.z).sub(c);
+      const depth = p.dot(d);
+      dist = Math.max(dist, depth + Math.abs(p.dot(u)) / t, depth + Math.abs(p.dot(r)) / t);
+    }
+    dist /= o.zoom ?? 1;
+    c.addScaledVector(u, (o.lift ?? 0) * 2 * t * dist);
+    cam.position.copy(c).addScaledVector(d, dist);
+    cam.near = dist * 0.05;
+    cam.far = dist * 4;
+    cam.updateProjectionMatrix();
+    cam.lookAt(c);
+    // Key from the camera's left and above, rim from behind on the right; both follow the frame size.
+    key.target.position.copy(c);
+    key.position.copy(c).addScaledVector(r, -dist * 0.6).addScaledVector(up, dist * 0.5).addScaledVector(d, dist);
+    rim.target.position.copy(c);
+    rim.position.copy(c).addScaledVector(r, dist * 1.1).addScaledVector(up, dist * 0.6).addScaledVector(d, -dist);
+    rim.color.set(mod ? ELITES[mod].color : 0x86b4ff);
+    renderer.clear();
+    renderer.render(scene, cam);
+    // Kodex card background (`.kimg` in src/ui/style.css), then the body.
+    const c2 = document.createElement('canvas');
+    c2.width = c2.height = S;
+    const g = c2.getContext('2d')!;
+    const grad = g.createRadialGradient(S / 2, S * 0.6, 0, S / 2, S * 0.6, S * 0.72 * Math.SQRT2 * 0.5 * 1.42);
+    grad.addColorStop(0, '#3a2c22');
+    grad.addColorStop(1, '#120d0a');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, S, S);
+    g.drawImage(canvas, 0, 0);
+    out[token] = c2.toDataURL('image/png');
+    c2.style.width = c2.style.height = '256px';
+    c2.title = token;
+    document.body.append(c2);
+    scene.remove(v.root);
+    sim.enemies.length = 0;
+  }
+  (window as unknown as { portraits: Record<string, string> }).portraits = out;
+  document.title = `done ${tokens.length}`;
+}
+
+async function sheet(): Promise<void> {
 const kind = q.get('kind') as EnemyKind | null;
 const kinds = kind ? [kind] : (Object.keys(ENEMIES) as EnemyKind[]);
 const n = kind ? Number(q.get('n') ?? 6) : kinds.length;
@@ -103,3 +227,7 @@ for (let i = 0; i < n; i++) {
 }
 // Triangles drawn per view (all views summed; divide by n), for cost checks.
 document.title = `done ${kinds.join(' ')} tris=${Math.round(tris / Math.max(1, n))}`;
+}
+
+if (q.get('portrait')) await portraits();
+else await sheet();

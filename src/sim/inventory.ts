@@ -6,7 +6,8 @@ import { isUpgrade, salvage, type Item } from './items';
 import { setLoadout } from './loadout';
 import type { Sim } from './types';
 
-export const BAG_SIZE = 25;
+/** 30 since the playtest of 2026-11-20 (was 25). */
+export const BAG_SIZE = 30;
 export interface Inventory {
   bag: Item[];
   scrap: number;
@@ -77,7 +78,8 @@ export function setImplantMode(sim: Sim, item: Item, mode: number): void {
   item.implantMode = mode as 0 | 1 | 2;
   if (sim.equipment.i === item) setLoadout(sim, sim.equipment);
 }
-/** 2D salvage chips: bag items a bulk salvage of rarity r (0..2) or 'rest' (no upgrade) would take. */
+/** 2D salvage chips: bag items a bulk salvage of rarity r (0..2) and below, or 'rest' (no upgrade), would take.
+ * Cumulative since the playtest of 2026-11-20: "Selten" takes rare, magic and common pieces. */
 export function bulkCandidates(sim: Sim, what: number | 'rest'): Item[] {
-  return sim.inventory.bag.filter(i => !i.locked && !i.set && i.rarity < 3 && (what === 'rest' ? !isUpgrade(i, sim.equipment[i.slot]) : i.rarity === what));
+  return sim.inventory.bag.filter(i => !i.locked && !i.set && i.rarity < 3 && (what === 'rest' ? !isUpgrade(i, sim.equipment[i.slot]) : i.rarity <= what));
 }

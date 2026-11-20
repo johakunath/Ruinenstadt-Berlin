@@ -17,7 +17,7 @@ import { XHAIN_TIER } from './xhain';
 import { mitteWaveTier } from './mitte';
 import { LINES, stopName } from './lines';
 import type { Prop } from './courtyard';
-import { lineDist, type MapDef, type Pt, type Tube, type TunnelGate } from './map';
+import { inTube, type MapDef, type Pt, type Tube, type TunnelGate } from './map';
 
 /** Centre line of the S3 track bed (line 0): a gentle S-curve. */
 export const tunnelZ = (x: number): number => 16 * Math.sin((Math.PI * (x - 40)) / 190);
@@ -142,7 +142,7 @@ export function tunnelMap(line = 0): MapDef {
     { id: 'geisterbahnhof', name: ghost, entry: { x: at(232)[0], z: at(232)[1] } },
   ];
 
-  const inTubes = (x: number, z: number): boolean => tubes.some((t) => lineDist(t.pts, x, z) <= t.width / 2);
+  const inTubes = (x: number, z: number): boolean => tubes.some((t) => inTube(t, x, z));
   // A grating closes the whole cross-section: march out along the normal until the rock.
   const gates: TunnelGate[] = TUNNEL.gates.map((x, after) => {
     const dz = cz(x + 0.5) - cz(x - 0.5), l = Math.hypot(1, dz), ux = 1 / l, uz = dz / l;
@@ -158,20 +158,25 @@ export function tunnelMap(line = 0): MapDef {
 
   // Name plates on the north walls (the camera looks at them): start, ghost and end station.
   const signs: Array<{ x: number; z: number; rot: number; text: string }> = [];
+  const walls = tunnelWalls(tubes);
   for (const [i, text] of [from, L.ghost, to].entries()) {
     const t = tubes[1 + i]!, [a, b] = t.pts as [Pt, Pt];
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len;
     // Wall normal on the north side (towards -z) and the plate facing back into the hall.
-    const nx = uz, nz = -ux, off = t.width / 2 - 0.06;
+    const nx = uz, nz = -ux;
     for (const k of [0.18, 0.5, 0.82]) {
       const d = len * k;
+      // In front of the wall face where it swells most behind the 2.95 m plate (it was half buried in the bumps).
+      const bump = Math.max(0, ...walls.filter((w) => w.tube === 1 + i && w.side === 1 && Math.abs((w.x - a[0]) * ux + (w.z - a[1]) * uz - d) < 2).map((w) => w.bump));
+      const off = t.width / 2 - bump - 0.06;
       signs.push({ x: a[0] + ux * d + nx * off, z: a[1] + uz * d + nz * off, rot: Math.atan2(-nx, -nz), text });
     }
   }
 
   const fixedProps: Prop[] = [];
   // The cache: three crates at the end of the second passage (every crate breaks and drops).
-  const [kx, kz] = [206, cz(196) + 30 * s];
+  // 1.3 m in from the flat end wall (the crates stood half in it).
+  const kl = Math.hypot(6, 14), [kx, kz] = [206 - (6 / kl) * 1.3, cz(196) + (30 - (14 / kl) * 1.3) * s];
   fixedProps.push({ kind: 'crates', x: kx, z: kz, rot: 0.3, size: 1.2 }, { kind: 'crate', x: kx - 1.6, z: kz - 1.2 * s, rot: 0.8, size: 1 }, { kind: 'crate', x: kx + 1.5, z: kz - 1.4 * s, rot: -0.4, size: 1 });
   // A stopped train in the wreck stretch (left track), campfires in the stations.
   fixedProps.push({ kind: 'tram', x: wx, z: cz(wx) - 2.4, rot: Math.PI / 2 + Math.atan2(cz(wx + 7) - cz(wx - 7), 14), size: 1 });
@@ -211,7 +216,8 @@ export function tunnelMap(line = 0): MapDef {
       signs,
     },
     hiddenSpots: [hidden],
-    guards: [{ x: 314, z: cz(316) - 40 * s, kind: 'brute', elite: true, wake: 9, hp: 2.6 * TUNNEL.hp }],
+    // Three metres in from the flat end wall of the room.
+    guards: [{ x: 314, z: cz(316) - 37 * s, kind: 'brute', elite: true, wake: 9, hp: 2.6 * TUNNEL.hp }],
     district: 0,
     seed: 3030,
   };
@@ -219,3 +225,145 @@ export function tunnelMap(line = 0): MapDef {
 
 /** Route checks for tests: every fight lies inside the tube. */
 export const TUNNEL_TRACK_WIDTH = TUNNEL.trackWidth;
+
+/**
+ * One piece of tunnel wall (playtest 2026-11-20: walls and the walk grid disagreed at station ends,
+ * side passage ends and the room off the last passage). Walls stand exactly where the walkable tubes
+ * (`inTube`, flat ends) meet rock, so the render (`map-world` buildTunnel) and the walk grid come from
+ * the same tubes. Side pieces are at most 1 m long; end walls one piece per closed run.
+ */
+export interface TunnelWall {
+  /** Index into `tubes` and its kind. */
+  tube: number;
+  kind: Tube['kind'];
+  /** Side wall: 1 on the left of the run (north for a run towards +x), -1 on the right; 0: end wall. */
+  side: -1 | 0 | 1;
+  /** Fills the wedge on the outer side of a bend (no dressing). */
+  fill: boolean;
+  /** End wall: the run closes the whole end (rubble and planks go there). */
+  whole: boolean;
+  /** Centre of the face on the tube edge, the unit direction along the face and its length. */
+  x: number; z: number; ux: number; uz: number; len: number;
+  /** Outward normal (into the rock). */
+  nx: number; nz: number;
+  /** Depth into the rock: up to 12 m on the sides, 3 m at the ends, half the gap when another tube is near. */
+  thick: number;
+  /** A low divider (less than 2.5 m of rock to the next tube): the camera sees over it. */
+  low: boolean;
+  /** The thickness ends at another tube. */
+  shared: boolean;
+  /** Side pieces: metres of this tube kind and side built before, 1-based (ribs, niches, lamps). */
+  run: number;
+  /** How far the face swells into the tube (playtest 2026-11-18 uneven walls); 0 on low dividers, ends and fills. */
+  bump: number;
+}
+
+/** Sample spacing along a face, and how far off the face the inside and outside are tested. */
+const WALL_STEP = 0.1, WALL_EPS = 0.05;
+
+/** Every tunnel wall piece of these tubes, in a fixed order (tube, segment, side, metre; then ends, then fills). */
+export function tunnelWalls(tubes: readonly Tube[]): TunnelWall[] {
+  const inside = (x: number, z: number): boolean => tubes.some((t) => inTube(t, x, z));
+  const owner = (x: number, z: number): number => tubes.findIndex((t) => inTube(t, x, z));
+  // A face sample is wall when rock lies just beyond it and its own tube is the first one just inside
+  // (where two tubes share an edge, as the track and a station at the end wall, the earlier one builds it).
+  const edge = (ti: number, x: number, z: number, nx: number, nz: number): boolean =>
+    !inside(x + nx * WALL_EPS, z + nz * WALL_EPS) && owner(x - nx * WALL_EPS, z - nz * WALL_EPS) === ti;
+  /** Rock depth behind the face points (the least of them), up to `max`; half the gap when a tube lies behind. */
+  const depth = (ps: ReadonlyArray<readonly [number, number]>, nx: number, nz: number, max: number): { thick: number; shared: boolean } => {
+    let d = max;
+    for (const [x, z] of ps) {
+      let k = 0.5;
+      while (k < d && !inside(x + nx * k, z + nz * k)) k += 0.5;
+      if (k >= d) continue;
+      // Refine to 2 cm.
+      let lo = k - 0.5;
+      while (k - lo > 0.02) { const mid = (lo + k) / 2; if (inside(x + nx * mid, z + nz * mid)) k = mid; else lo = mid; }
+      d = lo;
+    }
+    return d < max ? { thick: Math.max(0.04, d / 2), shared: true } : { thick: max, shared: false };
+  };
+  /** Contiguous runs of true flags as [first, last] index pairs. */
+  const runs = (flags: boolean[]): Array<[number, number]> => {
+    const out: Array<[number, number]> = [];
+    flags.forEach((f, k) => { if (!f) return; const r = out.at(-1); if (r && r[1] === k - 1) r[1] = k; else out.push([k, k]); });
+    return out;
+  };
+  const out: TunnelWall[] = [];
+  const counter = new Map<string, number>();
+  const LOW = 2.5;
+  const bumpOf = (run: number, side: number, width: number, low: boolean): number => {
+    const u = run + side * 37 + width * 3;
+    return low ? 0 : 0.15 + 0.1 * Math.sin(u * 0.43) + 0.05 * Math.sin(u * 1.9 + 1.3);
+  };
+  tubes.forEach((t, ti) => {
+    const r = t.width / 2;
+    for (let i = 1; i < t.pts.length; i++) {
+      const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.01) continue;
+      const ux = (bx - ax) / len, uz = (bz - az) / len;
+      for (const side of [-1, 1] as const) {
+        const nx = uz * side, nz = -ux * side;
+        for (let d = 0; d < len; d += 1) {
+          const l = Math.min(1, len - d);
+          if (l < 0.01) continue;
+          const K = Math.max(1, Math.round(l / WALL_STEP));
+          const at = (s: number): [number, number] => [ax + ux * s + nx * r, az + uz * s + nz * r];
+          const flags = Array.from({ length: K }, (_, k) => { const [x, z] = at(d + ((k + 0.5) * l) / K); return edge(ti, x, z, nx, nz); });
+          for (const [k0, k1] of runs(flags)) {
+            const s0 = d + (k0 * l) / K, s1 = d + ((k1 + 1) * l) / K, sm = (s0 + s1) / 2;
+            const { thick, shared } = depth([at(Math.min(sm, s0 + 0.05)), at(sm), at(Math.max(sm, s1 - 0.05))], nx, nz, 12);
+            const key = `${t.kind}${side}`, run = (counter.get(key) ?? 0) + 1;
+            counter.set(key, run);
+            const low = thick < LOW;
+            const [x, z] = at(sm);
+            out.push({ tube: ti, kind: t.kind, side, fill: false, whole: false, x, z, ux, uz, len: s1 - s0, nx, nz, thick, low, shared, run, bump: bumpOf(run, side, t.width, low) });
+          }
+        }
+      }
+    }
+    // End walls: across the flat end, where rock lies beyond it.
+    for (const [end, prev] of [[t.pts[0]!, t.pts[1]!], [t.pts.at(-1)!, t.pts.at(-2)!]] as Array<[Pt, Pt]>) {
+      const len = Math.hypot(end[0] - prev[0], end[1] - prev[1]);
+      if (len < 0.01) continue;
+      const nx = (end[0] - prev[0]) / len, nz = (end[1] - prev[1]) / len, px = nz, pz = -nx;
+      const K = Math.max(1, Math.round(t.width / WALL_STEP)), step = t.width / K;
+      const at = (a: number): [number, number] => [end[0] + px * a, end[1] + pz * a];
+      const flags = Array.from({ length: K }, (_, k) => { const [x, z] = at(-r + (k + 0.5) * step); return edge(ti, x, z, nx, nz); });
+      for (const [k0, k1] of runs(flags)) {
+        let a0 = -r + k0 * step, a1 = -r + (k1 + 1) * step;
+        const whole = k0 === 0 && k1 === K - 1;
+        // Round the corner into the side wall's rock (half a metre past the tube edge).
+        const rock = (a: number): boolean => { const [x, z] = at(a); return !inside(x + nx * WALL_EPS, z + nz * WALL_EPS) && !inside(x - nx * WALL_EPS, z - nz * WALL_EPS); };
+        if (k0 === 0 && rock(-r - 0.25)) a0 -= 0.5;
+        if (k1 === K - 1 && rock(r + 0.25)) a1 += 0.5;
+        const ps: Array<[number, number]> = [];
+        for (let a = Math.max(a0, -r) + 0.05; a < Math.min(a1, r); a += 0.5) ps.push(at(a));
+        ps.push(at(Math.min(a1, r) - 0.05));
+        const { thick, shared } = depth(ps, nx, nz, 3);
+        const [x, z] = at((a0 + a1) / 2);
+        out.push({ tube: ti, kind: t.kind, side: 0, fill: false, whole, x, z, ux: px, uz: pz, len: a1 - a0, nx, nz, thick, low: thick < LOW, shared, run: 0, bump: 0 });
+      }
+    }
+    // Bends: the outer side's faces part by r × angle; a piece on the bisector closes the wedge.
+    for (let i = 1; i < t.pts.length - 1; i++) {
+      const [jx, jz] = t.pts[i]!, [px, pz] = t.pts[i - 1]!, [qx, qz] = t.pts[i + 1]!;
+      const la = Math.hypot(jx - px, jz - pz), lb = Math.hypot(qx - jx, qz - jz);
+      if (la < 0.01 || lb < 0.01) continue;
+      const ax = (jx - px) / la, az = (jz - pz) / la, bx = (qx - jx) / lb, bz = (qz - jz) / lb;
+      const ang = Math.acos(Math.max(-1, Math.min(1, ax * bx + az * bz)));
+      if (ang * r < 0.02) continue;
+      // Outer side: the incoming normal points away from where the run turns.
+      const side = (az * bx - ax * bz) * 1 < 0 ? 1 : -1;
+      let nx = az * side + bz * side, nz = -ax * side - bx * side;
+      const nl = Math.hypot(nx, nz);
+      nx /= nl; nz /= nl;
+      const x = jx + nx * r, z = jz + nz * r;
+      if (!edge(ti, x - nx * 0.01, z - nz * 0.01, nx, nz)) continue;
+      const len = 2 * r * Math.tan(ang / 2) + 0.06, ux = -nz * side, uz = nx * side;
+      const { thick, shared } = depth([[x, z]], nx, nz, 12);
+      out.push({ tube: ti, kind: t.kind, side, fill: true, whole: false, x, z, ux, uz, len, nx, nz, thick, low: thick < LOW, shared, run: 0, bump: 0 });
+    }
+  });
+  return out;
+}

@@ -349,9 +349,44 @@ export interface TunnelDef {
 /** Generator body (half sizes). */
 export const GENERATOR = { hx: 1.3, hz: 0.8 } as const;
 
+/**
+ * Inside one tube, `pad` metres clear of its edge. The ends are flat (butt), where the end walls
+ * stand; bends are round (playtest 2026-11-20: the round ends were walkable floor without a wall).
+ */
+export function inTube(t: Tube, x: number, z: number, pad = 0): boolean {
+  const g = tubeGeom(t), r = t.width / 2 - pad;
+  if (x < g.box[0] - r || x > g.box[1] + r || z < g.box[2] - r || z > g.box[3] + r) return false;
+  // Behind either end plane (a short last segment must not let the bend before it round past the end).
+  const { seg } = g, n = seg.length / 5, p0 = t.pts[0]!, q1 = t.pts[t.pts.length - 1]!;
+  if ((x - p0[0]) * seg[2]! + (z - p0[1]) * seg[3]! < pad) return false;
+  if ((x - q1[0]) * seg[(n - 1) * 5 + 2]! + (z - q1[1]) * seg[(n - 1) * 5 + 3]! > -pad) return false;
+  for (let i = 0; i < n; i++) {
+    const ax = seg[i * 5]!, az = seg[i * 5 + 1]!, ux = seg[i * 5 + 2]!, uz = seg[i * 5 + 3]!, l = seg[i * 5 + 4]!;
+    const c = Math.max(0, Math.min(l, (x - ax) * ux + (z - az) * uz));
+    const dx = x - ax - ux * c, dz = z - az - uz * c;
+    if (dx * dx + dz * dz <= r * r && r > 0) return true;
+  }
+  return false;
+}
+/** Per tube: its segments (start, unit direction, length; zero-length ones dropped) and the bounds of its line. */
+const TUBE_GEOM = new WeakMap<Tube, { seg: number[]; box: [number, number, number, number] }>();
+function tubeGeom(t: Tube): { seg: number[]; box: [number, number, number, number] } {
+  let g = TUBE_GEOM.get(t);
+  if (g) return g;
+  const seg: number[] = [], box: [number, number, number, number] = [Infinity, -Infinity, Infinity, -Infinity];
+  for (let i = 0; i < t.pts.length; i++) {
+    const [x, z] = t.pts[i]!;
+    box[0] = Math.min(box[0], x); box[1] = Math.max(box[1], x); box[2] = Math.min(box[2], z); box[3] = Math.max(box[3], z);
+    if (i === 0) continue;
+    const [ax, az] = t.pts[i - 1]!, l = Math.hypot(x - ax, z - az);
+    if (l >= 1e-6) seg.push(ax, az, (x - ax) / l, (z - az) / l, l);
+  }
+  TUBE_GEOM.set(t, (g = { seg, box }));
+  return g;
+}
 /** Inside a tunnel tube (always true on open maps). Rubble is inside: use `tunnelWalk` for walking. */
 export function inTunnel(m: MapDef, x: number, z: number, pad = 0): boolean {
-  return !m.tunnel || m.tunnel.tubes.some((t) => lineDist(t.pts, x, z) <= t.width / 2 - pad);
+  return !m.tunnel || m.tunnel.tubes.some((t) => inTube(t, x, z, pad));
 }
 /** Walkable in a tunnel: inside a tube and not in the collapse (always true on open maps). */
 export function tunnelWalk(m: MapDef, x: number, z: number, pad = 0): boolean {
@@ -1850,10 +1885,14 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   for (const l of lots) colliders.push(...lotColliders(l));
   for (const t of m.terraces) for (const q of t.solid ?? []) colliders.push({ kind: 'box', ...q });
   for (const w of m.camp?.walls ?? []) colliders.push({ kind: 'box', x: w.x, z: w.z, hx: w.hx, hz: w.hz, rot: 0 });
+  // M20 camp stations: furniture boxes per level, the whole footprint while a build site (switched by the sim, `syncCampSolids`).
+  const campSolids: Level['campSolids'] = [];
   for (const t of m.camp?.stations ?? []) {
-    if (!t.solid) { colliders.push({ kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot }); continue; }
+    const site: Collider = { kind: 'box', x: t.x, z: t.z, hx: t.w / 2, hz: t.d / 2, rot: t.rot };
+    if (!t.solid) { colliders.push(site); continue; }
+    campSolids.push({ station: t.id, lo: 0, hi: 0, collider: site });
     const c = Math.cos(t.rot), sn = Math.sin(t.rot);
-    for (const [lx, lz, hx, hz] of t.solid) colliders.push({ kind: 'box', x: t.x + lx * c + lz * sn, z: t.z - lx * sn + lz * c, hx, hz, rot: t.rot });
+    for (const [lx, lz, hx, hz, lo = 1, hi = 3] of t.solid) campSolids.push({ station: t.id, lo, hi, collider: { kind: 'box', x: t.x + lx * c + lz * sn, z: t.z - lx * sn + lz * c, hx, hz, rot: t.rot } });
   }
   for (const f of m.camp?.decor ?? []) colliders.push({ kind: 'box', x: f.x, z: f.z, hx: f.w / 2, hz: f.d / 2, rot: 0 });
   colliders.push(...barrierColliders(m));
@@ -1876,6 +1915,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
   level.camp = !!m.camp;
+  level.campSolids = campSolids;
   if (m.flavor) level.flavor = m.flavor;
   if (m.tunnel) level.tunnel = true;
   if (m.wet) level.wet = true;
@@ -1945,8 +1985,10 @@ function tunnelProps(m: MapDef): Prop[] {
         if (rng.next() < 0.55 && t.kind !== 'bypass' && free(cx, cz, 0.8)) props.push({ kind: rng.pick(['crates', 'crate', 'rubble', 'planks', 'bins'] as const), x: cx, z: cz, rot: rng.range(0, Math.PI * 2), size: rng.range(0.8, 1.3) });
       }
     }
-    const end = t.pts[t.pts.length - 1]!;
-    if (t.kind !== 'track' && free(end[0], end[1], 0.6)) props.push({ kind: 'fireBarrel', x: end[0], z: end[1], rot: 0, size: 1 });
+    // A metre in from the flat end wall.
+    const end = t.pts[t.pts.length - 1]!, prev = t.pts[t.pts.length - 2]!, el = Math.hypot(end[0] - prev[0], end[1] - prev[1]) || 1;
+    const bx = end[0] - ((end[0] - prev[0]) / el) * 1.2, bz = end[1] - ((end[1] - prev[1]) / el) * 1.2;
+    if (t.kind !== 'track' && free(bx, bz, 0.6)) props.push({ kind: 'fireBarrel', x: bx, z: bz, rot: 0, size: 1 });
   }
   return props;
 }

@@ -6,7 +6,7 @@ import { CONSUMABLES } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
 import { FUNDE, FUNDE_TEILE, fundId, TEIL_BONUS, type FundKind } from '../data/funde';
 import { PX } from '../data/powers';
-import { SHRINES, SURVIVORS, type ShrineId, type SurvivorId } from '../data/progression';
+import { ECONOMY, SHRINES, SURVIVORS, type ShrineId, type SurvivorId } from '../data/progression';
 import { offerBlessings } from './blessings';
 import { ELITE_MODS, type EnemyKind } from '../data/enemies';
 import { pk } from './combat';
@@ -504,7 +504,7 @@ export function updateContent(s: Sim): void {
     const C = c.cache;
     if (travel) C.t -= DT;
     if (near(C, CONTENT.touch)) {
-      for (let i = 0; i < 2; i++) spawnDrop(s, C.x, C.z, { kind: 'item', item: lootItem(rng, ctx(), il + 2, 1, 0.08) });
+      for (let i = 0; i < Math.round(2 * ECONOMY.items); i++) spawnDrop(s, C.x, C.z, { kind: 'item', item: lootItem(rng, ctx(), il + 2, 1, 0.08) });
       for (let i = 0; i < 3; i++) spawnDrop(s, C.x, C.z, { kind: 'material', id: rng.pick(MATERIAL_IDS) });
       creditScrap(s, CONTENT.cache.scrap, C.x, C.z);
       done('cache', 'done', C);

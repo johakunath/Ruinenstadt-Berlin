@@ -33,7 +33,7 @@ describe('M19 S3 tunnel (layout B)', () => {
     for (const e of m.encounters) expect(ok(e.x, e.z), e.name).toBe(true);
     const h = m.hiddenSpots![0]!;
     expect(ok(h.x, h.z)).toBe(true);
-    expect(ok(206, tunnelZ(196) + 29)).toBe(true);
+    expect(ok(204.3, tunnelZ(196) + 26)).toBe(true);
     const g = m.guards![0]!;
     expect(ok(g.x, g.z)).toBe(true);
   });

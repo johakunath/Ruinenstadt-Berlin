@@ -128,7 +128,9 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
   if (ctx.meal === 'soljanka') { a.regen += 3 * mk; a.res += 10 * mk; }
   if (ctx.meal === 'gurke') a.luck += Math.round(4 * mk);
   if (ctx.meal === 'curry') a.dmg += 25 * mk;
-  const asF = Math.max(.4, 1 + .12 * pk('rate') + a.as / 100 + (ctx.shrines?.as ? .3 : 0));
+  // Playtest 2026-11-20 blessing cut (about a third to a half): Kiezwut 15→8 %, Adlerblick 8→5 %, Akkordarbeit 12→8 %,
+  // Pulverfass 25→15 % (Husarenritt, Retourkutsche, Jagdfieber and Dicke Bertha in combat and player).
+  const asF = Math.max(.4, 1 + .08 * pk('rate') + a.as / 100 + (ctx.shrines?.as ? .3 : 0));
   const cdr = clamp(a.cdr / 100, 0, .5), drill = ctx.drill ?? 0;
   // Hero level is fixed at 1: the 2D (lv - 1) damage/life terms vanish.
   return {
@@ -137,12 +139,12 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
     elementChance: wm.some(m => m.element) ? .5 : .3,
     eliteBonus: wm.reduce((n, m) => n + (m.eliteBossBonus ?? 0), 0),
     weight: wm.find(m => m.heavyHitEvery)?.heavyHitEvery ?? 0,
-    elementPower: Math.max(0, 1 + a.el / 100 + .25 * pk('elp')),
-    damage: Math.max(1, w.value * size.damage * (1 + .07 * upg('dmg') + .15 * pk('dmg') + a.dmg / 100 + DRILL.damage * drill) * (pk('m_dampf') && kind === 'hammer' ? 1.7 : 1)
+    elementPower: Math.max(0, 1 + a.el / 100 + .15 * pk('elp')),
+    damage: Math.max(1, w.value * size.damage * (1 + .07 * upg('dmg') + .08 * pk('dmg') + a.dmg / 100 + DRILL.damage * drill) * (pk('m_dampf') && kind === 'hammer' ? 1.7 : 1)
       // G1 Umbau: Sturmklinge and Schnellfeuer trade damage for tempo.
       * (pk('m_sturm') && kind === 'blade' ? .85 : 1) * (pk('m_salve') && kind === 'sling' ? .75 : 1)),
     maxHp: Math.max(20, Math.round((100 + a.hp) * (1 + .05 * upg('hp') + .1 * pk('hp')) * (1 + DRILL.life * drill) * (ctx.meal === 'suppe' ? 1 + .35 * mk : 1))),
-    crit: clamp(.08 + .08 * pk('crit') + a.crit / 100, 0, .75),
+    crit: clamp(.08 + .05 * pk('crit') + a.crit / 100, 0, .75),
     moveSpeed: clamp(1 + .1 * pk('spd') + a.spd / 100 + (ctx.shrines?.spd ? .25 : 0), .5, 1.8),
     attackSpeed: asF / (pk('m_dampf') && kind === 'hammer' ? 1.3 : 1) * (pk('m_sturm') && kind === 'blade' ? 1.25 : 1) * (pk('m_salve') && kind === 'sling' ? 1.4 : 1),
     regen: Math.max(0, a.regen),

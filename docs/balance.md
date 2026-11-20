@@ -2,6 +2,26 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Playtest follow-up (2026-11-20, Codex · GPT-6)
+
+`node tools/balance.mjs 1 normal johannes 1`: 1/1 Köpenick campaigns won, 4 deaths, 33.0 simulated minutes, 831 kills, final power 249 (blade). This includes PR #73's doubled normal-enemy life, halved equipment drops, slower swings and weaker blessings, plus basic attacks −10% damage and powers/ultimates/Molotow +25%. One seed checks completion; B9/B10 calibration and the hardware playtest remain open.
+
+| Encounter | Deaths | Time s | Damage taken | Lowest life | Power |
+|---|---|---|---|---|---|
+| Bahnhofsvorplatz | 0 | 34 | 13 % | 87 % | 33 |
+| Lindenstraße | 0 | 44 | 28 % | 86 % | 33 |
+| Forum | 0 | 71 | 74 % | 45 % | 43 |
+| ★ Dammbrücke | 0 | 47 | 103 % | 65 % | 64 |
+| Kietz | 0 | 29 | 23 % | 84 % | 135 |
+| Müggelheimer Straße | 0 | 41 | 27 % | 78 % | 135 |
+| Teufelssee | 0 | 47 | 67 % | 62 % | 135 |
+| ★ Müggelturm | 2 | 23 | 49 % | 52 % | 135 |
+| Fähre Grünau | 0 | 46 | 45 % | 75 % | 192 |
+| Flugfeld Johannisthal | 0 | 53 | 67 % | 71 % | 215 |
+| Dino-Wiese | 0 | 55 | 34 % | 90 % | 245 |
+| ★ Riesenrad | 2 | 34 | 121 % | 7 % | 245 |
+| ★ Rathausplatz | 0 | 59 | 147 % | 6 % | 249 |
+
 ## Rule
 
 | Target (B10) | Check in the table |

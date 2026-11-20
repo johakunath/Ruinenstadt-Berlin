@@ -37,10 +37,26 @@ describe('kill drops', () => {
     }
     expect(ing / n).toBeCloseTo(0.03, 1);
     expect(mat / n).toBeCloseTo(0.22 * ECONOMY.material, 1);
-    expect(item / n).toBeCloseTo(0.78 * 0.15 * 0.4, 1);
+    expect(item / n).toBeCloseTo(0.78 * 0.15 * 0.4 * ECONOMY.items, 1);
     expect(heal / n).toBeCloseTo(0.78 * 0.94 * 0.06, 1);
-    expect(item / n).toBeGreaterThan(0.03);
-    expect(item / n).toBeLessThan(0.065);
+    // Playtest 2026-11-20: half the 2D item rate.
+    expect(item / n).toBeGreaterThan(0.015);
+    expect(item / n).toBeLessThan(0.035);
+  });
+
+  it('elites drop an item about every second kill (playtest 2026-11-20)', () => {
+    const sim = flat();
+    let got = 0;
+    const n = 400;
+    for (let i = 0; i < n; i++) {
+      sim.drops.length = 0;
+      const e = spawnEnemy(sim, 2, 2, 'walker');
+      e.elite = 'flink';
+      killDrops(sim, e);
+      if (sim.drops.some((d) => d.content.kind === 'item')) got++;
+    }
+    expect(got / n).toBeGreaterThan(0.4);
+    expect(got / n).toBeLessThan(0.65);
   });
 
   it('credits scrap at once', () => {
@@ -53,7 +69,7 @@ describe('kill drops', () => {
     const sim = flat();
     killDrops(sim, spawnEnemy(sim, 2, 2, 'feldwebel'));
     const items = sim.drops.filter((d) => d.content.kind === 'item');
-    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(items.length).toBeGreaterThanOrEqual(1);
     expect(sim.drops.some((d) => d.content.kind === 'heal')).toBe(true);
     expect(sim.inventory.scrap).toBe(Math.round(40 * ECONOMY.scrap));
     for (let s = 0; s < 5; s++) {
@@ -81,7 +97,7 @@ describe('kill drops', () => {
     for (const kind of ['grenzer', 'brandmeister', 'rattenmutter'] as const) {
       const sm = flat();
       killDrops(sm, spawnEnemy(sm, 2, 2, kind));
-      expect(sm.drops.filter((d) => d.content.kind === 'item').length, kind).toBeGreaterThanOrEqual(2);
+      expect(sm.drops.filter((d) => d.content.kind === 'item').length, kind).toBeGreaterThanOrEqual(1);
       expect(sm.inventory.scrap, kind).toBe(Math.round(40 * ECONOMY.scrap));
     }
     const sm = flat();

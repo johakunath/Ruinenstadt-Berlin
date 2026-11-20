@@ -1,7 +1,7 @@
 // WP5 (backlog P12): Zünder, Schildträger and Heuler. Numbers from 2D `mkEnemy` (`bomb`, `shield`, `howl`)
 // on the ghoul and brute ratios; every rule below has its test.
 import { describe, it, expect } from 'vitest';
-import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
+import { BOSS, ENEMIES, NORMAL_HP, THREAT, type EnemyKind } from '../data/enemies';
 import { alexWaveTier, ALEX_TIER } from '../data/alexanderplatz';
 import { mitteWaveTier } from '../data/mitte';
 import { xhainWaveTier } from '../data/xhain';
@@ -35,10 +35,11 @@ describe('WP5 roster: 2D numbers on the 3D ratios', () => {
   it('Zünder, Schildträger and Heuler carry the 2D life, hit and speed on the ghoul and brute ratios', () => {
     const z = ENEMIES.zuender, sh = ENEMIES.schild, h = ENEMIES.heuler;
     // Ghoul ratios (life ×1.5, hit ×1.7): bomb 22 / 20, howl 34 / 6.
-    expect([z.hp, z.damage, z.res, z.attackRange]).toEqual([33, 34, 'bomb', 0]);
-    expect([h.hp, h.damage, h.res, h.cap]).toEqual([51, 10, 'howl', 1]);
+    // Normal kinds carry NORMAL_HP times the table life since the playtest of 2026-11-20.
+    expect([z.hp, z.damage, z.res, z.attackRange]).toEqual([33 * NORMAL_HP, 34, 'bomb', 0]);
+    expect([h.hp, h.damage, h.res, h.cap]).toEqual([51 * NORMAL_HP, 10, 'howl', 1]);
     // Brute ratios (life ×1.2, hit ×1.44): shield 52 / 13; the 2D shield rule (±1.2 rad, 20 %, 1.6 rad/s, 2.2 s).
-    expect([sh.hp, sh.damage, sh.res]).toEqual([62, 19, 'shield']);
+    expect([sh.hp, sh.damage, sh.res]).toEqual([62 * NORMAL_HP, 19, 'shield']);
     expect(sh.shield).toEqual({ arc: 1.2, front: 0.2, turn: 1.6, open: 2.2 });
   });
 });

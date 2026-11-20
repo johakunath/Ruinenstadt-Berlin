@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAG_SIZE, collectItem, equipItem, salvageItem, unequipItem } from './inventory';
+import { BAG_SIZE, bulkCandidates, collectItem, equipItem, salvageItem, unequipItem } from './inventory';
 import { createSim } from './sim';
 import { makeSetItem, scrapValue, type Item } from './items';
 import { setCount } from './stats';
@@ -36,11 +36,21 @@ describe('M5 inventory', () => {
     const s = createSim({ empty: true });
     for (let i = 1; i <= BAG_SIZE; i++) collectItem(s, item(i));
     equipItem(s, 0);
-    collectItem(s, item(30, { locked: true }));
+    collectItem(s, item(99, { locked: true }));
     expect(unequipItem(s, 'a')).toBe(false);
     expect(equipItem(s, 0)).toBe(true);
     expect(s.inventory.bag).toHaveLength(BAG_SIZE);
     expect(s.inventory.bag.some(i => i.id === 1)).toBe(true);
+  });
+  it('bulk salvage of a rarity takes that rarity and below, never locked, set or legendary pieces', () => {
+    const s = createSim({ empty: true });
+    [0, 1, 2, 3].forEach((rarity, k) => collectItem(s, item(k + 1, { rarity: rarity as Item['rarity'] })));
+    collectItem(s, item(5, { rarity: 0, locked: true }));
+    collectItem(s, item(6, { rarity: 2, set: 'kiez' }));
+    const ids = (r: number): number[] => bulkCandidates(s, r).map(i => i.id);
+    expect(ids(0)).toEqual([1]);
+    expect(ids(1)).toEqual([1, 2]);
+    expect(ids(2)).toEqual([1, 2, 3]);
   });
   it('locks block salvage; deterministic salvage returns materials/mods once', () => {
     const a = createSim({ empty: true }), b = createSim({ empty: true });

@@ -21,11 +21,16 @@ export interface StationSpot {
   /** Floor height when it is not the hall (0) or the yard (YARD_H). */ y?: number;
   /** Where the keeper stands, in the station frame (x across the front, z toward the front). */ keeper: readonly [number, number];
   /**
-   * Colliders of the furniture in the station frame (x, z, half x, half z), for stations that are mostly
-   * open floor; without it the whole w × d footprint blocks.
+   * Colliders of the furniture in the station frame (x, z, half x, half z, from level, to level; levels
+   * 1 to 3 when left out), one tight box per piece as drawn in `camp-stations.ts` (playtest 2026-11-20:
+   * one box over the whole room blocked open floor). The sim switches them with the station's level
+   * (`syncCampSolids`); a build site (level 0) blocks the whole w × d footprint (it is taped off).
+   * Without it the footprint blocks at every level.
    */
-  solid?: ReadonlyArray<readonly [number, number, number, number]>;
+  solid?: ReadonlyArray<SolidBox>;
 }
+/** A furniture collider of a station: x, z, half x, half z in the station frame, from and to level (default 1 and 3). */
+export type SolidBox = readonly [number, number, number, number, number?, number?];
 /** A ring that opens something when the hero stands in it. */
 export interface CampPlace { id: StationId | 'abfahrt'; x: number; z: number; r: number }
 export interface CampLayout {
@@ -89,20 +94,64 @@ export const CAMP_LAYOUT: CampLayout = {
     { x: 30.5, z: 21.6, hx: 0.25, hz: 0.25, h: 5.4, kind: 'column' },
   ],
   stations: [
-    { id: 'markt', x: 22, z: 20.5, rot: 0, w: 11, d: 4, inside: true, keeper: [1.5, 1.4] },
-    // Playtest 2026-11-18: the 10 × 4 m footprint blocked the open room; only the furniture does now (all three levels).
+    // Playtest 2026-11-20: every station blocks only its furniture, level by level (boxes from the art in `camp-stations.ts`).
+    { id: 'markt', x: 22, z: 20.5, rot: 0, w: 11, d: 4, inside: true, keeper: [1.5, 1.4], solid: [
+      // Fence, the two stalls (`propCollider` size), crates and sacks, the stash locker.
+      [0, -1.85, 5.35, 0.08], [-3.6, -0.45, 1.6, 1.1], [-0.3, -0.45, 1.6, 1.1], [-4.75, 1.37, 0.66, 0.5], [1.8, 1.5, 0.56, 0.28],
+      [2.4, 1.0, 0.4, 0.4], [4.5, -1.45, 0.76, 0.3],
+      // L2 shelf and the pallet of sacks; L3 canopy posts, second locker, crate stack.
+      [2.5, -1.4, 0.78, 0.28, 2], [4.2, 0.75, 0.62, 0.52, 2],
+      [1.7, 0.4, 0.06, 0.06, 3], [5.3, 0.4, 0.06, 0.06, 3], [3.4, -1.45, 0.76, 0.3, 3], [5.0, 1.5, 0.33, 0.33, 3],
+    ] },
     { id: 'laz', x: 7.5, z: 34, rot: 0, w: 10, d: 4, inside: true, keeper: [1.1, 1.0], solid: [
-      [-2.6, -0.6, 2.3, 1.25], [3.2, -1.65, 1.3, 0.3], [0.4, -1.8, 1.05, 0.12], [1.6, -0.9, 0.45, 0.3],
-      [-4.6, 1.3, 0.3, 0.25], [2.6, 1.1, 0.18, 0.18], [1.4, 1.2, 0.45, 0.3], [-0.1, 0.3, 0.12, 0.12],
+      // Cot, medicine cabinet, the red-cross sheet, table, blankets, bucket, the name board's posts.
+      [-3.6, -0.6, 0.4, 0.98], [3.9, -1.65, 0.56, 0.26], [0.4, -1.8, 1.04, 0.07], [1.6, -0.9, 0.46, 0.31], [-4.6, 1.3, 0.33, 0.27],
+      [2.6, 1.1, 0.17, 0.17], [2.32, -1.95, 0.05, 0.05], [4.48, -1.95, 0.05, 0.05],
+      // L2 second cot, the curtains (back and between the cots), a curtain post, IV stand, sani crate.
+      [-1.4, -0.6, 0.4, 0.98, 2], [-2.6, -1.75, 2.22, 0.1, 2], [-2.5, -0.575, 0.1, 1.2, 2], [-0.4, 0.6, 0.05, 0.05, 2],
+      [-0.1, 0.3, 0.1, 0.1, 2], [1.4, 1.2, 0.48, 0.34, 2],
+      // L3 drug shelf and the operating lamp's foot.
+      [2.5, -1.65, 0.6, 0.24, 3], [-4.75, -1.5, 0.3, 0.3, 3],
     ] },
     // Johannes 2026-11-18: Hackerspace inside (old bakery), Imbiss outside in a viaduct arch, the
     // signal box on a raised loading ramp in the north, the freight car on the southern track.
-    { id: 'hack', x: 21, z: 32.6, rot: 0, w: 10, d: 2.6, inside: true, keeper: [-1.3, 0.85] },
-    { id: 'imbiss', x: 50, z: 4.6, rot: 0, w: 7.4, d: 3.4, inside: false, keeper: [-1.0, -0.2] },
-    { id: 'kom', x: 62, z: 9.6, rot: 0, w: 7, d: 6, inside: false, y: RAMP_H, keeper: [0.3, 1.9] },
+    { id: 'hack', x: 21, z: 32.6, rot: 0, w: 10, d: 2.6, inside: true, keeper: [-1.3, 0.85], solid: [
+      // Bench with the CRTs, crate with a monitor, battery, the name board's posts.
+      [-1.2, 0.015, 1.82, 0.52], [-4.2, 0, 0.39, 0.39], [1.4, -0.6, 0.46, 0.31], [1.92, -1.1, 0.05, 0.05], [3.88, -1.1, 0.05, 0.05],
+      // L2 scrap press and its heap; L3 server rack, screen shelf, antenna mast.
+      [3.6, 0.1, 0.76, 0.56, 2], [2.6, 0.9, 0.36, 0.36, 2],
+      [-4.4, -0.8, 0.36, 0.31, 3], [-1.2, -1.0, 1.7, 0.23, 3], [0.9, -0.9, 0.05, 0.05, 3],
+    ] },
+    { id: 'imbiss', x: 50, z: 4.6, rot: 0, w: 7.4, d: 3.4, inside: false, keeper: [-1.0, -0.2], solid: [
+      // Counter, stove, gas bottle, firewood, the jar shelf on the back.
+      [-0.8, 1.25, 2.3, 0.37], [-1.6, -0.55, 0.58, 0.41], [1.9, -0.4, 0.18, 0.18], [3.3, -0.9, 0.3, 0.36], [0.6, -1.5, 1.1, 0.16],
+      // L2 grill and the garden crates; L3 awning posts.
+      [2.6, 0.5, 0.7, 0.4, 2], [-3.4, 0.4, 0.46, 0.78, 2],
+      [-3.2, 1.65, 0.05, 0.05, 3], [1.6, 1.65, 0.05, 0.05, 3],
+    ] },
+    { id: 'kom', x: 62, z: 9.6, rot: 0, w: 7, d: 6, inside: false, y: RAMP_H, keeper: [0.3, 1.9], solid: [
+      // Signal box, its outside stair, map table, stools, crates, jerry cans.
+      [1.5, -1.6, 1.85, 1.35], [-0.77, -1.4, 0.42, 1.1], [-1.4, 1.3, 0.93, 0.52], [-1.6, 2.2, 0.18, 0.18], [-0.4, 2.0, 0.18, 0.18],
+      [3.0, 1.6, 0.39, 0.39], [2.53, 2.5, 0.33, 0.1],
+      // L2 notes board on its posts; L3 sandbag wall.
+      [-2.55, -0.5, 0.7, 0.06, 2], [2.15, 2.7, 1.2, 0.22, 3],
+    ] },
     // The freight car's open side faces south, toward the camera and its ring (a ring north of it hid the hero behind the car).
-    { id: 'zeug', x: 56.5, z: 40, rot: 0, w: 13, d: 5, inside: false, keeper: [-0.5, 1.4] },
-    { id: 'exer', x: 62.5, z: 26, rot: -Math.PI / 2, w: 10, d: 7, inside: false, keeper: [-1.0, 2.6] },
+    { id: 'zeug', x: 56.5, z: 40, rot: 0, w: 13, d: 5, inside: false, keeper: [-0.5, 1.4], solid: [
+      // The freight car with its buffers (the floor is 1 m up, the ramp in front stays walkable), crates, barrels, scrap heap.
+      [0, 0, 5.1, 1.46], [-5.7, 0.9, 0.39, 0.39], [-5.8, -0.6, 0.31, 0.31], [-5.4, 1.9, 0.31, 0.31], [-1.6, 2.0, 0.4, 0.4],
+      // L3 weapon racks and the quench barrel.
+      [5.9, 0, 0.36, 0.96, 3], [5.3, 2.0, 0.31, 0.31, 3],
+    ] },
+    { id: 'exer', x: 62.5, z: 26, rot: -Math.PI / 2, w: 10, d: 7, inside: false, keeper: [-1.0, 2.6], solid: [
+      // Sandbag walls (back, north end, the low camera end), dummy, targets, crate, chalk board, the name board.
+      [0, -3.15, 4.7, 0.22], [-4.65, -0.55, 0.22, 2.15], [4.65, -0.45, 0.22, 2.25], [-2.0, -0.3, 0.36, 0.36],
+      [-3.65, 0.6, 0.08, 0.35], [-3.65, -1.0, 0.08, 0.35], [1.2, -2.5, 0.33, 0.33], [3.6, -2.55, 0.5, 0.07], [-3.35, 2.25, 0.08, 0.92],
+      // L2 two more dummies, the crawl net, two hurdles (the tyre run stays walkable).
+      [-0.2, -1.6, 0.36, 0.36, 2], [0.9, 0.4, 0.36, 0.36, 2], [2.4, 1.8, 1.03, 0.63, 2], [-0.4, 2.0, 0.05, 0.55, 2], [0.4, 2.0, 0.05, 0.55, 2],
+      // L3 the stand with the flag, a third target.
+      [0.6, -1.95, 1.3, 0.45, 3], [2.2, -2.35, 0.05, 0.05, 3], [-3.65, -2.6, 0.08, 0.35, 3],
+    ] },
   ],
   // The lower half of the old toilets and of the bakery (playtest 2026-11-18: the rooms felt empty there).
   decor: [

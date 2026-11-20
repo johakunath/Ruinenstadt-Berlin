@@ -197,6 +197,8 @@ export class Level {
   gates: GateDef[] = [];
   /** P25 Brandenburger Tor: the Türsteher's neon bars (`src/sim/barriers.ts`), open at build time. */
   barriers: BarrierDef[] = [];
+  /** M20 camp: station colliders that apply from level `lo` to `hi` (0 = build site), switched by `syncCampSolids`. */
+  campSolids: Array<{ station: string; lo: number; hi: number; collider: Collider }> = [];
   wade: (Ribbon & { factor: number }) | null = null;
   traderSpot: Point | null = null;
 
