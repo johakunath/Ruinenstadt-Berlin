@@ -207,6 +207,7 @@ test('equip, unequip and salvage keep keyboard focus in the menu', async ({page}
 test('phone landscape: doll, bag and comparison fit; tabs Segen, Kodex and the options screen render',async({browser},info)=>{
   const context=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true});
   const page=await context.newPage(); await setup(page);
+  await page.locator('[data-action="tip"]').tap();
   await page.locator('[data-bag="0"]').tap();
   await expect(page.locator('.inv-detail .cmp2')).toBeVisible();
   for (const sel of ['.inv-doll','.inv-grid','.inv-detail']) { const b=(await page.locator(sel).boundingBox())!; expect(b.y+Math.min(b.height,120)).toBeLessThanOrEqual(390); }
