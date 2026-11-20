@@ -27,8 +27,19 @@ export class Input {
   /** Last pointer position in client pixels, for mouse aim. */
   pointerX = 0;
   pointerY = 0;
+  /** Fixed mouse position when another device took over; small moves must add up, jitter must not. */
+  private mouseOriginX = 0;
+  private mouseOriginY = 0;
+  private activeDevice: Device = 'keyboard';
   /** The device that pressed the last action. Mouse aims at the cursor, the others use aim assist. */
-  device: Device = 'keyboard';
+  get device(): Device { return this.activeDevice; }
+  set device(device: Device) {
+    if (device !== this.activeDevice) {
+      this.mouseOriginX = this.pointerX;
+      this.mouseOriginY = this.pointerY;
+    }
+    this.activeDevice = device;
+  }
   /** Gameplay presses are ignored while a menu is open. */
   enabled = false;
   onMenu: () => void = () => {};
@@ -84,7 +95,10 @@ export class Input {
     target.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;
       // A real move (not a jitter) after the pad or touch hands the labels and the aim back to the mouse.
-      if ((this.device === 'gamepad' || this.device === 'touch') && this.enabled && Math.hypot(e.clientX - this.pointerX, e.clientY - this.pointerY) > 30) this.device = 'mouse';
+      if (!this.enabled) {
+        this.mouseOriginX = e.clientX;
+        this.mouseOriginY = e.clientY;
+      } else if ((this.device === 'gamepad' || this.device === 'touch') && Math.hypot(e.clientX - this.mouseOriginX, e.clientY - this.mouseOriginY) > 30) this.device = 'mouse';
       this.pointerX = e.clientX;
       this.pointerY = e.clientY;
     });
