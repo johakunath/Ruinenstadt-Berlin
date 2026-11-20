@@ -134,6 +134,15 @@ export function threatBy(sim: Sim, what: keyof typeof THREAT_NAME, src?: number)
   return e ? `${e.def.name} · ${THREAT_NAME[what]}` : THREAT_NAME[what];
 }
 
+/**
+ * Victory (review 2026-11-20): every marked zone, shot, burning or acid ground, ring, searchlight and
+ * minute hand goes out, so nothing left in the air kills the hero after the win.
+ */
+export function clearThreats(sim: Sim): void {
+  const T = sim.threats;
+  T.zones.length = T.shots.length = T.hazards.length = T.waves.length = T.spots.length = T.sweeps.length = 0;
+}
+
 export function addZone(sim: Sim, z: Zone): void {
   sim.threats.zones.push(z);
 }
@@ -276,7 +285,7 @@ export function updateThreats(sim: Sim): void {
     if (!gone && Math.hypot(p.x - q.x, p.z - q.z) < q.r + PLAYER.radius && p.state !== 'dead' && p.invuln <= 0) {
       const l = Math.hypot(q.vx, q.vz) || 1;
       // A shot that meets the hero is spent, also inside the hit grace (no damage then).
-      threatHit(sim, null, q.damage, 0, q.vx / l, q.vz / l, threatBy(sim, 'shot'));
+      threatHit(sim, null, q.damage, 0, q.vx / l, q.vz / l, threatBy(sim, 'shot', q.src));
       gone = true;
     }
     if (!gone && L.near(q.x, q.z, q.r + 0.5).some((c) => colliderDistance(c, q.x, q.z) < q.r)) gone = true;

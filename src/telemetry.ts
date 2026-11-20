@@ -30,6 +30,8 @@ interface EncounterLog {
   /** Max life at the fight's start and the lowest life during it, so `dmg` reads as a share like `docs/balance.md`. */
   hp?: number;
   low?: number;
+  /** Life at the fight's start (rounded): `low` counts from here, so life lost before the fight does not read as the fight's. */
+  h0?: number;
 }
 
 export interface RunRecord {
@@ -190,7 +192,7 @@ export class Telemetry {
     } else if (ev.type === 'encounterStart') {
       this.encFrames = new FrameStats();
       this.encCalls = this.encAlive = 0;
-      r.enc.push({ i: ev.index, start: Math.round(r.t), clear: null, dmg: 0, fps: 0 });
+      r.enc.push({ i: ev.index, start: Math.round(r.t), clear: null, dmg: 0, fps: 0, h0: Math.round(ev.hp) });
     } else if (ev.type === 'encounterClear') {
       const e = r.enc.find((x) => x.i === ev.index && x.clear === null);
       if (e) {
@@ -203,6 +205,7 @@ export class Telemetry {
   }
 
   private closeEnc(e: EncounterLog): void {
+    e.dmg = Math.round(e.dmg * 10) / 10;
     e.fps = Math.round(this.encFrames.fps);
     e.p95 = this.encFrames.quantile(0.95);
     e.calls = this.encCalls;

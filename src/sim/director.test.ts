@@ -4,6 +4,8 @@ import { generateLots, mapLevel } from '../data/map';
 import { PLAYER } from '../data/combat';
 import { createSim, stepSim } from './sim';
 import { setLoadout } from './loadout';
+import { summon } from './ai';
+import { encounterAlive, spawnEnemy, splitElite } from './enemies';
 import { DT, NO_INPUT, type Sim, type SimEvent } from './types';
 
 const map = koepenickMap(1);
@@ -154,5 +156,82 @@ describe('encounter director', () => {
     expect(sim.level.blocked(sim.player.x, sim.player.z)).toBe(false);
     expect(sim.player.z).toBeGreaterThan(-36);
     void DT;
+  });
+});
+
+describe('review 2026-11-20: fights and the victory', () => {
+  it('only the encounter\'s own bodies fill a wave and hold it open; others keep fighting', () => {
+    const sim = createSim({ level });
+    const enc = level.encounters[0]!;
+    // An awake captive guard and leftover event adds far off (one stuck behind a wall soft-locked the run).
+    const strays = Array.from({ length: 8 }, (_, i) => spawnEnemy(sim, enc.x + 30 + i, enc.z + 30, 'walker'));
+    strays[0]!.guard = true;
+    const hold = (): void => { for (const e of strays) { e.x = e.px = enc.x + 30; e.z = e.pz = enc.z + 30; } };
+    teleport(sim, enc.x, enc.z);
+    sim.player.invuln = 1e9;
+    stepSim(sim, NO_INPUT);
+    expect(sim.run.phase).toBe('fight');
+    // Eight strays are more than the wave's `maxAlive`: its own spawns still come.
+    for (let i = 0; i < 60 * 3; i++) { sim.player.invuln = 1e9; stepSim(sim, NO_INPUT); hold(); }
+    const own = sim.enemies.filter((e) => e.enc === 0 && e.state !== 'dead').length;
+    expect(own).toBeGreaterThan(0);
+    expect(encounterAlive(sim, 0)).toBe(own);
+    // Kill only the encounter's bodies: it is won although the strays still stand.
+    for (let i = 0; i < 60 * 120 && sim.run.index === 0; i++) {
+      sim.player.invuln = 1e9;
+      stepSim(sim, NO_INPUT);
+      for (const e of sim.enemies) if (e.enc === 0 && e.state !== 'dead' && e.stateT > 0.3) { e.state = 'dead'; e.stateT = 0; e.hp = 0; }
+      hold();
+    }
+    expect(sim.run.index).toBe(1);
+    expect(strays.every((e) => e.state !== 'dead')).toBe(true);
+  });
+
+  it('a boss\'s adds and a Spaltend elite\'s halves belong to its fight', () => {
+    const sim = createSim({ level });
+    const boss = spawnEnemy(sim, sim.player.x + 6, sim.player.z, 'feldwebel');
+    boss.enc = 3;
+    summon(sim, boss, 'walker', 2);
+    const adds = sim.enemies.filter((e) => e !== boss);
+    expect(adds.length).toBe(2);
+    expect(adds.every((e) => e.enc === 3)).toBe(true);
+    const el = spawnEnemy(sim, sim.player.x - 6, sim.player.z, 'walker');
+    el.enc = 3;
+    splitElite(sim, el);
+    const minis = sim.enemies.filter((e) => e.mini);
+    expect(minis.length).toBeGreaterThan(0);
+    expect(minis.every((e) => e.enc === 3)).toBe(true);
+  });
+
+  it('the victory puts out every shot, marked zone and burning ground', () => {
+    const last = level.encounters.length - 1;
+    const sim = createSim({ level, startAt: last });
+    const enc = level.encounters[last]!;
+    teleport(sim, enc.x, enc.z);
+    sim.player.invuln = 1e9;
+    stepSim(sim, NO_INPUT);
+    expect(sim.run.phase).toBe('fight');
+    sim.run.wave = enc.waves.length - 1;
+    sim.run.toSpawn = 0;
+    sim.run.bossesToSpawn = [];
+    sim.enemies.length = 0;
+    const T = sim.threats, p = sim.player;
+    T.zones.push({ x: p.x, z: p.z, r: 2, t: 5, max: 5, damage: 50, floor: 0, kind: 'slam', src: -1, free: true });
+    T.shots.push({ x: p.x + 20, z: p.z, px: p.x + 20, pz: p.z, vx: -1, vz: 0, r: 0.3, damage: 50, life: 9, boss: false });
+    T.hazards.push({ x: p.x, z: p.z, r: 2, t: 9, max: 9, damage: 9, tick: 0.5, kind: 'fire' });
+    const log: SimEvent[] = [];
+    for (let i = 0; i < 3 && sim.run.phase !== 'won'; i++) { stepSim(sim, NO_INPUT); log.push(...sim.events); }
+    expect(sim.run.phase).toBe('won');
+    expect(log.some((e) => e.type === 'victory')).toBe(true);
+    expect(T.zones.length + T.shots.length + T.hazards.length + T.waves.length + T.sweeps.length + T.spots.length).toBe(0);
+  });
+
+  it('an encounter tells the hero\'s life at its start (telemetry `h0`)', () => {
+    const sim = createSim({ level });
+    sim.player.hp = 54;
+    const enc = level.encounters[0]!;
+    teleport(sim, enc.x, enc.z);
+    stepSim(sim, NO_INPUT);
+    expect(sim.events.find((e) => e.type === 'encounterStart')).toMatchObject({ index: 0, hp: 54 });
   });
 });
