@@ -677,7 +677,7 @@ body:has(#menu:not([hidden])) :is(#hud, #minimap), body:has(#optv:not([hidden]))
 .menu-res b { color: var(--bone); margin-left: 4px; font-weight: 600; }
 .mico { width: 22px; height: 22px; object-fit: contain; margin-right: 5px; }
 .menu-body { flex: 1; min-height: 0; position: relative; margin-top: 10px; }
-.menu-tab { position: absolute; inset: 0; overflow-y: auto; padding: 4px 0 10px; overscroll-behavior: contain; }
+.menu-tab { position: absolute; inset: 0; overflow-y: auto; padding: 4px 0 max(10px, env(safe-area-inset-bottom)); overscroll-behavior: contain; touch-action: pan-y; }
 .menu-tab h3 { margin: 14px 0 6px; font: 500 14px var(--f-ui); color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
 .menu-panel button:not(.menu-tabb) { touch-action: manipulation; }
 .menu-panel button:focus-visible, .menu-panel summary:focus-visible, .menu-panel input:focus-visible, .sn:focus-visible { outline: 2px solid var(--bone); outline-offset: 2px; }
@@ -854,16 +854,37 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
   .inv-card-head img, .inv-card-head > span:first-child { width: 32px; height: 32px; }
   .menu-panel .inv-actions button { min-height: 36px; padding: 4px 8px; font-size: 13px; }
   .inv-hint { font-size: 13px; margin: 3px 0; }
-  .menu-tab { padding: 2px 0 6px; }
+  .menu-tab { padding: 2px 0 max(6px, env(safe-area-inset-bottom)); }
   .mapw { grid-template-columns: minmax(0, 1fr) 140px; }
   .leg { font-size: 14px; }
   .map-svg svg { max-height: calc(100dvh - 60px); }
 }
-@media (max-width: 699px) and (orientation: portrait) {
-  .inv-tab { overflow-y: auto; }
-  .inv-columns { grid-template-columns: 1fr; flex: none; }
+@media (orientation: landscape) and (max-height: 620px), (orientation: portrait) and (max-width: 699px) {
+  #menu .menu-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding-right: 0; }
+  #menu .menu-side { display: contents; }
+  #menu .menu-tabs { grid-area: 1 / 1; min-width: 0; flex-wrap: wrap; gap: 2px 12px; }
+  #menu .menu-tabb { min-height: 44px; }
+  #menu-opt { grid-area: 1 / 2; width: 44px; min-height: 44px; padding: 0; margin-right: 104px; }
+  #menu .menu-res { grid-area: 2 / 1 / 3 / -1; justify-content: flex-start; font-size: 14px; gap: 2px 12px; }
+  #menu .menu-res:empty { display: none; }
+  #menu .menu-res span { white-space: normal; }
+  #inventory { overflow-y: auto; }
+  .inv-columns { flex: none; align-items: start; }
   .inv-columns > section { overflow: visible; }
-  .segen, .mapw, .kodex .cols2 { grid-template-columns: 1fr; }
+  canvas.inv-portrait { touch-action: pan-y; }
+  .cmp2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr)); }
+}
+@media (orientation: landscape) and (max-height: 620px) {
+  .inv-columns { grid-template-columns: minmax(0, min(29%, 280px)) minmax(196px, min(34%, 280px)) minmax(0, 1fr); gap: 10px; }
+  .inv-doll { grid-template-columns: 48px minmax(0, 1fr) 48px; gap: 4px; }
+  .inv-portrait { height: 190px; }
+  .kodex .cols2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+}
+@media (orientation: portrait) and (max-width: 699px) {
+  #menu .menu-tabs { grid-area: 2 / 1 / 3 / -1; max-width: none; justify-content: space-between; }
+  #menu .menu-res { grid-area: 1 / 1; font-size: 13px; }
+  #menu-opt { align-self: start; }
+  .inv-columns, .segen, .mapw, .kodex .cols2 { grid-template-columns: minmax(0, 1fr); }
 }
 /* ---- M13 camp: station list and the 2D station window. */
 #camp { z-index: 45; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left)); }
@@ -960,7 +981,7 @@ body:has(#hud:not([hidden])) #fsb, body:has(#menu:not([hidden])) #fsb, body:has(
 .camp-panel > .menu-head { padding: 12px 104px 8px 16px; }
 
 /* ---- U3 options screen (2D #optv): own overlay, centered column, × top right. */
-#optv { z-index: 50; display: block; padding: 0; overflow-y: auto; overscroll-behavior: contain; background: #140e0a; }
+#optv { z-index: 50; display: block; padding: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; background: #140e0a; }
 .optbox { width: min(860px, 100%); margin: 0 auto; padding: var(--gut-t) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); display: grid; gap: 8px; text-transform: none; letter-spacing: .02em; }
 .ohead { min-height: 44px; display: flex; align-items: center; padding-right: 104px; }
 .ohead h2 { font: 400 44px/1 var(--f-display); color: var(--ember); margin: 0; letter-spacing: 0; text-transform: none; text-shadow: none; text-align: left; }

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function setup(page: Page): Promise<void> {
-  await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');
+async function setup(page: Page, useDefaultProfile = false): Promise<void> {
+  await page.goto('/?map=hof&seed=7&autostart' + (useDefaultProfile ? '' : '&profile=Leistung'));
   await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 1, null, {timeout:90_000});
   await page.evaluate(() => {
     const g = window.__game!;
@@ -72,16 +72,61 @@ test('mouse drag equips compatible gear and rejects the wrong slot',async({page}
   expect(await page.evaluate(()=>window.__game!.sim().equipment.h)).toBeUndefined();
 });
 
-test('phone touch selection, equipping, scroll and overflow',async({browser},info)=>{
-  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
-  const page=await context.newPage(); await setup(page);
-  await page.locator('[data-bag="0"]').tap();
-  await page.locator('[data-action="equip"]').tap();
-  expect(await page.evaluate(()=>window.__game!.sim().equipment.a?.id)).toBe(101);
-  expect(await page.evaluate(()=>document.querySelector('.menu-panel')!.scrollWidth <= document.querySelector('.menu-panel')!.clientWidth)).toBe(true);
-  await page.screenshot({path:info.outputPath('inventory-phone.png')});
-  await context.close();
-});
+for (const viewport of [{ width: 320, height: 568 }, { width: 568, height: 320 }, { width: 844, height: 390 }]) {
+  test.describe(`phone ${viewport.width}×${viewport.height}`, () => {
+    test.use({ viewport, contextOptions: { screen: viewport }, hasTouch: true, isMobile: true });
+
+    test('inventory scrolls to all gear and bag slots, with the phone graphics defaults', async ({ page }, info) => {
+      await setup(page, true);
+      const inventory = page.locator('#inventory');
+      if (viewport.width === 844) {
+        const bag = (await page.locator('.inv-bag').boundingBox())!;
+        const bounds = (await inventory.boundingBox())!;
+        const x = Math.round(bag.x + bag.width / 2);
+        const y = Math.round(bounds.y + bounds.height - 16);
+        const cdp = await page.context().newCDPSession(page);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+        for (let dy = 15; dy <= 120; dy += 15) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - dy }] });
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await expect.poll(() => inventory.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+        await cdp.detach();
+      }
+      const reachable = await inventory.evaluate(el => {
+        const bounds = el.getBoundingClientRect();
+        el.scrollTop = el.scrollHeight;
+        const last = el.querySelector('.inv-grid > :last-child')!.getBoundingClientRect();
+        const stats = el.querySelector('.inv-stats')!.getBoundingClientRect();
+        return el.scrollTop > 0 && el.scrollWidth <= el.clientWidth + 1
+          && last.bottom <= bounds.bottom && stats.bottom <= bounds.bottom;
+      });
+      expect(reachable).toBe(true);
+      await page.locator('[data-bag="0"]').tap();
+      await page.locator('[data-action="equip"]').tap();
+      expect(await page.evaluate(() => window.__game!.sim().equipment.a?.id)).toBe(101);
+      await page.screenshot({ path: info.outputPath('inventory-phone.png') });
+
+      await page.locator('[data-t="kodex"]').tap();
+      const kodex = page.locator('[data-tab="kodex"]');
+      await expect(kodex).toBeVisible();
+      expect(await kodex.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+      await page.locator('#menu-opt').tap();
+      const options = page.locator('#optv');
+      expect(await options.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+      await expect(options.locator('[data-opt="profile"] [data-v="leistung"]')).toHaveAttribute('aria-pressed', 'true');
+      await expect(options.getByRole('switch', { name: 'Akkusparen' })).toHaveAttribute('aria-checked', 'false');
+      await expect(options.getByRole('switch', { name: 'Leistungsanzeige' })).toHaveAttribute('aria-checked', 'false');
+      await options.evaluate(el => { el.scrollTop = el.scrollHeight; });
+      await page.locator('#opt-close').tap();
+      await page.locator('#menu-opt').tap();
+      expect(await options.evaluate(el => el.scrollTop)).toBe(0);
+      await page.locator('#opt-close').tap();
+      await page.locator('#menu-close').tap();
+      await expect(page.locator('#menu')).toBeHidden();
+    });
+  });
+}
 
 test('controller Start opens, A activates and B closes',async({page})=>{
   await setup(page); await page.keyboard.press('Escape');
@@ -162,6 +207,7 @@ test('equip, unequip and salvage keep keyboard focus in the menu', async ({page}
 test('phone landscape: doll, bag and comparison fit; tabs Segen, Kodex and the options screen render',async({browser},info)=>{
   const context=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true});
   const page=await context.newPage(); await setup(page);
+  await page.locator('[data-action="tip"]').tap();
   await page.locator('[data-bag="0"]').tap();
   await expect(page.locator('.inv-detail .cmp2')).toBeVisible();
   for (const sel of ['.inv-doll','.inv-grid','.inv-detail']) { const b=(await page.locator(sel).boundingBox())!; expect(b.y+Math.min(b.height,120)).toBeLessThanOrEqual(390); }

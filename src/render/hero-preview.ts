@@ -142,7 +142,6 @@ export class HeroPreview {
     const end = (): void => { this.dragX = null; };
     c.addEventListener('pointerup', end);
     c.addEventListener('pointercancel', end);
-    c.style.touchAction = 'none';
     c.addEventListener('keydown', (e) => {
       const d = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
       if (!d) return;
