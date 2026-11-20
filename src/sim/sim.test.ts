@@ -59,7 +59,7 @@ describe('attack chain', () => {
     const hits = log.filter((ev) => ev.type === 'hit');
     expect(hits).toHaveLength(1);
     // The starter blade cuts Untote: + the D9 type bonus.
-    expect(e.hp).toBe(ENEMIES.brute.hp - Math.round(ATTACKS.light1.damage * (1 + WEAPON.typeBonus)));
+    expect(e.hp).toBe(ENEMIES.brute.hp - Math.round(ATTACKS.light1.damage * 0.9 * (1 + WEAPON.typeBonus)));
     expect(e.z).toBeGreaterThan(1.4);
   });
 

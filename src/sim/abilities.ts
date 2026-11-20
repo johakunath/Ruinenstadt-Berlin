@@ -3,7 +3,7 @@
 // (M16, 2D `useCons`) because Verband and Molotow share the cast and field rules.
 import { PLAYER, WEAPON } from '../data/combat';
 import type { WeaponKindId } from '../data/items';
-import { POWER, POWERS, PX, type PowerDef } from '../data/powers';
+import { POWER, POWERS, PX, SPECIAL_DAMAGE, type PowerDef } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { BREAKABLE, hitBreakable } from './breakables';
 import { colliderDistance } from './collide';
@@ -25,7 +25,7 @@ export interface Shock {
   /** Weapon damage multiple, stun seconds, knockback. */
   mul: number; stun: number; knock: number; acid: boolean; kind: 'earth' | 'small' | 'blade' | 'guard' | 'acid';
 }
-export interface FireField { x: number; z: number; r: number; t: number; max: number }
+export interface FireField { x: number; z: number; r: number; t: number; max: number; /** Burn multiplier; omitted for the regular Brandstifter trail. */ burn?: number }
 export interface Strike { x: number; z: number; t: number; max: number; r: number }
 export interface Bottle { x0: number; z0: number; x1: number; z1: number; t: number; dur: number; r: number; power: boolean }
 export interface Offer { id: PerkId; level: 1 | 2; /** 0 common, 1 rare, 2 epic or duo, 3 weapon mod. */ quality: 0 | 1 | 2 | 3 }
@@ -68,7 +68,7 @@ export const CONSUMABLE = {
   max: 3,
   /** Verband: share of max life over `hotTime` seconds. */
   heal: 0.4, hotTime: 3,
-  molotow: { aim: 320 * PX, free: 150 * PX, flight: 0.42, radius: 65 * PX, time: 4, cast: 0.45, fire: 0.2 },
+  molotow: { aim: 320 * PX, free: 150 * PX, flight: 0.42, radius: 65 * PX, time: 4, cast: 0.45, fire: 0.2, damage: SPECIAL_DAMAGE },
   /** Fire fields: burn per second as weapon damage share, refreshed while inside. */
   fieldBurn: 0.9, fieldHold: 0.7, fieldProps: 60 * PX,
   /** Döner: heal share, seconds of +10% damage. */
@@ -506,7 +506,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
     if (b.t < b.dur) continue;
     const r = b.r * (pk(s, 'blast') ? 1.5 : 1);
     const time = b.power ? POWER.brand.time : CONSUMABLE.molotow.time;
-    a.fields.push({ x: b.x1, z: b.z1, r, t: time, max: time });
+    a.fields.push({ x: b.x1, z: b.z1, r, t: time, max: time, burn: b.power ? POWER.brand.damage : CONSUMABLE.molotow.damage });
     s.events.push({ type: 'impact', x: b.x1, z: b.z1, radius: r, kind: 'molotov' });
     propsInRadius(s, b.x1, b.z1, CONSUMABLE.fieldProps);
   }
@@ -516,7 +516,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
     f.t -= DT;
     for (const e of s.enemies) {
       if (e.state === 'dead' || Math.hypot(e.x - f.x, e.z - f.z) >= f.r + e.def.radius * 0.5) continue;
-      ignite(s, e, d * CONSUMABLE.fieldBurn, CONSUMABLE.fieldHold);
+      ignite(s, e, d * CONSUMABLE.fieldBurn * (f.burn ?? 1), CONSUMABLE.fieldHold);
     }
   }
   if (a.fields.length) a.fields = a.fields.filter((f) => f.t > 0);

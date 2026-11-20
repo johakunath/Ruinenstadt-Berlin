@@ -55,8 +55,8 @@ describe('legendary powers (2D hasL)', () => {
     const s = fresh('ring', 'sling'), a = dummy(s, 0, 5), b = dummy(s, 3, 5);
     run(s, 1, { attack: true });
     run(s, 80);
-    expect(lost(a)).toBe(10);
-    expect(lost(b)).toBe(8);
+    expect(lost(a)).toBe(9);
+    expect(lost(b)).toBe(7);
   });
   it('Krähenfeder: shots slow to 60% for 2 s', () => {
     const s = fresh('kraehe', 'sling'), e = dummy(s, 0, 5);

@@ -33,6 +33,13 @@ const run = (s: Sim, steps: number, inp: Partial<typeof NO_INPUT> = {}): void =>
 const lost = (e: Enemy): number => e.maxHp - e.hp;
 
 describe('M7 weapons', () => {
+  it.each(kinds)('%s: basic attacks are 10% weaker without lowering the weapon damage used by powers', (kind) => {
+    const s = fresh(kind);
+    s.stats.damage = 100;
+    run(s, 1, { attack: true });
+    expect(s.player.attack!.damage).toBeCloseTo(90);
+    expect(s.stats.damage).toBe(100);
+  });
   it('keeps the 2D roles: reach, arc, weight and finisher ratios', () => {
     expect(weaponAttack('hammer', 'light1').weight).toBe('heavy');
     expect(weaponAttack('spear', 'light1').reach).toBeGreaterThan(weaponAttack('blade', 'light1').reach + 1);
@@ -46,28 +53,28 @@ describe('M7 weapons', () => {
     const s = fresh('sling'), e = dummy(s, 0, 6);
     run(s, 1, { attack: true });
     run(s, 110);
-    expect(lost(e)).toBe(10);
+    expect(lost(e)).toBe(9);
   });
   it('the fourth shot is the finisher and pierces', () => {
     const s = fresh('sling'), a = dummy(s, 0, 4), b = dummy(s, 0, 6);
     for (let i = 0; i < 4; i++) { run(s, 1, { attack: true }); run(s, 24); }
     run(s, 60);
-    expect(lost(a)).toBe(10 * 3 + 16);
-    expect(lost(b)).toBe(16);
+    expect(lost(a)).toBe(9 * 3 + 14);
+    expect(lost(b)).toBe(14);
   });
   it('the hammer stuns and its finisher sends a shock ring', () => {
     const s = fresh('hammer'), e = dummy(s, 0, 1.6), far = dummy(s, 0, 5);
     run(s, 1, { attack: true });
     run(s, 24);
     // D8: the default hammer (Vorschlaghammer) is a third shorter, so it hits 1.1×.
-    expect(lost(e)).toBe(11);
+    expect(lost(e)).toBe(10);
     expect(e.state).toBe('stagger');
     expect(e.staggerDur).toBeCloseTo(0.6);
     s.player.state = 'move'; s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
     run(s, 40);
     // Out of the swing's reach, inside the ring (70% of the 1.1× damage).
-    expect(lost(far)).toBe(8);
+    expect(lost(far)).toBe(7);
   });
   it('the spear finisher lunges; Wurfspieße adds a thrown spear through four bodies', () => {
     const s = fresh('spear', { m_spiess: 1 });
@@ -87,7 +94,7 @@ describe('M7 weapons', () => {
     const crits: boolean[] = [];
     for (let i = 0; i < 4; i++) { s.player.state = 'move'; s.player.chain = null; run(s, 1, { attack: true }); crits.push(s.player.wucht); run(s, 30); }
     expect(crits).toEqual([false, false, false, true]);
-    expect(lost(e)).toBe(10 * 3 + 20);
+    expect(lost(e)).toBe(9 * 3 + 18);
   });
   it('Nagelband adds damage against elites and bosses', () => {
     const s = fresh('blade');
@@ -122,7 +129,7 @@ describe('M8 powers', () => {
     const s = fresh('blade'), e = dummy(s, 2, 0), out = dummy(s, 4, 0);
     run(s, 1, { power: true });
     run(s, 90);
-    expect(lost(e)).toBe(6 * 8);
+    expect(lost(e)).toBe(8 * 8);
     expect(lost(out)).toBe(0);
     expect(s.abilities.spin).toBeLessThanOrEqual(0);
   });
@@ -139,14 +146,21 @@ describe('M8 powers', () => {
     strike(s2, t, 50);
     expect(s2.abilities.powerCd).toBe(5);
   });
+  it('Fechtsprung deals 225% weapon damage on its dash hit', () => {
+    const s = fresh('blade', {}, 1), e = dummy(s, 0, 2.5);
+    run(s, 1, { power: true });
+    run(s, 20);
+    expect(lost(e)).toBe(23);
+  });
   it('Säbeltanz: opening wave, then every swing is a fast crit', () => {
     const s = fresh('blade'), e = dummy(s, 0, 1.4);
     run(s, 1, { ultimate: true });
     run(s, 30);
-    expect(lost(e)).toBe(15);
+    expect(lost(e)).toBe(19);
     run(s, 1, { attack: true });
     expect(s.player.critical).toBe(true);
     expect(s.player.attackSpeed).toBeCloseTo(1.8 * HERO_TEMPO);
+    expect(s.player.attack!.damage).toBeCloseTo(25);
   });
   it('Fallhammer hits in a ring after the slam lands', () => {
     const s = fresh('hammer'), e = dummy(s, 4.5, 0), out = dummy(s, 7, 0);
@@ -155,7 +169,7 @@ describe('M8 powers', () => {
     run(s, 10);
     expect(lost(e)).toBe(0);
     run(s, 50);
-    expect(lost(e)).toBe(28);
+    expect(lost(e)).toBe(34);
     expect(lost(out)).toBe(0);
     expect(s.player.state).toBe('move');
   });
@@ -166,22 +180,23 @@ describe('M8 powers', () => {
     hurtPlayer(s, null, 20, 1, 0);
     expect(hp - s.player.hp).toBeCloseTo(6);
     run(s, 200);
-    expect(lost(e)).toBe(18);
+    expect(lost(e)).toBe(22);
   });
-  it('Abrissbirne leaps to the target and lands with 400%', () => {
+  it('Abrissbirne leaps to the target and lands with 500%', () => {
     const s = fresh('hammer'), e = dummy(s, 0, 6);
     run(s, 1, { ultimate: true });
     run(s, 10);
     expect(s.player.invuln).toBeGreaterThan(0);
     run(s, 40);
     expect(Math.hypot(s.player.x - e.x, s.player.z - e.z)).toBeLessThan(2);
-    expect(lost(e)).toBe(44);
+    expect(lost(e)).toBe(55);
   });
   it('Nagelsturm fans nine shots; Brandsatz leaves a burning field', () => {
     const s = fresh('sling');
     run(s, 1, { power: true });
     run(s, 9);
     expect(s.abilities.projectiles).toHaveLength(9);
+    expect(s.abilities.projectiles.every((p) => p.damage === 10)).toBe(true);
     const b = fresh('sling', {}, 1), e = dummy(b, 0, 5);
     run(b, 1, { power: true });
     run(b, 60);
@@ -196,24 +211,24 @@ describe('M8 powers', () => {
     run(s, 14);
     expect(s.abilities.strikes).toHaveLength(8);
     run(s, 120);
-    expect(lost(e)).toBe(22 * 8);
+    expect(lost(e)).toBe(28 * 8);
   });
   it('Spießrute pierces a line; Stabhochsprung lands in a circle; Standarte buffs, heals and slows', () => {
     const s = fresh('spear'), row = [3, 5, 7, 9].map((z) => dummy(s, 0, z));
     run(s, 1, { power: true });
     run(s, 60);
-    expect(row.every((e) => lost(e) === 26)).toBe(true);
+    expect(row.every((e) => lost(e) === 33)).toBe(true);
     const v = fresh('spear', {}, 1), t = dummy(v, 0, 5);
     run(v, 1, { power: true });
     run(v, 40);
-    expect(lost(t)).toBe(22);
+    expect(lost(t)).toBe(28);
     const u = fresh('spear'), d = dummy(u, 0, 2);
     u.player.hp = 50;
     run(u, 1, { ultimate: true });
     run(u, 80);
     expect(u.abilities.banner).not.toBeNull();
     expect(u.player.hp).toBeGreaterThan(50);
-    expect(strike(u, d, 100)).toBe(150);
+    expect(strike(u, d, 100)).toBe(188);
   });
   it('a dead hero cannot cast', () => {
     const s = fresh('sling');
@@ -245,6 +260,19 @@ describe('consumables', () => {
     expect(s.abilities.fields[0]!.r).toBeCloseTo(CONSUMABLE.molotow.radius * 1.5);
     expect(e.burn).toBeGreaterThan(0);
     expect(s.inventory.consumables?.molotow).toBe(0);
+  });
+  it.each(['molotow', 'brand'] as const)('%s burns 25% harder without weakening with basic attacks', (kind) => {
+    const s = fresh(kind === 'brand' ? 'sling' : 'blade', {}, 1), e = dummy(s, 0, 6);
+    run(s, 1, kind === 'brand' ? { power: true } : { molotow: true });
+    run(s, 50);
+    expect(e.bdps).toBeCloseTo(11.25);
+    expect(lost(e)).toBeGreaterThan(0);
+  });
+  it('keeps the Brandstifter trail at its original burn strength', () => {
+    const s = fresh(), e = dummy(s, 0, 2);
+    s.abilities.fields.push({ x: e.x, z: e.z, r: 1, t: 2, max: 2 });
+    run(s, 1);
+    expect(e.bdps).toBeCloseTo(9);
   });
 });
 

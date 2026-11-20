@@ -41,6 +41,8 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-20)
 
+- Slow mouse movement returns the action labels and aiming from pad or touch to the mouse after 30 px of net movement; small jitter is ignored.
+- Combat follow-up (Codex · GPT-6): basic attacks of all four weapons deal 10% less damage; powers, ultimates and Molotow deal 25% more before rounding. Säbeltanz swings also get the increase; Standarte multiplies damage by 1.875. Timings and cooldowns stay the same.
 - Damage numbers as in 2D: dealt (white, gold „!“ on crits, element colours), taken (red „-X“) and every heal (green „+X“), packs and ticks merged; switch „Schadenszahlen“ in Optionen.
 - Three graphics levels: Qualität, Ausgewogen (the former Leistung) and a new, lighter Leistung for phones; phones start on Leistung, tablets on Ausgewogen. Ausgewogen and Leistung lower the resolution a little while the device struggles; a tablet that stays slow gets one hint to switch.
 - Optionen start with the Konto card of the title screen (name, code, sync state; Umbenennen, Code kopieren, Konto wechseln, Ausschalten). The game has a browser and home screen icon (the 2D ruin skyline).

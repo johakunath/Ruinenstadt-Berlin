@@ -41,10 +41,10 @@ export function releaseSwing(sim: Sim): void {
     const H = WEAPON.hammer;
     // Erdbeben: the finisher ring is twice as wide and stuns for a second.
     const beben = pk(sim, 'm_beben') > 0;
-    if (fin) shock(sim, p.x + fx * H.shock.ahead, p.z + fz * H.shock.ahead, H.shock.radius * (beben ? WEAPON.umbau.bebenRadius : 1), { mul: H.shock.damage, stun: beben ? WEAPON.umbau.bebenStun : H.shock.stun, knock: knock(260), kind: beben ? 'earth' : 'small' });
+    if (fin) shock(sim, p.x + fx * H.shock.ahead, p.z + fz * H.shock.ahead, H.shock.radius * (beben ? WEAPON.umbau.bebenRadius : 1), { mul: H.shock.damage * WEAPON.normalDamage, stun: beben ? WEAPON.umbau.bebenStun : H.shock.stun, knock: knock(260), kind: beben ? 'earth' : 'small' });
     // Wurfhammer: the finisher also throws the hammer through three bodies.
     if (fin && pk(sim, 'm_wurf')) { const W = WEAPON.umbau.wurf; shoot(sim, { angle: p.facing, damage: a.damage * W.damage, crit: p.critical, speed: W.speed, life: W.life, pierce: W.pierce, kind: 'spear' }); }
-    if (pk(sim, 'm_dampf')) shock(sim, p.x + fx * H.dampf.ahead, p.z + fz * H.dampf.ahead, H.dampf.radius, { mul: H.dampf.damage, stun: 0, knock: knock(140), kind: 'small' });
+    if (pk(sim, 'm_dampf')) shock(sim, p.x + fx * H.dampf.ahead, p.z + fz * H.dampf.ahead, H.dampf.radius, { mul: H.dampf.damage * WEAPON.normalDamage, stun: 0, knock: knock(140), kind: 'small' });
   }
   if (kind === 'spear' && fin && pk(sim, 'm_spiess')) {
     const T = WEAPON.spear.spiess;
@@ -167,7 +167,7 @@ function startAttack(sim: Sim, inp: SimInput, id: AttackId): void {
   p.attack = { ...def, windup: def.windup / speed, active: def.active / speed, recovery: def.recovery / speed,
     reach: def.reach * sim.stats.reachFactor,
     knockback: def.knockback * (fin ? WEAPON.finisherKnock : 1) * (p.wucht ? WEAPON.wucht.knock : 1),
-    damage: def.damage * mul * sim.stats.damage / STARTER_DAMAGE };
+    damage: def.damage * mul * sim.stats.damage / STARTER_DAMAGE * (frenzy ? POWER.saebel.attackDamage : WEAPON.normalDamage) };
   p.swing++;
   p.hits.length = 0;
   p.propHits.length = 0;

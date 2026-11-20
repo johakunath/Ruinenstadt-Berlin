@@ -6,7 +6,7 @@ import { STRONG_AGAINST, type DamageType } from '../data/weapon-look';
 import { ENEMY_RESISTANCES, type ElementId, type LegendaryId } from '../data/items';
 import { BOSS, ELITES, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { splitElite } from './enemies';
-import { PX } from '../data/powers';
+import { POWER, PX } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { killDrops } from './loot';
 import { healPlayer } from './heal';
@@ -156,7 +156,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
     damage *= 2;
   }
   if (pk(s, 'kimme')) damage *= 1 + Math.min(0.32, (0.04 * dist) / STATUS.kimmeStep);
-  if (a.banner && Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) damage *= 1.5;
+  if (a.banner && Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) damage *= POWER.stand.damage;
   // 2D Brecher also counts against shield bearers.
   if (tough(e) || e.def.shield) damage *= (tough(e) ? (1 + s.stats.eliteBonus) * (hasL(s, 'auge') ? 1.25 : 1) : 1) * (1 + 0.15 * pk(s, 'breaker'));
   if (pk(s, 'rush') && a.streak.n >= 10) damage *= 1 + 0.02 * Math.floor(a.streak.n / 10);

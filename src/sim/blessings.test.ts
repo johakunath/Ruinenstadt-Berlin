@@ -266,7 +266,7 @@ describe('hit and kill blessings', () => {
     s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
     run(s, 30);
-    expect(lost(behind)).toBe(16);
+    expect(lost(behind)).toBe(14);
   });
   it('Dampfhammer: slower, +70% damage, every swing sends a small ring; Schrotladung: three shots at 55%', () => {
     const s = fresh('hammer', { m_dampf: 1 }), e = dummy(s, 0, 3.6);
@@ -275,12 +275,12 @@ describe('hit and kill blessings', () => {
     expect(s.stats.attackSpeed).toBeCloseTo(1 / 1.3);
     run(s, 1, { attack: true });
     run(s, 50);
-    expect(lost(e)).toBe(Math.round(17 * 0.5));
+    expect(lost(e)).toBe(Math.round(18.7 * 0.5 * 0.9));
     const g = fresh('sling', { m_schrot: 1 });
     run(g, 1, { attack: true });
     run(g, 8);
     expect(g.abilities.projectiles).toHaveLength(3);
-    expect(g.abilities.projectiles[0]!.damage).toBeCloseTo(5.5);
+    expect(g.abilities.projectiles[0]!.damage).toBeCloseTo(4.95);
   });
   it('Durchschlag: shots pass through one more body per level; Langer Kerl: longer reach, faster shots', () => {
     const s = fresh('sling', { durch: 2, reach: 1 }), row = [3, 4, 5, 6].map((z) => dummy(s, 0, z));
@@ -288,7 +288,7 @@ describe('hit and kill blessings', () => {
     run(s, 8);
     expect(s.abilities.projectiles[0]!.speed).toBeCloseTo((560 / 30) * 1.2);
     run(s, 60);
-    expect(row.map(lost)).toEqual([10, 10, 10, 0]);
+    expect(row.map(lost)).toEqual([9, 9, 9, 0]);
     expect(fresh('blade', { reach: 1 }).stats.reachFactor).toBeCloseTo(1.2);
   });
 });
@@ -322,7 +322,7 @@ describe('defence and sprint blessings', () => {
     expect(e.bdps).toBeCloseTo(8);
     expect(s.abilities.ret).toBe(true);
     run(s, 1, { attack: true });
-    expect(s.player.attack?.damage).toBe(15);
+    expect(s.player.attack?.damage).toBe(13.5);
     expect(s.abilities.ret).toBe(false);
   });
   it('Atempause heals on a dodge; Husarenritt adds damage right after it; Hakenschlag shortens the cooldown', () => {
@@ -332,7 +332,7 @@ describe('defence and sprint blessings', () => {
     expect(s.player.hp).toBeCloseTo(56);
     run(s, 20);
     run(s, 1, { attack: true });
-    expect(s.player.attack?.damage).toBeCloseTo(15 * 1.4);
+    expect(s.player.attack?.damage).toBeCloseTo(13.5 * 1.4);
     expect(fresh('blade', { dashcd: 2 }).stats.dashCooldown).toBeCloseTo(1.4 * 0.6);
   });
   it('Rammbock: the dodge hits bodies on the way, once each', () => {
@@ -397,7 +397,7 @@ describe('loot blessings', () => {
     expect(s.player.hp).toBe(65);
     expect(s.abilities.fed).toBe(30);
     stepSim(s, { ...NO_INPUT, attack: true });
-    expect(s.player.attack?.damage).toBeCloseTo(11);
+    expect(s.player.attack?.damage).toBeCloseTo(9.9);
     for (let t = 0; t < 31; t += DT) stepSim(s, NO_INPUT);
     expect(s.abilities.fed).toBe(0);
   });
@@ -408,7 +408,7 @@ describe('G1 Umbau cards (3D additions)', () => {
     const s = fresh('blade', { m_doppel: 1 }), e = dummy(s, 0, 1.4);
     run(s, 1, { attack: true });
     run(s, 30);
-    expect(lost(e)).toBe(12);
+    expect(lost(e)).toBe(10);
   });
   it('Sturmklinge: faster, weaker, and each swing carries the hero a meter further', () => {
     const base = fresh('blade'), s = fresh('blade', { m_sturm: 1 });
@@ -426,7 +426,7 @@ describe('G1 Umbau cards (3D additions)', () => {
     s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
     run(s, 50);
-    expect(lost(far)).toBe(8);
+    expect(lost(far)).toBe(7);
     expect(far.staggerDur).toBeCloseTo(1);
     const n = fresh('hammer'), out = dummy(n, 0, 8);
     n.player.chain = 'light3'; n.player.chainT = 1;
@@ -439,14 +439,14 @@ describe('G1 Umbau cards (3D additions)', () => {
     s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
     run(s, 70);
-    expect(row.map(lost)).toEqual([20, 20, 20, 20, 0]);
+    expect(row.map(lost)).toEqual([18, 18, 18, 18, 0]);
   });
   it('Fegestoß: thrusts become wide, shorter sweeps; the finisher stays the round sweep', () => {
     const s = fresh('spear', { m_fege: 1 }), side = dummy(s, 1.9, 1.3), far = dummy(s, 0, 4.6);
     run(s, 1, { attack: true });
     expect(s.player.attack?.style).toBe('slash');
     run(s, 30);
-    expect(lost(side)).toBe(10);
+    expect(lost(side)).toBe(9);
     expect(lost(far)).toBe(0);
     s.player.state = 'move'; s.player.chain = 'light3'; s.player.chainT = 1;
     run(s, 1, { attack: true });
@@ -455,21 +455,21 @@ describe('G1 Umbau cards (3D additions)', () => {
   it('Sturmlanze: thrusts right after a dodge hit twice as hard and reach further', () => {
     const s = fresh('spear', { m_lanze: 1 });
     run(s, 1, { attack: true });
-    expect(s.player.attack?.damage).toBe(10);
+    expect(s.player.attack?.damage).toBe(9);
     run(s, 40);
     run(s, 1, { dodge: true });
     run(s, 30);
     s.player.chain = null;
     run(s, 1, { attack: true });
-    expect(s.player.attack?.damage).toBe(20);
+    expect(s.player.attack?.damage).toBe(18);
     expect(s.player.attack?.reach).toBeCloseTo(4.0 * 1.5);
   });
   it('Querschläger: a shot jumps once to the nearest other enemy for 80%', () => {
     const s = fresh('sling', { m_quer: 1 }), a = dummy(s, 0, 5), b = dummy(s, 3, 5);
     run(s, 1, { attack: true });
     run(s, 80);
-    expect(lost(a)).toBe(10);
-    expect(lost(b)).toBe(8);
+    expect(lost(a)).toBe(9);
+    expect(lost(b)).toBe(7);
   });
   it('Querschläger: the jump skips a reflection (M16 Spiegelbild) and goes to the next real body', () => {
     const s = fresh('sling', { m_quer: 1 }), a = dummy(s, 0, 5), b = dummy(s, 3, 5);
@@ -479,8 +479,8 @@ describe('G1 Umbau cards (3D additions)', () => {
     m.mirror = { x: (a.x + m.x) / 2, z: (a.z + m.z) / 2 };
     run(s, 1, { attack: true });
     run(s, 80);
-    expect(lost(a)).toBe(10);
-    expect(lost(b)).toBe(8);
+    expect(lost(a)).toBe(9);
+    expect(lost(b)).toBe(7);
   });
   it('Schnellfeuer: faster and weaker shots, the finisher is a fan of five', () => {
     const s = fresh('sling', { m_salve: 1 });

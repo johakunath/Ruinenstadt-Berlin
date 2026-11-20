@@ -176,7 +176,7 @@ test('equipment changes combat and HUD health, and survives a retry', async ({ p
     g.step({}, 35);
     return { maxHp: sim.stats.maxHp, hp: p.hp, damage: 1000 - enemy.hp, timing };
   });
-  expect(result).toMatchObject({ maxHp: 200, hp: 100, damage: 20 });
+  expect(result).toMatchObject({ maxHp: 200, hp: 100, damage: 18 });
   // The hero swings at 85 % tempo (HERO_TEMPO, playtest 2026-11-20).
   expect(result.timing.windup).toBeCloseTo(.04 / .85);
   expect(result.timing.active).toBeCloseTo(.05 / .85);
