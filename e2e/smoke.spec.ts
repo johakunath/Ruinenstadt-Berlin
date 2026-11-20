@@ -177,8 +177,9 @@ test('equipment changes combat and HUD health, and survives a retry', async ({ p
     return { maxHp: sim.stats.maxHp, hp: p.hp, damage: 1000 - enemy.hp, timing };
   });
   expect(result).toMatchObject({ maxHp: 200, hp: 100, damage: 20 });
-  expect(result.timing.windup).toBeCloseTo(.04);
-  expect(result.timing.active).toBeCloseTo(.05);
+  // The hero swings at 85 % tempo (HERO_TEMPO, playtest 2026-11-20).
+  expect(result.timing.windup).toBeCloseTo(.04 / .85);
+  expect(result.timing.active).toBeCloseTo(.05 / .85);
   await expect(page.locator('#hp-fill')).toHaveCSS('transform', 'matrix(0.5, 0, 0, 1, 0, 0)', { timeout: 90_000 });
   await page.screenshot({ path: testInfo.outputPath('m3b-equipped-health.png') });
 

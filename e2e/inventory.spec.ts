@@ -35,11 +35,12 @@ test('inventory equips, compares, protects loot, pauses, and closes without buff
   await expect(page.locator('[data-action="salvage"]')).toBeDisabled();
   await page.locator('[data-bag="1"]').click();
   await expect(page.locator('.inv-detail')).toContainText('Kiez');
-  await page.getByRole('button',{name:/Schrott \+/}).click();
+  await page.getByRole('button',{name:/Verschrotten \+/}).click();
   expect(await page.evaluate(()=>window.__game!.sim().inventory.bag.some(i=>i.id===103))).toBe(true);
-  await expect(page.locator('#inventory footer')).toHaveText('Sicher? Erneut tippen.');
+  await expect(page.locator('#inventory footer')).toHaveText('Teil verschrotten? Zum Bestätigen erneut tippen.');
+  await expect(page.locator('[data-action="salvage"]')).toContainText('Wirklich?');
   await page.screenshot({path:info.outputPath('inventory-1280.png')});
-  await page.getByRole('button',{name:/^Gewöhnl\. \+/}).click();
+  await page.getByRole('button',{name:/^Gewöhnl\./}).click();
   const ids=await page.evaluate(()=>window.__game!.sim().inventory.bag.map(i=>i.id));
   expect(ids).toContain(102); expect(ids).toContain(103); expect(ids).toContain(104); expect(ids).not.toContain(105);
   // ] switches menu tabs; Tab moves focus and stays in the menu.
