@@ -2,6 +2,20 @@
 
 Newest first. 2D history: `docs/playtests.md` in `johakunath/Ruinenstadt`.
 
+## 2026-11-20 · Köpenick on build fa2d6f8 (Johannes, PC, pad, Qualität; telemetry and code review)
+
+Two runs on 20 Nov (live sheet): a death at encounter 1 after 111 s (two shots, cause „Geschoss“), then a win in 20.5 min at 29 to 37 fps (59 to 60 on 16 Nov), p95 42 ms, up to 687 draw calls and 816k triangles. Tab S9 Xhain on 19 Nov: 30 fps. All fixed in the review PR unless noted.
+
+| Point | Finding | Answer |
+|---|---|---|
+| Death at encounter 1 | The Hilferufe rescue always brought an elite Brocken, also at leg 1 before any Brocken wave; with Spaltend it fires three shots of about 29 on Normal (100 life) | Event enemies take only types the waves ahead bring; the rescue's elite is a Läufer early, a Brocken once Brocken come |
+| Damage numbers | None for damage dealt, taken or healing (Johannes) | Ported from 2D (`src/ui/damage-numbers.ts`), switch in Optionen |
+| Phone and tablet | Must run on phones; three settings unless something easier (Johannes) | Q1 three levels, dynamic resolution, crates culled near the hero (−146k triangles on the Köpenick start, Xhain start 553k → 168k), dinos and mechs culled, shadow rate in frames |
+| PC | 144 Hz screen, no performance problem felt (Johannes). p95 values are multiples of 6.9 ms: the 60 fps cap alternates 2 and 3 refreshes, so p95 21 ms on 16 Nov was the cap, not a hitch | Qualität unchanged; headroom ideas in backlog P40; render CPU time now in the perf readout and telemetry |
+| Soft-lock risk | Captive guards and event leftovers counted for the fight, so a stuck one could hold the last wave open | Fights count only their own enemies |
+| After the boss | A death in the 6 s after the win or while exploring showed the death screen and retried the boss; the loot chip stayed | Victory clears enemy shots and zones; such a death shows the victory screen; the loot search ends on death |
+| Telemetry | Fight `low` started from the life at fight start without saying so; shot deaths had no shooter | `h0` per fight, „Speier · Geschoss“; run `rms` (render ms) and `minScale` |
+
 ## 2026-11-17 · Köpenick on main before M12 (Johannes, PC, phone)
 
 Played the build without the new enemies. Fixed at once (same PR as M12): see the last column. The rest is in `docs/backlog.md` (P rows) and `docs/tasks/m11d-map-realism.md`.

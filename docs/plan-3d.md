@@ -13,7 +13,7 @@ The ceiling of the Canvas 2D renderer is the main limit on the look: lights, sha
 | 3D1 | New repo `johakunath/Ruinenstadt-Berlin`. The 2D game stays playable and untouched | Old repo keeps its no-build rule; no risk to the current game |
 | 3D2 | Three.js (WebGL 2 renderer), browser first, shareable link | Friends play without installing; JS know-how; cloud workflow |
 | 3D3 | TypeScript + Vite, CI on every PR, deploy to GitHub Pages via Actions | See *Build setup* below |
-| 3D4 | Two render profiles from the start: **Qualität** (PC, full effects) and **Leistung** (tablet/phone) | PC is the fidelity target, tablet must stay playable |
+| 3D4 | Two render profiles from the start: **Qualität** (PC, full effects) and **Leistung** (tablet/phone). Three since 2026-11-20 (Q1): Qualität, Ausgewogen (the former Leistung), Leistung (phones, hot devices) | PC is the fidelity target, tablet must stay playable |
 | 3D5 | Gate 1 tests look, feel and performance together, measured on the PC and the Tab S9 | A pretty scene that stutters on the tablet or feels bad is no answer |
 | 3D6 | Gameplay on the ground plane with 2D collision and real hitboxes (see *Collision*), confirmed 2026-11-14. Full 3D physics only where a feature needs it | Precision comes from shapes and hit frames, not from a third axis |
 | 3D7 | Assets: CC0 packs and Mixamo for gate 1; the hero becomes a proper custom character from gate 2 on (realistic proportions, swappable clothes and weapons, style bible). Mixamo files in the public repo are accepted (non-commercial, Johannes takes the risk) | Fast first test, quality where it matters most |
@@ -70,14 +70,14 @@ No React, no ECS framework, no engine abstraction.
 
 ## Render budget (start values, tuned in gate 1)
 
-| | Qualität (PC) | Leistung (Tab S9, phone) |
-|---|---|---|
-| Resolution | Native up to DPR 2 | DPR cap 1 to 1.25, optional dynamic resolution |
-| Shadows | Moonlight (one directional) 2048 map, selected objects | 1024 map, hero and big props only |
-| Point lights | Up to 8 without shadows, 1 to 2 with | Up to 4 without shadows |
-| Post | Tone mapping, bloom, GTAO, color grading, optional outline | Tone mapping, light bloom, color grading |
-| Characters | Full animation rate | Distant enemies animate at reduced rate |
-| Target | 60 fps, p95 ≤ 17 ms with 40 enemies | 60 fps with 20 enemies, never under 45 |
+| | Qualität (PC) | Ausgewogen (Tab S9) | Leistung (phone, hot device) |
+|---|---|---|---|
+| Resolution | Native up to DPR 2 | DPR cap 1.25, dynamic resolution down to 0.75 | DPR 1, dynamic resolution down to 0.6 |
+| Shadows | Moonlight (one directional) 2048 map, every frame | 1024 map, every 2nd frame | 1024 map, every 2nd frame, caster boxes only |
+| Point lights | Up to 8 without shadows, 1 to 2 with | Up to 4 without shadows | Up to 4 without shadows |
+| Post | Tone mapping, bloom, GTAO, color grading, optional outline | Tone mapping, light bloom, color grading, pre-pass 0.75 | Same, pre-pass 0.5, bloom at half size |
+| Characters | Full animation rate | Distant enemies animate at reduced rate (from 6 m) | From 4 m |
+| Target | 60 fps, p95 ≤ 17 ms with 40 enemies (on a 144 Hz screen the 60 fps cap alone gives p95 21 ms: 2 and 3 refreshes in turn) | 60 fps with 20 enemies, never under 45 | 60 fps on a mid-range phone, warm not hot |
 
 Lightmaps only if gate 1 shows the budget is not enough; they need a Blender bake on the PC.
 

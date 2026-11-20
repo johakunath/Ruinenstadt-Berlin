@@ -25,9 +25,9 @@ Two findings set the ranking. The world is drawn three times per frame, and the 
 | # | Measure | Expected effect | Cost and risk | Status |
 |---|---|---|---|---|
 | 1 | Chunks 48 → 32 m (ground 31.5 m, a multiple of its 1.5 m grid) | Measured: triangles −17 to −24 %, draw calls −2 to +7 % (shadow pass +11 %, beauty and pre-pass down) | Two constants, same picture | built |
-| 2 | Shadow map at most 30 times a second on Leistung (`Profile.shadowInterval`) | Every second frame at 60 fps skips the shadow pass: about −19 % of calls and triangles on average | Small. The light moves only with a new shadow map, so shadows do not swim; the hero's shadow is up to one frame late | built, Johannes checks the look |
+| 2 | Shadow map at most 30 times a second on Leistung (`Profile.shadowInterval`; since 2026-11-20 `shadowEvery`, every 2nd frame on Ausgewogen and Leistung, counted in frames so 30 fps saves too) | Every second frame at 60 fps skips the shadow pass: about −19 % of calls and triangles on average | Small. The light moves only with a new shadow map, so shadows do not swim; the hero's shadow is up to one frame late | built, Johannes checks the look |
 | 3 | P1b proxy passes: one vertex buffer per chunk, materials as index ranges; pre-pass and shadow pass draw the chunk in one call each | Draw calls about −50 % (to roughly 220 to 250), triangles unchanged | Medium to large refactor of `src/render/batch.ts` and the chunk loop; +index memory (32-bit). Own task | open: `docs/tasks/p1b-proxy-passes.md` |
-| 4 | Shadow casters on Leistung: only the caster boxes, not the merged chunk meshes (`?shadows=boxes`) | Measured at one spot: shadow pass 236 → 66 calls, 263k → 170k triangles (frame −29 % calls, −12 % triangles; trees and other instanced things still cast) | Look: small props, fences and lamp posts lose their shadow. Needs Johannes' eye on the tablet; becomes a profile field if accepted | test switch built |
+| 4 | Shadow casters on Leistung (built 2026-11-20 as the new lowest level's default): only the caster boxes, not the merged chunk meshes (`?shadows=boxes`) | Measured at one spot: shadow pass 236 → 66 calls, 263k → 170k triangles (frame −29 % calls, −12 % triangles; trees and other instanced things still cast) | Look: small props, fences and lamp posts lose their shadow. Needs Johannes' eye on the tablet; becomes a profile field if accepted | test switch built |
 | 5 | Material audit: 35 to 45 materials per chunk, half of the beauty draws have under 200 triangles; merge materials that differ only in tint or use a small painted texture | Beauty and pre-pass calls about −30 % | Medium to high, touches many builders. After P1b | open |
 | 6 | Hero: about 15 draws in each of four passes; merge clothing meshes per material when equipping | −30 to −40 calls | Medium (H1 follow-up) | open |
 | 7 | Chunks 24 m | Triangles a further −8 to −12 % | Today +4 to +6 % calls (shadow pass); free after P1b | after P1b |
@@ -43,6 +43,14 @@ Two findings set the ranking. The world is drawn three times per frame, and the 
 
 ### Johannes measures
 Checks 1 to 5 and 7 in `docs/tasks/pt-hardware-checks.md` (one list for all sessions). A third, lowest quality level is planned as `docs/tasks/q1-quality-levels.md`; rows 4 and 8 of the ranking are its candidates, row 3 (P1b) is for every level.
+
+## Step 3 (2026-11-20, code review): cheap levers found
+| Measure | Effect (cloud counts) |
+|---|---|
+| Crates and bins only within 45 m of the hero (one instanced mesh per kind spanned the map and was never culled) | Köpenick start −146k triangles on every level; Xhain start on Ausgewogen 553k → 168k |
+| Culling spheres for raptor, rex and mech bodies | Off-screen dinos and mechs no longer drawn in three passes |
+| Shadow rate in frames, not seconds | A tablet at 30 fps now skips every 2nd shadow render too |
+| Three levels and dynamic resolution (`q1-quality-levels.md`) | Leistung for phones; the two lower levels lower the render scale while frames run late |
 
 ## Older candidates (row 8 above; measure one at a time)
 | Candidate | Expected gain | Risk |
