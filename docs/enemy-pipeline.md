@@ -16,11 +16,11 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 | Charlottenburg | 14 (9 normal, 4 bosses, the Spiegelbild) | 12 (6 zombie; Conférencier and Ringvater on `human1`; Scherbentänzerin, Spiegelpaar, Spiegelbild and Diva on `human2`) | 0 | 2 (crow, rat) |
 | Camp | 0 enemies, 7 keepers | 0 | 7 on `hero.glb` | 0 |
 
-- Roster: 41 kinds (19 normal or special, 21 bosses, the Spiegelbild) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types. M16 (2026-11-19, `docs/tasks/m12d-charlottenburg-enemies.md`): three Charlottenburg kinds, four bosses and the reflection, all code gear (placeholder); 1920s dress for Schlurfer, Hetzer, Brocken and Speier on `revue` maps (render only). Kodex: glyphs, no busts yet (ids E19 to E21, X20 to X23 reserved); no boss voices yet.
+- Roster: 41 kinds (19 normal or special, 21 bosses, the Spiegelbild) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types. M16 (2026-11-19, `docs/tasks/m12d-charlottenburg-enemies.md`): three Charlottenburg kinds, four bosses and the reflection, all code gear (placeholder); 1920s dress for Schlurfer, Hetzer, Brocken and Speier on `revue` maps (render only). Kodex: 3D renders E19 to E21, X20 to X23 (2026-11-20); no boss voices yet.
 - Bodies: 22 kinds on the zombie rig (2 without own gear: walker, runner), 4 with an own GLB, 7 code-built. None is marked `final`.
 - WP5 fix: zombie-rig gear is now built in the idle pose (`EnemyView.inIdle`); before, it took the pose the pooled view held (often a death pose), so helmets, caps, speakers, torch and lantern sat tilted.
 - WP5 step 3 (H2): coats are fitted to the skinned body at build time (`BodyFit`, `fitCoat` in `src/render/enemies.ts`): ring shells per bone, skirts open at the front and hang (`hangSkirts`). Reuse them for any new coat on the zombie rig.
-- Kodex: all 33 kinds have painted portraits, including 13 added in PR #56. SVG glyphs remain as fallbacks. Existing 2D busts still have the body mismatches listed below. The new portraits follow the current 3D designs and await side-by-side review.
+- Kodex (2026-11-20, Johannes' playtest): every enemy and boss portrait (E, X) and the four elite portraits (L, a Brocken with the mod's tint and a rim light in its colour) are renders of the in-game 3D bodies (`tools/kodex-portraits.mjs`), so all 40 Kodex kinds match their body; the painted 2D and Codex busts are replaced (in git history). SVG glyphs remain as fallbacks. Survivor portraits S01 to S07 are unchanged.
 - Voices (S3, WP5 step 4): the 16 human, robot and machine bosses each say three lines (`assets/voices/<kind>-<trigger>.ogg`: start, rage, signature special; table in `tools/voices.mjs`, rules in `src/audio/voices.ts`). No voice: the Rex and every normal kind. New boss: add its three lines and its `SIGNATURE` entry.
 - Elite tiers in every map: an elite Brocken guards one side passage (`guards` in each map file; the tunnel "mini-boss" is this guard).
 
@@ -30,57 +30,57 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte, C Charlottenbu
 
 | Name | Kind | Role | Maps | Body | Refined | Kodex | Matches 3D | Needs | Prio |
 |---|---|---|---|---|---|---|---|---|---|
-| Schlurfer | walker | normal | K X T A M | zombie, no gear (cyber cables on M) | ok | E01 | yes | final skin pass | P1 |
-| Hetzer | runner | normal | K X T A M | zombie, longer arms (cyber on M) | ok | E09 | yes | final skin pass | P1 |
-| Brocken | brute | normal, elite guard | K X T A M | zombie+gear: open orange high-vis vest with reflective bands, collar | ok | E02 | yes | final skin pass | P1 |
-| Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils, bloated belly | ok | E03 | yes | final skin pass (bust skin is browner) | P1 |
-| Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0) | ok | E11 | yes | none | P1 |
-| Krähe | crow | normal | K X A M | code (body, wings, beak) | ok | E05 | yes | none | P1 |
-| Der Feldwebel | feldwebel | boss | K | human+gear (WP5 H2, pick A): Pickelhaube with gold eagle, high-collared greatcoat to the knee fitted to the body, gold epaulettes, moustache, sabre; parchment skin, Prussian-blue trousers | ok | X04 | yes (bust coat rust-brown, body Prussian blue as the mockup) | hardware look check | P1 |
-| Der Turmwächter | waechter | boss | K | GLB `mech.glb` (Leela, CC0; H3 step 3): the Fernsehturm on her legs, head hull hidden, ribbed tapering shaft over torso and neck, steel sphere head with lit cyan window ring (flares in his volley and ring), red-white antenna with beacon, flickering cyan sparks; rust tint on the legs | ok | X03 | yes (bust has a face, the body is the tower) | hardware look check (row 36) | P1 |
-| Der Rex | rex | boss | K | GLB `rex.glb` (Quaternius CC0) | ok | E12 | yes | none | P1 |
-| Hauptmann von Köpenick | hauptmann | boss | K | human+gear (WP5 H2, pick B): Pickelhaube with gold eagle (no plume), white moustache, long officer's greatcoat, red cape, gold sash, epaulettes, sabre | ok | X01 | yes (cape and sash added per pick) | hardware look check | P1 |
-| Ratte | rat | normal (packs of 5) | X | code (body, ears, tail) | ok | E04 | yes | none | P2 |
-| Der Grenzer | grenzer | boss | X | human+gear: peaked cap, olive tunic, rifle; WP5 H2: pale grey skin, GDR stone-grey trousers | placeholder | X11 | unverified | silhouette review | P2 |
-| Der Brandmeister | brandmeister | boss | X | human+gear (WP5 H2, pick A): leather fire helmet with flickering flames, turnout coat with yellow bands fitted to the body (no more clipping), chest lamp; torch removed | ok | X10 | yes | hardware look check | P2 |
-| Die Rattenmutter | rattenmutter | boss | X | zombie+gear (WP5 H2, pick A): giant rat head with crown on the neck (skull shrunk away), fur cloak, torn oxblood rag dress, strong hunch | ok | X06 | yes | hardware look check | P2 |
-| Die Spreehexe | spreehexe | boss | X | female+gear: punk crest, black coat, acid hand | placeholder | X12 | unverified | silhouette review | P2 |
-| Der Schaffner | schaffner | boss | T | human+gear (WP5 H2, pick A): peaked cap with brass badge, long double-breasted navy coat, the Kelle held high in the right hand | ok | X05 | yes | hardware look check | P4 |
-| Brigadeghul | walker (render) | normal | A | zombie+gear: Blaumann, cap, armband | ok | E01 (walker) | no, walker bust | none, shares walker | P4 |
-| Uhrwerkläufer | uhrwerk | normal | A | GLB `mech.glb` (Leela, CC0) + clock shield, dome, key | ok | E16 | unverified | compare portrait and body | P4 |
-| Wurzler | wurzler | special | A | zombie+gear: roots, apron, sunflower face | placeholder | E17 | unverified | silhouette review | P4 |
-| Kernspeier | kernspeier | special | A | code (clay pot, stem, toothed sunflower) | ok | E18 | unverified | compare portrait and body | P4 |
-| Die Wurzel-Mutter | wurzelmutter | boss | A | female+gear: roots, crown of sunflowers | placeholder | X13 | unverified | silhouette review | P4 |
-| Der Große Uhrwerkläufer | uhrwerkgross | boss | A | GLB `mechbig.glb` (Mike, CC0) + key | ok | X14 | unverified | compare portrait and body | P4 |
-| Der Volkseigene Koloss | volkskoloss | boss | A | code (Plattenbau slab, clockwork legs, arms) | ok | X15 | unverified | compare portrait and body | P4 |
-| Die Weltzeituhr | weltzeituhr | boss | A | code (landmark rig `src/render/clock.ts` on four legs) | ok | X16 | unverified | compare portrait and body | P4 |
-| Kabelghul | kabel | normal | M | zombie+gear: lit cyan cable arches, cyan implants and eyes, red scarf, crouch | ok | E13 | yes | none | P4 |
-| Zünder | zuender | special | X A M | zombie+gear: dynamite bundle, detonator, fuse spark, red scarf | ok | E07 | yes | none | P2 |
-| Schildträger | schild | normal | M | zombie+gear: riot helmet with visor, shoulder plates, shield (swings aside when the guard opens) | ok | E06 | yes | none | P4 |
-| Heuler | heuler | special | X | zombie+gear: swollen throat that bulges on the howl | ok | E08 | yes | none | P2 |
-| Boxenkopf | bass | special | M | zombie+gear: speaker head, violet rags | ok | E14 | yes | none | P4 |
-| Drohne | drone | normal | M | code (`buildDrone`) | ok | E15 | unverified | compare portrait and body | P4 |
-| Der Türsteher | tuersteher | boss | M | human+gear: bomber jacket, glasses, clipboard; rage effect: neon bars across the Tor passages (`src/render/barriers.ts`, P25) | placeholder | X17 | unverified | silhouette review; bar look on hardware | P4 |
-| Die Wachdrohne | wachdrohne | boss | M | code (`buildDrone`, big) | ok | X18 | unverified | compare portrait and body | P4 |
-| Der Dirigent | dirigent | boss | M | human+gear: tailcoat, bow tie, baton, speaker | placeholder | X19 | unverified | silhouette review | P4 |
-| Der Bassprediger | bassprediger | boss | M | human+gear: speaker head, five cables, mixer | ok | X09 | yes | none | P4 |
-| Scherbentänzerin | scherbe | normal | C | female+gear: glass corset and torn shard tutu, violet feather plume, glass tiara, porcelain half mask, pearls; spins (two turns) in the pirouette | placeholder | glyph (E19 reserved) | n/a | Codex bust; silhouette review | P5 |
-| Logenbrecher | loge | normal (2 alive) | C | zombie+gear (Brocken shape): torn tux with crimson collar and cape scrap, smoked-glass front on the chest (swings aside when the guard is down or he stands open), lit chandelier drops behind it, glass shards on shoulders, forearms and fists | placeholder | glyph (E20 reserved) | n/a | Codex bust; front readable at play distance | P5 |
-| Spiegelsouffleur | souffleur | special (2 alive) | C | zombie+gear (thin): long torn plum coat, white mirror mask, fan crest of eleven glass blades behind the head, violet ribbons; hovers 0.3 m (render only) | placeholder | glyph (E21 reserved) | n/a | Codex bust | P5 |
-| Zeitlose in 1920s dress | walker, runner, brute, spitter (render) | normal | C | zombie+gear on `flavor: 'revue'`: tails or an usher's jacket and cap (Schlurfer, by id), a page's uniform and pillbox (Hetzer), a stagehand's apron, flat cap and rope (Brocken, replaces the vest), a cigarette tray and pillbox (Speier) | placeholder | E01, E09, E02, E03 | no, base busts | none, share the base busts | P5 |
-| Der Conférencier | conferencier | boss | C | human+gear: tailcoat open at the front, shirt front with pearl studs, crimson bow tie, top hat, half mask of mirror shards, silver cane with a cut-glass knob | placeholder | glyph (X20 reserved) | n/a | Codex bust; voices | P5 |
-| Der Ringvater | ringvater | boss | C | human+gear (broad): long dark coat with a thick fur collar, the Ringverein's crimson sash with a brass badge, bowler, moustache, three signet rings per hand; gold ring at his feet while guarded (`src/render/threats.ts`) | placeholder | glyph (X21 reserved) | n/a | Codex bust; voices | P5 |
-| Das Spiegelpaar | spiegelpaar | boss | C | female+gear: the dancer's cut in silver glass, red sash, lit heart, violet plume; warm ring at her feet | placeholder | glyph (X22 reserved) | n/a | Codex bust; voices | P5 |
+| Schlurfer | walker | normal | K X T A M | zombie, no gear (cyber cables on M) | ok | E01 (3D render) | yes | final skin pass | P1 |
+| Hetzer | runner | normal | K X T A M | zombie, longer arms (cyber on M) | ok | E09 (3D render) | yes | final skin pass | P1 |
+| Brocken | brute | normal, elite guard | K X T A M | zombie+gear: open orange high-vis vest with reflective bands, collar | ok | E02 (3D render) | yes | final skin pass | P1 |
+| Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils, bloated belly | ok | E03 (3D render) | yes | final skin pass | P1 |
+| Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0) | ok | E11 (3D render) | yes | none | P1 |
+| Krähe | crow | normal | K X A M | code (body, wings, beak) | ok | E05 (3D render) | yes | none | P1 |
+| Der Feldwebel | feldwebel | boss | K | human+gear (WP5 H2, pick A): Pickelhaube with gold eagle, high-collared greatcoat to the knee fitted to the body, gold epaulettes, moustache, sabre; parchment skin, Prussian-blue trousers | ok | X04 (3D render) | yes | hardware look check | P1 |
+| Der Turmwächter | waechter | boss | K | GLB `mech.glb` (Leela, CC0; H3 step 3): the Fernsehturm on her legs, head hull hidden, ribbed tapering shaft over torso and neck, steel sphere head with lit cyan window ring (flares in his volley and ring), red-white antenna with beacon, flickering cyan sparks; rust tint on the legs | ok | X03 (3D render) | yes | hardware look check (row 36) | P1 |
+| Der Rex | rex | boss | K | GLB `rex.glb` (Quaternius CC0) | ok | E12 (3D render) | yes | none | P1 |
+| Hauptmann von Köpenick | hauptmann | boss | K | human+gear (WP5 H2, pick B): Pickelhaube with gold eagle (no plume), white moustache, long officer's greatcoat, red cape, gold sash, epaulettes, sabre | ok | X01 (3D render) | yes | hardware look check | P1 |
+| Ratte | rat | normal (packs of 5) | X | code (body, ears, tail) | ok | E04 (3D render) | yes | none | P2 |
+| Der Grenzer | grenzer | boss | X | human+gear: peaked cap, olive tunic, rifle; WP5 H2: pale grey skin, GDR stone-grey trousers | placeholder | X11 (3D render) | yes | silhouette review | P2 |
+| Der Brandmeister | brandmeister | boss | X | human+gear (WP5 H2, pick A): leather fire helmet with flickering flames, turnout coat with yellow bands fitted to the body (no more clipping), chest lamp; torch removed | ok | X10 (3D render) | yes | hardware look check | P2 |
+| Die Rattenmutter | rattenmutter | boss | X | zombie+gear (WP5 H2, pick A): giant rat head with crown on the neck (skull shrunk away), fur cloak, torn oxblood rag dress, strong hunch | ok | X06 (3D render) | yes | hardware look check | P2 |
+| Die Spreehexe | spreehexe | boss | X | female+gear: punk crest, black coat, acid hand | placeholder | X12 (3D render) | yes | silhouette review | P2 |
+| Der Schaffner | schaffner | boss | T | human+gear (WP5 H2, pick A): peaked cap with brass badge, long double-breasted navy coat, the Kelle held high in the right hand | ok | X05 (3D render) | yes | hardware look check | P4 |
+| Brigadeghul | walker (render) | normal | A | zombie+gear: Blaumann, cap, armband | ok | E01 (walker) | no, walker render (no Blaumann) | none, shares walker | P4 |
+| Uhrwerkläufer | uhrwerk | normal | A | GLB `mech.glb` (Leela, CC0) + clock shield, dome, key | ok | E16 (3D render) | yes | none | P4 |
+| Wurzler | wurzler | special | A | zombie+gear: roots, apron, sunflower face | placeholder | E17 (3D render) | yes | silhouette review | P4 |
+| Kernspeier | kernspeier | special | A | code (clay pot, stem, toothed sunflower) | ok | E18 (3D render) | yes | none | P4 |
+| Die Wurzel-Mutter | wurzelmutter | boss | A | female+gear: roots, crown of sunflowers | placeholder | X13 (3D render) | yes | silhouette review | P4 |
+| Der Große Uhrwerkläufer | uhrwerkgross | boss | A | GLB `mechbig.glb` (Mike, CC0) + key | ok | X14 (3D render) | yes | none | P4 |
+| Der Volkseigene Koloss | volkskoloss | boss | A | code (Plattenbau slab, clockwork legs, arms) | ok | X15 (3D render) | yes | none | P4 |
+| Die Weltzeituhr | weltzeituhr | boss | A | code (landmark rig `src/render/clock.ts` on four legs) | ok | X16 (3D render) | yes | none | P4 |
+| Kabelghul | kabel | normal | M | zombie+gear: lit cyan cable arches, cyan implants and eyes, red scarf, crouch | ok | E13 (3D render) | yes | none | P4 |
+| Zünder | zuender | special | X A M | zombie+gear: dynamite bundle, detonator, fuse spark, red scarf | ok | E07 (3D render) | yes | none | P2 |
+| Schildträger | schild | normal | M | zombie+gear: riot helmet with visor, shoulder plates, shield (swings aside when the guard opens) | ok | E06 (3D render) | yes | none | P4 |
+| Heuler | heuler | special | X | zombie+gear: swollen throat that bulges on the howl | ok | E08 (3D render) | yes | none | P2 |
+| Boxenkopf | bass | special | M | zombie+gear: speaker head, violet rags | ok | E14 (3D render) | yes | none | P4 |
+| Drohne | drone | normal | M | code (`buildDrone`) | ok | E15 (3D render) | yes | none | P4 |
+| Der Türsteher | tuersteher | boss | M | human+gear: bomber jacket, glasses, clipboard; rage effect: neon bars across the Tor passages (`src/render/barriers.ts`, P25) | placeholder | X17 (3D render) | yes | silhouette review; bar look on hardware | P4 |
+| Die Wachdrohne | wachdrohne | boss | M | code (`buildDrone`, big) | ok | X18 (3D render) | yes | none | P4 |
+| Der Dirigent | dirigent | boss | M | human+gear: tailcoat, bow tie, baton, speaker | placeholder | X19 (3D render) | yes | silhouette review | P4 |
+| Der Bassprediger | bassprediger | boss | M | human+gear: speaker head, five cables, mixer | ok | X09 (3D render) | yes | none | P4 |
+| Scherbentänzerin | scherbe | normal | C | female+gear: glass corset and torn shard tutu, violet feather plume, glass tiara, porcelain half mask, pearls; spins (two turns) in the pirouette | placeholder | E19 (3D render) | yes | silhouette review | P5 |
+| Logenbrecher | loge | normal (2 alive) | C | zombie+gear (Brocken shape): torn tux with crimson collar and cape scrap, smoked-glass front on the chest (swings aside when the guard is down or he stands open), lit chandelier drops behind it, glass shards on shoulders, forearms and fists | placeholder | E20 (3D render) | yes | front readable at play distance | P5 |
+| Spiegelsouffleur | souffleur | special (2 alive) | C | zombie+gear (thin): long torn plum coat, white mirror mask, fan crest of eleven glass blades behind the head, violet ribbons; hovers 0.3 m (render only) | placeholder | E21 (3D render) | yes | none | P5 |
+| Zeitlose in 1920s dress | walker, runner, brute, spitter (render) | normal | C | zombie+gear on `flavor: 'revue'`: tails or an usher's jacket and cap (Schlurfer, by id), a page's uniform and pillbox (Hetzer), a stagehand's apron, flat cap and rope (Brocken, replaces the vest), a cigarette tray and pillbox (Speier) | placeholder | E01, E09, E02, E03 | no, base renders | none, share the base renders | P5 |
+| Der Conférencier | conferencier | boss | C | human+gear: tailcoat open at the front, shirt front with pearl studs, crimson bow tie, top hat, half mask of mirror shards, silver cane with a cut-glass knob | placeholder | X20 (3D render) | yes | voices | P5 |
+| Der Ringvater | ringvater | boss | C | human+gear (broad): long dark coat with a thick fur collar, the Ringverein's crimson sash with a brass badge, bowler, moustache, three signet rings per hand; gold ring at his feet while guarded (`src/render/threats.ts`) | placeholder | X21 (3D render) | yes | voices | P5 |
+| Das Spiegelpaar | spiegelpaar | boss | C | female+gear: the dancer's cut in silver glass, red sash, lit heart, violet plume; warm ring at her feet | placeholder | X22 (3D render) | yes | voices | P5 |
 | Spiegelbild | spiegelbild | boss part (cannot be hurt) | C | female+gear in cold frost glass, no sash, no heart, mirrored left to right (negative x scale); copies her animation | placeholder | none (not in the Kodex) | n/a | none | P5 |
-| Die Diamantene Diva | diva | district boss | C | female+gear: glass corset, a gown of three stepped tiers of overlapping pleated glass fan panels with silver ribs and pointed shard hems, crystal drops on the lowest (2026-11-19, replaced the stacked cones; the bottom tier breaks at 66 %, the middle at 33 %), violet cape to the floor, tall halo of violet feathers, glass spikes and diamonds, lit crystal heart, stage mask, four big glass fans floating round her (one merged mesh) | placeholder | glyph (X23 reserved) | n/a | Codex bust; voices; tier break effect | P5 |
-| Flink / Brennend / Spaltend / Gepanzert | elite mods | elite | all | host body ×1.15 plus a faint glow in the mod colour | placeholder | L01 to L04 | unverified | mod-specific gear | P1 |
+| Die Diamantene Diva | diva | district boss | C | female+gear: glass corset, a gown of three stepped tiers of overlapping pleated glass fan panels with silver ribs and pointed shard hems, crystal drops on the lowest (2026-11-19, replaced the stacked cones; the bottom tier breaks at 66 %, the middle at 33 %), violet cape to the floor, tall halo of violet feathers, glass spikes and diamonds, lit crystal heart, stage mask, four big glass fans floating round her (one merged mesh) | placeholder | X23 (3D render) | yes | voices; tier break effect | P5 |
+| Flink / Brennend / Spaltend / Gepanzert | elite mods | elite | all | host body ×1.15 plus a faint glow in the mod colour | placeholder | L01 to L04 (3D render on a Brocken) | yes | mod-specific gear | P1 |
 | Späti-Wirt | keeper | NPC | all expeditions | `hero.glb` in vest + flat cap, apron (`src/render/content.ts`) | placeholder | none | n/a | own look | P3 |
 | Händler | trader | NPC | expeditions | `hero.glb` + wide hat, pack, green lantern | placeholder | none | n/a | own look | P3 |
 | Gefangener | captive | NPC | expeditions | `hero.glb` in vest, no gear | placeholder | none | n/a | per-survivor look | P3 |
 | Dr. Ahmet, Mira, Jonas, Oma Gerda, Lin, Kalle | survivors | NPC | camp | `hero.glb` + per-station dress (`dress` in `src/render/camp-stations.ts`) | placeholder | S01 to S06 | unverified | compare busts | P3 |
 | Ilse | kom keeper | NPC | camp | `hero.glb` + olive cap, red armband, clipboard | placeholder | S07 (camp) | unverified | Kodex entry | P3 |
 
-Sources: kinds and bodies `src/data/enemies.ts` (`ENEMIES[].body`), gear `gearFor` in `src/render/enemies.ts` and `src/render/enemies-alex.ts`, busts `ENEMY_PORTRAIT` in `src/ui/menu.ts`, licences `assets/LICENSES.md`. "Placeholder" for zombie-rig bosses follows `docs/tasks/m12b-xhain-enemies.md` and `m12c-mitte-enemies.md`; for Köpenick and tunnel bosses it is a judgment (no task note).
+Sources: kinds and bodies `src/data/enemies.ts` (`ENEMIES[].body`), gear `gearFor` in `src/render/enemies.ts` and `src/render/enemies-alex.ts`, portraits `ENEMY_PORTRAIT` in `src/ui/menu.ts`, licences `assets/LICENSES.md`. "Placeholder" for zombie-rig bosses follows `docs/tasks/m12b-xhain-enemies.md` and `m12c-mitte-enemies.md`; for Köpenick and tunnel bosses it is a judgment (no task note).
 
 ## Priorities
 
@@ -89,15 +89,15 @@ Sources: kinds and bodies `src/data/enemies.ts` (`ENEMIES[].body`), gear `gearFo
 | P1 | Köpenick enemies and bosses | Boss looks built (WP5 step 3, proof `docs/proof/wp5/bosses-h2.webp`); hardware look check; elite readability |
 | P2 | Xhain | Rattenmutter and Brandmeister built (WP5 step 3); compare Grenzer and Spreehexe with X11 and X12 |
 | P3 | NPCs | Späti-Wirt, Händler, captive and the 7 keepers all share the hero body: give each a distinct silhouette; check survivors against S01 to S06; Kodex entry for Ilse (her portrait is used in the camp) |
-| P5 | Charlottenburg | Codex busts for the seven Kodex entries (board `docs/style/charlottenburg.png`), boss voices (three lines each and `SIGNATURE`), look review of the code bodies (proof `docs/proof/m16-charlottenburg/enemies/`) |
-| P4 | Tunnels, Alexanderplatz, Mitte | Schaffner built (WP5 step 3); compare the new portraits with their bodies |
+| P5 | Charlottenburg | Boss voices (three lines each and `SIGNATURE`), look review of the code bodies (proof `docs/proof/m16-charlottenburg/enemies/`) |
+| P4 | Tunnels, Alexanderplatz, Mitte | Schaffner built (WP5 step 3) |
 
 ## Kodex from 3D renders
 
-- Render Kodex portraits from the in-game bodies with `tools/enemy-sheet.mjs` (`kind=…&state=…`, dev server running), so the Kodex always shows the body the player fights.
-- Framing: head and shoulders (bosses and creatures: full head and upper body), warm key light, cool rim light, dark plain background, 64 px target with a 256 px source. `enemy-sheet.ts` has only a fixed hemisphere and sun light and a `view` option today: a portrait mode with camera framing and the two lights is still to build.
-- Swap one kind at a time once its body is `final`; painted busts stay until then.
-- Store renders as `assets/portraits/<id>.webp` with a row in `assets/LICENSES.md`, mapped in `ENEMY_PORTRAIT`.
+- Every enemy, boss and elite portrait is a render of the in-game body (2026-11-20), so the Kodex always shows the body the player fights. Survivor portraits (S) are painted busts.
+- Regenerate all: `PORT=5173 node tools/kodex-portraits.mjs` (dev server running; add kind or elite names for a few, `OUT=dir` for a preview). It reads `ENEMY_PORTRAIT` and `ELITE_PORTRAIT` in `src/ui/menu.ts` and renders `tools/enemy-sheet.html?portrait=1&kinds=…` (`kind+mod` for an elite, on a Brocken).
+- Framing: the top 42 % of the body's visible bounding box (long bodies: only the front part), camera 28° off the front; small creatures and drones whole; `PORTRAIT` in `tools/enemy-sheet.ts` holds the few overrides (plumes, the Diva's fans, the shield). Warm key light, cool rim light (elites: the mod colour), the `.kimg` card gradient as background, idle pose. Rendered at 512 px, saved as 256 px WebP (2 to 7 KB).
+- Rerun it whenever a body or its gear changes; a new kind needs only its id in `ENEMY_PORTRAIT` and a row in `assets/LICENSES.md`.
 
 ## Route per job
 

@@ -64,6 +64,9 @@ export class Input {
       if (e.code === 'KeyM') { this.onMap(); return; }
       if (!this.enabled) return;
       this.keys.add(e.code);
+      // Moving with the keys after the pad or touch shows the key labels again (playtest 2026-11-20). From the
+      // mouse it stays 'mouse': the cursor keeps aiming.
+      if (this.device === 'gamepad' || this.device === 'touch') this.device = 'keyboard';
       if (e.code === 'KeyE') this.press('power', 'keyboard');
       if (e.code === 'KeyR') this.press('ultimate', 'keyboard');
       if (e.code === 'KeyQ' || e.code === 'Digit1') this.press('verband', 'keyboard');
@@ -80,6 +83,8 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear());
     target.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;
+      // A real move (not a jitter) after the pad or touch hands the labels and the aim back to the mouse.
+      if ((this.device === 'gamepad' || this.device === 'touch') && this.enabled && Math.hypot(e.clientX - this.pointerX, e.clientY - this.pointerY) > 30) this.device = 'mouse';
       this.pointerX = e.clientX;
       this.pointerY = e.clientY;
     });

@@ -141,12 +141,12 @@ export class DamageNumbers {
       slot.life = r.kind === 'heal' ? HEAL_LIFE : LIFE;
       slot.x = r.x; slot.y = r.y; slot.z = r.z;
       // Dealt numbers jitter a little (2D); at the hero, taken damage sits right and heal ticks left of the +X Leben line.
-      slot.jx = r.kind === 'taken' ? 26 : r.kind === 'tick' ? -34 : r.kind === 'heal' ? 0 : (Math.random() - 0.5) * 20;
+      slot.jx = r.kind === 'taken' ? 32 : r.kind === 'tick' ? -42 : r.kind === 'heal' ? 0 : (Math.random() - 0.5) * 20;
       // Numbers born at the same spot stack upward instead of covering each other (a pack around the hero).
       const s = screenOf(r.x, r.y, r.z);
       slot.sx = s.x + slot.jx;
       slot.dy = 0;
-      for (let k = 0; k < 4 && this.nums.some((n) => n !== slot && n.on && n.t < 0.4 && Math.abs(n.sx - slot!.sx) < 44 && Math.abs(n.sy - (s.y + slot!.dy)) < 18); k++) slot.dy -= 20;
+      for (let k = 0; k < 4 && this.nums.some((n) => n !== slot && n.on && n.t < 0.4 && Math.abs(n.sx - slot!.sx) < 56 && Math.abs(n.sy - (s.y + slot!.dy)) < 24); k++) slot.dy -= 26;
       slot.sy = s.y + slot.dy;
       slot.val = r.val;
       slot.kind = r.kind;

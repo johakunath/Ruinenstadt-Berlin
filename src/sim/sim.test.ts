@@ -4,6 +4,7 @@ import { ENEMIES } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { spawnEnemy } from './enemies';
 import { createSim, stepSim } from './sim';
+import { HERO_TEMPO } from './player';
 import { DT, NO_INPUT, type Sim, type SimEvent, type SimInput } from './types';
 
 const input = (over: Partial<SimInput> = {}): SimInput => ({ ...NO_INPUT, ...over });
@@ -88,7 +89,7 @@ describe('attack chain', () => {
     const sim = arena();
     stepSim(sim, input({ attack: true }));
     const a = ATTACKS.light1;
-    run(sim, secs(a.windup + a.active) - 2, input({ attack: true }));
+    run(sim, secs((a.windup + a.active) / HERO_TEMPO) - 2, input({ attack: true }));
     expect(sim.player.attack?.id).toBe('light1');
     run(sim, 6, input({ attack: true }));
     expect(sim.player.attack?.id).toBe('light2');
@@ -98,7 +99,7 @@ describe('attack chain', () => {
     const sim = arena();
     stepSim(sim, input({ attack: true }));
     const a = ATTACKS.light1;
-    run(sim, secs(a.windup + a.active + a.recovery + PLAYER.comboGrace) + 3);
+    run(sim, secs((a.windup + a.active + a.recovery) / HERO_TEMPO + PLAYER.comboGrace) + 3);
     stepSim(sim, input({ attack: true }));
     expect(sim.player.attack?.id).toBe('light1');
   });
@@ -142,7 +143,7 @@ describe('dodge', () => {
     stepSim(sim, input({ dodge: true }));
     expect(sim.player.state).toBe('attack');
     const a = ATTACKS.light1;
-    run(sim, secs(a.windup + a.active), input({ dodge: true }));
+    run(sim, secs((a.windup + a.active) / HERO_TEMPO), input({ dodge: true }));
     expect(sim.player.state).toBe('dodge');
   });
 

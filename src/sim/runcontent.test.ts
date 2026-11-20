@@ -197,7 +197,7 @@ describe('events', () => {
     walkTo(s, C);
     run(s, 1);
     expect(s.content.cache).toBeNull();
-    expect(s.drops.filter((d) => d.content.kind === 'item')).toHaveLength(2);
+    expect(s.drops.filter((d) => d.content.kind === 'item')).toHaveLength(Math.round(2 * ECONOMY.items));
     expect(s.drops.filter((d) => d.content.kind === 'material')).toHaveLength(3);
     expect(s.inventory.scrap).toBe(scrap + Math.round(CONTENT.cache.scrap * ECONOMY.scrap));
     const l = make();
@@ -351,7 +351,7 @@ describe('events', () => {
     run(s, 5);
     expect(s.content.done[2]).toBe(false);
   });
-  it('an elite drops an item and pays four times the Schrott', () => {
+  it('an elite pays four times the Schrott (its item rate is in loot.test)', () => {
     const s = make();
     const e = spawnEnemy(s, s.player.x + 1, s.player.z, 'walker');
     e.elite = 'flink';
@@ -363,7 +363,6 @@ describe('events', () => {
     return import('./combat').then(({ killEnemy }) => {
       killEnemy(s, e);
       expect(s.inventory.scrap).toBe(scrap + Math.round(4 * ECONOMY.scrap));
-      expect(s.drops.some((d) => d.content.kind === 'item')).toBe(true);
     });
   });
 });

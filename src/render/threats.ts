@@ -77,7 +77,8 @@ export class ThreatView {
   private time = 0;
 
   constructor(private readonly emit: Emitters) {
-    // Small life bars over hurt enemies (playtest 2026-11-17); bosses keep the big bar in the HUD.
+    // Small life bars over hurt enemies (playtest 2026-11-17); bosses always, wider and gold (playtest 2026-11-20),
+    // on top of the big bar in the HUD.
     for (let i = 0; i < BARS; i++) {
       const mk = (color: number, order: number): Sprite => {
         const sp = new Sprite(new SpriteMaterial({ color, depthTest: false, depthWrite: false, fog: false, transparent: true, opacity: 0.9 }));
@@ -392,21 +393,24 @@ export class ThreatView {
       (m.beam.material as MeshBasicMaterial).color.setHex(lock ? 0xff3a2a : stage ? 0xffe0a0 : 0x9ff0ea);
     });
 
-    // Life bars: only on bodies that took damage, nearest slots first come first served.
+    // Life bars: bosses first (the Spiegelbild cannot be hurt), then bodies that took damage, first come first served.
     let nbar = 0;
-    for (const e of s.enemies) {
+    const bosses = s.enemies.filter((e) => e.def.boss && e.kind !== 'spiegelbild');
+    const list = [...bosses, ...s.enemies];
+    for (let i = 0; i < list.length; i++) {
       if (nbar >= BARS) break;
-      if (e.state === 'dead' || e.def.boss || e.hp >= e.maxHp) continue;
+      const e = list[i]!, boss = i < bosses.length;
+      if (e.state === 'dead' || (!boss && (e.def.boss || e.hp >= e.maxHp))) continue;
       const b = this.bars[nbar++]!;
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
-      const w = Math.min(1.5, 0.7 + e.def.radius * 0.6), y = groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' || e.def.body === 'human' || e.def.body === 'female' || e.def.body === 'mech' ? e.def.scale : 1);
+      const w = boss ? Math.min(2.6, 1.6 + e.def.radius * 0.5) : Math.min(1.5, 0.7 + e.def.radius * 0.6), y = (boss ? 0.25 : 0) + groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' || e.def.body === 'human' || e.def.body === 'female' || e.def.body === 'mech' ? e.def.scale : 1);
       b.back.visible = b.fill.visible = true;
       // Sprites face the camera; the left edge is the anchor, so shift half a width to the camera's left (screen x = world x here).
       b.back.position.set(x - w / 2, y, z);
       b.fill.position.set(x - w / 2 + 0.02, y, z);
-      b.back.scale.set(w, 0.13, 1);
-      b.fill.scale.set(Math.max(0.01, (w - 0.04) * (e.hp / e.maxHp)), 0.085, 1);
-      (b.fill.material as SpriteMaterial).color.setHex(e.open > 0 ? 0xf4f1ea : e.elite ? 0xc98cff : 0xd8452e);
+      b.back.scale.set(w, boss ? 0.2 : 0.13, 1);
+      b.fill.scale.set(Math.max(0.01, (w - 0.04) * (e.hp / e.maxHp)), boss ? 0.14 : 0.085, 1);
+      (b.fill.material as SpriteMaterial).color.setHex(e.open > 0 ? 0xf4f1ea : boss ? 0xe0a03a : e.elite ? 0xc98cff : 0xd8452e);
     }
     for (let i = nbar; i < BARS; i++) this.bars[i]!.back.visible = this.bars[i]!.fill.visible = false;
 

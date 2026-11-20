@@ -70,7 +70,7 @@ describe('ported hero stats', () => {
     const s = heroStats(eq({ w: item({ element: 'fire', mods: ['tank', 'batt', 'nagel', 'gewicht'] }) }), context({ perks: { fire: 1, acid: 1, shock: 1, elp: 2 } }));
     expect(s.elements).toEqual(['fire', 'shock', 'acid']);
     expect(s.elementChance).toBe(.5);
-    expect(s.elementPower).toBeCloseTo(2.2);
+    expect(s.elementPower).toBeCloseTo(2.0);
     expect(s.eliteBonus).toBe(.2);
     expect(s.weight).toBe(4);
     expect(s.damage).toBe(12);
@@ -97,17 +97,17 @@ describe('ported hero stats', () => {
   });
 
   it('matches three hand-calculated loadouts from the 2D formula', () => {
-    // 20*(1+.14+.15+.20+.10)=31.8; round(140*1.2*1.1)=185.
+    // 20*(1+.14+.08+.20+.10)=30.4; round(140*1.2*1.1)=185.
     const a = heroStats(eq({ w: item({ value: 20, mods: ['nagel'] }), a: item({ slot: 'a', kind: 'armor', base: 'leder', value: 40 }) }), context({ upgrades: { dmg: 2, hp: 2 }, perks: { dmg: 1, hp: 1 }, drill: 5 }));
-    expect(a.damage).toBeCloseTo(31.8); expect(a.maxHp).toBe(185); expect(a.moveSpeed).toBe(1.04);
-    // 30*(1+.06+.30)*1.7=69.36, × 1.15 for the shorter Werkhammer (D8); as=(1+.24)/1.3; res=(8+10+8)/100+.12+.25=.63.
+    expect(a.damage).toBeCloseTo(30.4); expect(a.maxHp).toBe(185); expect(a.moveSpeed).toBe(1.04);
+    // 30*(1+.06+.16)*1.7=62.22, × 1.15 for the shorter Werkhammer (D8); as=(1+.16)/1.3; res=(8+10+8)/100+.12+.25=.63.
     const b = heroStats(eq({ w: item({ kind: 'hammer', base: 'werkh', value: 30, mods: ['dorn'] }), i: item({ slot: 'i', kind: 'krit', value: 5, implantMode: 2 }) }), context({ camp: { turm: true }, perks: { dmg: 2, rate: 2, res: 2, m_dampf: 1 }, shrines: { res: true } }));
-    expect(b.damage).toBeCloseTo(69.36 * 1.15); expect(b.attackSpeed).toBeCloseTo(1.24 / 1.3); expect(b.res).toBeCloseTo(.63); expect(b.crit).toBeCloseTo(.13); expect(b.leech).toBe(5);
-    // 40*(1+.07+.30+.04)=56.4; HP=round(150*1.15*1.04*1.42)=255; cooldown=.6*.8=.48.
+    expect(b.damage).toBeCloseTo(62.22 * 1.15); expect(b.attackSpeed).toBeCloseTo(1.16 / 1.3); expect(b.res).toBeCloseTo(.63); expect(b.crit).toBeCloseTo(.13); expect(b.leech).toBe(5);
+    // 40*(1+.07+.16+.04)=50.8; HP=round(150*1.15*1.04*1.42)=255; cooldown=.6*.8=.48.
     const c = heroStats(eq({ w: item({ value: 40, element: 'fire', mods: ['batt'] }), a: item({ slot: 'a', kind: 'armor', base: 'mantel', value: 50 }), r: item({ slot: 'r', kind: 'tempo', value: 8, affixes: [{ id: 'cdr', value: 20 }] }) }), context({ upgrades: { dmg: 1, hp: 3 }, perks: { dmg: 2, rate: 1, reach: 2, skill: 2 }, meal: 'suppe', imbissLevel: 3, drill: 2, survivors: { spaeher: true } }));
-    expect(c.damage).toBeCloseTo(56.4); expect(c.maxHp).toBe(255); expect(c.attackSpeed).toBe(1.12); expect(c.moveSpeed).toBe(1.08); expect(c.regen).toBe(.5); expect(c.luck).toBe(1); expect(c.cooldownFactor).toBeCloseTo(.48); expect(c.reachFactor).toBe(1.4);
+    expect(c.damage).toBeCloseTo(50.8); expect(c.maxHp).toBe(255); expect(c.attackSpeed).toBe(1.08); expect(c.moveSpeed).toBe(1.08); expect(c.regen).toBe(.5); expect(c.luck).toBe(1); expect(c.cooldownFactor).toBeCloseTo(.48); expect(c.reachFactor).toBe(1.4);
     // Includes both elements (.18*1.35*.5/.3*2), regen, movement and luck.
-    expect(power(c)).toBe(187);
+    expect(power(c)).toBe(174);
   });
   it('power compares weapon kinds by damage per second, as 2D pwParts', () => {
     const of = (kind: string, value: number): number => power(heroStats({ w: { id: 1, slot: 'w', kind, base: 'x', name: 'x', rarity: 0, value, itemLevel: 1, affixes: [] } }, { upgrades: {}, perks: {}, camp: {}, survivors: {} }));

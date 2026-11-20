@@ -335,7 +335,8 @@ body:has(.overlay:not([hidden])) #touch {
 #bossbar {
   position: fixed;
   left: 50%;
-  bottom: max(26px, env(safe-area-inset-bottom));
+  /* Above the action bar (playtest 2026-11-20: they overlapped); touch keeps the bottom edge. */
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 104px);
   transform: translateX(-50%);
   width: min(520px, 70vw);
   pointer-events: none;
@@ -475,20 +476,21 @@ body:has(.overlay:not([hidden])) #edges {
   left: 0;
   top: 0;
   white-space: nowrap;
-  font: 600 18px/1 var(--f-ui);
+  font: 600 24px/1 var(--f-ui);
   letter-spacing: 0.02em;
   text-shadow: 1px 1px 0 #0d0907, 0 0 3px rgba(13, 9, 7, 0.7);
   transform-origin: 50% 100%;
   will-change: transform, opacity;
 }
-.dmg-num[data-k='crit'] { font-size: 24px; }
-.dmg-num[data-k='taken'] { font-size: 20px; }
-.dmg-num[data-k='quiet'], .dmg-num[data-k='tick'] { font-size: 14px; }
+/* A third bigger since the playtest of 2026-11-20 (2D sizes were 18, 24, 20, 14). */
+.dmg-num[data-k='crit'] { font-size: 32px; }
+.dmg-num[data-k='taken'] { font-size: 26px; }
+.dmg-num[data-k='quiet'], .dmg-num[data-k='tick'] { font-size: 18px; }
 @media (max-height: 500px), (max-width: 699px) {
-  .dmg-num { font-size: 15px; }
-  .dmg-num[data-k='crit'] { font-size: 20px; }
-  .dmg-num[data-k='taken'] { font-size: 17px; }
-  .dmg-num[data-k='quiet'], .dmg-num[data-k='tick'] { font-size: 12px; }
+  .dmg-num { font-size: 19px; }
+  .dmg-num[data-k='crit'] { font-size: 26px; }
+  .dmg-num[data-k='taken'] { font-size: 22px; }
+  .dmg-num[data-k='quiet'], .dmg-num[data-k='tick'] { font-size: 15px; }
 }
 #toast {
   position: fixed;
@@ -514,7 +516,7 @@ body:has(.overlay:not([hidden])) #edges {
 
 /* ---- M8/M9/M16: action bar. One set of buttons: a bar at the bottom for mouse and pad, the thumb arc on touch. */
 #actions { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: flex-end; gap: 10px; z-index: 8; pointer-events: none; }
-.act { position: relative; width: 62px; height: 62px; margin: 0; padding: 0; border-radius: 14px; border: 2px solid #6a5a48; background: radial-gradient(circle at 50% 35%, #2c3f47, #131d20 78%); color: var(--cream); pointer-events: auto; touch-action: none; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55); transition: transform 0.08s, border-color 0.15s, box-shadow 0.15s; }
+.act { position: relative; width: 76px; height: 76px; margin: 0; padding: 0; border-radius: 14px; border: 2px solid #6a5a48; background: radial-gradient(circle at 50% 35%, #2c3f47, #131d20 78%); color: var(--cream); pointer-events: auto; touch-action: none; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55); transition: transform 0.08s, border-color 0.15s, box-shadow 0.15s; }
 .act:active { transform: scale(0.93); }
 .act.ready { border-color: #d8b64e; }
 .act .act-icon { position: absolute; inset: 7px; display: grid; place-items: center; }
@@ -522,24 +524,29 @@ body:has(.overlay:not([hidden])) #edges {
 /* Cooldown: a dark sweep that drains clockwise, seconds in the middle. */
 .act::after { content: ''; position: absolute; inset: 0; background: conic-gradient(rgba(6, 10, 12, 0.82) calc(var(--cd, 0) * 360deg), transparent 0); pointer-events: none; }
 .act .act-cd { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; font: 700 20px/1 system-ui, sans-serif; text-shadow: 0 1px 3px #000, 0 0 6px #000; }
-.act .act-key { position: absolute; left: 4px; top: 3px; z-index: 3; font: 700 11px/1 system-ui, sans-serif; font-style: normal; padding: 2px 4px; border-radius: 4px; background: rgba(6, 10, 12, 0.8); color: #cdbf9c; }
+.act .act-key { position: absolute; left: 3px; top: 3px; z-index: 3; min-width: 22px; font: 700 15px/1 system-ui, sans-serif; font-style: normal; text-align: center; padding: 3px 5px; border-radius: 5px; border: 1px solid #8a7a5e; background: rgba(6, 10, 12, 0.88); color: #f0e2c0; }
+/* Pad face buttons in their usual colours (A green, B red, X blue, Y yellow). */
+.act .act-key[data-k='A'] { color: #7ed67e; } .act .act-key[data-k='B'] { color: #ff7a6a; } .act .act-key[data-k='X'] { color: #7aaeff; } .act .act-key[data-k='Y'] { color: #f2d14b; }
 .act .act-key:empty { display: none; }
 .act .act-count { position: absolute; right: 4px; bottom: 3px; z-index: 3; min-width: 18px; padding: 1px 4px; border-radius: 9px; background: #b8261c; font: 700 13px/1.2 system-ui, sans-serif; text-align: center; }
 .act .act-count:empty { display: none; }
 .act.off { filter: grayscale(0.9) brightness(0.6); }
 .act.off .act-count { background: #4a4038; }
-#btn-ultimate { width: 72px; height: 72px; border-radius: 50%; border-color: #8a6f2a; }
+#btn-ultimate { width: 88px; height: 88px; border-radius: 50%; border-color: #8a6f2a; }
 #btn-ultimate.ready { border-color: #f2d14b; box-shadow: 0 0 0 2px rgba(242, 209, 75, 0.25), 0 0 22px rgba(242, 209, 75, 0.55); animation: ult-ready 1.6s ease-in-out infinite; }
 @keyframes ult-ready { 50% { box-shadow: 0 0 0 2px rgba(242, 209, 75, 0.4), 0 0 32px rgba(242, 209, 75, 0.85); } }
-#btn-power { width: 68px; height: 68px; }
-#btn-swap { width: 34px; height: 34px; border-radius: 50%; margin: 0 -4px 0 -6px; border-color: #4a5a60; }
+#btn-power { width: 84px; height: 84px; }
+#btn-swap { width: 42px; height: 42px; border-radius: 50%; margin: 0 -4px 0 -6px; border-color: #4a5a60; overflow: visible; }
 #btn-swap .act-icon { inset: 4px; }
-#btn-swap .act-key { left: auto; right: -2px; top: -4px; }
-#btn-verband, #btn-molotow { width: 52px; height: 52px; border-radius: 50%; }
+#btn-swap .act-key { left: auto; right: -8px; top: -10px; }
+#btn-verband, #btn-molotow { width: 64px; height: 64px; border-radius: 50%; }
+#btn-ultimate .act-key, #btn-verband .act-key, #btn-molotow .act-key { left: 50%; top: 2px; transform: translateX(-50%); }
 #btn-molotow { margin-right: 14px; }
 body:has(.overlay:not([hidden])) #actions, body:has(.overlay:not([hidden])) #buffs { display: none; }
 
 /* Touch: around the attack button, in reach of the right thumb. */
+body.touch-on #bossbar { bottom: max(26px, env(safe-area-inset-bottom)); width: min(420px, 46vw); }
+body.touch-on .act .act-key { font-size: 11px; min-width: 0; padding: 2px 4px; }
 body.touch-on #actions { left: auto; right: 0; bottom: 0; transform: none; width: 320px; height: 250px; display: block; }
 body.touch-on #actions .act { position: absolute; border-radius: 50%; opacity: 0.92; }
 body.touch-on #btn-power { right: calc(max(26px, env(safe-area-inset-right)) + 104px); bottom: calc(max(34px, env(safe-area-inset-bottom)) + 74px); width: 72px; height: 72px; margin: 0; }
@@ -554,9 +561,13 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 }
 
 /* Buff chips under the life bar. */
-#buffs { position: fixed; left: max(14px, env(safe-area-inset-left)); top: 52px; display: flex; flex-wrap: wrap; gap: 6px; max-width: 46%; pointer-events: none; z-index: 7; }
-.buff { padding: 3px 9px; border-radius: 11px; border: 1px solid var(--c); background: rgba(11, 20, 22, 0.72); color: var(--c); font: 600 12px/1.4 system-ui, sans-serif; letter-spacing: 0.03em; text-shadow: 0 1px 2px #000; }
-.buff b { color: var(--cream); font-weight: 700; }
+/* Buffs top right, left of the minimap (playtest 2026-11-20, as in WoW): an icon tile, seconds, the name. */
+#buffs { position: fixed; right: calc(max(16px, env(safe-area-inset-right)) + 146px); top: calc(max(14px, env(safe-area-inset-top)) + 54px); display: flex; flex-direction: row-reverse; flex-wrap: wrap; gap: 8px; max-width: 42vw; pointer-events: none; z-index: 7; }
+.buff { display: grid; justify-items: center; width: 64px; color: var(--c); font: 600 11px/1.15 system-ui, sans-serif; text-shadow: 0 1px 2px #000; text-align: center; }
+.buff .buff-i { display: grid; place-items: center; width: 46px; height: 46px; border: 2px solid var(--c); border-radius: 6px; background: rgba(11, 20, 22, 0.8); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55); }
+.buff .buff-i svg { width: 36px; height: 36px; }
+.buff b { min-height: 17px; color: var(--cream); font: 700 15px/1.15 system-ui, sans-serif; }
+.buff i { font-style: normal; color: var(--cream); opacity: 0.85; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- blessing choice (2D perk cards) */
 #blessings { z-index: 30; background: radial-gradient(ellipse at center, rgba(40, 22, 8, 0.55), rgba(6, 12, 14, 0.9)); }
@@ -566,7 +577,7 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 #blessing-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 6px; }
 .pcard { position: relative; display: grid; grid-template-rows: auto auto auto 1fr auto; justify-items: center; gap: 5px; margin: 0; padding: 18px 14px 14px; min-height: 250px; text-align: center; color: var(--cream); font: inherit; cursor: pointer; border-radius: 8px; border: 2px solid #4a3c2e; border-top: 4px solid var(--fc); background: linear-gradient(170deg, color-mix(in srgb, var(--fc) 13%, #221a14), #17110d 62%); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5); animation: card-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; animation-delay: calc(var(--i) * 70ms); transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
 @keyframes card-in { from { opacity: 0; transform: translateY(26px) scale(0.94); } }
-.pcard:hover, .pcard:focus-visible { transform: translateY(-6px); outline: none; border-color: #ef9f27; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6), 0 0 22px color-mix(in srgb, var(--fc) 55%, transparent); }
+.pcard:hover, .pcard:focus-visible, .pcard.sel { transform: translateY(-6px); outline: none; border-color: #ef9f27; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6), 0 0 22px color-mix(in srgb, var(--fc) 55%, transparent); }
 .pcard .perk-icon { width: 72px; height: 72px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6)); }
 .pcard .pnum { position: absolute; left: 8px; top: 6px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0, 0, 0, 0.45); font: 700 12px/20px system-ui, sans-serif; color: #b5aa98; }
 .pcard .pfam { position: absolute; right: 8px; top: 7px; display: flex; gap: 4px; }
@@ -636,7 +647,8 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
   .kills { display: none; }
   .hp { width: min(220px, 30vw); height: 13px; }
   #objective { font-size: 12px; }
-  #buffs { top: 36px; }
+  #buffs { right: calc(max(16px, env(safe-area-inset-right)) + 96px); top: calc(max(14px, env(safe-area-inset-top)) + 50px); gap: 5px; }
+  .buff { width: 48px; font-size: 9px; } .buff .buff-i { width: 34px; height: 34px; } .buff .buff-i svg { width: 26px; height: 26px; } .buff b { font-size: 12px; min-height: 14px; } .buff i { max-width: 48px; }
   /* Menus use the whole screen. */
   .overlay { padding: 6px; }
   .panel { padding: 12px 14px 10px; gap: 7px; }
@@ -682,6 +694,8 @@ body:has(#menu:not([hidden])) :is(#hud, #minimap), body:has(#optv:not([hidden]))
 /* Inventory: doll and stats | bag | wide detail; columns scroll on their own (2D .inv3). */
 .inv-tab { overflow: hidden; display: flex; flex-direction: column; padding: 4px 0 2px; }
 .inv-columns { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 364px) 276px minmax(0, 1fr); gap: 16px; }
+/* Wide screens: the detail column stops at two readable cards (playtest 2026-11-20). */
+@media (min-width: 1500px) { .inv-columns { grid-template-columns: 364px 276px minmax(0, 760px); justify-content: center; } }
 .inv-columns > section { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .inv-doll { display: grid; grid-template-columns: 60px minmax(0, 1fr) 60px; gap: 6px 10px; align-items: center; }
 .inv-portrait { width: 100%; height: 300px; object-fit: contain; grid-column: 2; grid-row: 1/5; }
@@ -701,9 +715,19 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .inv-cell i { position: absolute; bottom: 3px; left: 3px; width: 8px; height: 8px; border-radius: 50%; }
 .inv-cell.dragging { opacity: .4; } .inv-cell.drop-target { outline: 2px solid var(--ember) !important; }
 .inv-bagh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 2px 0 8px; min-height: 22px; }
-.inv-bulk { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Fixed 2×2 grid under its label, so no chip moves when another empties (playtest 2026-11-20). */
+.inv-bulk { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; }
+.inv-bulkl { grid-column: 1 / -1; display: inline-flex; align-items: center; font: 600 13px var(--f-ui); color: var(--dim); letter-spacing: .04em; }
+.menu-panel .inv-bulk .chip { display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
+.inv-bulkl .mico { width: 18px; height: 18px; margin-right: 3px; }
 .menu-panel .chip { min-height: 30px; padding: 3px 9px; font: 600 14px var(--f-ui); border-radius: 12px; background: rgba(13, 9, 7, .6); border: 1px solid var(--edge); }
-.menu-panel .chip.warn { border-color: #c23a2e; color: #ff8a7a; }
+.menu-panel .chip small { margin-left: 4px; font-size: 12px; color: var(--bone); opacity: .75; }
+.menu-panel .chip:disabled { opacity: .35; cursor: default; }
+.menu-panel .chip.warn, .menu-panel .inv-actions button.salv.warn { border-color: #c23a2e; color: #ff8a7a; background: #3a1410; }
+.inv-actions button.salv .mico { width: 18px; height: 18px; margin-right: 4px; vertical-align: -4px; }
+.inv-tip { border: 1px solid var(--ember); background: #22160f; border-radius: 4px; padding: 8px 10px; margin: 0 0 8px; font-size: 14px; }
+.inv-tip p { margin: 4px 0 6px; } .inv-tip .mico { width: 16px; height: 16px; vertical-align: -3px; margin: 0 2px; }
+.menu-panel .inv-tip button { min-height: 30px; padding: 2px 12px; border: 1px solid var(--ember); background: transparent; color: var(--ember); font: 600 14px var(--f-ui); border-radius: 3px; }
 .inv-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 /* Stat rows with a line icon and a ? tooltip (2D .stab, .sn). */
 .inv-stats { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 16px; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; padding: 10px 12px; margin: 12px 0 0; font-variant-numeric: tabular-nums; }

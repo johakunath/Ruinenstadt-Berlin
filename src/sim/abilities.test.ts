@@ -1,3 +1,4 @@
+import { HERO_TEMPO } from './player';
 import { describe, it, expect } from 'vitest';
 import { finisherOf, weaponAttack } from '../data/combat';
 import type { WeaponKindId } from '../data/items';
@@ -145,7 +146,7 @@ describe('M8 powers', () => {
     expect(lost(e)).toBe(15);
     run(s, 1, { attack: true });
     expect(s.player.critical).toBe(true);
-    expect(s.player.attackSpeed).toBeCloseTo(1.8);
+    expect(s.player.attackSpeed).toBeCloseTo(1.8 * HERO_TEMPO);
   });
   it('Fallhammer hits in a ring after the slam lands', () => {
     const s = fresh('hammer'), e = dummy(s, 4.5, 0), out = dummy(s, 7, 0);

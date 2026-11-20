@@ -4,6 +4,7 @@ import type { Item } from './items';
 import { setLoadout, starterEquipment } from './loadout';
 import { spawnEnemy } from './enemies';
 import { createSim, stepSim } from './sim';
+import { HERO_TEMPO } from './player';
 import { DT, NO_INPUT, type Sim, type SimEvent, type SimInput } from './types';
 import type { Equipment, StatContext } from './stats';
 
@@ -85,9 +86,9 @@ describe('equipment in the 3D simulation', () => {
     setLoadout(sim, gear({ value: 30, affixes: [{ id: 'as', value: 100 }, { id: 'crit', value: -8 }] }));
     expect(sim.player.attack).toBe(first);
     expect(hits(run(sim, 50))[0]!.damage).toBe(10);
-    expect(sim.player.attackSpeed).toBe(1);
+    expect(sim.player.attackSpeed).toBe(HERO_TEMPO);
     expect(hits(swing(sim))[0]!.damage).toBe(30);
-    expect(sim.player.attackSpeed).toBe(2);
+    expect(sim.player.attackSpeed).toBeCloseTo(2 * HERO_TEMPO);
     expect(ATTACKS.light1.windup).toBe(.08); expect(ATTACKS.light1.damage).toBe(10);
   });
 
@@ -134,9 +135,9 @@ describe('equipment in the 3D simulation', () => {
     for (const speed of [1, 2]) {
       const sim = arena(gear({ affixes: [{ id: 'as', value: (speed - 1) * 100 }, { id: 'crit', value: -8 }] }));
       run(sim, 1, { ...NO_INPUT, attack: true });
-      expect(sim.player.attack!.windup).toBeCloseTo(ATTACKS.light1.windup / speed);
-      expect(sim.player.attack!.active).toBeCloseTo(ATTACKS.light1.active / speed);
-      expect(sim.player.attack!.recovery).toBeCloseTo(ATTACKS.light1.recovery / speed);
+      expect(sim.player.attack!.windup).toBeCloseTo(ATTACKS.light1.windup / speed / HERO_TEMPO);
+      expect(sim.player.attack!.active).toBeCloseTo(ATTACKS.light1.active / speed / HERO_TEMPO);
+      expect(sim.player.attack!.recovery).toBeCloseTo(ATTACKS.light1.recovery / speed / HERO_TEMPO);
       let n = 0;
       while (sim.player.attack?.id === 'light1' && n++ < 100) run(sim, 1, { ...NO_INPUT, attack: true });
       expect(sim.player.attack?.id).toBe('light2'); times.push(n * DT);

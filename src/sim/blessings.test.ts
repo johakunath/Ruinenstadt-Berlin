@@ -1,3 +1,4 @@
+import { HERO_TEMPO } from './player';
 import { describe, it, expect } from 'vitest';
 import type { WeaponKindId } from '../data/items';
 import { PERKS, type PerkId } from '../data/progression';
@@ -140,7 +141,7 @@ describe('element blessings', () => {
     always(s);
     for (let i = 0; i < 5; i++) strike(s, e, 100);
     expect(e.burn).toBe(3);
-    expect(e.bdps).toBeCloseTo(3 * 45 * 1.5);
+    expect(e.bdps).toBeCloseTo(3 * 45 * 1.3);
   });
   it('Flächenbrand spreads on death; Kachelofen heals from burn damage', () => {
     const s = fresh('blade', { fire: 1, spread: 1, kachel: 2 }), e = dummy(s, 0, 2, 50), n = dummy(s, 1.5, 2), far = dummy(s, 9, 2);
@@ -194,10 +195,10 @@ describe('hit and kill blessings', () => {
     strike(s, b, 89);
     expect(b.state).not.toBe('dead');
   });
-  it('Dicke Bertha: +25% per level against bosses and elites', () => {
+  it('Dicke Bertha: +15% per level against bosses and elites', () => {
     const s = fresh('blade', { breaker: 2 }), n = dummy(s, 2, 0), b = dummy(s, -2, 0, 100000, 'feldwebel');
     expect(strike(s, n, 100)).toBe(100);
-    expect(strike(s, b, 100)).toBe(150);
+    expect(strike(s, b, 100)).toBe(130);
   });
   it('Kimme und Korn scales with distance up to 32%; Zielwasser crits far targets', () => {
     const s = fresh('blade', { kimme: 1 }), near = dummy(s, 0, 1), far = dummy(s, 0, 30);
@@ -235,7 +236,7 @@ describe('hit and kill blessings', () => {
     for (let i = 0; i < 7; i++) strike(s, dummy(s, 0, 2, 1), 5);
     expect(s.abilities.jagd.n).toBe(5);
     run(s, 1, { attack: true });
-    expect(s.player.attackSpeed).toBeCloseTo(1.3);
+    expect(s.player.attackSpeed).toBeCloseTo(HERO_TEMPO * 1.2);
     for (let i = 0; i < 190; i++) updateStatuses(s);
     expect(s.abilities.jagd.n).toBe(0);
   });
@@ -313,7 +314,7 @@ describe('defence and sprint blessings', () => {
     expect(incomingDamage(fresh('blade', { res: 2 }), 20)).toBeCloseTo(20 * 0.88);
     expect(incomingDamage(s, 500)).toBeCloseTo(45);
   });
-  it('Igelstellung returns damage, Brandmauer ignites, Retourkutsche doubles the next attack', () => {
+  it('Igelstellung returns damage, Brandmauer ignites, Retourkutsche adds half to the next attack', () => {
     const s = fresh('blade', { thorns: 2, d_mauer: 1, retour: 1 }), e = dummy(s, 0, 1.2);
     hurtPlayer(s, e, 10, 0, -1);
     expect(lost(e)).toBe(12);
@@ -321,7 +322,7 @@ describe('defence and sprint blessings', () => {
     expect(e.bdps).toBeCloseTo(8);
     expect(s.abilities.ret).toBe(true);
     run(s, 1, { attack: true });
-    expect(s.player.attack?.damage).toBe(20);
+    expect(s.player.attack?.damage).toBe(15);
     expect(s.abilities.ret).toBe(false);
   });
   it('Atempause heals on a dodge; Husarenritt adds damage right after it; Hakenschlag shortens the cooldown', () => {
@@ -331,7 +332,7 @@ describe('defence and sprint blessings', () => {
     expect(s.player.hp).toBeCloseTo(56);
     run(s, 20);
     run(s, 1, { attack: true });
-    expect(s.player.attack?.damage).toBeCloseTo(15 * 1.8);
+    expect(s.player.attack?.damage).toBeCloseTo(15 * 1.4);
     expect(fresh('blade', { dashcd: 2 }).stats.dashCooldown).toBeCloseTo(1.4 * 0.6);
   });
   it('Rammbock: the dodge hits bodies on the way, once each', () => {
@@ -361,9 +362,9 @@ describe('defence and sprint blessings', () => {
     const s = fresh('blade', { spd: 2, crit: 2, rate: 2, dmg: 2 });
     setLoadout(s, s.equipment);
     expect(s.stats.moveSpeed).toBeCloseTo(1.2);
-    expect(s.stats.crit).toBeCloseTo(0.24);
-    expect(s.stats.attackSpeed).toBeCloseTo(1.24);
-    expect(s.stats.damage).toBeCloseTo(13);
+    expect(s.stats.crit).toBeCloseTo(0.18);
+    expect(s.stats.attackSpeed).toBeCloseTo(1.16);
+    expect(s.stats.damage).toBeCloseTo(11.6);
   });
 });
 

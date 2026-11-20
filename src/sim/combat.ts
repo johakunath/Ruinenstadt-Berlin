@@ -25,7 +25,7 @@ export const STATUS = {
   burnTime: 2, burnShare: 0.45, acidTime: 3, acidBonus: 0.25, chainRange: 140 * PX, chainShare: 0.5,
   corrodeSlow: 0.7, spreadRange: 90 * PX, spreadShare: 0.8, boomRange: 72 * PX, boomShare: 0.35,
   critStun: 0.6, farRange: 200 * PX, kimmeStep: 50 * PX, execShare: 0.12, dotReport: 0.4,
-  streakTime: 2.6, jagdTime: 3, jagdMax: 5, jagdStep: 0.06, eliteHp: 2.6,
+  streakTime: 2.6, jagdTime: 3, jagdMax: 5, jagdStep: 0.04, eliteHp: 2.6,
   /** Zweiter Atem: life restored and seconds of invulnerability. */
   secondHp: 0.3, secondInvuln: 1.5, stellung: 0.75, thorns: 0.6, mauerBurn: 0.8, mauerTime: 3,
   /** M12c rain (2D `D.wet`): an element burn lasts 1.4 s, a shock chain reaches 190 px and jumps once more. */
@@ -158,7 +158,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (pk(s, 'kimme')) damage *= 1 + Math.min(0.32, (0.04 * dist) / STATUS.kimmeStep);
   if (a.banner && Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) damage *= 1.5;
   // 2D Brecher also counts against shield bearers.
-  if (tough(e) || e.def.shield) damage *= (tough(e) ? (1 + s.stats.eliteBonus) * (hasL(s, 'auge') ? 1.25 : 1) : 1) * (1 + 0.25 * pk(s, 'breaker'));
+  if (tough(e) || e.def.shield) damage *= (tough(e) ? (1 + s.stats.eliteBonus) * (hasL(s, 'auge') ? 1.25 : 1) : 1) * (1 + 0.15 * pk(s, 'breaker'));
   if (pk(s, 'rush') && a.streak.n >= 10) damage *= 1 + 0.02 * Math.floor(a.streak.n / 10);
   if (e.acid > 0) damage *= 1 + STATUS.acidBonus * s.stats.elementPower;
   // M12: open bodies take more, armored elites half until they open; elemental hits meet the type's resistance.

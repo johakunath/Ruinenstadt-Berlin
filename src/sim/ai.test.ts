@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
+import { BOSS, ENEMIES, NORMAL_HP, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
 import { ignite, killEnemy, knock, strike } from './combat';
 import { aliveCount, capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
@@ -872,7 +872,7 @@ describe('Mitte roster (M12c)', () => {
 
   it('the Kabelghul is the 2D kabel on the ghoul ratios and leaps along a marked line, then stands open', () => {
     const k = ENEMIES.kabel;
-    expect([k.hp, k.damage, k.speed, k.radius, k.res]).toEqual([22, 10, 3.3, 0.3, 'kabel']);
+    expect([k.hp, k.damage, k.speed, k.radius, k.res]).toEqual([22 * NORMAL_HP, 10, 3.3, 0.3, 'kabel']);
     const s = fresh();
     const e = put(s, 'kabel', 0, 4.6);
     e.cd[1] = 0;
@@ -1258,7 +1258,7 @@ describe('Charlottenburg roster (M16, spec m12d)', () => {
 
   it('the Scherbentänzerin spins 4.55 m along a marked line, hits once, then stands open; her cooldown is fixed per body', () => {
     const d = ENEMIES.scherbe;
-    expect([d.hp, d.damage, d.speed, d.radius, d.res, d.glass, d.body]).toEqual([20, 10, 3.6, 0.3, 'glas', true, 'female']);
+    expect([d.hp, d.damage, d.speed, d.radius, d.res, d.glass, d.body]).toEqual([20 * NORMAL_HP, 10, 3.6, 0.3, 'glas', true, 'female']);
     const s = fresh();
     const e = put(s, 'scherbe', 0, 4.8);
     e.cd[1] = 0;
@@ -1285,7 +1285,7 @@ describe('Charlottenburg roster (M16, spec m12d)', () => {
 
   it('the Logenbrecher blocks from the front, slams a marked circle in front of him and is open with the front down after it', () => {
     const d = ENEMIES.loge;
-    expect([d.hp, d.damage, d.speed, d.cap, d.knockbackTaken, d.poise, d.attackRange]).toEqual([130, 30, 1.2, 2, 0.35, true, 0]);
+    expect([d.hp, d.damage, d.speed, d.cap, d.knockbackTaken, d.poise, d.attackRange]).toEqual([130 * NORMAL_HP, 30, 1.2, 2, 0.35, true, 0]);
     const s = plain();
     const e = put(s, 'loge', 0, 2.5);
     e.hp = e.maxHp = 1e6;
@@ -1319,7 +1319,7 @@ describe('Charlottenburg roster (M16, spec m12d)', () => {
   });
 
   it('the Spiegelsouffleur keeps back, cues the others on and throws five shards between two cues', () => {
-    expect([ENEMIES.souffleur.hp, ENEMIES.souffleur.damage, ENEMIES.souffleur.cap, ENEMIES.souffleur.res]).toEqual([34, 12, 2, 'spiegel']);
+    expect([ENEMIES.souffleur.hp, ENEMIES.souffleur.damage, ENEMIES.souffleur.cap, ENEMIES.souffleur.res]).toEqual([34 * NORMAL_HP, 12, 2, 'spiegel']);
     const s = fresh();
     const e = put(s, 'souffleur', 0, 3);
     e.hp = e.maxHp = 1e6;

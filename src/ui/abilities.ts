@@ -13,6 +13,7 @@ import { chooseBlessing, heldFamilies, perkOf, rerollBlessings, rerollCost } fro
 import { buyConsumable, buyHeal, buyOffer, closeTrade, healPrice, tradeStock } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
 import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
+import { uiIcon } from './ui-icons';
 import { itemCard } from './inventory';
 import { SLOT_NAMES } from '../data/items';
 
@@ -20,6 +21,7 @@ const QUALITY_COLOR = ['#e8ddd0', '#7d9bff', '#f2d14b', '#b48cff'] as const;
 const VERBAND = '<path d="M9 21h30v8H9z" fill="#ead9c0"/><path d="M20 10h8v28h-8z" fill="#ead9c0"/><path d="M21 18h6v12h-6zM16 22h16v4H16z" fill="#c23a2e"/>';
 const MOLOTOW = '<path d="M19 20h10l3 7v13a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V27z" fill="#6a8a5a"/><path d="M21 12h6v8h-6z" fill="#8a9a7a"/><path d="M24 2c4 4 4 7 1 10-4-2-4-6-1-10z" fill="#ff8a3d"/><path d="M17 30h14v6H17z" fill="#c9b58c"/>';
 const SWAP = '<path d="M14 18h20l-5-5M34 30H14l5 5" fill="none" stroke="#ead9c0" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>';
+const MEAL = '<path d="M8 22h32a16 16 0 0 1-32 0z" fill="#c98a4a"/><path d="M6 21h36v3H6z" fill="#8a5a2e"/><path d="M18 6c-3 3 3 5 0 9M25 4c-3 3 3 5 0 9M32 6c-3 3 3 5 0 9" fill="none" stroke="#ead9c0" stroke-width="2.4" stroke-linecap="round"/>';
 const svg = (body: string, box = 48): string => `<svg viewBox="0 0 ${box} ${box}" aria-hidden="true">${body}</svg>`;
 
 /** Hex badge with a blessing glyph (2D `pIcon`). */
@@ -61,6 +63,8 @@ export class AbilitiesUi {
   private choices: HTMLButtonElement[] = [];
   private selection = 0;
   private openedAt = 0;
+  /** Stick repeat: the next time a held stick may move the card selection. */
+  private stickNext = 0;
 
   constructor(private readonly input: Input) {
     this.panel.id = 'blessings';
@@ -159,6 +163,8 @@ export class AbilitiesUi {
   private focus(n: number): void {
     if (!this.choices.length) return;
     this.selection = (n + this.choices.length) % this.choices.length;
+    // A pad press is no keyboard event, so :focus-visible may stay off: the class marks the card (playtest 2026-11-20).
+    this.choices.forEach((c, i) => c.classList.toggle('sel', i === this.selection));
     this.choices[this.selection]?.focus();
   }
   /** A card cannot be taken in the first moment: a held attack button must not pick blindly. */
@@ -206,6 +212,7 @@ export class AbilitiesUi {
     b.style.setProperty('--fc', fc);
     b.style.setProperty('--i', String(i));
     b.innerHTML = `<span class="pnum">${i + 1}</span><span class="pfam">${fams.map((f) => familyIcon(f, p.duo ? true : held.has(f))).join('')}</span>${perkIcon(o.id, o.quality)}<span class="prar">${rarity}</span><span class="pn">${p.name}</span><span class="pd">${p.description}</span><span class="pl">${level}</span>`;
+    b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') this.focus(i); });
     b.addEventListener('click', () => {
       if (performance.now() - this.openedAt < 350) return;
       if (this.sim && chooseBlessing(this.sim, o.id)) this.onChoose();
@@ -277,6 +284,7 @@ export class AbilitiesUi {
     A.el.classList.toggle('off', !usable);
     A.el.classList.toggle('ready', usable && cd <= 0);
     A.key.textContent = key;
+    A.key.dataset.k = key;
   }
 
   /** `padBlocked`: a card lies on top (tutorial); pad state is tracked but not acted on. */
@@ -315,6 +323,10 @@ export class AbilitiesUi {
     const down = pad?.buttons.map((b) => b.pressed) ?? [];
     const edge = (i: number): boolean => !!down[i] && !this.padDown[i];
     if (padBlocked) { /* only track */ } else if (this.open) {
+      // D-pad and left stick (playtest 2026-11-20: the stick did nothing); a held stick repeats every 220 ms.
+      const ax = pad?.axes[0] ?? 0, ay = pad?.axes[1] ?? 0, st = Math.abs(ax) > Math.abs(ay) ? ax : ay, now = performance.now();
+      if (Math.abs(st) < .5) this.stickNext = 0;
+      else if (now >= this.stickNext) { this.focus(this.selection + (st < 0 ? -1 : 1)); this.stickNext = now + (this.stickNext ? 220 : 380); }
       if (edge(14) || edge(12)) this.focus(this.selection - 1);
       if (edge(15) || edge(13)) this.focus(this.selection + 1);
       if (edge(0)) this.pick(this.selection);
@@ -350,22 +362,24 @@ export class AbilitiesUi {
     this.setAction('verband', null, a.hot, 3, cons.verband, cons.verband > 0, k('verband'));
     this.setAction('molotow', null, 0, 0, cons.molotow, cons.molotow > 0, k('molotow'));
 
-    // Buff chips: only what is running, with seconds.
-    const chips: Array<[string, string, number]> = [];
-    if (a.frenzy > 0) chips.push(['Säbeltanz', '#ff4a3a', a.frenzy]);
-    if (a.guard > 0) chips.push(['Deckung', '#9aa4b0', a.guard]);
-    if (a.banner) chips.push(['Standarte', '#f2d14b', a.banner.t]);
-    if (a.fed > 0) chips.push(['Satt', '#f2a04b', a.fed]);
-    if (a.hot > 0) chips.push(['Verband', '#8fd16a', a.hot]);
-    if (a.hus > 0 && (sim.statContext.perks.husar ?? 0) > 0) chips.push(['Husarenritt', '#9fd8c8', a.hus]);
-    if (a.jagd.n > 0) chips.push([`Jagdfieber ×${a.jagd.n}`, '#e05050', a.jagd.t]);
-    if (a.streak.n >= 5) chips.push([`Serie ${a.streak.n}`, '#e05050', a.streak.t]);
-    if (a.ret) chips.push(['Retourkutsche', '#9aa4b0', 0]);
-    for (const id of Object.keys(sim.content.shrine) as ShrineId[]) if ((sim.content.shrine[id] ?? 0) > 0) chips.push([SHRINES[id].name, '#7dd3ff', sim.content.shrine[id]!]);
+    // Buffs (playtest 2026-11-20): icon tiles beside the minimap, seconds under the icon, the name below.
+    const chips: Array<[string, string, number, string]> = [];
+    const pg = (id: keyof typeof POWER_GLYPHS): string => svg(POWER_GLYPHS[id]);
+    if (a.frenzy > 0) chips.push(['Säbeltanz', '#ff4a3a', a.frenzy, pg('saebel')]);
+    if (a.guard > 0) chips.push(['Deckung', '#9aa4b0', a.guard, pg('gully')]);
+    if (a.banner) chips.push(['Standarte', '#f2d14b', a.banner.t, pg('stand')]);
+    if (a.fed > 0) chips.push(['Satt', '#f2a04b', a.fed, svg(MEAL)]);
+    if (a.hot > 0) chips.push(['Verband', '#8fd16a', a.hot, svg(VERBAND)]);
+    if (a.hus > 0 && (sim.statContext.perks.husar ?? 0) > 0) chips.push(['Husarenritt', '#9fd8c8', a.hus, perkIcon('husar')]);
+    if (a.jagd.n > 0) chips.push([`Jagdfieber ×${a.jagd.n}`, '#e05050', a.jagd.t, perkIcon('jagd')]);
+    if (a.streak.n >= 5) chips.push([`Serie ${a.streak.n}`, '#e05050', a.streak.t, perkIcon('rush')]);
+    if (a.ret) chips.push(['Retourkutsche', '#9aa4b0', 0, perkIcon('retour')]);
+    const SHRINE_ICON = { as: 'dmg', res: 'res', gold: 'scrap', spd: 'spd', zap: 'rate' } as const;
+    for (const id of Object.keys(sim.content.shrine) as ShrineId[]) if ((sim.content.shrine[id] ?? 0) > 0) chips.push([SHRINES[id].name, '#7dd3ff', sim.content.shrine[id]!, uiIcon(SHRINE_ICON[id], 30)]);
     const sig = chips.map(([n, , t]) => `${n}${Math.ceil(t)}`).join('|');
     if (sig !== this.buffSig) {
       this.buffSig = sig;
-      this.buffs.innerHTML = chips.map(([n, c, t]) => `<span class="buff" style="--c:${c}">${n}${t > 0 ? ` <b>${Math.ceil(t)}</b>` : ''}</span>`).join('');
+      this.buffs.innerHTML = chips.map(([n, c, t, icon]) => `<span class="buff" style="--c:${c}" title="${n}"><span class="buff-i">${icon}</span><b>${t > 0 ? Math.ceil(t) : ''}</b><i>${n}</i></span>`).join('');
     }
   }
 }

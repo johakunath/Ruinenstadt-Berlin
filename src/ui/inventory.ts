@@ -132,10 +132,11 @@ export class InventoryUi {
       if (!b) return;
       if (b.dataset.bag !== undefined || b.dataset.slot) {
         const next: Selection = b.dataset.bag !== undefined ? { bag: +b.dataset.bag } : { slot: b.dataset.slot as SlotId };
-        // Second tap or a double click on the selected bag item equips it (backlog P4).
+        // Second tap or a double click on the selected bag item equips it (backlog P4); on a worn piece it takes it off
+        // (playtest 2026-11-20).
         const again = this.selection && JSON.stringify(this.selection) === JSON.stringify(next) && e.detail >= 2;
         this.selection = next; this.armed = ''; this.message = '';
-        if (again && 'bag' in next) { this.act('equip', ''); this.render(b.dataset.key); return; }
+        if (again && this.item(next)) { this.act('bag' in next ? 'equip' : 'unequip', ''); this.render(b.dataset.key); return; }
         this.renderDetail(); return;
       }
       this.act(b.dataset.action ?? '', b.dataset.value ?? '');
@@ -220,9 +221,10 @@ export class InventoryUi {
     if (action === 'equip' && sel && 'bag' in sel) { equipItem(sim, sel.bag); this.selection = { slot: item!.slot }; }
     if (action === 'unequip' && sel && 'slot' in sel) {
       if (unequipItem(sim, sel.slot)) this.selection = { bag: sim.inventory.bag.length - 1 };
-      else this.message = 'Rucksack voll.';
+      else this.message = sel.slot === 'w' ? 'Waffe nur tauschen.' : 'Rucksack voll.';
     }
     if (action === 'lock' && item) item.locked = !item.locked;
+    if (action === 'tip') (sim.inventory.tips ??= {}).schrott = 1;
     if (action === 'mode' && item) setImplantMode(sim, item, Number(value));
     if (action === 'power' && item?.slot === 'w') {
       if (sim.equipment.w === item) selectPower(sim, Number(value) === 1 ? 1 : 0); else item.power = Number(value) === 1 ? 1 : 0;
@@ -231,8 +233,9 @@ export class InventoryUi {
       const candidates = action === 'salvage' && sel && 'bag' in sel ? [this.item(sel)!] : bulkCandidates(sim, value === 'rest' ? 'rest' : Number(value));
       const key = action + value;
       // "Rest" and rare or set pieces need a second tap (2D allArm).
+      if (!candidates.length) return;
       if ((action === 'bulk' && value === 'rest') || candidates.some(i => i.set || i.rarity >= 2)) {
-        if (this.armed !== key) { this.armed = key; this.message = 'Sicher? Erneut tippen.'; return; }
+        if (this.armed !== key) { this.armed = key; this.message = `${candidates.length > 1 ? `${candidates.length} Teile` : 'Teil'} verschrotten? Zum Bestätigen erneut tippen.`; return; }
       }
       const before = sim.inventory.scrap;
       for (const i of candidates) salvageItem(sim, sim.inventory.bag.indexOf(i));
@@ -251,13 +254,15 @@ export class InventoryUi {
     const previousKey = preferredKey ?? (active && this.root.contains(active) ? active.dataset.key : undefined);
     const sim = this.sim(), inv = sim.inventory, s = sim.stats;
     const gear = SLOTS.map(slot => `<div class="inv-slot inv-${slot}">${this.cell(sim.equipment[slot], `data-slot="${slot}" data-key="slot-${slot}"`, SLOT_NAMES[slot], true)}<span>${SLOT_NAMES[slot]}</span></div>`).join('');
-    const chips = ([['Gewöhnl.', 0], ['Magisch', 1], ['Selten', 2], ['Rest', 'rest']] as const).flatMap(([label, what], i) => {
+    // Bulk salvage (playtest 2026-11-20): fixed chips, a rarity takes itself and everything below; greyed when empty.
+    const chips = ([['Gewöhnl.', 0, 'Alle gewöhnlichen Teile verschrotten'], ['bis Magisch', 1, 'Alle gewöhnlichen und magischen Teile verschrotten'], ['bis Selten', 2, 'Alle gewöhnlichen, magischen und seltenen Teile verschrotten'], ['ohne ▲', 'rest', 'Alle Teile ohne ▲ verschrotten']] as const).map(([label, what, tip], i) => {
       const v = bulkCandidates(sim, what).reduce((a, it) => a + scrapValue(it), 0);
-      if (!v) return [];
-      const armed = what === 'rest' && this.armed === 'bulkrest';
-      return [`<button type="button" class="chip${armed ? ' warn' : ''}" data-action="bulk" data-value="${what}" data-key="bulk-${i}"${typeof what === 'number' ? ` style="color:${RARITIES[what].color}"` : ''}>${armed ? 'Sicher?' : `${label} +${v}`}</button>`];
+      const armed = this.armed === `bulk${what}`;
+      return `<button type="button" class="chip${armed ? ' warn' : ''}" data-action="bulk" data-value="${what}" data-key="bulk-${i}" title="${tip}"${v ? '' : ' disabled'}${typeof what === 'number' ? ` style="color:${RARITIES[what].color}"` : ''}>${armed ? 'Sicher?' : label}<small>+${v}</small></button>`;
     }).join('');
-    this.root.innerHTML = `<div class="inv-columns"><section class="inv-character"><div class="inv-doll">${this.portrait ? '<span class="inv-portrait-slot"></span>' : `<img class="inv-portrait" src="${artUrl('survivor')}" alt="">`}${gear}</div><div class="inv-stats">${STAT_ROWS.filter(r => r[1](s) !== 0 && (r[0] !== 'Elementarschaden' || s.elements.length)).map(([n, f, d, u]) => `${statName(n)}<b>${fmt(f(s), d, u)}</b>`).join('')}${s.elements.length ? `${statName('Elemente')}<b>${s.elements.map(e => `<i style="color:${ELEMENTS[e].color};font-style:normal">${ELEMENTS[e].name}</i>`).join(', ')}</b>` : ''}</div></section><section class="inv-bag"><div class="inv-bagh"><div class="lbl">Rucksack ${inv.bag.length}/${BAG_SIZE}</div>${chips ? `<div class="inv-bulk">${chips}</div>` : ''}</div><div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => this.cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, `Platz ${i + 1}`, false)).join('')}</div><p class="inv-hint">▲ Höherer Item Level. Doppeltipp legt an.</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer>`;
+    // First look at a bag with something in it: what Schrott is (playtest 2026-11-20).
+    const tip = inv.bag.length && !inv.tips?.schrott ? `<div class="inv-tip"><b>Tipp: Verschrotten</b><p>Alte Teile werden zu ${resIcon('scrap')}Schrott: Teil antippen, dann <b>Verschrotten</b>. Die Knöpfe oben verschrotten alles bis zu einer Seltenheit. Schrott brauchst du im Lager und am Späti.</p><button type="button" data-action="tip" data-key="tip">Verstanden</button></div>` : '';
+    this.root.innerHTML = `<div class="inv-columns"><section class="inv-character"><div class="inv-doll">${this.portrait ? '<span class="inv-portrait-slot"></span>' : `<img class="inv-portrait" src="${artUrl('survivor')}" alt="">`}${gear}</div><div class="inv-stats">${STAT_ROWS.filter(r => r[1](s) !== 0 && (r[0] !== 'Elementarschaden' || s.elements.length)).map(([n, f, d, u]) => `${statName(n)}<b>${fmt(f(s), d, u)}</b>`).join('')}${s.elements.length ? `${statName('Elemente')}<b>${s.elements.map(e => `<i style="color:${ELEMENTS[e].color};font-style:normal">${ELEMENTS[e].name}</i>`).join(', ')}</b>` : ''}</div></section><section class="inv-bag"><div class="inv-bagh"><div class="lbl">Rucksack ${inv.bag.length}/${BAG_SIZE}</div><div class="inv-bulk"><span class="inv-bulkl">${resIcon('scrap')}Verschrotten</span>${chips}</div></div>${tip}<div class="inv-grid">${Array.from({ length: BAG_SIZE }, (_, i) => this.cell(inv.bag[i], `data-bag="${i}" data-key="bag-${i}"`, `Platz ${i + 1}`, false)).join('')}</div><p class="inv-hint">▲ Höherer Item Level. Doppeltipp legt an oder ab, Ziehen auch.</p></section><section class="inv-detail">${this.detail()}</section></div><footer aria-live="polite">${esc(this.message)}</footer>`;
     if (this.portrait) {
       this.root.querySelector('.inv-portrait-slot')?.replaceWith(this.portrait.canvas);
       this.portrait.refresh();
@@ -312,7 +317,8 @@ export class InventoryUi {
     const eq = eqAll[it.slot], il0 = eq ? shownLevel(eq) : 0, il1 = shownLevel(it);
     const a = sim.stats, b = heroStats({ ...eqAll, [it.slot]: it }, sim.statContext);
     const all = STAT_ROWS.flatMap(([n, f, d, u, inv]) => { const x = fmt(f(a), d, u), y = fmt(f(b), d, u); if (x === y) return []; const good = inv ? f(b) < f(a) : f(b) > f(a); return [`<div class="cmp"><span>${n}</span><span>${x} → <b class="${good ? 'positive' : 'negative'}">${y}</b></span></div>`]; }).join('') || '<p class="inv-hint">Keine Veränderung</p>';
-    const acts = `<div class="inv-actions"><button type="button" class="primary" data-action="equip" data-key="equip">Anlegen</button><button type="button" data-action="salvage" data-key="salvage" ${it.locked ? 'disabled' : ''}>Schrott +${scrapValue(it)}</button>${lock}</div>`;
+    const armed = this.armed === 'salvage';
+    const acts = `<div class="inv-actions"><button type="button" class="primary" data-action="equip" data-key="equip">Anlegen</button><button type="button" class="salv${armed ? ' warn' : ''}" data-action="salvage" data-key="salvage" ${it.locked ? 'disabled' : ''}>${resIcon('scrap')}${armed ? 'Wirklich? Erneut tippen' : `Verschrotten +${scrapValue(it)}`}</button>${lock}</div>`;
     return `<div class="cmp2"><article class="inv-card" style="--rarity:${color(it)}">${this.head(it, 'Ausgewählt', it.slot)}<div class="crows">${cmpRows(it, eq, true)}</div>${extraLines(it, eqAll)}${this.config(it)}<div class="cmp ckp"><span>Item Level</span><span>${eq ? `${il0} → ` : ''}<b class="${il1 > il0 ? 'positive' : il1 < il0 ? 'negative' : ''}">${il1}${il1 > il0 ? ' ▲' : ''}</b></span></div>${setLossLine(it, eqAll)}<details class="cdet"><summary>Alle Werte nach Wechsel</summary>${all}</details>${acts}</article><article class="inv-card ceq" style="--rarity:${eq ? color(eq) : '#4c453a'}">${this.head(eq, 'Angelegt', it.slot)}<div class="crows">${cmpRows(eq, it, false)}</div>${eq ? extraLines(eq, eqAll) : ''}</article></div>`;
   }
 }

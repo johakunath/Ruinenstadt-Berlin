@@ -224,7 +224,8 @@ export class Menu {
   }
 }
 
-/** Kodex busts in `assets/portraits/`, including portraits imported from 2D (`js/items.js` PORTI). */
+/** Kodex portraits in `assets/portraits/`: renders of the in-game 3D bodies (`node tools/kodex-portraits.mjs`, which
+ * reads this map and `ELITE_PORTRAIT`). Ids from the 2D busts (`js/items.js` PORTI) are kept. */
 const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
   walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04',
   kabel: 'E13', schild: 'E06', zuender: 'E07', heuler: 'E08', bass: 'E14', drone: 'E15', uhrwerk: 'E16', wurzler: 'E17', kernspeier: 'E18',
@@ -232,7 +233,7 @@ const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
   grenzer: 'X11', brandmeister: 'X10', rattenmutter: 'X06', spreehexe: 'X12',
   wurzelmutter: 'X13', uhrwerkgross: 'X14', volkskoloss: 'X15', weltzeituhr: 'X16',
   tuersteher: 'X17', wachdrohne: 'X18', dirigent: 'X19', bassprediger: 'X09',
-  // M16: no busts yet (Codex art); the ids are reserved, the glyphs below show meanwhile.
+  // M16 Charlottenburg; the Spiegelbild is not in the Kodex and shares the Spiegelpaar's id.
   scherbe: 'E19', loge: 'E20', souffleur: 'E21', spiegelbild: 'X22',
   conferencier: 'X20', ringvater: 'X21', spiegelpaar: 'X22', diva: 'X23',
 };

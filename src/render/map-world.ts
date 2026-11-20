@@ -1087,107 +1087,102 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
   // M20: a thin divider between two tubes (the bypass beside the collapse) stays low, so the camera sees over it.
   const LOW = 1.4;
   const stripe = lineTint(m.tunnel!.color);
-  /** Meters of wall built so far per tube kind and side: places ribs, niches and lamps along the run. */
-  const wallRun = new Map<string, number>();
+  const T = m.tunnel!;
   const wallBoxes = new Map<string, { b: ChunkBuilder; box: Box3 }>();
-  for (const t of m.tunnel!.tubes) {
-    // Playtest 2026-11-18: a tube end that joins no other tube (station ends, side passages) gets a wall
-    // and a rubble pile, so it no longer looks like it runs on into the dark.
-    for (const [end, prev] of [[t.pts[0]!, t.pts[1]!], [t.pts[t.pts.length - 1]!, t.pts[t.pts.length - 2]!]] as Array<[Pt, Pt]>) {
-      const len = Math.hypot(end[0] - prev[0], end[1] - prev[1]);
-      if (len < 0.01) continue;
-      const ux = (end[0] - prev[0]) / len, uz = (end[1] - prev[1]) / len;
-      // Joins another tube (a junction, the track inside a station): that tube closes it, or nothing does.
-      const px = end[0] + ux * (t.width / 2 + 0.6), pz = end[1] + uz * (t.width / 2 + 0.6);
-      if (m.tunnel!.tubes.some((o) => o !== t && lineDist(o.pts, px, pz) <= o.width / 2)) continue;
-      const yaw = Math.atan2(ux, uz), thick = 3;
-      const cx = end[0] + ux * thick / 2, cz = end[1] + uz * thick / 2;
-      const b = chunkOf(end[0], end[1]);
-      b.solid.captureOccluder(() => b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick, [0.38, 0.36, 0.34]));
-      b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(cx, H + 0.05, cz), t.width + 1.4, 0.1, thick + 0.4, [0.08, 0.08, 0.09]);
-      b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(cx, H / 2, cz), t.width + 1, H, thick);
-      const rng = new Rng(Math.round(end[0] * 31 + end[1] * 17));
-      const n = Math.max(2, Math.round(t.width / 2.5));
+  // Playtest 2026-11-20: walls from `tunnelWalls`, the same flat-ended tubes the walk grid uses, so no
+  // floor runs on without a wall (station ends, the room off the last passage) and no wall stands on floor.
+  const flood = T.flood;
+  for (const w of tunnelWalls(T.tubes)) {
+    const t = T.tubes[w.tube]!, yaw = Math.atan2(w.ux, w.uz), { nx, nz, thick } = w;
+    const h = w.low ? LOW : H;
+    const b = chunkOf(w.x, w.z);
+    const rot = (x: number, y: number, z: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(x, y, z);
+    // The top cap overhangs the face by 0.2 m; a shared divider's cap stops at its half of the rock.
+    const cap = (tint: RGB): void => {
+      const back = w.shared ? 0 : 0.2, cw = thick + 0.2 + back, co = (thick + back - 0.2) / 2;
+      b.box(mats.concrete, rot(w.x + nx * co, h + 0.05, w.z + nz * co), cw, 0.1, w.len + 0.04, tint);
+    };
+    if (w.side === 0 || w.fill) {
+      // End walls (playtest 2026-11-18: a tube end that joins no other tube) and bend wedges: plain rock faces.
+      const mx = w.x + nx * thick / 2, mz = w.z + nz * thick / 2;
+      // The end walls are the dark rock faces of before (an end is one box, the shading of its run).
+      b.solid.captureOccluder(() => b.box(mats.concrete, rot(mx, h / 2, mz), w.len + 0.04, h, thick, w.fill ? [0.4, 0.38, 0.36] : [0.38, 0.36, 0.34]));
+      cap(h < H ? [0.3, 0.29, 0.27] : [0.08, 0.08, 0.09]);
+      b.shadowBox(rot(mx, h / 2, mz), w.len, h, thick);
+      if (w.side !== 0 || w.len < 2) continue;
+      // Rubble along the foot, and on a closed side passage or bypass end fallen planks (render only, so no crate that looks breakable).
+      const rng = new Rng(Math.round(w.x * 31 + w.z * 17));
+      const n = Math.max(2, Math.round(w.len / 2.5));
       for (let i = 0; i < n; i++) {
-        const across = ((i + 0.5) / n - 0.5) * t.width * 0.9;
-        const x = end[0] + uz * across - ux * rng.range(0, 0.6), z = end[1] - ux * across - uz * rng.range(0, 0.6);
-        buildProp(b, { kind: 'rubble', x, z, rot: rng.range(0, 6.28), size: rng.range(1.3, 2.2) }, rng);
+        const across = ((i + 0.5) / n - 0.5) * w.len * 0.9, back = rng.range(0, 0.6);
+        buildProp(b, { kind: 'rubble', x: w.x + w.ux * across - nx * back, z: w.z + w.uz * across - nz * back, rot: rng.range(0, 6.28), size: rng.range(1.3, 2.2) }, rng);
       }
-      if (t.kind === 'branch' || t.kind === 'bypass') {
-        const x = end[0] - ux * 0.8 + uz * t.width * 0.25, z = end[1] - uz * 0.8 - ux * t.width * 0.25;
-        // Render only, so no crate that looks breakable: fallen planks.
+      if (w.whole && (t.kind === 'branch' || t.kind === 'bypass')) {
+        const x = w.x - nx * 0.8 + w.ux * w.len * 0.25, z = w.z - nz * 0.8 + w.uz * w.len * 0.25;
         buildProp(b, { kind: 'planks', x, z, rot: rng.range(0, 6.28), size: 1.2 }, rng);
       }
+      continue;
+    }
+    const side = w.side, run = w.run, bump = w.bump;
+    // Playtest 2026-11-18: uneven walls. The face swells by up to 0.3 m (two slow waves along the
+    // tube), the tint drifts, damp darkens the foot; ribs, refuge niches, a cable tray and wall lamps
+    // break the run. Cost: boxes in the existing tunnel materials, merged per chunk; lamps feed the fixed pool.
+    const u = run + side * 37 + t.width * 3;
+    const tone = 0.86 + 0.14 * Math.sin(u * 0.21) + 0.06 * Math.sin(u * 1.37);
+    const mx = w.x + nx * (thick - bump) / 2, mz = w.z + nz * (thick - bump) / 2;
+    const fx = w.x - nx * bump, fz = w.z - nz * bump;
+    const onFace = (o: number, y: number): Matrix4 => rot(fx - nx * o, y, fz - nz * o);
+    const segment = (run - 1) % 4;
+    const variant = (Math.floor((run - 1) / 4) + (side > 0 ? 1 : 0)) % 3;
+    const L = w.len + 0.04;
+    // Playtest 2026-11-18: characters behind a tunnel wall get their contour. One mask box per 8 m of wall and chunk.
+    const occKey = `${w.tube}:${side}:${(run / 8) | 0}`, occ = wallBoxes.get(occKey);
+    const occBox = b.solid.captureOccluder(() => b.geo(mats.concrete, tunnelBoxGeo(thick + bump, h, L, variant, segment, true), rot(mx, h / 2, mz), [0.42 * tone, 0.4 * tone, 0.38 * tone]), occ?.b === b ? occ.box : undefined);
+    if (occBox) wallBoxes.set(occKey, { b, box: occBox });
+    if (h === H && t.kind !== 'station') {
+      const niche = run % 8 !== 0 && run % 29 === 14;
+      // Damp foot; darker and higher where the flooded stretch laps at the wall (it was a loose strip that
+      // stood free at the station cap). Playtest 2026-11-20: not on a niche, whose dark recess shared its
+      // front plane (0.025 m off the face) and flickered black.
+      const axis = flood ? lineDist(flood.pts, w.x - nx * t.width / 2, w.z - nz * t.width / 2) : Infinity;
+      if (!niche) {
+        if (axis < 0.6) b.box(mats.concrete, onFace(0.01, 0.45), 0.03, 0.9, L, [0.14, 0.17, 0.17]);
+        else b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, L, [0.2, 0.21, 0.19]);
+      }
+      if (run % 8 === 0) b.box(mats.concrete, onFace(0.15, H / 2), 0.3, H, Math.min(0.55, L), [0.5 * tone, 0.48 * tone, 0.45 * tone]);
+      else if (niche) {
+        // Refuge niche: a dark recess with a light frame.
+        b.box(mats.dark, onFace(0.015, 1.05), 0.02, 2.1, Math.min(1.0, L));
+        b.box(mats.concrete, onFace(0.03, 2.18), 0.05, 0.12, Math.min(1.2, L + 0.16), [0.6, 0.58, 0.54]);
+      }
+      // Cable tray on brackets along the wall.
+      b.box(mats.iron, onFace(0.1, 2.05), 0.16, 0.05, L, [0.24, 0.24, 0.22]);
+      b.box(mats.rubber, onFace(0.1, 2.12), 0.12, 0.09, L, [0.12, 0.12, 0.12]);
+      if (run % 2 === 0) b.box(mats.iron, onFace(0.08, 2.0), 0.16, 0.12, 0.05, [0.3, 0.3, 0.28]);
+      // U-Bahn tunnel lamp: a caged bulkhead light on the wall, every 12 m, alternating sides and shades.
+      if ((t.kind === 'track' || t.kind === 'bypass') && (run + (side > 0 ? 6 : 0)) % 12 === 0) {
+        const cold = ((run / 12) | 0) % 3 === 1;
+        b.box(mats.iron, onFace(0.08, 2.75), 0.16, 0.3, 0.42, [0.2, 0.2, 0.2]);
+        b.box(mats.lampGlass, onFace(0.17, 2.75), 0.04, 0.2, 0.32, cold ? [1.2, 1.5, 1.8] : [1.7, 1.25, 0.55]);
+        b.light(new Vector3(fx - nx * 0.5, 2.6, fz - nz * 0.5), cold ? 0xd8ecff : 0xffb060, 18, 10, 0.02, 4.5, { yaw: Math.atan2(-nx, -nz), stretch: 1.3, reach: 1.6, halo: 0.3 });
+      }
+    }
+    cap(h < H ? [0.3, 0.29, 0.27] : [0.08, 0.08, 0.09]);
+    b.shadowBox(rot(mx, h / 2, mz), thick, h, L);
+    if (t.kind === 'station') {
+      // Tiled band at eye height (cream tiles), as on the old S-Bahn halls; M20: a stripe in the line color.
+      const band = (width: number, height: number, offset: number, y: number, tint: RGB): void => {
+        b.geo(mats.concrete, tunnelBoxGeo(width, height, L, 3, segment, true), onFace(offset, y), tint);
+      };
+      band(0.08, 1.8, 0.01, 1.6, [0.86, 0.82, 0.7]);
+      band(0.1, 0.24, 0.02, 2.25, stripe);
     }
   }
-  for (const [ti, t] of m.tunnel!.tubes.entries()) {
+  for (const t of T.tubes) {
     for (let i = 1; i < t.pts.length; i++) {
       const [ax, az] = t.pts[i - 1]!, [bx, bz] = t.pts[i]!, len = Math.hypot(bx - ax, bz - az);
       if (len < 0.01) continue;
       const ux = (bx - ax) / len, uz = (bz - az) / len, yaw = Math.atan2(ux, uz);
-      for (const side of [-1, 1]) {
-        // Normal pointing out of the tube on this side.
-        const nx = uz * side, nz = -ux * side;
-        const key = `${t.kind}${side}`;
-        for (let d = 0; d < len; d += 1) {
-          const cx = ax + ux * (d + 0.5), cz = az + uz * (d + 0.5);
-          const ex = cx + nx * t.width / 2, ez = cz + nz * t.width / 2;
-          // Open where the wall would stand inside another tube (a junction).
-          if (inTunnel(m, ex + nx * 0.6, ez + nz * 0.6)) continue;
-          // As thick as fits before the next tube (M20: marched in half meters, so a parallel bypass is found).
-          let thick = 0.5;
-          while (thick < 12 && !inTunnel(m, ex + nx * (thick + 0.5), ez + nz * (thick + 0.5))) thick += 0.5;
-          const h = thick < 2.5 ? LOW : H;
-          const b = chunkOf(cx, cz);
-          // Playtest 2026-11-18: uneven walls. The face swells by up to 0.3 m (two slow waves along the
-          // tube), the tint drifts, damp darkens the foot; ribs, refuge niches, a cable tray and wall lamps
-          // break the run. Cost: boxes in the existing tunnel materials, merged per chunk; lamps feed the fixed pool.
-          const run = (wallRun.get(key) ?? 0) + 1;
-          wallRun.set(key, run);
-          const u = run + side * 37 + t.width * 3;
-          const bump = h < H ? 0 : 0.15 + 0.1 * Math.sin(u * 0.43) + 0.05 * Math.sin(u * 1.9 + 1.3);
-          const tone = 0.86 + 0.14 * Math.sin(u * 0.21) + 0.06 * Math.sin(u * 1.37);
-          const mx = ex + nx * (thick - bump) / 2, mz = ez + nz * (thick - bump) / 2;
-          const fx = ex - nx * bump, fz = ez - nz * bump;
-          const onFace = (o: number, y: number): Matrix4 => new Matrix4().makeRotationY(yaw).setPosition(fx - nx * o, y, fz - nz * o);
-          const segment = (run - 1) % 4;
-          const variant = (Math.floor((run - 1) / 4) + (side > 0 ? 1 : 0)) % 3;
-          // Playtest 2026-11-18: characters behind a tunnel wall get their contour. One mask box per 8 m of wall and chunk.
-          const occKey = `${ti}:${side}:${(run / 8) | 0}`, occ = wallBoxes.get(occKey);
-          const occBox = b.solid.captureOccluder(() => b.geo(mats.concrete, tunnelBoxGeo(thick + bump, h, 1.04, variant, segment, true), new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), [0.42 * tone, 0.4 * tone, 0.38 * tone]), occ?.b === b ? occ.box : undefined);
-          if (occBox) wallBoxes.set(occKey, { b, box: occBox });
-          if (h === H && t.kind !== 'station') {
-            b.box(mats.concrete, onFace(0.01, 0.35), 0.03, 0.7, 1.04, [0.2, 0.21, 0.19]);
-            if (run % 8 === 0) b.box(mats.concrete, onFace(0.15, H / 2), 0.3, H, 0.55, [0.5 * tone, 0.48 * tone, 0.45 * tone]);
-            else if (run % 29 === 14) {
-              // Refuge niche: a dark recess with a light frame.
-              b.box(mats.dark, onFace(0.015, 1.05), 0.02, 2.1, 1.0);
-              b.box(mats.concrete, onFace(0.03, 2.18), 0.05, 0.12, 1.2, [0.6, 0.58, 0.54]);
-            }
-            // Cable tray on brackets along the wall.
-            b.box(mats.iron, onFace(0.1, 2.05), 0.16, 0.05, 1.04, [0.24, 0.24, 0.22]);
-            b.box(mats.rubber, onFace(0.1, 2.12), 0.12, 0.09, 1.04, [0.12, 0.12, 0.12]);
-            if (run % 2 === 0) b.box(mats.iron, onFace(0.08, 2.0), 0.16, 0.12, 0.05, [0.3, 0.3, 0.28]);
-            // U-Bahn tunnel lamp: a caged bulkhead light on the wall, every 12 m, alternating sides and shades.
-            if ((t.kind === 'track' || t.kind === 'bypass') && (run + (side > 0 ? 6 : 0)) % 12 === 0) {
-              const cold = ((run / 12) | 0) % 3 === 1;
-              b.box(mats.iron, onFace(0.08, 2.75), 0.16, 0.3, 0.42, [0.2, 0.2, 0.2]);
-              b.box(mats.lampGlass, onFace(0.17, 2.75), 0.04, 0.2, 0.32, cold ? [1.2, 1.5, 1.8] : [1.7, 1.25, 0.55]);
-              b.light(new Vector3(fx - nx * 0.5, 2.6, fz - nz * 0.5), cold ? 0xd8ecff : 0xffb060, 18, 10, 0.02, 4.5, { yaw: Math.atan2(-nx, -nz), stretch: 1.3, reach: 1.6, halo: 0.3 });
-            }
-          }
-          b.box(mats.concrete, new Matrix4().makeRotationY(yaw).setPosition(mx, h + 0.05, mz), thick + 0.4, 0.1, 1.04, h < H ? [0.3, 0.29, 0.27] : [0.08, 0.08, 0.09]);
-          b.shadowBox(new Matrix4().makeRotationY(yaw).setPosition(mx, h / 2, mz), thick, h, 1.04);
-          if (t.kind === 'station') {
-            // Tiled band at eye height (cream tiles), as on the old S-Bahn halls; M20: a stripe in the line color.
-            const band = (width: number, height: number, offset: number, y: number, tint: RGB): void => {
-              b.geo(mats.concrete, tunnelBoxGeo(width, height, 1.04, 3, segment, true), onFace(offset, y), tint);
-            };
-            band(0.08, 1.8, 0.01, 1.6, [0.86, 0.82, 0.7]);
-            band(0.1, 0.24, 0.02, 2.25, stripe);
-          }
-        }
-      }
       if (t.kind === 'track') {
         // Two tracks: rails 1.435 m apart, sleepers every 0.7 m.
         for (const off of [-2.6, 2.6]) {
