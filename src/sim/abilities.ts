@@ -8,6 +8,7 @@ import type { PerkId } from '../data/progression';
 import { BREAKABLE, hitBreakable } from './breakables';
 import { colliderDistance } from './collide';
 import { hasL, ignite, knock, pk, strike, resist } from './combat';
+import { healPlayer } from './heal';
 import { angleOf, clamp } from './math';
 import { DT, type Cast, type Enemy, type Sim, type SimInput } from './types';
 
@@ -427,21 +428,10 @@ export function addConsumable(s: Sim, id: 'verband' | 'molotow'): boolean {
   return true;
 }
 
-export function healPlayer(s: Sim, amount: number): number {
-  const p = s.player;
-  if (p.state === 'dead') return 0;
-  const h = Math.min(Math.max(0, s.stats.maxHp - p.hp), amount);
-  p.hp += h;
-  return h;
-}
-
 /** The dodge started: Atempause, Husarenritt and Sturmangriff windows, Rammbock list. */
 export function onDodge(s: Sim): void {
   const a = s.abilities;
-  if (pk(s, 'breath')) {
-    const h = healPlayer(s, s.stats.maxHp * 0.03 * pk(s, 'breath'));
-    if (h >= 1) s.events.push({ type: 'heal', amount: Math.round(h), source: 'breath' });
-  }
+  if (pk(s, 'breath')) healPlayer(s, s.stats.maxHp * 0.03 * pk(s, 'breath'), 'breath');
   a.hus = 1.45;
   a.stT = 1.7;
   if (hasL(s, 'weltuhr')) a.dcrit = true;
@@ -474,7 +464,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
   if (p.state !== 'dead') {
     if (a.hot > 0) {
       a.hot -= DT;
-      healPlayer(s, (s.stats.maxHp * ((s.inventory.camp?.stations.laz ?? 1) >= 3 ? 0.6 : CONSUMABLE.heal)) / CONSUMABLE.hotTime * DT);
+      healPlayer(s, (s.stats.maxHp * ((s.inventory.camp?.stations.laz ?? 1) >= 3 ? 0.6 : CONSUMABLE.heal)) / CONSUMABLE.hotTime * DT, 'verband');
     }
     if (a.guard > 0) {
       a.guard -= DT;
@@ -497,7 +487,7 @@ export function updateAbilities(s: Sim, inp: SimInput): void {
     if (a.banner) {
       a.banner.t -= DT;
       if (a.banner.t <= 0) a.banner = null;
-      else if (Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) healPlayer(s, s.stats.maxHp * POWER.stand.heal * DT);
+      else if (Math.hypot(p.x - a.banner.x, p.z - a.banner.z) < a.banner.r) healPlayer(s, s.stats.maxHp * POWER.stand.heal * DT, 'banner');
     }
   }
 

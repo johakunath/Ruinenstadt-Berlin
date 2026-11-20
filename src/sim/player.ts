@@ -4,6 +4,7 @@ import { POWER } from '../data/powers';
 import { BOSS } from '../data/enemies';
 import { CONSUMABLE, onDodge, shock, shoot, updateCast } from './abilities';
 import { hasL, knock, pk, STATUS } from './combat';
+import { healPlayer } from './heal';
 import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
 import { DT, type Enemy, type Player, type Sim, type SimInput } from './types';
@@ -232,7 +233,7 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     return;
   }
 
-  p.hp = Math.min(sim.stats.maxHp, p.hp + sim.stats.regen * DT);
+  healPlayer(sim, sim.stats.regen * DT, 'regen');
 
   // Timed state ends first, so a buffered press can fire on the first legal step.
   if (p.state === 'attack' && p.attack) {

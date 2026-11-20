@@ -4,6 +4,7 @@
 import { PERKS, type PerkDefinition, type PerkFamilyId, type PerkId } from '../data/progression';
 import type { ElementId } from '../data/items';
 import { pk } from './combat';
+import { healPlayer } from './heal';
 import { setLoadout } from './loadout';
 import type { Sim } from './types';
 import type { Offer } from './abilities';
@@ -85,7 +86,7 @@ export function chooseBlessing(s: Sim, id: PerkId): boolean {
   const level = Math.min(perkOf(id).max, pk(s, id) + offer.level);
   setLoadout(s, s.equipment, { ...s.statContext, perks: { ...s.statContext.perks, [id]: level } });
   // 2D: Dickes Fell also heals a little when taken.
-  if (id === 'hp' && s.player.state !== 'dead') s.player.hp = Math.min(s.stats.maxHp, s.player.hp + 25);
+  if (id === 'hp') healPlayer(s, 25, 'blessing');
   a.quality[id] = Math.max(a.quality[id] ?? 0, offer.quality);
   a.offers = [];
   a.hiddenOffer = false;
