@@ -80,7 +80,7 @@ export class OptionsScreen {
     // Loading a code replaces the profile and reloads: only from the title, as in 2D.
     (this.root.querySelector('#save-load-row') as HTMLElement).hidden = !!document.getElementById('title')?.hidden;
     this.root.hidden = false;
-    this.root.querySelector('.optbox')!.scrollTop = 0;
+    this.root.scrollTop = 0;
     this.pad.reset();
     this.root.querySelector<HTMLElement>('[data-opt="autoAttack"]')?.focus({ preventScroll: true });
   }

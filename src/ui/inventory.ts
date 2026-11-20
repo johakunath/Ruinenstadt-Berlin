@@ -188,7 +188,11 @@ export class InventoryUi {
     if (on && this.selection && !this.item()) this.selection = null;
     this.root.hidden = !on;
     this.portrait?.setOpen(on);
-    if (on) { this.render(); (this.root.querySelector<HTMLElement>('.inv-grid button') ?? this.root.querySelector<HTMLElement>('.inv-doll button'))?.focus(); }
+    if (on) {
+      this.render();
+      this.root.scrollTop = 0;
+      (this.root.querySelector<HTMLElement>('.inv-grid button') ?? this.root.querySelector<HTMLElement>('.inv-doll button'))?.focus({ preventScroll: true });
+    }
   }
   private item(sel = this.selection): Item | undefined {
     if (!sel) return;
