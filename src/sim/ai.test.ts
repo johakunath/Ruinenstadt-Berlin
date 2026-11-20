@@ -3,7 +3,7 @@ import { BOSS, ENEMIES, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
 import { ignite, killEnemy, knock, strike } from './combat';
 import { aliveCount, capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
-import { inZone } from './threats';
+import { fireShot, inZone, threatBy } from './threats';
 import { autoAttackTarget } from './player';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
@@ -1690,5 +1690,19 @@ describe('Auto-Angriff (2D autoAtk)', () => {
     expect(autoAttackTarget(s)).toBe(far);
     far.wake = 2;
     expect(autoAttackTarget(s)).toBe(near);
+  });
+});
+
+describe('shot hits name the shooter (review 2026-11-20)', () => {
+  it('a shot reads „Speier · Geschoss“ in the death summary, only „Geschoss“ once the body is gone', () => {
+    const s = fresh();
+    const e = put(s, 'spitter', 0, 6);
+    e.state = 'stagger';
+    e.stateT = 0;
+    e.staggerDur = 99;
+    fireShot(s, e, angleOfHero(s, e), 8, 5, 3, 0.3);
+    const hit = run(s, 1.5).find((v) => v.type === 'playerHit');
+    expect(hit).toMatchObject({ by: 'Speier · Geschoss' });
+    expect(threatBy(s, 'shot', 9999)).toBe('Geschoss');
   });
 });

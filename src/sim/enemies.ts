@@ -4,7 +4,7 @@ import { BOSS, ELITE_MODS, ENEMIES, SPAWN, THREAT, type EliteMod, type EnemyKind
 import { initCooldowns, isRush, jitter, passive, runSpecial, think, tickCooldowns } from './ai';
 import { colliderDistance } from './collide';
 import { reachable } from './reach';
-import { angleOf, clamp, turnToward } from './math';
+import { angleOf, clamp, turnToward, type Rng } from './math';
 import { DT, type Enemy, type Sim } from './types';
 import { POWER } from '../data/powers';
 import { STATUS } from './combat';
@@ -21,12 +21,12 @@ export function aliveOf(sim: Sim, kind: EnemyKind): number {
 }
 export const capped = (sim: Sim, kind: EnemyKind): boolean => ENEMIES[kind].cap !== undefined && aliveOf(sim, kind) >= ENEMIES[kind].cap!;
 
-export function pickKind(sim: Sim, mix?: Partial<Record<EnemyKind, number>>): EnemyKind {
+export function pickKind(sim: Sim, mix?: Partial<Record<EnemyKind, number>>, rng: Rng = sim.rng): EnemyKind {
   const kinds = Object.values(ENEMIES).filter((k) => (mix ? (mix[k.kind] ?? 0) : k.weight) > 0 && !capped(sim, k.kind));
   let total = 0;
   const w = (k: (typeof kinds)[number]): number => (mix ? (mix[k.kind] ?? 0) : k.weight);
   for (const k of kinds) total += w(k);
-  let roll = sim.rng.next() * total;
+  let roll = rng.next() * total;
   for (const k of kinds) {
     roll -= w(k);
     if (roll <= 0) return k.kind;
@@ -91,6 +91,7 @@ export function splitElite(sim: Sim, e: Enemy): void {
     const m = spawnEnemy(sim, e.x + sim.rng.range(-0.5, 0.5), e.z + sim.rng.range(-0.5, 0.5), 'walker', e.hpMul * S.hp, e.dmgMul);
     m.def = { ...m.def, radius: m.def.radius * S.scale, scale: m.def.scale * S.scale };
     m.mini = true;
+    m.enc = e.enc;
   }
 }
 
@@ -115,6 +116,17 @@ export function aliveCount(sim: Sim): number {
   let n = 0;
   // Side passage guards (sleep set) never hold up a wave; nor does a reflection (M16, it dies with its host).
   for (const e of sim.enemies) if (e.state !== 'dead' && e.sleep === undefined && e.mirrorOf === undefined) n++;
+  return n;
+}
+
+/**
+ * Alive bodies the director spawned for encounter `index` (`Enemy.enc`, review 2026-11-20): only these fill
+ * a wave's `maxAlive` and hold up its clear. Captive guards, event adds and leftovers of an earlier fight
+ * keep fighting but can no longer hold a fight open (one stuck behind a wall soft-locked the run).
+ */
+export function encounterAlive(sim: Sim, index: number): number {
+  let n = 0;
+  for (const e of sim.enemies) if (e.enc === index && e.state !== 'dead' && e.sleep === undefined && e.mirrorOf === undefined) n++;
   return n;
 }
 

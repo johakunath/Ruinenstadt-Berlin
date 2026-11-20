@@ -234,8 +234,10 @@ function showWon(): void {
   input.enabled = false;
   input.clear();
   ui.showWon(sim.kills);
-  document.getElementById('won-stats')!.innerHTML = endStats(true);
-  (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined;
+  const fell = sim.player.state === 'dead';
+  document.getElementById('won-stats')!.innerHTML = (fell ? '<div class="death-by">Nach dem Sieg gefallen</div>' : '') + endStats(true);
+  (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined || fell;
+  document.getElementById('won-explore')!.hidden = fell;
   document.getElementById('won-title')!.textContent = winText;
   const t = document.getElementById('won-tunnel')!, link = wonLink(mapId, line);
   t.hidden = !level || !link;
@@ -259,7 +261,7 @@ function showCampButtons(): void {
 }
 // Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
 document.getElementById('won-tunnel')!.addEventListener('click', () => {
-  if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
+  if (importantDrops(sim).length > 0 && lootExit !== 'ask' && sim.player.state !== 'dead') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
   const link = wonLink(mapId, line);
   goMap(link?.to ?? 'koepenick', link?.line ?? 0);
 });
@@ -409,7 +411,7 @@ const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLab
 document.getElementById('open-camp')!.addEventListener('click', () => { if (isCamp) startCamp(); else goMap('lager'); });
 document.getElementById('won-camp')!.addEventListener('click', () => {
   // Leaving the freed district for the camp ends the run (same loot warning as Nochmal).
-  if (importantDrops(sim).length > 0 && lootExit !== 'ask') { lootExit = 'ask'; afterLoot = 'camp'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
+  if (importantDrops(sim).length > 0 && lootExit !== 'ask' && sim.player.state !== 'dead') { lootExit = 'ask'; afterLoot = 'camp'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
   toCamp();
 });
 /** Back to the title with the camp open: a fresh run waits, gear and Schrott stay. */
@@ -926,7 +928,15 @@ function frame(now: number): void {
   // Paused screens (trade, camp, menu) can still raise events, e.g. the coin of a purchase (A2).
   if (!running && sim.events.length) drainEvents();
 
-  if (phase === 'play' && sim.player.state === 'dead') {
+  // The hero fell: the loot search ends with them (review 2026-11-20).
+  if (sim.player.state === 'dead' && lootExit === 'search') { lootExit = 'off'; lootChip.hidden = true; }
+  if (phase === 'play' && sim.player.state === 'dead' && sim.run.phase === 'won' && sim.run.endless === undefined) {
+    // Fallen after the victory (review 2026-11-20): the run stays won (telemetry already sent 'win'), so the
+    // end screen follows after the fall, never the death screen or a retry of the boss.
+    input.enabled = false;
+    exitChip.hidden = true;
+    if (wonFor < WON_DELAY - 1.4) wonFor = WON_DELAY - 1.4;
+  } else if (phase === 'play' && sim.player.state === 'dead') {
     phase = 'dead';
     // A fall ends the expedition (2D): the meal is eaten, the retry starts without it.
     endExpedition(sim, false);

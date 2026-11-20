@@ -209,6 +209,8 @@ export interface Enemy {
   /** M16 Spiegelbild: the body it reflects (it cannot be hurt and dies with it) and the centre it is reflected through. */
   mirrorOf?: number;
   mirror?: { x: number; z: number };
+  /** The encounter (`run.index`) whose waves brought it; only these hold a fight open (`encounterAlive`). Endless waves use the encounter count. */
+  enc?: number;
   /** M16 Spiegelpaar: the id of her reflection. */
   pair?: number;
   /** M16 Ringvater: „Erst die Leibwache!“ was shown for the guard he has now. */
@@ -258,7 +260,7 @@ export type SimEvent =
   | { type: 'bossRage'; id: number; name: string }
   | { type: 'summon'; id: number; x: number; z: number; count: number }
   | { type: 'spawn'; id: number }
-  | { type: 'encounterStart'; index: number }
+  | { type: 'encounterStart'; index: number; /** The hero's life as the fight starts (telemetry `h0`). */ hp: number }
   | { type: 'waveStart'; index: number; wave: number; waves: number }
   | { type: 'encounterClear'; index: number; heal: number }
   | { type: 'zoneClear'; zone: number }

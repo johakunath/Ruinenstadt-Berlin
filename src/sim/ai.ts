@@ -505,7 +505,8 @@ export function summon(sim: Sim, e: Enemy, kind: EnemyKind, count: number): void
   const n = Math.min(count, BOSS.summon.maxAdds - alive, cap === undefined ? Infinity : cap - aliveOf(sim, kind));
   for (let i = 0; i < n; i++) {
     const q = freeSpot(sim.level, sim.rng, e.x, e.z, e.def.radius + 0.6, e.def.radius + BOSS.summon.spread, ENEMIES[kind].radius + 0.1) ?? { x: e.x, z: e.z };
-    spawnEnemy(sim, q.x, q.z, kind, e.hpMul, e.dmgMul);
+    // A boss's adds belong to its fight (`Enemy.enc`).
+    spawnEnemy(sim, q.x, q.z, kind, e.hpMul, e.dmgMul).enc = e.enc;
   }
   if (n > 0) sim.events.push({ type: 'summon', id: e.id, x: e.x, z: e.z, count: n });
 }
