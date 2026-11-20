@@ -1776,6 +1776,7 @@ export class EnemyView {
     this.anim = new Animator(model, clips);
     this.clips = clips;
     const own = new Map<unknown, LitMaterial>();
+    const skinned: SkinnedMesh[] = [];
     model.traverse((o) => {
       const mesh = o as SkinnedMesh;
       if (!mesh.isMesh) return;
@@ -1799,14 +1800,25 @@ export class EnemyView {
       mesh.castShadow = castShadow;
       mesh.frustumCulled = true;
       if (skin === 'zombie') mesh.boundingSphere = new Sphere(new Vector3(0, 0.9, 0), 1.7);
-      else {
-        // Dinos and mechs (review 2026-11-20: they were drawn in every pass even off screen): the
-        // bind pose bounds, doubled for strides, lunges and the mechs' raised legs.
-        if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
-        const b = mesh.geometry.boundingSphere!;
-        mesh.boundingSphere = new Sphere(b.center.clone(), b.radius * 2);
-      }
+      else if (mesh.isSkinnedMesh) skinned.push(mesh);
     });
+    // Dinos and mechs (review 2026-11-20: they were drawn in every pass even off screen): bounds of the
+    // skinned rest pose (their geometry is in other units than the posed mesh), grown for strides,
+    // lunges and the mechs' raised legs. Checked against every animated frame in a pack fight.
+    // One sphere for all parts of a body (a mech's small parts swing far from their own rest bounds).
+    if (skinned.length) {
+      model.updateMatrixWorld(true);
+      const all = new Sphere();
+      for (const mesh of skinned) {
+        mesh.skeleton?.update();
+        mesh.computeBoundingSphere();
+        const w = mesh.boundingSphere!.clone().applyMatrix4(mesh.matrixWorld);
+        if (all.isEmpty()) all.copy(w);
+        else all.union(w);
+      }
+      all.radius *= skin === 'mech' || skin === 'mechBig' ? 2 : 1.6;
+      for (const mesh of skinned) mesh.boundingSphere = all.clone().applyMatrix4(mesh.matrixWorld.clone().invert());
+    }
     if (skin === 'mech' || skin === 'mechBig') {
       // H3: gear sets per kind are built in the rest pose the body has now (`inRest`); the clock gear at once.
       model.traverse((o) => { if ((o as Bone).isBone) this.rest.push([o, o.position.clone(), o.quaternion.clone()]); });
