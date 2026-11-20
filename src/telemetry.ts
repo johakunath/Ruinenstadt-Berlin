@@ -54,6 +54,10 @@ export interface RunRecord {
   low1: number;
   calls: number;
   tris: number;
+  /** Mean render CPU ms per frame (scene update and pass submission; GPU time not included). Review 2026-11-20. */
+  rms?: number;
+  /** Lowest dynamic resolution scale reached (1 = never lowered). */
+  minScale?: number;
   profile: string;
   screen: string;
   dpr: number;
@@ -122,6 +126,9 @@ export class Telemetry {
   private encCalls = 0;
   private encAlive = 0;
   private maxTris = 0;
+  private renderSum = 0;
+  private renderN = 0;
+  private minScale = 1;
   private busy = false;
 
   constructor(enabled: boolean, autostart: boolean) {
@@ -147,6 +154,9 @@ export class Telemetry {
     this.encFrames = new FrameStats();
     this.maxCalls = 0;
     this.maxTris = 0;
+    this.renderSum = 0;
+    this.renderN = 0;
+    this.minScale = 1;
     this.run = {
       at: now.getTime(), v: VERSION, day: now.toISOString().slice(0, 10), d: 0, dn: ctx.map, df: 1, m: '3d', end: 'quit',
       wave: sim.run.index, t: 0, lvl: 0, dev: device(), inp: ctx.input, fps: 0, p95: 0, low1: 0, calls: 0, tris: 0,
@@ -156,7 +166,7 @@ export class Telemetry {
   }
 
   /** Once per rendered frame while playing. */
-  frame(dt: number, sim: Sim, perf: { calls: number; triangles: number }, input: string): void {
+  frame(dt: number, sim: Sim, perf: { calls: number; triangles: number; renderMs?: number; scale?: number }, input: string): void {
     const r = this.run;
     if (!r || dt <= 0 || dt > 1) return;
     r.t += dt;
@@ -165,6 +175,8 @@ export class Telemetry {
     this.encFrames.add(dt);
     this.maxCalls = Math.max(this.maxCalls, perf.calls);
     this.maxTris = Math.max(this.maxTris, perf.triangles);
+    if (perf.renderMs !== undefined) { this.renderSum += perf.renderMs; this.renderN++; }
+    if (perf.scale !== undefined) this.minScale = Math.min(this.minScale, perf.scale);
     this.encCalls = Math.max(this.encCalls, perf.calls);
     let alive = 0;
     for (const e of sim.enemies) if (e.state !== 'dead') alive++;
@@ -231,6 +243,8 @@ export class Telemetry {
     r.low1 = Math.round(1000 / Math.max(1, this.frames.quantile(0.99)));
     r.calls = this.maxCalls;
     r.tris = this.maxTris;
+    if (this.renderN) r.rms = Math.round((this.renderSum / this.renderN) * 10) / 10;
+    if (this.minScale < 1) r.minScale = this.minScale;
     const e = r.enc[r.enc.length - 1];
     if (e && e.clear === null) this.closeEnc(e);
     const q = store<RunRecord[]>(QUEUE) ?? [];

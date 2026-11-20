@@ -75,16 +75,20 @@ describe('telemetry fight log', () => {
     tick(60);
     sim.player.hp = sim.stats.maxHp;
     tick(600);
+    // Render CPU time and the lowest dynamic resolution scale (review 2026-11-20).
+    t.frame(1 / 60, sim, { calls: 100, triangles: 1000, renderMs: 4, scale: 0.85 }, 'touch');
     // A hit drained between frames (e.g. the killing blow) still counts.
     t.event({ type: 'playerHit', x: 0, z: 0, dx: 0, dz: 0, damage: 90.333, hp: 5, by: 'Ratte' });
     t.event({ type: 'encounterClear', index: 0, heal: 0 });
     t.end('win');
-    const q = JSON.parse(mem.get('ruinenstadt-berlin.tlq')!) as Array<{ v: string; end: string; enc: Array<{ hp?: number; low?: number; h0?: number; dmg: number }> }>;
+    const q = JSON.parse(mem.get('ruinenstadt-berlin.tlq')!) as Array<{ v: string; end: string; rms?: number; minScale?: number; enc: Array<{ hp?: number; low?: number; h0?: number; dmg: number }> }>;
     expect(q.map((r) => r.end)).toEqual(['dead', 'win']);
     expect(q[1]!.enc[0]!.hp).toBe(Math.round(sim.stats.maxHp));
     expect(q[1]!.enc[0]!.low).toBe(5);
     expect(q[1]!.enc[0]!.h0).toBe(54);
     expect(q[1]!.enc[0]!.dmg).toBe(90.3);
+    expect(q[1]!.rms).toBe(4);
+    expect(q[1]!.minScale).toBe(0.85);
     expect(VERSION).toMatch(/^3d-0\.1\.0\+\w+$/);
     vi.useRealTimers();
     vi.unstubAllGlobals();
