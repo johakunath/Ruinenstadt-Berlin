@@ -9,6 +9,7 @@ import { splitElite } from './enemies';
 import { PX } from '../data/powers';
 import type { PerkId } from '../data/progression';
 import { killDrops } from './loot';
+import { healPlayer } from './heal';
 import { kodexKill } from './inventory';
 import { angleDiff, angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
@@ -281,7 +282,8 @@ export function killEnemy(s: Sim, e: Enemy, byHero = true): void {
   if (!byHero) return;
   a.streak.n++;
   a.streak.t = STATUS.streakTime;
-  if (p.state !== 'dead') p.hp = Math.min(s.stats.maxHp, p.hp + s.stats.leech + s.stats.maxHp * 0.01 * pk(s, 'leech') + (tough(e) && hasL(s, 'pickel') ? s.stats.maxHp * 0.15 : 0));
+  healPlayer(s, s.stats.leech + s.stats.maxHp * 0.01 * pk(s, 'leech'), 'kill');
+  if (tough(e) && hasL(s, 'pickel')) healPlayer(s, s.stats.maxHp * 0.15, 'pickel');
   // Schaffnerkelle: a kill shortens the dodge cooldown (2D 0.5 s of 1.4 s). Zitadellenklinge: one second off the power.
   if (hasL(s, 'schaffner')) p.dodgeCd = Math.max(0, p.dodgeCd - (0.5 / 1.4) * PLAYER.dodge.cooldown);
   if (hasL(s, 'zitklinge')) a.powerCd = Math.max(0, a.powerCd - 1);
@@ -360,7 +362,6 @@ function deathBlast(s: Sim, e: Enemy): void {
 
 /** Burn and acid timers. Burn damage has no hit feel; it reports as `dot` a few times a second. */
 export function updateStatuses(s: Sim): void {
-  const p = s.player;
   for (const e of s.enemies) {
     if (e.state === 'dead' || (e.wake ?? 0) > 0) continue;
     if (e.acid > 0) e.acid = Math.max(0, e.acid - DT);
@@ -370,7 +371,7 @@ export function updateStatuses(s: Sim): void {
     e.burn -= DT;
     e.hp -= d;
     e.burnAcc += d;
-    if (pk(s, 'kachel') && p.state !== 'dead') p.hp = Math.min(s.stats.maxHp, p.hp + d * 0.05 * pk(s, 'kachel'));
+    if (pk(s, 'kachel')) healPlayer(s, d * 0.05 * pk(s, 'kachel'), 'leech');
     const killed = e.hp <= 0;
     if (killed || e.burn <= 0 || e.burnAcc >= e.bdps * STATUS.dotReport) {
       if (e.burnAcc >= 0.5 || killed) s.events.push({ type: 'dot', id: e.id, x: e.x, z: e.z, damage: Math.max(1, Math.round(e.burnAcc)), killed });
@@ -427,7 +428,8 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
     if ((pk(s, 'second') || hasL(s, 'herz')) && !s.abilities.secondUsed) {
       s.abilities.secondUsed = true;
       // Herz der Spree: back at 40% instead of 30%.
-      p.hp = Math.round(s.stats.maxHp * (hasL(s, 'herz') ? 0.4 : STATUS.secondHp));
+      p.hp = 0;
+      healPlayer(s, Math.round(s.stats.maxHp * (hasL(s, 'herz') ? 0.4 : STATUS.secondHp)), 'secondWind');
       p.invuln = STATUS.secondInvuln;
       s.events.push({ type: 'secondWind' });
     } else {

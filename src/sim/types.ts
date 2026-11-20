@@ -219,6 +219,9 @@ export interface Enemy {
   fans?: { n: number; t: number; aim: number; k: number };
 }
 
+/** What healed the hero (`healPlayer` in heal.ts). */
+export type HealSource = 'regen' | 'rest' | 'verband' | 'banner' | 'leech' | 'kill' | 'pickel' | 'breath' | 'pickup' | 'food' | 'trader' | 'encounter' | 'endless' | 'blessing' | 'secondWind';
+
 export type SimEvent =
   | { type: 'swing'; attack: AttackId; weight: HitWeight }
   | { type: 'hit'; id: number; x: number; z: number; dx: number; dz: number; weight: HitWeight; killed: boolean; damage: number; critical?: boolean; element?: ElementId; quiet?: boolean; note?: string; /** D9: the weapon fits the enemy's class. */ effective?: boolean }
@@ -231,7 +234,8 @@ export type SimEvent =
   | { type: 'bolt'; x0: number; z0: number; x1: number; z1: number }
   | { type: 'impact'; x: number; z: number; radius: number; kind: 'strike' | 'molotov' | 'boom' }
   | { type: 'ignite'; id: number; x: number; z: number }
-  | { type: 'heal'; amount: number; source: 'verband' | 'food' | 'breath' | 'banner' | 'trader' }
+  /** Life restored (`healPlayer`): exact, may be fractional. `tick`: a small repeated heal (regen, Verband, leech). */
+  | { type: 'heal'; amount: number; source: HealSource; tick?: true }
   | { type: 'consumable'; id: 'verband' | 'molotow'; left: number }
   | { type: 'note'; text: string; color: string; x: number; z: number }
   | { type: 'secondWind' }

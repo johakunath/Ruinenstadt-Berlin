@@ -35,6 +35,7 @@ export class OptionsScreen {
       <div class="ohead"><h2>Optionen</h2></div>
       <div class="osec">Spiel</div>
       ${row('Auto-Angriff', 'Schlägt zu, wenn ein Gegner in Reichweite ist.', toggle('autoAttack', 'Auto-Angriff'))}
+      ${row('Schadenszahlen', 'Schaden und Heilung als Zahlen.', toggle('damageNumbers', 'Schadenszahlen'))}
       <div class="osec">Bild und Ton</div>
       ${row('Grafik', 'Qualität für PC, Leistung für Tablet und Handy.', profileSeg(), ' id="opt-profile-row"')}
       ${row('Ton', '', toggle('sound', 'Ton'))}${row('Musik', '', toggle('music', 'Musik'))}${row('Lautstärke', '', volumeRange(), ' id="opt-volume-row"')}

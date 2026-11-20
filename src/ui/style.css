@@ -469,6 +469,27 @@ body:has(.overlay:not([hidden])) #edges {
 .loot-label[data-rarity='0'] { opacity: 0.8; font-size: 11px; }
 .loot-label[data-rarity='3'] { font-size: 14px; font-weight: bold; }
 .loot-float { font-size: 14px; font-weight: bold; }
+/* Damage and heal numbers (2D nums: Barlow Condensed 600, 18 px, crits 24, 1 px dark drop shadow). */
+.dmg-num {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font: 600 18px/1 var(--f-ui);
+  letter-spacing: 0.02em;
+  text-shadow: 1px 1px 0 #0d0907, 0 0 3px rgba(13, 9, 7, 0.7);
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+}
+.dmg-num[data-k='crit'] { font-size: 24px; }
+.dmg-num[data-k='taken'] { font-size: 20px; }
+.dmg-num[data-k='quiet'], .dmg-num[data-k='tick'] { font-size: 14px; }
+@media (max-height: 500px), (max-width: 699px) {
+  .dmg-num { font-size: 15px; }
+  .dmg-num[data-k='crit'] { font-size: 20px; }
+  .dmg-num[data-k='taken'] { font-size: 17px; }
+  .dmg-num[data-k='quiet'], .dmg-num[data-k='tick'] { font-size: 12px; }
+}
 #toast {
   position: fixed;
   left: 50%;

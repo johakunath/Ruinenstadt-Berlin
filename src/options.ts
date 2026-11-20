@@ -28,6 +28,8 @@ export interface Options {
   telemetry: boolean;
   /** Auto-Angriff (2D `autoAtk`): swing when an enemy is in reach. Default off (2D: on for touch). */
   autoAttack: boolean;
+  /** Schadenszahlen (2D `nums`): damage dealt, taken and healing as rising numbers. Default on. */
+  damageNumbers: boolean;
   /** Skips the title screen (smoke test and screenshots). */
   autostart: boolean;
   /** M11d landmark reveal shot: on in normal play, off for debug starts and automated browsers unless ?reveal. */
@@ -72,6 +74,7 @@ interface Stored {
   showPerf?: boolean;
   telemetry?: boolean;
   autoAttack?: boolean;
+  damageNumbers?: boolean;
 }
 
 function readStored(): Stored {
@@ -84,7 +87,7 @@ function readStored(): Stored {
 
 export function storeOptions(o: Options): void {
   try {
-    const s: Stored = { profile: o.profile, pv: 2, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry, autoAttack: o.autoAttack };
+    const s: Stored = { profile: o.profile, pv: 2, volume: o.volume, sound: o.sound, music: o.music, rumble: o.rumble, eco: o.eco, showPerf: o.showPerf, telemetry: o.telemetry, autoAttack: o.autoAttack, damageNumbers: o.damageNumbers };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     // Private mode: options just do not persist.
@@ -143,6 +146,7 @@ export function readOptions(): Options {
     showPerf: debug.includes('perf') || (stored.showPerf ?? false),
     telemetry: stored.telemetry ?? true,
     autoAttack: stored.autoAttack ?? false,
+    damageNumbers: stored.damageNumbers ?? true,
     autostart: q.has('autostart'),
     reveal: q.has('reveal') || (!q.has('autostart') && !q.has('at') && !q.has('cam') && !navigator.webdriver),
     cam: parseCam(q.get('cam')),

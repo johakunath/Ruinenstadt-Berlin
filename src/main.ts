@@ -52,6 +52,7 @@ import { ENEMIES } from './data/enemies';
 import type { Level } from './sim/level';
 import { Telemetry, VERSION } from './telemetry';
 import { LootLabels, rarityColor } from './ui/loot-labels';
+import { DamageNumbers } from './ui/damage-numbers';
 import { groundY } from './render/ground';
 import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
 import { MATERIALS } from './data/crafting';
@@ -150,6 +151,7 @@ let lootExit: 'off' | 'ask' | 'search' = 'off';
 /** Where the exit warning leads after "Weiterziehen". */
 let afterLoot: 'again' | 'camp' | 'map' = 'again';
 const lootUi = new LootLabels();
+const dmgNums = new DamageNumbers();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
 const exitChip = document.getElementById('exit-chip') as HTMLButtonElement;
@@ -663,6 +665,7 @@ function drainEvents(): void {
     renderer?.onEvent(ev, sim);
     audio.onEvent(ev, sim);
     telemetry.event(ev);
+    if (opts.damageNumbers) dmgNums.onEvent(ev, sim);
     if (ev.type === 'playerHit') { logHit(hitLog, ev.by, ev.damage, sim.time); fight.dmg += ev.damage; }
     else if (ev.type === 'encounterStart') { fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0; }
     // M20 tunnel: gratings opening, the generator and its power (2D messages).
@@ -728,8 +731,7 @@ function drainEvents(): void {
       case 'pickup':
         if (ev.what === 'item' && persist && !intro.seen('loot')) intro.showTip('loot', () => input.clear());
         if (ev.what === 'item') lootUi.toast(`<span style="color:${rarityColor(ev.rarity, ev.set)}">${ev.name}</span>${ev.upgrade ? ' <span style="color:#8fd16a">▲</span>' : ''}`);
-        else if (ev.what === 'heal') lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
-        else if (ev.what === 'food') { lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s'); if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z); }
+        else if (ev.what === 'food') lootUi.toast('<span style="color:#f2a04b">Satt</span> · +10% Schaden · 30 s');
         else if (ev.ingredient) lootUi.float(`+1 ${INGREDIENTS[ev.ingredient].name}`, INGREDIENTS[ev.ingredient].color, sim.player.x, 1.8, sim.player.z);
         else if (ev.material) lootUi.float(`+1 ${MATERIALS[ev.material].name}`, MATERIALS[ev.material].color, sim.player.x, 1.8, sim.player.z);
         break;
@@ -742,9 +744,6 @@ function drainEvents(): void {
         break;
       case 'note':
         lootUi.float(ev.text, ev.color, ev.x, 2.2, ev.z);
-        break;
-      case 'heal':
-        if (ev.amount > 0) lootUi.float(`+${ev.amount} Leben`, '#8fd16a', sim.player.x, 1.8, sim.player.z);
         break;
       case 'secondWind':
         ui.banner('Zweiter Atem');
@@ -978,7 +977,9 @@ function frame(now: number): void {
   else if (isCamp) { minimap?.show(phase === 'play' && !camp.isOpen && !netBoard.isOpen); minimap?.update(dt, sim.player, [], []); }
   pollLootPad();
   // Heights are above the local ground (hills and terraces).
-  lootUi.update(sim, dt, (x, y, z) => renderer!.screenOf(x, y + groundY(x, z), z), phase === 'play' && !menu.isOpen);
+  const screenOf = (x: number, y: number, z: number) => renderer!.screenOf(x, y + groundY(x, z), z);
+  lootUi.update(sim, dt, screenOf, phase === 'play' && !menu.isOpen);
+  dmgNums.update(sim, dt, screenOf, phase === 'play' && !menu.isOpen && opts.damageNumbers);
 
   // Behind a still overlay (trade, blessing choice, cards) the world only idles: draw at about 10 fps
   // instead of full rate (playtest 2026-11-17: the tablet runs hot). The open menu draws nothing.

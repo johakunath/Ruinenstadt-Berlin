@@ -14,6 +14,7 @@ import { clearThreats } from './threats';
 import { FlowField, type Bounds } from './flowfield';
 import type { EncounterDef } from './level';
 import { spawnDrop } from './loot';
+import { healPlayer } from './heal';
 import { DT, type Enemy, type Sim } from './types';
 
 /** The player triggers an encounter this far inside its circle. */
@@ -222,8 +223,7 @@ export function updateDirector(sim: Sim): void {
     openGates(sim, run.index);
     focusFlow(sim, p.x, p.z);
   }
-  const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * enc.heal));
-  p.hp += heal;
+  const heal = healPlayer(sim, Math.round(sim.stats.maxHp * enc.heal), 'encounter');
   sim.events.push({ type: 'encounterClear', index: run.index, heal });
   const next = sim.level.encounters[run.index + 1];
   if (!next || next.zone !== enc.zone) sim.events.push({ type: 'zoneClear', zone: enc.zone });
@@ -342,8 +342,7 @@ function updateEndless(sim: Sim): void {
   sim.lootWaves++;
   const camp = sim.inventory.camp ??= { stations: {}, stash: [], freed: [] };
   camp.endlessBest = Math.max(camp.endlessBest ?? 0, n + 1);
-  const heal = Math.min(sim.stats.maxHp - p.hp, Math.round(sim.stats.maxHp * 0.15));
-  p.hp += heal;
+  healPlayer(sim, Math.round(sim.stats.maxHp * 0.15), 'endless');
   sim.events.push({ type: 'endlessWave', n: n + 1, done: true });
   if ((n + 1) % ENDLESS.blessingEvery === 0) sim.abilities.rewardT = REWARD_DELAY;
   run.phase = 'pause';

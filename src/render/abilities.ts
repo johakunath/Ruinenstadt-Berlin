@@ -198,7 +198,7 @@ export class AbilityView {
       for (let i = 0; i < 8; i++) E.dust(ev.x, y + 0.2, ev.z, R.range(-3, 3), R.range(0.5, 2), R.range(-3, 3), R.range(0.5, 0.9), R.range(0.5, 1), 0.16, 0.14, 0.13);
     } else if (ev.type === 'ignite') {
       for (let i = 0; i < 6; i++) E.glow(ev.x, groundY(ev.x, ev.z) + R.range(0.4, 1.4), ev.z, R.range(-1, 1), R.range(1, 3), R.range(-1, 1), R.range(0.25, 0.5), R.range(0.25, 0.45), 1.6, 0.6, 0.12, -1.5, 0.3);
-    } else if (ev.type === 'heal' || ev.type === 'secondWind' || ev.type === 'blessing' || ev.type === 'shrine') {
+    } else if ((ev.type === 'heal' && !ev.tick) || ev.type === 'secondWind' || ev.type === 'blessing' || ev.type === 'shrine') {
       const c = ev.type === 'heal' ? [0x8fd16a, 0.8] as const : ev.type === 'shrine' ? [0x7dd3ff, 1] as const : [0xf2d14b, 1] as const;
       (this.aura.material as SpriteMaterial).color.setHex(c[0]);
       (this.aura.material as SpriteMaterial).opacity = c[1];

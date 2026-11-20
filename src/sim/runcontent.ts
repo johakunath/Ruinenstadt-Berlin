@@ -11,6 +11,7 @@ import { offerBlessings } from './blessings';
 import { ELITE_MODS, type EnemyKind } from '../data/enemies';
 import { pk } from './combat';
 import { makeElite, pickKind, spawnEnemy } from './enemies';
+import { healPlayer } from './heal';
 import { BAG_SIZE } from './inventory';
 import { lootItem, makeItem, price, type Item } from './items';
 import type { Level, WaveDef } from './level';
@@ -592,9 +593,7 @@ export function buyHeal(s: Sim): { ok: boolean; text: string } {
   if (s.player.hp >= s.stats.maxHp) return { ok: false, text: 'Du bist unverletzt.' };
   if (s.inventory.scrap < cost) return { ok: false, text: `Dir fehlen ${cost - s.inventory.scrap} Schrott.` };
   s.inventory.scrap -= cost;
-  const amount = Math.round(s.stats.maxHp - s.player.hp);
-  s.player.hp = s.stats.maxHp;
-  s.events.push({ type: 'heal', amount, source: 'trader' });
+  healPlayer(s, s.stats.maxHp, 'trader');
   s.events.push({ type: 'buy' });
   return { ok: true, text: 'Geheilt.' };
 }
