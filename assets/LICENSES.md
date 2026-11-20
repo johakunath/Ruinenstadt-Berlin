@@ -53,6 +53,7 @@ The source packs are not committed. `tools/fetch-assets.sh` downloads them into 
 
 Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 
+| `icons/icon.svg`, `icons/icon-180.png` | Ruinenstadt 2D `icons/icon.svg`, `icons/icon-180.png` | Ruinenstadt project | Project-owned | Browser and home screen icon, unchanged |
 | `inventory/I01.webp` | Ruinenstadt 2D `assets/icons/I01.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I02.webp` | Ruinenstadt 2D `assets/icons/I02.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I03.webp` | Ruinenstadt 2D `assets/icons/I03.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |

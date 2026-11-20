@@ -33,18 +33,21 @@ export class OptionsScreen {
     r.setAttribute('aria-label', 'Optionen');
     r.innerHTML = `<button type="button" class="tr-x" id="opt-close" aria-label="Zurück">×</button><div class="optbox">
       <div class="ohead"><h2>Optionen</h2></div>
+      <div id="cloud-row" hidden><div class="osec">Konto</div>
+        <div class="acct"><div class="acct-head"><b id="cloud-name">Konto</b><small id="cloud-info"></small></div>
+        <div class="acct-btns"><button id="cloud-rename" type="button" class="btn sm">Umbenennen</button><button id="cloud-copy" type="button" class="btn sm">Code kopieren</button><button id="cloud-join" type="button" class="btn sm">Konto wechseln</button><button id="cloud-toggle" type="button" class="btn sm"></button></div></div>
+      </div>
       <div class="osec">Spiel</div>
       ${row('Auto-Angriff', 'Schlägt zu, wenn ein Gegner in Reichweite ist.', toggle('autoAttack', 'Auto-Angriff'))}
       ${row('Schadenszahlen', 'Schaden und Heilung als Zahlen.', toggle('damageNumbers', 'Schadenszahlen'))}
       <div class="osec">Bild und Ton</div>
-      ${row('Grafik', 'Qualität für PC, Leistung für Tablet und Handy.', profileSeg(), ' id="opt-profile-row"')}
+      ${row('Grafik', 'Qualität für PC, Ausgewogen für Tablet, Leistung für Handy.', profileSeg(), ' id="opt-profile-row"')}
       ${row('Ton', '', toggle('sound', 'Ton'))}${row('Musik', '', toggle('music', 'Musik'))}${row('Lautstärke', '', volumeRange(), ' id="opt-volume-row"')}
       ${row('Vibration', 'Kurze Stöße bei Treffern.', toggle('rumble', 'Vibration'))}
       ${row('Akkusparen', '30 Bilder pro Sekunde, schont Akku und Wärme.', toggle('eco', 'Akkusparen'))}
       ${row('Leistungsanzeige', 'Bildrate unten links.', toggle('showPerf', 'Leistungsanzeige'))}
       <div class="osec">Steuerung</div><div class="ctl">${segment('dev', 'Gerät', DEVICES)}<div class="ctl-gfx"></div></div>
       <div class="osec">Spielstand</div>
-      ${row('Online speichern', '<span id="cloud-info"></span>', '<span class="cloud-btns"><button id="cloud-copy" type="button" class="btn sm">Kopieren</button><button id="cloud-join" type="button" class="btn sm">Code eingeben</button><button id="cloud-toggle" type="button" class="btn sm"></button></span>', ' id="cloud-row" hidden')}
       ${row('Spieldaten senden', 'Anonyme Laufdaten für die Balance.', toggle('telemetry', 'Spieldaten senden'))}
       ${row('Spielstand kopieren', 'Als Code, zum Sichern oder für ein anderes Gerät.', '<button id="save-copy" type="button" class="btn sm">Kopieren</button>')}
       ${row('Spielstand laden', 'Einen kopierten Code einfügen.', '<button id="save-load" type="button" class="btn sm">Laden</button>', ' id="save-load-row"')}

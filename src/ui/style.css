@@ -956,7 +956,6 @@ body:has(#hud:not([hidden])) #fsb, body:has(#menu:not([hidden])) #fsb, body:has(
 .cgfx .k.ult { stroke: #f2d14b; stroke-width: 2; }
 .cgfx .map { fill: #1a1612; stroke: #7dd3ff; stroke-opacity: .6; }
 .cgfx .kt { fill: var(--bone); font: 600 12px var(--f-ui); text-anchor: middle; }
-.cloud-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 body:has(#title:not([hidden])) #run-actions { display: none; }
 @media (max-width: 599px) { .orow { flex-wrap: wrap; } .oc { width: 100%; } .seg { width: 100%; } .seg button { flex: 1; padding: 8px 4px; } }
 @media (max-height: 500px) {

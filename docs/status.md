@@ -42,6 +42,7 @@ What is in the game now. Updated 2026-11-19. Next work: `docs/migration.md` › 
 
 - Damage numbers as in 2D: dealt (white, gold „!“ on crits, element colours), taken (red „-X“) and every heal (green „+X“), packs and ticks merged; switch „Schadenszahlen“ in Optionen.
 - Three graphics levels: Qualität, Ausgewogen (the former Leistung) and a new, lighter Leistung for phones; phones start on Leistung, tablets on Ausgewogen. Ausgewogen and Leistung lower the resolution a little while the device struggles; a tablet that stays slow gets one hint to switch.
+- Optionen start with the Konto card of the title screen (name, code, sync state; Umbenennen, Code kopieren, Konto wechseln, Ausschalten). The game has a browser and home screen icon (the 2D ruin skyline).
 - Rescue and ambush events bring only enemy types the waves ahead already bring (no elite Brocken at leg 1 any more); a fight ends when its own enemies are down (captive guards and event enemies no longer hold it open); a death after the boss falls shows the victory screen, not a boss retry.
 
 ## 2026-11-19
