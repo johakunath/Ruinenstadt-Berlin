@@ -219,6 +219,7 @@ export function tunnelMap(line = 0): MapDef {
     // Three metres in from the flat end wall of the room.
     guards: [{ x: 314, z: cz(316) - 37 * s, kind: 'brute', elite: true, wake: 9, hp: 2.6 * TUNNEL.hp }],
     district: 0,
+    strength: line,
     seed: 3030,
   };
 }

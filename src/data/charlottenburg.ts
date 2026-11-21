@@ -46,7 +46,7 @@ export function charlottenburgWaveTier(g: number, bosses: BossKind[] = [], zone 
   for (const [k, v] of Object.entries(extra) as Array<[EnemyKind, number]>) mix[k] = (mix[k] ?? 0) + v;
   return {
     count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1) * lateTier(g).count),
-    maxAlive: Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count)) - (calm ? 3 : 0),
+    maxAlive: Math.max(calm ? 3 : 5, Math.round((Math.min(12, 6 + Math.floor(g / 3)) - (calm ? 3 : 0)) * lateTier(g).count)),
     mix,
     hpMul: (1 + g * 0.13) * lateTier(g).hp,
     dmgMul: 1 + g * 0.06,

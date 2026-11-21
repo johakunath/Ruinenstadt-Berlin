@@ -38,7 +38,8 @@ export interface Profile {
   minScale: number;
   /**
    * The ink outline reads depth from the beauty pass instead of its own normal/depth pre-pass:
-   * one scene render less per frame (about a third of the draw calls), silhouette lines only.
+   * one scene render less per frame (about a third of the draw calls), silhouette lines only. Depth-writing
+   * FX-layer meshes (alpha-tested cards) get outlines here that the pre-pass leaves out (accepted, hardware row 37).
    */
   inkFromBeauty: boolean;
 }

@@ -10,7 +10,7 @@ import type { Enemy, Sim } from '../sim/types';
 import { groundY } from './ground';
 import { FX_LAYER } from './layers';
 
-/** Most marks drawn at once; a burning, corroded and shocked enemy uses up to six. */
+/** Most marks drawn at once; one enemy uses up to seven (flame and glow, puddle and drips, arcs and glow, cold ring): 27 fully marked enemies. */
 const MAX = 192;
 /** How long a shock hit keeps its arcs on the body. */
 export const ZAP_TIME = 0.55;

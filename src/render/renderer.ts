@@ -276,7 +276,7 @@ export class GameRenderer {
    * raises the render scale on the profiles that allow it.
    */
   frameTime(ms: number, targetMs: number): void {
-    if (this.dynRes.frame(ms, targetMs, this.perf.renderMs + this.perf.simMs)) {
+    if (this.dynRes.frame(ms, targetMs)) {
       this.perf.scale = this.dynRes.scale;
       this.resize();
     }

@@ -168,6 +168,8 @@ export class Level {
   private readonly removed: Collider[] = [];
   /** L2: district index for loot (2D `D.lvl`: item level +3 per district) and item name flavor. Köpenick 0. */
   district = 0;
+  /** Enemy strength step (`districtScale`): the district, a tunnel its line. */
+  strength = 0;
   flavor?: 'neon' | 'gdr' | 'revue';
   /** U-Bahn tunnel map (M19/M20): the tunnel set drops here. */
   tunnel?: boolean;

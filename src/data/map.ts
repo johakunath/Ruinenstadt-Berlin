@@ -215,6 +215,8 @@ export interface MapDef {
   seed: number;
   /** L2: district index (Köpenick 0) and item name flavor for the loot of this map. */
   district?: number;
+  /** Enemy strength step (`districtScale`) when it differs from `district`: a tunnel takes its line (S3 0, U8 1, U2 2). */
+  strength?: number;
   /** M16 `revue` (Charlottenburg): render only for now, the Zeitlose wear 1920s dress; no loot table yet. */
   flavor?: 'neon' | 'gdr' | 'revue';
   /** M12c rain rule (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
@@ -1915,6 +1917,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
   level.mapId = m.id;
+  level.strength = m.strength ?? m.district ?? 0;
   level.camp = !!m.camp;
   level.campSolids = campSolids;
   if (m.flavor) level.flavor = m.flavor;

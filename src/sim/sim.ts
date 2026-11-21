@@ -10,7 +10,7 @@ import { updateDrops } from './loot';
 import { PLAYER, WEAPON } from '../data/combat';
 import { DEFAULT_DIFFICULTY, type DifficultyId } from '../data/difficulty';
 import { courtyardLevel } from '../data/courtyard';
-import { ELITES, ENEMIES, SPAWN, type EliteMod, type EnemyKind } from '../data/enemies';
+import { ELITES, ENEMIES, SPAWN, type EliteMod, type EnemyKind, districtScale } from '../data/enemies';
 import { sectorHitsCircle } from './collide';
 import { ferryPos, onFerryBoat } from './ferry';
 import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
@@ -106,7 +106,8 @@ export function createSim(opts: SimOptions = {}): Sim {
     focusFlow(sim, sim.player.x, sim.player.z);
     // Side passage guards (M19): asleep until the hero comes near.
     level.guards.forEach((g, i) => {
-      const e = spawnEnemy(sim, g.x, g.z, g.kind, g.hp, 1.3);
+      const ds = districtScale(sim.level.strength);
+      const e = spawnEnemy(sim, g.x, g.z, g.kind, g.hp * ds.hp, 1.3 * ds.dmg);
       e.guardIndex = i;
       if (g.elite) makeElite(sim, e);
       e.sleep = g.wake;

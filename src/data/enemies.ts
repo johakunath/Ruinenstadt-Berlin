@@ -392,11 +392,6 @@ export const ELITES: Record<EliteMod, { name: string; color: number; hint: strin
 export const ELITE_MODS = Object.keys(ELITES) as EliteMod[];
 
 /**
- * Specials and what they put into the world. Distances are the 2D pixels at 30 px per meter,
- * times the 2D seconds. `floor`: a telegraphed hit takes at least this share of max life
- * (2D `bigHit`), so dodging matters at any gear level; the 45 % cap still holds.
- */
-/**
  * Playtest 2026-11-20 (Johannes two-shots normal enemies after Xhain): hero power multiplies (item
  * level, affixes, workshop, drill, Aufsätze) while wave life grew only linearly. From tier 10 on a
  * wave has fewer, tougher enemies: life +5 % and count -2.5 % (relative) per tier. Tier 19 (Köpenick's
@@ -417,6 +412,11 @@ export function lateTier(g: number): { hp: number; count: number } {
 export const DISTRICT_STEP = { hp: 0.3, dmg: 0.25 } as const;
 export const districtScale = (district: number): { hp: number; dmg: number } => ({ hp: 1 + DISTRICT_STEP.hp * Math.max(0, district), dmg: 1 + DISTRICT_STEP.dmg * Math.max(0, district) });
 
+/**
+ * Specials and what they put into the world. Distances are the 2D pixels at 30 px per meter,
+ * times the 2D seconds. `floor`: a telegraphed hit takes at least this share of max life
+ * (2D `bigHit`), so dodging matters at any gear level; the 45 % cap still holds.
+ */
 export const THREAT = {
   /** Punish window after a special: the body stands open and takes more damage (2D `TACO`, +30 %). */
   openBonus: 1.3,

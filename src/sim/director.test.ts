@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { koepenickMap } from '../data/koepenick';
 import { generateLots, mapLevel } from '../data/map';
 import { PLAYER } from '../data/combat';
+import { DISTRICT_STEP } from '../data/enemies';
 import { createSim, stepSim } from './sim';
 import { setLoadout } from './loadout';
 import { summon } from './ai';
@@ -233,5 +234,24 @@ describe('review 2026-11-20: fights and the victory', () => {
     teleport(sim, enc.x, enc.z);
     stepSim(sim, NO_INPUT);
     expect(sim.events.find((e) => e.type === 'encounterStart')).toMatchObject({ index: 0, hp: 54 });
+  });
+});
+
+describe('district step (bot campaigns 2026-11-21)', () => {
+  it('a later district spawns the same wave with more life and damage', () => {
+    const first = (strength: number) => {
+      const lv = level;
+      lv.strength = strength;
+      const sim = createSim({ level: lv, seed: 4 });
+      const enc = lv.encounters[0]!;
+      teleport(sim, enc.x, enc.z);
+      for (let i = 0; i < 600 && !sim.enemies.length; i++) stepSim(sim, NO_INPUT);
+      lv.strength = 0;
+      const e = sim.enemies[0]!;
+      return { hp: e.maxHp, dmg: e.dmgMul };
+    };
+    const a = first(0), c = first(2);
+    expect(c.hp / a.hp).toBeCloseTo(1 + 2 * DISTRICT_STEP.hp, 1);
+    expect(c.dmg / a.dmg).toBeCloseTo(1 + 2 * DISTRICT_STEP.dmg, 5);
   });
 });
