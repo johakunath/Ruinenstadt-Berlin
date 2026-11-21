@@ -1,9 +1,10 @@
 // U1: the inventory tab of the pause menu, laid out as the 2D bag (`js/panels.js` renderInv, detail;
 // `js/items.js` cmpRows, cmpBlock, statLine): doll and stats, bag with salvage chips, detail column.
-import { WEAPON_MODS } from '../data/crafting';
+import { WEAPON_MODS, type WeaponModId } from '../data/crafting';
 import { AFFIXES, ATTRIBUTE_STATS, ELEMENTS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, RARITIES, SETS, SLOTS, SLOT_MAIN_STATS, SLOT_NAMES, WEAPON_KINDS, type AffixId, type AttributeKindId, type BaseId, type LegendaryId, type SlotId, type WeaponKindId } from '../data/items';
 import { POWERS } from '../data/powers';
 import { selectPower } from '../sim/abilities';
+import { installMod, modSlots, removeMod } from '../sim/camp';
 import { BAG_SIZE, bulkCandidates, equipItem, salvageItem, setImplantMode, unequipItem } from '../sim/inventory';
 import { isUpgrade, scrapValue, shownLevel, type Item } from '../sim/items';
 import { heroStats, lostSetTiers, setCount, weaponDamage, weaponDps, type Equipment, type HeroStats } from '../sim/stats';
@@ -230,6 +231,9 @@ export class InventoryUi {
     if (action === 'lock' && item) item.locked = !item.locked;
     if (action === 'tip') (sim.inventory.tips ??= {}).schrott = 1;
     if (action === 'mode' && item) setImplantMode(sim, item, Number(value));
+    // Playtest 2026-11-20: Aufsätze go in and out anywhere, also on the map; only building them needs the Zeughaus.
+    if (action === 'modIn') this.message = installMod(sim, value as WeaponModId).text;
+    if (action === 'modOut') this.message = removeMod(sim, value as WeaponModId).text;
     if (action === 'power' && item?.slot === 'w') {
       if (sim.equipment.w === item) selectPower(sim, Number(value) === 1 ? 1 : 0); else item.power = Number(value) === 1 ? 1 : 0;
     }
@@ -303,10 +307,23 @@ export class InventoryUi {
       const glyph = (id: keyof typeof POWER_GLYPHS): string => `<svg viewBox="0 0 48 48" aria-hidden="true">${POWER_GLYPHS[id]}</svg>`;
       // U4 layout A (Johannes, 2026-11-19): two power cards to toggle, each with its own text; the ultimate is fixed, so it is a plain line, not a button.
       const cards = [0, 1].map(i => `<button type="button" class="krb krc" data-action="power" data-value="${i}" data-key="power-${i}" aria-pressed="${cur === i}"><span class="krh">${glyph(P[i]!.id)}<span><b>${P[i]!.name}</b><small>${P[i]!.cooldown} s</small></span>${cur === i ? '<em>Aktiv</em>' : ''}</span><span class="krd">${P[i]!.description}</span></button>`).join('');
-      return `<div class="krsel"><small class="clab">Kraft · wähle eine</small><div class="krrow">${cards}</div><small class="clab">Ultimativ · immer dabei</small><div class="krult">${glyph(P[2].id)}<span><b>${P[2].name}</b><small>${P[2].cooldown} s</small></span><span class="krd">${P[2].description}</span></div></div>`;
+      return `<div class="krsel"><small class="clab">Kraft · wähle eine</small><div class="krrow">${cards}</div><small class="clab">Ultimativ · immer dabei</small><div class="krult">${glyph(P[2].id)}<span><b>${P[2].name}</b><small>${P[2].cooldown} s</small></span><span class="krd">${P[2].description}</span></div></div>${this.mods(x)}`;
     }
     if (x.slot === 'i') return `<div class="krsel"><small class="clab">Implantat-Modus</small><div class="krrow">${IMPLANT_MODES.map((m, i) => `<button type="button" class="krb" data-action="mode" data-value="${i}" data-key="mode-${i}" aria-pressed="${(x.implantMode ?? 0) === i}"><span>${m.name}</span><small>${m.description}</small></button>`).join('')}</div></div>`;
     return '';
+  }
+  /** Aufsätze of the weapon in hand: built ones go in, fitted ones come out (built in the camp's Zeughaus). */
+  private mods(x: Item): string {
+    const sim = this.sim();
+    if (sim.equipment.w !== x) return '';
+    const on = x.mods ?? [], slots = modSlots(x);
+    const rows = WEAPON_MODS.filter(m => on.includes(m.id) || (sim.inventory.mods[m.id] ?? 0) > 0).map(m => {
+      const inW = on.includes(m.id), n = sim.inventory.mods[m.id] ?? 0;
+      const btn = inW ? `<button type="button" data-action="modOut" data-value="${m.id}" data-key="mod-${m.id}">Ausbauen</button>`
+        : `<button type="button" class="primary" data-action="modIn" data-value="${m.id}" data-key="mod-${m.id}" ${on.length >= slots ? 'disabled' : ''}>Einbauen</button>`;
+      return `<div class="row-c"><div><b>${m.name}${inW ? ' · eingebaut' : ` · ${n} da`}</b><small>${m.description}</small></div>${btn}</div>`;
+    }).join('');
+    return `<div class="krsel"><small class="clab">Aufsätze ${on.length}/${slots}</small>${rows || '<p class="inv-hint">Noch keine gebaut. Das Zeughaus im Lager baut sie.</p>'}</div>`;
   }
   private detail(): string {
     const it = this.item(), sim = this.sim(), sel = this.selection;
