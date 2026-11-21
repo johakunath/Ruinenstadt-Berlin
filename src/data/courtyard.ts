@@ -148,7 +148,8 @@ export function propCollider(p: Prop): Collider | null {
     case 'lantern':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.2 };
     case 'van':
-      return { kind: 'box', x: p.x, z: p.z, hx: 1.1, hz: 2.75, rot: p.rot };
+      // The BVG midibus wreck, 8 m (Johannes 2026-11-21; `VAN` in `src/render/world.ts`).
+      return { kind: 'box', x: p.x, z: p.z, hx: 1.1, hz: 4.0, rot: p.rot };
     case 'sandbags':
       return { kind: 'box', x: p.x, z: p.z, hx: 1.0, hz: 0.5, rot: p.rot };
     case 'crate':

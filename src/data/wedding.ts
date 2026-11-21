@@ -3,8 +3,9 @@
 // „kommt bald“: the feast that never ends holds the Kiez; cranes, scaffolds and billboards for lofts that never open.
 // Origin U Leopoldplatz (the start). Anchors checked against OpenStreetMap on 2026-11-21 (octants in the map doc),
 // compressed about 0.12 east–west and 0.15 to 0.3 north–south. Route, one loop without doubling back:
-// U Leopoldplatz → Wochenmarkt on the square → Müllerstraße → Lindower Straße along the Ringbahn → Nettelbeckplatz →
-// into Zum Magendoktor (two waves, then boss 1 in the same room) → Pankstraße over the Panke → Uferterrasse → Brunnenplatz before the
+// U Leopoldplatz → Wochenmarkt on the square → Müllerstraße → Lindower Straße along the Ringbahn to the forecourt →
+// into Zum Magendoktor from the south (two waves, then boss 1 in the same room) → round the pub onto the Nettelbeckplatz →
+// Pankstraße over the Panke → Uferterrasse → Brunnenplatz before the
 // Amtsgericht (boss 2) → Badstraße → through the Ringbahn arch on the Brunnenstraße → east gate of the
 // Humboldthain → Rosengarten → Humboldthöhe → south-east gate → Beamtentor (boss 3) → the Lange Tafel in the
 // AEG yard → the Hochzeitspalast in the roofless Maschinenhalle (the district boss).
@@ -61,7 +62,7 @@ export function weddingWaveTier(g: number, bosses: BossKind[] = [], zone = 0, ca
 const NORMAL_HEAL = 0.3;
 
 /** The Ringbahn polyline (unscaled): one plain brick viaduct, cut where the Müllerstraße, the Panke and the Brunnenstraße pass. */
-const RINGBAHN: Array<[number, number]> = [[-55, 96], [60, 68], [108, 62], [138, 30], [170, 0], [200, -28], [235, -44], [296, -55]];
+const RINGBAHN: Array<[number, number]> = [[-55, 96], [60, 71], [113, 74], [138, 30], [170, 0], [200, -28], [235, -44], [296, -55]];
 /** The Panke (placeholder line, map doc): north edge to south edge, under the Ringbahn at (138, 30). */
 const PANKE: Array<[number, number]> = [[124, -105], [122, -70], [118, -30], [122, -6], [130, 14], [138, 30], [132, 56], [118, 90], [104, 125]];
 /** The viaduct's brick body (as Charlottenburg's Stadtbahn). */
@@ -89,7 +90,9 @@ export function weddingMap(scale = 1): MapDef {
   const HALL = { x: AEG.x0 + 6 + HALLE.hx, z: AEG.z1 - HALLE.hz };
   const BT = { x: AEG.x1, z: 60 * s };
 
-  const kneipe: Landmark = { kind: 'kneipe', x: PUB.x, z: PUB.z, rot: 180 * DEG, hx: KNEIPE.w / 2, hz: KNEIPE.d / 2, clear: 1, name: 'Zum Magendoktor' };
+  // Johannes 2026-11-21: the door faces the camera (south) and the hero walks in upwards; the forecourt lies between
+  // the pub and the Ringbahn, the Nettelbeckplatz behind it.
+  const kneipe: Landmark = { kind: 'kneipe', x: PUB.x, z: PUB.z, rot: 0, hx: KNEIPE.w / 2, hz: KNEIPE.d / 2, clear: 1, name: 'Zum Magendoktor' };
 
   let g = 0;
   const tier = (n: number): number => WEDDING_TIER.from + (n * (WEDDING_TIER.to - WEDDING_TIER.from)) / (WEDDING_WAVES - 1);
@@ -148,7 +151,7 @@ export function weddingMap(scale = 1): MapDef {
     // Leopoldplatz to the closed arch at S Wedding; Blockrand on its north-east side.
     { name: 'Müllerstraße', kind: 'main', width: 14, sidewalk: 3, block: true, pts: line([[-48, -52], [-10, 4], [20, 28], [58, 64]]) },
     { name: 'Schulstraße', kind: 'side', width: 9, sidewalk: 2, block: true, pts: line([[6, 17], [30, -24], [48, -58]]) },
-    { name: 'Lindower Straße', kind: 'side', width: 9, sidewalk: 2, block: true, pts: line([[50, 56], [70, 50], [80, 34]]) },
+    { name: 'Lindower Straße', kind: 'side', width: 9, sidewalk: 2, block: true, pts: line([[50, 57], [72, 57], [86, 58]]) },
     { name: 'Reinickendorfer Straße', kind: 'side', width: 9, sidewalk: 2, block: true, pts: line([[88, -14], [90, 2]]) },
     // Zone 1. The Pankstraße over the Panke to the Brunnenplatz and on to the Badstraße corner.
     { name: 'Pankstraße', kind: 'side', width: 10, sidewalk: 2, block: true, pts: line([[104, 6], [122, -7], [146, -34], [156, -52], [192, -86], [206, -105]]) },
@@ -289,9 +292,6 @@ export function weddingMap(scale = 1): MapDef {
     { name: 'AEG Ost Süd', kind: 'brick', pts: [at(beamtentor, -BEAMTENTOR.half - BEAMTENTOR.tower.hx * 2 + 0.2, 0), [AEG.x1, AEG.z1]] },
     { name: 'AEG Süd', kind: 'brick', pts: [[AEG.x1, AEG.z1], [HALL.x + HALLE.hx, AEG.z1]] },
     // The unbuilt north-west: a brick wall behind the rows of the square and the Reinickendorfer Straße, to the Panke.
-    // Behind the Magendoktor: the strip between its back wall and the viaduct is shut at both ends.
-    { name: 'Hof Magendoktor West', kind: 'brick', pts: [[PUB.x - KNEIPE.w / 2 + 0.3, PUB.z + KNEIPE.d / 2 - 0.3], [PUB.x - KNEIPE.w / 2 + 0.3, PUB.z + KNEIPE.d / 2 + 7]] },
-    { name: 'Hof Magendoktor Ost', kind: 'brick', pts: [[PUB.x + KNEIPE.w / 2 - 0.3, PUB.z + KNEIPE.d / 2 - 0.3], [PUB.x + KNEIPE.w / 2 - 0.3, PUB.z + KNEIPE.d / 2 + 5]] },
     { name: 'Brandmauer Nord', kind: 'brick', pts: line([[-55, -78], [-34, -78], [-20, -60], [32, -88], [70, -64], [74, -30], [80, -24], [100, -24], [112, -36], [118, -36]]) },
   ];
 
@@ -299,7 +299,8 @@ export function weddingMap(scale = 1): MapDef {
   const parkPoly: Pt[] = [...parkNorth, [262.5 * s, parkNE[1]], [262.5 * s, AEG.z0], [parkNorth[0]![0], AEG.z0]];
   const areas: Area[] = [
     { id: 'leopoldplatz', name: 'Leopoldplatz', ground: 'cobbles', frontage: null, trees: 0.15, poly: line([[-15, -20], [-12, -46], [34, -72], [60, -52], [28, 6], [8, 8], [-2, -2]]) },
-    { id: 'nettelbeckplatz', name: 'Nettelbeckplatz', ground: 'cobbles', frontage: null, trees: 0.1, poly: line([[76, 0], [104, 0], [118, 4], [126, 18], [116, 40], [112, 58], [76, 60]]) },
+    { id: 'vorhof', name: 'Zum Magendoktor', ground: 'cobbles', frontage: null, trees: 0, poly: line([[80, 53], [118, 53], [116, 70], [80, 70]]) },
+    { id: 'nettelbeckplatz', name: 'Nettelbeckplatz', ground: 'cobbles', frontage: null, trees: 0.1, poly: line([[76, 0], [104, 0], [118, 4], [126, 18], [118, 42], [116, 53], [76, 53]]) },
     { id: 'uferterrasse', name: 'Uferterrasse', ground: 'cobbles', frontage: null, trees: 0, poly: line([[124, -38], [152, -38], [152, -8], [124, -8]]) },
     { id: 'brunnenplatz', name: 'Brunnenplatz', ground: 'cobbles', frontage: null, trees: 0.1, poly: line([[140, -70], [172, -70], [172, -38], [140, -38]]) },
     { id: 'badplatz', name: 'Badstraße', ground: 'cobbles', frontage: null, trees: 0, poly: line([[210, -90], [236, -90], [236, -62], [210, -62]]) },
@@ -308,9 +309,9 @@ export function weddingMap(scale = 1): MapDef {
     { id: 'humboldthain', name: 'Humboldthain', ground: 'grass', frontage: null, trees: 0.35, poly: parkPoly },
     // The unbuilt corners: dark rubble ground, nothing placed, never in view.
     { id: 'brache-nord', name: 'Brache', ground: 'asphalt', frontage: null, trees: 0, poly: line([[-55, -105], [124, -105], [121, -40], [118, -36], [112, -36], [100, -24], [80, -24], [74, -30], [70, -64], [32, -88], [-20, -60], [-34, -78], [-55, -78]]) },
-    { id: 'brache-sued', name: 'Brache', ground: 'asphalt', frontage: null, trees: 0, poly: [...line([[-55, 103], [60, 75], [108, 69], [136, 38], [150, 24]]), [parkNorth[0]![0], parkNorth[0]![1] + 6], [parkNorth[0]![0], AEG.z0], [AEG.x0, AEG.z0], [AEG.x0, 125 * s], [-55 * s, 125 * s]] },
+    { id: 'brache-sued', name: 'Brache', ground: 'asphalt', frontage: null, trees: 0, poly: [...line([[-55, 103], [60, 78], [113, 81], [141, 36], [150, 24]]), [parkNorth[0]![0], parkNorth[0]![1] + 6], [parkNorth[0]![0], AEG.z0], [AEG.x0, AEG.z0], [AEG.x0, 125 * s], [-55 * s, 125 * s]] },
     // The Kiez: Leopoldkiez west of the Panke, Gesundbrunnen east of it, both north of the Ringbahn.
-    { id: 'leopoldkiez', name: 'Leopoldkiez', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['hinterhof', 'baustelle'], poly: line([[-55, -78], [-34, -78], [-20, -60], [32, -88], [70, -64], [74, -30], [80, -24], [100, -24], [112, -36], [121, -36], [126, 14], [136, 30], [108, 60], [60, 66], [-55, 94]]) },
+    { id: 'leopoldkiez', name: 'Leopoldkiez', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['hinterhof', 'baustelle'], poly: line([[-55, -78], [-34, -78], [-20, -60], [32, -88], [70, -64], [74, -30], [80, -24], [100, -24], [112, -36], [121, -36], [126, 14], [136, 30], [113, 67], [60, 65], [-55, 94]]) },
     { id: 'gesundbrunnen', name: 'Gesundbrunnen', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['truemmer', 'parkplatz'], poly: [...line([[121, -105], [296, -105], [296, -60], [270, -56], [235, -48], [200, -32], [170, -4], [136, 30], [126, 14], [118, -30]])] },
     { id: 'brunnenstrasse', name: 'Brunnenstraße', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['truemmer'], poly: [...line([[262.5, -56], [296, -60], [296, 125], [240, 125], [240, 76], [262.5, 76]])] },
   ];
@@ -374,7 +375,7 @@ export function weddingMap(scale = 1): MapDef {
       d -= len;
     }
   };
-  for (const st of streets) if (st.kind !== 'path') curb(st.name, (st.kind === 'main' ? 13 : 15) * Math.sqrt(s), 6);
+  for (const st of streets) if (st.kind !== 'path') curb(st.name, (st.kind === 'main' ? 12 : 14) * Math.sqrt(s), 6);
   // Both heads of the Pankstraße bridge: a barrel on the quay each side.
   for (const k of [-1, 1]) {
     const b = bridges[0]!, ux = Math.sin(b.rot), uz = Math.cos(b.rot), d = k * (b.len / 2 + 2.5);
@@ -431,18 +432,38 @@ export function weddingMap(scale = 1): MapDef {
 
   // The Neubau's building site and the Kiez blocks along the square's north side (Blockrand by hand: no street runs there).
   const handLots: NonNullable<MapDef['handLots']> = [];
-  const row = (a: Pt, b: Pt, n: number, floors: number[], ruins: number[] = []): void => {
+  const row = (a: Pt, b: Pt, n: number, floors: number[], ruins: number[] = [], depth = 13): void => {
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, w = len / n;
     for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) * w, d = 6.5;
-      handLots.push({ kind: 'altbau', x: a[0] + ux * t + uz * d, z: a[1] + uz * t - ux * d, rot: Math.atan2(-uz, ux), w: w - 0.1, d: 13, floors: floors[i % floors.length]!, block: true, ruin: ruins.includes(i) });
+      const t = (i + 0.5) * w, d = depth / 2, f = floors[i % floors.length]!;
+      handLots.push({ kind: f === 0 ? 'shop' : 'altbau', x: a[0] + ux * t + uz * d, z: a[1] + uz * t - ux * d, rot: Math.atan2(-uz, ux), w: w - 0.1, d: depth, floors: f, block: true, ruin: ruins.includes(i) });
     }
+  };
+  /**
+   * A hand row along piece `seg` of a street, from `t0` to `t1` meters along it, on its left (+1, the side left of the
+   * street's direction) or right (−1) side, fronts on the sidewalk edge (thin stretches the generator leaves empty:
+   * squares, fight circles and sights take the street fronts there).
+   */
+  const streetRow = (name: string, seg: number, t0: number, t1: number, side: 1 | -1, n: number, floors: number[], ruins: number[] = [], depth = 13): void => {
+    const st = streets.find((q) => q.name === name)!, [ax, az] = st.pts[seg]!, [bx, bz] = st.pts[seg + 1]!, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len;
+    const off = st.width / 2 + (st.sidewalk ?? 0) + 0.2, at = (t: number): Pt => [ax + ux * t * s + uz * off * side, az + uz * t * s - ux * off * side];
+    // `row` builds on the left of its direction: run along the street for the left side, against it for the right.
+    if (side > 0) row(at(t0), at(t1), n, floors, ruins, depth);
+    else row(at(t1), at(t0), n, floors, ruins, depth);
   };
   row(P(-12, -46), P(34, -72), 3, [4, 3, 4], [1]);
   row(P(34, -72), P(60, -52), 2, [4, 3]);
   // The square's east side and the Nettelbeckplatz's west side close the Kiez block behind them.
   row(P(60, -52), P(28, 6), 4, [3, 4, 3, 4], [2]);
   row(P(76, 30), P(76, 2), 2, [3, 4]);
+  // Thin stretches along the route (Johannes 2026-11-21): the Lindower Straße's north side up to the pub's forecourt,
+  // the Pankstraße between the Brunnenplatz and the Badstraße, both sides of the Badstraße round its fight. Tall rows
+  // away from the camera, shops and low houses on the camera side.
+  streetRow('Lindower Straße', 0, 12, 34, 1, 2, [3, 4]);
+  streetRow('Pankstraße', 3, 26, 47, 1, 2, [4, 3], [1]);
+  streetRow('Pankstraße', 3, 29, 45, -1, 2, [0, 1], [], 9);
+  streetRow('Badstraße', 0, 4, 16, -1, 1, [0], [], 9);
+  streetRow('Badstraße', 1, 14, 29, 1, 1, [4]);
   // The Kiez south of the Müllerstraße backs onto the Ringbahn: low houses and shops with their backs to the viaduct.
   { const a = railOff(project(-48 * s, 94 * s).at, -RING.width / 2 - 1), b = railOff(project(44 * s, 72 * s).at, -RING.width / 2 - 1); row(a, b, 7, [1, 2, 1, 0, 2, 1, 1], [1, 4]); }
 
@@ -470,7 +491,6 @@ export function weddingMap(scale = 1): MapDef {
     noSpawn: [areas.find((a) => a.id === 'brache-nord')!.poly, areas.find((a) => a.id === 'brache-sued')!.poly],
     district: 5,
     flavor: 'fest',
-    noLivery: true,
     strictLots: true,
     specialMax: { markt: 1, hinterhof: 2, baustelle: 1, truemmer: 2, parkplatz: 1 },
     viaducts,

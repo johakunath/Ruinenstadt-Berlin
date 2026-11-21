@@ -40,7 +40,7 @@ import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteM
 import { buildRiddleView } from './charlottenburg-riddles';
 import { buildSearchlights } from './searchlights';
 import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from './charlottenburg-world';
-import { buildKneipe, buildWeddingLandmark, buildWeddingWorld, makeWeddingMats, WEDDING_KINDS, type WeddingMats } from './wedding-world';
+import { buildKneipe, buildWeddingLandmark, buildWeddingWorld, makeWeddingMats, WEDDING_KINDS, weddingSpatiSign, type WeddingMats } from './wedding-world';
 import { inKneipe } from '../data/kneipe';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
@@ -2294,7 +2294,8 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
   up.box(M.iron, lm(l, 0, 2.28, d / 2 + 0.08), door + 0.2, 0.26, 0.3, [0.9, 0.9, 0.85]);
   // Sign standing on the front edge of the awning, so the camera above sees it.
   const tilt = new Matrix4().makeRotationX(-0.6);
-  up.geo(M.spatiSign, new PlaneGeometry(4.4, 0.95), lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt));
+  // M18 Wedding: each rest stop shows its own name from the sign atlas.
+  if (!weddingSpatiSign(up, lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt), l.name)) up.geo(M.spatiSign, new PlaneGeometry(4.4, 0.95), lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt));
   up.box(M.rust, lm(l, 0, 3.0, d / 2 + 1.24).multiply(tilt), 4.6, 1.1, 0.08, [0.35, 0.35, 0.38]);
   up.box(M.awning, lm(l, 0, 2.55, d / 2 + 0.7), w - 0.4, 0.08, 1.2);
   for (const side of [-1, 1]) {

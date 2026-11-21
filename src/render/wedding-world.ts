@@ -40,7 +40,7 @@ const W = {
 // ---------------------------------------------------------------- sign atlas (the one new material)
 
 /** Cells of the sign atlas (2 columns × 8 rows of 512 × 128 px). */
-export const SIGN = { magendoktor: 0, tagnacht: 1, sWedding: 2, gesundbrunnen: 3, kommtBald: 4, eroeffnung: 5, palast: 6, u: 7, amtsgericht: 8, festsaal: 9 } as const;
+export const SIGN = { magendoktor: 0, tagnacht: 1, sWedding: 2, gesundbrunnen: 3, kommtBald: 4, eroeffnung: 5, palast: 6, u: 7, amtsgericht: 8, festsaal: 9, leo: 10, baklava: 11, kiosk: 12, teestube: 13, uLeo: 14 } as const;
 const CELLS: Array<{ text: string; bg: string; fg: string; font: string; glow: number }> = [
   { text: 'Zum Magendoktor', bg: '#9a1b1f', fg: '#fff4e4', font: 'bold italic 76px Georgia, serif', glow: 1 },
   { text: 'Tag u. Nacht', bg: '#f2c94b', fg: '#2a1a10', font: 'bold 72px Arial, sans-serif', glow: 0.8 },
@@ -52,7 +52,25 @@ const CELLS: Array<{ text: string; bg: string; fg: string; font: string; glow: n
   { text: 'U', bg: '#1c4f9c', fg: '#ffffff', font: 'bold 104px Arial, sans-serif', glow: 0.6 },
   { text: 'Amtsgericht', bg: '#2c2a26', fg: '#e8dcc0', font: 'bold 66px Georgia, serif', glow: 0.25 },
   { text: 'Festsaal', bg: '#1d4a3c', fg: '#f6cf62', font: 'bold italic 76px Georgia, serif', glow: 0.9 },
+  // The four rest stops (the Späti with its own sign on this map) and the station name at the U entrance.
+  { text: 'Späti am Leo', bg: '#1a1e22', fg: '#f2d14b', font: 'bold 70px Georgia, serif', glow: 1 },
+  { text: 'Baklava & Döner', bg: '#7a1420', fg: '#f6cf62', font: 'bold 64px Georgia, serif', glow: 1 },
+  { text: 'Kiosk am Rosengarten', bg: '#1d4a3c', fg: '#f4f0e4', font: 'bold 56px Georgia, serif', glow: 1 },
+  { text: 'Teestube im Werkhof', bg: '#3a1e12', fg: '#f6cf62', font: 'bold italic 58px Georgia, serif', glow: 1 },
+  { text: 'U Leopoldplatz', bg: '#1c4f9c', fg: '#ffffff', font: 'bold 70px Arial, sans-serif', glow: 0.6 },
 ];
+
+/** Rest stop names with their own sign on the Wedding map (the Späti sign elsewhere). */
+const SPATI_SIGN: Readonly<Record<string, number>> = { 'Späti am Leo': SIGN.leo, 'Baklava & Döner': SIGN.baklava, 'Kiosk am Rosengarten': SIGN.kiosk, 'Teestube im Werkhof': SIGN.teestube };
+
+/** Draws a Wedding rest stop sign from the atlas on frame `m` (4.4 × 0.95 m); false when the map or the name has none. */
+export function weddingSpatiSign(up: ChunkBuilder, m: Matrix4, name: string | undefined): boolean {
+  const cell = name === undefined ? undefined : SPATI_SIGN[name];
+  if (cell === undefined || !up.mm.wedding) return false;
+  // Both faces: most of the four stand with their door away from the camera.
+  sign(up, m, 4.4, 0.95, cell, true);
+  return true;
+}
 
 /** Painted sign atlas: colour map and emissive map (letters glow, the board a little). */
 function paintSigns(): { map: ReturnType<typeof toTexture>; emissiveMap: ReturnType<typeof toTexture> } {
@@ -117,21 +135,33 @@ export function buildWeddingLandmark(b: ChunkBuilder, l: Landmark): void {
   const c = ctxOf(b, l), M = c.M;
   switch (l.kind) {
     case 'ubahn': {
-      // U Leopoldplatz: a stair well between low walls with railings, the U sign on a pole (no BVG livery).
-      const F = lm(l);
+      // U Leopoldplatz: a stair down between granite kerbs and dark green railings, the well fading to black (the
+      // ground cannot open: treads darken toward the bottom over a black floor), the U on a pole, the name plate over
+      // the far end facing the camera, a lamp over the steps (no BVG livery).
+      const F = lm(l), GREEN: RGB = [0.18, 0.42, 0.3], GRANITE: RGB = [0.62, 0.6, 0.58];
       b.solid.excludeOccluder(() => {
-        b.box(M.dark, sub(F, 0, 0.012, -0.2), 2.6, 0.02, 5.4);
-        for (let i = 0; i < 12; i++) { const k = 0.85 * Math.pow(1 - i / 12, 1.5) + 0.05; b.box(M.concrete, sub(F, 0, 0.03, 2.4 - (i + 0.5) * 0.42), 2.5, 0.025, 0.37, [k, k, k]); }
-        for (const s of [-1, 1]) {
-          b.box(M.concrete, sub(F, s * 1.45, 0.25, 0), 0.3, 0.5, 5.8, [0.8, 0.78, 0.74]);
-          for (const y of [0.55, 1.15]) b.box(M.iron, sub(F, s * 1.45, y, 0), 0.05, 0.05, 5.6, W.iron);
-          for (let z = -2.7; z <= 2.7; z += 0.9) b.box(M.iron, sub(F, s * 1.45, 0.85, z), 0.05, 0.7, 0.05, W.iron);
+        // The well: pale steps at the top that sink into black (stair nosings as thin light lines), dark inner walls.
+        b.box(M.dark, sub(F, 0, 0.01, -0.1), 2.7, 0.02, 5.8, [0.05, 0.05, 0.06]);
+        for (let i = 0; i < 13; i++) {
+          const k = Math.pow(1 - i / 13, 2.6);
+          b.box(i < 5 ? M.concrete : M.dark, sub(F, 0, 0.025, 2.55 - (i + 0.5) * 0.4), 2.5, 0.02, 0.3, [0.85 * k + 0.03, 0.85 * k + 0.03, 0.88 * k + 0.04]);
+          if (i < 8) b.box(M.concrete, sub(F, 0, 0.04, 2.55 - i * 0.4 - 0.02), 2.5, 0.015, 0.05, [1.1 * k + 0.08, 1.1 * k + 0.08, 1.1 * k + 0.1]);
         }
-        b.box(M.concrete, sub(F, 0, 0.25, -2.85), 3.2, 0.5, 0.3, [0.8, 0.78, 0.74]);
-        b.box(M.iron, sub(F, 1.75, 1.6, 2.6), 0.1, 3.2, 0.1, [1.3, 1.3, 1.35]);
-        sign(b, sub(F, 1.75, 3.0, 2.66), 0.75, 0.75, SIGN.u, true);
+        for (const s of [-1, 1]) b.box(M.dark, sub(F, s * 1.28, 0.04, 0), 0.02, 0.06, 5.6, [0.02, 0.02, 0.02]);
+        for (const s of [-1, 1]) {
+          b.box(M.concrete, sub(F, s * 1.45, 0.2, 0), 0.32, 0.4, 5.9, GRANITE);
+          b.box(M.dark, sub(F, s * 1.24, 0.03, 0), 0.08, 0.04, 5.6, [0.1, 0.1, 0.1]);
+          for (const y of [0.55, 1.15]) b.box(M.enamel, sub(F, s * 1.45, y, 0), 0.05, 0.05, 5.7, GREEN);
+          for (let z = -2.8; z <= 2.8; z += 0.28) b.box(M.enamel, sub(F, s * 1.45, 0.85, z), 0.03, 0.6, 0.03, GREEN);
+        }
+        b.box(M.concrete, sub(F, 0, 0.2, -2.95), 3.2, 0.4, 0.32, GRANITE);
+        for (const s of [-1, 1]) b.box(M.enamel, sub(F, s * 1.5, 1.4, -2.95), 0.12, 2.8, 0.12, GREEN);
+        b.box(M.enamel, sub(F, 0, 2.6, -2.95), 3.1, 0.7, 0.1, GREEN);
+        sign(b, sub(F, 0, 2.6, -2.89), 2.8, 0.6, SIGN.uLeo);
+        b.box(M.iron, sub(F, 1.8, 1.6, 2.7), 0.1, 3.2, 0.1, [1.3, 1.3, 1.35]);
+        sign(b, sub(F, 1.8, 3.0, 2.76), 0.75, 0.75, SIGN.u, true);
       });
-      b.light(lp(l, 0, 1.6, 1.2), 0xffb060, 10, 9, 0.03, 3.4);
+      b.light(lp(l, 0, 2.2, 0.8), 0xffb060, 12, 9, 0.03, 3.6, { halo: 0.3 });
       return;
     }
     case 'nazareth': {
@@ -218,7 +248,11 @@ export function buildWeddingLandmark(b: ChunkBuilder, l: Landmark): void {
         dome(c, M.enamel, i * 5.6, 4.6, z0 + 0.84, 1.5, W.gold, 1);
         cyl(c, M.enamel, i * 5.6 + 2.8, 0, z0 + 1.1, 0.35, 7.5, [1.6, 1.1, 0.35], 8);
       }
-      for (const x of [-9, 0, 9]) dome(c, M.enamel, x, 8.1, z0 + 0.4, x === 0 ? 2.6 : 1.6, W.gold, 1.3);
+      // Gilded domes on the emissive lamp batch (low tint): the gold glows warm under the green night sky.
+      for (const x of [-9, 0, 9]) dome(c, M.lampGlass, x, 8.1, z0 + 0.4, x === 0 ? 2.6 : 1.6, [0.42, 0.28, 0.1], 1.3);
+      for (let i = -2; i <= 2; i++) for (const dx of [-1.55, 1.55]) blk(c, M.lampGlass, i * 5.6 + dx, 0.2, z0 + 0.86, 0.08, 4.4, 0.05, [0.5, 0.33, 0.12]);
+      // Warm uplights at the foot of the front (pooled spots): the facade reads gold, not olive.
+      for (const x of [-10, 10]) b.light(lp(l, x, 0.5, z0 + 2.2), 0xffb060, 18, 11, 0.05, 5, { yaw: l.rot + Math.PI, stretch: 1.4, reach: 1.2, halo: 0.4 });
       sign(b, lm(l, 0, 6.3, z0 + 0.86), 9, 1.2, SIGN.palast);
       // Dais, throne and the ruby runner toward the floor.
       blk(c, M.linen, 0, 0, z0 + 4.5, 9, 0.45, 4.5, W.ruby);
@@ -239,7 +273,7 @@ export function buildWeddingLandmark(b: ChunkBuilder, l: Landmark): void {
 // ---------------------------------------------------------------- Zum Magendoktor (E2)
 
 /** Plan frame of the pub (x east, z south, the door north) as a landmark frame. */
-const K = (l: Landmark, px: number, y: number, pz: number, ry = 0): Matrix4 => lm(l, -px, y, -pz, ry);
+const K = (l: Landmark, px: number, y: number, pz: number, ry = 0): Matrix4 => { const m = lm(l, -px, y, -pz); return ry ? m.multiply(new Matrix4().makeRotationY(ry)) : m; };
 const KP = (l: Landmark, px: number, y: number, pz: number): Vector3 => lp(l, -px, y, -pz);
 
 /**
@@ -251,7 +285,8 @@ export function buildKneipe(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): voi
   b.box(M.darkWood, K(l, 0, 0.04, 0), w - 0.6, 0.08, d - 0.6, [0.62, 0.42, 0.3]);
   const stool = cached('hocker', () => new CylinderGeometry(0.2, 0.16, 1, 8));
   for (const p of kneipeParts()) {
-    const m = K(l, p.x, 0, p.z);
+    // The part frame has the plan's axes (x east, z south as on the floor plan), whatever the pub's facing.
+    const m = K(l, p.x, 0, p.z, Math.PI);
     switch (p.kind) {
       case 'wall':
         b.box(M.stucco, sub(m, 0, low / 2, 0), p.hx * 2, low, p.hz * 2, W.ochre);
@@ -312,10 +347,11 @@ export function buildKneipe(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): voi
   b.light(KP(l, 0, 2.6, -d / 2 - 1.4), 0xffc890, 12, 9, 0.05, 4);
   // Upper part: lintel over the door, the signs, a balcony rail, the flat roof with a parapet.
   up.box(M.stucco, K(l, 0, (2.7 + H) / 2, -d / 2 + KNEIPE.wall / 2), door, H - 2.7, KNEIPE.wall, W.ochre);
-  sign(up, K(l, 0, 3.15, -d / 2 - 0.05, Math.PI), 7.5, 1.0, SIGN.magendoktor);
-  sign(up, K(l, -4.6, 2.2, -d / 2 - 0.05, Math.PI), 2.2, 0.55, SIGN.tagnacht);
-  // The house stands between camera and square: the sign also stands on the south roof edge, readable from the south.
-  sign(up, K(l, 0, H + 0.75, d / 2 + 0.1), 9, 1.2, SIGN.magendoktor);
+  // The front with the door faces the camera (Johannes 2026-11-21): red sign over the door, the box sign beside it; the
+  // back wall carries the name on its roof edge toward the Nettelbeckplatz.
+  sign(up, K(l, 0, 3.15, -d / 2 - 0.05), 7.5, 1.0, SIGN.magendoktor);
+  sign(up, K(l, -4.6, 2.2, -d / 2 - 0.05), 2.2, 0.55, SIGN.tagnacht);
+  sign(up, K(l, 0, H + 0.75, d / 2 + 0.1, Math.PI), 9, 1.2, SIGN.magendoktor);
   up.box(M.tar, K(l, 0, H + 0.12, 0), w + 0.4, 0.24, d + 0.4, [0.55, 0.52, 0.5]);
   for (const s of [-1, 1]) up.box(M.stucco, K(l, s * (w / 2), H + 0.45, 0), 0.3, 0.5, d + 0.4, W.ochre);
   up.box(M.stucco, K(l, 0, H + 0.45, -d / 2), w + 0.4, 0.5, 0.3, W.ochre);

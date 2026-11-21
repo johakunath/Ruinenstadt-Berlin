@@ -58,7 +58,7 @@ export const CHARLOTTENBURG_WEATHER: Readonly<Record<string, WeatherKind>> = {
  * fireflies at the Panke, ember sparks over the AEG yard; Gesundbrunnen and the Brunnenstraße clear.
  */
 export const WEDDING_WEATHER: Readonly<Record<string, WeatherKind>> = {
-  leopoldplatz: 'leaves', leopoldkiez: 'leaves', nettelbeckplatz: 'leaves', humboldthain: 'leaves',
+  leopoldplatz: 'leaves', leopoldkiez: 'leaves', nettelbeckplatz: 'leaves', vorhof: 'leaves', humboldthain: 'leaves',
   uferterrasse: 'fog', brunnenplatz: 'fog',
   aeg: 'ash', vorplatz: 'ash',
 };

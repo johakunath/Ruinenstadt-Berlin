@@ -178,9 +178,11 @@ describe('Wedding map (M18, layout C2)', () => {
       expect(near(seen, inDoor.x, inDoor.z), 'inside the door').toBe(true);
       expect(near(seen, outDoor.x, outDoor.z), 'outside the door').toBe(true);
       expect(solid(door.x, door.z)).toBe(false);
-      // The door faces the Nettelbeckplatz (north): the square lies in front of it.
-      expect(door.z).toBeLessThan(pub.z);
-      expect(inPoly(m.areas.find((a) => a.id === 'nettelbeckplatz')!.poly, outDoor.x, outDoor.z - 2)).toBe(true);
+      // Johannes 2026-11-21: the door faces the camera (south), the hero walks in upwards from the forecourt by the
+      // Ringbahn; the Nettelbeckplatz lies behind the pub.
+      expect(door.z).toBeGreaterThan(pub.z);
+      expect(inPoly(m.areas.find((a) => a.id === 'vorhof')!.poly, outDoor.x, outDoor.z + 1)).toBe(true);
+      expect(inPoly(m.areas.find((a) => a.id === 'nettelbeckplatz')!.poly, pub.x, pub.z - pub.hz - 3)).toBe(true);
       for (const p of kneipeParts().filter((q) => q.kind === 'wall')) { const w = kneipeWorld(pub, p.x, p.z); expect(solid(w.x, w.z), `wall ${p.x},${p.z}`).toBe(true); }
       // The room is one pocket: with the door shut, the inside is not reached from outside.
       const shut = reach(m, level, m.start, m.bounds, (x, z) => Math.hypot(x - door.x, z - door.z) < 2.2);
