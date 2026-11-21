@@ -1,6 +1,6 @@
 // Ties the scene together: world, characters, effects, camera, post-processing.
 // The sim knows nothing about this file; it reads sim state and events and draws them.
-import { ALEX_WEATHER, CHARLOTTENBURG_WEATHER, KOEPENICK_WEATHER, MITTE_WEATHER, Weather, XHAIN_WEATHER } from './weather';
+import { ALEX_WEATHER, CHARLOTTENBURG_WEATHER, KOEPENICK_WEATHER, MITTE_WEATHER, Weather, WEDDING_WEATHER, XHAIN_WEATHER } from './weather';
 import { HeroPreview, type PreviewState } from './hero-preview';
 import { heroLook } from '../data/hero-look';
 import {
@@ -185,7 +185,7 @@ export class GameRenderer {
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     // M11c: weather per zone (Köpenick only; the tunnel stays dry).
-    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : def?.id === 'xhain' ? XHAIN_WEATHER : def?.id === 'alex' ? ALEX_WEATHER : def?.id === 'mitte' ? MITTE_WEATHER : def?.id === 'charlottenburg' ? CHARLOTTENBURG_WEATHER : {}, opts.profile.embers / 140, this.sky.fogDensity / NIGHT_SKY.fogDensity, this.sky.wet);
+    this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : def?.id === 'xhain' ? XHAIN_WEATHER : def?.id === 'alex' ? ALEX_WEATHER : def?.id === 'mitte' ? MITTE_WEATHER : def?.id === 'charlottenburg' ? CHARLOTTENBURG_WEATHER : def?.id === 'wedding' ? WEDDING_WEATHER : {}, opts.profile.embers / 140, this.sky.fogDensity / NIGHT_SKY.fogDensity, this.sky.wet);
     this.fx = new Fx(world.fires, { embers: opts.profile.embers, statusGlow: opts.profile.statusGlow, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.content = new ContentView(assets, materials);
     // M20: the walkable camp's stations (build sites, levels, keepers) and their rings.

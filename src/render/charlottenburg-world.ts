@@ -1060,7 +1060,7 @@ function buildHedge(chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x:
 }
 
 /** Iron fences (Zoo, garden, Orangerie forecourt): bars on two rails, sandstone piers every 10 m. */
-function buildFence(chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, w: Wall): void {
+export function buildFence(chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, w: Wall): void {
   const H = WALL_KIND.fence.height;
   let acc = 0;
   along(w.pts, 2.5, (x, z, rot, len) => {

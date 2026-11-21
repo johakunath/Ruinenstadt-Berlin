@@ -48,6 +48,20 @@ export interface EncounterDef {
   hold?: { r: number; need: number; every: number; mouth: Point };
   /** M15: the boss stands here instead of coming from the rim (the Weltzeituhr on its base). */
   bossAt?: Point;
+  /**
+   * M18 walk-in room (Zum Magendoktor, E2): the whole room is the arena. The fight starts when the hero is inside
+   * this rectangle (inner half extents, turned like a landmark by `rot`) and every wave spawns on free cells in it.
+   */
+  room?: RoomRect;
+}
+
+/** A rectangle turned like a landmark: local (u, v) maps to (x + u cos rot + v sin rot, z − u sin rot + v cos rot). */
+export interface RoomRect { x: number; z: number; rot: number; hx: number; hz: number }
+
+/** Inside a room rectangle, `pad` meters in from its walls (negative: beyond them). */
+export function inRoom(r: RoomRect, x: number, z: number, pad = 0): boolean {
+  const dx = x - r.x, dz = z - r.z, c = Math.cos(r.rot), s = Math.sin(r.rot);
+  return Math.abs(dx * c - dz * s) < r.hx - pad && Math.abs(dx * s + dz * c) < r.hz - pad;
 }
 
 /** M20 tunnel grating across the track bed: closed (its collider in the level) until encounter `after` is won. */

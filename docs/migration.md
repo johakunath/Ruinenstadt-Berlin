@@ -18,7 +18,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | H3 humanoid boss bases: step 2 human base mesh (comparison first), step 3 Turmwächter on the mech; Codex T8 boss textures | Claude · Opus high | open: `docs/tasks/h3-humanoid-bosses.md` |
 | M16 Charlottenburg step 8 rest: tier calibration with the bot once B2 is decided (C4; tier 32 … 54 and U2 west 41 … 46 are provisional) | Claude · Opus medium | after B2: `docs/tasks/m16-charlottenburg.md` › Handover step 8 |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
-| M18 Wedding, district 6 („kommt bald“, gold banquet; layout C2, look A, with the Magendoktor; small scope): step 1 map and step 2 enemies, bosses and loot run as Opus sessions; step 3 sights and finish (U9 line, links) starts when both are merged | Claude · Opus high (plan: Fable high, done) | running: `docs/tasks/m18-wedding.md` |
+| M18 Wedding, district 6 („kommt bald“, gold banquet; layout C2, look A, with the Magendoktor; small scope): step 1 map built (`?map=wedding`, draft PR from `claude/m18-wedding-map`), step 2 enemies, bosses and loot running; step 3 sights and finish (U9 line, links) starts when both are merged | Claude · Opus high (plan: Fable high, done) | running: `docs/tasks/m18-wedding.md` |
 
 Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.
 

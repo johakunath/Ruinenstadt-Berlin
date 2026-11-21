@@ -40,6 +40,8 @@ import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteM
 import { buildRiddleView } from './charlottenburg-riddles';
 import { buildSearchlights } from './searchlights';
 import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from './charlottenburg-world';
+import { buildKneipe, buildWeddingLandmark, buildWeddingWorld, makeWeddingMats, WEDDING_KINDS, weddingSpatiSign, type WeddingMats } from './wedding-world';
+import { inKneipe } from '../data/kneipe';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
@@ -108,6 +110,8 @@ export interface MapMats extends Mats, LotGroundMats {
   tunnelConcrete?: boolean;
   /** M15 Mitte materials (`mitte-world.ts`), only on that map. */
   mitte?: MitteMats;
+  /** M18 Wedding sign atlas (`wedding-world.ts`), only on that map. */
+  wedding?: WeddingMats;
 }
 
 /** A builder per chunk. Lamps become light spots plus a merged glow decal. */
@@ -2290,7 +2294,8 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
   up.box(M.iron, lm(l, 0, 2.28, d / 2 + 0.08), door + 0.2, 0.26, 0.3, [0.9, 0.9, 0.85]);
   // Sign standing on the front edge of the awning, so the camera above sees it.
   const tilt = new Matrix4().makeRotationX(-0.6);
-  up.geo(M.spatiSign, new PlaneGeometry(4.4, 0.95), lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt));
+  // M18 Wedding: each rest stop shows its own name from the sign atlas.
+  if (!weddingSpatiSign(up, lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt), l.name)) up.geo(M.spatiSign, new PlaneGeometry(4.4, 0.95), lm(l, 0, 3.0, d / 2 + 1.3).multiply(tilt));
   up.box(M.rust, lm(l, 0, 3.0, d / 2 + 1.24).multiply(tilt), 4.6, 1.1, 0.08, [0.35, 0.35, 0.38]);
   up.box(M.awning, lm(l, 0, 2.55, d / 2 + 0.7), w - 0.4, 0.08, 1.2);
   for (const side of [-1, 1]) {
@@ -2307,7 +2312,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const sky = opts.sky ?? NIGHT_SKY;
   glowScale = sky.lamps;
   setPropEra(m.id === 'charlottenburg' ? 1920 : null);
-  shopShare = m.id === 'charlottenburg' ? [0.8, 0.55] : [0.4, 0.22];
+  // M18 Wedding: a street of shops under the lampions (awnings come from `wedding-world.ts`).
+  shopShare = m.id === 'charlottenburg' ? [0.8, 0.55] : m.id === 'wedding' ? [0.7, 0.45] : [0.4, 0.22];
   wet = sky.wet;
   const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' ? m.id : undefined);
   const mats = makeMapMats(materials, district);
@@ -2344,6 +2350,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     swapPaintedMap([mats.concrete], TUNNEL_WALLS_URL, materials.profile.anisotropy, false);
   }
   if (m.id === 'mitte') mats.mitte = mitteMats(materials);
+  if (m.id === 'wedding') mats.wedding = makeWeddingMats(materials);
   // V1 B cutaway: flagged lots and landmarks, cut while the hero is in one of their zones (`follow`).
   const plan = cutPlan(m, lots, { off: opts.cut === 'off', yard: typeof opts.cut === 'number' ? opts.cut : undefined });
   const cutaway = new Cutaway(plan.zones);
@@ -2417,6 +2424,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   });
   // Späti: roof and upper walls in their own group, hidden while the hero is inside (`follow`).
   const spatis: Array<{ rest: RestArea; upper: Group }> = [];
+  // M18: the walk-in pub hides its roof and upper walls the same way.
+  const kneipen: Array<{ l: Landmark; upper: Group }> = [];
   // M15: the Weltzeituhr stands as its own object (`clock.ts`): the final boss wakes up out of it.
   let clock: Group | undefined;
   for (const l of m.landmarks) {
@@ -2430,9 +2439,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       group.add(rig.group);
       clock = rig.group;
     }
-    if (l.kind === 'spati') {
+    if (l.kind === 'spati' || l.kind === 'kneipe') {
       const up = new ChunkBuilder(mats);
-      up.solid.captureOccluder(() => b.on(y0, () => buildSpati(b, up, l)));
+      up.solid.captureOccluder(() => b.on(y0, () => (l.kind === 'kneipe' ? buildKneipe(b, up, l) : buildSpati(b, up, l))));
       const g = new Group();
       for (const mesh of up.solid.meshes()) {
         mesh.castShadow = true;
@@ -2443,7 +2452,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       const occluder = up.solid.occluderMesh();
       if (occluder) g.add(occluder);
       group.add(g);
-      spatis.push({ rest: spatiRest(l), upper: g });
+      if (l.kind === 'kneipe') kneipen.push({ l, upper: g });
+      else spatis.push({ rest: spatiRest(l), upper: g });
       continue;
     }
     // Xhain landmarks are built and cut in `buildXhainWorld`.
@@ -2452,7 +2462,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     const build = (): void => b.on(y0, () => {
       if (XHAIN_KINDS.has(l.kind)) return;
       b.wearLandmark(l, () => {
-        if (ALEX_KINDS.has(l.kind)) buildAlexLandmark(b, l);
+        if (m.id === 'wedding' && WEDDING_KINDS.has(l.kind)) buildWeddingLandmark(b, l);
+        else if (ALEX_KINDS.has(l.kind)) buildAlexLandmark(b, l);
         else if (MITTE_KINDS.has(l.kind)) buildMitteLandmark(b, l);
         else if (CHARLOTTENBURG_KINDS.has(l.kind)) buildCharlottenburgLandmark(b, l);
         else buildLandmark(b, l);
@@ -2489,6 +2500,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   }
   // M16 Charlottenburg: the brick Stadtbahn, the Bahnhof Zoo platform, hedges and fences (`charlottenburg-world.ts`).
   if (m.id === 'charlottenburg') buildCharlottenburgWorld(m, chunkOf, (x, z) => surfaceAt(m, x, z));
+  // M18 Wedding: the plain brick Ringbahn, fences and brick walls, look A dressing (`wedding-world.ts`).
+  if (m.id === 'wedding') buildWeddingWorld(m, lots, props, chunkOf, (x, z) => surfaceAt(m, x, z));
   // M15 Mitte: neon street dressing (`mitte-world.ts`).
   if (mats.mitte) buildMitteWorld(m, lots, props, mats.mitte, mats, wet, chunkOf, (x, z) => surfaceAt(m, x, z), (l) => lotCutAt.get(l));
   if (m.tunnel) {
@@ -2691,6 +2704,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       hz = z;
       breakableView?.near(x, z);
       for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
+      for (const k of kneipen) k.upper.visible = !inKneipe(k.l, x, z, 0.3);
       // A reveal looks at the landmark itself, whose cut zone holds its footprint: keep it whole then.
       if (uncut) cutaway.update(1e6, 1e6);
       else cutaway.update(x, z);
