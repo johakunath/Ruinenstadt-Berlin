@@ -4,7 +4,7 @@
 import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, nextDestination, stopName, STOPS } from '../data/lines';
 import { keyNav } from './focus';
 
-export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' | 'mitte' } | { map: 'tunnel'; line: number };
+export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' } | { map: 'tunnel'; line: number };
 
 export class NetBoard {
   readonly root = document.createElement('div');
@@ -113,7 +113,7 @@ export class NetBoard {
   private ride(): void {
     const s = this.sel;
     if (!s) return;
-    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain' || m === 'alex' || m === 'mitte') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
+    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain' || m === 'alex' || m === 'mitte' || m === 'charlottenburg') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
     if (linePlayable(s.line, this.freed)) this.go({ map: 'tunnel', line: s.line });
   }
 

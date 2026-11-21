@@ -14,13 +14,15 @@ export interface LineDef {
   readonly color: string;
   /** Ghost station in the middle of the tunnel. */
   readonly ghost: string;
+  /** Tunnel name when the badge repeats (M16 C3: both U2 lines); it is also the run-save key. */
+  readonly name?: string;
 }
 
 export const LINES: readonly LineDef[] = [
   { id: 'S3', color: '#2a8a3a', ghost: 'Rummelsburg' },
   { id: 'U8', color: '#224f86', ghost: 'Heinrich-Heine-Straße' },
   { id: 'U2', color: '#da421e', ghost: 'Klosterstraße' },
-  { id: 'U2', color: '#da421e', ghost: 'Bülowstraße' },
+  { id: 'U2', color: '#da421e', ghost: 'Bülowstraße', name: 'U2-Tunnel West' },
 ];
 
 /** Districts on the network map. `map`: the 3D page that plays it (`?map=`), absent while it is not built. */
@@ -30,7 +32,7 @@ export const STOPS: readonly NetStop[] = [
   { name: 'Xhain', station: 'S+U Warschauer Straße', map: 'xhain', at: [238, 135] },
   { name: 'Alexanderplatz', station: 'U Alexanderplatz', map: 'alex', at: [189, 65] },
   { name: 'Mitte', station: 'U Potsdamer Platz', map: 'mitte', at: [119, 100] },
-  { name: 'Charlottenburg', station: 'S+U Zoologischer Garten', at: [35, 149] },
+  { name: 'Charlottenburg', station: 'S+U Zoologischer Garten', map: 'charlottenburg', at: [35, 149] },
 ];
 /** Line routes (45° schematic, viewBox 400 × 250) and badge positions, 2D's scaled by 1.4. */
 export const NET_ROUTES: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
@@ -40,6 +42,9 @@ export const NET_ROUTES: ReadonlyArray<ReadonlyArray<readonly [number, number]>>
   [[119, 100], [70, 149], [35, 149]],
 ];
 export const NET_BADGES: ReadonlyArray<readonly [number, number]> = [[309, 222], [259, 107], [158, 45], [112, 145]];
+
+/** Tunnel name of line k, unique per line (map name, banner and the run-save key): „U2-Tunnel“, „U2-Tunnel West“. */
+export const tunnelName = (k: number): string => LINES[k]?.name ?? `${LINES[k]?.id ?? 'S3'}-Tunnel`;
 
 /** `camp.freed` holds districts (0 Köpenick) and cleared lines as LINE_FREED + k. */
 export const LINE_FREED = 100;

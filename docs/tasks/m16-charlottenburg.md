@@ -2,7 +2,7 @@
 
 Layout C2 „Spiegelschloss“ (Johannes, 2026-11-19). Concept, decisions C1 to C6, geography check, the 1920 table and 2D reuse: `docs/maps/charlottenburg.md`. Mockups: `docs/mockups/m16-charlottenburg-layouts.svg` (A, B, C), `docs/mockups/m16-charlottenburg-c2.svg` (the revision; schematic, the anchors below rule). Template: `docs/tasks/m15-mitte.md` and its code.
 
-Status: steps 0 to 2 done, steps 3a, 4 and 5 open. Notes are short; whoever builds a step writes its handover here (at most 8 lines).
+Status: steps 0 to 8 done (2026-11-21; step 7 without the two hand-placed zone 3 lot types), step 9 (Codex) and 10 (Johannes) open. Notes are short; whoever builds a step writes its handover here (at most 8 lines).
 
 ## Steps (one session each unless noted)
 
@@ -11,13 +11,13 @@ Status: steps 0 to 2 done, steps 3a, 4 and 5 open. Notes are short; whoever buil
 | 0 | Concept, geography check, decisions, plan | | Fable high | done 2026-11-19 |
 | 1 | Data `src/data/charlottenburg.ts` from the anchors below, invariant tests `src/data/charlottenburg.test.ts` at scale 1 and 1.3 (as `mitte.test.ts`, with the collider flood fill), map SVG `docs/maps/charlottenburg.svg` shown in chat. Stand-ins for bosses and district enemies; district 4, tier 32 to 54 (C4). Network data in `src/data/lines.ts` (C3) with `lines.test.ts`; `map` on the stop only in step 8 | 0 | Opus high | done 2026-11-19 |
 | 2 | Playable blockout `?map=charlottenburg`: wiring (`options.ts`, `ui/maps.ts`, `main.ts` banner „Charlottenburg · 1920“, bot `mapLevelOf`), landmark massing, Spree, Karpfenteich, Stadtbahn viaduct with arches, maze hedges, the two roofless halls, Zoo paths and gates, the locked Ehrenhof gate, smoke test | 1 | Opus high | done 2026-11-19 (Handover › step 2) |
-| 3a | Sky per zone: spec (below, *Engine* E1). Which `Sky` fields blend as uniforms, what is baked today, cost, fallback | 1 (reads `sky.ts`, `renderer.ts`, `map-world.ts`, `weather.ts`) | Fable high | open |
-| 3b | Look in game: the four times of day (C2) and the street dressing below 5 m (bulb marquees and canopies, searchlight beams, poster columns, gas lanterns, shards, diamond dust, confetti). Johannes tunes each time of day. State the Leistung cost | 2, 3a | Opus high | open |
+| 3a | Sky per zone: spec (below, *Engine* E1). Which `Sky` fields blend as uniforms, what is baked today, cost, fallback | 1 (reads `sky.ts`, `renderer.ts`, `map-world.ts`, `weather.ts`) | Fable high (written by Opus high: no fork found) | done 2026-11-21 (Step 3a spec) |
+| 3b | Look in game: the four times of day (C2) and the street dressing below 5 m (bulb marquees and canopies, searchlight beams, poster columns, gas lanterns, shards, diamond dust, confetti). Johannes tunes each time of day. State the Leistung cost | 2, 3a | Opus high | done 2026-11-21 (Handover › steps 3a/3b); Johannes tunes |
 | 4 | Landmarks from pre-1930 photos (`docs/maps/landmarks.md`; Wikimedia, look at the photos yourself), built worn. Three builders in parallel as in Mitte: City West (Bahnhof Zoo 1882, Löwentor, Elefantentor, Antilopenhaus, Musikpavillon, Aquarium, Ufa-Palast, Capitol shop row, Gedächtniskirche with five towers, Romanisches Café, Gloria-Palast, Marmorhaus, KaDeWe with Lichthof, U Wittenbergplatz hall, Café des Westens); Ku'damm to Oper (Revuepalast and Gläsernes Varieté from the board, Theater des Westens, Deutsches Opernhaus, Schiller-Theater, Technische Hochschule, Rathaus tower); Schloss (central block with dome, Ehrenhof and gate, Neuer Flügel, Orangerie ruin as mirror gallery, Neuer Pavillon, Stülerbauten, Belvedere, Mausoleum, maze pieces, statues). Correct the 1920 table in the map doc | 2 | Opus high | done 2026-11-19 (three Opus builders; handover below) |
 | 5 | Enemy and boss spec (`docs/tasks/m12d-charlottenburg-enemies.md`): the three board enemies, Zeitlose in 1920s dress, the three zone bosses, Die Diamantene Diva, the district rule, wave mix per zone, maze riddles, district loot (set Ornat des Letzten Vorhangs, weapon Schlussapplaus), Kodex lines. Input below | 0 (can run now, parallel to 1 to 4) | Fable high | done 2026-11-19: `docs/tasks/m12d-charlottenburg-enemies.md` (riddles are their own small step 6c there) |
-| 6 | Enemy and boss build (sim, bodies, sounds, Kodex) from the spec; update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md` | 5 | Opus high | done 2026-11-19: `docs/tasks/m12d-charlottenburg-enemies.md` › Handover. Open: 6c maze riddles |
-| 7 | Buildings and lot types: mockup first (two lot types per zone, the 1920 facade: stucco Altbau with shop fronts and canopies), then build; 1920s vehicles (cars, double-deck bus, tram, cab); weather per zone | 3b | Opus high, mockup first | open |
-| 8 | Flow and balance: U2 tunnel (line 3) from U Potsdamer Platz, title and victory links, network stop `map: 'charlottenburg'`, bot `--map=charlottenburg`, tier. First: give tunnel lines 2 and 3 distinct map names and run-save keys (both are „U2-Tunnel“ today, map doc C3) | 2, 6, Mitte step 8, the M14/B2 decision (C4) | Opus medium | open |
+| 6 | Enemy and boss build (sim, bodies, sounds, Kodex) from the spec; update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md` | 5 | Opus high | done 2026-11-19: `docs/tasks/m12d-charlottenburg-enemies.md` › Handover; 6c maze riddles done 2026-11-21 (Handover › step 6c) |
+| 7 | Buildings and lot types: mockup first (two lot types per zone, the 1920 facade: stucco Altbau with shop fronts and canopies), then build; 1920s vehicles (cars, double-deck bus, tram, cab); weather per zone | 3b | Opus high, mockup first | done 2026-11-21 (Handover › step 7); open: zone 3 Heckenkabinett and Gartentheater by hand |
+| 8 | Flow and balance: U2 tunnel (line 3) from U Potsdamer Platz, title and victory links, network stop `map: 'charlottenburg'`, bot `--map=charlottenburg`, tier. First: give tunnel lines 2 and 3 distinct map names and run-save keys (both are „U2-Tunnel“ today, map doc C3) | 2, 6, Mitte step 8, the M14/B2 decision (C4) | Opus medium | done 2026-11-21 (Handover › step 8); tier stays provisional until B2 (C4) |
 | 9 | Textures: rows in `docs/asset-pipeline.md` (stucco facade, marquee sign atlas, cut glass and mirror, hedge, gravel parterre, baroque sandstone) | 3b, 4, 7 | Codex | open |
 | 10 | Screenshots (street at each time of day, fight, each landmark), PC and Tab S9 playtest; rows in `docs/tasks/pt-hardware-checks.md` | all | Johannes | open |
 
@@ -154,3 +154,41 @@ Text drafts (Opus finalises): banner „Charlottenburg · 1920“; district card
 - Triangles: City West 35.4k → 38.7k, Ku'damm 30.5k → 33.5k, Schloss 22.7k → 24.8k (+9 to 10 %, each sight ≤ +15 %); sheets gain up to two batches of shared materials (dark wood, burlap, linen, rust; the Tor the sign atlas). Proof: `docs/proof/m16-charlottenburg/landmarks/` and `surfaces/` (before and after).
 - Diva: the gown is now three stepped rings of pleated glass fan panels with silver ribs and shard hems (tiers still hide by `still`), taller feather halo with diamonds, bigger fans; about the same cost (sheet 7952 → 8034 triangles). Proof `enemies/diva.jpg`, old `diva-before.jpg`. Codex rows T9a to T9j in `docs/asset-pipeline.md`.
 - Open: the Opernhaus colonnade and other column fronts stay fairly clean (cylinders are not in the pass); Neuer Flügel's side-part windows stand 1 m in front of its wall box (older builder bug, not changed); look on the Tab S9 not yet seen.
+
+## Step 3a spec (2026-11-21) [Claude · Opus high]
+
+No architecture fork: every `Sky` field but the reflection map is a uniform or a scene field.
+- Blends per frame (`SkyBlend`, `src/render/sky-blend.ts`, smoothstep over 4 s): background, fog colour and density, hemisphere colours and strength, moon or sun colour and strength, lamp scale (pooled light intensity and every glow decal's opacity, `World.setLamps`), grade (exposure, saturation, contrast, split, bloom strength; `Post.grade`). No shader recompile.
+- Zone at a point: the zone of the nearest fight circle (distance to its rim; `skyZoneAt`). A jump of more than 30 m (start at an encounter, resume) snaps without a blend.
+- Reflection map: one small PMREM per zone sky, rendered at load (4 maps), switched at the middle of a blend. Light direction: fixed per map (NIGHT_SKY's): a moving sun would move every shadow. Light count: unchanged.
+- Fallback `?sky=one`: the Premierennacht everywhere (no blend). Not built: the dawn brightening with the Diva's phases (optional in m12d).
+
+## Handover 2026-11-21 (steps 3a/3b) [Claude · Opus high]
+
+- Skies `CHARLOTTENBURG_SKIES` in `src/render/sky.ts`: Blaue Stunde (violet-teal, berry horizon), Premierennacht (black, lamps up), Mondnacht (cold, mist), Morgengrauen (pearl and rose, lamps low). First values; Johannes tunes. Proof `docs/proof/m16-charlottenburg/sky/`.
+- Searchlights (E5, `src/render/searchlights.ts`): five beams over Ufa-Palast, Gloria-Palast, Revuepalast, Theater des Westens and Varieté, leaning north away from the camera, strength follows the zone's lamp scale. Marmorhaus left out (camera side: its beam crossed the whole view).
+- Weather per area (`CHARLOTTENBURG_WEATHER`): leaves in the Zoo, confetti on the Ku'damm and Savignyplatz, prism motes in the garden, diamond dust at the Schloss.
+- Cost, Ausgewogen and Leistung: searchlights 1 instanced draw (720 triangles); a particle layer 1 point draw while shown (2 during a 2 s fade); sky blend only uniform writes; 4 reflection maps at load (a few MB of GPU memory). No light, pass or shadow added.
+- Bulb white and stage pink (E6) were already built with the landmark lighting; poster columns, gas lanterns and shards exist. Not seen in the cloud: whether the beams read at all from the game camera (hardware check 52).
+
+## Handover 2026-11-21 (step 6c) [Claude · Opus high]
+
+- Kristallsockel: `MapDef.plinths` → `Level.plinths`, progress in `RunContent.plinths` (saved with the run, never drops, partial charge kept); all three lit removes the hedge gate collider once (`updatePlinths`), notes „Sockel n von 3“ and „Das Heckentor öffnet sich“. Behind it the second fixed hidden blessing.
+- Spiegelpfad: `MapDef.mirrors`, four panels at two forks (each fork here has two ways, so two panels each, not three), thin colliders; the true one shows a lit silhouette that follows the hero (render only). Two sleeping Spiegelsouffleurs at the wrong ways' dead ends.
+- Layout in the maze frame: `IRRGARTEN_RIDDLES` (`src/data/charlottenburg.ts`); render `src/render/charlottenburg-riddles.ts` (cost at most 12 draws with the whole maze in view, no light).
+- Tests: reach before and after the gate, order free, progress kept, gate once, resume keeps it open. Proof `docs/proof/m16-charlottenburg/riddles/`. Reused from 2D: nothing (2D had no maze); the tunnel hold ring drawing.
+
+## Handover 2026-11-21 (step 7) [Claude · Opus high]
+
+- Mockup `docs/mockups/m16-charlottenburg-lots.svg` (shown in chat; the session ran unattended, so Claude picked the most defensible variant): facade F-A (stucco Altbau, shops with awnings) over F-B (Jugendstil bays, dark shop band: reads badly from above); lot types A (concept C2) over B (Biergarten, Markthalle, Tanzpalast, arch workshops, nursery, jetty); vehicles V-A (motor cars) over V-B (horse carts: needs animals, P18). Johannes can still switch.
+- Built: lot types `droschkenplatz`, `passage` (Tauentzien), `kinovorplatz`, `jazzhof` (Ku'damm) from existing props (`src/data/lots.ts`); 1920 car (cab, limousine, tourer), open-top double-decker and two-axle tram with trailer (`src/render/props-1920.ts`, same footprints); 80 % / 55 % of long Altbau fronts get a shop with its awning (40 % / 22 % elsewhere).
+- Not built: the zone 3 hand-placed Heckenkabinett and Gartentheater; own awning colours per shop (the awning material has no vertex colours); the cab's yellow belt is an unverified detail.
+- Tests: lot types in their zones at 1 and 1.3; Blockrand still ≥ 10 tall rows (lot caps lowered for it).
+
+## Handover 2026-11-21 (step 8) [Claude · Opus medium work, Opus high session]
+
+- Tunnel names keyed by line: `LineDef.name`, `tunnelName(k)` („U2-Tunnel West“ for line 3; older lines keep theirs, so saves stay valid); map id `tunnel-u2-3`. Used by the map, the title and the run-save lookup (`boot.ts`).
+- Line 3 waves (`lineWaves(3)`): Mitte roster to Bülowstraße, Charlottenburg glass after it, tier 41 … 46 (Mitte's late tier, as the U2 before it). Female bodies now load for wave kinds too (Scherbentänzerin), `main.ts`.
+- Flow: Mitte won → „In die U2“ → U2 west → „Weiter nach Charlottenburg“ → back to Köpenick; stop `map: 'charlottenburg'`; camp radio lists „U2 West“ and Charlottenburg.
+- Bot (`--map=charlottenburg`, 3 runs, fresh hero, power 33): 12 deaths at the Konzertgarten each run. Expected for a fresh hero at tier 32; no calibration before B2 (C4). Reused from 2D: the tunnel's start-district roster rule (`tunSpecial`).
+- Tests: names and ids per line, line 3 mix and tier, the chain to Charlottenburg; smoke „M16 step 8: the U2 west tunnel loads …“.

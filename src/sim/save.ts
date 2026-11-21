@@ -55,6 +55,8 @@ export function simFromSave(save: SaveV1, opts: Omit<SimOptions, 'inventory' | '
     // and one from before Funde existed has none; the profile decides what is still lying there.
     const found = sim.statContext.funde ?? [];
     sim.content.funde = sim.content.funde ? sim.content.funde.map((f) => ({ ...f, got: f.got || found.includes(f.id) })) : placeFunde(sim);
+    // M16 Kristallsockel: an opened hedge gate stays open.
+    if (sim.content.plinths?.open && sim.level.plinths) sim.level.remove(sim.level.plinths.gate.collider);
     for (const h of sim.content.shrines) sim.level.add({ kind: 'circle', x: h.x, z: h.z, r: 0.5 });
     // Enemies are not saved: an unfinished rescue gets its guards back, or the captive would be free at once.
     spawnGuards(sim);

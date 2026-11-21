@@ -222,6 +222,18 @@ test('M15 step 8: the U2 tunnel loads with the mechs, its first fight brings Ale
   expect(errors).toEqual([]);
 });
 
+test('M16 step 8: the U2 west tunnel loads with its own name, its first fight brings Mitte enemies', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=tunnel&line=3&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Tunnelmund');
+  expect(await page.evaluate(() => window.__game!.sim().level.zones.map((z) => z.name))).toEqual(['U2-Tunnel West', 'Geisterbahnhof Bülowstraße']);
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; s.player.hp = 1e9; });
+  await page.waitForFunction(() => window.__game!.sim().enemies.length > 0, null, { timeout: 90_000 });
+  await page.waitForTimeout(1500);
+  expect(errors).toEqual([]);
+});
+
 test('M15: Xhain loads on the Warschauer Brücke, the first fight starts, the map opens', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?map=xhain&profile=Leistung&seed=7&autostart');
