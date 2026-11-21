@@ -1,13 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { DynamicResolution } from './dyn-res';
 
-const run = (d: DynamicResolution, ms: number, seconds: number, target = 1000 / 60): number => {
+const run = (d: DynamicResolution, ms: number, seconds: number, target = 1000 / 60, cpu = 0): number => {
   let changes = 0;
-  for (let t = 0; t < seconds * 1000; t += ms) if (d.frame(ms, target)) changes++;
+  for (let t = 0; t < seconds * 1000; t += ms) if (d.frame(ms, target, cpu)) changes++;
   return changes;
 };
 
 describe('dynamic resolution', () => {
+  it('keeps full scale when the CPU is the bottleneck (fewer pixels would only blur)', () => {
+    const d = new DynamicResolution({ min: 0.6 });
+    run(d, 33, 20, 1000 / 60, 28);
+    expect(d.scale).toBe(1);
+  });
+
+  it('climbs back once frames turn CPU-bound', () => {
+    const d = new DynamicResolution({ min: 0.6 });
+    run(d, 30, 10, 1000 / 60, 5);
+    expect(d.scale).toBe(0.6);
+    run(d, 33, 60, 1000 / 60, 28);
+    expect(d.scale).toBe(1);
+  });
+
   it('off at min 1', () => {
     const d = new DynamicResolution({ min: 1 });
     run(d, 40, 10);

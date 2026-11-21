@@ -1004,11 +1004,11 @@ function frame(now: number): void {
   }
 }
 
-/** Q1: on Ausgewogen, after 20 s of play under 40 fps at the lowest render scale, one hint per session. */
+/** Q1: on Ausgewogen, after 20 s of play under 40 fps, one hint per session. */
 let slowFor = 0;
 let slowShown = false;
 function slowHint(frameMs: number): void {
-  if (slowShown || opts.profile !== 'ausgewogen' || !renderer || renderer.perf.scale > PROFILES.ausgewogen.minScale) return;
+  if (slowShown || opts.profile !== 'ausgewogen' || !renderer) return;
   slowFor = frameMs > 25 ? slowFor + frameMs / 1000 : Math.max(0, slowFor - frameMs / 2000);
   if (slowFor < 20) return;
   slowShown = true;
