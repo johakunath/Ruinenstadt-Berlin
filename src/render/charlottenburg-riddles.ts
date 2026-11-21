@@ -194,7 +194,9 @@ export function buildRiddleView(m: MapDef, mats: MapMats, ground: (x: number, z:
         (dashMesh.material as MeshBasicMaterial).opacity = inside ? 0.6 : 0.3;
       }
       // Gate: swings over `SWING` seconds; a resumed run finds it open.
+      // A new run closes it again (the sim restores the collider).
       if (s.open) openK = first ? 1 : Math.min(1, openK + dt / SWING);
+      else openK = 0;
       first = false;
       const e = openK * openK * (3 - 2 * openK);
       leaves.forEach((leaf, i) => { leaf.rotation.y = (i === 0 ? 1 : -1) * e * Math.PI * 0.5; });
