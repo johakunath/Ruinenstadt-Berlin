@@ -635,11 +635,16 @@ function loadout(s: Sim): void {
     for (const id of [...(w.mods ?? [])]) if (!want.includes(id)) removeMod(s, id);
     for (const id of want) if (!(w.mods ?? []).includes(id)) installMod(s, id);
   }
+  // Scored on hypothetical copies (setLoadout replaces the equipment objects), applied only on a change
+  // (every setLoadout rounds life, which would eat fractional regeneration each step: Codex on PR 75).
   const im = s.equipment.i;
   if (im) {
-    let best = 0, bp = -1;
-    for (let k = 0; k < IMPLANT_MODES.length; k++) { setImplantMode(s, im, k); const q = power(s.stats); if (q > bp) { bp = q; best = k; } }
-    setImplantMode(s, im, best);
+    let best: 0 | 1 | 2 = im.implantMode ?? 0, bp = -1;
+    for (let k = 0 as 0 | 1 | 2; k < IMPLANT_MODES.length; k = (k + 1) as 0 | 1 | 2) {
+      const q = power(heroStats({ ...s.equipment, i: { ...im, implantMode: k } }, s.statContext));
+      if (q > bp) { bp = q; best = k; }
+    }
+    if (best !== (im.implantMode ?? 0)) setImplantMode(s, im, best);
   }
 }
 
