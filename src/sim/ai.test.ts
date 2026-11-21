@@ -1734,18 +1734,18 @@ describe('Wedding roster (M18, spec m12e)', () => {
     expect(has(run(m, THREAT.dive.time + 0.1), 'playerHit')).toBe(false);
   });
 
-  it('Der Stammgast calls a round of Zecher (a Brocken too in rage) and charges twice in rage', () => {
-    const G = BOSS.stammgast;
+  it('Der Zugezogene calls two Zecher (a Brocken too in rage), charges on his scooter twice in rage and throws a volley of coffee cups', () => {
+    const G = BOSS.zugezogene;
     const s = fresh();
-    const e = put(s, 'stammgast', 0, 9);
+    const e = put(s, 'zugezogene', 0, 9);
     e.hp = e.maxHp = 1e6;
     still(e);
     e.cd = [99, 0, 99];
     const evs = run(s, BOSS.summon.wind + 0.6);
     expect([alive(s, 'walker'), alive(s, 'runner'), alive(s, 'brute')]).toEqual([G.adds, G.runners, 0]);
-    expect(notes(evs)).toContain('„Noch \'ne Runde!“');
+    expect(notes(evs)).toContain('„Bald nur noch Hafermilch!“');
     const r = fresh();
-    const q = put(r, 'stammgast', 0, 9);
+    const q = put(r, 'zugezogene', 0, 9);
     q.hp = q.maxHp * 0.45;
     run(r, 0.05);
     expect(q.rage).toBe(true);
@@ -1754,12 +1754,28 @@ describe('Wedding roster (M18, spec m12e)', () => {
     expect(alive(r, 'brute')).toBe(G.rageBrutes);
     // Twice in rage: two charge wind-ups from one cooldown.
     const c = fresh();
-    const h = put(c, 'stammgast', 0, 8);
+    const h = put(c, 'zugezogene', 0, 8);
     h.hp = h.maxHp * 0.45;
     run(c, 0.05);
     h.cd = [0, 99, 99];
     h.gap = 0;
     expect(specials(run(c, 2.4)).filter((k) => k === 'charge')).toHaveLength(2);
+    // Coffee cups: the Grenzer's five-shot volley within 12 m, not from farther.
+    const v = fresh();
+    const z = put(v, 'zugezogene', 0, 8);
+    z.hp = z.maxHp = 1e6;
+    still(z);
+    z.cd = [99, 99, 0];
+    stepSim(v, NO_INPUT);
+    expect(z.sp?.kind).toBe('volley');
+    run(v, BOSS.grenzer.volleyWind + 0.05);
+    expect(v.threats.shots.filter((q) => q.src === z.id)).toHaveLength(BOSS.grenzer.shots);
+    const f = fresh();
+    const y = put(f, 'zugezogene', 0, G.volleyRange + 1);
+    still(y);
+    y.cd = [99, 99, 0];
+    stepSim(f, NO_INPUT);
+    expect(y.sp?.kind).not.toBe('volley');
   });
 
   it('Das Hauptgericht sweeps a ring round itself with the spit, roars, charges, and calls no raptors', () => {
@@ -1838,7 +1854,7 @@ describe('Wedding roster (M18, spec m12e)', () => {
   });
 
   it('the Wedding bosses sit on the ladder; all but the Sultan rage below half life', () => {
-    const kinds = ['stammgast', 'hauptgericht', 'bauherr', 'sultan'] as const;
+    const kinds = ['zugezogene', 'hauptgericht', 'bauherr', 'sultan'] as const;
     expect(kinds.map((k) => ENEMIES[k].hp)).toEqual([1000, 2200, 3200, 4400]);
     expect(kinds.map((k) => ENEMIES[k].damage)).toEqual([26, 30, 32, 34]);
     for (const kind of kinds) {
@@ -1850,7 +1866,7 @@ describe('Wedding roster (M18, spec m12e)', () => {
   });
 
   it('no Wedding hit takes more than 45 % of max life, even at ten times the damage', () => {
-    for (const kind of ['teeifrit', 'baklava', 'teppich', 'stammgast', 'hauptgericht', 'bauherr', 'sultan'] as const) {
+    for (const kind of ['teeifrit', 'baklava', 'teppich', 'zugezogene', 'hauptgericht', 'bauherr', 'sultan'] as const) {
       const s = fresh();
       const e = spawnEnemy(s, s.player.x, s.player.z + (kind === 'teeifrit' ? 7 : 3), kind, 1, 10);
       e.hp = e.maxHp = 1e6;

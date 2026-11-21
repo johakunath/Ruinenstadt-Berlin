@@ -21,7 +21,7 @@ export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffn
   | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
   | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr'
   | 'conferencier' | 'ringvater' | 'spiegelpaar' | 'diva'
-  | 'stammgast' | 'hauptgericht' | 'bauherr' | 'sultan';
+  | 'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan';
 export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
   | 'zuender' | 'schild' | 'heuler' | 'scherbe' | 'loge' | 'souffleur' | 'spiegelbild' | 'teeifrit' | 'baklava' | 'teppich' | BossKind;
 /**
@@ -112,7 +112,7 @@ export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> =
   conferencier: ['menschen'], ringvater: ['menschen'], spiegelpaar: ['menschen'], spiegelbild: ['menschen'], diva: ['menschen'],
   // M18 Wedding: the tea spirit is undead, the pastry a plant (cut it), the carpet a flyer (shoot it).
   teeifrit: ['untote'], baklava: ['pflanzen'], teppich: ['tiere'],
-  stammgast: ['menschen'], hauptgericht: ['pflanzen'], bauherr: ['maschinen'], sultan: ['menschen'],
+  zugezogene: ['menschen'], hauptgericht: ['pflanzen'], bauherr: ['maschinen'], sultan: ['menschen'],
 };
 
 const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
@@ -398,10 +398,11 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
   },
-  // M18 Wedding. Zone 1, Nettelbeckplatz: the regular of the Magendoktor. The Feldwebel's brain: rounds of Zecher, a
-  // staggering charge (twice in rage).
-  stammgast: {
-    kind: 'stammgast', name: 'Der Stammgast', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.8, scale: 1.55, hp: 1000, speed: 2.3,
+  // M18 Wedding. Zone 1, inside the Magendoktor (Johannes, 2026-11-21): a newcomer hipster who wants to turn the pub
+  // into something new. The Feldwebel's brain: an e-scooter charge along a marked line (twice in rage), two Zecher,
+  // and one block of his own, a volley of thrown coffee cups (the Grenzer's five-shot fan).
+  zugezogene: {
+    kind: 'zugezogene', name: 'Der Zugezogene', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 1000, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
   },
@@ -722,8 +723,12 @@ export const BOSS = {
     summon: 12, adds: 3, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
   },
   // M18 Wedding (spec m12e).
-  /** Runde: `adds` Schlurfer and `runners` Hetzer, in rage `rageBrutes` Brocken too; the charge twice in rage, `rageGap` s apart. */
-  stammgast: { charge: [5, 7] as [number, number], summon: 9, adds: 2, runners: 1, rageBrutes: 1, rageGap: 0.6 },
+  /**
+   * Der Zugezogene: two Zecher every `summon` s (`adds` Schlurfer, `runners` Hetzer, in rage `rageBrutes` Brocken too);
+   * the e-scooter charge (the default charge) every `charge` s, twice in rage `rageGap` s apart; coffee cups (the
+   * Grenzer's five-shot volley) every `volley` s within `volleyRange` m with a clear line.
+   */
+  zugezogene: { charge: [5, 7] as [number, number], summon: 10, adds: 1, runners: 1, rageBrutes: 1, rageGap: 0.6, volley: 5, volleyRange: 12 },
   /** Bautrupp: `adds` Brocken every `addsEvery`-th Koloss cycle (instead of the Uhrwerkläufer). */
   bauherr: { adds: 2 },
   /**

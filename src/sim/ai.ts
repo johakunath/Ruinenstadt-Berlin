@@ -15,7 +15,7 @@
 // the Ringvater (guards, charging blow), the Spiegelpaar (a reflection, crossing pirouettes, the swap) and the
 // Diva (fans, prism rays, gown tiers).
 // M18 (Wedding, `docs/tasks/m12e-wedding-enemies.md`): no new brain. The Tee-Ifrit throws one Molotov glass, the
-// Teppichschlinger's dive line is marked, the Stammgast and the Bauherr call Zecher and a crew, the Hauptgericht is
+// Teppichschlinger's dive line is marked, Der Zugezogene (charge, coffee cups) and the Bauherr call Zecher and a crew, the Hauptgericht is
 // the Rex's brain, Sultan Nimmersatt the Diva's with his numbers (`divaOf`).
 import { BOSS, ENEMIES, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
 import { freeSpot } from './reach';
@@ -469,13 +469,13 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
         sim.events.push({ type: 'note', text: '„Nachschlag!“', color: '#f2d14b', x: e.x, z: e.z });
         break;
       }
-      if (e.kind === 'stammgast') {
-        // M18 Runde: Zecher (Schlurfer and a Hetzer), in rage a Brocken too.
-        const G = BOSS.stammgast;
+      if (e.kind === 'zugezogene') {
+        // M18: two Zecher (a Schlurfer and a Hetzer), in rage a Brocken too.
+        const G = BOSS.zugezogene;
         summon(sim, e, 'walker', G.adds);
         summon(sim, e, 'runner', G.runners);
         if (e.rage) summon(sim, e, 'brute', G.rageBrutes);
-        sim.events.push({ type: 'note', text: '„Noch \'ne Runde!“', color: '#f2d14b', x: e.x, z: e.z });
+        sim.events.push({ type: 'note', text: '„Bald nur noch Hafermilch!“', color: '#f2d14b', x: e.x, z: e.z });
         break;
       }
       if (e.kind === 'tuersteher') {
@@ -615,9 +615,9 @@ function finish(sim: Sim, e: Enemy, sp: Special): void {
   }
   if (sp.kind === 'charge' && e.kind === 'bassprediger' && (++e.cycle % BOSS.bassprediger.sermonEvery === 0 || e.rage)) e.queue = { kind: 'roar', t: 0 };
   // M16: in rage the Ringvater's Ringschlag comes twice (the second along a new line, the first without its opening).
-  // M18: the Stammgast staggers twice the same way.
-  if (sp.kind === 'charge' && (e.kind === 'ringvater' || e.kind === 'stammgast') && e.rage && !sp.queued) {
-    e.queue = { kind: 'charge', t: e.kind === 'stammgast' ? BOSS.stammgast.rageGap : BOSS.ringvater.rageGap };
+  // M18: Der Zugezogene charges twice the same way on his e-scooter.
+  if (sp.kind === 'charge' && (e.kind === 'ringvater' || e.kind === 'zugezogene') && e.rage && !sp.queued) {
+    e.queue = { kind: 'charge', t: e.kind === 'zugezogene' ? BOSS.zugezogene.rageGap : BOSS.ringvater.rageGap };
     open = 0;
   }
   // Playtest 2026-11-18: in rage the Hauptmann fires a second ring right after the first.
@@ -1028,13 +1028,17 @@ function bossThink(sim: Sim, e: Enemy, dist: number): void {
   const sight = (): boolean => sim.flow.clearLine(e.x, e.z, p.x, p.z);
   switch (e.def.ai) {
     case 'feldwebel': {
-      const F = e.kind === 'stammgast' ? BOSS.stammgast : BOSS.feldwebel;
+      const F = e.kind === 'zugezogene' ? BOSS.zugezogene : BOSS.feldwebel;
       if (e.cd[1] <= 0) {
         e.cd[1] = F.summon;
         begin(sim, e, 'summon');
       } else if (e.cd[0] <= 0 && dist < BOSS.charge.range && dist > 3 && sight()) {
         e.cd[0] = range(sim, F.charge);
         begin(sim, e, 'charge');
+      } else if (e.kind === 'zugezogene' && e.cd[2] <= 0 && dist < BOSS.zugezogene.volleyRange && sight()) {
+        // M18: his one block of his own, a volley of coffee cups.
+        e.cd[2] = BOSS.zugezogene.volley;
+        begin(sim, e, 'volley');
       }
       break;
     }
@@ -1337,7 +1341,7 @@ export function initCooldowns(e: Enemy): void {
     case 'spitter': e.cd = [r(2, 4, 1), r(1.5, 2.5, 2), 0]; break;
     case 'pouncer': e.cd = [r(2, 4, 1), r(1, 2, 2), 0]; break;
     case 'crow': e.cd = [0, r(2, 3.5, 2), 0]; break;
-    case 'feldwebel': e.cd = [3, 6, 0]; break;
+    case 'feldwebel': e.cd = [3, 6, e.kind === 'zugezogene' ? 2.5 : 0]; break;
     case 'waechter': e.cd = [2.5, 5, 3.5]; break;
     case 'rex': e.cd = [3, 6, 2]; break;
     case 'hauptmann': e.cd = [2.5, 4, 6]; break;

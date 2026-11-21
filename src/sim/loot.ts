@@ -143,7 +143,7 @@ const SCRAP: Partial<Record<EnemyKind, number>> = {
   grenzer: 40, brandmeister: 40, rattenmutter: 40, spreehexe: 70, tuersteher: 40, wachdrohne: 40, dirigent: 40, bassprediger: 70,
   uhrwerk: 4, wurzler: 3, kernspeier: 2, zuender: 3, schild: 4, heuler: 4, wurzelmutter: 40, uhrwerkgross: 40, volkskoloss: 40, weltzeituhr: 70,
   scherbe: 1, souffleur: 2, loge: 4, conferencier: 40, ringvater: 40, spiegelpaar: 40, diva: 70,
-  teeifrit: 2, baklava: 4, teppich: 1, stammgast: 40, hauptgericht: 40, bauherr: 40, sultan: 70,
+  teeifrit: 2, baklava: 4, teppich: 1, zugezogene: 40, hauptgericht: 40, bauherr: 40, sultan: 70,
 };
 /** 2D: rats drop material and ingredients rarely (8 % and 1 % instead of 22 % and 3 %). */
 const MAT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.08 };

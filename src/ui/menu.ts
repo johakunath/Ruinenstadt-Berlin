@@ -58,13 +58,13 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   teeifrit: 'Wirft heiße Teegläser. Zuerst erledigen.',
   baklava: 'Vorn ein Tablett, hinten nur Teig. Umgehen.',
   teppich: 'Kreist, zeigt eine Linie, stürzt herab.',
-  stammgast: 'Sitzt hier, seit die Uhr stehen blieb. Gibt Runden aus.',
+  zugezogene: 'Will aus der Kneipe bald was Neues machen. Raus aus seiner Spur.',
   hauptgericht: 'Frisch vom Spieß. Raus aus dem Kreis, wenn er sich dreht.',
   bauherr: 'Baut seit Jahren. Fertig wird nie etwas.',
   sultan: 'Vorspeise, Hauptgang, Nachtisch. Kein Gast geht.',
 };
 const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone', 'zuender', 'schild', 'heuler', 'scherbe', 'loge', 'souffleur', 'teeifrit', 'baklava', 'teppich'];
-const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger', 'conferencier', 'ringvater', 'spiegelpaar', 'diva', 'stammgast', 'hauptgericht', 'bauherr', 'sultan'];
+const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger', 'conferencier', 'ringvater', 'spiegelpaar', 'diva', 'zugezogene', 'hauptgericht', 'bauherr', 'sultan'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
 export interface MenuHost {
@@ -246,7 +246,7 @@ const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
   conferencier: 'X20', ringvater: 'X21', spiegelpaar: 'X22', diva: 'X23',
   // M18 Wedding (ids reserved for Codex busts; glyphs until then).
   teeifrit: 'E22', baklava: 'E23', teppich: 'E24',
-  stammgast: 'X24', hauptgericht: 'X25', bauherr: 'X26', sultan: 'X27',
+  zugezogene: 'X24', hauptgericht: 'X25', bauherr: 'X26', sultan: 'X27',
 };
 const ELITE_PORTRAIT: Record<EliteMod, string> = { flink: 'L01', brennend: 'L02', spaltend: 'L03', gepanzert: 'L04' };
 /** Line-art fallbacks when portrait files are missing. */
@@ -274,11 +274,11 @@ const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
   ringvater: '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/><path d="M9 5l3-3 3 3"/>',
   spiegelpaar: '<path d="M12 2v20M7 5a1.5 1.5 0 1 1 0 .1M17 5a1.5 1.5 0 1 1 0 .1M7 7v6l-3 7M7 9l-3-2M17 7v6l3 7M17 9l3-2"/>',
   diva: '<path d="M12 21L4 9M12 21l-4-13M12 21V7M12 21l4-13M12 21l8-12M4 9c2-2 14-2 16 0"/><circle cx="12" cy="4" r="1.5"/>',
-  // M18 Wedding: a samovar with steam, a tray in front of a block, a carpet with a face, a mug, a spit, a crane, a crowned urn.
+  // M18 Wedding: a samovar with steam, a tray in front of a block, a carpet with a face, a beanie with round glasses, a spit, a crane, a crowned urn.
   teeifrit: '<path d="M8 21h8M9 21l1-3M15 21l-1-3M7 18h10c0-5-2-7-5-7s-5 2-5 7zM12 11V9M10 7c0-2 2-2 2-4M14 7c0-2 2-2 2-4"/>',
   baklava: '<path d="M6 4h12v6H6zM6 7h12M5 10h14v9H5zM5 14h14"/><circle cx="12" cy="15" r="4"/>',
   teppich: '<path d="M3 8c4-3 6 3 9 0s5 3 9 0v8c-4 3-6-3-9 0s-5-3-9 0zM7 11h1M11 11h1M7 14h6"/>',
-  stammgast: '<path d="M6 7h9v13H6zM15 10h3v6h-3M6 10h9M8 4c1 1 3 1 4 0"/>',
+  zugezogene: '<path d="M7 9c0-5 10-5 10 0zM6 9h12M11.3 12h1.4M9 16.5c2 1 4 1 6 0M8 21l8-3"/><circle cx="9.5" cy="12" r="1.8"/><circle cx="14.5" cy="12" r="1.8"/>',
   hauptgericht: '<path d="M12 2v20M8 6h8l-1 10H9zM9 10h6M9 13h6"/>',
   bauherr: '<path d="M4 21V5h7v16M4 9h7M4 13h7M4 17h7M11 5l9 2M18 7v6M16 13h4"/>',
   sultan: '<path d="M7 9l1-4 2 2 2-3 2 3 2-2 1 4zM7 9h10M6 14a6 5 0 0 0 12 0 6 5 0 0 0-12 0zM4 21c3-2 13-2 16 0"/>',

@@ -88,7 +88,7 @@ const TINTS: Record<EnemyKind, number[]> = {
   conferencier: [0xd8cec4], ringvater: [0xb8a494], spiegelpaar: [0xecdcdc], spiegelbild: [0xc8d8ec], diva: [0xf0e4e4],
   // M18 Wedding (board: warm gold under lampions): an amber tea spirit, golden pastry, a ruddy regular, the Sultan.
   teeifrit: [0xffa048, 0xff9040], baklava: [0xd8a050, 0xe0b060], teppich: [0xffffff],
-  stammgast: [0xd8b0a0], hauptgericht: [0xd8a050], bauherr: [0xffffff], sultan: [0xdcb490],
+  zugezogene: [0xe8d0c0], hauptgericht: [0xd8a050], bauherr: [0xffffff], sultan: [0xdcb490],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
@@ -115,7 +115,7 @@ const CLOTH: Partial<Record<EnemyKind, number>> = {
   // M16 Charlottenburg 1920: tux black, plum, the Ringvater's dark suit, violet tights under the glass.
   loge: 0x1e1c24, souffleur: 0x3a2244, scherbe: 0x8a6aa8, conferencier: 0x16141a, ringvater: 0x24222a, spiegelpaar: 0x6a5a8a, spiegelbild: 0x5a7aa0, diva: 0x4a2a58,
   // M18 Wedding: amber rags under the samovar, pastry brown, grey trousers, the Sultan's ruby.
-  teeifrit: 0xc87a3a, baklava: 0x8a5a2a, hauptgericht: 0x8a5a2a, stammgast: 0x3a3a44, sultan: 0x7a1830,
+  teeifrit: 0xc87a3a, baklava: 0x8a5a2a, hauptgericht: 0x8a5a2a, zugezogene: 0x2a2a34, sultan: 0x7a1830,
 };
 const CLOTH_BRIGADE = 0x34528e;
 /** WP5: rag tints for normal ghouls without own clothing colour (multiplies the painted rags), one per body. */
@@ -149,7 +149,7 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   // M18: the tea spirit has no legs (a samovar instead); the pastry golem's skull is a block; a belly for the regular and the Sultan.
   teeifrit: { thigh_l: 0.05, thigh_r: 0.05, spine_02: 0.95, Head: 1.08 },
   baklava: { spine_02: 1.3, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 }, hauptgericht: { spine_02: 1.3, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 },
-  stammgast: { spine_01: 1.2, spine_02: 1.22, Head: 0.9 }, sultan: { spine_01: 1.25, spine_02: 1.15, Head: 0.95 },
+  zugezogene: { spine_02: 0.94, Head: 1.0 }, sultan: { spine_01: 1.25, spine_02: 1.15, Head: 0.95 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
@@ -159,14 +159,14 @@ const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
   loge: [1.14, 1], souffleur: [0.86, 1.08], scherbe: [0.86, 1.04], conferencier: [0.9, 1.08], ringvater: [1.18, 1], spiegelpaar: [0.9, 1.04], spiegelbild: [0.9, 1.04], diva: [0.9, 1.06],
-  baklava: [1.15, 1], hauptgericht: [1.15, 1], stammgast: [1.15, 1], sultan: [1.1, 1],
+  baklava: [1.15, 1], hauptgericht: [1.15, 1], zugezogene: [0.92, 1.04], sultan: [1.1, 1],
 };
 /** H3: humanoid bosses stand upright (`EnemyView.straighten`); the Rattenmutter keeps her hunch. */
 const UPRIGHT: Partial<Record<EnemyKind, true>> = {
   feldwebel: true, hauptmann: true, schaffner: true, grenzer: true, brandmeister: true, spreehexe: true,
   tuersteher: true, dirigent: true, bassprediger: true, wurzelmutter: true,
   scherbe: true, conferencier: true, ringvater: true, spiegelpaar: true, spiegelbild: true, diva: true,
-  stammgast: true, sultan: true, teeifrit: true,
+  zugezogene: true, sultan: true, teeifrit: true,
 };
 /** The bones whose zombie-to-upright turn `straighten` applies. */
 const STRAIGHT = ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head', 'clavicle_l', 'clavicle_r'] as const;
@@ -180,7 +180,7 @@ const EYES: Partial<Record<EnemyKind, number>> = {
   // M16: violet glass light in the revue ghouls; the reflection's eyes cold blue.
   scherbe: 0xc88cff, loge: 0xc88cff, souffleur: 0xc88cff, conferencier: 0xe8b4ff, spiegelpaar: 0xff8aa8, spiegelbild: 0x8ad8ff, diva: 0xffb4e0,
   // M18: gold eyes in the tea spirit and the host, the regular's bleary amber.
-  teeifrit: 0xffe08a, stammgast: 0xffb04a, sultan: 0xffd060,
+  teeifrit: 0xffe08a, zugezogene: 0xffb04a, sultan: 0xffd060,
 };
 /** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
 const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, brute: true };
@@ -878,7 +878,7 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
     || kind === 'scherbe' || kind === 'loge' || kind === 'souffleur' || kind === 'conferencier' || kind === 'ringvater' || kind === 'spiegelpaar' || kind === 'spiegelbild' || kind === 'diva'
     || kind.startsWith('revue')
     // M18: every Wedding body and the Zecher dress.
-    || kind === 'teeifrit' || kind === 'baklava' || kind === 'hauptgericht' || kind === 'stammgast' || kind === 'sultan' || kind.startsWith('fest');
+    || kind === 'teeifrit' || kind === 'baklava' || kind === 'hauptgericht' || kind === 'zugezogene' || kind === 'sultan' || kind.startsWith('fest');
   const mount = (name: string, parts: Part[], dy = 0, dz = 0, dx = 0): Object3D | undefined => {
     const b = bone(name);
     if (!b) return undefined;
@@ -1560,32 +1560,35 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
       mount('pelvis', [[tf(new BoxGeometry(0.44, 0.18, 0.34), 0, -0.04, 0.01), 'filo'], [tf(new BoxGeometry(0.45, 0.02, 0.35), 0, 0.05, 0.01), 'honey']]);
       break;
     }
-    case 'stammgast': {
-      // The regular of the Magendoktor: a worn brown cardigan open over a stained undershirt and a big belly, a flat
-      // cap, a moustache, a Maßkrug in the right hand.
+    case 'zugezogene': {
+      // Der Zugezogene (Johannes, 2026-11-21): a newcomer hipster. Knit beanie, round glasses, a waxed moustache,
+      // an open olive jacket over a white shirt, a tote bag on the hip, an oat-milk coffee in the left hand. His
+      // e-scooter shows only while he charges (`EnemyView.scooter`).
       const fit = new BodyFit(model);
-      const coat = fitCoat(fit, { mat: 'cardigan', pad: 0.05, open: 1.5, jag: 0.03 });
+      const coat = fitCoat(fit, { mat: 'olive', pad: 0.02, hem: 0.12, flare: 0.04, open: 1.6 });
       const o3 = coat.o('spine_03');
-      coat.add('spine_03', [strip(coat.chest.slice(1, 6), o3, 0, 0, 0.45, 0.006), 'shirt']);
-      for (const [f, a] of [[2.2, 0.15], [3.1, -0.2], [3.6, 0.1]] as const) coat.add('spine_03', [onShell(new CircleGeometry(0.035, 7), coat.chest, o3, f, a, 0.012), 'stain']);
+      coat.add('spine_03', [strip(coat.chest.slice(1, 6), o3, 0, 0, 0.5, 0.006), 'shirt']);
       mountCoat(coat, 0.5);
-      mount('spine_01', [
-        [tf(new SphereGeometry(0.21, 14, 10).scale(1.1, 1, 1.12), 0, 0.1, 0.1), 'shirt'],
-        [tf(new CircleGeometry(0.045, 7), 0.06, 0.14, 0.335), 'stain'],
-        [tf(new CircleGeometry(0.03, 7), -0.08, 0.05, 0.325), 'stain'],
-      ]);
       const head = fit.box(['Head']), hp = fit.at('Head');
-      const at = new Vector3(head.c.x, head.max.y - 0.06, head.c.z - 0.01);
+      const at = new Vector3(head.c.x, head.max.y - 0.07, head.c.z - 0.01);
+      const eye = fit.eyes.clone().sub(at);
       const lip = fit.eyes.clone().add(new Vector3(0, -0.045, 0.025)).sub(at);
       mount('Head', [
-        [tf(new CylinderGeometry(0.135, 0.14, 0.05, 14).scale(1, 1, 1.12), 0, 0.02, -0.01, -0.08), 'cardigan'],
-        [tf(new BoxGeometry(0.2, 0.014, 0.1), 0, 0.0, 0.14, 0.18), 'cardigan'],
-        ...moustache(lip, 0.075, -0.02, 0.018, 'hair'),
+        // A slouchy knit beanie (oxblood, sits back on the head; no brim, so it never reads as a hard hat).
+        [tf(new SphereGeometry(0.13, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.6, 1.08), 0, 0.03, -0.04, -0.4), 'rags'],
+        [tf(new TorusGeometry(0.128, 0.018, 6, 18).scale(1, 1, 1.08), 0, 0.035, -0.02, Math.PI / 2 - 0.4), 'rags'],
+        ...[-1, 1].map((sd): Part => [tf(new TorusGeometry(0.03, 0.006, 4, 14), eye.x + sd * 0.042, eye.y, eye.z + 0.03), 'dark']),
+        [tf(new BoxGeometry(0.024, 0.006, 0.006), eye.x, eye.y + 0.005, eye.z + 0.03), 'dark'],
+        ...moustache(lip, 0.07, 0.012, 0.012, 'hair'),
       ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
-      mount('hand_r', [
-        [tf(new CylinderGeometry(0.075, 0.07, 0.2, 12), 0, -0.1, 0.07), 'beer'],
-        [tf(new CylinderGeometry(0.078, 0.078, 0.035, 12), 0, 0.012, 0.07), 'shirt'],
-        [tf(new TorusGeometry(0.05, 0.014, 5, 10, Math.PI), -0.07, -0.1, 0.07, 0, 0, Math.PI / 2), 'shirt'],
+      mount('spine_03', [
+        [tf(new BoxGeometry(0.03, 0.32, 0.28), 0.3, -0.55, -0.02, 0, 0, 0.08), 'paper'],
+        [cable([[-0.15, 0.14, 0.02], [0.0, 0.0, 0.17], [0.22, -0.24, 0.08], [0.29, -0.4, 0.0]], 0.01), 'paper'],
+      ], 0.08);
+      mount('hand_l', [
+        [tf(new CylinderGeometry(0.042, 0.032, 0.12, 10), 0, -0.07, 0.05), 'paper'],
+        [tf(new CylinderGeometry(0.044, 0.044, 0.02, 10), 0, 0.0, 0.05), 'dark'],
+        [tf(new CylinderGeometry(0.043, 0.04, 0.04, 10), 0, -0.07, 0.05), 'stagecloth'],
       ]);
       break;
     }
@@ -1982,6 +1985,7 @@ export class EnemyView {
   private readonly revue = new Map<RevueKey | FestKey, Object3D[]>();
   /** M18: the Sultan's carpet, the Bauherr's scaffold and mixer on the Koloss, the code-built Teppichschlinger. */
   private carpet: Group | null = null;
+  private scooter: Group | null = null;
   private bauherr: { group: Group; mixer: Group } | null = null;
   private rug: Rug | null = null;
   private spitT = 0;
@@ -2428,6 +2432,18 @@ export class EnemyView {
       this.inner.add(this.carpet);
     }
     if (this.carpet) this.carpet.visible = e.kind === 'sultan';
+    // M18: Der Zugezogene's e-scooter (shown while he charges): deck, stem, bar, two small wheels, a teal light.
+    if (e.kind === 'zugezogene' && !this.scooter) {
+      this.scooter = assemble(gearKit(this.materials), [
+        [tf(new BoxGeometry(0.16, 0.05, 0.8), 0, 0.1, 0), 'dark'],
+        [tf(new CylinderGeometry(0.018, 0.018, 0.95, 6), 0, 0.55, 0.38, -0.12), 'steel'],
+        [tf(new CylinderGeometry(0.014, 0.014, 0.42, 6), 0, 1.01, 0.44, 0, 0, Math.PI / 2), 'dark'],
+        ...[-0.38, 0.38].map((z): Part => [tf(new CylinderGeometry(0.08, 0.08, 0.04, 12), 0, 0.08, z, 0, 0, Math.PI / 2), 'dark']),
+        [tf(new SphereGeometry(0.025, 6, 4), 0, 0.9, 0.47), 'cyan'],
+      ], false);
+      this.inner.add(this.scooter);
+    }
+    if (this.scooter) this.scooter.visible = false;
     // M18: Der Ewige Bauherr is the Koloss slab under scaffold; a cement mixer turns where the clock ring was.
     if (this.koloss) {
       const own = e.kind === 'bauherr';
@@ -2726,6 +2742,9 @@ export class EnemyView {
       for (const g of this.gear.get(this.kind) ?? []) if (g.userData.tier) g.visible = (g.userData.tier as number) > (e.still ?? 0);
       if (this.divaFans) this.divaFans.rotation.y = this.time * 0.45;
       if (this.carpet) this.carpet.rotation.z = 0.04 * Math.sin(this.time * 2.1);
+    } else if (this.kind === 'zugezogene') {
+      // M18: he rides the e-scooter through the charge (stands on it from the wind-up on).
+      if (this.scooter) this.scooter.visible = e.state === 'special' && e.sp?.kind === 'charge';
     } else if (this.kind === 'hauptgericht') {
       // M18: the meat spit turns on the arm, faster while the sweep winds up.
       const spit = this.gear.get('hauptgericht')?.[0];

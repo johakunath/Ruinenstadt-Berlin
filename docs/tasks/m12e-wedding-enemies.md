@@ -40,16 +40,17 @@ The loot context sees `fest` (the set below drops there); `cy`/`gd` name tables 
 
 | Boss | Where | Life | Hit | Speed | Radius, scale | Res | Brain | Body |
 |---|---|---|---|---|---|---|---|---|
-| Der Stammgast (`stammgast`) | Nettelbeckplatz, zone 1 | 1000 | 26 | 2.3 | 0.8, 1.55 | `koloss` | `feldwebel` | `human`: big belly, worn brown cardigan over a stained undershirt, flat cap, moustache, a huge mug |
+| Der Zugezogene (`zugezogene`) | Inside the Magendoktor after its two waves, zone 1 (map doc W5, Johannes 2026-11-21) | 1000 | 26 | 2.5 | 0.7, 1.45 | `koloss` | `feldwebel` | `human`, slim: knit beanie, round glasses, waxed moustache, open olive jacket over a white shirt, tote bag, oat-milk coffee; an e-scooter while he charges |
 | Das Hauptgericht (`hauptgericht`) | Brunnenplatz, zone 2 | 2200 | 30 | 2.0 | 1.1, 2.0 | `baklava` | `rex` | The Baklava-Brocken at boss size; the right arm is a turning meat spit, the left holds the tray |
 | Der Ewige Bauherr (`bauherr`) | Beamtentor, zone 3 | 3200 | 32 | 1.4 | 1.7, 1 | `volk` | `volkskoloss` | The Koloss slab under scaffold poles and planks, green net, a hi-vis band, a cream banner, a hard hat on the cab; a cement mixer turns where the clock ring was |
 | Sultan Nimmersatt (`sultan`) | Hochzeitspalast, zone 4 | 4400 | 34 | 2.4 | 0.95, 1.85 | `tee` | `diva` (glides, three phases) | `human`: crown with feather, ruby-and-emerald robe, serving trays on the shoulders with three dishes, a glass tea-urn belly that glows, a spoon sceptre, floating on a carpet |
 
-### Der Stammgast („Noch 'ne Runde!“)
+### Der Zugezogene („Bald nur noch Hafermilch!“)
 | Special | Block | Numbers |
 |---|---|---|
-| Runde | `summon` every 9 s | two Schlurfer and one Hetzer (Zecher); in rage also one Brocken. Note „Noch 'ne Runde!“ |
-| Anlauf | `charge` (Feldwebel) | the default charge (wind 0.75, 0.6 s at 20 m/s, hit 1.1, floor 0.25, open 1.3), every 5 to 7 s from 3 m on; in rage twice (second 0.6 s later, as the Ringvater) |
+| Zecher | `summon` every 10 s | one Schlurfer and one Hetzer; in rage also one Brocken. Note „Bald nur noch Hafermilch!“ |
+| E-Scooter | `charge` (Feldwebel) | the default charge along a marked line (wind 0.75, 0.6 s at 20 m/s, hit 1.1, floor 0.25, open 1.3), every 5 to 7 s from 3 m on; in rage twice (second 0.6 s later, as the Ringvater) |
+| Kaffeebecher | `volley` (Grenzer), his one own block | five cups across the hero's line (9 m/s, ×0.55 each) every 5 s within 12 m with a clear line |
 
 ### Das Hauptgericht („Frisch vom Spieß“)
 | Special | Block | Numbers |
@@ -97,7 +98,7 @@ Fixed honey puddles `[x, z, r]` from the map data; `Level.speedAt` returns 0.6 i
 | Tee-Ifrit | Wirft heiße Teegläser. Zuerst erledigen. | Tee-Ifrite werfen Gläser. Raus aus dem Kreis. |
 | Baklava-Brocken | Vorn ein Tablett, hinten nur Teig. Umgehen. | Baklava-Brocken blocken vorn. Umgehen oder betäuben. |
 | Teppichschlinger | Kreist, zeigt eine Linie, stürzt herab. | Teppiche stürzen entlang der Linie. Seitlich weg. |
-| Der Stammgast | Sitzt hier, seit die Uhr stehen blieb. Gibt Runden aus. | – |
+| Der Zugezogene | Will aus der Kneipe bald was Neues machen. Raus aus seiner Spur. | – |
 | Das Hauptgericht | Frisch vom Spieß. Raus aus dem Kreis, wenn er sich dreht. | – |
 | Der Ewige Bauherr | Baut seit Jahren. Fertig wird nie etwas. | – |
 | Sultan Nimmersatt | Vorspeise, Hauptgang, Nachtisch. Kein Gast geht. | – |
@@ -106,12 +107,12 @@ Sounds: existing cues only (`molotov` throw for the glass, the Krähe's dive, th
 
 ## Build order (this session)
 
-1. Data: kinds, bosses, `THREAT.tea`, `BOSS.stammgast|sultan`, res rows, flavor `fest`, `MapDef.honey`, set and legendary. 2. Sim branches and unit tests (each special, the 45 % cap, set and legendary drops, honey). 3. Bodies and the Zecher overlay, carpet body, threat colours. 4. Kodex, tips, glyphs, portraits ids (Codex later). 5. Sheets to `docs/proof/m18-wedding/enemies/`, pipelines, handover.
+1. Data: kinds, bosses, `THREAT.tea`, `BOSS.zugezogene|sultan`, res rows, flavor `fest`, `MapDef.honey`, set and legendary. 2. Sim branches and unit tests (each special, the 45 % cap, set and legendary drops, honey). 3. Bodies and the Zecher overlay, carpet body, threat colours. 4. Kodex, tips, glyphs, portraits ids (Codex later). 5. Sheets to `docs/proof/m18-wedding/enemies/`, pipelines, handover.
 
 ## Handover 2026-11-21 (step 2) [Claude · Opus high]
 
-- **Built as specified**, no new brain or rig: data `src/data/enemies.ts` (3 kinds, 4 bosses, `THREAT.tea|carpetDive|honey`, `BOSS.stammgast|bauherr|sultan`), res rows `tee`, `baklava`, `teppich`; branches in `src/sim/ai.ts` (`divaOf`, the tea glass on the `molotov` block, the locked carpet line, Runde, Bautrupp, Nachschlag, courses); `MapDef.flavor: 'fest'`, `MapDef.honey` → `Level.speedAt`; set `gast` and legendary `bestellung` (`src/sim/items.ts`, `LAST_ORDER` in `combat.ts`). Tests: `ai.test.ts` › Wedding roster (10), `items.test.ts` (fest-only drops), `legendary.test.ts`, `stats.test.ts` (set bonuses). Reused: 2D has nothing; the blocks named in the tables.
+- **Built as specified**, no new brain or rig: data `src/data/enemies.ts` (3 kinds, 4 bosses, `THREAT.tea|carpetDive|honey`, `BOSS.zugezogene|bauherr|sultan`), res rows `tee`, `baklava`, `teppich`; branches in `src/sim/ai.ts` (`divaOf`, the tea glass on the `molotov` block, the locked carpet line, the Zugezogene's Zecher and coffee cups, Bautrupp, Nachschlag, courses); `MapDef.flavor: 'fest'`, `MapDef.honey` → `Level.speedAt`; set `gast` and legendary `bestellung` (`src/sim/items.ts`, `LAST_ORDER` in `combat.ts`). Tests: `ai.test.ts` › Wedding roster (10), `items.test.ts` (fest-only drops), `legendary.test.ts`, `stats.test.ts` (set bonuses). Reused: 2D has nothing; the blocks named in the tables.
 - **Render**: bodies in `src/render/enemies.ts` (`FEST` Zecher overlay, `buildRug`, `bauherrSet`, Sultan carpet), ruby carpet strips, amber tea circles and the marked carpet dive in `threats.ts`, the lamp hammer in `weapons.ts`. Kodex E22 to E24, X24 to X27 and icons I103 to I106 rendered from 3D; proof `docs/proof/m18-wedding/enemies/`. Draws per body in `docs/enemy-pipeline.md`. Sounds: existing cues only, no boss voices.
-- **Deviations**: the Hauptgericht calls no adds and has no new block (the Rex's tail ring is the spit sweep); the Bauherr's crew wears the Zecher mug (no per-call hard hat); the banner has no text (sign atlas of step 3); the death note for the spit sweep reads „Schwanzhieb“ (shared `tail` name). The `passes.mjs` readout returned 0 calls in this cloud session, so draws come from `tools/enemy-sheet.mjs` (now prints `calls=`).
-- **For step 3 (map not merged; do not edit here)**: in `src/data/wedding.ts` set `flavor: 'fest'`, the bosses in route order `stammgast`, `hauptgericht`, `bauherr`, `sultan`, Magendoktor guards `walker`. Wave mix (walker 6 as elsewhere, `g` = wave index): zone 1 runner 1.2, spitter 0.8, brute 0.4, teeifrit 0.5 + g·0.05 (the Magendoktor fight: Zecher only, no teeifrit); zone 2 teeifrit 1, baklava 0.5 + g·0.04, teppich 0.6, runner 1; zone 3 teppich 1, baklava 0.6, teeifrit 0.9, brute 0.4 (Humboldthöhe calm: teppich 1, runner 1); zone 4 teeifrit 1.2, baklava 0.8, teppich 1. Optional honey: `honey: [[x, z, r], …]` at the Wochenmarkt and the Lange Tafel, plus an amber decal.
+- **Deviations**: boss 1 was built first as Der Stammgast (the brief); main then changed it to Der Zugezogene in the pub (W5), so he replaced it in this PR (same brain, plus the coffee volley). The Hauptgericht calls no adds and has no new block (the Rex's tail ring is the spit sweep); the Bauherr's crew wears the Zecher mug (no per-call hard hat); the banner has no text (sign atlas of step 3); the death note for the spit sweep reads „Schwanzhieb“ (shared `tail` name). The `passes.mjs` readout returned 0 calls in this cloud session, so draws come from `tools/enemy-sheet.mjs` (now prints `calls=`).
+- **For step 3 (map not merged; do not edit here)**: in `src/data/wedding.ts` set `flavor: 'fest'`, the bosses in route order `zugezogene` (the third wave in the pub, with two adds), `hauptgericht`, `bauherr`, `sultan`, Magendoktor guards `walker`. Wave mix (walker 6 as elsewhere, `g` = wave index): zone 1 runner 1.2, spitter 0.8, brute 0.4, teeifrit 0.5 + g·0.05 (the Magendoktor's two waves: Zecher only, no teeifrit); zone 2 teeifrit 1, baklava 0.5 + g·0.04, teppich 0.6, runner 1; zone 3 teppich 1, baklava 0.6, teeifrit 0.9, brute 0.4 (Humboldthöhe calm: teppich 1, runner 1); zone 4 teeifrit 1.2, baklava 0.8, teppich 1. Optional honey: `honey: [[x, z, r], …]` at the Wochenmarkt and the Lange Tafel, plus an amber decal.
 - **Open**: Johannes playtest (`pt-hardware-checks.md` › Playtest, Wedding roster; hardware row 54); boss voices; bot run on Wedding once the map exists.
