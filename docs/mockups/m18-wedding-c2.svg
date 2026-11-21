@@ -32,11 +32,10 @@
 <rect x="901.3" y="568.2" width="23.2" height="40.6" fill="#b0563c" stroke="#14121a" stroke-width="1"/>
 <rect x="567.8" y="173.8" width="87.0" height="40.6" fill="#efeae0" stroke="#14121a" stroke-width="1"/>
 <text x="611.3" y="166.1" fill="#f1ede4" font-size="12.5" font-weight="500" text-anchor="middle" paint-order="stroke" stroke="#15141a" stroke-width="3">Amtsgericht</text>
-<polyline points="199.5,414.5 280.7,373.9 257.5,489.9 338.7,571.1 408.3,565.3 443.1,518.9 483.7,530.5 483.7,547.9 483.7,524.7 472.1,460.9 501.1,437.7 547.5,397.1 599.7,350.7 646.1,263.7 750.5,159.3 837.5,199.9 959.3,272.4 959.3,431.9 901.3,431.9 802.7,437.7 941.9,524.7 953.5,588.5 912.9,588.5 831.7,605.9 889.7,658.1 889.7,716.1 791.1,716.1" fill="none" stroke="#f0a030" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="199.5,414.5 280.7,373.9 257.5,489.9 338.7,571.1 408.3,565.3 443.1,518.9 483.7,518.9 483.7,547.9 483.7,518.9 501.1,437.7 547.5,397.1 599.7,350.7 646.1,263.7 750.5,159.3 837.5,199.9 959.3,272.4 959.3,431.9 901.3,431.9 802.7,437.7 941.9,524.7 953.5,588.5 912.9,588.5 831.7,605.9 889.7,658.1 889.7,716.1 791.1,716.1" fill="none" stroke="#f0a030" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
 <circle cx="280.7" cy="373.9" r="40.6" fill="#f0a030" fill-opacity="0.42" stroke="#f0a030" stroke-width="2.2"/>
 <circle cx="257.5" cy="489.9" r="40.6" fill="#f0a030" fill-opacity="0.42" stroke="#f0a030" stroke-width="2.2"/>
-<circle cx="483.7" cy="547.9" r="23.2" fill="#f0a030" fill-opacity="0.42" stroke="#f0a030" stroke-width="2.2"/>
-<circle cx="472.1" cy="460.9" r="43.5" fill="#e0483c" fill-opacity="0.55" stroke="#ff6a5a" stroke-width="2.5"/>
+<circle cx="483.7" cy="547.9" r="26.1" fill="#e0483c" fill-opacity="0.55" stroke="#ff6a5a" stroke-width="2.5"/>
 <circle cx="599.7" cy="350.7" r="37.7" fill="#f0a030" fill-opacity="0.42" stroke="#f0a030" stroke-width="2.2"/>
 <circle cx="646.1" cy="263.7" r="43.5" fill="#e0483c" fill-opacity="0.55" stroke="#ff6a5a" stroke-width="2.5"/>
 <circle cx="837.5" cy="199.9" r="40.6" fill="#f0a030" fill-opacity="0.42" stroke="#f0a030" stroke-width="2.2"/>
@@ -75,10 +74,10 @@
 </g>
 <line x1="713.5" y1="789.0" x2="1003.5" y2="789.0" stroke="#b8c0c0" stroke-width="2"/>
 <text x="1003.5" y="805.0" fill="#b8c0c0" font-size="12" font-weight="400" text-anchor="end" >100 m</text>
-<text x="40.0" y="827.0" fill="#7ff0e0" font-size="15" font-weight="700" text-anchor="start" >Start U Leopoldplatz · Karte 335 × 230 m (40 % weniger Fläche als Mitte, 20 % weniger als Köpenick) · Route ≈ 740 m · 8 Kämpfe + 4 Bosse, 22 Wellen · keine Straße doppelt</text>
+<text x="40.0" y="827.0" fill="#7ff0e0" font-size="15" font-weight="700" text-anchor="start" >Start U Leopoldplatz · Karte 335 × 230 m (40 % weniger Fläche als Mitte, 20 % weniger als Köpenick) · Route ≈ 740 m · 8 Kampforte + 4 Bosse, 21 Wellen (der Magendoktor ist Kampf und Bossort) · keine Straße doppelt</text>
 <circle cx="50" cy="850.0" r="10" fill="#ffd24a"/>
 <text x="50.0" y="855.0" fill="#14121a" font-size="13" font-weight="700" text-anchor="middle" >1</text>
-<text x="68.0" y="855.0" fill="#ffd24a" font-size="14.5" font-weight="400" text-anchor="start" >Leopoldkiez: Wochenmarkt (2), Müllerstraße (3), im Magendoktor (3) · Boss „Der Stammgast“ auf dem Nettelbeckplatz</text>
+<text x="68.0" y="855.0" fill="#ffd24a" font-size="14.5" font-weight="400" text-anchor="start" >Leopoldkiez: Wochenmarkt (2), Müllerstraße (3), im Magendoktor zwei Wellen Zecher (2) · Boss „Der Zugezogene“ im Magendoktor</text>
 <circle cx="50" cy="874.0" r="10" fill="#ffd24a"/>
 <text x="50.0" y="879.0" fill="#14121a" font-size="13" font-weight="700" text-anchor="middle" >2</text>
 <text x="68.0" y="879.0" fill="#ffd24a" font-size="14.5" font-weight="400" text-anchor="start" >Panke: Uferterrasse (3) · Boss „Das Hauptgericht“ vor dem Amtsgericht</text>
@@ -89,63 +88,72 @@
 <text x="50.0" y="927.0" fill="#14121a" font-size="13" font-weight="700" text-anchor="middle" >4</text>
 <text x="68.0" y="927.0" fill="#ffd24a" font-size="14.5" font-weight="400" text-anchor="start" >Das ewige Fest: Lange Tafel im Werkhof (3) · Sultan Nimmersatt im Hochzeitspalast</text>
 <text x="40.0" y="959.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Geändert gegenüber C im ersten Mockup: der Nordbogen (Uferhallen, Luisenbad) und der Boss am Bahnhof Gesundbrunnen entfallen, dafür der Magendoktor am</text>
-<text x="40.0" y="978.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Nettelbeckplatz und „Das Hauptgericht“ vor dem Amtsgericht. Nur 8 Sehenswürdigkeiten, 2 Nebenwege. Die beiden dunklen Ecken werden nicht bebaut.</text>
-<text x="1080.0" y="124.0" fill="#f0a030" font-size="20" font-weight="700" text-anchor="start" >Zum Magendoktor · begehbar (Grundriss, Norden oben, Kamera blickt von Süden)</text>
-<rect x="1080" y="156" width="572.0" height="442.0" fill="#3a2a1e" stroke="#c9a24a" stroke-width="5"/>
-<rect x="1327.0" y="152" width="78.0" height="8" fill="#0e1416"/>
-<text x="1366.0" y="144.0" fill="#c8ccc8" font-size="12.5" font-weight="400" text-anchor="middle" >Tür zum Nettelbeckplatz (3 m)</text>
-<rect x="1090" y="187" width="26" height="247" fill="#5a3a20" stroke="#14121a"/>
-<text x="1103.4" y="312.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="middle" transform="rotate(-90 1103 312)">Rückbuffet</text>
-<rect x="1148" y="198" width="29" height="224" fill="#8a5a2a" stroke="#14121a"/>
-<text x="1161.9" y="312.0" fill="#14121a" font-size="11.5" font-weight="700" text-anchor="middle" transform="rotate(-90 1162 312)">Tresen mit Zapfsäule</text>
-<circle cx="1197" cy="218" r="8" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1197" cy="260" r="8" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1197" cy="302" r="8" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1197" cy="343" r="8" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1197" cy="385" r="8" fill="#6a4a2a" stroke="#14121a"/>
-<rect x="1501" y="234" width="73" height="135" fill="#1f6a4a" stroke="#14121a"/>
-<text x="1537.6" y="305.6" fill="#f1ede4" font-size="12" font-weight="600" text-anchor="middle" >Billard</text>
-<rect x="1616" y="192" width="26" height="36" fill="#c04a8a" stroke="#14121a"/>
-<text x="1628.6" y="182.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="end" >Jukebox</text>
-<rect x="1618" y="406" width="23" height="31" fill="#d0a020" stroke="#14121a"/>
-<rect x="1618" y="445" width="23" height="31" fill="#d0a020" stroke="#14121a"/>
-<rect x="1618" y="484" width="23" height="31" fill="#d0a020" stroke="#14121a"/>
-<text x="1610.4" y="462.8" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="end" >Automaten</text>
-<rect x="1423" y="164" width="42" height="10" fill="#e04030" stroke="#14121a"/>
-<text x="1444.0" y="195.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="middle" >Dart</text>
-<rect x="1267" y="169" width="78" height="42" fill="#6a4a2a" stroke="#14121a"/>
-<text x="1306.2" y="193.8" fill="#f1ede4" font-size="12" font-weight="600" text-anchor="middle" >Stammtisch</text>
-<circle cx="1275" cy="510" r="20" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1379" cy="525" r="20" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1483" cy="510" r="20" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1574" cy="530" r="20" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1163" cy="499" r="20" fill="#6a4a2a" stroke="#14121a"/>
-<circle cx="1298" cy="515" r="7" fill="#7be08a" stroke="#14121a"/>
-<circle cx="1506" cy="515" r="7" fill="#7be08a" stroke="#14121a"/>
-<circle cx="1330" cy="195" r="7" fill="#7be08a" stroke="#14121a"/>
-<circle cx="1382" cy="374" r="208" fill="#f0a030" fill-opacity="0.16" stroke="#f0a030" stroke-width="2.5"/>
-<text x="1381.6" y="379.6" fill="#ffd24a" font-size="13" font-weight="700" text-anchor="middle" >Kampfring r 8 m</text>
-<rect x="1298" y="343" width="16" height="16" fill="#9a8a7a" stroke="#14121a"/>
-<rect x="1460" y="343" width="16" height="16" fill="#9a8a7a" stroke="#14121a"/>
-<line x1="1080" y1="598.0" x2="1652.0" y2="598.0" stroke="#0e1416" stroke-width="7" stroke-dasharray="14 8"/>
-<text x="1366.0" y="618.0" fill="#c8ccc8" font-size="12.5" font-weight="400" text-anchor="middle" >Südwand zur Kamera: kniehoch, Dach und obere Wände blenden aus (wie beim Späti)</text>
-<text x="1668.0" y="170.0" fill="#c8ccc8" font-size="13" font-weight="600" text-anchor="start" >22 × 17 m innen (Spielmaß)</text>
-<text x="1668.0" y="200.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Gegner: Zecher (Zeitlose als betrunkene</text>
-<text x="1668.0" y="218.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Gäste), 3 Wellen, höchstens 6 gleichzeitig.</text>
-<text x="1668.0" y="242.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Grün: drei schlafen am Tisch und wachen auf,</text>
-<text x="1668.0" y="260.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >wenn der Held nah kommt (vorhandene „Wachen“).</text>
-<text x="1668.0" y="284.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Außen nach Foto: ockergelber Putz, rotes</text>
-<text x="1668.0" y="302.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Leuchtschild mit weißer Frakturschrift,</text>
-<text x="1668.0" y="320.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Leuchtkasten „Tag u. Nacht“, beklebte Tür,</text>
-<text x="1668.0" y="338.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Wandbild Nachtwächter mit Laterne, rote</text>
-<text x="1668.0" y="356.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Schirme, Stehfass.</text>
-<text x="1668.0" y="380.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Innen: kein Foto gefunden. Aus</text>
-<text x="1668.0" y="398.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Presseberichten: Jukebox, Billard,</text>
-<text x="1668.0" y="416.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Spielautomaten, Dartscheibe. Tresen,</text>
-<text x="1668.0" y="434.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Rückbuffet und Stammtisch sind typische</text>
-<text x="1668.0" y="452.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Alt-Berliner Kneipe (Annahme).</text>
-<text x="1668.0" y="476.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Das echte Haus steht am Südrand des Platzes,</text>
-<text x="1668.0" y="494.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >also zwischen Kamera und Platz: das Schild</text>
-<text x="1668.0" y="512.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >sitzt zusätzlich an der Dachkante, die echte</text>
-<text x="1668.0" y="530.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Front zeigt die Enthüllungskamera.</text>
+<text x="40.0" y="978.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Nettelbeckplatz (Kneipenschlägerei und Boss im Lokal) und „Das Hauptgericht“ vor dem Amtsgericht. Nur 8 Sehenswürdigkeiten, 2 Nebenwege. Die beiden</text>
+<text x="40.0" y="997.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >dunklen Ecken werden nicht bebaut.</text>
+<text x="1080.0" y="124.0" fill="#f0a030" font-size="20" font-weight="700" text-anchor="start" >Zum Magendoktor · begehbar (Grundriss nach Johannes, Norden oben, Kamera blickt von Süden)</text>
+<rect x="1080" y="156" width="540.0" height="390.0" fill="#3a2a1e" stroke="#c9a24a" stroke-width="5"/>
+<rect x="1311.0" y="152" width="78.0" height="8" fill="#0e1416"/>
+<text x="1350.0" y="144.0" fill="#c8ccc8" font-size="12.5" font-weight="400" text-anchor="middle" >Tür zum Nettelbeckplatz</text>
+<rect x="1089" y="165" width="108" height="21" fill="#5a3a20" stroke="#14121a"/>
+<rect x="1089" y="165" width="21" height="102" fill="#5a3a20" stroke="#14121a"/>
+<rect x="1119" y="195" width="66" height="57" fill="#8a5a2a" stroke="#14121a"/>
+<text x="1152.0" y="227.5" fill="#14121a" font-size="12" font-weight="600" text-anchor="middle" >Ecktisch</text>
+<rect x="1086" y="306" width="90" height="96" fill="#4a4a52" stroke="#14121a"/>
+<text x="1131.0" y="358.0" fill="#f1ede4" font-size="12" font-weight="600" text-anchor="middle" >WC</text>
+<rect x="1173" y="336" width="6" height="33" fill="#c9a24a"/>
+<rect x="1587" y="174" width="24" height="198" fill="#5a3a20" stroke="#14121a"/>
+<text x="1599.0" y="273.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="middle" transform="rotate(-90 1599 273)">Rückbuffet</text>
+<rect x="1506" y="186" width="30" height="186" fill="#8a5a2a" stroke="#14121a"/>
+<rect x="1506" y="183" width="81" height="27" fill="#8a5a2a" stroke="#14121a"/>
+<text x="1521.0" y="285.0" fill="#14121a" font-size="11.5" font-weight="700" text-anchor="middle" transform="rotate(-90 1521 285)">Tresen</text>
+<circle cx="1482" cy="228" r="9" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1482" cy="268" r="9" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1482" cy="309" r="9" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1482" cy="350" r="9" fill="#6a4a2a" stroke="#14121a"/>
+<text x="1461.0" y="216.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="end" >Barhocker</text>
+<rect x="1446" y="426" width="132" height="75" fill="#1f6a4a" stroke="#14121a"/>
+<text x="1512.0" y="467.5" fill="#f1ede4" font-size="12" font-weight="600" text-anchor="middle" >Billard</text>
+<circle cx="1266" cy="288" r="26" fill="#8a5a2a" stroke="#14121a"/>
+<circle cx="1230" cy="288" r="7" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1302" cy="288" r="7" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1368" cy="363" r="26" fill="#8a5a2a" stroke="#14121a"/>
+<circle cx="1332" cy="363" r="7" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1404" cy="363" r="7" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1248" cy="444" r="26" fill="#8a5a2a" stroke="#14121a"/>
+<circle cx="1212" cy="444" r="7" fill="#6a4a2a" stroke="#14121a"/>
+<circle cx="1284" cy="444" r="7" fill="#6a4a2a" stroke="#14121a"/>
+<text x="1320.0" y="513.0" fill="#ffd24a" font-size="12" font-weight="600" text-anchor="middle" >Tische mitten im Raum: ausweichen</text>
+<rect x="1086" y="438" width="24" height="36" fill="#c04a8a" stroke="#14121a"/>
+<text x="1119.0" y="462.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="start" >Jukebox</text>
+<rect x="1086" y="486" width="24" height="24" fill="#d0a020" stroke="#14121a"/>
+<rect x="1086" y="514" width="24" height="24" fill="#d0a020" stroke="#14121a"/>
+<text x="1119.0" y="522.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="start" >Automaten</text>
+<rect x="1329" y="164" width="42" height="10" fill="#e04030" stroke="#14121a"/>
+<text x="1350.0" y="195.0" fill="#f1ede4" font-size="11.5" font-weight="600" text-anchor="middle" >Dart</text>
+<circle cx="1158" cy="273" r="7" fill="#7be08a" stroke="#14121a"/>
+<circle cx="1302" cy="294" r="7" fill="#7be08a" stroke="#14121a"/>
+<circle cx="1482" cy="393" r="7" fill="#7be08a" stroke="#14121a"/>
+<circle cx="1386" cy="252" r="13" fill="#e0483c" stroke="#ffd24a" stroke-width="3"/>
+<text x="1386.0" y="225.0" fill="#ffb0a0" font-size="12" font-weight="700" text-anchor="middle" >Boss</text>
+<line x1="1080" y1="546.0" x2="1620.0" y2="546.0" stroke="#0e1416" stroke-width="7" stroke-dasharray="14 8"/>
+<text x="1350.0" y="566.0" fill="#c8ccc8" font-size="12.5" font-weight="400" text-anchor="middle" >Südwand zur Kamera: kniehoch, Dach und obere Wände blenden aus (wie beim Späti)</text>
+<text x="1636.0" y="170.0" fill="#c8ccc8" font-size="13" font-weight="600" text-anchor="start" >18 × 13 m innen (Spielmaß), eng</text>
+<text x="1636.0" y="200.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Rechts vom Eingang der Ecktisch, dahinter</text>
+<text x="1636.0" y="218.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >rechts das WC. Links gleich der Tresen mit</text>
+<text x="1636.0" y="236.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Barhockern, hinten dahinter der</text>
+<text x="1636.0" y="254.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Billardtisch. Kein freier Kreis: der ganze</text>
+<text x="1636.0" y="272.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Raum ist die Arena.</text>
+<text x="1636.0" y="296.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Zwei Wellen Zecher (betrunkene Gäste),</text>
+<text x="1636.0" y="314.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >dann der Boss: „Der Zugezogene“, ein</text>
+<text x="1636.0" y="332.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Berliner Hipster, der die Stimmung kaputt</text>
+<text x="1636.0" y="350.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >macht.</text>
+<text x="1636.0" y="374.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Grün: drei Zecher schlafen und wachen auf,</text>
+<text x="1636.0" y="392.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >wenn der Held nah kommt.</text>
+<text x="1636.0" y="416.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Außen nach Foto: ockergelber Putz, rotes</text>
+<text x="1636.0" y="434.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Leuchtschild mit weißer Frakturschrift,</text>
+<text x="1636.0" y="452.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Leuchtkasten „Tag u. Nacht“, beklebte Tür,</text>
+<text x="1636.0" y="470.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Wandbild Nachtwächter, rote Schirme,</text>
+<text x="1636.0" y="488.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Stehfass.</text>
+<text x="1636.0" y="512.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >· Jukebox, Automaten und Dart aus</text>
+<text x="1636.0" y="530.0" fill="#c8ccc8" font-size="13.5" font-weight="400" text-anchor="start" >Presseberichten; ihre Plätze sind geraten.</text>
 </svg>
