@@ -1,7 +1,8 @@
 import { AbilityView, type Emitters } from './abilities';
 import { ThreatView } from './threats';
 import { allWeaponAttacks } from '../data/combat';
-import type { WeaponKindId } from '../data/items';
+import type { ElementId, WeaponKindId } from '../data/items';
+import { StatusMarks } from './status-fx';
 // Effects: particles (fire, embers, sparks, dust), weapon smear, enemy telegraphs, impact
 // flashes, blob shadows, drifting mist. All of it lives on the FX layer.
 import { groundY } from './ground';
@@ -310,12 +311,17 @@ class Telegraphs {
 
 export interface FxOptions {
   embers: number;
+  /** E1: ground glow under burning and shocked enemies. */
+  statusGlow: boolean;
   blobShadows: boolean;
   /** Where the mist starts (the yard, or around the map start). */
   mistBox: { minX: number; maxX: number; minZ: number; maxZ: number };
 }
 
 const m4 = new Matrix4();
+/** Spark colours (HDR, they bloom): a plain hit, a hit with the fitting weapon, an element hit. */
+const SPARK_HIT = [6, 4.2, 1.8] as const, SPARK_EFFECTIVE = [3.6, 5.6, 6.4] as const;
+const SPARK: Record<ElementId, readonly [number, number, number]> = { fire: [6.5, 2.2, 0.4], acid: [2.2, 5.6, 0.8], shock: [2.6, 5, 6.8] };
 
 export class Fx {
   readonly group = new Group();
@@ -334,6 +340,7 @@ export class Fx {
   private time = 0;
   private readonly abilities: AbilityView;
   private readonly threats: ThreatView;
+  private readonly status: StatusMarks;
 
   constructor(
     private readonly fires: Vector3[],
@@ -350,7 +357,8 @@ export class Fx {
       dust: (x, y, z, vx, vy, vz, life, size, r, g, b) => this.dust.spawn({ x, y, z, vx, vy, vz, life, size, grow: 2, r, g, b, gravity: -0.3, drag: 3 }),
     };
     this.threats = new ThreatView(emit);
-    this.group.add(this.glow.points, this.dust.points, this.smear.mesh, this.telegraphs.group, this.abilities.group, this.threats.group);
+    this.status = new StatusMarks(opts.statusGlow);
+    this.group.add(this.status.mesh, this.glow.points, this.dust.points, this.smear.mesh, this.telegraphs.group, this.abilities.group, this.threats.group);
     const flashTex = paintGlow('rgba(255,245,220,1)', 'rgba(255,170,90,0)');
     for (let i = 0; i < 8; i++) {
       const sprite = new Sprite(new SpriteMaterial({ map: flashTex, blending: AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, opacity: 0 }));
@@ -387,10 +395,13 @@ export class Fx {
     }
   }
 
-  /** Hit sparks flying along the blow, plus an impact flash. */
-  /** Hit sparks; `effective` (D9: the weapon fits the enemy's class) sparks cool white instead of orange. */
-  sparks(x: number, y: number, z: number, dx: number, dz: number, heavy: boolean, effective = false): void {
+  /**
+   * Hit sparks flying along the blow, plus an impact flash. `effective` (D9: the weapon fits the enemy's
+   * class) sparks cool white instead of orange; an element hit sparks in its colour (E1).
+   */
+  sparks(x: number, y: number, z: number, dx: number, dz: number, heavy: boolean, effective = false, element?: ElementId): void {
     const n = heavy ? 26 : 12;
+    const c = element ? SPARK[element] : effective ? SPARK_EFFECTIVE : SPARK_HIT;
     for (let i = 0; i < n; i++) {
       const spread = this.rng.range(-0.9, 0.9);
       const speed = this.rng.range(3, heavy ? 11 : 8);
@@ -400,7 +411,7 @@ export class Fx {
         x, y: y + this.rng.range(-0.2, 0.2), z,
         vx: (dx * cs - dz * sn) * speed, vy: this.rng.range(0.5, 5), vz: (dz * cs + dx * sn) * speed,
         life: this.rng.range(0.14, 0.38), size: this.rng.range(0.05, heavy ? 0.12 : 0.09), grow: 0.3,
-        r: effective ? 3.6 : 6, g: effective ? 5.6 : 4.2, b: effective ? 6.4 : 1.8, gravity: 16, drag: 2.5,
+        r: c[0], g: c[1], b: c[2], gravity: 16, drag: 2.5,
       });
     }
     // Dark droplets from the body.
@@ -456,6 +467,7 @@ export class Fx {
   onEvent(ev: SimEvent): void {
     this.abilities.onEvent(ev);
     this.threats.onEvent(ev);
+    if (ev.type === 'hit' && ev.element === 'shock' && !ev.killed) this.status.shock(ev.id);
   }
 
   /** A burst of colored sparks (pickups, shrines, found blessings). */
@@ -473,6 +485,7 @@ export class Fx {
     this.abilities.update(sim, alpha, dt, hx, heroY, hz);
     this.threats.update(sim, alpha, dt);
     this.time += dt;
+    this.status.update(sim, alpha, dt, this.time);
     // Fire and embers keep burning through hitstop: only the fight freezes.
     // Only fires near the hero burn (a map has dozens); each gets the same rate as the courtyard barrel.
     const p = sim.player;

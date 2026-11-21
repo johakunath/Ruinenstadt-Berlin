@@ -27,6 +27,7 @@ import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Enemy } from '../sim/types';
 import { Animator, type CharacterAssets } from './characters';
 import { groundY } from './ground';
+import { ZAP_TIME } from './status-fx';
 import type { LitMaterial, Materials } from './materials';
 import { WeaponRack } from './weapons';
 import {
@@ -1675,6 +1676,8 @@ export class EnemyView {
   private skip = 0;
   private pending = 0;
   private flash = 0;
+  /** E1: a shock hit strobes the body cyan this long (render state; the sim keeps no shock status). */
+  private zap = 0;
   private status = 0;
   private time = Math.random() * 10;
   private readonly inner = new Group();
@@ -1991,6 +1994,7 @@ export class EnemyView {
     this.id = e.id;
     this.kind = e.kind;
     this.flash = 0;
+    this.zap = 0;
     this.status = 0;
     this.inner.rotation.set(0, 0, 0);
     this.inner.position.set(0, 0, 0);
@@ -2107,8 +2111,10 @@ export class EnemyView {
     this.root.visible = true;
   }
 
-  hit(): void {
+  /** `shock`: the hit was lightning, the body strobes cyan after the white flash. */
+  hit(shock = false): void {
     this.flash = FLASH_TIME;
+    if (shock) this.zap = ZAP_TIME;
   }
 
   /** `host`: for the Spiegelbild, the body it reflects (it copies her animation outside its own specials). */
@@ -2125,17 +2131,32 @@ export class EnemyView {
       for (const m of this.mats) m.emissive.copy(WHITE).multiplyScalar(k * 0.85);
       if (this.flash <= 0) this.status = -1;
     } else {
-      // Burning bodies glow orange, corroded ones green, open ones gold, elites faintly in their color.
-      const st = e.state === 'dead' ? 0 : e.burn > 0 ? 1 : e.acid > 0 ? 2 : e.open > 0 ? 3 : e.elite ? 4 : 0;
+      // E1: shocked bodies strobe cyan, burning ones pulse orange, corroded ones green (set every frame);
+      // open ones glow gold, slowed ones cold blue, elites faintly in their color (set once).
+      if (this.zap > 0) this.zap = Math.max(0, this.zap - dt);
+      const st = e.state === 'dead' ? 0 : this.zap > 0 ? 6 : e.burn > 0 ? 1 : e.acid > 0 ? 2 : e.open > 0 ? 3 : (e.slow ?? 0) > 0 ? 5 : e.elite ? 4 : 0;
       // M16 Tausch: both the real one and her reflection shimmer white while it winds up.
       const swap = (q: Enemy | undefined): number => (q && q.state === 'special' && q.sp?.kind === 'swap' && q.stateT < q.sp.wind ? q.stateT / q.sp.wind : 0);
       const shimmer = Math.max(swap(e), swap(host));
       if (shimmer > 0) {
         this.status = -1;
         for (const m of this.mats) m.emissive.setScalar((0.25 + 0.35 * Math.sin(this.time * 30) ** 2) * shimmer);
+      } else if (st === 6 || st === 1 || st === 2) {
+        this.status = -1;
+        const T = this.time;
+        if (st === 6) {
+          const k = (Math.sin(T * 75) > 0 ? 1 : 0.3) * Math.min(1, this.zap * 5);
+          for (const m of this.mats) m.emissive.setRGB(0.22 * k, 0.62 * k, 1.0 * k);
+        } else if (st === 1) {
+          const k = 0.7 + 0.55 * Math.sin(T * 9 + this.seed * 6) ** 2;
+          for (const m of this.mats) m.emissive.setRGB(0.4 * k, 0.09 * k, 0.01 * k);
+        } else {
+          const k = 0.7 + 0.45 * Math.sin(T * 5 + this.seed * 6) ** 2;
+          for (const m of this.mats) m.emissive.setRGB(0.1 * k, 0.4 * k, 0.03 * k);
+        }
       } else if (st !== this.status) {
         this.status = st;
-        const hex = st === 1 ? 0x7a2a08 : st === 2 ? 0x2a4a10 : st === 3 ? 0x5a4408 : st === 4 ? new Color(ELITES[e.elite!].color).multiplyScalar(0.16).getHex() : 0x000000;
+        const hex = st === 3 ? 0x5a4408 : st === 5 ? 0x1c3866 : st === 4 ? new Color(ELITES[e.elite!].color).multiplyScalar(0.16).getHex() : 0x000000;
         for (const m of this.mats) m.emissive.setHex(hex);
       }
     }
