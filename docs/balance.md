@@ -2,6 +2,30 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Wedding and the six-district chain (M18 step 2, 2026-11-21)
+
+The chain now runs all six districts (`node tools/balance.mjs <runs> normal johannes <seed> --chain`). New `--carry` for one district: one hero plays the districts before it once, then every run starts with that gear (`--map=wedding --carry`). Fresh-gear runs say nothing about the later districts: a starter blade cannot hurt a tier 40 Zecher (3 runs, 0 kills, stuck at the Wochenmarkt).
+
+**Bug found and fixed:** the bot stood still in a corner of the Magendoktor after the pub fight (2 of 3 Wedding runs and every chain stopped there). From a blocked cell it picked a neighbour behind the pub wall; it now takes only neighbours it can walk to in a straight line (`Nav.clear`, test in `src/bot/bot.test.ts`).
+
+**Wedding, carried gear** (`3 normal johannes 1 --map=wedding --carry`, power about 1550 to 1850): 3 of 3 won, 0 deaths, 22.7 min per run.
+
+| Fight | Time | Damage taken | Lowest life |
+|---|---|---|---|
+| Normal fights | 33 to 112 s | 0 to 25 % | 85 to 100 % |
+| Der Zugezogene (with the pub's two waves) | 54 s | 28 % | 81 % |
+| Das Hauptgericht | 43 s | 73 % | 47 % |
+| Der Ewige Bauherr | 83 s | 117 % | 40 % |
+| Sultan Nimmersatt | 111 s | 194 % | 40 % |
+
+**Chains** (seed 11, two runs; seed 1, three runs before the bot fix): one chain won all six districts; Wedding there 0 deaths, 82 % damage per fight, bosses 75, 44, 181 and 207 s. One chain stopped in Xhain (12 deaths at the Spreehexe, power 558); the seed 1 chains won Köpenick to Charlottenburg and stopped at the pub bug.
+
+**Tried and reverted:** the Sultan's Nachschlag with one Tee-Ifrit every 14 s instead of two every 12 s (his fight ran 111 to 341 s across heroes; the 341 s one was a fire hammer against his fire resistance): 106 s, but 2.7 deaths a run (fewer adds, fewer kills and heals).
+
+**Read:**
+- Wedding sits where the next district should: a little harder than Charlottenburg (lowest life 40 % at the last two bosses, against 61 to 100 % damage there), no deaths with carried gear.
+- Still open for the B2/P33 decision: every district after Köpenick has no deaths with carried gear. Wedding's tier (40 to 62, W4) stays provisional with it.
+
 ## Realistic bot, first steps and district step (2026-11-21)
 
 The bot now plays like Johannes (2D `tools/sim.js` v0.99 rules): blessings by economy need, build and recent danger, heal pickups, Späti shopping, and a camp step between districts. The chain counts each district's tunnel as cleared, so the camp opens after Köpenick.

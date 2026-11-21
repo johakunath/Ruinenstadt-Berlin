@@ -744,9 +744,9 @@ export const BOSS = {
     near: 4, far: 8,
     fan: 3.5, blades: 7, cone: 0.5, bladeSpeed: 9, bladeDamage: 0.5, bladeLife: 1.8, fanWind: 0.6, fanGap: 0.4, turn3: 20 * DEG,
     prism: 8, prismWind: 0.9, prismTime: 0.3, prismWidth: 1.4, prismHalf: 18, prismDamage: 1.2, prismFloor: 0.25, prismOpen: 1.5, cross: 45 * DEG, spread3: 25 * DEG,
-    // Bot runs 2026-11-21 (111 to 341 s against the Diva's 53 to 135 s): one Tee-Ifrit every 14 s, not two every 12 s
-    // (the hero chased the casters that keep their distance instead of the Sultan).
-    summon: 14, adds: 1, carpets: 1, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
+    // Bot runs 2026-11-21: one Tee-Ifrit every 14 s was tried (fights 111 to 341 s) and made it worse (106 s, 2.7 deaths a
+    // run: fewer kills, fewer heals). Two every 12 s stay.
+    summon: 12, adds: 2, carpets: 1, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
   },
 } as const;
 

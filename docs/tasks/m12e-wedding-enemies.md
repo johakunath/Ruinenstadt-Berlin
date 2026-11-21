@@ -76,7 +76,7 @@ The Diva's brain with own numbers (`BOSS.sultan`): her phases are his courses, a
 |---|---|---|
 | Teeglasfächer | `fan` | seven glasses in a 0.5 rad cone, 9 m/s, ×0.5 each; phase 2 two fans, phase 3 three (Diva rule) |
 | Teppichbahn | `prism` (line zone) | a ruby carpet strip 1.4 m wide rolls through the hero, wind 0.9 s, hit ×1.2, floor 0.25; phase 2 an X, phase 3 three; open 1.5 s |
-| Nachschlag | `summon` every 14 s | one Tee-Ifrit; from phase 3 also one Teppichschlinger. Note „Nachschlag!“ (bot runs: was two every 12 s) |
+| Nachschlag | `summon` every 12 s | two Tee-Ifrite; from phase 3 also one Teppichschlinger. Note „Nachschlag!“ (one every 14 s was tried in the bot runs: more deaths, not shorter) |
 | Gangwechsel | `roar`, one ring | at 66 % („Hauptgang!“) and 33 % („Nachtisch!“), ring to 9 m, ×0.6, floor 0.15, open 2 s |
 
 No rage (the courses are his escalation; phase 3 cooldowns ×0.85).
@@ -115,4 +115,5 @@ Sounds: existing cues only (`molotov` throw for the glass, the Krähe's dive, th
 - **Render**: bodies in `src/render/enemies.ts` (`FEST` Zecher overlay, `buildRug`, `bauherrSet`, Sultan carpet), ruby carpet strips, amber tea circles and the marked carpet dive in `threats.ts`, the lamp hammer in `weapons.ts`. Kodex E22 to E24, X24 to X27 and icons I103 to I106 rendered from 3D; proof `docs/proof/m18-wedding/enemies/`. Draws per body in `docs/enemy-pipeline.md`. Sounds: existing cues only, no boss voices.
 - **Deviations**: boss 1 was built first as Der Stammgast (the brief); main then changed it to Der Zugezogene in the pub (W5), so he replaced it in this PR (same brain, plus the coffee volley). The Hauptgericht calls no adds and has no new block (the Rex's tail ring is the spit sweep); the Bauherr's crew wears the Zecher mug (no per-call hard hat); the banner has no text (sign atlas of step 3); the death note for the spit sweep reads „Schwanzhieb“ (shared `tail` name). The `passes.mjs` readout returned 0 calls in this cloud session, so draws come from `tools/enemy-sheet.mjs` (now prints `calls=`).
 - **Wired into the map (2026-11-21, after PR #81)**: `WEDDING_BOSSES` are the four real bosses; `weddingWaveTier` has the roster per zone (Tee-Ifrit from zone 1, Baklava-Brocken and Teppichschlinger from the Panke on, all three strongest in the Fest), the Humboldthöhe calm with carpets, the Magendoktor Zecher only (`pub`); no crow or rat left (`wedding.test.ts`). Honey puddles are not placed (no decal yet; step 3 may add them with one).
+- **Bot (2026-11-21)**: chain through all six districts and `--carry`; a bot nav fix for the Magendoktor corner; numbers in `docs/balance.md` › Wedding and the six-district chain. No tier or boss life changed (B2/P33 decision).
 - **Open**: Johannes playtest (`pt-hardware-checks.md` › Playtest, Wedding roster; hardware row 54); boss voices; bot run on Wedding once the map exists.
