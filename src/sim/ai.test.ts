@@ -1653,6 +1653,274 @@ describe('Charlottenburg roster (M16, spec m12d)', () => {
   });
 });
 
+describe('Wedding roster (M18, spec m12e)', () => {
+  const notes = (evs: SimEvent[]): string[] => evs.filter((q) => q.type === 'note').map((q) => (q as { text: string }).text);
+  const still = (e: Enemy): void => { e.def = { ...e.def, speed: 0 }; };
+  const alive = (s: Sim, kind: EnemyKind): number => s.enemies.filter((q) => q.kind === kind && q.state !== 'dead').length;
+  const plain = (): Sim => { const s = fresh(); s.stats.types = []; return s; };
+
+  it('the Tee-Ifrit keeps its distance and lobs one glass onto a marked circle that hits once and leaves hot tea; then it is open', () => {
+    const d = ENEMIES.teeifrit, T = THREAT.tea;
+    expect([d.hp, d.damage, d.ai, d.res, d.cap]).toEqual([26 * NORMAL_HP, 11, 'spitter', 'tee', 3]);
+    const s = fresh();
+    const e = put(s, 'teeifrit', 0, 7);
+    still(e);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('molotov');
+    expect(e.sp?.wind).toBe(T.wind);
+    const z = s.threats.zones.filter((q) => q.kind === 'tea');
+    expect(z).toHaveLength(1);
+    expect([z[0]!.r, Math.hypot(z[0]!.x - s.player.x, z[0]!.z - s.player.z)]).toEqual([T.radius, 0]);
+    expect(has(run(s, T.wind - 0.05), 'playerHit')).toBe(false);
+    expect(run(s, 0.1).filter((q) => q.type === 'playerHit')).toHaveLength(1);
+    expect(s.threats.hazards.some((h) => h.kind === 'fire' && h.r === T.puddle)).toBe(true);
+    run(s, 0.5);
+    expect(e.open).toBeGreaterThan(0);
+    // A sidestep out of the circle and the glass misses.
+    const m = fresh();
+    const f = put(m, 'teeifrit', 0, 7);
+    still(f);
+    f.cd[1] = 0;
+    stepSim(m, NO_INPUT);
+    m.player.x += T.radius + 0.6;
+    expect(has(run(m, T.wind + 0.05), 'playerHit')).toBe(false);
+    // Close up it backs off, like the Speier.
+    const b = fresh();
+    const g = put(b, 'teeifrit', 0, 2);
+    g.cd[1] = 99;
+    run(b, 1);
+    expect(Math.hypot(g.x - b.player.x, g.z - b.player.z)).toBeGreaterThan(2.5);
+  });
+
+  it('the Baklava-Brocken blocks with its tray in front, takes full damage from behind and slams a marked circle', () => {
+    const d = ENEMIES.baklava;
+    expect([d.hp, d.damage, d.ai, d.cap, d.shield?.front, d.classes]).toEqual([100 * NORMAL_HP, 26, 'brute', 2, 0.2, ['pflanzen']]);
+    const s = plain();
+    const e = put(s, 'baklava', 0, 2.5);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    e.def = { ...e.def, res: 'none' };
+    expect(strike(s, e, 100)).toBe(20);
+    e.facing = e.pfacing = e.facing + Math.PI;
+    expect(strike(s, e, 100)).toBe(100);
+    const t = fresh();
+    const q = put(t, 'baklava', 0, 4);
+    q.cd[0] = 0;
+    stepSim(t, NO_INPUT);
+    expect(q.sp?.kind).toBe('slam');
+    expect(t.threats.zones.filter((z) => z.kind === 'slam')).toHaveLength(1);
+  });
+
+  it('the Teppichschlinger flies and dives along the line it marked at the start of its wind-up', () => {
+    const d = ENEMIES.teppich;
+    expect([d.fly, d.ai, d.body, d.res]).toEqual([true, 'crow', 'carpet', 'teppich']);
+    const s = fresh();
+    const e = put(s, 'teppich', 0, 5);
+    e.cd[1] = 0;
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('dive');
+    expect(e.sp?.wind).toBe(THREAT.carpetDive.wind);
+    expect(run(s, THREAT.carpetDive.wind + THREAT.dive.time + 0.1).filter((q) => q.type === 'playerHit')).toHaveLength(1);
+    // Moving off the line during the wind-up: the carpet keeps its line and misses (the Krähe would turn after him).
+    const m = fresh();
+    const f = put(m, 'teppich', 0, 5);
+    f.cd[1] = 0;
+    stepSim(m, NO_INPUT);
+    const dx = f.sp!.dx, dz = f.sp!.dz;
+    m.player.x += 2.5;
+    run(m, THREAT.carpetDive.wind + 0.02);
+    expect([f.sp?.dx, f.sp?.dz]).toEqual([dx, dz]);
+    expect(has(run(m, THREAT.dive.time + 0.1), 'playerHit')).toBe(false);
+  });
+
+  it('Der Zugezogene calls two Zecher (a Brocken too in rage), charges on his scooter twice in rage and throws a volley of coffee cups', () => {
+    const G = BOSS.zugezogene;
+    const s = fresh();
+    const e = put(s, 'zugezogene', 0, 9);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    e.cd = [99, 0, 99];
+    const evs = run(s, BOSS.summon.wind + 0.6);
+    expect([alive(s, 'walker'), alive(s, 'runner'), alive(s, 'brute')]).toEqual([G.adds, G.runners, 0]);
+    expect(notes(evs)).toContain('„Bald nur noch Hafermilch!“');
+    const r = fresh();
+    const q = put(r, 'zugezogene', 0, 9);
+    q.hp = q.maxHp * 0.45;
+    run(r, 0.05);
+    expect(q.rage).toBe(true);
+    q.cd = [99, 0, 99];
+    run(r, BOSS.summon.wind + 0.6);
+    expect(alive(r, 'brute')).toBe(G.rageBrutes);
+    // Twice in rage: two charge wind-ups from one cooldown.
+    const c = fresh();
+    const h = put(c, 'zugezogene', 0, 5);
+    h.hp = h.maxHp * 0.45;
+    run(c, 0.05);
+    h.cd = [0, 99, 99];
+    h.gap = 0;
+    expect(specials(run(c, 2.4)).filter((k) => k === 'charge')).toHaveLength(2);
+    // A short run: a few metres, never from across the room.
+    const n = fresh();
+    const k = put(n, 'zugezogene', 0, 5);
+    still(k);
+    k.cd = [0, 99, 99];
+    stepSim(n, NO_INPUT);
+    expect([k.sp?.kind, k.sp?.go, k.sp?.speed]).toEqual(['charge', G.chargeTime, G.chargeSpeed]);
+    expect(G.chargeTime * G.chargeSpeed).toBeCloseTo(4.8);
+    const far = fresh();
+    const w = put(far, 'zugezogene', 0, G.chargeMax + 1);
+    still(w);
+    w.cd = [0, 99, 99];
+    stepSim(far, NO_INPUT);
+    expect(w.sp?.kind).not.toBe('charge');
+    // Coffee cups: the Grenzer's five-shot volley within 12 m, not from farther.
+    const v = fresh();
+    const z = put(v, 'zugezogene', 0, 7);
+    z.hp = z.maxHp = 1e6;
+    still(z);
+    z.cd = [99, 99, 0];
+    stepSim(v, NO_INPUT);
+    expect(z.sp?.kind).toBe('volley');
+    run(v, BOSS.grenzer.volleyWind + 0.05);
+    expect(v.threats.shots.filter((q) => q.src === z.id)).toHaveLength(BOSS.grenzer.shots);
+    const f = fresh();
+    const y = put(f, 'zugezogene', 0, G.volleyRange + 1);
+    still(y);
+    y.cd = [99, 99, 0];
+    stepSim(f, NO_INPUT);
+    expect(y.sp?.kind).not.toBe('volley');
+  });
+
+  it('Das Hauptgericht sweeps a ring round itself with the spit, roars, charges, and calls no raptors', () => {
+    const s = fresh();
+    const e = put(s, 'hauptgericht', 0, 2);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    e.cd = [99, 99, 0];
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('tail');
+    const z = s.threats.zones.find((q) => q.kind === 'tail')!;
+    expect([z.x, z.z, z.r]).toEqual([e.x, e.z, BOSS.rex.tailRadius]);
+    const t = fresh();
+    const q = put(t, 'hauptgericht', 0, 6);
+    q.hp = q.maxHp = 1e6;
+    still(q);
+    q.cycle = 2;
+    q.cd = [99, 0, 99];
+    run(t, BOSS.roar.wind + 1);
+    expect(t.threats.waves.length).toBeGreaterThan(0);
+    expect(alive(t, 'raptor')).toBe(0);
+  });
+
+  it('Der Ewige Bauherr calls a building crew of two Brocken every third cycle, never Uhrwerkläufer', () => {
+    const s = fresh();
+    const e = put(s, 'bauherr', 0, 8);
+    e.hp = e.maxHp = 1e6;
+    still(e);
+    e.cycle = 2;
+    e.cd = [0, 99, 99];
+    const evs = run(s, 0.5);
+    expect([alive(s, 'brute'), alive(s, 'uhrwerk')]).toEqual([BOSS.bauherr.adds, 0]);
+    expect(notes(evs)).toContain('„Bautrupp!“');
+    expect(specials(evs)).toContain('slabs');
+  });
+
+  it('Sultan Nimmersatt: no rage; courses at 66 and 33 % with notes; seven tea glasses a fan; one, two, three carpet strips; tea spirits, a carpet from the dessert on', () => {
+    const S = BOSS.sultan;
+    const s = fresh();
+    const e = put(s, 'sultan', 0, 7);
+    still(e);
+    e.cd = [0, 99, 99];
+    stepSim(s, NO_INPUT);
+    expect(e.sp?.kind).toBe('fan');
+    run(s, S.fanWind + 0.02);
+    expect(s.threats.shots.filter((q) => q.src === e.id)).toHaveLength(S.blades);
+    e.hp = e.maxHp * 0.6;
+    expect(notes(run(s, 1 / 60))).toContain('„Hauptgang!“');
+    expect([e.still, e.rage]).toEqual([1, false]);
+    run(s, 2.5);
+    e.hp = e.maxHp * 0.3;
+    expect(notes(run(s, 1 / 60))).toContain('„Nachtisch!“');
+    const lines = (tier: number): number[] => {
+      const t = fresh();
+      const q = put(t, 'sultan', 0, 7);
+      still(q);
+      q.hp = q.maxHp = 1e6;
+      q.still = tier;
+      q.cd = [99, 0, 99];
+      stepSim(t, NO_INPUT);
+      return t.threats.zones.filter((z) => z.kind === 'carpet').map((z) => z.line!.width);
+    };
+    expect([lines(0), lines(1), lines(2)]).toEqual([[S.prismWidth], [S.prismWidth, S.prismWidth], [S.prismWidth, S.prismWidth, S.prismWidth]]);
+    const call = (tier: number): [number, number, string[]] => {
+      const z = fresh();
+      const v = put(z, 'sultan', 0, 8);
+      v.hp = v.maxHp = 1e6;
+      v.still = tier;
+      v.cd = [99, 99, 0];
+      const zn = run(z, BOSS.summon.wind + 0.6);
+      return [alive(z, 'teeifrit'), alive(z, 'teppich'), notes(zn)];
+    };
+    expect(call(0).slice(0, 2)).toEqual([S.adds, 0]);
+    expect(call(2).slice(0, 2)).toEqual([S.adds, S.carpets]);
+    expect(call(0)[2]).toContain('„Nachschlag!“');
+  });
+
+  it('the Wedding bosses sit on the ladder; all but the Sultan rage below half life', () => {
+    const kinds = ['zugezogene', 'hauptgericht', 'bauherr', 'sultan'] as const;
+    expect(kinds.map((k) => ENEMIES[k].hp)).toEqual([1000, 2200, 3200, 4400]);
+    expect(kinds.map((k) => ENEMIES[k].damage)).toEqual([26, 30, 32, 34]);
+    for (const kind of kinds) {
+      const s = fresh();
+      const e = put(s, kind, 0, 9);
+      e.hp = e.maxHp * 0.45;
+      expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(kind === 'sultan' ? 0 : 1);
+    }
+  });
+
+  it('no Wedding hit takes more than 45 % of max life, even at ten times the damage', () => {
+    for (const kind of ['teeifrit', 'baklava', 'teppich', 'zugezogene', 'hauptgericht', 'bauherr', 'sultan'] as const) {
+      const s = fresh();
+      const e = spawnEnemy(s, s.player.x, s.player.z + (kind === 'teeifrit' ? 7 : 3), kind, 1, 10);
+      e.hp = e.maxHp = 1e6;
+      if (kind === 'teeifrit') still(e);
+      let hits = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        s.hitstop = 0;
+        const before = s.player.hp;
+        stepSim(s, NO_INPUT);
+        for (const q of s.events) if (q.type === 'playerHit') {
+          hits++;
+          expect(q.damage, kind).toBeLessThanOrEqual(s.stats.maxHp * 0.45 + 1e-6);
+          expect(before - s.player.hp, kind).toBeLessThan(s.stats.maxHp * 0.46);
+        }
+        s.events.length = 0;
+        s.player.hp = s.stats.maxHp;
+      }
+      expect(hits, kind).toBeGreaterThan(0);
+    }
+  });
+
+  it('„Honig klebt“: honey puddles slow walking to 60 % (hero and walking enemies), nothing without them', () => {
+    const s = fresh();
+    const { x, z } = s.player;
+    expect(s.level.speedAt(x, z)).toBe(1);
+    s.level.honey = [{ x, z, r: 2 }];
+    expect(s.level.speedAt(x + 1, z)).toBe(THREAT.honey);
+    expect(s.level.speedAt(x + 2.5, z)).toBe(1);
+    const t = fresh();
+    const x0 = t.player.x;
+    run(t, 1, { moveX: 1 });
+    const free = t.player.x - x0;
+    const h = fresh();
+    h.level.honey = [{ x: h.player.x, z: h.player.z, r: 20 }];
+    const x1 = h.player.x;
+    run(h, 1, { moveX: 1 });
+    expect((h.player.x - x1) / free).toBeCloseTo(THREAT.honey, 1);
+  });
+});
+
 describe('lying guards get up first (P22)', () => {
   it('a guard woken at 1 m neither winds up nor strikes before it stands', () => {
     const s = fresh();

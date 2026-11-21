@@ -217,8 +217,11 @@ export interface MapDef {
   district?: number;
   /** Enemy strength step (`districtScale`) when it differs from `district`: a tunnel takes its line (S3 0, U8 1, U2 2). */
   strength?: number;
-  /** M16 `revue` (Charlottenburg): render only for now, the Zeitlose wear 1920s dress; no loot table yet. */
-  flavor?: 'neon' | 'gdr' | 'revue';
+  /** M16 `revue` (Charlottenburg): render only for now, the Zeitlose wear 1920s dress; no loot table yet.
+   * M18 `fest` (Wedding): the Zeitlose are Zecher (pub guests); the Wedding set and legendary drop here. */
+  flavor?: 'neon' | 'gdr' | 'revue' | 'fest';
+  /** M18 „Honig klebt“: honey puddles `[x, z, r]` that slow walking to `THREAT.honey` (`Level.speedAt`). */
+  honey?: ReadonlyArray<readonly [number, number, number]>;
   /** M12c rain rule (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
   wet?: boolean;
   /** M16 district rule „Glas splittert“: glass bodies burst when they die (`THREAT.shards`). */
@@ -1938,6 +1941,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   if (m.tunnel) level.tunnel = true;
   if (m.wet) level.wet = true;
   if (m.shards) level.shards = true;
+  level.honey = (m.honey ?? []).map(([x, z, r]) => ({ x, z, r }));
   level.hiddenSpots = m.hiddenSpots ?? [];
   if (P && plinthGate) level.plinths = { pts: P.pts, r: P.r, need: P.need, gate: plinthGate };
   level.noSpawn = (m.noSpawn ?? []).map((p) => p.map(([x, z]) => ({ x, z })));

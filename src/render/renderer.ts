@@ -462,7 +462,7 @@ export class GameRenderer {
       if (!view) {
         view = this.pool.get(e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows, { gdr: this.opts.map?.def.id === 'alex', clockRig: this.world.clockRig });
         if (!view.root.parent) this.scene.add(view.root);
-        view.assign(e, sim.level.flavor === 'neon', sim.level.flavor === 'revue');
+        view.assign(e, sim.level.flavor === 'neon', sim.level.flavor === 'revue' || sim.level.flavor === 'fest' ? sim.level.flavor : null);
         view.root.traverse((o) => { if ((o as Mesh).isMesh) o.layers.enable(ENEMY_LAYER); });
         this.views.set(e.id, view);
       }

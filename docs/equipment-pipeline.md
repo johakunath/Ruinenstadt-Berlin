@@ -19,6 +19,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Ground drops | `src/render/loot.ts`: one instanced crystal in rarity colour, beam for rare and up. Same for every item (backlog P10) |
 | Starter | `starterEquipment()` (`src/sim/loadout.ts`): only `Rostige Klinge`, base `rohr`, kind `blade`. No armor, gloves, boots: hero starts in coat, boots, bare hands |
 | Legacy | `Holzlatte` (`latte`, I01) and `Rostiges Rohr` exist only in `BASES` for old saves; no drop pool rolls them |
+| M18 Wedding (2026-11-21) | One new base (`bestellung`, legendary hammer) and the set Pracht des Ewigen Gasts on five existing bases (`mantel`, `handsch`, `stiefel` with `base:gast` palettes, `feder`, `siegel`); both drop only on `fest` maps (`src/sim/items.ts`). Icons I103 to I106 rendered with `tools/item-icons.mjs`; feather and signet ring keep the plain icons. Proof `docs/proof/m18-wedding/enemies/loot-icons.png` |
 | Weapon cost (2026-11-19) | 2 meshes (metal, matte), 3 with a glow: 2 or 3 draw calls per pass (was 10); 174 to 830 triangles. `src/render/weapons.test.ts` checks envelope and budget |
 | Head, hand, foot, ring legendaries and set pieces (2D #2) | Data, drop tables and powers are ported and tested; only their looks are missing |
 | Base clash | `Kettenhemd der Zitadelle` uses base `kette` (same as `Fahrradkette`): icon I42 (bike chain); the chainmail icon I57 sits under key `khemd`, which no base uses |
@@ -27,15 +28,15 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 
 | Slot | Bases | Own 3D model | Changes hero | Icon yes / partly / no |
 |---|---|---|---|---|
-| Waffe (w) | 30 | 30 + 3 set variants | 30 | 33 / 0 / 0 (rendered) |
-| Körper (a) | 12 (+ Kettenhemd on `kette`) | 16 looks (2 pieces, cut, palettes, gear) | 16 | 16 / 0 / 0 (rendered) |
+| Waffe (w) | 31 | 31 + 3 set variants | 31 | 34 / 0 / 0 (rendered) |
+| Körper (a) | 12 (+ Kettenhemd on `kette`) | 17 looks (2 pieces, cut, palettes, gear) | 17 | 17 / 0 / 0 (rendered) |
 | Kopf (h) | 9 | 10 hats (gear) | 10 | 10 / 0 / 0 (rendered) |
-| Hände (g) | 6 | 6 looks (glove piece, palettes, gear) | 6 | 6 / 0 / 0 (rendered) |
-| Füße (f) | 6 | 7 looks (2 pieces, palettes, gear) | 7 | 7 / 0 / 0 (rendered) |
+| Hände (g) | 6 | 7 looks (glove piece, palettes, gear) | 7 | 7 / 0 / 0 (rendered) |
+| Füße (f) | 6 | 8 looks (2 pieces, palettes, gear) | 8 | 8 / 0 / 0 (rendered) |
 | Talisman (t) | 9 | 0 | 0 | n/a |
 | Ring (r) | 8 | 0 | 0 | n/a |
 | Implantat (i) | 7 | 0 | 0 | n/a |
-| Total | 87 | 30 weapon models + 3 set variants, 39 looks | 69 | |
+| Total | 88 | 31 weapon models + 3 set variants, 42 looks | 73 | |
 
 ## Index
 
@@ -67,6 +68,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Klinge der Zitadelle | zitklinge | w | legendary | model:zitklinge | yes | I51 | yes: rendered from the model | E | 3 |
 | Mauerbrecher | mauer | w | legendary | model:mauer | yes | I16 | yes: rendered from the model | E | 3 |
 | Plattenbrecher | pbrecher | w | legendary | model:pbrecher | yes | I52 | yes: rendered from the model | E | 3 |
+| Die Letzte Bestellung | bestellung | w | legendary (only on `fest` maps, M18) | model:bestellung (emerald shaft, gold wish-lamp head with a ruby glow band, two tea glasses on chains) | yes | I103 | yes: rendered from the model | E (tea splash on every third hit) | 3 |
 | Zorn der Ringbahn | ring | w | legendary | model:ring | yes | I32 | yes: rendered from the model | E | 3 |
 | Krähenschleuder | kraehe | w | legendary | model:kraehe | yes | I53 | yes: rendered from the model | E | 3 |
 | Speer der Siegessäule | siegsp | w | legendary | model:siegsp | yes | I56 | yes: rendered from the model | E | 3 |
@@ -90,6 +92,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Mantel des Spreegeists | mantel | a | set spree | wear:mantel:spree | yes | I94 | yes: rendered from the look | none | 3 |
 | Kettenhemd der Zitadelle | kette | a | set zit | wear:kette:zit | yes | I57 | yes: rendered from the look | T | 3 |
 | Mantel des Tunnelläufers | mantel | a | set tunnel | wear:mantel:tunnel | yes | I98 | yes: rendered from the look | none | 3 |
+| Kaftan des Ewigen Gasts | mantel | a | set gast (M18) | wear:mantel:gast (emerald coat, ruby hem and trousers, gold cuffs and buttons, plain belt) | yes | I104 | yes: rendered from the look | none | 3 |
 | Bauhelm | helm | h | normal | wear:helm | yes | I22 | yes: rendered from the look | none | 2 |
 | Schiebermütze | schieber | h | normal | wear:schieber | yes | I23 | yes: rendered from the look | T | 2 |
 | Wollmütze | muetze | h | normal | wear:muetze | yes | I24 | yes: rendered from the look | T | 2 |
@@ -106,6 +109,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Gartenhandschuhe | gartenh | g | GDR | wear:gartenh | yes | I77 | yes: rendered from the look | none | 4 |
 | Fäuste des Kiezboxers | kiezbox | g | legendary | wear:kiezbox | yes | I85 | yes: rendered from the look | E | 3 |
 | Handschuhe der Kiezwache | kiezhand | g | set kiez | wear:kiezhand | yes | I80 | yes: rendered from the look | none | 3 |
+| Handschuhe des Ewigen Gasts | handsch | g | set gast (M18) | wear:handsch:gast (gold gloves, ruby cuffs) | yes | I105 | yes: rendered from the look | none | 3 |
 | Turnschuhe | turnsch | f | normal | wear:turnsch | yes | I29 | yes: rendered from the look | none | 2 |
 | Arbeitsstiefel | stiefel | f | normal | wear:stiefel | yes | I30 | yes: rendered from the look | none | 2 |
 | Gummistiefel | gummi | f | normal | wear:gummi | yes | I31 | yes: rendered from the look | none | 2 |
@@ -113,6 +117,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief | yes | I81 | yes: rendered from the look | none | 3 |
 | Eisenstiefel der Zitadelle | eisenstief | f | set zit | wear:eisenstief | yes | I84 | yes: rendered from the look | none | 3 |
 | Stiefel des Tunnelläufers | stiefel | f | set tunnel | wear:stiefel:tunnel | yes | I100 | yes: rendered from the look | none | 3 |
+| Stiefel des Ewigen Gasts | stiefel | f | set gast (M18) | wear:stiefel:gast (ruby boots, gold soles) | yes | I106 | yes: rendered from the look | none | 3 |
 | Spreekiesel | kiesel | t | normal | none | - | I39 | n/a | - | 2 |
 | Mauerstück | stueck | t | normal | none | - | I40 | n/a | - | 2 |
 | Rabenfeder | feder | t | normal | none | - | I41 | n/a | - | 2 |
@@ -125,6 +130,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Schlüsselbund des Tunnelläufers | kette | t | set tunnel | none | - | I42 | n/a: bike chain until I102 | I (Codex K4) | 3 |
 | Abzeichen der Kiezwache | abzeichen | t | set kiez | none | - | I44 | n/a: currywurst icon | I | 3 |
 | Kiesel des Spreegeists | kiesel | t | set spree | none | - | I39 | n/a: plain pebble | I | 3 |
+| Feder des Ewigen Gasts | feder | t | set gast (M18) | none | - | I41 | n/a: plain raven feather | I | 3 |
 | Siegelring | siegel | r | normal | none | - | I33 | n/a | - | 2 |
 | Totenkopfring | totenk | r | normal | none | - | I34 | n/a | - | 2 |
 | Schraubenmutter | mutter | r | normal | none | - | I35 | n/a | - | 2 |
@@ -133,6 +139,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Kupferring | kupfer | r | normal | none | - | I38 | n/a | - | 2 |
 | Ring der Weltzeituhr | weltuhr | r | legendary | none | - | I87 | n/a | E | 3 |
 | Ring des Spreegeists | spreering | r | set spree | none | - | I82 | n/a | - | 3 |
+| Siegelring des Ewigen Gasts | siegel | r | set gast (M18) | none | - | I33 | n/a: plain signet ring | I | 3 |
 | Neonauge | nauge | i | neon | none | - | I66 | n/a | - | 4 |
 | Zielchip | zchip | i | neon | none | - | I67 | n/a | - | 4 |
 | Kabelarm | karm | i | neon | none | - | I58 | n/a: shared with Bassprediger | I | 4 |

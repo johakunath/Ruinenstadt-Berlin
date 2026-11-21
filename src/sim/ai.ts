@@ -14,6 +14,9 @@
 // Logenbrecher's Faustschlag, the Spiegelsouffleur's cue and shard fan; the Conférencier (acts, spotlight, cane),
 // the Ringvater (guards, charging blow), the Spiegelpaar (a reflection, crossing pirouettes, the swap) and the
 // Diva (fans, prism rays, gown tiers).
+// M18 (Wedding, `docs/tasks/m12e-wedding-enemies.md`): no new brain. The Tee-Ifrit throws one Molotov glass, the
+// Teppichschlinger's dive line is marked, Der Zugezogene (charge, coffee cups) and the Bauherr call Zecher and a crew, the Hauptgericht is
+// the Rex's brain, Sultan Nimmersatt the Diva's with his numbers (`divaOf`).
 import { BOSS, ENEMIES, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
 import { freeSpot } from './reach';
 import { addHazard, addZone, fireShot, laserVolley, pushPlayer, threatHit, type Special, type SpecialKind } from './threats';
@@ -38,6 +41,9 @@ export interface Plan {
   turn: number;
 }
 const plan: Plan = { mode: 'flow', x: 0, z: 0, speed: 1, melee: true, turn: 0 };
+
+/** M18: the Diva's brain runs on her numbers or Sultan Nimmersatt's. */
+const divaOf = (e: Enemy): typeof BOSS.diva | typeof BOSS.sultan => (e.kind === 'sultan' ? BOSS.sultan : BOSS.diva);
 
 const SPECIAL: Record<SpecialKind, { wind: number; go: number; open: number; speed?: number }> = {
   spit: { wind: THREAT.spit.wind, go: 0.25, open: 0 },
@@ -85,14 +91,19 @@ function own(e: Enemy, kind: SpecialKind): Partial<Pick<Special, 'wind' | 'go' |
   if (kind === 'volley' && e.kind === 'wachdrohne') return { wind: BOSS.wachdrohne.volleyWind };
   // M16 rushes with their own hit: the Stockstoß, the Ringschlag, the Doppelpirouette (the reflection's speed is set in `begin`).
   if (kind === 'lunge' && e.kind === 'conferencier') { const C = BOSS.conferencier; return { wind: C.lungeWind, go: C.lungeTime, open: C.lungeOpen, speed: C.lungeSpeed, mul: C.lungeDamage }; }
+  if (kind === 'charge' && e.kind === 'zugezogene') { const Z = BOSS.zugezogene; return { wind: Z.chargeWind, go: Z.chargeTime, speed: Z.chargeSpeed }; }
   if (kind === 'charge' && e.kind === 'ringvater') { const R = BOSS.ringvater; return { wind: R.wind, go: R.time, open: R.open, speed: R.speed, mul: R.damage, floor: R.floor }; }
   if (kind === 'lunge' && (e.kind === 'spiegelpaar' || e.kind === 'spiegelbild')) {
     const S = BOSS.spiegelpaar;
     return { wind: S.wind, go: S.time, open: S.open, speed: S.speed, mul: e.kind === 'spiegelbild' ? S.mirrorDamage : S.damage };
   }
   if (kind === 'fan' && e.kind === 'souffleur') return { wind: THREAT.cue.fanWind, open: THREAT.cue.fanOpen };
-  if (kind === 'fan' && e.kind === 'diva') return { wind: BOSS.diva.fanWind, open: 0 };
-  if (kind === 'roar' && e.kind === 'diva') return { open: BOSS.diva.curtainOpen };
+  if (kind === 'fan' && e.def.ai === 'diva') return { wind: divaOf(e).fanWind, open: 0 };
+  if (kind === 'roar' && e.def.ai === 'diva') return { open: divaOf(e).curtainOpen };
+  if (kind === 'prism' && e.def.ai === 'diva') { const D = divaOf(e); return { wind: D.prismWind, go: D.prismTime, open: D.prismOpen }; }
+  // M18: the Tee-Ifrit's glass (the Brandmeister's bottle block), the carpet's longer marked dive.
+  if (kind === 'molotov' && e.kind === 'teeifrit') return { wind: THREAT.tea.wind, open: THREAT.tea.open };
+  if (kind === 'dive' && e.kind === 'teppich') return { wind: THREAT.carpetDive.wind };
   return null;
 }
 
@@ -102,7 +113,7 @@ function roarOf(e: Enemy): { n: number; gap: number; max: number; damage: number
   if (e.kind === 'dirigent') { const D = BOSS.dirigent; return { n: 2, gap: D.fortGap, max: D.fortMax, damage: D.fortDamage, floor: D.fortFloor }; }
   if (e.kind === 'bassprediger') { const B = BOSS.bassprediger; return { n: 2, gap: B.gap, max: B.max, damage: B.ringDamage, floor: B.ringFloor }; }
   // M16 Vorhang: one ring when a gown tier bursts.
-  if (e.kind === 'diva') { const D = BOSS.diva; return { n: 1, gap: 0, max: D.curtain, damage: D.curtainDamage, floor: D.curtainFloor }; }
+  if (e.def.ai === 'diva') { const D = divaOf(e); return { n: 1, gap: 0, max: D.curtain, damage: D.curtainDamage, floor: D.curtainFloor }; }
   return { n: 2, gap: R.gap, max: R.max, damage: R.damage, floor: R.floor };
 }
 
@@ -238,6 +249,12 @@ function begin(sim: Sim, e: Enemy, kind: SpecialKind, queued = false): void {
       break;
     }
     case 'molotov': {
+      // M18 Teeglas: one glass on the hero that leaves hot tea.
+      if (e.kind === 'teeifrit') {
+        const T = THREAT.tea;
+        addZone(sim, { x: p.x, z: p.z, r: T.radius, t: sp.wind, max: sp.wind, damage: damageOf(e, T.damage), floor: 0, kind: 'tea', src, free: true, leave: { r: T.puddle, t: T.puddleTime, damage: damageOf(e, T.puddleDamage), kind: 'fire' } });
+        break;
+      }
       // Bottles in the air: marked circles (the first on the hero) that burn on where they land.
       const M = BOSS.brandmeister;
       const leave = { r: M.fireRadius, t: M.fireTime, damage: damageOf(e, M.fireDamage), kind: 'fire' as const };
@@ -257,12 +274,13 @@ function begin(sim: Sim, e: Enemy, kind: SpecialKind, queued = false): void {
     }
     case 'prism': {
       // M16 Prismenstrahl: strips through the hero, one more per gown tier broken (an X, then three fanned out).
-      const D = BOSS.diva;
+      // M18: the Sultan's carpet strips, the same with his width.
+      const D = divaOf(e);
       const phase = Math.min(2, e.still ?? 0);
       const offs = phase === 0 ? [0] : phase === 1 ? [-D.cross, D.cross] : [-D.spread3, 0, D.spread3];
       const a0 = angleOf(dx, dz);
       for (const o of offs) addZone(sim, {
-        x: p.x, z: p.z, r: D.prismHalf, t: sp.wind, max: sp.wind, damage: damageOf(e, D.prismDamage), floor: D.prismFloor, kind: 'prism', src, free: true,
+        x: p.x, z: p.z, r: D.prismHalf, t: sp.wind, max: sp.wind, damage: damageOf(e, D.prismDamage), floor: D.prismFloor, kind: e.kind === 'sultan' ? 'carpet' : 'prism', src, free: true,
         line: { dx: Math.sin(a0 + o), dz: Math.cos(a0 + o), half: D.prismHalf, width: D.prismWidth }, act: D.prismTime,
       });
       break;
@@ -309,9 +327,9 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
         // M16 Scherbenfächer: five shards across the hero's line.
         const C = THREAT.cue;
         for (let i = 0; i < C.shots; i++) fireShot(sim, e, aim + (i - (C.shots - 1) / 2) * C.spread, C.speed, damageOf(e, C.damage), C.life, THREAT.spit.radius);
-      } else if (e.kind === 'diva') {
+      } else if (e.def.ai === 'diva') {
         // M16 Fächerschlag: one fan now, the next ones from `passive` (phase 2: one more, phase 3: two more).
-        const D = BOSS.diva;
+        const D = divaOf(e);
         const phase = Math.min(2, e.still ?? 0);
         divaFan(sim, e, aim + (phase === 2 ? -D.turn3 : 0));
         if (phase > 0) e.fans = { n: phase, t: D.fanGap, aim, k: 1 };
@@ -335,7 +353,8 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
       break;
     }
     case 'dive': {
-      // The crow commits when it drops, not when it screeches.
+      // The crow commits when it drops, not when it screeches. M18: the carpet keeps the line it marked at the start.
+      if (e.kind === 'teppich') break;
       const d = Math.hypot(p.x - e.x, p.z - e.z) || 1;
       sp.dx = (p.x - e.x) / d;
       sp.dz = (p.z - e.z) / d;
@@ -443,6 +462,23 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
         sim.events.push({ type: 'note', text: '„Zugabe!“', color: '#ff9fd8', x: e.x, z: e.z });
         break;
       }
+      if (e.kind === 'sultan') {
+        // M18 Nachschlag: tea spirits, from the dessert on a carpet too.
+        const S = BOSS.sultan;
+        summon(sim, e, 'teeifrit', S.adds);
+        if ((e.still ?? 0) >= 2) summon(sim, e, 'teppich', S.carpets);
+        sim.events.push({ type: 'note', text: '„Nachschlag!“', color: '#f2d14b', x: e.x, z: e.z });
+        break;
+      }
+      if (e.kind === 'zugezogene') {
+        // M18: two Zecher (a Schlurfer and a Hetzer), in rage a Brocken too.
+        const G = BOSS.zugezogene;
+        summon(sim, e, 'walker', G.adds);
+        summon(sim, e, 'runner', G.runners);
+        if (e.rage) summon(sim, e, 'brute', G.rageBrutes);
+        sim.events.push({ type: 'note', text: '„Bald nur noch Hafermilch!“', color: '#f2d14b', x: e.x, z: e.z });
+        break;
+      }
       if (e.kind === 'tuersteher') {
         summon(sim, e, 'kabel', e.rage ? BOSS.tuersteher.rageAdds : BOSS.tuersteher.adds);
         sim.events.push({ type: 'note', text: '„Nicht auf der Liste!“', color: '#ff4fa3', x: e.x, z: e.z });
@@ -486,9 +522,9 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
   sim.events.push({ type: 'enemySpecial', id: e.id, kind: sp.kind, phase: 'go', x: e.x, z: e.z });
 }
 
-/** M16 Fächerschlag: `blades` blades over the cone round `aim`. */
+/** M16 Fächerschlag: `blades` blades over the cone round `aim` (M18: the Sultan's tea glasses). */
 function divaFan(sim: Sim, e: Enemy, aim: number): void {
-  const D = BOSS.diva;
+  const D = divaOf(e);
   for (let i = 0; i < D.blades; i++) fireShot(sim, e, aim + (i / (D.blades - 1) - 0.5) * D.cone, D.bladeSpeed, damageOf(e, D.bladeDamage), D.bladeLife, BOSS.ring.radius);
 }
 
@@ -580,8 +616,9 @@ function finish(sim: Sim, e: Enemy, sp: Special): void {
   }
   if (sp.kind === 'charge' && e.kind === 'bassprediger' && (++e.cycle % BOSS.bassprediger.sermonEvery === 0 || e.rage)) e.queue = { kind: 'roar', t: 0 };
   // M16: in rage the Ringvater's Ringschlag comes twice (the second along a new line, the first without its opening).
-  if (sp.kind === 'charge' && e.kind === 'ringvater' && e.rage && !sp.queued) {
-    e.queue = { kind: 'charge', t: BOSS.ringvater.rageGap };
+  // M18: Der Zugezogene charges twice the same way on his e-scooter.
+  if (sp.kind === 'charge' && (e.kind === 'ringvater' || e.kind === 'zugezogene') && e.rage && !sp.queued) {
+    e.queue = { kind: 'charge', t: e.kind === 'zugezogene' ? BOSS.zugezogene.rageGap : BOSS.ringvater.rageGap };
     open = 0;
   }
   // Playtest 2026-11-18: in rage the Hauptmann fires a second ring right after the first.
@@ -681,9 +718,10 @@ export function passive(sim: Sim, e: Enemy): void {
       m.facing = m.pfacing = e.facing + Math.PI;
       e.pair = m.id;
     }
-  } else if (e.kind === 'diva') {
+  } else if (e.def.ai === 'diva') {
     // M16 Vorhang at 66 and 33 % life: the tier bursts (one ring, her blades in flight fall), then she stands open.
-    const D = BOSS.diva;
+    // M18: the Sultan's courses (Hauptgang, Nachtisch) the same way.
+    const D = divaOf(e);
     const k = e.still ?? 0;
     if (k < D.tiers.length && e.hp < e.maxHp * D.tiers[k]!) {
       e.still = k + 1;
@@ -692,7 +730,8 @@ export function passive(sim: Sim, e: Enemy): void {
       for (let i = T.length - 1; i >= 0; i--) if (T[i]!.src === e.id) T.splice(i, 1);
       e.queue = { kind: 'roar', t: 0 };
       sim.events.push({ type: 'divaTier', id: e.id, tier: k + 1, x: e.x, z: e.z });
-      if (k + 1 === D.tiers.length) sim.events.push({ type: 'note', text: '„Der Vorhang fällt“', color: '#ff9fd8', x: e.x, z: e.z });
+      if (e.kind === 'sultan') sim.events.push({ type: 'note', text: k === 0 ? '„Hauptgang!“' : '„Nachtisch!“', color: '#f2d14b', x: e.x, z: e.z });
+      else if (k + 1 === D.tiers.length) sim.events.push({ type: 'note', text: '„Der Vorhang fällt“', color: '#ff9fd8', x: e.x, z: e.z });
     }
     // The fans after the first (phase 2: half a gap turned, phase 3: −20°, 0, +20°).
     if (e.fans) {
@@ -796,12 +835,14 @@ export function think(sim: Sim, e: Enemy, dist: number, toX: number, toZ: number
       if (eliteThink(sim, e, e.elite ?? 'brute', dist)) return plan;
       break;
     case 'spitter': {
-      const S = THREAT.spit;
+      // M18 Tee-Ifrit: the same distance, a tea glass instead of the spit.
+      const tea = e.kind === 'teeifrit';
+      const S = tea ? THREAT.tea : THREAT.spit;
       const sight = dist < S.range && sim.flow.clearLine(e.x, e.z, p.x, p.z);
       if (e.elite && sight && eliteThink(sim, e, e.elite, dist)) return plan;
       if (e.cd[1] <= 0 && sight) {
         e.cd[1] = range(sim, S.every);
-        begin(sim, e, 'spit');
+        begin(sim, e, tea ? 'molotov' : 'spit');
         return plan;
       }
       if (dist < S.near) {
@@ -960,7 +1001,7 @@ export function think(sim: Sim, e: Enemy, dist: number, toX: number, toZ: number
     case 'wachdrohne':
     case 'diva': {
       // Keeps the watchtower distance: backs off when the hero comes close, strafes in range (M16: the Diva glides at 4 to 8 m).
-      const G = e.def.ai === 'wachdrohne' ? BOSS.wachdrohne : e.def.ai === 'diva' ? BOSS.diva : BOSS.grenzer;
+      const G = e.def.ai === 'wachdrohne' ? BOSS.wachdrohne : e.def.ai === 'diva' ? divaOf(e) : BOSS.grenzer;
       if (dist < G.near && dist > e.def.attackRange) {
         plan.mode = 'dir';
         plan.x = -ux;
@@ -988,13 +1029,19 @@ function bossThink(sim: Sim, e: Enemy, dist: number): void {
   const sight = (): boolean => sim.flow.clearLine(e.x, e.z, p.x, p.z);
   switch (e.def.ai) {
     case 'feldwebel': {
-      const F = BOSS.feldwebel;
+      const F = e.kind === 'zugezogene' ? BOSS.zugezogene : BOSS.feldwebel;
+      // M18: Der Zugezogene's scooter run is short (the pub is 18 × 13 m).
+      const [c0, c1] = e.kind === 'zugezogene' ? [BOSS.zugezogene.chargeMin, BOSS.zugezogene.chargeMax] : [3, BOSS.charge.range];
       if (e.cd[1] <= 0) {
         e.cd[1] = F.summon;
         begin(sim, e, 'summon');
-      } else if (e.cd[0] <= 0 && dist < BOSS.charge.range && dist > 3 && sight()) {
+      } else if (e.cd[0] <= 0 && dist < c1 && dist > c0 && sight()) {
         e.cd[0] = range(sim, F.charge);
         begin(sim, e, 'charge');
+      } else if (e.kind === 'zugezogene' && e.cd[2] <= 0 && dist < BOSS.zugezogene.volleyRange && sight()) {
+        // M18: his one block of his own, a volley of coffee cups.
+        e.cd[2] = BOSS.zugezogene.volley;
+        begin(sim, e, 'volley');
       }
       break;
     }
@@ -1168,7 +1215,11 @@ function bossThink(sim: Sim, e: Enemy, dist: number): void {
         // Real seconds as in 2D (4.4, in rage 3.2): undo the rage tick rate.
         e.cd[0] = K.cycle[e.rage ? 1 : 0] * (e.rage ? BOSS.rageRate : 1);
         e.cycle++;
-        if (e.cycle % K.addsEvery === 0) summon(sim, e, 'uhrwerk', K.adds);
+        // M18 Bautrupp: the Bauherr calls Brocken (with a note) instead of Uhrwerkläufer.
+        if (e.cycle % K.addsEvery === 0 && e.kind === 'bauherr') {
+          summon(sim, e, 'brute', BOSS.bauherr.adds);
+          sim.events.push({ type: 'note', text: '„Bautrupp!“', color: '#f2d14b', x: e.x, z: e.z });
+        } else if (e.cycle % K.addsEvery === 0) summon(sim, e, 'uhrwerk', K.adds);
         if (e.cycle % 2) begin(sim, e, 'slabs');
         else {
           e.spin = K.spin;
@@ -1243,7 +1294,7 @@ function bossThink(sim: Sim, e: Enemy, dist: number): void {
     }
     case 'diva': {
       // Zugabe, Prismenstrahl, Fächerschlag; phase 3 (two tiers broken) has every cooldown ×0.85.
-      const D = BOSS.diva;
+      const D = divaOf(e);
       const k = (e.still ?? 0) >= 2 ? D.phase3 : 1;
       if (e.cd[2] <= 0) {
         e.cd[2] = D.summon * k;
@@ -1293,7 +1344,7 @@ export function initCooldowns(e: Enemy): void {
     case 'spitter': e.cd = [r(2, 4, 1), r(1.5, 2.5, 2), 0]; break;
     case 'pouncer': e.cd = [r(2, 4, 1), r(1, 2, 2), 0]; break;
     case 'crow': e.cd = [0, r(2, 3.5, 2), 0]; break;
-    case 'feldwebel': e.cd = [3, 6, 0]; break;
+    case 'feldwebel': e.cd = [3, 6, e.kind === 'zugezogene' ? 2.5 : 0]; break;
     case 'waechter': e.cd = [2.5, 5, 3.5]; break;
     case 'rex': e.cd = [3, 6, 2]; break;
     case 'hauptmann': e.cd = [2.5, 4, 6]; break;

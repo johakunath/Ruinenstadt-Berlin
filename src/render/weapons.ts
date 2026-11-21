@@ -881,10 +881,39 @@ function morgen(b: Parts): void {
   ribbon(b, 0.26, 0.24, 0.026);
 }
 
+/**
+ * Die Letzte Bestellung (M18 Wedding, board): an emerald shaft with gold bands, a gold wish lamp as the head (spout,
+ * handle loop, domed lid, a glowing ruby belly band), two tea glasses on chains below it.
+ */
+function bestellung(b: Parts): void {
+  const gold = metal(0xd4a62a), bright = metal(0xf2d14b), glass = plain(0xb83a2a);
+  handle2(b, metal(0x1f6a4a), P.leather);
+  for (const y of [0.12, 0.36, 0.6]) b.add(cyl(0.033, 0.033, 0.02), bright, 0, y, 0);
+  b.add(cyl(0.036, 0.03, 0.06), gold, 0, 0.62, 0);
+  head(b, () => {
+    b.add(scaled(ball(0.11, 14, 10), 1.3, 0.7, 1), gold, 0, 1.08, 0)
+      .add(ring(0.112, 0.012, 5, 18), GLOW, 0, 1.075, 0, Math.PI / 2)
+      .add(cyl(0.05, 0.075, 0.04, 12), gold, 0, 1.15, 0)
+      .add(scaled(ball(0.05, 10, 6), 1, 0.6, 1), bright, 0, 1.15, 0)
+      .add(ball(0.015, 6, 4), GLOW, 0, 1.1875, 0)
+      // The spout to the right, curving up; the handle loop to the left.
+      .add(cone(0.035, 0.18, 8), gold, 0.2, 1.1, 0, 0, 0, -1.15)
+      .add(cyl(0.012, 0.012, 0.03, 6), bright, 0.29, 1.14, 0, 0, 0, -1.4)
+      .add(ring(0.05, 0.012, 5, 12), gold, -0.16, 1.1, 0);
+  });
+  // Two tea glasses on short chains under the lamp (soft: they swing).
+  for (const sx of [-1, 1]) {
+    cord(b, [sx * 0.1, 0.68, 0], [sx * 0.13, 0.56, 0.02], 0.02, 0.004, gold, 3);
+    b.add(cyl(0.022, 0.016, 0.05, 8), glass, sx * 0.13, 0.53, 0.02, 0, 0, 0, true)
+      .add(ring(0.02, 0.004, 4, 10), bright, sx * 0.13, 0.555, 0.02, Math.PI / 2, 0, 0, true);
+  }
+  ribbon(b, 0.26, 0.24, 0.026, plain(0xb02040));
+}
+
 const BUILD: Partial<Record<WeaponLookId, Builder>> = {
   rohr, latte, stahl, machete, brech, vorschlag, pflaster, zange, zwille: (b) => fork(b), nagel, stein, rspeer, fahne, harpune,
   leucht, boxh, neonfl, mikro, sichel, werkh, aufzieh, zeiger,
-  turm, zitklinge, mauer, pbrecher, ring: ringbahn, kraehe, siegsp, morgen,
+  turm, zitklinge, mauer, pbrecher, ring: ringbahn, kraehe, siegsp, morgen, bestellung,
   'brech:kiez': (b) => brech(b, plain(0x3a5a8a), plain(0xe07a2a), 0xdadee2),
   'zange:tunnel': zangeTunnel,
   'zwille:spree': (b) => {
