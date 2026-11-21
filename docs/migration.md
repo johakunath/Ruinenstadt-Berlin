@@ -19,7 +19,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | M16 Charlottenburg step 7 rest: the zone 3 lot types placed by hand (Heckenkabinett, Gartentheater; mockup variant A) | Claude · Opus high | open: `docs/tasks/m16-charlottenburg.md` › Handover step 7 |
 | M16 Charlottenburg step 8 rest: tier calibration with the bot once B2 is decided (C4; tier 32 … 54 and U2 west 41 … 46 are provisional) | Claude · Opus medium | after B2: `docs/tasks/m16-charlottenburg.md` › Handover step 8 |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
-| M18 Wedding, district 6 („kommt bald“, gold banquet): step 1 data and playable blockout; step 2 enemy and boss spec (Fable high) can start now | Claude · Opus high (plan: Fable high, done) | waits for Johannes' pick of layout and look (`docs/mockups/m18-wedding-layouts.svg`, `m18-wedding-look.svg`; recommended A and A): `docs/tasks/m18-wedding.md` |
+| M18 Wedding, district 6 („kommt bald“, gold banquet; layout C2, look A, with the Magendoktor; small scope): step 1 map and step 2 enemies, bosses and loot run as Opus sessions; step 3 sights and finish (U9 line, links) starts when both are merged | Claude · Opus high (plan: Fable high, done) | running: `docs/tasks/m18-wedding.md` |
 
 Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.
 
@@ -55,7 +55,7 @@ Reached 2026-11-18 for Köpenick: map, loot, inventory, save, weapons, powers, b
 | Q3 | Weapon order | Klinge, Hammer, Speer, Werfer |
 | Q4 | 2D saves | Not imported |
 | Q7 | Map size | Concept first, size set by the Tab S9 |
-| Q8 | Districts | Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg, Wedding, Fernsehturm finale. Each redrawn. Wedding is a district again (Johannes, 2026-11-21; M18, `docs/maps/wedding.md`; place in the chain proposed after Charlottenburg, not yet confirmed). Not migrated: Tempelhof, Spandau, Marzahn |
+| Q8 | Districts | Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg, Wedding, Fernsehturm finale. Each redrawn. Wedding is a district again (Johannes, 2026-11-21; M18, `docs/maps/wedding.md`): after Charlottenburg, index 5, U9 from Zoologischer Garten, small scope. Not migrated: Tempelhof, Spandau, Marzahn |
 | Q10 | Parity scope | P1 above: with endless mode and one tunnel; without threat levels and daily fight |
 | Q11 | Camp | Menu first; walkable 3D camp later. Walkable camp built in M20 (2026-11-18): opens with the S3 at Warschauer Straße, stations unlock as build sites |
 

@@ -2,7 +2,7 @@
 
 Copied from the 2D game `johakunath/Ruinenstadt` on 2026-11-15. Code references (`js/...`, `#NN`) point to that repo and its `BACKLOG.md`.
 
-**3D (Johannes, 2026-11-15, migration Q8):** districts are Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg and the Fernsehturm finale. Wedding is a district again (Johannes, 2026-11-21; `docs/maps/wedding.md`, proposed after Charlottenburg). Tempelhof is not migrated; its section stays as reference only.
+**3D (Johannes, 2026-11-15, migration Q8):** districts are Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg and the Fernsehturm finale. Wedding is a district again (Johannes, 2026-11-21; `docs/maps/wedding.md`, after Charlottenburg). Tempelhof is not migrated; its section stays as reference only.
 
 Source of truth for the story backdrop, district eras and the tone of NPCs and art. Story stays light: artefacts, tapes, plaques, one line per NPC, no dialogue trees (see `BACKLOG.md` › Intent). The two discarded directions (B Das Myzel, C Die Kiezfürsten) are at the end for reference.
 
