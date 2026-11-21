@@ -80,12 +80,12 @@ describe('ported hero stats', () => {
     expect(d.attackSpeed).toBe(1 / 1.3);
   });
 
-  it.each([['suppe', 135, 142], ['curry', 12.5, 13], ['kaffee', 1.18, 1.216], ['soljanka', 3, 3.6], ['gurke', 4, 5]] as const)('ports %s and Imbiss level 3', (meal, normal, stronger) => {
+  it.each([['suppe', 120, 124], ['curry', 11.2, 11.44], ['kaffee', 1.1, 1.12], ['soljanka', 1.5, 1.8], ['gurke', 4, 5]] as const)('ports %s and Imbiss level 3', (meal, normal, stronger) => {
     const select = (s: ReturnType<typeof heroStats>): number => meal === 'suppe' ? s.maxHp : meal === 'curry' ? s.damage : meal === 'kaffee' ? s.attackSpeed : meal === 'soljanka' ? s.regen : s.luck;
     expect(select(heroStats(eq(), context({ meal })))).toBeCloseTo(normal);
     expect(select(heroStats(eq(), context({ meal, imbissLevel: 3 })))).toBeCloseTo(stronger);
-    if (meal === 'kaffee') expect(heroStats(eq(), context({ meal, imbissLevel: 3 })).moveSpeed).toBeCloseTo(1.216);
-    if (meal === 'soljanka') expect(heroStats(eq(), context({ meal, imbissLevel: 3 })).res).toBeCloseTo(.12);
+    if (meal === 'kaffee') expect(heroStats(eq(), context({ meal, imbissLevel: 3 })).moveSpeed).toBeCloseTo(1.12);
+    if (meal === 'soljanka') expect(heroStats(eq(), context({ meal, imbissLevel: 3 })).res).toBeCloseTo(.06);
   });
 
   it('clamps positive and negative stats and cooldowns', () => {
@@ -105,9 +105,9 @@ describe('ported hero stats', () => {
     expect(b.damage).toBeCloseTo(62.22 * 1.15); expect(b.attackSpeed).toBeCloseTo(1.16 / 1.3); expect(b.res).toBeCloseTo(.63); expect(b.crit).toBeCloseTo(.13); expect(b.leech).toBe(5);
     // 40*(1+.07+.16+.04)=50.8; HP=round(150*1.15*1.04*1.42)=255; cooldown=.6*.8=.48.
     const c = heroStats(eq({ w: item({ value: 40, element: 'fire', mods: ['batt'] }), a: item({ slot: 'a', kind: 'armor', base: 'mantel', value: 50 }), r: item({ slot: 'r', kind: 'tempo', value: 8, affixes: [{ id: 'cdr', value: 20 }] }) }), context({ upgrades: { dmg: 1, hp: 3 }, perks: { dmg: 2, rate: 1, reach: 2, skill: 2 }, meal: 'suppe', imbissLevel: 3, drill: 2, survivors: { spaeher: true } }));
-    expect(c.damage).toBeCloseTo(50.8); expect(c.maxHp).toBe(255); expect(c.attackSpeed).toBe(1.08); expect(c.moveSpeed).toBe(1.08); expect(c.regen).toBe(.5); expect(c.luck).toBe(1); expect(c.cooldownFactor).toBeCloseTo(.48); expect(c.reachFactor).toBe(1.4);
+    expect(c.damage).toBeCloseTo(50.8); expect(c.maxHp).toBe(222); expect(c.attackSpeed).toBe(1.08); expect(c.moveSpeed).toBe(1.08); expect(c.regen).toBe(.5); expect(c.luck).toBe(1); expect(c.cooldownFactor).toBeCloseTo(.48); expect(c.reachFactor).toBe(1.4);
     // Includes both elements (.18*1.35*.5/.3*2), regen, movement and luck.
-    expect(power(c)).toBe(174);
+    expect(power(c)).toBe(162);
   });
   it('power compares weapon kinds by damage per second, as 2D pwParts', () => {
     const of = (kind: string, value: number): number => power(heroStats({ w: { id: 1, slot: 'w', kind, base: 'x', name: 'x', rarity: 0, value, itemLevel: 1, affixes: [] } }, { upgrades: {}, perks: {}, camp: {}, survivors: {} }));

@@ -24,7 +24,7 @@ export class CampUi {
   /** M20: opened from a station's ring in the walkable camp: only that station, no list. */
   private single = false;
   private msg: Result | null = null;
-  /** Schwarzmarkt: the item whose card is shown. */
+  /** Depot (the stash; Schwarzmarkt until playtest 2026-11-20): the item whose card is shown. */
   private pick: { from: 'bag' | 'stash'; i: number } | null = null;
   private previous: HTMLElement | null = null;
   private padDown: boolean[] = [];
@@ -42,7 +42,7 @@ export class CampUi {
       if (!b) return;
       const d = b.dataset, s = this.sim();
       if (d.close !== undefined) { this.close(); return; }
-      // Schwarzmarkt (playtest 2026-11-18): a tap shows the item's card, a second button moves it.
+      // Depot (playtest 2026-11-18): a tap shows the item's card, a second button moves it.
       if (d.pb !== undefined || d.pf !== undefined) { const pick = { from: d.pb !== undefined ? 'bag' as const : 'stash' as const, i: +(d.pb ?? d.pf!) }; this.pick = this.pick?.from === pick.from && this.pick.i === pick.i ? null : pick; this.render(); return; }
       if (d.ts !== undefined || d.fs !== undefined) this.pick = null;
       if (d.st) { this.sel = d.st as StationId; this.pick = null; this.msg = null; this.render(); this.root.querySelector<HTMLElement>(`[data-st="${d.st}"]`)?.focus(); return; }

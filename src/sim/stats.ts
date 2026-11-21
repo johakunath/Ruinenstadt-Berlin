@@ -124,10 +124,10 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
   if (setCount(eq, 'spree') >= 3) addElement('shock');
   for (const id of ['fire', 'acid', 'shock'] as const) if (pk(id)) addElement(id);
   const mk = (ctx.imbissLevel ?? 0) >= 3 ? 1.2 : 1;
-  if (ctx.meal === 'kaffee') { a.as += 18 * mk; a.spd += 18 * mk; }
-  if (ctx.meal === 'soljanka') { a.regen += 3 * mk; a.res += 10 * mk; }
+  if (ctx.meal === 'kaffee') { a.as += 10 * mk; a.spd += 10 * mk; }
+  if (ctx.meal === 'soljanka') { a.regen += 1.5 * mk; a.res += 5 * mk; }
   if (ctx.meal === 'gurke') a.luck += Math.round(4 * mk);
-  if (ctx.meal === 'curry') a.dmg += 25 * mk;
+  if (ctx.meal === 'curry') a.dmg += 12 * mk;
   // Playtest 2026-11-20 blessing cut (about a third to a half): Kiezwut 15→8 %, Adlerblick 8→5 %, Akkordarbeit 12→8 %,
   // Pulverfass 25→15 % (Husarenritt, Retourkutsche, Jagdfieber and Dicke Bertha in combat and player).
   const asF = Math.max(.4, 1 + .08 * pk('rate') + a.as / 100 + (ctx.shrines?.as ? .3 : 0));
@@ -143,7 +143,7 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
     damage: Math.max(1, w.value * size.damage * (1 + .07 * upg('dmg') + .08 * pk('dmg') + a.dmg / 100 + DRILL.damage * drill) * (pk('m_dampf') && kind === 'hammer' ? 1.7 : 1)
       // G1 Umbau: Sturmklinge and Schnellfeuer trade damage for tempo.
       * (pk('m_sturm') && kind === 'blade' ? .85 : 1) * (pk('m_salve') && kind === 'sling' ? .75 : 1)),
-    maxHp: Math.max(20, Math.round((100 + a.hp) * (1 + .05 * upg('hp') + .1 * pk('hp')) * (1 + DRILL.life * drill) * (ctx.meal === 'suppe' ? 1 + .35 * mk : 1))),
+    maxHp: Math.max(20, Math.round((100 + a.hp) * (1 + .05 * upg('hp') + .1 * pk('hp')) * (1 + DRILL.life * drill) * (ctx.meal === 'suppe' ? 1 + .2 * mk : 1))),
     crit: clamp(.08 + .05 * pk('crit') + a.crit / 100, 0, .75),
     moveSpeed: clamp(1 + .1 * pk('spd') + a.spd / 100 + (ctx.shrines?.spd ? .25 : 0), .5, 1.8),
     attackSpeed: asF / (pk('m_dampf') && kind === 'hammer' ? 1.3 : 1) * (pk('m_sturm') && kind === 'blade' ? 1.25 : 1) * (pk('m_salve') && kind === 'sling' ? 1.4 : 1),

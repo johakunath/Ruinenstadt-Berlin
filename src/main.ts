@@ -155,7 +155,20 @@ const dmgNums = new DamageNumbers();
 const lootWarn = document.getElementById('lootwarn') as HTMLDivElement;
 const lootChip = document.getElementById('loot-chip') as HTMLButtonElement;
 const exitChip = document.getElementById('exit-chip') as HTMLButtonElement;
-exitChip.addEventListener('click', () => showWon());
+/** Playtest 2026-11-20: Abschließen sits in the middle while the freed map is explored; one confirm. */
+let exitArmed = 0;
+exitChip.addEventListener('click', () => {
+  if (exitArmed > 0) { exitArmed = 0; exitChip.classList.remove('armed'); exitChip.textContent = 'Abschließen'; showWon(); return; }
+  exitArmed = 3;
+  exitChip.classList.add('armed');
+  exitChip.textContent = 'Wirklich abschließen?';
+});
+/** The way out returns once the loot search ends (it stayed hidden before: playtest 2026-11-20). */
+function endLootSearch(): void {
+  lootExit = 'off';
+  lootChip.hidden = true;
+  if (phase === 'play' && sim.run.phase === 'won' && sim.player.state !== 'dead') exitChip.hidden = false;
+}
 
 function finishLootExit(leave: boolean): void {
   lootWarn.hidden = true;
@@ -191,14 +204,13 @@ function pollLootPad(): void {
     else if (edge(0)) (document.activeElement === leave ? leave : find).click();
     else if (edge(1)) finishLootExit(false);
   } else if (lootExit === 'search' && edge(8)) {
-    lootExit = 'off';
-    lootChip.hidden = true;
+    endLootSearch();
   }
   lootPadDown = down;
 }
 document.getElementById('loot-find')!.addEventListener('click', () => finishLootExit(false));
 document.getElementById('loot-leave')!.addEventListener('click', () => finishLootExit(true));
-lootChip.addEventListener('click', () => { lootExit = 'off'; lootChip.hidden = true; });
+lootChip.addEventListener('click', () => endLootSearch());
 window.addEventListener('keydown', (e) => {
   if (lootExit === 'ask' && e.key === 'Escape') {
     e.preventDefault();
@@ -962,11 +974,11 @@ function frame(now: number): void {
     wonFor += dt;
     if (wonFor > WON_DELAY && !abilitiesUi.open && !menu.isOpen) showWon();
   }
+  if (exitArmed > 0 && (exitArmed -= dt) <= 0) { exitArmed = 0; exitChip.classList.remove('armed'); exitChip.textContent = 'Abschließen'; }
   if (lootExit === 'search') {
     const left = importantDrops(sim).length;
     if (left === 0) {
-      lootExit = 'off';
-      lootChip.hidden = true;
+      endLootSearch();
     } else {
       lootChip.hidden = false; exitChip.hidden = true;
       document.getElementById('loot-n')!.textContent = String(left);

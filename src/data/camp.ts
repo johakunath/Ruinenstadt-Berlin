@@ -35,7 +35,7 @@ export const STATIONS: readonly StationDef[] = [
     { text: 'Funkkontakt zur Kiezwache' },
     { text: 'Funkmast: ein Ereignis mehr pro Expedition', camp: 'funk', cost: { scrap: 240, kabel: 5, metall: 2 } },
     { text: 'Händler bieten ein Teil mehr an', cost: { scrap: 600, kabel: 8, metall: 4 } }] },
-  { id: 'markt', name: 'Schwarzmarkt', npc: 'kurier', line: '„Alles da. Fragen kostet extra.“', levels: [
+  { id: 'markt', name: 'Depot', npc: 'kurier', line: '„Was du nicht trägst, pass ich auf.“', levels: [
     { text: 'Lager mit 40 Plätzen' },
     { text: 'Lagerhalle: +20 Plätze', camp: 'halle', cost: { scrap: 200, stoff: 3, metall: 3 } },
     { text: 'Nochmal +20 Plätze', cost: { scrap: 500, stoff: 6, metall: 6 } }] },

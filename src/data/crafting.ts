@@ -140,14 +140,14 @@ export const ENEMY_INGREDIENT_DROPS: Readonly<Partial<Record<EnemyKind, Ingredie
   shield: 'gemuese',
 };
 
-/** 2D MEALS. */
+/** 2D MEALS; effects roughly halved after the playtest of 2026-11-20 (too strong). */
 export const MEALS: readonly MealDefinition[] = [
-  { id: 'suppe', name: 'Erbsensuppe', description: '+35% Leben', costs: { gemuese: 3 } },
-  { id: 'curry', name: 'Currywurst', description: '+25% Schaden', costs: { fleisch: 2, gewuerz: 1 } },
-  { id: 'kaffee', name: 'Filterkaffee', description: '+18% Angriffs- und Lauftempo', costs: { gewuerz: 2 } },
+  { id: 'suppe', name: 'Erbsensuppe', description: '+20% Leben', costs: { gemuese: 3 } },
+  { id: 'curry', name: 'Currywurst', description: '+12% Schaden', costs: { fleisch: 2, gewuerz: 1 } },
+  { id: 'kaffee', name: 'Filterkaffee', description: '+10% Angriffs- und Lauftempo', costs: { gewuerz: 2 } },
   { id: 'soljanka',
     name: 'Soljanka',
-    description: '+3 Leben pro Sekunde, +10% Widerstand',
+    description: '+1,5 Leben pro Sekunde, +5% Widerstand',
     costs: { fleisch: 2, gemuese: 2 } },
   { id: 'gurke',
     name: 'Spreewaldgurken',
