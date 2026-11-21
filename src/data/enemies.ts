@@ -410,6 +410,8 @@ export function lateTier(g: number): { hp: number; count: number } {
  * index, Köpenick 0, also the tunnels by their line).
  */
 export const DISTRICT_STEP = { hp: 0.3, dmg: 0.25 } as const;
+/** Share of the damage step that district bosses take. */
+export const BOSS_DMG_STEP = 0.4;
 export const districtScale = (district: number): { hp: number; dmg: number } => ({ hp: 1 + DISTRICT_STEP.hp * Math.max(0, district), dmg: 1 + DISTRICT_STEP.dmg * Math.max(0, district) });
 
 /**

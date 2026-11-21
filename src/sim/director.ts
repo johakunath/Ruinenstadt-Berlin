@@ -1,4 +1,4 @@
-import { districtScale } from '../data/enemies';
+import { BOSS_DMG_STEP, districtScale } from '../data/enemies';
 import { offerBlessings } from './blessings';
 // Encounter director for expedition maps (migration Q1): the player walks a route and fights at
 // fixed places. Entering the current encounter's circle starts it; waves spawn on its rim until
@@ -189,7 +189,10 @@ export function updateDirector(sim: Sim): void {
       // Nothing comes out until it stands.
     } else if (boss) {
       const s = enc.bossAt ?? rimSpot(sim, enc, ENEMIES[boss].radius);
-      const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp * districtScale(sim.level.strength).hp, w.dmgMul * df.dmg * districtScale(sim.level.strength).dmg);
+      // Bosses take the full life step but 40 % of the damage step (verification chains: the Spreehexe killed a weaker
+      // bot 12 times with the full step while normal fights stayed easy).
+      const ds = districtScale(sim.level.strength);
+      const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp * ds.hp, w.dmgMul * df.dmg * (1 + (ds.dmg - 1) * BOSS_DMG_STEP));
       // It stands where the landmark stood: the landmark's colliders leave until it dies.
       if (enc.bossAt) {
         e.home = { x: s.x, z: s.z };
