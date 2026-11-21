@@ -16,6 +16,7 @@
 // Diva (fans, prism rays, gown tiers).
 import { BOSS, ENEMIES, THREAT, type EliteMod, type EnemyKind } from '../data/enemies';
 import { freeSpot } from './reach';
+import { inRoom } from './level';
 import { addHazard, addZone, fireShot, laserVolley, pushPlayer, threatHit, type Special, type SpecialKind } from './threats';
 import { DEG } from './math';
 import { PLAYER } from '../data/combat';
@@ -503,8 +504,11 @@ export function summon(sim: Sim, e: Enemy, kind: EnemyKind, count: number): void
   // M12c: kinds with a cap (Boxenkopf) never go past it.
   const cap = ENEMIES[kind].cap;
   const n = Math.min(count, BOSS.summon.maxAdds - alive, cap === undefined ? Infinity : cap - aliveOf(sim, kind));
+  // M18 walk-in room (Codex review of PR 81): a boss inside its encounter's room calls its adds inside the walls too.
+  const room = e.enc === undefined ? undefined : sim.level.encounters[e.enc]?.room;
+  const inside = room && inRoom(room, e.x, e.z) ? (x: number, z: number): boolean => inRoom(room, x, z, ENEMIES[kind].radius + 0.1) : undefined;
   for (let i = 0; i < n; i++) {
-    const q = freeSpot(sim.level, sim.rng, e.x, e.z, e.def.radius + 0.6, e.def.radius + BOSS.summon.spread, ENEMIES[kind].radius + 0.1) ?? { x: e.x, z: e.z };
+    const q = freeSpot(sim.level, sim.rng, e.x, e.z, e.def.radius + 0.6, e.def.radius + BOSS.summon.spread, ENEMIES[kind].radius + 0.1, inside) ?? { x: e.x, z: e.z };
     // A boss's adds belong to its fight (`Enemy.enc`).
     spawnEnemy(sim, q.x, q.z, kind, e.hpMul, e.dmgMul).enc = e.enc;
   }

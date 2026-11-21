@@ -548,6 +548,12 @@ export function charlottenburgMap(scale = 1): MapDef {
     strictLots: true,
     // Step 7 (variant A): two lot types per street zone, still few, so the Blockrand rows keep the street fronts.
     specialMax: { droschkenplatz: 1, passage: 1, kinovorplatz: 2, jazzhof: 1, hinterhof: 2, truemmer: 2 },
+    // Step 7 zone 3 (Mondnacht, variant A): placed by hand east of the maze and south of the Karpfenteich,
+    // both off the route and off the fight circles; the open side faces the camera.
+    specialLots: [
+      { special: 'heckenkabinett', x: M.x + 61, z: M.z - 3, rot: 0, w: 17, d: 14 },
+      { special: 'gartentheater', x: -84 * s, z: -163 * s, rot: 0, w: 18, d: 11 },
+    ],
     viaducts,
     walls,
     hiddenSpots: [endOf('Hinterhof Bleibtreustraße', 1.2, 0), { x: M.x + R6.blessing[0], z: M.z + R6.blessing[1] }],

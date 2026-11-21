@@ -311,6 +311,36 @@ test('M16: Charlottenburg loads on the platform of Bahnhof Zoo, the hero walks d
   expect(errors).toEqual([]);
 });
 
+test('M18: Wedding loads at U Leopoldplatz, the market fight starts, the pub brawl runs inside the room, the map opens', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=wedding&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Wochenmarkt');
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; });
+  await page.waitForFunction(() => window.__game!.sim().run.phase === 'fight', null, { timeout: 90_000 });
+  // E2: jump to the Magendoktor fight and stand in the room; its first bodies appear inside the walls.
+  const pub = await page.evaluate(() => {
+    const g = window.__game!, s = g.sim(), i = s.level.encounters.findIndex((e) => e.id === 'magendoktor'), e = s.level.encounters[i]!;
+    for (const q of s.enemies) { q.state = 'dead'; q.hp = 0; }
+    s.run.index = i;
+    s.run.phase = 'travel';
+    s.player.x = s.player.px = e.x + 1;
+    s.player.z = s.player.pz = e.z;
+    s.player.invuln = 1e9;
+    g.hold(true);
+    for (let k = 0; k < 600; k++) g.step({ moveX: 0, moveZ: 0 }, 1);
+    g.hold(false);
+    const mine = s.enemies.filter((q) => q.state !== 'dead' && q.enc === i);
+    return { phase: s.run.phase, n: mine.length, inside: mine.every((q) => Math.abs(q.x - e.x) < 9 && Math.abs(q.z - e.z) < 6.5) };
+  });
+  expect(pub.phase).toBe('fight');
+  expect(pub.n).toBeGreaterThan(0);
+  expect(pub.inside).toBe(true);
+  await page.keyboard.press('m');
+  await expect(page.locator('.map-svg svg')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('H1: the inventory doll shows the live hero and turns her on drag and keys', async ({ page }, testInfo) => {
   const errors = watchErrors(page);
   await page.goto('/?map=hof&profile=Leistung&seed=7&autostart');

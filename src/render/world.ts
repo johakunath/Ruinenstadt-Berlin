@@ -1,7 +1,7 @@
 // Builds the Köpenick courtyard from `src/data/courtyard.ts`: facades, Späti, props, lights.
 // Everything is code-built geometry with painted textures (plan-3d.md › Style: closing the gap).
 import {
-  BoxGeometry, BufferAttribute, CircleGeometry, Euler, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide,
+  BoxGeometry, BufferAttribute, CircleGeometry, Euler, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide, OctahedronGeometry,
   Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
@@ -221,9 +221,10 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
     bin: m.surface({ map: paintMetal('#3d5550', o, 37, 0.5).map, roughness: 0.7, vertexColors: true }),
     burlap: m.surface({ map: paintCloth('#9a8560', o).map, roughness: 0.95, vertexColors: true }),
     awning: m.surface({ map: paintAwning(o).map, roughness: 0.9, doubleSided: true }),
-    vanSide: m.surface({ map: paintVan('side', o).map, roughness: 0.55, metalness: 0.15 }),
-    vanFront: m.surface({ map: paintVan('front', o).map, roughness: 0.55, metalness: 0.15 }),
-    vanRoof: m.surface({ map: paintVan('roof', o).map, roughness: 0.6, metalness: 0.15 }),
+    // The BVG midibus reads lighter than its dirty picture (Johannes 2026-11-21): the base colour lifts the map.
+    vanSide: lighter(m.surface({ map: paintVan('side', o).map, roughness: 0.55, metalness: 0.15 })),
+    vanFront: lighter(m.surface({ map: paintVan('front', o).map, roughness: 0.55, metalness: 0.15 })),
+    vanRoof: lighter(m.surface({ map: paintVan('roof', o).map, roughness: 0.6, metalness: 0.15 })),
     rubber: m.surface({ color: 0x1a1816, roughness: 0.95 }),
     lampGlass: m.surface({ color: 0x40280f, emissive: 0xffb057, emissiveIntensity: 2.6, roughness: 0.4 }),
     coals: m.surface({ color: 0x2a0d05, emissive: 0xff6a1a, emissiveIntensity: 2.5, roughness: 1 }),
@@ -679,6 +680,42 @@ export function at(p: Prop, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0): Matrix
 let propEra: 1920 | null = null;
 export function setPropEra(era: 1920 | null): void { propEra = era; }
 
+/** A material whose base colour lifts its map (the BVG midibus, lighter yellow). */
+function lighter<T extends { color: Color }>(mat: T): T {
+  mat.color.setRGB(1.32, 1.26, 1.14);
+  return mat;
+}
+
+/** The BVG midibus wreck (`van`): 8 m long (was 5.5), the axles under the painted wheel arches. */
+export const VAN = { len: 7.99, axle: 3.07 } as const;
+/**
+ * Side of the midibus: the van picture (1024 px for 5.5 m) cut at its window bays, with the second bay (px 290 … 522)
+ * repeated twice: [0, 522] + 2 × [290, 522] + [522, 1024] along the plane's +x, centred, 2.25 m high.
+ */
+const VAN_SIDE = ((): BufferGeometry => {
+  const px = 5.5 / 1024, cuts: Array<[number, number]> = [[0, 522], [290, 522], [290, 522], [522, 1024]];
+  const pos: number[] = [], uv: number[] = [], nor: number[] = [], idx: number[] = [];
+  let x = -VAN.len / 2;
+  for (const [a, c] of cuts) {
+    const w = (c - a) * px, k = pos.length / 3;
+    for (const [dx, y, u, v] of [[0, -1.125, a, 0], [w, -1.125, c, 0], [w, 1.125, c, 1], [0, 1.125, a, 1]] as const) { pos.push(x + dx, y, 0); uv.push(u / 1024, v); nor.push(0, 0, 1); }
+    idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
+    x += w;
+  }
+  const g = new PlaneGeometry(1, 1);
+  g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
+  g.setAttribute('normal', new BufferAttribute(new Float32Array(nor), 3));
+  g.setIndex(idx);
+  return g;
+})();
+
+/** M18 lampion chain parts, shared by every chain. */
+const POLE = new CylinderGeometry(0.05, 0.07, 4.9, 6);
+const LAMPION = new OctahedronGeometry(1, 0).scale(0.2, 0.27, 0.2);
+const CORD = new PlaneGeometry(1, 0.035).rotateX(-Math.PI / 2);
+const HALO_CARD = new PlaneGeometry(0.75, 0.75);
+
 export function buildProp(b: Builder, p: Prop, rng: Rng): void {
   const m = b.mats;
   if (propEra === 1920) {
@@ -725,6 +762,33 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       }
       // Pool stretched along the line (across the street), no halo: many small bulbs instead.
       b.light(new Vector3(p.x, 3.6, p.z), 0xffc890, 16, 11, 0.04, 4.5, { yaw: p.rot + Math.PI / 2, stretch: 1.8 });
+      break;
+    }
+    case 'lampions': {
+      // M18 Wedding (E4): a chain of paper lampions across the street at about 4.5 m between two poles at the
+      // curbs. No light per lampion: one pooled spot per chain, the bodies are 8-triangle octahedra on the
+      // emissive lamp batch, each with one 2-triangle halo card in the chunk's glow batch, the cord a flat strip.
+      const half = p.size / 2, teal = Math.abs(Math.round(p.x * 3.1 + p.z * 1.7)) % 6 === 0, color = teal ? 0x5fd8c8 : 0xffc890;
+      for (const x of [-half, half]) b.geo(m.iron, POLE, at(p, x, 2.45, 0), [0.55, 0.5, 0.45]);
+      b.light(new Vector3(p.x, 3.7, p.z), color, 16, 11, 0.05, 4.5, { yaw: p.rot + Math.PI / 2, stretch: 1.8 });
+      const glows = (b as Builder & { glows?: BatchSet; glowMaterial?(c: number): Material | undefined }), card = glows.glowMaterial?.(color);
+      const n = Math.max(8, Math.min(14, Math.round(p.size / 1.3)));
+      const sag = (u: number): number => 4.75 - 1.0 * 4 * u * (1 - u);
+      for (let i = 0; i <= n; i++) {
+        const u = i / n, x = -half + u * p.size, y = sag(u);
+        if (i < n) {
+          const x2 = -half + ((i + 1) / n) * p.size, y2 = sag((i + 1) / n);
+          b.geo(m.iron, CORD, at(p, (x + x2) / 2, (y + y2) / 2, 0, 0, 0, Math.atan2(y2 - y, x2 - x)).multiply(tmpScale.makeScale(Math.hypot(x2 - x, y2 - y), 1, 1)), [0.35, 0.3, 0.28]);
+        }
+        if (i === 0 || i === n) continue;
+        const k = (i * 7 + Math.round(p.x)) % 5;
+        const tint: RGB = teal ? [0.5, 1.7, 1.6] : k === 0 ? [1.9, 0.5, 0.35] : k === 3 ? [1.7, 1.35, 0.6] : [1.95, 1.05, 0.42];
+        b.geo(m.lampGlass, LAMPION, at(p, x, y - 0.32, 0, 0, i * 0.7, 0), tint);
+        if (card && glows.glows) {
+          const w = at(p, x, y - 0.32, 0), pos = new Vector3().setFromMatrixPosition(w);
+          glows.glows.of(card).add(HALO_CARD, new Matrix4().makeRotationX(-0.77).setPosition(pos));
+        }
+      }
       break;
     }
     case 'stormLantern': {
@@ -776,33 +840,33 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       break;
     }
     case 'van': {
-      // Body sunk on flat tires, nose down.
-      const tilt = at(p, 0, 0, 0, 0.025, 0, 0.03);
+      // The BVG midibus wreck (Johannes 2026-11-21: longer and lighter): body sunk on flat tires, nose down. The side
+      // is the 4-window van picture with two more window bays from its middle (VAN.len, wheels stay at the arches).
+      const tilt = at(p, 0, 0, 0, 0.025, 0, 0.03), L = VAN.len, hl = L / 2;
       const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
-      const side = new PlaneGeometry(5.5, 2.25);
-      b.geo(m.vanSide, side, part(1.1, 1.42, 0).multiply(new Matrix4().makeRotationY(Math.PI / 2)));
-      b.geo(m.vanSide, side, part(-1.1, 1.42, 0).multiply(new Matrix4().makeRotationY(-Math.PI / 2)));
+      b.geo(m.vanSide, VAN_SIDE, part(1.1, 1.42, 0).multiply(new Matrix4().makeRotationY(Math.PI / 2)));
+      b.geo(m.vanSide, VAN_SIDE, part(-1.1, 1.42, 0).multiply(new Matrix4().makeRotationY(-Math.PI / 2)));
       const end = new PlaneGeometry(2.2, 2.25);
-      b.geo(m.vanFront, end, part(0, 1.42, 2.75));
-      b.geo(m.vanFront, end, part(0, 1.42, -2.75).multiply(new Matrix4().makeRotationY(Math.PI)));
-      b.geo(m.vanRoof, new PlaneGeometry(2.2, 5.5), part(0, 2.545, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)));
-      b.box(m.rubber, part(0, 0.28, 0), 2.1, 0.3, 5.3);
-      b.box(m.iron, part(0, 0.42, 2.82), 2.3, 0.22, 0.16);
-      b.box(m.iron, part(0, 0.42, -2.82), 2.3, 0.22, 0.16);
+      b.geo(m.vanFront, end, part(0, 1.42, hl));
+      b.geo(m.vanFront, end, part(0, 1.42, -hl).multiply(new Matrix4().makeRotationY(Math.PI)));
+      b.geo(m.vanRoof, new PlaneGeometry(2.2, L), part(0, 2.545, 0).multiply(new Matrix4().makeRotationX(-Math.PI / 2)));
+      b.box(m.rubber, part(0, 0.28, 0), 2.1, 0.3, L - 0.2);
+      b.box(m.iron, part(0, 0.42, hl + 0.07), 2.3, 0.22, 0.16);
+      b.box(m.iron, part(0, 0.42, -hl - 0.07), 2.3, 0.22, 0.16);
       const wheel = new CylinderGeometry(0.42, 0.42, 0.28, 12);
-      for (const [x, z] of [[1.0, 1.75], [-1.0, 1.75], [1.0, -1.75], [-1.0, -1.75]] as Array<[number, number]>) {
+      for (const [x, z] of [[1.0, VAN.axle], [-1.0, VAN.axle], [1.0, -VAN.axle], [-1.0, -VAN.axle]] as Array<[number, number]>) {
         b.geo(m.rubber, wheel, part(x, 0.36, z).multiply(new Matrix4().makeRotationZ(Math.PI / 2)));
       }
-      b.shadowBox(part(0, 1.3, 0), 2.2, 2.5, 5.5);
+      b.shadowBox(part(0, 1.3, 0), 2.2, 2.5, L);
       const ivyGeo = new PlaneGeometry(1, 1);
       for (let i = 0; i < 12; i++) {
         const g = rng.range(0.6, 1);
-        b.cards.of(m.ivy).add(ivyGeo, part(rng.range(-1.0, 1.0), 2.6 + rng.range(-0.02, 0.1), rng.range(-2.7, -0.9)).multiply(new Matrix4().makeRotationX(-Math.PI / 2 + rng.range(-0.4, 0.4))).multiply(tmpScale.makeScale(1.1, 1.1, 1)), [g * 0.9, g, g * 0.7]);
+        b.cards.of(m.ivy).add(ivyGeo, part(rng.range(-1.0, 1.0), 2.6 + rng.range(-0.02, 0.1), rng.range(-hl + 0.3, -1.3)).multiply(new Matrix4().makeRotationX(-Math.PI / 2 + rng.range(-0.4, 0.4))).multiply(tmpScale.makeScale(1.1, 1.1, 1)), [g * 0.9, g, g * 0.7]);
       }
       for (let i = 0; i < 18; i++) {
         const g = rng.range(0.6, 1);
         const sideX = rng.next() < 0.5 ? 1.14 : -1.14;
-        b.cards.of(m.ivy).add(ivyGeo, part(sideX, rng.range(1.4, 2.6), rng.range(-2.7, -0.8)).multiply(new Matrix4().makeRotationY(sideX > 0 ? Math.PI / 2 : -Math.PI / 2)).multiply(tmpScale.makeScale(1, 1, 1)), [g * 0.9, g, g * 0.7]);
+        b.cards.of(m.ivy).add(ivyGeo, part(sideX, rng.range(1.4, 2.6), rng.range(-hl + 0.3, -1.2)).multiply(new Matrix4().makeRotationY(sideX > 0 ? Math.PI / 2 : -Math.PI / 2)).multiply(tmpScale.makeScale(1, 1, 1)), [g * 0.9, g, g * 0.7]);
       }
       break;
     }
@@ -1073,7 +1137,7 @@ function buildGreens(b: Builder): void {
   for (const p of COURTYARD.props) {
     if (p.kind !== 'van' && p.kind !== 'rubble' && p.kind !== 'lantern') continue;
     const n = p.kind === 'van' ? 16 : 5;
-    const r = p.kind === 'van' ? 3 : p.kind === 'rubble' ? p.size * 1.2 : 0.5;
+    const r = p.kind === 'van' ? 4 : p.kind === 'rubble' ? p.size * 1.2 : 0.5;
     for (let i = 0; i < n; i++) {
       const a = rng.range(0, Math.PI * 2);
       tuft(p.x + Math.cos(a) * r * rng.range(0.8, 1.1), p.z + Math.sin(a) * r * rng.range(0.6, 1.1), rng.range(0.45, 0.9));
