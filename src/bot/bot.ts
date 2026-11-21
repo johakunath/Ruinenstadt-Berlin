@@ -526,6 +526,8 @@ export interface CampaignReport {
   time: number;
   deaths: number;
   kills: number;
+  /** Item drops that appeared (enemies, chests, breakables), over all tries. */
+  items: number;
   encounters: EncounterReport[];
   /** Where it ended when not won. */
   stuckAt: string;
@@ -567,10 +569,13 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   let fightStart = -1, fightDamage = 0, fightLow = 1, fightIndex = -1;
   let idleT = 0, lastIndex = -1, quietT = 0;
   let won = false;
+  const seenDrops = new Set<number>();
+  let items = 0;
   while (time < maxTime) {
     bot.manage();
     stepSim(sim, bot.input());
     time += DT;
+    for (const d of sim.drops) if (d.content.kind === 'item' && !seenDrops.has(d.id)) { seenDrops.add(d.id); items++; }
     const p = sim.player;
     for (const ev of sim.events) {
       if (ev.type === 'encounterStart') {
@@ -608,6 +613,7 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
       if (deaths >= maxDeaths) break;
       const zone = level.encounters[at]!.zone;
       const prof = profileOf(sim);
+      seenDrops.clear();
       sim = createSim({ level, seed: ++seed, difficulty: sim.difficulty, startAt: level.encounters.findIndex((e) => e.zone === zone), equipment: prof.equipment, statContext: prof.statContext, inventory: prof.inventory });
       bot = new Bot(sim, bot.skill, seed);
       fightIndex = -1;
@@ -616,5 +622,5 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   kills += sim.kills;
   const at = Math.min(sim.run.index, level.encounters.length - 1);
   endExpedition(sim, won, o.district ?? 0);
-  return { profile: profileOf(sim), won, time, deaths, kills, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
+  return { profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }

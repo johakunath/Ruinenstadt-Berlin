@@ -4,8 +4,9 @@
 // Alexanderplatz; the camp is at S+U Warschauer Straße in Xhain (district 1). A cleared line is stored in
 // `camp.freed` as LINE_FREED + k (M19). M16 (decision C3): line 3 is the U2 running on from U Potsdamer
 // Platz to S+U Zoologischer Garten (ghost station Bülowstraße), so lines 2 and 3 both carry the U2 badge
-// (ids are labels only); Charlottenburg sits west of Mitte on the schematic. Stops 5 and 6 and lines 4 and 5
-// are still the 2D ones (C5 proposes the Fernsehturm finale instead).
+// (ids are labels only); Charlottenburg sits west of Mitte on the schematic and ends the network: Spandau
+// and Marzahn (2D stops 5 and 6, lines U7 and S5) are gone (Johannes, 2026-11-20); the schematic is scaled
+// by 1.4 about its middle to fill the board.
 export interface LineDef {
   /** Badge: S3, U8, ... */
   readonly id: string;
@@ -20,31 +21,25 @@ export const LINES: readonly LineDef[] = [
   { id: 'U8', color: '#224f86', ghost: 'Heinrich-Heine-Straße' },
   { id: 'U2', color: '#da421e', ghost: 'Klosterstraße' },
   { id: 'U2', color: '#da421e', ghost: 'Bülowstraße' },
-  { id: 'U7', color: '#528dba', ghost: 'Mierendorffplatz' },
-  { id: 'S5', color: '#e3801c', ghost: 'Biesdorf' },
 ];
 
 /** Districts on the network map. `map`: the 3D page that plays it (`?map=`), absent while it is not built. */
 export interface NetStop { readonly name: string; readonly station: string; readonly map?: string; readonly at: readonly [number, number] }
 export const STOPS: readonly NetStop[] = [
-  { name: 'Köpenick', station: 'S Köpenick', map: 'koepenick', at: [340, 190] },
-  { name: 'Xhain', station: 'S+U Warschauer Straße', map: 'xhain', at: [250, 140] },
-  { name: 'Alexanderplatz', station: 'U Alexanderplatz', map: 'alex', at: [215, 90] },
-  { name: 'Mitte', station: 'U Potsdamer Platz', map: 'mitte', at: [165, 115] },
-  { name: 'Charlottenburg', station: 'S+U Zoologischer Garten', at: [105, 150] },
-  { name: 'Spandau', station: 'U Rathaus Spandau', at: [45, 120] },
-  { name: 'Marzahn', station: 'S Marzahn', at: [330, 60] },
+  { name: 'Köpenick', station: 'S Köpenick', map: 'koepenick', at: [364, 205] },
+  { name: 'Xhain', station: 'S+U Warschauer Straße', map: 'xhain', at: [238, 135] },
+  { name: 'Alexanderplatz', station: 'U Alexanderplatz', map: 'alex', at: [189, 65] },
+  { name: 'Mitte', station: 'U Potsdamer Platz', map: 'mitte', at: [119, 100] },
+  { name: 'Charlottenburg', station: 'S+U Zoologischer Garten', at: [35, 149] },
 ];
-/** Line routes (45° schematic, viewBox 400 × 250) and badge positions, as in 2D. */
+/** Line routes (45° schematic, viewBox 400 × 250) and badge positions, 2D's scaled by 1.4. */
 export const NET_ROUTES: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
-  [[340, 190], [300, 190], [250, 140]],
-  [[250, 140], [250, 125], [215, 90]],
-  [[215, 90], [190, 90], [165, 115]],
-  [[165, 115], [130, 150], [105, 150]],
-  [[105, 150], [80, 125], [50, 125], [45, 120]],
-  [[45, 120], [45, 40], [310, 40], [330, 60]],
+  [[364, 205], [308, 205], [238, 135]],
+  [[238, 135], [238, 114], [189, 65]],
+  [[189, 65], [154, 65], [119, 100]],
+  [[119, 100], [70, 149], [35, 149]],
 ];
-export const NET_BADGES: ReadonlyArray<readonly [number, number]> = [[301, 202], [265, 120], [193, 76], [160, 147], [68, 113], [180, 32]];
+export const NET_BADGES: ReadonlyArray<readonly [number, number]> = [[309, 222], [259, 107], [158, 45], [112, 145]];
 
 /** `camp.freed` holds districts (0 Köpenick) and cleared lines as LINE_FREED + k. */
 export const LINE_FREED = 100;
