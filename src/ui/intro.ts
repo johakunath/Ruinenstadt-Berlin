@@ -16,6 +16,8 @@ const controls = (): string => matchMedia('(pointer: coarse)').matches
   : '<b>WASD</b> laufen, <b>Maus</b> zielt.<br><b>Linksklick</b> Schlag · <b>Leertaste</b> Rolle · <b>E</b> Kraft.<br>Controller: <b>A</b> Schlag · <b>B</b> Rolle · <b>Y</b> Kraft.';
 export const TUTORIALS = {
   loot: ['Neue Ausrüstung', 'Liegt jetzt im Rucksack. <b>Pause</b> öffnet das Inventar: Teil antippen, <b>Anlegen</b>. ▲ heißt stärker.'],
+  // Johannes 2026-11-21: the first time life drops to a quarter the game pauses and teaches the roll.
+  dodge: ['Ausweichen!', 'Wenig Leben. <b>Rolle</b> in eine Richtung, weg vom Gegner: du bist kurz unverwundbar. Rote Flächen am Boden zeigen, wo es gleich trifft.<br><small>Touch: Rolle-Knopf · Tastatur: Leertaste · Controller: B</small>'],
   perk: ['Segen', 'Nach jedem Kampf wählst du 1 von 3. Gilt nur für diese Expedition. Gleiche Familien kommen öfter, zwei Familien öffnen einen Doppelsegen.'],
 } as const;
 export type TipId = keyof typeof TUTORIALS | 'intro';

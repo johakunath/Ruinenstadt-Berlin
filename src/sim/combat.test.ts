@@ -160,3 +160,29 @@ describe('Glas splittert (M16, MapDef.shards)', () => {
     expect(c.lootCtx.flavor).toBeUndefined();
   }, 30000);
 });
+
+describe('first steps in Köpenick (Johannes 2026-11-21)', () => {
+  const novice = (freed: number[], index: number): Sim => {
+    const sim = createSim({ empty: true, seed: 3 });
+    sim.level.mapId = 'koepenick';
+    sim.inventory.camp = { stations: {}, stash: [], freed };
+    sim.run.index = index;
+    return sim;
+  };
+  it('the first two fights hurt less and never kill', () => {
+    const sim = novice([], 0);
+    const max = sim.stats.maxHp;
+    for (let i = 0; i < 40; i++) { sim.player.invuln = 0; hurtPlayer(sim, null, max * 0.3, 1, 0); }
+    expect(sim.player.state).not.toBe('dead');
+    expect(sim.player.hp).toBeGreaterThanOrEqual(max * 0.08 - 1e-6);
+  });
+  it('the first boss hits softer; after Köpenick is freed it is the normal game', () => {
+    const a = novice([], 3), b = novice([0], 3);
+    hurtPlayer(a, null, 20, 1, 0);
+    hurtPlayer(b, null, 20, 1, 0);
+    expect(a.stats.maxHp - a.player.hp).toBeCloseTo((b.stats.maxHp - b.player.hp) * 0.75, 5);
+    const c = novice([0], 0);
+    for (let i = 0; i < 40; i++) { c.player.invuln = 0; hurtPlayer(c, null, c.stats.maxHp * 0.3, 1, 0); }
+    expect(c.player.state).toBe('dead');
+  });
+});

@@ -152,7 +152,13 @@ const MAT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.08 };
  * and breakable item chances are scaled down in tunnels. Bosses keep their drops.
  */
 export const TUNNEL_ITEMS = 0.55;
-const itemRate = (sim: Sim): number => ECONOMY.items * (sim.level.tunnel ? TUNNEL_ITEMS : 1);
+/**
+ * Johannes 2026-11-21: the first run through Köpenick (until it is freed) drops more, so a new player
+ * has gear on and Schrott for the Späti; later districts keep the halved rate.
+ */
+export const FIRST_KOEPENICK = { items: 1.6, scrap: 1.3 } as const;
+const firstRun = (sim: Sim): boolean => sim.level.mapId === 'koepenick' && !sim.inventory.camp?.freed?.includes(0);
+const itemRate = (sim: Sim): number => ECONOMY.items * (sim.level.tunnel ? TUNNEL_ITEMS : 1) * (firstRun(sim) ? FIRST_KOEPENICK.items : 1);
 const ZUT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.01 };
 /** District bosses: three items and a legendary (2D `big`). */
 const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spreehexe: true, bassprediger: true, weltzeituhr: true, diva: true };
@@ -168,7 +174,7 @@ export function killDrops(sim: Sim, e: Enemy): void {
   const mat = (1 + 0.5 * pk(sim, 'mat')) * ECONOMY.material;
   // Späti-Tüte (legendary): Döner and supplies twice as often.
   const cook = (sim.statContext.survivors.koechin ? 2 : 1) * (sim.stats.legendary.includes('spaeti') ? 2 : 1);
-  creditScrap(sim, (SCRAP[kind] ?? 1) * (e.elite ? 4 : 1), e.x, e.z, true);
+  creditScrap(sim, (SCRAP[kind] ?? 1) * (e.elite ? 4 : 1) * (firstRun(sim) ? FIRST_KOEPENICK.scrap : 1), e.x, e.z, true);
   // 2D elites: always an item one level up, a quarter of them rare or better.
   // Playtest 2026-11-20: equipment drops at half the rate (ECONOMY.items), so elites drop an item every second time.
   if (e.elite && sim.rng.next() < itemRate(sim)) spawnDrop(sim, e.x, e.z, { kind: 'item', item: lootItem(sim.rng, c, il + 1, sim.rng.next() < 0.25 ? 1 : 0) }, spread(sim, 0.5), spread(sim, 0.5));

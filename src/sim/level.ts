@@ -171,6 +171,8 @@ export class Level {
   flavor?: 'neon' | 'gdr' | 'revue';
   /** U-Bahn tunnel map (M19/M20): the tunnel set drops here. */
   tunnel?: boolean;
+  /** Map id of a district level (`MapDef.id`), for rules tied to one map (the Köpenick first fights). */
+  mapId?: string;
   /** M12c rain (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
   wet?: boolean;
   /** M16 „Glas splittert“: glass bodies burst when they die. */

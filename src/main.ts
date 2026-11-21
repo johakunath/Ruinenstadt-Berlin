@@ -902,6 +902,8 @@ function frame(now: number): void {
   startScreen().pollPad(now);
   optionsScreen().pollPad(now);
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
+  // Johannes 2026-11-21: the first fall to a quarter of life pauses once and shows how to roll away.
+  if (persist && phase === 'play' && !abilitiesUi.open && !menu.isOpen && !intro.isOpen && sim.player.state !== 'dead' && sim.player.hp <= sim.stats.maxHp * 0.25 && !intro.seen('dodge')) intro.showTip('dodge', () => input.clear());
   if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
     revealStep(dt);
   const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active && !camp.isOpen && !netBoard.isOpen;

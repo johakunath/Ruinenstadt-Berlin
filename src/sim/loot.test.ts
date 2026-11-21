@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { BAG_SIZE, collectItem } from './inventory';
 import { makeItem } from './items';
-import { killDrops, lootLevel, spawnDrop, TUNNEL_ITEMS, updateDrops } from './loot';
+import { FIRST_KOEPENICK, killDrops, lootLevel, spawnDrop, TUNNEL_ITEMS, updateDrops } from './loot';
 import { Level, WalkGrid } from './level';
 import { createSim, stepSim } from './sim';
 import { makeElite, spawnEnemy } from './enemies';
@@ -35,6 +35,21 @@ describe('kill drops', () => {
       return item;
     };
     expect(count(true) / count(false)).toBeCloseTo(TUNNEL_ITEMS, 1);
+  });
+  it('the first Köpenick run drops more items until Köpenick is freed (Johannes 2026-11-21)', () => {
+    const count = (freed: number[]): number => {
+      const sim = flat();
+      sim.level.mapId = 'koepenick';
+      sim.inventory.camp = { stations: {}, stash: [], freed };
+      let item = 0;
+      for (let i = 0; i < 8000; i++) {
+        sim.drops.length = 0;
+        killDrops(sim, spawnEnemy(sim, 2, 2, 'brute'));
+        item += sim.drops.filter((d) => d.content.kind === 'item').length;
+      }
+      return item;
+    };
+    expect(count([]) / count([0])).toBeCloseTo(FIRST_KOEPENICK.items, 0);
   });
 
   it('walker chances match the 2D numbers', () => {

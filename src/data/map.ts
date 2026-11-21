@@ -1914,6 +1914,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     || (inRailYard(m, x, z) && !m.terraces.some((t) => inPoly(t.poly, x, z) || onStair(t, x, z) !== null)));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
+  level.mapId = m.id;
   level.camp = !!m.camp;
   level.campSolids = campSolids;
   if (m.flavor) level.flavor = m.flavor;
