@@ -18,7 +18,9 @@ export type SpecialKind = 'hinterhof' | 'parkplatz' | 'kleingarten' | 'teich' | 
   | 'clubhof' | 'sperrzone' | 'zeltlager' | 'lichtung'
   // M16 Charlottenburg step 7 (`docs/mockups/m16-charlottenburg-lots.svg`, variant A): a cab rank and a shop
   // arcade (zone 1, Blaue Stunde), a cinema forecourt and a jazz cellar yard (zone 2, Premierennacht).
-  | 'droschkenplatz' | 'passage' | 'kinovorplatz' | 'jazzhof';
+  | 'droschkenplatz' | 'passage' | 'kinovorplatz' | 'jazzhof'
+  // Zone 3 (Mondnacht), placed by hand in the Schlossgarten: a hedge room and a garden theatre ruin.
+  | 'heckenkabinett' | 'gartentheater';
 /** Sleeping guards: `lying` play dead on the ground, `hidden` wait unseen in a doorway or under rubble. */
 export interface LotGuard { x: number; z: number; kind: EnemyKind; elite: boolean; wake: number; hp: number; pose: 'lying' | 'hidden'; facing: number }
 /** A walkable plank path over water (pond jetty): center, facing along its length. */
@@ -58,6 +60,8 @@ export const SPECIAL_SIZE: Record<SpecialKind, { w: [number, number]; d: [number
   passage: { w: [17, 20], d: [18, 21], max: 2 },
   kinovorplatz: { w: [18, 21], d: [13, 16], max: 2 },
   jazzhof: { w: [18, 21], d: [18, 21], max: 2 },
+  heckenkabinett: { w: [16, 18], d: [13, 15], max: 1 },
+  gartentheater: { w: [17, 19], d: [11, 13], max: 1 },
 };
 /** Chance per street slot to try a lot type (Johannes: two in five lots; many tries do not fit, so higher). */
 export const SPECIAL_SHARE = 0.7;
@@ -66,6 +70,7 @@ export const SPECIAL_NAME: Record<SpecialKind, string> = {
   glashaus: 'Gewächshausgarten', plattenhof: 'Plattenbauhof', nachtmarkt: 'Nachtmarkt', containerdorf: 'Containerdorf',
   clubhof: 'Clubhof', sperrzone: 'Sperrzone', zeltlager: 'Zeltlager', lichtung: 'Lichtung',
   droschkenplatz: 'Droschkenplatz', passage: 'Ladenpassage', kinovorplatz: 'Kinovorplatz', jazzhof: 'Jazzkeller',
+  heckenkabinett: 'Heckenkabinett', gartentheater: 'Gartentheater',
 };
 
 export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
@@ -336,6 +341,41 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       prop('crates', side * (W - 1.8), fb - 1.6, rng.range(0, 3), 1, 0.3); prop('bins', -side * (W - 1.4), fb - 1.4, Math.PI / 2, 1, 0.2);
       guard('runner', side * 1.2, cb + 1.4, 'hidden', { elite: true, hp: 1.8, wake: 4 });
       out.spots.cache = P(side * 4.6, cb + 1.2); out.spots.rescue = P(-side * (W - 3), fb - 1.6);
+      break;
+    }
+    case 'heckenkabinett': {
+      // Hedge room (1920 garden): clipped hedges round three sides and the front with a gap, topiary in the
+      // corners, a bench on each side, candles and a storm lantern round the middle. A Scherbentänzerin lies
+      // among the topiary; the cache sits in the back.
+      out.ground = 'gravel';
+      run('hedge', -W + 0.6, -D + 0.6, W - 0.6, -D + 0.6, [], 0.01);
+      run('hedge', -W + 0.6, -D + 0.6, -W + 0.6, D - 0.6, [], 0.01);
+      run('hedge', W - 0.6, -D + 0.6, W - 0.6, D - 0.6, [], 0.01);
+      run('hedge', -W + 0.6, D - 0.6, W - 0.6, D - 0.6, [[W - 3.2, W + 3.2]], 0.01);
+      for (const [a, b] of [[-W + 2.4, -D + 2.4], [W - 2.4, -D + 2.4], [-W + 2.4, D - 2.6], [W - 2.4, D - 2.6]] as Array<[number, number]>) prop('topiary', a, b, 0, rng.range(0.9, 1.2), 0.1);
+      for (const s2 of [-1, 1]) prop('bench', s2 * (W - 2.2), 0, s2 * Math.PI / 2, 1, 0.05);
+      prop('stormLantern', 0, -D + 2, 0, 1, 0);
+      for (let i = 0; i < 3; i++) prop('candles', rng.range(-2.5, 2.5), rng.range(-2, 2), 0, 0.8, 0.2);
+      guard('scherbe', -side * (W - 3), -D + 3, 'lying', { wake: 3.5 });
+      out.spots.cache = P(side * (W - 3.2), -D + 2.8);
+      break;
+    }
+    case 'gartentheater': {
+      // Garden theatre ruin (1920): a broken stone stage at the back, footlights (storm lanterns), rows of low
+      // walls as grass steps toward the front, rubble from the fallen proscenium. Two ghouls still sit in the
+      // audience (playing dead).
+      out.ground = 'dirt';
+      prop('slab', 0, -D + 2.2, 0, 1.6, 0.02);
+      for (const s2 of [-1, 1]) prop('lowWall', s2 * 5.6, -D + 1.6, Math.PI / 2, 2.4, 0.04);
+      for (const a of [-2.4, 2.4]) prop('stormLantern', a, -D + 4.2, 0, 1, 0);
+      prop('candles', rng.range(-1.5, 1.5), -D + 2.2, 0, 0.8, 0.1);
+      for (const [b, half] of [[0.4, W - 4], [2.6, W - 3], [4.8, W - 2.4]] as Array<[number, number]>) {
+        if (b > D - 1.6) continue;
+        run('lowWall', -half, b, half, b, [[half - 1.2, half + 1.2]], 0.02);
+      }
+      prop('rubble', side * (W - 2.5), -D + 2, 0, rng.range(0.7, 1));
+      for (let i = 0; i < 2; i++) guard('walker', rng.range(-W + 3, W - 3), 1.5 + i * 2.2, 'lying', { wake: 3.8 });
+      out.spots.rescue = P(-side * 3, -D + 2.6);
       break;
     }
     case 'nachtmarkt': {

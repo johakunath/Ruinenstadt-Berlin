@@ -1333,8 +1333,9 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
-  // Every fight gets fire light and some cover near its rim.
+  // Every fight gets fire light and some cover near its rim (a walk-in room brings its own furniture, M18).
   for (const e of m.encounters) {
+    if (e.room) continue;
     let barrels = 0;
     for (let tries = 0; tries < 40 && barrels < 2; tries++) {
       const a = rng.range(0, Math.PI * 2);

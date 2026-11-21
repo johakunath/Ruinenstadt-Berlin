@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { HALLE, KNEIPE_FIGHT, WEDDING_BOSSES, weddingMap } from './wedding';
 import { inKneipe, KNEIPE, kneipeParts, kneipeWorld } from './kneipe';
+import { inRoom } from '../sim/level';
 import { lateTier } from './enemies';
 import { EDGE_FRONT, propCollider } from './courtyard';
 import { generateLots, generateProps, inPoly, isWater, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, onBridge, heightAt, type Landmark, type Lot, type MapDef } from './map';
@@ -43,14 +44,14 @@ describe('Wedding map (M18, layout C2)', () => {
     const seen = reach(m, level);
     const solid = (x: number, z: number): boolean => level.blocked(x, z, 0.4) || level.near(x, z, 1).some((c) => colliderDistance(c, x, z) < 0.4);
 
-    it(`has 22 normal waves (8, 3, 8, 3) and one boss per zone, district 5 (scale ${scale})`, () => {
-      expect(normal(m)).toHaveLength(22);
+    it(`has 21 normal waves (7, 3, 8, 3) and one boss per zone, district 5 (scale ${scale})`, () => {
+      expect(normal(m)).toHaveLength(21);
       const perZone = [0, 1, 2, 3].map((z) => m.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves).filter((w) => w.bosses.length === 0).length);
-      expect(perZone).toEqual([8, 3, 8, 3]);
+      expect(perZone).toEqual([7, 3, 8, 3]);
       const B = WEDDING_BOSSES;
-      expect(m.encounters.flatMap((e) => e.waves).flatMap((w) => w.bosses)).toEqual([B.stammgast, B.hauptgericht, B.bauherr, B.sultan]);
+      expect(m.encounters.flatMap((e) => e.waves).flatMap((w) => w.bosses)).toEqual([B.zugezogene, B.hauptgericht, B.bauherr, B.sultan]);
       for (const z of [0, 1, 2, 3]) expect(m.encounters.filter((e) => e.zone === z && e.waves.some((w) => w.bosses.length > 0)).map((e) => e.zone)).toEqual([z]);
-      expect(m.encounters.map((e) => e.id)).toEqual(['wochenmarkt', 'muellerstrasse', 'magendoktor', 'nettelbeckplatz', 'uferterrasse', 'brunnenplatz', 'badstrasse', 'rosengarten', 'humboldthoehe', 'beamtentor', 'langetafel', 'hochzeitspalast']);
+      expect(m.encounters.map((e) => e.id)).toEqual(['wochenmarkt', 'muellerstrasse', 'magendoktor', 'uferterrasse', 'brunnenplatz', 'badstrasse', 'rosengarten', 'humboldthoehe', 'beamtentor', 'langetafel', 'hochzeitspalast']);
       expect(m.district).toBe(5);
       expect(m.flavor).toBe('fest');
       expect(m.zones.map((z) => z.name)).toEqual(['Leopoldkiez', 'Panke', 'Humboldthain', 'Das ewige Fest']);
@@ -69,7 +70,7 @@ describe('Wedding map (M18, layout C2)', () => {
         expect(w.count).toBeLessThan(enc(m, 'rosengarten').waves.at(-1)!.count);
         expect(w.mix.crow).toBeGreaterThan(1);
       }
-      for (const w of pub.waves) expect(w.maxAlive).toBeLessThanOrEqual(KNEIPE_FIGHT.maxAlive);
+      for (const w of pub.waves.filter((q) => q.bosses.length === 0)) expect(w.maxAlive).toBeLessThanOrEqual(KNEIPE_FIGHT.maxAlive);
       expect(pub.waves[0]!.count).toBeLessThan(enc(m, 'muellerstrasse').waves.at(-1)!.count);
       for (const w of waves.filter((q) => !hill.waves.includes(q))) expect(w.elite).toBeGreaterThan(0);
     });
@@ -90,11 +91,12 @@ describe('Wedding map (M18, layout C2)', () => {
             if (!level.blocked(x, z, 0.4) && level.near(x, z, 1).every((c) => colliderDistance(c, x, z) > 0.4)) open++;
           }
         }
-        expect(open / n, e.id).toBeGreaterThan(0.8);
         for (let a = 0; a < Math.PI * 2; a += 0.2) expect(isWater(m, e.x + Math.sin(a) * e.r, e.z + Math.cos(a) * e.r), `${e.id} water`).toBe(false);
-        // Circles are 13 to 15 m, except the pub (E2).
-        if (e.id === 'magendoktor') expect(e.r).toBe(KNEIPE.ring);
-        else { expect(e.r).toBeGreaterThanOrEqual(13); expect(e.r).toBeLessThanOrEqual(15); }
+        // Circles are 13 to 15 m and 80 % open, except the pub: the whole room is its arena (E2, own tests below).
+        if (e.id === 'magendoktor') { expect(e.room).toBeDefined(); continue; }
+        expect(open / n, e.id).toBeGreaterThan(0.8);
+        expect(e.r).toBeGreaterThanOrEqual(13);
+        expect(e.r).toBeLessThanOrEqual(15);
       }
     });
 
@@ -169,52 +171,73 @@ describe('Wedding map (M18, layout C2)', () => {
       expect(near(seen, h.x, h.z)).toBe(true);
     });
 
-    it(`Zum Magendoktor: the door walks in, walls hold, the ring lies inside the room, spawns stay inside (scale ${scale})`, () => {
-      const pub = lm(m, 'kneipe'), f = enc(m, 'magendoktor');
+    it(`Zum Magendoktor: the door walks in, walls hold, every free cell connects to the door, lanes are 1.8 m (scale ${scale})`, () => {
+      const pub = lm(m, 'kneipe'), f = enc(m, 'magendoktor'), room = f.room!;
       expect(pub.name).toBe('Zum Magendoktor');
       const door = kneipeWorld(pub, 0, -KNEIPE.d / 2), inDoor = kneipeWorld(pub, 0, -KNEIPE.d / 2 + 1.5), outDoor = kneipeWorld(pub, 0, -KNEIPE.d / 2 - 2);
       expect(near(seen, inDoor.x, inDoor.z), 'inside the door').toBe(true);
       expect(near(seen, outDoor.x, outDoor.z), 'outside the door').toBe(true);
       expect(solid(door.x, door.z)).toBe(false);
-      // The door faces the Nettelbeckplatz (north) and the square's boss fight.
+      // The door faces the Nettelbeckplatz (north): the square lies in front of it.
       expect(door.z).toBeLessThan(pub.z);
+      expect(inPoly(m.areas.find((a) => a.id === 'nettelbeckplatz')!.poly, outDoor.x, outDoor.z - 2)).toBe(true);
       for (const p of kneipeParts().filter((q) => q.kind === 'wall')) { const w = kneipeWorld(pub, p.x, p.z); expect(solid(w.x, w.z), `wall ${p.x},${p.z}`).toBe(true); }
       // The room is one pocket: with the door shut, the inside is not reached from outside.
       const shut = reach(m, level, m.start, m.bounds, (x, z) => Math.hypot(x - door.x, z - door.z) < 2.2);
-      expect(near(shut, f.x, f.z)).toBe(false);
-      // The ring lies inside the room; every rim spawn spot is inside (the director spawns inside r − radius − 0.2).
-      for (let a = 0; a < Math.PI * 2; a += 0.1) expect(inKneipe(pub, f.x + Math.sin(a) * f.r, f.z + Math.cos(a) * f.r), `ring ${a.toFixed(1)}`).toBe(true);
-      expect(Math.hypot(f.x - pub.x, f.z - pub.z)).toBeLessThan(0.5);
-      // Three regulars sleep at tables inside the room.
+      expect(near(shut, inDoor.x, inDoor.z)).toBe(false);
+      // Every free cell of the room connects to the door, and the cells with 0.9 m to every piece (the 1.8 m lanes) form one net.
+      const free = (x: number, z: number, c: number): boolean => !level.blocked(x, z, 0.4) && level.near(x, z, c + 0.5).every((q) => colliderDistance(q, x, z) > c);
+      const cellsIn = (c: number): Array<[number, number]> => { const out: Array<[number, number]> = []; for (let u = -room.hx + 0.25; u < room.hx; u += 0.5) for (let v = -room.hz + 0.25; v < room.hz; v += 0.5) { const q = kneipeWorld(pub, u, v); if (free(q.x, q.z, c)) out.push([q.x, q.z]); } return out; };
+      const fill = (c: number): Set<string> => {
+        const key = (x: number, z: number): string => `${Math.round(x * 2)},${Math.round(z * 2)}`, all = new Set(cellsIn(c).map(([x, z]) => key(x, z))), got = new Set<string>(), q = [key(inDoor.x, inDoor.z)];
+        while (q.length) { const k = q.pop()!; if (got.has(k) || !all.has(k)) continue; got.add(k); const [a, b] = k.split(',').map(Number) as [number, number]; q.push(`${a + 1},${b}`, `${a - 1},${b}`, `${a},${b + 1}`, `${a},${b - 1}`); }
+        expect(got.size, `clearance ${c}`).toBe(all.size);
+        return got;
+      };
+      expect(fill(0.4).size).toBeGreaterThan(300);
+      expect(fill(0.9).size).toBeGreaterThan(150);
+      // Two waves of Zecher, then the boss in the same room (a full heal when won); he stands up inside.
+      expect(f.waves.map((w) => w.bosses.length)).toEqual([0, 0, 1]);
+      expect(f.heal).toBe(1);
+      expect(inRoom(room, f.bossAt!.x, f.bossAt!.z, 1)).toBe(true);
+      expect(free(f.bossAt!.x, f.bossAt!.z, 1)).toBe(true);
+      // Three regulars sleep inside the room.
       const guards = m.guards!.filter((g) => inKneipe(pub, g.x, g.z));
       expect(guards).toHaveLength(3);
       for (const g of guards) expect(near(seen, g.x, g.z), `guard ${g.x},${g.z}`).toBe(true);
-      // The pub sits south of the Nettelbeckplatz and north of the Ringbahn.
-      const boss = enc(m, 'nettelbeckplatz');
-      expect(pub.z).toBeGreaterThan(boss.z);
+      // The pub sits north of the Ringbahn.
       const v = m.viaducts!.flatMap((q) => q.pts);
       expect(pub.z + pub.hz).toBeLessThan(Math.min(...v.filter(([x]) => Math.abs(x - pub.x) < 20).map(([, z]) => z)));
     });
 
-    it(`a pub fight spawns its waves inside the room (scale ${scale})`, () => {
-      const lv = mapLevel(m, lots, props), pub = lm(m, 'kneipe'), i = m.encounters.findIndex((e) => e.id === 'magendoktor');
+    it(`the pub fight starts only inside the room; every body and the boss come from free cells in it (scale ${scale})`, () => {
+      const lv = mapLevel(m, lots, props), pub = lm(m, 'kneipe'), i = m.encounters.findIndex((e) => e.id === 'magendoktor'), room = m.encounters[i]!.room!;
       lv.guards = [];
       const sim = createSim({ level: lv, seed: 3 }), p = sim.player;
       sim.run.index = i;
-      let spawned = 0;
-      for (let t = 0; t < 60 * 30; t++) {
-        p.x = p.px = pub.x + 1;
-        p.z = p.pz = pub.z;
-        p.invuln = 1e9;
-        stepSim(sim, NO_INPUT);
+      const stand = (x: number, z: number, n: number): void => { for (let t = 0; t < n; t++) { p.x = p.px = x; p.z = p.pz = z; p.invuln = 1e9; stepSim(sim, NO_INPUT); sim.events.length = 0; } };
+      // In front of the door (within the radius, outside the room) nothing starts.
+      const out = kneipeWorld(pub, 0, -KNEIPE.d / 2 - 1.5);
+      stand(out.x, out.z, 60);
+      expect(sim.run.phase).toBe('travel');
+      let spawned = 0, bosses = 0;
+      const seenIds = new Set<number>();
+      for (let t = 0; t < 60 * 60 && sim.run.index === i; t++) {
+        stand(pub.x + 1, pub.z, 1);
         for (const e of sim.enemies) if (e.state !== 'dead' && e.enc === i) {
-          if (e.stateT === 0 || e.stateT < 0.05) { spawned++; expect(inKneipe(pub, e.x, e.z, 0), `${e.kind} at ${e.x.toFixed(1)},${e.z.toFixed(1)}`).toBe(true); }
+          if (!seenIds.has(e.id)) {
+            seenIds.add(e.id);
+            spawned++;
+            if (e.def.boss) bosses++;
+            expect(inRoom(room, e.x, e.z, 0), `${e.kind} at ${e.x.toFixed(1)},${e.z.toFixed(1)}`).toBe(true);
+            expect(lv.near(e.x, e.z, 1).every((q) => colliderDistance(q, e.x, e.z) > 0), `${e.kind} in a piece`).toBe(true);
+          }
           if (e.stateT > 0.3) { e.state = 'dead'; e.stateT = 0; e.hp = 0; }
         }
-        sim.events.length = 0;
-        if (sim.run.index !== i) break;
       }
+      expect(sim.run.index).toBe(i + 1);
       expect(spawned).toBeGreaterThan(5);
+      expect(bosses).toBe(1);
     });
 
     it(`nothing is placed or reached in the two unbuilt corners; nothing spawns there (scale ${scale})`, () => {
@@ -398,7 +421,7 @@ describe('Wedding map (M18, layout C2)', () => {
     const octant = (x: number, z: number): string => ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'][((Math.round(Math.atan2(-z, x) / (Math.PI / 4)) % 8) + 8) % 8]!;
     const want: Array<[string, { x: number; z: number }, string]> = [
       ['Alte Nazarethkirche', lm(m, 'nazareth'), 'N'], ['Neubau (Rathaus Wedding)', lm(m, 'neubau'), 'W'], ['Zum Magendoktor', lm(m, 'kneipe'), 'SE'],
-      ['Nettelbeckplatz', enc(m, 'nettelbeckplatz'), 'E'], ['Amtsgericht', lm(m, 'amtsgericht'), 'NE'], ['Brunnenplatz', enc(m, 'brunnenplatz'), 'E'],
+      ['Nettelbeckplatz', { x: 94, z: 16 }, 'E'], ['Amtsgericht', lm(m, 'amtsgericht'), 'NE'], ['Brunnenplatz', enc(m, 'brunnenplatz'), 'E'],
       ['Flakturm', lm(m, 'flakturm'), 'E'], ['Rosengarten', enc(m, 'rosengarten'), 'E'], ['Beamtentor', lm(m, 'beamtentor'), 'E'], ['U Pankstraße (zone 2 entry)', m.zones[2]!.entry, 'NE'],
     ];
     for (const [name, p, o] of want) expect(octant(p.x, p.z), name).toBe(o);
@@ -411,7 +434,7 @@ describe('Wedding map (M18, layout C2)', () => {
     expect(m.rivers[0]!.name).toBe('Panke');
   });
 
-  it('a scripted run clears all 26 waves, the four bosses and ends in victory', () => {
+  it('a scripted run clears all 25 waves, the four bosses and ends in victory', () => {
     const m = weddingMap(1), level = mapLevel(m, generateLots(m));
     level.guards = [];
     const sim = createSim({ level }), log: SimEvent[] = [];
@@ -428,7 +451,7 @@ describe('Wedding map (M18, layout C2)', () => {
         sim.events.length = 0;
       }
     }
-    expect(log.filter((e) => e.type === 'waveStart')).toHaveLength(26);
+    expect(log.filter((e) => e.type === 'waveStart')).toHaveLength(25);
     expect(log.filter((e) => e.type === 'zoneClear').map((e) => (e as { zone: number }).zone)).toEqual([0, 1, 2, 3]);
     expect(log.at(-1)?.type).toBe('victory');
   }, 30000);

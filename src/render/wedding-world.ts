@@ -16,7 +16,7 @@
 import { CylinderGeometry, Matrix4, PlaneGeometry, Vector3, type BufferGeometry } from 'three';
 import { OPEN_PARTS, WALL_KIND, inPoly, lineDist, streetDist, type Landmark, type LandmarkKind, type Lot, type MapDef, type Pt, type Wall } from '../data/map';
 import type { Prop } from '../data/courtyard';
-import { KNEIPE, kneipeParts } from '../data/kneipe';
+import { KNEIPE, KNEIPE_STOOLS, kneipeParts } from '../data/kneipe';
 import { RING } from '../data/wedding';
 import { Rng } from '../sim/math';
 import { buildArches, buildStadtbahn } from './alex-world';
@@ -249,6 +249,7 @@ const KP = (l: Landmark, px: number, y: number, pz: number): Vector3 => lp(l, -p
 export function buildKneipe(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
   const M = b.mm, { w, d, height: H, low, door } = KNEIPE, rng = new Rng(111);
   b.box(M.darkWood, K(l, 0, 0.04, 0), w - 0.6, 0.08, d - 0.6, [0.62, 0.42, 0.3]);
+  const stool = cached('hocker', () => new CylinderGeometry(0.2, 0.16, 1, 8));
   for (const p of kneipeParts()) {
     const m = K(l, p.x, 0, p.z);
     switch (p.kind) {
@@ -256,53 +257,58 @@ export function buildKneipe(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): voi
         b.box(M.stucco, sub(m, 0, low / 2, 0), p.hx * 2, low, p.hz * 2, W.ochre);
         up.box(M.stucco, sub(m, 0, low + (H - low) / 2, 0), p.hx * 2, H - low, p.hz * 2, W.ochre);
         break;
-      case 'shelf':
-        b.box(M.darkWood, sub(m, 0, 1.2, 0), p.hx * 2, 2.4, p.hz * 2, W.wood);
-        for (let z = -p.hz + 0.3; z < p.hz - 0.2; z += 0.22) for (const y of [1.05, 1.55, 2.05]) if (rng.next() > 0.25) b.box(M.lampGlass, sub(m, 0.32, y, z), 0.08, 0.28, 0.08, rng.pick([[0.6, 1.2, 0.5], [1.6, 0.9, 0.35], [0.9, 0.7, 0.4]] as RGB[]));
+      case 'bench':
+        b.box(M.darkWood, sub(m, 0, 0.23, 0), p.hx * 2, 0.46, p.hz * 2, W.wood);
+        b.box(M.linen, sub(m, 0, 0.48, 0), p.hx * 2 - 0.05, 0.06, p.hz * 2 - 0.05, W.rubyDark);
+        break;
+      case 'ecktisch':
+        b.box(M.wood, sub(m, 0, 0.76, 0), p.hx * 2, 0.08, p.hz * 2, [0.85, 0.6, 0.4]);
+        b.box(M.darkWood, sub(m, 0, 0.37, 0), 0.3, 0.74, 0.3, W.wood);
+        b.geo(M.lampGlass, cached('glas', () => new CylinderGeometry(0.05, 0.04, 0.16, 6)), sub(m, 0.3, 0.88, 0.1), [1.7, 1.2, 0.4]);
+        break;
+      case 'wc':
+        // The toilet: a closed cubicle against the west wall, its door to the room; the part above knee height hides inside.
+        b.box(M.stucco, sub(m, 0, low / 2, 0), p.hx * 2, low, p.hz * 2, [0.7, 0.72, 0.7]);
+        up.box(M.stucco, sub(m, 0, low + (2.5 - low) / 2, 0), p.hx * 2, 2.5 - low, p.hz * 2, [0.7, 0.72, 0.7]);
+        b.box(M.darkWood, sub(m, p.hx + 0.02, 1.0, 0.2), 0.05, 2.0, 0.9, W.wood);
         break;
       case 'counter':
         b.box(M.darkWood, sub(m, 0, 0.55, 0), p.hx * 2, 1.1, p.hz * 2, W.wood);
-        b.box(M.wood, sub(m, 0, 1.13, 0), p.hx * 2 + 0.2, 0.07, p.hz * 2 + 0.1, [0.95, 0.72, 0.5]);
-        b.geo(M.enamel, cached('zapf', () => new CylinderGeometry(0.06, 0.08, 0.55, 8)), sub(m, 0, 1.45, -1.2), W.gold);
-        for (let z = -p.hz + 0.6; z < p.hz; z += 1.1) b.geo(M.wood, cached('hocker', () => new CylinderGeometry(0.2, 0.16, 0.75, 8)), sub(m, 0.95, 0.38, z), W.wood);
+        b.box(M.wood, sub(m, 0, 1.13, 0), p.hx * 2 + 0.1, 0.07, p.hz * 2 + 0.1, [0.95, 0.72, 0.5]);
+        if (p.hz > 1) b.geo(M.enamel, cached('zapf', () => new CylinderGeometry(0.06, 0.08, 0.55, 8)), sub(m, 0, 1.45, -1.4), W.gold);
         break;
-      case 'stammtisch':
-        b.box(M.wood, sub(m, 0, 0.75, 0), p.hx * 2, 0.08, p.hz * 2, [0.85, 0.6, 0.4]);
-        b.box(M.darkWood, sub(m, 0, 0.37, 0), 0.3, 0.74, 0.3, W.wood);
-        b.box(M.iron, sub(m, 0, 1.15, 0), 0.03, 0.8, 0.03, W.iron);
-        b.box(M.enamel, sub(m, 0, 1.6, 0), 0.6, 0.25, 0.03, W.gold);
+      case 'shelf':
+        b.box(M.darkWood, sub(m, 0, 1.2, 0), p.hx * 2, 2.4, p.hz * 2, W.wood);
+        for (let z = -p.hz + 0.3; z < p.hz - 0.2; z += 0.22) for (const y of [1.05, 1.55, 2.05]) if (rng.next() > 0.25) b.box(M.lampGlass, sub(m, -p.hx - 0.02, y, z), 0.08, 0.28, 0.08, rng.pick([[0.6, 1.2, 0.5], [1.6, 0.9, 0.35], [0.9, 0.7, 0.4]] as RGB[]));
         break;
       case 'billard':
         b.box(M.darkWood, sub(m, 0, 0.4, 0), p.hx * 2, 0.8, p.hz * 2, W.wood);
         b.box(M.linen, sub(m, 0, 0.82, 0), p.hx * 2 - 0.2, 0.04, p.hz * 2 - 0.2, W.felt);
-        b.box(M.lampGlass, sub(m, 0, 2.3, 0), 0.4, 0.12, 1.6, [1.6, 1.4, 0.8]);
+        b.box(M.lampGlass, sub(m, 0, 2.3, 0), 1.6, 0.12, 0.4, [1.6, 1.4, 0.8]);
         break;
       case 'jukebox':
         b.box(M.enamel, sub(m, 0, 0.8, 0), p.hx * 2, 1.6, p.hz * 2, [0.9, 0.25, 0.45]);
-        b.box(M.lampGlass, sub(m, -p.hx - 0.01, 1.0, 0), 0.03, 0.7, p.hz * 1.6, [1.9, 0.9, 1.2]);
+        b.box(M.lampGlass, sub(m, p.hx + 0.01, 1.0, 0), 0.03, 0.7, p.hz * 1.6, [1.9, 0.9, 1.2]);
         break;
       case 'automat':
         b.box(M.enamel, sub(m, 0, 0.85, 0), p.hx * 2, 1.7, p.hz * 2, [0.35, 0.36, 0.42]);
-        b.box(M.lampGlass, sub(m, -p.hx - 0.01, 1.15, 0), 0.03, 0.45, p.hz * 1.5, [1.5, 1.6, 0.5]);
-        break;
-      case 'pillar':
-        b.box(M.darkWood, sub(m, 0, 0.55, 0), p.hx * 2, 1.1, p.hz * 2, W.wood);
-        up.box(M.darkWood, sub(m, 0, low + (H - low) / 2, 0), p.hx * 2, H - low, p.hz * 2, W.wood);
+        b.box(M.lampGlass, sub(m, p.hx + 0.01, 1.15, 0), 0.03, 0.45, p.hz * 1.5, [1.5, 1.6, 0.5]);
         break;
       case 'table':
-        b.geo(M.wood, cached('rtisch', () => new CylinderGeometry(0.6, 0.6, 0.06, 12)), sub(m, 0, 0.76, 0), [0.85, 0.6, 0.4]);
-        b.geo(M.darkWood, cached('rfuss', () => new CylinderGeometry(0.07, 0.12, 0.74, 6)), sub(m, 0, 0.37, 0), W.wood);
-        for (let k = 0; k < 3; k++) b.geo(M.wood, cached('hocker', () => new CylinderGeometry(0.2, 0.16, 0.75, 8)), sub(m, Math.cos(k * 2.1 + p.x) * 1.0, 0.38, Math.sin(k * 2.1 + p.x) * 1.0), W.wood);
-        b.geo(M.lampGlass, cached('glas', () => new CylinderGeometry(0.05, 0.04, 0.16, 6)), sub(m, 0.15, 0.87, 0.1), [1.7, 1.2, 0.4]);
+        b.geo(M.wood, cached('rtisch', () => new CylinderGeometry(0.85, 0.85, 0.06, 14)), sub(m, 0, 0.76, 0), [0.85, 0.6, 0.4]);
+        b.geo(M.darkWood, cached('rfuss', () => new CylinderGeometry(0.07, 0.14, 0.74, 6)), sub(m, 0, 0.37, 0), W.wood);
+        b.geo(M.lampGlass, cached('glas', () => new CylinderGeometry(0.05, 0.04, 0.16, 6)), sub(m, 0.2, 0.87, 0.1), [1.7, 1.2, 0.4]);
         break;
     }
   }
+  // Stools (render only): high ones at the bar, low ones at the tables.
+  for (const [x, z] of KNEIPE_STOOLS) { const h = x > 4 ? 0.8 : 0.48; b.geo(M.wood, stool, K(l, x, h / 2, z).multiply(new Matrix4().makeScale(1, h, 1)), W.wood); }
   // Wood panelling inside at knee height, a dart board on the north wall.
   b.box(M.darkWood, K(l, 0, 0.55, d / 2 - 0.52), w - 1.2, 1.0, 0.04, W.wood);
-  b.box(M.enamel, K(l, 2, 1.0, -d / 2 + 0.52), 0.5, 0.5, 0.04, [0.9, 0.2, 0.2]);
+  b.box(M.enamel, K(l, -3.2, 1.6, -d / 2 + 0.52), 0.5, 0.5, 0.04, [0.9, 0.2, 0.2]);
   // Light inside (warm, low over the tables and the counter) and a lamp at the door.
-  b.light(KP(l, -6.5, 2.8, -1), 0xffb060, 22, 12, 0.06, 7, { halo: 0.4 });
-  b.light(KP(l, 4.5, 2.8, 2), 0xffb060, 20, 12, 0.06, 7, { halo: 0.4 });
+  b.light(KP(l, -4, 2.8, -1.5), 0xffb060, 22, 12, 0.06, 7, { halo: 0.4 });
+  b.light(KP(l, 4, 2.8, 2), 0xffb060, 20, 12, 0.06, 7, { halo: 0.4 });
   b.light(KP(l, 0, 2.6, -d / 2 - 1.4), 0xffc890, 12, 9, 0.05, 4);
   // Upper part: lintel over the door, the signs, a balcony rail, the flat roof with a parapet.
   up.box(M.stucco, K(l, 0, (2.7 + H) / 2, -d / 2 + KNEIPE.wall / 2), door, H - 2.7, KNEIPE.wall, W.ochre);

@@ -311,7 +311,7 @@ test('M16: Charlottenburg loads on the platform of Bahnhof Zoo, the hero walks d
   expect(errors).toEqual([]);
 });
 
-test('M18: Wedding loads at U Leopoldplatz, the market fight starts, the pub fight runs inside the room, the map opens', async ({ page }) => {
+test('M18: Wedding loads at U Leopoldplatz, the market fight starts, the pub brawl runs inside the room, the map opens', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?map=wedding&profile=Leistung&seed=7&autostart');
   await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
@@ -331,7 +331,7 @@ test('M18: Wedding loads at U Leopoldplatz, the market fight starts, the pub fig
     for (let k = 0; k < 600; k++) g.step({ moveX: 0, moveZ: 0 }, 1);
     g.hold(false);
     const mine = s.enemies.filter((q) => q.state !== 'dead' && q.enc === i);
-    return { phase: s.run.phase, n: mine.length, inside: mine.every((q) => Math.abs(q.x - e.x) < 11 && Math.abs(q.z - e.z) < 8.5) };
+    return { phase: s.run.phase, n: mine.length, inside: mine.every((q) => Math.abs(q.x - e.x) < 9 && Math.abs(q.z - e.z) < 6.5) };
   });
   expect(pub.phase).toBe('fight');
   expect(pub.n).toBeGreaterThan(0);

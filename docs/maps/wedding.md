@@ -8,11 +8,11 @@ Layout **C2 „Zum Palast in der AEG“** and look **A „Lampionnacht“** (Joh
 
 | # | Decision | By |
 |---|---|---|
-| W1 | Layout C, trimmed to C2: start U Leopoldplatz → Wochenmarkt on the square → Müllerstraße → Lindower Straße along the Ringbahn → into the Magendoktor → Nettelbeckplatz → Pankstraße over the Panke → Uferterrasse → Brunnenplatz and Amtsgericht → Badstraße → through the Ringbahn arch on the Brunnenstraße → Rosengarten → Humboldthöhe → Beamtentor → the Lange Tafel in the AEG yard → the Hochzeitspalast in the Maschinenhalle. No street twice. The north loop of the first C (Uferhallen, Luisenbad) and the boss at Bahnhof Gesundbrunnen are gone | Johannes, 2026-11-21: C, „not too big“ |
+| W1 | Layout C, trimmed to C2: start U Leopoldplatz → Wochenmarkt on the square → Müllerstraße → Lindower Straße along the Ringbahn → Nettelbeckplatz → into the Magendoktor → Pankstraße over the Panke → Uferterrasse → Brunnenplatz and Amtsgericht → Badstraße → through the Ringbahn arch on the Brunnenstraße → Rosengarten → Humboldthöhe → Beamtentor → the Lange Tafel in the AEG yard → the Hochzeitspalast in the Maschinenhalle. No street twice. The north loop of the first C (Uferhallen, Luisenbad) and the boss at Bahnhof Gesundbrunnen are gone | Johannes, 2026-11-21: C, „not too big“ |
 | W2 | Look A „Lampionnacht“: one night sky for the whole map, deep emerald-teal; all gold comes from lamps and cloth below 5 m (lampion and wish-lamp chains across the streets, chandeliers behind hall windows, brass, brocade), ruby awnings and carpets, green scaffold nets on some tall fronts. Dry | Johannes, 2026-11-21 |
 | W3 | Chain: Wedding comes after Charlottenburg as district index 5 (appended, nothing built moves). Line 4 is the U9 from S+U Zoologischer Garten to U Leopoldplatz, ghost station Westhafen. The Fernsehturm finale moves to index 6 | Johannes, 2026-11-21 („go with your recommendation“) |
 | W4 | Tier 40 to 62, provisional: +8 per district as before (Charlottenburg 32 to 54). Not calibrated before the M14/B2 decision | Claude |
-| W5 | **Zum Magendoktor** is in the district and can be entered: the old Berlin pub at the Nettelbeckplatz (Reinickendorfer Straße 111, verified on OpenStreetMap). A fight inside against drunken guests. Built on the walk-in Späti (roof and upper walls hide while the hero is inside) | Johannes, 2026-11-21 |
+| W5 | **Zum Magendoktor** is in the district and can be entered: the old Berlin pub at the Nettelbeckplatz (Reinickendorfer Straße 111, verified on OpenStreetMap). A brawl inside against drunken guests, then the zone boss in the pub: a modern Berlin hipster who ruins the mood. The room is tight, with tables in the way; no free ring in the middle. Built on the walk-in Späti (roof and upper walls hide while the hero is inside) | Johannes, 2026-11-21 |
 | W6 | Small scope: recycle what exists, it does not have to match the other maps. 8 sights, 2 side passages, no new lot types, existing street profiles and props. A small selection of new items; the other drops come from the pools of the earlier maps. Still decent | Johannes, 2026-11-21 |
 | W7 | The final arena is the Hochzeitspalast inside the roofless AEG Maschinenhalle, reached through the Beamtentor. The Lampenpalast in the Osram-Höfe (layout A) is dropped | Follows from W1 |
 | W8 | Taste rules: no fight at a church door and no religious sign on any enemy, boss or the palace (it is Festsaal kitsch: chandeliers, gilded stucco, velvet); no mosque is placed; no Zeitlose in the dress of the neighbours; no BVG logo, yellow livery or transit costume (2D rule of 2026-11-13). Left out: silent green (a former crematorium), the Plötzensee memorial, the Anti-Kriegs-Museum, the Wall memorial | Claude, from the 2D rules |
@@ -26,12 +26,12 @@ For comparison: Köpenick 318 × 304 m and about 840 m; Mitte 330 × 387 m and a
 
 | Zone | Fights (waves) | Boss | Sights |
 |---|---|---|---|
-| 1 Leopoldkiez | Wochenmarkt on the Leopoldplatz (2), Müllerstraße (3), inside the Magendoktor (3) | Der Stammgast on the Nettelbeckplatz | U Leopoldplatz, Alte Nazarethkirche (backdrop), the Neubau im Gerüst with crane and banner (invented), Zum Magendoktor |
+| 1 Leopoldkiez | Wochenmarkt on the Leopoldplatz (2), Müllerstraße (3), inside the Magendoktor (2 waves of Zecher) | Der Zugezogene, inside the Magendoktor | U Leopoldplatz, Alte Nazarethkirche (backdrop), the Neubau im Gerüst with crane and banner (invented), Zum Magendoktor |
 | 2 Panke | Uferterrasse (3) | Das Hauptgericht on the Brunnenplatz, in front of the Amtsgericht | Amtsgericht Wedding, the Panke |
 | 3 Gesundbrunnen & Humboldthain | Badstraße (3), Rosengarten (3), Humboldthöhe (2, calm, on the summit) | Der Ewige Bauherr in front of the Beamtentor | Flakturm, Beamtentor |
 | 4 Das ewige Fest | Lange Tafel in the AEG yard (3) | Sultan Nimmersatt in the Hochzeitspalast | Hochzeitspalast in the Maschinenhalle (invented inside a real hall) |
 
-8 fights, 22 waves, 4 bosses, 8 sights. Rest stops: Späti am Leo, Baklava & Döner (Pankstraße), Kiosk am Rosengarten, Teestube im Werkhof. Side passages: a Hinterhof off the Müllerstraße (hidden blessing), the bunker door beside the Flakturm (cache). One hill: the Humboldthöhe, 7 m.
+8 fight places, 21 waves, 4 bosses, 8 sights; the Magendoktor is both a fight and the zone 1 boss place. Rest stops: Späti am Leo, Baklava & Döner (Pankstraße), Kiosk am Rosengarten, Teestube im Werkhof. Side passages: a Hinterhof off the Müllerstraße (hidden blessing), the bunker door beside the Flakturm (cache). One hill: the Humboldthöhe, 7 m.
 
 ## Zum Magendoktor
 
@@ -39,9 +39,9 @@ For comparison: Köpenick 318 × 304 m and about 840 m; Mitte 330 × 387 m and a
 |---|---|---|
 | Place | Reinickendorfer Straße 111, at the south end of the Nettelbeckplatz, beside S Wedding and the Ringbahn; open day and night | OpenStreetMap (658 m east, 275 m south of U Leopoldplatz); press |
 | Front | Ochre plaster ground floor of an Altbau; red lit sign with white Fraktur lettering „Zum Magendoktor“; a lit box sign „Tag u. Nacht“ with a cartoon figure; a door covered in stickers and tags; a dark plinth with graffiti; a wall painting of an old Berlin night watchman with a lantern; closed red parasols and a barrel as a standing table in front; a wrought-iron balcony above; a brick neighbour with a club neon | One press photo (Tagesspiegel, 2023), looked at on 2026-11-21. No brand names on the parasols |
-| Inside | Jukebox, billiard table, slot machines, dart board | Press text (Berliner Kurier, Tagesspiegel). **No interior photo was found**: Wikimedia answered 429 and the press pages show none |
-| Inside, assumed | A long wooden counter with a tap column and a back shelf, a Stammtisch with its sign, round tables, wood panelling, framed prints | Typical old Berlin pub; replace with what a photo shows. Johannes can send one |
-| In the game | Interior about 22 × 17 m (game size), door 3 m in the north front toward the square. Fight ring r 8 in the room, 3 waves of Zecher, at most 6 alive, three more asleep at tables (existing guards). The south wall toward the camera is knee high; roof and upper walls hide while the hero is inside | Task file E2 |
+| Inside, layout | Coming in: on the right a corner table, behind it on the right the toilet; on the left, right at the door, the bar with high bar stools; in the back behind the bar the pool table. Not much space; a few tables stand in the middle of the room | Johannes, 2026-11-21 (he knows the place) |
+| Inside, pieces | Jukebox, slot machines, dart board | Press text (Berliner Kurier, Tagesspiegel); their places are guessed. **No interior photo was found**: Wikimedia answered 429 and the press pages show none |
+| In the game | Interior about 18 × 13 m (game size), door in the north front toward the square. The whole room is the arena: no free ring, the tables in the middle are obstacles to dodge around. Two waves of Zecher, at most 6 alive, three more asleep at tables (existing guards), then the boss. The south wall toward the camera is knee high; roof and upper walls hide while the hero is inside. The toilet is a closed door | Task file E2; mockup `m18-wedding-c2.svg` |
 | Camera | The real house stands on the south side of the square, so between camera and square: the sign also sits on the roof edge, readable from the south; the reveal shot shows the real front | Guideline › Blockrand |
 
 ## Geography check (OpenStreetMap Nominatim, 2026-11-21)
@@ -54,7 +54,7 @@ Origin U Leopoldplatz (52.5465 N, 13.3596 E). Real offsets in m east, north, wit
 | Rathaus Wedding | −245, 101 | W | −40, 14 | W ✓ | the invented Neubau stands here; 3° from the octant border |
 | S+U Wedding | 346, −361 | SE | 60, −68 | SE ✓ | where the Müllerstraße meets the Ringbahn; a sign on the viaduct |
 | Lindower Straße | 593, −280 | SE | 72, −52 | SE ✓ | runs along the Ringbahn to the Magendoktor ✓ |
-| Nettelbeckplatz | 660, −202 | E | 94, −16 | E ✓ | OSM now names the square Martha-Ndumbe-Platz |
+| Nettelbeckplatz | 660, −202 | E | 94, −16 | E ✓ | OSM now names the square Martha-Ndumbe-Platz; no fight on it |
 | Zum Magendoktor | 658, −275 | SE | 98, −46 | SE ✓ | south end of the square ✓; real 0.5° and map 3° from the border, move only south |
 | Amtsgericht Wedding | 1077, 482 | NE | 142, 76 | NE ✓ | north-west of the Brunnenplatz ✓, so its front stands behind the boss fight; 6° from the border |
 | Brunnenplatz | 1152, 409 | E | 154, 52 | E ✓ | 4° from the border |
@@ -85,7 +85,7 @@ Compression: about 0.12 east to west, 0.15 to 0.3 north to south.
 | Tee-Ifrit | Tea-vapour spirit rising from a samovar | Caster that keeps its distance (Speier or Heuler brain): lobs tea glasses in an arc. Kill first |
 | Baklava-Brocken | Filo and pistachio golem, honey fists, serving-tray shield | Brute with the Schildträger front |
 | Teppichschlinger | Airborne carpet, woven face, tassel arms | Flyer (Krähe brain) with a dive along a marked line (pouncer) |
-| Boss 1, Nettelbeckplatz | | **Der Stammgast**: the regular who has sat in the Magendoktor since the clock broke. A heavy brawler on an existing boss brain (charge and summon as the Feldwebel or Türsteher); calls Zecher |
+| Boss 1, inside the Magendoktor | Not on the board (Johannes, 2026-11-21) | **Der Zugezogene**: a modern Berlin hipster who is turning the pub into something new and ruins the mood (beanie, moustache, round glasses, tote bag, oat-milk coffee). Human base, an existing boss brain: a short charge on an e-scooter along a marked line, thrown coffee cups as a volley; two Zecher as adds. He carries the „kommt bald“ joke into the pub. Working name; „Der Hipster“ if Johannes prefers |
 | Boss 2, Brunnenplatz | | **Das Hauptgericht** (the pun with the Amtsgericht behind it): the Baklava-Brocken model at boss size with a turning spit as an arm. Spin sweep and slams from existing blocks |
 | Boss 3, Beamtentor | Historical board B; story: Der Ewige Bauherr | **Der Ewige Bauherr**: an existing big body (Koloss or mech) in hi-vis and scaffold. Slow and strong, calls a building crew of Zeitlose |
 | Sultan Nimmersatt, Hochzeitspalast | Der Ewige Gastgeber: gold-vessel sovereign on a carpet throne, tea-urn belly, spoon sceptre | The one new boss body (human base with crown, tray shoulders, urn belly, carpet). An existing final-boss brain with its phases named as courses (Vorspeise, Hauptgang, Nachtisch); calls Tee-Ifrite and carpets |

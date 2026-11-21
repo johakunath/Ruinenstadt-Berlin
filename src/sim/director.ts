@@ -13,7 +13,7 @@ import { encounterAlive, makeElite, pickKind, spawnEnemy, spawnPack } from './en
 import { freeSpot, reachable } from './reach';
 import { clearThreats } from './threats';
 import { FlowField, type Bounds } from './flowfield';
-import type { EncounterDef } from './level';
+import { inRoom, type EncounterDef } from './level';
 import { spawnDrop } from './loot';
 import { healPlayer } from './heal';
 import { DT, type Enemy, type Sim } from './types';
@@ -99,6 +99,8 @@ export function gateBetween(sim: Sim, ax: number, az: number, bx: number, bz: nu
 /** A free spot on the rim, away from the player, preferably out of the camera's view. */
 function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: number } {
   const p = sim.player;
+  // M18 walk-in room (E2): every body comes from a free cell inside the room, the farther from the hero the better.
+  if (enc.room) return roomSpot(sim, enc.room, radius);
   // The hero left the place: the wave comes to them, from out of view.
   if (Math.hypot(p.x - enc.x, p.z - enc.z) > enc.r + AWAY) {
     const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, radius + 0.2, (x, z) => !gateBetween(sim, p.x, p.z, x, z));
@@ -124,6 +126,22 @@ function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: n
   return best;
 }
 
+/** A free cell inside a walk-in room (off walls and furniture, reachable), preferably far from the hero. */
+function roomSpot(sim: Sim, room: NonNullable<EncounterDef['room']>, radius: number): { x: number; z: number } {
+  const p = sim.player, c = Math.cos(room.rot), s = Math.sin(room.rot);
+  let best = { x: room.x, z: room.z }, bestScore = -Infinity;
+  for (let tries = 0; tries < 24; tries++) {
+    const u = sim.rng.range(-room.hx + radius + 0.2, room.hx - radius - 0.2), v = sim.rng.range(-room.hz + radius + 0.2, room.hz - radius - 0.2);
+    const x = room.x + u * c + v * s, z = room.z - u * s + v * c;
+    if (sim.level.blocked(x, z, radius) || sim.level.noSpawnAt(x, z)) continue;
+    if (sim.level.near(x, z, radius + 1).some((q) => colliderDistance(q, x, z) < radius + 0.2)) continue;
+    if (!reachable(sim.level, x, z)) continue;
+    const score = Math.hypot(x - p.x, z - p.z) + sim.rng.range(0, 3);
+    if (score > bestScore) { bestScore = score; best = { x, z }; }
+  }
+  return best;
+}
+
 /** Tags every body added since `from` (a pack, a boss) as part of the current encounter (`Enemy.enc`). */
 function tagSince(sim: Sim, from: number): void {
   for (let i = from; i < sim.enemies.length; i++) sim.enemies[i]!.enc = sim.run.index;
@@ -141,7 +159,8 @@ export function updateDirector(sim: Sim): void {
   if (!enc || p.state === 'dead') return;
 
   if (run.phase === 'travel') {
-    if (Math.hypot(p.x - enc.x, p.z - enc.z) > enc.r - TRIGGER_INSET) return;
+    // M18: a walk-in room starts when the hero is inside it (not on the square in front of its door).
+    if (enc.room ? !inRoom(enc.room, p.x, p.z, 0.3) : Math.hypot(p.x - enc.x, p.z - enc.z) > enc.r - TRIGGER_INSET) return;
     run.wave = 0;
     focusFlow(sim, enc.x, enc.z);
     if (enc.hold) {

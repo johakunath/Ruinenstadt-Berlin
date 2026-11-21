@@ -43,7 +43,7 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 
 - Charlottenburg is on the network: after Mitte the U2-Tunnel West leads to S+U Zoologischer Garten. The sky turns from Blaue Stunde at the Zoo to Premierennacht on the Ku'damm, Mondnacht in the Schlossgarten and Morgengrauen at the Schloss; searchlights over the cinemas, confetti, prism motes and diamond dust.
 - Maze riddles: three Kristallsockel open a hedge gate to a hidden blessing; at two forks only one mirror shows the hero.
-- Charlottenburg 1920 streets: cab ranks, shop arcades, cinema forecourts and jazz cellar yards; 1920 cars, open-top buses and trams; more shop fronts with awnings.
+- Charlottenburg 1920 streets: cab ranks, shop arcades, cinema forecourts and jazz cellar yards, a hedge room and a garden theatre ruin in the Schlossgarten; 1920 cars, open-top buses and trams; more shop fronts with awnings.
 
 ## 2026-11-20
 

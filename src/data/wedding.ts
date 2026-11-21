@@ -3,8 +3,8 @@
 // „kommt bald“: the feast that never ends holds the Kiez; cranes, scaffolds and billboards for lofts that never open.
 // Origin U Leopoldplatz (the start). Anchors checked against OpenStreetMap on 2026-11-21 (octants in the map doc),
 // compressed about 0.12 east–west and 0.15 to 0.3 north–south. Route, one loop without doubling back:
-// U Leopoldplatz → Wochenmarkt on the square → Müllerstraße → Lindower Straße along the Ringbahn → into Zum
-// Magendoktor → Nettelbeckplatz (boss 1) → Pankstraße over the Panke → Uferterrasse → Brunnenplatz before the
+// U Leopoldplatz → Wochenmarkt on the square → Müllerstraße → Lindower Straße along the Ringbahn → Nettelbeckplatz →
+// into Zum Magendoktor (two waves, then boss 1 in the same room) → Pankstraße over the Panke → Uferterrasse → Brunnenplatz before the
 // Amtsgericht (boss 2) → Badstraße → through the Ringbahn arch on the Brunnenstraße → east gate of the
 // Humboldthain → Rosengarten → Humboldthöhe → south-east gate → Beamtentor (boss 3) → the Lange Tafel in the
 // AEG yard → the Hochzeitspalast in the roofless Maschinenhalle (the district boss).
@@ -17,22 +17,22 @@ import { DEG } from '../sim/math';
 import { SAME_KIND_GAP, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street, type Viaduct, type Wall, type Lot, type Hill } from './map';
 import type { Prop } from './courtyard';
 import { lane } from './koepenick';
-import { KNEIPE, kneipeGuards } from './kneipe';
+import { KNEIPE, kneipeGuards, kneipeRoom, kneipeWorld } from './kneipe';
 
-/** Normal waves in the district: 8 Leopoldkiez, 3 Panke, 8 Gesundbrunnen & Humboldthain, 3 Das ewige Fest. */
-export const WEDDING_WAVES = 22;
+/** Normal waves in the district: 7 Leopoldkiez, 3 Panke, 8 Gesundbrunnen & Humboldthain, 3 Das ewige Fest. */
+export const WEDDING_WAVES = 21;
 /** Provisional (W4): +8 per district after Charlottenburg (32 to 54), not calibrated until the M14/B2 decision. */
 export const WEDDING_TIER = { from: 40, to: 62 } as const;
 
 /**
- * Stand-in bosses from existing kinds (step 2 builds the real ones): Der Stammgast on the Nettelbeckplatz (a
- * brawler who calls Zecher: the Feldwebel), Das Hauptgericht before the Amtsgericht, Der Ewige Bauherr before the
- * Beamtentor (a big slab: the Volkskoloss), Sultan Nimmersatt in the Hochzeitspalast (a final boss brain).
+ * Stand-in bosses from existing kinds (step 2 builds the real ones): Der Zugezogene in the Magendoktor (the Feldwebel
+ * brain: a charge, adds), Das Hauptgericht before the Amtsgericht, Der Ewige Bauherr before the Beamtentor (a big slab:
+ * the Volkskoloss), Sultan Nimmersatt in the Hochzeitspalast (a final boss brain).
  */
-export const WEDDING_BOSSES: Record<'stammgast' | 'hauptgericht' | 'bauherr' | 'sultan', BossKind> = { stammgast: 'feldwebel', hauptgericht: 'brandmeister', bauherr: 'volkskoloss', sultan: 'hauptmann' };
+export const WEDDING_BOSSES: Record<'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan', BossKind> = { zugezogene: 'feldwebel', hauptgericht: 'brandmeister', bauherr: 'volkskoloss', sultan: 'hauptmann' };
 
-/** The Magendoktor fight (E2): 0.6 of the usual count, at most 6 alive. */
-export const KNEIPE_FIGHT = { count: 0.6, maxAlive: 6 } as const;
+/** The Magendoktor fight (E2): two waves at 0.6 of the usual count, at most 6 alive, then the boss with two adds. */
+export const KNEIPE_FIGHT = { count: 0.6, maxAlive: 6, waves: 2, adds: 2 } as const;
 
 /**
  * Difficulty of wave `g` (40 … 62) in `zone`: the stand-in roster of existing kinds (walker weight 6 as
@@ -89,6 +89,8 @@ export function weddingMap(scale = 1): MapDef {
   const HALL = { x: AEG.x0 + 6 + HALLE.hx, z: AEG.z1 - HALLE.hz };
   const BT = { x: AEG.x1, z: 60 * s };
 
+  const kneipe: Landmark = { kind: 'kneipe', x: PUB.x, z: PUB.z, rot: 180 * DEG, hx: KNEIPE.w / 2, hz: KNEIPE.d / 2, clear: 1, name: 'Zum Magendoktor' };
+
   let g = 0;
   const tier = (n: number): number => WEDDING_TIER.from + (n * (WEDDING_TIER.to - WEDDING_TIER.from)) / (WEDDING_WAVES - 1);
   const encW = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number, calm = false): EncounterDef => {
@@ -102,18 +104,23 @@ export function weddingMap(scale = 1): MapDef {
   );
   const boss = (id: string, name: string, zone: number, x: number, z: number, r: number, kind: BossKind, adds: number): EncounterDef => bossW(id, name, zone, x * s, z * s, r, kind, adds);
   const B = WEDDING_BOSSES;
-  /** E2: the pub fight is a small ring inside the room, fewer bodies at once. */
+  /**
+   * E2: the whole pub is the arena (`room`): two waves of Zecher with fewer bodies at once, then the zone 1 boss in the
+   * same room as the third wave with two adds (the encounter heals fully when won, as a boss fight).
+   */
   const pubFight = (): EncounterDef => {
-    const e = encW('magendoktor', 'Zum Magendoktor', 0, PUB.x, PUB.z, KNEIPE.ring, 3);
-    return { ...e, waves: e.waves.map((w) => ({ ...w, count: Math.max(3, Math.round(w.count * KNEIPE_FIGHT.count)), maxAlive: Math.min(w.maxAlive, KNEIPE_FIGHT.maxAlive) })) };
+    const e = encW('magendoktor', 'Zum Magendoktor', 0, PUB.x, PUB.z, KNEIPE.r, KNEIPE_FIGHT.waves);
+    const waves = e.waves.map((w) => ({ ...w, count: Math.max(3, Math.round(w.count * KNEIPE_FIGHT.count)), maxAlive: Math.min(w.maxAlive, KNEIPE_FIGHT.maxAlive) }));
+    const boss: WaveDef = { ...weddingWaveTier(tier(Math.max(0, g - 1)), [B.zugezogene], 0), count: KNEIPE_FIGHT.adds, maxAlive: 4, elite: 0 };
+    return { ...e, waves: [...waves, boss], heal: 1, room: kneipeRoom(kneipe), bossAt: kneipeWorld(kneipe, KNEIPE.boss.x, KNEIPE.boss.z) };
   };
 
   const encounters: EncounterDef[] = [
-    // Zone 0, Leopoldkiez (8 waves): the market on the square, the Müllerstraße, inside the Magendoktor.
+    // Zone 0, Leopoldkiez (7 waves): the market on the square, the Müllerstraße, inside the Magendoktor (two waves and
+    // Der Zugezogene). The Nettelbeckplatz in front of the pub has no fight.
     enc('wochenmarkt', 'Wochenmarkt', 0, 24, -20, 14, 2),
     enc('muellerstrasse', 'Müllerstraße', 0, 22, 32, 14, 3),
     pubFight(),
-    boss('nettelbeckplatz', 'Nettelbeckplatz', 0, 94, 16, 15, B.stammgast, 3),
     // Zone 1, Panke (3 waves): the paved quay, then the court before the Amtsgericht.
     enc('uferterrasse', 'Uferterrasse', 1, 138, -21, 13, 3),
     boss('brunnenplatz', 'Brunnenplatz', 1, 156, -52, 15, B.hauptgericht, 4),
@@ -232,7 +239,6 @@ export function weddingMap(scale = 1): MapDef {
     const c = Math.abs(Math.cos(at.rot)), sn = Math.abs(Math.sin(at.rot));
     return { kind: 'spati', x: at.x, z: at.z, rot: at.rot, hx: 5.5 * c + 4 * sn, hz: 5.5 * sn + 4 * c, clear: 2, name };
   };
-  const kneipe = LW('kneipe', PUB.x, PUB.z, 180 * DEG, KNEIPE.w / 2, KNEIPE.d / 2, 1, { name: 'Zum Magendoktor' });
   const beamtentor = LW('beamtentor', BT.x, BT.z, 90 * DEG, BEAMTENTOR.half + BEAMTENTOR.tower.hx * 2, BEAMTENTOR.tower.hz, 0.5, { name: 'Beamtentor' });
   const halle = LW('maschinenhalle', HALL.x, HALL.z, 0, HALLE.hx, HALLE.hz, 0.5, { name: 'Hochzeitspalast' });
   const landmarks: Landmark[] = [
@@ -407,9 +413,8 @@ export function weddingMap(scale = 1): MapDef {
   for (let a = 0; a < 360; a += 30) yards.push({ kind: 'beerTable', x: tafel.x + Math.sin(a * DEG) * (tafel.r + 2.5), z: tafel.z + Math.cos(a * DEG) * (tafel.r + 2.5), rot: a * DEG + Math.PI / 2, size: 1 });
   for (let a = 0; a < 360; a += 36) if (Math.sin(a * DEG) < 0.5) yards.push({ kind: 'stall', x: markt.x + Math.sin(a * DEG) * (markt.r + 2.5), z: markt.z + Math.cos(a * DEG) * (markt.r + 2.5), rot: a * DEG + Math.PI, size: 1 });
   for (const [dx, dz, r] of [[-6, -4, 0.3], [5, -5, -0.2], [-4, 6, 0.1], [6, 4, 0.4]] as const) yards.push({ kind: 'stall', x: markt.x + dx, z: markt.z + dz, rot: r, size: 0.9 });
-  // Beer tables on the rim of the Nettelbeckplatz, between the fight and the house rows.
-  const nb = encounters.find((e) => e.id === 'nettelbeckplatz')!;
-  for (const a of [70, 110, 250, 290]) yards.push({ kind: 'beerTable', x: nb.x + Math.sin(a * DEG) * (nb.r + 2), z: nb.z + Math.cos(a * DEG) * (nb.r + 2), rot: 90 * DEG, size: 1 });
+  // The Nettelbeckplatz (no fight): beer tables on its sides, parasols and a barrel table in front of the pub.
+  for (const a of [70, 110, 250, 290]) yards.push({ kind: 'beerTable', x: 94 * s + Math.sin(a * DEG) * 17, z: 16 * s + Math.cos(a * DEG) * 17, rot: 90 * DEG, size: 1 });
   yards.push(
     // Street ends: the Müllerstraße at the Neubau's site fence, the Schulstraße and the Reinickendorfer Straße run into barricades; the arch at S Wedding is shut.
     barricadeAt('Müllerstraße', true), barricadeAt('Schulstraße', false), barricadeAt('Reinickendorfer Straße', true),
