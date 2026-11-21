@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { AFFIXES, LEGENDARY_ELEMENTS, SETS, SLOTS, type RarityId, type SlotId } from '../data/items';
 import { BASES } from '../data/item-names';
 import { Rng } from './math';
+import { createSim } from './sim';
+import { mapLevelOf } from '../bot/run';
 import { avgIl, isUpgrade, lootItem, makeItem, makeSetItem, price, rollRarity, salvage, scrapValue, shownLevel, type Item, type LootContext } from './items';
 
 const context = (overrides: Partial<LootContext> = {}): LootContext => ({ district: 0, luck: 0, wave: 1, ...overrides });
@@ -168,6 +170,11 @@ describe('item generation', () => {
     const n = lamps('fest');
     expect(n).toBeGreaterThan(350);
     expect(n).toBeLessThan(450);
+  });
+
+  it('a sim on the Wedding map hands `fest` to its loot, Charlottenburg (`revue`) none (Codex review of PR 80)', () => {
+    expect(createSim({ level: mapLevelOf('wedding'), seed: 1 }).lootCtx.flavor).toBe('fest');
+    expect(createSim({ level: mapLevelOf('charlottenburg'), seed: 1 }).lootCtx.flavor).toBeUndefined();
   });
 
   it('gives every set piece a finite value, the healing key ring too', () => {
