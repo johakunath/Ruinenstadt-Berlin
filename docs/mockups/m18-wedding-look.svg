@@ -1,0 +1,818 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="1210" viewBox="0 0 2100 1210" font-family="Inter,Segoe UI,Arial,sans-serif">
+<rect width="2100" height="1210" fill="#0e1416"/>
+<defs><linearGradient id="skyA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#061a1c"/><stop offset="1" stop-color="#12403a"/></linearGradient><linearGradient id="skyB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1020"/><stop offset="1" stop-color="#27344a"/></linearGradient><linearGradient id="skyC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2356"/><stop offset="0.6" stop-color="#a04a7a"/><stop offset="1" stop-color="#f0a070"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#ffd070" stop-opacity="0.85"/><stop offset="1" stop-color="#ffb040" stop-opacity="0"/></radialGradient><radialGradient id="glowT"><stop offset="0" stop-color="#5fd8c8" stop-opacity="0.7"/><stop offset="1" stop-color="#5fd8c8" stop-opacity="0"/></radialGradient><radialGradient id="pool"><stop offset="0" stop-color="#ffc060" stop-opacity="0.55"/><stop offset="1" stop-color="#ffc060" stop-opacity="0"/></radialGradient></defs>
+<text x="40.0" y="50.0" fill="#f2e3c8" font-size="27" font-weight="700" text-anchor="start" >M18 Wedding · Bildrichtung „Gold“ · drei Varianten (Straßenansicht von Süden, Beispielwerte, kein Spielbild)</text>
+<text x="40.0" y="80.0" fill="#b8c0c0" font-size="15.5" font-weight="400" text-anchor="start" >Die gestrichelte Linie zeigt, was die Spielkamera sieht (etwa 6 m Höhe am Helden). Gold muss also unter 5 m sitzen: Lampions, Markisen, Teppiche, Tafeln, Schaufenster.</text>
+<text x="40.0" y="128.0" fill="#f0a030" font-size="25" font-weight="700" text-anchor="start" >A · Lampionnacht</text>
+<rect x="270" y="108" width="118" height="27" rx="13.5" fill="#f0a030"/>
+<text x="328.6" y="127.0" fill="#14121a" font-size="14" font-weight="700" text-anchor="middle" >Empfehlung</text>
+<text x="40.0" y="154.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Smaragdgrüne Nacht, das Gold kommt von unten: dichte Lampion- und Wunschlampenketten</text>
+<text x="40.0" y="173.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >über der Straße</text>
+<clipPath id="kA"><rect x="40" y="200" width="640" height="400"/></clipPath><g clip-path="url(#kA)">
+<rect x="40" y="200" width="640" height="400" fill="url(#skyA)"/>
+<rect x="495" y="240" width="70" height="290" fill="#0b2624"/>
+<line x1="495" y1="260" x2="565" y2="260" stroke="#000" stroke-opacity="0.35"/>
+<line x1="495" y1="286" x2="565" y2="286" stroke="#000" stroke-opacity="0.35"/>
+<line x1="495" y1="312" x2="565" y2="312" stroke="#000" stroke-opacity="0.35"/>
+<line x1="495" y1="338" x2="565" y2="338" stroke="#000" stroke-opacity="0.35"/>
+<line x1="495" y1="364" x2="565" y2="364" stroke="#000" stroke-opacity="0.35"/>
+<line x1="495" y1="390" x2="565" y2="390" stroke="#000" stroke-opacity="0.35"/>
+<line x1="495" y1="416" x2="565" y2="416" stroke="#000" stroke-opacity="0.35"/>
+<path d="M600 530 V228 H460 M600 228 H650 M600 228 L510 252" stroke="#0b2624" stroke-width="5" fill="none"/>
+<circle cx="464" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="476" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="488" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="500" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="512" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="524" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="536" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="548" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="560" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="572" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="584" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="596" cy="234" r="2.2" fill="#ffd070"/>
+<rect x="480" y="310" width="100" height="34" fill="#efe6d0" transform="rotate(-4 530 327)"/>
+<text x="530.0" y="324.0" fill="#7a1c3a" font-size="10.5" font-weight="800" text-anchor="middle" transform="rotate(-4 530 327)">DER WEDDING</text>
+<text x="530.0" y="337.0" fill="#7a1c3a" font-size="10.5" font-weight="800" text-anchor="middle" transform="rotate(-4 530 327)">KOMMT BALD</text>
+<rect x="40" y="127.0" width="200" height="403.0" fill="#3a3a34" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="56" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="102" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="148" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="194" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="56" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="102" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="148" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="194" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="56" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="102" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="148" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="194" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="240" y="101.0" width="190" height="429.0" fill="#44403a" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="256" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="302" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="348" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="394" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="256" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="302" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="348" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="394" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="256" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="302" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="348" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="394" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="244" y="140.0" width="182" height="275.6" fill="#1f8a68" fill-opacity="0.5"/>
+<line x1="244" y1="124.40000000000003" x2="244" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="282" y1="124.40000000000003" x2="282" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="320" y1="124.40000000000003" x2="320" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="358" y1="124.40000000000003" x2="358" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="396" y1="124.40000000000003" x2="396" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="434" y1="124.40000000000003" x2="434" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="244" y1="415.6" x2="426" y2="415.6" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="244" y1="348.0" x2="426" y2="348.0" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="244" y1="280.4" x2="426" y2="280.4" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="244" y1="212.79999999999995" x2="426" y2="212.79999999999995" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="244" y1="145.2" x2="426" y2="145.2" stroke="#9aa0a0" stroke-width="2"/>
+<rect x="430" y="127.0" width="250" height="403.0" fill="#39403c" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="446" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="492" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="538" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="584" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="630" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="446" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="492" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="538" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="584" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="630" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="446" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="492" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="538" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="584" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="630" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="40" y="406.8" width="200" height="123.19999999999999" fill="#1c5a4a"/>
+<path d="M58.0 530 V454.8 A22.333333333333332 22.333333333333332 0 0 1 102.66666666666666 454.8 V530 Z" fill="#ffcc66" stroke="#e8b838" stroke-width="3"/>
+<circle cx="80.33333333333333" cy="464.8" r="9" fill="#fff0c0"/>
+<path d="M58.0 450.8 Q80.33333333333333 482.8 102.66666666666666 450.8 V442.8 H58.0 Z" fill="#9a1c3a"/>
+<path d="M112.66666666666666 530 V454.8 A22.333333333333332 22.333333333333332 0 0 1 157.33333333333331 454.8 V530 Z" fill="#ffcc66" stroke="#e8b838" stroke-width="3"/>
+<circle cx="135.0" cy="464.8" r="9" fill="#fff0c0"/>
+<path d="M112.66666666666666 450.8 Q135.0 482.8 157.33333333333331 450.8 V442.8 H112.66666666666666 Z" fill="#9a1c3a"/>
+<path d="M167.33333333333331 530 V454.8 A22.333333333333332 22.333333333333332 0 0 1 211.99999999999997 454.8 V530 Z" fill="#ffcc66" stroke="#e8b838" stroke-width="3"/>
+<circle cx="189.66666666666666" cy="464.8" r="9" fill="#fff0c0"/>
+<path d="M167.33333333333331 450.8 Q189.66666666666666 482.8 211.99999999999997 450.8 V442.8 H167.33333333333331 Z" fill="#9a1c3a"/>
+<rect x="78.0" y="408.8" width="124" height="22" rx="4" fill="#7a1430" stroke="#e8b838" stroke-width="2"/>
+<text x="140.0" y="424.8" fill="#ffd880" font-size="14" font-weight="700" text-anchor="middle" font-style="italic">Hochzeitssaal</text>
+<rect x="244" y="420.8" width="92" height="109.19999999999999" fill="#201c1c"/>
+<rect x="254" y="454.8" width="72" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M248 430.8 H332 L344 456.8 H236 Z" fill="#a01c3c"/>
+<circle cx="238" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="247" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="256" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="265" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="274" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="283" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="292" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="301" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="310" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="319" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="328" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="337" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="290.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Juwelier</text>
+<rect x="340" y="420.8" width="86" height="109.19999999999999" fill="#201c1c"/>
+<rect x="350" y="454.8" width="66" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M344 430.8 H422 L434 456.8 H332 Z" fill="#a01c3c"/>
+<circle cx="334" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="343" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="352" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="361" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="370" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="379" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="388" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="397" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="406" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="415" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="424" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="383.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Brautmoden</text>
+<rect x="434" y="420.8" width="120" height="109.19999999999999" fill="#201c1c"/>
+<rect x="444" y="454.8" width="100" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M438 430.8 H550 L562 456.8 H426 Z" fill="#a01c3c"/>
+<circle cx="428" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="437" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="446" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="455" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="464" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="473" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="482" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="491" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="500" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="509" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="518" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="527" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="536" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="545" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="554" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="494.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Baklava &amp; Döner</text>
+<rect x="558" y="420.8" width="122" height="109.19999999999999" fill="#201c1c"/>
+<rect x="568" y="454.8" width="102" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M562 430.8 H676 L688 456.8 H550 Z" fill="#a01c3c"/>
+<circle cx="552" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="561" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="570" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="579" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="588" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="597" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="606" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="615" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="624" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="633" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="642" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="651" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="660" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="669" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="678" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="619.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Barbier</text>
+<rect x="40" y="530" width="640" height="70" fill="#1a2422"/>
+<rect x="40" y="530" width="640" height="9" fill="#55504a"/>
+<ellipse cx="110" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="230" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="340" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="460" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="580" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<polyline points="50,403 78,414 106,413 135,423 163,420 191,430 219,426 247,435 275,430 304,438 332,432 360,439 388,432 416,438 445,430 473,435 501,426 529,430 557,420 585,423 614,413 642,414 670,403" fill="none" stroke="#2a2a20" stroke-width="1.5"/>
+<circle cx="78" cy="423" r="26" fill="url(#glow)"/>
+<ellipse cx="78" cy="423" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="106" cy="422" r="26" fill="url(#glow)"/>
+<ellipse cx="106" cy="422" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="135" cy="432" r="26" fill="url(#glow)"/>
+<ellipse cx="135" cy="432" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="163" cy="429" r="26" fill="url(#glowT)"/>
+<ellipse cx="163" cy="429" rx="7" ry="9" fill="#7fe8d8" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="191" cy="439" r="26" fill="url(#glow)"/>
+<ellipse cx="191" cy="439" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="219" cy="435" r="26" fill="url(#glow)"/>
+<ellipse cx="219" cy="435" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="247" cy="444" r="26" fill="url(#glow)"/>
+<ellipse cx="247" cy="444" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="275" cy="439" r="26" fill="url(#glow)"/>
+<ellipse cx="275" cy="439" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="304" cy="447" r="26" fill="url(#glow)"/>
+<ellipse cx="304" cy="447" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="332" cy="441" r="26" fill="url(#glowT)"/>
+<ellipse cx="332" cy="441" rx="7" ry="9" fill="#7fe8d8" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="360" cy="448" r="26" fill="url(#glow)"/>
+<ellipse cx="360" cy="448" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="388" cy="441" r="26" fill="url(#glow)"/>
+<ellipse cx="388" cy="441" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="416" cy="447" r="26" fill="url(#glow)"/>
+<ellipse cx="416" cy="447" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="445" cy="439" r="26" fill="url(#glow)"/>
+<ellipse cx="445" cy="439" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="473" cy="444" r="26" fill="url(#glow)"/>
+<ellipse cx="473" cy="444" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="501" cy="435" r="26" fill="url(#glowT)"/>
+<ellipse cx="501" cy="435" rx="7" ry="9" fill="#7fe8d8" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="529" cy="439" r="26" fill="url(#glow)"/>
+<ellipse cx="529" cy="439" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="557" cy="429" r="26" fill="url(#glow)"/>
+<ellipse cx="557" cy="429" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="585" cy="432" r="26" fill="url(#glow)"/>
+<ellipse cx="585" cy="432" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="614" cy="422" r="26" fill="url(#glow)"/>
+<ellipse cx="614" cy="422" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="642" cy="423" r="26" fill="url(#glow)"/>
+<ellipse cx="642" cy="423" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<polyline points="50,416 84,425 119,423 153,431 188,428 222,436 257,431 291,438 326,433 360,439 394,433 429,438 463,431 498,436 532,428 567,431 601,423 636,425 670,416" fill="none" stroke="#2a2a20" stroke-width="1.5"/>
+<circle cx="84" cy="434" r="26" fill="url(#glow)"/>
+<ellipse cx="84" cy="434" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="119" cy="432" r="26" fill="url(#glow)"/>
+<ellipse cx="119" cy="432" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="153" cy="440" r="26" fill="url(#glow)"/>
+<ellipse cx="153" cy="440" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="188" cy="437" r="26" fill="url(#glowT)"/>
+<ellipse cx="188" cy="437" rx="7" ry="9" fill="#7fe8d8" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="222" cy="445" r="26" fill="url(#glow)"/>
+<ellipse cx="222" cy="445" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="257" cy="440" r="26" fill="url(#glow)"/>
+<ellipse cx="257" cy="440" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="291" cy="447" r="26" fill="url(#glow)"/>
+<ellipse cx="291" cy="447" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="326" cy="442" r="26" fill="url(#glow)"/>
+<ellipse cx="326" cy="442" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="360" cy="448" r="26" fill="url(#glow)"/>
+<ellipse cx="360" cy="448" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="394" cy="442" r="26" fill="url(#glowT)"/>
+<ellipse cx="394" cy="442" rx="7" ry="9" fill="#7fe8d8" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="429" cy="447" r="26" fill="url(#glow)"/>
+<ellipse cx="429" cy="447" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="463" cy="440" r="26" fill="url(#glow)"/>
+<ellipse cx="463" cy="440" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="498" cy="445" r="26" fill="url(#glow)"/>
+<ellipse cx="498" cy="445" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="532" cy="437" r="26" fill="url(#glow)"/>
+<ellipse cx="532" cy="437" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="567" cy="440" r="26" fill="url(#glow)"/>
+<ellipse cx="567" cy="440" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="601" cy="432" r="26" fill="url(#glowT)"/>
+<ellipse cx="601" cy="432" rx="7" ry="9" fill="#7fe8d8" stroke="#8a5a10" stroke-width="1"/>
+<circle cx="636" cy="434" r="26" fill="url(#glow)"/>
+<ellipse cx="636" cy="434" rx="7" ry="9" fill="#ffd070" stroke="#8a5a10" stroke-width="1"/>
+<rect x="254" y="542" width="150" height="22" fill="#8a1c34" stroke="#e8b838" stroke-width="2"/>
+<rect x="276" y="508" width="250" height="8" fill="#f2e6d0"/><rect x="276" y="516" width="250" height="14" fill="#1f7a5c"/>
+<rect x="290" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="320" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="350" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="380" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="410" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="440" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="470" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="500" y="500" width="8" height="8" fill="#e8b838"/>
+<path d="M502 508 v-22 h14 v22 z M498 484 h22 v6 h-22z" fill="#e8b838"/>
+<rect x="183" y="483.2" width="14" height="38.800000000000004" rx="4" fill="#5a3a24"/><circle cx="190" cy="480.6" r="7" fill="#d8b090"/><path d="M182 489.7 h16 l6 10 h-10z" fill="#c8242c"/>
+<text x="190.0" y="592.0" fill="#c8ccc8" font-size="11.5" font-weight="400" text-anchor="middle" >Held 1,8 m</text>
+<line x1="40" y1="374.0" x2="680" y2="374.0" stroke="#ffffff" stroke-opacity="0.75" stroke-dasharray="8 6" stroke-width="1.5"/>
+<text x="672.0" y="368.0" fill="#ffffff" font-size="11.5" font-weight="500" text-anchor="end" >Kamera: bis hier sichtbar (6 m)</text>
+</g>
+<text x="40.0" y="630.0" fill="#c8ccc8" font-size="13.5" font-weight="600" text-anchor="start" >Palette</text>
+<rect x="190" y="616" width="30" height="20" fill="#061a1c" stroke="#000" stroke-opacity="0.4"/>
+<rect x="224" y="616" width="30" height="20" fill="#12403a" stroke="#000" stroke-opacity="0.4"/>
+<rect x="258" y="616" width="30" height="20" fill="#ffd070" stroke="#000" stroke-opacity="0.4"/>
+<rect x="292" y="616" width="30" height="20" fill="#e8b838" stroke="#000" stroke-opacity="0.4"/>
+<rect x="326" y="616" width="30" height="20" fill="#a01c3c" stroke="#000" stroke-opacity="0.4"/>
+<rect x="360" y="616" width="30" height="20" fill="#1f8a68" stroke="#000" stroke-opacity="0.4"/>
+<rect x="394" y="616" width="30" height="20" fill="#f2e6d0" stroke="#000" stroke-opacity="0.4"/>
+<text x="40.0" y="666.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >+ Am klarsten anders als Mitte (blauschwarzer Regen, Cyan und Magenta) und</text>
+<text x="40.0" y="685.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >Charlottenburg (Silber, Violett, weiße Glühbirnen): Smaragd, Gold, Rubin.</text>
+<text x="40.0" y="708.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >+ Gold aus den vorhandenen Lampenfarben (Lampe, Lichterkette), Smaragd-Akzente aus dem</text>
+<text x="40.0" y="727.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >vorhandenen Türkis: keine neue Leuchtfarbe.</text>
+<text x="40.0" y="750.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >+ Trägt die Lichtregel von selbst: Lampions in 4,5 m, Kerzen und Samoware am Boden,</text>
+<text x="40.0" y="769.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >Schaufenster, Kronleuchter im Saal.</text>
+<text x="40.0" y="792.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >– Viele kleine Leuchtkörper: müssen als ein Netz je Chunk gebaut werden, sonst teuer</text>
+<text x="40.0" y="811.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >auf Leistung.</text>
+<text x="730.0" y="128.0" fill="#f0a030" font-size="25" font-weight="700" text-anchor="start" >B · Baustelle in Gold</text>
+<text x="730.0" y="154.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Kühle Mondnacht, alles eingerüstet: Smaragdnetze, Lichterketten an Gerüst und Kran,</text>
+<text x="730.0" y="173.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >das Fest ist klein</text>
+<clipPath id="kB"><rect x="730" y="200" width="640" height="400"/></clipPath><g clip-path="url(#kB)">
+<rect x="730" y="200" width="640" height="400" fill="url(#skyB)"/>
+<circle cx="1250" cy="260" r="22" fill="#dfe8f4" fill-opacity="0.9"/>
+<rect x="1185" y="240" width="70" height="290" fill="#141c2c"/>
+<line x1="1185" y1="260" x2="1255" y2="260" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1185" y1="286" x2="1255" y2="286" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1185" y1="312" x2="1255" y2="312" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1185" y1="338" x2="1255" y2="338" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1185" y1="364" x2="1255" y2="364" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1185" y1="390" x2="1255" y2="390" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1185" y1="416" x2="1255" y2="416" stroke="#000" stroke-opacity="0.35"/>
+<path d="M1290 530 V228 H1150 M1290 228 H1340 M1290 228 L1200 252" stroke="#141c2c" stroke-width="5" fill="none"/>
+<circle cx="1154" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="1166" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="1178" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="1190" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="1202" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="1214" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="1226" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="1238" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="1250" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="1262" cy="234" r="2.2" fill="#ffd070"/>
+<circle cx="1274" cy="231" r="2.2" fill="#ffd070"/>
+<circle cx="1286" cy="234" r="2.2" fill="#ffd070"/>
+<rect x="1170" y="310" width="100" height="34" fill="#efe6d0" transform="rotate(-4 1220 327)"/>
+<text x="1220.0" y="324.0" fill="#7a1c3a" font-size="10.5" font-weight="800" text-anchor="middle" transform="rotate(-4 1220 327)">DER WEDDING</text>
+<text x="1220.0" y="337.0" fill="#7a1c3a" font-size="10.5" font-weight="800" text-anchor="middle" transform="rotate(-4 1220 327)">KOMMT BALD</text>
+<rect x="730" y="127.0" width="200" height="403.0" fill="#2c3038" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="746" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="792" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="838" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="884" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="746" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="792" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="838" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="884" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="746" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="792" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="838" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="884" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="734" y="140.0" width="192" height="275.6" fill="#1f8a68" fill-opacity="0.55"/>
+<line x1="734" y1="124.40000000000003" x2="734" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="772" y1="124.40000000000003" x2="772" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="810" y1="124.40000000000003" x2="810" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="848" y1="124.40000000000003" x2="848" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="886" y1="124.40000000000003" x2="886" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="924" y1="124.40000000000003" x2="924" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="734" y1="415.6" x2="926" y2="415.6" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="734" y1="348.0" x2="926" y2="348.0" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="734" y1="280.4" x2="926" y2="280.4" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="734" y1="212.79999999999995" x2="926" y2="212.79999999999995" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="734" y1="145.2" x2="926" y2="145.2" stroke="#9aa0a0" stroke-width="2"/>
+<circle cx="738" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="752" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="766" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="780" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="794" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="808" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="822" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="836" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="850" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="864" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="878" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="892" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="906" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="920" cy="421.6" r="2.2" fill="#ffd070"/>
+<rect x="930" y="101.0" width="190" height="429.0" fill="#32343c" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="946" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="992" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1038" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1084" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="946" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="992" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1038" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1084" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="946" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="992" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1038" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1084" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="934" y="140.0" width="182" height="275.6" fill="#1f8a68" fill-opacity="0.55"/>
+<line x1="934" y1="124.40000000000003" x2="934" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="972" y1="124.40000000000003" x2="972" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1010" y1="124.40000000000003" x2="1010" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1048" y1="124.40000000000003" x2="1048" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1086" y1="124.40000000000003" x2="1086" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1124" y1="124.40000000000003" x2="1124" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="934" y1="415.6" x2="1116" y2="415.6" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="934" y1="348.0" x2="1116" y2="348.0" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="934" y1="280.4" x2="1116" y2="280.4" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="934" y1="212.79999999999995" x2="1116" y2="212.79999999999995" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="934" y1="145.2" x2="1116" y2="145.2" stroke="#9aa0a0" stroke-width="2"/>
+<circle cx="938" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="952" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="966" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="980" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="994" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1008" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1022" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1036" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1050" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1064" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1078" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1092" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1106" cy="419.6" r="2.2" fill="#ffd070"/>
+<rect x="1120" y="127.0" width="250" height="403.0" fill="#2a3036" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="1136" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1182" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1228" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1274" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1320" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1136" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1182" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1228" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1274" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1320" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1136" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1182" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1228" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1274" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1320" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1124" y="140.0" width="242" height="275.6" fill="#1f8a68" fill-opacity="0.55"/>
+<line x1="1124" y1="124.40000000000003" x2="1124" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1162" y1="124.40000000000003" x2="1162" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1200" y1="124.40000000000003" x2="1200" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1238" y1="124.40000000000003" x2="1238" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1276" y1="124.40000000000003" x2="1276" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1314" y1="124.40000000000003" x2="1314" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1352" y1="124.40000000000003" x2="1352" y2="530" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1124" y1="415.6" x2="1366" y2="415.6" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1124" y1="348.0" x2="1366" y2="348.0" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1124" y1="280.4" x2="1366" y2="280.4" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1124" y1="212.79999999999995" x2="1366" y2="212.79999999999995" stroke="#9aa0a0" stroke-width="2"/>
+<line x1="1124" y1="145.2" x2="1366" y2="145.2" stroke="#9aa0a0" stroke-width="2"/>
+<circle cx="1128" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1142" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1156" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1170" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1184" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1198" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1212" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1226" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1240" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1254" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1268" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1282" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1296" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1310" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1324" cy="419.6" r="2.2" fill="#ffd070"/>
+<circle cx="1338" cy="421.6" r="2.2" fill="#ffd070"/>
+<circle cx="1352" cy="419.6" r="2.2" fill="#ffd070"/>
+<rect x="730" y="420.8" width="200" height="109.19999999999999" fill="#201c1c"/>
+<rect x="740" y="454.8" width="180" height="69.19999999999999" fill="#6a5a3a" fill-opacity="0.9"/>
+<path d="M734 430.8 H926 L938 456.8 H722 Z" fill="#5a2030"/>
+<circle cx="724" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="733" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="742" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="751" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="760" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="769" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="778" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="787" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="796" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="805" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="814" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="823" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="832" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="841" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="850" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="859" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="868" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="877" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="886" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="895" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="904" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="913" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="922" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="931" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="830.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Teestube</text>
+<rect x="934" y="420.8" width="92" height="109.19999999999999" fill="#201c1c"/>
+<rect x="944" y="454.8" width="72" height="69.19999999999999" fill="#6a5a3a" fill-opacity="0.9"/>
+<path d="M938 430.8 H1022 L1034 456.8 H926 Z" fill="#5a2030"/>
+<circle cx="928" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="937" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="946" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="955" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="964" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="973" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="982" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="991" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1000" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1009" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1018" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1027" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="980.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Juwelier</text>
+<rect x="1030" y="420.8" width="86" height="109.19999999999999" fill="#201c1c"/>
+<rect x="1040" y="454.8" width="66" height="69.19999999999999" fill="#6a5a3a" fill-opacity="0.9"/>
+<path d="M1034 430.8 H1112 L1124 456.8 H1022 Z" fill="#5a2030"/>
+<circle cx="1024" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1033" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1042" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1051" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1060" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1069" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1078" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1087" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1096" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1105" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1114" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="1073.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Brautmoden</text>
+<rect x="1124" y="420.8" width="120" height="109.19999999999999" fill="#201c1c"/>
+<rect x="1134" y="454.8" width="100" height="69.19999999999999" fill="#6a5a3a" fill-opacity="0.9"/>
+<path d="M1128 430.8 H1240 L1252 456.8 H1116 Z" fill="#5a2030"/>
+<circle cx="1118" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1127" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1136" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1145" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1154" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1163" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1172" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1181" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1190" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1199" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1208" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1217" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1226" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1235" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1244" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="1184.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Baklava &amp; Döner</text>
+<rect x="1248" y="420.8" width="122" height="109.19999999999999" fill="#201c1c"/>
+<rect x="1258" y="454.8" width="102" height="69.19999999999999" fill="#6a5a3a" fill-opacity="0.9"/>
+<path d="M1252 430.8 H1366 L1378 456.8 H1240 Z" fill="#5a2030"/>
+<circle cx="1242" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1251" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1260" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1269" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1278" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1287" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1296" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1305" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1314" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1323" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1332" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1341" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1350" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1359" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1368" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="1309.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Barbier</text>
+<rect x="730" y="530" width="640" height="70" fill="#171a22"/>
+<rect x="730" y="530" width="640" height="9" fill="#55504a"/>
+<ellipse cx="850" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="1160" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<line x1="850" y1="530" x2="850" y2="472.8" stroke="#c8a020" stroke-width="3"/><rect x="838" y="462.4" width="24" height="12" fill="#fff0c0"/>
+<circle cx="850" cy="467.6" r="40" fill="url(#glow)"/>
+<line x1="1160" y1="530" x2="1160" y2="472.8" stroke="#c8a020" stroke-width="3"/><rect x="1148" y="462.4" width="24" height="12" fill="#fff0c0"/>
+<circle cx="1160" cy="467.6" r="40" fill="url(#glow)"/>
+<rect x="980" y="510" width="90" height="6" fill="#f2e6d0"/><rect x="984" y="516" width="82" height="14" fill="#1f7a5c"/>
+<path d="M1090 530 l8 -26 l8 26 z" fill="#e06a20"/>
+<path d="M1124 530 l8 -26 l8 26 z" fill="#e06a20"/>
+<path d="M1158 530 l8 -26 l8 26 z" fill="#e06a20"/>
+<path d="M1192 530 l8 -26 l8 26 z" fill="#e06a20"/>
+<path d="M1226 530 l8 -26 l8 26 z" fill="#e06a20"/>
+<rect x="1270" y="486" width="80" height="44" fill="none" stroke="#9aa0a0" stroke-width="2"/><line x1="1270" y1="486" x2="1350" y2="530" stroke="#9aa0a0"/>
+<rect x="873" y="483.2" width="14" height="38.800000000000004" rx="4" fill="#5a3a24"/><circle cx="880" cy="480.6" r="7" fill="#d8b090"/><path d="M872 489.7 h16 l6 10 h-10z" fill="#c8242c"/>
+<text x="880.0" y="592.0" fill="#c8ccc8" font-size="11.5" font-weight="400" text-anchor="middle" >Held 1,8 m</text>
+<line x1="730" y1="374.0" x2="1370" y2="374.0" stroke="#ffffff" stroke-opacity="0.75" stroke-dasharray="8 6" stroke-width="1.5"/>
+<text x="1362.0" y="368.0" fill="#ffffff" font-size="11.5" font-weight="500" text-anchor="end" >Kamera: bis hier sichtbar (6 m)</text>
+</g>
+<text x="730.0" y="630.0" fill="#c8ccc8" font-size="13.5" font-weight="600" text-anchor="start" >Palette</text>
+<rect x="880" y="616" width="30" height="20" fill="#0a1020" stroke="#000" stroke-opacity="0.4"/>
+<rect x="914" y="616" width="30" height="20" fill="#27344a" stroke="#000" stroke-opacity="0.4"/>
+<rect x="948" y="616" width="30" height="20" fill="#1f8a68" stroke="#000" stroke-opacity="0.4"/>
+<rect x="982" y="616" width="30" height="20" fill="#9aa0a0" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1016" y="616" width="30" height="20" fill="#ffd070" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1050" y="616" width="30" height="20" fill="#e06a20" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1084" y="616" width="30" height="20" fill="#5a2030" stroke="#000" stroke-opacity="0.4"/>
+<text x="730.0" y="666.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >+ Der Witz „kommt bald“ ist überall zu sehen. Gerüstnetze sind wirklich grün: Smaragd</text>
+<text x="730.0" y="685.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >ohne Kitsch.</text>
+<text x="730.0" y="708.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >+ Am billigsten: Gerüste sind Stäbe und eine Netzfläche, wenig Licht.</text>
+<text x="730.0" y="731.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >– Kalt und grau, kaum Festgefühl: weit weg vom gewählten Board (Wedding C), näher an</text>
+<text x="730.0" y="750.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >der verworfenen Kran-Richtung.</text>
+<text x="730.0" y="773.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >– Gerüste über 5 m sieht die Kamera kaum.</text>
+<text x="1420.0" y="128.0" fill="#f0a030" font-size="25" font-weight="700" text-anchor="start" >C · Abendrot wie auf dem Board</text>
+<text x="1420.0" y="154.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Magenta-violetter Abendhimmel, Blütenranken, goldene Fenster: am nächsten am</text>
+<text x="1420.0" y="173.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Konzeptbild</text>
+<clipPath id="kC"><rect x="1420" y="200" width="640" height="400"/></clipPath><g clip-path="url(#kC)">
+<rect x="1420" y="200" width="640" height="400" fill="url(#skyC)"/>
+<ellipse cx="1540" cy="260" rx="110" ry="16" fill="#ffb0a0" fill-opacity="0.35"/>
+<ellipse cx="1840" cy="290" rx="150" ry="16" fill="#ffb0a0" fill-opacity="0.35"/>
+<ellipse cx="1980" cy="240" rx="90" ry="16" fill="#ffb0a0" fill-opacity="0.35"/>
+<rect x="1875" y="240" width="70" height="290" fill="#4a2a5a"/>
+<line x1="1875" y1="260" x2="1945" y2="260" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1875" y1="286" x2="1945" y2="286" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1875" y1="312" x2="1945" y2="312" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1875" y1="338" x2="1945" y2="338" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1875" y1="364" x2="1945" y2="364" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1875" y1="390" x2="1945" y2="390" stroke="#000" stroke-opacity="0.35"/>
+<line x1="1875" y1="416" x2="1945" y2="416" stroke="#000" stroke-opacity="0.35"/>
+<path d="M1980 530 V228 H1840 M1980 228 H2030 M1980 228 L1890 252" stroke="#4a2a5a" stroke-width="5" fill="none"/>
+<rect x="1860" y="310" width="100" height="34" fill="#efe6d0" transform="rotate(-4 1910 327)"/>
+<text x="1910.0" y="324.0" fill="#7a1c3a" font-size="10.5" font-weight="800" text-anchor="middle" transform="rotate(-4 1910 327)">DER WEDDING</text>
+<text x="1910.0" y="337.0" fill="#7a1c3a" font-size="10.5" font-weight="800" text-anchor="middle" transform="rotate(-4 1910 327)">KOMMT BALD</text>
+<rect x="1420" y="127.0" width="200" height="403.0" fill="#6a4a5a" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="1436" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1482" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1528" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1574" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1436" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1482" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1528" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1574" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1436" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1482" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1528" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1574" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1620" y="101.0" width="190" height="429.0" fill="#7a5660" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="1636" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1682" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1728" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1774" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1636" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1682" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1728" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1774" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1636" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1682" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1728" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1774" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1810" y="127.0" width="250" height="403.0" fill="#644a5c" stroke="#101010" stroke-opacity="0.5"/>
+<rect x="1826" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1872" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1918" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1964" y="270.0" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="2010" y="270.0" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1826" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1872" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1918" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1964" y="181.60000000000002" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="2010" y="181.60000000000002" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1826" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1872" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1918" y="93.19999999999999" width="20" height="38" fill="#15181a" fill-opacity="0.8"/>
+<rect x="1964" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="2010" y="93.19999999999999" width="20" height="38" fill="#ffc860" fill-opacity="0.9"/>
+<rect x="1420" y="406.8" width="200" height="123.19999999999999" fill="#1c5a4a"/>
+<path d="M1438.0 530 V454.8 A22.333333333333332 22.333333333333332 0 0 1 1482.6666666666667 454.8 V530 Z" fill="#ffcc66" stroke="#e8b838" stroke-width="3"/>
+<circle cx="1460.3333333333333" cy="464.8" r="9" fill="#fff0c0"/>
+<path d="M1438.0 450.8 Q1460.3333333333333 482.8 1482.6666666666667 450.8 V442.8 H1438.0 Z" fill="#9a1c3a"/>
+<path d="M1492.6666666666667 530 V454.8 A22.333333333333332 22.333333333333332 0 0 1 1537.3333333333335 454.8 V530 Z" fill="#ffcc66" stroke="#e8b838" stroke-width="3"/>
+<circle cx="1515.0" cy="464.8" r="9" fill="#fff0c0"/>
+<path d="M1492.6666666666667 450.8 Q1515.0 482.8 1537.3333333333335 450.8 V442.8 H1492.6666666666667 Z" fill="#9a1c3a"/>
+<path d="M1547.3333333333333 530 V454.8 A22.333333333333332 22.333333333333332 0 0 1 1592.0 454.8 V530 Z" fill="#ffcc66" stroke="#e8b838" stroke-width="3"/>
+<circle cx="1569.6666666666665" cy="464.8" r="9" fill="#fff0c0"/>
+<path d="M1547.3333333333333 450.8 Q1569.6666666666665 482.8 1592.0 450.8 V442.8 H1547.3333333333333 Z" fill="#9a1c3a"/>
+<rect x="1458.0" y="408.8" width="124" height="22" rx="4" fill="#7a1430" stroke="#e8b838" stroke-width="2"/>
+<text x="1520.0" y="424.8" fill="#ffd880" font-size="14" font-weight="700" text-anchor="middle" font-style="italic">Hochzeitssaal</text>
+<rect x="1624" y="420.8" width="92" height="109.19999999999999" fill="#201c1c"/>
+<rect x="1634" y="454.8" width="72" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M1628 430.8 H1712 L1724 456.8 H1616 Z" fill="#b02a4a"/>
+<circle cx="1618" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1627" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1636" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1645" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1654" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1663" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1672" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1681" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1690" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1699" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1708" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1717" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="1670.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Juwelier</text>
+<rect x="1720" y="420.8" width="86" height="109.19999999999999" fill="#201c1c"/>
+<rect x="1730" y="454.8" width="66" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M1724 430.8 H1802 L1814 456.8 H1712 Z" fill="#b02a4a"/>
+<circle cx="1714" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1723" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1732" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1741" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1750" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1759" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1768" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1777" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1786" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1795" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1804" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="1763.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Brautmoden</text>
+<rect x="1814" y="420.8" width="120" height="109.19999999999999" fill="#201c1c"/>
+<rect x="1824" y="454.8" width="100" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M1818 430.8 H1930 L1942 456.8 H1806 Z" fill="#b02a4a"/>
+<circle cx="1808" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1817" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1826" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1835" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1844" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1853" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1862" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1871" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1880" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1889" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1898" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1907" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1916" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1925" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1934" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="1874.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Baklava &amp; Döner</text>
+<rect x="1938" y="420.8" width="122" height="109.19999999999999" fill="#201c1c"/>
+<rect x="1948" y="454.8" width="102" height="69.19999999999999" fill="#ffcc66" fill-opacity="0.9"/>
+<path d="M1942 430.8 H2056 L2068 456.8 H1930 Z" fill="#b02a4a"/>
+<circle cx="1932" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1941" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1950" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1959" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1968" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1977" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1986" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="1995" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="2004" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="2013" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="2022" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="2031" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="2040" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="2049" cy="459.8" r="2.4" fill="#e8b838"/>
+<circle cx="2058" cy="459.8" r="2.4" fill="#e8b838"/>
+<text x="1999.0" y="448.8" fill="#ffe6a8" font-size="12.5" font-weight="700" text-anchor="middle" >Barbier</text>
+<rect x="1420" y="530" width="640" height="70" fill="#3a2a38"/>
+<rect x="1420" y="530" width="640" height="9" fill="#55504a"/>
+<ellipse cx="1500" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="1670" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="1860" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<ellipse cx="2000" cy="560" rx="90" ry="26" fill="url(#pool)"/>
+<circle cx="1480" cy="444.2" r="30" fill="url(#glow)"/><ellipse cx="1480" cy="444.2" rx="8" ry="11" fill="#ffd070" stroke="#8a5a10"/>
+<circle cx="1650" cy="444.2" r="30" fill="url(#glow)"/><ellipse cx="1650" cy="444.2" rx="8" ry="11" fill="#ffd070" stroke="#8a5a10"/>
+<circle cx="1840" cy="444.2" r="30" fill="url(#glow)"/><ellipse cx="1840" cy="444.2" rx="8" ry="11" fill="#ffd070" stroke="#8a5a10"/>
+<circle cx="2010" cy="444.2" r="30" fill="url(#glow)"/><ellipse cx="2010" cy="444.2" rx="8" ry="11" fill="#ffd070" stroke="#8a5a10"/>
+<circle cx="1428.197866089107" cy="420.37005628015703" r="6.498834984318412" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1457.1213127413148" cy="425.77787754205053" r="6.220482553610765" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1480.0419319436214" cy="421.95432308385193" r="9.375687477867144" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1508.2122340521491" cy="416.73463082758406" r="9.900874237462912" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1525.6529208955694" cy="419.598702079275" r="8.785704647826247" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1552.1277834852472" cy="421.1571882104677" r="5.196036285237188" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1585.3550219914816" cy="427.22055905668185" r="7.86512970138692" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1614.2566893656324" cy="417.3024452826581" r="8.476476831368297" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1636.3211782794704" cy="423.1576944942148" r="7.281026656507065" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1665.7595489271755" cy="431.1829840923746" r="7.370491687098222" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1689.2981308766455" cy="411.7347274071388" r="8.50746010652212" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1715.0598039633874" cy="432.24811066826595" r="9.109623933048574" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1735.984337449318" cy="418.8874117338276" r="8.343263579420942" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1758.3158809927781" cy="420.55729629859485" r="5.840241894532722" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1785.6393411227443" cy="411.6969972252888" r="8.841164942362603" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1811.8107631082617" cy="415.84752634133207" r="6.954748515666136" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1848.199907637768" cy="412.172788626403" r="7.245937004746654" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1869.6921587280165" cy="429.83444418171325" r="9.096399189178706" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1900.0957825757791" cy="416.5252634193057" r="7.076482586058493" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1919.0227963146428" cy="429.8522421983607" r="9.788656019819957" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1942.1128926810754" cy="414.27679002678815" r="6.159784334097679" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1969.266705171532" cy="421.0691800675098" r="7.945617518661278" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="1995.6784526701795" cy="410.4900592744714" r="7.09473250562664" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="2023.1695500205262" cy="422.8595069215406" r="9.765489627625477" fill="#e85a9a" fill-opacity="0.8"/>
+<circle cx="2053.6669111999036" cy="421.7408115275571" r="8.087963747045638" fill="#e85a9a" fill-opacity="0.8"/>
+<rect x="1634" y="542" width="150" height="22" fill="#8a1c34" stroke="#e8b838" stroke-width="2"/>
+<rect x="1656" y="508" width="250" height="8" fill="#f2e6d0"/><rect x="1656" y="516" width="250" height="14" fill="#1f7a5c"/>
+<rect x="1670" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="1700" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="1730" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="1760" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="1790" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="1820" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="1850" y="500" width="8" height="8" fill="#e8b838"/>
+<rect x="1880" y="500" width="8" height="8" fill="#e8b838"/>
+<path d="M1882 508 v-22 h14 v22 z M1878 484 h22 v6 h-22z" fill="#e8b838"/>
+<rect x="1563" y="483.2" width="14" height="38.800000000000004" rx="4" fill="#5a3a24"/><circle cx="1570" cy="480.6" r="7" fill="#d8b090"/><path d="M1562 489.7 h16 l6 10 h-10z" fill="#c8242c"/>
+<text x="1570.0" y="592.0" fill="#c8ccc8" font-size="11.5" font-weight="400" text-anchor="middle" >Held 1,8 m</text>
+<line x1="1420" y1="374.0" x2="2060" y2="374.0" stroke="#ffffff" stroke-opacity="0.75" stroke-dasharray="8 6" stroke-width="1.5"/>
+<text x="2052.0" y="368.0" fill="#ffffff" font-size="11.5" font-weight="500" text-anchor="end" >Kamera: bis hier sichtbar (6 m)</text>
+</g>
+<text x="1420.0" y="630.0" fill="#c8ccc8" font-size="13.5" font-weight="600" text-anchor="start" >Palette</text>
+<rect x="1570" y="616" width="30" height="20" fill="#3a2356" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1604" y="616" width="30" height="20" fill="#a04a7a" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1638" y="616" width="30" height="20" fill="#f0a070" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1672" y="616" width="30" height="20" fill="#ffd070" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1706" y="616" width="30" height="20" fill="#e85a9a" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1740" y="616" width="30" height="20" fill="#b02a4a" stroke="#000" stroke-opacity="0.4"/>
+<rect x="1774" y="616" width="30" height="20" fill="#1c5a4a" stroke="#000" stroke-opacity="0.4"/>
+<text x="1420.0" y="666.0" fill="#f1ede4" font-size="14.5" font-weight="400" text-anchor="start" >+ Sieht aus wie das Board, sehr freundlich.</text>
+<text x="1420.0" y="689.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >– Zu nah an Charlottenburg Zone 1 („Blaue Stunde“, violetter Himmel mit</text>
+<text x="1420.0" y="708.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >Beerenhorizont) und am Nachmittagslicht des Alexanderplatzes.</text>
+<text x="1420.0" y="731.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >– Lampen wirken im Abendlicht schwach; die Lichtregeln und Tests sind für Nacht</text>
+<text x="1420.0" y="750.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >gebaut.</text>
+<text x="1420.0" y="773.0" fill="#ff8a5a" font-size="14.5" font-weight="400" text-anchor="start" >– Braucht einen eigenen Himmel mit Sonne: Schatten und Lampenstärken neu abstimmen.</text>
+<text x="40.0" y="860.0" fill="#f2e3c8" font-size="22" font-weight="700" text-anchor="start" >Abgrenzung zu den anderen Bezirken (Variante A)</text>
+<text x="40.0" y="905.0" fill="#c8ccc8" font-size="15" font-weight="700" text-anchor="start" >Mitte · 2089</text>
+<rect x="250" y="890" width="36" height="22" fill="#0a0c14" stroke="#000" stroke-opacity="0.4"/>
+<rect x="290" y="890" width="36" height="22" fill="#43d1cf" stroke="#000" stroke-opacity="0.4"/>
+<rect x="330" y="890" width="36" height="22" fill="#ff4fa3" stroke="#000" stroke-opacity="0.4"/>
+<rect x="370" y="890" width="36" height="22" fill="#6a8cff" stroke="#000" stroke-opacity="0.4"/>
+<rect x="410" y="890" width="36" height="22" fill="#e19142" stroke="#000" stroke-opacity="0.4"/>
+<text x="470.0" y="905.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Regen, nasse Straße, Neon an Fassaden und Masten, kalte blaue Laternen</text>
+<text x="40.0" y="943.0" fill="#c8ccc8" font-size="15" font-weight="700" text-anchor="start" >Charlottenburg · 1920</text>
+<rect x="250" y="928" width="36" height="22" fill="#1a1830" stroke="#000" stroke-opacity="0.4"/>
+<rect x="290" y="928" width="36" height="22" fill="#c8ccd8" stroke="#000" stroke-opacity="0.4"/>
+<rect x="330" y="928" width="36" height="22" fill="#c9a8ff" stroke="#000" stroke-opacity="0.4"/>
+<rect x="370" y="928" width="36" height="22" fill="#fff2ea" stroke="#000" stroke-opacity="0.4"/>
+<rect x="410" y="928" width="36" height="22" fill="#ff58c8" stroke="#000" stroke-opacity="0.4"/>
+<text x="470.0" y="943.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Silber, Glas, Spiegel; weiße und rosa Glühbirnen, Suchscheinwerfer, Diamantstaub; Abend bis Morgen</text>
+<text x="40.0" y="981.0" fill="#c8ccc8" font-size="15" font-weight="700" text-anchor="start" >Alexanderplatz · 1989</text>
+<rect x="250" y="966" width="36" height="22" fill="#e8b070" stroke="#000" stroke-opacity="0.4"/>
+<rect x="290" y="966" width="36" height="22" fill="#f0d0a0" stroke="#000" stroke-opacity="0.4"/>
+<rect x="330" y="966" width="36" height="22" fill="#8a6a4a" stroke="#000" stroke-opacity="0.4"/>
+<rect x="370" y="966" width="36" height="22" fill="#c04030" stroke="#000" stroke-opacity="0.4"/>
+<rect x="410" y="966" width="36" height="22" fill="#5a6a50" stroke="#000" stroke-opacity="0.4"/>
+<text x="470.0" y="981.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Nachmittagssonne „Goldene Stunde“: das Gold kommt vom Himmel</text>
+<text x="40.0" y="1019.0" fill="#ffd24a" font-size="15" font-weight="700" text-anchor="start" >Wedding · kommt bald</text>
+<rect x="250" y="1004" width="36" height="22" fill="#061a1c" stroke="#000" stroke-opacity="0.4"/>
+<rect x="290" y="1004" width="36" height="22" fill="#12403a" stroke="#000" stroke-opacity="0.4"/>
+<rect x="330" y="1004" width="36" height="22" fill="#ffd070" stroke="#000" stroke-opacity="0.4"/>
+<rect x="370" y="1004" width="36" height="22" fill="#e8b838" stroke="#000" stroke-opacity="0.4"/>
+<rect x="410" y="1004" width="36" height="22" fill="#a01c3c" stroke="#000" stroke-opacity="0.4"/>
+<text x="470.0" y="1019.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >Smaragdnacht, Gold nur aus Lampen und Stoffen: Lampions, Messing, Brokat, Rubin-Markisen; trocken, Blütenblätter und Teedampf</text>
+<text x="40.0" y="1076.0" fill="#f2e3c8" font-size="22" font-weight="700" text-anchor="start" >Straßenschmuck unter 5 m (alle Varianten, Dichte je Variante)</text>
+<text x="40.0" y="1106.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Lampionketten und Wunschlampen quer über die Straße (4,5 m), Kronleuchter in Saalfenstern</text>
+<text x="1050.0" y="1106.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Rubinrote Markisen mit Goldfransen an Läden: Juwelier, Brautmoden, Bäckerei, Barbier, Teestube</text>
+<text x="40.0" y="1130.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Lange Tafel mitten auf der Straße: Tischtücher, Samoware, Tabletts, Teegläser (halbhohe Deckung)</text>
+<text x="1050.0" y="1130.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Teppiche auf dem Gehweg, über Balkonen und Gerüsten; schwebende Teppiche als Kulisse</text>
+<text x="40.0" y="1154.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Hochzeitskorso: geschmückte Autos mit Schleifen als Wracks und Straßensperre</text>
+<text x="1050.0" y="1154.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Gerüste mit grünem Netz, Kräne mit Lichterketten, Bauschilder: „Eröffnung: bald“</text>
+<text x="40.0" y="1178.0" fill="#c8ccc8" font-size="14.5" font-weight="400" text-anchor="start" >· Keine religiösen Zeichen, keine BVG-Farben oder Logos; die Nachbarn sind Gastgeber</text>
+</svg>
