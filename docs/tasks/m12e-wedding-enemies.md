@@ -76,7 +76,7 @@ The Diva's brain with own numbers (`BOSS.sultan`): her phases are his courses, a
 |---|---|---|
 | Teeglasfächer | `fan` | seven glasses in a 0.5 rad cone, 9 m/s, ×0.5 each; phase 2 two fans, phase 3 three (Diva rule) |
 | Teppichbahn | `prism` (line zone) | a ruby carpet strip 1.4 m wide rolls through the hero, wind 0.9 s, hit ×1.2, floor 0.25; phase 2 an X, phase 3 three; open 1.5 s |
-| Nachschlag | `summon` every 12 s | two Tee-Ifrite; from phase 3 also one Teppichschlinger. Note „Nachschlag!“ |
+| Nachschlag | `summon` every 14 s | one Tee-Ifrit; from phase 3 also one Teppichschlinger. Note „Nachschlag!“ (bot runs: was two every 12 s) |
 | Gangwechsel | `roar`, one ring | at 66 % („Hauptgang!“) and 33 % („Nachtisch!“), ring to 9 m, ×0.6, floor 0.15, open 2 s |
 
 No rage (the courses are his escalation; phase 3 cooldowns ×0.85).
