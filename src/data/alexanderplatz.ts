@@ -227,10 +227,11 @@ export function alexMap(scale = 1): MapDef {
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3, extra: Partial<Landmark> = {}): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear, ...extra });
   const landmarks: Landmark[] = [
     // Museumsinsel.
-    L('altesmuseum', -150, -88, 0, 16, 4.5, 1),
+    // Playtest 2026-11-20 (hard to see behind them): the bot's route spends 5 to 25 s behind these three.
+    L('altesmuseum', -150, -88, 0, 16, 4.5, 1, { cut: {} }),
     // Main fronts in their real directions: the Dom to the west (Lustgarten), the Palast to the west
     // (Schlossplatz), the Marienkirche and Nikolaikirche towers to the west, the Rathaus tower to the north.
-    L('dom', -135, -28, 270 * DEG, 13, 12, 2),
+    L('dom', -135, -28, 270 * DEG, 13, 12, 2, { cut: {} }),
     L('palast', -138, 38, 270 * DEG, 18, 9, 2),
     // The forum inside the loop.
     L('fernsehturm', -25, -28, 0, 15, 15, 4),
@@ -247,7 +248,7 @@ export function alexMap(scale = 1): MapDef {
     L('sbahnhackescher', -150, -130, 90 * DEG, 5, 16, 0, { walkUnder: true, name: 'Hackescher Markt' }),
     // Karl-Marx-Allee: tall on the north side, low on the camera side.
     L('hausdeslehrers', 124, -68, 0, 11, 11, 2),
-    L('kongresshalle', 126, -6, 0, 10, 7, 2),
+    L('kongresshalle', 126, -6, 0, 10, 7, 2, { cut: {} }),
     L('kino', 168, -92, 0, 15, 7, 2),
     L('cafemoskau', 148, 4, 180 * DEG, 11, 7, 2),
     // Späti rest stops, one per zone beside the route (front to the street).

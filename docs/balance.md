@@ -2,6 +2,17 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Fewer, tougher enemies (2026-11-21)
+
+Johannes two-shot normal enemies after Xhain. From tier 10 waves have life ×(1 + 0.05 per tier) and count ÷(1 + 0.025 per tier) (`lateTier`, `src/data/enemies.ts`); meals about halved; tunnel item drops ×0.55. `node tools/balance.mjs 2 normal johannes 1 --chain`, run 1:
+
+| District | Result | Min | Deaths | Power | Avg damage per fight |
+|---|---|---|---|---|---|
+| Köpenick | win | 26.7 | 2 | 33 → 223 | 97 % |
+| Xhain | win | 14.4 | 0 | 190 → 353 | 53 % |
+| Alexanderplatz | win | 20.3 | 0 | 282 → 528 | 72 % |
+| Mitte | win | 20.3 | 0 | 517 → 850 | 32 % |
+
 ## Playtest follow-up (2026-11-20, Codex · GPT-6)
 
 `node tools/balance.mjs 1 normal johannes 1`: 1/1 Köpenick campaigns won, 4 deaths, 33.0 simulated minutes, 831 kills, final power 249 (blade). This includes PR #73's doubled normal-enemy life, halved equipment drops, slower swings and weaker blessings, plus basic attacks −10% damage and powers/ultimates/Molotow +25%. One seed checks completion; B9/B10 calibration and the hardware playtest remain open.
