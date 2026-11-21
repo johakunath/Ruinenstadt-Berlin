@@ -14,6 +14,7 @@ import { snapReachable } from '../sim/reach';
 import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
 import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, type SpecialKind } from './lots';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
+import { kneipeColliders } from './kneipe';
 import { onCampFloor, type CampLayout } from './camp-map';
 
 export type Pt = readonly [number, number];
@@ -94,7 +95,9 @@ export type LandmarkKind = 'sbahnhof' | 'forum' | 'rathaus' | 'schloss' | 'muegg
   | 'zoobahnhof' | 'loewentor' | 'elefantentor' | 'aquarium' | 'musikpavillon' | 'antilopenhaus' | 'ufapalast' | 'capitol' | 'gedaechtniskirche'
   | 'romanischescafe' | 'gloriapalast' | 'marmorhaus' | 'kadewe' | 'wittenbergplatz' | 'cafewestens' | 'revuepalast' | 'theaterwestens' | 'variete'
   | 'opernhaus' | 'schillertheater' | 'hochschule' | 'chtor' | 'stuelerbau' | 'ehrenhoftor' | 'schlossmitte' | 'schlossfluegel' | 'neuerfluegel'
-  | 'orangerie' | 'gartentor' | 'mausoleum' | 'belvedere' | 'chrathaus';
+  | 'orangerie' | 'gartentor' | 'mausoleum' | 'belvedere' | 'chrathaus'
+  // M18 Wedding: the walk-in pub, the church backdrop, the invented Neubau, the court, the flak tower, the AEG gate and hall.
+  | 'kneipe' | 'nazareth' | 'neubau' | 'amtsgericht' | 'flakturm' | 'beamtentor' | 'maschinenhalle';
 
 export interface Landmark {
   kind: LandmarkKind;
@@ -218,7 +221,7 @@ export interface MapDef {
   /** Enemy strength step (`districtScale`) when it differs from `district`: a tunnel takes its line (S3 0, U8 1, U2 2). */
   strength?: number;
   /** M16 `revue` (Charlottenburg): render only for now, the Zeitlose wear 1920s dress; no loot table yet. */
-  flavor?: 'neon' | 'gdr' | 'revue';
+  flavor?: 'neon' | 'gdr' | 'revue' | 'fest';
   /** M12c rain rule (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
   wet?: boolean;
   /** M16 district rule „Glas splittert“: glass bodies burst when they die (`THREAT.shards`). */
@@ -276,10 +279,10 @@ export const MIRROR = { w: 1.1, h: 2.1, thick: 0.2 } as const;
 /** Kristallsockel: hedge gate depth across the corridor (as a hedge); the crystal post stands this far north of each plinth, radius. */
 export const PLINTH_GATE_DEPTH = 1;
 export const PLINTH = { post: 1.7, postR: 0.3 } as const;
-export interface Wall { name: string; pts: Pt[]; kind?: 'hedge' | 'fence' }
+export interface Wall { name: string; pts: Pt[]; kind?: 'hedge' | 'fence' | 'brick' }
 export const WALL = { height: 3.6, thick: 0.6 } as const;
 /** M16: hedges 2.2 m (the camera sees over them), iron fences 2 m. */
-export const WALL_KIND = { hedge: { height: 2.2, thick: 1 }, fence: { height: 2, thick: 0.4 } } as const;
+export const WALL_KIND = { hedge: { height: 2.2, thick: 1 }, fence: { height: 2, thick: 0.4 }, brick: { height: 3.2, thick: 0.6 } } as const;
 /** Half thickness of a wall run (its collider half width). */
 export const wallHalf = (w: Wall): number => (w.kind ? WALL_KIND[w.kind].thick : WALL.thick) / 2;
 
@@ -737,6 +740,13 @@ export const OPEN_PARTS: Partial<Record<LandmarkKind, ReadonlyArray<{ x: number;
   gartentor: [-3.2, 3.2].map((x) => ({ x, z: 0, hx: 0.7, hz: 0.7, rot: 0 })),
   // Charlottenburger Tor: two colonnade halves either side of the 20 m Chaussee.
   chtor: [-13, 13].map((x) => ({ x, z: 0, hx: 2.5, hz: 3, rot: 0 })),
+  // M18 Wedding. Beamtentor: two brick towers round a 6 m passage (the yard walls are `MapDef.walls`).
+  beamtentor: [-5.6, 5.6].map((x) => ({ x, z: 0, hx: 2.6, hz: 2.4, rot: 0 })),
+  // AEG Maschinenhalle (60 × 34), roofless (E3): a 6 m door gap in its east wall (local z −4 … 2), closed elsewhere.
+  maschinenhalle: [
+    { x: 0, z: -16.5, hx: 30, hz: 0.5, rot: 0 }, { x: 0, z: 16.5, hx: 30, hz: 0.5, rot: 0 }, { x: -29.5, z: 0, hx: 0.5, hz: 17, rot: 0 },
+    { x: 29.5, z: -10.5, hx: 0.5, hz: 6.5, rot: 0 }, { x: 29.5, z: 9.5, hx: 0.5, hz: 7.5, rot: 0 },
+  ],
 };
 
 /**
@@ -1321,8 +1331,9 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
       }
     }
   }
-  // Every fight gets fire light and some cover near its rim.
+  // Every fight gets fire light and some cover near its rim (a walk-in room brings its own furniture, M18).
   for (const e of m.encounters) {
+    if (e.room) continue;
     let barrels = 0;
     for (let tries = 0; tries < 40 && barrels < 2; tries++) {
       const a = rng.range(0, Math.PI * 2);
@@ -1363,7 +1374,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
           props.push({ kind: 'bus', x: x - ((bz - az) / len) * off, z: z + ((bx - ax) / len) * off, rot: Math.atan2(bx - ax, bz - az) + rng.range(-0.08, 0.08), size: 1 });
           continue;
         }
-        if (hit(x, z, van ? 3 : 1.2)) continue;
+        if (hit(x, z, van ? 4.2 : 1.2)) continue;
         props.push({ kind: van ? 'van' : 'rubble', x, z, rot: Math.atan2(bx - ax, bz - az) + rng.range(-0.5, 0.5), size: rng.range(0.8, 1.3) });
       }
     }
@@ -1513,7 +1524,7 @@ function inLot(l: Lot, x: number, z: number, pad: number): boolean {
 }
 
 /** Light sources: working lamps, fires, construction lamps, storm lanterns, beacons, grave candles, string lights. */
-export const LIGHT_PROPS: ReadonlySet<Prop['kind']> = new Set<Prop['kind']>(['lantern', 'fireBarrel', 'campfire', 'workLamp', 'stormLantern', 'beacon', 'candles', 'stringLights']);
+export const LIGHT_PROPS: ReadonlySet<Prop['kind']> = new Set<Prop['kind']>(['lantern', 'fireBarrel', 'campfire', 'workLamp', 'stormLantern', 'beacon', 'candles', 'stringLights', 'lampions']);
 /**
  * Light gap rule (Johannes 2026-11-16): where one light pool ends the next begins, but organic, not
  * on a grid. The allowed distance to the nearest light varies with a slow noise between
@@ -1892,6 +1903,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   }
   for (const l of m.landmarks) {
     if (l.kind === 'spati') colliders.push(...spatiColliders(l));
+    else if (l.kind === 'kneipe') colliders.push(...kneipeColliders(l));
     else if (l.hx > 0 && !l.walkUnder) colliders.push(...landmarkColliders(l));
   }
   for (const l of lots) colliders.push(...lotColliders(l));

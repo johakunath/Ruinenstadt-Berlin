@@ -41,6 +41,7 @@ import { siteLevel } from './sim/camp';
 import { xhainMap } from './data/xhain';
 import { mitteMap } from './data/mitte';
 import { charlottenburgMap } from './data/charlottenburg';
+import { weddingMap } from './data/wedding';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor, zoneSkies } from './render/sky';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, wonLink, type MapId } from './ui/maps';
@@ -85,9 +86,9 @@ input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
 abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
-// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), Charlottenburg (M16, ?map=charlottenburg), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
+// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), Charlottenburg (M16, ?map=charlottenburg), Wedding (M18, ?map=wedding), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : opts.map === 'charlottenburg' ? charlottenburgMap(opts.mapScale) : koepenickMap(opts.mapScale);
+  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : opts.map === 'charlottenburg' ? charlottenburgMap(opts.mapScale) : opts.map === 'wedding' ? weddingMap(opts.mapScale) : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall:1.5*4`, kind[:size][*count]): rows of six props near the start on the
@@ -609,7 +610,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : mapId === 'charlottenburg' ? 'Charlottenburg · 1920' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : sim.shards ? 'Glas splittert: Wer zerspringt, trifft alle ringsum.' : '');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : mapId === 'charlottenburg' ? 'Charlottenburg · 1920' : mapId === 'wedding' ? 'Wedding · kommt bald' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : sim.shards ? 'Glas splittert: Wer zerspringt, trifft alle ringsum.' : '');
   }
   input.buffer.clear();
   input.enabled = true;

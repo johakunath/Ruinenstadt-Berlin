@@ -5,6 +5,7 @@ import { xhainMap } from './xhain';
 import { mitteMap } from './mitte';
 import { alexMap } from './alexanderplatz';
 import { charlottenburgMap } from './charlottenburg';
+import { weddingMap } from './wedding';
 import { generateLots } from './map';
 import { mapSvg } from './map-svg';
 
@@ -38,6 +39,12 @@ describe('map svg', () => {
     const svg = mapSvg(m, generateLots(m), { trees: true });
     expect(svg).toContain('Ehrenhof');
     if (process.env.CHARLOTTENBURG_SVG) writeFileSync(process.env.CHARLOTTENBURG_SVG, svg);
+  });
+  it('draws the Wedding map (WEDDING_SVG=path writes the review image)', () => {
+    const m = weddingMap(Number(process.env.MAP_SCALE ?? 1));
+    const svg = mapSvg(m, generateLots(m), { trees: true });
+    expect(svg).toContain('Hochzeitspalast');
+    if (process.env.WEDDING_SVG) writeFileSync(process.env.WEDDING_SVG, svg);
   });
   it('in-game map has no fight circles, route or encounter names, and labels do not repeat', () => {
     const m = koepenickMap(1);
