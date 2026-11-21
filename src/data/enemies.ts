@@ -408,6 +408,15 @@ export function lateTier(g: number): { hp: number; count: number } {
   return { hp: 1 + t * 0.05, count: 1 / (1 + t * 0.025) };
 }
 
+/**
+ * Bot campaigns 2026-11-21 (5 chains, upgraded bot with the camp step): Köpenick 1 to 7 deaths, every later
+ * district 0 deaths with 11 to 32 % damage taken per fight and bosses often down in under 25 s. The camp
+ * lifts the hero's power after Köpenick, so each later district adds enemy life and damage (district
+ * index, Köpenick 0, also the tunnels by their line).
+ */
+export const DISTRICT_STEP = { hp: 0.3, dmg: 0.25 } as const;
+export const districtScale = (district: number): { hp: number; dmg: number } => ({ hp: 1 + DISTRICT_STEP.hp * Math.max(0, district), dmg: 1 + DISTRICT_STEP.dmg * Math.max(0, district) });
+
 export const THREAT = {
   /** Punish window after a special: the body stands open and takes more damage (2D `TACO`, +30 %). */
   openBonus: 1.3,
