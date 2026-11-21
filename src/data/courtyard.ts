@@ -36,7 +36,7 @@ export interface Facade {
   seed: number;
 }
 
-export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stormLantern' | 'beacon' | 'stringLights' | 'tankTrap'
+export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stormLantern' | 'beacon' | 'stringLights' | 'lampions' | 'tankTrap'
   // M11c lot types (render: `src/render/props-urban.ts`, `props-market.ts`, `vegetation.ts`).
   | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind | GdrPropKind | MittePropKind;
 /** M15 Mitte step 7 props (render: `src/render/props-mitte.ts`). */
@@ -188,6 +188,7 @@ export function propCollider(p: Prop): Collider | null {
     // The storm lantern's stake is too thin to block (it replaced the walk-through candles, playtest 2026-11-18).
     case 'stormLantern':
     case 'stringLights':
+    case 'lampions':
     case 'planks':
       return null;
     // M11c lot types. Box half extents: hx along the prop's width (local x), hz along its depth.

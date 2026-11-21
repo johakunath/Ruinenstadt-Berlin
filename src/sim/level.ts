@@ -183,7 +183,7 @@ export class Level {
   district = 0;
   /** Enemy strength step (`districtScale`): the district, a tunnel its line. */
   strength = 0;
-  flavor?: 'neon' | 'gdr' | 'revue';
+  flavor?: 'neon' | 'gdr' | 'revue' | 'fest';
   /** U-Bahn tunnel map (M19/M20): the tunnel set drops here. */
   tunnel?: boolean;
   /** Map id of a district level (`MapDef.id`), for rules tied to one map (the Köpenick first fights). */
