@@ -1,6 +1,6 @@
 # M17 Fernsehturm finale, district 6 [plan: Claude · Fable high; build: Claude · Opus high]
 
-Layout A „Aufstieg“ (Johannes, 2026-11-21). Order: Charlottenburg, Wedding, then this finale (map doc F9). Concept, decisions F1 to F13, geography check, tower facts and proportions, deck table, boss, light, entry, cost and 2D reuse: `docs/maps/fernsehturm.md`. Mockups: `docs/mockups/m17-fernsehturm-layouts.html`, `docs/mockups/m17-tower-proportions.html` (PNGs beside them; schematic, the tables in the map doc rule). Templates: the tunnel (`src/data/tunnel.ts`, `src/render/tunnel-view.ts`) and the camp (`src/data/camp-map.ts`, `src/render/camp-world.ts`) for interiors, `docs/tasks/m16-charlottenburg.md` for the step format.
+Layout A „Aufstieg“ (Johannes, 2026-11-21). Order: Charlottenburg, Wedding, then this finale (map doc F9). **Do not start any build step before Wedding is complete and merged (Johannes, 2026-11-21).** The style boards (step S) may be made in the meantime. Concept, decisions F1 to F13, geography check, tower facts and proportions, deck table, boss, light, entry, cost and 2D reuse: `docs/maps/fernsehturm.md`. Mockups: `docs/mockups/m17-fernsehturm-layouts.html`, `docs/mockups/m17-tower-proportions.html` (PNGs beside them; schematic, the tables in the map doc rule). Templates: the tunnel (`src/data/tunnel.ts`, `src/render/tunnel-view.ts`) and the camp (`src/data/camp-map.ts`, `src/render/camp-world.ts`) for interiors, `docs/tasks/m16-charlottenburg.md` for the step format.
 
 Notes are short; whoever builds a step writes its handover here (at most 8 lines).
 
@@ -14,15 +14,15 @@ A playable finale `?map=turm`: five decks inside the Fernsehturm, four fights, t
 |---|---|---|---|---|
 | 0 | Concept A and B, mockup, geography check, plan | | Fable high | done 2026-11-21, A picked |
 | S | Style boards: Johannes gives Codex the two prompts below (*Style boards*); picks; files `docs/style/fernsehturm.png` and `docs/style/fernsehturm-zeitwart.png`, a row in `docs/style-bible.md` | | Johannes, Codex | open |
-| P | Tower proportions on map 3 (map doc F13): after Johannes picks variant 3 or 4, change `fernsehturm` in `src/render/alex-world.ts` (shaft, flared foot, sphere, window band, antenna), check `SHOW.fernsehturm` in `src/render/reveal.ts`, screenshot before and after | Johannes' pick | Opus medium | open, small; can run now |
-| 1 | Engine, data, blockout. `MapDef.decks` and `deckWalk` (T1), the lift (T2), ring encounters (T3), clock hands (T4), revolving band (T5, drop first). `src/data/fernsehturm.ts` from the deck table, tests `src/data/fernsehturm.test.ts` (invariants below), a scripted run wins (`director.test.ts`). Wiring `?map=turm` (`options.ts`, `ui/maps.ts` `MapId`, `main.ts` banner). Blockout render: discs, sills, window band, cores, hands and rings on the FX layer; only the hero's deck visible. Stand-ins: echoes are the plain boss kinds, final boss `diva` | | Opus high | open; does not wait for S or Wedding |
+| P | Tower proportions on map 3 | | | dropped: Johannes keeps the model as it is (map doc F13) |
+| 1 | Engine, data, blockout. `MapDef.decks` and `deckWalk` (T1), the lift (T2), ring encounters (T3), clock hands (T4), revolving band (T5, drop first). `src/data/fernsehturm.ts` from the deck table, tests `src/data/fernsehturm.test.ts` (invariants below), a scripted run wins (`director.test.ts`). Wiring `?map=turm` (`options.ts`, `ui/maps.ts` `MapId`, `main.ts` banner). Blockout render: discs, sills, window band, cores, hands and rings on the FX layer; only the hero's deck visible. Stand-ins: echoes are the plain boss kinds, final boss `diva` | Wedding merged | Opus high | open; first read Wedding's map doc, enemies, boss and stop and correct the assumptions here |
 | 2 | Look. First a look mockup in chat from the style board (the sphere decks and the city image), Johannes confirms. Then: five interiors in `src/render/turm-world.ts`, the city image and cloud cards (T6), one `Sky` per deck (T7), the lift cut with the height counter, cutaway of the cores, window-break effect where a spawn enters. State the Leistung and Ausgewogen cost | 1, S | Opus high, mockup first | open |
 | 3 | Enemies and boss. Spec lines first (wave mix numbers, echo scale, Zeitwart numbers, calibrated with the bot), then build: `echo` modifier (T8), Der Zeitwart from the board (kit below, body on the human base, sounds, spoken lines, Kodex), the gear holds (T9), the ending choice (T10), the spear Telespargel (model, power, icon). Update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md` | 1, S | Opus high (a Fable pass only if Johannes dislikes the boss) | open |
 | 4 | Flow. Unlock rule and network stop (map doc › Entry), Wedding victory link, save flag `ending`, ending cards, bot `--map=turm` and `mapLevelOf`, tier F8, signature drops, the Wedding kinds in the Telecafé waves. Run-save and resume across decks | 1, 3, Wedding built with its flow step | Opus medium | open |
 | 5 | Textures: rows in `docs/asset-pipeline.md` (city image, interior atlas: enamel panels, steel ribs, dials, Telecafé cloth and signs; Zeitwart bust and the Telespargel icon if not rendered) | 2, 3 | Codex | open |
 | 6 | Screenshots (each deck, a fight with the hand, the boss), playtest on PC and Tab S9; rows in `docs/tasks/pt-hardware-checks.md` (load time and memory with all enemy families, the lift cut hitch, hand readability, revolving floor feel, core cutaway) | all | Johannes | open |
 
-Six build steps (1 to 6); S and P are small side items.
+Six build steps (1 to 6); S is a side item for Johannes and Codex.
 
 ## Anchors (scale 1, meters, +X east, +Z south)
 
@@ -138,8 +138,8 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 | J3 | Does the ending change anything afterwards? | No: card and flag (took the recommendation) |
 | J4 | Unlock with all other districts freed, no tunnel of its own? | Yes, the game is linear |
 | J5 | Wedding window gag? | No: Wedding is freed by then; it is a played district before the finale |
-| J6 | Tower proportions: variant 3 (same height, thicker, flared foot) or 4 (shorter and thicker)? | Open; 3 recommended |
-| J7 | Wedding has no task, map or line. Plan it next (a Fable concept session like this one)? | Open |
+| J6 | Tower proportions: variant 3 or 4? | Neither: the model in the game stays (Johannes, 2026-11-21) |
+| J7 | Wedding first? | Yes. Wedding is in progress in another session (not on `main` yet); the finale waits until it is complete |
 
 ## Handover 2026-11-21 (step 0) [Claude · Fable high]
 
@@ -157,3 +157,9 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 - Style boards: two Codex prompts above (step S). Steps 2 and 3 wait for them, step 1 does not.
 - New legendary Telespargel specified (Loot). The set was renamed away from a transit uniform.
 - Wedding is not planned anywhere yet (J7); step 4 depends on it.
+
+## Handover 2026-11-21 (third round) [Claude · Fable high]
+
+- Tower model on map 3 stays as it is; step P dropped. The proportion mockup stays as the record.
+- Wedding is in progress elsewhere. No finale build step before it is merged; step 1 then starts by reading Wedding and correcting the Telecafé waves, the echo choice, the tier and `STOPS`.
+- Only step S (Codex style boards) can happen meanwhile.

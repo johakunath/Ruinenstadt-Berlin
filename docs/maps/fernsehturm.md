@@ -20,11 +20,11 @@ The Fernsehturm already stands in Alexanderplatz (map 3): inside the loop, visib
 | F6 | Entry: opens when all six districts are freed; the game is linear. No tunnel of its own in the first version | Johannes, 2026-11-21 |
 | F7 | Ending: after the boss, two rings at the main switch: „Uhr stellen“ or „Stehen lassen“. A card and a save flag, no rule change | Johannes, 2026-11-21 (took the recommendation) |
 | F8 | Tier 48 to 70 (the +8 per district rule with Wedding as district 6), provisional like Charlottenburg C4 | Claude, proposed |
-| F9 | Order: Charlottenburg, Wedding, Fernsehturm. Wedding is a played district after all (changes migration Q8); it has no task or map yet | Johannes, 2026-11-21 |
+| F9 | Order: Charlottenburg, Wedding, Fernsehturm. Wedding is a played district after all (changes migration Q8); it is being built in another session and is not on `main` yet. Work on the finale starts only after Wedding is complete | Johannes, 2026-11-21 |
 | F10 | Style boards from Codex before the look and the boss are built (steps 2 and 3); the engine step does not wait for them. Prompts in the task file | Johannes, 2026-11-21 |
 | F11 | No „kommt bald“ window gag: Wedding is a freed district by then | Johannes, 2026-11-21 |
 | F12 | A new tower legendary: the spear „Telespargel“ (task file › Loot) | Johannes asked for one, 2026-11-21; design Claude, proposed |
-| F13 | Tower proportions: thicker shaft and sphere, flared foot (section *Tower proportions*), for map 3 and the finale. Variant 3 recommended | Open: Johannes picks 3 or 4 |
+| F13 | Tower proportions: the model on map 3 stays as it is. Section *Tower proportions* and its mockup are kept as the record of the check | Johannes, 2026-11-21 (dictated message, read as "the proportions currently in the game are fine") |
 
 ## Why A differs from the Alexanderplatz map
 
@@ -88,10 +88,10 @@ Mockup: [`../mockups/m17-tower-proportions.html`](../mockups/m17-tower-proportio
 | Real | 368 m | 32 m | 9 to 16 m, foot flares to 32 m | 118 m |
 | Real, shrunk to 101 m | 101 m | 8.8 m | 2.5 to 4.4 m, foot 8.8 m | 32 m |
 | Map 3 today (`alex-world.ts`, `fernsehturm`) | 101 m | 17 m | 6.4 to 9.2 m, no flare | 21 m |
-| Variant 3 (recommended) | 101 m | 22 m | 8.6 to 12.8 m, foot flares to 19 m over the lowest 8 m | 19 m |
-| Variant 4 | 84 m | 23 m | 9.2 to 12.8 m, same foot | 14.5 m |
+| Variant 3 (not taken) | 101 m | 22 m | 8.6 to 12.8 m, foot flares to 19 m over the lowest 8 m | 19 m |
+| Variant 4 (not taken) | 84 m | 23 m | 9.2 to 12.8 m, same foot | 14.5 m |
 
-Finding: the model is already twice as thick as the real tower at that height. It reads as a stick because the game camera sees mostly the foot and shaft, and the foot has no flare. The first M17 mockup drew the tower too thin (a drawing error, corrected). Variant 3 keeps the height the reveal camera is tuned for (`reveal.ts`: top 92). The picked variant applies to map 3 and to anything the finale shows of the tower; the pavilion ring and the landmark footprint (hx 15) stay.
+Finding: the model is already twice as thick as the real tower at that height. It reads as a stick because the game camera sees mostly the foot and shaft, and the foot has no flare. The first M17 mockup drew the tower too thin (a drawing error, corrected). Johannes keeps the model as it is (F13). The finale shows the tower from outside only on the city image and the ending shot; use the map 3 proportions there.
 
 ## Decks (scale 1, meters, +X east, +Z south)
 
@@ -156,7 +156,7 @@ Camera: no ceilings drawn. The wall toward the camera is a knee-high sill; the n
 | Unlock | Districts 0 to 5 all freed (six gears; Johannes, 2026-11-21). No line of its own in the first version |
 | Network | Wedding becomes `STOPS[5]`, the finale `STOPS[6] = { name: 'Fernsehturm', station: 'S+U Alexanderplatz', map: 'turm' }`. `nextDestination` already returns a stop without a line. Needed: a rule that the last stop opens only with all others freed, and a place on the board beside the Alexanderplatz stop |
 | Links | Wedding victory screen: „Zum Fernsehturm“. Title: the main button follows `nextDestination` |
-| Depends on | Wedding (district 6): no task, no map, no line yet; its board is `docs/style/wedding.png`, its story `docs/story.md`. M17 step 4 does the wiring after Wedding's flow step. Until then the finale is reachable by URL only (`?map=turm`) |
+| Depends on | Wedding (district 6), in progress in another session and not on `main` yet. The whole finale waits for it (F9); read its map doc, enemy kinds, boss and network stop before step 1 and correct the Telecafé waves, the echo and `STOPS` here |
 | Later option | The Stadtbahn ride to Alexanderplatz as a line (Charlottenburg C5), backlog |
 | Arrival | The run starts at the foyer's north-east door; the last train on Normalzeit stands on the viaduct outside the glass (station at bearing 57°, 150 m) |
 
@@ -182,7 +182,7 @@ District budget for comparison: under about 200 draw calls and 200k triangles (`
 | Revolving floor touches many sim parts | Fallback: the band turns in the render only and the panorama drifts; no sim effect. Drop this first |
 | Load time and memory with all enemy families | Cap the roster to the kinds in *Flow*; load echo bosses with the map only; hardware check row |
 | The view carries the mood | Code-painted city image must already read; show it in the look mockup |
-| Wedding is not built: its enemies, boss and stop are missing | Steps 1 to 3 do not need it (the Telecafé runs with 1920 kinds); step 4 waits for it |
+| Wedding is still in progress: its enemies, boss and stop may differ from what is assumed here | The finale starts after Wedding is merged; step 1 begins by reading it |
 | No style board for the finale | Codex boards first (F10); steps 2 and 3 wait, step 1 does not |
 
 ## B Splitterring (not picked; kept for the record)
