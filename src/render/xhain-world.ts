@@ -1208,6 +1208,8 @@ function buildThomaskirche(c: Ctx, b: ChunkBuilder, l: Landmark): void {
 const CAPS: Partial<Record<LandmarkKind, Array<{ x: number; z: number; w: number; d: number }>>> = {
   thomaskirche: [{ x: 0, z: 2.5, w: 9, d: 10 }, { x: 0, z: -3.5, w: 16, d: 6 }, { x: -5.6, z: 9.5, w: 3.8, d: 4 }, { x: 5.6, z: 9.5, w: 3.8, d: 4 }],
   bethanien: [{ x: 0, z: 0, w: 12, d: 20 }],
+  // Walk-under stations: no lid, the hero stands under the cut.
+  u1station: [],
 };
 
 /** Cap polygons of a flagged landmark (world ground plane); unlisted kinds get their footprint. */

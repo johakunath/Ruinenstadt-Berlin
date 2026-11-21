@@ -2,6 +2,30 @@
 
 Newest first. 2D history: `docs/playtests.md` in `johakunath/Ruinenstadt`.
 
+## 2026-11-20 evening · Xhain, U8, Alexanderplatz (Johannes, Tab S9 touch, phone, PC pad; telemetry review 2026-11-21)
+
+Live sheet: only two 3D player ids since the link went out (Johannes' PC and Tab S9), so no outside players yet. Telemetry review: [`telemetry/analysis-2026-11-21.md`](telemetry/analysis-2026-11-21.md).
+
+| Point | Finding | Answer |
+|---|---|---|
+| Leistung on the tablet | No more fps, everything jittery and blurry (Görli, Rattenmutter, about 22:00) | Telemetry: render CPU 30 ms, scale down to 0.6, fps 25 like Ausgewogen. The tablet is CPU-bound. Dynamic resolution no longer drops when the CPU alone fills the frame; Leistung now skips the outline pre-pass (silhouette lines from the beauty depth), shadows every third frame, sharp 1.25× resolution |
+| Default level | Leistung by default, Akkusparen not | Phones and tablets start on Leistung; Akkusparen stays off |
+| Year of Xhain | 1981 wrong because the Wall stood? | Kept: the Wall stood 1961 to 1989, so 1981 fits the death strip, towers, Grenzer and East Berlin trams. Anachronism: the East Side Gallery murals were painted in 1990; in 1981 that hinterland wall was plain. Johannes decides |
+| Reveals | Oberbaumbrücke and Alexanderplatz sights did not zoom out | Xhain had no reveal entries; Fernsehturm and Rotes Rathaus triggers were closer than the route passes (bot: 79 m and 18 m). Fixed, seven Xhain sights added |
+| Under bridges | Hero and enemies hidden under the U1 at Schlesisches Tor (Spreehexe fight) and under Alexanderplatz sights | U1 station halls cut away above 2 m while the hero is under or behind them; Altes Museum, Dom and Kongresshalle cut like St. Thomas |
+| Loading | „Lädt …“ only small at the bottom | Box in the middle with a turning hourglass |
+| Leaving a freed map | After collecting the loot only the pause menu had Abschließen | The chip came back only on some paths; now a large Abschließen at the top middle, one confirm |
+| Aufsätze | Only in the camp, the weapon had no option | Weapon card in the inventory fits and removes built Aufsätze anywhere |
+| Camp after Xhain | Nothing to upgrade | A freed Xhain opens level 2 of every station without its survivor |
+| Imbiss | Meals too strong | Erbsensuppe +20 % life, Currywurst +12 % damage, Kaffee +10 % tempo, Soljanka +1.5 life/s and +5 % resistance (about half) |
+| Schwarzmarkt | The stash is not a black market | Renamed Depot |
+| Tunnel drops | Too many | Bot: 13 to 21 items per 100 kills in tunnels against 7 to 11 in districts; tunnel item chances ×0.55 |
+| Overpowered | Two hits for normal enemies and some bosses with gear | From tier 10 waves have fewer, tougher enemies (tier 19 ×1.45 life ×0.82 count, tier 38 ×2.4 and ×0.59; bosses get the life factor too). After 5 bot campaigns: each district after Köpenick +30 % enemy life and +25 % damage (bosses 40 % of the damage step), also events, guards and tunnels by their line (`docs/balance.md`) |
+| New players (2026-11-21) | The first fights should teach, nobody should die there; the first boss easy; more loot until Köpenick is freed | First Köpenick run only: fights 1 and 2 at 55 to 60 % damage with a life floor of 8 %, fight 3 at 80 %, the Dammbrücke boss at 75 %, the rest at 85 %; at a quarter life the game pauses once for an „Ausweichen!“ card; items ×1.6, Schrott ×1.3 |
+| Element effects | Burning, lightning, acid and slow hardly visible | Fable pass E1 (`docs/tasks/e1-element-visuals.md`): flame, acid puddle, shock arcs, slow ring as one instanced draw call |
+| Bot | Should play like Johannes | Blessings by economy need, build and recent danger; heal pickups; Späti shopping; a camp step between districts (meals, Lazarett, workshop, drill, stations, Aufsätze, implant mode) |
+| Network map | Spandau and Marzahn | Gone, the five stops fill the board |
+
 ## 2026-11-20 · Köpenick on build fa2d6f8 (Johannes, PC, pad, Qualität; telemetry and code review)
 
 Two runs on 20 Nov (live sheet): a death at encounter 1 after 111 s (two shots, cause „Geschoss“), then a win in 20.5 min at 29 to 37 fps (59 to 60 on 16 Nov), p95 42 ms, up to 687 draw calls and 816k triangles. Tab S9 Xhain on 19 Nov: 30 fps. All fixed in the review PR unless noted.

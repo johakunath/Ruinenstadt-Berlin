@@ -112,12 +112,10 @@ export function storedProfile(s: { profile?: string; pv?: number }): ProfileId |
   return s.profile as ProfileId;
 }
 
-/** Phones start on Leistung, tablets on Ausgewogen, everything else on Qualität. */
+/** Phones and tablets start on Leistung (Johannes, 2026-11-20), everything else on Qualität. */
 function defaultProfile(): ProfileId {
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-  if (!coarse && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) return 'qualitaet';
-  // Phone: the short screen side under 500 CSS px (phones about 360 to 430, the Tab S9 747).
-  return Math.min(screen.width, screen.height) < 500 ? 'leistung' : 'ausgewogen';
+  return !coarse && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? 'qualitaet' : 'leistung';
 }
 
 function parseCam(v: string | null): { distance: number; pitch: number } | undefined {

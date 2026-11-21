@@ -7,6 +7,7 @@ import { alexMap } from '../data/alexanderplatz';
 import { charlottenburgMap } from '../data/charlottenburg';
 import { generateLots, generateProps, mapLevel } from '../data/map';
 import type { Level } from '../sim/level';
+import { LINE_FREED } from '../data/lines';
 import { runCampaign, SKILL_DEFAULT, SKILL_GOOD, SKILL_WEAK, type BotSkill, type CampaignReport } from './bot';
 
 export const SKILLS: Record<string, BotSkill> = { johannes: SKILL_DEFAULT, good: SKILL_GOOD, weak: SKILL_WEAK };
@@ -42,6 +43,9 @@ export function chain(a: Omit<BalanceArgs, 'map' | 'startAt' | 'until'>, onMap?:
       onMap?.(i, map, r);
       if (!r.won) break;
       carry = r.profile;
+      // The tunnels are not played: count the line after a won district as cleared, so the camp opens after Köpenick (S3) as in the game.
+      const camp = carry.inventory.camp ??= { stations: {}, stash: [], freed: [] };
+      if (!camp.freed.includes(LINE_FREED + d)) camp.freed.push(LINE_FREED + d);
     }
     out.push(runs);
   }

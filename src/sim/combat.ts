@@ -408,6 +408,19 @@ export function incomingDamage(s: Sim, raw: number): number {
   return Math.min(d, s.stats.maxHp * PLAYER.maxHitShare);
 }
 
+/**
+ * First steps (Johannes 2026-11-21): until Köpenick is freed once, its first fights teach rather than
+ * punish. Damage factor per encounter index (the rest of the first run 0.85: the bot died 1 to 7 times at the
+ * Riesenrad and Müggelturm), and a life floor (share of max life) in the first two:
+ * the hero gets low and sees the danger, but does not die there. The first boss (index 3) hits softer.
+ */
+export const NOVICE = { damage: [0.55, 0.6, 0.8, 0.75] as const, later: 0.85, floor: 0.08, floorUntil: 1 } as const;
+export function noviceFactor(s: Sim): { damage: number; floor: number } {
+  if (s.level.mapId !== 'koepenick' || s.inventory.camp?.freed?.includes(0)) return { damage: 1, floor: 0 };
+  const i = s.run.index;
+  return { damage: NOVICE.damage[i] ?? NOVICE.later, floor: i <= NOVICE.floorUntil ? NOVICE.floor : 0 };
+}
+
 /** An enemy's melee hit on the hero. Returns false when it did not land. */
 export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz: number, by?: string): boolean {
   const p = s.player;
@@ -418,7 +431,9 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
     s.events.push({ type: 'note', text: 'geblockt', color: '#d6cfc0', x: p.x, z: p.z });
     return false;
   }
-  const damage = incomingDamage(s, raw);
+  const nv = noviceFactor(s);
+  let damage = incomingDamage(s, raw) * nv.damage;
+  if (nv.floor > 0) damage = Math.min(damage, Math.max(0, p.hp - s.stats.maxHp * nv.floor));
   p.hp = Math.max(0, p.hp - damage);
   p.hurtT = 0;
   if (pk(s, 'retour')) s.abilities.ret = true;

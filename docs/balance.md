@@ -2,6 +2,44 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Realistic bot, first steps and district step (2026-11-21)
+
+The bot now plays like Johannes (2D `tools/sim.js` v0.99 rules): blessings by economy need, build and recent danger, heal pickups, Späti shopping, and a camp step between districts. The chain counts each district's tunnel as cleared, so the camp opens after Köpenick.
+
+**Before** (5 chains, `node tools/balance.mjs 5 normal johannes 1 --chain`): every chain won.
+- Köpenick: 5, 5, 2, 7, 1 deaths (Riesenrad, Müggelturm).
+- Xhain, Alexanderplatz, Mitte: 0 deaths in every chain, 11 to 32 % damage per fight, bosses often down in under 25 s.
+- Power after the first camp step: about 330 to 630, then about 900 to 1300 by the end of Mitte.
+
+**Changes:**
+- First Köpenick run: novice damage factors (`NOVICE`, `src/sim/combat.ts`), items ×1.6 and Schrott ×1.3.
+- Each district after Köpenick: enemy life +30 % and damage +25 % per step (`DISTRICT_STEP`). Bosses take 40 % of the damage step. Events, guards and tunnels (by their line) are included.
+
+**After** (same command): 4 of 5 chains won.
+
+| District | Deaths per chain | Avg damage per fight | Last boss |
+|---|---|---|---|
+| Köpenick | 3, 5, 3, 1, 1 | 50 to 72 % | 25 to 78 s, 70 to 236 % |
+| Xhain | 0 | 14 to 47 % | 26 to 71 s, 38 to 191 % |
+| Alexanderplatz | 0, 12 (stop at the Weltzeituhr), 0, 0, 0 | 19 to 44 % | 72 to 137 s, 65 to 123 % |
+| Mitte | 0, 0, 0, 0 | 31 to 76 % | 74 to 326 s, 129 to 330 % |
+
+**Read:**
+- Later districts are no longer free.
+- The one stop is a weak build (power 633) that the bot does not farm up after its deaths; a player would.
+- Watch the Weltzeituhr and the long Mitte last boss (Bassprediger, up to 289 s).
+
+## Fewer, tougher enemies (2026-11-21)
+
+Johannes two-shot normal enemies after Xhain. From tier 10 waves have life ×(1 + 0.05 per tier) and count ÷(1 + 0.025 per tier) (`lateTier`, `src/data/enemies.ts`); meals about halved; tunnel item drops ×0.55. `node tools/balance.mjs 2 normal johannes 1 --chain`, run 1:
+
+| District | Result | Min | Deaths | Power | Avg damage per fight |
+|---|---|---|---|---|---|
+| Köpenick | win | 26.7 | 2 | 33 → 223 | 97 % |
+| Xhain | win | 14.4 | 0 | 190 → 353 | 53 % |
+| Alexanderplatz | win | 20.3 | 0 | 282 → 528 | 72 % |
+| Mitte | win | 20.3 | 0 | 517 → 850 | 32 % |
+
 ## Playtest follow-up (2026-11-20, Codex · GPT-6)
 
 `node tools/balance.mjs 1 normal johannes 1`: 1/1 Köpenick campaigns won, 4 deaths, 33.0 simulated minutes, 831 kills, final power 249 (blade). This includes PR #73's doubled normal-enemy life, halved equipment drops, slower swings and weaker blessings, plus basic attacks −10% damage and powers/ultimates/Molotow +25%. One seed checks completion; B9/B10 calibration and the hardware playtest remain open.

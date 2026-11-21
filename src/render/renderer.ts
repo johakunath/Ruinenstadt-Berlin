@@ -174,7 +174,7 @@ export class GameRenderer {
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     // M11c: weather per zone (Köpenick only; the tunnel stays dry).
     this.weather = new Weather(this.scene, def, def?.id === 'koepenick' ? KOEPENICK_WEATHER : def?.id === 'xhain' ? XHAIN_WEATHER : def?.id === 'alex' ? ALEX_WEATHER : def?.id === 'mitte' ? MITTE_WEATHER : def?.id === 'charlottenburg' ? CHARLOTTENBURG_WEATHER : {}, opts.profile.embers / 140, this.sky.fogDensity / NIGHT_SKY.fogDensity, this.sky.wet);
-    this.fx = new Fx(world.fires, { embers: opts.profile.embers, blobShadows: !opts.profile.enemyShadows, mistBox });
+    this.fx = new Fx(world.fires, { embers: opts.profile.embers, statusGlow: opts.profile.statusGlow, blobShadows: !opts.profile.enemyShadows, mistBox });
     this.content = new ContentView(assets, materials);
     // M20: the walkable camp's stations (build sites, levels, keepers) and their rings.
     this.campLayout = def?.camp ?? null;
@@ -295,10 +295,10 @@ export class GameRenderer {
     if (ts > 0) this.cam.shake(0, 0, ts);
     switch (ev.type) {
       case 'hit': {
-        this.views.get(ev.id)?.hit();
+        this.views.get(ev.id)?.hit(ev.element === 'shock');
         const feel = HIT_FEEL[ev.weight];
         // Procs and area ticks (quiet) spark a little and never shake the camera.
-        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical), !!ev.effective);
+        this.fx.sparks(ev.x, groundY(ev.x, ev.z) + 1.15, ev.z, ev.dx, ev.dz, !ev.quiet && (ev.weight === 'heavy' || !!ev.critical), !!ev.effective, ev.element);
         if (!ev.quiet) this.cam.shake(ev.dx, ev.dz, feel.shake * (ev.killed ? 1.5 : 1) * (ev.critical ? 1.25 : 1));
         if (ev.killed) this.fx.puff(ev.x, ev.z, 5);
         break;
@@ -460,7 +460,7 @@ export class GameRenderer {
     this.heroLight.position.set(px, py + 2.8, pz + 1.6);
     const shadows = this.shadowClock.tick();
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
-    if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows);
+    if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows, true);
     else this.world.follow?.(px, pz, shadows);
     (this.scene.fog as FogExp2).density = this.sky.fogDensity * (1 - 0.9 * (reveal?.weight ?? 0));
     this.world.breakables?.update(dt);

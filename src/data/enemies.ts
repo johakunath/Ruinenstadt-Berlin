@@ -392,6 +392,29 @@ export const ELITES: Record<EliteMod, { name: string; color: number; hint: strin
 export const ELITE_MODS = Object.keys(ELITES) as EliteMod[];
 
 /**
+ * Playtest 2026-11-20 (Johannes two-shots normal enemies after Xhain): hero power multiplies (item
+ * level, affixes, workshop, drill, Aufsätze) while wave life grew only linearly. From tier 10 on a
+ * wave has fewer, tougher enemies: life +5 % and count -2.5 % (relative) per tier. Tier 19 (Köpenick's
+ * end): ×1.45 life, ×0.82 count; tier 30: ×2.0, ×0.67; tier 38: ×2.4, ×0.59. Wave life in all rises
+ * 20 to 40 %; fewer bodies at once also lighten the tablet (CPU-bound at 25 to 38 alive).
+ */
+export function lateTier(g: number): { hp: number; count: number } {
+  const t = Math.max(0, g - 10);
+  return { hp: 1 + t * 0.05, count: 1 / (1 + t * 0.025) };
+}
+
+/**
+ * Bot campaigns 2026-11-21 (5 chains, upgraded bot with the camp step): Köpenick 1 to 7 deaths, every later
+ * district 0 deaths with 11 to 32 % damage taken per fight and bosses often down in under 25 s. The camp
+ * lifts the hero's power after Köpenick, so each later district adds enemy life and damage (district
+ * index, Köpenick 0, also the tunnels by their line).
+ */
+export const DISTRICT_STEP = { hp: 0.3, dmg: 0.25 } as const;
+/** Share of the damage step that district bosses take. */
+export const BOSS_DMG_STEP = 0.4;
+export const districtScale = (district: number): { hp: number; dmg: number } => ({ hp: 1 + DISTRICT_STEP.hp * Math.max(0, district), dmg: 1 + DISTRICT_STEP.dmg * Math.max(0, district) });
+
+/**
  * Specials and what they put into the world. Distances are the 2D pixels at 30 px per meter,
  * times the 2D seconds. `floor`: a telegraphed hit takes at least this share of max life
  * (2D `bigHit`), so dodging matters at any gear level; the 45 % cap still holds.

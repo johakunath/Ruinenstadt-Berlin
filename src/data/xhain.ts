@@ -8,7 +8,7 @@
 // Kottbusser Tor → under the Hochbahn along the Skalitzer Straße → Görlitzer Park (Die Rattenmutter)
 // → Schlesisches Tor → Oberbaumbrücke (Die Spreehexe).
 // Meters, +X east, +Z south, origin at the Oberbaumbrücke. `scale` stretches distances only.
-import { THREAT, type BossKind, type EnemyKind } from './enemies';
+import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { lineDist, type Area, type Bridge, type Landmark, type MapDef, type Pt, type RailYard, type River, type Stair, type Street, type Terrace, type Viaduct, type Wall } from './map';
@@ -38,10 +38,10 @@ export function xhainWaveTier(g: number, bosses: BossKind[] = [], zone = 0): Wav
     heuler: zone === 2 ? 0.6 : 0,
   };
   return {
-    count: Math.round(5 + g * 0.45),
-    maxAlive: Math.min(12, 6 + Math.floor(g / 3)),
+    count: Math.round((5 + g * 0.45) * lateTier(g).count),
+    maxAlive: Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count)),
     mix,
-    hpMul: 1 + g * 0.13,
+    hpMul: (1 + g * 0.13) * lateTier(g).hp,
     dmgMul: 1 + g * 0.06,
     bosses,
     elite: THREAT.eliteChance(g),
@@ -221,6 +221,7 @@ export function xhainMap(scale = 1): MapDef {
     { id: 'wrangelkiez', name: 'Wrangelkiez', ground: 'cobbles', frontage: 'altbau', trees: 0.5, specials: ['hinterhof'], poly: line([[-112, -60], [-124, -82], [-116, -98], [-80, -56], [-40, -26], [-6, 0], [30, 30], [100, 66], [100, 180], [-40, 180], [-104, 70], [-120, 34]]) },
   ];
 
+  const U1_CUT = { h: 2, reach: 15 };
   const L = (kind: Landmark['kind'], x: number, z: number, rot: number, hx: number, hz: number, clear = 3, extra: Partial<Landmark> = {}): Landmark => ({ kind, x: x * s, z: z * s, rot, hx, hz, clear, ...extra });
   const stadtbahnRot = Math.atan2(-50, -28);
   const landmarks: Landmark[] = [
@@ -236,10 +237,12 @@ export function xhainMap(scale = 1): MapDef {
     // Front to the north, towards the Kottbusser Tor.
     L('nkz', -276, 76, Math.PI, 20, 7, 3),
     L('goerlitzer', -160, 84, Math.atan2(GU[0], GU[1]), 12, 6, 2),
-    // U1 stations on the viaduct (walk under).
-    L('u1station', -246, 60, (Math.atan2(54, 4) * 1), 18, 4, 0, { walkUnder: true, name: 'Kottbusser Tor' }),
-    L('u1station', -150, 54, Math.atan2(50, -8), 18, 4, 0, { walkUnder: true, name: 'Görlitzer Bahnhof' }),
-    L('u1station', -70, 38, Math.atan2(36, -14), 18, 4, 0, { walkUnder: true, name: 'Schlesisches Tor' }),
+    // U1 stations on the viaduct (walk under). Playtest 2026-11-20: hero and enemies vanished under them
+    // (the Spreehexe fight is at Schlesisches Tor), so the halls cut away above 2 m while the hero is under
+    // or behind them (roof about 14 m: 14.5 m of hidden ground north at the 44° camera).
+    L('u1station', -246, 60, (Math.atan2(54, 4) * 1), 18, 4, 0, { walkUnder: true, name: 'Kottbusser Tor', cut: U1_CUT }),
+    L('u1station', -150, 54, Math.atan2(50, -8), 18, 4, 0, { walkUnder: true, name: 'Görlitzer Bahnhof', cut: U1_CUT }),
+    L('u1station', -70, 38, Math.atan2(36, -14), 18, 4, 0, { walkUnder: true, name: 'Schlesisches Tor', cut: U1_CUT }),
     // Späti rest stops, one per zone beside the route (front to the street).
     { ...L('spati', -6, -66, 0, 5.5, 4, 2), name: 'Späti an der Mauer' },
     { ...L('spati', -176, 36, 180 * DEG, 5.5, 4, 2), name: 'Späti in der Oranienstraße' },

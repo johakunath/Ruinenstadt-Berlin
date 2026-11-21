@@ -353,6 +353,8 @@ describe('events', () => {
   });
   it('an elite pays four times the Schrott (its item rate is in loot.test)', () => {
     const s = make();
+    // Köpenick already freed: no first-run bonus (FIRST_KOEPENICK, loot.test).
+    s.inventory.camp = { stations: {}, stash: [], freed: [0] };
     const e = spawnEnemy(s, s.player.x + 1, s.player.z, 'walker');
     e.elite = 'flink';
     e.hp = 1;

@@ -2,7 +2,7 @@
 //   beauty → [GTAO] → ink → hidden hero contour → bloom → grade → output → [FXAA]
 // GTAO and the ink outline share one normal/depth pre-pass.
 import {
-  DepthTexture, HalfFloatType, MeshNormalMaterial, NearestFilter, NoBlending, Vector2, WebGLRenderTarget,
+  DataTexture, DepthTexture, HalfFloatType, MeshNormalMaterial, NearestFilter, NoBlending, Vector2, WebGLRenderTarget,
   type Camera, type PerspectiveCamera, type Scene, type Sphere, type WebGLRenderer,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -133,11 +133,14 @@ export class Post {
     enemyBounds?: (out: Sphere[]) => number,
     lootBounds?: (out: Sphere[]) => number,
   ) {
-    const target = new WebGLRenderTarget(4, 4, { type: HalfFloatType, samples: profile.msaa });
+    // Leistung: the beauty target carries depth for the ink pass (both composer buffers get a copy).
+    const beautyDepth = profile.inkFromBeauty && look.outline > 0 && profile.msaa === 0;
+    const target = new WebGLRenderTarget(4, 4, beautyDepth ? { type: HalfFloatType, samples: profile.msaa, depthTexture: new DepthTexture(4, 4) } : { type: HalfFloatType, samples: profile.msaa });
     this.composer = new EffectComposer(renderer, target);
     this.composer.addPass(new RenderPass(scene, camera));
+    this.beautyDepth = beautyDepth;
 
-    const needsG = profile.gtao || look.outline > 0;
+    const needsG = profile.gtao || (look.outline > 0 && !beautyDepth);
     this.gbuffer = needsG
       ? new WebGLRenderTarget(4, 4, { minFilter: NearestFilter, magFilter: NearestFilter, type: HalfFloatType, depthTexture: new DepthTexture(4, 4) })
       : null;
@@ -148,11 +151,18 @@ export class Post {
       this.gtao.blendIntensity = look.ao;
       this.composer.addPass(this.gtao);
     }
-    if (look.outline > 0 && this.gbuffer) {
+    if (look.outline > 0 && (this.gbuffer || beautyDepth)) {
       this.ink = new ShaderPass(InkShader);
       const u = this.ink.uniforms;
-      u.tDepth!.value = this.gbuffer.depthTexture;
-      u.tNormal!.value = this.gbuffer.texture;
+      if (this.gbuffer && !beautyDepth) {
+        u.tDepth!.value = this.gbuffer.depthTexture;
+        u.tNormal!.value = this.gbuffer.texture;
+      } else {
+        // One flat normal everywhere: no crease lines, only depth silhouettes.
+        const flat = new DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1);
+        flat.needsUpdate = true;
+        u.tNormal!.value = flat;
+      }
       u.strength!.value = look.outline;
       u.near!.value = camera.near;
       u.far!.value = camera.far;
@@ -177,6 +187,7 @@ export class Post {
   }
 
   private readonly look: Look;
+  private readonly beautyDepth: boolean;
 
   /** `width` and `height` in CSS pixels. */
   setSize(width: number, height: number, dpr: number): void {
@@ -194,7 +205,10 @@ export class Post {
     // Offsets in pre-pass pixels: one step at full resolution is the thinnest clean line.
     const s = this.profile.gbufferScale;
     const px = Math.max(1, this.look.outlineWidth * s);
-    this.ink?.uniforms.texel!.value.set(px / Math.round(w * s), px / Math.round(h * s));
+    const tw = this.beautyDepth ? w : Math.round(w * s);
+    const th = this.beautyDepth ? h : Math.round(h * s);
+    const lw = this.beautyDepth ? Math.max(1, this.look.outlineWidth) : px;
+    this.ink?.uniforms.texel!.value.set(lw / tw, lw / th);
   }
 
   /**
@@ -227,6 +241,8 @@ export class Post {
     // The RenderPass is the composer's first scene render and consumes the request; the full-screen
     // passes after it find `needsUpdate` false again.
     this.renderer.shadowMap.needsUpdate = shadows;
+    // The RenderPass draws into the composer's read buffer, which alternates between frames.
+    if (this.beautyDepth && this.ink) this.ink.uniforms.tDepth!.value = this.composer.readBuffer.depthTexture;
     this.composer.render(dt);
   }
 }

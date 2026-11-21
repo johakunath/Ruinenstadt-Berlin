@@ -24,7 +24,7 @@ export class CampUi {
   /** M20: opened from a station's ring in the walkable camp: only that station, no list. */
   private single = false;
   private msg: Result | null = null;
-  /** Schwarzmarkt: the item whose card is shown. */
+  /** Depot (the stash; Schwarzmarkt until playtest 2026-11-20): the item whose card is shown. */
   private pick: { from: 'bag' | 'stash'; i: number } | null = null;
   private previous: HTMLElement | null = null;
   private padDown: boolean[] = [];
@@ -42,7 +42,7 @@ export class CampUi {
       if (!b) return;
       const d = b.dataset, s = this.sim();
       if (d.close !== undefined) { this.close(); return; }
-      // Schwarzmarkt (playtest 2026-11-18): a tap shows the item's card, a second button moves it.
+      // Depot (playtest 2026-11-18): a tap shows the item's card, a second button moves it.
       if (d.pb !== undefined || d.pf !== undefined) { const pick = { from: d.pb !== undefined ? 'bag' as const : 'stash' as const, i: +(d.pb ?? d.pf!) }; this.pick = this.pick?.from === pick.from && this.pick.i === pick.i ? null : pick; this.render(); return; }
       if (d.ts !== undefined || d.fs !== undefined) this.pick = null;
       if (d.st) { this.sel = d.st as StationId; this.pick = null; this.msg = null; this.render(); this.root.querySelector<HTMLElement>(`[data-st="${d.st}"]`)?.focus(); return; }
@@ -119,7 +119,7 @@ export class CampUi {
         return `<div class="row-c"><div><b class="${on ? 'positive' : ''}">${m.name}${on ? ' · gekocht' : ''}</b><small>${m.description}${lock ? ' · ab Stufe 2' : ''}</small><small>${Object.entries(m.costs).map(([k, v]) => `<span class="${(s.inventory.ingredients?.[k as IngredientId] ?? 0) >= v || on ? '' : 'negative'}">${v} ${INGREDIENTS[k as IngredientId].name}</span>`).join(' · ')}</small></div><button type="button" class="${!on && ok && !lock ? 'primary' : ''}" data-meal="${m.id}" ${lock ? 'disabled' : ''}>${on ? 'Abbestellen' : 'Kochen'}</button></div>`;
       }).join('') + '<p class="inv-hint">Ein Essen hält eine Expedition lang. Zutaten fallen von Gegnern.</p>';
       case 'laz': return CONSUMABLES.map(c => { const n = s.inventory.consumables?.[c.id] ?? 0; return `<div class="row-c"><div><b>${c.name}</b><small>${c.id === 'verband' && stationLevel(s, 'laz') >= 3 ? 'Heilt 60% Leben über 3 Sekunden' : c.description} · ${n}/${CONSUMABLE.max} dabei</small></div>${n >= CONSUMABLE.max ? '<small>Voll</small>' : `<button type="button" class="${s.inventory.scrap >= c.scrapCost ? 'primary' : ''}" data-cons="${c.id}">${resIcon('scrap')}${c.scrapCost}</button>`}</div>`; }).join('');
-      case 'kom': { const c = campOf(s); return `<div class="row-c"><div><b>Befreit</b><small>${([[0, 'Köpenick'], [100, 'S3'], [1, 'Xhain'], [101, 'U8'], [2, 'Alexanderplatz'], [102, 'U2'], [3, 'Mitte']] as const).filter(([id]) => c.freed.includes(id)).map(([, n]) => n).join(' · ') || 'Noch nichts'}</small></div></div><p class="inv-hint">Ilse hält Funkkontakt. Alexanderplatz befreit öffnet Stufe 3 aller Stationen.</p>`; }
+      case 'kom': { const c = campOf(s); return `<div class="row-c"><div><b>Befreit</b><small>${([[0, 'Köpenick'], [100, 'S3'], [1, 'Xhain'], [101, 'U8'], [2, 'Alexanderplatz'], [102, 'U2'], [3, 'Mitte']] as const).filter(([id]) => c.freed.includes(id)).map(([, n]) => n).join(' · ') || 'Noch nichts'}</small></div></div><p class="inv-hint">Ilse hält Funkkontakt. Xhain befreit öffnet Stufe 2, Alexanderplatz Stufe 3 aller Stationen.</p>`; }
       case 'markt': return this.stash(s);
     }
   }

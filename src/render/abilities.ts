@@ -22,6 +22,8 @@ export interface Emitters {
 
 const SHOTS = 96, RINGS = 12, FIELDS = 48, STRIKES = 10, BOLTS = 10, ELITES = 8;
 const RING_COLOR: Record<string, number> = { earth: 0xffc98a, small: 0xffd9a8, blade: 0xff4a3a, guard: 0xb8c4d0, acid: 0x97c459 };
+/** E1 lightning ribbon: half height in meters and seconds on screen. */
+const BOLT_HALF = 0.16, BOLT_LIFE = 0.26;
 const m4 = new Matrix4();
 const col = new Color();
 
@@ -98,10 +100,20 @@ export class AbilityView {
     for (let i = 0; i < BOLTS; i++) {
       const g = new BufferGeometry();
       g.setAttribute('position', new BufferAttribute(new Float32Array(9 * 2 * 3), 3));
-      const idx: number[] = [];
+      const idx: number[] = [], uv: number[] = [];
       for (let k = 0; k < 8; k++) idx.push(k * 2, k * 2 + 1, k * 2 + 3, k * 2, k * 2 + 3, k * 2 + 2);
+      for (let k = 0; k <= 8; k++) uv.push(k / 8, 0, k / 8, 1);
+      g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
       g.setIndex(idx);
-      const mesh = fxMesh(new Mesh(g, add(0xa8e4ff, 1)), 6);
+      // E1: a wide ribbon with a white core in a cyan halo (the thin flat one was lost in a fight).
+      const mesh = fxMesh(new Mesh(g, new ShaderMaterial({
+        uniforms: { fade: { value: 1 } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: `uniform float fade; varying vec2 vUv;
+          void main() { float d = abs(vUv.y - 0.5) * 2.0; float halo = (1.0 - d) * (1.0 - d), core = smoothstep(0.3, 0.1, d);
+            gl_FragColor = vec4((vec3(0.2, 0.62, 1.0) * halo * 1.2 + vec3(0.9, 0.97, 1.0) * core * 1.3) * fade, 1.0); }`,
+        blending: AdditiveBlending, premultipliedAlpha: true, transparent: true, depthWrite: false, side: DoubleSide, fog: false,
+      })), 6);
       mesh.visible = false;
       this.group.add(mesh);
       this.bolts.push({ mesh, life: 0 });
@@ -173,13 +185,13 @@ export class AbilityView {
       for (let i = 0; i <= 8; i++) {
         const t = i / 8, j = i === 0 || i === 8 ? 0 : R.range(-0.28, 0.28);
         const x = lerp(ev.x0, ev.x1, t) + (-dz / len) * j, z = lerp(ev.z0, ev.z1, t) + (dx / len) * j, y = lerp(y0, y1, t) + (i % 8 ? R.range(-0.2, 0.2) : 0);
-        pos.setXYZ(i * 2, x, y - 0.07, z);
-        pos.setXYZ(i * 2 + 1, x, y + 0.07, z);
+        pos.setXYZ(i * 2, x, y - BOLT_HALF, z);
+        pos.setXYZ(i * 2 + 1, x, y + BOLT_HALF, z);
       }
       pos.needsUpdate = true;
-      b.life = 0.16;
+      b.life = BOLT_LIFE;
       b.mesh.visible = true;
-      for (let i = 0; i < 8; i++) E.glow(ev.x1, y1, ev.z1, R.range(-3, 3), R.range(0, 4), R.range(-3, 3), R.range(0.12, 0.3), 0.08, 2, 4.5, 6, 6);
+      for (let i = 0; i < 10; i++) E.glow(ev.x1, y1, ev.z1, R.range(-3.5, 3.5), R.range(0, 4.5), R.range(-3.5, 3.5), R.range(0.15, 0.35), 0.11, 2, 4.5, 6.5, 6);
     } else if (ev.type === 'shock') {
       const y = groundY(ev.x, ev.z);
       const n = Math.round(10 + ev.radius * 5);
@@ -197,7 +209,7 @@ export class AbilityView {
       }
       for (let i = 0; i < 8; i++) E.dust(ev.x, y + 0.2, ev.z, R.range(-3, 3), R.range(0.5, 2), R.range(-3, 3), R.range(0.5, 0.9), R.range(0.5, 1), 0.16, 0.14, 0.13);
     } else if (ev.type === 'ignite') {
-      for (let i = 0; i < 6; i++) E.glow(ev.x, groundY(ev.x, ev.z) + R.range(0.4, 1.4), ev.z, R.range(-1, 1), R.range(1, 3), R.range(-1, 1), R.range(0.25, 0.5), R.range(0.25, 0.45), 1.6, 0.6, 0.12, -1.5, 0.3);
+      for (let i = 0; i < 10; i++) E.glow(ev.x, groundY(ev.x, ev.z) + R.range(0.4, 1.4), ev.z, R.range(-1.6, 1.6), R.range(1, 3.5), R.range(-1.6, 1.6), R.range(0.25, 0.5), R.range(0.3, 0.55), 1.8, 0.7, 0.12, -1.5, 0.3);
     } else if ((ev.type === 'heal' && !ev.tick) || ev.type === 'secondWind' || ev.type === 'blessing' || ev.type === 'shrine') {
       const c = ev.type === 'heal' ? [0x8fd16a, 0.8] as const : ev.type === 'shrine' ? [0x7dd3ff, 1] as const : [0xf2d14b, 1] as const;
       (this.aura.material as SpriteMaterial).color.setHex(c[0]);
@@ -290,7 +302,9 @@ export class AbilityView {
     for (const b of this.bolts) {
       if (b.life <= 0) continue;
       b.life -= dt;
-      (b.mesh.material as MeshBasicMaterial).opacity = Math.max(0, b.life / 0.16);
+      // Full for the first half, then out; it flickers once on the way.
+      const k = Math.max(0, Math.min(1, (b.life / BOLT_LIFE) * 2));
+      (b.mesh.material as ShaderMaterial).uniforms.fade!.value = k * (b.life > BOLT_LIFE * 0.55 && b.life < BOLT_LIFE * 0.7 ? 0.35 : 1);
       b.mesh.visible = b.life > 0;
     }
 
@@ -306,10 +320,10 @@ export class AbilityView {
     }
     for (let i = ne; i < ELITES; i++) this.elites[i]!.visible = false;
 
-    // Burning and corroded bodies.
+    // Burning and corroded bodies: embers rise off the flame, drops fall (the marks themselves: `status-fx.ts`).
     for (const e of s.enemies) {
       if (e.state === 'dead') continue;
-      if (e.burn > 0 && R.next() < dt * 16) E.glow(e.x + R.range(-0.25, 0.25), groundY(e.x, e.z) + R.range(0.3, 1.5) * e.def.scale, e.z + R.range(-0.25, 0.25), R.range(-0.3, 0.3), R.range(1, 2.4), R.range(-0.3, 0.3), R.range(0.25, 0.5), R.range(0.25, 0.5), 1.6, 0.6, 0.12, -1.5, 0.3);
+      if (e.burn > 0 && R.next() < dt * 12) E.glow(e.x + R.range(-0.3, 0.3), groundY(e.x, e.z) + R.range(0.8, 1.9) * e.def.scale, e.z + R.range(-0.3, 0.3), R.range(-0.5, 0.5), R.range(1.2, 3), R.range(-0.5, 0.5), R.range(0.5, 1), R.range(0.05, 0.09), 5, 1.8, 0.35, -0.5, 0.5);
       if (e.acid > 0 && R.next() < dt * 8) E.glow(e.x + R.range(-0.25, 0.25), groundY(e.x, e.z) + R.range(0.5, 1.4) * e.def.scale, e.z + R.range(-0.25, 0.25), 0, R.range(-1.4, -0.6), 0, 0.5, 0.09, 1.2, 2.4, 0.5, 2, 0.6);
     }
 

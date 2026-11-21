@@ -1,6 +1,9 @@
 // Balance bot (M14; 2D tools/sim.js). Plays the sim through `SimInput` like a person would:
 // walks the route, fights, steps out of marked zones, rolls through shots and rings, picks up
 // loot, wears upgrades, takes blessings, rests in a Späti. Its skill is a handful of numbers
+// 2026-11-21 (Johannes: make it play like him, 2D tools/sim.js v0.99): blessings by economy need,
+// build and how hard the last fights were; heal drops when low; Späti shopping; a camp step between
+// districts (meals, Lazarett, workshop, drill, stations, Aufsätze, implant mode). Its own
 // (`BotSkill`) meant to be fitted to Johannes' telemetry (B9): how often it overlooks a telegraph
 // and how long it takes to react. No DOM, no rendering: runs in Node (tools/balance.mjs) and tests.
 import { PLAYER, weaponAttack } from '../data/combat';
@@ -13,7 +16,16 @@ import type { Item } from '../sim/items';
 import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
 import { profileOf, type SaveProfile } from '../sim/save';
-import { endExpedition } from '../sim/camp';
+import { buildMod, buildStation, buyDrill, buySpatiUpgrade, buyUpgrade, cookMeal, craftConsumable, drillCost, endExpedition, installMod, modSlots, nextLevel, removeMod, SPATI_UPGRADE, spatiUpgradeCost, stationBuilt, upgradeCost, upgradeMax } from '../sim/camp';
+import { buyConsumable, buyOffer, closeTrade, talkTo, tradeStock } from '../sim/runcontent';
+import { heldFamilies, perkOf } from '../sim/blessings';
+import { pk } from '../sim/combat';
+import { setImplantMode } from '../sim/inventory';
+import { CAMP_UPGRADES, type PerkFamilyId, type PerkId } from '../data/progression';
+import { CONSUMABLES, MEALS, WEAPON_MODS, type WeaponModId } from '../data/crafting';
+import { IMPLANT_MODES } from '../data/items';
+import { campOpen } from '../data/lines';
+import { STATIONS } from '../data/camp';
 import { createSim, stepSim } from '../sim/sim';
 import { heroStats, power } from '../sim/stats';
 import { DT, type Enemy, type Sim, type SimInput } from '../sim/types';
@@ -200,23 +212,31 @@ export class Bot {
     return s.act && this.sim.time >= s.at;
   }
 
-  /** Between steps: blessings, gear, bag. */
+  /** Lowest life share in the recent fights (decays back to 1): hard fights steer blessings to toughness. */
+  recentLow = 1;
+  private shopped = -1;
+
+  /** Between steps: blessings, gear, bag, shopping. */
   manage(): void {
     const s = this.sim;
     const a = s.abilities;
+    this.recentLow = Math.min(1, Math.min(this.recentLow + DT / 120, s.player.hp / s.stats.maxHp));
     while (a.offers.length) {
-      const best = [...a.offers].sort((x, y) => y.quality - x.quality)[0]!;
+      // 2D: one choice in ten is a whim; otherwise the best score.
+      const best = this.rng.next() < 0.1 ? a.offers[Math.floor(this.rng.next() * a.offers.length)]! : [...a.offers].sort((x, y) => perkScore(s, y.id, y.level, this.recentLow) - perkScore(s, x.id, x.level, this.recentLow))[0]!;
       if (!chooseBlessing(s, best.id)) break;
     }
-    const bag = s.inventory.bag;
-    for (let i = bag.length - 1; i >= 0; i--) {
-      const it = bag[i] as Item;
-      const now = power(s.stats);
-      const then = power(heroStats({ ...s.equipment, [it.slot]: it }, s.statContext));
-      if (then > now * 1.01) equipItem(s, i);
-    }
+    equipBest(s, true);
     // Keep room: salvage what is not worn once the bag is nearly full.
+    const bag = s.inventory.bag;
     if (bag.length >= 20) for (let i = bag.length - 1; i >= 0; i--) salvageItem(s, i);
+    // Späti or trader: open the trade once per stop and shop like a person.
+    const c = s.content;
+    if (c.talk != null && !c.tradeOpen && this.shopped !== c.talk && s.run.phase === 'travel') {
+      this.shopped = c.talk;
+      if (talkTo(s)) { shop(s); closeTrade(s); }
+    }
+    if (c.talk == null && s.rest.at < 0) this.shopped = -1;
   }
 
   input(): SimInput {
@@ -404,6 +424,19 @@ export class Bot {
     }
 
     if (p.hp < s.stats.maxHp * this.skill.bandageAt && (s.inventory.consumables?.verband ?? 0) > 0 && s.abilities.hot <= 0) inp.verband = true;
+    // 2D v0.99: below half life walk to a landed heal or Döner close by when the nearest enemy is not on top of it (below 30 % always).
+    if (p.hp < s.stats.maxHp * 0.5 && near) {
+      let heal: { x: number; z: number } | null = null, hd = 12;
+      for (const d of s.drops) {
+        if (!d.landed || this.skip.has(d) || (d.content.kind !== 'heal' && d.content.kind !== 'food')) continue;
+        const q = Math.hypot(d.x - p.x, d.z - p.z);
+        if (q < hd) { hd = q; heal = d; }
+      }
+      if (heal && (nd > 4 || p.hp < s.stats.maxHp * 0.3) && this.nav.toward(p.x, p.z, heal.x, heal.z, this.dir)) {
+        mx += this.dir.x * 1.5;
+        mz += this.dir.z * 1.5;
+      }
+    }
 
     // Stuck on a corner: walk a detour for a moment.
     this.stuckT += DT;
@@ -504,6 +537,154 @@ export class Bot {
   }
 }
 
+
+// ---------------------------------------------------------------- choices (2D tools/sim.js v0.99)
+
+/** Economy blessings (2D ECON). */
+const ECON: Partial<Record<PerkId, number>> = { scrap: 1, mat: 1, loot: 1, magnet: 0.5 };
+/** Base value of combat blessings (2D PV); unlisted ones 2.5. */
+const PV: Partial<Record<PerkId, number>> = { dmg: 5, crit: 4, rate: 4.5, hp: 4, res: 4, leech: 3, second: 6, exec: 3, combo: 3, pauke: 3.5, jagd: 3.5, rush: 3, boom: 3.5, ram: 3, husar: 3, stun: 3, breaker: 3.5, thorns: 3, stellung: 2.5, retour: 2.5, spd: 2.5, dashcd: 2, breath: 2.5, reach: 3, kimme: 3, durch: 3, skill: 3, fire: 3.5, acid: 3.5, shock: 3.5, elp: 3, blast: 1.5 };
+/** Johannes (2026-11-21): when it gets hard he takes toughness, when it is easy damage. */
+const TOUGH: readonly PerkId[] = ['hp', 'res', 'leech', 'second', 'thorns', 'breath'];
+const HURT: readonly PerkId[] = ['dmg', 'crit', 'rate', 'exec', 'combo', 'boom'];
+const WFAM: Record<string, readonly PerkFamilyId[]> = { blade: ['krit', 'serie'], hammer: ['boll', 'krit'], spear: ['dist', 'krit'], sling: ['dist', 'serie'] };
+
+/** Share of the workshop not yet bought (2D econNeed): 1 at the start of a campaign, 0 when all is bought. */
+export function econNeed(s: Sim): number {
+  let max = 0, have = 0;
+  for (const u of CAMP_UPGRADES) { const m = upgradeMax(s, u.id); max += m; have += Math.min(m, s.statContext.upgrades[u.id] ?? 0); }
+  return 1 - have / Math.max(1, max);
+}
+
+/** Build families the hero leans to: the weapon's, its element, big gear affixes (2D SIM.profile). */
+function buildProfile(s: Sim): Set<PerkFamilyId> {
+  const f = new Set<PerkFamilyId>(WFAM[s.stats.kind] ?? []);
+  if (s.stats.elements.length) f.add('el' as PerkFamilyId);
+  if (s.stats.elements.includes('fire')) f.add('glut' as PerkFamilyId);
+  if (s.stats.crit >= 0.13) f.add('krit' as PerkFamilyId);
+  return f;
+}
+
+/** 2D perkScore: economy early in the campaign and in a mission, later blessings that fit the build; hard fights favour toughness. */
+export function perkScore(s: Sim, id: PerkId, level: number, recentLow = 1): number {
+  const p = perkOf(id);
+  const n = s.level.encounters.length, at = s.run.index / Math.max(1, n - 1);
+  const mission = at < 0.35 ? 1 : at < 0.7 ? 0.5 : 0.15;
+  const econ = ECON[id];
+  if (econ) return 1 + 6 * econ * econNeed(s) * mission * level;
+  const prof = buildProfile(s), held = heldFamilies(s);
+  let v = PV[id] ?? 2.5;
+  for (const f of p.families ?? []) { if (prof.has(f)) v += 2; if (held.has(f)) v += 3; }
+  if (p.duo) v += 5;
+  if (p.weapon) v += 4;
+  if (recentLow < 0.4 && TOUGH.includes(id)) v += 4;
+  if (recentLow > 0.75 && HURT.includes(id)) v += 2;
+  return v * (level > 1 ? 1.5 : 1) * (pk(s, id) >= p.max ? 0 : 1);
+}
+
+/**
+ * 2D gear rule: weapons by power, another weapon class needs +15 % in the camp, +20 % on an expedition
+ * (+40 % when the run's blessings are tied to the class); other slots on any power gain.
+ */
+export function equipBest(s: Sim, inRun: boolean): void {
+  for (let n = 0; n < 20; n++) {
+    let changed = false;
+    const bag = s.inventory.bag;
+    for (let i = bag.length - 1; i >= 0; i--) {
+      const it = bag[i] as Item;
+      const now = power(s.stats);
+      const then = power(heroStats({ ...s.equipment, [it.slot]: it }, s.statContext));
+      const cur = s.equipment[it.slot];
+      let need = 1.01;
+      if (it.slot === 'w' && cur && it.kind !== cur.kind) {
+        const tied = PERKS_TIED(s);
+        need = !inRun ? 1.15 : tied >= 2 ? 1.4 : 1.2;
+      }
+      if (then > now * need) {
+        // Aufsätze stay in stock when the weapon changes (2D swapW).
+        if (it.slot === 'w' && cur?.mods?.length) for (const m of [...cur.mods]) removeMod(s, m);
+        equipItem(s, i);
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) break;
+  }
+  loadout(s);
+}
+const PERKS_TIED = (s: Sim): number => {
+  const fam = WFAM[s.stats.kind] ?? [];
+  let n = 0;
+  for (const id of Object.keys(s.statContext.perks ?? {}) as PerkId[]) {
+    if (pk(s, id) <= 0) continue;
+    const p = perkOf(id);
+    if (p.weapon === s.stats.kind) n += 2;
+    else if (!p.weapon && (p.families ?? []).some((f) => fam.includes(f))) n++;
+  }
+  return n;
+};
+
+/** Aufsätze and implant mode (2D SIM.loadout): the fitted mods are the best of those in stock, the implant mode the one with the most power. */
+function loadout(s: Sim): void {
+  const w = s.equipment.w;
+  const slots = modSlots(w);
+  if (w && slots) {
+    const score = (id: WeaponModId): number => ({ nagel: 4, gewicht: s.stats.crit >= 0.13 ? 5 : 3, dorn: 2, tank: s.stats.elements.includes('fire') ? 5 : 1, phiole: s.stats.elements.includes('acid') ? 5 : 1, batt: s.stats.elements.includes('shock') ? 5 : 1 }[id] ?? 0);
+    const have = WEAPON_MODS.map((m) => m.id).filter((id) => (w.mods ?? []).includes(id) || (s.inventory.mods[id] ?? 0) > 0);
+    const want = have.sort((a, b) => score(b) - score(a)).slice(0, slots);
+    for (const id of [...(w.mods ?? [])]) if (!want.includes(id)) removeMod(s, id);
+    for (const id of want) if (!(w.mods ?? []).includes(id)) installMod(s, id);
+  }
+  // Scored on hypothetical copies (setLoadout replaces the equipment objects), applied only on a change
+  // (every setLoadout rounds life, which would eat fractional regeneration each step: Codex on PR 75).
+  const im = s.equipment.i;
+  if (im) {
+    let best: 0 | 1 | 2 = im.implantMode ?? 0, bp = -1;
+    for (let k = 0 as 0 | 1 | 2; k < IMPLANT_MODES.length; k = (k + 1) as 0 | 1 | 2) {
+      const q = power(heroStats({ ...s.equipment, i: { ...im, implantMode: k } }, s.statContext));
+      if (q > bp) { bp = q; best = k; }
+    }
+    if (best !== (im.implantMode ?? 0)) setImplantMode(s, im, best);
+  }
+}
+
+/** Späti or trader (2D state 'trade'): better gear if affordable, Verband and Molotow up to three, Schärfen and Panzerung when Schrott is left. */
+function shop(s: Sim): void {
+  const stock = tradeStock(s);
+  stock.forEach((o, i) => {
+    if (!o) return;
+    const then = power(heroStats({ ...s.equipment, [o.item.slot]: o.item }, s.statContext));
+    if (then > power(s.stats) * 1.05 && s.inventory.scrap >= o.price) buyOffer(s, i);
+  });
+  equipBest(s, true);
+  if (s.content.tradeAt >= 0) {
+    for (const c of CONSUMABLES) while ((s.inventory.consumables?.[c.id] ?? 0) < 2 && s.inventory.scrap >= c.scrapCost * 3) if (!buyConsumable(s, c.id).ok) break;
+    for (const id of SPATI_UPGRADE.ids) if ((s.statContext.upgrades[id] ?? 0) < SPATI_UPGRADE.max && s.inventory.scrap >= spatiUpgradeCost(s, id) * 1.5) buySpatiUpgrade(s, id);
+  }
+}
+
+/** Between districts (2D SIM.camp): gear, salvage the rest, cook, Lazarett, workshop, drill, stations, Aufsätze. */
+export function botCamp(s: Sim): void {
+  equipBest(s, false);
+  for (let i = s.inventory.bag.length - 1; i >= 0; i--) salvageItem(s, i);
+  if (!campOpen(s.inventory.camp?.freed)) return;
+  if (!s.statContext.meal) {
+    const pref = econNeed(s) > 0.4 ? ['gurke', 'curry', 'suppe', 'soljanka', 'kaffee'] : ['curry', 'suppe', 'soljanka', 'kaffee', 'gurke'];
+    for (const id of pref) if (MEALS.some((m) => m.id === id) && cookMeal(s, id as (typeof MEALS)[number]['id']).ok) break;
+  }
+  for (const c of CONSUMABLES) while ((s.inventory.consumables?.[c.id] ?? 0) < 3 && s.inventory.scrap >= c.scrapCost * 3) if (!craftConsumable(s, c.id).ok) break;
+  for (let guard = 0; guard < 200; guard++) {
+    const u = CAMP_UPGRADES.filter((x) => (s.statContext.upgrades[x.id] ?? 0) < upgradeMax(s, x.id)).sort((a, b) => upgradeCost(s, a.id) - upgradeCost(s, b.id))[0];
+    if (u && s.inventory.scrap >= upgradeCost(s, u.id)) { buyUpgrade(s, u.id); continue; }
+    const st = STATIONS.find((x) => nextLevel(s, x.id)?.ok);
+    if (st) { buildStation(s, st.id); continue; }
+    if (!u && stationBuilt(s, 'exer') && s.inventory.scrap >= drillCost(s) + 300) { buyDrill(s); continue; }
+    break;
+  }
+  if (stationBuilt(s, 'zeug')) for (const m of WEAPON_MODS) if (!(s.inventory.mods[m.id] ?? 0) && !(s.equipment.w?.mods ?? []).includes(m.id)) buildMod(s, m.id);
+  loadout(s);
+}
+
 // ---------------------------------------------------------------- campaign
 
 export interface EncounterReport {
@@ -526,6 +707,8 @@ export interface CampaignReport {
   time: number;
   deaths: number;
   kills: number;
+  /** Item drops that appeared (enemies, chests, breakables), over all tries. */
+  items: number;
   encounters: EncounterReport[];
   /** Where it ended when not won. */
   stuckAt: string;
@@ -559,6 +742,8 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   let seed = o.seed ?? 1;
   const c0 = o.carry ? structuredClone(o.carry) : undefined;
   let sim = createSim({ level, seed, difficulty: o.difficulty ?? 'normal', startAt: o.startAt ?? 0, ...(c0 ? { equipment: c0.equipment, statContext: c0.statContext, inventory: c0.inventory } : {}) });
+  // Coming from the last district: a camp step first (2D SIM.camp after every run).
+  if (c0) botCamp(sim);
   let bot = new Bot(sim, o.skill ?? SKILL_DEFAULT, seed);
   const maxDeaths = o.maxDeaths ?? 12;
   const maxTime = o.maxTime ?? 3 * 3600;
@@ -567,10 +752,13 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   let fightStart = -1, fightDamage = 0, fightLow = 1, fightIndex = -1;
   let idleT = 0, lastIndex = -1, quietT = 0;
   let won = false;
+  const seenDrops = new Set<number>();
+  let items = 0;
   while (time < maxTime) {
     bot.manage();
     stepSim(sim, bot.input());
     time += DT;
+    for (const d of sim.drops) if (d.content.kind === 'item' && !seenDrops.has(d.id)) { seenDrops.add(d.id); items++; }
     const p = sim.player;
     for (const ev of sim.events) {
       if (ev.type === 'encounterStart') {
@@ -608,6 +796,7 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
       if (deaths >= maxDeaths) break;
       const zone = level.encounters[at]!.zone;
       const prof = profileOf(sim);
+      seenDrops.clear();
       sim = createSim({ level, seed: ++seed, difficulty: sim.difficulty, startAt: level.encounters.findIndex((e) => e.zone === zone), equipment: prof.equipment, statContext: prof.statContext, inventory: prof.inventory });
       bot = new Bot(sim, bot.skill, seed);
       fightIndex = -1;
@@ -616,5 +805,5 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   kills += sim.kills;
   const at = Math.min(sim.run.index, level.encounters.length - 1);
   endExpedition(sim, won, o.district ?? 0);
-  return { profile: profileOf(sim), won, time, deaths, kills, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
+  return { profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }

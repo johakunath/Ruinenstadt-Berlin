@@ -72,7 +72,7 @@ No React, no ECS framework, no engine abstraction.
 
 | | Qualität (PC) | Ausgewogen (Tab S9) | Leistung (phone, hot device) |
 |---|---|---|---|
-| Resolution | Native up to DPR 2 | DPR cap 1.25, dynamic resolution down to 0.75 | DPR 1, dynamic resolution down to 0.6 |
+| Resolution | Native up to DPR 2 | DPR cap 1.25, dynamic resolution down to 0.75 (only when the GPU is the limit) | DPR cap 1.25, dynamic resolution down to 0.8; saves CPU instead: no outline pre-pass (silhouettes from the beauty depth), box shadows every 3rd frame (2026-11-21) |
 | Shadows | Moonlight (one directional) 2048 map, every frame | 1024 map, every 2nd frame | 1024 map, every 2nd frame, caster boxes only |
 | Point lights | Up to 8 without shadows, 1 to 2 with | Up to 4 without shadows | Up to 4 without shadows |
 | Post | Tone mapping, bloom, GTAO, color grading, optional outline | Tone mapping, light bloom, color grading, pre-pass 0.75 | Same, pre-pass 0.5, bloom at half size |

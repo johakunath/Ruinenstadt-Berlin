@@ -7,9 +7,9 @@ Status: built 2026-11-20 (Johannes asked for it after the review, before checks 
 |---|---|---|
 | Qualität | Unchanged | PC |
 | Ausgewogen | The former Leistung; shadow map every 2nd frame (counted in frames now), dynamic resolution down to 0.75 | Tablets (coarse pointer, short screen side ≥ 500 CSS px) |
-| Leistung | Pixel ratio 1, caster-box shadows every 2nd frame, pre-pass 0.5, bloom at half size, distant enemies animate at reduced rate from 4 m, 30 embers, dynamic resolution down to 0.6 | Phones (short side < 500) |
+| Leistung | Reworked 2026-11-21 (Tab S9 CPU-bound, telemetry `analysis-2026-11-21.md`): pixel ratio 1.25, no outline pre-pass (the ink reads the beauty depth, silhouettes only), caster-box shadows every 3rd frame, bloom at half size, reduced animation from 6 m, 30 embers, dynamic resolution down to 0.8 | Phones and tablets (default on touch since 2026-11-21) |
 
-A stored `leistung` from before (no `pv: 2` in the options) loads as Ausgewogen. Dynamic resolution (`src/render/dyn-res.ts`) judges the mean of half-second windows against the frame cap (60 or 30 with Akkusparen), steps down 0.1 after 2 s late and up 0.05 after 6 s on time. On Ausgewogen at the lowest scale, 20 s under 40 fps show one hint per session. Not built: less decoration on Leistung (backlog P38).
+A stored `leistung` from before (no `pv: 2` in the options) loads as Ausgewogen. Dynamic resolution (`src/render/dyn-res.ts`) judges the mean of half-second windows against the frame cap (60 or 30 with Akkusparen), steps down 0.1 after 2 s late and up 0.05 after 6 s on time; a window whose CPU time (sim + render) is over 70 % of the interval counts as on time, since fewer pixels cannot help a CPU-bound frame (2026-11-21). On Ausgewogen at the lowest scale, 20 s under 40 fps show one hint per session. Not built: less decoration on Leistung (backlog P38).
 
 Cloud counts (`tools/passes.mjs`-style, mean of 4 frames, seed 7): Köpenick start Qualität 458 calls / 348k triangles (494k before the crate fix), Ausgewogen 358 / 279k (old Leistung 455 / 494k), Leistung 281 / 236k; Xhain start Ausgewogen 294 / 168k (old Leistung 378 / 553k), Leistung 238 / 145k.
 

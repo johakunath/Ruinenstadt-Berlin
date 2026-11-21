@@ -8,7 +8,7 @@ import { FUNDE, FUNDE_TEILE, fundId, TEIL_BONUS, type FundKind } from '../data/f
 import { PX } from '../data/powers';
 import { ECONOMY, SHRINES, SURVIVORS, type ShrineId, type SurvivorId } from '../data/progression';
 import { offerBlessings } from './blessings';
-import { ELITE_MODS, type EnemyKind } from '../data/enemies';
+import { ELITE_MODS, type EnemyKind, districtScale } from '../data/enemies';
 import { pk } from './combat';
 import { makeElite, pickKind, spawnEnemy } from './enemies';
 import { healPlayer } from './heal';
@@ -230,7 +230,8 @@ export function eventKind(s: Sim, rng: Rng, kind: EnemyKind): EnemyKind {
 function tier(s: Sim): { hp: number; dmg: number } {
   const w = aheadWave(s);
   const df = difficultyOf(s.difficulty);
-  return { hp: (w?.hpMul ?? 1) * df.hp, dmg: (w?.dmgMul ?? 1) * df.dmg };
+  const ds = districtScale(s.level.strength);
+  return { hp: (w?.hpMul ?? 1) * df.hp * ds.hp, dmg: (w?.dmgMul ?? 1) * df.dmg * ds.dmg };
 }
 
 const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;

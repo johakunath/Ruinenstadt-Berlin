@@ -1,3 +1,4 @@
+import { BOSS_DMG_STEP, districtScale } from '../data/enemies';
 import { offerBlessings } from './blessings';
 // Encounter director for expedition maps (migration Q1): the player walks a route and fights at
 // fixed places. Entering the current encounter's circle starts it; waves spawn on its rim until
@@ -188,7 +189,10 @@ export function updateDirector(sim: Sim): void {
       // Nothing comes out until it stands.
     } else if (boss) {
       const s = enc.bossAt ?? rimSpot(sim, enc, ENEMIES[boss].radius);
-      const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      // Bosses take the full life step but 40 % of the damage step (verification chains: the Spreehexe killed a weaker
+      // bot 12 times with the full step while normal fights stayed easy).
+      const ds = districtScale(sim.level.strength);
+      const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp * ds.hp, w.dmgMul * df.dmg * (1 + (ds.dmg - 1) * BOSS_DMG_STEP));
       // It stands where the landmark stood: the landmark's colliders leave until it dies.
       if (enc.bossAt) {
         e.home = { x: s.x, z: s.z };
@@ -202,7 +206,7 @@ export function updateDirector(sim: Sim): void {
       // five `maxAlive` slots, which holds back the next spawns until rats die.
       const kind = pickKind(sim, w.mix);
       const s = rimSpot(sim, enc, ENEMIES[kind].radius);
-      const e = spawnPack(sim, s.x, s.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      const e = spawnPack(sim, s.x, s.z, kind, w.hpMul * df.hp * districtScale(sim.level.strength).hp, w.dmgMul * df.dmg * districtScale(sim.level.strength).dmg);
       if (w.elite && sim.rng.next() < w.elite) makeElite(sim, e);
       run.toSpawn--;
     }
@@ -256,7 +260,7 @@ function updateHold(sim: Sim, enc: EncounterDef): void {
     const df = difficultyOf(sim.difficulty);
     const out = (kind: EnemyKind): Enemy => {
       const q = freeSpot(sim.level, sim.rng, H.mouth.x, H.mouth.z, 0, 3, ENEMIES[kind].radius + 0.2) ?? H.mouth;
-      const e = spawnEnemy(sim, q.x, q.z, kind, w.hpMul * df.hp, w.dmgMul * df.dmg);
+      const e = spawnEnemy(sim, q.x, q.z, kind, w.hpMul * df.hp * districtScale(sim.level.strength).hp, w.dmgMul * df.dmg * districtScale(sim.level.strength).dmg);
       e.enc = sim.run.index;
       return e;
     };
@@ -332,7 +336,7 @@ function updateEndless(sim: Sim): void {
     const boss = run.bossesToSpawn.shift();
     const kind = boss ?? pickKind(sim, w.mix);
     const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, ENEMIES[kind].radius + 0.2) ?? { x: p.x + 12, z: p.z };
-    const e = spawnPack(sim, q.x, q.z, kind, w.hpMul * df.hp * (boss ? 0.8 : 1), w.dmgMul * df.dmg);
+    const e = spawnPack(sim, q.x, q.z, kind, w.hpMul * df.hp * districtScale(sim.level.strength).hp * (boss ? 0.8 : 1), w.dmgMul * df.dmg * districtScale(sim.level.strength).dmg);
     if (!boss) { if (sim.rng.next() < w.elite) makeElite(sim, e); run.toSpawn--; }
     tagSince(sim, n0);
   }

@@ -94,8 +94,9 @@ export class StartScreen {
   /** While the game loads the buttons wait. */
   loading(on: boolean, text = 'Lädt …'): void {
     const l = this.root.querySelector<HTMLElement>('#loading')!;
-    l.hidden = !on;
+    l.hidden = true;
     l.textContent = text;
+    loadBox(on, text);
     for (const b of this.root.querySelectorAll<HTMLButtonElement>('.start-main button')) b.toggleAttribute('data-wait', on);
     this.root.classList.toggle('waiting', on);
   }
@@ -111,3 +112,28 @@ export class StartScreen {
 
 let screen: StartScreen | null = null;
 export function startScreen(): StartScreen { return screen ??= new StartScreen(); }
+
+/**
+ * Playtest 2026-11-20: the loading note sat small at the bottom of the title. Now a box in the
+ * middle of the screen with an hourglass that runs and turns (the game is about time).
+ */
+let box: HTMLDivElement | null = null;
+function loadBox(on: boolean, text: string): void {
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'loadbox';
+    box.setAttribute('role', 'status');
+    box.innerHTML = `<div class="loadbox-card"><svg class="hourglass" viewBox="0 0 40 56" aria-hidden="true">
+      <path class="hg-frame" d="M6 3h28M6 53h28M9 3c0 14 9 17 9 25S9 39 9 53M31 3c0 14-9 17-9 25s9 11 9 25"/>
+      <clipPath id="hg-top"><path d="M10 6h20c-1 10-7 14-10 20-3-6-9-10-10-20z"/></clipPath>
+      <clipPath id="hg-bot"><path d="M20 30c3 6 9 10 10 20H10c1-10 7-14 10-20z"/></clipPath>
+      <rect class="hg-sand-top" clip-path="url(#hg-top)" x="8" y="6" width="24" height="22"/>
+      <rect class="hg-sand-bot" clip-path="url(#hg-bot)" x="8" y="30" width="24" height="22"/>
+      <line class="hg-stream" x1="20" y1="26" x2="20" y2="50"/>
+    </svg><p></p></div>`;
+    document.body.appendChild(box);
+  }
+  box.hidden = !on;
+  box.querySelector('p')!.textContent = text;
+  box.classList.toggle('failed', on && !/^Lädt/.test(text));
+}

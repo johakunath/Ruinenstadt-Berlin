@@ -9,7 +9,7 @@
 // (around the Siegessäule) → Neuer See (mini-boss, beer garden) → Kulturforum → Landwehrkanal →
 // Tilla-Durieux-Park → Sony Center (Der Bassprediger).
 // Meters, +X east, +Z south, origin about the map centre. `scale` stretches distances only.
-import { THREAT, type BossKind, type EnemyKind } from './enemies';
+import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { ellipse, type Area, type Landmark, type MapDef, type Pt, type River, type Street } from './map';
@@ -44,10 +44,10 @@ export function mitteWaveTier(g: number, bosses: BossKind[] = [], zone = 0): Wav
   ];
   const mix = MIX[zone] ?? MIX[0]!;
   return {
-    count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1)),
-    maxAlive: Math.min(12, 6 + Math.floor(g / 3)) - (calm ? 3 : 0),
+    count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1) * lateTier(g).count),
+    maxAlive: Math.max(calm ? 3 : 5, Math.round((Math.min(12, 6 + Math.floor(g / 3)) - (calm ? 3 : 0)) * lateTier(g).count)),
     mix,
-    hpMul: 1 + g * 0.13,
+    hpMul: (1 + g * 0.13) * lateTier(g).hp,
     dmgMul: 1 + g * 0.06,
     bosses,
     elite: calm ? 0 : THREAT.eliteChance(g),
