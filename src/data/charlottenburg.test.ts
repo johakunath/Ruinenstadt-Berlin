@@ -510,6 +510,20 @@ describe('Charlottenburg map (M16, layout C2)', () => {
     }
   });
 
+  it('step 7 zone 3: Heckenkabinett and Gartentheater in the garden, off the fights, their spots and guards reachable', () => {
+    for (const scale of [1, 1.3]) {
+      const m = charlottenburgMap(scale), lots = generateLots(m), level = mapLevel(m, lots, generateProps(m, lots)), seen = reach(m, level);
+      for (const k of ['heckenkabinett', 'gartentheater']) {
+        const l = lots.find((q) => q.special === k);
+        expect(l, `${k} ${scale}`).toBeDefined();
+        expect(['schlossgarten', 'irrgarten', 'schlossvorplatz']).toContain(areaAt(m, l!.x, l!.z)?.id);
+        for (const e of m.encounters) expect(Math.hypot(e.x - l!.x, e.z - l!.z), `${k} ${e.id} ${scale}`).toBeGreaterThan(e.r + Math.hypot(l!.w, l!.d) / 2);
+        for (const [name, p] of Object.entries(l!.content!.spots)) if (p) expect(near(seen, p[0], p[1]), `${k} ${name} ${scale}`).toBe(true);
+        for (const g of l!.content!.guards) expect(near(seen, g.x, g.z), `${k} guard ${scale}`).toBe(true);
+      }
+    }
+  }, 30000);
+
   it('Kristallsockel (6c): any order, progress never drops, the hedge gate opens once and stays open on resume', () => {
     const m = charlottenburgMap(1), level = mapLevel(m, generateLots(m));
     const sim = createSim({ level }), notes: string[] = [];

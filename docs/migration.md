@@ -16,7 +16,6 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | WP4 Hero, weapons and loot visuals: equipment on the hero (P32), pickups per kind (P10), legendary and set looks (P31), 2D #2 close-out, daggers (2D #38). Step 1 (weapon model per base, weapon types, rendered icons) is built | Claude · Opus high (spec: Fable high, done) | open: step 2 (clothing) built 2026-11-19, tunnel set waits for Johannes' pick; step 3 next; `docs/tasks/wp4-equipment-visuals.md` (gates G2 to G4 need Johannes before steps 3, 5, 6b) |
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals | Claude · Opus high | open: `docs/backlog.md` |
 | H3 humanoid boss bases: step 2 human base mesh (comparison first), step 3 Turmwächter on the mech; Codex T8 boss textures | Claude · Opus high | open: `docs/tasks/h3-humanoid-bosses.md` |
-| M16 Charlottenburg step 7 rest: the zone 3 lot types placed by hand (Heckenkabinett, Gartentheater; mockup variant A) | Claude · Opus high | open: `docs/tasks/m16-charlottenburg.md` › Handover step 7 |
 | M16 Charlottenburg step 8 rest: tier calibration with the bot once B2 is decided (C4; tier 32 … 54 and U2 west 41 … 46 are provisional) | Claude · Opus medium | after B2: `docs/tasks/m16-charlottenburg.md` › Handover step 8 |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
 
