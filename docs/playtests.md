@@ -20,7 +20,10 @@ Live sheet: only two 3D player ids since the link went out (Johannes' PC and Tab
 | Imbiss | Meals too strong | Erbsensuppe +20 % life, Currywurst +12 % damage, Kaffee +10 % tempo, Soljanka +1.5 life/s and +5 % resistance (about half) |
 | Schwarzmarkt | The stash is not a black market | Renamed Depot |
 | Tunnel drops | Too many | Bot: 13 to 21 items per 100 kills in tunnels against 7 to 11 in districts; tunnel item chances ×0.55 |
-| Overpowered | Two hits for normal enemies and some bosses with gear | From tier 10 waves have fewer, tougher enemies (tier 19 ×1.45 life ×0.82 count, tier 38 ×2.4 and ×0.59); boss life unchanged |
+| Overpowered | Two hits for normal enemies and some bosses with gear | From tier 10 waves have fewer, tougher enemies (tier 19 ×1.45 life ×0.82 count, tier 38 ×2.4 and ×0.59; bosses get the life factor too). After 5 bot campaigns: each district after Köpenick +30 % enemy life and +25 % damage (bosses 40 % of the damage step), also events, guards and tunnels by their line (`docs/balance.md`) |
+| New players (2026-11-21) | The first fights should teach, nobody should die there; the first boss easy; more loot until Köpenick is freed | First Köpenick run only: fights 1 and 2 at 55 to 60 % damage with a life floor of 8 %, fight 3 at 80 %, the Dammbrücke boss at 75 %, the rest at 85 %; at a quarter life the game pauses once for an „Ausweichen!“ card; items ×1.6, Schrott ×1.3 |
+| Element effects | Burning, lightning, acid and slow hardly visible | Fable pass E1 (`docs/tasks/e1-element-visuals.md`): flame, acid puddle, shock arcs, slow ring as one instanced draw call |
+| Bot | Should play like Johannes | Blessings by economy need, build and recent danger; heal pickups; Späti shopping; a camp step between districts (meals, Lazarett, workshop, drill, stations, Aufsätze, implant mode) |
 | Network map | Spandau and Marzahn | Gone, the five stops fill the board |
 
 ## 2026-11-20 · Köpenick on build fa2d6f8 (Johannes, PC, pad, Qualität; telemetry and code review)
