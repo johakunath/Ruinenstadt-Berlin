@@ -1,17 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
-import { CHARLOTTENBURG_BOSSES, charlottenburgMap, IRRGARTEN, PLATFORM } from './charlottenburg';
+import { CHARLOTTENBURG_BOSSES, charlottenburgMap, IRRGARTEN, IRRGARTEN_RIDDLES, PLATFORM } from './charlottenburg';
 import { lateTier } from './enemies';
 
 /** Wave tier from its life multiplier (inverse of (1 + 0.13 g) × lateTier, by bisection). */
 const tierOf = (h: number): number => { let a = 0, b = 100; for (let i = 0; i < 60; i++) { const g = (a + b) / 2; if ((1 + g * 0.13) * lateTier(g).hp < h) a = g; else b = g; } return (a + b) / 2; };
 const hpAt = (g: number): number => (1 + g * 0.13) * lateTier(g).hp;
 import { EDGE_FRONT, propCollider } from './courtyard';
-import { generateLots, generateProps, heightAt, inPoly, isWater, onStair, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
+import { areaAt, generateLots, generateProps, heightAt, inPoly, isWater, onStair, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
+import type { Lot } from './map';
 import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
 import { freeSpot } from '../sim/reach';
 import { createSim, stepSim } from '../sim/sim';
+import { simFromSave, snapshot } from '../sim/save';
+import { PLINTH_NOTE } from '../sim/runcontent';
 import { NO_INPUT, type SimEvent } from '../sim/types';
 
 type Box = { minX: number; maxX: number; minZ: number; maxZ: number };
@@ -171,8 +174,10 @@ describe('Charlottenburg map (M16, layout C2)', () => {
       const f = m.encounters.find((e) => e.id === 'irrgarten')!;
       expect(near(seen, f.x, f.z)).toBe(true);
       let cells = 0;
+      // The gated fourth pocket (step 6c) is the one sealed place: north of the gate in the far west corridor.
+      const R = IRRGARTEN_RIDDLES, gated = (x: number, z: number): boolean => x < f.x + R.gate.x + R.gate.half && z < f.z + R.gate.z;
       for (let x = Math.ceil(f.x - IRRGARTEN.hx + 1); x < f.x + IRRGARTEN.hx - 1; x++) for (let z = Math.ceil(f.z - IRRGARTEN.hz + 1); z < f.z + IRRGARTEN.hz - 1; z++) {
-        if (solid(x, z)) continue;
+        if (solid(x, z) || gated(x, z)) continue;
         cells++;
         expect(seen.has(`${x},${z}`), `pocket ${x},${z}`).toBe(true);
       }
@@ -182,6 +187,29 @@ describe('Charlottenburg map (M16, layout C2)', () => {
       expect(hedges.length).toBeGreaterThanOrEqual(10);
       expect(solid(f.x + 22, f.z), 'east wing hedge').toBe(true);
       expect(solid(f.x - 28, f.z), 'west wing hedge').toBe(true);
+    });
+
+    it(`maze riddles (6c): plinths and mirrors reachable, the blessing only behind the opened hedge gate (scale ${scale})`, () => {
+      const P = level.plinths!, R = IRRGARTEN_RIDDLES;
+      expect(P.pts).toHaveLength(3);
+      for (const q of P.pts) expect(near(seen, q.x, q.z), `plinth ${q.x},${q.z}`).toBe(true);
+      for (const r of m.mirrors!) expect(near(seen, r.x + Math.sin(r.rot) * 1.5, r.z + Math.cos(r.rot) * 1.5), `mirror front ${r.x},${r.z}`).toBe(true);
+      expect(m.mirrors!.filter((r) => r.shows)).toHaveLength(2);
+      const blessing = m.hiddenSpots!.at(-1)!;
+      expect(near(seen, blessing.x, blessing.z), 'blessing before the gate opens').toBe(false);
+      expect(seen.has(`${Math.round(P.gate.x)},${Math.round(P.gate.z)}`)).toBe(false);
+      level.remove(P.gate.collider);
+      try {
+        expect(near(reach(m, level), blessing.x, blessing.z), 'blessing with the gate open').toBe(true);
+      } finally { level.restore(); }
+      // Each wrong way ends with a sleeping Spiegelsouffleur, off the fight circle.
+      const f = m.encounters.find((e) => e.id === 'irrgarten')!;
+      const guards = m.guards!.filter((g) => g.kind === 'souffleur');
+      expect(guards).toHaveLength(R.souffleurs.length);
+      for (const g of guards) {
+        expect(near(seen, g.x, g.z)).toBe(true);
+        expect(Math.hypot(g.x - f.x, g.z - f.z)).toBeGreaterThan(f.r + 2);
+      }
     });
 
     it(`the KaDeWe Lichthof and the Orangerie ruin can be walked through (scale ${scale})`, () => {
@@ -352,10 +380,12 @@ describe('Charlottenburg map (M16, layout C2)', () => {
   it('M16b: two sleeping elites, two caches (Capitol yard, Ku\'damm yard) and a hidden blessing at reachable ends, off the route and off blocking landmarks', () => {
     for (const scale of [1, 1.3]) {
       const m = charlottenburgMap(scale), lots = generateLots(m), level = mapLevel(m, lots, generateProps(m, lots)), seen = reach(m, level);
-      expect(m.guards).toHaveLength(2);
-      expect(m.hiddenSpots).toHaveLength(1);
-      for (const h of m.hiddenSpots!) expect(near(seen, h.x, h.z), `blessing ${h.x},${h.z}`).toBe(true);
-      for (const g of m.guards!) expect(near(seen, g.x, g.z), `guard ${g.x},${g.z}`).toBe(true);
+      // Step 6c adds the two maze Spiegelsouffleurs and the gated maze blessing (its own test).
+      const elites = m.guards!.filter((g) => g.elite), hidden = m.hiddenSpots!.slice(0, 1);
+      expect(elites).toHaveLength(2);
+      expect(m.hiddenSpots).toHaveLength(2);
+      for (const h of hidden) expect(near(seen, h.x, h.z), `blessing ${h.x},${h.z}`).toBe(true);
+      for (const g of elites) expect(near(seen, g.x, g.z), `guard ${g.x},${g.z}`).toBe(true);
       // Two caches: the Capitol yard and the yard off the Ku'damm stub.
       const caches = m.fixedProps.filter((p) => p.kind === 'crates');
       expect(caches).toHaveLength(2);
@@ -366,7 +396,7 @@ describe('Charlottenburg map (M16, layout C2)', () => {
       const junction = bleibtreu.pts[0]!, [yx, yz] = yard.pts[0]!, yEnd = yard.pts.at(-1)!;
       expect(Math.hypot(yx - junction[0], yz - junction[1])).toBeLessThan(42 * scale);
       expect(lineDist(kudamm.pts, yx, yz)).toBeLessThan(kudamm.width / 2);
-      for (const [x] of [...yard.pts, ...m.hiddenSpots!.map((h): [number, number] => [h.x, h.z])]) expect(x).toBeLessThan(junction[0]);
+      for (const [x] of [...yard.pts, ...hidden.map((h): [number, number] => [h.x, h.z])]) expect(x).toBeLessThan(junction[0]);
       const deep = yard.pts.slice(1).reduce((a, p, i) => a + Math.hypot(p[0] - yard.pts[i]![0], p[1] - yard.pts[i]![1]), 0) - (kudamm.width / 2 + (kudamm.sidewalk ?? 0) - lineDist(kudamm.pts, yx, yz));
       expect(deep).toBeGreaterThan(20);
       expect(deep).toBeLessThan(30 * scale + 2);
@@ -466,6 +496,56 @@ describe('Charlottenburg map (M16, layout C2)', () => {
     expect(octant(bridge.x, bridge.z)).toBe('NW');
     expect(luise.z).toBeGreaterThan(pavillon.z);
     expect(pavillon.z).toBeGreaterThan(bridge.z);
+  });
+
+  it('step 7: the 1920 lot types stand in their zones (cab rank or arcade on the Tauentzien, cinema or jazz yard on the Ku\'damm)', () => {
+    for (const scale of [1, 1.3]) {
+      const m = charlottenburgMap(scale), lots = generateLots(m);
+      const of = (kinds: string[]): Lot[] => lots.filter((l) => l.kind === 'special' && kinds.includes(l.special!));
+      const z1 = of(['droschkenplatz', 'passage']), z2 = of(['kinovorplatz', 'jazzhof']);
+      expect(z1.length + z2.length, `${scale}: ${z1.length} ${z2.length}`).toBeGreaterThanOrEqual(3);
+      expect(z2.length, `${scale}`).toBeGreaterThanOrEqual(1);
+      for (const l of z1) expect(areaAt(m, l.x, l.z)?.id).toBe('cityost');
+      for (const l of z2) expect(areaAt(m, l.x, l.z)?.id).toBe('kudamm');
+    }
+  });
+
+  it('Kristallsockel (6c): any order, progress never drops, the hedge gate opens once and stays open on resume', () => {
+    const m = charlottenburgMap(1), level = mapLevel(m, generateLots(m));
+    const sim = createSim({ level }), notes: string[] = [];
+    const P = level.plinths!, p = sim.player;
+    const stand = (q: { x: number; z: number }, secs: number): void => {
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        p.x = p.px = q.x;
+        p.z = p.pz = q.z;
+        p.invuln = 1e9;
+        stepSim(sim, NO_INPUT);
+        for (const e of sim.events) if (e.type === 'note' && e.color === PLINTH_NOTE) notes.push(e.text);
+        sim.events.length = 0;
+      }
+    };
+    const gateIn = (): boolean => level.near(P.gate.x, P.gate.z, 1).includes(P.gate.collider);
+    expect(gateIn()).toBe(true);
+    stand(P.pts[2]!, 1);
+    stand({ x: P.pts[2]!.x + 6, z: P.pts[2]!.z }, 1);
+    expect(sim.content.plinths!.t[2]).toBeGreaterThan(0.9);
+    stand(P.pts[2]!, 1.1);
+    stand(P.pts[0]!, 2.1);
+    expect(notes).toEqual(['Sockel 1 von 3', 'Sockel 2 von 3']);
+    expect(gateIn()).toBe(true);
+    stand(P.pts[1]!, 2.1);
+    stand(P.pts[1]!, 1);
+    expect(notes).toEqual(['Sockel 1 von 3', 'Sockel 2 von 3', 'Das Heckentor öffnet sich']);
+    expect(sim.content.plinths!.open).toBe(true);
+    expect(gateIn()).toBe(false);
+    // A new run closes it again; a resumed one keeps it open.
+    const save = snapshot(sim, 'charlottenburg', true);
+    createSim({ level });
+    expect(gateIn()).toBe(true);
+    const resumed = simFromSave(save, { level }, true);
+    expect(resumed.content.plinths!.open).toBe(true);
+    expect(gateIn()).toBe(false);
+    createSim({ level });
   });
 
   it('a scripted run clears all 34 waves, the four bosses and ends in victory', () => {

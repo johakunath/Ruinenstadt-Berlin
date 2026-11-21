@@ -14,8 +14,9 @@ import { ALEX_TIER, alexWaveTier } from './alexanderplatz';
 import type { BossKind } from './enemies';
 import { waveTier } from './koepenick';
 import { XHAIN_TIER } from './xhain';
-import { mitteWaveTier } from './mitte';
-import { LINES, stopName } from './lines';
+import { MITTE_TIER, mitteWaveTier } from './mitte';
+import { charlottenburgWaveTier } from './charlottenburg';
+import { LINES, stopName, tunnelName } from './lines';
 import type { Prop } from './courtyard';
 import { inTube, type MapDef, type Pt, type Tube, type TunnelGate } from './map';
 
@@ -53,6 +54,8 @@ const STRETCH_NAME: Record<Stretch, string> = { collapse: 'Einsturz', flood: 'Ge
  */
 export interface LineWaves { from: number; to: number; wave: (g: number, zone: number, bosses?: BossKind[]) => WaveDef }
 export function lineWaves(line: number): LineWaves {
+  // M16 step 8: the U2 west brings Mitte's enemies to the ghost station, Charlottenburg's glass after it.
+  if (line === 3) return { from: MITTE_TIER.to - 5, to: MITTE_TIER.to, wave: (g, zone, bosses = []) => (zone === 0 ? mitteWaveTier(g, bosses, 0) : charlottenburgWaveTier(g, bosses, 0)) };
   if (line === 2) return { from: ALEX_TIER.to - 5, to: ALEX_TIER.to, wave: (g, zone, bosses = []) => (zone === 0 ? alexWaveTier(g, bosses, 2) : mitteWaveTier(g, bosses, 0)) };
   const to = line === 1 ? XHAIN_TIER.to : 19;
   return { from: to - 5, to, wave: (g, _zone, bosses = []) => waveTier(g, bosses, 0) };
@@ -138,7 +141,7 @@ export function tunnelMap(line = 0): MapDef {
     hold,
   ];
   const zones: ZoneDef[] = [
-    { id: 'tunnel', name: `${L.id}-Tunnel`, entry: { x: at(10)[0], z: at(10)[1] } },
+    { id: 'tunnel', name: tunnelName(line), entry: { x: at(10)[0], z: at(10)[1] } },
     { id: 'geisterbahnhof', name: ghost, entry: { x: at(232)[0], z: at(232)[1] } },
   ];
 
@@ -194,12 +197,13 @@ export function tunnelMap(line = 0): MapDef {
 
   const hidden: Point = { x: 70, z: cz(62) - 31 * s };
   return {
-    id: `tunnel-${L.id.toLowerCase()}`,
-    name: `${L.id}-Tunnel`,
+    // A repeated badge gets the line index (U2 west: `tunnel-u2-3`), so Funde and saves never mix the two.
+    id: `tunnel-${L.id.toLowerCase()}${LINES.findIndex((q) => q.id === L.id) !== line ? `-${line}` : ''}`,
+    name: tunnelName(line),
     bounds: { minX: -30, maxX: 460, minZ: -70, maxZ: 70 },
     start: zones[0]!.entry,
     rivers: [], lakes: [], islands: [], bridges: [], streets: [],
-    areas: [{ id: 'tunnel', name: `${L.id}-Tunnel`, poly: [[-30, -70], [460, -70], [460, 70], [-30, 70]], ground: 'asphalt', frontage: null, trees: 0 }],
+    areas: [{ id: 'tunnel', name: tunnelName(line), poly: [[-30, -70], [460, -70], [460, 70], [-30, 70]], ground: 'asphalt', frontage: null, trees: 0 }],
     defaultGround: 'asphalt',
     landmarks: [],
     encounters,

@@ -64,6 +64,9 @@ export class Materials {
 
   /** Unlit, for glow decals and effects. */
   static glow(map: Texture | null, color: ColorRepresentation, opacity = 1): MeshBasicMaterial {
-    return new MeshBasicMaterial({ map, color, transparent: true, opacity, depthWrite: false, fog: false });
+    const m = new MeshBasicMaterial({ map, color, transparent: true, opacity, depthWrite: false, fog: false });
+    // M16 sky per zone: `World.setLamps` scales glow decals from this base.
+    m.userData.glowBase = opacity;
+    return m;
   }
 }

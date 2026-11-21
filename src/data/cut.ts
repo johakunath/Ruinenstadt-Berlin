@@ -113,7 +113,7 @@ export function cutPlan(m: MapDef, lots: readonly Lot[], opts: { off?: boolean; 
   const yard = opts.yard ?? CUT.yard;
   const buildings = lots.flatMap((l, i) => (l.kind === 'tree' || l.kind === 'special' ? [] : [{ i, bodies: lotBodies(l) }]));
   lots.forEach((l, zi) => {
-    if (l.special !== 'hinterhof' && l.special !== 'clubhof') return;
+    if (l.special !== 'hinterhof' && l.special !== 'clubhof' && l.special !== 'jazzhof' && l.special !== 'passage') return;
     const rect: Rect = { x: l.x, z: l.z, rot: l.rot, hw: l.w / 2, hd: l.d / 2 };
     const zone: CutZone = { name: `hinterhof ${zi}`, poly: rectPoly(rect), h: yard, parts: [] };
     const radius = Math.hypot(rect.hw, rect.hd) + CUT.reach;

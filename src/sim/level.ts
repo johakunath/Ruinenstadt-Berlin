@@ -62,6 +62,19 @@ export interface GateDef {
   collider: Collider;
 }
 
+/**
+ * M16 step 6c Kristallsockel (`docs/tasks/m12d-charlottenburg-enemies.md` › Maze riddles): plinths, each a
+ * small hold ring; standing `need` seconds within `r` lights one for good. All lit: the hedge gate's
+ * collider leaves the level (`RunContent.plinths`, saved with the run).
+ */
+export interface PlinthDef {
+  pts: Point[];
+  r: number;
+  need: number;
+  /** Facing along the corridor it closes (the hedge runs across it), half its width. */
+  gate: { x: number; z: number; rot: number; half: number; collider: Collider };
+}
+
 /** P25 Türsteher neon bar across a Tor passage: open (not in the level) until `Level.shut`. */
 export interface BarrierDef {
   x: number;
@@ -199,6 +212,8 @@ export class Level {
   }
   /** M20 tunnel: gratings between the sections, the flooded stretch (speed factor) and the trader on the start platform. */
   gates: GateDef[] = [];
+  /** M16 step 6c: the maze plinths and their hedge gate (Charlottenburg only). */
+  plinths: PlinthDef | null = null;
   /** P25 Brandenburger Tor: the Türsteher's neon bars (`src/sim/barriers.ts`), open at build time. */
   barriers: BarrierDef[] = [];
   /** M20 camp: station colliders that apply from level `lo` to `hi` (0 = build site), switched by `syncCampSolids`. */

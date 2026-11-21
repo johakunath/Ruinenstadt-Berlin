@@ -9,7 +9,7 @@ import '@fontsource/pirata-one/latin-400.css';
 import './ui/style.css';
 import { isDifficulty } from './data/difficulty';
 import { GO_KEY, reloadWith, RESUME_KEY } from './options';
-import { campOpen, LINES, stopName } from './data/lines';
+import { campOpen, stopName, tunnelName } from './data/lines';
 import { optionsScreen } from './ui/options-screen';
 import { bindSettings, initFullscreenButton, opts } from './ui/settings';
 import { MAP_NAME, MAP_SUB, type MapId } from './ui/maps';
@@ -26,7 +26,7 @@ bindSettings();
 initAccount(() => !start.root.hidden);
 initFullscreenButton();
 const title = start.root;
-document.getElementById('title-sub')!.textContent = opts.map === 'tunnel' && opts.line > 0 ? `${LINES[opts.line]?.id ?? 'S3'}-Tunnel · Richtung ${stopName(opts.line + 1)}` : MAP_SUB[opts.map];
+document.getElementById('title-sub')!.textContent = opts.map === 'tunnel' && opts.line > 0 ? `${tunnelName(opts.line)} · Richtung ${stopName(opts.line + 1)}` : MAP_SUB[opts.map];
 
 // The few save facts the screen needs, read without the sim (main.ts reads the real save on load).
 // Debug starts (?at, ?stress, ?mapscale, ?spawn) never read the save, as in main.ts.
@@ -35,7 +35,8 @@ const peek = ((): { difficulty?: unknown; run?: { map?: string; index?: number }
   if (!persist) return null;
   try { return JSON.parse(localStorage.getItem(slotKey(activeSlot())) ?? 'null'); } catch { return null; }
 })();
-const mapName = opts.map === 'tunnel' && opts.line > 0 ? `${LINES[opts.line]?.id ?? 'S3'}-Tunnel` : MAP_NAME[opts.map];
+// M16 C3: keyed by line (both U2 tunnels had the same name, so one's saved run was offered in the other).
+const mapName = opts.map === 'tunnel' && opts.line > 0 ? tunnelName(opts.line) : MAP_NAME[opts.map];
 const run = opts.map !== 'hof' && peek?.run?.map === mapName ? peek.run : null;
 start.setResume(run ? `Kampf ${(run.index ?? 0) + 1}` : null, isDifficulty(peek?.difficulty) ? peek.difficulty : start.difficulty);
 // Layout 2A: the network map with the next place picked; the main button follows the pick.
