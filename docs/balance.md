@@ -22,7 +22,7 @@ The bot now plays like Johannes (2D `tools/sim.js` v0.99 rules): blessings by ec
 | Köpenick | 3, 5, 3, 1, 1 | 50 to 72 % | 25 to 78 s, 70 to 236 % |
 | Xhain | 0 | 14 to 47 % | 26 to 71 s, 38 to 191 % |
 | Alexanderplatz | 0, 12 (stop at the Weltzeituhr), 0, 0, 0 | 19 to 44 % | 72 to 137 s, 65 to 123 % |
-| Mitte | 0, 3, 0, 0 | 34 to 76 % | 65 to 289 s, 69 to 392 % |
+| Mitte | 0, 0, 0, 0 | 31 to 76 % | 74 to 326 s, 129 to 330 % |
 
 **Read:**
 - Later districts are no longer free.
