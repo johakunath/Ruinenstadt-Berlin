@@ -80,6 +80,27 @@ export const PLATFORM = { len: 21, width: 10, h: 6.5, stairAt: 9.5, stair: { len
  */
 export const IRRGARTEN = { hx: 33, hz: 16, ring: 16, entrance: { x: 30.5, z: 16 }, exit: { x: 0, z: -16 } } as const;
 
+/**
+ * Step 6c maze riddles in the maze frame (unscaled; `docs/tasks/m12d-charlottenburg-enemies.md` › Maze riddles).
+ * Kristallsockel: plinths in the three dead ends (north-east pocket, west pocket, the far west corridor);
+ * all lit opens the hedge gate across the far west corridor, behind it the hidden blessing (the fourth pocket).
+ * Spiegelpfad: two forks, one panel at the mouth of each way, facing the fork. Fork A east of the Rondell:
+ * the true way runs west into the Rondell, the wrong one north to the dead end. Fork B west of it: the true
+ * way runs north toward the gate, the wrong one south. Each wrong way ends with a sleeping Spiegelsouffleur.
+ */
+export const IRRGARTEN_RIDDLES = {
+  plinths: [[16, -11], [-17, 10], [-30.5, 1]] as Array<[number, number]>,
+  r: 1.5,
+  need: 2,
+  gate: { x: -30.5, z: -5, half: 2.6 },
+  blessing: [-30.5, -12] as [number, number],
+  mirrors: [
+    { x: 16.25, z: 4.75, fork: [19, 0], shows: true }, { x: 20.8, z: -5, fork: [19, 0], shows: false },
+    { x: -20.8, z: -5, fork: [-19, 0], shows: true }, { x: -20.8, z: 5, fork: [-19, 0], shows: false },
+  ] as Array<{ x: number; z: number; fork: [number, number]; shows: boolean }>,
+  souffleurs: [[20, -14], [-20, 14]] as Array<[number, number]>,
+} as const;
+
 /** Local hedge runs of the maze (x east, z south, around the Rondell centre). */
 function mazeHedges(): Array<Array<[number, number]>> {
   const { hx, hz, ring } = IRRGARTEN;
@@ -116,6 +137,7 @@ export function charlottenburgMap(scale = 1): MapDef {
   const M = { x: -75 * s, z: -98 * s };
   const gx = -3.5 * s, gz = C.z + 4;
   const KDW = { x: 148 * s, z: 197 * s };
+  const R6 = IRRGARTEN_RIDDLES;
 
   let g = 0;
   const tier = (n: number): number => CHARLOTTENBURG_TIER.from + (n * (CHARLOTTENBURG_TIER.to - CHARLOTTENBURG_TIER.from)) / (CHARLOTTENBURG_WAVES - 1);
@@ -528,8 +550,11 @@ export function charlottenburgMap(scale = 1): MapDef {
     specialMax: { hinterhof: 3, markt: 1, truemmer: 2, parkplatz: 1 },
     viaducts,
     walls,
-    hiddenSpots: [endOf('Hinterhof Bleibtreustraße', 1.2, 0)],
+    hiddenSpots: [endOf('Hinterhof Bleibtreustraße', 1.2, 0), { x: M.x + R6.blessing[0], z: M.z + R6.blessing[1] }],
+    plinths: { pts: R6.plinths.map(([x, z]) => ({ x: M.x + x, z: M.z + z })), r: R6.r, need: R6.need, gate: { x: M.x + R6.gate.x, z: M.z + R6.gate.z, rot: 0, half: R6.gate.half } },
+    mirrors: R6.mirrors.map((q) => ({ x: M.x + q.x, z: M.z + q.z, rot: Math.atan2(q.fork[0] - q.x, q.fork[1] - q.z), shows: q.shows })),
     guards: [
+      ...R6.souffleurs.map(([x, z]) => ({ x: M.x + x, z: M.z + z, kind: 'souffleur' as const, elite: false, wake: 5, hp: 1 })),
       { ...endOf('Antilopenweg', 1.5, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 },
       { ...endOf('Varietéhof', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 },
     ],

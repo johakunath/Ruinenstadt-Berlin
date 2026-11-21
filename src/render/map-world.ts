@@ -37,6 +37,7 @@ import { ALEX_STONE_URL, alexStoneBoxGeo, alexStoneGeo, paintAlexStoneAtlas, typ
 import { buildMinistryLot } from './mitte-zones';
 import { makeClockRig } from './clock';
 import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
+import { buildRiddleView } from './charlottenburg-riddles';
 import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from './charlottenburg-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
@@ -2588,6 +2589,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     spots.push(...tunnel.spots);
   }
 
+  // M16 step 6c: the live maze riddle parts (crystals, ring, gate leaves, mirror silhouettes).
+  const riddles = m.plinths || m.mirrors ? buildRiddleView(m, mats, (x, z) => surfaceAt(m, x, z)) : undefined;
+  if (riddles) group.add(riddles.group);
+
   const poolSize = Math.max(1, materials.profile.maxPointLights - 1);
   const pool = Array.from({ length: poolSize }, () => {
     const light = new PointLight(0xffffff, 0, 10, 1.6);
@@ -2627,6 +2632,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     ...(clock ? { clock, clockRig: () => makeClockRig(mats) } : {}),
     breakables: breakableView,
     ...(tunnel ? { tunnel } : {}),
+    ...(riddles ? { riddles } : {}),
     lights: [],
     fires,
     update(time: number): void {

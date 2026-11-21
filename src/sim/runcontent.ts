@@ -35,6 +35,8 @@ export interface RunContent {
   /** Funde (2D #14, #27): fixed spots per district map (same every run); `got` mirrors `statContext.funde`. Missing in older saves. */
   funde?: Fund[];
   shrines: Array<{ x: number; z: number; used: boolean }>;
+  /** M16 step 6c Kristallsockel: seconds stood in each plinth's ring (lit at `Level.plinths.need`, never drops), the hedge gate open. Missing in older saves and on other maps. */
+  plinths?: { t: number[]; open: boolean };
   /** Seconds left per shrine buff. */
   shrine: Partial<Record<ShrineId, number>>;
   /** `fixed`: the M20 tunnel trader on the start platform (2D `TUN.npc`): stays all run, no mark, no timer. */
@@ -166,6 +168,7 @@ export function createContent(s: Sim, seed: number): RunContent {
   // 2D tunnels have no events (`run.events={}`): gratings would close off their spots.
   if (L.gates.length) c.plan = c.plan.map(() => null);
   c.done = c.plan.map(() => false);
+  if (L.plinths) c.plinths = { t: L.plinths.pts.map(() => 0), open: false };
 
   const b = L.bounds;
   const sample = (ok: (x: number, z: number) => boolean, score: (x: number, z: number) => number): { x: number; z: number } | null => {
@@ -394,6 +397,27 @@ export function talkTo(s: Sim): boolean {
   return true;
 }
 
+/** Plinth colour of the riddle notes (cold crystal). */
+export const PLINTH_NOTE = '#bfe8ff';
+
+/** M16 step 6c Kristallsockel: charge the plinth the hero stands on; all lit opens the hedge gate once. */
+function updatePlinths(s: Sim, near: (o: { x: number; z: number }, r: number) => boolean): void {
+  const P = s.level.plinths, pc = s.content.plinths;
+  if (!P || !pc || pc.open) return;
+  P.pts.forEach((q, i) => {
+    const t = pc.t[i] ?? 0;
+    if (t >= P.need || !near(q, P.r)) return;
+    pc.t[i] = Math.min(P.need, t + DT);
+    if (pc.t[i]! < P.need) return;
+    const lit = pc.t.filter((v) => v >= P.need).length;
+    if (lit < P.pts.length) s.events.push({ type: 'note', text: `Sockel ${lit} von ${P.pts.length}`, color: PLINTH_NOTE, x: q.x, z: q.z });
+  });
+  if (!pc.t.every((v) => v >= P.need)) return;
+  pc.open = true;
+  s.level.remove(P.gate.collider);
+  s.events.push({ type: 'note', text: 'Das Heckentor öffnet sich', color: PLINTH_NOTE, x: P.gate.x, z: P.gate.z });
+}
+
 export function updateContent(s: Sim): void {
   const c = s.content;
   const p = s.player;
@@ -434,6 +458,8 @@ export function updateContent(s: Sim): void {
     s.events.push({ type: 'hidden', x: h.x, z: h.z, found: c.hidden.filter((q) => q.got).length, total: c.hidden.length });
     break;
   }
+
+  updatePlinths(s, near);
 
   const travel = s.run.phase === 'travel';
   const fighting = s.run.phase === 'fight' || s.run.phase === 'pause' || s.run.phase === 'hold';

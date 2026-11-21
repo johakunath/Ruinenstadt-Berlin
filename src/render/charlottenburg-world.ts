@@ -30,6 +30,7 @@ import { buildCitywest, GRIME as CITYWEST_GRIME } from './charlottenburg-citywes
 import { buildKudamm, GRIME as KUDAMM_GRIME } from './charlottenburg-kudamm';
 import { buildSchloss, GRIME as SCHLOSS_GRIME } from './charlottenburg-schloss';
 import { lightCharlottenburgLandmarks } from './charlottenburg-lights';
+import { buildRiddleStatic } from './charlottenburg-riddles';
 
 export const CHARLOTTENBURG_KINDS = new Set<LandmarkKind>([
   'zoobahnhof', 'loewentor', 'elefantentor', 'aquarium', 'musikpavillon', 'antilopenhaus', 'ufapalast', 'capitol', 'gedaechtniskirche',
@@ -1165,6 +1166,8 @@ export function buildCharlottenburgWorld(m: MapDef, chunkOf: (x: number, z: numb
     if (w.kind === 'hedge') buildHedge(chunkOf, ground, w);
     else if (w.kind === 'fence') buildFence(chunkOf, ground, w);
   }
+  // Step 6c: mirror frames, plinths and the gate piers in the maze (the live parts are `buildRiddleView`).
+  buildRiddleStatic(m, chunkOf, ground);
   // Landmark lighting (Johannes 2026-11-19): lamps, washes and lantern bodies per sight (`charlottenburg-lights.ts`).
   lightCharlottenburgLandmarks(m, chunkOf, ground);
 }

@@ -230,6 +230,10 @@ export interface MapDef {
   /** M16b/M19 side passage surprises: fixed hidden blessings and sleeping guards (a mini-boss). */
   hiddenSpots?: Point[];
   guards?: Level['guards'];
+  /** M16 step 6c Kristallsockel: plinth spots, ring radius, seconds to light one, the hedge gate they open (`Level.plinths`). */
+  plinths?: { pts: Point[]; r: number; need: number; gate: { x: number; z: number; rot: number; half: number } };
+  /** M16 step 6c Spiegelpfad: mirror panels at maze forks, facing the fork; only `shows` ones show the hero (render only, a thin collider). */
+  mirrors?: Mirror[];
   /** M11c pond jetties: walkable over water. */
   piers?: Pier[];
   /** M11c lot types placed by hand where the generator finds no room (Altstadt market, churchyard). */
@@ -266,6 +270,12 @@ export function inRailYard(m: MapDef, x: number, z: number, pad = 0): boolean {
  * `kind` makes it a garden hedge (the maze) or an iron fence (Zoo, garden gate) with its own height and
  * thickness; without `kind` it is the Wall, so the older maps stay as they are.
  */
+export interface Mirror { x: number; z: number; rot: number; shows: boolean }
+/** Spiegelpfad panel: width, height, thickness (m). */
+export const MIRROR = { w: 1.1, h: 2.1, thick: 0.2 } as const;
+/** Kristallsockel: hedge gate depth across the corridor (as a hedge); the crystal post stands this far north of each plinth, radius. */
+export const PLINTH_GATE_DEPTH = 1;
+export const PLINTH = { post: 1.7, postR: 0.3 } as const;
 export interface Wall { name: string; pts: Pt[]; kind?: 'hedge' | 'fence' }
 export const WALL = { height: 3.6, thick: 0.6 } as const;
 /** M16: hedges 2.2 m (the camera sees over them), iron fences 2 m. */
@@ -1910,6 +1920,10 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   const onPier = (x: number, z: number): boolean => (m.piers ?? []).some((p) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2; });
   const T = m.tunnel;
   const gates = (T?.gates ?? []).map((g) => ({ ...g, collider: { kind: 'box' as const, x: g.x, z: g.z, hx: g.half, hz: 0.3, rot: g.rot } }));
+  const P = m.plinths;
+  const plinthGate = P ? { ...P.gate, collider: { kind: 'box' as const, x: P.gate.x, z: P.gate.z, hx: P.gate.half, hz: PLINTH_GATE_DEPTH / 2, rot: P.gate.rot } } : null;
+  if (plinthGate) colliders.push(plinthGate.collider, ...P!.pts.map((q) => ({ kind: 'circle' as const, x: q.x, z: q.z - PLINTH.post, r: PLINTH.postR })));
+  for (const r of m.mirrors ?? []) colliders.push({ kind: 'box', x: r.x, z: r.z, hx: MIRROR.w / 2, hz: MIRROR.thick / 2, rot: r.rot });
   if (T) colliders.push({ kind: 'box', x: T.generator.x, z: T.generator.z, hx: GENERATOR.hx, hz: GENERATOR.hz, rot: T.generator.rot }, ...gates.map((g) => g.collider));
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !tunnelWalk(m, x, z, 0.3)
     || (!!m.camp && !onCampFloor(m.camp, x, z))
@@ -1925,6 +1939,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   if (m.wet) level.wet = true;
   if (m.shards) level.shards = true;
   level.hiddenSpots = m.hiddenSpots ?? [];
+  if (P && plinthGate) level.plinths = { pts: P.pts, r: P.r, need: P.need, gate: plinthGate };
   level.noSpawn = (m.noSpawn ?? []).map((p) => p.map(([x, z]) => ({ x, z })));
   level.barriers = m.landmarks.filter((l) => l.kind === 'tor').flatMap(torBarriers);
   if (T) {
