@@ -21,6 +21,11 @@ export const stationLevel = (s: Sim, id: StationId): number => Math.max(1, campO
  */
 /** District that opens level 3 of every station (index into `STOPS`, 2 = Alexanderplatz). */
 export const LEVEL3_DISTRICT = 2;
+/**
+ * District that opens level 2 of every station without its survivor (1 = Xhain). Playtest 2026-11-20:
+ * after the Spreehexe nothing in the camp could be built; each freed district should open something.
+ */
+export const LEVEL2_DISTRICT = 1;
 export const OPEN_STATIONS: readonly StationId[] = ['kom', 'markt', 'laz'];
 export const SITE_COST: Readonly<Partial<Record<StationId, Partial<Record<MaterialId | 'scrap', number>>>>> = {
   // Cheap on purpose (Johannes, 2026-11-18): all stations open quickly, the levels take longer.
@@ -105,7 +110,7 @@ export function nextLevel(s: Sim, id: StationId): { level: number; text: string;
   const l = stationLevel(s, id), L = st.levels[l];
   if (!L) return null;
   const needs: string[] = [];
-  if (!npcHere(s, st)) needs.push(`${npcName(st)} befreien`);
+  if (!npcHere(s, st) && !(l + 1 === 2 && campOf(s).freed.includes(LEVEL2_DISTRICT))) needs.push(l + 1 === 2 ? `${npcName(st)} befreien oder Xhain befreien` : `${npcName(st)} befreien`);
   // Level 3 waits for the next planned district (2D LVREQ: Alexanderplatz); the camp itself opens after Köpenick.
   if (l + 1 >= 3 && !campOf(s).freed.includes(LEVEL3_DISTRICT)) needs.push('Alexanderplatz befreien');
   const cost = priced(L.cost ?? {});

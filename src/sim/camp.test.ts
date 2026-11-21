@@ -50,9 +50,17 @@ describe('M13 camp', () => {
     expect(buyUpgrade(s, 'dmg').ok).toBe(false);
     expect(s.stats.damage).toBeGreaterThan(createSim({ seed: 5 }).stats.damage);
   });
+  it('a freed Xhain opens level 2 without the survivor (playtest 2026-11-20)', () => {
+    const s = rich();
+    expect(nextLevel(s, 'hack')!.ok).toBe(false);
+    endExpedition(s, true, 1);
+    expect(nextLevel(s, 'hack')!.needs).toEqual([]);
+    expect(buildStation(s, 'hack').ok).toBe(true);
+    expect(stationLevel(s, 'hack')).toBe(2);
+  });
   it('level 2 needs the survivor, level 3 needs Alexanderplatz freed', () => {
     const s = rich();
-    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Mira befreien']);
+    expect(nextLevel(s, 'zeug')!.needs).toEqual(['Mira befreien oder Xhain befreien']);
     s.statContext.survivors.schmied = true;
     expect(buildStation(s, 'zeug').ok).toBe(true);
     expect(s.statContext.camp.lampe).toBe(true);
