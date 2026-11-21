@@ -26,7 +26,7 @@ Bounds x −55 … 280, z −105 … 125 (335 × 230). Start (0, 0) at the U Leo
 | 3 Gesundbrunnen & Humboldthain | badstrasse (220, −74, 3), rosengarten (242, 6, 3), humboldthoehe (208, 8, 2; calm: 0.7 count, no elites, flyers) | beamtentor (260, 60): Der Ewige Bauherr |
 | 4 Das ewige Fest | langetafel (218, 66, 3) | hochzeitspalast (204, 104): Sultan Nimmersatt |
 
-7 fights, 21 waves (7, 3, 8, 3), 4 bosses. Route order as listed. Circles r 13 to 15 except the Magendoktor. Every circle except the pub needs 80 % open ground (test), so: the Wochenmarkt keeps its stalls on the rim and at most four inside as cover; the Müllerstraße fight gets a widened pavement; the Uferterrasse is a paved quay between the Pankstraße and the stream, no water inside the circle; the Badstraße fight a small square; the Rosengarten a round lawn; the Beamtentor a forecourt set back from the Brunnenstraße; the Lange Tafel has its tables on the rim and two rows inside; the hall is at least 56 × 30 m clear.
+8 fight places, 21 waves (7, 3, 8, 3), 4 bosses. The Magendoktor counts once: it holds the last two waves of zone 1 and the zone 1 boss, so there are three boss arenas of their own. If E2's fallback splits the pub into two encounters, both sit at (98, 46) and still count as one place. Route order as listed. Circles r 13 to 15 except the Magendoktor. Every circle except the pub needs 80 % open ground (test), so: the Wochenmarkt keeps its stalls on the rim and at most four inside as cover; the Müllerstraße fight gets a widened pavement; the Uferterrasse is a paved quay between the Pankstraße and the stream, no water inside the circle; the Badstraße fight a small square; the Rosengarten a round lawn; the Beamtentor a forecourt set back from the Brunnenstraße; the Lange Tafel has its tables on the rim and two rows inside; the hall is at least 56 × 30 m clear.
 
 | Thing | Where |
 |---|---|
@@ -62,7 +62,7 @@ Bounds x −55 … 280, z −105 … 125 (335 × 230). Start (0, 0) at the U Leo
 
 ## Invariants and tests (`src/data/wedding.test.ts`, scale 1 and 1.3)
 
-- The guideline list: wave and boss counts (7, 3, 8, 3 and 4 bosses), rising tier, start, zone entries and fight centres free, circles 80 % open, the bridge walkable, water blocks, lots off streets and water, more lots at 1.3, light coverage and lamp rules, every 20 m of route street has something, closed edges by flood fill, streets end in a barricade, one rest stop per zone.
+- The guideline list: wave and boss counts (7, 3, 8, 3 and 4 bosses), rising tier, start, zone entries and fight centres free, circles 80 % open except every encounter at the Magendoktor (E2; it has its own room tests below), the bridge walkable, water blocks, lots off streets and water, more lots at 1.3, light coverage and lamp rules, every 20 m of route street has something, closed edges by flood fill, streets end in a barricade, one rest stop per zone.
 - Octants of the geography table from the start; the Magendoktor south of the Nettelbeckplatz and north of the Ringbahn.
 - The Panke is crossed only on the bridge; the Ringbahn only through the Brunnenstraße arch; the park only through its two gates; the AEG yard only through the Beamtentor.
 - The Magendoktor: the door walks in, walls and furniture hold, every free cell connects to the door, lanes are at least 1.8 m, no enemy spawns in a wall or a piece of furniture, the boss comes after the two waves.

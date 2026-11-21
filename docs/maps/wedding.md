@@ -31,7 +31,7 @@ For comparison: Köpenick 318 × 304 m and about 840 m; Mitte 330 × 387 m and a
 | 3 Gesundbrunnen & Humboldthain | Badstraße (3), Rosengarten (3), Humboldthöhe (2, calm, on the summit) | Der Ewige Bauherr in front of the Beamtentor | Flakturm, Beamtentor |
 | 4 Das ewige Fest | Lange Tafel in the AEG yard (3) | Sultan Nimmersatt in the Hochzeitspalast | Hochzeitspalast in the Maschinenhalle (invented inside a real hall) |
 
-7 fights, 21 waves, 4 bosses, 8 sights. Rest stops: Späti am Leo, Baklava & Döner (Pankstraße), Kiosk am Rosengarten, Teestube im Werkhof. Side passages: a Hinterhof off the Müllerstraße (hidden blessing), the bunker door beside the Flakturm (cache). One hill: the Humboldthöhe, 7 m.
+8 fight places, 21 waves, 4 bosses, 8 sights; the Magendoktor is both a fight and the zone 1 boss place. Rest stops: Späti am Leo, Baklava & Döner (Pankstraße), Kiosk am Rosengarten, Teestube im Werkhof. Side passages: a Hinterhof off the Müllerstraße (hidden blessing), the bunker door beside the Flakturm (cache). One hill: the Humboldthöhe, 7 m.
 
 ## Zum Magendoktor
 
