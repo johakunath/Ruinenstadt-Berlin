@@ -4,7 +4,7 @@ import { HALLE, KNEIPE_FIGHT, WEDDING_BOSSES, weddingMap } from './wedding';
 import { inKneipe, KNEIPE, kneipeParts, kneipeWorld } from './kneipe';
 import { lateTier } from './enemies';
 import { EDGE_FRONT, propCollider } from './courtyard';
-import { generateLots, generateProps, inPoly, isWater, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, onBridge, heightAt, type Landmark, type Lot, type MapDef } from './map';
+import { generateLots, generateProps, inPoly, isWater, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, onBridge, heightAt, type Landmark, type Lot, type MapDef } from './map';
 import type { Level } from '../sim/level';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT, type SimEvent } from '../sim/types';

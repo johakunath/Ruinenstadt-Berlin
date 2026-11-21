@@ -168,6 +168,23 @@ export const CHARLOTTENBURG_SKIES: readonly Sky[] = [
   },
 ];
 
+/**
+ * M18 Wedding, look A „Lampionnacht“ (Johannes 2026-11-21, `docs/maps/wedding.md` › Light): one dry night for the
+ * whole map, deep emerald-teal sky and fog, a dim green moon; all gold comes from the lamps and cloth below 5 m,
+ * so lamps run a little stronger than the default night. No zone blend.
+ */
+export const WEDDING_SKY: Sky = {
+  id: 'wedding',
+  background: 0x061b17,
+  fog: 0x08201b,
+  fogDensity: 0.016,
+  env: { top: [0.08, 0.27, 0.22], horizon: [0.02, 0.07, 0.055], lamps: 1.15, intensity: 0.5 },
+  hemi: { sky: 0x5aa894, ground: 0x1e1a14, intensity: 0.72 },
+  sun: { color: 0x9fdcc6, intensity: 1.55, from: NIGHT_SKY.sun.from },
+  lamps: 1.15,
+  look: { saturation: 1.12, contrast: 1.05, bloom: 0.9 },
+};
+
 /** Skies blended by zone on this map (`?sky=one`: the Premierennacht everywhere, the fallback of E1), else null. */
 export function zoneSkies(mapId: string | undefined, variant: string | null): readonly Sky[] | null {
   return mapId === 'charlottenburg' && variant !== 'one' ? CHARLOTTENBURG_SKIES : null;
@@ -213,6 +230,7 @@ export function mixSky(a: Sky, b: Sky, k: number): Sky {
 /** The sky of a map: Alexanderplatz by `?sky=` (default A until Johannes picks), Mitte's neon night, Charlottenburg's first zone (Premierennacht with `?sky=one`), every other map night. */
 export function skyFor(mapId: string | undefined, variant: string | null): Sky {
   if (mapId === 'mitte') return MITTE_SKY;
+  if (mapId === 'wedding') return WEDDING_SKY;
   if (mapId === 'charlottenburg') return CHARLOTTENBURG_SKIES[variant === 'one' ? 1 : 0]!;
   if (mapId !== 'alex') return NIGHT_SKY;
   return ALEX_SKIES[(variant === 'b' || variant === 'c' ? variant : 'a')];

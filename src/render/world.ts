@@ -1,7 +1,7 @@
 // Builds the Köpenick courtyard from `src/data/courtyard.ts`: facades, Späti, props, lights.
 // Everything is code-built geometry with painted textures (plan-3d.md › Style: closing the gap).
 import {
-  BoxGeometry, BufferAttribute, CircleGeometry, Euler, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide,
+  BoxGeometry, BufferAttribute, CircleGeometry, Euler, Color, ConeGeometry, CylinderGeometry, DirectionalLight, DodecahedronGeometry, DoubleSide, OctahedronGeometry,
   Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
@@ -679,6 +679,12 @@ export function at(p: Prop, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0): Matrix
 let propEra: 1920 | null = null;
 export function setPropEra(era: 1920 | null): void { propEra = era; }
 
+/** M18 lampion chain parts, shared by every chain. */
+const POLE = new CylinderGeometry(0.05, 0.07, 4.9, 6);
+const LAMPION = new OctahedronGeometry(1, 0).scale(0.2, 0.27, 0.2);
+const CORD = new PlaneGeometry(1, 0.035).rotateX(-Math.PI / 2);
+const HALO_CARD = new PlaneGeometry(0.75, 0.75);
+
 export function buildProp(b: Builder, p: Prop, rng: Rng): void {
   const m = b.mats;
   if (propEra === 1920) {
@@ -725,6 +731,33 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       }
       // Pool stretched along the line (across the street), no halo: many small bulbs instead.
       b.light(new Vector3(p.x, 3.6, p.z), 0xffc890, 16, 11, 0.04, 4.5, { yaw: p.rot + Math.PI / 2, stretch: 1.8 });
+      break;
+    }
+    case 'lampions': {
+      // M18 Wedding (E4): a chain of paper lampions across the street at about 4.5 m between two poles at the
+      // curbs. No light per lampion: one pooled spot per chain, the bodies are 8-triangle octahedra on the
+      // emissive lamp batch, each with one 2-triangle halo card in the chunk's glow batch, the cord a flat strip.
+      const half = p.size / 2, teal = Math.abs(Math.round(p.x * 3.1 + p.z * 1.7)) % 6 === 0, color = teal ? 0x5fd8c8 : 0xffc890;
+      for (const x of [-half, half]) b.geo(m.iron, POLE, at(p, x, 2.45, 0), [0.55, 0.5, 0.45]);
+      b.light(new Vector3(p.x, 3.7, p.z), color, 16, 11, 0.05, 4.5, { yaw: p.rot + Math.PI / 2, stretch: 1.8 });
+      const glows = (b as Builder & { glows?: BatchSet; glowMaterial?(c: number): Material | undefined }), card = glows.glowMaterial?.(color);
+      const n = Math.max(8, Math.min(14, Math.round(p.size / 1.3)));
+      const sag = (u: number): number => 4.75 - 1.0 * 4 * u * (1 - u);
+      for (let i = 0; i <= n; i++) {
+        const u = i / n, x = -half + u * p.size, y = sag(u);
+        if (i < n) {
+          const x2 = -half + ((i + 1) / n) * p.size, y2 = sag((i + 1) / n);
+          b.geo(m.iron, CORD, at(p, (x + x2) / 2, (y + y2) / 2, 0, 0, 0, Math.atan2(y2 - y, x2 - x)).multiply(tmpScale.makeScale(Math.hypot(x2 - x, y2 - y), 1, 1)), [0.35, 0.3, 0.28]);
+        }
+        if (i === 0 || i === n) continue;
+        const k = (i * 7 + Math.round(p.x)) % 5;
+        const tint: RGB = teal ? [0.5, 1.7, 1.6] : k === 0 ? [1.9, 0.5, 0.35] : k === 3 ? [1.7, 1.35, 0.6] : [1.95, 1.05, 0.42];
+        b.geo(m.lampGlass, LAMPION, at(p, x, y - 0.32, 0, 0, i * 0.7, 0), tint);
+        if (card && glows.glows) {
+          const w = at(p, x, y - 0.32, 0), pos = new Vector3().setFromMatrixPosition(w);
+          glows.glows.of(card).add(HALO_CARD, new Matrix4().makeRotationX(-0.77).setPosition(pos));
+        }
+      }
       break;
     }
     case 'stormLantern': {

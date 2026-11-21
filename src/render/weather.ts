@@ -53,6 +53,15 @@ export const CHARLOTTENBURG_WEATHER: Readonly<Record<string, WeatherKind>> = {
   zoo: 'leaves', kudamm: 'confetti', savignyplatz: 'confetti',
   schlossgarten: 'motes', schlossvorplatz: 'motes', luisenplatz: 'motes', irrgarten: 'motes', schloss: 'diamond',
 };
+/**
+ * Wedding (M18, look A, dry; existing kinds only): leaves in the Leopoldkiez and the Humboldthain, thin mist with
+ * fireflies at the Panke, ember sparks over the AEG yard; Gesundbrunnen and the Brunnenstraße clear.
+ */
+export const WEDDING_WEATHER: Readonly<Record<string, WeatherKind>> = {
+  leopoldplatz: 'leaves', leopoldkiez: 'leaves', nettelbeckplatz: 'leaves', humboldthain: 'leaves',
+  uferterrasse: 'fog', brunnenplatz: 'fog',
+  aeg: 'ash', vorplatz: 'ash',
+};
 /** Fog density per weather (scene default 0.017). */
 const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, leaves: 0.014, clear: 0.014, confetti: 0.015, motes: 0.022, diamond: 0.012 };
 /** Confetti colours (revue bills: gold, pink, white, teal, red) and the prism motes (pale spectrum). */

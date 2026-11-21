@@ -374,8 +374,10 @@ export function weddingMap(scale = 1): MapDef {
     const b = bridges[0]!, ux = Math.sin(b.rot), uz = Math.cos(b.rot), d = k * (b.len / 2 + 2.5);
     lights.push({ kind: 'fireBarrel', x: b.x + ux * d + uz * (b.width / 2 - 1), z: b.z + uz * d - ux * (b.width / 2 - 1), rot: 0, size: 1 });
   }
+  // Across the Nettelbeckplatz (the boss square in front of the pub): chains from the west row to the quay side.
+  for (const dz of [-8, 0, 8, 16]) lights.push({ kind: 'lampions', x: 94 * s, z: 16 * s + dz, rot: 0, size: 35 });
   // Across the AEG yard and the Lange Tafel (the yard is no street: chains between the walls).
-  for (let z = AEG.z0 + 8; z < HALL.z - HALLE.hz - 4; z += 9) lights.push({ kind: 'lampions', x: (AEG.x0 + AEG.x1) / 2 + 10, z, rot: Math.PI / 2, size: 40 });
+  for (let z = AEG.z0 + 8; z < HALL.z - HALLE.hz - 4; z += 9) lights.push({ kind: 'lampions', x: (AEG.x0 + AEG.x1) / 2 + 10, z, rot: 0, size: 40 });
   // Fires in the open arches (people living under the Ringbahn) and at the Panke quay.
   { const [x, z] = railOff(arch('Brunnenstraße').at, RING.width / 2 + 2); lights.push({ kind: 'fireBarrel', x: x - 8, z, rot: 0, size: 1 }); }
   // Lanterns and candles along the park paths, alternating sides, off the fights.
@@ -405,6 +407,9 @@ export function weddingMap(scale = 1): MapDef {
   for (let a = 0; a < 360; a += 30) yards.push({ kind: 'beerTable', x: tafel.x + Math.sin(a * DEG) * (tafel.r + 2.5), z: tafel.z + Math.cos(a * DEG) * (tafel.r + 2.5), rot: a * DEG + Math.PI / 2, size: 1 });
   for (let a = 0; a < 360; a += 36) if (Math.sin(a * DEG) < 0.5) yards.push({ kind: 'stall', x: markt.x + Math.sin(a * DEG) * (markt.r + 2.5), z: markt.z + Math.cos(a * DEG) * (markt.r + 2.5), rot: a * DEG + Math.PI, size: 1 });
   for (const [dx, dz, r] of [[-6, -4, 0.3], [5, -5, -0.2], [-4, 6, 0.1], [6, 4, 0.4]] as const) yards.push({ kind: 'stall', x: markt.x + dx, z: markt.z + dz, rot: r, size: 0.9 });
+  // Beer tables on the rim of the Nettelbeckplatz, between the fight and the house rows.
+  const nb = encounters.find((e) => e.id === 'nettelbeckplatz')!;
+  for (const a of [70, 110, 250, 290]) yards.push({ kind: 'beerTable', x: nb.x + Math.sin(a * DEG) * (nb.r + 2), z: nb.z + Math.cos(a * DEG) * (nb.r + 2), rot: 90 * DEG, size: 1 });
   yards.push(
     // Street ends: the Müllerstraße at the Neubau's site fence, the Schulstraße and the Reinickendorfer Straße run into barricades; the arch at S Wedding is shut.
     barricadeAt('Müllerstraße', true), barricadeAt('Schulstraße', false), barricadeAt('Reinickendorfer Straße', true),
@@ -460,6 +465,7 @@ export function weddingMap(scale = 1): MapDef {
     noSpawn: [areas.find((a) => a.id === 'brache-nord')!.poly, areas.find((a) => a.id === 'brache-sued')!.poly],
     district: 5,
     flavor: 'fest',
+    noLivery: true,
     strictLots: true,
     specialMax: { markt: 1, hinterhof: 2, baustelle: 1, truemmer: 2, parkplatz: 1 },
     viaducts,

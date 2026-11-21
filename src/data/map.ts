@@ -257,6 +257,8 @@ export interface MapDef {
   strictLots?: boolean;
   /** M16: ground where no enemy, event or drop is ever placed (the platform start of Charlottenburg). */
   noSpawn?: Pt[][];
+  /** M18 Wedding (W8): no BVG livery anywhere on the map, so generated van wrecks become cars. */
+  noLivery?: boolean;
   /** M11d step 5: hand-placed buildings on the route; they take their space before the generator fills the rest. */
   handLots?: Array<Omit<Lot, 'seed' | 'kind'> & { kind: LotKind; seed?: number }>;
 }
@@ -1374,7 +1376,8 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
           continue;
         }
         if (hit(x, z, van ? 3 : 1.2)) continue;
-        props.push({ kind: van ? 'van' : 'rubble', x, z, rot: Math.atan2(bx - ax, bz - az) + rng.range(-0.5, 0.5), size: rng.range(0.8, 1.3) });
+        // W8 (M18 Wedding): no BVG livery on this map, the van wrecks are cars (the wedding cars of E7).
+        props.push({ kind: van ? (m.noLivery ? 'car' : 'van') : 'rubble', x, z, rot: Math.atan2(bx - ax, bz - az) + rng.range(-0.5, 0.5), size: rng.range(0.8, 1.3) });
       }
     }
   }

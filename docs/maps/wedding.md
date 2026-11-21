@@ -117,6 +117,7 @@ Nothing is measured yet; cloud readouts count draw calls and triangles only. Eac
 | Materials | At most two new: a cloth atlas (awnings, carpets, table cloths) and a sign atlas (shop fronts, banners, the Magendoktor sign), each one draw call per chunk in view |
 | Sights | 8, at most 6 000 triangles each, the Hochzeitspalast 10 000, the Magendoktor interior 4 000 |
 | Target | Below the Charlottenburg readout at comparable spots (441 to 493 draw calls, 534k to 634k triangles in the cloud readout on Leistung) |
+| Step 1 readout (2026-11-21, cloud, Leistung) | Start 205 draw calls / 159k triangles, Nettelbeckplatz 131 / 94k, Brunnenstraße at the park 184 to 201 / 161k to 167k, Maschinenhalle 133 / 113k. One new material (sign atlas), no new glow colour |
 
 ## 2D reuse
 
