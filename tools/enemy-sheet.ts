@@ -87,7 +87,7 @@ async function portraits(): Promise<void> {
     e.speed = 0;
     if (def.wake) e.wake = 0;
     const v = new EnemyView(assets, materials, def.body, false);
-    v.assign(e, false, false);
+    v.assign(e, false, null);
     scene.add(v.root);
     for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
     const o = PORTRAIT[k] ?? {};
@@ -211,7 +211,7 @@ for (let i = 0; i < n; i++) {
   if (q.get('wake') === 'strip') e.wake = (def.wake ?? 0) * (1 - f);
   else if (q.get('wake') !== null) e.wake = Number(q.get('wake'));
   const v = new EnemyView(assets, materials, def.body, false);
-  v.assign(e, q.get('neon') === '1', q.get('revue') === '1');
+  v.assign(e, q.get('neon') === '1', q.get('revue') === '1' ? 'revue' : q.get('fest') === '1' ? 'fest' : null);
   scene.add(v.root);
   // Let fades and springs settle on the pose.
   for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);

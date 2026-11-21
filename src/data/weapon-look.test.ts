@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { weaponAttack } from './combat';
-import { BASES, GDR_WEAPON_NAMES, LEGENDARY_WEAPON_NAMES, NEON_WEAPON_NAMES, WEAPON_NAMES } from './item-names';
+import { BASES, FEST_LEGENDARY_WEAPON, GDR_WEAPON_NAMES, LEGENDARY_WEAPON_NAMES, NEON_WEAPON_NAMES, WEAPON_NAMES } from './item-names';
 import { SETS, type SetId, type WeaponKindId } from './items';
 import { DEFAULT_LOOK, WEAPON_LOOKS, strongAgainst, weaponLookId, weaponTraits, type WeaponLookId } from './weapon-look';
 
 /** Every weapon name with its kind: the drop tables, the legacy names in BASES and the set weapons. */
 const named: Array<[string, WeaponKindId]> = [];
 for (const t of [WEAPON_NAMES, NEON_WEAPON_NAMES, GDR_WEAPON_NAMES, LEGENDARY_WEAPON_NAMES]) for (const [kind, list] of Object.entries(t)) for (const n of list) named.push([n, kind as WeaponKindId]);
+named.push([FEST_LEGENDARY_WEAPON, 'hammer']);
 named.push(['Holzlatte', 'blade'], ['Rostiges Rohr', 'blade'], ['Bewehrungsstahl', 'blade'], ['Brechstange', 'blade'], ['Zwille', 'sling'], ['Nagelschleuder', 'sling'], ['Aufziehschleuder', 'sling']);
 
 describe('weapon looks (WP4 D1)', () => {
@@ -21,7 +22,9 @@ describe('weapon looks (WP4 D1)', () => {
 
   it('resolves every set weapon; set pieces on a shared base get their set variant', () => {
     for (const [set, def] of Object.entries(SETS) as Array<[SetId, (typeof SETS)[SetId]]>) {
-      const w = def.pieces.w!;
+      // M18: the Pracht des Ewigen Gasts is clothing only.
+      const w = def.pieces.w;
+      if (!w) continue;
       const id = weaponLookId(w.kind as WeaponKindId, w.base, set);
       expect(WEAPON_LOOKS[id].kind).toBe(w.kind);
       expect(WEAPON_LOOKS[id].family).toBe('set');

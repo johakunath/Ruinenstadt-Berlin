@@ -33,6 +33,8 @@ export const STATUS = {
 } as const;
 
 /** Burn time of an element proc: shorter in the rain. */
+/** M18 Die Letzte Bestellung: every third hit, a fire hit at `share` of it on enemies within `radius` m. */
+export const LAST_ORDER = { radius: 2.5, share: 0.5 } as const;
 export const burnTime = (s: Sim): number => (s.wet ? STATUS.wetBurnTime : STATUS.burnTime);
 
 export interface StrikeOpts {
@@ -222,6 +224,14 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
         ignite(s, t, procBase * 0.3, 2);
       }
       s.events.push({ type: 'impact', x: e.x, z: e.z, radius: 75 * PX, kind: 'boom' });
+    }
+    // M18 Die Letzte Bestellung: every third hit spills hot tea on the neighbours (fire, half the hit).
+    if (hasL(s, 'bestellung') && n % 3 === 0) {
+      for (const t of s.enemies) {
+        if (t === e || t.state === 'dead' || t.mirrorOf !== undefined || Math.hypot(t.x - e.x, t.z - e.z) >= LAST_ORDER.radius) continue;
+        strike(s, t, procBase * LAST_ORDER.share, { knock: knock(160), noproc: true, feel: 'none', element: 'fire' });
+      }
+      s.events.push({ type: 'impact', x: e.x, z: e.z, radius: LAST_ORDER.radius, kind: 'boom' });
     }
   }
 

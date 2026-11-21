@@ -140,6 +140,36 @@ describe('item generation', () => {
     expect(t.kiez).toBeGreaterThan(0);
   });
 
+  it('drops the Pracht des Ewigen Gasts only on fest maps, there in about 60 % of set drops (M18)', () => {
+    const sets = (fest: boolean): Record<string, number> => {
+      const rng = new Rng(5), ctx = context(fest ? { flavor: 'fest' } : {}), n: Record<string, number> = {};
+      for (let i = 0; i < 2000; i++) { const s = makeSetItem(rng, ctx, 5).set!; n[s] = (n[s] ?? 0) + 1; }
+      return n;
+    };
+    expect(sets(false).gast).toBeUndefined();
+    const f = sets(true);
+    expect(f.gast! / 2000).toBeGreaterThan(0.55);
+    expect(f.gast! / 2000).toBeLessThan(0.65);
+    expect(f.tunnel).toBeUndefined();
+  });
+
+  it('drops Die Letzte Bestellung only on fest maps, as about 40 % of legendary weapons (M18)', () => {
+    const lamps = (flavor?: 'fest' | 'neon'): number => {
+      const rng = new Rng(7), ctx = context(flavor ? { flavor } : {});
+      let n = 0;
+      for (let i = 0; i < 1000; i++) {
+        const item = makeItem(rng, ctx, 5, 3, 'w');
+        if (item.base === 'bestellung') { n++; expect([item.kind, item.name, item.element]).toEqual(['hammer', 'Die Letzte Bestellung', 'fire']); }
+      }
+      return n;
+    };
+    expect(lamps()).toBe(0);
+    expect(lamps('neon')).toBe(0);
+    const n = lamps('fest');
+    expect(n).toBeGreaterThan(350);
+    expect(n).toBeLessThan(450);
+  });
+
   it('gives every set piece a finite value, the healing key ring too', () => {
     const rng = new Rng(9), ctx = context({ tunnel: true });
     for (let i = 0; i < 400; i++) expect(Number.isFinite(makeSetItem(rng, ctx, 6).value)).toBe(true);

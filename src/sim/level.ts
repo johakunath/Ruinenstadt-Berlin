@@ -4,7 +4,7 @@
 import { pushOut, type Collider } from './collide';
 import type { RestArea } from './rest';
 import type { Bounds } from './flowfield';
-import type { EnemyKind } from '../data/enemies';
+import { THREAT, type EnemyKind } from '../data/enemies';
 import { onFerryBoat, type FerryLane } from './ferry';
 import type { BreakableDef } from './breakables';
 
@@ -183,7 +183,7 @@ export class Level {
   district = 0;
   /** Enemy strength step (`districtScale`): the district, a tunnel its line. */
   strength = 0;
-  flavor?: 'neon' | 'gdr' | 'revue';
+  flavor?: 'neon' | 'gdr' | 'revue' | 'fest';
   /** U-Bahn tunnel map (M19/M20): the tunnel set drops here. */
   tunnel?: boolean;
   /** Map id of a district level (`MapDef.id`), for rules tied to one map (the Köpenick first fights). */
@@ -221,9 +221,14 @@ export class Level {
   wade: (Ribbon & { factor: number }) | null = null;
   traderSpot: Point | null = null;
 
-  /** Walking speed factor at (x, z): 1 on dry ground, `wade.factor` in the flooded stretch (2D `P.wet`). */
+  /** M18 „Honig klebt“: honey puddles (circles) that slow walking. */
+  honey: Array<{ x: number; z: number; r: number }> = [];
+
+  /** Walking speed factor at (x, z): 1 on dry ground, `wade.factor` in the flooded stretch (2D `P.wet`), `THREAT.honey` in honey. */
   speedAt(x: number, z: number): number {
-    return this.wade && inRibbon(this.wade, x, z) ? this.wade.factor : 1;
+    if (this.wade && inRibbon(this.wade, x, z)) return this.wade.factor;
+    for (const h of this.honey) if ((x - h.x) ** 2 + (z - h.z) ** 2 < h.r * h.r) return THREAT.honey;
+    return 1;
   }
 
   /** M11c lot types: preferred places for run events (captive, trader, cache). */

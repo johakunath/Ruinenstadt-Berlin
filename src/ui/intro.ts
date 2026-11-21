@@ -29,6 +29,10 @@ export const SIGHT_TIPS: Partial<Record<import('../data/enemies').EnemyKind, str
   scherbe: 'Tänzerinnen zerspringen. Lass sie zwischen den anderen fallen.',
   loge: 'Logenbrecher sind vorn aus Glas. Nach dem Schlag sind sie offen.',
   souffleur: 'Der Souffleur treibt alle an. Zuerst erledigen.',
+  // M18 Wedding.
+  teeifrit: 'Tee-Ifrite werfen Gläser. Raus aus dem Kreis.',
+  baklava: 'Baklava-Brocken blocken vorn. Umgehen oder betäuben.',
+  teppich: 'Teppiche stürzen entlang der Linie. Seitlich weg.',
 };
 
 export class IntroUi {

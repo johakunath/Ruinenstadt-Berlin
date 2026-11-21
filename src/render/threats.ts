@@ -25,12 +25,14 @@ import { paintGlow } from './paint';
 
 const BARS = 18;
 /** Where the life bar floats, per body. */
-const BAR_Y = { zombie: 2.05, human: 2.05, female: 2, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4, mech: 2.3, mechBig: 4, kern: 1.25, koloss: 6.5, clock: 9 } as const;
+const BAR_Y = { zombie: 2.05, human: 2.05, female: 2, raptor: 1.55, rex: 3.9, crow: 2.2, rat: 0.6, drone: 2.4, mech: 2.3, mechBig: 4, kern: 1.25, koloss: 6.5, clock: 9, carpet: 2.3 } as const;
 const ZONES = 18, LINES = 6, SHOTS = 96, HAZARDS = 60, WAVES = 8, OPEN = 6, SPOTS = 2, PULSES = 6, SECTORS = 5, HANDS = 2, STRIPS = 3, MARKS = 2;
 const ZONE_COLOR = {
   slam: 0xff4a1e, flame: 0xff7a1e, bomb: 0xff2a2a, tail: 0xff4a1e, acid: 0x8fe04a, shove: 0xffa03a, land: 0x43d1cf, root: 0x97c459, slab: 0xffa03a, hour: 0xff3a2a,
   // M16: white-violet shard bursts, the Logenbrecher's crimson blow, the prism ray, the gold applause.
   shard: 0xd8b8ff, faust: 0xff3a5a, prism: 0xbfe8ff, applause: 0xffc84a,
+  // M18: the Tee-Ifrit's glass (tea amber), the Sultan's carpet strip (ruby).
+  tea: 0xffa040, carpet: 0xd0284a,
 } as const;
 /** Hour sector geometry: inner radius as a share of the outer (3 of 9 m), one of 24 slices, centred on angle 0. */
 const SECTOR_IN = BOSS.weltzeituhr.r0 / BOSS.weltzeituhr.r1, SECTOR_HALF = Math.PI / 24;
@@ -179,18 +181,18 @@ export class ThreatView {
   onEvent(ev: SimEvent): void {
     const E = this.emit;
     const R = this.rng;
-    if (ev.type === 'zoneHit' && (ev.kind === 'shard' || ev.kind === 'applause' || ev.kind === 'prism')) {
+    if (ev.type === 'zoneHit' && (ev.kind === 'shard' || ev.kind === 'applause' || ev.kind === 'prism' || ev.kind === 'carpet')) {
       // M16: a glass burst throws white-violet shards up and out; applause gold sparks; the prism ray a white flash.
       const y = groundY(ev.x, ev.z);
-      const n = ev.kind === 'prism' ? 10 : Math.round(16 + ev.r * 8);
-      const [r, g, b] = ev.kind === 'applause' ? [5, 3.6, 1.2] : ev.kind === 'prism' ? [3, 4.2, 5] : [3.6, 3, 5];
+      const n = ev.kind === 'prism' || ev.kind === 'carpet' ? 10 : Math.round(16 + ev.r * 8);
+      const [r, g, b] = ev.kind === 'applause' ? [5, 3.6, 1.2] : ev.kind === 'prism' ? [3, 4.2, 5] : ev.kind === 'carpet' ? [5, 1.6, 1.4] : [3.6, 3, 5];
       for (let i = 0; i < n; i++) {
         const a = R.range(0, Math.PI * 2), d = Math.sqrt(R.next()) * ev.r * 0.6, s = R.range(1.5, 5);
         E.glow(ev.x + Math.sin(a) * d, y + R.range(0.2, 1.2), ev.z + Math.cos(a) * d, Math.sin(a) * s, R.range(2, 6), Math.cos(a) * s, R.range(0.3, 0.7), R.range(0.05, 0.12), r, g, b, 14, 0.4);
       }
     } else if (ev.type === 'zoneHit') {
       const y = groundY(ev.x, ev.z);
-      const fire = ev.kind === 'flame' || ev.kind === 'bomb';
+      const fire = ev.kind === 'flame' || ev.kind === 'bomb' || ev.kind === 'tea';
       const n = Math.round(14 + ev.r * 8);
       for (let i = 0; i < n; i++) {
         const a = R.range(0, Math.PI * 2), d = Math.sqrt(R.next()) * ev.r;
@@ -238,7 +240,9 @@ export class ThreatView {
         const live = z.t <= 0;
         m.scale.set(live ? z.line.width : z.line.width * (0.15 + 0.35 * k), z.line.half * 2, 1);
         (m.material as MeshBasicMaterial).opacity = live ? 0.85 : 0.18 + 0.3 * k + 0.1 * Math.sin(this.time * 30) ** 2;
-        (m.material as MeshBasicMaterial).color.setHex(live ? 0xffffff : ZONE_COLOR.prism);
+        // M18: the Sultan's carpet strip is ruby, bright gold while it hits.
+        const rug = z.kind === 'carpet';
+        (m.material as MeshBasicMaterial).color.setHex(live ? (rug ? 0xffd070 : 0xffffff) : rug ? ZONE_COLOR.carpet : ZONE_COLOR.prism);
         continue;
       }
       if (z.sector) {
@@ -324,7 +328,8 @@ export class ThreatView {
       if (e.buff > 0 && R.next() < dt * 5) E.glow(x + R.range(-0.3, 0.3), groundY(x, z) + R.range(0.8, 1.6), z + R.range(-0.3, 0.3), 0, R.range(0.6, 1.2), 0, R.range(0.4, 0.7), 0.08, 5, 1.4, 2.6, 0);
       // Dazed drones spark.
       if (e.kind === 'drone' && e.rest > 0 && R.next() < dt * 14) E.glow(x, groundY(x, z) + 0.6, z, R.range(-1.5, 1.5), R.range(0.5, 2.5), R.range(-1.5, 1.5), R.range(0.15, 0.3), 0.06, 3, 4.5, 6, 6);
-      if (e.state === 'special' && sp && sp.speed > 0 && sp.kind !== 'dive' && e.stateT < sp.wind && nl < LINES) {
+      // M18: the Teppichschlinger's dive is marked (its line is locked at the start of the wind-up).
+      if (e.state === 'special' && sp && sp.speed > 0 && (sp.kind !== 'dive' || e.kind === 'teppich') && e.stateT < sp.wind && nl < LINES) {
         const m = this.lines[nl++]!;
         const k = e.stateT / sp.wind;
         m.visible = true;
