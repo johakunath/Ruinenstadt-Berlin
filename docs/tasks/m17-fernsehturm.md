@@ -13,7 +13,7 @@ A playable finale `?map=turm`: five decks inside the Fernsehturm, four fights, t
 | # | Step | Needs | Model | State |
 |---|---|---|---|---|
 | 0 | Concept A and B, mockup, geography check, plan | | Fable high | done 2026-11-21, A picked |
-| S | Style boards for the [boss and gear](../style/fernsehturm-zeitwart.webp) and the tower interiors (`docs/style/fernsehturm.png`). Index in `docs/style-bible.md` | | Johannes, Codex | Boss board added. Place board pending in the repo |
+| S | Style boards for the [tower interiors](../style/fernsehturm.webp) and the [boss and gear](../style/fernsehturm-zeitwart.webp). Index in `docs/style-bible.md` | | Johannes, Codex | done 2026-11-21 |
 | P | Tower proportions on map 3 | | | dropped: Johannes keeps the model as it is (map doc F13) |
 | 1 | Engine, data, blockout. `MapDef.decks` and `deckWalk` (T1), the lift (T2), ring encounters (T3), clock hands (T4), revolving band (T5, drop first). `src/data/fernsehturm.ts` from the deck table, tests `src/data/fernsehturm.test.ts` (invariants below), a scripted run wins (`director.test.ts`). Wiring `?map=turm` (`options.ts`, `ui/maps.ts` `MapId`, `main.ts` banner). Blockout render: discs, sills, window band, cores, hands and rings on the FX layer; only the hero's deck visible. Stand-ins: echoes are the plain boss kinds, final boss `diva` | Wedding merged | Opus high | open; first read Wedding's map doc, enemies, boss and stop and correct the assumptions here |
 | 2 | Look. First a look mockup in chat from the style board (the sphere decks and the city image), Johannes confirms. Then: five interiors in `src/render/turm-world.ts`, the city image and cloud cards (T6), one `Sky` per deck (T7), the lift cut with the height counter, cutaway of the cores, window-break effect where a spawn enters. State the Leistung and Ausgewogen cost | 1, S | Opus high, mockup first | open |
@@ -103,7 +103,7 @@ The Stadtbahn line 4, changes to the Alexanderplatz map, new ordinary enemies, a
 
 Why: every other district was built from a board; without one the interior look, the boss and the spear are guesses. Step 1 (engine, blockout) does not need them. Attach `docs/style/koepenick.png` (style and layout), `docs/style/charlottenburg.png` (final board layout) and `docs/style/alexanderplatz-pioneer.png` (GDR colours) to both prompts.
 
-Board 1, the place:
+**Board 1.** [Fernsehturm · Stillstand](../style/fernsehturm.webp). Use it for the Telecafé, the views across the eras, and interior materials. The map spec defines the five playable decks and the six gear seats.
 
 ```
 Generate ONE beautiful landscape RUINENSTADT game art direction board. Use the attached Köpenick board for STYLE only and the attached Charlottenburg board for the final-board LAYOUT; new content below. Painted comic, strong dark ink outlines, rich painterly texture, warm lights against cool teal shadows, gritty readable post-apocalypse, chipped enamel, cracked glass, soot, tarps, ivy. Not photorealistic, not 3D, no game HUD, no BVG branding or transit livery.
@@ -139,7 +139,7 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 | J4 | Unlock with all other districts freed, no tunnel of its own? | Yes, the game is linear |
 | J5 | Wedding window gag? | No: Wedding is freed by then; it is a played district before the finale |
 | J6 | Tower proportions: variant 3 or 4? | Neither: the model in the game stays (Johannes, 2026-11-21) |
-| J7 | Wedding first? | Yes. Wedding is in progress in another session (not on `main` yet); the finale waits until it is complete |
+| J7 | Wedding first? | Yes. The Wedding map is on `main`. The finale waits until [M18 Wedding](m18-wedding.md) is complete and merged |
 
 ## Handover 2026-11-21 (step 0) [Claude · Fable high]
 
@@ -163,3 +163,8 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 - Tower model on map 3 stays as it is; step P dropped. The proportion mockup stays as the record.
 - Wedding is in progress elsewhere. No finale build step before it is merged; step 1 then starts by reading Wedding and correcting the Telecafé waves, the echo choice, the tier and `STOPS`.
 - Only step S (Codex style boards) can happen meanwhile.
+
+## Handover 2026-11-21 (step S) [Codex · GPT-6]
+
+- Both style boards are linked above and in the style bible. Stillstand covers the tower interiors and the multi-era view. Der Zeitwart covers the humanoid robot boss, the Echo treatment and equipment.
+- Begin step 1 after M18 Wedding is complete and merged.

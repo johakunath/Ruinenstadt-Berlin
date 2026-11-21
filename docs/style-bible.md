@@ -19,6 +19,7 @@ boards. Existing Köpenick/U-Bahn/Mitte/GDR references remain intact.
 | Tempelhof | `docs/style/tempelhof.png` | 1948 · Die Windpilger | Final B refinement: frightening wind/airplane cult, dark magic, elaborate sailcloth sets, no BVG |
 | Wedding | `docs/style/wedding.png` | kommt bald · Das ewige Fest | Final C refinement: gold/emerald banquet fantasy, carpets/lamps/tea/food, friendly Kiez, no BVG |
 | Charlottenburg | `docs/style/charlottenburg.png` | 1920 · Die diamantene Revue | Final A+C refinement: silver/diamond/glass revue, elaborate stage couture, no BVG |
+| Fernsehturm | [Stillstand](style/fernsehturm.webp) | Alle Zeiten zugleich. | Tower interiors, GDR space-age materials and the simultaneous eras seen from the sphere |
 | Fernsehturm | [Boss and gear](style/fernsehturm-zeitwart.webp) | Der Zeitwart | Humanoid robot boss, Echo treatment, the Telespargel, and the Montur der Normalzeit |
 
 The legacy boards have a scene above a lineup. The three new final district

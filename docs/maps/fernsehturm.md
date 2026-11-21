@@ -20,8 +20,8 @@ The Fernsehturm already stands in Alexanderplatz (map 3): inside the loop, visib
 | F6 | Entry: opens when all six districts are freed; the game is linear. No tunnel of its own in the first version | Johannes, 2026-11-21 |
 | F7 | Ending: after the boss, two rings at the main switch: „Uhr stellen“ or „Stehen lassen“. A card and a save flag, no rule change | Johannes, 2026-11-21 (took the recommendation) |
 | F8 | Tier 48 to 70 (the +8 per district rule with Wedding as district 6), provisional like Charlottenburg C4 | Claude, proposed |
-| F9 | Order: Charlottenburg, Wedding, Fernsehturm. Wedding is a played district after all (changes migration Q8); it is being built in another session and is not on `main` yet. Work on the finale starts only after Wedding is complete | Johannes, 2026-11-21 |
-| F10 | Style boards from Codex before the look and the boss are built (steps 2 and 3); the engine step does not wait for them. Prompts in the task file | Johannes, 2026-11-21 |
+| F9 | Order: Charlottenburg, Wedding, Fernsehturm. Work on the finale starts after [M18 Wedding](../tasks/m18-wedding.md) is complete and merged | Johannes, 2026-11-21 |
+| F10 | Art direction for steps 2 and 3: [Stillstand](../style/fernsehturm.webp) for interiors and lighting, and [Der Zeitwart](../style/fernsehturm-zeitwart.webp) for the boss and gear. Step 1 uses the deck specs below | Johannes, 2026-11-21 |
 | F11 | No „kommt bald“ window gag: Wedding is a freed district by then | Johannes, 2026-11-21 |
 | F12 | A new tower legendary: the spear „Telespargel“ (task file › Loot) | Johannes asked for one, 2026-11-21; design Claude, proposed |
 | F13 | Tower proportions: the model on map 3 stays as it is. Section *Tower proportions* and its mockup are kept as the record of the check | Johannes, 2026-11-21 (dictated message, read as "the proportions currently in the game are fine") |
@@ -158,7 +158,7 @@ Camera: no ceilings drawn. The wall toward the camera is a knee-high sill; the n
 | Unlock | Districts 0 to 5 all freed (six gears; Johannes, 2026-11-21). No line of its own in the first version |
 | Network | Wedding becomes `STOPS[5]`, the finale `STOPS[6] = { name: 'Fernsehturm', station: 'S+U Alexanderplatz', map: 'turm' }`. `nextDestination` already returns a stop without a line. Needed: a rule that the last stop opens only with all others freed, and a place on the board beside the Alexanderplatz stop |
 | Links | Wedding victory screen: „Zum Fernsehturm“. Title: the main button follows `nextDestination` |
-| Depends on | Wedding (district 6), in progress in another session and not on `main` yet. The whole finale waits for it (F9); read its map doc, enemy kinds, boss and network stop before step 1 and correct the Telecafé waves, the echo and `STOPS` here |
+| Depends on | Completion of [M18 Wedding](../tasks/m18-wedding.md) (F9). Read its [map spec](wedding.md), enemy roster, boss and network stop before step 1, then update the Telecafé waves, the Echo and `STOPS` here |
 | Later option | The Stadtbahn ride to Alexanderplatz as a line (Charlottenburg C5), backlog |
 | Arrival | The run starts at the foyer's north-east door; the last train on Normalzeit stands on the viaduct outside the glass (station at bearing 57°, 150 m) |
 
@@ -185,7 +185,7 @@ District budget for comparison: under about 200 draw calls and 200k triangles (`
 | Load time and memory with all enemy families | Cap the roster to the kinds in *Flow*; load echo bosses with the map only; hardware check row |
 | The view carries the mood | Code-painted city image must already read; show it in the look mockup |
 | Wedding is still in progress: its enemies, boss and stop may differ from what is assumed here | The finale starts after Wedding is merged; step 1 begins by reading it |
-| No style board for the finale | Codex boards first (F10); steps 2 and 3 wait, step 1 does not |
+| Art studies and playable deck layouts differ | Use the boards for the look (F10) and the deck table for layout and gameplay |
 
 ## B Splitterring (not picked; kept for the record)
 
