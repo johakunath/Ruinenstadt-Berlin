@@ -38,6 +38,7 @@ import { buildMinistryLot } from './mitte-zones';
 import { makeClockRig } from './clock';
 import { buildGlassLot, buildMitteLandmark, buildMitteWorld, MITTE_KINDS, mitteMats, type MitteMats } from './mitte-world';
 import { buildRiddleView } from './charlottenburg-riddles';
+import { buildSearchlights } from './searchlights';
 import { buildCharlottenburgLandmark, buildCharlottenburgWorld, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from './charlottenburg-world';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
@@ -2565,7 +2566,11 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
 
   // --- light: moon follows the hero; a fixed pool of point lights takes the nearest lamps.
   // Daylight maps: the same light is the sun (`Sky.sun`), from another direction.
-  group.add(new HemisphereLight(sky.hemi.sky, sky.hemi.ground, sky.hemi.intensity));
+  const hemi = new HemisphereLight(sky.hemi.sky, sky.hemi.ground, sky.hemi.intensity);
+  group.add(hemi);
+  // M16 sky per zone: lamps scale relative to the build sky (pooled lights and every glow decal).
+  let lampK = 1;
+  let glows: MeshBasicMaterial[] | null = null;
   const moon = new DirectionalLight(sky.sun.color, sky.sun.intensity);
   const MOON = new Vector3(...sky.sun.from);
   moon.castShadow = true;
@@ -2592,6 +2597,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   // M16 step 6c: the live maze riddle parts (crystals, ring, gate leaves, mirror silhouettes).
   const riddles = m.plinths || m.mirrors ? buildRiddleView(m, mats, (x, z) => surfaceAt(m, x, z)) : undefined;
   if (riddles) group.add(riddles.group);
+  // M16 step 3b: searchlight beams over the cinemas (one instanced additive draw).
+  const beams = m.id === 'charlottenburg' ? buildSearchlights(m) : null;
+  if (beams) { group.add(beams.mesh); beams.setLamps(sky.lamps); }
 
   const poolSize = Math.max(1, materials.profile.maxPointLights - 1);
   const pool = Array.from({ length: poolSize }, () => {
@@ -2633,10 +2641,22 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     breakables: breakableView,
     ...(tunnel ? { tunnel } : {}),
     ...(riddles ? { riddles } : {}),
+    hemi,
+    setLamps(k: number): void {
+      lampK = k / (sky.lamps || 1);
+      if (!glows) {
+        const found = new Set<MeshBasicMaterial>();
+        group.traverse((o) => { const mt = (o as Mesh).material; for (const q of Array.isArray(mt) ? mt : mt ? [mt] : []) if (q.userData.glowBase !== undefined) found.add(q as MeshBasicMaterial); });
+        glows = [...found];
+      }
+      for (const q of glows) q.opacity = (q.userData.glowBase as number) * lampK;
+      beams?.setLamps(k);
+    },
     lights: [],
     fires,
     update(time: number): void {
       mats.water.normalMap?.offset.set(time * 0.012, time * 0.007);
+      beams?.update(time, hx, hz);
       for (const slot of pool) {
         const s = slot.spot;
         slot.weight = Math.min(1, slot.weight + (s ? 0.05 : -0.08));
@@ -2645,7 +2665,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
           continue;
         }
         const f = s.flicker > 0 ? 0.5 * Math.sin(time * 11 + s.phase) + 0.3 * Math.sin(time * 23.7 + s.phase * 2) + 0.2 * Math.sin(time * 47.3 + s.phase * 3) : 0;
-        slot.light.intensity = s.intensity * sky.lamps * slot.weight * (1 + f * 0.22 * s.flicker);
+        slot.light.intensity = s.intensity * sky.lamps * lampK * slot.weight * (1 + f * 0.22 * s.flicker);
       }
       pickT += 1 / 60;
       if (pickT > 0.25) {

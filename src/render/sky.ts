@@ -123,9 +123,97 @@ export const MITTE_SKY: Sky = {
   },
 };
 
-/** The sky of a map: Alexanderplatz by `?sky=` (default A until Johannes picks), Mitte's neon night, every other map night. */
+/**
+ * M16 Charlottenburg step 3a/3b: one sky per zone, evening to morning along the route (map doc C2; spec in
+ * `docs/tasks/m16-charlottenburg.md` › Step 3a spec). Blaue Stunde at the Zoo, Premierennacht on the
+ * Ku'damm, Mondnacht in the Schlossgarten, Morgengrauen at the Spiegelschloss. All keep NIGHT_SKY's light
+ * direction (`sun.from`): a moving sun would move every shadow. First values; Johannes tunes them.
+ */
+export const CHARLOTTENBURG_SKIES: readonly Sky[] = [
+  // Zone 1 Blaue Stunde: violet-teal sky, berry horizon, lamps and shop windows coming on.
+  {
+    id: 'ch-blau', background: 0x24284a, fog: 0x2b2a4c, fogDensity: 0.016,
+    env: { top: [0.2, 0.24, 0.44], horizon: [0.46, 0.2, 0.34], lamps: 0.8, intensity: 0.7 },
+    hemi: { sky: 0x8590cc, ground: 0x2a2230, intensity: 0.95 },
+    sun: { color: 0xb6a9e6, intensity: 1.7, from: NIGHT_SKY.sun.from },
+    lamps: 0.85,
+    look: { exposure: 1.1, saturation: 1.26, split: 0.35, contrast: 1.06, bloom: 0.8 },
+  },
+  // Zone 2 Premierennacht: black sky, the bulbs and the searchlights carry the street.
+  {
+    id: 'ch-premiere', background: 0x07070d, fog: 0x0d0b14, fogDensity: 0.018,
+    env: { top: [0.06, 0.06, 0.1], horizon: [0.14, 0.05, 0.11], lamps: 1.3, intensity: 0.6 },
+    hemi: { sky: 0x4c4c74, ground: 0x1b1418, intensity: 0.7 },
+    sun: { color: 0x9aa8d8, intensity: 1.4, from: NIGHT_SKY.sun.from },
+    lamps: 1.15,
+    look: { exposure: 1.05, saturation: 1.3, split: 0.45, contrast: 1.1, bloom: 1.0 },
+  },
+  // Zone 3 Mondnacht: cold moon, long shadows, mist.
+  {
+    id: 'ch-mond', background: 0x0d1828, fog: 0x15243a, fogDensity: 0.02,
+    env: { top: [0.12, 0.2, 0.34], horizon: [0.05, 0.08, 0.14], lamps: 0.8, intensity: 0.6 },
+    hemi: { sky: 0x80a6da, ground: 0x141a22, intensity: 0.8 },
+    sun: { color: 0xd2e2ff, intensity: 2.4, from: NIGHT_SKY.sun.from },
+    lamps: 0.9,
+    look: { exposure: 1.0, saturation: 1.1, split: 0.55, contrast: 1.06, bloom: 0.8 },
+  },
+  // Zone 4 Morgengrauen: pale pearl and rose behind the dome, lamps fading.
+  {
+    id: 'ch-morgen', background: 0xb4a6bd, fog: 0xc4b0c4, fogDensity: 0.012,
+    env: { top: [0.68, 0.68, 0.82], horizon: [0.95, 0.74, 0.76], lamps: 0.3, intensity: 0.85 },
+    hemi: { sky: 0xc6c6e6, ground: 0x463c4a, intensity: 1.1 },
+    sun: { color: 0xffdcd6, intensity: 2.2, from: NIGHT_SKY.sun.from },
+    lamps: 0.35,
+    look: { exposure: 0.92, saturation: 1.02, split: 0.15, contrast: 1.04, bloom: 0.7 },
+  },
+];
+
+/** Skies blended by zone on this map (`?sky=one`: the Premierennacht everywhere, the fallback of E1), else null. */
+export function zoneSkies(mapId: string | undefined, variant: string | null): readonly Sky[] | null {
+  return mapId === 'charlottenburg' && variant !== 'one' ? CHARLOTTENBURG_SKIES : null;
+}
+
+/** The zone whose sky holds at (x, z): the zone of the nearest fight circle (distance to its rim). */
+export function skyZoneAt(encounters: ReadonlyArray<{ x: number; z: number; r: number; zone: number }>, x: number, z: number): number {
+  let best = Infinity, zone = 0;
+  for (const e of encounters) {
+    const d = Math.hypot(e.x - x, e.z - z) - e.r;
+    if (d < best) { best = d; zone = e.zone; }
+  }
+  return zone;
+}
+
+const mixHex = (a: number, b: number, k: number): number => {
+  const ch = (s: number): number => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * k);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
+const mix = (a: number, b: number, k: number): number => a + (b - a) * k;
+const mix3 = (a: readonly number[], b: readonly number[], k: number): [number, number, number] => [mix(a[0]!, b[0]!, k), mix(a[1]!, b[1]!, k), mix(a[2]!, b[2]!, k)];
+
+/** Sky between `a` (k 0) and `b` (k 1): colours, strengths and the grade keys either sets; `id`, `wet` and the light direction stay `a`'s. */
+export function mixSky(a: Sky, b: Sky, k: number): Sky {
+  const look: Partial<Look> = {};
+  for (const key of new Set([...Object.keys(a.look), ...Object.keys(b.look)]) as Set<keyof Look>) {
+    const va = a.look[key] ?? b.look[key]!, vb = b.look[key] ?? va;
+    look[key] = mix(va, vb, k);
+  }
+  return {
+    ...a,
+    background: mixHex(a.background, b.background, k),
+    fog: mixHex(a.fog, b.fog, k),
+    fogDensity: mix(a.fogDensity, b.fogDensity, k),
+    env: { top: mix3(a.env.top, b.env.top, k), horizon: mix3(a.env.horizon, b.env.horizon, k), lamps: mix(a.env.lamps, b.env.lamps, k), intensity: mix(a.env.intensity, b.env.intensity, k) },
+    hemi: { sky: mixHex(a.hemi.sky, b.hemi.sky, k), ground: mixHex(a.hemi.ground, b.hemi.ground, k), intensity: mix(a.hemi.intensity, b.hemi.intensity, k) },
+    sun: { color: mixHex(a.sun.color, b.sun.color, k), intensity: mix(a.sun.intensity, b.sun.intensity, k), from: a.sun.from },
+    lamps: mix(a.lamps, b.lamps, k),
+    look,
+  };
+}
+
+/** The sky of a map: Alexanderplatz by `?sky=` (default A until Johannes picks), Mitte's neon night, Charlottenburg's first zone (Premierennacht with `?sky=one`), every other map night. */
 export function skyFor(mapId: string | undefined, variant: string | null): Sky {
   if (mapId === 'mitte') return MITTE_SKY;
+  if (mapId === 'charlottenburg') return CHARLOTTENBURG_SKIES[variant === 'one' ? 1 : 0]!;
   if (mapId !== 'alex') return NIGHT_SKY;
   return ALEX_SKIES[(variant === 'b' || variant === 'c' ? variant : 'a')];
 }

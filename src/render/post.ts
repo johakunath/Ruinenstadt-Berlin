@@ -172,7 +172,7 @@ export class Post {
     this.composer.addPass(this.heroOutline);
     this.bloom = new UnrealBloomPass(new Vector2(4, 4), 0.42 * profile.bloomStrength * look.bloom, 0.5, 1.0);
     this.composer.addPass(this.bloom);
-    const grade = new ShaderPass(GradeShader);
+    const grade = (this.gradePass = new ShaderPass(GradeShader));
     grade.uniforms.saturation!.value = look.saturation;
     grade.uniforms.contrast!.value = look.contrast;
     grade.uniforms.split!.value = look.split;
@@ -188,6 +188,17 @@ export class Post {
 
   private readonly look: Look;
   private readonly beautyDepth: boolean;
+  private readonly gradePass: ShaderPass;
+
+  /** M16 sky per zone: grade and bloom strength follow the blended sky (uniforms only, no recompile). */
+  grade(look: Look): void {
+    const u = this.gradePass.uniforms;
+    u.saturation!.value = look.saturation;
+    u.contrast!.value = look.contrast;
+    u.split!.value = look.split;
+    u.exposure!.value = look.exposure;
+    this.bloom.strength = 0.42 * this.profile.bloomStrength * look.bloom;
+  }
 
   /** `width` and `height` in CSS pixels. */
   setSize(width: number, height: number, dpr: number): void {

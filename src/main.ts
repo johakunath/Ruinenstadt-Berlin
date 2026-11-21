@@ -42,7 +42,7 @@ import { xhainMap } from './data/xhain';
 import { mitteMap } from './data/mitte';
 import { charlottenburgMap } from './data/charlottenburg';
 import { alexMap } from './data/alexanderplatz';
-import { skyFor } from './render/sky';
+import { skyFor, zoneSkies } from './render/sky';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, wonLink, type MapId } from './ui/maps';
 import { areaAt, generateLots, generateProps, mapLevel } from './data/map';
 import { pickIsHere, titleNet } from './ui/title-net';
@@ -1140,9 +1140,12 @@ function femalesFor(): boolean {
 }
 
 // M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.
-const sky = skyFor(opts.map, new URLSearchParams(location.search).get('sky'));
+// M16: Charlottenburg blends one sky per zone (`?sky=one`: the Premierennacht everywhere).
+const skyParam = new URLSearchParams(location.search).get('sky');
+const sky = skyFor(opts.map, skyParam);
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
+  zoneSkies: zoneSkies(opts.map, skyParam),
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),
   humans: humansFor(),

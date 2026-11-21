@@ -1,14 +1,15 @@
 // M11c weather, variant A (Johannes, 2026-11-17): fixed per zone. Bahnhofsviertel rain, Müggelberge
 // fog with fireflies, Spreepark ash with embers, Rathaus/Altstadt clear moonlight. Particles live in a
 // box that follows the hero and fade over two seconds when the zone changes. Cost: three point or line
-// draws on the FX layer (no lights, no shadows), scene fog density eased per weather.
+// draws on the FX layer (no lights, no shadows), scene fog density eased per weather. M16 Charlottenburg adds
+// confetti, prism motes and diamond dust: one more point draw while one of them shows (two during a fade).
 import { AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, Color, FogExp2, LineBasicMaterial, LineSegments, Points, PointsMaterial, type Scene } from 'three';
 import { areaAt, type MapDef } from '../data/map';
 import { FX_LAYER } from './world';
 import { groundY } from './ground';
 import type { Wet } from './sky';
 
-export type WeatherKind = 'rain' | 'fog' | 'ash' | 'leaves' | 'clear';
+export type WeatherKind = 'rain' | 'fog' | 'ash' | 'leaves' | 'clear' | 'confetti' | 'motes' | 'diamond';
 /** Which weather an area has (area ids of `MapDef.areas`); missing ids are clear. */
 export const KOEPENICK_WEATHER: Readonly<Record<string, WeatherKind>> = {
   bahnhof: 'rain', friedrichshagen: 'rain',
@@ -44,14 +45,19 @@ export const MITTE_WEATHER: Readonly<Record<string, WeatherKind>> = {
   tiergarten: 'fog', stern: 'fog', biergarten: 'fog',
 };
 /**
- * Charlottenburg 1920 (M16 blockout): dry, no rain. Leaves drift in the Zoo and the Schlossgarten, every
- * street stays clear. Step 3b sets the look per time of day (dusk to dawn) and its diamond dust and confetti.
+ * Charlottenburg 1920 (M16 step 3b, dry, one look per zone): a few leaves in the Zoo (Blaue Stunde),
+ * confetti and streamer bits on the Ku'damm and the Savignyplatz (Premierennacht), prism motes in the
+ * garden mist (Mondnacht), diamond dust at the Schloss (Morgengrauen). Other streets clear.
  */
 export const CHARLOTTENBURG_WEATHER: Readonly<Record<string, WeatherKind>> = {
-  zoo: 'leaves', schlossgarten: 'leaves', schlossvorplatz: 'leaves', luisenplatz: 'leaves',
+  zoo: 'leaves', kudamm: 'confetti', savignyplatz: 'confetti',
+  schlossgarten: 'motes', schlossvorplatz: 'motes', luisenplatz: 'motes', irrgarten: 'motes', schloss: 'diamond',
 };
 /** Fog density per weather (scene default 0.017). */
-const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, leaves: 0.014, clear: 0.014 };
+const FOG: Record<WeatherKind, number> = { rain: 0.021, fog: 0.03, ash: 0.022, leaves: 0.014, clear: 0.014, confetti: 0.015, motes: 0.022, diamond: 0.012 };
+/** Confetti colours (revue bills: gold, pink, white, teal, red) and the prism motes (pale spectrum). */
+const CONFETTI = [0xf2c14b, 0xff6fb5, 0xf4f0e8, 0x4fd0c8, 0xe0453a, 0xf2c14b];
+const PRISM = [0xff9ec4, 0xffe08a, 0x9ff2c4, 0x9fd0ff, 0xc9a8ff];
 const W = 36, D = 30, H = 14;
 
 /** Soft round dot for point particles (white, tinted by the material color). */
@@ -67,7 +73,7 @@ function dot(): CanvasTexture | null {
 interface Layer { obj: Points | LineSegments; pos: Float32Array; vel: Float32Array; level: number; max: number }
 
 export class Weather {
-  private readonly layers: Record<'rain' | 'fireflies' | 'ash' | 'embers' | 'splash' | 'leaves', Layer>;
+  private readonly layers: Record<'rain' | 'fireflies' | 'ash' | 'embers' | 'splash' | 'leaves' | 'confetti' | 'motes' | 'diamond', Layer>;
   private kind: WeatherKind = 'clear';
   private seed = 1;
   private readonly tex = dot();
@@ -85,6 +91,10 @@ export class Weather {
       embers: this.points(n(140), 0xff7a2a, 0.22, true),
       splash: this.points(wet ? n(220) : 0, wet?.rain ?? 0xffffff, 0.16, true),
       leaves: this.points(n(160), 0xd88a2a, 0.2, false),
+      // M16 Charlottenburg: one Points draw each on the FX layer, only where the zone has it (none elsewhere: count 0).
+      confetti: this.points(map?.id === 'charlottenburg' ? n(240) : 0, 0xffffff, 0.15, false, CONFETTI),
+      motes: this.points(map?.id === 'charlottenburg' ? n(120) : 0, 0xffffff, 0.2, true, PRISM),
+      diamond: this.points(map?.id === 'charlottenburg' ? n(300) : 0, 0xdcecff, 0.08, true),
     };
   }
   private rnd(): number { this.seed = (this.seed * 16807) % 2147483647; return this.seed / 2147483647; }
@@ -110,10 +120,15 @@ export class Weather {
     this.add(obj);
     return { obj, pos, vel, level: 0, max: opacity };
   }
-  private points(count: number, color: number, size: number, glow: boolean): Layer {
+  private points(count: number, color: number, size: number, glow: boolean, palette?: number[]): Layer {
     const { pos, vel } = this.fill(count, 1);
     const g = new BufferGeometry(); g.setAttribute('position', new BufferAttribute(pos, 3));
-    const obj = new Points(g, new PointsMaterial({ color, size, map: this.tex, alphaTest: 0.02, sizeAttenuation: true, transparent: true, opacity: 0, depthWrite: false, blending: glow ? AdditiveBlending : undefined, fog: !glow }));
+    if (palette) {
+      const col = new Float32Array(count * 3), c = new Color();
+      for (let i = 0; i < count; i++) { c.setHex(palette[Math.floor(this.rnd() * palette.length)]!); col.set([c.r, c.g, c.b], i * 3); }
+      g.setAttribute('color', new BufferAttribute(col, 3));
+    }
+    const obj = new Points(g, new PointsMaterial({ color, size, map: this.tex, alphaTest: 0.02, sizeAttenuation: true, transparent: true, opacity: 0, depthWrite: false, vertexColors: !!palette, ...(glow ? { blending: AdditiveBlending } : {}), fog: !glow }));
     this.add(obj);
     for (let i = 0; i < count; i++) vel.set([this.rnd() - 0.5, this.rnd() - 0.5, this.rnd() - 0.5], i * 3);
     return { obj, pos, vel, level: 0, max: glow ? 0.95 : 0.7 };
@@ -126,11 +141,12 @@ export class Weather {
   }
   update(dt: number, hx: number, hz: number, time: number): void {
     this.kind = this.kindAt(hx, hz);
-    const want = { rain: this.kind === 'rain', fireflies: this.kind === 'fog', ash: this.kind === 'ash', embers: this.kind === 'ash', splash: this.kind === 'rain', leaves: this.kind === 'leaves' };
+    const k = this.kind;
+    const want = { rain: k === 'rain', fireflies: k === 'fog', ash: k === 'ash', embers: k === 'ash', splash: k === 'rain', leaves: k === 'leaves', confetti: k === 'confetti', motes: k === 'motes', diamond: k === 'diamond' };
     for (const key of Object.keys(this.layers) as Array<keyof typeof this.layers>) {
       const L = this.layers[key];
       L.level = Math.max(0, Math.min(1, L.level + (want[key] ? dt : -dt) / 2));
-      L.obj.visible = L.level > 0.01;
+      L.obj.visible = L.level > 0.01 && L.pos.length > 0;
       (L.obj.material as PointsMaterial).opacity = L.max * L.level;
       if (!L.obj.visible) continue;
       // Heights are relative to the ground under the hero (the Müggelberge summit is 7 m up; Codex review).
@@ -180,6 +196,19 @@ export class Weather {
         // Autumn leaves: a slow fall with a wide sway and flutter.
         p[i + 1]! -= (0.55 + Math.abs(v[i + 1]!) * 0.5) * dt; p[i]! += (0.4 + Math.sin(t * 1.1 + k) * 1.1) * dt; p[i + 2]! += Math.cos(t * 0.9 + k * 1.7) * 0.7 * dt;
         if (p[i + 1]! < 0) p[i + 1]! += H;
+      } else if (key === 'confetti') {
+        // Paper bits: a fluttering fall, quicker than leaves, spinning sideways.
+        p[i + 1]! -= (0.8 + Math.abs(v[i + 1]!) * 0.6) * dt; p[i]! += Math.sin(t * 3.1 + k * 1.3) * 1.2 * dt + 0.2 * dt; p[i + 2]! += Math.cos(t * 2.7 + k) * 0.9 * dt;
+        if (p[i + 1]! < 0) p[i + 1]! += H;
+      } else if (key === 'motes') {
+        // Prism motes in the mist: slow wandering, 0.5 to 4 m high.
+        p[i]! += Math.sin(t * 0.4 + k) * 0.35 * dt + v[i]! * 0.2 * dt;
+        p[i + 2]! += Math.cos(t * 0.35 + k * 1.7) * 0.35 * dt + v[i + 2]! * 0.2 * dt;
+        p[i + 1] = 0.5 + ((k * 0.53) % 3.5) + Math.sin(t * 0.8 + k) * 0.25;
+      } else if (key === 'diamond') {
+        // Diamond dust: a very slow glittering sink.
+        p[i + 1]! -= (0.12 + Math.abs(v[i + 1]!) * 0.1) * dt; p[i]! += (0.1 + Math.sin(t * 0.5 + k) * 0.15) * dt; p[i + 2]! += v[i + 2]! * 0.1 * dt;
+        if (p[i + 1]! < 0) p[i + 1]! += H * 0.6;
       } else if (key === 'ash') {
         p[i + 1]! -= (0.5 + Math.abs(v[i + 1]!)) * dt; p[i]! += (0.6 + Math.sin(t + k) * 0.4) * dt; p[i + 2]! += v[i + 2]! * 0.3 * dt;
         if (p[i + 1]! < 0) p[i + 1]! += H;

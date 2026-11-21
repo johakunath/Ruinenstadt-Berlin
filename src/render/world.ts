@@ -82,6 +82,9 @@ export interface World {
   breakables?: BreakableView;
   /** M20 tunnel: gratings, the generator hold ring and the end platform's power. */
   tunnel?: import('./tunnel-view').TunnelView;
+  /** M16 sky per zone: the hemisphere light, and a lamp scale (pooled lights and glow decals) relative to the build sky. */
+  hemi?: import('three').HemisphereLight;
+  setLamps?(k: number): void;
   /** M16 step 6c: maze plinths, hedge gate and mirrors (Charlottenburg). */
   riddles?: import('./charlottenburg-riddles').RiddleView;
   /** M15 the Weltzeituhr landmark (hidden while the boss is up) and a maker of boss rigs with the map's materials. */

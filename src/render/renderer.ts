@@ -31,7 +31,8 @@ import { DynamicResolution } from './dyn-res';
 import type { Profile } from './profile';
 import { buildWorld, type World } from './world';
 import { buildMapWorld } from './map-world';
-import { NIGHT_SKY, type Sky } from './sky';
+import { NIGHT_SKY, skyZoneAt, type Sky } from './sky';
+import { SkyBlend } from './sky-blend';
 import type { TunnelState } from './tunnel-view';
 import { bridgeAwareSurface, groundY, setGround } from './ground';
 import { COURTYARD } from '../data/courtyard';
@@ -59,6 +60,8 @@ export interface RendererOptions {
   cut?: 'off' | number;
   /** M11d: show each landmark once with a camera swing. */
   reveal?: boolean;
+  /** M16 step 3a: skies blended by the hero's zone (`zoneSkies`), null or left out for one sky. */
+  zoneSkies?: readonly Sky[] | null;
   /** ?cam=distance,pitch for close-up checks. */
   cam?: { distance: number; pitch: number };
   /** Expedition map; the gate 1 courtyard when left out. */
@@ -120,7 +123,12 @@ export class GameRenderer {
   /** M11d: camera swing to a landmark the first time the hero comes near (null in the courtyard). */
   readonly reveal: LandmarkReveal | null;
   private readonly post: Post;
-  private readonly sky: Sky;
+  private sky: Sky;
+  /** M16 sky per zone (Charlottenburg): the blend and one reflection map per zone sky. */
+  private readonly skyBlend: SkyBlend | null;
+  private readonly envs: Texture[] | null;
+  private skyX = 0;
+  private skyZ = 0;
   private readonly fx: Fx;
   private readonly weather: Weather;
   private readonly loot = new LootView();
@@ -162,10 +170,14 @@ export class GameRenderer {
     const def = opts.map?.def;
     this.reveal = def && opts.reveal ? new LandmarkReveal(def.landmarks, (x, z) => groundY(x, z)) : null;
     setGround(def ? bridgeAwareSurface(def) : () => 0);
-    this.sky = opts.sky ?? NIGHT_SKY;
+    const zs = def ? opts.zoneSkies ?? null : null;
+    this.skyBlend = zs && def ? new SkyBlend(zs, (x, z) => skyZoneAt(def.encounters, x, z), def.start.x, def.start.z) : null;
+    this.sky = this.skyBlend?.now ?? opts.sky ?? NIGHT_SKY;
     this.scene.background = new Color(this.sky.background);
     this.scene.fog = new FogExp2(this.sky.fog, this.sky.fogDensity);
-    this.scene.environment = skyEnvironment(renderer, this.sky);
+    // Cost of the zone skies: one small reflection map per zone (pre-rendered here), no pass, no light.
+    this.envs = zs ? zs.map((z) => skyEnvironment(renderer, z)) : null;
+    this.scene.environment = this.envs ? this.envs[this.skyBlend!.envZone]! : skyEnvironment(renderer, this.sky);
     this.scene.environmentIntensity = this.sky.env.intensity;
     this.scene.add(world.group);
     this.hero = new HeroView(assets, materials);
@@ -225,6 +237,26 @@ export class GameRenderer {
     return new HeroPreview(this.renderer, this.assets, this.materials, read);
   }
 
+  /** M16: puts a blended zone sky on the scene (uniforms and scene fields only; the light count stays). */
+  private applySky(s: Sky): void {
+    this.sky = s;
+    (this.scene.background as Color).setHex(s.background);
+    (this.scene.fog as FogExp2).color.setHex(s.fog);
+    this.scene.environmentIntensity = s.env.intensity;
+    const h = this.world.hemi;
+    if (h) {
+      h.color.setHex(s.hemi.sky);
+      h.groundColor.setHex(s.hemi.ground);
+      h.intensity = s.hemi.intensity;
+    }
+    if (this.world.moon) {
+      this.world.moon.color.setHex(s.sun.color);
+      this.world.moon.intensity = s.sun.intensity;
+    }
+    this.world.setLamps?.(s.lamps);
+    this.post.grade({ ...this.opts.look, ...s.look });
+  }
+
   /** Akkusparen: at most 1× pixel ratio (main.ts also caps the frame rate). */
   private eco = false;
   setEco(on: boolean): void {
@@ -253,6 +285,11 @@ export class GameRenderer {
     for (const view of this.views.values()) this.release(view);
     this.views.clear();
     this.cam.snap(sim.player.x, sim.player.z, groundY(sim.player.x, sim.player.z));
+    if (this.skyBlend) {
+      this.skyBlend.snap(sim.player.x, sim.player.z);
+      this.applySky(this.skyBlend.now);
+      this.scene.environment = this.envs![this.skyBlend.envZone]!;
+    }
     this.world.follow?.(sim.player.x, sim.player.z, true);
     this.shadowClock.invalidate();
     this.world.breakables?.reset();
@@ -462,6 +499,12 @@ export class GameRenderer {
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
     if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows, true);
     else this.world.follow?.(px, pz, shadows);
+    // A jump (start at an encounter, a teleport) snaps the sky; walking blends it.
+    if (this.skyBlend && Math.hypot(px - this.skyX, pz - this.skyZ) > 30) { this.skyBlend.snap(px, pz); this.applySky(this.skyBlend.now); }
+    else if (this.skyBlend?.update(dt, px, pz)) this.applySky(this.skyBlend.now);
+    this.skyX = px;
+    this.skyZ = pz;
+    if (this.envs && this.scene.environment !== this.envs[this.skyBlend!.envZone]) this.scene.environment = this.envs[this.skyBlend!.envZone]!;
     (this.scene.fog as FogExp2).density = this.sky.fogDensity * (1 - 0.9 * (reveal?.weight ?? 0));
     this.world.breakables?.update(dt);
     this.loot.update(sim, this.time);
