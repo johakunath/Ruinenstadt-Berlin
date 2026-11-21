@@ -725,10 +725,15 @@ export const BOSS = {
   // M18 Wedding (spec m12e).
   /**
    * Der Zugezogene: two Zecher every `summon` s (`adds` Schlurfer, `runners` Hetzer, in rage `rageBrutes` Brocken too);
-   * the e-scooter charge (the default charge) every `charge` s, twice in rage `rageGap` s apart; coffee cups (the
+   * the e-scooter charge (the charge block, short: `chargeMin`..`chargeMax` m, `chargeTime` s at `chargeSpeed`) every
+ * `charge` s, twice in rage `rageGap` s apart; coffee cups (the
    * Grenzer's five-shot volley) every `volley` s within `volleyRange` m with a clear line.
    */
-  zugezogene: { charge: [5, 7] as [number, number], summon: 10, adds: 1, runners: 1, rageBrutes: 1, rageGap: 0.6, volley: 5, volleyRange: 12 },
+  zugezogene: {
+    charge: [5, 7] as [number, number], summon: 10, adds: 1, runners: 1, rageBrutes: 1, rageGap: 0.6, volley: 5, volleyRange: 8,
+    // A short scooter run for the tight pub (planning session 2026-11-21): 0.4 s at 12 m/s covers 4.8 m plus contact.
+    chargeMin: 2.5, chargeMax: 6, chargeWind: 0.6, chargeTime: 0.4, chargeSpeed: 12,
+  },
   /** Bautrupp: `adds` Brocken every `addsEvery`-th Koloss cycle (instead of the Uhrwerkläufer). */
   bauherr: { adds: 2 },
   /**

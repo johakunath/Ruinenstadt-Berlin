@@ -1754,15 +1754,29 @@ describe('Wedding roster (M18, spec m12e)', () => {
     expect(alive(r, 'brute')).toBe(G.rageBrutes);
     // Twice in rage: two charge wind-ups from one cooldown.
     const c = fresh();
-    const h = put(c, 'zugezogene', 0, 8);
+    const h = put(c, 'zugezogene', 0, 5);
     h.hp = h.maxHp * 0.45;
     run(c, 0.05);
     h.cd = [0, 99, 99];
     h.gap = 0;
     expect(specials(run(c, 2.4)).filter((k) => k === 'charge')).toHaveLength(2);
+    // A short run: a few metres, never from across the room.
+    const n = fresh();
+    const k = put(n, 'zugezogene', 0, 5);
+    still(k);
+    k.cd = [0, 99, 99];
+    stepSim(n, NO_INPUT);
+    expect([k.sp?.kind, k.sp?.go, k.sp?.speed]).toEqual(['charge', G.chargeTime, G.chargeSpeed]);
+    expect(G.chargeTime * G.chargeSpeed).toBeCloseTo(4.8);
+    const far = fresh();
+    const w = put(far, 'zugezogene', 0, G.chargeMax + 1);
+    still(w);
+    w.cd = [0, 99, 99];
+    stepSim(far, NO_INPUT);
+    expect(w.sp?.kind).not.toBe('charge');
     // Coffee cups: the Grenzer's five-shot volley within 12 m, not from farther.
     const v = fresh();
-    const z = put(v, 'zugezogene', 0, 8);
+    const z = put(v, 'zugezogene', 0, 7);
     z.hp = z.maxHp = 1e6;
     still(z);
     z.cd = [99, 99, 0];

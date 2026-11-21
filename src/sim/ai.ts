@@ -91,6 +91,7 @@ function own(e: Enemy, kind: SpecialKind): Partial<Pick<Special, 'wind' | 'go' |
   if (kind === 'volley' && e.kind === 'wachdrohne') return { wind: BOSS.wachdrohne.volleyWind };
   // M16 rushes with their own hit: the Stockstoß, the Ringschlag, the Doppelpirouette (the reflection's speed is set in `begin`).
   if (kind === 'lunge' && e.kind === 'conferencier') { const C = BOSS.conferencier; return { wind: C.lungeWind, go: C.lungeTime, open: C.lungeOpen, speed: C.lungeSpeed, mul: C.lungeDamage }; }
+  if (kind === 'charge' && e.kind === 'zugezogene') { const Z = BOSS.zugezogene; return { wind: Z.chargeWind, go: Z.chargeTime, speed: Z.chargeSpeed }; }
   if (kind === 'charge' && e.kind === 'ringvater') { const R = BOSS.ringvater; return { wind: R.wind, go: R.time, open: R.open, speed: R.speed, mul: R.damage, floor: R.floor }; }
   if (kind === 'lunge' && (e.kind === 'spiegelpaar' || e.kind === 'spiegelbild')) {
     const S = BOSS.spiegelpaar;
@@ -1029,10 +1030,12 @@ function bossThink(sim: Sim, e: Enemy, dist: number): void {
   switch (e.def.ai) {
     case 'feldwebel': {
       const F = e.kind === 'zugezogene' ? BOSS.zugezogene : BOSS.feldwebel;
+      // M18: Der Zugezogene's scooter run is short (the pub is 18 × 13 m).
+      const [c0, c1] = e.kind === 'zugezogene' ? [BOSS.zugezogene.chargeMin, BOSS.zugezogene.chargeMax] : [3, BOSS.charge.range];
       if (e.cd[1] <= 0) {
         e.cd[1] = F.summon;
         begin(sim, e, 'summon');
-      } else if (e.cd[0] <= 0 && dist < BOSS.charge.range && dist > 3 && sight()) {
+      } else if (e.cd[0] <= 0 && dist < c1 && dist > c0 && sight()) {
         e.cd[0] = range(sim, F.charge);
         begin(sim, e, 'charge');
       } else if (e.kind === 'zugezogene' && e.cd[2] <= 0 && dist < BOSS.zugezogene.volleyRange && sight()) {

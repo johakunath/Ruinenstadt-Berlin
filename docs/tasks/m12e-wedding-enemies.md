@@ -49,8 +49,8 @@ The loot context sees `fest` (the set below drops there); `cy`/`gd` name tables 
 | Special | Block | Numbers |
 |---|---|---|
 | Zecher | `summon` every 10 s | one Schlurfer and one Hetzer; in rage also one Brocken. Note „Bald nur noch Hafermilch!“ |
-| E-Scooter | `charge` (Feldwebel) | the default charge along a marked line (wind 0.75, 0.6 s at 20 m/s, hit 1.1, floor 0.25, open 1.3), every 5 to 7 s from 3 m on; in rage twice (second 0.6 s later, as the Ringvater) |
-| Kaffeebecher | `volley` (Grenzer), his one own block | five cups across the hero's line (9 m/s, ×0.55 each) every 5 s within 12 m with a clear line |
+| E-Scooter | `charge` (Feldwebel) with own numbers | a short run along a marked line for the tight pub: from 2.5 to 6 m, wind 0.6, 0.4 s at 12 m/s (4.8 m), hit 1.1, floor 0.25, open 1.3, every 5 to 7 s; in rage twice (second 0.6 s later, as the Ringvater) |
+| Kaffeebecher | `volley` (Grenzer), his one own block | five cups across the hero's line (9 m/s, ×0.55 each) every 5 s within 8 m with a clear line |
 
 ### Das Hauptgericht („Frisch vom Spieß“)
 | Special | Block | Numbers |
