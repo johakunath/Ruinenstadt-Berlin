@@ -70,8 +70,14 @@ describe('Wedding map (M18, layout C2)', () => {
       for (const w of hill.waves) {
         expect(w.elite).toBe(0);
         expect(w.count).toBeLessThan(enc(m, 'rosengarten').waves.at(-1)!.count);
-        expect(w.mix.crow).toBeGreaterThan(1);
+        expect(w.mix.teppich).toBeGreaterThan(1);
       }
+      // Step 2 roster: the pub holds Zecher only; the board kinds come in zone by zone; no stand-in kinds are left.
+      for (const w of pub.waves) expect(Object.keys(w.mix).sort()).toEqual(['brute', 'runner', 'spitter', 'walker']);
+      const at = (zone: number): string[] => [...new Set(m.encounters.filter((e) => e.zone === zone && e.id !== 'magendoktor').flatMap((e) => e.waves).flatMap((w) => Object.keys(w.mix)))];
+      expect(at(0)).toContain('teeifrit');
+      for (const z of [1, 2, 3]) for (const k of ['teeifrit', 'baklava', 'teppich']) expect(at(z), `${z} ${k}`).toContain(k);
+      for (const z of [0, 1, 2, 3]) for (const k of ['crow', 'rat']) expect(at(z)).not.toContain(k);
       for (const w of pub.waves.filter((q) => q.bosses.length === 0)) expect(w.maxAlive).toBeLessThanOrEqual(KNEIPE_FIGHT.maxAlive);
       expect(pub.waves[0]!.count).toBeLessThan(enc(m, 'muellerstrasse').waves.at(-1)!.count);
       for (const w of waves.filter((q) => !hill.waves.includes(q))) expect(w.elite).toBeGreaterThan(0);

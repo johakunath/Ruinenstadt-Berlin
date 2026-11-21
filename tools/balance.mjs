@@ -1,6 +1,7 @@
 // Balance runner (M14): the bot plays fresh Köpenick campaigns in Node, no browser.
 //   node tools/balance.mjs [runs=5] [difficulty=normal] [skill=johannes|good|weak] [seed=1] [--miss=0.3] [--react=0.25,0.5] [--at=4] [--until=6] [--map=xhain|alex|mitte|charlottenburg|wedding]
-//   node tools/balance.mjs 3 normal johannes 1 --chain   (one hero through Köpenick, Xhain, Alexanderplatz and Mitte; gear and camp carry over)
+//   node tools/balance.mjs 3 normal johannes 1 --map=wedding --carry   (each run starts with the gear one hero earned in the districts before)
+//   node tools/balance.mjs 3 normal johannes 1 --chain   (one hero through all six districts, Köpenick to Wedding; gear and camp carry over)
 // Prints one line per run and a table per encounter: tries, time, damage taken and lowest life.
 // Rerun after every balance change and compare with docs/balance.md.
 import { createServer } from 'vite';
@@ -17,8 +18,9 @@ try {
   if (flag('react')) skill.react = flag('react').split(',').map(Number);
   if (process.argv.includes('--chain')) {
     const { chain } = await server.ssrLoadModule('/src/bot/run.ts');
-    const NAME = { koepenick: 'Köpenick', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte' };
-    console.log(`Chain Köpenick → Xhain → Alexanderplatz → Mitte, ${difficulty}, skill ${skillName}, ${runs} runs from seed ${seed}`);
+    const NAME = { koepenick: 'Köpenick', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte', charlottenburg: 'Charlottenburg', wedding: 'Wedding' };
+    const { CHAIN } = await server.ssrLoadModule('/src/bot/run.ts');
+    console.log(`Chain ${CHAIN.map((m) => NAME[m]).join(' → ')}, ${difficulty}, skill ${skillName}, ${runs} runs from seed ${seed}`);
     const t0 = Date.now();
     const all = chain({ runs, difficulty, skill, seed }, (i, map, r) => {
       const fights = r.encounters.filter((e) => e.time > 0);
@@ -27,15 +29,16 @@ try {
       const bosses = r.encounters.filter((e) => e.boss && e.time > 0);
       console.log(`${String(i + 1).padStart(3)} ${NAME[map].padEnd(15)} ${r.won ? 'WIN ' : 'stop'} ${(r.time / 60).toFixed(1).padStart(5)} min  deaths ${String(r.deaths).padStart(2)}  power ${String(r.encounters[0]?.power ?? 0).padStart(4)} → ${String(r.power).padStart(4)}  avg dmg ${Math.round(dmg * 100)}%  bosses ${bosses.map((b) => `${Math.round(b.time)}s/${Math.round(b.damage * 100)}%`).join(' ')}  ${worst && worst.deaths ? `most deaths: ${worst.name} (${worst.deaths})` : ''}`);
     });
-    const done = all.filter((runs) => runs.length === 4 && runs[3].won).length;
-    console.log(`\n${done}/${all.length} chains finished all four districts (${((Date.now() - t0) / 1000).toFixed(0)} s wall time)`);
+    const done = all.filter((runs) => runs.length === CHAIN.length && runs[CHAIN.length - 1].won).length;
+    console.log(`\n${done}/${all.length} chains finished all ${CHAIN.length} districts (${((Date.now() - t0) / 1000).toFixed(0)} s wall time)`);
     process.exit(0);
   }
   const map = ['xhain', 'alex', 'mitte', 'charlottenburg', 'wedding'].includes(flag('map')) ? flag('map') : 'koepenick';
   console.log(`${({ koepenick: 'Köpenick', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte', charlottenburg: 'Charlottenburg', wedding: 'Wedding' })[map]}, ${difficulty}, skill ${skillName} (miss ${skill.miss}, react ${skill.react.join('–')} s), ${runs} runs from seed ${seed}`);
   const pct = (v) => `${Math.round(v * 100)}%`.padStart(4);
   const t0 = Date.now();
-  const reports = balance({ map, runs, difficulty, skill, seed, startAt: flag('at') ? Number(flag('at')) : undefined, until: flag('until') ? Number(flag('until')) : undefined }, (i, r) => {
+  if (process.argv.includes('--carry')) console.log('carry: one hero plays the districts before this one first; every run starts with that gear');
+  const reports = balance({ map, runs, difficulty, skill, seed, carry: process.argv.includes('--carry'), startAt: flag('at') ? Number(flag('at')) : undefined, until: flag('until') ? Number(flag('until')) : undefined }, (i, r) => {
     console.log(`${String(i + 1).padStart(3)} ${r.won ? 'WIN ' : 'stop'} ${(r.time / 60).toFixed(1).padStart(5)} min  deaths ${String(r.deaths).padStart(2)}  kills ${String(r.kills).padStart(4)}  power ${String(r.power).padStart(4)} ${r.weapon.padEnd(6)} ${r.stuckAt}`);
   });
   console.log(`\n${'Encounter'.padEnd(24)} won  deaths/run  time s  dmg taken  lowest life  power`);

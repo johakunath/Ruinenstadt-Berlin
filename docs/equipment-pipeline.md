@@ -130,7 +130,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Schlüsselbund des Tunnelläufers | kette | t | set tunnel | none | - | I42 | n/a: bike chain until I102 | I (Codex K4) | 3 |
 | Abzeichen der Kiezwache | abzeichen | t | set kiez | none | - | I44 | n/a: currywurst icon | I | 3 |
 | Kiesel des Spreegeists | kiesel | t | set spree | none | - | I39 | n/a: plain pebble | I | 3 |
-| Feder des Ewigen Gasts | feder | t | set gast (M18) | none | - | I41 | n/a: plain raven feather | I | 3 |
+| Feder des Ewigen Gasts | feder | t | set gast (M18) | none | - | I41 | n/a: plain raven feather until I107 | I (Codex K5) | 3 |
 | Siegelring | siegel | r | normal | none | - | I33 | n/a | - | 2 |
 | Totenkopfring | totenk | r | normal | none | - | I34 | n/a | - | 2 |
 | Schraubenmutter | mutter | r | normal | none | - | I35 | n/a | - | 2 |
@@ -139,7 +139,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Kupferring | kupfer | r | normal | none | - | I38 | n/a | - | 2 |
 | Ring der Weltzeituhr | weltuhr | r | legendary | none | - | I87 | n/a | E | 3 |
 | Ring des Spreegeists | spreering | r | set spree | none | - | I82 | n/a | - | 3 |
-| Siegelring des Ewigen Gasts | siegel | r | set gast (M18) | none | - | I33 | n/a: plain signet ring | I | 3 |
+| Siegelring des Ewigen Gasts | siegel | r | set gast (M18) | none | - | I33 | n/a: plain signet ring until I108 | I (Codex K5) | 3 |
 | Neonauge | nauge | i | neon | none | - | I66 | n/a | - | 4 |
 | Zielchip | zchip | i | neon | none | - | I67 | n/a | - | 4 |
 | Kabelarm | karm | i | neon | none | - | I58 | n/a: shared with Bassprediger | I | 4 |
