@@ -2,7 +2,7 @@
 
 Step 5 of `docs/tasks/m16-charlottenburg.md` (spec). Step 6 builds from this file; format and blocks as in `m12c-mitte-enemies.md`. Board: `docs/style/charlottenburg.png` (`docs/district-design-directions.md` › Final · Charlottenburg). 2D has nothing for this district (only the era string), so every number here is new and sits on the existing 3D ladders.
 
-Status: spec written 2026-11-19; built 2026-11-19 (step 6 without the maze riddles 6c and the loot section, see Handover at the end). Johannes playtest open.
+Status: spec written 2026-11-19; built 2026-11-19 (step 6 without the loot section, see Handover at the end); maze riddles 6c built 2026-11-21 (`docs/tasks/m16-charlottenburg.md` › Handover step 6c). Johannes playtest open.
 
 ## Design aims
 
@@ -127,7 +127,7 @@ Three gown tiers are three phases: at 66 % and 33 % life a tier shatters.
 | Spiegelpfad | data and render only | At two forks stand three mirror panels. Only the one at the true way shows the hero (a lit silhouette card that mirrors his side-to-side position); the wrong ways end in a dead end with a sleeping Spiegelsouffleur (`guards`). No sim rule |
 
 - New sim work for the plinths: `MapDef.plinths` and one gate that opens when all are lit; reuse the hold ring drawing. Tests: order free, progress never drops, the gate opens once, the blessing is unreachable before.
-- Build this as its own small step (6c) after the roster; it needs the maze dead ends of the data.
+- Built 2026-11-21 as step 6c (handover in `docs/tasks/m16-charlottenburg.md`). Deviation: the maze forks have two ways each, so each fork has two panels (four in all).
 
 ## Kodex, notes, sounds (German drafts, one line each; Opus finalises)
 
