@@ -8,6 +8,8 @@ import { EDGE_FRONT, propCollider } from './courtyard';
 import { generateLots, generateProps, inPoly, isWater, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, OPEN_PARTS, SAME_KIND_GAP, streetDist, onBridge, heightAt, type Landmark, type Lot, type MapDef } from './map';
 import type { Level } from '../sim/level';
 import { createSim, stepSim } from '../sim/sim';
+import { summon } from '../sim/ai';
+import { spawnEnemy } from '../sim/enemies';
 import { NO_INPUT, type SimEvent } from '../sim/types';
 
 const hpAt = (g: number): number => (1 + g * 0.13) * lateTier(g).hp;
@@ -240,6 +242,22 @@ describe('Wedding map (M18, layout C2)', () => {
       expect(sim.run.index).toBe(i + 1);
       expect(spawned).toBeGreaterThan(5);
       expect(bosses).toBe(1);
+    });
+
+    it(`a boss in the pub calls his adds inside the walls, also from beside a wall (Codex review of PR 81) (scale ${scale})`, () => {
+      const lv = mapLevel(m, lots, props), pub = lm(m, 'kneipe'), i = m.encounters.findIndex((e) => e.id === 'magendoktor'), room = m.encounters[i]!.room!;
+      lv.guards = [];
+      const sim = createSim({ level: lv, seed: 1 });
+      // The boss stands just inside the back wall and beside the side walls; every add lands in the room.
+      for (const [px, pz] of [[0, -5.4], [-7.6, 5.6], [7.4, -0.5], [0, 5.6]] as const) {
+        const q = kneipeWorld(pub, px, pz), boss = spawnEnemy(sim, q.x, q.z, WEDDING_BOSSES.zugezogene, 1, 1);
+        boss.enc = i;
+        const n0 = sim.enemies.length;
+        summon(sim, boss, 'walker', 4);
+        expect(sim.enemies.length).toBeGreaterThan(n0);
+        for (const e of sim.enemies.slice(n0)) expect(inRoom(room, e.x, e.z, 0), `add at ${e.x.toFixed(1)},${e.z.toFixed(1)} from ${px},${pz}`).toBe(true);
+        for (const e of sim.enemies) { e.state = 'dead'; e.hp = 0; }
+      }
     });
 
     it(`nothing is placed or reached in the two unbuilt corners; nothing spawns there (scale ${scale})`, () => {
