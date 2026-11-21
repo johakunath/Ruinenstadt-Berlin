@@ -2,7 +2,7 @@
 // trader on the start platform, collapse with bypass). M19 layout checks: tunnel.test.ts.
 import { describe, expect, it } from 'vitest';
 import { generateLots, generateProps, inTunnel, mapLevel, tunnelWalk } from './map';
-import { LINES } from './lines';
+import { tunnelName, LINES } from './lines';
 import { lineLayout, TUNNEL, tunnelMap, tunnelZ } from './tunnel';
 import { lateTier } from './enemies';
 import { colliderDistance } from '../sim/collide';
@@ -96,11 +96,21 @@ describe('M20 tunnel generator (every line)', () => {
     expect(u2.encounters.at(-1)!.waves[1]!.bosses).toEqual(['schaffner']);
   });
 
+  it('U2 west (M16 step 8): Mitte enemies to Bülowstraße, Charlottenburg glass after it, the Mitte late tier', () => {
+  const u = tunnelMap(3), kinds = (z: number): Set<string> => new Set(u.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix as Record<string, number>)[k]! > 0))));
+  expect(u.name).toBe('U2-Tunnel West');
+  expect(u.encounters.map((e) => e.name)).toEqual(['Tunnelmund', 'Einsturz', 'Geisterbahnhof Bülowstraße', 'Kehrgleis', 'Zugwrack', 'Generator Zoologischer Garten']);
+  for (const k of ['scherbe', 'loge', 'souffleur']) expect(kinds(0).has(k), k).toBe(false);
+  expect([...kinds(1)]).toEqual(expect.arrayContaining(['scherbe']));
+  expect(u.encounters[0]!.waves[0]!.hpMul).toBeCloseTo((1 + 42 * 0.13) * lateTier(42).hp * TUNNEL.hp);
+  expect(u.encounters.at(-1)!.waves[1]!.bosses).toEqual(['schaffner']);
+});
+
   for (const [k, L] of LINES.entries()) {
     it(`${L.id}: valid, sealed by its gratings and winnable`, () => {
       const { m: mm, level: lv } = build(k);
-      expect(mm.id).toBe(`tunnel-${L.id.toLowerCase()}`);
-      expect(mm.name).toBe(`${L.id}-Tunnel`);
+      expect(mm.id.startsWith(`tunnel-${L.id.toLowerCase()}`)).toBe(true);
+      expect(mm.name).toBe(tunnelName(k));
       expect(mm.zones[1]!.name).toBe(`Geisterbahnhof ${L.ghost}`);
       expect(new Set(mm.tunnel!.signs.map((s) => s.text)).size).toBe(3);
       expect(tunnelWalk(mm, mm.start.x, mm.start.z, 0.5)).toBe(true);

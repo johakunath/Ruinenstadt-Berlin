@@ -433,8 +433,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     // line between the Kantstraße and the Bismarckstraße rows), the north (Bismarckstraße, Schloßstraße, Klausener
     // Kiez) last. Area borders keep off the building rows (a lot must stand in its street's area). Lot types are
     // stand-ins until step 7.
-    { id: 'cityost', name: 'Tauentzien', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['parkplatz', 'hinterhof'], poly: [P(100, 97), P(104, 99), P(120, 107.5), at(capitol, -13.5, -5.2), at(capitol, 13.5, -5.2), at(elefantentor, 0, 0), at(aquarium, -3.4, 3), P(185, 116), P(185, 215), P(100, 215)] },
-    { id: 'kudamm', name: 'Neuer Westen', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['hinterhof', 'markt'], poly: line([[-135, 96], [30, 98], [60, 96], [84, 72], [92, 68], [100, 88], [100, 215], [-135, 215]]) },
+    { id: 'cityost', name: 'Tauentzien', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['droschkenplatz', 'passage'], poly: [P(100, 97), P(104, 99), P(120, 107.5), at(capitol, -13.5, -5.2), at(capitol, 13.5, -5.2), at(elefantentor, 0, 0), at(aquarium, -3.4, 3), P(185, 116), P(185, 215), P(100, 215)] },
+    { id: 'kudamm', name: 'Neuer Westen', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['kinovorplatz', 'jazzhof', 'hinterhof'], poly: line([[-135, 96], [30, 98], [60, 96], [84, 72], [92, 68], [100, 88], [100, 215], [-135, 215]]) },
     // The north, traced round the Schloss, the Luisenplatz, the Hochschulviertel and the Zoo.
     { id: 'westend', name: 'Charlottenburg', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['hinterhof', 'truemmer'],
       poly: [[bounds.minX, gateZ], [C.x + 29, gateZ], P(-20, -19), P(-20, -8), P(14, -8), P(14, -40), P(40, -40), ...hsWest, kv(bl, fenceV), [bounds.maxX, eastZ], P(185, 30), P(125, 52), P(92, 68), P(84, 72), P(60, 96), P(30, 98), P(-135, 96)] },
@@ -546,8 +546,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     flavor: 'revue',
     shards: true,
     strictLots: true,
-    // Stand-in lot types stay few, so the Blockrand rows get the street fronts (step 7 picks the real ones).
-    specialMax: { hinterhof: 3, markt: 1, truemmer: 2, parkplatz: 1 },
+    // Step 7 (variant A): two lot types per street zone, still few, so the Blockrand rows keep the street fronts.
+    specialMax: { droschkenplatz: 1, passage: 1, kinovorplatz: 2, jazzhof: 1, hinterhof: 2, truemmer: 2 },
     viaducts,
     walls,
     hiddenSpots: [endOf('Hinterhof Bleibtreustraße', 1.2, 0), { x: M.x + R6.blessing[0], z: M.z + R6.blessing[1] }],

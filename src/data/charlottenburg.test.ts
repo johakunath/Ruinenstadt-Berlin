@@ -7,7 +7,8 @@ import { lateTier } from './enemies';
 const tierOf = (h: number): number => { let a = 0, b = 100; for (let i = 0; i < 60; i++) { const g = (a + b) / 2; if ((1 + g * 0.13) * lateTier(g).hp < h) a = g; else b = g; } return (a + b) / 2; };
 const hpAt = (g: number): number => (1 + g * 0.13) * lateTier(g).hp;
 import { EDGE_FRONT, propCollider } from './courtyard';
-import { generateLots, generateProps, heightAt, inPoly, isWater, onStair, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
+import { areaAt, generateLots, generateProps, heightAt, inPoly, isWater, onStair, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
+import type { Lot } from './map';
 import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
 import { freeSpot } from '../sim/reach';
@@ -495,6 +496,18 @@ describe('Charlottenburg map (M16, layout C2)', () => {
     expect(octant(bridge.x, bridge.z)).toBe('NW');
     expect(luise.z).toBeGreaterThan(pavillon.z);
     expect(pavillon.z).toBeGreaterThan(bridge.z);
+  });
+
+  it('step 7: the 1920 lot types stand in their zones (cab rank or arcade on the Tauentzien, cinema or jazz yard on the Ku\'damm)', () => {
+    for (const scale of [1, 1.3]) {
+      const m = charlottenburgMap(scale), lots = generateLots(m);
+      const of = (kinds: string[]): Lot[] => lots.filter((l) => l.kind === 'special' && kinds.includes(l.special!));
+      const z1 = of(['droschkenplatz', 'passage']), z2 = of(['kinovorplatz', 'jazzhof']);
+      expect(z1.length + z2.length, `${scale}: ${z1.length} ${z2.length}`).toBeGreaterThanOrEqual(3);
+      expect(z2.length, `${scale}`).toBeGreaterThanOrEqual(1);
+      for (const l of z1) expect(areaAt(m, l.x, l.z)?.id).toBe('cityost');
+      for (const l of z2) expect(areaAt(m, l.x, l.z)?.id).toBe('kudamm');
+    }
   });
 
   it('Kristallsockel (6c): any order, progress never drops, the hedge gate opens once and stays open on resume', () => {

@@ -15,7 +15,10 @@ export type SpecialKind = 'hinterhof' | 'parkplatz' | 'kleingarten' | 'teich' | 
   | 'nachtmarkt' | 'containerdorf'
   // M15 Mitte step 7, the other zones (`docs/mockups/m15-mitte-lots.svg`, variant A): a club yard (Friedrichstadt),
   // a checkpoint zone (Regierungsviertel), a tent camp and a beer garden clearing (Tiergarten, placed by hand).
-  | 'clubhof' | 'sperrzone' | 'zeltlager' | 'lichtung';
+  | 'clubhof' | 'sperrzone' | 'zeltlager' | 'lichtung'
+  // M16 Charlottenburg step 7 (`docs/mockups/m16-charlottenburg-lots.svg`, variant A): a cab rank and a shop
+  // arcade (zone 1, Blaue Stunde), a cinema forecourt and a jazz cellar yard (zone 2, Premierennacht).
+  | 'droschkenplatz' | 'passage' | 'kinovorplatz' | 'jazzhof';
 /** Sleeping guards: `lying` play dead on the ground, `hidden` wait unseen in a doorway or under rubble. */
 export interface LotGuard { x: number; z: number; kind: EnemyKind; elite: boolean; wake: number; hp: number; pose: 'lying' | 'hidden'; facing: number }
 /** A walkable plank path over water (pond jetty): center, facing along its length. */
@@ -51,6 +54,10 @@ export const SPECIAL_SIZE: Record<SpecialKind, { w: [number, number]; d: [number
   sperrzone: { w: [18, 22], d: [14, 17], max: 3 },
   zeltlager: { w: [17, 20], d: [14, 16], max: 2 },
   lichtung: { w: [17, 20], d: [14, 16], max: 2 },
+  droschkenplatz: { w: [19, 22], d: [14, 16], max: 2 },
+  passage: { w: [17, 20], d: [18, 21], max: 2 },
+  kinovorplatz: { w: [18, 21], d: [13, 16], max: 2 },
+  jazzhof: { w: [18, 21], d: [18, 21], max: 2 },
 };
 /** Chance per street slot to try a lot type (Johannes: two in five lots; many tries do not fit, so higher). */
 export const SPECIAL_SHARE = 0.7;
@@ -58,6 +65,7 @@ export const SPECIAL_NAME: Record<SpecialKind, string> = {
   hinterhof: 'Hinterhof', parkplatz: 'Parkplatz', kleingarten: 'Kleingärten', teich: 'Teich', truemmer: 'Trümmerfeld', baustelle: 'Baustelle', markt: 'Markt', kirchhof: 'Kirchhof',
   glashaus: 'Gewächshausgarten', plattenhof: 'Plattenbauhof', nachtmarkt: 'Nachtmarkt', containerdorf: 'Containerdorf',
   clubhof: 'Clubhof', sperrzone: 'Sperrzone', zeltlager: 'Zeltlager', lichtung: 'Lichtung',
+  droschkenplatz: 'Droschkenplatz', passage: 'Ladenpassage', kinovorplatz: 'Kinovorplatz', jazzhof: 'Jazzkeller',
 };
 
 export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
@@ -273,6 +281,61 @@ export function lotContent(l: Lot & { special: SpecialKind }): LotContent {
       prop('candles', rng.range(-W / 2, 0), rng.range(-2, 2)); prop('bush', -W + 1.6, -D + 1.6, 0, 1.2);
       for (let i = 0; i < 3; i++) { const [a, b] = rng.pick(graves); guard('walker', a + 0.4, b - 1.1, 'lying', { wake: 3.8 }); }
       out.spots.rescue = P(W - 4, 0);
+      break;
+    }
+    case 'droschkenplatz': {
+      // Cab rank (1920): cabs parked in a row along the back (the 1920 car props), the drivers' hut and a
+      // horse trough at one side, storm lanterns at the street, a bench. A dead cabbie lies by his car.
+      out.ground = 'cobbles';
+      for (let a = -W + 2.6; a < W - 4; a += rng.range(2.7, 3.1)) prop('car', a, -D + 3.4, Math.PI + rng.range(-0.08, 0.08), 1, 0.05);
+      prop('shed', side * (W - 2), D - 4, side * Math.PI / 2, 1, 0.05);
+      prop('lowWall', side * (W - 2), D - 7.2, 0, 2.4, 0.05);
+      for (const a of [-W + 1.6, W - 1.6]) prop('stormLantern', a, D - 1.4, 0, 1, 0);
+      prop('bench', -side * (W - 4), D - 3, Math.PI, 1, 0.1); prop('bins', -side * (W - 1.4), 0, Math.PI / 2, 1, 0.2);
+      guard('walker', rng.range(-3, 3), -D + 6, 'lying', { wake: 3.8 });
+      out.spots.cache = P(side * (W - 2), D - 7);
+      break;
+    }
+    case 'passage': {
+      // Shop arcade (1920): two rows of low shops along a covered walk, the glass roof gone (render: the
+      // shop fronts); display stands and crates spilled in the walk, a lantern at each end. Mannequins lie
+      // among the stands, one is a Scherbentänzerin.
+      out.ground = 'cobbles';
+      building('shop', -W, -2.6, -D, D - 2, 1);
+      building('shop', 2.6, W, -D, D - 2, 1);
+      for (let b = -D + 3; b < D - 4; b += rng.range(3.2, 4)) prop(rng.next() < 0.35 ? 'stallBroken' : 'crates', rng.pick([-1.3, 1.3]), b, rng.range(0, 3), 0.8, 0.3);
+      prop('stormLantern', 0, D - 1.2, 0, 1, 0); prop('stormLantern', 0, -D + 1.4, 0, 1, 0);
+      guard('scherbe', rng.range(-1, 1), -D + 4, 'lying', { wake: 3.5 });
+      out.spots.cache = P(0, -D + 2);
+      break;
+    }
+    case 'kinovorplatz': {
+      // Cinema forecourt (1920): the ticket booth in the middle, posts where the velvet ropes hung, bulb
+      // strings over the square, benches at the side. Ghouls still stand in the queue (playing dead).
+      out.ground = 'cobbles';
+      prop('shed', 0, -D + 3.2, 0, 0.8, 0.05);
+      for (let a = -W + 3; a < W - 3; a += 1.6) { prop('bollard', a, -D + 6.4, 0, 1, 0.02); prop('bollard', a, -D + 8.4, 0, 1, 0.02); }
+      prop('stringLights', 0, 0, rng.range(-0.15, 0.15), 1, 0.05);
+      for (const s2 of [-1, 1]) prop('bench', s2 * (W - 1.6), D - 3, s2 * Math.PI / 2, 1, 0.1);
+      for (let i = 0; i < 3; i++) guard('walker', -W + 4 + i * 2.2, -D + 7.4, 'lying', { wake: 3.8 });
+      out.spots.rescue = P(side * (W - 3), D - 4);
+      break;
+    }
+    case 'jazzhof': {
+      // Jazz cellar yard (1920): Vorderhaus with a Durchfahrt, the back house with the cellar stair (a low
+      // wall frames the stair head), string lights, crates of bottles, a fire barrel. A runner hides by the stair.
+      out.ground = 'cobbles';
+      const gx = rng.range(-W + 5, W - 5), fb = D - 5, cb = -D + 5;
+      building('altbau', -W, gx - 1.6, fb, D, 1 + rng.int(2));
+      building('altbau', gx + 1.6, W, fb, D, 1 + rng.int(2));
+      building('altbau', -W, W, -D, cb, 2);
+      run('wall', -W + 0.2, cb, -W + 0.2, fb, [], 0.02); run('wall', W - 0.2, cb, W - 0.2, fb, [], 0.02);
+      prop('lowWall', side * 3, cb + 1.6, 0, 3, 0.02);
+      prop('stringLights', 0, (cb + fb) / 2, rng.range(-0.2, 0.2), 1, 0.05);
+      prop('fireBarrel', -side * (W - 1.8), (cb + fb) / 2 + rng.range(-1, 1));
+      prop('crates', side * (W - 1.8), fb - 1.6, rng.range(0, 3), 1, 0.3); prop('bins', -side * (W - 1.4), fb - 1.4, Math.PI / 2, 1, 0.2);
+      guard('runner', side * 1.2, cb + 1.4, 'hidden', { elite: true, hp: 1.8, wake: 4 });
+      out.spots.cache = P(side * 4.6, cb + 1.2); out.spots.rescue = P(-side * (W - 3), fb - 1.6);
       break;
     }
     case 'nachtmarkt': {

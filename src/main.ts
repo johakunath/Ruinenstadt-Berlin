@@ -1136,7 +1136,9 @@ function humansFor(): boolean {
 function femalesFor(): boolean {
   if (isCamp) return false;
   const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
-  return [...opts.spawn.map((k) => k.split('+')[0]!), ...own].some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'female');
+  // M16 step 8: wave kinds too (the U2 west brings Scherbentänzerinnen, a female body, without a female boss).
+  const waves = level?.encounters.flatMap((e) => e.waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix[k as keyof typeof w.mix] ?? 0) > 0))) ?? [];
+  return [...opts.spawn.map((k) => k.split('+')[0]!), ...own, ...waves].some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'female');
 }
 
 // M15: Alexanderplatz is the daylight district (`?sky=a|b|c` compares the afternoon variants); Mitte has its neon night.

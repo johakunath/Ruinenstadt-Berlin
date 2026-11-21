@@ -53,7 +53,7 @@ import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
 import { canvas, toTexture, paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, paintWaterNormal, type PaintOptions } from './paint';
 import {
-  Builder, balconyLife, buildAltbau, buildProp, partOf, type BreakableView, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
+  Builder, balconyLife, buildAltbau, buildProp, partOf, setPropEra, type BreakableView, FLOOR_H, FX_LAYER, GROUND_H, makeMats, PARAPET, Run, UNIT_BOX, windowAt, type LightShape, type Mats, type World,
 } from './world';
 
 type RGB = readonly [number, number, number];
@@ -231,6 +231,8 @@ export class ChunkBuilder extends Builder {
 
 /** Ground glow strength of lamps for the map being built (daylight maps dim them, `Sky.lamps`). */
 let glowScale = 1;
+/** Share of long Altbau fronts with a shop (main street, other streets). M16 step 7 facade F-A: Charlottenburg 1920 is a street of shops with awnings. */
+let shopShare: readonly [number, number] = [0.4, 0.22];
 /** M15 Mitte: wet streets of the map being built (`Sky.wet`), else undefined. */
 let wet: Wet | undefined;
 let streakCache: Texture | undefined;
@@ -1685,7 +1687,7 @@ export function buildAltbauLot(b: ChunkBuilder, l: Lot & { inner?: boolean }, m:
       const from = Math.max(0.6, (s.len - 7) / 2);
       features.push({ kind: 'spati', from, to: Math.min(s.len - 0.6, from + 7) });
     } else if (i === front && !l.inner) {
-      if (s.len > 15 && rng.next() < (main ? 0.4 : 0.22)) {
+      if (s.len > 15 && rng.next() < (main ? shopShare[0] : shopShare[1])) {
         const from = rng.range(1.5, s.len - 9.5);
         features.push({ kind: 'spati', from, to: from + 7 });
         const door = from > 5 ? 1.6 : from + 8.5;
@@ -2304,6 +2306,8 @@ function buildSpati(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): void {
 export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], props: Prop[], breakables: BreakableDef[] = [], opts: { boxShadows?: boolean; cut?: 'off' | number; sky?: Sky } = {}): World {
   const sky = opts.sky ?? NIGHT_SKY;
   glowScale = sky.lamps;
+  setPropEra(m.id === 'charlottenburg' ? 1920 : null);
+  shopShare = m.id === 'charlottenburg' ? [0.8, 0.55] : [0.4, 0.22];
   wet = sky.wet;
   const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' ? m.id : undefined);
   const mats = makeMapMats(materials, district);

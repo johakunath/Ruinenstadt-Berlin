@@ -943,7 +943,7 @@ export function generateLots(m: MapDef): Lot[] {
             const S = pick && SPECIAL_SIZE[pick];
             // Full size first, then smaller (short street pieces and close side streets); may overhang the piece end.
             const w0 = pick && rng.range(S!.w[0], S!.w[1]), d0 = pick && rng.range(S!.d[0], S!.d[1]);
-            for (const k of pick ? (pick === 'hinterhof' || pick === 'clubhof' ? [1, 0.93] : pick === 'markt' || pick === 'kirchhof' ? [1, 0.85, 0.72, 0.62, 0.54] : [1, 0.85, 0.72]) : []) {
+            for (const k of pick ? (pick === 'hinterhof' || pick === 'clubhof' || pick === 'jazzhof' || pick === 'passage' ? [1, 0.93] : pick === 'markt' || pick === 'kirchhof' ? [1, 0.85, 0.72, 0.62, 0.54] : [1, 0.85, 0.72]) : []) {
               const w = w0! * k, d = d0! * k;
               const nx = -dz * side, nz = dx * side, off = s.width / 2 + Math.max(1.2, s.sidewalk ?? 0) + d / 2;
               const x = cx + dx * (w / 2) + nx * off, z = cz + dz * (w / 2) + nz * off, rot = Math.atan2(-nx, -nz);

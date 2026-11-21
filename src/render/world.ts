@@ -5,6 +5,7 @@ import {
   Group, HemisphereLight, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, PointLight, Quaternion, SphereGeometry, Vector3,
   type BufferGeometry, type Material, type Object3D,
 } from 'three';
+import { buildBus1920, buildCar1920, buildTram1920 } from './props-1920';
 import { TRAM_AXLES, TRAM_BOGIES, TRAM_BRIDGE_DECK, TRAM_HEAD_HEIGHT, TRAM_WHEEL_OFFSET, TRAM_WHEEL_RADIUS } from '../data/tram';
 import { FX_LAYER, isOccluderProp } from './layers';
 export { FX_LAYER } from './layers';
@@ -674,8 +675,17 @@ export function at(p: Prop, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0): Matrix
   return m.multiply(local);
 }
 
+/** M16 step 7: vehicles of 1920 on Charlottenburg (`props-1920.ts`); set by `buildMapWorld` per map. */
+let propEra: 1920 | null = null;
+export function setPropEra(era: 1920 | null): void { propEra = era; }
+
 export function buildProp(b: Builder, p: Prop, rng: Rng): void {
   const m = b.mats;
+  if (propEra === 1920) {
+    if (p.kind === 'car' || p.kind === 'van') { buildCar1920(b, p, rng); return; }
+    if (p.kind === 'bus') { buildBus1920(b, p, rng); return; }
+    if (p.kind === 'tram') { buildTram1920(b, p, rng, TRAM_BRIDGE_DECK + TRAM_HEAD_HEIGHT); return; }
+  }
   switch (p.kind) {
     case 'fireBarrel': {
       b.geo(m.rust, new CylinderGeometry(0.4, 0.37, 0.95, 14, 1, true), at(p, 0, 0.475, 0));
