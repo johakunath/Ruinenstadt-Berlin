@@ -135,7 +135,7 @@ export class Post {
   ) {
     // Leistung: the beauty target carries depth for the ink pass (both composer buffers get a copy).
     const beautyDepth = profile.inkFromBeauty && look.outline > 0 && profile.msaa === 0;
-    const target = new WebGLRenderTarget(4, 4, { type: HalfFloatType, samples: profile.msaa, depthTexture: beautyDepth ? new DepthTexture(4, 4) : undefined });
+    const target = new WebGLRenderTarget(4, 4, beautyDepth ? { type: HalfFloatType, samples: profile.msaa, depthTexture: new DepthTexture(4, 4) } : { type: HalfFloatType, samples: profile.msaa });
     this.composer = new EffectComposer(renderer, target);
     this.composer.addPass(new RenderPass(scene, camera));
     this.beautyDepth = beautyDepth;
