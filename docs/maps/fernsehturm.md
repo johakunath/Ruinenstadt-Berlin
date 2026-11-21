@@ -15,7 +15,7 @@ The Fernsehturm already stands in Alexanderplatz (map 3): inside the loop, visib
 | F1 | Layout A "Aufstieg": the finale plays inside the tower, on five round decks one above the other, joined by the lift. No street, no lot, no ground map | Johannes, 2026-11-21 |
 | F2 | Each deck is one ring arena (walkable ring around a solid core). One twist per deck: lift crank (hold), windows by compass bearing plus one clock hand, revolving floor, two clock hands plus the boss | Part of A |
 | F3 | "All eras at once": no new ordinary enemies. Waves mix the existing kinds of two districts per deck (six districts, three fight decks); three district bosses return as weaker echoes | Part of A |
-| F4 | Final boss: **Der Zeitwart** (working name), the last duty officer of the Zeitnormal. Not a clock machine (the Weltzeituhr boss of map 3 already is one). He holds the last part, **die Unruh** (balance wheel) | Claude, proposed; Johannes decides with the style board |
+| F4 | Final boss: **Der Zeitwart**, the last duty officer of the Zeitnormal, appears as a humanoid robot in the [boss board](../style/fernsehturm-zeitwart.webp). He holds the last part, **die Unruh** (balance wheel), in the current proposal | Look approved by Johannes, 2026-11-21. Unruh proposed |
 | F5 | Light: night at the foot, dawn at the top, one sky per deck, switched during the lift ride. From the sphere the city lies below with every district in its own light | Part of A |
 | F6 | Entry: opens when all six districts are freed; the game is linear. No tunnel of its own in the first version | Johannes, 2026-11-21 |
 | F7 | Ending: after the boss, two rings at the main switch: „Uhr stellen“ or „Stehen lassen“. A card and a save flag, no rule change | Johannes, 2026-11-21 (took the recommendation) |
@@ -121,7 +121,9 @@ Lift: door on the south face of each core (toward the camera). Arrival spot 2 m 
 
 ## Final boss: Der Zeitwart
 
-Story: the duty officer who stood at the main switch between two seconds. The first Zeitloser and the only one who knows. He keeps the clock stopped, because a running clock ends him. Body: human base (`human1.glb`) with code-built gear: grey work coat, cap, watch chains, a dial monocle, the right arm a long brass minute hand, the left a short heavy hour hand, a pendulum on the back. Each phase tints him in its eras.
+Story: the duty officer who stood at the main switch between two seconds. The first Zeitloser and the only one who knows. He keeps the clock stopped, because a running clock ends him.
+
+Reuse the humanoid base and rig (`human1.glb`). Use weathered blue-grey steel for the exposed face and neck, with plate seams, chipped enamel and an amber lens beside the dial monocle. Keep the grey-blue work coat, peaked cap and watch chains. Use separate clockwork meshes for the long brass minute hand on the right arm, the short heavy hour hand on the left arm, and the pendulum on his back. Each phase tints him in its eras.
 
 | Phase | Life | Eras | Moves (existing blocks first) |
 |---|---|---|---|

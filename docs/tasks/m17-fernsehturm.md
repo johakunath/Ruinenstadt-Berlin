@@ -13,11 +13,11 @@ A playable finale `?map=turm`: five decks inside the Fernsehturm, four fights, t
 | # | Step | Needs | Model | State |
 |---|---|---|---|---|
 | 0 | Concept A and B, mockup, geography check, plan | | Fable high | done 2026-11-21, A picked |
-| S | Style boards: Johannes gives Codex the two prompts below (*Style boards*); picks; files `docs/style/fernsehturm.png` and `docs/style/fernsehturm-zeitwart.png`, a row in `docs/style-bible.md` | | Johannes, Codex | open |
+| S | Style boards for the [boss and gear](../style/fernsehturm-zeitwart.webp) and the tower interiors (`docs/style/fernsehturm.png`). Index in `docs/style-bible.md` | | Johannes, Codex | Boss board added. Place board pending in the repo |
 | P | Tower proportions on map 3 | | | dropped: Johannes keeps the model as it is (map doc F13) |
 | 1 | Engine, data, blockout. `MapDef.decks` and `deckWalk` (T1), the lift (T2), ring encounters (T3), clock hands (T4), revolving band (T5, drop first). `src/data/fernsehturm.ts` from the deck table, tests `src/data/fernsehturm.test.ts` (invariants below), a scripted run wins (`director.test.ts`). Wiring `?map=turm` (`options.ts`, `ui/maps.ts` `MapId`, `main.ts` banner). Blockout render: discs, sills, window band, cores, hands and rings on the FX layer; only the hero's deck visible. Stand-ins: echoes are the plain boss kinds, final boss `diva` | Wedding merged | Opus high | open; first read Wedding's map doc, enemies, boss and stop and correct the assumptions here |
 | 2 | Look. First a look mockup in chat from the style board (the sphere decks and the city image), Johannes confirms. Then: five interiors in `src/render/turm-world.ts`, the city image and cloud cards (T6), one `Sky` per deck (T7), the lift cut with the height counter, cutaway of the cores, window-break effect where a spawn enters. State the Leistung and Ausgewogen cost | 1, S | Opus high, mockup first | open |
-| 3 | Enemies and boss. Spec lines first (wave mix numbers, echo scale, Zeitwart numbers, calibrated with the bot), then build: `echo` modifier (T8), Der Zeitwart from the board (kit below, body on the human base, sounds, spoken lines, Kodex), the gear holds (T9), the ending choice (T10), the spear Telespargel (model, power, icon). Update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md` | 1, S | Opus high (a Fable pass only if Johannes dislikes the boss) | open |
+| 3 | Enemies and boss. Spec lines first (wave mix numbers, echo scale, Zeitwart numbers, calibrated with the bot), then build: `echo` modifier (T8), Der Zeitwart from the board (kit below, robot materials on the humanoid base, sounds, spoken lines, Kodex), the gear holds (T9), the ending choice (T10), the spear Telespargel (model, power, icon). Update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md` | 1, S | Opus high (a Fable pass only if Johannes dislikes the boss) | open |
 | 4 | Flow. Unlock rule and network stop (map doc › Entry), Wedding victory link, save flag `ending`, ending cards, bot `--map=turm` and `mapLevelOf`, tier F8, signature drops, the Wedding kinds in the Telecafé waves. Run-save and resume across decks | 1, 3, Wedding built with its flow step | Opus medium | open |
 | 5 | Textures: rows in `docs/asset-pipeline.md` (city image, interior atlas: enamel panels, steel ribs, dials, Telecafé cloth and signs; Zeitwart bust and the Telespargel icon if not rendered) | 2, 3 | Codex | open |
 | 6 | Screenshots (each deck, a fight with the hand, the boss), playtest on PC and Tab S9; rows in `docs/tasks/pt-hardware-checks.md` (load time and memory with all enemy families, the lift cut hitch, hand readability, revolving floor feel, core cutaway) | all | Johannes | open |
@@ -75,7 +75,7 @@ Not applicable here and why: street density, lamp spacing, Späti per zone, lots
 |---|---|
 | Waves | Existing kinds only, two districts per deck (map doc › Flow). Zeitlose everywhere. Tier 48 to 70 over 10 waves |
 | Echo des Hauptmanns, der Spreehexe, der Diva | T8. One per fight 2 to 4, as its last wave. The Telecafé echo may become the Wedding boss later |
-| Der Zeitwart | Human base, gear in code (coat, cap, dial monocle, hand arms, pendulum). Three phases by era pair (Urzeit and 1920, 1981 and 1989, 2089 and kommt bald), moves from `slam`, `pounce`, `fan`, `roots`, `bass`, summons; new: the blink (0.5 s warning circle at the landing spot). Gear holds T9. Resistances: propose shock weak (a clock), fire neutral, acid resistant |
+| Der Zeitwart | Humanoid robot on the human base, with worn steel on the exposed head and neck. Gear in code (coat, cap, dial monocle, clock-hand arms, pendulum). Three phases by era pair (Urzeit and 1920, 1981 and 1989, 2089 and kommt bald), moves from `slam`, `pounce`, `fan`, `roots`, `bass`, summons; new: the blink (0.5 s warning circle at the landing spot). Gear holds T9. Resistances: propose shock weak (a clock), fire neutral, acid resistant |
 | Lines (drafts, Opus finalises) | Start „Die Zeit steht. Das bleibt so.“ · Rage „Zurück auf Null!“ · Special „Schlag zwölf!“ · Kodex „Steht er im Werk: Zahnrad einsetzen.“ |
 
 Text drafts: banner „Fernsehturm · Stillstand“; deck names „Foyer“, „Schacht“, „Panoramaetage“, „Telecafé“, „Uhrenraum“; hold „Notkurbel halten“; lift „Aufzug frei“; gear „Zahnrad eingesetzt“; choice „Uhr stellen“ / „Stehen lassen“; cards „Normalzeit. Berlin tickt wieder, auch das Alte.“ / „Die Stadt behält ihre Zeiten.“; win „Die Unruh ist dein“.
@@ -115,7 +115,7 @@ Upper 60%, key scene: inside the revolving restaurant in the tower sphere, about
 Lower 40%, dark teal concept panel: four small interior studies, each a round room seen from a high three-quarter view with the wall toward the viewer cut low: (1) FOYER at night, hexagonal entrance hall with folded concrete roof, souvenir kiosk with warm light, lift door with six empty gear sockets; (2) SCHACHT, inside the concrete shaft, a maintenance gallery around a dark open lift well, jungle vines and sparking cable trays climbing from below, an emergency hand crank; (3) PANORAMAETAGE before dawn, observation ring with telescopes and broken windows; (4) UHRENRAUM under the steel dome, a low brass clock movement in the centre with six gear seats and a balance wheel, two huge clock hands, a main switch. Props row: six different gear wheels (one per era), the balance wheel "Unruh", lift panel, hand crank, telescope, kiosk. Eight palette swatches: concrete white, steel blue-grey, brass, enamel orange, cobalt, signal red, dawn rose, night teal. Discreet title and subtitle.
 ```
 
-Board 2, boss and gear:
+**Board 2.** [Fernsehturm · Der Zeitwart](../style/fernsehturm-zeitwart.webp). Johannes approved the humanoid robot revision on 2026-11-21. The revision supersedes the human face in the original prompt below.
 
 ```
 Generate ONE beautiful landscape RUINENSTADT game art direction board. Use the attached Köpenick board for STYLE only and the attached Charlottenburg board for the final-board LAYOUT; new content below. Painted comic, strong dark ink outlines, rich painterly texture, warm lights against cool teal shadows, worn materials. Not photorealistic, not 3D, no game HUD, no BVG branding or transit livery. Dark teal concept panel background throughout, figures full body with clear silhouettes.
@@ -134,7 +134,7 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 | # | Question | Answer |
 |---|---|---|
 | J1 | A or B? | A (Johannes, 2026-11-21) |
-| J2 | Boss: Der Zeitwart, holding the Unruh? | No answer yet; decide on board 2 |
+| J2 | Boss: Der Zeitwart, holding the Unruh? | Humanoid robot look approved on board 2. The Unruh question remains open |
 | J3 | Does the ending change anything afterwards? | No: card and flag (took the recommendation) |
 | J4 | Unlock with all other districts freed, no tunnel of its own? | Yes, the game is linear |
 | J5 | Wedding window gag? | No: Wedding is freed by then; it is a played district before the finale |
