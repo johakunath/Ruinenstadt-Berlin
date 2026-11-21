@@ -39,7 +39,13 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-20)
+## Latest (2026-11-21)
+
+- Charlottenburg is on the network: after Mitte the U2-Tunnel West leads to S+U Zoologischer Garten. The sky turns from Blaue Stunde at the Zoo to Premierennacht on the Ku'damm, Mondnacht in the Schlossgarten and Morgengrauen at the Schloss; searchlights over the cinemas, confetti, prism motes and diamond dust.
+- Maze riddles: three Kristallsockel open a hedge gate to a hidden blessing; at two forks only one mirror shows the hero.
+- Charlottenburg 1920 streets: cab ranks, shop arcades, cinema forecourts and jazz cellar yards; 1920 cars, open-top buses and trams; more shop fronts with awnings.
+
+## 2026-11-20
 
 - Slow mouse movement returns the action labels and aiming from pad or touch to the mouse after 30 px of net movement; small jitter is ignored.
 - Combat follow-up (Codex · GPT-6): basic attacks of all four weapons deal 10% less damage; powers, ultimates and Molotow deal 25% more before rounding. Säbeltanz swings also get the increase; Standarte multiplies damage by 1.875. Timings and cooldowns stay the same.

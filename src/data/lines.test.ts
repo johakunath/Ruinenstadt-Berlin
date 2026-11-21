@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, stopName, STOPS } from './lines';
+import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, stopName, STOPS, tunnelName } from './lines';
 
 describe('M20 S+U network (2D js/ubahn.js)', () => {
   it('one route and badge per line, each joining two stops', () => {
@@ -28,10 +28,12 @@ describe('M20 S+U network (2D js/ubahn.js)', () => {
     });
   });
   it('line 3 is the U2 on to Zoologischer Garten, west of Mitte (M16 C3)', () => {
-    expect(LINES[3]).toEqual({ id: 'U2', color: '#da421e', ghost: 'Bülowstraße' });
+    expect(LINES[3]).toEqual({ id: 'U2', color: '#da421e', ghost: 'Bülowstraße', name: 'U2-Tunnel West' });
     expect(LINES[2]!.id).toBe(LINES[3]!.id);
     expect(STOPS[4]!.station).toBe('S+U Zoologischer Garten');
-    expect(STOPS[4]!.map).toBeUndefined();
+    expect(STOPS[4]!.map).toBe('charlottenburg');
+    // Step 8: tunnel names (map name and run-save key) differ per line; the older ones keep theirs.
+    expect(LINES.map((_, k) => tunnelName(k))).toEqual(['S3-Tunnel', 'U8-Tunnel', 'U2-Tunnel', 'U2-Tunnel West']);
     expect(stopName(4)).toBe('Zoologischer Garten');
     expect(STOPS[4]!.at[0]).toBeLessThan(STOPS[3]!.at[0] - 40);
   });
@@ -47,7 +49,8 @@ describe('M20 S+U network (2D js/ubahn.js)', () => {
     expect(linePlayable(1, [0, 1, LINE_FREED])).toBe(true);
     expect(linePlayable(2, [0, 1, LINE_FREED, LINE_FREED + 1])).toBe(false);
     expect(linePlayable(2, [0, 1, 2, LINE_FREED, LINE_FREED + 1])).toBe(true);
-    expect(linePlayable(3, [0, 1, 2, 3, LINE_FREED, LINE_FREED + 1, LINE_FREED + 2])).toBe(false);
+    expect(linePlayable(3, [0, 1, 2, LINE_FREED, LINE_FREED + 1, LINE_FREED + 2])).toBe(false);
+    expect(linePlayable(3, [0, 1, 2, 3, LINE_FREED, LINE_FREED + 1, LINE_FREED + 2])).toBe(true);
     expect(stopName(1)).toBe('Warschauer Straße');
     expect(stopName(3)).toBe('Potsdamer Platz');
   });
@@ -63,5 +66,8 @@ describe('next destination (playtest 2026-11-18)', () => {
     expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1])).toEqual({ stop: 2 });
     expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2])).toEqual({ line: 2 });
     expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2, LINE_FREED + 2])).toEqual({ stop: 3 });
+    // M16 step 8: on through the U2 west to Charlottenburg.
+    expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2, LINE_FREED + 2, 3])).toEqual({ line: 3 });
+    expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2, LINE_FREED + 2, 3, LINE_FREED + 3])).toEqual({ stop: 4 });
   });
 });

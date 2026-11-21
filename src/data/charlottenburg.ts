@@ -80,6 +80,27 @@ export const PLATFORM = { len: 21, width: 10, h: 6.5, stairAt: 9.5, stair: { len
  */
 export const IRRGARTEN = { hx: 33, hz: 16, ring: 16, entrance: { x: 30.5, z: 16 }, exit: { x: 0, z: -16 } } as const;
 
+/**
+ * Step 6c maze riddles in the maze frame (unscaled; `docs/tasks/m12d-charlottenburg-enemies.md` › Maze riddles).
+ * Kristallsockel: plinths in the three dead ends (north-east pocket, west pocket, the far west corridor);
+ * all lit opens the hedge gate across the far west corridor, behind it the hidden blessing (the fourth pocket).
+ * Spiegelpfad: two forks, one panel at the mouth of each way, facing the fork. Fork A east of the Rondell:
+ * the true way runs west into the Rondell, the wrong one north to the dead end. Fork B west of it: the true
+ * way runs north toward the gate, the wrong one south. Each wrong way ends with a sleeping Spiegelsouffleur.
+ */
+export const IRRGARTEN_RIDDLES = {
+  plinths: [[16, -11], [-17, 10], [-30.5, 1]] as Array<[number, number]>,
+  r: 1.5,
+  need: 2,
+  gate: { x: -30.5, z: -5, half: 2.6 },
+  blessing: [-30.5, -12] as [number, number],
+  mirrors: [
+    { x: 16.25, z: 4.75, fork: [19, 0], shows: true }, { x: 20.8, z: -5, fork: [19, 0], shows: false },
+    { x: -20.8, z: -5, fork: [-19, 0], shows: true }, { x: -20.8, z: 5, fork: [-19, 0], shows: false },
+  ] as Array<{ x: number; z: number; fork: [number, number]; shows: boolean }>,
+  souffleurs: [[20, -14], [-20, 14]] as Array<[number, number]>,
+} as const;
+
 /** Local hedge runs of the maze (x east, z south, around the Rondell centre). */
 function mazeHedges(): Array<Array<[number, number]>> {
   const { hx, hz, ring } = IRRGARTEN;
@@ -116,6 +137,7 @@ export function charlottenburgMap(scale = 1): MapDef {
   const M = { x: -75 * s, z: -98 * s };
   const gx = -3.5 * s, gz = C.z + 4;
   const KDW = { x: 148 * s, z: 197 * s };
+  const R6 = IRRGARTEN_RIDDLES;
 
   let g = 0;
   const tier = (n: number): number => CHARLOTTENBURG_TIER.from + (n * (CHARLOTTENBURG_TIER.to - CHARLOTTENBURG_TIER.from)) / (CHARLOTTENBURG_WAVES - 1);
@@ -411,8 +433,8 @@ export function charlottenburgMap(scale = 1): MapDef {
     // line between the Kantstraße and the Bismarckstraße rows), the north (Bismarckstraße, Schloßstraße, Klausener
     // Kiez) last. Area borders keep off the building rows (a lot must stand in its street's area). Lot types are
     // stand-ins until step 7.
-    { id: 'cityost', name: 'Tauentzien', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['parkplatz', 'hinterhof'], poly: [P(100, 97), P(104, 99), P(120, 107.5), at(capitol, -13.5, -5.2), at(capitol, 13.5, -5.2), at(elefantentor, 0, 0), at(aquarium, -3.4, 3), P(185, 116), P(185, 215), P(100, 215)] },
-    { id: 'kudamm', name: 'Neuer Westen', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['hinterhof', 'markt'], poly: line([[-135, 96], [30, 98], [60, 96], [84, 72], [92, 68], [100, 88], [100, 215], [-135, 215]]) },
+    { id: 'cityost', name: 'Tauentzien', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['droschkenplatz', 'passage'], poly: [P(100, 97), P(104, 99), P(120, 107.5), at(capitol, -13.5, -5.2), at(capitol, 13.5, -5.2), at(elefantentor, 0, 0), at(aquarium, -3.4, 3), P(185, 116), P(185, 215), P(100, 215)] },
+    { id: 'kudamm', name: 'Neuer Westen', ground: 'asphalt', frontage: 'altbau', trees: 0.2, specials: ['kinovorplatz', 'jazzhof', 'hinterhof'], poly: line([[-135, 96], [30, 98], [60, 96], [84, 72], [92, 68], [100, 88], [100, 215], [-135, 215]]) },
     // The north, traced round the Schloss, the Luisenplatz, the Hochschulviertel and the Zoo.
     { id: 'westend', name: 'Charlottenburg', ground: 'asphalt', frontage: 'altbau', trees: 0.25, specials: ['hinterhof', 'truemmer'],
       poly: [[bounds.minX, gateZ], [C.x + 29, gateZ], P(-20, -19), P(-20, -8), P(14, -8), P(14, -40), P(40, -40), ...hsWest, kv(bl, fenceV), [bounds.maxX, eastZ], P(185, 30), P(125, 52), P(92, 68), P(84, 72), P(60, 96), P(30, 98), P(-135, 96)] },
@@ -524,12 +546,15 @@ export function charlottenburgMap(scale = 1): MapDef {
     flavor: 'revue',
     shards: true,
     strictLots: true,
-    // Stand-in lot types stay few, so the Blockrand rows get the street fronts (step 7 picks the real ones).
-    specialMax: { hinterhof: 3, markt: 1, truemmer: 2, parkplatz: 1 },
+    // Step 7 (variant A): two lot types per street zone, still few, so the Blockrand rows keep the street fronts.
+    specialMax: { droschkenplatz: 1, passage: 1, kinovorplatz: 2, jazzhof: 1, hinterhof: 2, truemmer: 2 },
     viaducts,
     walls,
-    hiddenSpots: [endOf('Hinterhof Bleibtreustraße', 1.2, 0)],
+    hiddenSpots: [endOf('Hinterhof Bleibtreustraße', 1.2, 0), { x: M.x + R6.blessing[0], z: M.z + R6.blessing[1] }],
+    plinths: { pts: R6.plinths.map(([x, z]) => ({ x: M.x + x, z: M.z + z })), r: R6.r, need: R6.need, gate: { x: M.x + R6.gate.x, z: M.z + R6.gate.z, rot: 0, half: R6.gate.half } },
+    mirrors: R6.mirrors.map((q) => ({ x: M.x + q.x, z: M.z + q.z, rot: Math.atan2(q.fork[0] - q.x, q.fork[1] - q.z), shows: q.shows })),
     guards: [
+      ...R6.souffleurs.map(([x, z]) => ({ x: M.x + x, z: M.z + z, kind: 'souffleur' as const, elite: false, wake: 5, hp: 1 })),
       { ...endOf('Antilopenweg', 1.5, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 },
       { ...endOf('Varietéhof', 2, 0), kind: 'brute', elite: true, wake: 8, hp: 2.6 },
     ],
