@@ -2,24 +2,29 @@
 
 Final district (migration Q8, `docs/story.md` › Finale): "back up the Fernsehturm with all gears", the clock room in the sphere, all eras at once, then the choice.
 
-**Status: concept. Layout A "Aufstieg" is the recommendation and is NOT confirmed by Johannes (2026-11-21).** Mockup with A and B: [`../mockups/m17-fernsehturm-layouts.html`](../mockups/m17-fernsehturm-layouts.html) (PNG beside it). Plan and steps: `docs/tasks/m17-fernsehturm.md`. Notes are short on purpose; Opus writes the final text with the data step. If Johannes picks B, section *B Splitterring* below is the starting point and the task file needs a new plan.
+**Status: concept done. Johannes picked layout A "Aufstieg" (2026-11-21).** Order (Johannes, 2026-11-21): Charlottenburg, then Wedding, then this finale; it opens when all six districts are freed. Mockup with A and B: [`../mockups/m17-fernsehturm-layouts.html`](../mockups/m17-fernsehturm-layouts.html) (PNG beside it). Plan and steps: `docs/tasks/m17-fernsehturm.md`. Notes are short on purpose; Opus writes the final text with the data step.
 
 ## Problem
 
 The Fernsehturm already stands in Alexanderplatz (map 3): inside the loop, visible from every fight, the Rathausforum around it walkable (side branches, a hidden blessing), Marienkirche and Neptunbrunnen beside it, reveal shot, golden hour. Only the tower door is locked. A finale on the ground at the tower would replay that place.
 
-## Decisions (proposed, Johannes confirms)
+## Decisions
 
 | # | Decision | By |
 |---|---|---|
-| F1 | Layout A "Aufstieg": the finale plays inside the tower, on five round decks one above the other, joined by the lift. No street, no lot, no ground map | Claude, proposed |
-| F2 | Each deck is one ring arena (walkable ring around a solid core). One twist per deck: lift crank (hold), windows by compass bearing plus one clock hand, revolving floor, two clock hands plus the boss | Claude, proposed |
-| F3 | "All eras at once": no new ordinary enemies. Waves mix the existing kinds of two districts per deck; three district bosses return as weaker echoes | Claude, proposed |
-| F4 | Final boss: **Der Zeitwart** (working name), the last duty officer of the Zeitnormal. Not a clock machine (the Weltzeituhr boss of map 3 already is one). He holds the last part, **die Unruh** (balance wheel) | Claude, proposed |
-| F5 | Light: night at the foot, dawn at the top, one sky per deck, switched during the lift ride. From the sphere the city lies below with every district in its own light | Claude, proposed |
-| F6 | Entry: the finale opens when all five districts are freed. No fifth tunnel in the first version. Interface in *Entry* below | Claude, proposed |
-| F7 | Ending: after the boss, two rings at the main switch: „Uhr stellen“ or „Stehen lassen“. A card, a save flag, no rule change in the first version | Claude, proposed; consequences are Johannes' call (task file › Questions) |
-| F8 | Tier 40 to 62 (the +8 per district rule), provisional like Charlottenburg C4 | Claude, proposed |
+| F1 | Layout A "Aufstieg": the finale plays inside the tower, on five round decks one above the other, joined by the lift. No street, no lot, no ground map | Johannes, 2026-11-21 |
+| F2 | Each deck is one ring arena (walkable ring around a solid core). One twist per deck: lift crank (hold), windows by compass bearing plus one clock hand, revolving floor, two clock hands plus the boss | Part of A |
+| F3 | "All eras at once": no new ordinary enemies. Waves mix the existing kinds of two districts per deck (six districts, three fight decks); three district bosses return as weaker echoes | Part of A |
+| F4 | Final boss: **Der Zeitwart** (working name), the last duty officer of the Zeitnormal. Not a clock machine (the Weltzeituhr boss of map 3 already is one). He holds the last part, **die Unruh** (balance wheel) | Claude, proposed; Johannes decides with the style board |
+| F5 | Light: night at the foot, dawn at the top, one sky per deck, switched during the lift ride. From the sphere the city lies below with every district in its own light | Part of A |
+| F6 | Entry: opens when all six districts are freed; the game is linear. No tunnel of its own in the first version | Johannes, 2026-11-21 |
+| F7 | Ending: after the boss, two rings at the main switch: „Uhr stellen“ or „Stehen lassen“. A card and a save flag, no rule change | Johannes, 2026-11-21 (took the recommendation) |
+| F8 | Tier 48 to 70 (the +8 per district rule with Wedding as district 6), provisional like Charlottenburg C4 | Claude, proposed |
+| F9 | Order: Charlottenburg, Wedding, Fernsehturm. Wedding is a played district after all (changes migration Q8); it has no task or map yet | Johannes, 2026-11-21 |
+| F10 | Style boards from Codex before the look and the boss are built (steps 2 and 3); the engine step does not wait for them. Prompts in the task file | Johannes, 2026-11-21 |
+| F11 | No „kommt bald“ window gag: Wedding is a freed district by then | Johannes, 2026-11-21 |
+| F12 | A new tower legendary: the spear „Telespargel“ (task file › Loot) | Johannes asked for one, 2026-11-21; design Claude, proposed |
+| F13 | Tower proportions: thicker shaft and sphere, flared foot (section *Tower proportions*), for map 3 and the finale. Variant 3 recommended | Open: Johannes picks 3 or 4 |
 
 ## Why A differs from the Alexanderplatz map
 
@@ -53,26 +58,40 @@ OpenStreetMap Nominatim, 2026-11-21. Origin: Fernsehturm (52.52083, 13.40942). F
 | Bahnhof Zoologischer Garten | −5206 | −1489 | 5.4 km | 254° W | Behind Mitte: Charlottenburg, 1920 |
 | Gedächtniskirche | −5028 | −1784 | 5.3 km | 250° W | Charlottenburg |
 | Schloss Charlottenburg | −7905 | −21 | 7.9 km | 270° W | Charlottenburg, furthest |
-| Leopoldplatz (Wedding) | −3404 | 2842 | 4.4 km | 310° NW | Not migrated; optional gag: boarded window „kommt bald“ |
+| Leopoldplatz (Wedding) | −3404 | 2842 | 4.4 km | 310° NW | North-west windows: Wedding, „kommt bald“ |
 | Tempelhofer Feld | −462 | −5161 | 5.2 km | 185° S | Not migrated; dark sector |
 
-Order on each line of sight is real: south-east Xhain then Köpenick, west Mitte then Charlottenburg, east Alexanderplatz at the foot.
+Order on each line of sight is real: south-east Xhain then Köpenick, west Mitte then Charlottenburg, north-west Wedding, east Alexanderplatz at the foot.
 
-Tower facts:
+Tower facts, checked 2026-11-21 (structurae.net with the German Wikipedia text, tv-turm.de FAQ, berlin.de, OSM tags, Wikidata):
 
-| Fact | Value | Source |
-|---|---|---|
-| Height | 368 m | OSM tag `height` (checked) |
-| Opened | 1969 | OSM tag `start_date` (checked) |
-| Sphere diameter | about 32 m | Memory, not checked |
-| Observation deck, revolving restaurant | about 203 m, about 207 m | Memory, not checked |
-| Stairs in the shaft | 986 steps | Memory, not checked |
-| Foot pavilion with folded roof wings | 1972 | Memory, not checked; shape as in `alex-world.ts` |
-| Sun reflection as a cross on the sphere | "Rache des Papstes" | Memory, not checked |
+| Fact | Value |
+|---|---|
+| Height | 368.03 m, opened 3 October 1969 |
+| Shaft | 248.78 m high; foot 32 m across, a 20 m high curved cone down to 16 m, then tapering to 9 m; portholes mark five sections |
+| Sphere | 32 m across, centre at 213.78 m |
+| Observation deck, restaurant | 203.78 m, 207.53 m; the restaurant turns twice an hour |
+| Antenna | 118 m |
+| Lifts, stairs | 2 visitor lifts (Wikidata), 986 steps |
+| Foot | Three pavilions with arrow-shaped plans and folded roofs, finished 1972; hexagonal geometry; a wide stair to the south-west; the entrance faces the S-Bahnhof |
 
-Wikipedia was rate limited on 2026-11-21. Check the memory rows from photos and the article in the look step (`docs/maps/landmarks.md`).
+Not checked: the sun reflection as a cross on the sphere ("Rache des Papstes"), from memory.
 
-Invented for the game (say so, do not present as real): the Uhrenraum under the dome (story), a walkable platform in the shaft at about 100 m, deck radius 17 m (real is about 16), the lift stopping between floors.
+Invented for the game (say so, do not present as real): the Uhrenraum under the dome (story), a walkable platform in the shaft at about 100 m (the real shaft is under 13 m across there), deck radius 17 m (real 16), one hexagonal foyer hall in place of the three pavilions, the lift stopping between floors.
+
+## Tower proportions (Johannes, 2026-11-21: "the tower looks very long, maybe not thick enough")
+
+Mockup: [`../mockups/m17-tower-proportions.html`](../mockups/m17-tower-proportions.html).
+
+| | Height | Sphere | Shaft (top to foot) | Antenna |
+|---|---|---|---|---|
+| Real | 368 m | 32 m | 9 to 16 m, foot flares to 32 m | 118 m |
+| Real, shrunk to 101 m | 101 m | 8.8 m | 2.5 to 4.4 m, foot 8.8 m | 32 m |
+| Map 3 today (`alex-world.ts`, `fernsehturm`) | 101 m | 17 m | 6.4 to 9.2 m, no flare | 21 m |
+| Variant 3 (recommended) | 101 m | 22 m | 8.6 to 12.8 m, foot flares to 19 m over the lowest 8 m | 19 m |
+| Variant 4 | 84 m | 23 m | 9.2 to 12.8 m, same foot | 14.5 m |
+
+Finding: the model is already twice as thick as the real tower at that height. It reads as a stick because the game camera sees mostly the foot and shaft, and the foot has no flare. The first M17 mockup drew the tower too thin (a drawing error, corrected). Variant 3 keeps the height the reveal camera is tuned for (`reveal.ts`: top 92). The picked variant applies to map 3 and to anything the finale shows of the tower; the pavilion ring and the landmark footprint (hx 15) stay.
 
 ## Decks (scale 1, meters, +X east, +Z south)
 
@@ -80,11 +99,11 @@ Decks lie side by side on the plane, 120 m apart, so collision stays 2D. Only th
 
 | Deck | Height label | Centre | Outer | Core | Era, sky | Content |
 |---|---|---|---|---|---|---|
-| E0 Foyer | 0 m | (0, 0) | Hexagon, r 26 | Lift core r 5 | Night | Start inside the south door (0, 20). Kiosk (rest stop and trader) at (−13, 15), outside the fight circle. First gear into the lift panel. Fight 1 round the core |
-| E1 Schacht | ≈100 m | (120, 0) | r 15 | Open well r 5.5 (blocked, see down) | Urzeit, dark | Lift stuck. Crank hold at (120, −10.5). Fight 2 |
+| E0 Foyer | 0 m | (0, 0) | Hexagon, r 26 | Lift core r 5 | Night | Start inside the north-east door (16.8, −10.9), the side of the S-Bahnhof as in reality. Kiosk (rest stop and trader) at (−13, 15), outside the fight circle. First gear into the lift panel. Fight 1 round the core |
+| E1 Schacht | ≈100 m | (120, 0) | r 15 | Open well r 5.5 (blocked, see down) | Urzeit + 2089, dark | Lift stuck. Crank hold at (120, −10.5). Fight 2 |
 | E2 Panoramaetage | 203 m | (240, 0) | r 17 | Lift core r 5 | 1981 + 1989, before dawn | Windows all round. One clock hand. Fight 3 |
-| E3 Telecafé | 207 m | (360, 0) | r 17 | Lift core r 5; bar: a 90° arc r 5 to 7.5 on the north side | 1920 + 2089, first light | Floor band r 8 to 14 revolves. Bar is the rest stop. Fight 4 |
-| E4 Uhrenraum | ≈214 m | (480, 0) | r 17 | The movement r 4, low (1.2 m) | All eras, the sun standing on the horizon | Five gear seats. Two clock hands. Der Zeitwart. Main switch at (480, −15) |
+| E3 Telecafé | 207 m | (360, 0) | r 17 | Lift core r 5; bar: a 90° arc r 5 to 7.5 on the north side | 1920 + kommt bald (Wedding), first light | Floor band r 8 to 14 revolves. Bar is the rest stop. Fight 4 |
+| E4 Uhrenraum | ≈220 m | (480, 0) | r 17 | The movement r 4, low (1.2 m) | All eras, the sun standing on the horizon | Six gear seats. Two clock hands. Der Zeitwart. Main switch at (480, −15) |
 
 Lift: door on the south face of each core (toward the camera). Arrival spot 2 m south of the door. Bounds x −30 … 510, z −30 … 30.
 
@@ -93,12 +112,12 @@ Lift: door on the south face of each core (toward the camera). Arrival spot 2 m 
 | # | Deck | Fight | Waves | Mix (existing kinds) | Twist |
 |---|---|---|---|---|---|
 | 1 | Foyer | foyer | 2 | walker, runner, brute, spitter | None: the Zeitlose come in from the forum through the broken glass |
-| 2 | Schacht | schacht | hold, then 2, echo Hauptmann | raptor, crow, walker | Hold the crank 35 s (tunnel generator rule); spawns come up the stairwell |
+| 2 | Schacht | schacht | hold, then 2, echo Hauptmann | raptor, crow; kabel, drone; walker | Hold the crank 35 s (tunnel generator rule); spawns come up the stairwell. Vines and cables in the shaft |
 | 3 | Panoramaetage | panorama | 3, echo Spreehexe | zuender, schild, heuler, rat; uhrwerk, wurzler, kernspeier | Enemies enter through the windows of their district's bearing (SE and E). One hand sweeps the ring |
-| 4 | Telecafé | telecafe | 3, echo Bassprediger | kabel, bass, drone; scherbe, loge, souffleur | The floor band turns and carries hero, enemies and drops. Laid tables on the sill as cover |
+| 4 | Telecafé | telecafe | 3, echo Diva | scherbe, loge, souffleur; the Wedding kinds once that district is built (until then 1920 only) | The floor band turns and carries hero, enemies and drops. Laid tables on the sill as cover: the revue and the eternal feast at one table |
 | 5 | Uhrenraum | uhrenraum | Boss | Summons from all eras | Two hands; gear holds at 66 % and 33 % |
 
-10 normal waves, 3 echoes, 1 boss; about 10 to 12 minutes. After each won fight the lift door opens; the hero sets the next gear at the panel (automatic) and rides up. The echo is the last wave of its fight.
+10 normal waves, 3 echoes, 1 boss; about 10 to 12 minutes. After each won fight the lift door opens; the hero sets the next gear at the panel (automatic) and rides up. The echo is the last wave of its fight. The Telecafé echo may become the Wedding boss (Der Ewige Gastgeber, a host in the revolving restaurant) once Wedding is built; decide then.
 
 ## Final boss: Der Zeitwart
 
@@ -108,7 +127,7 @@ Story: the duty officer who stood at the main switch between two seconds. The fi
 |---|---|---|---|
 | 1 Gestern | 100 to 66 % | Urzeit, 1920 | Zeigerhieb (wide arc, as `slam`), Sprung on a marked line (`pounce`), calls two raptors or Scherbentänzerinnen |
 | 2 Mauerzeit | 66 to 33 % | 1981, 1989 | Volley of five (`fan`), root field under the hero (`roots`), calls an Uhrwerkläufer |
-| 3 Morgen | 33 to 0 % | 2089, all | Zeitsprung: three blinks to marked spots, each with a shock ring (`bass`); calls drones; both hands faster |
+| 3 Morgen | 33 to 0 % | 2089, kommt bald | Zeitsprung: three blinks to marked spots, each with a shock ring (`bass`); calls drones; both hands faster |
 
 Arena: the minute hand (16 m, one turn in 12 s) and the hour hand (10 m, one turn in 30 s, the other way) sweep the ring the whole fight. At 66 % and 33 % he steps into the movement and cannot be hurt; the hero holds a gear seat (ring r 3.5, 6 s, adds every 2 s, the tunnel hold rule). Gear in: the boss is stunned 3 s, next phase. Fallback if a hold inside a boss fight costs too much: plain phase change as the Diva's tiers.
 
@@ -119,27 +138,27 @@ After the kill the movement lies open with the Unruh. Two rings at the main swit
 | Deck | Sky | Light sources |
 |---|---|---|
 | Foyer | Night, as the other districts; the forum outside the glass dark | Cold emergency strips, the warm kiosk, a red lift lamp |
-| Schacht | Almost black; green glow from below (the jungle climbed the shaft, as the ivy on the 2D sprite) | Caged work lamps on the wall, fireflies |
+| Schacht | Almost black; green glow from below (the jungle climbed the shaft, as the ivy on the 2D sprite), magenta and cyan from the cable trays | Caged work lamps on the wall, fireflies, sparking cables |
 | Panoramaetage | Deep blue before dawn | Floor lamps, console lights; the city glow through the glass |
-| Telecafé | Rose and pearl, first light | Table candles, bar lamps, bulb strings (1920), a neon sign (2089) |
+| Telecafé | Rose and pearl, first light | Table candles, bar lamps, bulb strings (1920), wish lamps and lanterns in gold and emerald (Wedding) |
 | Uhrenraum | The sun stands on the horizon and does not move: pale gold rim, long mullion shadows | Dial lamps on the movement, the glowing hands |
 
-The city image ("Stadtteppich"): one painted ground plane far below the sphere decks, visible past the deck edge and through the north windows. Each district is painted at its real bearing in its own light: Köpenick dark green with fog, Xhain fire orange with the Wall line, Alexanderplatz a patch of golden afternoon (the only daylight), Mitte magenta and cyan under a rain veil, Charlottenburg silver with searchlights, the camp a warm dot, the Spree through all of them. Code-painted first from the map data (`src/data/map-svg.ts` has every district's streets and water); Codex may paint the final image. The camera looks 24° to 64° below the horizon, so it sees this plane and never the sky. Cloud cards drift between.
+The city image ("Stadtteppich"): one painted ground plane far below the sphere decks, visible past the deck edge and through the north windows. Each district is painted at its real bearing in its own light: Köpenick dark green with fog, Xhain fire orange with the Wall line, Alexanderplatz a patch of golden afternoon (the only daylight), Mitte magenta and cyan under a rain veil, Charlottenburg silver with searchlights, Wedding gold and emerald lanterns, the camp a warm dot, the Spree through all of them. Code-painted first from the map data (`src/data/map-svg.ts` has every district's streets and water); Codex may paint the final image. The camera looks 24° to 64° below the horizon, so it sees this plane and never the sky. Cloud cards drift between.
 
 Interior style: 1969 space-age GDR (steel ribs, brown and orange enamel, cobalt and yellow from the Pioneer palette, restrained), brass clockwork of the Zeitnormal growing through it, worn as every landmark (soot, cracked glass, tarps). Style source: `docs/style-bible.md` (Alexanderplatz board for the materials, shared wear rules). The deck interiors need a look mockup before they are built.
 
 Camera: no ceilings drawn. The wall toward the camera is a knee-high sill; the north half carries the full window band. The core is cut at 4.3 m with a dark cap while the hero is north of it (V1 B cutaway). The movement in the Uhrenraum stays low.
 
-## Entry (interface note, Charlottenburg step 8 runs in parallel)
+## Entry
 
 | Topic | Note |
 |---|---|
-| Unlock | Districts 0 to 4 all freed (five gears). No line between Charlottenburg and the finale in the first version |
-| Network | `STOPS[5] = { name: 'Fernsehturm', station: 'S+U Alexanderplatz', map: 'turm' }`. `nextDestination` already returns a stop without a line; `linePlayable` is not involved. Needed: a rule that stop 5 opens only with all five freed, and a place on the board (the tower sits beside the Alexanderplatz stop) |
-| Links | Charlottenburg victory screen: „Zum Fernsehturm“ once stop 5 is open. Title: the main button follows `nextDestination` |
-| Not touched here | `src/data/lines.ts`, `src/ui/maps.ts` until Charlottenburg step 8 is merged; M17 step 4 does the wiring after it |
-| Later option | Line 4 as the Stadtbahn ride Zoo to Alexanderplatz (Charlottenburg C5), backlog. The stops are real (Zoologischer Garten, Tiergarten, Bellevue, Hauptbahnhof, Friedrichstraße, Hackescher Markt, Alexanderplatz: from memory) |
-| Arrival | The run starts at the foyer door; the last train on Normalzeit stands on the viaduct outside the north-east glass (bearing 57°) |
+| Unlock | Districts 0 to 5 all freed (six gears; Johannes, 2026-11-21). No line of its own in the first version |
+| Network | Wedding becomes `STOPS[5]`, the finale `STOPS[6] = { name: 'Fernsehturm', station: 'S+U Alexanderplatz', map: 'turm' }`. `nextDestination` already returns a stop without a line. Needed: a rule that the last stop opens only with all others freed, and a place on the board beside the Alexanderplatz stop |
+| Links | Wedding victory screen: „Zum Fernsehturm“. Title: the main button follows `nextDestination` |
+| Depends on | Wedding (district 6): no task, no map, no line yet; its board is `docs/style/wedding.png`, its story `docs/story.md`. M17 step 4 does the wiring after Wedding's flow step. Until then the finale is reachable by URL only (`?map=turm`) |
+| Later option | The Stadtbahn ride to Alexanderplatz as a line (Charlottenburg C5), backlog |
+| Arrival | The run starts at the foyer's north-east door; the last train on Normalzeit stands on the viaduct outside the glass (station at bearing 57°, 150 m) |
 
 ## Cost (estimate, not measured)
 
@@ -150,7 +169,7 @@ Camera: no ceilings drawn. The wall toward the camera is a knee-high sill; the n
 | Clock hands, lift ring, hold ring | FX layer cards, no lights | Same |
 | Lights | Pooled as everywhere; the count never changes | Same |
 | Sky switch | A new reflection environment per deck, rendered while the lift cut is dark | Same |
-| Load | All enemy bodies of five districts plus three echo bosses in one page: the real risk; measure on the Tab S9 | Same |
+| Load | Enemy bodies of six districts plus three echo bosses in one page: the real risk; measure on the Tab S9 | Same |
 
 District budget for comparison: under about 200 draw calls and 200k triangles (`guidelines.md` › Performance). Cloud browsers have no GPU; only the PC and the Tab S9 count.
 
@@ -158,14 +177,15 @@ District budget for comparison: under about 200 draw calls and 200k triangles (`
 
 | Risk | Answer |
 |---|---|
-| Feels small after five open districts | It is a finale: dense fights, three echoes, one boss, the view. Add a second fight per sphere deck only after a playtest |
+| Feels small after six open districts | It is a finale: dense fights, three echoes, one boss, the view. Add a second fight per sphere deck only after a playtest |
 | Core hides the hero | Cutaway of the core, low movement in the Uhrenraum, hero contour as the fallback |
 | Revolving floor touches many sim parts | Fallback: the band turns in the render only and the panorama drifts; no sim effect. Drop this first |
 | Load time and memory with all enemy families | Cap the roster to the kinds in *Flow*; load echo bosses with the map only; hardware check row |
 | The view carries the mood | Code-painted city image must already read; show it in the look mockup |
-| Tower interior facts from memory | Photo check in the look step |
+| Wedding is not built: its enemies, boss and stop are missing | Steps 1 to 3 do not need it (the Telecafé runs with 1920 kinds); step 4 waits for it |
+| No style board for the finale | Codex boards first (F10); steps 2 and 3 wait, step 1 does not |
 
-## B Splitterring (alternative, not specified further)
+## B Splitterring (not picked; kept for the record)
 
 Pieces of every district float around the sphere at 203 m, each at its real bearing: Alexanderplatz east, Xhain and Köpenick south-east, Mitte and Charlottenburg west. Hub: the Panoramaetage. Route as a figure eight through the hub, bridges of rail and viaduct, an S-Bahn car as a ferry, the Oberbaum arch between Xhain and Köpenick. Five fights of three waves, two echoes, the Zeitwart on the roof at the antenna foot; each phase docks one piece and floods the roof with its era. About 280 × 170 m, 650 m of route, about 15 minutes.
 

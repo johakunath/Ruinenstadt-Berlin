@@ -19,7 +19,8 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | M16 Charlottenburg step 7 rest: the zone 3 lot types placed by hand (Heckenkabinett, Gartentheater; mockup variant A) | Claude · Opus high | open: `docs/tasks/m16-charlottenburg.md` › Handover step 7 |
 | M16 Charlottenburg step 8 rest: tier calibration with the bot once B2 is decided (C4; tier 32 … 54 and U2 west 41 … 46 are provisional) | Claude · Opus medium | after B2: `docs/tasks/m16-charlottenburg.md` › Handover step 8 |
 | B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
-| M17 Fernsehturm finale: Johannes picks layout A „Aufstieg“ (recommended) or B „Splitterring“ (`docs/mockups/m17-fernsehturm-layouts.html`), then step 1 engine, data and blockout | Johannes, then Claude · Opus high (plan: Fable high, done) | waits for the pick: `docs/tasks/m17-fernsehturm.md`, spec `docs/maps/fernsehturm.md` |
+| M17 Fernsehturm finale, layout A „Aufstieg“ (Johannes, 2026-11-21): step 1 engine, data and blockout can start. Side items: Johannes gives Codex the two style-board prompts (step S) and picks the tower proportion variant for map 3 (step P, then a small Opus medium change) | Claude · Opus high (plan: Fable high, done); Johannes and Codex for S | open: `docs/tasks/m17-fernsehturm.md`, spec `docs/maps/fernsehturm.md` |
+| Wedding district (Johannes, 2026-11-21: played after Charlottenburg, before the finale): concept, layouts, geography check, plan | Claude · Fable high | open, no task file yet; board `docs/style/wedding.png`, story `docs/story.md` › Wedding |
 
 Finish a task: task file status and a handover of at most 8 lines, update this queue (delete the row when done; add a Playtest row in `docs/tasks/pt-hardware-checks.md` when Johannes must try it), update `docs/status.md` only for player-visible changes. Draft PR, one review, fixes, then ready and CI.
 
@@ -56,7 +57,8 @@ Reached 2026-11-18 for Köpenick: map, loot, inventory, save, weapons, powers, b
 | Q4 | 2D saves | Not imported |
 | Q7 | Map size | Concept first, size set by the Tab S9 |
 | Q8 | Districts | Köpenick, Xhain, Alexanderplatz, Mitte/Potsdamer Platz, Charlottenburg, Fernsehturm finale. Each redrawn. Not migrated: Tempelhof, Wedding, Spandau, Marzahn |
-| Q8a | Fernsehturm finale | Proposed 2026-11-21 (Claude · Fable high), **not yet confirmed by Johannes**: layout A „Aufstieg“, five decks inside the tower with the lift between, ring arenas, existing enemies of all eras, echo bosses, Der Zeitwart in the Uhrenraum, the ending choice; opens with all five districts freed. Not on the ground at the tower: the Alexanderplatz map already plays there. `docs/maps/fernsehturm.md` |
+| Q8a | Fernsehturm finale | Johannes, 2026-11-21: layout A „Aufstieg“, five decks inside the tower with the lift between, ring arenas, existing enemies of all eras, echo bosses, the ending choice as a card and a flag; opens when all other districts are freed. Not on the ground at the tower: the Alexanderplatz map already plays there. Boss Der Zeitwart is proposed, decided with the Codex style board. `docs/maps/fernsehturm.md` |
+| Q8b | Order | Johannes, 2026-11-21: Charlottenburg, Wedding, then the Fernsehturm finale. Wedding is played after all (changes Q8); it is not planned yet |
 | Q10 | Parity scope | P1 above: with endless mode and one tunnel; without threat levels and daily fight |
 | Q11 | Camp | Menu first; walkable 3D camp later. Walkable camp built in M20 (2026-11-18): opens with the S3 at Warschauer Straße, stations unlock as build sites |
 
