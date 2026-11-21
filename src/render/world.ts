@@ -74,7 +74,8 @@ export interface World {
    * Big maps: moon shadow and pooled lights follow the hero. The moon only moves when `shadow` is
    * true (the shadow map is re-rendered this frame), so a stale map never meets a moved light.
    */
-  follow?(x: number, z: number, shadow: boolean): void;
+  /** `uncut`: no V1 cutaway this frame (a landmark reveal shows the sight whole). */
+  follow?(x: number, z: number, shadow: boolean, uncut?: boolean): void;
   /** Moving map parts (ferry boat) at the interpolated sim time. */
   sync?(simTime: number): void;
   /** Breakable props (M4), drawn instanced so one can vanish. */

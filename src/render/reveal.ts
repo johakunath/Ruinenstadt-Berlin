@@ -15,9 +15,15 @@ import { FOV } from './camera';
 const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: number }>> = {
   rathaus: { top: 44, half: 15 }, kirche: { top: 40.5, half: 9 }, mueggelturm: { top: 33, half: 6.5 }, riesenrad: { top: 38, half: 18 },
   sbahnhof: { top: 10, half: 15 }, schloss: { top: 17.5, half: 12 }, forum: { top: 15, half: 22 },
+  // M15 Xhain (playtest 2026-11-20: no Xhain sight zoomed out). `near` from the bot's closest pass on the
+  // route: the Oberbaumbrücke 44 m (the last fight is at its south head), St. Thomas 58 m, the watchtower 34 m.
+  oberbaum: { top: 32, half: 22, near: 48 }, thomaskirche: { top: 34, half: 11, near: 62 }, wachturm: { top: 14, half: 4, near: 37 },
+  bethanien: { top: 22, half: 10 }, nkz: { top: 37, half: 20 }, ostbahnhof: { top: 17, half: 22 }, goerlitzer: { top: 11, half: 12 },
   // M15 Alexanderplatz.
-  weltzeituhr: { top: 10.5, half: 4.5 }, fernsehturm: { top: 92, half: 15, near: 32 }, dom: { top: 32, half: 13 }, palast: { top: 16, half: 18 },
-  rotesrathaus: { top: 45, half: 20 }, nikolaikirche: { top: 27, half: 10 }, hausdeslehrers: { top: 36, half: 11 }, kino: { top: 13, half: 15 },
+  // Playtest 2026-11-20: the bot's route passes the Fernsehturm footprint 79 m off and the Rotes Rathaus 18 m off, so
+  // neither ever fired at 32 and 12 m.
+  weltzeituhr: { top: 10.5, half: 4.5 }, fernsehturm: { top: 92, half: 15, near: 84 }, dom: { top: 32, half: 13 }, palast: { top: 16, half: 18 },
+  rotesrathaus: { top: 45, half: 20, near: 22 }, nikolaikirche: { top: 27, half: 10 }, hausdeslehrers: { top: 36, half: 11 }, kino: { top: 13, half: 15 },
   // M15 Mitte: the seven sights of the route (Kollhoff-Tower shows the Bahntower beside it).
   tor: { top: 26, half: 20 }, reichstag: { top: 23, half: 14 }, kanzleramt: { top: 25, half: 14 }, siegessaeule: { top: 49, half: 6 },
   sony: { top: 39, half: 30 }, kollhoff: { top: 70, half: 12 }, philharmonie: { top: 23, half: 16 },
@@ -31,7 +37,8 @@ const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: num
   elefantentor: { top: 10.5, half: 6.5 }, revuepalast: { top: 19, half: 8.5 }, theaterwestens: { top: 22, half: 7 },
 };
 /** German names for the hint while the view holds. */
-const NAMES: Partial<Record<LandmarkKind, string>> = { rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
+const NAMES: Partial<Record<LandmarkKind, string>> = { oberbaum: 'Oberbaumbrücke', thomaskirche: 'St. Thomas', wachturm: 'Grenzturm', bethanien: 'Bethanien', nkz: 'Neues Kreuzberger Zentrum', ostbahnhof: 'Ostbahnhof', goerlitzer: 'Görlitzer Bahnhof',
+  rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
   weltzeituhr: 'Weltzeituhr', fernsehturm: 'Fernsehturm', dom: 'Berliner Dom', palast: 'Palast der Republik', rotesrathaus: 'Rotes Rathaus', nikolaikirche: 'Nikolaikirche', hausdeslehrers: 'Haus des Lehrers', kino: 'Kino International',
   gedaechtniskirche: 'Gedächtniskirche', kadewe: 'Kaufhaus des Westens', opernhaus: 'Deutsches Opernhaus', schlossmitte: 'Schloss Charlottenburg', belvedere: 'Belvedere',
   elefantentor: 'Elefantentor', revuepalast: 'Revuepalast', theaterwestens: 'Theater des Westens' };

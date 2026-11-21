@@ -7,7 +7,7 @@
 // Müggelberge (9 waves, Turmwächter) → ferry → Johannisthal → Spreepark (9 waves, Rex) → along the
 // Spree over the Lange Brücke → Rathaus (Hauptmann).
 // Meters, +X east, +Z south, origin at the Rathaus. `scale` stretches distances only.
-import { THREAT, type BossKind, type EnemyKind } from './enemies';
+import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { ellipse, type Stair, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street } from './map';
@@ -28,10 +28,10 @@ export function waveTier(g: number, bosses: BossKind[] = [], zone = g < 6 ? 0 : 
     raptor: zone === 2 ? 1.6 + (g - 13) * 0.4 : 0,
   };
   return {
-    count: Math.round(5 + g * 0.45),
-    maxAlive: Math.min(12, 6 + Math.floor(g / 3)),
+    count: Math.round((5 + g * 0.45) * lateTier(g).count),
+    maxAlive: Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count)),
     mix,
-    hpMul: 1 + g * 0.13,
+    hpMul: (1 + g * 0.13) * lateTier(g).hp,
     dmgMul: 1 + g * 0.06,
     bosses,
     elite: THREAT.eliteChance(g),

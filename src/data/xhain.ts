@@ -8,7 +8,7 @@
 // Kottbusser Tor → under the Hochbahn along the Skalitzer Straße → Görlitzer Park (Die Rattenmutter)
 // → Schlesisches Tor → Oberbaumbrücke (Die Spreehexe).
 // Meters, +X east, +Z south, origin at the Oberbaumbrücke. `scale` stretches distances only.
-import { THREAT, type BossKind, type EnemyKind } from './enemies';
+import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { lineDist, type Area, type Bridge, type Landmark, type MapDef, type Pt, type RailYard, type River, type Stair, type Street, type Terrace, type Viaduct, type Wall } from './map';
@@ -38,10 +38,10 @@ export function xhainWaveTier(g: number, bosses: BossKind[] = [], zone = 0): Wav
     heuler: zone === 2 ? 0.6 : 0,
   };
   return {
-    count: Math.round(5 + g * 0.45),
-    maxAlive: Math.min(12, 6 + Math.floor(g / 3)),
+    count: Math.round((5 + g * 0.45) * lateTier(g).count),
+    maxAlive: Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count)),
     mix,
-    hpMul: 1 + g * 0.13,
+    hpMul: (1 + g * 0.13) * lateTier(g).hp,
     dmgMul: 1 + g * 0.06,
     bosses,
     elite: THREAT.eliteChance(g),

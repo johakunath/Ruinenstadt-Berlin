@@ -2656,12 +2656,14 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         bt.group.position.y = 0.04 * Math.sin(simTime * 1.3);
       }
     },
-    follow(x: number, z: number, shadow: boolean): void {
+    follow(x: number, z: number, shadow: boolean, uncut = false): void {
       hx = x;
       hz = z;
       breakableView?.near(x, z);
       for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
-      cutaway.update(x, z);
+      // A reveal looks at the landmark itself, whose cut zone holds its footprint: keep it whole then.
+      if (uncut) cutaway.update(1e6, 1e6);
+      else cutaway.update(x, z);
       // The light moves only with a fresh shadow map, or static shadows would swim between renders.
       if (!shadow) return;
       // Snap the shadow frustum to whole texels so shadows do not shimmer while walking.

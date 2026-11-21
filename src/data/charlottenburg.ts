@@ -10,7 +10,7 @@
 // Karpfenteich → Belvedere (boss 3) → the Orangerie ruin as mirror gallery → Ehrenhof (the district boss).
 // Meters, +X east, +Z south. `scale` stretches distances only; the Schloss, the maze, the KaDeWe and the
 // Zoo gates keep their size (parts are placed relative to one anchor, so they stay joined at every scale).
-import { THREAT, type BossKind, type EnemyKind } from './enemies';
+import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { ellipse, type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Stair, type Street, type Terrace, type Viaduct, type Wall } from './map';
@@ -45,10 +45,10 @@ export function charlottenburgWaveTier(g: number, bosses: BossKind[] = [], zone 
   const mix: Partial<Record<EnemyKind, number>> = { ...base };
   for (const [k, v] of Object.entries(extra) as Array<[EnemyKind, number]>) mix[k] = (mix[k] ?? 0) + v;
   return {
-    count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1)),
-    maxAlive: Math.min(12, 6 + Math.floor(g / 3)) - (calm ? 3 : 0),
+    count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1) * lateTier(g).count),
+    maxAlive: Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count)) - (calm ? 3 : 0),
     mix,
-    hpMul: 1 + g * 0.13,
+    hpMul: (1 + g * 0.13) * lateTier(g).hp,
     dmgMul: 1 + g * 0.06,
     bosses,
     elite: calm ? 0 : THREAT.eliteChance(g),

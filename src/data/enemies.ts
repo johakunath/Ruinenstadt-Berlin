@@ -396,6 +396,18 @@ export const ELITE_MODS = Object.keys(ELITES) as EliteMod[];
  * times the 2D seconds. `floor`: a telegraphed hit takes at least this share of max life
  * (2D `bigHit`), so dodging matters at any gear level; the 45 % cap still holds.
  */
+/**
+ * Playtest 2026-11-20 (Johannes two-shots normal enemies after Xhain): hero power multiplies (item
+ * level, affixes, workshop, drill, Aufsätze) while wave life grew only linearly. From tier 10 on a
+ * wave has fewer, tougher enemies: life +5 % and count -2.5 % (relative) per tier. Tier 19 (Köpenick's
+ * end): ×1.45 life, ×0.82 count; tier 30: ×2.0, ×0.67; tier 38: ×2.4, ×0.59. Wave life in all rises
+ * 20 to 40 %; fewer bodies at once also lighten the tablet (CPU-bound at 25 to 38 alive).
+ */
+export function lateTier(g: number): { hp: number; count: number } {
+  const t = Math.max(0, g - 10);
+  return { hp: 1 + t * 0.05, count: 1 / (1 + t * 0.025) };
+}
+
 export const THREAT = {
   /** Punish window after a special: the body stands open and takes more damage (2D `TACO`, +30 %). */
   openBonus: 1.3,

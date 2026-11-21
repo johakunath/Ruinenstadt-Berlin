@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { CHARLOTTENBURG_BOSSES, charlottenburgMap, IRRGARTEN, PLATFORM } from './charlottenburg';
+import { lateTier } from './enemies';
+
+/** Wave tier from its life multiplier (inverse of (1 + 0.13 g) × lateTier, by bisection). */
+const tierOf = (h: number): number => { let a = 0, b = 100; for (let i = 0; i < 60; i++) { const g = (a + b) / 2; if ((1 + g * 0.13) * lateTier(g).hp < h) a = g; else b = g; } return (a + b) / 2; };
+const hpAt = (g: number): number => (1 + g * 0.13) * lateTier(g).hp;
 import { EDGE_FRONT, propCollider } from './courtyard';
 import { generateLots, generateProps, heightAt, inPoly, isWater, onStair, LAMP_CURB, landmarkColliders, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, OPEN_PARTS, SAME_KIND_GAP, streetDist, type Landmark, type MapDef } from './map';
 import type { Level } from '../sim/level';
@@ -64,14 +69,14 @@ describe('Charlottenburg map (M16, layout C2)', () => {
       expect(kinds('karpfenteich')).toEqual(['crow', 'runner', 'scherbe', 'walker']);
       // The KaDeWe's mannequins: one more dancer weight than the Elefantentor wave of the same tier would have.
       const k = enc('kadewe').waves[0]!, e = enc('elefantentor').waves.at(-1)!;
-      expect(k.mix.scherbe! - e.mix.scherbe!).toBeCloseTo(1 + (k.hpMul - e.hpMul) / 0.13 * 0.06, 5);
+      expect(k.mix.scherbe! - e.mix.scherbe!).toBeCloseTo(1 + (tierOf(k.hpMul) - tierOf(e.hpMul)) * 0.06, 5);
       expect(m.encounters.flatMap((q) => q.waves).every((w) => !('schild' in w.mix) && !('zuender' in w.mix))).toBe(true);
     });
 
     it(`gets harder wave by wave from tier 32 to 54; the Karpfenteich is calm (scale ${scale})`, () => {
       const waves = normal(m);
-      expect(waves[0]!.hpMul).toBeCloseTo(1 + 32 * 0.13);
-      expect(waves.at(-1)!.hpMul).toBeCloseTo(1 + 54 * 0.13);
+      expect(waves[0]!.hpMul).toBeCloseTo(hpAt(32));
+      expect(waves.at(-1)!.hpMul).toBeCloseTo(hpAt(54));
       for (let i = 1; i < waves.length; i++) expect(waves[i]!.hpMul).toBeGreaterThan(waves[i - 1]!.hpMul);
       const pond = m.encounters.find((e) => e.id === 'karpfenteich')!, before = m.encounters.find((e) => e.id === 'irrgarten')!.waves.at(-1)!;
       for (const w of pond.waves) {

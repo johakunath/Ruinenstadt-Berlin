@@ -2,10 +2,10 @@ import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { BAG_SIZE, collectItem } from './inventory';
 import { makeItem } from './items';
-import { killDrops, lootLevel, spawnDrop, updateDrops } from './loot';
+import { killDrops, lootLevel, spawnDrop, TUNNEL_ITEMS, updateDrops } from './loot';
 import { Level, WalkGrid } from './level';
 import { createSim, stepSim } from './sim';
-import { spawnEnemy } from './enemies';
+import { makeElite, spawnEnemy } from './enemies';
 import { NO_INPUT, type Sim } from './types';
 
 const flat = (): Sim => createSim({ empty: true, seed: 5 });
@@ -20,6 +20,23 @@ function land(sim: Sim, ticks = 60): void {
 }
 
 describe('kill drops', () => {
+  it('tunnels drop fewer items (playtest 2026-11-20)', () => {
+    const count = (tunnel: boolean): number => {
+      const sim = flat();
+      (sim.level as { tunnel?: boolean }).tunnel = tunnel;
+      let item = 0;
+      for (let i = 0; i < 8000; i++) {
+        sim.drops.length = 0;
+        const e = spawnEnemy(sim, 2, 2, 'brute');
+        if (i % 4 === 0) makeElite(sim, e);
+        killDrops(sim, e);
+        item += sim.drops.filter((d) => d.content.kind === 'item').length;
+      }
+      return item;
+    };
+    expect(count(true) / count(false)).toBeCloseTo(TUNNEL_ITEMS, 1);
+  });
+
   it('walker chances match the 2D numbers', () => {
     const sim = flat();
     const n = 6000;

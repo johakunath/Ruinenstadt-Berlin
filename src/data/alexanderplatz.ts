@@ -8,7 +8,7 @@
 // (boss) → north up the Lichtenberger Straße → Karl-Marx-Allee (the Koloss) → Weltzeituhr (final boss).
 // The Fernsehturm, Marienkirche and Neptunbrunnen stand inside the loop: visible from every fight, free
 // for side branches. Meters, +X east, +Z south, origin the map centre. `scale` stretches distances only.
-import { THREAT, type BossKind, type EnemyKind } from './enemies';
+import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
 import { type Area, type Bridge, type Landmark, type MapDef, type Pt, type River, type Street, type Viaduct } from './map';
@@ -44,10 +44,10 @@ export function alexWaveTier(g: number, bosses: BossKind[] = [], zone = 0): Wave
     zuender: t < 1.5 ? 0 : 0.35,
   };
   return {
-    count: Math.round(5 + g * 0.45),
-    maxAlive: Math.min(12, 6 + Math.floor(g / 3)),
+    count: Math.round((5 + g * 0.45) * lateTier(g).count),
+    maxAlive: Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count)),
     mix,
-    hpMul: 1 + g * 0.13,
+    hpMul: (1 + g * 0.13) * lateTier(g).hp,
     dmgMul: 1 + g * 0.06,
     bosses,
     elite: THREAT.eliteChance(g),
