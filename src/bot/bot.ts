@@ -122,6 +122,16 @@ class Nav {
     }
   }
 
+  /** No wall or prop crosses the straight line from (x, z) to (tx, tz) (a thin probe every 0.25 m). */
+  private clear(x: number, z: number, tx: number, tz: number): boolean {
+    const n = Math.max(1, Math.ceil(Math.hypot(tx - x, tz - z) / 0.25));
+    for (let k = 1; k <= n; k++) {
+      const px = x + ((tx - x) * k) / n, pz = z + ((tz - z) * k) / n;
+      if (this.level.near(px, pz, 0.2).some((c) => colliderDistance(c, px, pz) < 0.05)) return false;
+    }
+    return true;
+  }
+
   /** Unit direction from (x, z) toward the target along walkable ground; null when there is no way. */
   toward(x: number, z: number, tx: number, tz: number, out: { x: number; z: number }): boolean {
     const d = Math.hypot(tx - x, tz - z);
@@ -134,11 +144,14 @@ class Nav {
     const b = this.level.bounds;
     let i = this.cell(x, z);
     if (this.dist[i] === -1) {
-      // Standing on a blocked cell (prop edge, boat): take the best neighbor.
+      // Standing on a blocked cell (prop edge, boat): take the best neighbor that can be walked to in a straight line.
+      // M18 (bot run in the Magendoktor): without the line check it picked a cell behind the pub wall and pushed into it.
       let best = -1;
       for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
         const n = i + dr * this.cols + dc;
         if (n < 0 || n >= this.dist.length || this.dist[n] === -1) continue;
+        const nc = n % this.cols, nr = (n - nc) / this.cols;
+        if (!this.clear(x, z, b.minX + (nc + 0.5) * CELL, b.minZ + (nr + 0.5) * CELL)) continue;
         if (best === -1 || this.dist[n]! < this.dist[best]!) best = n;
       }
       if (best === -1) return false;

@@ -20,16 +20,18 @@ describe('ported hero stats', () => {
     expect(() => heroStats({}, ctx)).toThrow('weapon');
   });
 
-  it.each(['kiez', 'spree', 'zit', 'tunnel'] as SetId[])('%s thresholds apply cumulatively at 2/3/5 pieces only', set => {
+  it.each(['kiez', 'spree', 'zit', 'tunnel', 'gast'] as SetId[])('%s thresholds apply cumulatively at 2/3/5 pieces only', set => {
     // No main stats/implicits: isolate the set contributions.
     const expected = {
       kiez: [{}, { res: 25 }, { res: 25, dmg: 60 }, { res: 25, dmg: 60, crit: 15, hp: 100 }],
       spree: [{}, { as: 25 }, { as: 25, el: 80 }, { as: 25, el: 130, spd: 10 }],
       zit: [{}, { hp: 120 }, { hp: 120, dmg: 55, res: 20 }, { hp: 320, dmg: 55, res: 20, leech: 4 }],
       tunnel: [{}, { cdr: 20 }, { cdr: 20, dmg: 50, regen: 2 }, { cdr: 20, dmg: 50, regen: 2, luck: 8, hp: 120 }],
-    }[set];
+      gast: [{}, { regen: 1.5 }, { regen: 1.5, dmg: 45, leech: 3 }, { regen: 1.5, dmg: 45, leech: 3, luck: 6, hp: 150 }],
+    }[set]!;
     for (const n of [1, 2, 3, 4, 5]) {
-      const equipment: Equipment = {};
+      // M18: the Pracht des Ewigen Gasts has no weapon piece; a plain weapon without affixes fills the slot.
+      const equipment: Equipment = SETS[set].pieces.w ? {} : { w: item({ slot: 'w', value: 0, base: 'rohr', kind: 'blade' }) };
       for (const slot of (Object.keys(SETS[set].pieces) as SlotId[]).slice(0, n)) equipment[slot] = item({ slot, set, value: 0, base: 'rohr', kind: slot === 't' || slot === 'r' ? 'krit' : 'blade' });
       expect(setCount(equipment, set)).toBe(n);
       const a = gearAffixes(equipment, context());

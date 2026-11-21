@@ -87,7 +87,7 @@ async function portraits(): Promise<void> {
     e.speed = 0;
     if (def.wake) e.wake = 0;
     const v = new EnemyView(assets, materials, def.body, false);
-    v.assign(e, false, false);
+    v.assign(e, false, null);
     scene.add(v.root);
     for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
     const o = PORTRAIT[k] ?? {};
@@ -149,7 +149,7 @@ async function sheet(): Promise<void> {
 const kind = q.get('kind') as EnemyKind | null;
 const kinds = kind ? [kind] : (Object.keys(ENEMIES) as EnemyKind[]);
 const n = kind ? Number(q.get('n') ?? 6) : kinds.length;
-let tris = 0;
+let tris = 0, calls = 0;
 const W = Number(q.get('w') ?? (kind ? 260 : 190)), H = Number(q.get('h') ?? 320);
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
@@ -211,7 +211,7 @@ for (let i = 0; i < n; i++) {
   if (q.get('wake') === 'strip') e.wake = (def.wake ?? 0) * (1 - f);
   else if (q.get('wake') !== null) e.wake = Number(q.get('wake'));
   const v = new EnemyView(assets, materials, def.body, false);
-  v.assign(e, q.get('neon') === '1', q.get('revue') === '1');
+  v.assign(e, q.get('neon') === '1', q.get('revue') === '1' ? 'revue' : q.get('fest') === '1' ? 'fest' : null);
   scene.add(v.root);
   // Let fades and springs settle on the pose.
   for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
@@ -222,11 +222,12 @@ for (let i = 0; i < n; i++) {
   renderer.setScissor(i * W, 0, W, H);
   renderer.render(scene, cam);
   tris += renderer.info.render.triangles;
+  calls += renderer.info.render.calls;
   scene.remove(v.root);
   sim.enemies.length = 0;
 }
 // Triangles drawn per view (all views summed; divide by n), for cost checks.
-document.title = `done ${kinds.join(' ')} tris=${Math.round(tris / Math.max(1, n))}`;
+document.title = `done ${kinds.join(' ')} tris=${Math.round(tris / Math.max(1, n))} calls=${Math.round(calls / Math.max(1, n))}`;
 }
 
 if (q.get('portrait')) await portraits();

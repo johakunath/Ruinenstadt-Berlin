@@ -5,13 +5,13 @@ export type RarityId = 0 | 1 | 2 | 3;
 export type ElementId = 'fire' | 'acid' | 'shock';
 export type EnemyKind = 'raser' | 'ghoul' | 'brute' | 'spitter' | 'koloss' | 'brand' | 'hauptmann' | 'hexe' | 'turm'
   | 'flieger' | 'rat' | 'bomb' | 'shield' | 'crow' | 'howl' | 'ratten' | 'ritter' | 'platte'
-  | 'volk' | 'uhr' | 'wurz' | 'kern' | 'kabel' | 'bass' | 'glas' | 'rauchglas' | 'spiegel';
+  | 'volk' | 'uhr' | 'wurz' | 'kern' | 'kabel' | 'bass' | 'glas' | 'rauchglas' | 'spiegel' | 'tee' | 'baklava' | 'teppich';
 export type AffixId = 'dmg' | 'as' | 'crit' | 'spd' | 'hp' | 'regen' | 'res' | 'el' | 'leech' | 'cdr' | 'luck';
 export type SlotId = 'w' | 'h' | 'a' | 'g' | 'f' | 't' | 'r' | 'i';
 export type WeaponKindId = 'blade' | 'hammer' | 'sling' | 'spear';
 export type AttributeKindId = 'krit' | 'tempo' | 'heil';
 export type ItemKindId = WeaponKindId | AttributeKindId | 'armor' | 'head' | 'hand' | 'feet';
-export type SetId = 'kiez' | 'spree' | 'zit' | 'tunnel';
+export type SetId = 'kiez' | 'spree' | 'zit' | 'tunnel' | 'gast';
 export type SetThreshold = 2 | 3 | 5;
 export type BaseId = 'latte' | 'rohr' | 'stahl' | 'machete' | 'brech' | 'vorschlag' | 'pflaster' | 'zange' | 'zwille'
   | 'nagel' | 'stein' | 'turm' | 'mauer' | 'ring' | 'leder' | 'helm' | 'mantel' | 'weste'
@@ -23,10 +23,10 @@ export type BaseId = 'latte' | 'rohr' | 'stahl' | 'machete' | 'brech' | 'vorschl
   | 'mikro' | 'poncho' | 'kmantel' | 'nbrille' | 'nauge' | 'zchip' | 'karm' | 'reflex' | 'bherz'
   | 'npumpe' | 'bassarm' | 'sichel' | 'werkh' | 'aufzieh' | 'zeiger' | 'blaumann' | 'stroh'
   | 'gartenh' | 'pickel' | 'kiezhelm' | 'kiezhand' | 'spreestief' | 'spreering' | 'topfhelm'
-  | 'eisenstief' | 'kiezbox' | 'schaffner' | 'weltuhr';
+  | 'eisenstief' | 'kiezbox' | 'schaffner' | 'weltuhr' | 'bestellung';
 export type LegendaryId = 'turm' | 'mauer' | 'ring' | 'spaeti' | 'panzer' | 'herz' | 'zitklinge' | 'pbrecher' | 'kraehe'
   | 'rattenmantel' | 'ritter' | 'auge' | 'siegsp' | 'bassarm' | 'pickel' | 'kiezbox'
-  | 'schaffner' | 'weltuhr';
+  | 'schaffner' | 'weltuhr' | 'bestellung';
 
 /** 2D RAR entries: display and item-value multiplier. */
 export interface RarityDefinition {
@@ -147,6 +147,10 @@ export const ENEMY_RESISTANCES: Readonly<Record<EnemyKind, EnemyResistance>> = {
   glas: { fire: 1, acid: 0.5, shock: 1.6 },
   rauchglas: { fire: 1, acid: 1.6, shock: 0.5 },
   spiegel: { fire: 1.6, acid: 0.6, shock: 1 },
+  // M18 Wedding (new): steam carries current, pastry burns, a woven carpet catches fire and shrugs off shock.
+  tee: { fire: 0.5, acid: 1, shock: 1.6 },
+  baklava: { fire: 1.6, acid: 0.6, shock: 1 },
+  teppich: { fire: 1.6, acid: 1.2, shock: 0.6 },
 };
 
 /** 2D AFX. */
@@ -244,6 +248,15 @@ export const SETS: Readonly<Record<SetId, SetDefinition>> = {
        h: { name: 'Stirnlampe des Tunnelläufers', kind: 'head', base: 'nbrille' },
        f: { name: 'Stiefel des Tunnelläufers', kind: 'feet', base: 'stiefel' } },
     bonusDescriptions: { '2': '−20% Abklingzeiten', '3': '+50% Schaden und +2 Leben pro Sekunde', '5': '+8 Beuteglück und +120 Leben' } },
+  // M18 Wedding (board: Pracht des Ewigen Gasts): five pieces on existing bases in a new palette; drops only on `fest` maps.
+  gast: { name: 'Pracht des Ewigen Gasts',
+    pieces:
+     { a: { name: 'Kaftan des Ewigen Gasts', kind: 'armor', base: 'mantel' },
+       g: { name: 'Handschuhe des Ewigen Gasts', kind: 'hand', base: 'handsch' },
+       f: { name: 'Stiefel des Ewigen Gasts', kind: 'feet', base: 'stiefel' },
+       t: { name: 'Feder des Ewigen Gasts', kind: 'tempo', base: 'feder' },
+       r: { name: 'Siegelring des Ewigen Gasts', kind: 'krit', base: 'siegel' } },
+    bonusDescriptions: { '2': '+1,5 Leben pro Sekunde', '3': '+45% Schaden und +3 Leben pro Kill', '5': '+6 Beuteglück und +150 Leben' } },
 };
 
 /** 2D SETB. */
@@ -261,6 +274,10 @@ export const SET_BONUSES: Readonly<Record<SetId, readonly SetBonus[]>> = {
   tunnel: [ { pieces: 2, affixes: { cdr: 20 } },
     { pieces: 3, affixes: { dmg: 50, regen: 2 } },
     { pieces: 5, affixes: { luck: 8, hp: 120 } } ],
+  // Start values (M18), to be checked by the balance bot.
+  gast: [ { pieces: 2, affixes: { regen: 1.5 } },
+    { pieces: 3, affixes: { dmg: 45, leech: 3 } },
+    { pieces: 5, affixes: { luck: 6, hp: 150 } } ],
 };
 
 /** 2D SETC. */
@@ -286,6 +303,8 @@ export const LEGENDARY_POWERS: Readonly<Record<LegendaryId, LegendaryPower>> = {
   kiezbox: { description: 'Jeder vierte Treffer betäubt den Gegner kurz' },
   schaffner: { description: 'Jeder Kill verkürzt die Sprint-Abklingzeit um 0,5 Sekunden' },
   weltuhr: { description: 'Dein erster Angriff nach einem Sprint ist immer ein Krit' },
+  // M18 Wedding: the wish-lamp hammer (only on `fest` maps).
+  bestellung: { description: 'Jeder dritte Treffer verbrüht Gegner ringsum mit heißem Tee' },
 };
 
 /** 2D LEGEL. */
@@ -297,6 +316,7 @@ export const LEGENDARY_ELEMENTS: Readonly<Partial<Record<LegendaryId, ElementId>
   pbrecher: 'fire',
   kraehe: 'acid',
   siegsp: 'fire',
+  bestellung: 'fire',
 };
 
 /** 2D SLOTS. */

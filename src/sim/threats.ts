@@ -41,7 +41,7 @@ export interface Special {
   floor?: number;
 }
 
-export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail' | 'acid' | 'shove' | 'land' | 'root' | 'slab' | 'hour' | 'shard' | 'faust' | 'prism' | 'applause';
+export type ZoneKind = 'slam' | 'flame' | 'bomb' | 'tail' | 'acid' | 'shove' | 'land' | 'root' | 'slab' | 'hour' | 'shard' | 'faust' | 'prism' | 'applause' | 'tea' | 'carpet';
 /** A marked circle: fills for `max` seconds, then hits the hero inside it. */
 export interface Zone {
   x: number; z: number; r: number; t: number; max: number; damage: number; floor: number; kind: ZoneKind; src: number;
@@ -126,7 +126,7 @@ export function threatHit(sim: Sim, src: Enemy | null, raw: number, floor: numbe
 /** German name of what a threat is, with the enemy that made it when it still lives (death summary). */
 const THREAT_NAME: Record<ZoneKind | 'shot' | 'fire' | 'acid' | 'wave' | 'sweep' | 'barrier', string> = {
   slam: 'Stampfer', flame: 'Flammen', bomb: 'Sprengsatz', tail: 'Schwanzhieb', acid: 'Säure', shove: 'Stoß', land: 'Landung', root: 'Wurzeln', slab: 'Platte', hour: 'Stundenschlag',
-  shard: 'Scherben', faust: 'Faustschlag', prism: 'Prismenstrahl', applause: 'Applaus',
+  shard: 'Scherben', faust: 'Faustschlag', prism: 'Prismenstrahl', applause: 'Applaus', tea: 'Teeglas', carpet: 'Teppichbahn',
   shot: 'Geschoss', fire: 'Feuer', wave: 'Druckwelle', sweep: 'Zeiger', barrier: 'Neonschranke',
 };
 export function threatBy(sim: Sim, what: keyof typeof THREAT_NAME, src?: number): string {

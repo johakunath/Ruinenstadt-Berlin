@@ -27,7 +27,7 @@ const lost = (e: Enemy): number => e.maxHp - e.hp;
 
 describe('legendary powers (2D hasL)', () => {
   it('every legendary with a power text has a rule here', () => {
-    const tested: LegendaryId[] = ['turm', 'mauer', 'ring', 'spaeti', 'panzer', 'herz', 'zitklinge', 'pbrecher', 'kraehe', 'rattenmantel', 'ritter', 'auge', 'siegsp', 'bassarm', 'pickel', 'kiezbox', 'schaffner', 'weltuhr'];
+    const tested: LegendaryId[] = ['turm', 'mauer', 'ring', 'spaeti', 'panzer', 'herz', 'zitklinge', 'pbrecher', 'kraehe', 'rattenmantel', 'ritter', 'auge', 'siegsp', 'bassarm', 'pickel', 'kiezbox', 'schaffner', 'weltuhr', 'bestellung'];
     expect(new Set(tested)).toEqual(new Set(Object.keys(LEGENDARY_POWERS)));
     expect(hasL(fresh('turm'), 'turm')).toBe(true);
     expect(hasL(fresh('turm'), 'auge')).toBe(false);
@@ -149,6 +149,17 @@ describe('legendary powers (2D hasL)', () => {
     strike(k, t, 10, { feel: 'none' });
     expect(t.state).toBe('stagger');
     expect(t.staggerDur).toBeCloseTo(0.5);
+  });
+  it('Die Letzte Bestellung (M18): every third hit spills hot tea (fire, half the hit) on enemies within 2.5 m', () => {
+    const s = fresh('bestellung', 'hammer'), e = dummy(s, 0, 2), n = dummy(s, 1.5, 2), far = dummy(s, 4, 2);
+    for (let i = 0; i < 2; i++) strike(s, e, 100, { feel: 'none' });
+    expect(lost(n)).toBe(0);
+    strike(s, e, 100, { feel: 'none' });
+    expect(lost(n)).toBe(50);
+    expect(lost(far)).toBe(0);
+    // The splash itself does not count as a hit for the next splash.
+    strike(s, e, 100, { feel: 'none' });
+    expect(lost(n)).toBe(50);
   });
   it('Weltzeituhr: the first attack after a dodge crits, the next does not', () => {
     const s = fresh('weltuhr');

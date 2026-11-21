@@ -119,6 +119,10 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
   // Brass buttons as the mockup's (the yellow buckle is the gear belt's).
   'mantel:tunnel': { roles: { coat: '#7a6a34', hem: '#e0a020', cuff: '#e0a020', trousers: '#3a3c36', leather: '#3a2414', brass: '#c9a34a' } },
   'stiefel:tunnel': { roles: { boot: '#3a2a1c', sole: '#1e140c' } },
+  // M18 Pracht des Ewigen Gasts (board Wedding): emerald kaftan, ruby hem and trousers, gold brass; gold gloves, ruby boots.
+  'mantel:gast': { roles: { coat: '#1f6a4a', hem: '#9a1c3a', cuff: '#d4a62a', trousers: '#7a1830', leather: '#4a2a18', brass: '#f2d14b' } },
+  'handsch:gast': { roles: { glove: '#c8a040', cuff: '#9a1c3a' } },
+  'stiefel:gast': { roles: { boot: '#8a1c34', sole: '#c8a040' } },
 };
 
 /** What one item base puts on the hero. Every field is optional; the slot's default fills the rest. */
@@ -161,6 +165,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     'mantel:spree': { palette: 'mantel:spree', scarf: 'none', gear: ['collar-reed', 'seams-spree', 'belt-sash'] },
     'kette:zit': { cut: CUT.knee, palette: 'kette:zit', scarf: 'none', gear: ['tabard', 'belt-knight-short'] },
     'mantel:tunnel': { palette: 'mantel:tunnel', scarf: 'none', gear: ['harness', 'kneepads-teal', 'belt-tunnel'] },
+    'mantel:gast': { palette: 'mantel:gast', scarf: 'none', puff: 0.024, gear: ['belt-plain'] },
   },
   h: {
     helm: { gear: ['hat-hard'] },
@@ -181,6 +186,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     gartenh: { palette: 'gartenh', gear: ['wrist-garden'] },
     kiezbox: { gloves: null, gear: ['boxing'], covers: ['hands'] },
     kiezhand: { palette: 'kiezhand', gear: ['knuckles-kiez', 'wrist-kiez'] },
+    'handsch:gast': { palette: 'handsch:gast' },
   },
   f: {
     turnsch: { boots: 'turnsch', palette: 'turnsch', gear: ['sneaker-stripes'] },
@@ -190,6 +196,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     spreestief: { palette: 'spreestief', gear: ['shaft-wrapped'] },
     eisenstief: { palette: 'eisenstief', gear: ['greaves'] },
     'stiefel:tunnel': { palette: 'stiefel:tunnel', gear: ['puttees'] },
+    'stiefel:gast': { palette: 'stiefel:gast' },
   },
 };
 

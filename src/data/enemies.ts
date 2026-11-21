@@ -12,23 +12,26 @@
 // M16 Charlottenburg (`docs/tasks/m12d-charlottenburg-enemies.md`; 2D has nothing for this district): glass bodies
 // that burst on maps with `shards`. The Scherbentänzerin spins along a line, the Logenbrecher blocks with a glass
 // front and slams a marked circle, the Spiegelsouffleur cues the others on and throws shard fans; four revue bosses.
+// M18 Wedding (`docs/tasks/m12e-wedding-enemies.md`; 2D has nothing): feast beings on existing brains. The Tee-Ifrit lobs
+// tea glasses, the Baklava-Brocken blocks with a tray, the Teppichschlinger dives along a marked line; four bosses.
 import { DEG } from '../sim/math';
 import type { EnemyKind as ResKind } from './items';
 
 export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffner' | 'grenzer' | 'brandmeister' | 'rattenmutter' | 'spreehexe'
   | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
   | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr'
-  | 'conferencier' | 'ringvater' | 'spiegelpaar' | 'diva';
+  | 'conferencier' | 'ringvater' | 'spiegelpaar' | 'diva'
+  | 'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan';
 export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
-  | 'zuender' | 'schild' | 'heuler' | 'scherbe' | 'loge' | 'souffleur' | 'spiegelbild' | BossKind;
+  | 'zuender' | 'schild' | 'heuler' | 'scherbe' | 'loge' | 'souffleur' | 'spiegelbild' | 'teeifrit' | 'baklava' | 'teppich' | BossKind;
 /**
  * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
  * `mechBig` are the Quaternius mechs Leela and Mike, `kern` the code-built Kernspeier, `koloss` the walking slab,
  * `clock` the Weltzeituhr (the landmark itself, `src/render/clock.ts`). H3: `human` is the male humanoid bosses' base
  * (`human1.glb`, the zombie's body without the zombie repaint, same skeleton and clips); `female` the female ones
- * (`human2.glb`, UBC Superhero_Female, the hero's proportions).
+ * (`human2.glb`, UBC Superhero_Female, the hero's proportions). M18: `carpet` the code-built Teppichschlinger.
  */
-export type BodyKind = 'zombie' | 'human' | 'female' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock';
+export type BodyKind = 'zombie' | 'human' | 'female' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock' | 'carpet';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
 export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | 'spiegelbild' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
@@ -107,6 +110,9 @@ export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> =
   // M16 Charlottenburg: the glass revue ghouls are Zeitlose (undead); the bosses are people of the revue.
   scherbe: ['untote'], loge: ['untote'], souffleur: ['untote'],
   conferencier: ['menschen'], ringvater: ['menschen'], spiegelpaar: ['menschen'], spiegelbild: ['menschen'], diva: ['menschen'],
+  // M18 Wedding: the tea spirit is undead, the pastry a plant (cut it), the carpet a flyer (shoot it).
+  teeifrit: ['untote'], baklava: ['pflanzen'], teppich: ['tiere'],
+  zugezogene: ['menschen'], hauptgericht: ['pflanzen'], bauherr: ['maschinen'], sultan: ['menschen'],
 };
 
 const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
@@ -241,6 +247,27 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     attackRange: 0, windup: 0.6, active: 0.12, recovery: 0.7,
     reach: 2.3, halfAngle: 60 * DEG, damage: 28, knockbackTaken: 0, poise: true, weight: 0, fly: true,
   },
+  // M18 Wedding (spec m12e). Near the Speier (24, 11): a tea spirit over a samovar. Keeps the Speier's distance and
+  // lobs a tea glass onto a marked circle (`THREAT.tea`, the Brandmeister's bottle block). Kill it first.
+  teeifrit: {
+    kind: 'teeifrit', name: 'Tee-Ifrit', body: 'zombie', ai: 'spitter', res: 'tee', radius: 0.36, scale: 1, hp: 26, speed: 2,
+    attackRange: 0, windup: 0.5, active: 0.1, recovery: 0.6,
+    reach: 1.4, halfAngle: 40 * DEG, damage: 11, knockbackTaken: 1.1, poise: false, weight: 0, cap: 3,
+  },
+  // Between the Schildträger and the Brocken (100, 26): a filo golem with a tray in front (the Schildträger's
+  // shield rule) and the Brocken's slam. Walk round it or open the tray with a stun.
+  baklava: {
+    kind: 'baklava', name: 'Baklava-Brocken', body: 'zombie', ai: 'brute', res: 'baklava', radius: 0.6, scale: 1.3, hp: 100, speed: 1.4,
+    attackRange: 1.9, windup: 0.85, active: 0.14, recovery: 0.9,
+    reach: 2.3, halfAngle: 60 * DEG, damage: 26, knockbackTaken: 0.45, poise: true, weight: 0, cap: 2,
+    shield: { arc: 1.2, front: 0.2, turn: 1.6, open: 2.2 },
+  },
+  // As the Krähe (14, 10): a flying carpet. Circles, then dives along a line marked from the start of its wind-up.
+  teppich: {
+    kind: 'teppich', name: 'Teppichschlinger', body: 'carpet', ai: 'crow', res: 'teppich', radius: 0.32, scale: 1.2, hp: 16, speed: 5,
+    attackRange: 0, windup: 0.35, active: 0.1, recovery: 0.5,
+    reach: 1.2, halfAngle: 40 * DEG, damage: 11, knockbackTaken: 1.4, poise: false, weight: 0, fly: true,
+  },
   // Zone bosses.
   feldwebel: {
     kind: 'feldwebel', name: 'Der Feldwebel', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
@@ -371,6 +398,35 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
   },
+  // M18 Wedding. Zone 1, inside the Magendoktor (Johannes, 2026-11-21): a newcomer hipster who wants to turn the pub
+  // into something new. The Feldwebel's brain: an e-scooter charge along a marked line (twice in rage), two Zecher,
+  // and one block of his own, a volley of thrown coffee cups (the Grenzer's five-shot fan).
+  zugezogene: {
+    kind: 'zugezogene', name: 'Der Zugezogene', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 1000, speed: 2.5,
+    attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
+    reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
+  },
+  // Zone 2, Brunnenplatz before the Amtsgericht: the Baklava-Brocken at boss size with a turning spit. The Rex's brain:
+  // the spit sweep (tail ring), steam rings, charges.
+  hauptgericht: {
+    kind: 'hauptgericht', name: 'Das Hauptgericht', body: 'zombie', ai: 'rex', res: 'baklava', radius: 1.1, scale: 2, hp: 2200, speed: 2,
+    attackRange: 2.6, windup: 0.75, active: 0.16, recovery: 0.9,
+    reach: 3.2, halfAngle: 60 * DEG, damage: 30, knockbackTaken: 0.1, poise: true, weight: 0, boss: true,
+  },
+  // Zone 3, Beamtentor: the Koloss slab under scaffold. The Koloss brain: precast slabs, a bolt spiral, the hammer;
+  // a building crew of two Brocken every third cycle.
+  bauherr: {
+    kind: 'bauherr', name: 'Der Ewige Bauherr', body: 'koloss', ai: 'volkskoloss', res: 'volk', radius: 1.7, scale: 1, hp: 3200, speed: 1.4,
+    attackRange: 0, windup: 0.7, active: 0.14, recovery: 0.8,
+    reach: 3, halfAngle: 70 * DEG, damage: 32, knockbackTaken: 0.05, poise: true, weight: 0, boss: true,
+  },
+  // District boss in the Hochzeitspalast: the eternal host on his carpet. The Diva's brain (`BOSS.sultan`): tea glass
+  // fans, carpet strips, tea spirits; three courses instead of gown tiers (no rage).
+  sultan: {
+    kind: 'sultan', name: 'Sultan Nimmersatt', body: 'human', ai: 'diva', res: 'tee', radius: 0.95, scale: 1.85, hp: 4400, speed: 2.4,
+    attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
+    reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
+  },
 };
 
 /** Life of every normal (non-boss) kind against the table above (playtest 2026-11-20: blessed heroes one-shot
@@ -494,6 +550,17 @@ export const THREAT = {
    * kind's base life × its wave life factor, a boss at most `bossCap` of its life per burst. Kills by shards burst too.
    */
   shards: { wind: 0.5, radius: 1.5, hit: 0.5, life: 0.4, bossCap: 0.02 },
+  // M18 Wedding (spec m12e).
+  /**
+   * Tee-Ifrit Teeglas: keeps the Speier's `near`..`far`; with a clear line within `range` every `every` s one glass
+   * lands on a marked circle r `radius` on the hero after `wind` s (×`damage`, floor 0) and leaves hot tea (a fire
+   * puddle r `puddle`, `puddleTime` s, ×`puddleDamage` a tick); open `open` s after the throw.
+   */
+  tea: { near: 200 * PX, far: 290 * PX, range: 13, every: [2.8, 3.6], wind: 1, radius: 1.2, damage: 1, open: 0.6, puddle: 0.9, puddleTime: 2.5, puddleDamage: 0.3 },
+  /** Teppichschlinger: the dive line is locked when the wind-up starts and marked; the wind-up is longer to read it. */
+  carpetDive: { wind: 0.55 },
+  /** „Honig klebt“ (`MapDef.honey`): walking speed factor inside a honey puddle. */
+  honey: 0.6,
   /** Chance of an elite per normal spawn in wave g (2D: min(25 %, 2.2 % per wave pair), from the third wave). */
   eliteChance: (g: number): number => (g < 3 ? 0 : Math.min(0.25, 0.011 * (g + 1))),
 } as const;
@@ -654,6 +721,32 @@ export const BOSS = {
     fan: 3.5, blades: 7, cone: 0.5, bladeSpeed: 9, bladeDamage: 0.5, bladeLife: 1.8, fanWind: 0.6, fanGap: 0.4, turn3: 20 * DEG,
     prism: 8, prismWind: 0.9, prismTime: 0.3, prismWidth: 1.2, prismHalf: 18, prismDamage: 1.2, prismFloor: 0.25, prismOpen: 1.5, cross: 45 * DEG, spread3: 25 * DEG,
     summon: 12, adds: 3, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
+  },
+  // M18 Wedding (spec m12e).
+  /**
+   * Der Zugezogene: two Zecher every `summon` s (`adds` Schlurfer, `runners` Hetzer, in rage `rageBrutes` Brocken too);
+   * the e-scooter charge (the charge block, short: `chargeMin`..`chargeMax` m, `chargeTime` s at `chargeSpeed`) every
+ * `charge` s, twice in rage `rageGap` s apart; coffee cups (the
+   * Grenzer's five-shot volley) every `volley` s within `volleyRange` m with a clear line.
+   */
+  zugezogene: {
+    charge: [5, 7] as [number, number], summon: 10, adds: 1, runners: 1, rageBrutes: 1, rageGap: 0.6, volley: 5, volleyRange: 8,
+    // A short scooter run for the tight pub (planning session 2026-11-21): 0.4 s at 12 m/s covers 4.8 m plus contact.
+    chargeMin: 2.5, chargeMax: 6, chargeWind: 0.6, chargeTime: 0.4, chargeSpeed: 12,
+  },
+  /** Bautrupp: `adds` Brocken every `addsEvery`-th Koloss cycle (instead of the Uhrwerkläufer). */
+  bauherr: { adds: 2 },
+  /**
+   * The Diva's numbers with his own: seven tea glasses a fan, a carpet strip `prismWidth` wide (ruby), Nachschlag:
+   * `adds` Tee-Ifrite, from phase 3 `carpets` Teppichschlinger. Courses at the Diva's tiers.
+   */
+  sultan: {
+    near: 4, far: 8,
+    fan: 3.5, blades: 7, cone: 0.5, bladeSpeed: 9, bladeDamage: 0.5, bladeLife: 1.8, fanWind: 0.6, fanGap: 0.4, turn3: 20 * DEG,
+    prism: 8, prismWind: 0.9, prismTime: 0.3, prismWidth: 1.4, prismHalf: 18, prismDamage: 1.2, prismFloor: 0.25, prismOpen: 1.5, cross: 45 * DEG, spread3: 25 * DEG,
+    // Bot runs 2026-11-21: one Tee-Ifrit every 14 s was tried (fights 111 to 341 s) and made it worse (106 s, 2.7 deaths a
+    // run: fewer kills, fewer heals). Two every 12 s stay.
+    summon: 12, adds: 2, carpets: 1, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
   },
 } as const;
 

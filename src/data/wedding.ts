@@ -11,7 +11,8 @@
 // AEG yard → the Hochzeitspalast in the roofless Maschinenhalle (the district boss).
 // Two corners stay unbuilt and are never in view: north-west of the Leopoldplatz and the Nettelbeckplatz, and
 // south of the Ringbahn west of the park. Meters, +X east, +Z south; `scale` stretches distances only.
-// Step 1 builds the map with stand-in enemies and bosses from existing kinds; step 2 swaps in the Wedding roster.
+// Enemies (step 2, `docs/tasks/m12e-wedding-enemies.md`): Zecher (the plain Zeitlose in pub dress on this `fest`
+// map), Tee-Ifrit, Baklava-Brocken, Teppichschlinger; the four Wedding bosses.
 import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, WaveDef, ZoneDef } from '../sim/level';
 import { DEG } from '../sim/math';
@@ -26,28 +27,28 @@ export const WEDDING_WAVES = 21;
 export const WEDDING_TIER = { from: 40, to: 62 } as const;
 
 /**
- * Stand-in bosses from existing kinds (step 2 builds the real ones): Der Zugezogene in the Magendoktor (the Feldwebel
- * brain: a charge, adds), Das Hauptgericht before the Amtsgericht, Der Ewige Bauherr before the Beamtentor (a big slab:
- * the Volkskoloss), Sultan Nimmersatt in the Hochzeitspalast (a final boss brain).
+ * The four bosses (step 2): Der Zugezogene in the Magendoktor, Das Hauptgericht before the Amtsgericht, Der Ewige
+ * Bauherr before the Beamtentor, Sultan Nimmersatt in the Hochzeitspalast.
  */
-export const WEDDING_BOSSES: Record<'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan', BossKind> = { zugezogene: 'feldwebel', hauptgericht: 'brandmeister', bauherr: 'volkskoloss', sultan: 'hauptmann' };
+export const WEDDING_BOSSES: Record<'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan', BossKind> = { zugezogene: 'zugezogene', hauptgericht: 'hauptgericht', bauherr: 'bauherr', sultan: 'sultan' };
 
 /** The Magendoktor fight (E2): two waves at 0.6 of the usual count, at most 6 alive, then the boss with two adds. */
 export const KNEIPE_FIGHT = { count: 0.6, maxAlive: 6, waves: 2, adds: 2 } as const;
 
 /**
- * Difficulty of wave `g` (40 … 62) in `zone`: the stand-in roster of existing kinds (walker weight 6 as
- * elsewhere; the walkers become the Zecher in step 2). The Humboldthöhe is `calm`: smaller waves, no
- * elites, flyers.
+ * Difficulty of wave `g` (40 … 62) in `zone` (walker weight 6 as elsewhere; on this `fest` map the plain kinds are
+ * the Zecher). The board kinds come in zone by zone: the Tee-Ifrit in the Leopoldkiez, the Baklava-Brocken and the
+ * Teppichschlinger from the Panke on, all three strongest in the ewiges Fest. `calm` (the Humboldthöhe): smaller
+ * waves, no elites, carpets. `pub` (the Magendoktor): Zecher only.
  */
-export function weddingWaveTier(g: number, bosses: BossKind[] = [], zone = 0, calm = false): WaveDef {
+export function weddingWaveTier(g: number, bosses: BossKind[] = [], zone = 0, calm = false, pub = false): WaveDef {
   const MIX: Array<Partial<Record<EnemyKind, number>>> = [
-    { walker: 6, runner: 1.2 + g * 0.05, brute: 0.5 + g * 0.03, spitter: 0.8 + g * 0.03, crow: 0.4 },
-    { walker: 6, runner: 1, spitter: 1.2, brute: 0.7, rat: 0.5, crow: 0.6 },
-    { walker: 6, runner: 1.1, brute: 0.9, spitter: 1, crow: 0.8 },
-    { walker: 6, brute: 1.1, spitter: 1.3, runner: 1 },
+    { walker: 6, runner: 1.2 + g * 0.05, brute: 0.5 + g * 0.03, spitter: 0.6 + g * 0.02, teeifrit: 0.6 },
+    { walker: 6, runner: 1, spitter: 0.6, brute: 0.5, teeifrit: 1, baklava: 0.6, teppich: 0.6 },
+    { walker: 6, runner: 1.1, brute: 0.5, teeifrit: 0.9, baklava: 0.7, teppich: 1 },
+    { walker: 6, runner: 0.6, brute: 0.5, teeifrit: 1.2, baklava: 0.9, teppich: 1 },
   ];
-  const mix = calm ? { walker: 6, crow: 1.6, runner: 1 } : MIX[zone] ?? MIX[0]!;
+  const mix = pub ? { walker: 6, runner: 1.2, brute: 0.4, spitter: 0.8 } : calm ? { walker: 6, teppich: 1.6, runner: 1 } : MIX[zone] ?? MIX[0]!;
   return {
     count: Math.round((5 + g * 0.45) * (calm ? 0.7 : 1) * lateTier(g).count),
     maxAlive: Math.max(calm ? 3 : 5, Math.round((Math.min(12, 6 + Math.floor(g / 3)) - (calm ? 3 : 0)) * lateTier(g).count)),
@@ -96,9 +97,9 @@ export function weddingMap(scale = 1): MapDef {
 
   let g = 0;
   const tier = (n: number): number => WEDDING_TIER.from + (n * (WEDDING_TIER.to - WEDDING_TIER.from)) / (WEDDING_WAVES - 1);
-  const encW = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number, calm = false): EncounterDef => {
+  const encW = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number, calm = false, pub = false): EncounterDef => {
     const list: WaveDef[] = [];
-    for (let i = 0; i < waves; i++) list.push(weddingWaveTier(tier(g++), [], zone, calm));
+    for (let i = 0; i < waves; i++) list.push(weddingWaveTier(tier(g++), [], zone, calm, pub));
     return { id, name, zone, x, z, r, waves: list, heal: NORMAL_HEAL };
   };
   const enc = (id: string, name: string, zone: number, x: number, z: number, r: number, waves: number, calm = false): EncounterDef => encW(id, name, zone, x * s, z * s, r, waves, calm);
@@ -112,9 +113,9 @@ export function weddingMap(scale = 1): MapDef {
    * same room as the third wave with two adds (the encounter heals fully when won, as a boss fight).
    */
   const pubFight = (): EncounterDef => {
-    const e = encW('magendoktor', 'Zum Magendoktor', 0, PUB.x, PUB.z, KNEIPE.r, KNEIPE_FIGHT.waves);
+    const e = encW('magendoktor', 'Zum Magendoktor', 0, PUB.x, PUB.z, KNEIPE.r, KNEIPE_FIGHT.waves, false, true);
     const waves = e.waves.map((w) => ({ ...w, count: Math.max(3, Math.round(w.count * KNEIPE_FIGHT.count)), maxAlive: Math.min(w.maxAlive, KNEIPE_FIGHT.maxAlive) }));
-    const boss: WaveDef = { ...weddingWaveTier(tier(Math.max(0, g - 1)), [B.zugezogene], 0), count: KNEIPE_FIGHT.adds, maxAlive: 4, elite: 0 };
+    const boss: WaveDef = { ...weddingWaveTier(tier(Math.max(0, g - 1)), [B.zugezogene], 0, false, true), count: KNEIPE_FIGHT.adds, maxAlive: 4, elite: 0 };
     return { ...e, waves: [...waves, boss], heal: 1, room: kneipeRoom(kneipe), bossAt: kneipeWorld(kneipe, KNEIPE.boss.x, KNEIPE.boss.z) };
   };
 

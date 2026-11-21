@@ -17,7 +17,7 @@
 // a cigarette girl), like the neon cables.
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
-  AnimationMixer, BoxGeometry, BufferGeometry, CatmullRomCurve3, Color, ExtrudeGeometry, Float32BufferAttribute, IcosahedronGeometry, LatheGeometry, OctahedronGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
+  AnimationMixer, BoxGeometry, BufferGeometry, CatmullRomCurve3, CircleGeometry, Color, ExtrudeGeometry, Float32BufferAttribute, IcosahedronGeometry, LatheGeometry, OctahedronGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, PlaneGeometry, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
   type AnimationClip, type Bone, type Object3D, type SkinnedMesh,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -31,7 +31,7 @@ import { ZAP_TIME } from './status-fx';
 import type { LitMaterial, Materials } from './materials';
 import { WeaponRack } from './weapons';
 import {
-  alexKit, assemble as assembleAlex, buildClockLegs, buildKern, buildKoloss, CLOCK_LEG, domeParts, emblemParts, keyParts, reachLeg, shieldParts, tf as tfAlex, zombieAlexGear,
+  alexKit, assemble as assembleAlex, buildClockLegs, buildKern, buildKoloss, CLOCK_LEG, KOLOSS, domeParts, emblemParts, keyParts, reachLeg, shieldParts, tf as tfAlex, zombieAlexGear,
   type ClockLeg, type Kern, type Koloss, type Part as AlexPart,
 } from './enemies-alex';
 import { clockMats, makeClockRig, type ClockRig } from './clock';
@@ -86,12 +86,18 @@ const TINTS: Record<EnemyKind, number[]> = {
   // M16 Charlottenburg 1920 (board: porcelain pale skin under violet light; the glass parts are gear).
   scherbe: [0xe6dce4, 0xdcd4e0], loge: [0x8c8494], souffleur: [0xd8d0dc],
   conferencier: [0xd8cec4], ringvater: [0xb8a494], spiegelpaar: [0xecdcdc], spiegelbild: [0xc8d8ec], diva: [0xf0e4e4],
+  // M18 Wedding (board: warm gold under lampions): an amber tea spirit, golden pastry, a ruddy regular, the Sultan.
+  teeifrit: [0xffa048, 0xff9040], baklava: [0xd8a050, 0xe0b060], teppich: [0xffffff],
+  zugezogene: [0xe8d0c0], hauptgericht: [0xd8a050], bauherr: [0xffffff], sultan: [0xdcb490],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
 /** M16: the 1920s dress of the plain Zeitlose on `revue` maps (render only, as the neon cables). */
 type RevueKey = 'revueTails' | 'revueUsher' | 'revuePage' | 'revueHand' | 'revueTray';
 const REVUE: Partial<Record<EnemyKind, readonly RevueKey[]>> = { walker: ['revueTails', 'revueUsher'], runner: ['revuePage'], brute: ['revueHand'], spitter: ['revueTray'] };
+/** M18: the Zecher (pub guests) on `fest` maps: a stained shirt and a mug; the Brocken keeps his hi-vis vest (after work). */
+type FestKey = 'festShirt' | 'festMug';
+const FEST: Partial<Record<EnemyKind, FestKey>> = { walker: 'festShirt', runner: 'festShirt', brute: 'festMug', spitter: 'festShirt' };
 
 /** Clothing tint per kind (multiplies the painted rags): uniforms for the 1906 garrison. */
 const CLOTH: Partial<Record<EnemyKind, number>> = {
@@ -108,6 +114,8 @@ const CLOTH: Partial<Record<EnemyKind, number>> = {
   zuender: 0x6a5a44, schild: 0x4a5058, heuler: 0x9a3a30,
   // M16 Charlottenburg 1920: tux black, plum, the Ringvater's dark suit, violet tights under the glass.
   loge: 0x1e1c24, souffleur: 0x3a2244, scherbe: 0x8a6aa8, conferencier: 0x16141a, ringvater: 0x24222a, spiegelpaar: 0x6a5a8a, spiegelbild: 0x5a7aa0, diva: 0x4a2a58,
+  // M18 Wedding: amber rags under the samovar, pastry brown, grey trousers, the Sultan's ruby.
+  teeifrit: 0xc87a3a, baklava: 0x8a5a2a, hauptgericht: 0x8a5a2a, zugezogene: 0x2a2a34, sultan: 0x7a1830,
 };
 const CLOTH_BRIGADE = 0x34528e;
 /** WP5: rag tints for normal ghouls without own clothing colour (multiplies the painted rags), one per body. */
@@ -138,6 +146,10 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   loge: { spine_02: 1.3, upperarm_l: 1.12, upperarm_r: 1.12, Head: 0.74 }, souffleur: { spine_02: 0.88, Head: 1.02 },
   conferencier: { spine_02: 0.96, Head: 0.98 }, ringvater: { spine_02: 1.26, upperarm_l: 1.12, upperarm_r: 1.12, Head: 0.84 },
   wurzler: { upperarm_l: 1.1, upperarm_r: 1.1, Head: 0.05 }, wurzelmutter: { spine_02: 1.12, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 },
+  // M18: the tea spirit has no legs (a samovar instead); the pastry golem's skull is a block; a belly for the regular and the Sultan.
+  teeifrit: { thigh_l: 0.05, thigh_r: 0.05, spine_02: 0.95, Head: 1.08 },
+  baklava: { spine_02: 1.3, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 }, hauptgericht: { spine_02: 1.3, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 },
+  zugezogene: { spine_02: 0.94, Head: 1.0 }, sultan: { spine_01: 1.25, spine_02: 1.15, Head: 0.95 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
@@ -147,12 +159,14 @@ const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
   loge: [1.14, 1], souffleur: [0.86, 1.08], scherbe: [0.86, 1.04], conferencier: [0.9, 1.08], ringvater: [1.18, 1], spiegelpaar: [0.9, 1.04], spiegelbild: [0.9, 1.04], diva: [0.9, 1.06],
+  baklava: [1.15, 1], hauptgericht: [1.15, 1], zugezogene: [0.92, 1.04], sultan: [1.1, 1],
 };
 /** H3: humanoid bosses stand upright (`EnemyView.straighten`); the Rattenmutter keeps her hunch. */
 const UPRIGHT: Partial<Record<EnemyKind, true>> = {
   feldwebel: true, hauptmann: true, schaffner: true, grenzer: true, brandmeister: true, spreehexe: true,
   tuersteher: true, dirigent: true, bassprediger: true, wurzelmutter: true,
   scherbe: true, conferencier: true, ringvater: true, spiegelpaar: true, spiegelbild: true, diva: true,
+  zugezogene: true, sultan: true, teeifrit: true,
 };
 /** The bones whose zombie-to-upright turn `straighten` applies. */
 const STRAIGHT = ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head', 'clavicle_l', 'clavicle_r'] as const;
@@ -165,6 +179,8 @@ const EYES: Partial<Record<EnemyKind, number>> = {
   spitter: 0x97ff5a, kabel: 0x43d1cf, tuersteher: 0xff4fa3, dirigent: 0xff4fa3,
   // M16: violet glass light in the revue ghouls; the reflection's eyes cold blue.
   scherbe: 0xc88cff, loge: 0xc88cff, souffleur: 0xc88cff, conferencier: 0xe8b4ff, spiegelpaar: 0xff8aa8, spiegelbild: 0x8ad8ff, diva: 0xffb4e0,
+  // M18: gold eyes in the tea spirit and the host, the regular's bleary amber.
+  teeifrit: 0xffe08a, zugezogene: 0xffb04a, sultan: 0xffd060,
 };
 /** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
 const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, brute: true };
@@ -185,6 +201,9 @@ interface GearKit {
   // M16 Charlottenburg (board `docs/style/charlottenburg.png`: silver-lilac cut glass, violet, crimson, pearls).
   glass: LitMaterial; smoke: LitMaterial; frost: LitMaterial; mirror: LitMaterial; velvet: LitMaterial; plum: LitMaterial; tux: LitMaterial;
   shirt: LitMaterial; feather: LitMaterial; pearl: LitMaterial; silver: LitMaterial; heart: LitMaterial; chandelier: LitMaterial; stagecloth: LitMaterial;
+  // M18 Wedding (board `docs/style/wedding.png`: gold, emerald, ruby, tea, baklava).
+  beer: LitMaterial; stain: LitMaterial; cardigan: LitMaterial; filo: LitMaterial; honey: LitMaterial; pistachio: LitMaterial; meat: LitMaterial;
+  tea: LitMaterial; steam: LitMaterial; emerald: LitMaterial; plume: LitMaterial; urn: LitMaterial; net: LitMaterial;
 }
 let kit: GearKit | null = null;
 function gearKit(m: Materials): GearKit {
@@ -269,6 +288,20 @@ function gearKit(m: Materials): GearKit {
     heart: m.surface({ color: 0x5a1020, emissive: 0xff5a6a, emissiveIntensity: 2.6, roughness: 0.3 }),
     chandelier: m.surface({ color: 0x3a2a12, emissive: 0xffc878, emissiveIntensity: 2.2, roughness: 0.4 }),
     stagecloth: m.surface({ color: 0x5a4a3a, roughness: 0.95, doubleSided: true }),
+    // M18 Wedding. The tea glows a little (emissive only, no light): the Tee-Ifrit's glasses, the Sultan's urn belly.
+    beer: m.surface({ color: 0xd89428, roughness: 0.25, metalness: 0.1 }),
+    stain: m.surface({ color: 0x8a6a3a, roughness: 0.95, doubleSided: true }),
+    cardigan: m.surface({ color: 0x6a4a30, roughness: 0.95, doubleSided: true }),
+    filo: m.surface({ color: 0xe0a64a, roughness: 0.75 }),
+    honey: m.surface({ color: 0xc8780e, roughness: 0.2, metalness: 0.25 }),
+    pistachio: m.surface({ color: 0x7aa83a, roughness: 0.8 }),
+    meat: m.surface({ color: 0x8a4a24, roughness: 0.8 }),
+    tea: m.surface({ color: 0x8a2a10, emissive: 0xff7a2a, emissiveIntensity: 0.9, roughness: 0.2 }),
+    steam: m.surface({ color: 0xf0e4d4, emissive: 0x6a5040, emissiveIntensity: 0.5, roughness: 0.9, doubleSided: true }),
+    emerald: m.surface({ color: 0x1f6a4a, roughness: 0.85, doubleSided: true }),
+    plume: m.surface({ color: 0xf0ece0, roughness: 0.9, doubleSided: true }),
+    urn: m.surface({ color: 0x6a1a10, emissive: 0xff8a3a, emissiveIntensity: 1.4, roughness: 0.15, metalness: 0.3 }),
+    net: m.surface({ color: 0x2f6a3a, roughness: 0.95, doubleSided: true }),
   };
   // The intensity each material was made with (animated glows change theirs; `assemble` sorts by this one).
   for (const mat of Object.values(kit)) mat.userData.baseEmissive ??= mat.emissiveIntensity;
@@ -833,7 +866,7 @@ function towerGear(model: Object3D, materials: Materials, castShadow: boolean): 
   return { list, shield: null, key: null, bones: TOWER_BONES, sparks };
 }
 
-function gearFor(kind: GearKey | RevueKey | 'cyber', model: Object3D, materials: Materials, castShadow: boolean, pulse?: LitMaterial): Object3D[] {
+function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, materials: Materials, castShadow: boolean, pulse?: LitMaterial): Object3D[] {
   const k = gearKit(materials);
   const out: Object3D[] = [];
   const bone = (n: string): Object3D | undefined => model.getObjectByName(n);
@@ -843,7 +876,9 @@ function gearFor(kind: GearKey | RevueKey | 'cyber', model: Object3D, materials:
   const paint = kind === 'feldwebel' || kind === 'hauptmann' || kind === 'schaffner' || kind === 'brandmeister' || kind === 'rattenmutter'
     // M16: every Charlottenburg body (glass and the glows keep their own material, the cloth merges).
     || kind === 'scherbe' || kind === 'loge' || kind === 'souffleur' || kind === 'conferencier' || kind === 'ringvater' || kind === 'spiegelpaar' || kind === 'spiegelbild' || kind === 'diva'
-    || kind.startsWith('revue');
+    || kind.startsWith('revue')
+    // M18: every Wedding body and the Zecher dress.
+    || kind === 'teeifrit' || kind === 'baklava' || kind === 'hauptgericht' || kind === 'zugezogene' || kind === 'sultan' || kind.startsWith('fest');
   const mount = (name: string, parts: Part[], dy = 0, dz = 0, dx = 0): Object3D | undefined => {
     const b = bone(name);
     if (!b) return undefined;
@@ -1450,6 +1485,172 @@ function gearFor(kind: GearKey | RevueKey | 'cyber', model: Object3D, materials:
       mount('neck_01', [[tf(new TorusGeometry(0.075, 0.014, 5, 16).scale(1.1, 1, 1.05), 0, -0.05, 0.012, Math.PI / 2 + 0.3), 'pearl']]);
       break;
     }
+    // M18 Wedding (spec m12e, board `docs/style/wedding.png`).
+    case 'teeifrit': {
+      // A tea spirit rising out of a brass samovar: the legs are scaled away, the samovar hangs under the pelvis to the
+      // ground, a skirt of steam over the join, steam wisps off the shoulders, a glowing tea glass in each hand.
+      mount('pelvis', [
+        [tf(new CylinderGeometry(0.15, 0.19, 0.07, 12), 0, -0.9, 0), 'brass'],
+        [tf(new CylinderGeometry(0.07, 0.11, 0.16, 10), 0, -0.79, 0), 'brass'],
+        [tf(new SphereGeometry(0.25, 14, 10).scale(1, 1.15, 1), 0, -0.48, 0), 'brass'],
+        [tf(new TorusGeometry(0.252, 0.022, 5, 18), 0, -0.48, 0, Math.PI / 2), 'tea'],
+        [tf(new TorusGeometry(0.2, 0.012, 4, 16), 0, -0.26, 0, Math.PI / 2), 'rust'],
+        [tf(new CylinderGeometry(0.018, 0.018, 0.14, 6), 0, -0.62, 0.27, Math.PI / 2), 'brass'],
+        [tf(new SphereGeometry(0.025, 6, 4), 0, -0.62, 0.34), 'tea'],
+        ...[-1, 1].map((sd): Part => [tf(new TorusGeometry(0.05, 0.012, 4, 10), sd * 0.27, -0.42, 0, 0, Math.PI / 2), 'brass']),
+        // The spirit's tail of steam: twisted wisps from the samovar's lid up into the waist.
+        ...[0, 1, 2, 3, 4].map((i): Part => {
+          const a = (i / 5) * Math.PI * 2;
+          return [cable([[Math.sin(a) * 0.08, -0.26, Math.cos(a) * 0.08], [Math.sin(a + 0.9) * 0.17, -0.14, Math.cos(a + 0.9) * 0.17], [Math.sin(a + 1.8) * 0.2, 0.0, Math.cos(a + 1.8) * 0.2]], 0.045), 'steam'];
+        }),
+      ]);
+      // Steam trails off the back (kept low and behind, so it never reads as horns).
+      mount('spine_03', [-1, 0, 1].map((k): Part => [cable([[k * 0.12, 0.0, -0.14], [k * 0.18, 0.06, -0.32], [k * 0.14, 0.16, -0.48], [k * 0.2, 0.2, -0.62]], 0.028), 'steam']), 0.08);
+      for (const sd of ['l', 'r']) mount(`hand_${sd}`, [
+        [tf(new CylinderGeometry(0.032, 0.024, 0.08, 8), 0, -0.08, 0.05), 'tea'],
+        [tf(new CylinderGeometry(0.05, 0.05, 0.01, 10), 0, -0.125, 0.05), 'brass'],
+      ]);
+      break;
+    }
+    case 'baklava': case 'hauptgericht': {
+      // A golem of stacked filo slabs with honey between the layers and on the fists, a block head with pistachio
+      // crumbs and green eyes. The Baklava-Brocken's silver tray is gear [0] (hangs from its top edge, swings aside
+      // while open); the Hauptgericht holds the tray in the left hand and turns a meat spit in the right (gear [0]).
+      const boss = kind === 'hauptgericht';
+      if (boss) {
+        mount('hand_r', [
+          // Held upright like a torch: the rod through the fist, the meat cone above it.
+          [tf(new CylinderGeometry(0.022, 0.022, 1.2, 6), 0, 0.35, 0.04), 'steel'],
+          [tf(new CylinderGeometry(0.18, 0.1, 0.55, 12), 0, 0.45, 0.04), 'meat'],
+          ...[0.3, 0.45, 0.6].map((y): Part => [tf(new TorusGeometry(0.11 + (y - 0.3) * 0.13, 0.014, 4, 14), 0, y, 0.04, Math.PI / 2), 'filo']),
+          [tf(new SphereGeometry(0.05, 8, 6), 0, 0.97, 0.04), 'brass'],
+          [tf(new CylinderGeometry(0.1, 0.1, 0.02, 12), 0, 0.15, 0.04), 'steel'],
+        ]);
+        mount('hand_l', [
+          [tf(new CylinderGeometry(0.3, 0.3, 0.02, 20), 0, -0.06, 0.12), 'silver'],
+          [tf(new TorusGeometry(0.3, 0.014, 4, 22), 0, -0.05, 0.12, Math.PI / 2), 'brass'],
+          ...[[-0.1, -0.06], [0.08, -0.1], [0, 0.1], [0.12, 0.08]].map(([x, z]): Part => [tf(new BoxGeometry(0.1, 0.05, 0.1), x!, -0.02, 0.12 + z!, 0, 0.4), 'filo']),
+        ]);
+      } else {
+        mount('spine_03', [
+          [tf(new CylinderGeometry(0.34, 0.34, 0.025, 24), 0, -0.34, 0, Math.PI / 2), 'silver'],
+          [tf(new TorusGeometry(0.34, 0.016, 5, 28), 0, -0.34, 0.012), 'brass'],
+          [tf(new TorusGeometry(0.22, 0.008, 4, 24), 0, -0.34, 0.016), 'brass'],
+          [tf(new SphereGeometry(0.03, 8, 6), 0, -0.34, 0.02), 'brass'],
+        ], 0.16, 0.36);
+      }
+      mount('neck_01', [
+        [tf(new BoxGeometry(0.34, 0.28, 0.3), 0, 0.16, 0.02), 'filo'],
+        ...[0.08, 0.17, 0.25].map((y): Part => [tf(new BoxGeometry(0.352, 0.022, 0.312), 0, y, 0.02), 'honey']),
+        ...[[-0.1, 0.06], [0.04, -0.05], [0.11, 0.08], [-0.03, 0.1], [0.08, -0.08]].map(([x, z]): Part => [tf(new BoxGeometry(0.04, 0.025, 0.04), x!, 0.31, z!, 0, x! * 6), 'pistachio']),
+        ...[-1, 1].map((sd): Part => [tf(new SphereGeometry(0.034, 8, 6), sd * 0.075, 0.18, 0.175), 'acid']),
+        [tf(new BoxGeometry(0.16, 0.03, 0.02), 0, 0.09, 0.172), 'dark'],
+      ]);
+      mount('spine_03', [
+        ...[-0.26, -0.09, 0.08].map((y, i): Part => [tf(new BoxGeometry(0.56 - i * 0.02, 0.15, 0.4), 0, y, 0.02, 0, (i - 1) * 0.08), 'filo']),
+        ...[-0.175, -0.005].map((y): Part => [tf(new BoxGeometry(0.58, 0.022, 0.41), 0, y, 0.02), 'honey']),
+        ...[[-0.2, -0.04], [0.06, -0.21], [0.22, -0.02], [-0.08, -0.36]].map(([x, y]): Part => [tf(new SphereGeometry(0.028, 6, 5).scale(1, 2.2, 1), x!, y!, 0.23), 'honey']),
+        ...[[-0.18, 0.16], [0.12, 0.17], [0.0, 0.15]].map(([x, y]): Part => [tf(new BoxGeometry(0.05, 0.03, 0.05), x!, y!, 0.1, 0, x! * 5), 'pistachio']),
+      ], 0.08);
+      for (const sd of ['l', 'r'] as const) {
+        mount(`upperarm_${sd}`, [[tf(new BoxGeometry(0.22, 0.2, 0.22), 0, 0.02, 0, 0, 0.3), 'filo'], [tf(new BoxGeometry(0.23, 0.02, 0.23), 0, 0.12, 0, 0, 0.3), 'honey']]);
+        mount(`lowerarm_${sd}`, [[tf(new BoxGeometry(0.15, 0.15, 0.3), 0, 0, -0.08), 'filo']]);
+        if (!boss) mount(`hand_${sd}`, [[tf(new SphereGeometry(0.1, 10, 8), 0, -0.06, 0.02), 'honey']]);
+      }
+      mount('pelvis', [[tf(new BoxGeometry(0.44, 0.18, 0.34), 0, -0.04, 0.01), 'filo'], [tf(new BoxGeometry(0.45, 0.02, 0.35), 0, 0.05, 0.01), 'honey']]);
+      break;
+    }
+    case 'zugezogene': {
+      // Der Zugezogene (Johannes, 2026-11-21): a newcomer hipster. Knit beanie, round glasses, a waxed moustache,
+      // an open olive jacket over a white shirt, a tote bag on the hip, an oat-milk coffee in the left hand. His
+      // e-scooter shows only while he charges (`EnemyView.scooter`).
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'olive', pad: 0.02, hem: 0.12, flare: 0.04, open: 1.6 });
+      const o3 = coat.o('spine_03');
+      coat.add('spine_03', [strip(coat.chest.slice(1, 6), o3, 0, 0, 0.5, 0.006), 'shirt']);
+      mountCoat(coat, 0.5);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.max.y - 0.07, head.c.z - 0.01);
+      const eye = fit.eyes.clone().sub(at);
+      const lip = fit.eyes.clone().add(new Vector3(0, -0.045, 0.025)).sub(at);
+      mount('Head', [
+        // A slouchy knit beanie (oxblood, sits back on the head; no brim, so it never reads as a hard hat).
+        [tf(new SphereGeometry(0.13, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.6, 1.08), 0, 0.03, -0.04, -0.4), 'rags'],
+        [tf(new TorusGeometry(0.128, 0.018, 6, 18).scale(1, 1, 1.08), 0, 0.035, -0.02, Math.PI / 2 - 0.4), 'rags'],
+        ...[-1, 1].map((sd): Part => [tf(new TorusGeometry(0.03, 0.006, 4, 14), eye.x + sd * 0.042, eye.y, eye.z + 0.03), 'dark']),
+        [tf(new BoxGeometry(0.024, 0.006, 0.006), eye.x, eye.y + 0.005, eye.z + 0.03), 'dark'],
+        ...moustache(lip, 0.07, 0.012, 0.012, 'hair'),
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      mount('spine_03', [
+        [tf(new BoxGeometry(0.03, 0.32, 0.28), 0.3, -0.55, -0.02, 0, 0, 0.08), 'paper'],
+        [cable([[-0.15, 0.14, 0.02], [0.0, 0.0, 0.17], [0.22, -0.24, 0.08], [0.29, -0.4, 0.0]], 0.01), 'paper'],
+      ], 0.08);
+      mount('hand_l', [
+        [tf(new CylinderGeometry(0.042, 0.032, 0.12, 10), 0, -0.07, 0.05), 'paper'],
+        [tf(new CylinderGeometry(0.044, 0.044, 0.02, 10), 0, 0.0, 0.05), 'dark'],
+        [tf(new CylinderGeometry(0.043, 0.04, 0.04, 10), 0, -0.07, 0.05), 'stagecloth'],
+      ]);
+      break;
+    }
+    case 'sultan': {
+      // Sultan Nimmersatt (board: Der Ewige Gastgeber): an emerald robe with ruby sash and gold, a glass tea-urn belly
+      // that glows, serving trays on the shoulders with a dish each (the Vorspeise goes at 66 %, the Hauptgang at
+      // 33 %: `userData.tier`), a gold crown band with jewels and a white feather (no religious sign), a beard, a
+      // spoon sceptre. The carpet he floats on is its own group (`EnemyView.carpet`).
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'emerald', pad: 0.04, hem: 0.5, flare: 0.3, open: 1.2, collar: 'brass' });
+      const o3 = coat.o('spine_03');
+      coat.add('spine_03', [strip(coat.chest.slice(1, 6), o3, -0.9, 0.7, 0.12, 0.02), 'velvet']);
+      for (const f of [1.6, 2.4, 3.2]) coat.add('spine_03', [onShell(new SphereGeometry(0.016, 6, 4), coat.chest, o3, f, 0.35, 0.02), 'brass']);
+      mountCoat(coat, 0.5);
+      mount('spine_01', [
+        // A glass urn in a brass cage: three meridians and two rings, a tap in front.
+        [tf(new SphereGeometry(0.23, 16, 12), 0, 0.04, 0.12), 'urn'],
+        ...[-0.1, 0.16].map((y): Part => [tf(new TorusGeometry(Math.sqrt(0.237 ** 2 - y * y), 0.014, 5, 20), 0, 0.04 + y, 0.12, Math.PI / 2), 'brass']),
+        ...[0, 1, 2].map((i): Part => [tf(new TorusGeometry(0.237, 0.011, 4, 24), 0, 0.04, 0.12, 0, (i * Math.PI) / 3), 'brass']),
+        [tf(new CylinderGeometry(0.018, 0.018, 0.1, 6), 0, -0.08, 0.38, Math.PI / 2), 'brass'],
+      ]);
+      const dish = (sd: 'l' | 'r', tier: number, food: Part[]): void => {
+        const g = mount(`clavicle_${sd}`, [
+          [tf(new CylinderGeometry(0.2, 0.2, 0.02, 18), 0, 0.12, 0), 'brass'],
+          [tf(new TorusGeometry(0.2, 0.012, 4, 18), 0, 0.13, 0, Math.PI / 2), 'brass'],
+          ...food,
+        ], 0.06, -0.02, sd === 'l' ? 0.26 : -0.26);
+        if (g) g.userData.tier = tier;
+      };
+      dish('l', 1, [0, 1, 2].map((i): Part => [tf(new SphereGeometry(0.05, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), Math.sin(i * 2.1) * 0.1, 0.13, Math.cos(i * 2.1) * 0.1), i === 1 ? 'pistachio' : 'velvet']));
+      dish('r', 2, [[tf(new SphereGeometry(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0.13, 0), 'meat'], [tf(new SphereGeometry(0.02, 6, 4), 0, 0.25, 0), 'filo']]);
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      const at = new Vector3(head.c.x, head.max.y - 0.05, head.c.z - 0.01);
+      const lip = fit.eyes.clone().add(new Vector3(0, -0.045, 0.025)).sub(at);
+      mount('Head', [
+        [tf(new CylinderGeometry(0.15, 0.14, 0.1, 18, 1, true), 0, 0.03, 0), 'brass'],
+        ...[0, 1, 2, 3, 4, 5, 6, 7].map((i): Part => [tf(new ConeGeometry(0.025, 0.07, 4), Math.sin(i * Math.PI / 4) * 0.15, 0.11, Math.cos(i * Math.PI / 4) * 0.15), 'brass']),
+        ...[0, 1, 2, 3, 4, 5].map((i): Part => [tf(new SphereGeometry(0.018, 6, 4), Math.sin(i * Math.PI / 3) * 0.152, 0.03, Math.cos(i * Math.PI / 3) * 0.152), i % 2 ? 'emerald' : 'velvet']),
+        // Two feathers swept back from the band (white and emerald), not upright.
+        [tf(new ConeGeometry(0.05, 0.36, 6).scale(1, 1, 0.3).translate(0, 0.18, 0), 0.05, 0.08, -0.08, -1.15, 0, -0.3), 'plume'],
+        [tf(new ConeGeometry(0.035, 0.28, 6).scale(1, 1, 0.3).translate(0, 0.14, 0), -0.03, 0.08, -0.1, -1.3, 0, 0.25), 'emerald'],
+        [tf(new SphereGeometry(0.03, 8, 6), 0, 0.09, 0.15), 'heart'],
+        ...moustache(lip, 0.08, -0.025, 0.018, 'hair'),
+        [tf(new SphereGeometry(0.06, 8, 6).scale(1, 1.3, 0.7), lip.x, lip.y - 0.07, lip.z - 0.02), 'hair'],
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      mount('hand_r', [
+        [tf(new CylinderGeometry(0.016, 0.016, 1.05, 6), 0, 0.3, 0.03), 'brass'],
+        [tf(new SphereGeometry(0.08, 10, 8).scale(1, 0.4, 1.4), 0, 0.88, 0.06, 0.3), 'brass'],
+        [tf(new SphereGeometry(0.03, 8, 6), 0, 0.8, 0.03), 'heart'],
+      ]);
+      break;
+    }
+    // M18 Zecher on `fest` maps: a stained shirt over the rags and a mug in the right hand; the Brocken only the mug.
+    case 'festShirt':
+      mount('spine_03', [...tunic('shirt', 'shirt').slice(0, 2),
+        [tf(new CircleGeometry(0.04, 7), 0.06, -0.05, 0.215), 'stain'], [tf(new CircleGeometry(0.03, 7), -0.08, -0.2, 0.205), 'stain']], 0.08);
+      mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.25, 0.16, 10, 1, true), 0, 0.02, 0.01), 'shirt']]);
+      mount('hand_r', [[tf(new CylinderGeometry(0.05, 0.045, 0.14, 10), 0, -0.08, 0.06), 'beer'], [tf(new CylinderGeometry(0.052, 0.052, 0.025, 10), 0, 0.0, 0.06), 'shirt']]);
+      break;
+    case 'festMug':
+      mount('hand_r', [[tf(new CylinderGeometry(0.065, 0.06, 0.18, 10), 0, -0.1, 0.06), 'beer'], [tf(new CylinderGeometry(0.067, 0.067, 0.03, 10), 0, 0.0, 0.06), 'shirt']]);
+      break;
     // M16 1920s dress for the plain Zeitlose on `revue` maps.
     case 'revueTails':
       mount('spine_03', [...tunic('tux', 'tux'), [tf(new BoxGeometry(0.12, 0.3, 0.02), 0, 0.04, 0.2), 'shirt'],
@@ -1644,6 +1845,97 @@ function buildDrone(materials: Materials, castShadow: boolean, big: boolean): Dr
 }
 const rotorM = new Matrix4();
 const rotorS = new Vector3();
+const SPIT_Q = new Quaternion(), SPIT_AXIS = new Vector3(0, 1, 0);
+
+// ---------------------------------------------------------------- M18 carpet and scaffold
+
+/** M18 Teppichschlinger: one waving cloth (CPU wave on a small grid), a woven face with teeth at the front, tassels. */
+interface Rug { model: Group; cloth: Mesh; base: Float32Array; face: Group; mats: LitMaterial[]; eyes: LitMaterial }
+const RUG = { w: 0.75, l: 1.5, nx: 4, nz: 16 } as const;
+
+/**
+ * The carpet along +z (front edge at +l/2), painted in vertex colours (ruby field, gold border, an emerald
+ * medallion and stripes). Draws: cloth, face paint, eyes: 3.
+ */
+function buildRug(materials: Materials, castShadow: boolean): Rug {
+  const { w, l, nx, nz } = RUG;
+  const g = new PlaneGeometry(w, l, nx * 2, nz).rotateX(-Math.PI / 2);
+  const pos = g.attributes.position!;
+  const col = new Float32Array(pos.count * 3);
+  const ruby = new Color(0x9a1c3a), gold = new Color(0xd4a62a), emerald = new Color(0x1f6a4a), dark = new Color(0x5a1028);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const edge = Math.min(w / 2 - Math.abs(x), l / 2 - Math.abs(z));
+    const diamond = Math.abs(x) / (w * 0.3) + Math.abs(z) / (l * 0.22) < 1;
+    const c = edge < 0.06 ? gold : diamond ? emerald : Math.abs(z) % 0.3 < 0.06 ? dark : ruby;
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  g.setAttribute('color', new Float32BufferAttribute(col, 3));
+  const clothMat = materials.surface({ color: 0xffffff, roughness: 0.9, vertexColors: true, doubleSided: true });
+  const cloth = new Mesh(g, clothMat);
+  cloth.castShadow = castShadow;
+  const model = new Group();
+  model.add(cloth);
+  const k = gearKit(materials);
+  const face = assemble(k, [
+    // Woven brows and a dark mouth with two rows of teeth along the front edge; tassels at the corners.
+    ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(0.16, 0.02, 0.04), sd * 0.14, 0.05, -0.1, 0, sd * 0.3), 'brass']),
+    [tf(new BoxGeometry(0.4, 0.03, 0.1), 0, 0.012, -0.02), 'dark'],
+    ...[-3, -2, -1, 0, 1, 2, 3].map((i): Part => [tf(new ConeGeometry(0.025, 0.07, 4), i * 0.055, 0.03, 0.02, Math.PI / 2), 'bone']),
+    ...[-1, 1].map((sd): Part => [tf(new ConeGeometry(0.035, 0.14, 5), sd * (w / 2), -0.04, 0, Math.PI), 'brass']),
+  ], false, undefined, true);
+  // On the reared front edge, turned to look ahead and down at the hero.
+  face.position.set(0, 0.4, l / 2 - 0.02);
+  face.rotation.x = -0.5;
+  face.scale.setScalar(1.4);
+  const eyes = materials.surface({ color: 0x3a2a08, emissive: 0xffc84a, emissiveIntensity: 2.6, roughness: 0.4 });
+  for (const sd of [-1, 1]) {
+    const eye = new Mesh(new SphereGeometry(0.04, 8, 6), eyes);
+    eye.position.set(sd * 0.14, 0.04, -0.16);
+    face.add(eye);
+  }
+  model.add(face);
+  const tails = assemble(k, [-1, 1].map((sd): Part => [tf(new ConeGeometry(0.035, 0.14, 5), sd * (w / 2), -0.04, -l / 2, Math.PI), 'brass']), false, undefined, true);
+  model.add(tails);
+  return { model, cloth, base: Float32Array.from(pos.array as Float32Array), face, mats: [clothMat], eyes };
+}
+
+/**
+ * M18 Der Ewige Bauherr on the Koloss slab (slab space, front +z): scaffold poles, ledgers and planks, green net on
+ * the sides, a hi-vis band, a cream banner over the GDR one, a hard hat on the cab, and a cement mixer on the back
+ * (turns like the clock ring did). Merged per material (`paint`): a few draws.
+ */
+function bauherrSet(materials: Materials, castShadow: boolean, slab: Group): { group: Group; mixer: Group } {
+  const k = gearKit(materials), K = KOLOSS;
+  const X = K.slabW / 2 + 0.15, Z = K.slabD / 2 + 0.15, top = K.slabH + 0.75;
+  const parts: Part[] = [];
+  for (const x of [-X, X]) for (const z of [-Z, Z]) parts.push([tf(new CylinderGeometry(0.04, 0.04, top, 6), x, top / 2 + 0.1, z), 'steel']);
+  for (const y of [1.3, 2.4, 3.5]) {
+    for (const z of [-Z, Z]) parts.push([tf(new CylinderGeometry(0.03, 0.03, X * 2, 6), 0, y, z, 0, 0, Math.PI / 2), 'steel']);
+    for (const x of [-X, X]) parts.push([tf(new CylinderGeometry(0.03, 0.03, Z * 2, 6), x, y, 0, Math.PI / 2), 'steel']);
+  }
+  for (const y of [1.25, 2.35]) parts.push([tf(new BoxGeometry(X * 2, 0.05, 0.3), 0, y, Z + 0.1), 'stagecloth']);
+  for (const x of [-X - 0.02, X + 0.02]) parts.push([tf(new PlaneGeometry(Z * 2, top - 0.6).rotateY(Math.PI / 2), x, top / 2 + 0.3, 0), 'net']);
+  parts.push([tf(new PlaneGeometry(X * 2, 1.3), 0, top - 0.8, -Z - 0.02), 'net']);
+  parts.push([tf(new BoxGeometry(K.slabW + 0.04, 0.24, K.slabD + 0.04), 0, 1.85, 0), 'vest']);
+  for (const y of [1.79, 1.91]) parts.push([tf(new BoxGeometry(K.slabW + 0.05, 0.03, K.slabD + 0.05), 0, y, 0), 'reflect']);
+  parts.push([tf(new PlaneGeometry(1.0, 2.3), -1.35, 2.1, K.slabD / 2 + 0.06), 'paper']);
+  for (const y of [1.2, 3.0]) parts.push([tf(new PlaneGeometry(1.0, 0.12), -1.35, y, K.slabD / 2 + 0.07), 'velvet']);
+  parts.push([tf(new SphereGeometry(0.62, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.6, 1), 0.8, K.slabH + 0.72, -0.1), 'hazard']);
+  parts.push([tf(new CylinderGeometry(0.74, 0.74, 0.05, 16), 0.8, K.slabH + 0.74, -0.1), 'hazard']);
+  const group = assemble(k, parts, castShadow, undefined, true);
+  slab.add(group);
+  const mixer = new Group();
+  mixer.position.set(0, 2.1, -K.slabD / 2 - 0.55);
+  mixer.add(assemble(k, [
+    [tf(new CylinderGeometry(0.55, 0.95, 1.1, 14), 0, 0, 0, Math.PI / 2), 'vest'],
+    [tf(new CylinderGeometry(0.3, 0.55, 0.35, 12), 0, 0, -0.7, Math.PI / 2), 'vest'],
+    ...[-0.25, 0.2].map((z): Part => [tf(new TorusGeometry(0.85 - (z + 0.25) * 0.4, 0.04, 4, 18), 0, 0, z), 'steel']),
+    ...[0, 1, 2].map((i): Part => [tf(new BoxGeometry(0.06, 0.3, 1.0), Math.sin(i * 2.1) * 0.8, Math.cos(i * 2.1) * 0.8, 0, 0, 0, -i * 2.1), 'steel']),
+  ], castShadow, undefined, true));
+  group.add(mixer);
+  return { group, mixer };
+}
 
 // ---------------------------------------------------------------- view
 
@@ -1690,7 +1982,14 @@ export class EnemyView {
   /** M12c: pink cables on neon maps (plain bodies), and the speaker rings of this body. */
   private cyber: Object3D[] | null = null;
   /** M16: 1920s dress on `revue` maps, built per dress on first use; the Diva's floating fans (one merged mesh). */
-  private readonly revue = new Map<RevueKey, Object3D[]>();
+  private readonly revue = new Map<RevueKey | FestKey, Object3D[]>();
+  /** M18: the Sultan's carpet, the Bauherr's scaffold and mixer on the Koloss, the code-built Teppichschlinger. */
+  private carpet: Group | null = null;
+  private scooter: Group | null = null;
+  private bauherr: { group: Group; mixer: Group } | null = null;
+  private rug: Rug | null = null;
+  private spitT = 0;
+  private frameDt = 0;
   private divaFans: Group | null = null;
   private readonly pulse: LitMaterial | null = null;
   private readonly kern: Kern | null = null;
@@ -1766,6 +2065,13 @@ export class EnemyView {
       return;
     }
     if (body === 'drone') return;
+    if (body === 'carpet') {
+      this.rug = buildRug(materials, castShadow);
+      this.inner.add(this.rug.model);
+      this.mats.push(...this.rug.mats);
+      this.glow.push(this.rug.eyes);
+      return;
+    }
     this.pulse = materials.surface({ color: 0x5a1034, emissive: 0xff4fa3, emissiveIntensity: 1.6, roughness: 0.5 });
     const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
@@ -1989,8 +2295,11 @@ export class EnemyView {
     }
   }
 
-  /** `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. M16 `revue`: they wear 1920s dress. */
-  assign(e: Enemy, neon = false, revue = false): void {
+  /**
+   * `neon`: the map's flavor is neon (Mitte), the plain bodies wear cables. `dress`: M16 `revue`, they wear 1920s
+   * dress; M18 `fest` (Wedding), they are Zecher with a stained shirt and a mug.
+   */
+  assign(e: Enemy, neon = false, dress: 'revue' | 'fest' | null = null): void {
     this.id = e.id;
     this.kind = e.kind;
     this.flash = 0;
@@ -2075,11 +2384,12 @@ export class EnemyView {
       for (const g of this.cyber ?? []) g.visible = cyber;
       // M16 revue maps: one dress per plain kind (the walker's by its id: tails or an usher's jacket); the
       // stagehand's apron replaces the Brocken's vest.
-      const dresses = revue ? REVUE[e.kind] : undefined;
-      const dress = dresses ? dresses[e.id % dresses.length]! : undefined;
-      if (dress && !this.revue.has(dress)) this.revue.set(dress, this.inIdle(() => gearFor(dress, this.model!, this.materials, this.castShadow)));
-      for (const [k, list] of this.revue) for (const g of list) g.visible = k === dress;
-      if (dress && e.kind === 'brute') for (const g of gear) g.visible = false;
+      // M18 fest maps: the Zecher overlay (the Brocken keeps his vest and only gets a mug).
+      const dresses = dress === 'revue' ? REVUE[e.kind] : undefined;
+      const wear: RevueKey | FestKey | undefined = dresses ? dresses[e.id % dresses.length]! : dress === 'fest' ? FEST[e.kind] : undefined;
+      if (wear && !this.revue.has(wear)) this.revue.set(wear, this.inIdle(() => gearFor(wear, this.model!, this.materials, this.castShadow)));
+      for (const [k, list] of this.revue) for (const g of list) g.visible = k === wear;
+      if (dresses && e.kind === 'brute') for (const g of gear) g.visible = false;
       // Officers carry a saber.
       const armed = e.kind === 'feldwebel' || e.kind === 'hauptmann';
       if (armed && !this.rack) {
@@ -2108,6 +2418,40 @@ export class EnemyView {
       this.inner.add(this.divaFans);
     }
     if (this.divaFans) this.divaFans.visible = e.kind === 'diva';
+    // M18: the carpet under Sultan Nimmersatt (built once per view): ruby field, gold border, tassels at the corners.
+    if (e.kind === 'sultan' && !this.carpet) {
+      const k = gearKit(this.materials);
+      const W = 0.62, D = 0.44;
+      this.carpet = assemble(k, [
+        [tf(new BoxGeometry(W * 2, 0.025, D * 2), 0, 0.012, 0), 'velvet'],
+        ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(W * 2 + 0.02, 0.03, 0.05), 0, 0.014, sd * (D - 0.02)), 'brass']),
+        ...[-1, 1].map((sd): Part => [tf(new BoxGeometry(0.05, 0.03, D * 2), sd * (W - 0.02), 0.014, 0), 'brass']),
+        [tf(new BoxGeometry(0.5, 0.03, 0.3), 0, 0.016, 0), 'emerald'],
+        ...[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([x, z]): Part => [tf(new ConeGeometry(0.035, 0.14, 5), x! * (W + 0.03), -0.04, z! * (D + 0.03), Math.PI), 'brass']),
+      ], false);
+      this.inner.add(this.carpet);
+    }
+    if (this.carpet) this.carpet.visible = e.kind === 'sultan';
+    // M18: Der Zugezogene's e-scooter (shown while he charges): deck, stem, bar, two small wheels, a teal light.
+    if (e.kind === 'zugezogene' && !this.scooter) {
+      this.scooter = assemble(gearKit(this.materials), [
+        [tf(new BoxGeometry(0.16, 0.05, 0.8), 0, 0.1, 0), 'dark'],
+        [tf(new CylinderGeometry(0.018, 0.018, 0.95, 6), 0, 0.55, 0.38, -0.12), 'steel'],
+        [tf(new CylinderGeometry(0.014, 0.014, 0.42, 6), 0, 1.01, 0.44, 0, 0, Math.PI / 2), 'dark'],
+        ...[-0.38, 0.38].map((z): Part => [tf(new CylinderGeometry(0.08, 0.08, 0.04, 12), 0, 0.08, z, 0, 0, Math.PI / 2), 'dark']),
+        [tf(new SphereGeometry(0.025, 6, 4), 0, 0.9, 0.47), 'cyan'],
+      ], false);
+      this.inner.add(this.scooter);
+    }
+    if (this.scooter) this.scooter.visible = false;
+    // M18: Der Ewige Bauherr is the Koloss slab under scaffold; a cement mixer turns where the clock ring was.
+    if (this.koloss) {
+      const own = e.kind === 'bauherr';
+      if (own && !this.bauherr) this.bauherr = bauherrSet(this.materials, this.castShadow, this.koloss.slab);
+      if (this.bauherr) this.bauherr.group.visible = own;
+      this.koloss.ring.visible = !own;
+    }
+    if (this.rug) this.rug.model.visible = e.kind === 'teppich';
     this.root.visible = true;
   }
 
@@ -2124,6 +2468,7 @@ export class EnemyView {
     this.root.position.set(ex, groundY(ex, ez), ez);
     this.root.rotation.y = lerpAngle(e.pfacing, e.facing, alpha);
     if (!frozen) this.time += dt;
+    this.frameDt = frozen ? 0 : dt;
     // White hit flash: full for half the time, then fading. Runs through hitstop.
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt);
@@ -2168,6 +2513,7 @@ export class EnemyView {
     if (this.body === 'crow') this.poseCrow(e, t);
     else if (this.body === 'rat') this.poseRat(e, t);
     else if (this.body === 'drone') this.poseDrone(e, t);
+    else if (this.rug) this.poseRug(e, t);
     else if (this.kern) this.poseKern(e, t);
     else if (this.koloss) this.poseKoloss(e, t, dt2);
     else if (this.clock) this.poseClock(e, t, dt2, alpha);
@@ -2233,9 +2579,9 @@ export class EnemyView {
     let spin = 0;
     switch (e.state) {
       case 'chase':
-        // M16: the Diva glides (stands in her pose while she moves).
-        if (e.speed > 0.2 && e.kind !== 'diva') a.loop('Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * def.scale))));
-        else a.loop(e.kind === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop', 0.25);
+        // M16: the Diva glides (stands in her pose while she moves); M18: the Sultan floats on his carpet the same way.
+        if (e.speed > 0.2 && def.ai !== 'diva') a.loop('Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * def.scale))));
+        else a.loop(def.ai === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop', 0.25);
         // Open: bent over, catching breath.
         if (e.open > 0) pitch = 0.32;
         break;
@@ -2309,6 +2655,16 @@ export class EnemyView {
           case 'barrage':
             a.pose('OverhandThrow', going ? lerp(0.37, 0.7, g) : lerp(0.1, 0.37, w), 0.1);
             break;
+          case 'tail':
+            // M18 Hauptgericht: the spit arm swings round once with the whole body (the Rex keeps its own tail clip).
+            a.pose('Sword_Heavy_Combo', going ? lerp(2.66, 2.95, g) : lerp(2.3, 2.66, w), 0.1);
+            if (going) spin = g * Math.PI * 2;
+            break;
+          case 'molotov':
+            // M18 Tee-Ifrit: the glass is thrown overhand early in the wind-up (it flies the rest); the Brandmeister calls.
+            if (e.kind === 'teeifrit') a.pose('OverhandThrow', lerp(0.1, 0.7, Math.min(1, w * 2.5)), 0.1);
+            else { a.pose('Spell_Simple_Shoot', Math.min(0.49, t * 0.5), 0.12); pitch = going ? 0 : -0.12 * w; }
+            break;
           default:
             // Summon, ring: the arm goes out, a command.
             a.pose('Spell_Simple_Shoot', Math.min(0.49, t * 0.5), 0.12);
@@ -2329,7 +2685,9 @@ export class EnemyView {
     lean.x += (pitch - lean.x) * 0.35;
     lean.y = spin;
     // M16: the Souffleur hovers 0.3 m (render only; walls stop him in the sim), the Diva floats a little.
-    const hover = this.kind === 'souffleur' ? 0.3 + 0.05 * Math.sin(this.time * 2.2 + this.seed * 6) : this.kind === 'diva' ? 0.08 + 0.04 * Math.sin(this.time * 1.6) : 0;
+    // M18: the Sultan floats 0.3 m on his carpet, the Tee-Ifrit bobs on its samovar.
+    const hover = this.kind === 'souffleur' ? 0.3 + 0.05 * Math.sin(this.time * 2.2 + this.seed * 6) : this.kind === 'diva' ? 0.08 + 0.04 * Math.sin(this.time * 1.6)
+      : this.kind === 'sultan' ? 0.3 + 0.05 * Math.sin(this.time * 1.4) : this.kind === 'teeifrit' ? 0.04 * Math.sin(this.time * 2.6 + this.seed * 6) : 0;
     this.inner.position.y = e.state === 'dead' ? 0 : hover / (Math.abs(this.root.scale.y) || 1);
     // M12c speakers swell while a ring winds up and throb with the bass otherwise.
     if (this.pulse) {
@@ -2374,15 +2732,28 @@ export class EnemyView {
       const sac = this.gear.get('heuler')?.[0];
       const sp = e.state === 'special' ? e.sp : null;
       sac?.scale.setScalar(sp?.kind === 'howl' ? 1 + 0.8 * Math.min(1, e.stateT / sp.wind) : 1 + 0.05 * Math.sin(this.time * 3));
-    } else if (this.kind === 'schild' || this.kind === 'loge') {
-      // M16: the Logenbrecher's glass front also swings aside while he stands open after his blow.
+    } else if (this.kind === 'schild' || this.kind === 'loge' || this.kind === 'baklava') {
+      // M16: the Logenbrecher's glass front also swings aside while he stands open after his blow. M18: the Baklava tray.
       const sh = this.gear.get(this.kind)?.[0];
       const down = (e.guardOpen ?? 0) > 0 || e.state === 'dead' || (this.kind === 'loge' && e.open > 0);
       if (sh) sh.rotation.z += ((down ? 1.0 : 0) - sh.rotation.z) * 0.25;
-    } else if (this.kind === 'diva') {
-      // M16: a gown tier is gone once it broke; the fans circle slowly.
-      for (const g of this.gear.get('diva') ?? []) if (g.userData.tier) g.visible = (g.userData.tier as number) > (e.still ?? 0);
+    } else if (this.kind === 'diva' || this.kind === 'sultan') {
+      // M16: a gown tier is gone once it broke; the fans circle slowly. M18: the Sultan's dish of a course is eaten.
+      for (const g of this.gear.get(this.kind) ?? []) if (g.userData.tier) g.visible = (g.userData.tier as number) > (e.still ?? 0);
       if (this.divaFans) this.divaFans.rotation.y = this.time * 0.45;
+      if (this.carpet) this.carpet.rotation.z = 0.04 * Math.sin(this.time * 2.1);
+    } else if (this.kind === 'zugezogene') {
+      // M18: he rides the e-scooter through the charge (stands on it from the wind-up on).
+      if (this.scooter) this.scooter.visible = e.state === 'special' && e.sp?.kind === 'charge';
+    } else if (this.kind === 'hauptgericht') {
+      // M18: the meat spit turns on the arm, faster while the sweep winds up.
+      const spit = this.gear.get('hauptgericht')?.[0];
+      if (spit) {
+        // About the spit's own axis (model up in the rest pose it was built in), after the bone's turn.
+        const q0 = (spit.userData.q0 ??= spit.quaternion.clone()) as Quaternion;
+        this.spitT += (e.state === 'special' && e.sp?.kind === 'tail' ? 9 : 2.5) * Math.min(0.1, this.frameDt);
+        spit.quaternion.copy(q0).multiply(SPIT_Q.setFromAxisAngle(SPIT_AXIS, this.spitT));
+      }
     }
     // The spitter's throat swells while it winds up.
     if (this.kind === 'spitter') {
@@ -2568,6 +2939,33 @@ export class EnemyView {
     d.rotors.instanceMatrix.needsUpdate = true;
   }
 
+  /** M18 Teppichschlinger: flies at 1.6 m and waves (a wave runs from the face to the tail); the drone's dive and daze. */
+  private poseRug(e: Enemy, t: number): void {
+    const r = this.rug!;
+    let y = 1.6 + 0.1 * Math.sin(this.time * 2.4 + this.seed * 6), pitch = 0, roll = 0, wave = 1, ease = 0.25;
+    if (e.state === 'chase' && e.rest > 0) { y = 0.5 + 0.05 * Math.sin(this.time * 17); roll = 0.3 * Math.sin(this.time * 6); wave = 0.4; }
+    else if (e.state === 'special' && e.sp?.kind === 'dive') {
+      const sp = e.sp, w = Math.min(1, t / sp.wind), g = Math.min(1, Math.max(0, (t - sp.wind) / sp.go));
+      if (t < sp.wind) { y = 1.6 + 0.5 * w; pitch = -0.5 * w; wave = 1 + 1.5 * w; }
+      else { y = lerp(2.1, 0.5, Math.min(1, g * 2.2)); pitch = 0.6 * (1 - g); wave = 2.5; }
+      ease = 0.35;
+    } else if (e.state === 'stagger') roll = Math.sin(t * 20) * 0.4;
+    else if (e.state === 'dead') { y = Math.max(0.05, 1.6 - t * t * 8); wave = Math.max(0, 1 - t); roll = Math.min(0.3, t); ease = 1; }
+    y /= this.root.scale.y || 1;
+    this.inner.position.y += (y - this.inner.position.y) * ease;
+    this.inner.rotation.x += (pitch - this.inner.rotation.x) * 0.2;
+    this.inner.rotation.z += (roll - this.inner.rotation.z) * 0.25;
+    const pos = r.cloth.geometry.attributes.position!, b = r.base, L = RUG.l;
+    for (let i = 0; i < pos.count; i++) {
+      const z = b[i * 3 + 2]!, u = (L / 2 - z) / L;
+      // The front quarter rears up like a snake's head (board), the rest waves behind it.
+      const rear = Math.max(0, 1 - u / 0.28) ** 2 * 0.42;
+      pos.setY(i, rear + wave * 0.14 * Math.sin(this.time * 6 - u * 7) * u ** 0.7 + 0.04 * Math.sin(b[i * 3]! * 6 + this.time * 3) * u);
+    }
+    pos.needsUpdate = true;
+    r.cloth.geometry.computeVertexNormals();
+  }
+
   /** Mechs: walk and run clips by speed, the strike clip posed from sim time, the shield swings aside while the guard is open. */
   private poseMech(e: Enemy, t: number, k: (typeof MECH)['mech' | 'mechBig'], dt: number): void {
     const a = this.anim!;
@@ -2712,6 +3110,7 @@ export class EnemyView {
     K.compass.rotation.x += (compass - K.compass.rotation.x) * 0.25;
     this.spinRing += dt * ((e.spin ?? 0) > 0 ? 9 : 0.5);
     K.ring.rotation.z = this.spinRing;
+    if (this.bauherr) this.bauherr.mixer.rotation.z = this.spinRing;
     this.inner.rotation.x += (tilt - this.inner.rotation.x) * 0.2;
   }
 

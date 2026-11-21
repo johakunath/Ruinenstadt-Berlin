@@ -32,7 +32,8 @@ export interface LootContext {
   luck: number;
   /** Effective wave (2D wE()), or 1 outside a run. */
   wave: number;
-  flavor?: 'neon' | 'gdr';
+  /** M18 `fest` (Wedding): the Pracht des Ewigen Gasts and Die Letzte Bestellung drop here. */
+  flavor?: 'neon' | 'gdr' | 'fest';
   /** An U-Bahn tunnel map: its own set drops here (`makeSetItem`). */
   tunnel?: boolean;
   /** Caller-owned last allocated id. Share one context per sim; persist with its state. */
@@ -70,9 +71,11 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
   const m = RARITIES[rarity].multiplier * rng.range(.85, 1.15) * .9;
   let kind: ItemKindId, name: string, value: number;
   if (slot === 'w') {
-    const weapon = rng.pick<WeaponKindId>(['blade', 'blade', 'hammer', 'sling', 'spear']);
+    // M18: on `fest` maps 40 % of legendary weapons are Die Letzte Bestellung (draws only there).
+    const lamp = rarity === 3 && ctx.flavor === 'fest' && rng.next() < .4;
+    const weapon = lamp ? 'hammer' : rng.pick<WeaponKindId>(['blade', 'blade', 'hammer', 'sling', 'spear']);
     kind = weapon;
-    name = rng.pick(rarity === 3 ? N.LEGENDARY_WEAPON_NAMES[weapon]
+    name = lamp ? N.FEST_LEGENDARY_WEAPON : rng.pick(rarity === 3 ? N.LEGENDARY_WEAPON_NAMES[weapon]
       : cy && rng.next() < .45 ? N.NEON_WEAPON_NAMES[weapon]
       : gd && rng.next() < .45 ? N.GDR_WEAPON_NAMES[weapon] : N.WEAPON_NAMES[weapon]);
     value = Math.round((4 + itemLevel * 1.6) * WEAPON_KINDS[weapon].damageFactor * m);
@@ -111,7 +114,8 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
 
 export function makeSetItem(rng: Rng, ctx: LootContext, itemLevel: number): Item {
   // The Tunnelläufer drops only in the tunnels, there in 60 % of set drops (Johannes, 2026-11-19).
-  const set = ctx.tunnel && rng.next() < .6 ? 'tunnel' : rng.pick<SetId>(['kiez', 'spree', 'zit']);
+  // M18: the Pracht des Ewigen Gasts the same way on `fest` maps (Wedding).
+  const set = ctx.tunnel && rng.next() < .6 ? 'tunnel' : ctx.flavor === 'fest' && rng.next() < .6 ? 'gast' : rng.pick<SetId>(['kiez', 'spree', 'zit']);
   const slot = rng.pick(Object.keys(SETS[set].pieces) as SlotId[]);
   const { name, kind, base } = SETS[set].pieces[slot]!;
   let value: number;

@@ -41,6 +41,9 @@ export const LEGENDARY_WEAPON_NAMES: WeaponNameTable = {
   spear: [ 'Speer der Siegessäule' ],
 };
 
+/** M18 Wedding: on `fest` maps 40 % of legendary weapons are this hammer (`makeItem`); it drops nowhere else. */
+export const FEST_LEGENDARY_WEAPON = 'Die Letzte Bestellung';
+
 /** 2D NA. */
 export const ARMOR_NAMES: readonly string[] = [
   'Lederjacke',
@@ -270,4 +273,6 @@ export const BASES: Readonly<Record<string, BaseId>> = {
   'Fäuste des Kiezboxers': 'kiezbox',
   'Stiefel des Schaffners': 'schaffner',
   'Ring der Weltzeituhr': 'weltuhr',
+  // M18 Wedding: the legendary hammer of `fest` maps (`FEST_LEGENDARY_WEAPON`).
+  'Die Letzte Bestellung': 'bestellung',
 };
