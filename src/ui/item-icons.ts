@@ -7,4 +7,7 @@ export const ITEM_ICONS: Readonly<Record<string, string>> = {'latte': 'I01', 'ro
   'weste:kiez': 'I93', 'mantel:spree': 'I94', 'kette:zit': 'I57',
   // Tunnelläufer set: rendered from the looks and the weapon model. The key ring (`kette:tunnel`) shows the
   // bike chain I42 until Codex paints I102 (docs/asset-pipeline.md › K4); add its key with the file.
-  'mantel:tunnel': 'I98', 'nbrille:tunnel': 'I99', 'stiefel:tunnel': 'I100', 'zange:tunnel': 'I101'};
+  'mantel:tunnel': 'I98', 'nbrille:tunnel': 'I99', 'stiefel:tunnel': 'I100', 'zange:tunnel': 'I101',
+  // M18 Wedding: Die Letzte Bestellung and the Pracht des Ewigen Gasts, rendered from the model and the looks
+  // (feather and signet ring keep the plain talisman and ring icons).
+  bestellung: 'I103', 'mantel:gast': 'I104', 'handsch:gast': 'I105', 'stiefel:gast': 'I106'};

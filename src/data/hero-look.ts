@@ -186,7 +186,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     gartenh: { palette: 'gartenh', gear: ['wrist-garden'] },
     kiezbox: { gloves: null, gear: ['boxing'], covers: ['hands'] },
     kiezhand: { palette: 'kiezhand', gear: ['knuckles-kiez', 'wrist-kiez'] },
-    'handsch:gast': { palette: 'handsch:gast', gear: ['wrist-work'] },
+    'handsch:gast': { palette: 'handsch:gast' },
   },
   f: {
     turnsch: { boots: 'turnsch', palette: 'turnsch', gear: ['sneaker-stripes'] },
@@ -196,7 +196,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     spreestief: { palette: 'spreestief', gear: ['shaft-wrapped'] },
     eisenstief: { palette: 'eisenstief', gear: ['greaves'] },
     'stiefel:tunnel': { palette: 'stiefel:tunnel', gear: ['puttees'] },
-    'stiefel:gast': { palette: 'stiefel:gast', gear: ['shaft-riding'] },
+    'stiefel:gast': { palette: 'stiefel:gast' },
   },
 };
 

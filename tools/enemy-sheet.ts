@@ -149,7 +149,7 @@ async function sheet(): Promise<void> {
 const kind = q.get('kind') as EnemyKind | null;
 const kinds = kind ? [kind] : (Object.keys(ENEMIES) as EnemyKind[]);
 const n = kind ? Number(q.get('n') ?? 6) : kinds.length;
-let tris = 0;
+let tris = 0, calls = 0;
 const W = Number(q.get('w') ?? (kind ? 260 : 190)), H = Number(q.get('h') ?? 320);
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
@@ -222,11 +222,12 @@ for (let i = 0; i < n; i++) {
   renderer.setScissor(i * W, 0, W, H);
   renderer.render(scene, cam);
   tris += renderer.info.render.triangles;
+  calls += renderer.info.render.calls;
   scene.remove(v.root);
   sim.enemies.length = 0;
 }
 // Triangles drawn per view (all views summed; divide by n), for cost checks.
-document.title = `done ${kinds.join(' ')} tris=${Math.round(tris / Math.max(1, n))}`;
+document.title = `done ${kinds.join(' ')} tris=${Math.round(tris / Math.max(1, n))} calls=${Math.round(calls / Math.max(1, n))}`;
 }
 
 if (q.get('portrait')) await portraits();

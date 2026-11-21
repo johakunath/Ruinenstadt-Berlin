@@ -14,9 +14,11 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 | Alexanderplatz | 13 (9 normal, 4 bosses) | 7 | 2 (mech, mechBig) | 4 |
 | Mitte | 14 (10 normal, 4 bosses) | 11 | 0 | 3 (drone, wachdrohne, crow) |
 | Charlottenburg | 14 (9 normal, 4 bosses, the Spiegelbild) | 12 (6 zombie; Conférencier and Ringvater on `human1`; Scherbentänzerin, Spiegelpaar, Spiegelbild and Diva on `human2`) | 0 | 2 (crow, rat) |
+| Wedding | 7 (3 normal, 4 bosses) plus the Zecher dress | 5 (3 zombie; Stammgast and Sultan on `human1`) | 0 | 2 (carpet; the Bauherr on the Koloss slab) |
 | Camp | 0 enemies, 7 keepers | 0 | 7 on `hero.glb` | 0 |
 
 - Roster: 41 kinds (19 normal or special, 21 bosses, the Spiegelbild) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types. M16 (2026-11-19, `docs/tasks/m12d-charlottenburg-enemies.md`): three Charlottenburg kinds, four bosses and the reflection, all code gear (placeholder); 1920s dress for Schlurfer, Hetzer, Brocken and Speier on `revue` maps (render only). Kodex: 3D renders E19 to E21, X20 to X23 (2026-11-20); no boss voices yet.
+- M18 Wedding (2026-11-21, `docs/tasks/m12e-wedding-enemies.md`): three kinds, four bosses, all code gear (placeholder); the Zecher dress (stained shirt and a mug) for Schlurfer, Hetzer and Speier, a mug for the Brocken on `fest` maps (render only). Kodex: 3D renders E22 to E24, X24 to X27. Proof `docs/proof/m18-wedding/enemies/`. Draws per body (main pass in `tools/enemy-sheet.mjs`, no shadow): Tee-Ifrit 12 (Speier 6), Baklava-Brocken 15 (Schildträger 19), Teppichschlinger 7 (Krähe 19), Stammgast 13 and Hauptgericht 15 (Feldwebel 17), Bauherr 17 (Koloss 18), Sultan 25 (Diva 20), a Zecher 7 (Schlurfer 4).
 - Bodies: 22 kinds on the zombie rig (2 without own gear: walker, runner), 4 with an own GLB, 7 code-built. None is marked `final`.
 - WP5 fix: zombie-rig gear is now built in the idle pose (`EnemyView.inIdle`); before, it took the pose the pooled view held (often a death pose), so helmets, caps, speakers, torch and lantern sat tilted.
 - WP5 step 3 (H2): coats are fitted to the skinned body at build time (`BodyFit`, `fitCoat` in `src/render/enemies.ts`): ring shells per bone, skirts open at the front and hang (`hangSkirts`). Reuse them for any new coat on the zombie rig.
@@ -26,7 +28,7 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 
 ## Index
 
-Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte, C Charlottenburg. Normal mixes from `waveTier` per map file; tunnels reuse the Köpenick tier at zone 0 (no crow, no raptor).
+Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte, C Charlottenburg, W Wedding. Normal mixes from `waveTier` per map file; tunnels reuse the Köpenick tier at zone 0 (no crow, no raptor).
 
 | Name | Kind | Role | Maps | Body | Refined | Kodex | Matches 3D | Needs | Prio |
 |---|---|---|---|---|---|---|---|---|---|
@@ -73,6 +75,14 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte, C Charlottenbu
 | Das Spiegelpaar | spiegelpaar | boss | C | female+gear: the dancer's cut in silver glass, red sash, lit heart, violet plume; warm ring at her feet | placeholder | X22 (3D render) | yes | voices | P5 |
 | Spiegelbild | spiegelbild | boss part (cannot be hurt) | C | female+gear in cold frost glass, no sash, no heart, mirrored left to right (negative x scale); copies her animation | placeholder | none (not in the Kodex) | n/a | none | P5 |
 | Die Diamantene Diva | diva | district boss | C | female+gear: glass corset, a gown of three stepped tiers of overlapping pleated glass fan panels with silver ribs and pointed shard hems, crystal drops on the lowest (2026-11-19, replaced the stacked cones; the bottom tier breaks at 66 %, the middle at 33 %), violet cape to the floor, tall halo of violet feathers, glass spikes and diamonds, lit crystal heart, stage mask, four big glass fans floating round her (one merged mesh) | placeholder | X23 (3D render) | yes | voices; tier break effect | P5 |
+| Tee-Ifrit | teeifrit | special (3 alive) | W | zombie+gear: legs scaled away above a brass samovar with a glowing tea band and tap, twisted steam wisps into the waist and off the back, amber skin, a glowing tea glass in each hand; upright, bobs | placeholder | E22 (3D render) | yes | silhouette review (board: a smoke blob, here a body) | P6 |
+| Baklava-Brocken | baklava | normal (2 alive) | W | zombie+gear (Brocken shape): stacked filo slabs with honey layers and drips, a block head with pistachio crumbs and green eyes (skull shrunk away), honey fists, a silver tray as shield (gear [0], swings aside while open) | placeholder | E23 (3D render) | yes | none | P6 |
+| Teppichschlinger | teppich | normal | W | code (`buildRug`): one cloth grid in vertex colours (ruby, gold border, emerald medallion) waved on the CPU, the front reared up like a snake's head with a woven face, teeth and gold eyes, tassels | placeholder | E24 (3D render) | yes | none | P6 |
+| Zecher | walker, runner, brute, spitter (render) | normal | W | zombie+gear on `flavor: 'fest'`: stained white undershirt and a beer mug (Schlurfer, Hetzer, Speier), the Brocken keeps his hi-vis vest and gets a big mug | placeholder | E01, E09, E02, E03 | no, base renders | none, share the base renders | P6 |
+| Der Stammgast | stammgast | boss | W | human+gear: worn brown cardigan over a stained undershirt and a belly, flat cap, moustache, a Maßkrug | placeholder | X24 (3D render) | yes | voices | P6 |
+| Das Hauptgericht | hauptgericht | boss | W | zombie+gear at scale 2: the Baklava-Brocken's body, an upright meat spit in the right fist that turns (faster in the sweep), the silver tray with baklava in the left; the body turns once in the Drehspieß | placeholder | X25 (3D render) | yes | voices | P6 |
+| Der Ewige Bauherr | bauherr | boss | W | code (`buildKoloss` + `bauherrSet`): the Koloss slab under scaffold poles, ledgers and planks, green net on the sides, a hi-vis band, a cream banner over the GDR one, a yellow hard hat on the cab, an orange cement mixer on the back that turns (the clock ring hidden) | placeholder | X26 (3D render) | yes | voices; banner text „Kommt bald“ (sign atlas of step 3) | P6 |
+| Sultan Nimmersatt | sultan | district boss | W | human+gear: emerald robe with gold collar and buttons, ruby sash, a glass tea urn as belly in a brass cage (glows), serving trays on the shoulders with a dish each (Vorspeise gone at 66 %, Hauptgang at 33 %), gold crown band with jewels and two swept-back feathers (no religious sign), beard, spoon sceptre; floats 0.3 m on a ruby carpet with gold border and tassels | placeholder | X27 (3D render) | yes | voices; course change effect | P6 |
 | Flink / Brennend / Spaltend / Gepanzert | elite mods | elite | all | host body ×1.15 plus a faint glow in the mod colour | placeholder | L01 to L04 (3D render on a Brocken) | yes | mod-specific gear | P1 |
 | Späti-Wirt | keeper | NPC | all expeditions | `hero.glb` in vest + flat cap, apron (`src/render/content.ts`) | placeholder | none | n/a | own look | P3 |
 | Händler | trader | NPC | expeditions | `hero.glb` + wide hat, pack, green lantern | placeholder | none | n/a | own look | P3 |
@@ -89,6 +99,7 @@ Sources: kinds and bodies `src/data/enemies.ts` (`ENEMIES[].body`), gear `gearFo
 | P1 | Köpenick enemies and bosses | Boss looks built (WP5 step 3, proof `docs/proof/wp5/bosses-h2.webp`); hardware look check; elite readability |
 | P2 | Xhain | Rattenmutter and Brandmeister built (WP5 step 3); compare Grenzer and Spreehexe with X11 and X12 |
 | P3 | NPCs | Späti-Wirt, Händler, captive and the 7 keepers all share the hero body: give each a distinct silhouette; check survivors against S01 to S06; Kodex entry for Ilse (her portrait is used in the camp) |
+| P6 | Wedding | Boss voices (three lines each and `SIGNATURE`), look review of the code bodies (proof `docs/proof/m18-wedding/enemies/`), the Bauherr's banner text |
 | P5 | Charlottenburg | Boss voices (three lines each and `SIGNATURE`), look review of the code bodies (proof `docs/proof/m16-charlottenburg/enemies/`) |
 | P4 | Tunnels, Alexanderplatz, Mitte | Schaffner built (WP5 step 3) |
 

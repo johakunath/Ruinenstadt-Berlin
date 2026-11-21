@@ -87,7 +87,7 @@ const TINTS: Record<EnemyKind, number[]> = {
   scherbe: [0xe6dce4, 0xdcd4e0], loge: [0x8c8494], souffleur: [0xd8d0dc],
   conferencier: [0xd8cec4], ringvater: [0xb8a494], spiegelpaar: [0xecdcdc], spiegelbild: [0xc8d8ec], diva: [0xf0e4e4],
   // M18 Wedding (board: warm gold under lampions): an amber tea spirit, golden pastry, a ruddy regular, the Sultan.
-  teeifrit: [0xf0b070, 0xe8a060], baklava: [0xd8a050, 0xe0b060], teppich: [0xffffff],
+  teeifrit: [0xffa048, 0xff9040], baklava: [0xd8a050, 0xe0b060], teppich: [0xffffff],
   stammgast: [0xd8b0a0], hauptgericht: [0xd8a050], bauherr: [0xffffff], sultan: [0xdcb490],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
@@ -166,7 +166,7 @@ const UPRIGHT: Partial<Record<EnemyKind, true>> = {
   feldwebel: true, hauptmann: true, schaffner: true, grenzer: true, brandmeister: true, spreehexe: true,
   tuersteher: true, dirigent: true, bassprediger: true, wurzelmutter: true,
   scherbe: true, conferencier: true, ringvater: true, spiegelpaar: true, spiegelbild: true, diva: true,
-  stammgast: true, sultan: true,
+  stammgast: true, sultan: true, teeifrit: true,
 };
 /** The bones whose zombie-to-upright turn `straighten` applies. */
 const STRAIGHT = ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head', 'clavicle_l', 'clavicle_r'] as const;
@@ -1498,9 +1498,14 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
         [tf(new CylinderGeometry(0.018, 0.018, 0.14, 6), 0, -0.62, 0.27, Math.PI / 2), 'brass'],
         [tf(new SphereGeometry(0.025, 6, 4), 0, -0.62, 0.34), 'tea'],
         ...[-1, 1].map((sd): Part => [tf(new TorusGeometry(0.05, 0.012, 4, 10), sd * 0.27, -0.42, 0, 0, Math.PI / 2), 'brass']),
-        [tf(new ConeGeometry(0.26, 0.42, 12, 1, true), 0, -0.08, 0, Math.PI), 'steam'],
+        // The spirit's tail of steam: twisted wisps from the samovar's lid up into the waist.
+        ...[0, 1, 2, 3, 4].map((i): Part => {
+          const a = (i / 5) * Math.PI * 2;
+          return [cable([[Math.sin(a) * 0.08, -0.26, Math.cos(a) * 0.08], [Math.sin(a + 0.9) * 0.17, -0.14, Math.cos(a + 0.9) * 0.17], [Math.sin(a + 1.8) * 0.2, 0.0, Math.cos(a + 1.8) * 0.2]], 0.045), 'steam'];
+        }),
       ]);
-      mount('spine_03', [-1, -0.3, 0.4, 1].map((k): Part => [cable([[k * 0.12, 0.1, -0.08], [k * 0.2, 0.3, -0.2], [k * 0.12 + 0.05, 0.55, -0.25], [k * 0.18, 0.8, -0.18]], 0.022), 'steam']), 0.08);
+      // Steam trails off the back (kept low and behind, so it never reads as horns).
+      mount('spine_03', [-1, 0, 1].map((k): Part => [cable([[k * 0.12, 0.0, -0.14], [k * 0.18, 0.06, -0.32], [k * 0.14, 0.16, -0.48], [k * 0.2, 0.2, -0.62]], 0.028), 'steam']), 0.08);
       for (const sd of ['l', 'r']) mount(`hand_${sd}`, [
         [tf(new CylinderGeometry(0.032, 0.024, 0.08, 8), 0, -0.08, 0.05), 'tea'],
         [tf(new CylinderGeometry(0.05, 0.05, 0.01, 10), 0, -0.125, 0.05), 'brass'],
@@ -1514,10 +1519,12 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
       const boss = kind === 'hauptgericht';
       if (boss) {
         mount('hand_r', [
-          [tf(new CylinderGeometry(0.022, 0.022, 1.25, 6), 0, -0.35, 0.04), 'steel'],
-          [tf(new CylinderGeometry(0.17, 0.09, 0.55, 12), 0, -0.4, 0.04), 'meat'],
-          ...[-0.2, -0.38, -0.56].map((y): Part => [tf(new TorusGeometry(0.14 - (y + 0.2) * 0.12, 0.012, 4, 14), 0, y, 0.04, Math.PI / 2), 'filo']),
-          [tf(new SphereGeometry(0.05, 8, 6), 0, 0.23, 0.04), 'brass'],
+          // Held upright like a torch: the rod through the fist, the meat cone above it.
+          [tf(new CylinderGeometry(0.022, 0.022, 1.2, 6), 0, 0.35, 0.04), 'steel'],
+          [tf(new CylinderGeometry(0.18, 0.1, 0.55, 12), 0, 0.45, 0.04), 'meat'],
+          ...[0.3, 0.45, 0.6].map((y): Part => [tf(new TorusGeometry(0.11 + (y - 0.3) * 0.13, 0.014, 4, 14), 0, y, 0.04, Math.PI / 2), 'filo']),
+          [tf(new SphereGeometry(0.05, 8, 6), 0, 0.97, 0.04), 'brass'],
+          [tf(new CylinderGeometry(0.1, 0.1, 0.02, 12), 0, 0.15, 0.04), 'steel'],
         ]);
         mount('hand_l', [
           [tf(new CylinderGeometry(0.3, 0.3, 0.02, 20), 0, -0.06, 0.12), 'silver'],
@@ -1563,9 +1570,9 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
       for (const [f, a] of [[2.2, 0.15], [3.1, -0.2], [3.6, 0.1]] as const) coat.add('spine_03', [onShell(new CircleGeometry(0.035, 7), coat.chest, o3, f, a, 0.012), 'stain']);
       mountCoat(coat, 0.5);
       mount('spine_01', [
-        [tf(new SphereGeometry(0.25, 14, 10).scale(1.12, 1, 1.15), 0, 0.02, 0.1), 'shirt'],
-        [tf(new CircleGeometry(0.05, 7), 0.06, 0.06, 0.39), 'stain'],
-        [tf(new CircleGeometry(0.035, 7), -0.08, -0.04, 0.38), 'stain'],
+        [tf(new SphereGeometry(0.21, 14, 10).scale(1.1, 1, 1.12), 0, 0.1, 0.1), 'shirt'],
+        [tf(new CircleGeometry(0.045, 7), 0.06, 0.14, 0.335), 'stain'],
+        [tf(new CircleGeometry(0.03, 7), -0.08, 0.05, 0.325), 'stain'],
       ]);
       const head = fit.box(['Head']), hp = fit.at('Head');
       const at = new Vector3(head.c.x, head.max.y - 0.06, head.c.z - 0.01);
@@ -1594,16 +1601,18 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
       for (const f of [1.6, 2.4, 3.2]) coat.add('spine_03', [onShell(new SphereGeometry(0.016, 6, 4), coat.chest, o3, f, 0.35, 0.02), 'brass']);
       mountCoat(coat, 0.5);
       mount('spine_01', [
-        [tf(new SphereGeometry(0.27, 16, 12).scale(1.05, 1, 1.1), 0, 0.02, 0.12), 'urn'],
-        ...[-0.12, 0.14].map((y): Part => [tf(new TorusGeometry(0.255 * Math.cos(y * 1.6), 0.016, 5, 20), 0, 0.02 + y, 0.12, Math.PI / 2), 'brass']),
-        [tf(new CylinderGeometry(0.018, 0.018, 0.1, 6), 0, -0.1, 0.42, Math.PI / 2), 'brass'],
+        // A glass urn in a brass cage: three meridians and two rings, a tap in front.
+        [tf(new SphereGeometry(0.23, 16, 12), 0, 0.04, 0.12), 'urn'],
+        ...[-0.1, 0.16].map((y): Part => [tf(new TorusGeometry(Math.sqrt(0.237 ** 2 - y * y), 0.014, 5, 20), 0, 0.04 + y, 0.12, Math.PI / 2), 'brass']),
+        ...[0, 1, 2].map((i): Part => [tf(new TorusGeometry(0.237, 0.011, 4, 24), 0, 0.04, 0.12, 0, (i * Math.PI) / 3), 'brass']),
+        [tf(new CylinderGeometry(0.018, 0.018, 0.1, 6), 0, -0.08, 0.38, Math.PI / 2), 'brass'],
       ]);
       const dish = (sd: 'l' | 'r', tier: number, food: Part[]): void => {
         const g = mount(`clavicle_${sd}`, [
           [tf(new CylinderGeometry(0.2, 0.2, 0.02, 18), 0, 0.12, 0), 'brass'],
           [tf(new TorusGeometry(0.2, 0.012, 4, 18), 0, 0.13, 0, Math.PI / 2), 'brass'],
           ...food,
-        ], 0, 0, sd === 'l' ? 0.1 : -0.1);
+        ], 0.06, -0.02, sd === 'l' ? 0.26 : -0.26);
         if (g) g.userData.tier = tier;
       };
       dish('l', 1, [0, 1, 2].map((i): Part => [tf(new SphereGeometry(0.05, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), Math.sin(i * 2.1) * 0.1, 0.13, Math.cos(i * 2.1) * 0.1), i === 1 ? 'pistachio' : 'velvet']));
@@ -1615,15 +1624,17 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
         [tf(new CylinderGeometry(0.15, 0.14, 0.1, 18, 1, true), 0, 0.03, 0), 'brass'],
         ...[0, 1, 2, 3, 4, 5, 6, 7].map((i): Part => [tf(new ConeGeometry(0.025, 0.07, 4), Math.sin(i * Math.PI / 4) * 0.15, 0.11, Math.cos(i * Math.PI / 4) * 0.15), 'brass']),
         ...[0, 1, 2, 3, 4, 5].map((i): Part => [tf(new SphereGeometry(0.018, 6, 4), Math.sin(i * Math.PI / 3) * 0.152, 0.03, Math.cos(i * Math.PI / 3) * 0.152), i % 2 ? 'emerald' : 'velvet']),
-        [tf(new ConeGeometry(0.045, 0.42, 6).scale(1, 1, 0.35), 0.05, 0.3, -0.06, -0.5, 0, -0.25), 'plume'],
+        // Two feathers swept back from the band (white and emerald), not upright.
+        [tf(new ConeGeometry(0.05, 0.36, 6).scale(1, 1, 0.3).translate(0, 0.18, 0), 0.05, 0.08, -0.08, -1.15, 0, -0.3), 'plume'],
+        [tf(new ConeGeometry(0.035, 0.28, 6).scale(1, 1, 0.3).translate(0, 0.14, 0), -0.03, 0.08, -0.1, -1.3, 0, 0.25), 'emerald'],
         [tf(new SphereGeometry(0.03, 8, 6), 0, 0.09, 0.15), 'heart'],
         ...moustache(lip, 0.08, -0.025, 0.018, 'hair'),
         [tf(new SphereGeometry(0.06, 8, 6).scale(1, 1.3, 0.7), lip.x, lip.y - 0.07, lip.z - 0.02), 'hair'],
       ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
       mount('hand_r', [
-        [tf(new CylinderGeometry(0.016, 0.016, 1.05, 6), 0, -0.32, 0.03), 'brass'],
-        [tf(new SphereGeometry(0.08, 10, 8).scale(1, 0.4, 1.4), 0, 0.24, 0.03, 0.3), 'brass'],
-        [tf(new SphereGeometry(0.03, 8, 6), 0, 0.17, 0.03), 'heart'],
+        [tf(new CylinderGeometry(0.016, 0.016, 1.05, 6), 0, 0.3, 0.03), 'brass'],
+        [tf(new SphereGeometry(0.08, 10, 8).scale(1, 0.4, 1.4), 0, 0.88, 0.06, 0.3), 'brass'],
+        [tf(new SphereGeometry(0.03, 8, 6), 0, 0.8, 0.03), 'heart'],
       ]);
       break;
     }
@@ -1870,7 +1881,10 @@ function buildRug(materials: Materials, castShadow: boolean): Rug {
     ...[-3, -2, -1, 0, 1, 2, 3].map((i): Part => [tf(new ConeGeometry(0.025, 0.07, 4), i * 0.055, 0.03, 0.02, Math.PI / 2), 'bone']),
     ...[-1, 1].map((sd): Part => [tf(new ConeGeometry(0.035, 0.14, 5), sd * (w / 2), -0.04, 0, Math.PI), 'brass']),
   ], false, undefined, true);
-  face.position.z = l / 2 - 0.05;
+  // On the reared front edge, turned to look ahead and down at the hero.
+  face.position.set(0, 0.4, l / 2 - 0.02);
+  face.rotation.x = -0.5;
+  face.scale.setScalar(1.4);
   const eyes = materials.surface({ color: 0x3a2a08, emissive: 0xffc84a, emissiveIntensity: 2.6, roughness: 0.4 });
   for (const sd of [-1, 1]) {
     const eye = new Mesh(new SphereGeometry(0.04, 8, 6), eyes);
@@ -2925,7 +2939,9 @@ export class EnemyView {
     const pos = r.cloth.geometry.attributes.position!, b = r.base, L = RUG.l;
     for (let i = 0; i < pos.count; i++) {
       const z = b[i * 3 + 2]!, u = (L / 2 - z) / L;
-      pos.setY(i, wave * 0.14 * Math.sin(this.time * 6 - u * 7) * u ** 0.7 + 0.04 * Math.sin(b[i * 3]! * 6 + this.time * 3) * u);
+      // The front quarter rears up like a snake's head (board), the rest waves behind it.
+      const rear = Math.max(0, 1 - u / 0.28) ** 2 * 0.42;
+      pos.setY(i, rear + wave * 0.14 * Math.sin(this.time * 6 - u * 7) * u ** 0.7 + 0.04 * Math.sin(b[i * 3]! * 6 + this.time * 3) * u);
     }
     pos.needsUpdate = true;
     r.cloth.geometry.computeVertexNormals();
