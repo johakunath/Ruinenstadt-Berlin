@@ -10,5 +10,5 @@ Status: built (2026-11-17). Calibration to Johannes (B9) waits for telemetry fro
 
 ## Open
 - B9: fit `miss`, `react`, `dodgeMelee` to Johannes' runs (compare damage per encounter and lowest life from the "Telemetrie" sheet with the bot table).
-- B13: the bot does not trade.
+- B13 (trading) built in B2 step 1 (`docs/tasks/b2-economy-pacing.md`).
 - The bot attacks without pause and never gets lost; real clear times will be longer.

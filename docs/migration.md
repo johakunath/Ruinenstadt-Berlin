@@ -17,7 +17,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals | Claude · Opus high | open: `docs/backlog.md` |
 | H3 humanoid boss bases: step 2 human base mesh (comparison first), step 3 Turmwächter on the mech; Codex T8 boss textures | Claude · Opus high | open: `docs/tasks/h3-humanoid-bosses.md` |
 | M16 Charlottenburg step 8 rest: tier calibration with the bot once B2 is decided (C4; tier 32 … 54 and U2 west 41 … 46 are provisional) | Claude · Opus medium | after B2: `docs/tasks/m16-charlottenburg.md` › Handover step 8 |
-| B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18) | Claude · Fable high (spec), Opus high (build) | open: `docs/tasks/b2-economy-pacing.md` |
+| B2 Economy, enemy roles, tunnel pacing (playtest 2026-11-18): step 1 bot economy built (`--campaign`) | Claude · Fable high (spec, step 2 targets), Opus high (build) | open, step 2 next: `docs/tasks/b2-economy-pacing.md` |
 | M18 Wedding, district 6 („kommt bald“, gold banquet; layout C2, look A, with the Magendoktor; small scope): step 1 map merged in PR #81 (`?map=wedding`), step 2 enemies, bosses and loot running; step 3 sights and finish (U9 line, links) starts after step 2 is merged | Claude · Opus high (plan: Fable high, done) | running: `docs/tasks/m18-wedding.md` |
 | M17 Fernsehturm finale, layout A „Aufstieg“ (Johannes, 2026-11-21): waits until Wedding is complete and merged; then step 1 engine, data and blockout. Both style boards are in the style bible (step S done) | Claude · Opus high (plan: Fable high, done); Johannes and Codex for S | after Wedding: `docs/tasks/m17-fernsehturm.md`, spec `docs/maps/fernsehturm.md` |
 

@@ -1,6 +1,13 @@
 # B2 Economy, enemy roles and tunnel pacing [spec: Claude · Fable high; build: Claude · Opus high]
 
-Status: open (Johannes, playtest 2026-11-18). Built already in PR #57: Späti Schärfen and Panzerung (`SPATI_UPGRADE`: 2 levels, 3× the workshop price), "fürs Lager" hint on the Schrott count, trader shows item level.
+Status: step 1 built (2026-11-22), step 2 next. Built already in PR #57: Späti Schärfen and Panzerung (`SPATI_UPGRADE`: 2 levels, 3× the workshop price), "fürs Lager" hint on the Schrott count, trader shows item level.
+
+## Handover step 1 (2026-11-22, Claude · Opus high)
+- `src/bot/bot.ts`: rules of the table below as `SHOP`, `keepsItem`/`salvageSpare`, `wantsOffer`, `botCamp`/`campOffers`; the bot walks to unvisited Spätis and traders within 50 m, holds the generator ring, routes through tunnel gratings; every Schrott is booked in a `Ledger` (`CampaignReport.economy`). Tests in `src/bot/bot.test.ts`.
+- `node tools/balance.mjs 3 normal johannes 1 --campaign`: new mode (not `--chain`, which keeps counting tunnels as cleared for comparison with older records): `CAMPAIGN` in `src/bot/run.ts`, ten maps with the four tunnels, Wedding directly after Charlottenburg. `--map=tunnel0..3` plays one tunnel.
+- Baseline table and reading: `docs/balance.md` › Economy baseline. No balance number changed. 2D repo not needed (the 3D Späti, trader and camp code held the rules).
+- Step 2 needs: Fable targets (Schrott left after Köpenick, camp levels per district, tunnel item level); then mainly the power runaway: shop stock rolls at worn item level + 2 (`runcontent.ts` Späti and `rollTrader`), so shopping compounds with the district loot step. Schrott is never short after Xhain (900 to 2800 left per map).
+- Still open from P33 (`docs/backlog.md`): shrines, hidden blessings, run events, Umbau judgement, weapon by enemy class.
 
 ## Johannes' feedback
 - Too much Schrott in Köpenick and too little to spend it on. Lower the drops a little and raise prices once the bot plays the economy.
