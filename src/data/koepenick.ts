@@ -192,10 +192,11 @@ export function koepenickMap(scale = 1): MapDef {
   const landmarks: Landmark[] = [
     L('sbahnhof', 10, -140, 0, 15, 7, 6),
     L('forum', 52, -126, 0, 22, 11, 3),
-    L('rathaus', 24, -18, 270 * DEG, 13, 15, 3),
+    // P42: cut while the hero is behind them. The Böttcherstraße runs right behind the Rathaus, so it is cut low (like the U1 halls).
+    { ...L('rathaus', 24, -18, 270 * DEG, 13, 15, 3), cut: { h: 2 } },
     // M11d: sizes from reference photos (Schloss front along the island, tower plus pavilion, wheel legs).
-    L('schloss', -31, 24, 90 * DEG, 11.5, 5.5, 0),
-    L('kirche', 26, 18, 0, 5, 9, 2),
+    { ...L('schloss', -31, 24, 90 * DEG, 11.5, 5.5, 0), cut: {} },
+    { ...L('kirche', 26, 18, 0, 5, 9, 2), cut: {} },
     L('mueggelturm', 147, 124, 0, 6, 5, 6),
     L('riesenrad', -137, -51, 30 * DEG, 6.5, 3.5, 10),
     { ...L('dino', -96, -4, 200 * DEG, 2, 3.5, 1), variant: 0 },
@@ -250,6 +251,7 @@ export function koepenickMap(scale = 1): MapDef {
       { special: 'kirchhof', x: 39 * s, z: 16 * s, rot: 180 * DEG, w: 13, d: 17 },
     ],
     zones,
+    cutStreets: true,
     rail: { z: -142 * s, minX: -156 * s, maxX: 162 * s, gapX: 10 * s, gapW: 9 },
     hills: [
       // Müggelberge: the Turm fight on the summit, the Teufelssee fight on the lower slope.

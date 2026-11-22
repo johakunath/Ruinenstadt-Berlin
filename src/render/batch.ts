@@ -38,16 +38,16 @@ export class Batch {
 
   /** Captures the triangles added since `first`; `box` grows by their vertices (world space). */
   captureOccluderFrom(first: number, box?: Box3): void {
-    const upper = this.cuts.filter((c) => !c.cap && c.start >= first);
+    const ranges = this.cuts.filter((c) => c.start >= first);
     for (let i = first; i < this.indices.length; i++) {
       if (this.excludedOccluderIndices.has(i)) continue;
       const k = this.indices[i]!;
-      // Upper triangles of a cut part stay one contiguous range in the mask too.
-      const cut = upper.find((c) => i >= c.start && i < c.start + c.count);
+      // Upper triangles and caps of a cut part stay contiguous ranges in the mask too.
+      const cut = ranges.find((c) => i >= c.start && i < c.start + c.count);
       if (cut) {
         const last = this.occluderCuts[this.occluderCuts.length - 1];
-        if (last && last.part === cut.part && last.start + last.count === this.occluderIndices.length) last.count++;
-        else this.occluderCuts.push({ part: cut.part, start: this.occluderIndices.length, count: 1, cap: false });
+        if (last && last.part === cut.part && last.cap === cut.cap && last.start + last.count === this.occluderIndices.length) last.count++;
+        else this.occluderCuts.push({ part: cut.part, start: this.occluderIndices.length, count: 1, cap: cut.cap });
       }
       this.occluderIndices.push(k);
       box?.expandByPoint(v.set(this.positions[k * 3]!, this.positions[k * 3 + 1]!, this.positions[k * 3 + 2]!));
@@ -259,12 +259,8 @@ export class BatchSet {
     if (!caps) return;
     starts = this.starts();
     caps();
-    for (const [material, batch] of this.map) {
-      const first = starts.get(material) ?? 0;
-      batch.capFrom(first, part);
-      // Caps are no occluders: the hero is never under one.
-      if (this.capturing) batch.excludeOccluderFrom(first);
-    }
+    // Caps are occluders too (P42): a hero close behind a cut building is hidden by the cap and keeps her contour.
+    for (const [material, batch] of this.map) batch.capFrom(starts.get(material) ?? 0, part);
   }
 
   /** World bounds of each captured object: the hero outline tests these before drawing anything. */

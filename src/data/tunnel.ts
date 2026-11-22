@@ -17,6 +17,7 @@ import { XHAIN_TIER } from './xhain';
 import { MITTE_TIER, mitteWaveTier } from './mitte';
 import { charlottenburgWaveTier } from './charlottenburg';
 import { LINES, stopName, tunnelName } from './lines';
+import { TRAM_BOGIES, TRAM_HEAD_WIDTH, TRAM_WHEEL_OFFSET } from './tram';
 import type { Prop } from './courtyard';
 import { inTube, type MapDef, type Pt, type Tube, type TunnelGate } from './map';
 
@@ -38,6 +39,45 @@ export const TUNNEL = {
   /** Gratings (2D TSEC `gate`): one after each of the five fights, clear of the fight circles, junctions and station ends. */
   gates: [116, 172, 288, 311, 372],
 } as const;
+
+/**
+ * P43: the two tracks of the bed, shared by the rails (map-world) and the stopped train, so the
+ * train's sixteen wheels stand on the rail heads. Offsets run along the segment normal (uz, -ux).
+ */
+export const TUNNEL_TRACK = {
+  /** Track centres from the bed's centre line; the wreck train stands on the second (north) one. */
+  tracks: [-2.6, 2.6],
+  /** Rail centres from the track centre: the tram's wheel offset (1.435 m gauge between the inner faces). */
+  rail: TRAM_WHEEL_OFFSET,
+  headWidth: TRAM_HEAD_WIDTH,
+  /** Rail height; the rails stand on the sleepers' base, their top is where the wheels stand. */
+  railHeight: 0.14,
+  railTop: 0.15,
+  /** Half length of the straight under the train (the train's 15 m plus a margin; on a curve its wheels miss the rails). */
+  trainHalf: 8,
+} as const;
+
+/** One rail piece per track segment: centre, yaw and length (a box of `headWidth` by `railHeight`, rails top at `railTop`). */
+export function trackRails(pts: readonly Pt[]): { x: number; z: number; yaw: number; len: number; a: Pt; b: Pt }[] {
+  const out: { x: number; z: number; yaw: number; len: number; a: Pt; b: Pt }[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, az] = pts[i - 1]!, [bx, bz] = pts[i]!, len = Math.hypot(bx - ax, bz - az);
+    if (len < 0.01) continue;
+    const ux = (bx - ax) / len, uz = (bz - az) / len;
+    for (const off of TUNNEL_TRACK.tracks) for (const r of [-TUNNEL_TRACK.rail, TUNNEL_TRACK.rail]) {
+      const o = off + r;
+      out.push({ x: (ax + bx) / 2 + uz * o, z: (az + bz) / 2 - ux * o, yaw: Math.atan2(ux, uz), len, a: [ax + uz * o, az - ux * o], b: [bx + uz * o, bz - ux * o] });
+    }
+  }
+  return out;
+}
+
+/** Pose of the stopped train on a straight track segment a..b: centre on the north track, yaw along the segment. */
+export function trackTrainPose(a: Pt, b: Pt): { x: number; z: number; rot: number } {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, o = TUNNEL_TRACK.tracks[1];
+  // `at()` maps local z to (sin rot, cos rot): rot = atan2(ux, uz) runs the train along the track.
+  return { x: (a[0] + b[0]) / 2 + uz * o, z: (a[1] + b[1]) / 2 - ux * o, rot: Math.atan2(ux, uz) };
+}
 
 export type Stretch = 'collapse' | 'flood' | 'wreck';
 /** Free stretches between the fights that take the three special stretches (x ranges). The collapse fits only the first and the last. */
@@ -83,10 +123,19 @@ export function tunnelMap(line = 0): MapDef {
   const { side: s, order } = lineLayout(line);
   const slot = (k: Stretch): readonly [number, number] => SLOTS[order.indexOf(k)]!;
 
+  const [wa, wb] = slot('wreck');
+  const wx = wa + (wb - wa) * 0.625;
+  // The train's bogies span 13 m: P43 keeps the track straight under it (one chord of the curve).
+  const wh = TUNNEL_TRACK.trainHalf;
+  if (wh < TRAM_BOGIES.at(-1)! + 1) throw new Error('train straight too short');
   const track: Pt[] = [];
   // Rails run from end wall to end wall (playtest 2026-11-18: they began 2 m inside the start station).
   track.push(at(-12));
-  for (let x = -10; x <= 440; x += 10) track.push(at(x));
+  for (let x = -10; x <= 440; x += 10) {
+    if (Math.abs(x - wx) <= wh + 2) continue;
+    if (x > wx && track.at(-1)![0] < wx) track.push(at(wx - wh), at(wx + wh));
+    track.push(at(x));
+  }
   track.push(at(442));
   const tubes: Tube[] = [
     { kind: 'track', pts: track, width: TUNNEL.trackWidth },
@@ -111,8 +160,6 @@ export function tunnelMap(line = 0): MapDef {
   const rubble = { pts: along(ca + 10, cb - 10, 2), width: 12 };
   const [fa, fb] = slot('flood');
   const flood = { pts: along(fa + 1, fb - 1, 2), width: TUNNEL.trackWidth - 0.2, slow: TUNNEL.floodSlow };
-  const [wa, wb] = slot('wreck');
-  const wx = wa + (wb - wa) * 0.625;
 
   const W = lineWaves(line);
   let g = W.from;
@@ -182,7 +229,7 @@ export function tunnelMap(line = 0): MapDef {
   const kl = Math.hypot(6, 14), [kx, kz] = [206 - (6 / kl) * 1.3, cz(196) + (30 - (14 / kl) * 1.3) * s];
   fixedProps.push({ kind: 'crates', x: kx, z: kz, rot: 0.3, size: 1.2 }, { kind: 'crate', x: kx - 1.6, z: kz - 1.2 * s, rot: 0.8, size: 1 }, { kind: 'crate', x: kx + 1.5, z: kz - 1.4 * s, rot: -0.4, size: 1 });
   // A stopped train in the wreck stretch (left track), campfires in the stations.
-  fixedProps.push({ kind: 'tram', x: wx, z: cz(wx) - 2.4, rot: Math.PI / 2 + Math.atan2(cz(wx + 7) - cz(wx - 7), 14), size: 1 });
+  fixedProps.push({ kind: 'tram', ...trackTrainPose(at(wx - wh), at(wx + wh)), size: 1, railTop: TUNNEL_TRACK.railTop });
   fixedProps.push({ kind: 'campfire', x: at(14)[0], z: at(14, -7)[1], rot: 0, size: 1 }, { kind: 'campfire', x: at(256)[0], z: at(256, 7)[1], rot: 0, size: 1 });
   // The collapse: rubble heaps and fallen ceiling slabs and girders across the track bed (they stay inside the blocked band).
   const rr = new Rng(5151);

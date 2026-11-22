@@ -6,18 +6,21 @@
 // districts (meals, Lazarett, workshop, drill, stations, Aufsätze, implant mode). Its own
 // (`BotSkill`) meant to be fitted to Johannes' telemetry (B9): how often it overlooks a telegraph
 // and how long it takes to react. No DOM, no rendering: runs in Node (tools/balance.mjs) and tests.
+// B2 step 1 (economy, first guesses in `docs/tasks/b2-economy-pacing.md`): salvages what it will not
+// wear, walks to Spätis and traders and buys by item level, builds the camp cheapest first, holds the
+// tunnel generator ring, and books every Schrott it earns and spends in a `Ledger`.
 import { PLAYER, weaponAttack } from '../data/combat';
 import type { DifficultyId } from '../data/difficulty';
 import { chooseBlessing } from '../sim/blessings';
-import { colliderDistance } from '../sim/collide';
+import { colliderDistance, type Collider } from '../sim/collide';
 import { ferryPos } from '../sim/ferry';
-import { equipItem, salvageItem } from '../sim/inventory';
+import { BAG_SIZE, equipItem, salvageItem } from '../sim/inventory';
 import type { Item } from '../sim/items';
 import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
 import { profileOf, type SaveProfile } from '../sim/save';
 import { buildMod, buildStation, buyDrill, buySpatiUpgrade, buyUpgrade, cookMeal, craftConsumable, drillCost, endExpedition, installMod, modSlots, nextLevel, removeMod, SPATI_UPGRADE, spatiUpgradeCost, stationBuilt, upgradeCost, upgradeMax } from '../sim/camp';
-import { buyConsumable, buyOffer, closeTrade, talkTo, tradeStock } from '../sim/runcontent';
+import { buyConsumable, buyOffer, closeTrade, talkTo, tradeStock, type TradeOffer } from '../sim/runcontent';
 import { heldFamilies, perkOf } from '../sim/blessings';
 import { pk } from '../sim/combat';
 import { setImplantMode } from '../sim/inventory';
@@ -26,6 +29,7 @@ import { CONSUMABLES, MEALS, WEAPON_MODS, type WeaponModId } from '../data/craft
 import { IMPLANT_MODES } from '../data/items';
 import { campOpen } from '../data/lines';
 import { STATIONS } from '../data/camp';
+import { gateBetween } from '../sim/director';
 import { createSim, stepSim } from '../sim/sim';
 import { heroStats, power } from '../sim/stats';
 import { DT, type Enemy, type Sim, type SimInput } from '../sim/types';
@@ -69,15 +73,19 @@ class Nav {
   private tx = NaN;
   private tz = NaN;
 
+  /** M20 tunnel gratings: closed when the grid is built, open later; the route runs through them (the next fight lies behind one only once it is open). */
+  private readonly gates: ReadonlySet<Collider>;
+
   constructor(private readonly level: Level) {
     const b = level.bounds;
+    this.gates = new Set(level.gates.map((g) => g.collider));
     this.cols = Math.ceil((b.maxX - b.minX) / CELL);
     this.rows = Math.ceil((b.maxZ - b.minZ) / CELL);
     this.free = new Uint8Array(this.cols * this.rows);
     this.dist = new Int32Array(this.cols * this.rows);
     for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
       const x = b.minX + (c + 0.5) * CELL, z = b.minZ + (r + 0.5) * CELL;
-      const solid = level.near(x, z, BODY + 0.1).some((k) => colliderDistance(k, x, z) < BODY);
+      const solid = level.near(x, z, BODY + 0.1).some((k) => !this.gates.has(k) && colliderDistance(k, x, z) < BODY);
       this.free[r * this.cols + c] = !solid && (!level.blocked(x, z, BODY) || this.onLane(x, z)) ? 1 : 0;
     }
   }
@@ -98,6 +106,11 @@ class Nav {
     const c = Math.min(this.cols - 1, Math.max(0, Math.floor((x - b.minX) / CELL)));
     const r = Math.min(this.rows - 1, Math.max(0, Math.floor((z - b.minZ) / CELL)));
     return r * this.cols + c;
+  }
+
+  /** The cell under (x, z) is walkable ground of the grid. */
+  isFree(x: number, z: number): boolean {
+    return this.free[this.cell(x, z)] === 1;
   }
 
   private target(x: number, z: number): void {
@@ -127,7 +140,7 @@ class Nav {
     const n = Math.max(1, Math.ceil(Math.hypot(tx - x, tz - z) / 0.25));
     for (let k = 1; k <= n; k++) {
       const px = x + ((tx - x) * k) / n, pz = z + ((tz - z) * k) / n;
-      if (this.level.near(px, pz, 0.2).some((c) => colliderDistance(c, px, pz) < 0.05)) return false;
+      if (this.level.near(px, pz, 0.2).some((c) => !this.gates.has(c) && colliderDistance(c, px, pz) < 0.05)) return false;
     }
     return true;
   }
@@ -205,7 +218,7 @@ export class Bot {
   private detourA = 0;
   private attackHeld = 0;
 
-  constructor(private readonly sim: Sim, readonly skill: BotSkill, seed = 1) {
+  constructor(private readonly sim: Sim, readonly skill: BotSkill, seed = 1, readonly ledger: Ledger = newLedger()) {
     this.rng = new Rng(seed * 7919 + 13);
     let nav = navs.get(sim.level);
     if (!nav) {
@@ -227,7 +240,10 @@ export class Bot {
 
   /** Lowest life share in the recent fights (decays back to 1): hard fights steer blessings to toughness. */
   recentLow = 1;
-  private shopped = -1;
+  /** B2: Spätis (rest index) and the trader (-1) shopped at in this life; one it cannot reach in `SHOP.giveUp` s counts too. */
+  private readonly shopped = new Set<number>();
+  private shopT = 0;
+  private shopTarget = NaN;
 
   /** Between steps: blessings, gear, bag, shopping. */
   manage(): void {
@@ -240,16 +256,32 @@ export class Bot {
       if (!chooseBlessing(s, best.id)) break;
     }
     equipBest(s, true);
-    // Keep room: salvage what is not worn once the bag is nearly full.
-    const bag = s.inventory.bag;
-    if (bag.length >= 20) for (let i = bag.length - 1; i >= 0; i--) salvageItem(s, i);
+    salvageSpare(s, this.ledger);
     // Späti or trader: open the trade once per stop and shop like a person.
     const c = s.content;
-    if (c.talk != null && !c.tradeOpen && this.shopped !== c.talk && s.run.phase === 'travel') {
-      this.shopped = c.talk;
-      if (talkTo(s)) { shop(s); closeTrade(s); }
+    if (c.talk != null && !c.tradeOpen && !this.shopped.has(c.talk) && s.run.phase === 'travel') {
+      this.shopped.add(c.talk);
+      if (talkTo(s)) { shop(s, this.ledger); closeTrade(s); }
     }
-    if (c.talk == null && s.rest.at < 0) this.shopped = -1;
+  }
+
+  /** B2: the shop to walk to now: an unvisited Späti counter or the trader close by, while there is Schrott to spend. */
+  private shopGoal(): { key: number; x: number; z: number } | null {
+    const s = this.sim, p = s.player;
+    if (s.run.phase !== 'travel' || s.inventory.scrap < SHOP.minScrap) return null;
+    let best: { key: number; x: number; z: number } | null = null;
+    let bd: number = SHOP.reach;
+    const t = s.content.trader;
+    if (t && !this.shopped.has(-1)) {
+      const d = Math.hypot(t.x - p.x, t.z - p.z);
+      if (d < bd) { bd = d; best = { key: -1, x: t.x, z: t.z }; }
+    }
+    s.level.rests.forEach((r, i) => {
+      if (!r.desk || this.shopped.has(i)) return;
+      const d = Math.hypot(r.desk.x - p.x, r.desk.z - p.z);
+      if (d < bd) { bd = d; best = { key: i, x: r.desk.x, z: r.desk.z }; }
+    });
+    return best;
   }
 
   input(): SimInput {
@@ -257,6 +289,7 @@ export class Bot {
     const p = s.player;
     const inp: SimInput = { moveX: 0, moveZ: 0, aimX: 0, aimZ: 0, aimAssist: true, attack: false, dodge: false };
     if (p.state === 'dead') return inp;
+    if (this.nav.isFree(p.x, p.z)) { this.okX = p.x; this.okZ = p.z; }
     const T = s.threats;
     let mx = 0, mz = 0, threat = 0;
     let dodge = false;
@@ -402,7 +435,7 @@ export class Bot {
         if (d < 9 && s.flow.clearLine(p.x, p.z, near.x, near.z)) {
           mx += ux;
           mz += uz;
-        } else if (this.nav.toward(p.x, p.z, near.x, near.z, this.dir)) {
+        } else if (this.go(near.x, near.z)) {
           mx += this.dir.x;
           mz += this.dir.z;
         }
@@ -445,9 +478,19 @@ export class Bot {
         const q = Math.hypot(d.x - p.x, d.z - p.z);
         if (q < hd) { hd = q; heal = d; }
       }
-      if (heal && (nd > 4 || p.hp < s.stats.maxHp * 0.3) && this.nav.toward(p.x, p.z, heal.x, heal.z, this.dir)) {
+      if (heal && (nd > 4 || p.hp < s.stats.maxHp * 0.3) && this.go(heal.x, heal.z)) {
         mx += this.dir.x * 1.5;
         mz += this.dir.z * 1.5;
+      }
+    }
+
+    // M20 generator: the charge runs only while the hero stands in the ring, so fight from inside it.
+    const enc = s.level.encounters[s.run.index];
+    if (s.run.phase === 'hold' && enc?.hold) {
+      const d = Math.hypot(enc.x - p.x, enc.z - p.z);
+      if (d > enc.hold.r - 1.5) {
+        mx += ((enc.x - p.x) / (d || 1)) * 4;
+        mz += ((enc.z - p.z) / (d || 1)) * 4;
       }
     }
 
@@ -490,6 +533,25 @@ export class Bot {
     return inp;
   }
 
+  /**
+   * Sets `dir` toward (tx, tz) along the grid. B2 (Späti counters): the last metres to a target are walked
+   * straight and can end on cells the grid calls blocked (inside a shop, by its counter) with no free
+   * neighbour in a clear line; then it walks back straight to where it last stood on free ground.
+   */
+  private go(tx: number, tz: number): boolean {
+    const p = this.sim.player;
+    // The grid treats gratings as open; a target behind one that is still closed (loot, a heal drop) is out of reach.
+    if (gateBetween(this.sim, p.x, p.z, tx, tz)) return false;
+    if (this.nav.toward(p.x, p.z, tx, tz, this.dir)) return true;
+    const d = Math.hypot(this.okX - p.x, this.okZ - p.z);
+    if (!Number.isFinite(d) || d < 0.1) return false;
+    this.dir.x = (this.okX - p.x) / d;
+    this.dir.z = (this.okZ - p.z) / d;
+    return true;
+  }
+  private okX = NaN;
+  private okZ = NaN;
+
   private onBoatWait(): boolean {
     const p = this.sim.player;
     return this.nav.onLane(p.x, p.z) || this.sim.level.ferries.some((f) => Math.hypot(ferryPos(f, this.sim.time).x - p.x, ferryPos(f, this.sim.time).z - p.z) < 14);
@@ -524,9 +586,15 @@ export class Bot {
         this.lootT = 0;
       }
     }
+    const goal = best ? null : this.shopGoal();
+    if (goal && goal.key !== this.shopTarget) { this.shopTarget = goal.key; this.shopT = 0; }
+    if (goal && (this.shopT += DT) > SHOP.giveUp) this.shopped.add(goal.key);
     if (best) {
       tx = best.x;
       tz = best.z;
+    } else if (goal) {
+      tx = goal.x;
+      tz = goal.z;
     } else if (s.run.phase === 'travel' && p.hp < s.stats.maxHp * 0.6 && s.level.rests.length > 0) {
       // Rest in the nearest Späti until healed.
       let r = s.level.rests[0]!;
@@ -543,7 +611,7 @@ export class Bot {
       tx = enc.x;
       tz = enc.z;
     }
-    if (this.nav.toward(p.x, p.z, tx, tz, this.dir)) {
+    if (this.go(tx, tz)) {
       inp.moveX = this.dir.x;
       inp.moveZ = this.dir.z;
     }
@@ -608,12 +676,7 @@ export function equipBest(s: Sim, inRun: boolean): void {
       const now = power(s.stats);
       const then = power(heroStats({ ...s.equipment, [it.slot]: it }, s.statContext));
       const cur = s.equipment[it.slot];
-      let need = 1.01;
-      if (it.slot === 'w' && cur && it.kind !== cur.kind) {
-        const tied = PERKS_TIED(s);
-        need = !inRun ? 1.15 : tied >= 2 ? 1.4 : 1.2;
-      }
-      if (then > now * need) {
+      if (then > now * wearNeed(s, it, inRun)) {
         // Aufsätze stay in stock when the weapon changes (2D swapW).
         if (it.slot === 'w' && cur?.mods?.length) for (const m of [...cur.mods]) removeMod(s, m);
         equipItem(s, i);
@@ -624,6 +687,12 @@ export function equipBest(s: Sim, inRun: boolean): void {
     if (!changed) break;
   }
   loadout(s);
+}
+/** Power factor a piece needs over the worn one before the bot wears it. */
+function wearNeed(s: Sim, it: Item, inRun: boolean): number {
+  const cur = s.equipment[it.slot];
+  if (it.slot !== 'w' || !cur || it.kind === cur.kind) return 1.01;
+  return !inRun ? 1.15 : PERKS_TIED(s) >= 2 ? 1.4 : 1.2;
 }
 const PERKS_TIED = (s: Sim): number => {
   const fam = WFAM[s.stats.kind] ?? [];
@@ -661,40 +730,115 @@ function loadout(s: Sim): void {
   }
 }
 
-/** Späti or trader (2D state 'trade'): better gear if affordable, Verband and Molotow up to three, Schärfen and Panzerung when Schrott is left. */
-function shop(s: Sim): void {
-  const stock = tradeStock(s);
-  stock.forEach((o, i) => {
-    if (!o) return;
-    const then = power(heroStats({ ...s.equipment, [o.item.slot]: o.item }, s.statContext));
-    if (then > power(s.stats) * 1.05 && s.inventory.scrap >= o.price) buyOffer(s, i);
-  });
+// ---------------------------------------------------------------- economy (B2 step 1, first guesses)
+
+/** Where the Schrott of one map went (each purchase is booked as the Schrott it took). */
+export interface Ledger {
+  /** Schrott from salvaging bag items. */
+  salvage: number;
+  /** Gear offers and Verband or Molotow bought at a Späti or the trader. */
+  items: number;
+  /** Schärfen and Panzerung at a Späti. */
+  upgrades: number;
+  /** Everything bought in the camp: build sites, station levels, workshop upgrades, Lazarett, drill, Aufsätze. */
+  camp: number;
+}
+export const newLedger = (): Ledger => ({ salvage: 0, items: 0, upgrades: 0, camp: 0 });
+
+/** Runs `f` and books the Schrott it moved under `k`. */
+function book<T>(s: Sim, l: Ledger | undefined, k: keyof Ledger, f: () => T): T {
+  const before = s.inventory.scrap;
+  const r = f();
+  if (l) l[k] += Math.abs(s.inventory.scrap - before);
+  return r;
+}
+
+/**
+ * B2 rules, first guesses before calibration: a trade offer must beat the worn piece by `lead` item
+ * levels and leave `keep` of the Schrott; the bot detours to an unvisited shop within `reach` m while
+ * it holds `minScrap` and gives up on one it cannot reach in `giveUp` s; Verband and Molotow are kept
+ * at `pouch`; the drill waits for `drillReserve` Schrott above its price.
+ */
+export const SHOP = { lead: 2, keep: 0.3, reach: 50, minScrap: 60, giveUp: 25, pouch: 2, drillReserve: 300 } as const;
+
+/** A legendary or set piece is kept; anything else below the worn piece's item level is salvaged. */
+export function keepsItem(s: Sim, it: Item): boolean {
+  if (it.locked || it.rarity >= 3 || it.set) return true;
+  const worn = s.equipment[it.slot];
+  return !worn || it.itemLevel >= worn.itemLevel;
+}
+
+/** Salvages what the bot will not wear; a nearly full bag loses its kept pieces too, the plain ones first. */
+export function salvageSpare(s: Sim, l?: Ledger): void {
+  const bag = s.inventory.bag;
+  for (let i = bag.length - 1; i >= 0; i--) if (!keepsItem(s, bag[i]!)) book(s, l, 'salvage', () => salvageItem(s, i));
+  if (bag.length < BAG_SIZE - 5) return;
+  for (let i = bag.length - 1; i >= 0; i--) if (bag[i]!.rarity < 3 && !bag[i]!.set) book(s, l, 'salvage', () => salvageItem(s, i));
+  if (bag.length < BAG_SIZE - 5) return;
+  for (let i = bag.length - 1; i >= 0; i--) book(s, l, 'salvage', () => salvageItem(s, i));
+}
+
+/** The trade rule: `SHOP.lead` item levels above the worn piece, `SHOP.keep` of the Schrott left, and a piece `equipBest` would wear. */
+export function wantsOffer(s: Sim, o: TradeOffer): boolean {
+  const worn = s.equipment[o.item.slot];
+  if (worn && o.item.itemLevel < worn.itemLevel + SHOP.lead) return false;
+  if (o.price > s.inventory.scrap * (1 - SHOP.keep)) return false;
+  return power(heroStats({ ...s.equipment, [o.item.slot]: o.item }, s.statContext)) > power(s.stats) * wearNeed(s, o.item, true);
+}
+
+/** Späti or trader (2D state 'trade'): offers by the trade rule, Verband and Molotow up to two, Schärfen and Panzerung while the Späti cap allows. */
+function shop(s: Sim, l?: Ledger): void {
+  // Wear each purchase before judging the next offer, so two offers for one slot are not both bought.
+  tradeStock(s).forEach((o, i) => { if (o && wantsOffer(s, o) && book(s, l, 'items', () => buyOffer(s, i)).ok) equipBest(s, true); });
   equipBest(s, true);
+  salvageSpare(s, l);
   if (s.content.tradeAt >= 0) {
-    for (const c of CONSUMABLES) while ((s.inventory.consumables?.[c.id] ?? 0) < 2 && s.inventory.scrap >= c.scrapCost * 3) if (!buyConsumable(s, c.id).ok) break;
-    for (const id of SPATI_UPGRADE.ids) if ((s.statContext.upgrades[id] ?? 0) < SPATI_UPGRADE.max && s.inventory.scrap >= spatiUpgradeCost(s, id) * 1.5) buySpatiUpgrade(s, id);
+    for (const c of CONSUMABLES) while ((s.inventory.consumables?.[c.id] ?? 0) < SHOP.pouch && s.inventory.scrap >= c.scrapCost * 3) if (!book(s, l, 'items', () => buyConsumable(s, c.id)).ok) break;
+    for (const id of SPATI_UPGRADE.ids) while ((s.statContext.upgrades[id] ?? 0) < SPATI_UPGRADE.max && s.inventory.scrap >= spatiUpgradeCost(s, id)) if (!book(s, l, 'upgrades', () => buySpatiUpgrade(s, id)).ok) break;
   }
 }
 
-/** Between districts (2D SIM.camp): gear, salvage the rest, cook, Lazarett, workshop, drill, stations, Aufsätze. */
-export function botCamp(s: Sim): void {
+/** Camp purchases open now, cheapest first: workshop upgrades below their cap and station levels whose needs and materials are met. */
+export function campOffers(s: Sim): Array<{ cost: number; buy: () => unknown }> {
+  const out: Array<{ cost: number; buy: () => unknown }> = [];
+  for (const u of CAMP_UPGRADES) if ((s.statContext.upgrades[u.id] ?? 0) < upgradeMax(s, u.id)) out.push({ cost: upgradeCost(s, u.id), buy: () => buyUpgrade(s, u.id) });
+  for (const st of STATIONS) {
+    if (!stationBuilt(s, st.id)) continue;
+    const n = nextLevel(s, st.id);
+    if (n && !n.needs.length && (Object.entries(n.cost) as Array<[string, number]>).every(([k, v]) => k === 'scrap' || (s.inventory.materials[k as keyof typeof s.inventory.materials] ?? 0) >= v)) out.push({ cost: n.cost.scrap ?? 0, buy: () => buildStation(s, st.id) });
+  }
+  return out.sort((a, b) => a.cost - b.cost);
+}
+
+/**
+ * Between expeditions (2D SIM.camp, B2 order): gear, salvage all but legendary and set pieces, cook;
+ * then every missing build site, cheapest first; Verband and Molotow to `SHOP.pouch`; upgrades and
+ * station levels by price (it saves up for the cheapest); the drill; Aufsätze.
+ */
+export function botCamp(s: Sim, l?: Ledger): void {
   equipBest(s, false);
-  for (let i = s.inventory.bag.length - 1; i >= 0; i--) salvageItem(s, i);
+  const bag = s.inventory.bag;
+  for (let i = bag.length - 1; i >= 0; i--) if (bag[i]!.rarity < 3 && !bag[i]!.set) book(s, l, 'salvage', () => salvageItem(s, i));
+  salvageSpare(s, l);
   if (!campOpen(s.inventory.camp?.freed)) return;
   if (!s.statContext.meal) {
     const pref = econNeed(s) > 0.4 ? ['gurke', 'curry', 'suppe', 'soljanka', 'kaffee'] : ['curry', 'suppe', 'soljanka', 'kaffee', 'gurke'];
     for (const id of pref) if (MEALS.some((m) => m.id === id) && cookMeal(s, id as (typeof MEALS)[number]['id']).ok) break;
   }
-  for (const c of CONSUMABLES) while ((s.inventory.consumables?.[c.id] ?? 0) < 3 && s.inventory.scrap >= c.scrapCost * 3) if (!craftConsumable(s, c.id).ok) break;
-  for (let guard = 0; guard < 200; guard++) {
-    const u = CAMP_UPGRADES.filter((x) => (s.statContext.upgrades[x.id] ?? 0) < upgradeMax(s, x.id)).sort((a, b) => upgradeCost(s, a.id) - upgradeCost(s, b.id))[0];
-    if (u && s.inventory.scrap >= upgradeCost(s, u.id)) { buyUpgrade(s, u.id); continue; }
-    const st = STATIONS.find((x) => nextLevel(s, x.id)?.ok);
-    if (st) { buildStation(s, st.id); continue; }
-    if (!u && stationBuilt(s, 'exer') && s.inventory.scrap >= drillCost(s) + 300) { buyDrill(s); continue; }
-    break;
+  const siteCost = (id: (typeof STATIONS)[number]['id']): number => nextLevel(s, id)?.cost.scrap ?? 0;
+  for (let guard = 0; guard < STATIONS.length; guard++) {
+    const site = STATIONS.filter((x) => !stationBuilt(s, x.id) && nextLevel(s, x.id)?.ok).sort((a, b) => siteCost(a.id) - siteCost(b.id))[0];
+    if (!site) break;
+    book(s, l, 'camp', () => buildStation(s, site.id));
   }
-  if (stationBuilt(s, 'zeug')) for (const m of WEAPON_MODS) if (!(s.inventory.mods[m.id] ?? 0) && !(s.equipment.w?.mods ?? []).includes(m.id)) buildMod(s, m.id);
+  for (const c of CONSUMABLES) while ((s.inventory.consumables?.[c.id] ?? 0) < SHOP.pouch && s.inventory.scrap >= c.scrapCost) if (!book(s, l, 'camp', () => craftConsumable(s, c.id)).ok) break;
+  for (let guard = 0; guard < 200; guard++) {
+    const next = campOffers(s)[0];
+    if (!next || s.inventory.scrap < next.cost) break;
+    book(s, l, 'camp', next.buy);
+  }
+  for (let guard = 0; guard < 50 && !campOffers(s).length && stationBuilt(s, 'exer') && s.inventory.scrap >= drillCost(s) + SHOP.drillReserve; guard++) book(s, l, 'camp', () => buyDrill(s));
+  if (stationBuilt(s, 'zeug')) for (const m of WEAPON_MODS) if (!(s.inventory.mods[m.id] ?? 0) && !(s.equipment.w?.mods ?? []).includes(m.id)) book(s, l, 'camp', () => buildMod(s, m.id));
   loadout(s);
 }
 
@@ -729,6 +873,14 @@ export interface CampaignReport {
   weapon: string;
   /** Gear, inventory and camp at the end, for the next district of a chain (after the camp step of a won run). */
   profile: SaveProfile;
+  /** B2: Schrott of this map. `camp` is the camp step before it; `earned` counts pickups, streaks and salvage. */
+  economy: Ledger & { start: number; earned: number; left: number; itemLevel: number; weaponLevel: number };
+}
+
+/** Mean item level of the worn pieces. */
+function wornLevel(s: Sim): number {
+  const lv = Object.values(s.equipment).filter((it): it is Item => !!it).map((it) => it.itemLevel);
+  return lv.length ? lv.reduce((a, b) => a + b, 0) / lv.length : 0;
 }
 
 export interface CampaignOptions {
@@ -756,8 +908,10 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   const c0 = o.carry ? structuredClone(o.carry) : undefined;
   let sim = createSim({ level, seed, difficulty: o.difficulty ?? 'normal', startAt: o.startAt ?? 0, ...(c0 ? { equipment: c0.equipment, statContext: c0.statContext, inventory: c0.inventory } : {}) });
   // Coming from the last district: a camp step first (2D SIM.camp after every run).
-  if (c0) botCamp(sim);
-  let bot = new Bot(sim, o.skill ?? SKILL_DEFAULT, seed);
+  const ledger = newLedger();
+  const scrap0 = sim.inventory.scrap;
+  if (c0) botCamp(sim, ledger);
+  let bot = new Bot(sim, o.skill ?? SKILL_DEFAULT, seed, ledger);
   const maxDeaths = o.maxDeaths ?? 12;
   const maxTime = o.maxTime ?? 3 * 3600;
   const reports: EncounterReport[] = level.encounters.map((e) => ({ name: e.name, boss: e.waves.some((w) => w.bosses.length > 0), time: 0, damage: 0, low: 1, deaths: 0, power: 0 }));
@@ -811,12 +965,14 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
       const prof = profileOf(sim);
       seenDrops.clear();
       sim = createSim({ level, seed: ++seed, difficulty: sim.difficulty, startAt: level.encounters.findIndex((e) => e.zone === zone), equipment: prof.equipment, statContext: prof.statContext, inventory: prof.inventory });
-      bot = new Bot(sim, bot.skill, seed);
+      bot = new Bot(sim, bot.skill, seed, ledger);
       fightIndex = -1;
     }
   }
   kills += sim.kills;
   const at = Math.min(sim.run.index, level.encounters.length - 1);
   endExpedition(sim, won, o.district ?? 0);
-  return { profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
+  const left = sim.inventory.scrap;
+  const economy = { ...ledger, start: scrap0, earned: left - scrap0 + ledger.items + ledger.upgrades + ledger.camp, left, itemLevel: wornLevel(sim), weaponLevel: sim.equipment.w?.itemLevel ?? 0 };
+  return { economy, profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }

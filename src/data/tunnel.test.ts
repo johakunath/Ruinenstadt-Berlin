@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { generateLots, generateProps, inTunnel, mapLevel } from './map';
-import { tunnelMap, tunnelZ } from './tunnel';
+import { trackRails, TUNNEL_TRACK, tunnelMap, tunnelZ } from './tunnel';
+import { LINES } from './lines';
+import { lineDist } from './map';
+import { TRAM_AXLES, TRAM_BOGIES, TRAM_WHEEL_OFFSET } from './tram';
 import { createSim, stepSim } from '../sim/sim';
 import { NO_INPUT } from '../sim/types';
 import { killEnemy } from '../sim/combat';
@@ -65,4 +68,26 @@ describe('M19 S3 tunnel (layout B)', () => {
     const fresh = simFromSave(save, { seed: 1, stress: 0, level }, false);
     expect(fresh.enemies.filter(e => e.guardIndex !== undefined)).toHaveLength(1);
   });
+});
+
+describe('P43 stopped train on the rails', () => {
+  for (const line of LINES.keys()) {
+    it(`stands with all sixteen wheels on the rail heads (line ${line})`, () => {
+      const t = tunnelMap(line), tram = t.fixedProps.find((p) => p.kind === 'tram')!;
+      const rails = trackRails(t.tunnel!.tubes.find((q) => q.kind === 'track')!.pts);
+      const c = Math.cos(tram.rot), s = Math.sin(tram.rot);
+      let contacts = 0;
+      for (const bogie of TRAM_BOGIES) for (const axle of TRAM_AXLES) for (const side of [-1, 1]) {
+        const lx = side * TRAM_WHEEL_OFFSET, lz = bogie + axle;
+        // `at()` in world.ts: local x runs along (cos rot, -sin rot), local z along (sin rot, cos rot).
+        const x = tram.x + c * lx + s * lz, z = tram.z - s * lx + c * lz;
+        // On a rail piece itself (not its extension), centred on the head.
+        expect(Math.min(...rails.map((r) => lineDist([r.a, r.b], x, z)))).toBeLessThan(1e-6);
+        contacts++;
+      }
+      expect(contacts).toBe(16);
+      // The wheel centres sit one radius above the prop base, so the wheels stand on the rail tops.
+      expect(tram.railTop).toBe(TUNNEL_TRACK.railTop);
+    });
+  }
 });

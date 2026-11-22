@@ -45,7 +45,7 @@ import { inKneipe } from '../data/kneipe';
 import { NIGHT_SKY, type Sky, type Wet } from './sky';
 import { isOccluderProp, OCCLUDER_LAYER } from './layers';
 import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
-import { tunnelWalls } from '../data/tunnel';
+import { trackRails, TUNNEL_TRACK, tunnelWalls } from '../data/tunnel';
 import { paintTunnelAtlas, tunnelBoxGeo, TUNNEL_WALLS_URL } from './tunnel-textures';
 import { Materials, type LitMaterial } from './materials';
 import { buildGlbProps, type GlbPlacement } from './glb-props';
@@ -1198,12 +1198,12 @@ function buildTunnel(m: MapDef, mats: MapMats, chunkOf: (x: number, z: number) =
       if (len < 0.01) continue;
       const ux = (bx - ax) / len, uz = (bz - az) / len, yaw = Math.atan2(ux, uz);
       if (t.kind === 'track') {
-        // Two tracks: rails 1.435 m apart, sleepers every 0.7 m.
-        for (const off of [-2.6, 2.6]) {
-          for (const r of [-0.72, 0.72]) {
-            const x = (ax + bx) / 2 + uz * (off + r), z = (az + bz) / 2 - ux * (off + r);
-            chunkOf(x, z).box(mats.railSteel, new Matrix4().makeRotationY(yaw).setPosition(x, 0.08, z), 0.08, 0.14, len + 0.05, [0.7, 0.68, 0.64]);
-          }
+        // Two tracks (`TUNNEL_TRACK`, shared with the stopped train): 1.435 m gauge, sleepers every 0.7 m.
+        const R = TUNNEL_TRACK;
+        for (const r of trackRails([t.pts[i - 1]!, t.pts[i]!])) {
+          chunkOf(r.x, r.z).box(mats.railSteel, new Matrix4().makeRotationY(r.yaw).setPosition(r.x, R.railTop - R.railHeight / 2, r.z), R.headWidth, R.railHeight, r.len + 0.05, [0.7, 0.68, 0.64]);
+        }
+        for (const off of R.tracks) {
           for (let d = 0.35; d < len; d += 0.7) {
             const x = ax + ux * d + uz * off, z = az + uz * d - ux * off;
             chunkOf(x, z).box(mats.trunk, new Matrix4().makeRotationY(yaw).setPosition(x, 0.03, z), 2.4, 0.06, 0.22, [0.5, 0.42, 0.36]);
