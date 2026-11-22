@@ -7,6 +7,7 @@
 //
 // --ref     reference image(s): style or content the model looks at (FLUX.2 ReferenceLatent, as in the
 //           ComfyUI template `image_flux2_klein_image_edit_4b_distilled`)
+// --cutout  1: cut the object out with BiRefNet (PNG with alpha), for icons and props
 // --init    start image; the sampler begins from it with --denoise (0 keeps it, 1 ignores it). Use the
 //           code placeholder here so a pattern keeps its layout and scale
 // Writes <out>/<name>-<seed>.png and prints the paths. Plain Node 24 (fetch, FormData), no dependencies.
@@ -37,7 +38,7 @@ async function upload(path) {
 }
 
 /** API-format graph. Node ids are strings; an input [id, slot] links to another node's output. */
-export function graph({ prompt, refs, init, size, seed, steps, denoise }) {
+export function graph({ prompt, refs, init, size, seed, steps, denoise, cutout }) {
   const g = {
     unet: { class_type: 'UNETLoader', inputs: { unet_name: MODEL.unet, weight_dtype: 'default' } },
     clip: { class_type: 'CLIPLoader', inputs: { clip_name: MODEL.clip, type: 'flux2', device: 'default' } },
@@ -72,7 +73,16 @@ export function graph({ prompt, refs, init, size, seed, steps, denoise }) {
   }
   g.run = { class_type: 'SamplerCustomAdvanced', inputs: { noise: ['noise', 0], guider: ['guider', 0], sampler: ['sampler', 0], sigmas, latent_image: latent } };
   g.decode = { class_type: 'VAEDecode', inputs: { samples: ['run', 0], vae: ['vae', 0] } };
-  g.save = { class_type: 'SaveImage', inputs: { images: ['decode', 0], filename_prefix: 'ruinenstadt' } };
+  let image = ['decode', 0];
+  if (cutout) {
+    // BiRefNet cut-out: the mask marks the object; JoinImageWithAlpha takes 1 - mask, so invert it first.
+    g.bgModel = { class_type: 'LoadBackgroundRemovalModel', inputs: { bg_removal_name: 'birefnet.safetensors' } };
+    g.bgMask = { class_type: 'RemoveBackground', inputs: { bg_removal_model: ['bgModel', 0], image } };
+    g.bgInv = { class_type: 'InvertMask', inputs: { mask: ['bgMask', 0] } };
+    g.bgJoin = { class_type: 'JoinImageWithAlpha', inputs: { image, alpha: ['bgInv', 0] } };
+    image = ['bgJoin', 0];
+  }
+  g.save = { class_type: 'SaveImage', inputs: { images: image, filename_prefix: 'ruinenstadt' } };
   return g;
 }
 
@@ -82,7 +92,7 @@ async function run(prompt) {
   if (!r.ok) throw new Error(`queue: ${JSON.stringify(body).slice(0, 800)}`);
   const id = body.prompt_id;
   for (;;) {
-    await new Promise(res => setTimeout(res, 1000));
+    await new Promise(res => setTimeout(res, 250));
     const h = (await (await fetch(`${HOST}/history/${id}`)).json())[id];
     if (!h) continue;
     if (h.status?.status_str === 'error') throw new Error(`run: ${JSON.stringify(h.status.messages).slice(0, 800)}`);
