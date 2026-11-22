@@ -2,6 +2,29 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Economy baseline, whole campaign (B2 step 1, 2026-11-22)
+
+The bot now plays the economy (rules in `docs/tasks/b2-economy-pacing.md` › Step 1, `SHOP` in `src/bot/bot.ts`) and the four tunnels. `node tools/balance.mjs 3 normal johannes 1 --campaign`: 3 of 3 campaigns won all ten maps, 12 min wall time. No balance numbers changed. Averages per map; "Camp before" is the camp step before that map (the camp opens with the S3), "Left" the Schrott at the map's end; "Earned" counts pickups, streaks and salvage.
+
+| Map | Deaths | Min | Earned (salvage) | Items | Späti upgr. | Camp before | Left | Item level end (weapon) | Power end |
+|---|---|---|---|---|---|---|---|---|---|
+| Köpenick | 0.3 | 16.6 | 1618 (469) | 683 | 398 | 0 | 537 | 13.0 (17) | 463 |
+| S3-Tunnel | 0 | 6.1 | 883 (261) | 138 | 0 | 0 | 1282 | 13.3 (17) | 589 |
+| Xhain | 0 | 13.3 | 1598 (539) | 417 | 0 | 1305 | 1158 | 18.0 (20) | 939 |
+| U8-Tunnel | 0 | 7.5 | 1071 (307) | 0 | 0 | 1314 | 916 | 18.0 (20) | 1071 |
+| Alexanderplatz | 0 | 13.1 | 2292 (985) | 510 | 0 | 893 | 1804 | 19.2 (30) | 2618 |
+| U2-Tunnel | 0 | 7.3 | 890 (155) | 0 | 0 | 1760 | 934 | 19.2 (30) | 2368 |
+| Mitte | 0 | 14.9 | 2256 (986) | 940 | 0 | 594 | 1657 | 30.7 (30) | 4204 |
+| U2-Tunnel West | 0 | 9.2 | 1114 (315) | 110 | 0 | 1247 | 1414 | 30.8 (30) | 4209 |
+| Charlottenburg | 0 | 19.4 | 2750 (1488) | 1618 | 0 | 937 | 1609 | 49.5 (71) | 7096 |
+| Wedding | 0 | 13.5 | 3248 (2213) | 932 | 0 | 1117 | 2808 | 65.5 (83) | 9250 |
+
+**Read (for step 2):**
+- Köpenick: the Späti upgrades (cap 2 + 2) and gear take two thirds of the Schrott; the hero reaches the camp with about 1300 (Johannes held 3699; the Späti upgrades came after his save). The first camp step spends all of it.
+- Schrott is never short after Xhain: every map ends with 900 to 2800 left although the bot buys whatever its rules allow; salvage is a third to two thirds of the income and grows with the item level.
+- Power runs away: about 460 after Köpenick, 2600 after Alexanderplatz, 9250 at the end (the `--chain` run of 2026-11-21 ended Mitte at 850). Spätis and traders roll stock at the worn item level + 2 (last offer + 4), so every shop the bot visits lifts its gear; with the district loot step (+3 item levels per district) this compounds.
+- With carried gear nothing after Köpenick costs a death; tunnel fights cost 7 to 21 % life per fight (Schaffner 60 to 166 s).
+
 ## Wedding and the six-district chain (M18 step 2, 2026-11-21)
 
 The chain now runs all six districts (`node tools/balance.mjs <runs> normal johannes <seed> --chain`). New `--carry` for one district: one hero plays the districts before it once, then every run starts with that gear (`--map=wedding --carry`). Fresh-gear runs say nothing about the later districts: a starter blade cannot hurt a tier 40 Zecher (3 runs, 0 kills, stuck at the Wochenmarkt).

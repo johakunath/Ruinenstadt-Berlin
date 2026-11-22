@@ -6,7 +6,7 @@ Where code lives and the rules each folder keeps. Read the part your task touche
 |---|---|
 | `src/sim` | Game state and rules at a fixed 60 Hz step. No Three.js, no DOM, no `Math.random` (use `sim.rng`). Every rule has a unit test. Ground plane is XZ in meters; facing θ means direction `(sin θ, cos θ)` |
 | `src/data` | Typed tuning and map data, single source for sim footprints and render meshes. `map.ts` is the expedition map format with seeded lot and prop generators; `koepenick.ts` the Köpenick map, route and wave tiers (`docs/maps/koepenick.md`); `courtyard.ts` the gate 1 yard (`?map=hof`); `combat.ts` attack timing per weapon; `powers.ts` powers and cast times; `enemies.ts` roster, elite modifiers, special and boss tuning |
-| `src/bot` | Balance bot (M14): plays the sim through `SimInput`, no DOM. `node tools/balance.mjs`; rerun after balance changes and compare with `docs/balance.md` |
+| `src/bot` | Balance bot (M14): plays the sim through `SimInput`, no DOM. `node tools/balance.mjs` (`--campaign`: the whole game with tunnels, camp and a Schrott table); rerun after balance changes and compare with `docs/balance.md` |
 | `src/render` | Three.js scene. Reads sim state, interpolates between steps, never writes to it. One-shot clips are posed from sim time so pose and hitbox match |
 | `src/input` | Devices → move vector plus buffered actions. Polled every render frame, also during hitstop |
 | `src/audio`, `src/ui` | WebAudio synth, DOM overlay |
