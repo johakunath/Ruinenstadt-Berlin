@@ -5,6 +5,7 @@
 #   https://quaternius.itch.io/universal-animation-library
 #   https://quaternius.itch.io/universal-animation-library-2
 #   https://quaternius.itch.io/universal-base-characters
+#   https://quaternius.itch.io/modular-character-outfits-fantasy   (LA3: the Ranger boots, `ranger_boots` in hero_clothes.py)
 # and unpack them as this script does.
 set -euo pipefail
 
@@ -28,13 +29,16 @@ fetch() { # slug, output zip
 fetch universal-animation-library "$tmp/ual1.zip"
 fetch universal-animation-library-2 "$tmp/ual2.zip"
 fetch universal-base-characters "$tmp/ubc.zip"
+fetch modular-character-outfits-fantasy "$tmp/outfits.zip"
 for z in ual1 ual2 ubc; do mkdir -p "$tmp/$z" && unzip -qo "$tmp/$z.zip" -d "$tmp/$z"; done
 
-rm -rf assets-src
+# Only the pack folders are replaced: assets-src/ai/ keeps the local AI sources (docs/local-ai-assets.md).
+rm -rf assets-src/UAL1_Standard.glb assets-src/UAL2_Standard.glb assets-src/body assets-src/hair assets-src/mechs assets-src/outfits
 mkdir -p assets-src
 cp "$tmp"/ual1/*/Unreal-Godot/UAL1_Standard.glb "$tmp"/ual2/*/Unreal-Godot/UAL2_Standard.glb assets-src/
 cp -r "$tmp"/ubc/*/"Base Characters/Godot - UE" assets-src/body
 cp -r "$tmp"/ubc/*/Hairstyles/"Rigged to Head Bone"/"glTF (Godot -Unreal)" assets-src/hair
+mkdir -p assets-src/outfits && unzip -qo "$tmp/outfits.zip" -d assets-src/outfits
 # M15: Quaternius Animated Mech Pack (CC0) for mech.glb and mechbig.glb (`node tools/build-creatures.mjs`).
 # The Drive copy linked on quaternius.com is often over quota; OpenGameArt hosts the same March 2021 zip.
 curl -sS -L https://opengameart.org/sites/default/files/animated_mech_pack_-_march_2021.zip -o "$tmp/mech.zip"

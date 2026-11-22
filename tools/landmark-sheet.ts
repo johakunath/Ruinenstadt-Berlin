@@ -2,7 +2,7 @@
 // reference photos (M11d). Never part of the game build.
 //   /tools/landmark-sheet.html?kind=rathaus                three-quarter, front, game camera, top
 //   &views=quarter,game  &variant=1 (dinos)  &w=480&h=400
-import { Color, DirectionalLight, GridHelper, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { Color, DirectionalLight, GridHelper, Group, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { koepenickMap } from '../src/data/koepenick';
 import { alexMap } from '../src/data/alexanderplatz';
 import { ALEX_KINDS, buildAlexLandmark } from '../src/render/alex-world';
@@ -10,6 +10,7 @@ import { paintAlexAtlas } from '../src/render/alex-paint';
 import { mitteMap } from '../src/data/mitte';
 import { buildMitteLandmark, MITTE_KINDS, mitteMats } from '../src/render/mitte-world';
 import { charlottenburgMap } from '../src/data/charlottenburg';
+import { buildGlbProps } from '../src/render/glb-props';
 import { buildCharlottenburgLandmark, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from '../src/render/charlottenburg-world';
 import type { LandmarkKind } from '../src/data/map';
 import { buildLandmark } from '../src/render/landmarks';
@@ -31,7 +32,8 @@ const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(W * views.length, H, false);
 const materials = new Materials(LOOK, PROFILES.qualitaet);
-const mm = makeMapMats(materials);
+// ?old keeps the common stucco on Charlottenburg sights (before/after of the T9a image, LA1).
+const mm = makeMapMats(materials, CHARLOTTENBURG_KINDS.has(kind) && !q.has('old') ? 'charlottenburg' : undefined);
 if (ALEX_KINDS.has(kind)) { const t = paintAlexAtlas(); mm.alex = materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe0a0, emissiveIntensity: 0.8, roughness: 0.6 }); }
 if (MITTE_KINDS.has(kind)) mm.mitte = mitteMats(materials);
 if (!q.has('clean')) {
@@ -52,6 +54,7 @@ const sun = new DirectionalLight(0xfff0d8, 2.6);
 sun.position.set(-30, 50, 40);
 scene.add(sun, new GridHelper(80, 40, 0x50606a, 0x6a7a80));
 for (const m of [...b.solid.meshes(), ...b.cards.meshes()]) scene.add(m);
+if (mm.glbProps.length) { const g = new Group(); buildGlbProps(materials, mm.glbProps, g, mm.stucco.map); scene.add(g); }
 // Let the async ground/paint textures arrive.
 await new Promise((r) => setTimeout(r, 1500));
 const size = Math.max(l.hx, l.hz, 6);

@@ -81,7 +81,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |
 | Feuerwehrjacke | feuer | a | normal | wear:feuer | yes | I20 | yes: rendered from the look | none | 2 |
 | BVG-Uniform | bvg | a | normal | wear:bvg | yes | I21 | yes: rendered from the look | none | 2 |
-| Regenponcho | poncho | a | neon | wear:poncho | yes | I63 | yes: rendered from the look | M (Blender B1) | 4 |
+| Regenponcho | poncho | a | neon | wear:poncho (own `a_poncho` piece, B1, 2026-11-22) | yes | I63 | yes: rendered from the look | none | 4 |
 | Kabelmantel | kmantel | a | neon | wear:kmantel | yes | I64 | yes: rendered from the look | none | 4 |
 | Blaumann | blaumann | a | GDR | wear:blaumann | yes | I75 | yes: rendered from the look | none | 4 |
 | Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look | T, E | 3 |
@@ -114,7 +114,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Arbeitsstiefel | stiefel | f | normal | wear:stiefel | yes | I30 | yes: rendered from the look | none | 2 |
 | Gummistiefel | gummi | f | normal | wear:gummi | yes | I31 | yes: rendered from the look | none | 2 |
 | Stiefel des Schaffners | schaffner | f | legendary | wear:schaffner | yes | I86 | yes: rendered from the look | E | 3 |
-| Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief | yes | I81 | yes: rendered from the look | none | 3 |
+| Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief (own `f_wickel` piece: Quaternius Ranger boots, LA3, 2026-11-22) | yes | I81 | yes: rendered from the look | none | 3 |
 | Eisenstiefel der Zitadelle | eisenstief | f | set zit | wear:eisenstief | yes | I84 | yes: rendered from the look | none | 3 |
 | Stiefel des Tunnelläufers | stiefel | f | set tunnel | wear:stiefel:tunnel | yes | I100 | yes: rendered from the look | none | 3 |
 | Stiefel des Ewigen Gasts | stiefel | f | set gast (M18) | wear:stiefel:gast (ruby boots, gold soles) | yes | I106 | yes: rendered from the look | none | 3 |
@@ -127,10 +127,10 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Herz der Spree | herz | t | legendary | none | - | I45 | n/a | E | 3 |
 | Auge des Fernsehturms | auge | t | legendary | none | - | I47 | n/a | E | 3 |
 | Wappen der Zitadelle | wappen | t | set zit | none | - | I46 | n/a | - | 3 |
-| Schlüsselbund des Tunnelläufers | kette | t | set tunnel | none | - | I42 | n/a: bike chain until I102 | I (Codex K4) | 3 |
-| Abzeichen der Kiezwache | abzeichen | t | set kiez | none | - | I44 | n/a: currywurst icon | I | 3 |
-| Kiesel des Spreegeists | kiesel | t | set spree | none | - | I39 | n/a: plain pebble | I | 3 |
-| Feder des Ewigen Gasts | feder | t | set gast (M18) | none | - | I41 | n/a: plain raven feather until I107 | I (Codex K5) | 3 |
+| Schlüsselbund des Tunnelläufers | kette | t | set tunnel | none | - | I102 | yes: painted (local FLUX, K4) | none | 3 |
+| Abzeichen der Kiezwache | abzeichen | t | set kiez | none | - | I95 | yes: painted (local FLUX, K4) | none | 3 |
+| Kiesel des Spreegeists | kiesel | t | set spree | none | - | I96 | yes: painted (local FLUX, K4) | none | 3 |
+| Feder des Ewigen Gasts | feder | t | set gast (M18) | none | - | I107 | yes: painted (local FLUX, K5) | none | 3 |
 | Siegelring | siegel | r | normal | none | - | I33 | n/a | - | 2 |
 | Totenkopfring | totenk | r | normal | none | - | I34 | n/a | - | 2 |
 | Schraubenmutter | mutter | r | normal | none | - | I35 | n/a | - | 2 |
@@ -139,14 +139,14 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Kupferring | kupfer | r | normal | none | - | I38 | n/a | - | 2 |
 | Ring der Weltzeituhr | weltuhr | r | legendary | none | - | I87 | n/a | E | 3 |
 | Ring des Spreegeists | spreering | r | set spree | none | - | I82 | n/a | - | 3 |
-| Siegelring des Ewigen Gasts | siegel | r | set gast (M18) | none | - | I33 | n/a: plain signet ring until I108 | I (Codex K5) | 3 |
+| Siegelring des Ewigen Gasts | siegel | r | set gast (M18) | none | - | I108 | yes: painted (local FLUX, K5) | none | 3 |
 | Neonauge | nauge | i | neon | none | - | I66 | n/a | - | 4 |
 | Zielchip | zchip | i | neon | none | - | I67 | n/a | - | 4 |
 | Kabelarm | karm | i | neon | none | - | I58 | n/a: shared with Bassprediger | I | 4 |
 | Reflexkoppler | reflex | i | neon | none | - | I68 | n/a | - | 4 |
 | Bassherz | bherz | i | neon | none | - | I69 | n/a | - | 4 |
 | Nanopumpe | npumpe | i | neon | none | - | I70 | n/a | - | 4 |
-| Arm des Basspredigers | bassarm | i | legendary | none | - | I58 | n/a: shared with Kabelarm | I, E | 3 |
+| Arm des Basspredigers | bassarm | i | legendary | none | - | I97 | yes: painted (local FLUX, K4) | E | 3 |
 
 Icon judgements are from the 128 px icons against the model code and the piece names; individual item looks still need comparison. The shared H1 coat, vest, boots, sneakers, gloves and scarf have [painted albedos and review captures](proof/h1-hero/step6/README.md). Item-specific `T` entries track variants beyond those shared textures.
 
@@ -196,7 +196,8 @@ Not part of WP4: there the models follow the painted icons, and Codex repaints t
 | Colours and simple surfaces | Code: vertex colours, code-painted canvas textures (`src/render/paint.ts`) |
 | UI glyphs, set marks | Code: SVG |
 | Effects (glow, trails, flashes) | Code: emissive parts, instanced sprites on `FX_LAYER`, no new lights |
-| Painted texture images, painted icons | Codex generates and does the first integration; Claude does the performance integration (`docs/asset-pipeline.md`) |
+| Painted texture images, painted icons | Local first (FLUX.2 klein on the PC, `docs/local-ai-assets.md` W1 to W3), Codex as fallback; Claude does the performance integration (`docs/asset-pipeline.md`) |
+| Static pickups and props with organic detail (P10 pickups per item kind) | Image-to-3D (Pixal3D) plus Blender clean-up (`docs/local-ai-assets.md` W4 to W6) |
 | Rigid hero equipment (hats, plates, cuffs, talisman, ring, implants) | Code: parts skinned rigidly to the bones at equip time and merged into one gear mesh (`src/render/gear.ts`, WP4 D2) |
 | Colours per item base on existing pieces | Code: palette that recolours the piece's vertex colours (WP4 D2) |
 | Hero clothing shells that deform (jacket with sleeves, poncho), retargeting | Blender on the PC, only for skinning to the UAL skeleton, rebinding the hero mesh (`npm run assets:hero`, `tools/blender/`) or retargeting animations |

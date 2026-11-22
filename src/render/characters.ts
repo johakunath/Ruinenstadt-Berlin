@@ -60,8 +60,10 @@ const ZOMBIE_CLIPS = /^(Zombie_|Hit_|Death01$|Idle_Loop$|Sword_Heavy_Combo$|Shie
 const CLOTHING_MAPS = {
   a_mantel: new URL('../../assets/textures/hero/coat.webp', import.meta.url).href,
   a_weste: new URL('../../assets/textures/hero/vest.webp', import.meta.url).href,
+  a_poncho: new URL('../../assets/textures/hero/poncho.webp', import.meta.url).href,
   f_stiefel: new URL('../../assets/textures/hero/boots.webp', import.meta.url).href,
   f_turnsch: new URL('../../assets/textures/hero/sneakers.webp', import.meta.url).href,
+  f_wickel: new URL('../../assets/textures/hero/boots.webp', import.meta.url).href,
   g_handsch: new URL('../../assets/textures/hero/gloves.webp', import.meta.url).href,
   scarf: new URL('../../assets/textures/hero/scarf.webp', import.meta.url).href,
 };

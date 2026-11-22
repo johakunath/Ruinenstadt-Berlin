@@ -25,6 +25,7 @@ The ceiling of the Canvas 2D renderer is the main limit on the look: lights, sha
 | 3D13 | Look fixed after the gate 1 playtest: painted PBR shading, thin ink line, saturated grade, highlight shoulder, FXAA (Johannes, 2026-11-15). Feedback adjusts it, no more variant rounds | Supersedes the variant part of 3D9 |
 | 3D14 | Continue in 3D (Johannes, 2026-11-15). The custom hero and enemies are PC tasks, not gates. Migration order: `docs/migration.md` | Gate 1 convinced on feel and performance |
 | 3D15 | The hero stays on the Quaternius body and the UAL skeleton; detail comes from real clothing meshes and textures built by Blender scripts (Johannes, 2026-11-17). No MPFB body, no Mixamo retargeting, no test-hero round. Spec: `docs/tasks/h1-hero.md` | The body is 12,800 of 18,600 triangles and looks good; the painted-on clothes are the weak part. Same skeleton means no animation risk. Supersedes the hero part of 3D7 |
+| 3D16 | Local AI first for assets (Johannes, 2026-11-22): FLUX.2 klein (Apache 2.0) for texture images, icons and reference images; Pixal3D for static props and rigid parts on one bone; Blender for clean-up and skinned clothing; Codex image generation only as the fallback. Bodies stay on the UAL skeleton (3D15). Routes and workflows: `docs/local-ai-assets.md` | Fast and free on the PC; supersedes the "Codex only" texture rule of 2026-11-16 |
 
 ## Build setup: why TypeScript + Vite
 

@@ -8,6 +8,7 @@
 #
 # Blender space: meters, Z up, front -Y, hero's left +X.
 import math
+import os
 
 import bmesh
 import bpy
@@ -421,6 +422,139 @@ def coat(body):
     return join('a_mantel', [top, trousers, loose])
 
 
+PONCHO_HEM = 0.69
+
+
+def poncho(body):
+    """a_poncho (B1, docs/blender-pipeline.md): rain poncho over a dark shirt and trousers. A loose shell
+    over the shoulders and chest, a front and a back panel hanging from the chest to mid-thigh with open
+    sides (the arms come out there), and dark sleeves and trousers under it. Cloth uses the coat's source
+    colour, the shirt and trousers the trousers' colour, so `hero-wear.ts` sorts them like the coat's."""
+    waist = body.head('spine_01').z - 0.005
+    wrist_x = abs(body.head('hand_l').x) - 0.035
+    chest = body.head('spine_03').z
+    cy = (body.head('thigh_l').y + body.head('thigh_r').y) / 2
+
+    def cloth(co, k=1.0):
+        return tuple(c * k * (0.8 + 0.3 * noise(co, 3.0)) for c in COAT)
+
+    top, _ = shell(body, 'poncho_top', lambda d, p: d.startswith(('spine', 'clavicle')) and p.z > waist - 0.02, lambda d, p: 0.03, relax=30)
+    _paint(top, lambda i, co: cloth(co))
+
+    def arm(d, p):
+        return d.startswith(('upperarm', 'lowerarm')) and abs(p.x) < wrist_x
+
+    sleeves, _ = shell(body, 'poncho_sleeves', arm, lambda d, p: 0.008, relax=6)
+    _paint(sleeves, lambda i, co: tuple(c * (0.85 + 0.25 * noise(co, 5.0)) for c in TROUSERS))
+    trousers, _ = shell(body, 'trousers', lambda d, p: d.startswith(('pelvis', 'thigh', 'calf')), lambda d, p: 0.006 if d != 'pelvis' else 0.009, relax=4)
+    _paint(trousers, lambda i, co: tuple(c * (0.85 + 0.25 * noise(co, 5.0)) for c in TROUSERS))
+
+    # Front (phi 0) and back (phi pi) panels: rows from the chest to the hem, each a sector that widens
+    # downward; the radius only grows downward, so the panel hangs like sheeting instead of hugging.
+    piece = Piece()
+    rows, cols = 9, 12
+    heights = [chest + (PONCHO_HEM - chest) * r / (rows - 1) for r in range(rows)]
+    for mid in (0.0, math.pi):
+        grid, prev = [], [0.0] * (cols + 1)
+        for r, z in enumerate(heights):
+            t = r / (rows - 1)
+            half = 0.95 + 0.3 * t
+            off = 0.035 + 0.035 * t
+            row = []
+            for c in range(cols + 1):
+                phi = mid - half + 2 * half * c / cols
+                e = body.extent(z, phi, cy)
+                if e is None:
+                    e = prev[c] - off if r else 0.13
+                rad = max(prev[c] + 0.003, e + off) if r else e + off
+                prev[c] = rad
+                jag = (noise(Vector((c + mid, r, 5.0))) - 0.4) * 0.05 if r == rows - 1 else 0.0
+                co = Vector((math.sin(phi) * rad, cy - math.cos(phi) * rad, z + jag))
+                if z > waist:
+                    k = min(1.0, (chest - z) / max(1e-3, chest - waist))
+                    w = [('spine_03', 1 - k), ('spine_02', 0.6), ('spine_01', k)]
+                else:
+                    ts = (waist - z) / (waist - PONCHO_HEM)
+                    w = skirt_weights(ts, co.x, ts < 0.2, phi)
+                row.append(piece.vert(co, w, cloth(co, 1 - 0.18 * t)))
+            grid.append(row)
+        for r in range(rows - 1):
+            for c in range(cols):
+                a, b, cc, d = grid[r][c], grid[r + 1][c], grid[r + 1][c + 1], grid[r][c + 1]
+                piece.face(a, d, cc, b) if mid == 0.0 else piece.face(a, b, cc, d)
+    loose = piece.to_object('poncho_loose')
+    return join('a_poncho', [top, sleeves, trousers, loose])
+
+
+RANGER_FEET = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets-src', 'outfits',
+                           'Modular Character Outfits - Fantasy[Standard]', 'Exports', 'glTF (Godot-Unreal)', 'Modular Parts',
+                           'Female_Ranger_Feet.gltf')
+
+
+def ranger_boots(body, tris=2400):
+    """f_wickel (LA3): the wrapped knee boots of Quaternius' Modular Character Outfits Fantasy (CC0,
+    Female_Ranger_Feet), for the Stiefel des Spreegeists. The part is skinned to the same UAL skeleton,
+    but made for the Regular body: it is welded, decimated, pushed out of the hero's skin (and past the
+    trousers on the shaft), reskinned from the body, and the light and dark of its painted texture
+    (wraps, straps, sole) become the vertex colour, so palettes recolour it like the other boots."""
+    if not os.path.exists(RANGER_FEET):
+        raise RuntimeError(f'missing {RANGER_FEET}: run tools/fetch-assets.sh (Quaternius Outfits Fantasy)')
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=RANGER_FEET)
+    new = [o for o in bpy.data.objects if o not in before]
+    obj = next(o for o in new if o.type == 'MESH' and o.name.startswith('Female_Ranger'))
+    for o in new:
+        if o is not obj:
+            bpy.data.objects.remove(o)
+    mw = obj.matrix_world.copy()
+    obj.parent = None
+    obj.modifiers.clear()
+    obj.data.transform(mw)
+    obj.matrix_world.identity()
+    mesh = obj.data
+    # Brightness of the painted texture per vertex (mean over its loops), 1 = the texture's mean.
+    img = next(n.image for m in mesh.materials if m and m.use_nodes for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image)
+    w, h = img.size
+    if not w or not h:
+        raise RuntimeError(f'ranger_boots: texture {img.filepath} did not load (incomplete Outfits pack?)')
+    px = img.pixels[:]
+    uv = mesh.uv_layers.active.data
+    acc = [0.0] * len(mesh.vertices)
+    cnt = [0] * len(mesh.vertices)
+    for loop in mesh.loops:
+        u, v = uv[loop.index].uv
+        x, y = min(w - 1, max(0, int(u % 1.0 * w))), min(h - 1, max(0, int(v % 1.0 * h)))
+        i = (y * w + x) * 4
+        acc[loop.vertex_index] += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]
+        cnt[loop.vertex_index] += 1
+    lum = [a / max(1, c) for a, c in zip(acc, cnt)]
+    mean = sum(lum) / len(lum)
+    while mesh.color_attributes:
+        mesh.color_attributes.remove(mesh.color_attributes[0])
+    _paint(obj, lambda i, co: tuple(c * min(1.6, max(0.35, lum[i] / mean)) for c in BOOTS))
+    # Weld the UV seams, then decimate (colours interpolate); a seam left open tears under the decimate.
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.remove_doubles(bm, verts=list(bm.verts), dist=1e-4)
+    bm.to_mesh(mesh)
+    bm.free()
+    dec = obj.modifiers.new('Decimate', 'DECIMATE')
+    dec.ratio = min(1.0, tris / max(1, len(mesh.polygons)))
+    apply_modifiers(obj)
+    # Out of the skin: 4 mm on the foot, 12 mm on the shaft (the trousers are 6 to 7 mm out).
+    for v in obj.data.vertices:
+        loc, n = body.surface(v.co)
+        gap = 0.004 if v.co.z < 0.1 else 0.012
+        out = (v.co - loc).dot(n)
+        if out < gap:
+            v.co += n * (gap - out)
+    rebind_weights(obj, body)
+    obj.name = obj.data.name = 'f_wickel'
+    for p in obj.data.polygons:
+        p.use_smooth = True
+    return obj
+
+
 def footwear(body, name, shaft, offset, cuff_drop, color_of):
     """Shoes from the inflated feet and lower calves, closed at the top and voxel remeshed (the toes
     melt into one shape), reopened at `shaft`, flat sole, a folded cuff; weights from the nearest body
@@ -773,7 +907,7 @@ def bake_ao(pieces, body):
 def build(armature, body_obj):
     body = Body(body_obj, armature)
     mantel = coat(body)
-    pieces = [mantel, vest(body), boots(body), sneakers(body), gloves(body), scarf(body, mantel)]
+    pieces = [mantel, vest(body), boots(body), sneakers(body), gloves(body), scarf(body, mantel), poncho(body), ranger_boots(body)]
     # The shells carry the body's UVs, which mean nothing on clothing (and joining them with built
     # parts leaves undefined UVs): drop them, unwrap each piece for step 6's painted textures, and
     # bake ambient occlusion into the vertex colours as placeholder shading.

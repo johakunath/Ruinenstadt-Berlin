@@ -48,6 +48,7 @@ import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { tunnelWalls } from '../data/tunnel';
 import { paintTunnelAtlas, tunnelBoxGeo, TUNNEL_WALLS_URL } from './tunnel-textures';
 import { Materials, type LitMaterial } from './materials';
+import { buildGlbProps, type GlbPlacement } from './glb-props';
 import { loadGroundTexture } from './ground-textures';
 import { swapPaintedMap } from './surface-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
@@ -96,6 +97,8 @@ export interface MapMats extends Mats, LotGroundMats {
   slate: LitMaterial;
   landmarkFinishes?: ReturnType<typeof makeLandmarkFinishes>;
   landmarkWear?: LitMaterial;
+  /** LA2: GLB props placed by the landmark builders, drawn instanced after the chunks (`glb-props.ts`). */
+  glbProps: GlbPlacement[];
   clock: LitMaterial;
   sRoundel: LitMaterial;
   stationName: LitMaterial;
@@ -284,7 +287,7 @@ export function emissive(materials: Materials, t: { map: Texture; emissiveMap: T
   return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
 }
 
-export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 'tunnel'): MapMats {
+export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 'tunnel' | 'charlottenburg'): MapMats {
   const base = makeMats(materials, district === 'mitte' ? undefined : district);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
@@ -316,6 +319,7 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
       return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffa050, emissiveIntensity: 1.4, roughness: 0.6 });
     })(),
     frond: materials.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
+    glbProps: [],
     slate: materials.surface({ map: paintSlate(o).map, roughness: 0.55, metalness: 0.15, vertexColors: true }),
     clock: emissive(materials, paintClock(), 0xffe0a0, 1.1),
     sRoundel: emissive(materials, paintSRoundel(), 0x40ff90, 1.3),
@@ -334,8 +338,10 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
     m.asphalt.map = m.tar.map = texture;
     asphalt.dispose();
   });
-  const roofUrl = new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href;
-  swapPaintedMap([m.roof], roofUrl, o.anisotropy);
+  // T9e: Charlottenburg has its own worn roof tiles and slate (local FLUX.2 klein); elsewhere slate stays painted.
+  const charl = district === 'charlottenburg';
+  swapPaintedMap([m.roof], charl ? new URL('../../assets/textures/charlottenburg/roof-tiles.webp', import.meta.url).href : new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href, o.anisotropy);
+  if (charl) swapPaintedMap([m.slate], new URL('../../assets/textures/charlottenburg/slate.webp', import.meta.url).href, o.anisotropy);
   return m;
 }
 
@@ -2315,7 +2321,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   // M18 Wedding: a street of shops under the lampions (awnings come from `wedding-world.ts`).
   shopShare = m.id === 'charlottenburg' ? [0.8, 0.55] : m.id === 'wedding' ? [0.7, 0.45] : [0.4, 0.22];
   wet = sky.wet;
-  const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' ? m.id : undefined);
+  const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' || m.id === 'charlottenburg' ? m.id : undefined);
   const mats = makeMapMats(materials, district);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
@@ -2580,6 +2586,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     spots.push(...b.spots);
     fires.push(...b.fires);
   }
+  if (mats.glbProps.length) buildGlbProps(materials, mats.glbProps, group, mats.stucco.map);
 
   // --- light: moon follows the hero; a fixed pool of point lights takes the nearest lamps.
   // Daylight maps: the same light is the sun (`Sky.sun`), from another direction.
