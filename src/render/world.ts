@@ -982,7 +982,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       // Two-car tram (generic, no livery), stopped squarely on the rails, pantograph folded.
       const L = 15;
       const W = 2.25;
-      const base = at(p, 0, TRAM_BRIDGE_DECK + TRAM_HEAD_HEIGHT, 0);
+      const base = at(p, 0, p.railTop ?? TRAM_BRIDGE_DECK + TRAM_HEAD_HEIGHT, 0);
       const part = (x: number, y: number, z: number): Matrix4 => base.clone().multiply(new Matrix4().makeTranslation(x, y, z));
       const paint = m.carPaint;
       const cream = TRANSIT_PAINT.cream;

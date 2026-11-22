@@ -56,6 +56,8 @@ export interface Prop {
   rot: number;
   /** Rubble pile radius, fence length; a scale for other kinds. */
   size: number;
+  /** Tram: height of the rail heads its wheels stand on (default: the street's embedded rails). */
+  railTop?: number;
 }
 
 export interface SpawnPoint {
