@@ -8,6 +8,7 @@
 #
 # Blender space: meters, Z up, front -Y, hero's left +X.
 import math
+import os
 
 import bmesh
 import bpy
@@ -485,6 +486,73 @@ def poncho(body):
     return join('a_poncho', [top, sleeves, trousers, loose])
 
 
+RANGER_FEET = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets-src', 'outfits',
+                           'Modular Character Outfits - Fantasy[Standard]', 'Exports', 'glTF (Godot-Unreal)', 'Modular Parts',
+                           'Female_Ranger_Feet.gltf')
+
+
+def ranger_boots(body, tris=2400):
+    """f_wickel (LA3): the wrapped knee boots of Quaternius' Modular Character Outfits Fantasy (CC0,
+    Female_Ranger_Feet), for the Stiefel des Spreegeists. The part is skinned to the same UAL skeleton,
+    but made for the Regular body: it is welded, decimated, pushed out of the hero's skin (and past the
+    trousers on the shaft), reskinned from the body, and the light and dark of its painted texture
+    (wraps, straps, sole) become the vertex colour, so palettes recolour it like the other boots."""
+    if not os.path.exists(RANGER_FEET):
+        raise RuntimeError(f'missing {RANGER_FEET}: run tools/fetch-assets.sh (Quaternius Outfits Fantasy)')
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=RANGER_FEET)
+    new = [o for o in bpy.data.objects if o not in before]
+    obj = next(o for o in new if o.type == 'MESH' and o.name.startswith('Female_Ranger'))
+    for o in new:
+        if o is not obj:
+            bpy.data.objects.remove(o)
+    mw = obj.matrix_world.copy()
+    obj.parent = None
+    obj.modifiers.clear()
+    obj.data.transform(mw)
+    obj.matrix_world.identity()
+    mesh = obj.data
+    # Brightness of the painted texture per vertex (mean over its loops), 1 = the texture's mean.
+    img = next(n.image for m in mesh.materials if m and m.use_nodes for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image)
+    w, h = img.size
+    px = img.pixels[:]
+    uv = mesh.uv_layers.active.data
+    acc = [0.0] * len(mesh.vertices)
+    cnt = [0] * len(mesh.vertices)
+    for loop in mesh.loops:
+        u, v = uv[loop.index].uv
+        x, y = min(w - 1, max(0, int(u % 1.0 * w))), min(h - 1, max(0, int(v % 1.0 * h)))
+        i = (y * w + x) * 4
+        acc[loop.vertex_index] += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]
+        cnt[loop.vertex_index] += 1
+    lum = [a / max(1, c) for a, c in zip(acc, cnt)]
+    mean = sum(lum) / len(lum)
+    while mesh.color_attributes:
+        mesh.color_attributes.remove(mesh.color_attributes[0])
+    _paint(obj, lambda i, co: tuple(c * min(1.6, max(0.35, lum[i] / mean)) for c in BOOTS))
+    # Weld the UV seams, then decimate (colours interpolate); a seam left open tears under the decimate.
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.remove_doubles(bm, verts=list(bm.verts), dist=1e-4)
+    bm.to_mesh(mesh)
+    bm.free()
+    dec = obj.modifiers.new('Decimate', 'DECIMATE')
+    dec.ratio = min(1.0, tris / max(1, len(mesh.polygons)))
+    apply_modifiers(obj)
+    # Out of the skin: 4 mm on the foot, 12 mm on the shaft (the trousers are 6 to 7 mm out).
+    for v in obj.data.vertices:
+        loc, n = body.surface(v.co)
+        gap = 0.004 if v.co.z < 0.1 else 0.012
+        out = (v.co - loc).dot(n)
+        if out < gap:
+            v.co += n * (gap - out)
+    rebind_weights(obj, body)
+    obj.name = obj.data.name = 'f_wickel'
+    for p in obj.data.polygons:
+        p.use_smooth = True
+    return obj
+
+
 def footwear(body, name, shaft, offset, cuff_drop, color_of):
     """Shoes from the inflated feet and lower calves, closed at the top and voxel remeshed (the toes
     melt into one shape), reopened at `shaft`, flat sole, a folded cuff; weights from the nearest body
@@ -837,7 +905,7 @@ def bake_ao(pieces, body):
 def build(armature, body_obj):
     body = Body(body_obj, armature)
     mantel = coat(body)
-    pieces = [mantel, vest(body), boots(body), sneakers(body), gloves(body), scarf(body, mantel), poncho(body)]
+    pieces = [mantel, vest(body), boots(body), sneakers(body), gloves(body), scarf(body, mantel), poncho(body), ranger_boots(body)]
     # The shells carry the body's UVs, which mean nothing on clothing (and joining them with built
     # parts leaves undefined UVs): drop them, unwrap each piece for step 6's painted textures, and
     # bake ambient occlusion into the vertex colours as placeholder shading.

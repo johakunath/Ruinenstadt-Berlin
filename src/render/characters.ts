@@ -63,6 +63,7 @@ const CLOTHING_MAPS = {
   a_poncho: new URL('../../assets/textures/hero/poncho.webp', import.meta.url).href,
   f_stiefel: new URL('../../assets/textures/hero/boots.webp', import.meta.url).href,
   f_turnsch: new URL('../../assets/textures/hero/sneakers.webp', import.meta.url).href,
+  f_wickel: new URL('../../assets/textures/hero/boots.webp', import.meta.url).href,
   g_handsch: new URL('../../assets/textures/hero/gloves.webp', import.meta.url).href,
   scarf: new URL('../../assets/textures/hero/scarf.webp', import.meta.url).href,
 };

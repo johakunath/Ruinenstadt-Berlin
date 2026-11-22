@@ -44,6 +44,8 @@ export const PIECES: Readonly<Record<string, Piece>> = {
   poncho: { node: 'a_poncho', hides: ['torso', 'arms', 'legs'] },
   stiefel: { node: 'f_stiefel', hides: ['feet'] },
   turnsch: { node: 'f_turnsch', hides: ['feet'] },
+  // LA3: wrapped knee boots, Quaternius Outfits Fantasy (Female_Ranger_Feet), `ranger_boots` in hero_clothes.py.
+  wickel: { node: 'f_wickel', hides: ['feet'] },
   handsch: { node: 'g_handsch', hides: ['hands'] },
 };
 
@@ -111,7 +113,7 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
   // Füße
   gummi: { roles: { boot: '#2f5a32', sole: '#7a5a2a' } },
   schaffner: { roles: { boot: '#1f2430', sole: '#0c0e12' } },
-  spreestief: { roles: { boot: '#1e5a4a', sole: '#1e2a26' } },
+  spreestief: { roles: { boot: '#1e5a4a', sole: '#1e2a26' }, bands: [{ roles: ['boot'], axis: 'y', from: 0.5, to: 0.535, hex: '#2aa890' }] },
   eisenstief: { roles: { boot: '#7a8088', sole: '#2a2c30' } },
   turnsch: { roles: { upper: '#ece6da', sole: '#d8d0c0' } },
   // Scarves of the legendary coats
@@ -131,7 +133,7 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
 interface Wear {
   outfit?: 'mantel' | 'weste' | 'poncho';
   cut?: number;
-  boots?: 'stiefel' | 'turnsch';
+  boots?: 'stiefel' | 'turnsch' | 'wickel';
   gloves?: 'handsch' | null;
   palette?: string;
   /** Scarf palette, or 'none' for no scarf. Without an entry the red scarf stays (the coats). */
@@ -195,7 +197,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     stiefel: {},
     gummi: { palette: 'gummi', gear: ['shaft-rubber'] },
     schaffner: { palette: 'schaffner', gear: ['shaft-riding'] },
-    spreestief: { palette: 'spreestief', gear: ['shaft-wrapped'] },
+    spreestief: { boots: 'wickel', palette: 'spreestief' },
     eisenstief: { palette: 'eisenstief', gear: ['greaves'] },
     'stiefel:tunnel': { palette: 'stiefel:tunnel', gear: ['puttees'] },
     'stiefel:gast': { palette: 'stiefel:gast' },

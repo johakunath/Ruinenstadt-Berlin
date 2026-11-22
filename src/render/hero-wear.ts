@@ -14,6 +14,7 @@ const SOURCE: Readonly<Record<string, Readonly<Partial<Record<Role, string>>>>> 
   a_weste: { vest: '#5d6b3a', cargo: '#4a3b2c', straps: '#4a2f1a', belt: '#4a2f1a', thigh: '#4a2f1a', brass: '#c9973a' },
   f_stiefel: { boot: '#2a1f17', sole: '#2a1f17' },
   f_turnsch: { upper: '#c9bea4', sole: '#e2dccb' },
+  f_wickel: { boot: '#2a1f17', sole: '#2a1f17' },
   g_handsch: { glove: '#3b2717', cuff: '#3b2717' },
   scarf: { scarf: '#d22c1e' },
 };
@@ -25,6 +26,7 @@ const CLASSES: Readonly<Record<string, ReadonlyArray<readonly [Role, number, num
   a_weste: [['vest', 0.75, 1, 0.25], ['cargo', 1, 0.625, 0.3125], ['straps', 1, 0.375, 0.125], ['brass', 1, 0.5625, 0.0625]],
   f_stiefel: [['boot', 1, 0.5, 0.25]],
   f_turnsch: [['sole', 1, 0.9375, 0.8125], ['upper', 1, 0.875, 0.625]],
+  f_wickel: [['boot', 1, 0.5, 0.25]],
   g_handsch: [['glove', 1, 0.375, 0.125]],
   scarf: [['scarf', 1, 0.0625, 0]],
 };
@@ -83,7 +85,7 @@ export function pieceInfo(mesh: SkinnedMesh, piece: string, geo: BufferGeometry 
       if (best === 'coat' && y < 0.75) best = 'hem';
     } else if (piece === 'a_weste' && best === 'straps') {
       best = y < 0.82 ? 'thigh' : y < 1.09 ? 'belt' : 'straps';
-    } else if (piece === 'f_stiefel' && y < 0.022) best = 'sole';
+    } else if ((piece === 'f_stiefel' || piece === 'f_wickel') && y < 0.022) best = 'sole';
     else if (piece === 'g_handsch' && Math.abs(x) < 0.665) best = 'cuff'; // the wrist ring (the glove starts at |x| 0.62)
     info.role[i] = ROLE_IDS.indexOf(best);
   }
