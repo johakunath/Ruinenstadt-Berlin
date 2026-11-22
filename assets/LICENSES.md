@@ -220,6 +220,7 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `ui/intro-koepenick.webp` | OpenAI image generation; narrative painting using the Köpenick style board | Codex for Johannes | Own work | Befreie Köpenick: confrontation at Rathaus Köpenick; 768 × 512 WebP |
 | `ui/intro-controls.webp` | OpenAI image generation; narrative painting using the Köpenick style board | Codex for Johannes | Own work | Steuerung: hero crouched to dodge in a courtyard; 768 × 512 WebP |
 | `textures/hero/coat.webp` | OpenAI image generation, 2D survivor outfit board reference | Codex for Johannes | Own work | Rubbed trench-coat leather, neutral albedo, 1024 px |
+| `textures/hero/poncho.webp` | FLUX.2 klein 4B (Apache 2.0), local ComfyUI: img2img from `textures/hero/coat.webp` at denoise 0.75, seed 44 | Claude (for Johannes) | Own work | Regenponcho cloth, creased rubberised nylon, neutral albedo, 1024 px (LA3, 2026-11-22) |
 | `textures/hero/vest.webp` | OpenAI image generation, 2D survivor outfit board reference | Codex for Johannes | Own work | Worn utility vest canvas, neutral albedo, 1024 px |
 | `textures/hero/boots.webp` | OpenAI image generation | Codex for Johannes | Own work | Cracked boot leather, neutral albedo, 512 px |
 | `textures/hero/sneakers.webp` | OpenAI image generation | Codex for Johannes | Own work | Worn sneaker canvas, neutral albedo, 512 px |

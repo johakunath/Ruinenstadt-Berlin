@@ -10,6 +10,7 @@ import { PALETTES, type Role } from '../data/hero-look';
 /** Source colours of tools/blender/hero_clothes.py (sRGB), per piece and role. */
 const SOURCE: Readonly<Record<string, Readonly<Partial<Record<Role, string>>>>> = {
   a_mantel: { coat: '#8a5c33', hem: '#8a5c33', cuff: '#8a5c33', trousers: '#3d3a36', leather: '#4a2f1a', brass: '#c9973a' },
+  a_poncho: { coat: '#8a5c33', hem: '#8a5c33', trousers: '#3d3a36' },
   a_weste: { vest: '#5d6b3a', cargo: '#4a3b2c', straps: '#4a2f1a', belt: '#4a2f1a', thigh: '#4a2f1a', brass: '#c9973a' },
   f_stiefel: { boot: '#2a1f17', sole: '#2a1f17' },
   f_turnsch: { upper: '#c9bea4', sole: '#e2dccb' },
@@ -20,6 +21,7 @@ const SOURCE: Readonly<Record<string, Readonly<Partial<Record<Role, string>>>>> 
 /** Chroma classes (rgb ÷ max) in the committed hero.glb, nearest wins; `hero-wear.test.ts` pins the counts. */
 const CLASSES: Readonly<Record<string, ReadonlyArray<readonly [Role, number, number, number]>>> = {
   a_mantel: [['coat', 1, 0.4375, 0.125], ['coat', 1, 0.375, 0.0625], ['trousers', 1, 0.875, 0.75], ['brass', 1, 0.5625, 0.0625], ['leather', 1, 0.375, 0.125]],
+  a_poncho: [['coat', 1, 0.4375, 0.125], ['coat', 1, 0.375, 0.0625], ['trousers', 1, 0.875, 0.75]],
   a_weste: [['vest', 0.75, 1, 0.25], ['cargo', 1, 0.625, 0.3125], ['straps', 1, 0.375, 0.125], ['brass', 1, 0.5625, 0.0625]],
   f_stiefel: [['boot', 1, 0.5, 0.25]],
   f_turnsch: [['sole', 1, 0.9375, 0.8125], ['upper', 1, 0.875, 0.625]],
@@ -76,6 +78,9 @@ export function pieceInfo(mesh: SkinnedMesh, piece: string, geo: BufferGeometry 
       if (skirt && SKIRT_JOINT.test(joint)) info.skirt[i] = 1;
       if (best === 'coat' && info.skirt[i] && y < HEM_ROW) best = 'hem';
       if (best === 'coat' && Math.abs(x) > 0.56) best = 'cuff';
+    } else if (piece === 'a_poncho') {
+      // The panels' last row (hem at 0.69 m, jagged by up to 3 cm) takes the hem colour.
+      if (best === 'coat' && y < 0.75) best = 'hem';
     } else if (piece === 'a_weste' && best === 'straps') {
       best = y < 0.82 ? 'thigh' : y < 1.09 ? 'belt' : 'straps';
     } else if (piece === 'f_stiefel' && y < 0.022) best = 'sole';
@@ -174,7 +179,7 @@ const variants = new WeakMap<BufferGeometry, Map<string, BufferGeometry>>();
 export function pieceVariant(mesh: SkinnedMesh, piece: string, source: BufferGeometry, paletteId: string, cut: number, puff: number): BufferGeometry {
   const coat = piece === 'a_mantel';
   if (!coat) cut = 0;
-  if (piece !== 'a_mantel' && piece !== 'a_weste') puff = 0;
+  if (piece !== 'a_mantel' && piece !== 'a_weste' && piece !== 'a_poncho') puff = 0;
   if (!paletteId && !cut && !puff) return source;
   let byKey = variants.get(source);
   if (!byKey) variants.set(source, (byKey = new Map()));

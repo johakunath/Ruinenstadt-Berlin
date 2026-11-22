@@ -40,6 +40,8 @@ export interface Piece {
 export const PIECES: Readonly<Record<string, Piece>> = {
   mantel: { node: 'a_mantel', hides: ['torso', 'arms', 'legs'] },
   weste: { node: 'a_weste', hides: ['torso', 'legs'] },
+  // B1 (LA3): rain poncho over a dark shirt and trousers (tools/blender/hero_clothes.py `poncho`).
+  poncho: { node: 'a_poncho', hides: ['torso', 'arms', 'legs'] },
   stiefel: { node: 'f_stiefel', hides: ['feet'] },
   turnsch: { node: 'f_turnsch', hides: ['feet'] },
   handsch: { node: 'g_handsch', hides: ['hands'] },
@@ -127,7 +129,7 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
 
 /** What one item base puts on the hero. Every field is optional; the slot's default fills the rest. */
 interface Wear {
-  outfit?: 'mantel' | 'weste';
+  outfit?: 'mantel' | 'weste' | 'poncho';
   cut?: number;
   boots?: 'stiefel' | 'turnsch';
   gloves?: 'handsch' | null;
@@ -155,7 +157,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     feuer: { cut: CUT.thigh, palette: 'feuer', scarf: 'none', puff: 0.024, gear: ['belt-fire', 'collar-fire'] },
     bvg: { cut: CUT.hip, palette: 'bvg', scarf: 'none', puff: 0.018, gear: ['boards-bvg', 'badge-bvg', 'belt-bvg'] },
     blaumann: { outfit: 'weste', palette: 'blaumann', scarf: 'none', gear: ['bib', 'patch-gear', 'wrench'] },
-    poncho: { palette: 'poncho', scarf: 'none', puff: 0.026, gear: ['poncho-bands', 'hood-roll'] },
+    poncho: { outfit: 'poncho', palette: 'poncho', scarf: 'none', puff: 0.026, gear: ['poncho-bands', 'hood-roll'] },
     kmantel: { palette: 'kmantel', scarf: 'none', puff: 0.018, gear: ['collar-high', 'cables', 'belt-led'] },
     spaeti: { palette: 'spaeti', scarf: 'scarf:gold', gear: ['caps', 'sign-spaeti', 'belt-caps'] },
     panzer: { palette: 'panzer', scarf: 'none', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },

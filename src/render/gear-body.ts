@@ -54,6 +54,8 @@ const legDist = (x: number, z: number, s: Side): number => Math.hypot(x - 0.111 
 /** The coat without its T-pose sleeves and without the skirt below the belt (collars, hoods, a jacket's hips). */
 const coatCore = (k: GearKit): Sampler => subset(k, 'coat-core', 'a_mantel', (x, y, z) =>
   (y > 1.045 ? !(Math.abs(x) > 0.165 && y > 1.33) : legDist(x, z, x > 0 ? 1 : -1) < 0.1), AXES.torso);
+/** The poncho's shoulders and chest (B1) above the panels' open sides, for the hood roll and its bag. */
+const ponchoCore = (k: GearKit): Sampler => subset(k, 'poncho-core', 'a_poncho', (x, y) => y > 1.1 && !(Math.abs(x) > 0.165 && y > 1.33), AXES.torso);
 /** One leg of the coat's trousers, without the skirt. */
 const coatLeg = (k: GearKit, s: Side): Sampler => subset(k, `coat-leg${s}`, 'a_mantel', (x, y, z) => x * s > 0.012 && y < 0.9 && legDist(x, z, s) < 0.1, AXES.leg(s), 0.012 * s);
 
@@ -233,7 +235,7 @@ const NB = 48;
 const angDist = (p: number, q: number): number => { const d = Math.abs(p - q) % (2 * Math.PI); return d > Math.PI ? 2 * Math.PI - d : d; };
 
 /** The neck tables of an outfit (cached per hero). */
-export function neckOf(k: GearKit, node: 'a_mantel' | 'a_weste'): Neck {
+export function neckOf(k: GearKit, node: 'a_mantel' | 'a_weste' | 'a_poncho'): Neck {
   let m = necks.get(k.src);
   if (!m) necks.set(k.src, (m = new Map()));
   const hit = m.get(node);
@@ -676,14 +678,14 @@ function wrench(k: GearKit): void {
 
 /** Regenponcho (until the Blender shell, B1): glowing cyan bands round the chest under the bust and on the belt. */
 function ponchoBands(k: GearKit): void {
-  const s = k.sampler(['a_mantel'], AXES.torso), cyan = glow(0x43d1cf);
+  const s = k.sampler(['a_poncho'], AXES.torso), cyan = glow(0x43d1cf);
   k.on('spine_02', () => k.add(surface(s, 1.188, 1.204, { segs: 32, rows: 1, offset: 0.007, median: 5 }), cyan));
   k.on('pelvis', () => k.add(surface(s, 1.072, 1.088, { segs: 32, rows: 1, offset: 0.012, median: 11 }), cyan));
 }
 
 /** Regenponcho: the rolled-down hood, a roll lying round the neck on the shoulders (open at the front), its bag hanging on the upper back. */
 function hoodRoll(k: GearKit): void {
-  const s = coatCore(k), n = neckOf(k, 'a_mantel');
+  const s = ponchoCore(k), n = neckOf(k, 'a_poncho');
   // Centre line, one side from the front end to the back middle: angle from the front, how far down the shoulder from the neckline (rad, seen from NECK_BASE), tube radius.
   const line: readonly (readonly [number, number, number])[] = [[0.8, 0.05, 0.01], [1.05, 0.07, 0.015], [1.4, 0.09, 0.019], [1.8, 0.1, 0.022], [2.3, 0.13, 0.025], [2.75, 0.16, 0.027], [Math.PI, 0.17, 0.028]];
   const pts: Vector3[] = [], rad: number[] = [];

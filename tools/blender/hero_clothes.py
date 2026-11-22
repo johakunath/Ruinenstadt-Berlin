@@ -421,6 +421,70 @@ def coat(body):
     return join('a_mantel', [top, trousers, loose])
 
 
+PONCHO_HEM = 0.69
+
+
+def poncho(body):
+    """a_poncho (B1, docs/blender-pipeline.md): rain poncho over a dark shirt and trousers. A loose shell
+    over the shoulders and chest, a front and a back panel hanging from the chest to mid-thigh with open
+    sides (the arms come out there), and dark sleeves and trousers under it. Cloth uses the coat's source
+    colour, the shirt and trousers the trousers' colour, so `hero-wear.ts` sorts them like the coat's."""
+    waist = body.head('spine_01').z - 0.005
+    wrist_x = abs(body.head('hand_l').x) - 0.035
+    chest = body.head('spine_03').z
+    cy = (body.head('thigh_l').y + body.head('thigh_r').y) / 2
+
+    def cloth(co, k=1.0):
+        return tuple(c * k * (0.8 + 0.3 * noise(co, 3.0)) for c in COAT)
+
+    top, _ = shell(body, 'poncho_top', lambda d, p: d.startswith(('spine', 'clavicle')) and p.z > waist - 0.02, lambda d, p: 0.03, relax=30)
+    _paint(top, lambda i, co: cloth(co))
+
+    def arm(d, p):
+        return d.startswith(('upperarm', 'lowerarm')) and abs(p.x) < wrist_x
+
+    sleeves, _ = shell(body, 'poncho_sleeves', arm, lambda d, p: 0.008, relax=6)
+    _paint(sleeves, lambda i, co: tuple(c * (0.85 + 0.25 * noise(co, 5.0)) for c in TROUSERS))
+    trousers, _ = shell(body, 'trousers', lambda d, p: d.startswith(('pelvis', 'thigh', 'calf')), lambda d, p: 0.006 if d != 'pelvis' else 0.009, relax=4)
+    _paint(trousers, lambda i, co: tuple(c * (0.85 + 0.25 * noise(co, 5.0)) for c in TROUSERS))
+
+    # Front (phi 0) and back (phi pi) panels: rows from the chest to the hem, each a sector that widens
+    # downward; the radius only grows downward, so the panel hangs like sheeting instead of hugging.
+    piece = Piece()
+    rows, cols = 9, 12
+    heights = [chest + (PONCHO_HEM - chest) * r / (rows - 1) for r in range(rows)]
+    for mid in (0.0, math.pi):
+        grid, prev = [], [0.0] * (cols + 1)
+        for r, z in enumerate(heights):
+            t = r / (rows - 1)
+            half = 0.95 + 0.3 * t
+            off = 0.035 + 0.035 * t
+            row = []
+            for c in range(cols + 1):
+                phi = mid - half + 2 * half * c / cols
+                e = body.extent(z, phi, cy)
+                if e is None:
+                    e = prev[c] - off if r else 0.13
+                rad = max(prev[c] + 0.003, e + off) if r else e + off
+                prev[c] = rad
+                jag = (noise(Vector((c + mid, r, 5.0))) - 0.4) * 0.05 if r == rows - 1 else 0.0
+                co = Vector((math.sin(phi) * rad, cy - math.cos(phi) * rad, z + jag))
+                if z > waist:
+                    k = min(1.0, (chest - z) / max(1e-3, chest - waist))
+                    w = [('spine_03', 1 - k), ('spine_02', 0.6), ('spine_01', k)]
+                else:
+                    ts = (waist - z) / (waist - PONCHO_HEM)
+                    w = skirt_weights(ts, co.x, ts < 0.2, phi)
+                row.append(piece.vert(co, w, cloth(co, 1 - 0.18 * t)))
+            grid.append(row)
+        for r in range(rows - 1):
+            for c in range(cols):
+                a, b, cc, d = grid[r][c], grid[r + 1][c], grid[r + 1][c + 1], grid[r][c + 1]
+                piece.face(a, d, cc, b) if mid == 0.0 else piece.face(a, b, cc, d)
+    loose = piece.to_object('poncho_loose')
+    return join('a_poncho', [top, sleeves, trousers, loose])
+
+
 def footwear(body, name, shaft, offset, cuff_drop, color_of):
     """Shoes from the inflated feet and lower calves, closed at the top and voxel remeshed (the toes
     melt into one shape), reopened at `shaft`, flat sole, a folded cuff; weights from the nearest body
@@ -773,7 +837,7 @@ def bake_ao(pieces, body):
 def build(armature, body_obj):
     body = Body(body_obj, armature)
     mantel = coat(body)
-    pieces = [mantel, vest(body), boots(body), sneakers(body), gloves(body), scarf(body, mantel)]
+    pieces = [mantel, vest(body), boots(body), sneakers(body), gloves(body), scarf(body, mantel), poncho(body)]
     # The shells carry the body's UVs, which mean nothing on clothing (and joining them with built
     # parts leaves undefined UVs): drop them, unwrap each piece for step 6's painted textures, and
     # bake ambient occlusion into the vertex colours as placeholder shading.

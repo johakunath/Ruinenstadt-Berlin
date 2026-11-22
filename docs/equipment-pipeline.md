@@ -81,7 +81,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |
 | Feuerwehrjacke | feuer | a | normal | wear:feuer | yes | I20 | yes: rendered from the look | none | 2 |
 | BVG-Uniform | bvg | a | normal | wear:bvg | yes | I21 | yes: rendered from the look | none | 2 |
-| Regenponcho | poncho | a | neon | wear:poncho | yes | I63 | yes: rendered from the look | M (Blender B1) | 4 |
+| Regenponcho | poncho | a | neon | wear:poncho (own `a_poncho` piece, B1, 2026-11-22) | yes | I63 | yes: rendered from the look (re-render with the poncho open) | none | 4 |
 | Kabelmantel | kmantel | a | neon | wear:kmantel | yes | I64 | yes: rendered from the look | none | 4 |
 | Blaumann | blaumann | a | GDR | wear:blaumann | yes | I75 | yes: rendered from the look | none | 4 |
 | Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look | T, E | 3 |

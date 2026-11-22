@@ -8,7 +8,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 
 | Task | Owner | Status / start file |
 |---|---|---|
-| LA Local AI asset trials (Johannes, 2026-11-22: "start the local asset test"): LA1 T9a Charlottenburg stucco with FLUX.2 klein, then LA2 one Pixal3D prop, then LA3 hero clothing. Runs on the PC only (ComfyUI) | Claude · Opus medium (LA1), Opus high (LA2, LA3) · PC | LA1 built 2026-11-22, round 2 (icons K4/K5, roofs T9e, iron T9i) and LA2 (Schlossgarten urn) built 2026-11-22 (Johannes looks at them, Playtest rows); open: Johannes' hand clean-up on a second prop, then LA3: `docs/local-ai-assets.md` › Trials |
+| LA Local AI asset trials (Johannes, 2026-11-22: "start the local asset test"): LA1 T9a Charlottenburg stucco with FLUX.2 klein, then LA2 one Pixal3D prop, then LA3 hero clothing. Runs on the PC only (ComfyUI) | Claude · Opus medium (LA1), Opus high (LA2, LA3) · PC | LA1 built 2026-11-22, round 2 (icons K4/K5, roofs T9e, iron T9i) and LA2 (Schlossgarten urn) built 2026-11-22 (Johannes looks at them, Playtest rows); LA3 Regenponcho built 2026-11-22; open: Johannes' hand clean-up on a second prop, the Quaternius outfit piece of LA3: `docs/local-ai-assets.md` › Trials |
 | M15 Alexanderplatz step 4 photo check for the landmarks built without a downloaded photo | Claude · Opus high | open: `docs/tasks/m15-alexanderplatz.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |

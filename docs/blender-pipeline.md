@@ -10,7 +10,7 @@ Rule: a session that needs Blender adds a row here and does not wait; the code s
 
 | # | Step | For | Fallback until done | Budget | State |
 |---|---|---|---|---|---|
-| B1 | `a_poncho`: rain poncho shell from the shoulders to mid-thigh (hem about 0.69 m), arms under it, open sides; weights like the coat skirt (`skirt_weights`) on the lower rows, `spine_03` and `clavicle_*` on top. Neutral vertex colours (palette sets teal); cyan glow bands are code parts | Regenponcho (`poncho`, WP4 step 2) | Coat with the teal palette and glow bands | ≤ 2,500 triangles, replaces `a_mantel` (0 extra draw calls) | to do (Johannes, 2026-11-19: Blender) |
+| B1 | `a_poncho`: rain poncho shell from the shoulders to mid-thigh (hem about 0.69 m), arms under it, open sides; weights like the coat skirt (`skirt_weights`) on the lower rows, `spine_03` and `clavicle_*` on top. Neutral vertex colours (palette sets teal); cyan glow bands are code parts | Regenponcho (`poncho`, WP4 step 2) | Coat with the teal palette and glow bands | ≤ 2,500 triangles, replaces `a_mantel` (0 extra draw calls) | built 2026-11-22 by script (LA3): `poncho` in `tools/blender/hero_clothes.py`, 5,308 triangles with its shirt and trousers (the coat is 5,566), [look](proof/la3/poncho-look.jpg) |
 
 Only if the code cut fails at build (a hem that cannot be cleaned on a skirt row):
 
