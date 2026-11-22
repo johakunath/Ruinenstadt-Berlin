@@ -3,10 +3,13 @@
 // reference images and an optional start image (img2img). Start ComfyUI first (`ComfyUI starten.bat`).
 //
 //   node tools/comfy.mjs --prompt "..." [--ref a.png]... [--init start.png --denoise 0.6]
-//                        [--size 1024] [--count 4] [--seed 1] [--steps 4] [--out dir] [--name stucco]
+//                        [--size 1024] [--count 8] [--batch 1] [--seed 1] [--steps 4] [--out dir] [--name stucco]
 //
 // --ref     reference image(s): style or content the model looks at (FLUX.2 ReferenceLatent, as in the
 //           ComfyUI template `image_flux2_klein_image_edit_4b_distilled`)
+// --batch   images per queued prompt (default 1). Measured 2026-11-22: only ~10 % faster than
+//           one prompt per image, and with --init the batch images barely differ. Files are numbered from --seed
+// --cut     a.png b.png ...: only cut out existing picks (writes <name>-cut.png next to each), no generation
 // --cutout  1: cut the object out with BiRefNet (PNG with alpha), for icons and props
 // --init    start image; the sampler begins from it with --denoise (0 keeps it, 1 ignores it). Use the
 //           code placeholder here so a pattern keeps its layout and scale
@@ -18,12 +21,13 @@ const HOST = process.env.COMFY_URL ?? 'http://127.0.0.1:8188';
 const MODEL = { unet: 'flux-2-klein-4b.safetensors', clip: 'qwen_3_4b.safetensors', vae: 'flux2-vae.safetensors' };
 
 function args(argv) {
-  const o = { ref: [], size: 1024, count: 1, seed: 1, steps: 4, denoise: 1, out: 'out/comfy', name: 'img' };
+  const o = { ref: [], size: 1024, count: 1, batch: 1, seed: 1, steps: 4, denoise: 1, out: 'out/comfy', name: 'img' };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, ''), v = argv[++i];
     if (k === 'ref') o.ref.push(v);
-    else o[k] = ['size', 'count', 'seed', 'steps', 'denoise'].includes(k) ? Number(v) : v;
+    else o[k] = ['size', 'count', 'batch', 'seed', 'steps', 'denoise'].includes(k) ? Number(v) : v;
   }
+  if (o.cut) { o.cut = [o.cut, ...argv.slice(argv.indexOf(o.cut) + 1).filter(a => !a.startsWith('--'))]; return o; }
   if (!o.prompt) throw new Error('--prompt is required');
   return o;
 }
@@ -37,8 +41,20 @@ async function upload(path) {
   return (await r.json()).name;
 }
 
+/** Cut-out only: BiRefNet on an existing image, PNG with alpha. */
+function cutGraph(name) {
+  return {
+    load: { class_type: 'LoadImage', inputs: { image: name } },
+    bgModel: { class_type: 'LoadBackgroundRemovalModel', inputs: { bg_removal_name: 'birefnet.safetensors' } },
+    bgMask: { class_type: 'RemoveBackground', inputs: { bg_removal_model: ['bgModel', 0], image: ['load', 0] } },
+    bgInv: { class_type: 'InvertMask', inputs: { mask: ['bgMask', 0] } },
+    bgJoin: { class_type: 'JoinImageWithAlpha', inputs: { image: ['load', 0], alpha: ['bgInv', 0] } },
+    save: { class_type: 'SaveImage', inputs: { images: ['bgJoin', 0], filename_prefix: 'ruinenstadt-cut' } },
+  };
+}
+
 /** API-format graph. Node ids are strings; an input [id, slot] links to another node's output. */
-export function graph({ prompt, refs, init, size, seed, steps, denoise, cutout }) {
+export function graph({ prompt, refs, init, size, seed, steps, denoise, cutout, batch = 1 }) {
   const g = {
     unet: { class_type: 'UNETLoader', inputs: { unet_name: MODEL.unet, weight_dtype: 'default' } },
     clip: { class_type: 'CLIPLoader', inputs: { clip_name: MODEL.clip, type: 'flux2', device: 'default' } },
@@ -67,8 +83,9 @@ export function graph({ prompt, refs, init, size, seed, steps, denoise, cutout }
     g.split = { class_type: 'SplitSigmasDenoise', inputs: { sigmas: ['sched', 0], denoise } };
     sigmas = ['split', 1];
     latent = ['initEnc', 0];
+    if (batch > 1) { g.repeat = { class_type: 'RepeatLatentBatch', inputs: { samples: latent, amount: batch } }; latent = ['repeat', 0]; }
   } else {
-    g.empty = { class_type: 'EmptyFlux2LatentImage', inputs: { width: size, height: size, batch_size: 1 } };
+    g.empty = { class_type: 'EmptyFlux2LatentImage', inputs: { width: size, height: size, batch_size: batch } };
     latent = ['empty', 0];
   }
   g.run = { class_type: 'SamplerCustomAdvanced', inputs: { noise: ['noise', 0], guider: ['guider', 0], sampler: ['sampler', 0], sigmas, latent_image: latent } };
@@ -96,22 +113,34 @@ async function run(prompt) {
     const h = (await (await fetch(`${HOST}/history/${id}`)).json())[id];
     if (!h) continue;
     if (h.status?.status_str === 'error') throw new Error(`run: ${JSON.stringify(h.status.messages).slice(0, 800)}`);
-    const img = h.outputs?.save?.images?.[0];
-    if (img) return (await fetch(`${HOST}/view?${new URLSearchParams({ filename: img.filename, subfolder: img.subfolder, type: img.type })}`)).arrayBuffer();
+    const imgs = h.outputs?.save?.images;
+    if (imgs?.length) return Promise.all(imgs.map(async img => (await fetch(`${HOST}/view?${new URLSearchParams({ filename: img.filename, subfolder: img.subfolder, type: img.type })}`)).arrayBuffer()));
   }
 }
 
 async function main() {
   const o = args(process.argv.slice(2));
+  if (o.cut) {
+    for (const f of o.cut) {
+      const [png] = await run(cutGraph(await upload(f)));
+      const file = f.replace(/.png$/, '-cut.png');
+      await writeFile(file, Buffer.from(png));
+      console.log(file);
+    }
+    return;
+  }
   const refs = await Promise.all(o.ref.map(upload));
   const init = o.init ? await upload(o.init) : undefined;
   await mkdir(o.out, { recursive: true });
-  for (let k = 0; k < o.count; k++) {
-    const seed = o.seed + k, t = Date.now();
-    const png = await run(graph({ ...o, refs, init, seed }));
-    const file = join(o.out, `${o.name}-${seed}.png`);
-    await writeFile(file, Buffer.from(png));
-    console.log(`${file} (${((Date.now() - t) / 1000).toFixed(1)} s)`);
+  for (let k = 0; k < o.count; k += o.batch) {
+    const seed = o.seed + k, batch = Math.min(o.batch, o.count - k), t = Date.now();
+    const pngs = await run(graph({ ...o, refs, init, seed, batch }));
+    for (const [i, png] of pngs.entries()) {
+      const file = join(o.out, `${o.name}-${seed + i}.png`);
+      await writeFile(file, Buffer.from(png));
+      console.log(file);
+    }
+    console.log(`  ${pngs.length} images in ${((Date.now() - t) / 1000).toFixed(1)} s`);
   }
 }
 

@@ -334,8 +334,10 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
     m.asphalt.map = m.tar.map = texture;
     asphalt.dispose();
   });
-  const roofUrl = new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href;
-  swapPaintedMap([m.roof], roofUrl, o.anisotropy);
+  // T9e: Charlottenburg has its own worn roof tiles and slate (local FLUX.2 klein); elsewhere slate stays painted.
+  const charl = district === 'charlottenburg';
+  swapPaintedMap([m.roof], charl ? new URL('../../assets/textures/charlottenburg/roof-tiles.webp', import.meta.url).href : new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href, o.anisotropy);
+  if (charl) swapPaintedMap([m.slate], new URL('../../assets/textures/charlottenburg/slate.webp', import.meta.url).href, o.anisotropy);
   return m;
 }
 

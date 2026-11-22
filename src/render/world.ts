@@ -267,6 +267,8 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel' | 'charlotte
     [district === 'charlottenburg' ? CHARLOTTENBURG_STUCCO : new URL('../../assets/textures/common/stucco.webp', import.meta.url).href, [mats.stucco]],
   );
   if (!district || district === 'charlottenburg') sources.push([new URL('../../assets/textures/common/concrete.webp', import.meta.url).href, [mats.concrete]]);
+  // T9i: black paint flaking to rust on the 1920 wrought iron (local FLUX.2 klein); other districts keep the painted map.
+  if (district === 'charlottenburg') sources.push([new URL('../../assets/textures/charlottenburg/iron.webp', import.meta.url).href, [mats.iron]]);
   for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat);
   if (district !== 'tunnel') loadLotPropTextures(mats);
   return mats;

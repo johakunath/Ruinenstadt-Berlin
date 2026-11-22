@@ -13,15 +13,17 @@ Routes per asset group, licences and the full workflows: `docs/local-ai-assets.m
 |---|---|
 | Start ComfyUI (Terminal tab, close it afterwards to free the GPU) | `& 'C:\Users\Johannes\AI projects Local\ComfyUI\.venv\Scripts\python.exe' 'C:\Users\Johannes\AI projects Local\ComfyUI\main.py' --listen 127.0.0.1 --port 8188` |
 | Generate | `node tools/comfy.mjs --prompt "…" [--init old.webp --denoise 0.7] [--ref style.png] --count 8 --seed 1 --out assets-src/ai/<job> --name <job>` |
-| Pick | Contact sheet of all variants at small size, look once, pick 1 to 3 |
-| Finish a tiling texture | `node tools/texture-tile.mjs <png> assets/textures/<district>/<name>.webp --match <old texture>`, then `--check` for the 2 × 2 repeat |
+| Pick | `node tools/contact-sheet.mjs sheet.jpg 150 <files>`, look once, pick 1 to 3; judge scale and seams at full size |
+| Finish an icon | `node tools/comfy.mjs --cut <pick.png>` (cut-out of the pick only), then `node tools/icon-finish.mjs <pick-cut.png> assets/inventory/I95.webp` |
+| Finish a tiling texture | `node tools/texture-tile.mjs <png> assets/textures/<district>/<name>.webp --match <old texture>` (`--band 0` for tiles and other rows, `--gain` for a darker surface), then `--check` for the 2 × 2 repeat |
 | Look in game | `node tools/landmark-sheet.mjs out.png "kind=<sight>&views=quarter,game"` (`&old` for before), or `tools/screenshot.mjs` with a wait of 15000 |
 
 ## Learnings
 
-- **Start from the old image.** img2img from the texture or icon being replaced (`--init`, denoise 0.6 to 0.75) keeps scale, palette and layout; pure text-to-image drifts to photos or cartoons.
+- **Start from the old image.** img2img from the texture or icon being replaced (`--init`) keeps scale, palette and layout; pure text-to-image drifts to photos or cartoons. Denoise: 0.7 for irregular surfaces (plaster, rust), at most 0.55 for regular rows (roof tiles, slate, brick: at 0.65 the rows break up), 0.9 plus `--ref` for icons.
+- **Describe the surface, not the object.** "Railing" or "roof" in a texture prompt draws railings and roofs; say "a plain flat sheet, no objects, no bars". If an icon loses a key detail (the emerald), rerun from the best pick at 0.75 and name the detail first.
 - **Prompt words that work:** "semi-realistic hand-painted game texture", "even density over the whole square, no edges, no border", "flat albedo, no light direction, no shadows". "Painterly" alone gives cartoon outlines and drawn shadows.
-- **Generate many, pick few.** About 4 s per 1024 px image (16 s for the first): make 8 or more per job with consecutive seeds and judge them on one contact sheet.
+- **Generate many, pick few.** About 4 s per 1024 px image (16 s for the first): make 8 or more per job with consecutive seeds and judge them on one contact sheet. One prompt per image: `--batch` is only ~10 % faster and its images barely differ.
 - **Keep the GPU on one model.** The text encoder (7.7 GB) and FLUX (7.4 GB) do not both fit in 12 GB; adding the BiRefNet cut-out (`--cutout 1`) to every run made it swap and slowed images from 8 s to 37 s. Generate without cut-out, then cut out only the picks.
 - **Colour always drifts** (greenish on plaster): match it to the old texture with `texture-tile.mjs --match`, or the code tints stop fitting.
 - **Several views of one object do not match** each other; do not feed FLUX multi-angle sheets to image-to-3D.
