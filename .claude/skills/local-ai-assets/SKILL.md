@@ -26,5 +26,6 @@ Routes per asset group, licences and the full workflows: `docs/local-ai-assets.m
 - **Generate many, pick few.** About 4 s per 1024 px image (16 s for the first): make 8 or more per job with consecutive seeds and judge them on one contact sheet. One prompt per image: `--batch` is only ~10 % faster and its images barely differ.
 - **Keep the GPU on one model.** The text encoder (7.7 GB) and FLUX (7.4 GB) do not both fit in 12 GB; adding the BiRefNet cut-out (`--cutout 1`) to every run made it swap and slowed images from 8 s to 37 s. Generate without cut-out, then cut out only the picks.
 - **Colour always drifts** (greenish on plaster): match it to the old texture with `texture-tile.mjs --match`, or the code tints stop fitting.
-- **Several views of one object do not match** each other; do not feed FLUX multi-angle sheets to image-to-3D.
+- **Several views of one object do not match** each other; do not feed FLUX multi-angle sheets to image-to-3D. A round object (urn, column, barrel) works: one FLUX side view serves as all four Pixal3D views.
+- **Pixal3D to a small prop:** ~9 min per model. Decimating its textured mesh to 2,000 triangles breaks the texture into facets (6,000 holds); bake the texture onto a fresh low mesh instead. Colours drift greyer.
 - **A texture on a shared material changes every district.** Swap it per district (`makeMats` district in `src/render/world.ts`); a new material means more draw calls and needs a reason.
