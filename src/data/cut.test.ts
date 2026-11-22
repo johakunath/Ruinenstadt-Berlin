@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUT, cutActive, cutPlan, hides, LANDMARK_PART, STOREY, type CutZone } from './cut';
+import { CUT, cutActive, cutPlan, frontCut, hides, LANDMARK_PART, STOREY, type CutZone } from './cut';
 import { generateLots, inPoly, type Lot, type MapDef } from './map';
 import { koepenickMap } from './koepenick';
 import { xhainMap } from './xhain';
@@ -25,7 +25,7 @@ describe('cutaway plan (V1 B)', () => {
   });
 
   it('flags the camera-side building and the Quergebäude, never the far side, a side neighbour or a side wing', () => {
-    const m = { ...koepenickMap(), landmarks: [] } as MapDef;
+    const m = { ...koepenickMap(), landmarks: [], cutStreets: false } as MapDef;
     const lots: Lot[] = [
       { kind: 'special', special: 'hinterhof', x: 0, z: 0, rot: 0, w: 20, d: 20, floors: 0, seed: 1 },
       altbau(0, 13, 20, 6, 2), // 1 south (camera side)
@@ -64,6 +64,32 @@ describe('cutaway plan (V1 B)', () => {
       expect(inPoly(zone.poly, l.x, l.z - Math.max(l.hx, l.hz) - 8)).toBe(true);
       expect(inPoly(zone.poly, l.x, l.z + Math.max(l.hx, l.hz) + 6)).toBe(false);
     }
+  });
+
+  it('cuts street-front buildings on the camera side of a street only on maps with cutStreets (P42)', () => {
+    const street = { name: 's', kind: 'side' as const, width: 6, pts: [[-20, 0], [20, 0]] as Array<[number, number]> };
+    const m = { ...koepenickMap(), landmarks: [], encounters: [], streets: [street], cutStreets: true } as MapDef;
+    const lots: Lot[] = [
+      altbau(0, 9, 12, 8, 2), // 0 south of the street (camera side): hides its north half
+      altbau(0, -9, 12, 8, 2), // 1 north of the street: never in front of it
+      { kind: 'shop', x: -14, z: 8, rot: 0, w: 6, d: 6, floors: 0, seed: 1 }, // 2 a parapet alone is not worth a cut
+    ];
+    const plan = cutPlan(m, lots);
+    expect(plan.parts).toEqual([{ id: 0, kind: 'lot', index: 0, h: CUT.floor }]);
+    const zone = plan.zones[0]!;
+    expect(inPoly(zone.poly, 0, -2)).toBe(true); // on the street behind it
+    expect(inPoly(zone.poly, 0, 16)).toBe(false); // in front of it
+    expect(cutPlan({ ...m, cutStreets: false }, lots).parts).toEqual([]);
+    expect(frontCut({ ...lots[0]!, kind: 'house' })).toBe(STOREY.house);
+  });
+
+  it('cuts the Köpenick sights the route passes behind (P42)', () => {
+    const m = koepenickMap(), plan = cutPlan(m, generateLots(m));
+    for (const [kind, h] of [['rathaus', 2], ['schloss', CUT.floor], ['kirche', CUT.floor]] as const) {
+      const i = m.landmarks.findIndex((l) => l.kind === kind);
+      expect(plan.parts.find((p) => p.id === LANDMARK_PART + i)).toMatchObject({ kind: 'landmark', h });
+    }
+    expect(plan.zones.filter((z) => z.name.startsWith('front')).length).toBeGreaterThan(5);
   });
 
   it('switches on inside a zone and off only beyond the leave margin', () => {

@@ -75,9 +75,13 @@ describe('batch cut (V1 B)', () => {
     expect(new Set(Array.from(cap.shown)).size).toBe(4);
     const mask = set.occluderMesh()!, mc = mask.geometry.userData.cuts as CutRange[];
     const upper = (meshes[0]!.geometry.userData.cuts as CutRange[])[0]!;
-    expect(mc).toHaveLength(1);
-    expect(mc[0]!.count).toBe(upper.count); // caps are no occluders
-    expect(mask.geometry.index!.count).toBe(meshes[0]!.geometry.index!.count);
+    // Caps are in the mask too, hidden while uncut (the hero close behind a cut building keeps her contour).
+    expect(mc).toHaveLength(2);
+    expect(mc[0]).toMatchObject({ part: 3, cap: false, count: upper.count });
+    expect(mc[1]).toMatchObject({ part: 3, cap: true, count: cap.count });
+    const mi = mask.geometry.index!.array;
+    expect(new Set(Array.from(mi.slice(mc[1]!.start, mc[1]!.start + mc[1]!.count))).size).toBe(1);
+    expect(mask.geometry.index!.count).toBe(meshes[0]!.geometry.index!.count + cap.count);
     const boxCuts = mask.userData.boxCuts as BoxCut[];
     expect(boxCuts).toEqual([{ box: 0, part: 3, y: 1, top: 4 }]);
   });

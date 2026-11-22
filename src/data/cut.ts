@@ -138,7 +138,66 @@ export function cutPlan(m: MapDef, lots: readonly Lot[], opts: { off?: boolean; 
     for (const n of near) if ((hidden.get(n.i) ?? 0) >= CUT.minHidden) flag(zone, n.i, 'lot', n.i);
     zones.push(zone);
   });
+  if (m.cutStreets) streetFronts(m, lots, buildings, (zone, i) => { flag(zone, i, 'lot', i); zones.push(zone); });
   return { zones, parts: [...parts.values()] };
+}
+
+/** A street-front body must rise this far above its cut (a shop parapet alone is not worth a cut). */
+const FRONT_MIN = 1.5;
+
+/** Cut height of a street-front building: the eaves of a house, the ground floor of the rest. */
+export function frontCut(l: Lot): number {
+  return l.kind === 'house' ? STOREY.house : CUT.floor;
+}
+
+/**
+ * P42 (maps with `cutStreets`): a building whose upper part is the first to hide at least `minHidden`
+ * 1 m samples of a street (with its sidewalks) or a fight circle gets its own zone, its footprint swept
+ * north as far as it hides (like a landmark), cut at `frontCut`.
+ */
+function streetFronts(m: MapDef, lots: readonly Lot[], buildings: ReadonlyArray<{ i: number; bodies: Array<{ rect: Rect; h: number }> }>, add: (zone: CutZone, i: number) => void): void {
+  const samples: Pt[] = [];
+  for (const st of m.streets) {
+    const half = st.width / 2 + (st.sidewalk ?? 1.5);
+    for (let k = 1; k < st.pts.length; k++) {
+      const [x0, z0] = st.pts[k - 1]!, [x1, z1] = st.pts[k]!, len = Math.hypot(x1 - x0, z1 - z0);
+      if (len < 1e-6) continue;
+      const ux = (x1 - x0) / len, uz = (z1 - z0) / len;
+      for (let t = 0.5; t < len; t += 1) for (let o = -half + 0.5; o < half; o += 1) samples.push([x0 + ux * t - uz * o, z0 + uz * t + ux * o]);
+    }
+  }
+  for (const e of m.encounters) for (let a = -e.r + 0.5; a < e.r; a += 1) for (let b = -e.r + 0.5; b < e.r; b += 1) if (a * a + b * b <= e.r * e.r) samples.push([e.x + a, e.z + b]);
+  const tan = Math.tan(VIEW.pitch * DEG);
+  // `size`: how far any body reaches from the main body's centre (cheap reject before the sight test).
+  const cand = buildings.map((n) => {
+    const r0 = n.bodies[0]!.rect;
+    return { ...n, h: frontCut(lots[n.i]!), size: Math.max(...n.bodies.map(({ rect: r }) => Math.hypot(r.x - r0.x, r.z - r0.z) + Math.hypot(r.hw, r.hd))) };
+  });
+  const hidden = new Map<number, number>();
+  for (const [x, z] of samples) {
+    let best = Infinity, by = -1;
+    for (const n of cand) {
+      const r0 = n.bodies[0]!.rect;
+      if (Math.abs(r0.x - x) > n.size || r0.z < z - n.size || r0.z > z + CUT.reach + n.size) continue;
+      // A sample inside a building is no walkable ground.
+      if (n.bodies.some(({ rect }) => inRect(rect, x, z))) { by = -1; break; }
+      for (const body of n.bodies) {
+        if (body.h <= n.h + FRONT_MIN) continue;
+        const d = hideDist(x, z, body.rect, body.h, n.h);
+        if (d < best) { best = d; by = n.i; }
+      }
+    }
+    if (by >= 0) hidden.set(by, (hidden.get(by) ?? 0) + 1);
+  }
+  for (const n of cand) {
+    if ((hidden.get(n.i) ?? 0) < CUT.minHidden) continue;
+    const pts: Pt[] = [];
+    for (const { rect, h } of n.bodies) {
+      const foot = rectPoly(rect), reach = Math.min(h / tan, CUT.reach);
+      pts.push(...foot, ...foot.map(([x, z]): Pt => [x, z - reach]));
+    }
+    add({ name: `front ${n.i}`, poly: hull(pts), h: n.h, parts: [] }, n.i);
+  }
 }
 
 /** Distance from (x, z) to the polygon outline. */

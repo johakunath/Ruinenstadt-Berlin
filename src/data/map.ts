@@ -227,6 +227,8 @@ export interface MapDef {
   honey?: ReadonlyArray<readonly [number, number, number]>;
   /** M12c rain rule (2D `D.wet`): fire burns shorter, shock chains reach further and jump once more. */
   wet?: boolean;
+  /** P42 cutaway (`src/data/cut.ts`): also cut street-front buildings whose upper part hides streets or fights behind them. */
+  cutStreets?: boolean;
   /** M16 district rule „Glas splittert“: glass bodies burst when they die (`THREAT.shards`). */
   shards?: boolean;
   /** M19 U-Bahn tunnel: only these tubes are walkable, everything else is rock (no lots, no streets). M20: line, gratings, collapse, flood, trader, generator, signs. */
