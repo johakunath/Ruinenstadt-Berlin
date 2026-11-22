@@ -5,9 +5,10 @@
 //   node tools/texture-tile.mjs in.png out.webp [--match old.webp] [--size 1024] [--band 0.22] [--quality 85] [--gain 1]
 //   node tools/texture-tile.mjs --check out.webp sheet.jpg     (2 x 2 repeat to look for seams and blobs)
 //
-// Seamless: the image is blended with a copy shifted by half its size. The shifted copy has no seam at the
-// borders, the original has none in the middle; a soft, noisy mask takes the copy near the borders and the
-// original inside. Suits irregular surfaces (plaster, fur, grass, dirt). Regular patterns (brick courses,
+// Seamless: one axis at a time, the image is blended with a copy shifted by half its size along that axis.
+// The copy has no seam at that axis' borders (its own wrap seam sits in the middle), so a soft, noisy mask
+// takes the copy only near those two borders and the original elsewhere; then the same along the other axis
+// (shifting both axes at once would bring the copy's middle seam into the border bands). Suits irregular surfaces (plaster, fur, grass, dirt). Regular patterns (brick courses,
 // tiles, setts) keep their layout from a seamless start image instead (`tools/comfy.mjs --init`).
 // --band 0: no blend (tiles, slates and other regular rows: a seamless --init keeps them nearly seamless).
 // --gain: multiply the brightness after matching (a darker or lighter surface than the old file, e.g. black iron).
@@ -46,14 +47,19 @@ function noise(x, y) {
 }
 const smooth = (a, b, t) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
 
-if (!opt.band) src.copy(out);
-else for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-  // Distance to the nearest border in [0, 0.5], pushed around by noise.
-  const d = Math.min(x, S - 1 - x, y, S - 1 - y) / S + (noise(x / 64, y / 64) - 0.5) * opt.band * 0.6;
-  const w = 1 - smooth(0.02, opt.band, d);
-  const sx = (x + S / 2) % S, sy = (y + S / 2) % S;
-  for (let c = 0; c < 3; c++) out[(y * S + x) * 3 + c] = src[(y * S + x) * 3 + c] * (1 - w) + src[(sy * S + sx) * 3 + c] * w;
+/** One blend pass along x (axis 0) or y (axis 1) from `from` into `to`. */
+function pass(from, to, axis) {
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const a = axis ? y : x;
+    // Distance to the nearer border of this axis in [0, 0.5], pushed around by noise.
+    const d = Math.min(a, S - 1 - a) / S + (noise(x / 64 + axis * 17, y / 64) - 0.5) * opt.band * 0.6;
+    const w = 1 - smooth(0.02, opt.band, d);
+    const sx = axis ? x : (x + S / 2) % S, sy = axis ? (y + S / 2) % S : y;
+    for (let c = 0; c < 3; c++) to[(y * S + x) * 3 + c] = from[(y * S + x) * 3 + c] * (1 - w) + from[(sy * S + sx) * 3 + c] * w;
+  }
 }
+if (!opt.band) src.copy(out);
+else { const mid = Buffer.alloc(S * S * 3); pass(src, mid, 0); pass(mid, out, 1); }
 
 if (opt.match) {
   const stats = buf => [0, 1, 2].map(c => {
