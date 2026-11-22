@@ -48,6 +48,7 @@ import { buildTunnelExtras, buildTunnelView, lineTint } from './tunnel-view';
 import { tunnelWalls } from '../data/tunnel';
 import { paintTunnelAtlas, tunnelBoxGeo, TUNNEL_WALLS_URL } from './tunnel-textures';
 import { Materials, type LitMaterial } from './materials';
+import { buildGlbProps, type GlbPlacement } from './glb-props';
 import { loadGroundTexture } from './ground-textures';
 import { swapPaintedMap } from './surface-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
@@ -96,6 +97,8 @@ export interface MapMats extends Mats, LotGroundMats {
   slate: LitMaterial;
   landmarkFinishes?: ReturnType<typeof makeLandmarkFinishes>;
   landmarkWear?: LitMaterial;
+  /** LA2: GLB props placed by the landmark builders, drawn instanced after the chunks (`glb-props.ts`). */
+  glbProps: GlbPlacement[];
   clock: LitMaterial;
   sRoundel: LitMaterial;
   stationName: LitMaterial;
@@ -316,6 +319,7 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
       return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffa050, emissiveIntensity: 1.4, roughness: 0.6 });
     })(),
     frond: materials.surface({ map: paintFern(), alphaTest: 0.5, doubleSided: true, roughness: 0.8, vertexColors: true }),
+    glbProps: [],
     slate: materials.surface({ map: paintSlate(o).map, roughness: 0.55, metalness: 0.15, vertexColors: true }),
     clock: emissive(materials, paintClock(), 0xffe0a0, 1.1),
     sRoundel: emissive(materials, paintSRoundel(), 0x40ff90, 1.3),
@@ -2582,6 +2586,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     spots.push(...b.spots);
     fires.push(...b.fires);
   }
+  if (mats.glbProps.length) buildGlbProps(materials, mats.glbProps, group, mats.stucco.map);
 
   // --- light: moon follows the hero; a fixed pool of point lights takes the nearest lamps.
   // Daylight maps: the same light is the sun (`Sky.sun`), from another direction.

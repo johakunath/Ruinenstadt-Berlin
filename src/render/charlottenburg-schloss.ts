@@ -837,10 +837,9 @@ function mausoleum(c: Ctx): void {
   roof(c, M.slate, 0, Y0 + CH + 1.22, PZ - 0.85, 2.3, 7.0, 1.3, 2.3, 0, SLATE, Math.PI / 2);
   // A ☧ Ω in the tympanum.
   for (const [x, w] of [[-1.0, 0.28], [0, 0.34], [1.0, 0.28]] as const) quad(c, M.enamel, m, x, Y0 + CH + 1.6, PZ + 0.42, w, 0.3, GOLD);
-  // Vases on pedestals beside the steps, two firs.
+  // Urns on pedestals beside the steps (LA2: the local AI model, `glb-props.ts`), two firs.
   for (const s of [-1, 1]) {
-    bb(c, M.stucco, m, s * 3.4, 0, PZ + 1.2, 0.8, 1.0, 0.8, G);
-    urn(c, m, s * 3.4, 1.0, PZ + 1.2, 0.9, CELLA);
+    M.glbProps.push({ kind: 'urn', m: sub(m, s * 3.4, 0, PZ + 1.2) });
     const x = s * (l.hx - 0.8), z = l.hz - 1.6;
     cy(c, M.darkWood, m, x, 0, z, 0.14, 1.2, [0.4, 0.32, 0.26], 5);
     for (let k = 0; k < 4; k++) c.b.geo(M.mossy, cached(`sc-fir${k}`, () => new ConeGeometry(0.8 - k * 0.15, 1.6, 7)), sub(m, x, 1.4 + k * 1.05, z, k), [0.16, 0.26, 0.17]);
