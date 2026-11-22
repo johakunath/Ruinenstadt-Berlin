@@ -182,7 +182,10 @@ export interface Mats {
   graffiti: LitMaterial;
 }
 
-export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
+/** Charlottenburg's worn 1920 stucco (T9a, local FLUX.2 klein, `docs/local-ai-assets.md` LA1). */
+const CHARLOTTENBURG_STUCCO = new URL('../../assets/textures/charlottenburg/stucco.webp', import.meta.url).href;
+
+export function makeMats(m: Materials, district?: 'alex' | 'tunnel' | 'charlottenburg'): Mats {
   const o: PaintOptions = { flatten: m.look.flatten, normalMaps: m.profile.normalMaps, anisotropy: m.profile.anisotropy };
   const plaster: Record<string, LitMaterial> = {};
   for (const tone of ['cream', 'ochre', 'oxblood']) {
@@ -261,9 +264,9 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel'): Mats {
   // Alexanderplatz and the tunnels supply their own versions of these surfaces.
   if (district !== 'alex') sources.push(
     [new URL('../../assets/textures/common/brick.webp', import.meta.url).href, [mats.brick]],
-    [new URL('../../assets/textures/common/stucco.webp', import.meta.url).href, [mats.stucco]],
+    [district === 'charlottenburg' ? CHARLOTTENBURG_STUCCO : new URL('../../assets/textures/common/stucco.webp', import.meta.url).href, [mats.stucco]],
   );
-  if (!district) sources.push([new URL('../../assets/textures/common/concrete.webp', import.meta.url).href, [mats.concrete]]);
+  if (!district || district === 'charlottenburg') sources.push([new URL('../../assets/textures/common/concrete.webp', import.meta.url).href, [mats.concrete]]);
   for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat);
   if (district !== 'tunnel') loadLotPropTextures(mats);
   return mats;

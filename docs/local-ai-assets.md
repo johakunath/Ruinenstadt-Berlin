@@ -23,6 +23,7 @@ How Claude drives ComfyUI: export a workflow from the ComfyUI menu with "Export 
 |---|---|---|
 | 2026-11-22 | FLUX.2 klein is fast and free and good for textures. Several views of one object do not match each other: never feed FLUX multi-angle sheets into image-to-3D | Johannes, another game |
 | 2026-11-22 | Pixal3D works locally for simple static props (toy race cars) | Johannes, another game |
+| 2026-11-22 | LA1: about 4 s per 1024 px image on the 4070 (16 s for the first, model load). Plain text-to-image comes out photographic, and asked for "painterly" it turns cartoonish with drawn shadows. Best: img2img from the texture it replaces (`--init`, denoise 0.7) with a "semi-realistic hand-painted" prompt; it keeps scale and palette and adds the wear. Ask for "even density, nothing along the edges" or features pile up at the border. Generated colours drift (here greenish): always run `tools/texture-tile.mjs --match` against the old texture | LA1 |
 | 2026-11-22 | Image-to-3D gives a fused mesh with no clean topology and no rig. Use it for things that do not bend: props, and parts that hang rigidly on one bone | Scouting session |
 
 ## Which route for which asset
@@ -49,10 +50,10 @@ How Claude drives ComfyUI: export a workflow from the ComfyUI menu with "Export 
 
 1. Read the queue row (size, world size per tile, palette) and `docs/asset-pipeline.md` › Style and Technical requirements.
 2. Take two references: the 2D art for that surface (`johakunath/Ruinenstadt` `assets/buildings/`) and the code placeholder from `src/render/paint.ts` (already seamless, with the right pattern scale).
-3. Generate with the edit workflow: the placeholder as the start image (denoise about 0.5 to 0.7, so brick courses and joints stay where the code put them), the 2D art as the style reference. Prompt: the queue row text plus "flat even albedo, no shadows, no highlights, seamless, top-down".
-4. Make 4 to 8 variants, pick by eye in a 2 × 2 repeat.
-5. Fix seams: wrap the image by half its size and repair the cross seam. Irregular surfaces (plaster, fur, grass) take an edge blend in code (`sharp`); regular patterns keep their layout from the placeholder. A seamless-tiling custom node for ComfyUI is optional and needs Johannes' OK to install.
-6. Resize to the stated size, WebP quality about 85, at most 400 KB, put it in `assets/textures/<district>/`.
+3. Generate with `node tools/comfy.mjs --prompt "…" --init <old texture or placeholder PNG> --denoise 0.7 --count 3 --seed <n> --out assets-src/ai/<job> --name <job>` (ComfyUI running; add `--ref <2D art>` for a style reference). The start image keeps scale, palette and pattern layout (brick courses, joints). Prompt: "Semi-realistic hand-painted game texture, seamless tileable square of …" plus the queue row text, "even density over the whole square, no edges, no border, flat albedo, no light direction, no shadows, no highlights, medium-low contrast". The LA1 prompt is in `assets/LICENSES.md` and Lessons.
+4. Make 3 to 6 variants, pick by eye.
+5. Seams and colour: `node tools/texture-tile.mjs <png> assets/textures/<district>/<surface>.webp --match <old texture>` (half-shift blend with a noisy mask, colour moved to the old texture so the code tints still fit, 1024 px WebP 85). Then `node tools/texture-tile.mjs --check <webp> <sheet.jpg>` for the 2 × 2 repeat. Regular patterns keep their layout from the start image; if the blend smears them, use a lower denoise instead.
+6. Put it in `assets/textures/<district>/` (at most 400 KB).
 7. Hook it up as in `docs/asset-pipeline.md` › Initial integration (keep the code placeholder as the fallback), add the `assets/LICENSES.md` row: "FLUX.2 klein 4B (Apache 2.0), local ComfyUI; <prompt summary>; <references>", author "Claude (for Johannes)", licence "own work".
 8. Look at it in game with `node tools/screenshot.mjs` on Qualität and Leistung. If it does not satisfy after two rounds, hand it to Codex with the best attempt attached.
 
@@ -101,5 +102,13 @@ As `docs/blender-pipeline.md`: a function in `tools/blender/hero_clothes.py`, we
 | LA1 | W1 on T9a Charlottenburg worn stucco (three tones), plus the `tools/comfy.mjs` script and the exported workflow in `tools/comfy/` | Three variants in game next to the Codex version, screenshots on Qualität and Leistung, Johannes picks; time per texture noted under Lessons | [Claude · Opus medium · PC] |
 | LA2 | W4 + W5 + W6 on one static prop: a Spreepark dino statue (P17) or the Sultan's urn | The prop stands in its map within the triangle and texture budget, draw calls before and after noted, screenshot; Johannes tries the W6 hand steps once on a second prop | [Claude · Opus high · PC] |
 | LA3 | W7 + W1 on the hero: the Regenponcho (B1) and its cloth albedo, plus one more piece from the Quaternius outfits | Both pieces animate through all clips without clipping (`tools/clip-sheet.mjs`), Johannes looks at them in the inventory preview. Then he decides whether the body or face still needs a change (3D15) | [Claude · Opus high · PC · Blender] |
+
+### LA1 handover (2026-11-22, built)
+
+- Tools: `tools/comfy.mjs` (FLUX.2 klein through the ComfyUI API, text to image, references, img2img) and `tools/texture-tile.mjs` (seamless, colour match, 2 × 2 check). The API graph lives in `comfy.mjs` (`graph()`), so no exported workflow file is needed.
+- `assets/textures/charlottenburg/stucco.webp` replaces the common stucco on the Charlottenburg map only (`makeMats` district `charlottenburg` in `src/render/world.ts`; the code placeholder stays the fallback). Same size as before, so no memory or draw call change on any profile.
+- Proof: [before and after](proof/la1/before-after.jpg) (rows: Romanisches Café old, new, Schloss old, new; `tools/landmark-sheet.mjs`, now with `?old`), [the attempts](proof/la1/attempts.jpg) (photo, cartoon, semi-real, three img2img), [2 × 2 repeat](proof/la1/repeat-2x2.jpg).
+- Result: the café and the shop facades read worn and patched instead of even sand; the Schloss walls barely change (they use another surface, T9d). The light repair blotches repeat every 2 m on long walls: the next step is the three per-bay variants of T9a (a 3 × 1 atlas, the variant picked per bay in code). About 30 minutes from the first image to the in-game texture.
+- Open for Johannes: does it fit (Playtest row in `docs/tasks/pt-hardware-checks.md`)? If yes, the same recipe runs T9b to T9e, T9i, T9j next.
 
 Downloads, each needing Johannes' OK first: for LA2 the two Pixal3D files named in W5 (if not already on the PC); for LA3 Quaternius Modular Character Outfits Fantasy (CC0, itch.io slug `modular-character-outfits-fantasy`; already used for the Stiefel des Spreegeists in WP4, but not on this PC: `assets-src/` is missing here). LA1 needs nothing new.

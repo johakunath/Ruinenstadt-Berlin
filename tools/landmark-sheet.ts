@@ -31,7 +31,8 @@ const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(W * views.length, H, false);
 const materials = new Materials(LOOK, PROFILES.qualitaet);
-const mm = makeMapMats(materials);
+// ?old keeps the common stucco on Charlottenburg sights (before/after of the T9a image, LA1).
+const mm = makeMapMats(materials, CHARLOTTENBURG_KINDS.has(kind) && !q.has('old') ? 'charlottenburg' : undefined);
 if (ALEX_KINDS.has(kind)) { const t = paintAlexAtlas(); mm.alex = materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe0a0, emissiveIntensity: 0.8, roughness: 0.6 }); }
 if (MITTE_KINDS.has(kind)) mm.mitte = mitteMats(materials);
 if (!q.has('clean')) {
