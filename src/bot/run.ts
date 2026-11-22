@@ -110,7 +110,8 @@ export function carryTo(map: DistrictKey, a: ChainArgs, onMap?: (map: MapKey, r:
 
 export function balance(a: BalanceArgs, onRun?: (i: number, r: CampaignReport) => void): CampaignReport[] {
   const out: CampaignReport[] = [];
-  const carry = a.carry && a.map && lineOf(a.map) < 0 ? carryTo(a.map as DistrictKey, a) : undefined;
+  if (a.carry && a.map && lineOf(a.map) >= 0) throw new Error('carry: only for districts (use --campaign for the tunnels)');
+  const carry = a.carry && a.map ? carryTo(a.map as DistrictKey, a) : undefined;
   if (a.carry && !carry && a.map && a.map !== 'koepenick') throw new Error('carry: the chain before this district was lost');
   for (let i = 0; i < a.runs; i++) {
     const r = runCampaign({ level: mapLevelOf(a.map), seed: a.seed + i * 101, difficulty: a.difficulty, skill: a.skill, startAt: a.startAt, until: a.until, carry, district: freedId(a.map ?? 'koepenick') });

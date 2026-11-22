@@ -29,6 +29,7 @@ import { CONSUMABLES, MEALS, WEAPON_MODS, type WeaponModId } from '../data/craft
 import { IMPLANT_MODES } from '../data/items';
 import { campOpen } from '../data/lines';
 import { STATIONS } from '../data/camp';
+import { gateBetween } from '../sim/director';
 import { createSim, stepSim } from '../sim/sim';
 import { heroStats, power } from '../sim/stats';
 import { DT, type Enemy, type Sim, type SimInput } from '../sim/types';
@@ -539,6 +540,8 @@ export class Bot {
    */
   private go(tx: number, tz: number): boolean {
     const p = this.sim.player;
+    // The grid treats gratings as open; a target behind one that is still closed (loot, a heal drop) is out of reach.
+    if (gateBetween(this.sim, p.x, p.z, tx, tz)) return false;
     if (this.nav.toward(p.x, p.z, tx, tz, this.dir)) return true;
     const d = Math.hypot(this.okX - p.x, this.okZ - p.z);
     if (!Number.isFinite(d) || d < 0.1) return false;
@@ -785,7 +788,8 @@ export function wantsOffer(s: Sim, o: TradeOffer): boolean {
 
 /** Späti or trader (2D state 'trade'): offers by the trade rule, Verband and Molotow up to two, Schärfen and Panzerung while the Späti cap allows. */
 function shop(s: Sim, l?: Ledger): void {
-  tradeStock(s).forEach((o, i) => { if (o && wantsOffer(s, o)) book(s, l, 'items', () => buyOffer(s, i)); });
+  // Wear each purchase before judging the next offer, so two offers for one slot are not both bought.
+  tradeStock(s).forEach((o, i) => { if (o && wantsOffer(s, o) && book(s, l, 'items', () => buyOffer(s, i)).ok) equipBest(s, true); });
   equipBest(s, true);
   salvageSpare(s, l);
   if (s.content.tradeAt >= 0) {
@@ -801,7 +805,7 @@ export function campOffers(s: Sim): Array<{ cost: number; buy: () => unknown }> 
   for (const st of STATIONS) {
     if (!stationBuilt(s, st.id)) continue;
     const n = nextLevel(s, st.id);
-    if (n && !n.needs.length && n.missing.every((m) => m.endsWith(' Schrott'))) out.push({ cost: n.cost.scrap ?? 0, buy: () => buildStation(s, st.id) });
+    if (n && !n.needs.length && (Object.entries(n.cost) as Array<[string, number]>).every(([k, v]) => k === 'scrap' || (s.inventory.materials[k as keyof typeof s.inventory.materials] ?? 0) >= v)) out.push({ cost: n.cost.scrap ?? 0, buy: () => buildStation(s, st.id) });
   }
   return out.sort((a, b) => a.cost - b.cost);
 }
