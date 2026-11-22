@@ -8,6 +8,7 @@ Status: step 1 built (2026-11-22), step 2 next. Built already in PR #57: Späti 
 - Baseline table and reading: `docs/balance.md` › Economy baseline. No balance number changed. 2D repo not needed (the 3D Späti, trader and camp code held the rules).
 - Step 2 needs: Fable targets (Schrott left after Köpenick, camp levels per district, tunnel item level); then mainly the power runaway: shop stock rolls at worn item level + 2 (`runcontent.ts` Späti and `rollTrader`), so shopping compounds with the district loot step. Schrott is never short after Xhain (900 to 2800 left per map).
 - Still open from P33 (`docs/backlog.md`): shrines, hidden blessings, run events, Umbau judgement, weapon by enemy class.
+- Before step 2 compares numbers: chain runs are not fully reproducible from their seed (a replay of seed 203 differed from run 3 of the same campaign), and one campaign of three stalled at the U2-Tunnel West Zugwrack (361,-10). Find the non-determinism first, then the stall.
 
 ## Johannes' feedback
 - Too much Schrott in Köpenick and too little to spend it on. Lower the drops a little and raise prices once the bot plays the economy.

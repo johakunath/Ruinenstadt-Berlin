@@ -4,25 +4,27 @@ Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance 
 
 ## Economy baseline, whole campaign (B2 step 1, 2026-11-22)
 
-The bot now plays the economy (rules in `docs/tasks/b2-economy-pacing.md` › Step 1, `SHOP` in `src/bot/bot.ts`) and the four tunnels. `node tools/balance.mjs 3 normal johannes 1 --campaign`: 3 of 3 campaigns won all ten maps, 12 min wall time. No balance numbers changed. Averages per map; "Camp before" is the camp step before that map (the camp opens with the S3), "Left" the Schrott at the map's end; "Earned" counts pickups, streaks and salvage.
+The bot now plays the economy (rules in `docs/tasks/b2-economy-pacing.md` › Step 1, `SHOP` in `src/bot/bot.ts`) and the four tunnels. `node tools/balance.mjs 3 normal johannes 1 --campaign`, after the review fixes (one purchase per slot per shop, no routes through closed gratings): 3 campaigns, 12 min wall time; 2 won all ten maps, one stopped in the U2-Tunnel West at the Zugwrack fight (bot stuck at 361,-10; a replay of that chain from the same seed won both with and without the grating fix, so runs of a chain are not fully reproducible yet and the stall is rare). No balance numbers changed. Averages per map; "Camp before" is the camp step before that map (the camp opens with the S3), "Left" the Schrott at the map's end; "Earned" counts pickups, streaks and salvage.
 
-| Map | Deaths | Min | Earned (salvage) | Items | Späti upgr. | Camp before | Left | Item level end (weapon) | Power end |
-|---|---|---|---|---|---|---|---|---|---|
-| Köpenick | 0.3 | 16.6 | 1618 (469) | 683 | 398 | 0 | 537 | 13.0 (17) | 463 |
-| S3-Tunnel | 0 | 6.1 | 883 (261) | 138 | 0 | 0 | 1282 | 13.3 (17) | 589 |
-| Xhain | 0 | 13.3 | 1598 (539) | 417 | 0 | 1305 | 1158 | 18.0 (20) | 939 |
-| U8-Tunnel | 0 | 7.5 | 1071 (307) | 0 | 0 | 1314 | 916 | 18.0 (20) | 1071 |
-| Alexanderplatz | 0 | 13.1 | 2292 (985) | 510 | 0 | 893 | 1804 | 19.2 (30) | 2618 |
-| U2-Tunnel | 0 | 7.3 | 890 (155) | 0 | 0 | 1760 | 934 | 19.2 (30) | 2368 |
-| Mitte | 0 | 14.9 | 2256 (986) | 940 | 0 | 594 | 1657 | 30.7 (30) | 4204 |
-| U2-Tunnel West | 0 | 9.2 | 1114 (315) | 110 | 0 | 1247 | 1414 | 30.8 (30) | 4209 |
-| Charlottenburg | 0 | 19.4 | 2750 (1488) | 1618 | 0 | 937 | 1609 | 49.5 (71) | 7096 |
-| Wedding | 0 | 13.5 | 3248 (2213) | 932 | 0 | 1117 | 2808 | 65.5 (83) | 9250 |
+| Map | Played | Won | Deaths | Min | Earned (salvage) | Items | Späti upgr. | Camp before | Left | Item level end (weapon) | Power end |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Köpenick | 3 | 3 | 0.3 | 16.7 | 1575 (439) | 640 | 444 | 0 | 491 | 13.3 (17) | 467 |
+| S3-Tunnel | 3 | 3 | 0.0 | 6.3 | 851 (225) | 87 | 0 | 0 | 1256 | 13.2 (17) | 500 |
+| Xhain | 3 | 3 | 0.0 | 13.3 | 1612 (547) | 380 | 0 | 1257 | 1230 | 17.1 (24) | 922 |
+| U8-Tunnel | 3 | 3 | 0.0 | 6.8 | 1016 (273) | 0 | 0 | 1386 | 860 | 17.1 (24) | 941 |
+| Alexanderplatz | 3 | 3 | 0.0 | 14.6 | 2294 (959) | 235 | 0 | 851 | 2069 | 16.3 (24) | 1725 |
+| U2-Tunnel | 3 | 3 | 0.0 | 9.0 | 990 (174) | 0 | 0 | 1922 | 1136 | 16.3 (24) | 1526 |
+| Mitte | 3 | 3 | 0.0 | 17.4 | 2231 (904) | 480 | 0 | 841 | 2046 | 22.3 (24) | 2473 |
+| U2-Tunnel West | 3 | 2 | 0.0 | 10.2 | 975 (308) | 0 | 0 | 1763 | 1258 | 22.3 (24) | 2030 |
+| Charlottenburg | 2 | 2 | 0.0 | 19.3 | 2464 (1140) | 1470 | 0 | 974 | 1532 | 51.3 (66) | 5520 |
+| Wedding | 2 | 2 | 0.0 | 15.0 | 2450 (1446) | 1370 | 0 | 1081 | 1531 | 66.5 (99) | 6525 |
+
+Before the review fixes (same command): 3 of 3 won, power at the end 9250, Mitte 4204; buying two offers for one slot inflated both spending and power.
 
 **Read (for step 2):**
 - Köpenick: the Späti upgrades (cap 2 + 2) and gear take two thirds of the Schrott; the hero reaches the camp with about 1300 (Johannes held 3699; the Späti upgrades came after his save). The first camp step spends all of it.
 - Schrott is never short after Xhain: every map ends with 900 to 2800 left although the bot buys whatever its rules allow; salvage is a third to two thirds of the income and grows with the item level.
-- Power runs away: about 460 after Köpenick, 2600 after Alexanderplatz, 9250 at the end (the `--chain` run of 2026-11-21 ended Mitte at 850). Spätis and traders roll stock at the worn item level + 2 (last offer + 4), so every shop the bot visits lifts its gear; with the district loot step (+3 item levels per district) this compounds.
+- Power runs away: about 470 after Köpenick, 1700 after Alexanderplatz, 6500 at the end (the `--chain` run of 2026-11-21 ended Mitte at 850). Spätis and traders roll stock at the worn item level + 2 (last offer + 4), so every shop the bot visits lifts its gear; with the district loot step (+3 item levels per district) this compounds.
 - With carried gear nothing after Köpenick costs a death; tunnel fights cost 7 to 21 % life per fight (Schaffner 60 to 166 s).
 
 ## Wedding and the six-district chain (M18 step 2, 2026-11-21)
