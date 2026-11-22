@@ -32,7 +32,8 @@ fetch universal-base-characters "$tmp/ubc.zip"
 fetch modular-character-outfits-fantasy "$tmp/outfits.zip"
 for z in ual1 ual2 ubc; do mkdir -p "$tmp/$z" && unzip -qo "$tmp/$z.zip" -d "$tmp/$z"; done
 
-rm -rf assets-src
+# Only the pack folders are replaced: assets-src/ai/ keeps the local AI sources (docs/local-ai-assets.md).
+rm -rf assets-src/UAL1_Standard.glb assets-src/UAL2_Standard.glb assets-src/body assets-src/hair assets-src/mechs assets-src/outfits
 mkdir -p assets-src
 cp "$tmp"/ual1/*/Unreal-Godot/UAL1_Standard.glb "$tmp"/ual2/*/Unreal-Godot/UAL2_Standard.glb assets-src/
 cp -r "$tmp"/ubc/*/"Base Characters/Godot - UE" assets-src/body

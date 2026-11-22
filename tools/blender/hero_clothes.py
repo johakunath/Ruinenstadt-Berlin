@@ -515,6 +515,8 @@ def ranger_boots(body, tris=2400):
     # Brightness of the painted texture per vertex (mean over its loops), 1 = the texture's mean.
     img = next(n.image for m in mesh.materials if m and m.use_nodes for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image)
     w, h = img.size
+    if not w or not h:
+        raise RuntimeError(f'ranger_boots: texture {img.filepath} did not load (incomplete Outfits pack?)')
     px = img.pixels[:]
     uv = mesh.uv_layers.active.data
     acc = [0.0] * len(mesh.vertices)

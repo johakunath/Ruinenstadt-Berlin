@@ -25,9 +25,14 @@ function args(argv) {
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, ''), v = argv[++i];
     if (k === 'ref') o.ref.push(v);
-    else o[k] = ['size', 'count', 'batch', 'seed', 'steps', 'denoise'].includes(k) ? Number(v) : v;
+    else o[k] = ['size', 'count', 'batch', 'seed', 'steps', 'denoise', 'cutout'].includes(k) ? Number(v) : v;
   }
-  if (o.cut) { o.cut = [o.cut, ...argv.slice(argv.indexOf(o.cut) + 1).filter(a => !a.startsWith('--'))]; return o; }
+  if (o.cut) {
+    // --cut a.png b.png ...: the files up to the next option.
+    const rest = argv.slice(argv.indexOf(o.cut) + 1), end = rest.findIndex(a => a.startsWith('--'));
+    o.cut = [o.cut, ...(end < 0 ? rest : rest.slice(0, end))];
+    return o;
+  }
   if (!o.prompt) throw new Error('--prompt is required');
   return o;
 }

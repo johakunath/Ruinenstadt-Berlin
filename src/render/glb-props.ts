@@ -22,11 +22,15 @@ export function buildGlbProps(materials: Materials, placements: readonly GlbPlac
   for (const kind of new Set(placements.map((p) => p.kind))) {
     const list = placements.filter((p) => p.kind === kind);
     const material = materials.surface({ map: placeholder ?? undefined, roughness: 0.9, vertexColors: true });
-    const mesh = new InstancedMesh(new BufferGeometry(), material, list.length);
+    // Until the file arrives: one degenerate triangle with the real attribute set and no instances drawn.
+    // The mesh stays visible, so `compileAsync` (it only walks visible objects) builds its shader up front.
+    const stub = new BufferGeometry();
+    for (const [name, size] of [['position', 3], ['normal', 3], ['uv', 2], ['color', 3]] as const) stub.setAttribute(name, new BufferAttribute(new Float32Array(3 * size), size));
+    const mesh = new InstancedMesh(stub, material, list.length);
     list.forEach((p, i) => mesh.setMatrixAt(i, p.m));
+    mesh.count = 0;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    mesh.visible = false;
     parent.add(mesh);
     new GLTFLoader().loadAsync(PROPS[kind].url).then((gltf) => {
       let src: Mesh | undefined;
@@ -45,8 +49,9 @@ export function buildGlbProps(materials: Materials, placements: readonly GlbPlac
         material.map = map;
         material.needsUpdate = !placeholder;
       }
+      // Bounds over the instances: only after the count is set (InstancedMesh bounds count instances).
+      mesh.count = list.length;
       mesh.computeBoundingSphere();
-      mesh.visible = true;
     }).catch((e: unknown) => console.warn(`GLB prop ${kind} did not load`, e));
   }
 }

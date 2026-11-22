@@ -313,7 +313,9 @@ export const LIMB_GEAR: Readonly<Record<string, GearBuilder>> = {
     l.add('calf', box(0.004, 0.012, 0.016), plain(0x12151c), p.x + out.x * 0.002, p.y, p.z + out.z * 0.002, 0, Math.atan2(out.x, out.z) - Math.PI / 2, 0);
   }),
 
-  // Stiefel des Spreegeists: dark green shafts wrapped with slanted teal bands, a fin cuff, a faint glow line.
+  // Stiefel des Spreegeists before LA3: dark green shafts wrapped with slanted teal bands, a fin cuff, a faint glow
+  // line. Unused since 2026-11-23 (the boots are the Quaternius `f_wickel` piece); kept until Johannes' playtest
+  // decides whether the glow comes back (docs/tasks/pt-hardware-checks.md › Spreegeist boots LA3), then delete.
   'shaft-wrapped': (k) => both(k, (l) => {
     const smp = leg(k), t0 = 0.13, t1 = 0.47;
     const f: Fit = { cols: 12, rows: 4, closed: true, hull: true, smooth: 3, vsmooth: 1, span: 0.03, at: (u, v) => [t0 + (t1 - t0) * v, round(u)] };
