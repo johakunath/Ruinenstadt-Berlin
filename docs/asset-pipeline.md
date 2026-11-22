@@ -5,7 +5,9 @@ Characters and animation (`assets/characters`, `npm run assets`) are out of scop
 
 Indexes with the status of every item and every enemy: `docs/equipment-pipeline.md`, `docs/enemy-pipeline.md`. Update them in the same PR whenever you add or change a model, icon, bust, texture or effect.
 
-## Which tool for which job (2026-11-18)
+## Which tool for which job (2026-11-18, updated 2026-11-22)
+
+**2026-11-22 (Johannes):** local models first. Texture images, painted icons, reference images and static 3D props come from FLUX.2 klein and Pixal3D on the PC, finished in Blender; Codex is the fallback when the local result does not satisfy. Routes and standard workflows per asset group: `docs/local-ai-assets.md`. Where the tables below say "Codex", read "local first, Codex as fallback". Style, technical and integration rules in this file apply to local images unchanged.
 
 | Job | Route | Who |
 |---|---|---|
@@ -23,11 +25,11 @@ Every new map, building type or prop goes through these steps in order. A step d
 | Step | Who | Does | Done when |
 |---|---|---|---|
 | 1. Build | Claude | Builds geometry in code (`src/render`). Paints placeholder textures in code (`src/render/paint.ts`), like ground variant C: blended surfaces plus scatter | Playable, readable at game camera. Johannes approved the direction (mockup first for critical looks) |
-| 2. Texture | **Codex only** | Generates the texture images with image generation, then the initial integration (below) | Images load in game, code placeholder kept as fallback, row in `assets/LICENSES.md` |
+| 2. Texture | Local first (Claude or Johannes on the PC, `docs/local-ai-assets.md` W1), Codex as fallback | Generates the texture images with image generation, then the initial integration (below) | Images load in game, code placeholder kept as fallback, row in `assets/LICENSES.md` |
 | 3. Performance | Claude | Compression (KTX2 or smaller WebP), mipmaps, atlas merges, draw call and memory checks on both profiles | PC and Tab S9 budgets hold (`docs/plan-3d.md`) |
 | 4. Playtest | Johannes | Looks at it on the Tab S9 | Notes go to `docs/playtests.md` |
 
-Claude does not generate images; Codex does not change geometry, shaders, draw calls or render profiles.
+Claude generates images only with the local models (`docs/local-ai-assets.md`); Codex does not change geometry, shaders, draw calls or render profiles.
 If a texture would need any of those changes, Codex writes the question into the task file and stops (`docs/workflow.md`).
 
 ## Style requirements

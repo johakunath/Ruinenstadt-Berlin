@@ -10,7 +10,7 @@
 - Art: `docs/style-bible.md` and the boards in `docs/style/` are the source of truth (Köpenick = default look). Check them before any visual work.
 - Asset status: `docs/equipment-pipeline.md` (every item: 3D model, hero look, icon) and `docs/enemy-pipeline.md` (every enemy, boss and NPC: body, Kodex). **Whoever touches an item or enemy model, icon, bust, texture or effect (Claude or Codex) updates these indexes in the same PR.**
 - Blender steps for Johannes' PC are collected in `docs/blender-pipeline.md`; add a row there instead of waiting.
-- Textures: `docs/asset-pipeline.md`. Claude builds objects in code with code-painted placeholder textures; **only Codex** generates texture images and does their first integration; Claude then does the performance integration.
+- Textures: `docs/asset-pipeline.md`. Claude builds objects in code with code-painted placeholder textures. Texture images, icons and static 3D props are made **locally first** (FLUX.2 klein, Pixal3D, Blender on the PC: `docs/local-ai-assets.md`, route and standard workflow per asset group); Codex image generation is the fallback (Johannes, 2026-11-22). Claude then does the performance integration.
 - Stack: Three.js (WebGL 2), TypeScript strict, Vite, Vitest, Playwright. Versions are pinned exactly in `package.json`. No React, no ECS, no physics engine.
 - Game text is German, short: a few words or one line. Code, comments and docs are English.
 

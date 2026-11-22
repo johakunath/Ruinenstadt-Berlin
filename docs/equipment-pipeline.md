@@ -196,7 +196,8 @@ Not part of WP4: there the models follow the painted icons, and Codex repaints t
 | Colours and simple surfaces | Code: vertex colours, code-painted canvas textures (`src/render/paint.ts`) |
 | UI glyphs, set marks | Code: SVG |
 | Effects (glow, trails, flashes) | Code: emissive parts, instanced sprites on `FX_LAYER`, no new lights |
-| Painted texture images, painted icons | Codex generates and does the first integration; Claude does the performance integration (`docs/asset-pipeline.md`) |
+| Painted texture images, painted icons | Local first (FLUX.2 klein on the PC, `docs/local-ai-assets.md` W1 to W3), Codex as fallback; Claude does the performance integration (`docs/asset-pipeline.md`) |
+| Static pickups and props with organic detail (P10 pickups per item kind) | Image-to-3D (Pixal3D) plus Blender clean-up (`docs/local-ai-assets.md` W4 to W6) |
 | Rigid hero equipment (hats, plates, cuffs, talisman, ring, implants) | Code: parts skinned rigidly to the bones at equip time and merged into one gear mesh (`src/render/gear.ts`, WP4 D2) |
 | Colours per item base on existing pieces | Code: palette that recolours the piece's vertex colours (WP4 D2) |
 | Hero clothing shells that deform (jacket with sleeves, poncho), retargeting | Blender on the PC, only for skinning to the UAL skeleton, rebinding the hero mesh (`npm run assets:hero`, `tools/blender/`) or retargeting animations |

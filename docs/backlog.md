@@ -51,6 +51,9 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | P42 | Köpenick: some buildings are still not cut off when the hero walks behind them (V1 B cutaway). Find which ones (walk the route with `?cut=4.3`) and flag them in `src/data/cut.ts` | Playtest 2026-11-20 | Claude · Opus medium |
 | P43 | Tunnels: the S-Bahn train does not stand on the tracks (offset or height against the rails in the tunnel view) | Playtest 2026-11-20 | Claude · Opus medium |
 | P44 | Buses are too small: scale them to a real BVG bus (about 12 m, near a tram's length), with footprint and collider | Playtest 2026-11-20 | Claude · Opus medium |
+| LA1 | Local texture trial: T9a Charlottenburg worn stucco with FLUX.2 klein (workflow W1), plus `tools/comfy.mjs` and the exported workflow in `tools/comfy/`; compare in game with the Codex version | Johannes, 2026-11-22 (`docs/local-ai-assets.md` › Trials) | Claude · Opus medium · PC |
+| LA2 | Local prop trial: one static prop (Spreepark dino statue P17, or the Sultan's urn) from a FLUX.2 reference image through Pixal3D and Blender clean-up (W4 to W6) into its map within budget; Johannes tries the hand clean-up once on a second prop | Johannes, 2026-11-22 (`docs/local-ai-assets.md` › Trials) | Claude · Opus high · PC |
+| LA3 | Hero clothing trial: Regenponcho (B1) and one Quaternius outfit piece by Blender script with FLUX.2 cloth albedos (W7, W1); afterwards Johannes decides whether the body or face still needs a change (3D15) | Johannes, 2026-11-22 (`docs/local-ai-assets.md` › Trials) | Claude · Opus high · PC · Blender |
 | P34 | Touch controls are harder than the pad (Johannes, 2026-11-18): compare deaths and fight times per input in telemetry (`inp`, `death`), then options such as a larger dodge button, aim assist strength on touch, a stick that follows the thumb, Auto-Angriff on by default for touch | Johannes, 2026-11-18 | After a few runs with the new telemetry |
 
 ## Ideas (not decided)
