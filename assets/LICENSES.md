@@ -121,7 +121,7 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `inventory/I60.webp` | Ruinenstadt 2D `assets/icons/I60.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I61.webp` | Ruinenstadt 2D `assets/icons/I61.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I62.webp` | Ruinenstadt 2D `assets/icons/I62.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
-| `inventory/I63.webp` | Ruinenstadt 2D `assets/icons/I63.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
+| `inventory/I63.webp` | Render of the hero's `a_poncho` piece (`characters/hero.glb`, CC0 sources) | Claude (`tools/item-icons.mjs`) | Own work; source models CC0 1.0 | Regenponcho, rendered from the look (LA3, 2026-11-23) |
 | `inventory/I64.webp` | Ruinenstadt 2D `assets/icons/I64.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I65.webp` | Ruinenstadt 2D `assets/icons/I65.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I66.webp` | Ruinenstadt 2D `assets/icons/I66.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
@@ -139,7 +139,7 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `inventory/I78.webp` | Ruinenstadt 2D `assets/icons/I78.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I79.webp` | Ruinenstadt 2D `assets/icons/I79.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I80.webp` | Ruinenstadt 2D `assets/icons/I80.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
-| `inventory/I81.webp` | Ruinenstadt 2D `assets/icons/I81.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
+| `inventory/I81.webp` | Render of the hero's `f_wickel` piece (Quaternius Outfits Fantasy, CC0) | Claude (`tools/item-icons.mjs`) | Own work; source models CC0 1.0 | Stiefel des Spreegeists, rendered from the look (LA3, 2026-11-23) |
 | `inventory/I82.webp` | Ruinenstadt 2D `assets/icons/I82.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I83.webp` | Ruinenstadt 2D `assets/icons/I83.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |
 | `inventory/I84.webp` | Ruinenstadt 2D `assets/icons/I84.webp` | Johannes / OpenAI image generation | Project-owned generated menu art | Unchanged placeholder |

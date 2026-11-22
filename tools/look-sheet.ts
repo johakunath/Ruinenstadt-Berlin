@@ -6,7 +6,7 @@
 // Caption: item names, gear triangles per slot and the hero's visible skinned meshes (draw calls per pass).
 import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, PerspectiveCamera, Scene, Vector3, WebGLRenderer, type Mesh, type Object3D, type SkinnedMesh } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { heroLook, WEAR } from '../src/data/hero-look';
+import { heroLook, PIECES, WEAR } from '../src/data/hero-look';
 import { BASES } from '../src/data/item-names';
 import { SETS, type SetId, type SlotId } from '../src/data/items';
 import { loadCharacters, Animator } from '../src/render/characters';
@@ -81,7 +81,9 @@ if (mode === 'icons') {
   for (const it of items) {
     const look = heroLook(equip([it]));
     body.setLook(look);
-    const keep = (n: string): boolean => n.startsWith('gear_') || (it.slot === 'a' && n === (look.outfit === 'weste' ? 'a_weste' : 'a_mantel')) || (it.slot === 'f' && n === (look.boots === 'turnsch' ? 'f_turnsch' : 'f_stiefel')) || (it.slot === 'g' && n === 'g_handsch' && !!look.gloves);
+    // The item's own piece node (PIECES: coat, vest, poncho; boots, sneakers, wrapped boots; gloves).
+    const node = (piece: string): string => PIECES[piece]?.node ?? '';
+    const keep = (n: string): boolean => n.startsWith('gear_') || (it.slot === 'a' && n === node(look.outfit)) || (it.slot === 'f' && n === node(look.boots)) || (it.slot === 'g' && n === 'g_handsch' && !!look.gloves);
     const shown: Object3D[] = [];
     body.model.traverse((o) => { if ((o as Mesh).isMesh) { if (o.visible && !keep(o.name)) { o.visible = false; shown.push(o); } } });
     // Three-quarter view from the front left, a little from above; gloves and boots nearly from the side,

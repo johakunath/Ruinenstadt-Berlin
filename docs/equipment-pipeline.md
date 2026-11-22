@@ -81,7 +81,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |
 | Feuerwehrjacke | feuer | a | normal | wear:feuer | yes | I20 | yes: rendered from the look | none | 2 |
 | BVG-Uniform | bvg | a | normal | wear:bvg | yes | I21 | yes: rendered from the look | none | 2 |
-| Regenponcho | poncho | a | neon | wear:poncho (own `a_poncho` piece, B1, 2026-11-22) | yes | I63 | yes: rendered from the look (re-render with the poncho open) | none | 4 |
+| Regenponcho | poncho | a | neon | wear:poncho (own `a_poncho` piece, B1, 2026-11-22) | yes | I63 | yes: rendered from the look | none | 4 |
 | Kabelmantel | kmantel | a | neon | wear:kmantel | yes | I64 | yes: rendered from the look | none | 4 |
 | Blaumann | blaumann | a | GDR | wear:blaumann | yes | I75 | yes: rendered from the look | none | 4 |
 | Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look | T, E | 3 |
@@ -114,7 +114,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Arbeitsstiefel | stiefel | f | normal | wear:stiefel | yes | I30 | yes: rendered from the look | none | 2 |
 | Gummistiefel | gummi | f | normal | wear:gummi | yes | I31 | yes: rendered from the look | none | 2 |
 | Stiefel des Schaffners | schaffner | f | legendary | wear:schaffner | yes | I86 | yes: rendered from the look | E | 3 |
-| Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief (own `f_wickel` piece: Quaternius Ranger boots, LA3, 2026-11-22) | yes | I81 (re-render with the new boots) | yes: rendered from the look | none | 3 |
+| Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief (own `f_wickel` piece: Quaternius Ranger boots, LA3, 2026-11-22) | yes | I81 | yes: rendered from the look | none | 3 |
 | Eisenstiefel der Zitadelle | eisenstief | f | set zit | wear:eisenstief | yes | I84 | yes: rendered from the look | none | 3 |
 | Stiefel des Tunnelläufers | stiefel | f | set tunnel | wear:stiefel:tunnel | yes | I100 | yes: rendered from the look | none | 3 |
 | Stiefel des Ewigen Gasts | stiefel | f | set gast (M18) | wear:stiefel:gast (ruby boots, gold soles) | yes | I106 | yes: rendered from the look | none | 3 |
