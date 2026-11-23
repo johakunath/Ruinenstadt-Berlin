@@ -41,7 +41,7 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-23)
 
-- Economy (B2 step 2): Späti and trader stock no longer climbs with every purchase (the 2D rule minus the district step was missing, so each district counted twice and the hero's gear ran away); Schrott pickups ×0.5 (was 0.7) and salvage ×0.5. Bot campaigns arrive at the camp with about 1050 Schrott (was 1500) and keep 700 to 1500 per map.
+- Economy (B2 step 2): Späti and trader stock no longer climbs with every purchase (the 2D rule minus the district step was missing, so each district counted twice and the hero's gear ran away); Schrott pickups ×0.5 (was 0.7) and salvage ×0.5. Bot campaigns arrive at the camp with about 950 Schrott (was 1500) and keep 700 to 1700 per map.
 - Enemies are no longer shoved through thin walls or closed tunnel gratings by a crowd, boss adds never appear behind a wall, and nothing can hide in the gap behind the stopped tunnel train (each of these held a fight open for good).
 - After a death and retry on the same map, an enemy or event can no longer be placed inside a crate the earlier run had broken.
 

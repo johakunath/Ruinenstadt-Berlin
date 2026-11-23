@@ -2,6 +2,34 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Economy calibration (B2 step 2, 2026-11-23)
+
+`node tools/balance.mjs 3 normal johannes 1 --campaign`, targets E1 to E6 in `docs/tasks/b2-economy-pacing.md` › Step 2. 3 of 3 campaigns won all ten maps; two processes with the same command printed the same output (runs repeat from the seed). Changes: Späti and trader stock at the 2D `tradeLvl` (minus the district step), `ECONOMY.scrap` 0.7 → 0.5, new `ECONOMY.salvage` 0.5; the bot now plays run events (rescues free the survivors that station level 3 needs).
+
+| Map | Played | Won | Deaths | Min | Earned (salvage) | Items | Späti upgr. | Camp before | Left | Item level end (weapon) | Power end |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Köpenick | 3 | 3 | 0.3 | 17.1 | 1231 (319) | 578 | 204 | 0 | 449 | 12.2 (14) | 439 |
+| S3-Tunnel | 3 | 3 | 0.0 | 6.5 | 668 (149) | 165 | 0 | 0 | 951 | 12.8 (14) | 479 |
+| Xhain | 3 | 3 | 0.0 | 14.2 | 1270 (326) | 438 | 0 | 936 | 847 | 16.2 (21) | 754 |
+| U8-Tunnel | 3 | 3 | 0.0 | 7.6 | 759 (163) | 0 | 0 | 913 | 693 | 16.2 (21) | 881 |
+| Alexanderplatz | 3 | 3 | 0.0 | 15.0 | 1556 (454) | 385 | 0 | 673 | 1192 | 18.6 (25) | 1426 |
+| U2-Tunnel | 3 | 3 | 0.0 | 8.4 | 741 (143) | 0 | 0 | 1254 | 678 | 18.6 (25) | 1334 |
+| Mitte | 3 | 3 | 0.0 | 18.1 | 1604 (578) | 247 | 0 | 538 | 1498 | 19.0 (25) | 2014 |
+| U2-Tunnel West | 3 | 3 | 0.0 | 11.9 | 781 (136) | 0 | 0 | 1295 | 984 | 18.5 (25) | 1889 |
+| Charlottenburg | 3 | 3 | 0.0 | 23.9 | 1849 (742) | 387 | 0 | 721 | 1725 | 21.9 (25) | 3000 |
+| Wedding | 3 | 3 | 0.0 | 30.3 | 1581 (684) | 487 | 0 | 1601 | 1218 | 27.0 (25) | 3099 |
+
+**Read against the targets:**
+- E1 met: worn item level ends near the drop level (27 at Wedding; was 66 before the shop fix).
+- E2 nearly: 951 Schrott on arriving at the camp (target 500 to 900; was 1501, Johannes held 3699).
+- E3 mostly: 678 to 1218 left per map, except Mitte (1498) and Charlottenburg (1725).
+- E4 met: all won, 0.3 deaths in Köpenick, none later.
+- E5 not met: several early district bosses still take 0 to 15 % of life (Xhain, Alexanderplatz, Mitte and Charlottenburg openers). Enemy tuning, for step 3.
+- E6 mostly: tunnel fights 9 to 61 % on average.
+- Spread between runs is large: power at the end 1900 to 4900; the weakest run needed 767 s for the last Wedding boss.
+
+**Before (same command, all bot fixes, old economy):** 3 of 3 won; 1501 Schrott on arrival at the camp, 924 to 2855 left per map, worn item level 22 at the end of Wedding.
+
 ## Economy baseline, whole campaign (B2 step 1, 2026-11-22)
 
 The bot now plays the economy (rules in `docs/tasks/b2-economy-pacing.md` › Step 1, `SHOP` in `src/bot/bot.ts`) and the four tunnels. `node tools/balance.mjs 3 normal johannes 1 --campaign`, after the review fixes (one purchase per slot per shop, no routes through closed gratings): 3 campaigns, 12 min wall time; 2 won all ten maps, one stopped in the U2-Tunnel West at the Zugwrack fight (bot stuck at 361,-10; a replay of that chain from the same seed won both with and without the grating fix, so runs of a chain are not fully reproducible yet and the stall is rare). No balance numbers changed. Averages per map; "Camp before" is the camp step before that map (the camp opens with the S3), "Left" the Schrott at the map's end; "Earned" counts pickups, streaks and salvage.
