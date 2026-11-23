@@ -4,6 +4,7 @@ import { generateLots, generateProps, mapLevel } from '../data/map';
 import { createBreakables, hitBreakable, type BreakableDef } from './breakables';
 import type { Collider } from './collide';
 import { Level } from './level';
+import { reachable } from './reach';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Sim, type SimEvent } from './types';
 
@@ -35,6 +36,16 @@ describe('breakables', () => {
     expect(sim.level.near(5, 5, 1)).toHaveLength(0);
     expect(sim.colliders).toHaveLength(0);
     expect(sim.events.filter((e: SimEvent) => e.type === 'breakableBreak')).toHaveLength(2);
+  });
+
+  it('the reach grid is built on the intact level, not on first use after a crate broke (B2 step 2)', () => {
+    const sim = simWith([def('crate', 5.5, 5.5)]);
+    hitBreakable(sim, sim.breakables[0]!);
+    hitBreakable(sim, sim.breakables[0]!);
+    expect(sim.breakables[0]!.broken).toBe(true);
+    // Built lazily here, the grid would count the broken crate's cell as free in every later run of the level.
+    expect(reachable(sim.level, 5.5, 5.5)).toBe(false);
+    expect(reachable(sim.level, 2, 2)).toBe(true);
   });
 
   it('a new sim on the same level starts with intact props', () => {
