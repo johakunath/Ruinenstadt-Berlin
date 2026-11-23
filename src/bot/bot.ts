@@ -274,6 +274,20 @@ export class Bot {
     }
   }
 
+  /** B2 step 2: the open run event to walk to (captive, cache, crate, radio zone), nearest first, within `EVENT_REACH`. */
+  private eventGoal(): { key: object; x: number; z: number } | null {
+    const s = this.sim, p = s.player, c = s.content;
+    let out: { key: object; x: number; z: number } | null = null, bd: number = EVENT_REACH;
+    for (const e of [c.captive, c.cache, c.crate, c.zone]) {
+      if (!e || this.skip.has(e)) continue;
+      const d = Math.hypot(e.x - p.x, e.z - p.z);
+      if (d < bd) { bd = d; out = { key: e, x: e.x, z: e.z }; }
+    }
+    return out;
+  }
+  private eventKey: object | null = null;
+  private eventT = 0;
+
   /** B2: the shop to walk to now: an unvisited Späti counter or the trader close by, while there is Schrott to spend. */
   private shopGoal(): { key: number; x: number; z: number } | null {
     const s = this.sim, p = s.player;
@@ -587,7 +601,7 @@ export class Bot {
     const p = s.player;
     // B2 step 2: travel watchdog. Pressed against a Späti wall on a cell the grid calls blocked, `go` found
     // no way and the bot stood still until the run was given up (Mitte, Leipziger Straße). Not moving for
-    // 4 s (healing in a Späti and the ferry aside): drop the shop it was after, walk 1 s to free ground.
+    // 4 s (healing in a Späti, holding a radio zone and the ferry aside): drop the shop it was after, walk 1 s to free ground.
     if (this.escapeT > 0) {
       this.escapeT -= DT;
       inp.moveX = Math.sin(this.escapeA);
@@ -596,7 +610,8 @@ export class Bot {
     }
     if ((this.travelT += DT) > 4) {
       const resting = s.rest.at >= 0 && p.hp < s.stats.maxHp;
-      if (Math.hypot(p.x - this.travelX, p.z - this.travelZ) < 0.5 && !resting && !this.onBoatWait()) {
+      const Z = s.content.zone, holding = !!Z && Math.hypot(Z.x - p.x, Z.z - p.z) < Z.r;
+      if (Math.hypot(p.x - this.travelX, p.z - this.travelZ) < 0.5 && !resting && !holding && !this.onBoatWait()) {
         if (!Number.isNaN(this.shopTarget)) this.shopped.add(this.shopTarget);
         this.escapeT = 1;
         this.escapeA = this.freeHeading();
@@ -629,6 +644,15 @@ export class Bot {
         this.lootTarget = best;
         this.lootT = 0;
       }
+    }
+    // B2 step 2 (P33): run events as Johannes plays them: free the captive (guards fight on their own once
+    // the bot is close), open the cache and the timed crate, hold the radio zone. Level 3 of a station needs its
+    // survivor; without rescues the camp stopped at level 2 and the Schrott piled up.
+    const ev = best ? null : this.eventGoal();
+    if (ev) {
+      if (ev.key !== this.eventKey) { this.eventKey = ev.key; this.eventT = 0; }
+      if ((this.eventT += DT) > EVENT_GIVE_UP) this.skip.add(ev.key);
+      else best = ev;
     }
     const goal = best ? null : this.shopGoal();
     if (goal && goal.key !== this.shopTarget) { this.shopTarget = goal.key; this.shopT = 0; }
@@ -803,6 +827,10 @@ function book<T>(s: Sim, l: Ledger | undefined, k: keyof Ledger, f: () => T): T 
  * it holds `minScrap` and gives up on one it cannot reach in `giveUp` s; Verband and Molotow are kept
  * at `pouch`; the drill waits for `drillReserve` Schrott above its price.
  */
+/** B2 step 2: run events farther than this are left; one not done within this many seconds is given up. */
+const EVENT_REACH = 60;
+const EVENT_GIVE_UP = 60;
+
 export const SHOP = { lead: 2, keep: 0.3, reach: 50, minScrap: 60, giveUp: 25, pouch: 2, drillReserve: 300 } as const;
 
 /** A legendary or set piece is kept; anything else below the worn piece's item level is salvaged. */
