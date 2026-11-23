@@ -11,6 +11,12 @@ export interface NoticeSink {
 
 /** Shows the tunnel's own messages; does nothing on other maps and for other events. */
 export function tunnelNotice(ev: SimEvent, def: MapDef | undefined, ui: NoticeSink): void {
+  // M17 Fernsehturm: the Schacht's emergency crank is the same hold.
+  if (def?.decks) {
+    if (ev.type === 'holdStart') ui.banner('Notkurbel halten', 'Bleib im Ring');
+    else if (ev.type === 'power') ui.banner('Gekurbelt', 'Sie kommen die Treppe hoch');
+    return;
+  }
   const T = def?.tunnel;
   if (!T) return;
   switch (ev.type) {
@@ -32,5 +38,5 @@ export function tunnelNotice(ev: SimEvent, def: MapDef | undefined, ui: NoticeSi
 export function tunnelObjective(sim: Sim): string | null {
   const h = sim.run.hold;
   if (sim.run.phase !== 'hold' || !h) return null;
-  return h.inside ? `Generator · ${Math.floor(h.p)}/${h.need} s` : 'Zurück in den Ring';
+  return h.inside ? `${sim.level?.lifts.length ? 'Notkurbel' : 'Generator'} · ${Math.floor(h.p)}/${h.need} s` : 'Zurück in den Ring';
 }

@@ -83,6 +83,8 @@ export interface World {
   breakables?: BreakableView;
   /** M20 tunnel: gratings, the generator hold ring and the end platform's power. */
   tunnel?: import('./tunnel-view').TunnelView;
+  /** M17 Fernsehturm: clock hands, lift rings, the crank hold ring, the revolving band. */
+  turm?: import('./turm-world').TurmView;
   /** M16 sky per zone: the hemisphere light, and a lamp scale (pooled lights and glow decals) relative to the build sky. */
   hemi?: import('three').HemisphereLight;
   setLamps?(k: number): void;

@@ -45,7 +45,12 @@ export interface EncounterDef {
    * standing within `r` of the center; one enemy of the first wave's mix comes out of `mouth` about
    * every `every` seconds (an elite at half charge). Full: a `power` event, then the other waves.
    */
-  hold?: { r: number; need: number; every: number; mouth: Point };
+  hold?: { r: number; need: number; every: number; mouth: Point; at?: Point };
+  /**
+   * M17 ring fights (T3): the centre lies in the tower's core, so it is no place to walk to. `at` is a walkable spot in
+   * the fight where travel leads (the bot) and where a spawn falls back to; the hold ring stands at `hold.at`.
+   */
+  at?: Point;
   /** M15: the boss stands here instead of coming from the rim (the Weltzeituhr on its base). */
   bossAt?: Point;
   /**
@@ -242,6 +247,11 @@ export class Level {
   campSolids: Array<{ station: string; lo: number; hi: number; collider: Collider }> = [];
   wade: (Ribbon & { factor: number }) | null = null;
   traderSpot: Point | null = null;
+
+  /** M17 Fernsehturm (`src/sim/turm.ts`): lifts between the decks, clock hands, the Telecafé's revolving band. */
+  lifts: import('./turm').LiftDef[] = [];
+  hands: import('./turm').HandDef[] = [];
+  band: import('./turm').BandDef | null = null;
 
   /** M18 „Honig klebt“: honey puddles (circles) that slow walking. */
   honey: Array<{ x: number; z: number; r: number }> = [];
