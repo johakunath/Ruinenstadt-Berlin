@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Landmark } from '../data/map';
 import { footprintDist, LandmarkReveal, REVEAL_IN, REVEAL_NEAR, REVEAL_OUT } from './reveal';
 import { charlottenburgMap } from '../data/charlottenburg';
+import { weddingMap } from '../data/wedding';
 
 const rathaus: Landmark = { kind: 'rathaus', x: 0, z: 0, rot: Math.PI / 2, hx: 13, hz: 15, clear: 3 };
 const spati: Landmark = { kind: 'spati', x: 100, z: 0, rot: 0, hx: 5, hz: 4, clear: 2 };
@@ -28,6 +29,21 @@ describe('landmark reveal (M11d)', () => {
           for (let t = 0; t <= len && !shown; t += 1) shown = r.update(0.1, ax + ((bx - ax) * t) / len + nx * side * 11, az + ((bz - az) * t) / len + nz * side * 11, true) !== null;
         }
         expect(shown, `scale ${scale} side ${side}`).toBe(true);
+      }
+    }
+  });
+
+  it('Wedding reveals its five sights (map doc): the Magendoktor, the Amtsgericht, the Flakturm, the Beamtentor, the Hochzeitspalast', () => {
+    for (const scale of [1, 1.3]) {
+      const m = weddingMap(scale), shown = m.landmarks.filter((l) => new LandmarkReveal([l]).update(0.1, l.x, l.z, true) !== null).map((l) => l.kind);
+      expect(shown.sort()).toEqual(['amtsgericht', 'beamtentor', 'flakturm', 'kneipe', 'maschinenhalle']);
+      // Each one fires from the place the route passes: its fight or boss circle (the pub from its own room).
+      for (const [kind, id] of [['kneipe', 'magendoktor'], ['amtsgericht', 'brunnenplatz'], ['flakturm', 'humboldthoehe'], ['beamtentor', 'beamtentor'], ['maschinenhalle', 'hochzeitspalast']] as const) {
+        const l = m.landmarks.find((q) => q.kind === kind)!, e = m.encounters.find((q) => q.id === id)!;
+        const r = new LandmarkReveal([l]);
+        let fired = false;
+        for (let a = 0; a < 360 && !fired; a += 10) fired = r.update(0.1, e.x + Math.sin((a * Math.PI) / 180) * e.r, e.z + Math.cos((a * Math.PI) / 180) * e.r, true) !== null;
+        expect(fired, `${kind} at ${scale}`).toBe(true);
       }
     }
   });

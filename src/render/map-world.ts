@@ -2721,7 +2721,8 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
       hz = z;
       breakableView?.near(x, z);
       for (const s of spatis) s.upper.visible = restAt([s.rest], x, z) < 0;
-      for (const k of kneipen) k.upper.visible = !inKneipe(k.l, x, z, 0.3);
+      // M18 step 3: a reveal looks at the pub's middle; it shows the whole front with its signs, roof on.
+      for (const k of kneipen) k.upper.visible = uncut || !inKneipe(k.l, x, z, 0.3);
       // A reveal looks at the landmark itself, whose cut zone holds its footprint: keep it whole then.
       if (uncut) cutaway.update(1e6, 1e6);
       else cutaway.update(x, z);

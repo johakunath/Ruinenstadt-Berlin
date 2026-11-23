@@ -35,13 +35,18 @@ const SHOW: Partial<Record<LandmarkKind, { top: number; half: number; near?: num
   gedaechtniskirche: { top: 61, half: 14 }, kadewe: { top: 18, half: 24 }, opernhaus: { top: 26, half: 15 },
   schlossmitte: { top: 36, half: 30, near: 66 }, belvedere: { top: 19, half: 7 },
   elefantentor: { top: 10.5, half: 6.5 }, revuepalast: { top: 19, half: 8.5 }, theaterwestens: { top: 22, half: 7 },
+  // M18 Wedding step 3: the five reveals of the map doc (as built in `wedding-sights.ts`; the pub in `wedding-world.ts`). The
+  // Amtsgericht stands 13 m behind its boss circle at ?mapscale=1.3, so it starts at 16 m.
+  kneipe: { top: 6, half: 9.5 }, amtsgericht: { top: 23, half: 15, near: 16 }, flakturm: { top: 18, half: 11 }, beamtentor: { top: 16, half: 8.5 },
+  maschinenhalle: { top: 13, half: 30 },
 };
 /** German names for the hint while the view holds. */
 const NAMES: Partial<Record<LandmarkKind, string>> = { oberbaum: 'Oberbaumbrücke', thomaskirche: 'St. Thomas', wachturm: 'Grenzturm', bethanien: 'Bethanien', nkz: 'Neues Kreuzberger Zentrum', ostbahnhof: 'Ostbahnhof', goerlitzer: 'Görlitzer Bahnhof',
   rathaus: 'Rathaus Köpenick', kirche: 'St. Laurentius', mueggelturm: 'Müggelturm', riesenrad: 'Riesenrad', sbahnhof: 'S-Bahnhof Köpenick', schloss: 'Schloss Köpenick', forum: 'Forum Köpenick',
   weltzeituhr: 'Weltzeituhr', fernsehturm: 'Fernsehturm', dom: 'Berliner Dom', palast: 'Palast der Republik', rotesrathaus: 'Rotes Rathaus', nikolaikirche: 'Nikolaikirche', hausdeslehrers: 'Haus des Lehrers', kino: 'Kino International',
   gedaechtniskirche: 'Gedächtniskirche', kadewe: 'Kaufhaus des Westens', opernhaus: 'Deutsches Opernhaus', schlossmitte: 'Schloss Charlottenburg', belvedere: 'Belvedere',
-  elefantentor: 'Elefantentor', revuepalast: 'Revuepalast', theaterwestens: 'Theater des Westens' };
+  elefantentor: 'Elefantentor', revuepalast: 'Revuepalast', theaterwestens: 'Theater des Westens',
+  kneipe: 'Zum Magendoktor', amtsgericht: 'Amtsgericht Wedding', flakturm: 'Flakturm Humboldthain', beamtentor: 'Beamtentor', maschinenhalle: 'Hochzeitspalast' };
 /** Start when the hero is this close to the footprint (also mid-fight: the game pauses). */
 export const REVEAL_NEAR = 12;
 export const REVEAL_IN = 1.0;

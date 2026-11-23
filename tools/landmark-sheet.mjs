@@ -9,4 +9,5 @@ page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
 await page.goto(`http://localhost:${process.env.PORT ?? 5173}/tools/landmark-sheet.html?` + query, { waitUntil: 'load' });
 await page.waitForFunction(() => document.title.startsWith('done'), null, { timeout: 120000 });
 await page.screenshot({ path: out });
+console.log(await page.title());
 await browser.close();
