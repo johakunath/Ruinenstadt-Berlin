@@ -1,3 +1,4 @@
+import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { AFFIXES, LEGENDARY_ELEMENTS, SETS, SLOTS, type RarityId, type SlotId } from '../data/items';
 import { BASES } from '../data/item-names';
@@ -215,8 +216,9 @@ describe('comparison and economy', () => {
   it.each([0, 1, 2, 3] as RarityId[])('adds the rarity level bonus and preserves prices at rarity %i', rarity => {
     const item = piece({ rarity });
     expect(shownLevel(item)).toBe([10, 13, 16, 20][rarity]);
-    expect(scrapValue(item)).toBe([5, 14, 36, 180][rarity]);
-    if (rarity === 2) expect(scrapValue({ ...item, set: 'kiez' })).toBe(144);
+    // 2D values times ECONOMY.salvage (B2 step 2).
+    expect(scrapValue(item)).toBe(Math.round([5, 14, 36, 180][rarity]! * ECONOMY.salvage));
+    if (rarity === 2) expect(scrapValue({ ...item, set: 'kiez' })).toBe(Math.round(144 * ECONOMY.salvage));
     expect(price(item)).toBe([5, 11, 16, 22][rarity]);
   });
 
@@ -237,7 +239,7 @@ describe('comparison and economy', () => {
     const allowed = { w: ['metall', 'kabel'], a: ['stoff', 'metall'], h: ['stoff', 'metall'], g: ['stoff', 'chemie'], f: ['stoff', 'metall'], t: ['kabel', 'chemie'], r: ['kabel', 'chemie'], i: ['kabel', 'chemie'] };
     const item = piece({ slot, rarity: 3 }), before = structuredClone(item);
     const result = salvage(new Rng(7), item);
-    expect(result.scrap).toBe(180);
+    expect(result.scrap).toBe(Math.round(180 * ECONOMY.salvage));
     expect(Object.values(result.materials).reduce((a, b) => a + b, 0)).toBe(3);
     expect(Object.keys(result.materials).every(id => allowed[slot].includes(id))).toBe(true);
     expect(item).toEqual(before);

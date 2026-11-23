@@ -978,7 +978,10 @@ function aliveNote(sim: Sim): string {
   const alive = sim.enemies.filter((e) => e.state !== 'dead');
   const hero = `; life ${Math.round((100 * sim.player.hp) / sim.stats.maxHp)} %${sim.rest.at >= 0 ? ', in a Späti' : ''}`;
   if (!alive.length) return hero;
-  return `${hero}; alive ${alive.length}: ${alive.slice(0, 4).map((e) => `${e.kind}@${e.x.toFixed(1)},${e.z.toFixed(1)}`).join(' ')}`;
+  const p = sim.player, held = alive.filter((e) => e.enc === sim.run.index && e.sleep === undefined && e.mirrorOf === undefined);
+  // Nearest first; only the ones that hold the current fight open (as `encounterAlive` counts them).
+  held.sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+  return `${hero}; alive ${alive.length}, holding ${held.length}: ${held.slice(0, 4).map((e) => `${e.kind}@${e.x.toFixed(1)},${e.z.toFixed(1)}`).join(' ')}`;
 }
 
 /** One fresh campaign through the map: retries at the zone start after a death, like the game. */
