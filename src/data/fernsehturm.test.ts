@@ -286,6 +286,57 @@ describe('Fernsehturm clock hands (T4)', () => {
     expect(times[1]! - times[0]!).toBeCloseTo(hand.period, 0);
   });
 
+  it('the slow hour hand near the core hits once per pass (Codex review: it stays on a body longer than the lockout)', () => {
+    const hour = level.hands[2]!;
+    const sim = createSim({ level, empty: true });
+    sim.run.index = hour.during;
+    sim.run.phase = 'fight';
+    sim.run.toSpawn = 1e6;
+    sim.run.spawnT = 1e9;
+    sim.god = true;
+    teleport(sim, hour.x, hour.z + 15);
+    // 5 m out (the core is 4 m) where the hand stands after 10 s; watch 20 s, so one pass.
+    const a = handAngle(hour, 10), ex = hour.x + Math.sin(a) * 5, ez = hour.z + Math.cos(a) * 5;
+    const e = spawnEnemy(sim, ex, ez, 'brute');
+    e.enc = sim.run.index;
+    // Only the hour hand: the minute hand passes the same spot 2.5 times in that while.
+    const minute = level.hands[1]!, during = minute.during;
+    minute.during = 99;
+    let hits = 0, hp = e.hp;
+    try {
+      for (let i = 0; i < 60 * 20 && e.state !== 'dead'; i++) {
+        e.x = e.px = ex;
+        e.z = e.pz = ez;
+        e.sleep = 0.1;
+        stepSim(sim, NO_INPUT);
+        sim.events.length = 0;
+        if (e.hp < hp) hits++;
+        hp = e.hp;
+      }
+    } finally { minute.during = during; }
+    expect(hits).toBe(1);
+  });
+
+  it('enemy damage ignores the hero build and a kill feeds no kill effects', () => {
+    const sim = setup();
+    sim.god = true;
+    const a = handAngle(hand, 5);
+    teleport(sim, hand.x, hand.z + 15);
+    const e = spawnEnemy(sim, hand.x + Math.sin(a) * 9, hand.z + Math.cos(a) * 9, 'walker');
+    e.enc = sim.run.index;
+    e.hp = 1;
+    const streak = sim.abilities.streak.n;
+    for (let i = 0; i < 60 * 6 && e.state !== 'dead'; i++) {
+      e.x = e.px = hand.x + Math.sin(a) * 9;
+      e.z = e.pz = hand.z + Math.cos(a) * 9;
+      e.sleep = 0.1;
+      stepSim(sim, NO_INPUT);
+      sim.events.length = 0;
+    }
+    expect(e.state).toBe('dead');
+    expect(sim.abilities.streak.n).toBe(streak);
+  });
+
   it('is harmless outside its fight', () => {
     const sim = createSim({ level, empty: true });
     sim.run.index = hand.during + 1;

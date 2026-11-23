@@ -189,7 +189,7 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 
 - `?map=turm` plays from the foyer door to the stand-in boss: `src/data/fernsehturm.ts` (decks, waves, layout), `src/sim/turm.ts` (lift, hands, band), `src/render/turm-world.ts` (blockout and moving parts), `src/ui/turm-curtain.ts` (dark cut with the height). 19 tests in `fernsehturm.test.ts` cover every invariant above, the scripted run included; smoke test M17.
 - Engine choices: `EncounterDef.at` (walkable spot of a ring fight: travel, bot, spawn fallback) and `hold.at` (the crank ring off the deck centre); `travelTarget` leads to the opened lift. The lift needs no grating: the core is solid, the ring only counts once its fight is won. A ride also saves (`checkpoint`), so resume lands on the right deck.
-- Changed from the anchors: band r 9.5 to 14 (was 8) so the bar's rest strip stays still; Telecafé echo Sultan Nimmersatt (above); hand hits: hero at least 16 % of life, enemies 30 %, bosses 3 % (start values).
+- Changed from the anchors: band r 9.5 to 14 (was 8) so the bar's rest strip stays still; Telecafé echo Sultan Nimmersatt (above); hand hits: hero at least 16 % of life, enemies 30 %, bosses 3 % (start values). Review fixes: enemies take plain damage (`blastHit`, no hero multipliers or kill effects, not `strike`), and a body is hit once per pass of each hand (the slow hour hand near the core stayed on a body longer than the 1 s lockout).
 - T5 and T9: T5 built in the sim (bodies, their rollback and drops turn; test). T9 is step 3.
 - Not yet: one night sky for all decks, no city image, no cutaway of the cores (step 2). No new hardware rows: nothing to measure until step 2 has the look.
 

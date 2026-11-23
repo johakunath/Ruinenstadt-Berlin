@@ -3,7 +3,7 @@
 // revolving floor band of the Telecafé (T5). All pure functions of sim state and sim time; no render, no DOM.
 import type { Point } from './level';
 import { focusFlow } from './director';
-import { strike } from './combat';
+import { blastHit } from './combat';
 import { threatHit } from './threats';
 import { DT, type Sim } from './types';
 
@@ -80,22 +80,34 @@ export function updateLifts(sim: Sim): void {
   sim.events.push({ type: 'lift', index: i, x: to.x, z: to.z }, { type: 'checkpoint' });
 }
 
-/** T4: hands hit the bodies they pass, once per pass. */
+/**
+ * T4: hands hit the bodies they pass, once per pass: a body is hit when a hand reaches it and not again until that hand
+ * has left it (`handIn`, one bit per hand; Codex review: the slow hour hand near the core stays on a body longer than
+ * the lockout), and never twice within `HAND.lockout`. Enemies take plain damage (`blastHit`: none of the hero's
+ * multipliers, a kill feeds no kill effects).
+ */
 export function updateHands(sim: Sim): void {
   const t = sim.time, p = sim.player;
-  for (const h of sim.level.hands) {
-    if (!handActive(sim, h)) continue;
-    if (p.state !== 'dead' && t - (p.handT ?? -1e9) >= HAND.lockout && onHand(h, t, p.x, p.z)) {
-      // Pushed along the sweep: the hand's direction turned a quarter in its sense of travel.
-      const a = handAngle(h, t) + (h.dir * Math.PI) / 2;
-      if (threatHit(sim, null, 0, HAND.floor, Math.sin(a), Math.cos(a), 'Uhrzeiger')) p.handT = t;
-    }
+  sim.level.hands.forEach((h, i) => {
+    const bit = 1 << i;
+    if (!handActive(sim, h)) { p.handIn = (p.handIn ?? 0) & ~bit; return; }
+    // Pushed along the sweep: the hand's direction turned a quarter in its sense of travel.
+    const a = handAngle(h, t) + (h.dir * Math.PI) / 2, ux = Math.sin(a), uz = Math.cos(a);
+    if (p.state !== 'dead' && onHand(h, t, p.x, p.z)) {
+      if (!((p.handIn ?? 0) & bit) && t - (p.handT ?? -1e9) >= HAND.lockout && threatHit(sim, null, 0, HAND.floor, ux, uz, 'Uhrzeiger')) {
+        p.handT = t;
+        p.handIn = (p.handIn ?? 0) | bit;
+      }
+    } else p.handIn = (p.handIn ?? 0) & ~bit;
     for (const e of sim.enemies) {
-      if (e.state === 'dead' || e.def.fly || t - (e.handT ?? -1e9) < HAND.lockout || !onHand(h, t, e.x, e.z)) continue;
+      if (e.state === 'dead' || e.def.fly) continue;
+      if (!onHand(h, t, e.x, e.z)) { e.handIn = (e.handIn ?? 0) & ~bit; continue; }
+      if ((e.handIn ?? 0) & bit || t - (e.handT ?? -1e9) < HAND.lockout) continue;
       e.handT = t;
-      strike(sim, e, e.maxHp * (e.def.boss ? HAND.boss : HAND.enemy), { feel: 'none', noproc: true, note: 'Zeiger' });
+      e.handIn = (e.handIn ?? 0) | bit;
+      blastHit(sim, e, e.maxHp * (e.def.boss ? HAND.boss : HAND.enemy), { x: e.x - ux, z: e.z - uz }, 90);
     }
-  }
+  });
 }
 
 /** Turns (x, z) about (cx, cz) by `d` radians in the facing sense. */

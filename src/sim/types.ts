@@ -59,8 +59,9 @@ export interface Cast {
 }
 
 export interface Player {
-  /** M17 (T4): sim time a clock hand last hit the hero (one hit per pass). */
+  /** M17 (T4): sim time a clock hand last hit the hero, and the hands (bits) that hit it in their current pass. */
   handT?: number;
+  handIn?: number;
   x: number;
   z: number;
   /** Previous step, for render interpolation. */
@@ -120,8 +121,9 @@ export interface Player {
 export type EnemyState = 'chase' | 'windup' | 'strike' | 'recover' | 'special' | 'stagger' | 'dead';
 
 export interface Enemy {
-  /** M17 (T4): sim time a clock hand last hit this body. */
+  /** M17 (T4): sim time a clock hand last hit this body, and the hands (bits) that hit it in their current pass. */
   handT?: number;
+  handIn?: number;
   id: number;
   kind: EnemyKind;
   def: EnemyDef;
