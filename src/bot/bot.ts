@@ -90,6 +90,12 @@ class Nav {
     }
   }
 
+  /** Forget the last distance field (a new bot starts without one). */
+  reset(): void {
+    this.tx = NaN;
+    this.tz = NaN;
+  }
+
   /** Inside a ferry lane (pier to pier): the boat will come. */
   onLane(x: number, z: number): boolean {
     for (const f of this.level.ferries) {
@@ -225,6 +231,9 @@ export class Bot {
       nav = new Nav(sim.level);
       navs.set(sim.level, nav);
     }
+    // B2 step 2: the grid is shared per level, its distance field is not; a field left from an earlier run
+    // (reused when the first target lies within 1.5 m) made a run depend on what the process played before.
+    nav.reset();
     this.nav = nav;
   }
 
@@ -901,6 +910,13 @@ export interface CampaignOptions {
   district?: number;
 }
 
+/** B2 step 2: the enemies still alive when a run stops (kind and position, at most four), to find unreachable ones. */
+function aliveNote(sim: Sim): string {
+  const alive = sim.enemies.filter((e) => e.state !== 'dead');
+  if (!alive.length) return '';
+  return `; alive ${alive.length}: ${alive.slice(0, 4).map((e) => `${e.kind}@${e.x.toFixed(1)},${e.z.toFixed(1)}`).join(' ')}`;
+}
+
 /** One fresh campaign through the map: retries at the zone start after a death, like the game. */
 export function runCampaign(o: CampaignOptions): CampaignReport {
   const level = o.level;
@@ -974,5 +990,5 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   endExpedition(sim, won, o.district ?? 0);
   const left = sim.inventory.scrap;
   const economy = { ...ledger, start: scrap0, earned: left - scrap0 + ledger.items + ledger.upgrades + ledger.camp, left, itemLevel: wornLevel(sim), weaponLevel: sim.equipment.w?.itemLevel ?? 0 };
-  return { economy, profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
+  return { economy, profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}${aliveNote(sim)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }

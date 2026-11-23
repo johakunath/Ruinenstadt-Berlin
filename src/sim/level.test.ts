@@ -46,6 +46,20 @@ describe('Level shut / open (P25 neon bars)', () => {
   });
 });
 
+describe('Level restore order (B2 step 2: same seed, same run)', () => {
+  it('puts removed colliders back in build order, in the list and in their hash cells', () => {
+    const cs = [box(0, 0), box(0.5, 0), box(1, 0), box(1.5, 0)];
+    const L = level([...cs]);
+    const before = [...L.near(0.7, 0, 1)];
+    L.remove(cs[0]!);
+    L.remove(cs[2]!);
+    L.add(box(3, 3));
+    L.restore();
+    expect(L.colliders).toEqual(cs);
+    expect([...L.near(0.7, 0, 1)]).toEqual(before);
+  });
+});
+
 describe('Level no-spawn zones (M16 platform start)', () => {
   it('noSpawnAt is true only inside a zone; freeSpot never places anything there', () => {
     const L = level([]);
