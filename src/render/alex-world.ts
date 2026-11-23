@@ -1,7 +1,7 @@
 // M15 Alexanderplatz blockout (`docs/tasks/m15-alexanderplatz.md`, step 2): the brick Stadtbahn viaduct
 // with open arches, and massing for the district landmarks (silhouette, height and colour only). The
 // landmarks get their real models from photos in step 4; this keeps the layout readable until then.
-import { CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometry, TorusGeometry, type BufferGeometry, type Material } from 'three';
+import { BufferAttribute, BufferGeometry as Geo, CircleGeometry, CylinderGeometry, Matrix4, PlaneGeometry, SphereGeometry, TorusGeometry, type BufferGeometry, type Material } from 'three';
 import type { Landmark, Lot, MapDef, Pt, Viaduct } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { blockFacades } from './map-world';
@@ -89,6 +89,25 @@ function windowRow(b: ChunkBuilder, m: Matrix4, len: number, y: number, w: numbe
 }
 
 /** The four faces of a w × d box: frame at each face centre (z out), and its length. */
+/** Fernsehturm pavilion wing (photo check 2026-11-23): folded white plates, a pointed gable high on the
+ * outside and valleys down to the square between neighbours, so the six wings form a zigzag crown.
+ * Wing frame: centre 9.5 m out, +z outward, ±30° to its neighbours. Both sides drawn (seen from below). */
+function foldedWing(): Geo {
+  return cached('tvWing', () => {
+    const c = Math.cos(Math.PI / 6), sn = Math.sin(Math.PI / 6);
+    const iL = [-5 * sn, 5.5, 5 * c - 9.5], iR = [5 * sn, 5.5, 5 * c - 9.5], P = [0, 9, 4.3];
+    const cL = [-13 * sn, 1.2, 13 * c - 9.5], cR = [13 * sn, 1.2, 13 * c - 9.5];
+    const pos: number[] = [], uv: number[] = [];
+    const U = (p: number[]): number[] => [p[0]! / 3, p[2]! / 3];
+    for (const t of [[iL, iR, P], [iL, P, cL], [iR, cR, P]]) for (const q of [t, [t[0]!, t[2]!, t[1]!]]) for (const p of q) { pos.push(...p!); uv.push(...U(p!)); }
+    const g = new Geo();
+    g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
+    g.computeVertexNormals();
+    return g;
+  });
+}
+
 function faces(F: Frame, w: number, d: number, cz = 0): Array<{ m: Matrix4; len: number }> {
   return [
     { m: F(0, 0, cz + d / 2), len: w },
@@ -252,14 +271,14 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       return;
     }
     case 'fernsehturm': {
-      // Fernsehturm foot: the pavilion with its folded, pointed roof wings round the shaft (the cue at street
-      // level), the tapering concrete shaft, the sphere and the red and white antenna above the camera.
+      // Fernsehturm foot: the pavilion round the shaft under six folded white roof wings, pointed gables
+      // outside and valleys down to the square between them (photo check 2026-11-23), glass under them,
+      // the tapering concrete shaft, the sphere and the red and white antenna above the camera.
       // The tower is the finale (its own district): the doors are chained.
       for (let i = 0; i < 6; i++) {
         const a = (i * Math.PI) / 3 + Math.PI / 6, cx = Math.sin(a) * 9.5, cz = Math.cos(a) * 9.5;
-        glassBox(b, (x, y, z, ry = 0) => F(cx, y, cz, a).multiply(new Matrix4().makeRotationY(ry).setPosition(x, 0, z)), 9, 7, 0, 4.4, 'foyer', 0, 4.4);
-        b.geo(M.concrete, frustum(10, 8, 3.2, 0, 8, SLOPES | ENDS), F(cx, 4.4, cz, a + Math.PI / 2), WHITE);
-        b.box(M.concrete, F(cx, 4.45, cz, a), 10.2, 0.25, 8.2, WHITE);
+        glassBox(b, (x, y, z, ry = 0) => F(cx, y, cz, a).multiply(new Matrix4().makeRotationY(ry).setPosition(x, 0, z - 0.5)), 6, 5, 0, 3.6, 'foyer', 0, 3.6);
+        b.geo(M.concrete, foldedWing(), F(cx, 0, cz, a), WHITE);
       }
       b.box(M.iron, F(0, 1.4, 14.3), 3.2, 2.8, 0.2, [0.5, 0.5, 0.5]);
       b.box(M.iron, F(0, 1.4, 14.42), 2.6, 0.1, 0.05, [0.7, 0.7, 0.7]);
@@ -356,8 +375,17 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
     case 'sbahnhackescher': {
       // Station hall on the viaduct: walk under it. Brick sides, the glass barrel roof, and at street level
       // the enamel name board with the S roundel (the cue the camera sees).
-      b.box(M.brick, F(-l.hx + 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
-      b.box(M.brick, F(l.hx - 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
+      // Alexanderplatz: the 1960s hall has glass sides on a low plinth (photo check 2026-11-23); the
+      // Stadtbahn station Marx-Engels-Platz (Hackescher Markt after 1992) keeps its brick.
+      if (l.kind === 'sbahnalex') {
+        for (const s2 of [-1, 1]) {
+          b.box(M.concrete, F(s2 * (l.hx - 0.3), 7, 0), 0.6, 1, d, GREY);
+          glassFace(b, F(s2 * (l.hx - 0.3), 0, 0, (s2 * Math.PI) / 2), d, 7.5, 2.4, 'curtain', 2.4);
+        }
+      } else {
+        b.box(M.brick, F(-l.hx + 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
+        b.box(M.brick, F(l.hx - 0.3, 8.2, 0), 0.6, 3.4, d, BRICK);
+      }
       b.geo(M.glass, cached(`sbVault${l.hx},${d}`, () => new CylinderGeometry(l.hx, l.hx, d, 10, 1, true, -Math.PI / 2, Math.PI)), F(0, 9.9, 0).multiply(new Matrix4().makeScale(1, 0.45, 1)).multiply(new Matrix4().makeRotationX(-Math.PI / 2)), [0.85, 1.1, 1.05]);
       for (const s of [-1, 1]) {
         const m = F(s * (l.hx + 0.35), 4.2, 0, (s * Math.PI) / 2);
@@ -380,10 +408,11 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       return;
     }
     case 'kongresshalle': {
-      // Kongresshalle: glass hall under a shallow shell dome, the ceramic frieze in blue.
+      // Kongresshalle: glass hall under a round ribbed shell dome about half the front wide (photo check
+      // 2026-11-23: it was too wide and flat), the ceramic frieze in blue.
       glassBox(b, F, w, d, 0, 5, 'foyer', 0, 5);
       b.box(M.concrete, F(0, 5.4, 0), w + 0.4, 0.8, d + 0.4, BLUE);
-      b.geo(M.concrete, cached('khDome', () => new SphereGeometry(1, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2)), F(0, 5.8, 0).multiply(new Matrix4().makeScale(l.hx * 0.8, 2.4, l.hz * 0.9)), CREAM);
+      b.geo(M.concrete, cached('khDome', () => new SphereGeometry(1, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2)), F(0, 5.6, 0).multiply(new Matrix4().makeScale(Math.min(l.hx * 0.55, l.hz * 0.8), 3.6, Math.min(l.hx * 0.55, l.hz * 0.8))), [1.0, 1.0, 1.02]);
       return;
     }
     case 'kino': {
@@ -400,12 +429,22 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
       return;
     }
     case 'cafemoskau': {
-      // Café Moskau: a glass pavilion with a closed upper storey, the Sputnik model on its mast over the
-      // entrance (front to the Allee, north) and the lettering on the east end seen from the route.
+      // Café Moskau (photo check 2026-11-23): glazed ground floor, the upper storey glass between bays of
+      // white diamond lattice, the MOCKBA lettering on the roof edge, the Sputnik on its mast over the
+      // entrance (front to the Allee, north), the lettering again on the east end seen from the route.
       glassBox(b, F, w, d, 0, 4, 'foyer', 0, 4);
-      b.box(M.concrete, F(0, 5.5, 0), w, 3, d, CREAM);
-      atlasPlane(b, F(0, 5.5, l.hz + 0.02), w * 0.7, 1.2, 'moskau');
-      atlasPlane(b, F(l.hx + 0.02, 5.5, 0, Math.PI / 2), d * 0.9, 1.0, 'moskau');
+      glassBox(b, F, w, d, 4, 3, 'curtain', 0, 3);
+      for (const [fx, fz, ry, len] of [[0, l.hz, 0, w], [l.hx, 0, Math.PI / 2, d]] as const) {
+        const bays = Math.max(2, Math.round(len / 4.5)), bw = len / bays;
+        for (let k = 0; k < bays; k += 2) {
+          const m = F(fx, 0, fz, ry).multiply(new Matrix4().makeTranslation(-len / 2 + (k + 0.5) * bw, 5.5, 0.12));
+          b.box(M.concrete, sub(m, 0, 0, -0.04), bw - 0.3, 2.8, 0.05, [0.9, 0.92, 0.95]);
+          for (let j = -2; j <= 2; j++) for (const s2 of [1, -1]) b.box(M.concrete, sub(m, j * bw / 5, 0, 0, 0, 0, s2 * 0.83), 0.09, 2.9, 0.08, WHITE);
+        }
+      }
+      b.box(M.concrete, F(0, 7.25, 0), w + 0.3, 0.5, d + 0.3, CREAM);
+      atlasPlane(b, F(0, 8.1, l.hz + 0.17), w * 0.6, 1.2, 'moskau');
+      atlasPlane(b, F(l.hx + 0.17, 8.1, 0, Math.PI / 2), d * 0.9, 1.0, 'moskau');
       cyl(0.12, 0.15, 6, 7, M.iron, GREY, l.hx - 2, l.hz - 1.5);
       ball(0.7, 13.4, M.stucco, [1.35, 1.35, 1.38], l.hx - 2, l.hz - 1.5);
       for (let k = 0; k < 4; k++) b.box(M.iron, F(l.hx - 2 + Math.sin(k * 1.57 + 0.6) * 1.1, 12.6, l.hz - 1.5 + Math.cos(k * 1.57 + 0.6) * 1.1, k * 1.57 + 0.6), 0.05, 0.05, 2.4, GREY);
@@ -425,10 +464,11 @@ export function buildAlexLandmark(b: ChunkBuilder, l: Landmark): void {
     case 'palast': {
       // Palast der Republik: the long front of bronze mirror glass between white marble ends; in the
       // Stillstand a glass house grew on its roof (the Wurzel-Mutter's den, zone 1 boss).
-      const H = 13;
-      glassBox(b, F, w - 7, d - 0.4, 0, H, 'bronze', 0, 3.25);
-      for (const x of [-l.hx + 1.75, l.hx - 1.75]) b.box(M.stucco, F(x, H / 2, 0), 3.5, H, d, WHITE);
-      b.box(M.stucco, F(0, H + 0.3, 0), w, 0.6, d + 0.2, WHITE);
+      // Photo check 2026-11-23: the closed white marble ends are wider and stand higher than the glass front.
+      const H = 13, E = 5.5;
+      glassBox(b, F, w - 2 * E, d - 0.4, 0, H, 'bronze', 0, 3.25);
+      for (const x of [-l.hx + E / 2, l.hx - E / 2]) b.box(M.stucco, F(x, (H + 2.4) / 2, 0), E, H + 2.4, d, WHITE);
+      b.box(M.stucco, F(0, H + 0.3, 0), w - 2 * E, 0.6, d + 0.2, WHITE);
       // The glass house: a vault along the roof (its lower half stays inside the building).
       b.geo(M.glass, cached(`plVault${w},${d}`, () => new CylinderGeometry(l.hz - 1.5, l.hz - 1.5, w - 9, 14, 1, true)), F(0, H + 0.5, 0).multiply(new Matrix4().makeRotationZ(Math.PI / 2)), [0.8, 1.2, 1]);
       b.box(M.ivy, F(2, 4, l.hz + 0.03), 9, 8, 0.02, GREEN);

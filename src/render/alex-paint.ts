@@ -143,7 +143,7 @@ export function paintAlexAtlas(): EmissiveSurface {
     for (let y = y0; y < y0 + h; y += 6) k.fillRect(x0, y, w, 1);
   }
   // Lettering.
-  for (const [key, t, bg, fg] of [['kino', 'KINO  INTERNATIONAL', '#ece6d4', '#3a3a36'], ['moskau', 'CAFÉ MOSKAU', '#2b3338', '#f2d14b'], ['alex', 'ALEXANDERPLATZ', '#f4f2ea', '#141414'], ['hackescher', 'HACKESCHER MARKT', '#f4f2ea', '#141414']] as Array<[AtlasKey, string, string, string]>) {
+  for (const [key, t, bg, fg] of [['kino', 'KINO  INTERNATIONAL', '#ece6d4', '#3a3a36'], ['moskau', 'MOCKBA', '#2b3338', '#f2d14b'], ['alex', 'ALEXANDERPLATZ', '#f4f2ea', '#141414'], ['hackescher', 'MARX-ENGELS-PLATZ', '#f4f2ea', '#141414']] as Array<[AtlasKey, string, string, string]>) {
     const [x, y, w, h] = ATLAS[key];
     k.fillStyle = bg;
     k.fillRect(x, y, w, h);

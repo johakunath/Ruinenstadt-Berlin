@@ -245,7 +245,7 @@ export function alexMap(scale = 1): MapDef {
     L('brunnen', 70, -100, 0, 7, 7, 2),
     L('hotelstadtberlin', 66, -142, 0, 14, 7, 2),
     L('sbahnalex', 28, -64, Math.atan2(35, 53), 6, 20, 0, { walkUnder: true, name: 'Alexanderplatz' }),
-    L('sbahnhackescher', -150, -130, 90 * DEG, 5, 16, 0, { walkUnder: true, name: 'Hackescher Markt' }),
+    L('sbahnhackescher', -150, -130, 90 * DEG, 5, 16, 0, { walkUnder: true, name: 'Marx-Engels-Platz' }),
     // Karl-Marx-Allee: tall on the north side, low on the camera side.
     L('hausdeslehrers', 124, -68, 0, 11, 11, 2),
     L('kongresshalle', 126, -6, 0, 10, 7, 2, { cut: {} }),
