@@ -7,6 +7,8 @@ import { fireShot, inZone, threatBy } from './threats';
 import { autoAttackTarget } from './player';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Enemy, type Sim, type SimEvent } from './types';
+import { summon } from './ai';
+import { Level } from './level';
 
 /** Open ground, no spawner. The courtyard has props; the hero stands clear of them. */
 function fresh(): Sim {
@@ -845,7 +847,9 @@ describe('Alexanderplatz roster (M15)', () => {
       e.hp = 1e6;
       const evs: SimEvent[] = [];
       for (let t = 0; t < 40; t += 2) {
-        // Alternate near and far so close-range specials come too.
+        // Alternate near and far so close-range specials come too. Its adds are cleared: they stood between the
+        // boss and the hero and kept it from the close-range specials (this test is about the boss's own).
+        s.enemies.splice(0, s.enemies.length, e);
         if (e.state !== 'special') { e.state = 'chase'; e.x = e.px = s.player.x; e.z = e.pz = s.player.z + ((t / 2) % 2 ? 2.8 + e.def.radius * 0.3 : 8); }
         evs.push(...run(s, 2));
       }
@@ -1972,5 +1976,22 @@ describe('shot hits name the shooter (review 2026-11-20)', () => {
     const hit = run(s, 1.5).find((v) => v.type === 'playerHit');
     expect(hit).toMatchObject({ by: 'Speier · Geschoss' });
     expect(threatBy(s, 'shot', 9999)).toBe('Geschoss');
+  });
+});
+
+describe('boss adds (B2 step 2)', () => {
+  it('never appear behind a wall the boss stands in front of', () => {
+    const b = { minX: -30, maxX: 30, minZ: -30, maxZ: 30 };
+    // A 1 m deep wall from z = 1 to z = 2 with free ground behind it (reachable round its ends), then the map edge.
+    const level = new Level('t', b, { x: 0, z: -10 }, [{ kind: 'box', x: 0, z: 1.5, hx: 20, hz: 0.5, rot: 0 }, { kind: 'box', x: 0, z: 9, hx: 30, hz: 1, rot: 0 }], null, [], b);
+    const adds: Enemy[] = [];
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = createSim({ level, empty: true, seed });
+      const boss = spawnEnemy(s, 0, 0, 'sultan');
+      summon(s, boss, 'teeifrit', 2);
+      adds.push(...s.enemies.filter((o) => o !== boss));
+    }
+    expect(adds.length).toBeGreaterThan(30);
+    expect(adds.filter((o) => o.z > 1).length).toBe(0);
   });
 });
