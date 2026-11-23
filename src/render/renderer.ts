@@ -17,7 +17,7 @@ import { HeroView, loadCharacters, type CharacterAssets } from './characters';
 import { EnemyView } from './enemies';
 import { ENEMY_LAYER } from './layers';
 import { threatShake } from './threats';
-import type { BodyKind } from '../data/enemies';
+import { BOSS, type BodyKind } from '../data/enemies';
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
 import { LootView } from './loot';
@@ -35,7 +35,7 @@ import { NIGHT_SKY, skyZoneAt, type Sky } from './sky';
 import { SkyBlend } from './sky-blend';
 import type { TunnelState } from './tunnel-view';
 import type { TurmState } from './turm-world';
-import { LIFT } from '../sim/turm';
+import { ENDING, LIFT } from '../sim/turm';
 import { bridgeAwareSurface, groundY, setGround } from './ground';
 import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
@@ -95,11 +95,25 @@ function turmState(sim: Sim, time: number): TurmState {
   const r = sim.run, h = r.hold, ph = r.phase;
   return {
     time,
+    x: sim.player.x,
+    z: sim.player.z,
     index: r.index,
     fighting: ph === 'fight' || ph === 'pause' || ph === 'hold',
     lift: sim.lift ? { i: sim.lift.i, k: Math.min(1, sim.lift.t / LIFT.ride) } : null,
     hold: ph === 'hold' && h ? { k: h.p / h.need, inside: h.inside } : null,
+    gear: gearOf(sim),
+    choice: { open: ph === 'choice', id: sim.choice?.id ?? null, k: Math.min(1, (sim.choice?.t ?? 0) / ENDING.hold) },
+    boost: sim.handBoost ?? null,
   };
+}
+
+/** M17: Der Zeitwart's gear hold for the view (the seat and the charge), if one runs. */
+function gearOf(sim: Sim): TurmState['gear'] {
+  for (const e of sim.enemies) {
+    const h = e.zw?.hold;
+    if (h && e.state !== 'dead') return { x: h.seat.x, z: h.seat.z, k: Math.min(1, h.p / BOSS.zeitwart.hold.need) };
+  }
+  return null;
 }
 
 /** Small sky environment for reflections on metal, glass and puddles: the sky gradient above, warm lamps low down. */
@@ -411,6 +425,17 @@ export class GameRenderer {
         this.fx.burst(ev.x, y(ev.x, ev.z, 1.4), ev.z, 6, 5.5, 2, 60, 7);
         this.cam.shake(0, 0, 0.1);
         break;
+      case 'spawn': {
+        // M17: on the sphere decks a body that comes in at the glass breaks a window (T6 dressing).
+        const deck = this.opts.map?.def.decks ? sim.enemies.find((e) => e.id === ev.id) : undefined;
+        if (!deck) break;
+        const d = this.opts.map!.def.decks!.find((q) => Math.abs(q.x - deck.x) < q.r + 2);
+        if (d && d.id !== 'schacht' && d.id !== 'foyer' && Math.hypot(deck.x - d.x, deck.z - d.z) > d.r - 3) {
+          this.fx.burst(deck.x, 1.6, deck.z, 0.75, 0.9, 1, 22, 5);
+          this.cam.shake(0, 0, 0.05);
+        }
+        break;
+      }
       case 'lift':
         // M17: the ride is a cut (the curtain is dark): camera, sky and lights jump to the next deck.
         this.cam.snap(ev.x, ev.z, groundY(ev.x, ev.z));

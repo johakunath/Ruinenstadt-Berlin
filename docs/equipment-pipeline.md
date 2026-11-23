@@ -20,6 +20,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Starter | `starterEquipment()` (`src/sim/loadout.ts`): only `Rostige Klinge`, base `rohr`, kind `blade`. No armor, gloves, boots: hero starts in coat, boots, bare hands |
 | Legacy | `Holzlatte` (`latte`, I01) and `Rostiges Rohr` exist only in `BASES` for old saves; no drop pool rolls them |
 | M18 Wedding (2026-11-21) | One new base (`bestellung`, legendary hammer) and the set Pracht des Ewigen Gasts on five existing bases (`mantel`, `handsch`, `stiefel` with `base:gast` palettes, `feder`, `siegel`); both drop only on `fest` maps (`src/sim/items.ts`). Icons I103 to I106 rendered with `tools/item-icons.mjs`; feather and signet ring keep the plain icons. Proof `docs/proof/m18-wedding/enemies/loot-icons.png` |
+| M17 Fernsehturm (2026-11-23) | One new base (`telespargel`, legendary spear, shock). Only Der Zeitwart drops it: for certain until it is in the Kodex, then a third of the time (`killDrops`). Icon I109 rendered from the model |
 | Weapon cost (2026-11-19) | 2 meshes (metal, matte), 3 with a glow: 2 or 3 draw calls per pass (was 10); 174 to 830 triangles. `src/render/weapons.test.ts` checks envelope and budget |
 | Head, hand, foot, ring legendaries and set pieces (2D #2) | Data, drop tables and powers are ported and tested; only their looks are missing |
 | Base clash | `Kettenhemd der Zitadelle` uses base `kette` (same as `Fahrradkette`): icon I42 (bike chain); the chainmail icon I57 sits under key `khemd`, which no base uses |
@@ -69,6 +70,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Mauerbrecher | mauer | w | legendary | model:mauer | yes | I16 | yes: rendered from the model | E | 3 |
 | Plattenbrecher | pbrecher | w | legendary | model:pbrecher | yes | I52 | yes: rendered from the model | E | 3 |
 | Die Letzte Bestellung | bestellung | w | legendary (only on `fest` maps, M18) | model:bestellung (emerald shaft, gold wish-lamp head with a ruby glow band, two tea glasses on chains) | yes | I103 | yes: rendered from the model | E (tea splash on every third hit) | 3 |
+| Telespargel | telespargel | w | legendary (only from Der Zeitwart, M17) | model:telespargel (red and white banded antenna shaft, the steel sphere with a lit window ring and a brass gear rim as the guard, a red beacon at the point) | yes | I109 | yes: rendered from the model | E (Zeitzeichen: every twelfth hit stops every enemy within 5 m for 1.5 s; a shock ring) | 3 |
 | Zorn der Ringbahn | ring | w | legendary | model:ring | yes | I32 | yes: rendered from the model | E | 3 |
 | Krähenschleuder | kraehe | w | legendary | model:kraehe | yes | I53 | yes: rendered from the model | E | 3 |
 | Speer der Siegessäule | siegsp | w | legendary | model:siegsp | yes | I56 | yes: rendered from the model | E | 3 |

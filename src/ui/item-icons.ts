@@ -10,4 +10,6 @@ export const ITEM_ICONS: Readonly<Record<string, string>> = {'latte': 'I01', 'ro
   // Tunnelläufer set: rendered from the looks and the weapon model.
   'mantel:tunnel': 'I98', 'nbrille:tunnel': 'I99', 'stiefel:tunnel': 'I100', 'zange:tunnel': 'I101',
   // M18 Wedding: Die Letzte Bestellung and the Pracht des Ewigen Gasts, rendered from the model and the looks.
-  bestellung: 'I103', 'mantel:gast': 'I104', 'handsch:gast': 'I105', 'stiefel:gast': 'I106'};
+  bestellung: 'I103', 'mantel:gast': 'I104', 'handsch:gast': 'I105', 'stiefel:gast': 'I106',
+  // M17 Fernsehturm: the Telespargel, rendered from its model.
+  telespargel: 'I109'};

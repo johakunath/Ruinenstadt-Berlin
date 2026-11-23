@@ -44,6 +44,7 @@ import { charlottenburgMap } from './data/charlottenburg';
 import { weddingMap } from './data/wedding';
 import { turmMap } from './data/fernsehturm';
 import { travelTarget } from './sim/turm';
+import { echoName } from './sim/echo';
 import { LiftCurtain } from './ui/turm-curtain';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor, zoneSkies } from './render/sky';
@@ -705,7 +706,7 @@ function drainEvents(): void {
         const enc = level?.encounters[ev.index];
         if (!enc) break;
         const boss = enc.waves[ev.wave]?.bosses[0];
-        if (boss) ui.banner(ENEMIES[boss].name, enc.name);
+        if (boss) ui.banner(echoName(ENEMIES[boss].name, enc.waves[ev.wave]?.echo), enc.name);
         else ui.banner(ev.waves > 1 ? `Welle ${ev.wave + 1}/${ev.waves}` : enc.name, ev.waves > 1 ? enc.name : '');
         break;
       }
@@ -723,6 +724,20 @@ function drainEvents(): void {
         else if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
         break;
       }
+      case 'gearHold':
+        // M17 (T9): Der Zeitwart stands in the movement; the gear goes in while the hero holds the seat.
+        ui.banner('Zahnrad einsetzen', 'Halte den Ring am Werk');
+        break;
+      case 'gear':
+        ui.banner('Zahnrad eingesetzt', ev.phase === 2 ? 'Morgen · die Zeiger rasen' : 'Mauerzeit');
+        break;
+      case 'choiceOpen':
+        // M17 (T10): two rings at the main switch.
+        ui.banner('Die Unruh ist dein', 'Uhr stellen oder stehen lassen?');
+        break;
+      case 'ending':
+        ui.banner(ev.choice === 'gestellt' ? 'Normalzeit' : 'Stillstand', ev.choice === 'gestellt' ? 'Berlin tickt wieder, auch das Alte.' : 'Die Stadt behält ihre Zeiten.');
+        break;
       case 'lift': {
         // Lift i joins deck i and deck i + 1.
         const D = map?.def.decks, from = D?.[ev.index], to = D?.[ev.index + 1];
@@ -1075,6 +1090,10 @@ function expeditionHud(dt: number): void {
     ui.objective(`Beute · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
   } else if (sim.run.endless !== undefined) {
     ui.objective(`Endlos · Welle ${sim.run.endless + (sim.run.phase === 'fight' ? 1 : 0)}`, null);
+  } else if (sim.run.phase === 'choice') {
+    // M17 (T10): the two rings at the main switch.
+    const ring = sim.choice ? level.ending.find((q) => q.id === sim.choice!.id) : undefined;
+    ui.objective(ring ? (ring.id === 'gestellt' ? 'Uhr stellen …' : 'Stehen lassen …') : 'Uhr stellen · Stehen lassen', null);
   } else if (!enc) {
     ui.objective(winText, null);
   } else if (sim.run.phase === 'travel') {

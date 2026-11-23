@@ -121,6 +121,10 @@ export interface Player {
 export type EnemyState = 'chase' | 'windup' | 'strike' | 'recover' | 'special' | 'stagger' | 'dead';
 
 export interface Enemy {
+  /** M17 Der Zeitwart's phase, gear hold and Zeitsprung (`src/sim/zeitwart.ts`). */
+  zw?: import('./zeitwart').ZeitwartState;
+  /** M17 (T8): an echo boss (weaker, no item drops). */
+  echo?: boolean;
   /** M17 (T4): sim time a clock hand last hit this body, and the hands (bits) that hit it in their current pass. */
   handT?: number;
   handIn?: number;
@@ -302,10 +306,18 @@ export type SimEvent =
   | { type: 'holdStart'; index: number; x: number; z: number }
   /** M20 tunnel: the generator is charged, the end platform has power ("Strom!"). */
   | { type: 'power'; index: number; x: number; z: number }
+  /** M17 Der Zeitwart: he stepped into the movement; hold the gear seat at (x, z) to reach `phase` (T9). The gear is in. A blink is marked or done. */
+  | { type: 'gearHold'; id: number; x: number; z: number; phase: number }
+  | { type: 'gear'; id: number; x: number; z: number; phase: number }
+  | { type: 'blink'; id: number; x: number; z: number; phase: 'mark' | 'go' }
+  /** M17 (T10): the boss fell, the ending rings are open; then the hero chose. */
+  | { type: 'choiceOpen' }
+  | { type: 'ending'; choice: 'gestellt' | 'gelassen' }
   /** M17 Fernsehturm: the hero rode lift `index` to (x, z) on the next deck (T2). */
   | { type: 'lift'; index: number; x: number; z: number };
 
-export type RunPhase = 'travel' | 'fight' | 'pause' | 'hold' | 'won';
+/** M17 `choice`: after the last fight of the Fernsehturm the hero picks the ending at the main switch (T10). */
+export type RunPhase = 'travel' | 'fight' | 'pause' | 'hold' | 'choice' | 'won';
 
 /** Expedition progress (encounter director). Arena levels leave it at travel forever. */
 export interface RunState {
@@ -385,4 +397,8 @@ export interface Sim {
   shards: boolean;
   /** M17 Fernsehturm (T2): the open lift ring the hero stands in and for how long, null outside one. */
   lift?: { i: number; t: number } | null;
+  /** M17: from sim time `t` the clock hands turn `k` times faster (Der Zeitwart's third phase). */
+  handBoost?: { t: number; k: number } | null;
+  /** M17 (T10): the ending ring the hero stands in and for how long. */
+  choice?: { id: 'gestellt' | 'gelassen'; t: number } | null;
 }

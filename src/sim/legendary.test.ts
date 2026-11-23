@@ -27,7 +27,9 @@ const lost = (e: Enemy): number => e.maxHp - e.hp;
 
 describe('legendary powers (2D hasL)', () => {
   it('every legendary with a power text has a rule here', () => {
-    const tested: LegendaryId[] = ['turm', 'mauer', 'ring', 'spaeti', 'panzer', 'herz', 'zitklinge', 'pbrecher', 'kraehe', 'rattenmantel', 'ritter', 'auge', 'siegsp', 'bassarm', 'pickel', 'kiezbox', 'schaffner', 'weltuhr', 'bestellung'];
+    const tested: LegendaryId[] = ['turm', 'mauer', 'ring', 'spaeti', 'panzer', 'herz', 'zitklinge', 'pbrecher', 'kraehe', 'rattenmantel', 'ritter', 'auge', 'siegsp', 'bassarm', 'pickel', 'kiezbox', 'schaffner', 'weltuhr', 'bestellung',
+      // M17 Telespargel: its rule is tested in zeitwart.test.ts.
+      'telespargel'];
     expect(new Set(tested)).toEqual(new Set(Object.keys(LEGENDARY_POWERS)));
     expect(hasL(fresh('turm'), 'turm')).toBe(true);
     expect(hasL(fresh('turm'), 'auge')).toBe(false);

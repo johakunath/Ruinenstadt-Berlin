@@ -1,46 +1,65 @@
-// M17 Fernsehturm (`src/data/fernsehturm.ts`, `docs/maps/fernsehturm.md`): the tower decks, step 1 blockout.
-// Static set (merged into the map chunks, per material): deck floors, the window band on the north half of every
-// deck and a knee-high sill toward the camera, cores (solid, the open well, the low movement), lift doors, the
-// Telecafé bar, furniture and the hand-placed lamps (pooled lights, the count never changes).
-// Moving parts (`TurmView`, FX layer, unlit, never in the pre-pass): the clock hands with their warning wedge, the
-// lift rings with the ride progress, the crank hold ring with its charge arc; the revolving band is a lit floor
-// mesh turned by sim time. Reads sim state, never writes it.
+// M17 Fernsehturm (`src/data/fernsehturm.ts`, `docs/maps/fernsehturm.md`): the tower decks, look of step 2 after the
+// Stillstand board (`docs/style/fernsehturm.webp`): 1969 GDR space age, worn. Orange enamel cores with brass rivets,
+// clocks and gears grown into them, cobalt and yellow seats, polished dark slate, steel ribs and slanted glass on the
+// north half, a knee-high sill toward the camera (no ceilings are drawn, so cores stop at the cut height 4.3 m with a
+// dark lid: the V1 B cutaway is their normal state; the hero contour covers the rest).
+// Static set: merged into the map chunks per material. Moving and see-through parts live in `TurmView` (FX layer,
+// unlit, never in the pre-pass): clock hands with their warning wedge, lift rings, the crank ring, the glass panes,
+// the revolving band (lit floor mesh turned by sim time), the city image and clouds below the sphere decks, the dark
+// forum round the foyer and the green glow in the shaft. Reads sim state, never writes it.
 //
-// Cost (estimate, not measured): per deck about 10 to 14 merged batches (floor, concrete, steel, glass, enamel,
-// brass, wood, cloth), under 20k triangles; the view adds 3 hand meshes, 3 wedges, 4 lift rings, 2 hold meshes and
-// the band (2 draw calls), each frustum-culled to the hero's deck. Same on Ausgewogen and Leistung.
-import { BufferAttribute, BufferGeometry, CircleGeometry, CylinderGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, RingGeometry, Vector3, type Material } from 'three';
-import { apothem, liftDoor, type DeckDef, type TurmSolid } from '../data/fernsehturm';
+// Cost (estimate, not measured; only the hero's deck is in view): about 14 to 20 merged batches per deck (its floor,
+// concrete, steel, glass ribs, enamel, brass, wood, cloth, lamps, ivy cards), under 40k triangles; the view adds 3 hand
+// blades with shadows and wedges, 4 lift rings, 2 hold meshes, 1 glass mesh per deck, the band (2), the city and
+// clouds (2), the forum (1) and the well glow (1), each frustum-culled. Textures: five 768² floors, the band, one
+// enamel tile, a dial, the city (1024²) and a cloud: about 25 MB with mips. No new light: lamps join the shared pool.
+// Same on Ausgewogen and Leistung (the board look adds no pass).
+import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, TorusGeometry, Vector3, type Material } from 'three';
+import { apothem, deckAt, liftDoor, type DeckDef, type TurmSolid } from '../data/fernsehturm';
 import type { MapDef } from '../data/map';
 import { bandAngle, handAngle, LIFT, type HandDef } from '../sim/turm';
+import { BOSS } from '../data/enemies';
 import { FX_LAYER } from './layers';
 import type { LitMaterial, Materials } from './materials';
 import type { ChunkBuilder, MapMats } from './map-world';
+import { buildCityView } from './turm-city';
+import { paintBand, paintDeckFloor, paintDial, paintEnamel } from './turm-paint';
 
 type RGB = readonly [number, number, number];
+type Box = (mat: Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, color?: RGB, ry?: number) => void;
 
 export interface TurmMats {
-  floor: LitMaterial;
+  floors: Record<DeckDef['id'], LitMaterial>;
   steel: LitMaterial;
   brass: LitMaterial;
-  glass: LitMaterial;
   enamel: LitMaterial;
+  /** Orange enamel panels of the cores (painted, tiles round the drum). */
+  core: LitMaterial;
   cloth: LitMaterial;
   lamp: LitMaterial;
+  dial: LitMaterial;
   band: LitMaterial;
+  ribs: LitMaterial;
 }
 
-/** Interior palette of the Stillstand board (`docs/style/fernsehturm.webp`): concrete white, steel blue-grey, brass, enamel orange, cobalt. */
-export function makeTurmMats(materials: Materials): TurmMats {
+/** Interior palette of the Stillstand board: concrete white, steel blue-grey, brass, enamel orange, cobalt, signal red. */
+export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): TurmMats {
+  const flat = materials.look.flatten;
+  const floors = {} as Record<DeckDef['id'], LitMaterial>;
+  for (const d of decks) floors[d.id] = materials.surface({ map: paintDeckFloor(d, flat), roughness: d.id === 'schacht' ? 0.85 : 0.32, metalness: d.id === 'schacht' ? 0.4 : 0.05 });
+  const core = paintEnamel('#c4521e', flat);
+  core.repeat.set(8, 1);
   return {
-    floor: materials.surface({ color: 0xffffff, roughness: 0.9, vertexColors: true }),
-    steel: materials.surface({ color: 0xffffff, roughness: 0.45, metalness: 0.55, vertexColors: true }),
-    brass: materials.surface({ color: 0xc8963c, roughness: 0.35, metalness: 0.8, emissive: 0x3a2408, emissiveIntensity: 0.6 }),
-    glass: materials.surface({ color: 0x2c4a5a, roughness: 0.12, metalness: 0.3, emissive: 0x0c1c26, emissiveIntensity: 1 }),
-    enamel: materials.surface({ color: 0xffffff, roughness: 0.5, vertexColors: true }),
-    cloth: materials.surface({ color: 0xffffff, roughness: 0.95, vertexColors: true }),
-    lamp: materials.surface({ color: 0xfff0d0, roughness: 0.4, emissive: 0xffc070, emissiveIntensity: 2.2 }),
-    band: materials.surface({ color: 0xffffff, roughness: 0.75, vertexColors: true }),
+    floors,
+    steel: materials.surface({ color: 0xffffff, roughness: 0.42, metalness: 0.55, vertexColors: true }),
+    brass: materials.surface({ color: 0xc8963c, roughness: 0.32, metalness: 0.85, emissive: 0x3a2408, emissiveIntensity: 0.7 }),
+    enamel: materials.surface({ color: 0xffffff, roughness: 0.45, vertexColors: true }),
+    core: materials.surface({ map: core, roughness: 0.48 }),
+    cloth: materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true }),
+    lamp: materials.surface({ color: 0xfff0d0, roughness: 0.4, emissive: 0xffc070, emissiveIntensity: 2.4 }),
+    dial: materials.surface({ map: paintDial(), roughness: 0.5 }),
+    band: materials.surface({ map: paintBand(flat), roughness: 0.4 }),
+    ribs: materials.surface({ color: 0x4a5866, roughness: 0.5, metalness: 0.6 }),
   };
 }
 
@@ -48,29 +67,45 @@ const M = (x: number, y: number, z: number, ry = 0): Matrix4 => new Matrix4().ma
 /** Facing angle a points along (sin a, cos a). */
 const polar = (d: { x: number; z: number }, r: number, a: number): [number, number] => [d.x + Math.sin(a) * r, d.z + Math.cos(a) * r];
 
-const CONCRETE: RGB = [0.86, 0.84, 0.8];
+const CONCRETE: RGB = [0.82, 0.8, 0.76];
 const STEEL: RGB = [0.5, 0.56, 0.62];
 const ENAMEL_ORANGE: RGB = [0.86, 0.42, 0.16];
 const ENAMEL_BROWN: RGB = [0.42, 0.24, 0.13];
 const COBALT: RGB = [0.16, 0.28, 0.62];
+const YELLOW: RGB = [0.92, 0.66, 0.16];
 const SIGNAL_RED: RGB = [0.8, 0.14, 0.1];
-/** Floor tint per deck: foyer terrazzo, shaft gallery grating, the two sphere decks in warm enamel, the dome brass-dark. */
-const FLOOR: Record<DeckDef['id'], RGB> = {
-  foyer: [0.34, 0.33, 0.31], schacht: [0.2, 0.21, 0.22], panorama: [0.34, 0.26, 0.2], telecafe: [0.36, 0.22, 0.15], uhrenraum: [0.24, 0.2, 0.16],
-};
+const CREAM: RGB = [0.92, 0.88, 0.8];
+const SHELF: readonly RGB[] = [[0.3, 0.5, 0.7], [0.8, 0.6, 0.3], [0.7, 0.3, 0.3]];
 /** Height of the window band (the room is open to the camera, no ceilings drawn). */
 const WALL_H = 4.4;
 const SILL_H = 0.9;
-/** Core walls are cut at this height (V1 B cutaway height). */
+/** Core walls end at this height with a dark lid (V1 B cut height). */
 export const CORE_H = 4.3;
 
 /** A wall segment counts as the camera side (knee-high sill) when it faces south. */
 const southward = (a: number): boolean => Math.cos(a) > 0.05;
 
-/** Floor ring (or polygon ring) of a deck from `r0` to `r1`. */
+/** Floor ring of a deck from `r0` to `r1` with the deck's own planar UV (so one painted texture spans every ring). */
 function floorGeo(d: DeckDef, r0: number, r1: number): BufferGeometry {
   const g = d.sides ? new RingGeometry(r0, r1, d.sides, 2) : new RingGeometry(r0, r1, 72, 2);
   g.rotateX(-Math.PI / 2);
+  const pos = g.getAttribute('position'), uv = g.getAttribute('uv');
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) / d.r + 1) / 2, (1 - pos.getZ(i) / d.r) / 2);
+  return g;
+}
+
+/** A flat gear: a toothed disc (cylinder with every other rim vertex pushed out), facing +z. */
+function gearGeo(r: number, teeth: number, thick: number): BufferGeometry {
+  const g = new CylinderGeometry(r, r, thick, teeth * 2, 1);
+  const p = g.getAttribute('position');
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), rr = Math.hypot(x, z);
+    if (rr < r * 0.99) continue;
+    const k = Math.round(((Math.atan2(z, x) + Math.PI) / (2 * Math.PI)) * teeth * 2) % 2 ? 1.14 : 0.94;
+    p.setXYZ(i, x * k, p.getY(i), z * k);
+  }
+  g.rotateX(Math.PI / 2);
+  g.computeVertexNormals();
   return g;
 }
 
@@ -79,98 +114,151 @@ export function buildTurmWorld(m: MapDef, mats: MapMats, tm: TurmMats, chunkOf: 
   const T = m.turm!;
   for (const d of m.decks ?? []) {
     const b = chunkOf(d.x, d.z);
-    const box = (mat: Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, color?: RGB, ry = 0): void => b.box(mat, M(x, y, z, ry), sx, sy, sz, color);
-    // Floor: the band of the Telecafé is the view's own mesh.
+    const box: Box = (mat, x, y, z, sx, sy, sz, color, ry = 0) => b.box(mat, M(x, y, z, ry), sx, sy, sz, color);
+    // Floor (the Telecafé's band is the view's own mesh), a darker rim along the wall.
     const band = d.id === 'telecafe' ? T.band : null;
-    const coreHole = d.core.r - 0.05;
+    const hole = d.core.kind === 'well' ? d.core.r : d.core.r - 0.05, outer = d.sides ? d.r : d.r + 0.4;
     if (band) {
-      b.geo(tm.floor, floorGeo(d, coreHole, band.r0), M(d.x, 0.01, d.z), FLOOR[d.id]);
-      b.geo(tm.floor, floorGeo(d, band.r1, d.r + 0.4), M(d.x, 0.01, d.z), FLOOR[d.id]);
-    } else b.geo(tm.floor, floorGeo(d, d.core.kind === 'well' ? d.core.r : coreHole, (d.sides ? d.r : d.r + 0.4)), M(d.x, 0.01, d.z), FLOOR[d.id]);
-    // A darker rim on the floor along the wall, and a brass inlay ring at the fight's edge on the sphere decks.
-    if (!d.sides) b.geo(tm.floor, floorGeo(d, d.r - 1.2, d.r + 0.4), M(d.x, 0.02, d.z), [0.25, 0.22, 0.2]);
-    if (d.id === 'panorama' || d.id === 'uhrenraum') b.geo(tm.brass, floorGeo(d, 8.4, 8.6), M(d.x, 0.025, d.z));
+      b.geo(tm.floors[d.id], floorGeo(d, hole, band.r0), M(d.x, 0.01, d.z));
+      b.geo(tm.floors[d.id], floorGeo(d, band.r1, outer), M(d.x, 0.01, d.z));
+      b.geo(tm.brass, floorGeo(d, band.r0 - 0.08, band.r0), M(d.x, 0.02, d.z));
+      b.geo(tm.brass, floorGeo(d, band.r1, band.r1 + 0.08), M(d.x, 0.02, d.z));
+    } else b.geo(tm.floors[d.id], floorGeo(d, hole, outer), M(d.x, 0.01, d.z));
+    if (!d.sides) b.geo(mats.tar, floorGeo(d, d.r - 0.9, d.r + 0.4), M(d.x, 0.015, d.z), [0.16, 0.14, 0.13]);
 
     walls(b, d, tm, mats, box);
-    core(b, d, tm, mats, box);
-    // Lift door on the south face of the core: steel frame, closed leaves, a red lamp over it.
-    const door = liftDoor(d);
-    box(tm.steel, door.x, 1.25, door.z + 0.12, 2.4, 2.5, 0.3, STEEL);
-    box(tm.steel, door.x, 1.15, door.z + 0.3, 1.8, 2.3, 0.06, [0.32, 0.36, 0.4]);
-    box(mats.iron, door.x, 1.15, door.z + 0.34, 0.04, 2.3, 0.02, [0.08, 0.08, 0.08]);
-    box(tm.lamp, door.x, 2.7, door.z + 0.32, 0.5, 0.18, 0.12, SIGNAL_RED);
+    b.solid.captureOccluder(() => core(b, d, tm, mats, box));
+    liftDoorAt(b, d, tm, mats, box);
     if (d.bar) bar(d, tm, box);
+    dress(b, d, tm, mats, box);
   }
   for (const s of T.solids) solid(chunkOf(s.x, s.z), s, tm, mats);
   for (const l of T.lights) {
     const b = chunkOf(l.x, l.z);
     b.light(new Vector3(l.x, l.y, l.z), l.color, l.intensity, l.distance, 0.02, 4);
-    b.box(tm.lamp, M(l.x, l.y + 0.2, l.z), 0.35, 0.12, 0.35);
+    // Only hanging lamps get a shade (candles and the shaft glow sit lower).
+    if (l.y < 2.5) continue;
+    // Pendant lamp: a brass shade glowing underneath, its cable running up out of view.
+    b.geo(tm.brass, new ConeGeometry(0.32, 0.26, 14, 1, true), M(l.x, l.y + 0.26, l.z));
+    b.geo(tm.lamp, new CircleGeometry(0.29, 14).rotateX(Math.PI / 2), M(l.x, l.y + 0.13, l.z));
+    b.box(mats.iron, M(l.x, l.y + 0.75, l.z), 0.03, 0.8, 0.03, [0.1, 0.1, 0.1]);
   }
 }
 
-/** Outer wall: the window band on the north half, a knee-high sill toward the camera. */
-function walls(b: ChunkBuilder, d: DeckDef, tm: TurmMats, mats: MapMats, box: (mat: Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, color?: RGB, ry?: number) => void): void {
-  const faces: Array<{ a: number; r: number; len: number }> = [];
+/** Wall faces of a deck: the polygon's sides, or 40 chords of the circle. */
+function wallFaces(d: DeckDef): Array<{ a: number; r: number; len: number }> {
   if (d.sides) {
     const ap = apothem(d), side = 2 * d.r * Math.sin(Math.PI / d.sides);
-    for (let k = 0; k < d.sides; k++) faces.push({ a: (k * 2 * Math.PI) / d.sides, r: ap, len: side });
-  } else {
-    const n = 40, len = (2 * Math.PI * d.r) / n;
-    for (let k = 0; k < n; k++) faces.push({ a: ((k + 0.5) * 2 * Math.PI) / n, r: d.r, len: len + 0.06 });
+    return Array.from({ length: d.sides }, (_, k) => ({ a: (k * 2 * Math.PI) / d.sides!, r: ap, len: side }));
   }
-  for (const f of faces) {
+  const n = 40, len = (2 * Math.PI * d.r) / n;
+  return Array.from({ length: n }, (_, k) => ({ a: ((k + 0.5) * 2 * Math.PI) / n, r: d.r, len: len + 0.06 }));
+}
+
+/** Outer wall: steel ribs (the glass is the view's) on the north half, a knee-high sill toward the camera. */
+function walls(b: ChunkBuilder, d: DeckDef, tm: TurmMats, mats: MapMats, box: Box): void {
+  for (const f of wallFaces(d)) {
     const [x, z] = polar(d, f.r + 0.3, f.a), ry = f.a;
-    const south = southward(f.a);
-    // Sill (concrete, enamel band on top).
     box(mats.concrete, x, SILL_H / 2, z, f.len, SILL_H, 0.6, CONCRETE, ry);
     box(tm.enamel, x, SILL_H + 0.04, z, f.len, 0.08, 0.7, d.id === 'foyer' || d.id === 'schacht' ? STEEL : ENAMEL_ORANGE, ry);
-    if (south) continue;
-    // Window band: slanted panes between steel ribs, a top beam.
-    const panes = d.sides ? 8 : 1;
-    for (let p = 0; p < panes; p++) {
-      const t = (p + 0.5) / panes - 0.5, px = x + Math.cos(ry) * t * f.len, pz = z - Math.sin(ry) * t * f.len;
-      // The foyer's north-east face is the entrance: an open door gap in the middle of its glass.
-      if (d.sides && Math.abs(Math.cos(f.a - (2 * Math.PI) / 3)) > 0.99 && Math.abs(t) < 0.1) continue;
-      b.box(tm.glass, M(px, SILL_H + (WALL_H - SILL_H) / 2, pz, ry).multiply(new Matrix4().makeRotationX(-0.12)), f.len / panes - 0.12, WALL_H - SILL_H, 0.06);
-      box(tm.steel, px + Math.cos(ry) * (f.len / panes / 2), WALL_H / 2, pz - Math.sin(ry) * (f.len / panes / 2), 0.16, WALL_H, 0.3, STEEL, ry);
+    if (southward(f.a)) continue;
+    if (d.id === 'schacht') {
+      // Inside the concrete shaft: a full wall, no glass.
+      box(mats.concrete, x, 3, z, f.len, 6, 0.5, [0.46, 0.46, 0.44], ry);
+      b.shadowBox(M(x, 3, z, ry), f.len, 6, 0.5);
+      continue;
     }
-    box(tm.steel, x, WALL_H + 0.1, z, f.len, 0.22, 0.5, d.id === 'telecafe' || d.id === 'panorama' ? COBALT : STEEL, ry);
-    b.shadowBox(M(x, WALL_H / 2, z, ry), f.len, WALL_H, 0.5);
+    // Slanted ribs leaning out at the top, as the sphere's windows; the foyer's glass has six mullions per face.
+    const ribs = d.sides ? 6 : 1;
+    for (let p = 0; p < ribs; p++) {
+      const t = d.sides ? (p + 0.5) / ribs - 0.5 : 0.5, px = x + Math.cos(ry) * t * f.len, pz = z - Math.sin(ry) * t * f.len;
+      b.box(tm.ribs, M(px, WALL_H / 2, pz, ry).multiply(new Matrix4().makeRotationX(-0.14)), 0.18, WALL_H + 0.2, 0.28);
+    }
+    box(tm.steel, x + Math.sin(ry) * 0.3, WALL_H + 0.12, z + Math.cos(ry) * 0.3, f.len + 0.05, 0.24, 0.5, d.id === 'telecafe' || d.id === 'panorama' ? COBALT : STEEL, ry);
+    b.shadowBox(M(x, WALL_H / 2, z, ry), f.len, WALL_H, 0.3);
+  }
+  if (d.sides) {
+    // The foyer is a hall of folded concrete: tall piers at the corners with folded heads.
+    for (let k = 0; k < d.sides; k++) {
+      const a = Math.PI / d.sides + (k * 2 * Math.PI) / d.sides, [x, z] = polar(d, d.r - 0.2, a);
+      const h = southward(a) ? 1.4 : 7.5;
+      b.solid.captureOccluder(() => box(mats.concrete, x, h / 2, z, 1.6, h, 1.6, CONCRETE, a));
+      if (!southward(a)) box(mats.concrete, x - Math.sin(a) * 1.6, h - 0.6, z - Math.cos(a) * 1.6, 1.2, 1.2, 4.2, [0.7, 0.68, 0.64], a);
+    }
   }
 }
 
-/** The core: concrete drum with an enamel band (solid), the open well with its railing, the low brass movement. */
-function core(b: ChunkBuilder, d: DeckDef, tm: TurmMats, mats: MapMats, box: (mat: Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, color?: RGB, ry?: number) => void): void {
+/** The core: enamel drum with clocks and gears (solid), the open well with its railing, the low brass movement. */
+function core(b: ChunkBuilder, d: DeckDef, tm: TurmMats, mats: MapMats, box: Box): void {
   const r = d.core.r;
   if (d.core.kind === 'solid') {
-    b.geo(mats.concrete, new CylinderGeometry(r, r, CORE_H, 40, 1, true), M(d.x, CORE_H / 2, d.z), CONCRETE);
-    b.geo(tm.enamel, new CylinderGeometry(r + 0.04, r + 0.04, 0.5, 40, 1, true), M(d.x, 2.6, d.z), d.id === 'foyer' ? COBALT : ENAMEL_BROWN);
-    b.geo(mats.tar, new CircleGeometry(r, 40).rotateX(-Math.PI / 2), M(d.x, CORE_H, d.z), [0.12, 0.12, 0.12]);
+    const foyer = d.id === 'foyer';
+    b.geo(foyer ? mats.concrete : tm.core, new CylinderGeometry(r, r, CORE_H, 48, 1, true), M(d.x, CORE_H / 2, d.z), foyer ? CONCRETE : undefined);
+    b.geo(tm.enamel, new CylinderGeometry(r + 0.05, r + 0.05, 0.4, 48, 1, true), M(d.x, 2.9, d.z), foyer ? COBALT : ENAMEL_BROWN);
+    b.geo(tm.brass, new TorusGeometry(r + 0.02, 0.07, 6, 48).rotateX(Math.PI / 2), M(d.x, CORE_H - 0.05, d.z));
+    b.geo(tm.brass, new TorusGeometry(r + 0.02, 0.06, 6, 48).rotateX(Math.PI / 2), M(d.x, 0.12, d.z));
+    b.geo(mats.tar, new CircleGeometry(r, 48).rotateX(-Math.PI / 2), M(d.x, CORE_H, d.z), [0.1, 0.1, 0.1]);
     b.shadowBox(M(d.x, CORE_H / 2, d.z), r * 1.6, CORE_H, r * 1.6);
-  } else if (d.core.kind === 'well') {
-    // The open shaft: a dark disc far below, the gallery's edge and a railing.
-    b.geo(mats.tar, new CircleGeometry(r, 40).rotateX(-Math.PI / 2), M(d.x, -6, d.z), [0.04, 0.09, 0.06]);
-    b.geo(mats.concrete, new CylinderGeometry(r, r, 6, 40, 1, true).scale(-1, 1, 1), M(d.x, -3, d.z), [0.3, 0.3, 0.3]);
-    for (let k = 0; k < 24; k++) {
-      const a = (k / 24) * Math.PI * 2, [x, z] = polar(d, r + 0.15, a);
-      if (Math.cos(a) > 0.92) continue;
-      box(tm.steel, x, 0.5, z, 0.06, 1, 0.06, STEEL);
+    if (foyer) return;
+    // Clocks and gears of the Zeitnormal grown through the enamel (board 1), clear of the lift door.
+    for (const [a, y, s] of [[-0.9, 2.6, 0.75], [0.95, 3.2, 0.55], [1.6, 2.1, 0.65], [-1.7, 3.3, 0.5], [2.6, 2.6, 0.7], [-2.5, 2.2, 0.6]] as const) {
+      const [x, z] = polar(d, r + 0.06, a);
+      b.geo(tm.brass, new CylinderGeometry(s + 0.08, s + 0.08, 0.1, 28).rotateX(Math.PI / 2), M(x, y, z, a));
+      b.geo(tm.dial, new CircleGeometry(s, 28), M(x, y, z, a).multiply(M(0, 0, 0.06)));
     }
-    b.geo(tm.steel, new CylinderGeometry(r + 0.15, r + 0.15, 0.06, 40, 1, true), M(d.x, 1, d.z), [0.85, 0.65, 0.1]);
+    for (const [a, y, s] of [[-0.55, 1.4, 0.9], [0.6, 1.7, 0.7], [1.25, 3.6, 0.8], [-1.25, 3.7, 0.6]] as const) {
+      const [x, z] = polar(d, r + 0.05, a);
+      b.geo(tm.brass, gearGeo(s, 12, 0.12), M(x, y, z, a));
+    }
+  } else if (d.core.kind === 'well') {
+    // The open shaft: a dark wall down to the jungle glow far below, the gallery edge and a brass railing.
+    b.geo(mats.concrete, new CylinderGeometry(r, r, 9, 40, 1, true).scale(-1, 1, 1), M(d.x, -4.5, d.z), [0.24, 0.26, 0.24]);
+    b.geo(tm.enamel, new CylinderGeometry(r - 0.02, r - 0.02, 0.2, 40, 1, true).scale(-1, 1, 1), M(d.x, -0.1, d.z), YELLOW);
+    for (let k = 0; k < 28; k++) {
+      const a = (k / 28) * Math.PI * 2, [x, z] = polar(d, r + 0.15, a);
+      if (Math.cos(a) > 0.92) continue;
+      box(tm.brass, x, 0.55, z, 0.06, 1.1, 0.06);
+    }
+    b.geo(tm.brass, new TorusGeometry(r + 0.15, 0.05, 6, 48).rotateX(Math.PI / 2), M(d.x, 1.1, d.z));
+    b.geo(tm.brass, new TorusGeometry(r + 0.15, 0.03, 6, 48).rotateX(Math.PI / 2), M(d.x, 0.6, d.z));
+    // Cables hanging into the well.
+    for (const [a, len] of [[0.6, 7], [2.2, 8], [3.6, 6], [4.8, 8]] as const) {
+      const [x, z] = polar(d, r - 0.6, a);
+      box(mats.rubber, x, -len / 2 + 1.5, z, 0.08, len, 0.08, [0.1, 0.1, 0.1]);
+    }
   } else {
-    // The movement under the dome: a low brass drum with dials and a frame.
-    b.geo(tm.brass, new CylinderGeometry(r, r * 1.05, 1.2, 40), M(d.x, 0.6, d.z));
-    b.geo(mats.iron, new CylinderGeometry(r * 0.7, r * 0.7, 0.3, 30), M(d.x, 1.35, d.z), [0.2, 0.2, 0.22]);
+    // The movement under the dome: a low brass drum with gear trains on top and an empty socket for the Unruh.
+    b.geo(tm.brass, new CylinderGeometry(r, r * 1.05, 1.2, 48), M(d.x, 0.6, d.z));
+    b.geo(mats.iron, new CylinderGeometry(r * 0.92, r * 0.92, 0.12, 40), M(d.x, 1.26, d.z), [0.18, 0.17, 0.16]);
+    for (const [ox, oz, s] of [[-1.6, -0.8, 1.1], [1.2, -1.5, 0.9], [1.5, 1.0, 1.2], [-1.2, 1.6, 0.8], [0, 0, 0.7]] as const) {
+      b.geo(tm.brass, gearGeo(s, 14, 0.18).rotateX(-Math.PI / 2), M(d.x + ox, 1.42, d.z + oz));
+    }
+    b.geo(mats.tar, new CylinderGeometry(0.5, 0.5, 0.08, 20), M(d.x, 1.55, d.z), [0.05, 0.05, 0.05]);
     for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2 + Math.PI / 6, [x, z] = polar(d, r + 0.02, a);
-      b.geo(tm.enamel, new CircleGeometry(0.4, 16), M(x, 0.65, z, a), [0.92, 0.9, 0.82]);
+      const a = (k / 6) * Math.PI * 2 + Math.PI / 6, [x, z] = polar(d, r + 0.03, a);
+      b.geo(tm.dial, new CircleGeometry(0.42, 20), M(x, 0.62, z, a));
     }
   }
 }
 
-/** Telecafé bar: a curved counter on the north side of the core. */
-function bar(d: DeckDef, tm: TurmMats, box: (mat: Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, color?: RGB, ry?: number) => void): void {
+/** Lift door on the south face of the core: brass frame, steel leaves, portholes, the red lamp; the foyer's has six gear sockets. */
+function liftDoorAt(b: ChunkBuilder, d: DeckDef, tm: TurmMats, mats: MapMats, box: Box): void {
+  const door = liftDoor(d);
+  box(tm.brass, door.x, 1.3, door.z + 0.1, 2.5, 2.6, 0.24);
+  box(tm.steel, door.x, 1.2, door.z + 0.24, 1.9, 2.4, 0.06, [0.34, 0.38, 0.42]);
+  box(mats.iron, door.x, 1.2, door.z + 0.28, 0.04, 2.4, 0.02, [0.06, 0.06, 0.06]);
+  box(tm.lamp, door.x, 2.76, door.z + 0.26, 0.5, 0.16, 0.12, SIGNAL_RED);
+  if (d.core.kind !== 'solid') return;
+  // Portholes (the foyer: six empty gear sockets), three on each side of the door.
+  for (const s of [-1, 1]) for (let k = 0; k < 3; k++) {
+    const a = s * (0.36 + 0.02 * k), [x, z] = polar(d, d.core.r + 0.04, a), y = 0.75 + k * 0.7;
+    b.geo(tm.brass, new TorusGeometry(0.2, 0.05, 6, 16), M(x, y, z, a));
+    b.geo(d.id === 'foyer' ? mats.tar : tm.dial, new CircleGeometry(0.17, 16), M(x, y, z, a).multiply(M(0, 0, 0.01)), d.id === 'foyer' ? [0.05, 0.05, 0.05] : undefined);
+  }
+}
+
+/** Telecafé bar: a curved counter on the north side of the core, brass top, shelves behind. */
+function bar(d: DeckDef, tm: TurmMats, box: Box): void {
   const B = d.bar!;
   const n = 10;
   for (let k = 0; k < n; k++) {
@@ -178,8 +266,62 @@ function bar(d: DeckDef, tm: TurmMats, box: (mat: Material, x: number, y: number
     const [x, z] = polar(d, B.r1 - 0.4, a);
     box(tm.enamel, x, 0.55, z, len, 1.1, 0.8, ENAMEL_BROWN, a);
     box(tm.brass, x, 1.13, z, len, 0.06, 0.9, undefined, a);
-    const [bx, bz] = polar(d, B.r0 + 0.5, a);
-    box(tm.enamel, bx, 1.1, bz, len * 0.6, 2.2, 0.5, ENAMEL_ORANGE, a);
+    const [bx, bz] = polar(d, B.r0 + 0.4, a);
+    box(tm.enamel, bx, 1.2, bz, len * 0.6, 2.4, 0.4, k % 2 ? ENAMEL_ORANGE : COBALT, a);
+  }
+}
+
+/** Per deck dressing from the board: ivy, cable trays, booths, benches, gear seats. */
+function dress(b: ChunkBuilder, d: DeckDef, tm: TurmMats, mats: MapMats, box: Box): void {
+  const ivy = new PlaneGeometry(1.2, 1.6);
+  const vine = (a: number, r: number, y: number, s = 1): void => {
+    const [x, z] = polar(d, r, a);
+    b.cards.of(mats.ivy).add(ivy, M(x, y, z, a + Math.PI).multiply(new Matrix4().makeScale(s, s, 1)), [0.7, 0.95, 0.6]);
+  };
+  switch (d.id) {
+    case 'foyer':
+      for (const a of [2.4, 3.3, 3.9]) vine(a, apothem(d) - 0.1, 2.2, 1.3);
+      break;
+    case 'schacht':
+      // Urzeit vines climb the west wall, 2089 cable trays glow on the east wall.
+      for (let k = 0; k < 9; k++) vine(3.2 + k * 0.2, d.r - 0.1, 1.2 + (k % 3) * 1.3, 1.4);
+      for (const y of [2.2, 3.4]) for (let k = 0; k < 6; k++) {
+        const a = 1.7 + k * 0.17, [x, z] = polar(d, d.r - 0.15, a);
+        box(tm.steel, x, y, z, 2.2, 0.12, 0.3, [0.2, 0.22, 0.24], a);
+        box(tm.lamp, x, y + 0.08, z, 2, 0.04, 0.06, k % 2 ? [0.9, 0.2, 0.9] : [0.2, 0.9, 1]);
+      }
+      vine(5.6, d.core.r + 0.3, 0.3, 0.9);
+      vine(0.9, d.core.r + 0.3, 0.3, 0.8);
+      break;
+    case 'panorama':
+      // Cobalt benches along the sill between the telescopes.
+      for (let k = 0; k < 8; k++) {
+        const a = (k * Math.PI) / 4, [x, z] = polar(d, d.r - 0.35, a);
+        if (Math.cos(a) > 0.6) continue;
+        box(tm.cloth, x, 0.42, z, 2.2, 0.16, 0.55, COBALT, a);
+        box(tm.cloth, x + Math.sin(a) * 0.25, 0.75, z + Math.cos(a) * 0.25, 2.2, 0.6, 0.14, COBALT, a);
+      }
+      vine(3.1, d.r - 0.1, 2.6, 1.4);
+      break;
+    case 'telecafe':
+      // Upholstered booths against the glass behind the tables: cobalt, mustard and red.
+      for (let k = 0; k < 12; k++) {
+        const a = (k * Math.PI) / 6 + Math.PI / 12, [x, z] = polar(d, d.r - 0.3, a);
+        if (Math.cos(a) > 0.75) continue;
+        const col = [COBALT, YELLOW, [0.66, 0.16, 0.14] as RGB][k % 3]!;
+        box(tm.cloth, x, 0.45, z, 1.8, 0.2, 0.6, col, a);
+        box(tm.cloth, x + Math.sin(a) * 0.28, 0.85, z + Math.cos(a) * 0.28, 1.8, 0.8, 0.18, col, a);
+      }
+      vine(3.6, d.r - 0.1, 3, 1.2);
+      break;
+    case 'uhrenraum':
+      // Six empty gear seats round the movement (the dome is not drawn: no ceilings).
+      for (let k = 0; k < 6; k++) {
+        const a = (k * Math.PI) / 3, [x, z] = polar(d, 6, a);
+        b.geo(tm.brass, new TorusGeometry(0.55, 0.08, 6, 20).rotateX(Math.PI / 2), M(x, 0.08, z));
+        b.geo(mats.tar, new CircleGeometry(0.5, 20).rotateX(-Math.PI / 2), M(x, 0.05, z), [0.06, 0.05, 0.04]);
+      }
+      break;
   }
 }
 
@@ -190,52 +332,61 @@ function solid(b: ChunkBuilder, s: TurmSolid, tm: TurmMats, mats: MapMats): void
     case 'counter':
       box(tm.enamel, 0, 0.55, 0, s.hx * 2, 1.1, s.hz * 2, ENAMEL_ORANGE);
       box(mats.wood, 0, 1.13, 0, s.hx * 2 + 0.1, 0.06, s.hz * 2 + 0.1, [0.5, 0.35, 0.2]);
+      // The kiosk roof: red and cream stripes over the booth, a warm strip light under it.
+      for (let k = 0; k < 6; k++) box(tm.cloth, -s.hx + (k + 0.5) * ((s.hx * 2 + 0.6) / 6) - 0.3, 2.75, -1.1, (s.hx * 2 + 0.6) / 6, 0.12, 3.2, k % 2 ? CREAM : SIGNAL_RED);
+      box(tm.lamp, 0, 2.55, -0.2, 1.6, 0.06, 0.1);
       break;
     case 'shelf':
       box(mats.wood, 0, 1, 0, s.hx * 2, 2, s.hz * 2, [0.42, 0.3, 0.2]);
-      for (const y of [0.7, 1.3]) box(tm.cloth, 0, y, 0.2, s.hx * 1.8, 0.25, 0.1, [0.3, 0.5, 0.7]);
+      for (const y of [0.7, 1.15, 1.6]) for (let k = 0; k < 6; k++) box(tm.cloth, -s.hx + 0.4 + k * ((s.hx * 2 - 0.8) / 5), y, 0.22, 0.3, 0.3, 0.05, SHELF[k % 3]);
       break;
     case 'kiosk':
       box(tm.enamel, 0, 1.3, 0, s.hx * 2, 2.6, s.hz * 2, COBALT);
       break;
     case 'bench':
-      box(mats.wood, 0, 0.42, 0, s.hx * 2, 0.08, s.hz * 2, [0.45, 0.3, 0.18]);
+      box(tm.cloth, 0, 0.42, 0, s.hx * 2, 0.14, s.hz * 2, COBALT);
       box(tm.steel, 0, 0.2, 0, s.hx * 1.8, 0.4, 0.1, STEEL);
       break;
     case 'telescope':
-      b.geo(tm.steel, new CylinderGeometry(0.08, 0.14, 1.1, 10), M(s.x, 0.55, s.z), STEEL);
-      b.geo(tm.enamel, new CylinderGeometry(0.16, 0.2, 0.8, 12).rotateX(Math.PI / 2 - 0.3), M(s.x, 1.25, s.z, s.rot), COBALT);
+      b.geo(tm.brass, new CylinderGeometry(0.07, 0.16, 1.1, 10), M(s.x, 0.55, s.z));
+      b.geo(tm.brass, new CylinderGeometry(0.13, 0.19, 0.9, 12).rotateX(Math.PI / 2 - 0.3), M(s.x, 1.25, s.z, s.rot));
       break;
     case 'table':
-      b.geo(tm.cloth, new CylinderGeometry(s.hx, s.hx, 0.06, 16), M(s.x, 0.78, s.z), [0.92, 0.88, 0.8]);
-      b.geo(tm.cloth, new CylinderGeometry(s.hx + 0.02, s.hx + 0.08, 0.5, 16, 1, true), M(s.x, 0.52, s.z), [0.86, 0.82, 0.74]);
-      b.geo(tm.steel, new CylinderGeometry(0.06, 0.06, 0.75, 8), M(s.x, 0.37, s.z), STEEL);
+      b.geo(tm.cloth, new CylinderGeometry(s.hx, s.hx, 0.06, 18), M(s.x, 0.78, s.z), [0.94, 0.9, 0.82]);
+      b.geo(tm.cloth, new CylinderGeometry(s.hx + 0.02, s.hx + 0.1, 0.55, 18, 1, true), M(s.x, 0.5, s.z), [0.86, 0.82, 0.74]);
+      // A candle glass and three champagne glasses, raised mid-toast.
+      b.geo(tm.lamp, new CylinderGeometry(0.06, 0.06, 0.14, 8), M(s.x, 0.88, s.z));
       for (const k of [0, 1, 2]) {
-        const [x, z] = polar(s, s.hx * 0.5, s.rot + (k * 2 * Math.PI) / 3);
-        b.geo(tm.glass, new CylinderGeometry(0.04, 0.03, 0.14, 8), M(x, 0.88, z));
+        const [x, z] = polar(s, s.hx * 0.55, s.rot + (k * 2 * Math.PI) / 3);
+        b.geo(tm.brass, new CylinderGeometry(0.05, 0.02, 0.18, 8), M(x, 0.92, z));
       }
       break;
     case 'crank':
-      box(tm.steel, 0, 0.6, 0, s.hx * 2, 1.2, s.hz * 2, [0.3, 0.34, 0.36]);
-      b.geo(tm.brass, new CylinderGeometry(0.45, 0.45, 0.08, 18).rotateX(Math.PI / 2), M(s.x, 1.1, s.z, s.rot).multiply(M(0, 0, 0.45)));
+      box(tm.steel, 0, 0.6, 0, s.hx * 2, 1.2, s.hz * 2, [0.32, 0.3, 0.3]);
+      b.geo(tm.enamel, new TorusGeometry(0.42, 0.05, 6, 18), M(s.x, 1.25, s.z, s.rot).multiply(M(0, 0, 0.45)), SIGNAL_RED);
+      box(tm.enamel, 0, 1.25, 0.45, 0.05, 0.8, 0.05, SIGNAL_RED);
       break;
     case 'switch':
-      box(tm.steel, 0, 0.9, 0, s.hx * 2, 1.8, s.hz * 2, [0.3, 0.34, 0.36]);
-      box(tm.brass, 0, 1.6, 0.45, 0.12, 0.7, 0.12);
-      box(tm.lamp, -0.4, 1.5, 0.42, 0.14, 0.14, 0.05, SIGNAL_RED);
+      box(tm.steel, 0, 0.9, 0, s.hx * 2, 1.8, s.hz * 2, [0.3, 0.28, 0.26]);
+      box(tm.brass, 0, 1.3, 0.42, 1.1, 0.5, 0.04);
+      box(tm.enamel, 0.1, 1.7, 0.5, 0.1, 0.6, 0.1, SIGNAL_RED);
+      box(tm.lamp, -0.4, 1.55, 0.45, 0.14, 0.14, 0.05, SIGNAL_RED);
       break;
     case 'console':
       box(tm.enamel, 0, 0.5, 0, s.hx * 2, 1, s.hz * 2, ENAMEL_BROWN);
-      box(tm.lamp, 0, 1.02, 0.1, s.hx * 1.6, 0.04, s.hz, [0.5, 0.9, 0.7]);
+      box(tm.lamp, 0, 1.02, 0.1, 0.6, 0.03, 0.15, [0.5, 0.9, 0.7]);
       break;
   }
 }
 
-// ---------------------------------------------------------------- moving parts
+// ---------------------------------------------------------------- moving and see-through parts
 
 /** What the view needs from the sim (the renderer builds it each frame). */
 export interface TurmState {
   time: number;
+  /** Hero position (which deck is in view). */
+  x: number;
+  z: number;
   /** Current encounter index and whether its fight runs (hands hurt only then). */
   index: number;
   fighting: boolean;
@@ -243,6 +394,12 @@ export interface TurmState {
   lift: { i: number; k: number } | null;
   /** Crank hold: charge share and whether the hero stands in the ring; null outside the hold. */
   hold: { k: number; inside: boolean } | null;
+  /** Der Zeitwart's gear hold (T9): the seat, the charge share; null outside it. */
+  gear: { x: number; z: number; k: number } | null;
+  /** The ending choice (T10): open, and the ring the hero waits in with the share of the wait. */
+  choice: { open: boolean; id: string | null; k: number };
+  /** Der Zeitwart's third phase turns the hands faster from then on. */
+  boost: { t: number; k: number } | null;
 }
 
 export interface TurmView {
@@ -265,19 +422,36 @@ function wedgeGeo(len: number, sweep: number): BufferGeometry {
   return g;
 }
 
+/** Clock hand: a long brass blade with a counterweight stub and an arrow tip, along +z from the centre. */
+function handGeo(len: number, width: number): BufferGeometry {
+  const w = width / 2;
+  const pos = [-w * 0.5, 0, -1.6, w * 0.5, 0, -1.6, w, 0, 0, -w, 0, 0, w * 0.6, 0, len - 1.6, -w * 0.6, 0, len - 1.6, w * 1.6, 0, len - 1.4, -w * 1.6, 0, len - 1.4, 0, 0, len];
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  g.setIndex([0, 1, 2, 0, 2, 3, 3, 2, 4, 3, 4, 5, 7, 6, 8]);
+  return g;
+}
+
+/** Sky tint of the city and the clouds per sphere deck (before dawn, first light, the sun on the horizon). */
+const CITY_TINT: Partial<Record<DeckDef['id'], [number, number]>> = {
+  panorama: [0x8a98d8, 0x6a78b0], telecafe: [0xf0c4cc, 0xffd8dc], uhrenraum: [0xffe2b0, 0xfff0c8],
+};
+
 export function buildTurmView(m: MapDef, tm: TurmMats): TurmView {
-  const T = m.turm!;
+  const T = m.turm!, decks = m.decks ?? [];
   const group = new Group();
   group.name = 'turm-view';
-  // Clock hands: a glowing brass bar from the centre to the tip, and a faint wedge where it will be in `HAND.warn` s.
+  // Clock hands: a glowing brass blade at waist height, its shadow on the floor and a faint wedge where it will be in 0.6 s.
   const hands = T.hands.map((h: HandDef) => {
-    const bar = fx(new Mesh(new CylinderGeometry(h.width / 2, h.width / 2, h.len, 6, 1).rotateX(Math.PI / 2).translate(0, 0, h.len / 2).scale(1, 0.25, 1), unlit(0xffc45a, 0.9)));
-    bar.position.set(h.x, 0.35, h.z);
+    const blade = fx(new Mesh(handGeo(h.len, h.width), unlit(0xffc45a, 0.9)));
+    blade.position.set(h.x, 1.25, h.z);
     const sweep = (h.dir * 2 * Math.PI * 0.6) / h.period;
-    const wedge = fx(new Mesh(wedgeGeo(h.len, sweep), unlit(0xffb040, 0.18)));
+    const wedge = fx(new Mesh(wedgeGeo(h.len, sweep), unlit(0xffb040, 0.16)));
     wedge.position.set(h.x, 0.04, h.z);
-    group.add(bar, wedge);
-    return { h, bar, wedge };
+    const shadow = fx(new Mesh(handGeo(h.len, h.width * 1.2), unlit(0x1a0c00, 0.35)));
+    shadow.position.set(h.x, 0.03, h.z);
+    group.add(blade, wedge, shadow);
+    return { h, blade, wedge, shadow };
   });
   // Lift rings: dim while closed, teal once the fight is won, filling while the hero waits.
   const ringGeo = new RingGeometry(LIFT.r - 0.12, LIFT.r, 40).rotateX(-Math.PI / 2);
@@ -293,46 +467,101 @@ export function buildTurmView(m: MapDef, tm: TurmMats): TurmView {
   // Crank hold ring and its charge arc (draw range grows with the charge).
   const holdAt = m.encounters.findIndex((e) => e.hold), hold = m.encounters[holdAt]?.hold;
   const holdC = hold?.at ?? null;
-  const holdRing = hold && holdC ? fx(new Mesh(new RingGeometry(hold.r - 0.15, hold.r, 64).rotateX(-Math.PI / 2), unlit(0xef9f27, 0.7))) : null;
   const ARC = 64;
+  const holdRing = hold && holdC ? fx(new Mesh(new RingGeometry(hold.r - 0.15, hold.r, 64).rotateX(-Math.PI / 2), unlit(0xef9f27, 0.7))) : null;
   const holdArc = hold && holdC ? fx(new Mesh(new RingGeometry(hold.r - 0.6, hold.r - 0.2, ARC, 1).rotateX(-Math.PI / 2), unlit(0xffd27a, 0.75))) : null;
   if (holdRing && holdArc && holdC) {
     holdRing.position.set(holdC.x, 0.04, holdC.z);
     holdArc.position.set(holdC.x, 0.05, holdC.z);
     group.add(holdRing, holdArc);
   }
-  // The revolving band: a lit floor ring with dark seams every 15°, turned by sim time.
+  // Der Zeitwart's gear hold: the seat's ring (T9, radius `BOSS.zeitwart.hold.r`) and its charge arc.
+  const GR = BOSS.zeitwart.hold.r;
+  const gearRing = fx(new Mesh(new RingGeometry(GR - 0.15, GR, 64).rotateX(-Math.PI / 2), unlit(0xffd27a, 0.8)));
+  const gearArc = fx(new Mesh(new RingGeometry(GR - 0.6, GR - 0.2, ARC, 1).rotateX(-Math.PI / 2), unlit(0xffe8a0, 0.8)));
+  gearRing.visible = gearArc.visible = false;
+  group.add(gearRing, gearArc);
+  // The ending rings at the main switch (T10): gold for „Uhr stellen“ (the sunrise), night blue for „Stehen lassen“.
+  const endings = T.ending.map((q) => {
+    const ring = fx(new Mesh(new RingGeometry(q.r + 0.1, q.r + 0.25, 40).rotateX(-Math.PI / 2), unlit(q.id === 'gestellt' ? 0xffc040 : 0x5a8aff, 0.85)));
+    const fill = fx(new Mesh(new CircleGeometry(q.r, 32).rotateX(-Math.PI / 2), unlit(q.id === 'gestellt' ? 0xffd870 : 0x8ab0ff, 0.45)));
+    ring.position.set(q.x, 0.05, q.z);
+    fill.position.set(q.x, 0.04, q.z);
+    ring.visible = fill.visible = false;
+    group.add(ring, fill);
+    return { q, ring, fill };
+  });
+
+  // Glass of the north windows: one see-through mesh per deck, slanted out like the ribs.
+  const glassMat = new MeshBasicMaterial({ color: 0x9cc8dc, transparent: true, opacity: 0.12, depthWrite: false, side: DoubleSide });
+  for (const d of decks) {
+    if (d.id === 'schacht') continue;
+    const pos: number[] = [], idx: number[] = [];
+    for (const f of wallFaces(d)) {
+      if (southward(f.a)) continue;
+      const [x, z] = polar(d, f.r + 0.3, f.a), c = Math.cos(f.a), s = Math.sin(f.a), out = Math.sin(0.14) * (WALL_H - SILL_H);
+      const h = f.len / 2, n = pos.length / 3;
+      for (const [u, y, o] of [[-h, SILL_H, 0], [h, SILL_H, 0], [h, WALL_H, out], [-h, WALL_H, out]] as const) pos.push(x + c * u + s * o, y, z - s * u + c * o);
+      idx.push(n, n + 1, n + 2, n, n + 2, n + 3);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+    g.setIndex(idx);
+    const glass = fx(new Mesh(g, glassMat));
+    glass.renderOrder = 3;
+    group.add(glass);
+  }
+  // The revolving band: a lit parquet ring with brass seams, turned by sim time.
   const B = T.band;
   let band: Group | null = null;
   if (B) {
     band = new Group();
     band.position.set(B.x, 0, B.z);
     const ring = new Mesh(new RingGeometry(B.r0, B.r1, 96, 1).rotateX(-Math.PI / 2), tm.band);
-    const colors = new Float32Array(ring.geometry.getAttribute('position').count * 3);
-    for (let i = 0; i < colors.length; i += 3) { colors[i] = 0.55; colors[i + 1] = 0.34; colors[i + 2] = 0.24; }
-    ring.geometry.setAttribute('color', new BufferAttribute(colors, 3));
     ring.position.y = 0.012;
     ring.receiveShadow = true;
-    const seams = new InstancedMesh(new CylinderGeometry(0.06, 0.06, B.r1 - B.r0, 4).rotateX(Math.PI / 2), tm.steel, 24);
+    const seams = new InstancedMesh(new CylinderGeometry(0.05, 0.05, B.r1 - B.r0, 4).rotateX(Math.PI / 2), tm.brass, 12);
     const one = new Matrix4();
-    for (let k = 0; k < 24; k++) {
-      const a = (k / 24) * Math.PI * 2, r = (B.r0 + B.r1) / 2;
-      seams.setMatrixAt(k, one.makeRotationY(a).setPosition(Math.sin(a) * r, 0.03, Math.cos(a) * r));
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2, r = (B.r0 + B.r1) / 2;
+      seams.setMatrixAt(k, one.makeRotationY(a).setPosition(Math.sin(a) * r, 0.025, Math.cos(a) * r));
     }
     seams.receiveShadow = true;
     band.add(ring, seams);
     group.add(band);
   }
+  // The city far below the sphere decks, the dark forum round the foyer, the green glow in the shaft.
+  const city = buildCityView();
+  group.add(city.group);
+  const foyer = decks.find((d) => d.id === 'foyer'), shaft = decks.find((d) => d.core.kind === 'well');
+  if (foyer) {
+    const forum = new Mesh(new PlaneGeometry(140, 140).rotateX(-Math.PI / 2), new MeshBasicMaterial({ color: 0x0e1214 }));
+    forum.position.set(foyer.x, -0.05, foyer.z);
+    forum.layers.set(FX_LAYER);
+    group.add(forum);
+  }
+  if (shaft) {
+    const glow = fx(new Mesh(new CircleGeometry(shaft.core.r, 32).rotateX(-Math.PI / 2), new MeshBasicMaterial({ color: 0x3cff7a, transparent: true, opacity: 0.35, blending: AdditiveBlending, depthWrite: false, fog: false })));
+    glow.position.set(shaft.x, -8.9, shaft.z);
+    group.add(glow);
+  }
+  let deckId: DeckDef['id'] | null = null;
 
   return {
     group,
     update(s: TurmState): void {
-      for (const { h, bar, wedge } of hands) {
-        const a = handAngle(h, s.time), live = s.fighting && s.index === h.during;
-        bar.rotation.y = a;
-        wedge.rotation.y = a;
+      const d = deckAt(decks, s.x, s.z) ?? decks.find((q) => Math.abs(q.x - s.x) < 60) ?? null;
+      if (d && d.id !== deckId) {
+        deckId = d.id;
+        const tint = CITY_TINT[d.id];
+        city.place(d.x, d.z, !!tint, tint?.[0] ?? 0xffffff, tint?.[1] ?? 0xffffff);
+      }
+      city.update(s.time);
+      for (const { h, blade, wedge, shadow } of hands) {
+        const a = handAngle(h, s.time, s.boost), live = s.fighting && s.index === h.during;
+        blade.rotation.y = wedge.rotation.y = shadow.rotation.y = a;
         wedge.visible = live;
-        (bar.material as MeshBasicMaterial).opacity = live ? 0.95 : 0.45;
+        (blade.material as MeshBasicMaterial).opacity = live ? 0.95 : 0.5;
       }
       lifts.forEach(({ l, ring, fill }, i) => {
         const open = s.index > l.after;
@@ -350,6 +579,19 @@ export function buildTurmView(m: MapDef, tm: TurmMats): TurmView {
         }
       }
       if (band && B) band.rotation.y = bandAngle(B, s.time);
+      gearRing.visible = gearArc.visible = !!s.gear;
+      if (s.gear) {
+        gearRing.position.set(s.gear.x, 0.06, s.gear.z);
+        gearArc.position.set(s.gear.x, 0.07, s.gear.z);
+        gearArc.geometry.setDrawRange(0, Math.round(ARC * s.gear.k) * 6);
+        (gearRing.material as MeshBasicMaterial).opacity = 0.6 + 0.3 * Math.sin(s.time * 6);
+      }
+      for (const { q, ring, fill } of endings) {
+        ring.visible = fill.visible = s.choice.open;
+        const k = s.choice.id === q.id ? s.choice.k : 0;
+        fill.scale.setScalar(Math.max(0.05, k));
+        (ring.material as MeshBasicMaterial).opacity = 0.6 + 0.3 * Math.sin(s.time * 3);
+      }
     },
   };
 }

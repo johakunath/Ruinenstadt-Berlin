@@ -44,6 +44,9 @@ export const LEGENDARY_WEAPON_NAMES: WeaponNameTable = {
 /** M18 Wedding: on `fest` maps 40 % of legendary weapons are this hammer (`makeItem`); it drops nowhere else. */
 export const FEST_LEGENDARY_WEAPON = 'Die Letzte Bestellung';
 
+/** M17 Fernsehturm: the tower spear (the Berliners' nickname for the tower); only Der Zeitwart drops it (`makeTelespargel`). */
+export const TURM_LEGENDARY_WEAPON = 'Telespargel';
+
 /** 2D NA. */
 export const ARMOR_NAMES: readonly string[] = [
   'Lederjacke',
@@ -275,4 +278,6 @@ export const BASES: Readonly<Record<string, BaseId>> = {
   'Ring der Weltzeituhr': 'weltuhr',
   // M18 Wedding: the legendary hammer of `fest` maps (`FEST_LEGENDARY_WEAPON`).
   'Die Letzte Bestellung': 'bestellung',
+  // M17 Fernsehturm: the Zeitwart's spear (`TURM_LEGENDARY_WEAPON`).
+  Telespargel: 'telespargel',
 };

@@ -113,6 +113,22 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
   return item;
 }
 
+/**
+ * M17: the Telespargel, the legendary spear only Der Zeitwart drops (`killDrops`): a legendary weapon rolled as any other,
+ * then made the tower spear.
+ */
+export function makeTelespargel(rng: Rng, ctx: LootContext, itemLevel: number): Item {
+  const item = makeItem(rng, ctx, itemLevel, 3, 'w');
+  const from = WEAPON_KINDS[item.kind as WeaponKindId].damageFactor;
+  item.kind = 'spear';
+  item.name = N.TURM_LEGENDARY_WEAPON;
+  item.base = N.BASES[item.name]!;
+  // The roll gave it the element of the legendary it was rolled as (Codex review): the tower spear is shock.
+  item.element = LEGENDARY_ELEMENTS.telespargel;
+  item.value = Math.round((item.value / from) * WEAPON_KINDS.spear.damageFactor);
+  return item;
+}
+
 export function makeSetItem(rng: Rng, ctx: LootContext, itemLevel: number): Item {
   // The Tunnelläufer drops only in the tunnels, there in 60 % of set drops (Johannes, 2026-11-19).
   // M18: the Pracht des Ewigen Gasts the same way on `fest` maps (Wedding).

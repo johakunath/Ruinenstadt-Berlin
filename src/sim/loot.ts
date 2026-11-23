@@ -7,7 +7,7 @@ import { ENEMIES, type EnemyKind } from '../data/enemies';
 import { RARITIES } from '../data/items';
 import { colliderDistance } from './collide';
 import { collectItem, BAG_SIZE } from './inventory';
-import { isUpgrade, lootItem, makeItem, type Item } from './items';
+import { isUpgrade, lootItem, makeItem, makeTelespargel, type Item } from './items';
 import type { Breakable } from './breakables';
 import { DT, type Enemy, type Sim } from './types';
 import { addConsumable, CONSUMABLE } from './abilities';
@@ -161,8 +161,10 @@ export const FIRST_KOEPENICK = { items: 1.6, scrap: 1.3 } as const;
 const firstRun = (sim: Sim): boolean => sim.level.mapId === 'koepenick' && !sim.inventory.camp?.freed?.includes(0);
 const itemRate = (sim: Sim): number => ECONOMY.items * (sim.level.tunnel ? TUNNEL_ITEMS : 1) * (firstRun(sim) ? FIRST_KOEPENICK.items : 1);
 const ZUT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.01 };
+/** M17: chance of another Telespargel once one was found. */
+export const TELESPARGEL_AGAIN = 1 / 3;
 /** District bosses: three items and a legendary (2D `big`). */
-const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spreehexe: true, bassprediger: true, weltzeituhr: true, diva: true, sultan: true };
+const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spreehexe: true, bassprediger: true, weltzeituhr: true, diva: true, sultan: true, zeitwart: true };
 
 /** 2D `kill()`: bosses drop first, then one of material, item or heal. Scrap is credited at once. */
 export function killDrops(sim: Sim, e: Enemy): void {
@@ -179,13 +181,18 @@ export function killDrops(sim: Sim, e: Enemy): void {
   // 2D elites: always an item one level up, a quarter of them rare or better.
   // Playtest 2026-11-20: equipment drops at half the rate (ECONOMY.items), so elites drop an item every second time.
   if (e.elite && sim.rng.next() < itemRate(sim)) spawnDrop(sim, e.x, e.z, { kind: 'item', item: lootItem(sim.rng, c, il + 1, sim.rng.next() < 0.25 ? 1 : 0) }, spread(sim, 0.5), spread(sim, 0.5));
-  if (boss) {
+  // M17: an echo boss drops no items (T8), only the heal below.
+  if (boss && !e.echo) {
     for (let i = 0; i < Math.round((big ? 3 : 2) * ECONOMY.items); i++) {
       spawnDrop(sim, e.x, e.z, { kind: 'item', item: lootItem(sim.rng, c, il + 2, big ? 2 : 1, 0.12) }, spread(sim, 1.3), spread(sim, 1.3));
     }
     // Guaranteed until M6 can remember the first kill per district (then 30 % afterwards).
     if (big) spawnDrop(sim, e.x, e.z, { kind: 'item', item: makeItem(sim.rng, c, il + 3, 3) }, 0, -0.8);
-    spawnDrop(sim, e.x, e.z, { kind: 'heal' }, 0, 0.7);
+  }
+  if (boss) spawnDrop(sim, e.x, e.z, { kind: 'heal' }, 0, 0.7);
+  // M17: Der Zeitwart drops the Telespargel for certain until it was found once, then a third of the time.
+  if (kind === 'zeitwart' && (!sim.inventory.kodex?.found.telespargel || sim.rng.next() < TELESPARGEL_AGAIN)) {
+    spawnDrop(sim, e.x, e.z, { kind: 'item', item: makeTelespargel(sim.rng, c, il + 3) }, 0.8, -0.4);
   }
   // 2D v0.78 ingredients: bosses three, elites 30 %, others 3 %; Oma Gerda doubles, Spreewaldgurken +50 %.
   const zc = (boss ? 1 : e.elite ? 0.3 : ZUT_CHANCE[kind] ?? 0.03) * (sim.statContext.survivors.koechin ? 2 : 1) * (sim.statContext.meal === 'gurke' ? 1.5 : 1);

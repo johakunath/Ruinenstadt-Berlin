@@ -16,6 +16,7 @@ import { clearThreats } from './threats';
 import { FlowField, type Bounds } from './flowfield';
 import { inRoom, type EncounterDef } from './level';
 import { spawnDrop } from './loot';
+import { makeEcho } from './echo';
 import { healPlayer } from './heal';
 import { DT, type Enemy, type Sim } from './types';
 
@@ -52,7 +53,8 @@ export function startRunAt(sim: Sim, index: number): void {
   sim.run.index = index;
   // M20: gratings behind fights already won stand open (a retry or a checkpoint resume).
   for (let i = 0; i < index; i++) openGates(sim, i, true);
-  sim.run.phase = index >= sim.level.encounters.length ? 'won' : 'travel';
+  // M17: a run saved at the ending choice resumes at it.
+  sim.run.phase = index >= sim.level.encounters.length ? (sim.level.ending.length ? 'choice' : 'won') : 'travel';
   // A retry mid-map keeps the item level of the waves before it.
   sim.lootWaves = 0;
   for (let i = 0; i < index; i++) for (const w of sim.level.encounters[i]!.waves) if (w.bosses.length === 0) sim.lootWaves++;
@@ -282,6 +284,8 @@ export function updateDirector(sim: Sim): void {
       const s = enc.bossAt ?? rimSpot(sim, enc, ENEMIES[boss].radius);
       const bs = bossScale(sim.level.strength);
       const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp * bs.hp, w.dmgMul * df.dmg * bs.dmg);
+      // M17: an echo of a district boss (weaker, no items).
+      if (w.echo) makeEcho(e);
       // It stands where the landmark stood: the landmark's colliders leave until it dies.
       if (enc.bossAt) {
         e.home = { x: s.x, z: s.z };
@@ -322,8 +326,15 @@ export function updateDirector(sim: Sim): void {
   if (!next || next.zone !== enc.zone) sim.events.push({ type: 'zoneClear', zone: enc.zone });
   run.index++;
   if (!next) {
-    run.phase = 'won';
     clearThreats(sim);
+    // M17 (T10): the Fernsehturm ends at the main switch: the choice first, then the victory (`updateEnding`).
+    if (sim.level.ending.length) {
+      run.phase = 'choice';
+      // A checkpoint, so leaving or a profile change before the choice resumes at the rings (Codex review).
+      sim.events.push({ type: 'choiceOpen' }, { type: 'checkpoint' });
+      return;
+    }
+    run.phase = 'won';
     sim.events.push({ type: 'victory' });
   } else {
     run.phase = 'travel';

@@ -117,6 +117,10 @@ const LINES = [
   { kind: 'weltzeituhr', trigger: 'start', text: 'Deine Zeit läuft ab.', voice: FLAT, len: 1.2, fx: (sr) => FX.bell(sr) },
   { kind: 'weltzeituhr', trigger: 'special', text: 'Die Stunde schlägt.', voice: FLAT, len: 1.2, fx: (sr) => FX.bell(sr) },
   { kind: 'weltzeituhr', trigger: 'rage', text: 'Stillstand!', voice: FLAT, len: 1.25, fx: (sr) => FX.bell(sr) },
+  // M17 Der Zeitwart: a humanoid robot with a clockwork voice; the rage line comes with his first gear hold.
+  { kind: 'zeitwart', trigger: 'start', text: 'Die Zeit steht. Das bleibt so.', voice: CALM, len: 1.15, fx: (sr) => FX.clockwork(sr) },
+  { kind: 'zeitwart', trigger: 'special', text: 'Schlag zwölf!', voice: ANGRY, len: 1.1, fx: (sr) => FX.clockwork(sr) },
+  { kind: 'zeitwart', trigger: 'rage', text: 'Zurück auf Null!', voice: ANGRY, len: 1.05, fx: (sr) => FX.clockwork(sr) },
 ];
 
 function run(cmd, args, input) {
