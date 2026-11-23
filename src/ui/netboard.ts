@@ -4,7 +4,7 @@
 import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, nextDestination, stopName, STOPS } from '../data/lines';
 import { keyNav } from './focus';
 
-export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' } | { map: 'tunnel'; line: number };
+export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding' } | { map: 'tunnel'; line: number };
 
 export class NetBoard {
   readonly root = document.createElement('div');
@@ -113,7 +113,7 @@ export class NetBoard {
   private ride(): void {
     const s = this.sel;
     if (!s) return;
-    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain' || m === 'alex' || m === 'mitte' || m === 'charlottenburg') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
+    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain' || m === 'alex' || m === 'mitte' || m === 'charlottenburg' || m === 'wedding') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
     if (linePlayable(s.line, this.freed)) this.go({ map: 'tunnel', line: s.line });
   }
 
@@ -132,7 +132,7 @@ export class NetBoard {
     });
     STOPS.forEach((d, i) => {
       const [x, y] = d.at, open = this.stopOpen(i), won = f.includes(i), here = i === 1, sel = this.sel && 'stop' in this.sel && this.sel.stop === i;
-      const lx = [0, 30, 17, -27, 22][i]!, ly = [25, 20, 23, -5, 24][i]!, an = lx > 20 ? 'start' : lx < -20 ? 'end' : 'middle';
+      const lx = [0, 30, 17, -27, 22, 22][i] ?? 0, ly = [25, 20, 23, -5, 24, 0][i] ?? 25, an = lx > 20 ? 'start' : lx < -20 ? 'end' : 'middle';
       svg += `<g class="node${open ? '' : ' lock'}" data-stop="${i}" role="button" tabindex="0" aria-label="${d.name}${open ? '' : ' kommt bald'}">`;
       if (here || sel) svg += `<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="#ef9f27" stroke-width="2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/></circle>`;
       svg += `<rect x="${x - 12}" y="${y - 9}" width="24" height="18" rx="9" fill="${!open ? '#2a211b' : won ? '#3b6d11' : '#993c1d'}" stroke="${sel ? '#ef9f27' : open ? '#ead9c0' : '#4a5a5e'}" stroke-width="${sel ? 3 : 2}"/>`;

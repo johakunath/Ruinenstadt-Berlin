@@ -15,7 +15,8 @@ import type { BossKind } from './enemies';
 import { waveTier } from './koepenick';
 import { XHAIN_TIER } from './xhain';
 import { MITTE_TIER, mitteWaveTier } from './mitte';
-import { charlottenburgWaveTier } from './charlottenburg';
+import { CHARLOTTENBURG_TIER, charlottenburgWaveTier } from './charlottenburg';
+import { weddingWaveTier } from './wedding';
 import { LINES, stopName, tunnelName } from './lines';
 import { TRAM_BOGIES, TRAM_HEAD_WIDTH, TRAM_WHEEL_OFFSET } from './tram';
 import type { Prop } from './courtyard';
@@ -98,6 +99,9 @@ const STRETCH_NAME: Record<Stretch, string> = { collapse: 'Einsturz', flood: 'Ge
  */
 export interface LineWaves { from: number; to: number; wave: (g: number, zone: number, bosses?: BossKind[]) => WaveDef }
 export function lineWaves(line: number): LineWaves {
+  // M18 step 3: the U9 brings Charlottenburg's enemies to Westhafen, the Wedding feast after it (zone 0 of the
+  // district: Zecher and the Tee-Ifrit, no carpets, as no tunnel line has flyers).
+  if (line === 4) return { from: CHARLOTTENBURG_TIER.to - 5, to: CHARLOTTENBURG_TIER.to, wave: (g, zone, bosses = []) => (zone === 0 ? charlottenburgWaveTier(g, bosses, 0) : weddingWaveTier(g, bosses, 0)) };
   // M16 step 8: the U2 west brings Mitte's enemies to the ghost station, Charlottenburg's glass after it.
   if (line === 3) return { from: MITTE_TIER.to - 5, to: MITTE_TIER.to, wave: (g, zone, bosses = []) => (zone === 0 ? mitteWaveTier(g, bosses, 0) : charlottenburgWaveTier(g, bosses, 0)) };
   if (line === 2) return { from: ALEX_TIER.to - 5, to: ALEX_TIER.to, wave: (g, zone, bosses = []) => (zone === 0 ? alexWaveTier(g, bosses, 2) : mitteWaveTier(g, bosses, 0)) };

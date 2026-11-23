@@ -55,9 +55,10 @@ export function titleLinks(map: MapId, freed: readonly number[]): MapLink[] {
   return out;
 }
 
-/** The map the victory screen leads on to (`line`: the tunnel line won or to ride). M15: Xhain → U8 → Alexanderplatz → U2 → Mitte. */
+/** The map the victory screen leads on to (`line`: the tunnel line won or to ride). M15: Xhain → U8 → Alexanderplatz → U2 → Mitte; M16 → U2 west → Charlottenburg; M18 → U9 → Wedding. */
 export function wonLink(map: MapId, line = 0): { to: MapId; line?: number; html: string } | null {
   if (map === 'koepenick') return { to: 'tunnel', html: '<b>In den S3-Tunnel</b><small>Richtung Warschauer Straße</small>' };
+  if (map === 'tunnel' && line === 4) return { to: 'wedding', html: '<b>Weiter in den Wedding</b><small>Ausstieg Leopoldplatz</small>' };
   if (map === 'tunnel' && line === 3) return { to: 'charlottenburg', html: '<b>Weiter nach Charlottenburg</b><small>Ausstieg Zoologischer Garten</small>' };
   if (map === 'tunnel' && line === 2) return { to: 'mitte', html: '<b>Weiter nach Mitte</b><small>Ausstieg Potsdamer Platz</small>' };
   if (map === 'tunnel' && line === 1) return { to: 'alex', html: '<b>Weiter zum Alex</b><small>Ausstieg Alexanderplatz</small>' };
@@ -65,7 +66,9 @@ export function wonLink(map: MapId, line = 0): { to: MapId; line?: number; html:
   if (map === 'xhain') return { to: 'tunnel', line: 1, html: '<b>In die U8</b><small>Richtung Alexanderplatz</small>' };
   if (map === 'alex') return { to: 'tunnel', line: 2, html: '<b>In die U2</b><small>Richtung Potsdamer Platz</small>' };
   if (map === 'mitte') return { to: 'tunnel', line: 3, html: '<b>In die U2</b><small>Richtung Zoologischer Garten</small>' };
-  if (map === 'charlottenburg') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
+  if (map === 'charlottenburg') return { to: 'tunnel', line: 4, html: '<b>In die U9</b><small>Richtung Leopoldplatz</small>' };
+  // M18: the finale session (M17) replaces this with the way up the Fernsehturm.
+  if (map === 'wedding') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
   return null;
 }
 
