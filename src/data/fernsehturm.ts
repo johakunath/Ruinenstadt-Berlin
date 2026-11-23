@@ -7,7 +7,7 @@
 import { THREAT, type BossKind, type EnemyKind, lateTier } from './enemies';
 import type { EncounterDef, Point, WaveDef, ZoneDef } from '../sim/level';
 import type { RestArea } from '../sim/rest';
-import { HAND, LIFT, type BandDef, type HandDef, type LiftDef } from '../sim/turm';
+import { ENDING, HAND, LIFT, type BandDef, type HandDef, type LiftDef } from '../sim/turm';
 import type { Prop } from './courtyard';
 import type { MapDef } from './map';
 
@@ -108,8 +108,11 @@ export interface TurmLayout {
   solids: TurmSolid[];
   rests: RestArea[];
   lights: TurmLight[];
-  /** Uhrenraum: the main switch (the ending choice stands beside it, step 3). */
+  /** Uhrenraum: the main switch; the two rings of the ending choice beside it (T10). */
   mainSwitch: Point;
+  ending: Array<{ id: 'gestellt' | 'gelassen'; x: number; z: number; r: number }>;
+  /** Uhrenraum: six gear seats round the movement (Der Zeitwart's holds, T9). */
+  seats: Point[];
 }
 
 /** Normal waves: foyer 2, schacht 2 after the hold, panorama 3, telecafe 3 (F3); echoes and the boss on top. */
@@ -122,11 +125,11 @@ export const TURM_DISTRICT = 6;
 /**
  * Echo bosses (F3), one per fight 2 to 4 as its last wave, and the final boss. Telecafé: Sultan Nimmersatt, the
  * Wedding district boss, is the eternal host of a revolving restaurant (map doc: „may become the Wedding boss once
- * Wedding is built“; Wedding is on `main`, so decided in step 1). Step 1 stand-ins: plain boss kinds, `diva` for
- * Der Zeitwart.
+ * Wedding is built“; Wedding is on `main`, so decided in step 1). The echoes are the plain kinds with the echo
+ * modifier (`src/sim/echo.ts`); Der Zeitwart has his own brain (`src/sim/zeitwart.ts`).
  */
 export const TURM_BOSSES: { schacht: BossKind; panorama: BossKind; telecafe: BossKind; zeitwart: BossKind } = {
-  schacht: 'hauptmann', panorama: 'spreehexe', telecafe: 'sultan', zeitwart: 'diva',
+  schacht: 'hauptmann', panorama: 'spreehexe', telecafe: 'sultan', zeitwart: 'zeitwart',
 };
 
 /**
@@ -142,10 +145,16 @@ export const TURM_MIX: ReadonlyArray<Partial<Record<EnemyKind, number>>> = [
   { walker: 3, raptor: 0.6, drone: 0.6, uhrwerk: 0.6, scherbe: 0.6, teeifrit: 0.6 },
 ];
 
-/** Wave `g` (48 … 70) on deck `deck`: the district formula of Wedding, at most 8 alive (the rings are small). */
+/**
+ * Bodies per wave against the district formula: the rings are small and the tower should take 10 to 12 minutes (bot
+ * campaigns 2026-11-23 with the carried hero: 15.5 min at ×1, the Telecafé alone 4 min).
+ */
+export const TURM_COUNT = 0.65;
+
+/** Wave `g` (48 … 70) on deck `deck`: the district formula of Wedding, fewer bodies, at most 8 alive (the rings are small). */
 export function turmWaveTier(g: number, deck: number, bosses: BossKind[] = []): WaveDef {
   return {
-    count: Math.round((5 + g * 0.45) * lateTier(g).count),
+    count: Math.round((5 + g * 0.45) * lateTier(g).count * TURM_COUNT),
     maxAlive: Math.min(8, Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count))),
     mix: { ...(TURM_MIX[deck] ?? TURM_MIX[0]!) },
     hpMul: (1 + g * 0.13) * lateTier(g).hp,
@@ -239,6 +248,9 @@ export function turmLayout(): TurmLayout {
     rests,
     lights,
     mainSwitch,
+    // T10: „Uhr stellen“ west of the switch, „Stehen lassen“ east, camp ring size.
+    ending: [{ id: 'gestellt', x: mainSwitch.x - 2.2, z: mainSwitch.z + 1.8, r: ENDING.r }, { id: 'gelassen', x: mainSwitch.x + 2.2, z: mainSwitch.z + 1.8, r: ENDING.r }],
+    seats: Array.from({ length: 6 }, (_, k) => polar(uhren, 6, (k * Math.PI) / 3)),
   };
 }
 
@@ -249,7 +261,7 @@ export function turmMap(): MapDef {
   const g = (): number => TURM_TIER.from + (n++ * (TURM_TIER.to - TURM_TIER.from)) / (TURM_WAVES - 1);
   const waves = (deck: number, k: number): WaveDef[] => Array.from({ length: k }, () => turmWaveTier(g(), deck));
   /** Echo or boss as the last wave: a few adds of the deck's mix, at the tier of the wave before. */
-  const bossWave = (deck: number, kind: BossKind, adds: number): WaveDef => ({ ...turmWaveTier(TURM_TIER.from + ((Math.max(0, n - 1)) * (TURM_TIER.to - TURM_TIER.from)) / (TURM_WAVES - 1), deck, [kind]), count: adds, maxAlive: 4, elite: 0 });
+  const bossWave = (deck: number, kind: BossKind, adds: number, echo = true): WaveDef => ({ ...turmWaveTier(TURM_TIER.from + ((Math.max(0, n - 1)) * (TURM_TIER.to - TURM_TIER.from)) / (TURM_WAVES - 1), deck, [kind]), count: adds, maxAlive: 4, elite: 0, ...(echo ? { echo: true } : {}) });
   const at = (d: DeckDef): Point => liftArrival(d);
   const fight = (d: DeckDef, zone: number, r: number, list: WaveDef[], heal: number, spot: Point): EncounterDef => ({ id: d.id, name: d.name, zone, x: d.x, z: d.z, r, waves: list, heal, at: spot });
 
@@ -265,7 +277,7 @@ export function turmMap(): MapDef {
   };
   const panoramaFight = fight(panorama, 2, 16, [...waves(2, 3), bossWave(2, TURM_BOSSES.panorama, 2)], 0.5, at(panorama));
   const telecafeFight = fight(telecafe, 3, 16, [...waves(3, 3), bossWave(3, TURM_BOSSES.telecafe, 2)], 0.5, at(telecafe));
-  const bossFight = fight(uhren, 4, 16, [bossWave(4, TURM_BOSSES.zeitwart, 2)], 1, at(uhren));
+  const bossFight = fight(uhren, 4, 16, [bossWave(4, TURM_BOSSES.zeitwart, 2, false)], 1, at(uhren));
   const encounters = [foyerFight, schachtFight, panoramaFight, telecafeFight, bossFight];
   const zones: ZoneDef[] = TURM_DECKS.map((d, i) => ({ id: d.id, name: d.name, entry: i === 0 ? { ...TURM_START } : at(d) }));
 

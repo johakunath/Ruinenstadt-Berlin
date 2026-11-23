@@ -24,7 +24,7 @@ export interface Inventory {
   /** M17: intro and tutorial cards already seen. */
   tips?: Partial<Record<string, 1>>;
 }
-export interface CampState { stations: Partial<Record<StationId, number>>; stash: Item[]; freed: number[]; /** M18: most endless waves survived. */ endlessBest?: number; /** Levels of Schärfen and Panzerung bought at a Späti (not evidence of a built station). */ spati?: { dmg?: number; hp?: number } }
+export interface CampState { stations: Partial<Record<StationId, number>>; stash: Item[]; freed: number[]; /** M18: most endless waves survived. */ endlessBest?: number; /** M17 (T10): how the finale ended: the clock set going („Uhr stellen“) or left standing. */ ending?: 'gestellt' | 'gelassen'; /** Levels of Schärfen and Panzerung bought at a Späti (not evidence of a built station). */ spati?: { dmg?: number; hp?: number } }
 export interface Kodex { kills: Partial<Record<string, number>>; found: Partial<Record<string, 1>> }
 const kodexOf = (sim: Sim): Kodex => sim.inventory.kodex ??= { kills: {}, found: {} };
 /** Counts a kill; true on the first of its kind (the UI shows "Neu im Kodex"). */

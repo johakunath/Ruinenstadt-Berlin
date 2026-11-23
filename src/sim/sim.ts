@@ -25,7 +25,9 @@ import { createPlayer, releaseSwing, updatePlayer } from './player';
 import { syncCampSolids } from './camp';
 import { DT, type Sim, type SimInput } from './types';
 import { reachGrid } from './reach';
-import { rideBand, updateHands, updateLifts } from './turm';
+import { rideBand, updateEnding, updateHands, updateLifts } from './turm';
+import { updateZeitwart } from './zeitwart';
+import { BLOCKS } from './ai';
 
 export interface SimOptions {
   difficulty?: DifficultyId;
@@ -170,6 +172,8 @@ export function stepSim(sim: Sim, input: SimInput): void {
   followFlow(sim);
   sim.flow.setTarget(p.x, p.z);
   updateEnemies(sim);
+  // M17: Der Zeitwart's gear holds and Zeitsprung (after the bodies moved, so the hold keeps him still).
+  if (sim.level.seats.length) updateZeitwart(sim, BLOCKS);
   resolveBodies(sim);
   if (sim.level.gates.length) holdGates(sim);
   playerSweep(sim);
@@ -182,6 +186,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   // M17 Fernsehturm: clock hands (T4) and the lift (T2).
   if (sim.level.hands.length) updateHands(sim);
   if (sim.level.lifts.length) updateLifts(sim);
+  if (sim.level.ending.length) updateEnding(sim);
   removeCorpses(sim);
   if (sim.level.camp) syncCampSolids(sim); // M20: the camp is peaceful; station furniture follows the levels
   else if (sim.level.expedition && sim.stress === 0) updateDirector(sim);

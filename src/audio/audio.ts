@@ -169,7 +169,7 @@ export class GameAudio {
       const source = 'x' in event ? event : 'id' in event ? sim.enemies.find(e=>e.id===event.id) : undefined;
       if(source) ({volume,pan}=spatialAudio(source.x-sim.player.x,source.z-sim.player.z));
       // S3: boss lines (spawn loads them; first act, rage and the signature special speak).
-      if (this.voices && this.volume > 0 && (event.type === 'spawn' || event.type === 'enemyWindup' || event.type === 'enemySpecial' || event.type === 'bossRage')) {
+      if (this.voices && this.volume > 0 && (event.type === 'spawn' || event.type === 'enemyWindup' || event.type === 'enemySpecial' || event.type === 'bossRage' || event.type === 'gearHold')) {
         const boss = sim.enemies.find(e => e.id === event.id);
         if (boss?.def.boss) this.voices.onEvent(event, boss.id, boss.kind, volume, pan);
       }
@@ -260,6 +260,13 @@ export class GameAudio {
       case 'power': this.play('zap'); this.play('win'); break;
       // P25: the Türsteher's neon bars snap shut (the generator's electric cue).
       case 'barrier': if (event.phase === 'shut') this.play('zap', 0, pan, volume); break;
+      // M17 Fernsehturm: the lift (a bell and the doors), Der Zeitwart's gear hold, the gear going in, his blinks, the choice.
+      case 'lift': this.play('bell'); this.play('thump', 0, 0, 0.6); break;
+      case 'gearHold': this.play('bell'); this.play('drumroll'); break;
+      case 'gear': this.play('register'); this.play('boom', 0, 0, 0.6); break;
+      case 'blink': if (event.phase === 'go') this.play('zap', 0, pan, volume); else this.play('tap', 0, pan, volume); break;
+      case 'choiceOpen': this.play('legend'); break;
+      case 'ending': this.play('bell'); break;
     }
   }
 

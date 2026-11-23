@@ -27,6 +27,7 @@ import { aliveOf, spawnEnemy } from './enemies';
 import { guarded, killEnemy, vanish } from './combat';
 import { angleOf } from './math';
 import { DT, type Enemy, type Sim } from './types';
+import { zeitwartSummon, zeitwartThink, type Blocks } from './zeitwart';
 
 /** What `think` wants the body to do this step while it is in `chase`. */
 export interface Plan {
@@ -456,6 +457,10 @@ function release(sim: Sim, e: Enemy, sp: Special): void {
         }
         break;
       }
+      if (e.kind === 'zeitwart') {
+        zeitwartSummon(sim, e, BLOCKS);
+        break;
+      }
       if (e.kind === 'diva') {
         const D = BOSS.diva;
         summon(sim, e, 'scherbe', D.adds);
@@ -531,6 +536,9 @@ function divaFan(sim: Sim, e: Enemy, aim: number): void {
 
 /** Shots in a boss's ring (default: the Turmwächter's twelve). */
 const RING_SHOTS: Partial<Record<EnemyKind, number>> = { hauptmann: BOSS.hauptmann.shots, brandmeister: BOSS.brandmeister.shots, spreehexe: BOSS.spreehexe.shots };
+
+/** M17: the shared blocks Der Zeitwart's brain uses (`src/sim/zeitwart.ts`, `updateZeitwart` in `stepSim`). */
+export const BLOCKS: Blocks = { begin: (sim, e, kind) => begin(sim, e, kind), summon: (sim, e, kind, n) => summon(sim, e, kind, n) };
 
 export function summon(sim: Sim, e: Enemy, kind: EnemyKind, count: number): void {
   let alive = 0;
@@ -1024,6 +1032,10 @@ export function think(sim: Sim, e: Enemy, dist: number, toX: number, toZ: number
       bossThink(sim, e, dist);
       break;
     }
+    case 'zeitwart':
+      // M17: his own picks per phase; still during a gear hold and a Zeitsprung.
+      zeitwartThink(sim, e, dist, plan, BLOCKS);
+      break;
     default:
       bossThink(sim, e, dist);
       break;
@@ -1381,6 +1393,7 @@ export function initCooldowns(e: Enemy): void {
     case 'spiegelpaar': e.cd = [2, 4, 8]; break;
     case 'spiegelbild': e.cd = [99, 99, 99]; break;
     case 'diva': e.cd = [1.5, 4, 6]; break;
+    case 'zeitwart': e.cd = [2, 3, 6]; break;
     default: e.cd = [r(THREAT.slam.first[0], THREAT.slam.first[1], 1), 0, 0]; break;
   }
 }

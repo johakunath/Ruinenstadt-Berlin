@@ -910,10 +910,35 @@ function bestellung(b: Parts): void {
   ribbon(b, 0.26, 0.24, 0.026, plain(0xb02040));
 }
 
+/**
+ * Telespargel (M17 Fernsehturm, board 2): the red and white banded antenna as the shaft, the steel sphere with its
+ * lit window ring and a brass gear rim as the guard below the tip, a red beacon glowing at the point.
+ */
+function telespargel(b: Parts): void {
+  const red = plain(0xc8281e), white = plain(0xe8e2d6), steel = metal(0x9aa2aa), brass = metal(0xc8963c), beacon = plain(0xff2a1a);
+  // Banded shaft from the butt to the sphere, alternating red and white.
+  for (let k = 0; k < 12; k++) b.add(cyl(0.019, 0.019, 0.16, 8, true), k % 2 ? white : red, 0, -0.58 + k * 0.16 + 0.08, 0);
+  b.add(cyl(0.024, 0.024, 0.3), P.leather, 0, 0.02, 0)
+    .add(ring(0.025, 0.004, 4, 10), brass, 0, 0.17, 0, Math.PI / 2)
+    .add(cone(0.022, 0.08, 6), steel, 0, -0.62, 0, Math.PI, 0, 0)
+    // The tower's shaft narrowing up to the sphere.
+    .add(cyl(0.016, 0.03, 0.14, 10), white, 0, 1.39, 0)
+    .add(ball(0.075, 12, 8), steel, 0, 1.5, 0)
+    .add(ring(0.077, 0.012, 4, 16), GLOW, 0, 1.5, 0, Math.PI / 2)
+    .add(ring(0.08, 0.009, 4, 16), brass, 0, 1.47, 0, Math.PI / 2);
+  // Gear teeth round the rim.
+  for (let k = 0; k < 8; k++) b.add(cyl(0.009, 0.009, 0.02, 4, true), brass, Math.cos(k * Math.PI / 4) * 0.088, 1.47, Math.sin(k * Math.PI / 4) * 0.088, 0, 0, Math.PI / 2);
+  // The antenna above the sphere, banded, ending in the point with the beacon.
+  for (let k = 0; k < 3; k++) b.add(cyl(0.011, 0.013, 0.07, 6, true), k % 2 ? red : white, 0, 1.6 + k * 0.07, 0);
+  b.add(cone(0.012, 0.09, 6), steel, 0, 1.8, 0)
+    .add(ball(0.014, 6, 4), beacon, 0, 1.846, 0)
+    .add(ball(0.009, 6, 4), GLOW, 0, 1.846, 0);
+}
+
 const BUILD: Partial<Record<WeaponLookId, Builder>> = {
   rohr, latte, stahl, machete, brech, vorschlag, pflaster, zange, zwille: (b) => fork(b), nagel, stein, rspeer, fahne, harpune,
   leucht, boxh, neonfl, mikro, sichel, werkh, aufzieh, zeiger,
-  turm, zitklinge, mauer, pbrecher, ring: ringbahn, kraehe, siegsp, morgen, bestellung,
+  turm, zitklinge, mauer, pbrecher, ring: ringbahn, kraehe, siegsp, morgen, bestellung, telespargel,
   'brech:kiez': (b) => brech(b, plain(0x3a5a8a), plain(0xe07a2a), 0xdadee2),
   'zange:tunnel': zangeTunnel,
   'zwille:spree': (b) => {
