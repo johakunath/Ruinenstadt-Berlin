@@ -16,7 +16,7 @@ import { makeLotGroundMats, type LotGroundMats } from './lot-textures';
 import { buildCampWorld, makeCampMats } from './camp-world';
 import { buildTurmView, buildTurmWorld, makeTurmMats } from './turm-world';
 import { onCampFloor } from '../data/camp-map';
-import { buildLandmark } from './landmarks';
+import { buildLandmark, landmarkCutCaps } from './landmarks';
 import { makeLandmarkFinishes } from './landmark-finishes';
 import { LandmarkWear, makeLandmarkWearMaterial, type WearOptions } from './landmark-wear';
 import {
@@ -2477,7 +2477,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
         else buildLandmark(b, l);
       }, m.id === 'charlottenburg' ? CHARLOTTENBURG_WEAR : undefined);
     });
-    b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
+    b.solid.captureOccluder(cut ? () => b.cut(cut.id, y0 + cut.h, build, landmarkCutCaps(l) ?? [rectPoly({ x: l.x, z: l.z, rot: l.rot, hw: l.hx, hd: l.hz })]) : build);
   }
   const rng = new Rng(m.seed);
   const instanced = new Set(breakables.map((d) => d.prop));
