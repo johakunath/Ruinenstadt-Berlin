@@ -3,6 +3,9 @@
 // Kodex entry of its own (its kills count for the kind). The render draws it pale with a clock-hand outline.
 import type { Enemy } from './types';
 
+// Shares of the boss as the director spawns it (`bossScale`). B2 step 3 raised that by about 1.9× life and 1.3× damage
+// at the tower's strength; the bot recalibration of 2026-11-23 took the share from 0.45 and 0.8 to these.
+
 export const ECHO = { hp: 0.2, dmg: 0.65 } as const;
 
 /** Turns a freshly spawned boss into its echo. */

@@ -431,8 +431,8 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
   },
-  // M17 final boss in the Uhrenraum (`docs/tasks/m17-fernsehturm.md` › Step 3 spec; life 6000 after the bot runs of
-  // 2026-11-23: 5200 fell in 87 s, short for the finale): the last duty officer of the
+  // M17 final boss in the Uhrenraum (`docs/tasks/m17-fernsehturm.md` › Step 3 spec; life 3800 and hit 30 after the bot runs
+  // of 2026-11-23: 5200 fell in 87 s; 6000 and 36 killed the bot 6.7 times a run once B2 step 3's `bossScale` applied): the last duty officer of the
   // Zeitnormal, a humanoid robot on the human base. His own brain (`src/sim/zeitwart.ts`): three phases by era pair,
   // a gear hold at each change instead of a rage. The Koloss row of resistances: shock weak, acid resistant.
   zeitwart: {

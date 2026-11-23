@@ -65,7 +65,7 @@ Lift door on the south face of every core; its ring 1.6 m and the arrival spot 2
 | T5 | Revolving band (step 1, drop first) | As the ferry (`src/sim/ferry.ts`, `stepSim`): bodies and drops whose distance from the centre is inside the band are turned by the band's angle each step, including the rollback position. No colliders on the band. Marked circles stay fixed in the world. Fallback: render only |
 | T6 | City image (step 2) | One plane below the sphere decks on `FX_LAYER`, no shadow, not in the pre-pass; texture painted in code from the districts' map data at the bearings of the map doc; cloud cards in one instanced batch. Hidden in the foyer and the shaft (the shaft shows a dark well with a green glow) |
 | T7 | Sky per deck (step 2) | Five `Sky` entries in `src/render/sky.ts`, switched while the lift cut is dark, so no blending and no dependence on Charlottenburg step 3a. The light count stays constant |
-| T8 | Echo (step 3) | A modifier on an existing boss kind: life × 0.45, damage × 0.8, pale tint with a clock-hand outline, name „Echo: …“, no gear drop, no Kodex entry of its own. Loaded with the map only |
+| T8 | Echo (step 3) | A modifier on an existing boss kind: life × 0.2, damage × 0.65 of the scaled boss (step 3 calibration), pale tint with a clock-hand outline, name „Echo: …“, no gear drop, no Kodex entry of its own. Loaded with the map only |
 | T9 | Hold inside the boss fight (step 3) | The tunnel `hold` replaces the first wave today. New: a hold at a boss tier (66 %, 33 %), ring r 3.5, need 6 s, adds every 2 s, the boss untouchable until it fills, then stunned 3 s. Fallback: tiers as the Diva (`tiers: [0.66, 0.33]`) without a hold |
 | T10 | Ending (steps 3, 4) | Two small rings (camp `stationRing` size) at the main switch after the boss dies; 1.5 s inside one decides. Save `camp.ending: 'gestellt' | 'gelassen'`, a card, then the victory screen. No rule change |
 | T11 | Windows by bearing (step 2 or 3, optional) | A wave may limit its rim spots to a bearing range (E 68 to 98°, SE 112 to 140°, W 238 to 272°, NW 300 to 320°). Without it spawns use any rim spot and the coloured window sectors are dressing |
@@ -216,9 +216,9 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 
 | Topic | Numbers (start values; calibration below) |
 |---|---|
-| Waves | `turmWaveTier` in `src/data/fernsehturm.ts`: the Wedding formula (count ×0.65) at tier 48 to 70 over the 10 normal waves, at most 8 alive. Mix per deck: foyer Zeitlose (walker 6, runner 1.4, brute 0.6, spitter 0.8); Schacht walker 4, raptor 1.2, crow 0.8, Kabelghul 1, drone 0.8; Panoramaetage walker 4, Zünder 0.8, Schildträger 0.6, Heuler 0.6, rat 0.4, Uhrwerkläufer 0.8, Wurzler 0.6, Kernspeier 0.6; Telecafé walker 4, Scherbentänzerin 0.9, Logenbrecher 0.7, Souffleur 0.6, Tee-Ifrit 0.8, Baklava-Brocken 0.6, Teppichschlinger 0.6; boss adds walker, raptor, drone, Uhrwerkläufer, Scherbentänzerin, Tee-Ifrit. District strength 6 |
-| Echo (T8) | `src/sim/echo.ts`: life ×0.45, damage ×0.8, name „Echo: …“, no item drops (heal only), Kodex counts the kind. Two adds of the deck's mix. Pale body on a pale dial with a frozen second hand |
-| Der Zeitwart | `ENEMIES.zeitwart`: life 6000 (Sultan 4400; 5200 at first), hit 36, speed 2.6, radius 0.9, scale 1.9, Koloss resistances (shock 1.7, acid 0.6), class Maschinen, no rage. `BOSS.zeitwart`: phases at 66 % and 33 %; gear hold ring 3.5 m round the seat nearest the hero, 6 s, an add every 2 s, then stunned and open 3 s. Phase 1: Zeigerhieb (`bossSlam`, every 3.6 s within 6 m), Sprung (`pounce`, every 5.5 s from 4 to 12 m), two raptors or two Scherbentänzerinnen every 12 s. Phase 2: volley of five (`volley`, every 4 s), root field (`roots`, every 6 s), one Uhrwerkläufer or two Zünder. Phase 3: Zeitsprung every 7 s (three blinks, 0.5 s mark, landing hit ×0.7, the Boxenkopf ring), Zeigerhieb up close, two drones or two Tee-Ifrite; the clock hands turn 1.5 times faster |
+| Waves | `turmWaveTier` in `src/data/fernsehturm.ts`: the Wedding formula (count ×0.5) at tier 48 to 70 over the 10 normal waves, at most 8 alive. Mix per deck: foyer Zeitlose (walker 6, runner 1.4, brute 0.6, spitter 0.8); Schacht walker 4, raptor 1.2, crow 0.8, Kabelghul 1, drone 0.8; Panoramaetage walker 4, Zünder 0.8, Schildträger 0.6, Heuler 0.6, rat 0.4, Uhrwerkläufer 0.8, Wurzler 0.6, Kernspeier 0.6; Telecafé walker 4, Scherbentänzerin 0.9, Logenbrecher 0.7, Souffleur 0.6, Tee-Ifrit 0.8, Baklava-Brocken 0.6, Teppichschlinger 0.6; boss adds walker, raptor, drone, Uhrwerkläufer, Scherbentänzerin, Tee-Ifrit. District strength 6 |
+| Echo (T8) | `src/sim/echo.ts`: life ×0.2, damage ×0.65 (0.45 and 0.8 before B2 step 3), name „Echo: …“, no item drops (heal only), Kodex counts the kind. Two adds of the deck's mix. Pale body on a pale dial with a frozen second hand |
+| Der Zeitwart | `ENEMIES.zeitwart`: life 3800, hit 30 (5200 and 36 at first, 6000 before B2 step 3; Sultan 4400), speed 2.6, radius 0.9, scale 1.9, Koloss resistances (shock 1.7, acid 0.6), class Maschinen, no rage. `BOSS.zeitwart`: phases at 66 % and 33 %; gear hold ring 3.5 m round the seat nearest the hero, 6 s, an add every 2 s, then stunned and open 3 s. Phase 1: Zeigerhieb (`bossSlam`, every 3.6 s within 6 m), Sprung (`pounce`, every 5.5 s from 4 to 12 m), two raptors or two Scherbentänzerinnen every 12 s. Phase 2: volley of five (`volley`, every 4 s), root field (`roots`, every 6 s), one Uhrwerkläufer or two Zünder. Phase 3: Zeitsprung every 7 s (three blinks, 0.5 s mark, landing hit ×0.7, the Boxenkopf ring), Zeigerhieb up close, two drones or two Tee-Ifrite; the clock hands turn 1.5 times faster |
 | Lines | Start „Die Zeit steht. Das bleibt so.“, rage (first gear hold) „Zurück auf Null!“, special (his call) „Schlag zwölf!“; Piper clips `assets/voices/zeitwart-*.ogg`. Kodex „Steht er im Werk: Zahnrad einsetzen.“ |
 | Ending (T10) | Two rings r 0.65 beside the main switch, 1.5 s inside decides; `camp.ending` 'gestellt' or 'gelassen'; a run saved at the choice resumes at it |
 | Telespargel | Legendary spear, shock; Zeitzeichen every 12th hit stops every enemy within 5 m for 1.5 s (a stun, bosses take 15 % of it as of any stun). Drops for certain from the Zeitwart until it is in the Kodex, then one time in three |
@@ -250,4 +250,18 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 - Bot: `--map=turm`; the finale ends `CHAIN` and `CAMPAIGN` (`src/bot/run.ts`).
 - Proof: `docs/proof/m17-fernsehturm/` (decks, the Panorama hand, the boss, both ending cards).
 - T5 (band) and T9 (gear holds) are built, no fallback used. Open: step 5 (Codex, T11 and T12), step 6 (Johannes, hardware rows 57 to 60 and the Playtest row).
+
+### Calibration after B2 step 3 (PR #89, `bossScale`), 2026-11-23
+
+Same command after merging main. With the start numbers the bot won 2 of 3 with 9.3 deaths a run (6.7 at the Zeitwart, 77.7 min); the carried hero is also weaker (power 2423, was 3439). Now: echo life ×0.2 and damage ×0.65, Der Zeitwart life 3800 and hit 30, waves ×0.5.
+
+| Fight | Won | Deaths | Time s | Damage taken | Lowest life |
+|---|---|---|---|---|---|
+| Foyer | 3/3 | 0 | 71 | 17 % | 90 % |
+| Schacht | 3/3 | 0 | 213 | 108 % | 64 % |
+| Panoramaetage | 3/3 | 0 | 183 | 188 % | 57 % |
+| Telecafé | 3/3 | 0 | 412 | 170 % | 60 % |
+| Uhrenraum (Der Zeitwart) | 3/3 | 0 | 193 | 298 % | 38 % |
+
+21.9 min per run, about 18 in fights: over the 10 to 12 of the map doc, since every district got longer with B2's weaker hero. The Telecafé (Sultan echo, about 250 s in the chain before B2 too) is the longest; left for Johannes' playtest rather than tuned further here.
 

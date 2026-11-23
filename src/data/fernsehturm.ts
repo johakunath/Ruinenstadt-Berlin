@@ -147,7 +147,8 @@ export const TURM_MIX: ReadonlyArray<Partial<Record<EnemyKind, number>>> = [
 
 /**
  * Bodies per wave against the district formula: the rings are small and the tower should take 10 to 12 minutes (bot
- * campaigns 2026-11-23 with the carried hero: 15.5 min at ×1, the Telecafé alone 4 min).
+ * campaigns 2026-11-23 with the carried hero: 15.5 min at ×1, the Telecafé alone 4 min; ×0.65 after step 3, ×0.5 after
+ * the B2 boss scaling made the carried hero weaker and the echoes tougher).
  */
 export const TURM_COUNT = 0.5;
 
