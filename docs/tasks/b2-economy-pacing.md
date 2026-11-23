@@ -39,8 +39,19 @@ The bot in `src/bot/bot.ts` plays Köpenick only and does not trade. Teach it to
 
 Output: `tools/balance.mjs --campaign` with a table per map: Schrott earned, spent (items, upgrades, camp), left over, item level at the end, deaths, clear time.
 
-## Step 2 Calibration [Fable high: targets; Opus: numbers]
-Targets to set first (Fable): how much Schrott should be left at the end of Köpenick (proposal: enough for 2 of the 4 build sites), how many camp levels after each district, and at which item level the tunnel stops being a challenge. Then tune with the bot: `scrapFactor` and drop amounts down, Späti and camp prices up, until the table meets the targets. Rerun and compare with `docs/balance.md`.
+## Step 2 Calibration [targets: Claude · Opus high (Johannes, 2026-11-23: Opus is enough); numbers: Opus]
+Targets (set 2026-11-23), checked with `node tools/balance.mjs 3 normal johannes 1 --campaign` (skill `johannes`, normal). The B10 rule in `docs/balance.md` › Rule still holds per district; these add the economy and the whole campaign.
+
+| # | Target | Read in the campaign table |
+|---|---|---|
+| E1 | Shops never ratchet the gear: worn item level at a map's end within +3 of that map's drop level | Item level end vs the map's drop level (wave level + 3 per district) |
+| E2 | Camp pacing: the four build sites (75 to 120 each, cheap on purpose, 2026-11-18) plus one or two station levels on the first camp visit after the S3, so 500 to 900 Schrott on arrival (Johannes held 3699) | "Left" after the S3-Tunnel |
+| E3 | Schrott stays short: after every later map at most about 1200 left (one level 3 costs 825 to 975), and the camp is not fully built before Charlottenburg | "Left" per map; camp spend per step |
+| E4 | Never frustrating: every campaign wins all ten maps; at most about 2 deaths in Köpenick and 1 per later map | Won, Deaths |
+| E5 | Bosses stay a real fight in every district, not only Köpenick: district bosses take 25 % or more of the hero's life | Boss column of the run lines |
+| E6 | Tunnels are not a walk: tunnel fights cost 15 % or more of life on average (step 3 adds the roles; step 2 only must not make them easier) | avg dmg on the tunnel lines |
+
+Bot problems fixed first (2026-11-23): chain runs now repeat from their seed (`Level.restore` restores the collider order, each bot starts without an old distance field, the reach grid is built on the intact level at sim start), and closed gratings hold bodies crowded through them (`holdGates`, the U2 West stalls). Root cause of the power runaway: the Späti and the trader rolled stock at worn level + 2 without the 2D "minus the district step", so every district counted twice (`shopLevel`, port of 2D `tradeLvl`).
 
 ## Step 3 Enemy roles in the tunnel and later districts [Fable high: design; Opus: build]
 Problem: the tunnel waves are Köpenick kinds in more numbers (+25 % life) in a narrow tube. Direction to design (show Johannes two variants first):
