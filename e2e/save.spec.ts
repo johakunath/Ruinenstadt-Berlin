@@ -63,8 +63,8 @@ test('M20: the walkable camp opens with the S3, spends Schrott at a station, kee
   await expect(page.locator('.camp-msg')).toHaveText('Schärfen · Stufe 1');
   await page.locator('#camp [data-close]').click();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ruinenstadt-berlin.save')!));
-  // Workshop price × ECONOMY.campPrice (1.5): 15 × 1.25 × 1.5 = 28.
-  expect(saved.profile.inventory.scrap).toBe(72);
+  // Workshop price × ECONOMY.campPrice (1.8, B2 step 3): 15 × 1.25 × 1.8 = 34.
+  expect(saved.profile.inventory.scrap).toBe(66);
   expect(saved.profile.statContext.upgrades.dmg).toBe(1);
   expect(saved.run.index).toBe(1);
   // The train: the network map, Köpenick, and straight back into the waiting checkpoint.
