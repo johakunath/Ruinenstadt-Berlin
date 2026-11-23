@@ -467,7 +467,7 @@ export function lateTier(g: number): { hp: number; count: number } {
  */
 export const DISTRICT_STEP = { hp: 0.3, dmg: 0.25 } as const;
 /** Share of the damage step that district bosses take. */
-export const BOSS_DMG_STEP = 1;
+export const BOSS_DMG_STEP = 0.7;
 /**
  * B2 step 3 (Johannes, 2026-11-23: bosses harder): extra boss life per district step on top of `districtScale`
  * (Köpenick, step 0, unchanged). Bot campaigns after the economy fix: district bosses fell in 10 to 30 s for 0 to 20 % of life.

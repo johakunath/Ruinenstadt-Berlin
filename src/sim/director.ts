@@ -113,6 +113,28 @@ const GATE_BAND = 1.5;
 /** Half the depth of a grating's collider (`hz` in `mapLevel`, `src/data/map.ts`). */
 const GATE_HALF_DEPTH = 0.3;
 
+/**
+ * B2 step 3: a fight never locks. When only a few of the fight's own bodies are left and nobody has hit anybody for
+ * `LULL.time` seconds, they were stuck where the hero cannot reach them (a pocket by the generator, a channel behind
+ * the Magendoktor bar, a wall seam): they step out at a free spot near the hero. A boss on its landmark stays.
+ */
+export const LULL = { time: 20, max: 3 } as const;
+export function unstickStragglers(sim: Sim, index: number): void {
+  const run = sim.run, p = sim.player;
+  if (sim.events.some((e) => e.type === 'hit' || e.type === 'playerHit' || e.type === 'spawn')) { run.lullT = 0; return; }
+  const left = sim.enemies.filter((e) => e.enc === index && e.state !== 'dead' && e.sleep === undefined && e.mirrorOf === undefined);
+  if (left.length === 0 || left.length > LULL.max) { run.lullT = 0; return; }
+  if ((run.lullT = (run.lullT ?? 0) + DT) < LULL.time) return;
+  run.lullT = 0;
+  for (const e of left) {
+    if (e.home) continue;
+    const q = freeSpot(sim.level, sim.rng, p.x, p.z, 5, 9, e.def.radius + 0.2, (x, z) => !gateBetween(sim, p.x, p.z, x, z));
+    if (!q) continue;
+    e.x = e.px = q.x;
+    e.z = e.pz = q.z;
+  }
+}
+
 /** A closed grating lies between two points (spawns never appear behind one). */
 export function gateBetween(sim: Sim, ax: number, az: number, bx: number, bz: number): boolean {
   return sim.level.gates.some((g, i) => {
@@ -209,6 +231,7 @@ export function updateDirector(sim: Sim): void {
   }
 
   if (run.phase === 'hold') {
+    unstickStragglers(sim, run.index);
     updateHold(sim, enc);
     return;
   }
@@ -223,6 +246,7 @@ export function updateDirector(sim: Sim): void {
   }
 
   if (run.phase !== 'fight') return;
+  unstickStragglers(sim, run.index);
   const w = enc.waves[run.wave];
   if (!w) return;
   const df = difficultyOf(sim.difficulty);
