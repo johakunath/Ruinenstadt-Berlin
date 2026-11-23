@@ -300,7 +300,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // M12b Xhain (1981). Zone 1: the GDR border guard from the watchtower, the weakest. Shoots from a
   // distance, calls runners. Resistances of the 2D Volkseigener Koloss (GDR row: weak to shock).
   grenzer: {
-    kind: 'grenzer', name: 'Der Grenzer', body: 'human', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 950, speed: 2.3,
+    kind: 'grenzer', name: 'Der Grenzer', body: 'human', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 1500, speed: 2.3,
     attackRange: 2.0, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.4, halfAngle: 60 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
@@ -325,7 +325,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // M12c Mitte (2089). Zone 0, Pariser Platz: a Kabelbrocken in a bomber jacket holds the Tor like a club
   // door („Kein Einlass“). Shoves, grabs and holds, calls Kabelghule from the guest list.
   tuersteher: {
-    kind: 'tuersteher', name: 'Der Türsteher', body: 'human', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1000, speed: 2.4,
+    kind: 'tuersteher', name: 'Der Türsteher', body: 'human', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1600, speed: 2.4,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
   },
@@ -337,7 +337,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   },
   // Zone 2, Neuer See (mini-boss): a ghoul in a torn tailcoat on the band stand; beat rings, the Boxenköpfe follow him.
   dirigent: {
-    kind: 'dirigent', name: 'Der Dirigent', body: 'human', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 1400, speed: 2.2,
+    kind: 'dirigent', name: 'Der Dirigent', body: 'human', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 2000, speed: 2.2,
     attackRange: 2.1, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
@@ -349,7 +349,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   },
   // M15 Alexanderplatz. Zone 1: a Wurzler grown out of the Palast glass house, a crown of sunflowers.
   wurzelmutter: {
-    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'female', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
+    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'female', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 2900, speed: 1.9,
     attackRange: 2.6, windup: 0.75, active: 0.14, recovery: 0.85,
     reach: 3.2, halfAngle: 70 * DEG, damage: 26, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
@@ -375,7 +375,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // M16 Charlottenburg. Zone 1, Auguste-Viktoria-Platz: the master of ceremonies announces the acts (the three
   // kinds), keeps the hero in his spotlight (applause on a lock) and thrusts with his cane.
   conferencier: {
-    kind: 'conferencier', name: 'Der Conférencier', body: 'human', ai: 'conferencier', res: 'spiegel', radius: 0.7, scale: 1.4, hp: 1000, speed: 2.6,
+    kind: 'conferencier', name: 'Der Conférencier', body: 'human', ai: 'conferencier', res: 'spiegel', radius: 0.7, scale: 1.4, hp: 1600, speed: 2.6,
     attackRange: 1.9, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.4, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
@@ -402,7 +402,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // into something new. The Feldwebel's brain: an e-scooter charge along a marked line (twice in rage), two Zecher,
   // and one block of his own, a volley of thrown coffee cups (the Grenzer's five-shot fan).
   zugezogene: {
-    kind: 'zugezogene', name: 'Der Zugezogene', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 1000, speed: 2.5,
+    kind: 'zugezogene', name: 'Der Zugezogene', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 1600, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
   },
@@ -467,12 +467,12 @@ export function lateTier(g: number): { hp: number; count: number } {
  */
 export const DISTRICT_STEP = { hp: 0.3, dmg: 0.25 } as const;
 /** Share of the damage step that district bosses take. */
-export const BOSS_DMG_STEP = 0.4;
+export const BOSS_DMG_STEP = 1;
 /**
  * B2 step 3 (Johannes, 2026-11-23: bosses harder): extra boss life per district step on top of `districtScale`
  * (Köpenick, step 0, unchanged). Bot campaigns after the economy fix: district bosses fell in 10 to 30 s for 0 to 20 % of life.
  */
-export const BOSS_HP_STEP = 0;
+export const BOSS_HP_STEP = 0.3;
 export const districtScale = (district: number): { hp: number; dmg: number } => ({ hp: 1 + DISTRICT_STEP.hp * Math.max(0, district), dmg: 1 + DISTRICT_STEP.dmg * Math.max(0, district) });
 
 /**

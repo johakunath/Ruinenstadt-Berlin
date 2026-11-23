@@ -1226,7 +1226,7 @@ describe('Mitte roster (M12c)', () => {
       expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(1);
       expect(e.def.speed).toBeCloseTo(ENEMIES[kind].speed * BOSS.rageSpeed);
     }
-    expect([ENEMIES.tuersteher.hp, ENEMIES.dirigent.hp, ENEMIES.wachdrohne.hp, ENEMIES.bassprediger.hp]).toEqual([1000, 1400, 2200, 4400]);
+    expect([ENEMIES.tuersteher.hp, ENEMIES.dirigent.hp, ENEMIES.wachdrohne.hp, ENEMIES.bassprediger.hp]).toEqual([1600, 2000, 2200, 4400]); // B2 step 3: openers and the Dirigent raised (bot: they fell in 10 to 30 s)
     expect(ENEMIES.bassprediger.damage).toBe(ENEMIES.hauptmann.damage);
   });
 
@@ -1627,7 +1627,7 @@ describe('Charlottenburg roster (M16, spec m12d)', () => {
       e.hp = e.maxHp * 0.45;
       expect(run(s, 0.1).filter((q) => q.type === 'bossRage'), kind).toHaveLength(kind === 'diva' ? 0 : 1);
     }
-    expect([ENEMIES.conferencier.hp, ENEMIES.ringvater.hp, ENEMIES.spiegelpaar.hp, ENEMIES.diva.hp]).toEqual([1000, 2200, 3200, 4400]);
+    expect([ENEMIES.conferencier.hp, ENEMIES.ringvater.hp, ENEMIES.spiegelpaar.hp, ENEMIES.diva.hp]).toEqual([1600, 2200, 3200, 4400]); // B2 step 3: the opener raised
     expect([ENEMIES.conferencier.damage, ENEMIES.ringvater.damage, ENEMIES.spiegelpaar.damage, ENEMIES.diva.damage]).toEqual([26, 30, 28, 34]);
   });
 
@@ -1873,7 +1873,7 @@ describe('Wedding roster (M18, spec m12e)', () => {
 
   it('the Wedding bosses sit on the ladder; all but the Sultan rage below half life', () => {
     const kinds = ['zugezogene', 'hauptgericht', 'bauherr', 'sultan'] as const;
-    expect(kinds.map((k) => ENEMIES[k].hp)).toEqual([1000, 2200, 3200, 4400]);
+    expect(kinds.map((k) => ENEMIES[k].hp)).toEqual([1600, 2200, 3200, 4400]); // B2 step 3: the opener raised
     expect(kinds.map((k) => ENEMIES[k].damage)).toEqual([26, 30, 32, 34]);
     for (const kind of kinds) {
       const s = fresh();
