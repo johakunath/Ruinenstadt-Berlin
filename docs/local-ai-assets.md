@@ -30,9 +30,9 @@ How Claude drives ComfyUI: export a workflow from the ComfyUI menu with "Export 
 
 | Asset group | Route | Why | Fallback |
 |---|---|---|---|
-| Tileable surface textures (facades, stone, roofs, ground, fur, cloth: T6, T8, T9a to T9e, T9i, T9j, T10, T9 hero cloth) | **W1** FLUX.2 klein | Fast, free, good at textures | Codex |
+| Tileable surface textures (facades, stone, roofs, ground, fur, cloth: T6, T8, T9a to T9e, T9i, T9j, T10, T14, T9 hero cloth) | **W1** FLUX.2 klein | Fast, free, good at textures | Codex |
 | Decal and alpha atlases (weathering, leaves, posters T9g, markings) | **W2** FLUX.2 klein, cut out in code | Same model, alpha made in code | Codex |
-| Sign atlases with a lot of text (T7, T9f) | Codex | A 4B model renders long or exact text poorly | Code-painted placeholder |
+| Sign atlases with a lot of text (T7, T9f, T13) | Codex | A 4B model renders long or exact text poorly | Code-painted placeholder |
 | Painted item icons for items without a 3D model (K4, K5) | **W3** FLUX.2 klein edit, using an existing icon as the style reference | Small images, easy to compare | Codex |
 | Item icons and Kodex busts for things that have a 3D model | Render the in-game model (`tools/kodex-portraits.mjs`, item icon renders) | Matches the body exactly | none |
 | Static organic or detailed props (dino statues, statues, urns, samovar, rubble piles, debris, sculpted fountains, pickups per item kind P10, cars P3 as a trial) | **W4** FLUX.2 reference image, then **W5** Pixal3D, then **W6** Blender clean-up | Shapes that are slow to model in code | Code-built geometry |
