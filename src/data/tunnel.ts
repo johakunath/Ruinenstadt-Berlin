@@ -83,6 +83,19 @@ export function trackTrainPose(a: Pt, b: Pt): { x: number; z: number; rot: numbe
 const TRAIN_HALF_WIDTH = 1.15;
 const TRAIN_HALF_LENGTH = 7.6;
 
+/**
+ * B2 step 3 (playtest 2026-11-18: the tunnels were the district's kinds in larger numbers, mown down in the tube).
+ * Fewer bodies and more kinds, each with a job: fast fodder (Hetzer, Zünder) reaches the hero first, a heavy line
+ * (Brocken: slow, a marked blow to dodge) and a bulwark (Schildträger: the shield closes the tube, the hammer opens
+ * it) come behind. Order of play: kill the fast ones, dodge the heavy blows, then break the line.
+ */
+export const TUNNEL_ROLES = { count: 0.7, maxAlive: 7, walker: 0.5, add: { runner: 1, zuender: 0.8, brute: 1.2, schild: 1 } } as const;
+export function tunnelRoles(w: WaveDef): WaveDef {
+  const mix = { ...w.mix, walker: (w.mix.walker ?? 0) * TUNNEL_ROLES.walker };
+  for (const [k, v] of Object.entries(TUNNEL_ROLES.add) as Array<[keyof typeof TUNNEL_ROLES.add, number]>) mix[k] = (mix[k] ?? 0) + v;
+  return { ...w, mix, count: Math.max(3, Math.round(w.count * TUNNEL_ROLES.count)), maxAlive: Math.min(w.maxAlive, TUNNEL_ROLES.maxAlive) };
+}
+
 export type Stretch = 'collapse' | 'flood' | 'wreck';
 /** Free stretches between the fights that take the three special stretches (x ranges). The collapse fits only the first and the last. */
 const SLOTS: ReadonlyArray<readonly [number, number]> = [[116, 152], [202, 236], [318, 350]];
@@ -167,7 +180,7 @@ export function tunnelMap(line = 0): MapDef {
 
   const W = lineWaves(line);
   let g = W.from;
-  const tier = (zone: number): WaveDef => { const w = W.wave(Math.min(W.to, g++), zone); return { ...w, hpMul: w.hpMul * TUNNEL.hp }; };
+  const tier = (zone: number): WaveDef => { const w = W.wave(Math.min(W.to, g++), zone); return tunnelRoles({ ...w, hpMul: w.hpMul * TUNNEL.hp }); };
   const enc = (id: string, name: string, zone: number, x: number, r: number, waves: number): EncounterDef => {
     const [ex, ez] = at(x);
     return { id, name, zone, x: ex, z: ez, r, waves: Array.from({ length: waves }, () => tier(zone)), heal: 0.3 };

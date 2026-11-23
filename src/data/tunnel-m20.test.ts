@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateLots, generateProps, inTunnel, mapLevel, tunnelWalk } from './map';
 import { tunnelName, LINES } from './lines';
-import { lineLayout, TUNNEL, tunnelMap, tunnelZ } from './tunnel';
+import { lineLayout, TUNNEL, TUNNEL_ROLES, tunnelMap, tunnelZ } from './tunnel';
 import { lateTier } from './enemies';
 import { colliderDistance } from '../sim/collide';
 import { holdGates, POWER_PAUSE } from '../sim/director';
@@ -313,5 +313,17 @@ describe('M20 trader on the start platform', () => {
     const back = simFromSave(save, { seed: 1, stress: 0, level }, true);
     expect(back.content.trader).toMatchObject({ x: m.tunnel!.trader.x, fixed: true });
     expect(back.content.trader!.t).toBeGreaterThan(1e6);
+  });
+});
+
+describe('tunnel roles (B2 step 3)', () => {
+  it('every normal tunnel wave on every line brings fodder, a heavy line and a bulwark, in fewer bodies', () => {
+    for (const line of [0, 1, 2, 3]) {
+      for (const e of tunnelMap(line).encounters) for (const w of e.waves) {
+        if (w.bosses.length) continue;
+        for (const k of ['runner', 'zuender', 'brute', 'schild'] as const) expect(w.mix[k] ?? 0, `${line} ${e.name} ${k}`).toBeGreaterThan(0);
+        expect(w.maxAlive).toBeLessThanOrEqual(TUNNEL_ROLES.maxAlive);
+      }
+    }
   });
 });
