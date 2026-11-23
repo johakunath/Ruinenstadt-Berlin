@@ -44,7 +44,7 @@ Origin: Weltzeituhr. +E east, +N north (map: x = E, z = −N). Map offsets are s
 | Berliner Dom | −827 | −231 | West-south-west, on the Spreeinsel |
 | Altes Museum | −983 | −190 | West, Museumsinsel |
 | Palast der Republik (Humboldt Forum site) | −818 | −460 | South-west, on the Spreeinsel |
-| S Hackescher Markt | −739 | 165 | West-north-west |
+| S Hackescher Markt (1989: S Marx-Engels-Platz) | −739 | 165 | West-north-west |
 | Volksbühne | −94 | 652 | North |
 | Kino International | 660 | −54 | East, Karl-Marx-Allee |
 | Café Moskau | 618 | −180 | East-south-east, Karl-Marx-Allee |
