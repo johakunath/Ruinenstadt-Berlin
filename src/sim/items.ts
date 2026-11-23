@@ -35,6 +35,8 @@ export interface LootContext {
   wave: number;
   /** M18 `fest` (Wedding): the Pracht des Ewigen Gasts and Die Letzte Bestellung drop here. */
   flavor?: 'neon' | 'gdr' | 'fest';
+  /** M17 Fernsehturm: the tower's two legendaries are weighted up (`TOWER_SHARE`). */
+  turm?: boolean;
   /** An U-Bahn tunnel map: its own set drops here (`makeSetItem`). */
   tunnel?: boolean;
   /** Caller-owned last allocated id. Share one context per sim; persist with its state. */
@@ -61,11 +63,16 @@ function wearNames(rng: Rng, ctx: LootContext, all: readonly string[]): readonly
   return home.length ? home : all;
 }
 
+/** M17: share of legendaries on the Fernsehturm that are Fernsehturm-Splitter or Auge des Fernsehturms. */
+export const TOWER_SHARE = 1 / 3;
+
 export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarity = 0, forcedSlot?: SlotId): Item {
   itemLevel += 3 * ctx.district;
   const cy = ctx.flavor === 'neon', gd = ctx.flavor === 'gdr';
   const rarity = rollRarity(rng, ctx, minRarity), roll = rng.next();
-  const slot = forcedSlot || (cy && rng.next() < (rarity === 3 ? .25 : .12) ? 'i' : undefined)
+  // M17 signature drops: on the Fernsehturm a third of the legendaries are the tower's own two (2D LEGP.turm, LEGP.auge).
+  const tower = rarity === 3 && !!ctx.turm && !forcedSlot && rng.next() < TOWER_SHARE;
+  const slot = (tower ? (rng.next() < .5 ? 'w' : 't') : undefined) || forcedSlot || (cy && rng.next() < (rarity === 3 ? .25 : .12) ? 'i' : undefined)
     || (rarity === 3
       ? roll < .3 ? 'w' : roll < .55 ? 'a' : roll < .67 ? 't' : roll < .76 ? 'h' : roll < .84 ? 'g' : roll < .92 ? 'f' : 'r'
       : roll < .3 ? 'w' : roll < .46 ? 'a' : roll < .56 ? 'h' : roll < .66 ? 'g' : roll < .76 ? 'f' : roll < .88 ? 't' : 'r');
@@ -74,9 +81,9 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
   if (slot === 'w') {
     // M18: on `fest` maps 40 % of legendary weapons are Die Letzte Bestellung (draws only there).
     const lamp = rarity === 3 && ctx.flavor === 'fest' && rng.next() < .4;
-    const weapon = lamp ? 'hammer' : rng.pick<WeaponKindId>(['blade', 'blade', 'hammer', 'sling', 'spear']);
+    const weapon = tower ? 'blade' : lamp ? 'hammer' : rng.pick<WeaponKindId>(['blade', 'blade', 'hammer', 'sling', 'spear']);
     kind = weapon;
-    name = lamp ? N.FEST_LEGENDARY_WEAPON : rng.pick(rarity === 3 ? N.LEGENDARY_WEAPON_NAMES[weapon]
+    name = tower ? 'Fernsehturm-Splitter' : lamp ? N.FEST_LEGENDARY_WEAPON : rng.pick(rarity === 3 ? N.LEGENDARY_WEAPON_NAMES[weapon]
       : cy && rng.next() < .45 ? N.NEON_WEAPON_NAMES[weapon]
       : gd && rng.next() < .45 ? N.GDR_WEAPON_NAMES[weapon] : N.WEAPON_NAMES[weapon]);
     value = Math.round((4 + itemLevel * 1.6) * WEAPON_KINDS[weapon].damageFactor * m);
@@ -101,7 +108,7 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
   } else {
     const attribute = rng.pick<AttributeKindId>(['krit', 'tempo', 'heil']);
     kind = attribute;
-    name = rng.pick(rarity === 3 ? slot === 'r' ? N.LEGENDARY_RING_NAMES : N.LEGENDARY_TALISMAN_NAMES
+    name = tower ? 'Auge des Fernsehturms' : rng.pick(rarity === 3 ? slot === 'r' ? N.LEGENDARY_RING_NAMES : N.LEGENDARY_TALISMAN_NAMES
       : (slot === 'r' ? N.RING_NAMES : N.TALISMAN_NAMES)[attribute]);
     const b = { krit: 3 + itemLevel * .35, tempo: 4 + itemLevel * .3, heil: .5 + itemLevel * .12 }[attribute] * m;
     value = attribute === 'heil' ? +b.toFixed(1) : Math.round(b);
@@ -110,6 +117,22 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
   if (rarity === 1 || rarity === 2) name += ' ' + rng.pick(N.RARITY_SUFFIXES[rarity]);
   const item: Item = { id: nextId(ctx), slot, kind, base, name, rarity, value, itemLevel, affixes: [] };
   rollAffixes(rng, item);
+  return item;
+}
+
+/**
+ * M17: the Telespargel, the legendary spear only Der Zeitwart drops (`killDrops`): a legendary weapon rolled as any other,
+ * then made the tower spear.
+ */
+export function makeTelespargel(rng: Rng, ctx: LootContext, itemLevel: number): Item {
+  const item = makeItem(rng, ctx, itemLevel, 3, 'w');
+  const from = WEAPON_KINDS[item.kind as WeaponKindId].damageFactor;
+  item.kind = 'spear';
+  item.name = N.TURM_LEGENDARY_WEAPON;
+  item.base = N.BASES[item.name]!;
+  // The roll gave it the element of the legendary it was rolled as (Codex review): the tower spear is shock.
+  item.element = LEGENDARY_ELEMENTS.telespargel;
+  item.value = Math.round((item.value / from) * WEAPON_KINDS.spear.damageFactor);
   return item;
 }
 

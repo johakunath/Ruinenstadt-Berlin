@@ -1,10 +1,10 @@
 // M20: the S+U network map at the camp's train (2D `netSVG`/`tunCard` in `js/ubahn.js`): districts
 // as interchanges, lines as tunnels between them. Tap a district for an expedition, a line for its
 // tunnel; places without a 3D map yet stay grey ("kommt bald"). Ported layout and colors.
-import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, nextDestination, stopName, STOPS } from '../data/lines';
+import { campOpen, FINALE, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, nextDestination, stopName, STOPS, turmOpen } from '../data/lines';
 import { keyNav } from './focus';
 
-export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding' } | { map: 'tunnel'; line: number };
+export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding' | 'turm' } | { map: 'tunnel'; line: number };
 
 export class NetBoard {
   readonly root = document.createElement('div');
@@ -109,11 +109,15 @@ export class NetBoard {
   }
 
   /** A district opens with the line that leads to it (the camp at Xhain with the S3, M15: the Alex with the U8, Mitte with the U2). */
-  private stopOpen(i: number): boolean { return !!STOPS[i]?.map && (i === 0 || (i === 1 ? campOpen(this.freed) : this.freed.includes(LINE_FREED + i - 1) || this.freed.includes(i))); }
+  private stopOpen(i: number): boolean {
+    // M17: the Fernsehturm has no line; it opens when every district is freed.
+    if (i === FINALE) return turmOpen(this.freed) || this.freed.includes(i);
+    return !!STOPS[i]?.map && (i === 0 || (i === 1 ? campOpen(this.freed) : this.freed.includes(LINE_FREED + i - 1) || this.freed.includes(i)));
+  }
   private ride(): void {
     const s = this.sel;
     if (!s) return;
-    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain' || m === 'alex' || m === 'mitte' || m === 'charlottenburg' || m === 'wedding') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
+    if ('stop' in s) { const m = STOPS[s.stop]?.map; if ((m === 'koepenick' || m === 'xhain' || m === 'alex' || m === 'mitte' || m === 'charlottenburg' || m === 'wedding' || m === 'turm') && this.stopOpen(s.stop)) this.go({ map: m }); return; }
     if (linePlayable(s.line, this.freed)) this.go({ map: 'tunnel', line: s.line });
   }
 
@@ -130,9 +134,11 @@ export class NetBoard {
       if (op && !fr) svg += `<text x="${b[0]}" y="${b[1] - 10}" class="neto">Tunnel offen</text>`;
       svg += `<polyline points="${P}" fill="none" stroke="transparent" stroke-width="18"/></g>`;
     });
+    // M17: a thin dotted path from the Alexanderplatz up to the tower (no line, no tunnel).
+    { const [ax, ay] = STOPS[2]!.at, [tx, ty] = STOPS[FINALE]!.at; svg += `<line x1="${ax}" y1="${ay}" x2="${tx}" y2="${ty}" stroke="${turmOpen(f) ? '#ead9c0' : '#3a4a4e'}" stroke-width="1.5" stroke-dasharray="2 3"/>`; }
     STOPS.forEach((d, i) => {
       const [x, y] = d.at, open = this.stopOpen(i), won = f.includes(i), here = i === 1, sel = this.sel && 'stop' in this.sel && this.sel.stop === i;
-      const lx = [0, 30, 17, -27, 22, 22][i] ?? 0, ly = [25, 20, 23, -5, 24, 0][i] ?? 25, an = lx > 20 ? 'start' : lx < -20 ? 'end' : 'middle';
+      const lx = [0, 30, 17, -27, 22, 22, 22][i] ?? 0, ly = [25, 20, 23, -5, 24, 0, 2][i] ?? 25, an = lx > 20 ? 'start' : lx < -20 ? 'end' : 'middle';
       svg += `<g class="node${open ? '' : ' lock'}" data-stop="${i}" role="button" tabindex="0" aria-label="${d.name}${open ? '' : ' kommt bald'}">`;
       if (here || sel) svg += `<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="#ef9f27" stroke-width="2"><animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/></circle>`;
       svg += `<rect x="${x - 12}" y="${y - 9}" width="24" height="18" rx="9" fill="${!open ? '#2a211b' : won ? '#3b6d11' : '#993c1d'}" stroke="${sel ? '#ef9f27' : open ? '#ead9c0' : '#4a5a5e'}" stroke-width="${sel ? 3 : 2}"/>`;
@@ -150,7 +156,9 @@ export class NetBoard {
     if (!s) return '';
     if ('stop' in s) {
       const d = STOPS[s.stop]!, open = this.stopOpen(s.stop);
-      return `<div class="net-card"><div><b>${d.name}</b><small>${open ? `${s.stop === 1 ? 'Das Lager liegt hier. ' : ''}${f.includes(s.stop) ? 'Befreit. Nochmal hin für Beute.' : 'Expedition'}` : 'Kommt bald'}</small></div><button type="button" class="primary" data-ride ${open ? '' : 'disabled'}>Losziehen</button></div>`;
+      const locked = s.stop === FINALE ? 'Erst alle Bezirke befreien' : 'Kommt bald';
+      const what = s.stop === FINALE ? 'Hinauf zur Uhr. Der Zeitwart wartet.' : 'Expedition';
+      return `<div class="net-card"><div><b>${d.name}</b><small>${open ? `${s.stop === 1 ? 'Das Lager liegt hier. ' : ''}${f.includes(s.stop) ? 'Befreit. Nochmal hin für Beute.' : what}` : locked}</small></div><button type="button" class="primary" data-ride ${open ? '' : 'disabled'}>Losziehen</button></div>`;
     }
     const L = LINES[s.line]!, fr = f.includes(LINE_FREED + s.line), op = linePlayable(s.line, f);
     return `<div class="net-card"><div><b><span class="lbadge" style="background:${L.color};border-radius:${L.id.startsWith('S') ? 9 : 3}px">${L.id}</span> ${stopName(s.line)} → ${stopName(s.line + 1)}</b><small>${op ? `Geisterbahnhof ${L.ghost}, Gitter, geflutete Strecke. Am Ende den Generator halten: Der Schaffner.${fr ? ' Strecke frei.' : ''}` : 'Kommt bald'}</small></div><button type="button" class="primary" data-ride ${op ? '' : 'disabled'}>Einsteigen</button></div>`;

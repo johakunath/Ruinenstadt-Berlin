@@ -1,8 +1,8 @@
 // Balance runner (M14): the bot plays fresh Köpenick campaigns in Node, no browser.
-//   node tools/balance.mjs [runs=5] [difficulty=normal] [skill=johannes|good|weak] [seed=1] [--miss=0.3] [--react=0.25,0.5] [--at=4] [--until=6] [--map=xhain|alex|mitte|charlottenburg|wedding|tunnel0..4]
+//   node tools/balance.mjs [runs=5] [difficulty=normal] [skill=johannes|good|weak] [seed=1] [--miss=0.3] [--react=0.25,0.5] [--at=4] [--until=6] [--map=xhain|alex|mitte|charlottenburg|wedding|turm|tunnel0..4]
 //   node tools/balance.mjs 3 normal johannes 1 --map=wedding --carry   (each run starts with the gear one hero earned in the districts before)
-//   node tools/balance.mjs 3 normal johannes 1 --chain   (one hero through all six districts, Köpenick to Wedding; gear and camp carry over, tunnels count as cleared)
-//   node tools/balance.mjs 3 normal johannes 1 --campaign   (B2: the whole game with the five tunnels and the camp; adds a Schrott table per map)
+//   node tools/balance.mjs 3 normal johannes 1 --chain   (one hero through all six districts and the Fernsehturm; gear and camp carry over, tunnels count as cleared)
+//   node tools/balance.mjs 3 normal johannes 1 --campaign   (B2: the whole game with the five tunnels, the camp and the Fernsehturm; adds a Schrott table per map)
 // Prints one line per run and a table per encounter: tries, time, damage taken and lowest life.
 // Rerun after every balance change and compare with docs/balance.md.
 import { createServer } from 'vite';
@@ -10,7 +10,7 @@ import { createServer } from 'vite';
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const flag = (n) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=')[1];
 const runs = Number(args[0] ?? 5), difficulty = args[1] ?? 'normal', skillName = args[2] ?? 'johannes', seed = Number(args[3] ?? 1);
-const NAME = { koepenick: 'Köpenick', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte', charlottenburg: 'Charlottenburg', wedding: 'Wedding', tunnel0: 'S3-Tunnel', tunnel1: 'U8-Tunnel', tunnel2: 'U2-Tunnel', tunnel3: 'U2-Tunnel West', tunnel4: 'U9-Tunnel' };
+const NAME = { koepenick: 'Köpenick', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte', charlottenburg: 'Charlottenburg', wedding: 'Wedding', turm: 'Fernsehturm', tunnel0: 'S3-Tunnel', tunnel1: 'U8-Tunnel', tunnel2: 'U2-Tunnel', tunnel3: 'U2-Tunnel West', tunnel4: 'U9-Tunnel' };
 
 const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom', logLevel: 'error', optimizeDeps: { noDiscovery: true } });
 try {

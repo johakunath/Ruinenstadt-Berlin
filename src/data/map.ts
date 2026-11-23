@@ -1970,6 +1970,8 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     level.lifts = m.turm.lifts.map((l) => ({ ...l, from: { ...l.from }, to: { ...l.to } }));
     level.hands = m.turm.hands.map((h) => ({ ...h }));
     level.band = m.turm.band ? { ...m.turm.band } : null;
+    level.seats = m.turm.seats.map((q) => ({ ...q }));
+    level.ending = m.turm.ending.map((q) => ({ ...q }));
   }
   if (m.flavor) level.flavor = m.flavor;
   if (m.tunnel) level.tunnel = true;

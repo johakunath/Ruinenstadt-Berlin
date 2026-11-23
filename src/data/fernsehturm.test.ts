@@ -8,8 +8,10 @@ import { colliderDistance } from '../sim/collide';
 import { createSim, stepSim } from '../sim/sim';
 import { bandAngle, HAND, handAngle, LIFT, liftOpen, onHand, travelTarget } from '../sim/turm';
 import { spawnEnemy } from '../sim/enemies';
+import { makeItem } from '../sim/items';
 import { DT, NO_INPUT, type Sim, type SimEvent } from '../sim/types';
 import type { Level } from '../sim/level';
+import { simFromSave, snapshot } from '../sim/save';
 
 const map = turmMap();
 const level = mapLevel(map, generateLots(map), generateProps(map, []));
@@ -154,7 +156,7 @@ describe('Fernsehturm decks', () => {
 });
 
 describe('Fernsehturm lift (T2)', () => {
-  it('is closed before its fight is won and open after; a ride moves the hero and nothing else', () => {
+  it('is closed before its fight is won and open after; a ride moves the hero, drops stay and enemies left below go', () => {
     const sim = createSim({ level, empty: true });
     const lift = level.lifts[0]!;
     expect(liftOpen(sim, lift)).toBe(false);
@@ -167,6 +169,9 @@ describe('Fernsehturm lift (T2)', () => {
     expect(liftOpen(sim, lift)).toBe(true);
     const e = spawnEnemy(sim, 8, 14, 'walker');
     e.sleep = 0.1;
+    // A stray on the foyer (bot run 2026-11-23: four howl strays chased the hero through the floor for good) and one up on the Schacht.
+    const stray = spawnEnemy(sim, -10, -6, 'walker'), above = spawnEnemy(sim, lift.to.x + 6, lift.to.z, 'walker');
+    above.sleep = 0.1;
     sim.drops.push({ id: 99, x: 5, z: 12, vx: 0, vz: 0, h: 0, vh: 0, t: 0, landed: true, content: { kind: 'heal' } });
     const log: SimEvent[] = [];
     let steps = 0;
@@ -181,7 +186,9 @@ describe('Fernsehturm lift (T2)', () => {
     expect(sim.player.x).toBeCloseTo(lift.to.x);
     expect(sim.player.z).toBeCloseTo(lift.to.z);
     expect(log.some((ev) => ev.type === 'lift')).toBe(true);
-    expect(deckAt(TURM_DECKS, e.x, e.z)?.id).toBe('foyer');
+    expect(sim.enemies).not.toContain(e);
+    expect(sim.enemies).not.toContain(stray);
+    expect(sim.enemies).toContain(above);
     expect(sim.drops.find((d) => d.id === 99)!.x).toBe(5);
   });
 
@@ -372,18 +379,21 @@ describe('Fernsehturm revolving band (T5)', () => {
 });
 
 describe('Fernsehturm scripted run', () => {
-  it('rides every lift, holds the crank and reaches the victory', () => {
+  it('rides every lift, holds the crank, chooses the ending and reaches the victory', () => {
     const sim = createSim({ level });
     const log: SimEvent[] = [];
     sim.god = true;
     let guard = 0;
     while (sim.run.phase !== 'won' && guard++ < 60 * 60 * 12) {
-      const enc = level.encounters[sim.run.index]!;
+      const enc = level.encounters[sim.run.index];
       if (sim.run.phase === 'travel') {
         const to = travelTarget(sim)!;
         teleport(sim, to.lift ? to.x : to.x, to.lift ? to.z + 0.9 : to.z);
       } else if (sim.run.phase === 'hold') {
-        teleport(sim, enc.hold!.at!.x, enc.hold!.at!.z);
+        teleport(sim, enc!.hold!.at!.x, enc!.hold!.at!.z);
+      } else if (sim.run.phase === 'choice') {
+        const ring = level.ending[0]!;
+        teleport(sim, ring.x, ring.z);
       }
       stepSim(sim, NO_INPUT);
       for (const e of sim.enemies) if (e.state !== 'dead' && e.stateT > 0.3) { e.state = 'dead'; e.stateT = 0; e.hp = 0; }
@@ -394,7 +404,68 @@ describe('Fernsehturm scripted run', () => {
     expect(log.filter((e) => e.type === 'lift')).toHaveLength(4);
     expect(log.filter((e) => e.type === 'power')).toHaveLength(1);
     expect(log.filter((e) => e.type === 'encounterClear')).toHaveLength(5);
+    expect(log.some((e) => e.type === 'choiceOpen')).toBe(true);
+    expect(log.find((e) => e.type === 'ending')).toEqual({ type: 'ending', choice: 'gestellt' });
+    expect(sim.inventory.camp?.ending).toBe('gestellt');
     expect(log.at(-1)?.type).toBe('victory');
     expect(deckAt(TURM_DECKS, sim.player.x, sim.player.z)?.id).toBe('uhrenraum');
+  });
+});
+
+describe('Fernsehturm save and resume across decks (step 4)', () => {
+  it('a checkpoint after a lift ride resumes on the new deck with the lift behind it open', () => {
+    const sim = createSim({ level, empty: true });
+    // Won the foyer, rode up: the run saves at the lift's checkpoint.
+    sim.run.index = 1;
+    sim.run.phase = 'travel';
+    const lift = level.lifts[0]!;
+    teleport(sim, lift.from.x, lift.from.z + 0.9);
+    let saved: ReturnType<typeof snapshot> | null = null;
+    for (let i = 0; i < 90 && !saved; i++) {
+      stepSim(sim, NO_INPUT);
+      if (sim.events.some((e) => e.type === 'checkpoint')) saved = snapshot(sim, map.name, true);
+      sim.events.length = 0;
+    }
+    expect(saved?.run).toBeTruthy();
+    const back = simFromSave(saved!, { level }, true);
+    expect(deckAt(TURM_DECKS, back.player.x, back.player.z)?.id).toBe('schacht');
+    expect(back.run.index).toBe(1);
+    expect(liftOpen(back, level.lifts[0]!)).toBe(true);
+    expect(liftOpen(back, level.lifts[1]!)).toBe(false);
+  });
+
+  it('a retry after death starts at the deck of the fight, not at the door', () => {
+    const back = createSim({ level, startAt: 3 });
+    expect(deckAt(TURM_DECKS, back.player.x, back.player.z)?.id).toBe('telecafe');
+  });
+
+  it('a retry at the ending choice starts on the Uhrenraum at the choice', () => {
+    const back = createSim({ level, startAt: level.encounters.length });
+    expect(back.run.phase).toBe('choice');
+    expect(deckAt(TURM_DECKS, back.player.x, back.player.z)?.id).toBe('uhrenraum');
+  });
+
+  it('a run saved at the ending choice resumes at it', () => {
+    const sim = createSim({ level, empty: true, startAt: level.encounters.length });
+    const ring = level.ending[0]!;
+    teleport(sim, ring.x, ring.z + 3);
+    const save = snapshot(sim, map.name, true);
+    expect(save.run).toBeTruthy();
+    const back = simFromSave(save, { level }, true);
+    expect(back.run.phase).toBe('choice');
+    expect(deckAt(TURM_DECKS, back.player.x, back.player.z)?.id).toBe('uhrenraum');
+  });
+
+  it('on the tower a third of the legendaries are its own two', () => {
+    const sim = createSim({ level, empty: true });
+    expect(sim.lootCtx.turm).toBe(true);
+    let own = 0;
+    const N = 600;
+    for (let i = 0; i < N; i++) {
+      const it = makeItem(sim.rng, sim.lootCtx, 20, 3);
+      if (it.name === 'Fernsehturm-Splitter' || it.name === 'Auge des Fernsehturms') own++;
+    }
+    expect(own / N).toBeGreaterThan(0.3);
+    expect(own / N).toBeLessThan(0.5);
   });
 });

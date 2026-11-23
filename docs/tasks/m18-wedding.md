@@ -92,7 +92,7 @@ Banner „Wedding · kommt bald“; district card „Gold, Tee und Baklava. Sult
 - Wave mix: the step 2 roster everywhere (no stand-ins); the pub and the U9 use the plain kinds as Zecher (pub) or Zeitlose (tunnel).
 - Bot: `--map=wedding --carry` 3/3 won, no deaths, 16.3 min, lowest life 87 % (the Sultan 47 % damage taken); the carried hero barely gets hurt here, so Wedding plays easy after Charlottenburg. For the balance session (W4, B2); no numbers changed here. `--campaign` 1 run: all 11 maps won, U9 15.9 min.
 - Proof: `docs/proof/m18-wedding/step3/` (day sheet, a reveal per sight, street, fight). Leistung readout (cloud): start 175 / 122k, Nettelbeckplatz 125 / 86k, Brunnenstraße 159 / 128k, Maschinenhalle 166 / 172k.
-- Open for the finale session: `wonLink('wedding')`, its own stop and unlock. Hardware: `pt-hardware-checks.md` row 57.
+- Open for the finale session: `wonLink('wedding')`, its own stop and unlock. Hardware: `pt-hardware-checks.md` row 61.
 
 ## Handover 2026-11-21 (step 1) [Claude · Opus high]
 

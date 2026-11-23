@@ -1,6 +1,14 @@
 # B2 Economy, enemy roles and tunnel pacing [spec: Claude · Fable high; build: Claude · Opus high]
 
-Status: step 1 built (2026-11-22), step 2 built (2026-11-23), step 3 next. Built already in PR #57: Späti Schärfen and Panzerung (`SPATI_UPGRADE`: 2 levels, 3× the workshop price), "fürs Lager" hint on the Schrott count, trader shows item level.
+Status: steps 1 to 3 built (2026-11-22 and 23). Step 4 (heat) is P1b, waiting for Johannes' Tab S9 measurements. Built already in PR #57: Späti Schärfen and Panzerung (`SPATI_UPGRADE`: 2 levels, 3× the workshop price), "fürs Lager" hint on the Schrott count, trader shows item level.
+
+## Handover step 3 (2026-11-23, Claude · Opus high; Johannes: bosses harder, no variants to pick, Opus is enough)
+- Bosses: `BOSS_DMG_STEP` 0.4 → 0.7, new `BOSS_HP_STEP` 0.3 extra life per district step up to `BOSS_HP_STEPS` 3 (Köpenick unchanged); openers and the Dirigent +60 % base life (Grenzer 1500, Wurzel-Mutter 2900, Türsteher, Conférencier, Zugezogene 1600, Dirigent 2000); Spreehexe hit 34 → 27. Three variants compared with the bot (record in `docs/balance.md` › Bosses).
+- Tunnel roles (`TUNNEL_ROLES`, `tunnelRoles` in `src/data/tunnel.ts`): count ×0.7, at most 7 alive, walkers halved, plus Hetzer, Zünder, Brocken and Schildträger in every normal tunnel wave. No new kind needed: the Brocken is the heavy line with a marked blow, the Schildträger the bulwark the hammer opens.
+- Powers scale with weapon damage like basic attacks (`abilities.ts`); the tunnel one-shots came from the gear runaway fixed in step 2. No change.
+- Fights never lock: `unstickStragglers` (director) moves the last three or fewer bodies of a fight next to the hero after 20 s without a hit (found: a walker in a pocket by the U2 West generator, a spitter in the Magendoktor bar channel).
+- Camp prices ×1.8 (was 1.5) for E3. Leftovers: Müggelturm cut with its own lid, boss add fallback ring, the shared cut height decided (comment in `cut.ts`).
+- Open for the playtest: one weak bot run needed 11 min for Sultan Nimmersatt; Charlottenburg and Wedding end with about 1500 Schrott.
 
 ## Handover step 2 (2026-11-23, Claude · Opus high)
 - Targets E1 to E6 in Step 2 below; results in `docs/balance.md` › Economy calibration. E1, E4 met; E2, E6 nearly; E3 partly (1300 to 1500 left after the later districts); E5 (bosses) not, it goes to step 3.

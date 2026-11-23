@@ -2,6 +2,22 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Bosses and tunnel roles (B2 step 3, 2026-11-23)
+
+`node tools/balance.mjs 3 normal johannes 1 --campaign`. Before (step 2 economy): district bosses after Köpenick fell in 10 to 30 s for 0 to 20 % of life. Variants (boss damage step / extra life step): 0.7 / 0.3 and 0.7 / 0.6 lost a campaign in Wedding; 1.0 / 0.3 won all but the openers stayed easy and the Spreehexe killed a weak hero five times. Picked: 0.7 / 0.3 with the life step capped at step 3, openers +60 % life, Spreehexe hit 27, tunnel roles, camp prices ×1.8.
+
+| Map | Won | Deaths | Boss fights (time / life taken, three runs) | Left |
+|---|---|---|---|---|
+| Köpenick | 3 | 0.7 | unchanged: 17 to 59 s, 19 to 150 % | 389 |
+| S3-Tunnel | 3 | 0 | Schaffner 58 to 113 s, 19 to 46 % | 844 |
+| Xhain | 3 | 0 | openers 14 to 42 s, 6 to 23 %; Spreehexe 46 to 95 s, 74 to 220 % | 856 |
+| Alexanderplatz | 3 | 0 | 20 to 115 s, 9 to 94 % | 1131 |
+| Mitte | 3 | 0 | 34 to 132 s, 10 to 145 % | 1147 |
+| Charlottenburg | 3 | 0 | 67 to 224 s, 12 to 148 % | 1544 |
+| Wedding | 3 | 0 | 26 to 670 s, 31 to 455 % (Sultan 63, 254 and 670 s) | 1448 |
+
+Tunnels: fights 8 to 31 % on average, Schaffner 19 to 102 %. No stalls in 30 maps (the `unstickStragglers` valve).
+
 ## Economy calibration (B2 step 2, 2026-11-23)
 
 `node tools/balance.mjs 3 normal johannes 1 --campaign`, targets E1 to E6 in `docs/tasks/b2-economy-pacing.md` › Step 2. 3 of 3 campaigns won all ten maps; two processes with the same command printed the same output (runs repeat from the seed). Changes: Späti and trader stock at the 2D `tradeLvl` (minus the district step), `ECONOMY.scrap` 0.7 → 0.5, new `ECONOMY.salvage` 0.5; the bot now plays run events (rescues free the survivors that station level 3 needs).

@@ -21,7 +21,8 @@ export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffn
   | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
   | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr'
   | 'conferencier' | 'ringvater' | 'spiegelpaar' | 'diva'
-  | 'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan';
+  | 'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan'
+  | 'zeitwart';
 export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
   | 'zuender' | 'schild' | 'heuler' | 'scherbe' | 'loge' | 'souffleur' | 'spiegelbild' | 'teeifrit' | 'baklava' | 'teppich' | BossKind;
 /**
@@ -113,6 +114,8 @@ export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> =
   // M18 Wedding: the tea spirit is undead, the pastry a plant (cut it), the carpet a flyer (shoot it).
   teeifrit: ['untote'], baklava: ['pflanzen'], teppich: ['tiere'],
   zugezogene: ['menschen'], hauptgericht: ['pflanzen'], bauherr: ['maschinen'], sultan: ['menschen'],
+  // M17 Fernsehturm: Der Zeitwart is a humanoid robot (board 2): a machine.
+  zeitwart: ['maschinen'],
 };
 
 const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
@@ -300,7 +303,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // M12b Xhain (1981). Zone 1: the GDR border guard from the watchtower, the weakest. Shoots from a
   // distance, calls runners. Resistances of the 2D Volkseigener Koloss (GDR row: weak to shock).
   grenzer: {
-    kind: 'grenzer', name: 'Der Grenzer', body: 'human', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 950, speed: 2.3,
+    kind: 'grenzer', name: 'Der Grenzer', body: 'human', ai: 'grenzer', res: 'volk', radius: 0.7, scale: 1.45, hp: 1500, speed: 2.3,
     attackRange: 2.0, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.4, halfAngle: 60 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
@@ -320,12 +323,13 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   spreehexe: {
     kind: 'spreehexe', name: 'Die Spreehexe', body: 'female', ai: 'spreehexe', res: 'hexe', radius: 0.8, scale: 1.7, hp: 4400, speed: 2.6,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
-    reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
+    // B2 step 3: 34 → 27 (with the harder boss life, a weaker hero died five times on the Oberbaumbrücke).
+    reach: 2.8, halfAngle: 70 * DEG, damage: 27, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
   // M12c Mitte (2089). Zone 0, Pariser Platz: a Kabelbrocken in a bomber jacket holds the Tor like a club
   // door („Kein Einlass“). Shoves, grabs and holds, calls Kabelghule from the guest list.
   tuersteher: {
-    kind: 'tuersteher', name: 'Der Türsteher', body: 'human', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1000, speed: 2.4,
+    kind: 'tuersteher', name: 'Der Türsteher', body: 'human', ai: 'tuersteher', res: 'koloss', radius: 0.8, scale: 1.6, hp: 1600, speed: 2.4,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
   },
@@ -337,7 +341,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   },
   // Zone 2, Neuer See (mini-boss): a ghoul in a torn tailcoat on the band stand; beat rings, the Boxenköpfe follow him.
   dirigent: {
-    kind: 'dirigent', name: 'Der Dirigent', body: 'human', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 1400, speed: 2.2,
+    kind: 'dirigent', name: 'Der Dirigent', body: 'human', ai: 'dirigent', res: 'bass', radius: 0.7, scale: 1.4, hp: 2000, speed: 2.2,
     attackRange: 2.1, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
@@ -349,7 +353,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   },
   // M15 Alexanderplatz. Zone 1: a Wurzler grown out of the Palast glass house, a crown of sunflowers.
   wurzelmutter: {
-    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'female', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 1900, speed: 1.9,
+    kind: 'wurzelmutter', name: 'Die Wurzel-Mutter', body: 'female', ai: 'wurzelmutter', res: 'wurz', radius: 0.95, scale: 2.2, hp: 2900, speed: 1.9,
     attackRange: 2.6, windup: 0.75, active: 0.14, recovery: 0.85,
     reach: 3.2, halfAngle: 70 * DEG, damage: 26, knockbackTaken: 0.2, poise: true, weight: 0, boss: true,
   },
@@ -375,7 +379,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // M16 Charlottenburg. Zone 1, Auguste-Viktoria-Platz: the master of ceremonies announces the acts (the three
   // kinds), keeps the hero in his spotlight (applause on a lock) and thrusts with his cane.
   conferencier: {
-    kind: 'conferencier', name: 'Der Conférencier', body: 'human', ai: 'conferencier', res: 'spiegel', radius: 0.7, scale: 1.4, hp: 1000, speed: 2.6,
+    kind: 'conferencier', name: 'Der Conférencier', body: 'human', ai: 'conferencier', res: 'spiegel', radius: 0.7, scale: 1.4, hp: 1600, speed: 2.6,
     attackRange: 1.9, windup: 0.65, active: 0.14, recovery: 0.8,
     reach: 2.4, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },
@@ -402,7 +406,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // into something new. The Feldwebel's brain: an e-scooter charge along a marked line (twice in rage), two Zecher,
   // and one block of his own, a volley of thrown coffee cups (the Grenzer's five-shot fan).
   zugezogene: {
-    kind: 'zugezogene', name: 'Der Zugezogene', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 1000, speed: 2.5,
+    kind: 'zugezogene', name: 'Der Zugezogene', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 1600, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 26, knockbackTaken: 0.25, poise: true, weight: 0, boss: true,
   },
@@ -426,6 +430,15 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     kind: 'sultan', name: 'Sultan Nimmersatt', body: 'human', ai: 'diva', res: 'tee', radius: 0.95, scale: 1.85, hp: 4400, speed: 2.4,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
+  },
+  // M17 final boss in the Uhrenraum (`docs/tasks/m17-fernsehturm.md` › Step 3 spec; life 3800 and hit 30 after the bot runs
+  // of 2026-11-23: 5200 fell in 87 s; 6000 and 36 killed the bot 6.7 times a run once B2 step 3's `bossScale` applied): the last duty officer of the
+  // Zeitnormal, a humanoid robot on the human base. His own brain (`src/sim/zeitwart.ts`): three phases by era pair,
+  // a gear hold at each change instead of a rage. The Koloss row of resistances: shock weak, acid resistant.
+  zeitwart: {
+    kind: 'zeitwart', name: 'Der Zeitwart', body: 'human', ai: 'zeitwart', res: 'volk', radius: 0.9, scale: 1.9, hp: 3800, speed: 2.6,
+    attackRange: 2.6, windup: 0.6, active: 0.14, recovery: 0.7,
+    reach: 3.2, halfAngle: 75 * DEG, damage: 30, knockbackTaken: 0.05, poise: true, weight: 0, boss: true, noRage: true,
   },
 };
 
@@ -467,7 +480,14 @@ export function lateTier(g: number): { hp: number; count: number } {
  */
 export const DISTRICT_STEP = { hp: 0.3, dmg: 0.25 } as const;
 /** Share of the damage step that district bosses take. */
-export const BOSS_DMG_STEP = 0.4;
+export const BOSS_DMG_STEP = 0.7;
+/**
+ * B2 step 3 (Johannes, 2026-11-23: bosses harder): extra boss life per district step on top of `districtScale`
+ * (Köpenick, step 0, unchanged). Bot campaigns after the economy fix: district bosses fell in 10 to 30 s for 0 to 20 % of life.
+ */
+export const BOSS_HP_STEP = 0.3;
+/** The extra boss life stops growing after this district step (Wedding's Sultan took ten minutes at step 5). */
+export const BOSS_HP_STEPS = 3;
 export const districtScale = (district: number): { hp: number; dmg: number } => ({ hp: 1 + DISTRICT_STEP.hp * Math.max(0, district), dmg: 1 + DISTRICT_STEP.dmg * Math.max(0, district) });
 
 /**
@@ -747,6 +767,21 @@ export const BOSS = {
     // Bot runs 2026-11-21: one Tee-Ifrit every 14 s was tried (fights 111 to 341 s) and made it worse (106 s, 2.7 deaths a
     // run: fewer kills, fewer heals). Two every 12 s stay.
     summon: 12, adds: 2, carpets: 1, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
+  },
+  /**
+   * M17 Der Zeitwart (`src/sim/zeitwart.ts`). Phase changes at `phases` of life: he stands in the movement, untouchable,
+   * while the hero holds a gear seat (ring `hold.r` round a seat, `hold.need` s, an add every `hold.every` s), then he is
+   * stunned `hold.stun` s. Phase 1 (Urzeit, 1920): Zeigerhieb (a marked circle on the hero), Sprung (a marked line),
+   * two raptors or two Scherbentänzerinnen. Phase 2 (1981, 1989): a fan of five, a root field under the hero, an
+   * Uhrwerkläufer. Phase 3 (2089, kommt bald): Zeitsprung, three blinks to marked spots (the landing hurts `landDamage`)
+   * each with the Boxenkopf's shock ring, two drones; the clock hands turn `handBoost` times faster. Blocks: the Zeigerhieb
+   * is `bossSlam`, the Sprung `pounce`, the fan of five the Grenzer's `volley`. Cooldowns in seconds.
+   */
+  zeitwart: {
+    phases: [0.66, 0.33], hold: { r: 3.5, need: 6, every: 2, stun: 3 },
+    hieb: 3.6, sprung: 5.5, sprungFrom: 4, sprungTo: 12, fan: 4, roots: 6,
+    blink: 7, blinks: 3, blinkWarn: 0.5, blinkGap: 0.9, blinkRange: 7, landDamage: 0.7,
+    summon: 12, handBoost: 1.5,
   },
 } as const;
 

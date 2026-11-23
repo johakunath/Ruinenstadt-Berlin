@@ -62,9 +62,11 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   hauptgericht: 'Frisch vom Spieß. Raus aus dem Kreis, wenn er sich dreht.',
   bauherr: 'Baut seit Jahren. Fertig wird nie etwas.',
   sultan: 'Vorspeise, Hauptgang, Nachtisch. Kein Gast geht.',
+  // M17 Fernsehturm.
+  zeitwart: 'Steht er im Werk: Zahnrad einsetzen.',
 };
 const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone', 'zuender', 'schild', 'heuler', 'scherbe', 'loge', 'souffleur', 'teeifrit', 'baklava', 'teppich'];
-const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger', 'conferencier', 'ringvater', 'spiegelpaar', 'diva', 'zugezogene', 'hauptgericht', 'bauherr', 'sultan'];
+const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger', 'conferencier', 'ringvater', 'spiegelpaar', 'diva', 'zugezogene', 'hauptgericht', 'bauherr', 'sultan', 'zeitwart'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
 export interface MenuHost {
@@ -247,6 +249,8 @@ const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
   // M18 Wedding (ids reserved for Codex busts; glyphs until then).
   teeifrit: 'E22', baklava: 'E23', teppich: 'E24',
   zugezogene: 'X24', hauptgericht: 'X25', bauherr: 'X26', sultan: 'X27',
+  // M17 Fernsehturm.
+  zeitwart: 'X28',
 };
 const ELITE_PORTRAIT: Record<EliteMod, string> = { flink: 'L01', brennend: 'L02', spaltend: 'L03', gepanzert: 'L04' };
 /** Line-art fallbacks when portrait files are missing. */
@@ -282,6 +286,8 @@ const BOSS_GLYPH: Partial<Record<EnemyKind, string>> = {
   hauptgericht: '<path d="M12 2v20M8 6h8l-1 10H9zM9 10h6M9 13h6"/>',
   bauherr: '<path d="M4 21V5h7v16M4 9h7M4 13h7M4 17h7M11 5l9 2M18 7v6M16 13h4"/>',
   sultan: '<path d="M7 9l1-4 2 2 2-3 2 3 2-2 1 4zM7 9h10M6 14a6 5 0 0 0 12 0 6 5 0 0 0-12 0zM4 21c3-2 13-2 16 0"/>',
+  // M17: a clock face with two hands under a peaked cap.
+  zeitwart: '<path d="M6 6h12l-2-3H8zM5 6h14"/><circle cx="12" cy="14" r="7"/><path d="M12 14V9M12 14l4 2"/>',
 };
 /** 2D `kImg`: portrait, greyed (`dim`) or a black silhouette with "?" (`sil`). */
 const kimg = (inner: string, state: 'on' | 'dim' | 'sil', ring = '', cls = ''): string => state === 'sil'

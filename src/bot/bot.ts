@@ -520,6 +520,16 @@ export class Bot {
       }
     }
 
+    // M17 Der Zeitwart in the movement: the gear goes in only while the hero holds the seat's ring (T9).
+    const zw = s.enemies.find((q) => q.kind === 'zeitwart' && q.state !== 'dead' && q.zw?.hold)?.zw?.hold;
+    if (zw) {
+      const d = Math.hypot(zw.seat.x - p.x, zw.seat.z - p.z);
+      if (d > 2) {
+        mx += ((zw.seat.x - p.x) / (d || 1)) * 4;
+        mz += ((zw.seat.z - p.z) / (d || 1)) * 4;
+      }
+    }
+
     // Stuck on a corner: walk a detour for a moment.
     this.stuckT += DT;
     if (this.stuckT > 1.2) {
@@ -683,10 +693,9 @@ export class Bot {
       }
     }
     if (Number.isNaN(tx)) {
-      const enc = s.level.encounters[s.run.index];
-      if (!enc) return;
-      // M17 Fernsehturm: the next fight is a deck up; ride the lift the last fight opened (T2).
-      const to = travelTarget(s)!;
+      // M17 Fernsehturm: the next fight is a deck up (ride the lift the last fight opened, T2); after the boss, an ending ring (T10).
+      const to = travelTarget(s);
+      if (!to) return;
       tx = to.x;
       tz = to.z;
     }

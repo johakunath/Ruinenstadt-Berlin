@@ -19,6 +19,8 @@ export const SIGNATURE: Partial<Record<EnemyKind, { kind: SpecialKind; phase: 'w
   dirigent: { kind: 'roar', phase: 'go' }, bassprediger: { kind: 'summon', phase: 'go' }, wachdrohne: { kind: 'volley', phase: 'wind' },
   wurzelmutter: { kind: 'roots', phase: 'wind' }, uhrwerkgross: { kind: 'key', phase: 'wind' }, volkskoloss: { kind: 'slabs', phase: 'wind' },
   weltzeituhr: { kind: 'hand', phase: 'wind' },
+  // M17 Der Zeitwart: „Schlag zwölf!“ when he calls his adds; his rage line comes with the first gear hold (he has no rage).
+  zeitwart: { kind: 'summon', phase: 'go' },
 };
 
 /** Seconds between two lines of one boss. */
@@ -41,7 +43,8 @@ export const voiceMemory = (): VoiceMemory => ({ busyUntil: -Infinity, bosses: n
 
 /** The line an event asks for from a boss of this kind, given what it has said (pure). */
 export function voiceTrigger(event: SimEvent, kind: EnemyKind, said: ReadonlySet<VoiceTrigger>): VoiceTrigger | null {
-  if (event.type === 'bossRage') return said.has('rage') ? null : 'rage';
+  // M17: Der Zeitwart says his rage line when he first steps into the movement (`gearHold`).
+  if (event.type === 'bossRage' || event.type === 'gearHold') return said.has('rage') ? null : 'rage';
   if (event.type !== 'enemyWindup' && event.type !== 'enemySpecial') return null;
   if (!said.has('start')) return 'start';
   const s = SIGNATURE[kind];
@@ -55,7 +58,7 @@ export function voiceTrigger(event: SimEvent, kind: EnemyKind, said: ReadonlySet
  * `ready` says whether a clip is loaded. Call markVoice when the line plays.
  */
 export function pickVoice(mem: VoiceMemory, id: number, kind: EnemyKind, event: SimEvent, now: number, ready: (key: string) => boolean): VoiceTrigger | null {
-  if (event.type !== 'bossRage' && event.type !== 'enemyWindup' && event.type !== 'enemySpecial') return null;
+  if (event.type !== 'bossRage' && event.type !== 'gearHold' && event.type !== 'enemyWindup' && event.type !== 'enemySpecial') return null;
   let b = mem.bosses.get(id);
   if (!b) mem.bosses.set(id, (b = { first: now, last: -Infinity, said: new Set() }));
   if (!b.said.has('start') && now - b.first > START_WINDOW) b.said.add('start');

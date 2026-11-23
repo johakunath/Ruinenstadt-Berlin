@@ -26,6 +26,8 @@ export interface WaveDef {
   bosses: EnemyKind[];
   /** Chance that a normal spawn is an elite. */
   elite?: number;
+  /** M17 (T8): the bosses of this wave come as echoes (`src/sim/echo.ts`). */
+  echo?: boolean;
 }
 
 export interface EncounterDef {
@@ -252,6 +254,10 @@ export class Level {
   lifts: import('./turm').LiftDef[] = [];
   hands: import('./turm').HandDef[] = [];
   band: import('./turm').BandDef | null = null;
+  /** M17 Uhrenraum: the six gear seats round the movement (Der Zeitwart's holds, T9). */
+  seats: Point[] = [];
+  /** M17 ending choice (T10): two rings at the main switch after the last fight. */
+  ending: Array<{ id: 'gestellt' | 'gelassen'; x: number; z: number; r: number }> = [];
 
   /** M18 „Honig klebt“: honey puddles (circles) that slow walking. */
   honey: Array<{ x: number; z: number; r: number }> = [];

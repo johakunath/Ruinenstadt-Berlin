@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { campOpen, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, stopName, STOPS, tunnelName } from './lines';
+import { campOpen, FINALE, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, nextDestination, stopName, STOPS, tunnelName, turmOpen } from './lines';
+import { wonLink } from '../ui/maps';
 
 describe('M20 S+U network (2D js/ubahn.js)', () => {
   it('one route and badge per line, each joining two stops', () => {
     expect(NET_ROUTES.length).toBe(LINES.length);
     expect(NET_BADGES.length).toBe(LINES.length);
-    expect(STOPS.length).toBe(LINES.length + 1);
+    // M17: the Fernsehturm is a stop without a line.
+    expect(STOPS.length).toBe(LINES.length + 2);
     NET_ROUTES.forEach((r, k) => { expect(r[0]).toEqual(STOPS[k]!.at); expect(r.at(-1)).toEqual(STOPS[k + 1]!.at); });
   });
   it('every route starts and ends at its two stops, runs straight or at 45° and passes no other stop (M16 C3)', () => {
@@ -82,5 +84,28 @@ describe('next destination (playtest 2026-11-18)', () => {
     // M18 step 3: on through the U9 to Wedding.
     expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2, LINE_FREED + 2, 3, LINE_FREED + 3, 4])).toEqual({ line: 4 });
     expect(nextDestination([0, LINE_FREED, 1, LINE_FREED + 1, 2, LINE_FREED + 2, 3, LINE_FREED + 3, 4, LINE_FREED + 4])).toEqual({ stop: 5 });
+  });
+});
+
+describe('M17 the Fernsehturm stop', () => {
+  const all = [0, 1, 2, 3, 4, 5, ...[0, 1, 2, 3, 4].map((k) => LINE_FREED + k)];
+  it('is the last stop, beside the Alexanderplatz, with the finale map and no line', () => {
+    expect(FINALE).toBe(STOPS.length - 1);
+    expect(STOPS[FINALE]).toMatchObject({ name: 'Fernsehturm', station: 'S+U Alexanderplatz', map: 'turm' });
+    const [ax, ay] = STOPS[2]!.at, [tx, ty] = STOPS[FINALE]!.at;
+    expect(Math.hypot(tx - ax, ty - ay)).toBeLessThan(50);
+    expect(LINES.length).toBeLessThan(FINALE);
+  });
+  it('opens only when all six districts are freed', () => {
+    expect(turmOpen([])).toBe(false);
+    expect(turmOpen([0, 1, 2, 3, 4])).toBe(false);
+    expect(turmOpen([0, 1, 2, 3, 4, 5])).toBe(true);
+  });
+  it('is the next destination after Wedding, and Wedding\'s victory leads up the tower', () => {
+    expect(nextDestination(all.filter((k) => k !== 5))).toEqual({ stop: 5 });
+    expect(nextDestination(all)).toEqual({ stop: FINALE });
+    expect(wonLink('wedding', 0, all)?.to).toBe('turm');
+    expect(wonLink('wedding', 0, [0, 1, 2, 3, 5])?.to).toBe('koepenick');
+    expect(wonLink('turm', 0, [...all, 6])?.to).toBe('koepenick');
   });
 });
