@@ -145,10 +145,16 @@ export const TURM_MIX: ReadonlyArray<Partial<Record<EnemyKind, number>>> = [
   { walker: 3, raptor: 0.6, drone: 0.6, uhrwerk: 0.6, scherbe: 0.6, teeifrit: 0.6 },
 ];
 
-/** Wave `g` (48 … 70) on deck `deck`: the district formula of Wedding, at most 8 alive (the rings are small). */
+/**
+ * Bodies per wave against the district formula: the rings are small and the tower should take 10 to 12 minutes (bot
+ * campaigns 2026-11-23 with the carried hero: 15.5 min at ×1, the Telecafé alone 4 min).
+ */
+export const TURM_COUNT = 0.75;
+
+/** Wave `g` (48 … 70) on deck `deck`: the district formula of Wedding, fewer bodies, at most 8 alive (the rings are small). */
 export function turmWaveTier(g: number, deck: number, bosses: BossKind[] = []): WaveDef {
   return {
-    count: Math.round((5 + g * 0.45) * lateTier(g).count),
+    count: Math.round((5 + g * 0.45) * lateTier(g).count * TURM_COUNT),
     maxAlive: Math.min(8, Math.max(5, Math.round(Math.min(12, 6 + Math.floor(g / 3)) * lateTier(g).count))),
     mix: { ...(TURM_MIX[deck] ?? TURM_MIX[0]!) },
     hpMul: (1 + g * 0.13) * lateTier(g).hp,
