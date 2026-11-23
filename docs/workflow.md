@@ -2,6 +2,8 @@
 
 Adapted from the 2D game (`pipeline/workflow.md`, token rules of 2026-11-12, design autonomy of 2026-11-10) on 2026-11-15. Index: `CLAUDE.md` (Codex reads it through `AGENTS.md`).
 
+**Codex paused (Johannes, 2026-11-23):** no Codex for now (no tokens left). Every task or fallback marked Codex goes to Claude with the local models, code and Blender on the PC; Claude reviews PRs itself (`/code-review`) and fixes its findings. Codex rows stay as they are for when it returns.
+
 ## Roles
 
 | Who | Does | Does not |

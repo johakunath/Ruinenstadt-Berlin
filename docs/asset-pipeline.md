@@ -7,7 +7,7 @@ Indexes with the status of every item and every enemy: `docs/equipment-pipeline.
 
 ## Which tool for which job (2026-11-18, updated 2026-11-22)
 
-**2026-11-22 (Johannes):** local models first. Texture images, painted icons, reference images and static 3D props come from FLUX.2 klein and Pixal3D on the PC, finished in Blender; Codex is the fallback when the local result does not satisfy. Routes and standard workflows per asset group: `docs/local-ai-assets.md`. Where the tables below say "Codex", read "local first, Codex as fallback". Style, technical and integration rules in this file apply to local images unchanged.
+**2026-11-22 (Johannes):** local models first. Texture images, painted icons, reference images and static 3D props come from FLUX.2 klein and Pixal3D on the PC, finished in Blender; Codex is the fallback when the local result does not satisfy. Routes and standard workflows per asset group: `docs/local-ai-assets.md`. Where the tables below say "Codex", read "local first, Codex as fallback". Style, technical and integration rules in this file apply to local images unchanged. **Codex paused (Johannes, 2026-11-23):** no Codex fallback; local models, code and Blender only (`docs/local-ai-assets.md`).
 
 | Job | Route | Who |
 |---|---|---|
@@ -15,7 +15,7 @@ Indexes with the status of every item and every enemy: `docs/equipment-pipeline.
 | UI glyphs, map icons, mockups | SVG in code | Claude |
 | Item icons and Kodex portraits that must match the 3D look | Render the in-game model (planned `tools/item-icons.mjs`, `tools/enemy-sheet.mjs` with portrait framing and key plus rim light) | Claude |
 | Converting CC0 model packs (FBX, glTF) | Node: `tools/build-creatures.mjs` (FBXLoader, glTF export) | Claude |
-| Painted textures, painted busts and icons where no 3D model exists yet | Image generation, first integration | Codex |
+| Painted textures, painted busts and icons where no 3D model exists yet | Local image generation (FLUX.2 klein), first integration | Claude on the PC (Codex paused 2026-11-23) |
 | Skinning, rebinding a mesh to the skeleton, retargeting animations | Blender headless (`npm run assets:hero`); slow, use only for rigging | Claude on the PC |
 
 ## Roles and order
