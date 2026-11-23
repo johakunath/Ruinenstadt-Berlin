@@ -2,6 +2,8 @@
 
 Decided by Johannes on 2026-11-22. **Local models come first** for texture images, icons, reference images and static 3D props. Codex image generation is the fallback: use it when the local result does not satisfy or a job does not work locally (for example sign atlases with a lot of text). This supersedes the "Codex only" texture rule of 2026-11-16 in `docs/asset-pipeline.md`; that file keeps the style, technical and integration rules, which apply unchanged to local images.
 
+**Codex paused (Johannes, 2026-11-23):** there is no Codex fallback for now. Where the table says Codex, do a second local round (other prompt, seed or reference image); if that still fails, keep the code-painted placeholder and note it in the task file. Text-heavy sign atlases are painted in code (canvas text in `src/render`).
+
 Whoever drives this (Claude on the PC, or Johannes) follows the standard workflow for the asset group below. When a step goes differently than written, update this file in the same PR (a short line under Lessons).
 
 ## Tools on the PC
@@ -32,7 +34,7 @@ How Claude drives ComfyUI: export a workflow from the ComfyUI menu with "Export 
 |---|---|---|---|
 | Tileable surface textures (facades, stone, roofs, ground, fur, cloth: T6, T8, T9a to T9e, T9i, T9j, T10, T14, T9 hero cloth) | **W1** FLUX.2 klein | Fast, free, good at textures | Codex |
 | Decal and alpha atlases (weathering, leaves, posters T9g, markings) | **W2** FLUX.2 klein, cut out in code | Same model, alpha made in code | Codex |
-| Sign atlases with a lot of text (T7, T9f, T13) | Codex | A 4B model renders long or exact text poorly | Code-painted placeholder |
+| Sign atlases with a lot of text (T7, T9f, T13) | Code-painted text atlas (Claude); Codex while it is paused: none | A 4B model renders long or exact text poorly | Code-painted placeholder |
 | Painted item icons for items without a 3D model (K4, K5) | **W3** FLUX.2 klein edit, using an existing icon as the style reference | Small images, easy to compare | Codex |
 | Item icons and Kodex busts for things that have a 3D model | Render the in-game model (`tools/kodex-portraits.mjs`, item icon renders) | Matches the body exactly | none |
 | Static organic or detailed props (dino statues, statues, urns, samovar, rubble piles, debris, sculpted fountains, pickups per item kind P10, cars P3 as a trial) | **W4** FLUX.2 reference image, then **W5** Pixal3D, then **W6** Blender clean-up | Shapes that are slow to model in code | Code-built geometry |

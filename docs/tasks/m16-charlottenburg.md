@@ -2,7 +2,7 @@
 
 Layout C2 „Spiegelschloss“ (Johannes, 2026-11-19). Concept, decisions C1 to C6, geography check, the 1920 table and 2D reuse: `docs/maps/charlottenburg.md`. Mockups: `docs/mockups/m16-charlottenburg-layouts.svg` (A, B, C), `docs/mockups/m16-charlottenburg-c2.svg` (the revision; schematic, the anchors below rule). Template: `docs/tasks/m15-mitte.md` and its code.
 
-Status: steps 0 to 8 done (2026-11-21), step 9 (Codex) and 10 (Johannes) open; the tier waits for B2 (C4). Notes are short; whoever builds a step writes its handover here (at most 8 lines).
+Status: steps 0 to 8 done (2026-11-21), step 9 (local models on the PC; Codex paused 2026-11-23) and 10 (Johannes) open; the tier waits for B2 (C4). Notes are short; whoever builds a step writes its handover here (at most 8 lines).
 
 ## Steps (one session each unless noted)
 
@@ -18,7 +18,7 @@ Status: steps 0 to 8 done (2026-11-21), step 9 (Codex) and 10 (Johannes) open; t
 | 6 | Enemy and boss build (sim, bodies, sounds, Kodex) from the spec; update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md` | 5 | Opus high | done 2026-11-19: `docs/tasks/m12d-charlottenburg-enemies.md` › Handover; 6c maze riddles done 2026-11-21 (Handover › step 6c) |
 | 7 | Buildings and lot types: mockup first (two lot types per zone, the 1920 facade: stucco Altbau with shop fronts and canopies), then build; 1920s vehicles (cars, double-deck bus, tram, cab); weather per zone | 3b | Opus high, mockup first | done 2026-11-21 (Handover › step 7, zone 3 lots the same day) |
 | 8 | Flow and balance: U2 tunnel (line 3) from U Potsdamer Platz, title and victory links, network stop `map: 'charlottenburg'`, bot `--map=charlottenburg`, tier. First: give tunnel lines 2 and 3 distinct map names and run-save keys (both are „U2-Tunnel“ today, map doc C3) | 2, 6, Mitte step 8, the M14/B2 decision (C4) | Opus medium | done 2026-11-21 (Handover › step 8); tier stays provisional until B2 (C4) |
-| 9 | Textures: rows in `docs/asset-pipeline.md` (stucco facade, marquee sign atlas, cut glass and mirror, hedge, gravel parterre, baroque sandstone) | 3b, 4, 7 | Codex | open |
+| 9 | Textures: rows in `docs/asset-pipeline.md` (stucco facade, marquee sign atlas, cut glass and mirror, hedge, gravel parterre, baroque sandstone) | 3b, 4, 7 | Claude · PC, local models (Codex paused 2026-11-23) | open |
 | 10 | Screenshots (street at each time of day, fight, each landmark), PC and Tab S9 playtest; rows in `docs/tasks/pt-hardware-checks.md` | all | Johannes | open |
 
 ## Anchors (scale 1, meters, +X east, +Z south)
