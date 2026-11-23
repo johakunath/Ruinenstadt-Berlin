@@ -52,9 +52,9 @@ export interface BalanceArgs {
 export const CHAIN: DistrictKey[] = ['koepenick', 'xhain', 'alex', 'mitte', 'charlottenburg', 'wedding', 'turm'];
 /**
  * B2 step 1: the whole game as a player walks it: each district, then the tunnel of its line to the
- * next (the camp opens with the S3). M18: the U9 leads from Charlottenburg to Wedding.
+ * next (the camp opens with the S3). M18: the U9 leads from Charlottenburg to Wedding; M17: the Fernsehturm last.
  */
-export const CAMPAIGN: MapKey[] = ['koepenick', 'tunnel0', 'xhain', 'tunnel1', 'alex', 'tunnel2', 'mitte', 'tunnel3', 'charlottenburg', 'tunnel4', 'wedding'];
+export const CAMPAIGN: MapKey[] = ['koepenick', 'tunnel0', 'xhain', 'tunnel1', 'alex', 'tunnel2', 'mitte', 'tunnel3', 'charlottenburg', 'tunnel4', 'wedding', 'turm'];
 
 export type ChainArgs = Omit<BalanceArgs, 'map' | 'startAt' | 'until'> & {
   /** B2: play the tunnels (`CAMPAIGN`) instead of counting each line as cleared (`CHAIN`). */

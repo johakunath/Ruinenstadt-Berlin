@@ -46,6 +46,7 @@ import { turmMap } from './data/fernsehturm';
 import { travelTarget } from './sim/turm';
 import { echoName } from './sim/echo';
 import { LiftCurtain } from './ui/turm-curtain';
+import { EndingCard } from './ui/turm-ending';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor, zoneSkies } from './render/sky';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, wonLink, type MapId } from './ui/maps';
@@ -117,6 +118,8 @@ const isTunnel = map?.def.tunnel !== undefined;
 const isCamp = map?.def.camp !== undefined;
 /** M17: the dark cut of the lift ride, on the tower only. */
 const liftCurtain = map?.def.decks ? new LiftCurtain() : null;
+/** M17: the ending card after the choice at the main switch. */
+const endingCard = map?.def.decks ? new EndingCard() : null;
 const line = isTunnel ? opts.line : 0;
 const mapId: MapId = opts.map;
 /** What a won run is called: the district freed or the line cleared. */
@@ -185,7 +188,7 @@ function finishLootExit(leave: boolean): void {
     lootExit = 'off';
     lootChip.hidden = true;
     if (afterLoot === 'camp') { afterLoot = 'again'; toCamp(); return; }
-    if (afterLoot === 'map') { afterLoot = 'again'; const link = wonLink(mapId, line); goMap(link?.to ?? 'koepenick', link?.line ?? 0); return; }
+    if (afterLoot === 'map') { afterLoot = 'again'; const link = wonLink(mapId, line, sim.inventory.camp?.freed ?? []); goMap(link?.to ?? 'koepenick', link?.line ?? 0); return; }
     again();
   } else {
     // Back into the map to fetch it.
@@ -229,6 +232,8 @@ window.addEventListener('keydown', (e) => {
 /** A retry starts at the first encounter of the zone the hero fell in. */
 function checkpoint(): number {
   if (!level) return 0;
+  // M17: a death at the ending choice comes back to it, not to the boss fight.
+  if (sim.run.phase === 'choice') return sim.run.index;
   const i = Math.min(sim.run.index, level.encounters.length - 1);
   const zone = level.encounters[i]?.zone ?? 0;
   return level.encounters.findIndex((e) => e.zone === zone);
@@ -260,7 +265,7 @@ function showWon(): void {
   (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined || fell;
   document.getElementById('won-explore')!.hidden = fell;
   document.getElementById('won-title')!.textContent = winText;
-  const t = document.getElementById('won-tunnel')!, link = wonLink(mapId, line);
+  const t = document.getElementById('won-tunnel')!, link = wonLink(mapId, line, sim.inventory.camp?.freed ?? []);
   t.hidden = !level || !link;
   if (link) t.innerHTML = link.html;
   showCampButtons();
@@ -283,7 +288,7 @@ function showCampButtons(): void {
 // Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
 document.getElementById('won-tunnel')!.addEventListener('click', () => {
   if (importantDrops(sim).length > 0 && lootExit !== 'ask' && sim.player.state !== 'dead') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
-  const link = wonLink(mapId, line);
+  const link = wonLink(mapId, line, sim.inventory.camp?.freed ?? []);
   goMap(link?.to ?? 'koepenick', link?.line ?? 0);
 });
 /** M19/M15: the title's map buttons (tunnel after Köpenick, Xhain after the tunnel). */
@@ -736,7 +741,10 @@ function drainEvents(): void {
         ui.banner('Die Unruh ist dein', 'Uhr stellen oder stehen lassen?');
         break;
       case 'ending':
-        ui.banner(ev.choice === 'gestellt' ? 'Normalzeit' : 'Stillstand', ev.choice === 'gestellt' ? 'Berlin tickt wieder, auch das Alte.' : 'Die Stadt behält ihre Zeiten.');
+        // M17 (T10): the card first; the victory screen waits until it is closed (`wonFor` holds while it is open).
+        input.enabled = false;
+        input.clear();
+        endingCard?.show(ev.choice, () => { input.enabled = true; input.clear(); });
         break;
       case 'lift': {
         // Lift i joins deck i and deck i + 1.
@@ -927,6 +935,7 @@ function frame(now: number): void {
   // The tutorial card blocks the blessing pad; it is polled after, so its closing press is not a pick (Codex review).
   abilitiesUi.update(sim, phase === 'play' && !menu.isOpen, intro.isOpen);
   intro.pollPad();
+  endingCard?.pollPad();
   // After the others: a press that opens one of them is then not seen as new there (U3).
   startScreen().pollPad(now);
   optionsScreen().pollPad(now);
@@ -1001,7 +1010,7 @@ function frame(now: number): void {
       document.getElementById('retry')!.textContent = endless ? 'Neue Expedition' : 'Ab Kontrollpunkt';
     }
   }
-  if (wonFor >= 0 && phase === 'play') {
+  if (wonFor >= 0 && phase === 'play' && !endingCard?.isOpen) {
     wonFor += dt;
     if (wonFor > WON_DELAY && !abilitiesUi.open && !menu.isOpen) showWon();
   }

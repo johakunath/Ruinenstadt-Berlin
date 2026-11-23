@@ -1,6 +1,8 @@
 // Which map a page shows and where its title and victory buttons lead (M19 tunnel, M15 Xhain).
 // Each map is its own page load (`?map=`); the chain follows the story: Köpenick freed opens the
 // S3 tunnel, the tunnel ends at Warschauer Straße where Xhain starts and the walkable camp (M20) is.
+import { turmOpen } from '../data/lines';
+
 export type MapId = 'koepenick' | 'tunnel' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding' | 'turm' | 'hof' | 'lager';
 
 /** `MapDef.name` of each map (a saved run belongs to the map with this name). */
@@ -56,7 +58,7 @@ export function titleLinks(map: MapId, freed: readonly number[]): MapLink[] {
 }
 
 /** The map the victory screen leads on to (`line`: the tunnel line won or to ride). M15: Xhain → U8 → Alexanderplatz → U2 → Mitte; M16 → U2 west → Charlottenburg; M18 → U9 → Wedding. */
-export function wonLink(map: MapId, line = 0): { to: MapId; line?: number; html: string } | null {
+export function wonLink(map: MapId, line = 0, freed: readonly number[] = []): { to: MapId; line?: number; html: string } | null {
   if (map === 'koepenick') return { to: 'tunnel', html: '<b>In den S3-Tunnel</b><small>Richtung Warschauer Straße</small>' };
   if (map === 'tunnel' && line === 4) return { to: 'wedding', html: '<b>Weiter in den Wedding</b><small>Ausstieg Leopoldplatz</small>' };
   if (map === 'tunnel' && line === 3) return { to: 'charlottenburg', html: '<b>Weiter nach Charlottenburg</b><small>Ausstieg Zoologischer Garten</small>' };
@@ -67,8 +69,9 @@ export function wonLink(map: MapId, line = 0): { to: MapId; line?: number; html:
   if (map === 'alex') return { to: 'tunnel', line: 2, html: '<b>In die U2</b><small>Richtung Potsdamer Platz</small>' };
   if (map === 'mitte') return { to: 'tunnel', line: 3, html: '<b>In die U2</b><small>Richtung Zoologischer Garten</small>' };
   if (map === 'charlottenburg') return { to: 'tunnel', line: 4, html: '<b>In die U9</b><small>Richtung Leopoldplatz</small>' };
-  // M18: the finale session (M17) replaces this with the way up the Fernsehturm.
-  if (map === 'wedding') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
+  // M17: with every district freed the way leads up the Fernsehturm (the finale); a replay of Wedding before that goes home.
+  if (map === 'wedding') return turmOpen(freed) ? { to: 'turm', html: '<b>Zum Fernsehturm</b><small>Hinauf zur Uhr</small>' } : { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
+  if (map === 'turm') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
   return null;
 }
 

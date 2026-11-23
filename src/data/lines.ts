@@ -7,7 +7,8 @@
 // (ids are labels only); Charlottenburg sits west of Mitte on the schematic: Spandau and Marzahn (2D stops
 // 5 and 6, lines U7 and S5) are gone (Johannes, 2026-11-20); the schematic is scaled by 1.4 about its middle
 // to fill the board. M18 (W3): line 4 is the U9 from S+U Zoologischer Garten north to U Leopoldplatz (ghost
-// station Westhafen); Wedding sits north of Zoo and Mitte on the schematic. The finale (M17) adds its own stop.
+// station Westhafen); Wedding sits north of Zoo and Mitte on the schematic. M17: the Fernsehturm is the last stop,
+// beside the Alexanderplatz and without a line; it opens when all six districts are freed (`turmOpen`).
 export interface LineDef {
   /** Badge: S3, U8, ... */
   readonly id: string;
@@ -36,7 +37,13 @@ export const STOPS: readonly NetStop[] = [
   { name: 'Mitte', station: 'U Potsdamer Platz', map: 'mitte', at: [119, 100] },
   { name: 'Charlottenburg', station: 'S+U Zoologischer Garten', map: 'charlottenburg', at: [35, 149] },
   { name: 'Wedding', station: 'U Leopoldplatz', map: 'wedding', at: [77, 42] },
+  // M17: the finale stands beside the Alexanderplatz stop, without a line of its own (map doc › Entry).
+  { name: 'Fernsehturm', station: 'S+U Alexanderplatz', map: 'turm', at: [222, 34] },
 ];
+/** M17: index of the Fernsehturm in `STOPS`; it opens when every district before it is freed (`turmOpen`). */
+export const FINALE = 6;
+/** The finale opens with districts 0 to 5 freed (Johannes, 2026-11-21: the game is linear, no tunnel of its own). */
+export const turmOpen = (freed: readonly number[] | undefined): boolean => Array.from({ length: FINALE }, (_, k) => k).every((k) => !!freed?.includes(k));
 /** Line routes (45° schematic, viewBox 400 × 250) and badge positions, 2D's scaled by 1.4. */
 export const NET_ROUTES: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
   [[364, 205], [308, 205], [238, 135]],
