@@ -41,6 +41,8 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 
 ## Latest (2026-11-23)
 
+- Bosses are harder: from Xhain on they have more life per district (+30 % per step up to Mitte) and hit closer to their district's strength; the first boss of each district and the Dirigent have 60 % more life; the Spreehexe hits a little softer. Tunnel waves are smaller but mixed: Hetzer and Zünder run ahead, Brocken and Schildträger come behind. Camp prices ×1.8.
+- A fight can no longer be held open by an enemy stuck where nobody reaches it: after 20 quiet seconds the last few step out near the hero. The Müggelturm is now cut too, with a lid only over the tower and its terrace.
 - Economy (B2 step 2): Späti and trader stock no longer climbs with every purchase (the 2D rule minus the district step was missing, so each district counted twice and the hero's gear ran away); Schrott pickups ×0.5 (was 0.7) and salvage ×0.5. Bot campaigns arrive at the camp with about 1000 Schrott (was 1500) and keep 700 to 1500 per map.
 - Enemies are no longer shoved through thin walls or closed tunnel gratings by a crowd, boss adds never appear behind a wall, and nothing can hide in the gap behind the stopped tunnel train (each of these held a fight open for good).
 - After a death and retry on the same map, an enemy or event can no longer be placed inside a crate the earlier run had broken.
