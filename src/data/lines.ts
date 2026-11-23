@@ -4,9 +4,11 @@
 // Alexanderplatz; the camp is at S+U Warschauer Straße in Xhain (district 1). A cleared line is stored in
 // `camp.freed` as LINE_FREED + k (M19). M16 (decision C3): line 3 is the U2 running on from U Potsdamer
 // Platz to S+U Zoologischer Garten (ghost station Bülowstraße), so lines 2 and 3 both carry the U2 badge
-// (ids are labels only); Charlottenburg sits west of Mitte on the schematic and ends the network: Spandau
-// and Marzahn (2D stops 5 and 6, lines U7 and S5) are gone (Johannes, 2026-11-20); the schematic is scaled
-// by 1.4 about its middle to fill the board.
+// (ids are labels only); Charlottenburg sits west of Mitte on the schematic: Spandau and Marzahn (2D stops
+// 5 and 6, lines U7 and S5) are gone (Johannes, 2026-11-20); the schematic is scaled by 1.4 about its middle
+// to fill the board. M18 (W3): line 4 is the U9 from S+U Zoologischer Garten north to U Leopoldplatz (ghost
+// station Westhafen); Wedding sits north of Zoo and Mitte on the schematic. M17: the Fernsehturm is the last stop,
+// beside the Alexanderplatz and without a line; it opens when all six districts are freed (`turmOpen`).
 export interface LineDef {
   /** Badge: S3, U8, ... */
   readonly id: string;
@@ -23,6 +25,7 @@ export const LINES: readonly LineDef[] = [
   { id: 'U8', color: '#224f86', ghost: 'Heinrich-Heine-Straße' },
   { id: 'U2', color: '#da421e', ghost: 'Klosterstraße' },
   { id: 'U2', color: '#da421e', ghost: 'Bülowstraße', name: 'U2-Tunnel West' },
+  { id: 'U9', color: '#f3791d', ghost: 'Westhafen', name: 'U9-Tunnel' },
 ];
 
 /** Districts on the network map. `map`: the 3D page that plays it (`?map=`), absent while it is not built. */
@@ -33,15 +36,23 @@ export const STOPS: readonly NetStop[] = [
   { name: 'Alexanderplatz', station: 'U Alexanderplatz', map: 'alex', at: [189, 65] },
   { name: 'Mitte', station: 'U Potsdamer Platz', map: 'mitte', at: [119, 100] },
   { name: 'Charlottenburg', station: 'S+U Zoologischer Garten', map: 'charlottenburg', at: [35, 149] },
+  { name: 'Wedding', station: 'U Leopoldplatz', map: 'wedding', at: [77, 42] },
+  // M17: the finale stands beside the Alexanderplatz stop, without a line of its own (map doc › Entry).
+  { name: 'Fernsehturm', station: 'S+U Alexanderplatz', map: 'turm', at: [222, 34] },
 ];
+/** M17: index of the Fernsehturm in `STOPS`; it opens when every district before it is freed (`turmOpen`). */
+export const FINALE = 6;
+/** The finale opens with districts 0 to 5 freed (Johannes, 2026-11-21: the game is linear, no tunnel of its own). */
+export const turmOpen = (freed: readonly number[] | undefined): boolean => Array.from({ length: FINALE }, (_, k) => k).every((k) => !!freed?.includes(k));
 /** Line routes (45° schematic, viewBox 400 × 250) and badge positions, 2D's scaled by 1.4. */
 export const NET_ROUTES: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
   [[364, 205], [308, 205], [238, 135]],
   [[238, 135], [238, 114], [189, 65]],
   [[189, 65], [154, 65], [119, 100]],
   [[119, 100], [70, 149], [35, 149]],
+  [[35, 149], [20, 134], [20, 99], [77, 42]],
 ];
-export const NET_BADGES: ReadonlyArray<readonly [number, number]> = [[309, 222], [259, 107], [158, 45], [112, 145]];
+export const NET_BADGES: ReadonlyArray<readonly [number, number]> = [[309, 222], [259, 107], [158, 45], [112, 145], [34, 70]];
 
 /** Tunnel name of line k, unique per line (map name, banner and the run-save key): „U2-Tunnel“, „U2-Tunnel West“. */
 export const tunnelName = (k: number): string => LINES[k]?.name ?? `${LINES[k]?.id ?? 'S3'}-Tunnel`;

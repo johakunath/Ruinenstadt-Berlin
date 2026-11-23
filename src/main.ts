@@ -188,7 +188,7 @@ function finishLootExit(leave: boolean): void {
     lootExit = 'off';
     lootChip.hidden = true;
     if (afterLoot === 'camp') { afterLoot = 'again'; toCamp(); return; }
-    if (afterLoot === 'map') { afterLoot = 'again'; const link = wonLink(mapId, line); goMap(link?.to ?? 'koepenick', link?.line ?? 0); return; }
+    if (afterLoot === 'map') { afterLoot = 'again'; const link = wonLink(mapId, line, sim.inventory.camp?.freed ?? []); goMap(link?.to ?? 'koepenick', link?.line ?? 0); return; }
     again();
   } else {
     // Back into the map to fetch it.
@@ -263,7 +263,7 @@ function showWon(): void {
   (document.getElementById('won-endless') as HTMLButtonElement).hidden = !level || isTunnel || sim.run.endless !== undefined || fell;
   document.getElementById('won-explore')!.hidden = fell;
   document.getElementById('won-title')!.textContent = winText;
-  const t = document.getElementById('won-tunnel')!, link = wonLink(mapId, line);
+  const t = document.getElementById('won-tunnel')!, link = wonLink(mapId, line, sim.inventory.camp?.freed ?? []);
   t.hidden = !level || !link;
   if (link) t.innerHTML = link.html;
   showCampButtons();
@@ -286,7 +286,7 @@ function showCampButtons(): void {
 // Leaving the map from the victory screen: the same loot warning as Nochmal and Ins Lager (Codex review).
 document.getElementById('won-tunnel')!.addEventListener('click', () => {
   if (importantDrops(sim).length > 0 && lootExit !== 'ask' && sim.player.state !== 'dead') { lootExit = 'ask'; afterLoot = 'map'; document.getElementById('won')!.hidden = true; lootWarn.hidden = false; document.getElementById('loot-find')?.focus(); return; }
-  const link = wonLink(mapId, line);
+  const link = wonLink(mapId, line, sim.inventory.camp?.freed ?? []);
   goMap(link?.to ?? 'koepenick', link?.line ?? 0);
 });
 /** M19/M15: the title's map buttons (tunnel after Köpenick, Xhain after the tunnel). */
