@@ -560,6 +560,21 @@ export class Bot {
   }
   private okX = NaN;
   private okZ = NaN;
+  private travelT = 0;
+  private travelX = NaN;
+  private travelZ = NaN;
+  private escapeT = 0;
+  private escapeA = 0;
+
+  /** A heading whose ground 1.2 m ahead is free (eight tries from a random start), else the random start. */
+  private freeHeading(): number {
+    const p = this.sim.player, L = this.sim.level, a0 = this.rng.range(0, Math.PI * 2);
+    for (let k = 0; k < 8; k++) {
+      const a = a0 + (k * Math.PI) / 4, x = p.x + Math.sin(a) * 1.2, z = p.z + Math.cos(a) * 1.2;
+      if (!L.blocked(x, z, BODY) && !L.near(x, z, BODY + 0.1).some((c) => colliderDistance(c, x, z) < BODY)) return a;
+    }
+    return a0;
+  }
 
   private onBoatWait(): boolean {
     const p = this.sim.player;
@@ -570,6 +585,26 @@ export class Bot {
   private travel(inp: SimInput): void {
     const s = this.sim;
     const p = s.player;
+    // B2 step 2: travel watchdog. Pressed against a Späti wall on a cell the grid calls blocked, `go` found
+    // no way and the bot stood still until the run was given up (Mitte, Leipziger Straße). Not moving for
+    // 4 s (healing in a Späti and the ferry aside): drop the shop it was after, walk 1 s to free ground.
+    if (this.escapeT > 0) {
+      this.escapeT -= DT;
+      inp.moveX = Math.sin(this.escapeA);
+      inp.moveZ = Math.cos(this.escapeA);
+      return;
+    }
+    if ((this.travelT += DT) > 4) {
+      const resting = s.rest.at >= 0 && p.hp < s.stats.maxHp;
+      if (Math.hypot(p.x - this.travelX, p.z - this.travelZ) < 0.5 && !resting && !this.onBoatWait()) {
+        if (!Number.isNaN(this.shopTarget)) this.shopped.add(this.shopTarget);
+        this.escapeT = 1;
+        this.escapeA = this.freeHeading();
+      }
+      this.travelT = 0;
+      this.travelX = p.x;
+      this.travelZ = p.z;
+    }
     let tx = NaN, tz = NaN;
     // Loot nearby first; give up on a drop after six seconds (behind a wall).
     let best: { x: number; z: number } | null = null;
