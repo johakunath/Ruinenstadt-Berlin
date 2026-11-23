@@ -8,7 +8,7 @@ import { generateLots, generateProps, mapLevel } from '../data/map';
 import { SURVIVORS } from '../data/progression';
 import { spawnEnemy } from './enemies';
 import { reachable } from './reach';
-import { buyHeal, buyOffer, closeTrade, CONTENT, contentMarks, healPrice, talkTo, type RunEventKind } from './runcontent';
+import { buyHeal, buyOffer, closeTrade, CONTENT, contentMarks, healPrice, shopLevel, talkTo, type RunEventKind } from './runcontent';
 import { parseSave, simFromSave, snapshot } from './save';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Sim } from './types';
@@ -469,4 +469,17 @@ describe('Funde (2D #14, #27)', () => {
       expect([m.id, f.filter((q) => q.kind === 'teil').length, f.filter((q) => q.kind === 'kassette').length]).toEqual([m.id, 6, 4]);
     }
   }, 60000);
+});
+
+describe('shop stock level (2D tradeLvl, B2 step 2)', () => {
+  it('two above the wave or the best worn piece, minus the district step makeItem adds again', () => {
+    const s = make();
+    const worn = s.equipment.w!.itemLevel;
+    expect(shopLevel(s, 0, 1)).toBe(Math.max(1, worn) + 2);
+    s.equipment.w!.itemLevel = 20;
+    // District 2: worn gear already carries +6; the stock rolls at 22 - 6, makeItem adds the 6 back (22, not 28).
+    expect(shopLevel(s, 2, 5)).toBe(16);
+    expect(shopLevel(s, 2, 30)).toBe(26);
+    expect(shopLevel(s, 9, 1)).toBe(0);
+  });
 });
