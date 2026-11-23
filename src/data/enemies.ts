@@ -320,7 +320,8 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   spreehexe: {
     kind: 'spreehexe', name: 'Die Spreehexe', body: 'female', ai: 'spreehexe', res: 'hexe', radius: 0.8, scale: 1.7, hp: 4400, speed: 2.6,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.7,
-    reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
+    // B2 step 3: 34 → 27 (with the harder boss life, a weaker hero died five times on the Oberbaumbrücke).
+    reach: 2.8, halfAngle: 70 * DEG, damage: 27, knockbackTaken: 0.15, poise: true, weight: 0, boss: true,
   },
   // M12c Mitte (2089). Zone 0, Pariser Platz: a Kabelbrocken in a bomber jacket holds the Tor like a club
   // door („Kein Einlass“). Shoves, grabs and holds, calls Kabelghule from the guest list.
@@ -473,6 +474,8 @@ export const BOSS_DMG_STEP = 0.7;
  * (Köpenick, step 0, unchanged). Bot campaigns after the economy fix: district bosses fell in 10 to 30 s for 0 to 20 % of life.
  */
 export const BOSS_HP_STEP = 0.3;
+/** The extra boss life stops growing after this district step (Wedding's Sultan took ten minutes at step 5). */
+export const BOSS_HP_STEPS = 3;
 export const districtScale = (district: number): { hp: number; dmg: number } => ({ hp: 1 + DISTRICT_STEP.hp * Math.max(0, district), dmg: 1 + DISTRICT_STEP.dmg * Math.max(0, district) });
 
 /**

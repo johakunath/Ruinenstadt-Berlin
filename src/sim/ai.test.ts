@@ -497,7 +497,8 @@ describe('Xhain roster (M12b)', () => {
     const hp = xhain.map((k) => ENEMIES[k].hp);
     expect([...hp].sort((a, b) => a - b)).toEqual(hp);
     expect(ENEMIES.spreehexe.hp).toBe(ENEMIES.hauptmann.hp);
-    expect(ENEMIES.spreehexe.damage).toBe(ENEMIES.hauptmann.damage);
+    // B2 step 3: she hits softer than the Hauptmann (34 → 27); her life stays on his tier.
+    expect(ENEMIES.spreehexe.damage).toBe(27);
   });
 
   it('no Xhain boss takes more than 45 % of max life in one hit, even at ten times the damage', () => {
