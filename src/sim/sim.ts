@@ -13,7 +13,7 @@ import { courtyardLevel } from '../data/courtyard';
 import { ELITES, ENEMIES, SPAWN, type EliteMod, type EnemyKind, districtScale } from '../data/enemies';
 import { sectorHitsCircle } from './collide';
 import { ferryPos, onFerryBoat } from './ferry';
-import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
+import { focusFlow, followFlow, holdGates, startRunAt, updateDirector } from './director';
 import { capped, makeElite, randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, spawnPack, updateEnemies, updateSpawner } from './enemies';
 import { FlowField } from './flowfield';
 import type { Level } from './level';
@@ -168,6 +168,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   sim.flow.setTarget(p.x, p.z);
   updateEnemies(sim);
   resolveBodies(sim);
+  if (sim.level.gates.length) holdGates(sim);
   playerSweep(sim);
   updateAbilities(sim, input);
   updateStatuses(sim);

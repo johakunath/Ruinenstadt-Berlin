@@ -7,6 +7,7 @@ import { offerBlessings } from './blessings';
 // circle, the hero may kite, fall back to a pickup or a Späti; enemies follow, and a wave that is
 // left behind spawns around the hero.
 import { difficultyOf } from '../data/difficulty';
+import { PLAYER } from '../data/combat';
 import { ENEMIES, type BossKind, type EnemyKind } from '../data/enemies';
 import { colliderDistance } from './collide';
 import { encounterAlive, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
@@ -81,6 +82,36 @@ export function openGates(sim: Sim, index: number, quiet = false): void {
     sim.events.push({ type: 'gateOpen', index: i, x: g.x, z: g.z });
   });
 }
+
+/**
+ * B2 step 2: a closed grating is a one-way wall in the sim. Body separation can shove a body crowded
+ * against the 0.6 m bars past their middle, and the next push-out then lets it out on the far side,
+ * where nobody can reach it (bot campaigns stalled on a spitter and a walker behind closed gratings).
+ * Walking bodies and the hero that end a step on the far side close to the bars go back in front of them.
+ */
+export function holdGates(sim: Sim): void {
+  const L = sim.level;
+  for (let i = 0; i < L.gates.length; i++) {
+    if (sim.gateT[i] !== Infinity) continue;
+    const g = L.gates[i]!, enc = L.encounters[g.after];
+    if (!enc) continue;
+    const ux = Math.sin(g.rot), uz = Math.cos(g.rot);
+    const side = Math.sign((enc.x - g.x) * ux + (enc.z - g.z) * uz) || -1;
+    const hold = (b: { x: number; z: number }, r: number): void => {
+      const dx = b.x - g.x, dz = b.z - g.z, along = dx * ux + dz * uz;
+      if (along * side >= 0 || Math.abs(along) > GATE_BAND || Math.abs(dx * uz - dz * ux) > g.half) return;
+      const to = side * (GATE_HALF_DEPTH + r) - along;
+      b.x += ux * to;
+      b.z += uz * to;
+    };
+    for (const e of sim.enemies) if (e.state !== 'dead' && !e.def.fly) hold(e, e.def.radius);
+    hold(sim.player, PLAYER.radius);
+  }
+}
+/** How far past the bars a body counts as pushed through (farther: it belongs to the next section). */
+const GATE_BAND = 1.5;
+/** Half the depth of a grating's collider (`hz` in `buildMapLevel`). */
+const GATE_HALF_DEPTH = 0.3;
 
 /** A closed grating lies between two points (spawns never appear behind one). */
 export function gateBetween(sim: Sim, ax: number, az: number, bx: number, bz: number): boolean {
