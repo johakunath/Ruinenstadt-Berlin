@@ -2,7 +2,8 @@ import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { BAG_SIZE, collectItem } from './inventory';
 import { makeItem } from './items';
-import { FIRST_KOEPENICK, killDrops, lootLevel, spawnDrop, TUNNEL_ITEMS, updateDrops } from './loot';
+import { FIRST_KOEPENICK, killDrops, lootContext, lootLevel, pityWeapon, spawnDrop, TUNNEL_ITEMS, updateDrops, WEAPON_PITY_LAG } from './loot';
+import { Rng } from './math';
 import { Level, WalkGrid } from './level';
 import { createSim, stepSim } from './sim';
 import { makeElite, spawnEnemy } from './enemies';
@@ -112,6 +113,23 @@ describe('kill drops', () => {
       expect(sm.events.some((e) => e.type === 'legendary')).toBe(true);
       expect(sm.inventory.scrap).toBe(Math.round(70 * ECONOMY.scrap));
     }
+  });
+
+  it('P45: a district boss drops a legendary weapon of the worn class when the worn weapon lags', () => {
+    for (let s = 0; s < 5; s++) {
+      const sm = createSim({ empty: true, seed: s + 1 });
+      sm.lootWaves = 30;
+      const rng = new Rng(s + 7);
+      sm.equipment.w = makeItem(rng, lootContext(sm), 1, 3, 'w', 'spear');
+      killDrops(sm, spawnEnemy(sm, 2, 2, 'hauptmann'));
+      const weapons = sm.drops.filter((d) => d.content.kind === 'item' && d.content.item.rarity === 3 && d.content.item.slot === 'w' && d.content.item.kind === 'spear');
+      expect(weapons.length).toBeGreaterThanOrEqual(1);
+    }
+    // No lag: the slot stays random (the forced draw is skipped).
+    const sm = createSim({ empty: true, seed: 3 });
+    sm.equipment.w = makeItem(new Rng(1), lootContext(sm), 40, 3, 'w', 'spear');
+    expect(pityWeapon(sm, 10)).toBeUndefined();
+    expect(pityWeapon(sm, 40 + WEAPON_PITY_LAG)).toBe('spear');
   });
 
   it('M12b: rats drop rarely and give no scrap; Xhain bosses drop like the others, the Spreehexe like the Hauptmann', () => {
