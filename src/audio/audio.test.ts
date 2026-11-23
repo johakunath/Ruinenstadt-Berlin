@@ -122,7 +122,7 @@ describe('S3 boss voices', async () => {
 
   it('has all three clips for every boss with a signature special, and no stray clips', () => {
     const kinds = Object.keys(SIGNATURE);
-    expect(kinds.length).toBe(16);
+    expect(kinds.length).toBe(17); // M17: Der Zeitwart
     expect(Object.keys(VOICE_URL).sort()).toEqual(kinds.flatMap(k => VOICE_TRIGGERS.map(t => `${k}-${t}`)).sort());
   });
 
