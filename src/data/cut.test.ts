@@ -85,7 +85,7 @@ describe('cutaway plan (V1 B)', () => {
 
   it('cuts the Köpenick sights the route passes behind (P42)', () => {
     const m = koepenickMap(), plan = cutPlan(m, generateLots(m));
-    for (const [kind, h] of [['rathaus', 2], ['schloss', CUT.floor], ['kirche', CUT.floor]] as const) {
+    for (const [kind, h] of [['rathaus', 2], ['schloss', CUT.floor], ['kirche', CUT.floor], ['mueggelturm', CUT.floor]] as const) {
       const i = m.landmarks.findIndex((l) => l.kind === kind);
       expect(plan.parts.find((p) => p.id === LANDMARK_PART + i)).toMatchObject({ kind: 'landmark', h });
     }

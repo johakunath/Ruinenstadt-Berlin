@@ -337,6 +337,8 @@ export interface RunState {
   ended?: boolean;
   /** M20 generator hold (`EncounterDef.hold`): charge in seconds, the hero stands in the ring, next spawn, elite sent, sim time the power came. */
   hold?: { p: number; need: number; inside: boolean; sp: number; elite: boolean; on?: number };
+  /** B2 step 3: seconds the current fight has gone without a hit either way while only stragglers are left. */
+  lullT?: number;
 }
 
 export interface Sim {

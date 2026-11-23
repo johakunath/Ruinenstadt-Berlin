@@ -4,7 +4,8 @@
 // recognizable cues low (portal, statue, arches, lettering, roof shapes seen from above); towers and
 // the wheel keep real proportions for zoomed-out views and the minimap.
 import { BufferAttribute, BufferGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, Euler, Matrix4, PlaneGeometry, Quaternion, SphereGeometry, TorusGeometry, Vector3, type Material } from 'three';
-import type { Landmark } from '../data/map';
+import type { Landmark, Pt } from '../data/map';
+import { rectPoly } from '../data/cut';
 import { Rng } from '../sim/math';
 import type { ChunkBuilder } from './map-world';
 
@@ -516,6 +517,27 @@ function sbahnhof(b: ChunkBuilder, l: Landmark): void {
 
 // ---------------------------------------------------------------- Müggelturm
 
+/**
+ * Cut caps that follow the building (V1 B cutaway, P42 follow-up): only what rises above the cut gets a lid.
+ * Müggelturm: the tower and the roof terrace over the pavilion; the beer garden and the pavilion stay open
+ * (a footprint lid was a black slab over the garden). Null: cap the whole footprint.
+ */
+export function landmarkCutCaps(l: Landmark): Pt[][] | null {
+  if (l.kind !== 'mueggelturm') return null;
+  const { tx, tz, T, px, pw, pd, pz } = mueggelDims(l);
+  const rect = (x: number, z: number, w: number, d: number): Pt[] => {
+    const c = worldPt(l, x, 0, z);
+    return rectPoly({ x: c.x, z: c.z, rot: l.rot, hw: w / 2, hd: d / 2 });
+  };
+  return [rect(tx, tz, T + 0.3, T + 0.3), rect(px, pz - pd / 4, pw + 1.0, pd / 2 + 1.0)];
+}
+
+/** Müggelturm layout in the landmark frame: tower centre and side, pavilion centre and size. */
+function mueggelDims(l: Landmark): { tx: number; tz: number; T: number; px: number; pw: number; pd: number; pz: number } {
+  const tx = -l.hx + 2.6, tz = l.hz - 2.8, T = 4.6;
+  return { tx, tz, T, px: tx + T / 2 + 0.3 + (l.hx - (tx + T / 2 + 0.3)) / 2, pw: l.hx - (tx + T / 2 + 0.3) - 0.2, pd: l.hz * 2 - 3.2, pz: -1.4 };
+}
+
 function mueggelturm(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
   const F = frameOf(l);
@@ -523,7 +545,7 @@ function mueggelturm(b: ChunkBuilder, l: Landmark): void {
   const white = M.stucco;
   const W: RGB = [1.55, 1.52, 1.44];
   // Slim white tower: nine storeys of window bands, an open deck and a cantilevered flat roof.
-  const tx = -l.hx + 2.6, tz = l.hz - 2.8, T = 4.6, FL = 2.85, N = 9;
+  const { tx, tz, T } = mueggelDims(l), FL = 2.85, N = 9;
   for (let i = 0; i < N; i++) {
     const y = i * FL;
     b.box(white, F(tx, y + 0.5, tz), T, 1.0, T, W);
@@ -544,7 +566,7 @@ function mueggelturm(b: ChunkBuilder, l: Landmark): void {
   b.geo(M.iron, cached('mast', () => new CylinderGeometry(0.05, 0.09, 4, 5)), F(tx, top + 5, tz));
   b.shadowBox(F(tx, (top + 3) / 2, tz), T, top + 3, T);
   // Restaurant pavilion (flat roof, big windows, roof terrace under a cantilevered canopy).
-  const px = tx + T / 2 + 0.3 + (l.hx - (tx + T / 2 + 0.3)) / 2, pw = l.hx - (tx + T / 2 + 0.3) - 0.2, pd = l.hz * 2 - 3.2, pz = -1.4;
+  const { px, pw, pd, pz } = mueggelDims(l);
   b.box(white, F(px, 1.7, pz), pw, 3.4, pd, W);
   b.box(M.stucco, F(px, 3.45, pz), pw + 0.4, 0.2, pd + 0.4, [1, 1, 0.96]);
   const fm = F(px, 0, pz + pd / 2);

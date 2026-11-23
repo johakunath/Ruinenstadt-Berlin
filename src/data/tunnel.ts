@@ -11,7 +11,7 @@
 import type { EncounterDef, Point, WaveDef, ZoneDef } from '../sim/level';
 import { Rng } from '../sim/math';
 import { ALEX_TIER, alexWaveTier } from './alexanderplatz';
-import type { BossKind } from './enemies';
+import type { BossKind, EnemyKind } from './enemies';
 import { waveTier } from './koepenick';
 import { XHAIN_TIER } from './xhain';
 import { MITTE_TIER, mitteWaveTier } from './mitte';
@@ -83,6 +83,27 @@ export function trackTrainPose(a: Pt, b: Pt): { x: number; z: number; rot: numbe
 /** The stopped train's footprint (`propCollider` 'tram': hx 1.15, hz 7.6). */
 const TRAIN_HALF_WIDTH = 1.15;
 const TRAIN_HALF_LENGTH = 7.6;
+
+/**
+ * B2 step 3 (playtest 2026-11-18: the tunnels were the district's kinds in larger numbers, mown down in the tube).
+ * Fewer bodies and more kinds, each with a job: fast fodder (Hetzer, Zünder) reaches the hero first, a heavy line
+ * (Brocken: slow, a marked blow to dodge) and a bulwark (Schildträger: the shield closes the tube, the hammer opens
+ * it) come behind. Order of play: kill the fast ones, dodge the heavy blows, then break the line.
+ */
+export const TUNNEL_ROLES = { count: 0.7, maxAlive: 7, walker: 0.5, district: 2, share: 0.25, add: { runner: 1, zuender: 0.8, brute: 1.2, schild: 1 } } as const;
+/** Kinds every district shares (Köpenick's roster and the WP5 kinds); the rest are a district's own. */
+const SHARED_KINDS: ReadonlySet<EnemyKind> = new Set<EnemyKind>(['walker', 'runner', 'spitter', 'brute', 'crow', 'raptor', 'zuender', 'schild', 'heuler']);
+export function tunnelRoles(w: WaveDef): WaveDef {
+  const mix: WaveDef['mix'] = {};
+  // The district's own kinds count double: the tunnel shows off where it leads (the U2 the Alexanderplatz mechs).
+  for (const [k, v] of Object.entries(w.mix) as Array<[EnemyKind, number]>) mix[k] = v * (k === 'walker' ? TUNNEL_ROLES.walker : SHARED_KINDS.has(k) ? 1 : TUNNEL_ROLES.district);
+  // The role kinds take `share` of the mix together, so the district's own enemies stay the majority (the U2 brings
+  // Alexanderplatz mechs, the U9 Wedding's guests).
+  const total = Object.values(mix).reduce((a, v) => a + (v ?? 0), 0), parts = Object.values(TUNNEL_ROLES.add).reduce((a, v) => a + v, 0);
+  const unit = (total * TUNNEL_ROLES.share) / (1 - TUNNEL_ROLES.share) / parts;
+  for (const [k, v] of Object.entries(TUNNEL_ROLES.add) as Array<[keyof typeof TUNNEL_ROLES.add, number]>) mix[k] = (mix[k] ?? 0) + v * unit;
+  return { ...w, mix, count: Math.max(3, Math.round(w.count * TUNNEL_ROLES.count)), maxAlive: Math.min(w.maxAlive, TUNNEL_ROLES.maxAlive) };
+}
 
 export type Stretch = 'collapse' | 'flood' | 'wreck';
 /** Free stretches between the fights that take the three special stretches (x ranges). The collapse fits only the first and the last. */
@@ -171,7 +192,7 @@ export function tunnelMap(line = 0): MapDef {
 
   const W = lineWaves(line);
   let g = W.from;
-  const tier = (zone: number): WaveDef => { const w = W.wave(Math.min(W.to, g++), zone); return { ...w, hpMul: w.hpMul * TUNNEL.hp }; };
+  const tier = (zone: number): WaveDef => { const w = W.wave(Math.min(W.to, g++), zone); return tunnelRoles({ ...w, hpMul: w.hpMul * TUNNEL.hp }); };
   const enc = (id: string, name: string, zone: number, x: number, r: number, waves: number): EncounterDef => {
     const [ex, ez] = at(x);
     return { id, name, zone, x: ex, z: ez, r, waves: Array.from({ length: waves }, () => tier(zone)), heal: 0.3 };
