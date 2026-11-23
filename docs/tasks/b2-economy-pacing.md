@@ -3,11 +3,11 @@
 Status: step 1 built (2026-11-22), step 2 built (2026-11-23), step 3 next. Built already in PR #57: Späti Schärfen and Panzerung (`SPATI_UPGRADE`: 2 levels, 3× the workshop price), "fürs Lager" hint on the Schrott count, trader shows item level.
 
 ## Handover step 2 (2026-11-23, Claude · Opus high)
-- Targets E1 to E6 in Step 2 below; results in `docs/balance.md` › Economy calibration. E1, E4 met; E2, E3, E6 nearly; E5 (bosses) not, it goes to step 3.
+- Targets E1 to E6 in Step 2 below; results in `docs/balance.md` › Economy calibration. E1, E4 met; E2, E6 nearly; E3 partly (1300 to 1500 left after the later districts); E5 (bosses) not, it goes to step 3.
 - Economy: `shopLevel` in `src/sim/runcontent.ts` (2D `tradeLvl`, the missing minus district step was the power runaway), `ECONOMY` scrap 0.5, salvage 0.5 (new factor, also on the salvage button).
 - Bot: run events (`eventGoal`: captive, cache, crate, zone), travel watchdog, stuck report names the enemies that hold the fight.
 - Sim fixes found by the bot (all in the game too): `Level.restore` restores collider order, reach grid built at sim start, `holdGates`, separation capped at 0.3 m per step, boss adds need a clear line from the boss, sim box behind the tunnel train.
-- Open: run n of one process can still depend on runs before it (a leak not found; the same command repeats exactly, which comparisons need). Mitte and Charlottenburg end with 1500 to 1700 Schrott; raise level 3 prices there or lower salvage further after Johannes' playtest.
+- Open: run n of one process can still depend on runs before it (a leak not found; the same command repeats exactly, which comparisons need). Alexanderplatz to Wedding end with 1300 to 1500 Schrott; raise level 3 prices or lower salvage further after Johannes' playtest.
 
 ## Handover step 1 (2026-11-22, Claude · Opus high)
 - `src/bot/bot.ts`: rules of the table below as `SHOP`, `keepsItem`/`salvageSpare`, `wantsOffer`, `botCamp`/`campOffers`; the bot walks to unvisited Spätis and traders within 50 m, holds the generator ring, routes through tunnel gratings; every Schrott is booked in a `Ledger` (`CampaignReport.economy`). Tests in `src/bot/bot.test.ts`.

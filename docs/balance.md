@@ -8,25 +8,24 @@ Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance 
 
 | Map | Played | Won | Deaths | Min | Earned (salvage) | Items | Späti upgr. | Camp before | Left | Item level end (weapon) | Power end |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Köpenick | 3 | 3 | 0.3 | 17.1 | 1231 (319) | 578 | 204 | 0 | 449 | 12.2 (14) | 439 |
-| S3-Tunnel | 3 | 3 | 0.0 | 6.5 | 668 (149) | 165 | 0 | 0 | 951 | 12.8 (14) | 479 |
-| Xhain | 3 | 3 | 0.0 | 14.2 | 1270 (326) | 438 | 0 | 936 | 847 | 16.2 (21) | 754 |
-| U8-Tunnel | 3 | 3 | 0.0 | 7.6 | 759 (163) | 0 | 0 | 913 | 693 | 16.2 (21) | 881 |
-| Alexanderplatz | 3 | 3 | 0.0 | 15.0 | 1556 (454) | 385 | 0 | 673 | 1192 | 18.6 (25) | 1426 |
-| U2-Tunnel | 3 | 3 | 0.0 | 8.4 | 741 (143) | 0 | 0 | 1254 | 678 | 18.6 (25) | 1334 |
-| Mitte | 3 | 3 | 0.0 | 18.1 | 1604 (578) | 247 | 0 | 538 | 1498 | 19.0 (25) | 2014 |
-| U2-Tunnel West | 3 | 3 | 0.0 | 11.9 | 781 (136) | 0 | 0 | 1295 | 984 | 18.5 (25) | 1889 |
-| Charlottenburg | 3 | 3 | 0.0 | 23.9 | 1849 (742) | 387 | 0 | 721 | 1725 | 21.9 (25) | 3000 |
-| Wedding | 3 | 3 | 0.0 | 30.3 | 1581 (684) | 487 | 0 | 1601 | 1218 | 27.0 (25) | 3099 |
+| Köpenick | 3 | 3 | 0.7 | 19.3 | 1360 (391) | 683 | 250 | 0 | 427 | 13.1 (15) | 515 |
+| S3-Tunnel | 3 | 3 | 0.0 | 6.8 | 681 (164) | 123 | 0 | 0 | 985 | 13.6 (15) | 511 |
+| Xhain | 3 | 3 | 0.0 | 13.4 | 1293 (335) | 437 | 0 | 964 | 877 | 17.0 (22) | 854 |
+| U8-Tunnel | 3 | 3 | 0.0 | 7.7 | 732 (154) | 0 | 0 | 932 | 677 | 17.0 (22) | 862 |
+| Alexanderplatz | 3 | 3 | 0.0 | 13.8 | 1605 (474) | 310 | 0 | 657 | 1315 | 17.5 (30) | 1391 |
+| U2-Tunnel | 3 | 3 | 0.0 | 6.8 | 735 (144) | 0 | 0 | 1372 | 678 | 17.5 (30) | 1338 |
+| Mitte | 3 | 3 | 0.0 | 14.2 | 1554 (510) | 292 | 0 | 606 | 1335 | 19.8 (30) | 2443 |
+| U2-Tunnel West | 3 | 3 | 0.0 | 8.7 | 822 (164) | 0 | 0 | 1243 | 914 | 19.2 (30) | 2153 |
+| Charlottenburg | 3 | 3 | 0.0 | 21.2 | 1883 (766) | 588 | 0 | 705 | 1505 | 23.2 (33) | 4346 |
+| Wedding | 3 | 3 | 0.0 | 18.5 | 1386 (534) | 293 | 0 | 1129 | 1469 | 25.3 (33) | 4517 |
 
 **Read against the targets:**
-- E1 met: worn item level ends near the drop level (27 at Wedding; was 66 before the shop fix).
-- E2 nearly: 951 Schrott on arriving at the camp (target 500 to 900; was 1501, Johannes held 3699).
-- E3 mostly: 678 to 1218 left per map, except Mitte (1498) and Charlottenburg (1725).
-- E4 met: all won, 0.3 deaths in Köpenick, none later.
-- E5 not met: several early district bosses still take 0 to 15 % of life (Xhain, Alexanderplatz, Mitte and Charlottenburg openers). Enemy tuning, for step 3.
-- E6 mostly: tunnel fights 9 to 61 % on average.
-- Spread between runs is large: power at the end 1900 to 4900; the weakest run needed 767 s for the last Wedding boss.
+- E1 met: worn item level ends near the drop level (25 at Wedding; was 66 before the shop fix).
+- E2 nearly: 985 Schrott on arriving at the camp (target 500 to 900; was 1501, Johannes held 3699).
+- E3 partly: 677 to 914 left after Xhain and the tunnels, 1315 to 1505 after Alexanderplatz, Mitte, Charlottenburg and Wedding (target about 1200).
+- E4 met: all won, 0.7 deaths in Köpenick, none later.
+- E5 not met: most district bosses before the last take 0 to 20 % of life (all of them in run 3 of Mitte and Charlottenburg). Enemy tuning, for step 3.
+- E6 mostly: tunnel bosses 0 to 88 % (one U8 Schaffner 0 %).
 
 **Before (same command, all bot fixes, old economy):** 3 of 3 won; 1501 Schrott on arrival at the camp, 924 to 2855 left per map, worn item level 22 at the end of Wedding.
 
