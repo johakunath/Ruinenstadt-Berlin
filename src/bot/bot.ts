@@ -913,8 +913,9 @@ export interface CampaignOptions {
 /** B2 step 2: the enemies still alive when a run stops (kind and position, at most four), to find unreachable ones. */
 function aliveNote(sim: Sim): string {
   const alive = sim.enemies.filter((e) => e.state !== 'dead');
-  if (!alive.length) return '';
-  return `; alive ${alive.length}: ${alive.slice(0, 4).map((e) => `${e.kind}@${e.x.toFixed(1)},${e.z.toFixed(1)}`).join(' ')}`;
+  const hero = `; life ${Math.round((100 * sim.player.hp) / sim.stats.maxHp)} %${sim.rest.at >= 0 ? ', in a Späti' : ''}`;
+  if (!alive.length) return hero;
+  return `${hero}; alive ${alive.length}: ${alive.slice(0, 4).map((e) => `${e.kind}@${e.x.toFixed(1)},${e.z.toFixed(1)}`).join(' ')}`;
 }
 
 /** One fresh campaign through the map: retries at the zone start after a death, like the game. */
