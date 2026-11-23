@@ -344,7 +344,9 @@ export function buildKneipe(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): voi
   // Step 3, the front from the press photo (map doc): a dark plinth with tags, warm windows with half curtains on both
   // sides of the door, the door leaf folded back under stickers, the night watchman mural west of the door.
   const fz = -d / 2 - 0.03;
-  b.box(M.stucco, K(l, 0, 0.3, fz), w, 0.6, 0.04, [0.3, 0.28, 0.27]);
+  // The plinth stops at the doorway (Codex on PR 87: a full-width strip read as a wall the hero walks through).
+  const pw = (w - door) / 2;
+  for (const sx of [-1, 1]) b.box(M.stucco, K(l, sx * (door + pw) / 2, 0.3, fz), pw, 0.6, 0.04, [0.3, 0.28, 0.27]);
   for (const [x, gw] of [[-6.2, 2.4], [-2.3, 1.2], [4.8, 2.0], [8.4, 1.4]] as const) b.geo(M.graffiti, cached(`kg${gw}`, () => new PlaneGeometry(gw, 0.5)), K(l, x, 0.32, fz - 0.03), [1, 1, 1]);
   for (const x of [-3.5, 3.5]) {
     up.box(M.darkWood, K(l, x, 1.85, fz), 1.8, 1.4, 0.06, W.wood);
