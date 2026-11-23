@@ -35,6 +35,8 @@ export const STATUS = {
 /** Burn time of an element proc: shorter in the rain. */
 /** M18 Die Letzte Bestellung: every third hit, a fire hit at `share` of it on enemies within `radius` m. */
 export const LAST_ORDER = { radius: 2.5, share: 0.5 } as const;
+/** M17 Telespargel „Zeitzeichen“: every `every`-th hit stops every enemy within `radius` m of the hero for `stop` s (start values). */
+export const TIME_SIGNAL = { every: 12, radius: 5, stop: 1.5 } as const;
 export const burnTime = (s: Sim): number => (s.wet ? STATUS.wetBurnTime : STATUS.burnTime);
 
 export interface StrikeOpts {
@@ -232,6 +234,16 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
         strike(s, t, procBase * LAST_ORDER.share, { knock: knock(160), noproc: true, feel: 'none', element: 'fire' });
       }
       s.events.push({ type: 'impact', x: e.x, z: e.z, radius: LAST_ORDER.radius, kind: 'boom' });
+    }
+    // M17 Telespargel „Zeitzeichen“: every twelfth hit, everyone near the hero stands between two seconds (a stun;
+    // bosses shrug most of it off as from any stun).
+    if (hasL(s, 'telespargel') && n % TIME_SIGNAL.every === 0) {
+      for (const t of s.enemies) {
+        if (t.state === 'dead' || t.mirrorOf !== undefined || Math.hypot(t.x - p.x, t.z - p.z) >= TIME_SIGNAL.radius) continue;
+        stun(t, TIME_SIGNAL.stop);
+      }
+      s.events.push({ type: 'shock', x: p.x, z: p.z, radius: TIME_SIGNAL.radius, kind: 'small' });
+      s.events.push({ type: 'note', text: 'Zeitzeichen', color: '#7dd3ff', x: p.x, z: p.z });
     }
   }
 

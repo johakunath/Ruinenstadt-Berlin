@@ -69,6 +69,8 @@ export const WEAPON_LOOKS = {
   siegsp: { kind: 'spear', family: 'legendary', length: 1.72, glow: '#f2d14b' },
   // M18 Die Letzte Bestellung: the Vorschlaghammer's handle with a wish-lamp head; the lamp glows warm.
   bestellung: { kind: 'hammer', family: 'legendary', length: 0.9, glow: '#ffb060' },
+  // M17 Telespargel: the antenna as the shaft, the sphere as the guard; the window ring glows shock blue.
+  telespargel: { kind: 'spear', family: 'legendary', length: 1.86, glow: '#7dd3ff' },
   morgen: { kind: 'hammer', family: 'set', length: 0.9 },
   'brech:kiez': { kind: 'blade', family: 'set', length: 0.53, ...CLEAVER },
   'zwille:spree': { kind: 'sling', family: 'set', length: 0.31, glow: '#5fd18a' },

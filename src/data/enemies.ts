@@ -21,7 +21,8 @@ export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffn
   | 'tuersteher' | 'wachdrohne' | 'dirigent' | 'bassprediger'
   | 'wurzelmutter' | 'uhrwerkgross' | 'volkskoloss' | 'weltzeituhr'
   | 'conferencier' | 'ringvater' | 'spiegelpaar' | 'diva'
-  | 'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan';
+  | 'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan'
+  | 'zeitwart';
 export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
   | 'zuender' | 'schild' | 'heuler' | 'scherbe' | 'loge' | 'souffleur' | 'spiegelbild' | 'teeifrit' | 'baklava' | 'teppich' | BossKind;
 /**
@@ -113,6 +114,8 @@ export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> =
   // M18 Wedding: the tea spirit is undead, the pastry a plant (cut it), the carpet a flyer (shoot it).
   teeifrit: ['untote'], baklava: ['pflanzen'], teppich: ['tiere'],
   zugezogene: ['menschen'], hauptgericht: ['pflanzen'], bauherr: ['maschinen'], sultan: ['menschen'],
+  // M17 Fernsehturm: Der Zeitwart is a humanoid robot (board 2): a machine.
+  zeitwart: ['maschinen'],
 };
 
 const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
@@ -426,6 +429,14 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     kind: 'sultan', name: 'Sultan Nimmersatt', body: 'human', ai: 'diva', res: 'tee', radius: 0.95, scale: 1.85, hp: 4400, speed: 2.4,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
+  },
+  // M17 final boss in the Uhrenraum (`docs/tasks/m17-fernsehturm.md` › Step 3 spec): the last duty officer of the
+  // Zeitnormal, a humanoid robot on the human base. His own brain (`src/sim/zeitwart.ts`): three phases by era pair,
+  // a gear hold at each change instead of a rage. The Koloss row of resistances: shock weak, acid resistant.
+  zeitwart: {
+    kind: 'zeitwart', name: 'Der Zeitwart', body: 'human', ai: 'zeitwart', res: 'volk', radius: 0.9, scale: 1.9, hp: 5200, speed: 2.6,
+    attackRange: 2.6, windup: 0.6, active: 0.14, recovery: 0.7,
+    reach: 3.2, halfAngle: 75 * DEG, damage: 36, knockbackTaken: 0.05, poise: true, weight: 0, boss: true, noRage: true,
   },
 };
 
@@ -747,6 +758,21 @@ export const BOSS = {
     // Bot runs 2026-11-21: one Tee-Ifrit every 14 s was tried (fights 111 to 341 s) and made it worse (106 s, 2.7 deaths a
     // run: fewer kills, fewer heals). Two every 12 s stay.
     summon: 12, adds: 2, carpets: 1, tiers: [0.66, 0.33], curtain: 9, curtainDamage: 0.6, curtainFloor: 0.15, curtainOpen: 2, phase3: 0.85,
+  },
+  /**
+   * M17 Der Zeitwart (`src/sim/zeitwart.ts`). Phase changes at `phases` of life: he stands in the movement, untouchable,
+   * while the hero holds a gear seat (ring `hold.r` round a seat, `hold.need` s, an add every `hold.every` s), then he is
+   * stunned `hold.stun` s. Phase 1 (Urzeit, 1920): Zeigerhieb (a marked circle on the hero), Sprung (a marked line),
+   * two raptors or two Scherbentänzerinnen. Phase 2 (1981, 1989): a fan of five, a root field under the hero, an
+   * Uhrwerkläufer. Phase 3 (2089, kommt bald): Zeitsprung, three blinks to marked spots (the landing hurts `landDamage`)
+   * each with the Boxenkopf's shock ring, two drones; the clock hands turn `handBoost` times faster. Blocks: the Zeigerhieb
+   * is `bossSlam`, the Sprung `pounce`, the fan of five the Grenzer's `volley`. Cooldowns in seconds.
+   */
+  zeitwart: {
+    phases: [0.66, 0.33], hold: { r: 3.5, need: 6, every: 2, stun: 3 },
+    hieb: 3.6, sprung: 5.5, sprungFrom: 4, sprungTo: 12, fan: 4, roots: 6,
+    blink: 7, blinks: 3, blinkWarn: 0.5, blinkGap: 0.9, blinkRange: 7, landDamage: 0.7,
+    summon: 12, handBoost: 1.5,
   },
 } as const;
 

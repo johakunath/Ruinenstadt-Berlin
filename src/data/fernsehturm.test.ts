@@ -372,18 +372,21 @@ describe('Fernsehturm revolving band (T5)', () => {
 });
 
 describe('Fernsehturm scripted run', () => {
-  it('rides every lift, holds the crank and reaches the victory', () => {
+  it('rides every lift, holds the crank, chooses the ending and reaches the victory', () => {
     const sim = createSim({ level });
     const log: SimEvent[] = [];
     sim.god = true;
     let guard = 0;
     while (sim.run.phase !== 'won' && guard++ < 60 * 60 * 12) {
-      const enc = level.encounters[sim.run.index]!;
+      const enc = level.encounters[sim.run.index];
       if (sim.run.phase === 'travel') {
         const to = travelTarget(sim)!;
         teleport(sim, to.lift ? to.x : to.x, to.lift ? to.z + 0.9 : to.z);
       } else if (sim.run.phase === 'hold') {
-        teleport(sim, enc.hold!.at!.x, enc.hold!.at!.z);
+        teleport(sim, enc!.hold!.at!.x, enc!.hold!.at!.z);
+      } else if (sim.run.phase === 'choice') {
+        const ring = level.ending[0]!;
+        teleport(sim, ring.x, ring.z);
       }
       stepSim(sim, NO_INPUT);
       for (const e of sim.enemies) if (e.state !== 'dead' && e.stateT > 0.3) { e.state = 'dead'; e.stateT = 0; e.hp = 0; }
@@ -394,6 +397,9 @@ describe('Fernsehturm scripted run', () => {
     expect(log.filter((e) => e.type === 'lift')).toHaveLength(4);
     expect(log.filter((e) => e.type === 'power')).toHaveLength(1);
     expect(log.filter((e) => e.type === 'encounterClear')).toHaveLength(5);
+    expect(log.some((e) => e.type === 'choiceOpen')).toBe(true);
+    expect(log.find((e) => e.type === 'ending')).toEqual({ type: 'ending', choice: 'gestellt' });
+    expect(sim.inventory.camp?.ending).toBe('gestellt');
     expect(log.at(-1)?.type).toBe('victory');
     expect(deckAt(TURM_DECKS, sim.player.x, sim.player.z)?.id).toBe('uhrenraum');
   });

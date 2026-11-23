@@ -211,3 +211,14 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 - Cost: cloud readout on Leistung 61 to 76 draw calls, 29k to 49k triangles per deck; Qualität 121 to 191 calls, 100k to 176k triangles (the Telecafé is the largest). Textures about 25 MB with mips. No new light at runtime; five candles and the well glow join the pool.
 - Open for Johannes (hardware rows 57 to 59): look per deck, the city image, hand readability, the band, frame rate. Codex: texture row T11.
 
+## Step 3 spec (2026-11-23) [Claude · Opus high]
+
+| Topic | Numbers (start values; calibration below) |
+|---|---|
+| Waves | `turmWaveTier` in `src/data/fernsehturm.ts`: the Wedding formula at tier 48 to 70 over the 10 normal waves, at most 8 alive. Mix per deck: foyer Zeitlose (walker 6, runner 1.4, brute 0.6, spitter 0.8); Schacht walker 4, raptor 1.2, crow 0.8, Kabelghul 1, drone 0.8; Panoramaetage walker 4, Zünder 0.8, Schildträger 0.6, Heuler 0.6, rat 0.4, Uhrwerkläufer 0.8, Wurzler 0.6, Kernspeier 0.6; Telecafé walker 4, Scherbentänzerin 0.9, Logenbrecher 0.7, Souffleur 0.6, Tee-Ifrit 0.8, Baklava-Brocken 0.6, Teppichschlinger 0.6; boss adds walker, raptor, drone, Uhrwerkläufer, Scherbentänzerin, Tee-Ifrit. District strength 6 |
+| Echo (T8) | `src/sim/echo.ts`: life ×0.45, damage ×0.8, name „Echo: …“, no item drops (heal only), Kodex counts the kind. Two adds of the deck's mix. Pale body on a pale dial with a frozen second hand |
+| Der Zeitwart | `ENEMIES.zeitwart`: life 5200 (Sultan 4400), hit 36, speed 2.6, radius 0.9, scale 1.9, Koloss resistances (shock 1.7, acid 0.6), class Maschinen, no rage. `BOSS.zeitwart`: phases at 66 % and 33 %; gear hold ring 3.5 m round the seat nearest the hero, 6 s, an add every 2 s, then stunned and open 3 s. Phase 1: Zeigerhieb (`bossSlam`, every 3.6 s within 6 m), Sprung (`pounce`, every 5.5 s from 4 to 12 m), two raptors or two Scherbentänzerinnen every 12 s. Phase 2: volley of five (`volley`, every 4 s), root field (`roots`, every 6 s), one Uhrwerkläufer or two Zünder. Phase 3: Zeitsprung every 7 s (three blinks, 0.5 s mark, landing hit ×0.7, the Boxenkopf ring), Zeigerhieb up close, two drones or two Tee-Ifrite; the clock hands turn 1.5 times faster |
+| Lines | Start „Die Zeit steht. Das bleibt so.“, rage (first gear hold) „Zurück auf Null!“, special (his call) „Schlag zwölf!“; Piper clips `assets/voices/zeitwart-*.ogg`. Kodex „Steht er im Werk: Zahnrad einsetzen.“ |
+| Ending (T10) | Two rings r 0.65 beside the main switch, 1.5 s inside decides; `camp.ending` 'gestellt' or 'gelassen'; a run saved at the choice resumes at it |
+| Telespargel | Legendary spear, shock; Zeitzeichen every 12th hit stops every enemy within 5 m for 1.5 s (a stun, bosses take 15 % of it as of any stun). Drops for certain from the Zeitwart until it is in the Kodex, then one time in three |
+

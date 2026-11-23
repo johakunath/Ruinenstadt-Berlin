@@ -17,7 +17,7 @@ import { HeroView, loadCharacters, type CharacterAssets } from './characters';
 import { EnemyView } from './enemies';
 import { ENEMY_LAYER } from './layers';
 import { threatShake } from './threats';
-import type { BodyKind } from '../data/enemies';
+import { BOSS, type BodyKind } from '../data/enemies';
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
 import { LootView } from './loot';
@@ -35,7 +35,7 @@ import { NIGHT_SKY, skyZoneAt, type Sky } from './sky';
 import { SkyBlend } from './sky-blend';
 import type { TunnelState } from './tunnel-view';
 import type { TurmState } from './turm-world';
-import { LIFT } from '../sim/turm';
+import { ENDING, LIFT } from '../sim/turm';
 import { bridgeAwareSurface, groundY, setGround } from './ground';
 import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
@@ -101,7 +101,19 @@ function turmState(sim: Sim, time: number): TurmState {
     fighting: ph === 'fight' || ph === 'pause' || ph === 'hold',
     lift: sim.lift ? { i: sim.lift.i, k: Math.min(1, sim.lift.t / LIFT.ride) } : null,
     hold: ph === 'hold' && h ? { k: h.p / h.need, inside: h.inside } : null,
+    gear: gearOf(sim),
+    choice: { open: ph === 'choice', id: sim.choice?.id ?? null, k: Math.min(1, (sim.choice?.t ?? 0) / ENDING.hold) },
+    boost: sim.handBoost ?? null,
   };
+}
+
+/** M17: Der Zeitwart's gear hold for the view (the seat and the charge), if one runs. */
+function gearOf(sim: Sim): TurmState['gear'] {
+  for (const e of sim.enemies) {
+    const h = e.zw?.hold;
+    if (h && e.state !== 'dead') return { x: h.seat.x, z: h.seat.z, k: Math.min(1, h.p / BOSS.zeitwart.hold.need) };
+  }
+  return null;
 }
 
 /** Small sky environment for reflections on metal, glass and puddles: the sky gradient above, warm lamps low down. */

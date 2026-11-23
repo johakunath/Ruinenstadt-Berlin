@@ -18,6 +18,7 @@ import { AdditiveBlending, BufferAttribute, BufferGeometry, CircleGeometry, Cone
 import { apothem, deckAt, liftDoor, type DeckDef, type TurmSolid } from '../data/fernsehturm';
 import type { MapDef } from '../data/map';
 import { bandAngle, handAngle, LIFT, type HandDef } from '../sim/turm';
+import { BOSS } from '../data/enemies';
 import { FX_LAYER } from './layers';
 import type { LitMaterial, Materials } from './materials';
 import type { ChunkBuilder, MapMats } from './map-world';
@@ -393,6 +394,12 @@ export interface TurmState {
   lift: { i: number; k: number } | null;
   /** Crank hold: charge share and whether the hero stands in the ring; null outside the hold. */
   hold: { k: number; inside: boolean } | null;
+  /** Der Zeitwart's gear hold (T9): the seat, the charge share; null outside it. */
+  gear: { x: number; z: number; k: number } | null;
+  /** The ending choice (T10): open, and the ring the hero waits in with the share of the wait. */
+  choice: { open: boolean; id: string | null; k: number };
+  /** Der Zeitwart's third phase turns the hands faster from then on. */
+  boost: { t: number; k: number } | null;
 }
 
 export interface TurmView {
@@ -468,6 +475,23 @@ export function buildTurmView(m: MapDef, tm: TurmMats): TurmView {
     holdArc.position.set(holdC.x, 0.05, holdC.z);
     group.add(holdRing, holdArc);
   }
+  // Der Zeitwart's gear hold: the seat's ring (T9, radius `BOSS.zeitwart.hold.r`) and its charge arc.
+  const GR = BOSS.zeitwart.hold.r;
+  const gearRing = fx(new Mesh(new RingGeometry(GR - 0.15, GR, 64).rotateX(-Math.PI / 2), unlit(0xffd27a, 0.8)));
+  const gearArc = fx(new Mesh(new RingGeometry(GR - 0.6, GR - 0.2, ARC, 1).rotateX(-Math.PI / 2), unlit(0xffe8a0, 0.8)));
+  gearRing.visible = gearArc.visible = false;
+  group.add(gearRing, gearArc);
+  // The ending rings at the main switch (T10): gold for „Uhr stellen“ (the sunrise), night blue for „Stehen lassen“.
+  const endings = T.ending.map((q) => {
+    const ring = fx(new Mesh(new RingGeometry(q.r + 0.1, q.r + 0.25, 40).rotateX(-Math.PI / 2), unlit(q.id === 'gestellt' ? 0xffc040 : 0x5a8aff, 0.85)));
+    const fill = fx(new Mesh(new CircleGeometry(q.r, 32).rotateX(-Math.PI / 2), unlit(q.id === 'gestellt' ? 0xffd870 : 0x8ab0ff, 0.45)));
+    ring.position.set(q.x, 0.05, q.z);
+    fill.position.set(q.x, 0.04, q.z);
+    ring.visible = fill.visible = false;
+    group.add(ring, fill);
+    return { q, ring, fill };
+  });
+
   // Glass of the north windows: one see-through mesh per deck, slanted out like the ribs.
   const glassMat = new MeshBasicMaterial({ color: 0x9cc8dc, transparent: true, opacity: 0.12, depthWrite: false, side: DoubleSide });
   for (const d of decks) {
@@ -534,7 +558,7 @@ export function buildTurmView(m: MapDef, tm: TurmMats): TurmView {
       }
       city.update(s.time);
       for (const { h, blade, wedge, shadow } of hands) {
-        const a = handAngle(h, s.time), live = s.fighting && s.index === h.during;
+        const a = handAngle(h, s.time, s.boost), live = s.fighting && s.index === h.during;
         blade.rotation.y = wedge.rotation.y = shadow.rotation.y = a;
         wedge.visible = live;
         (blade.material as MeshBasicMaterial).opacity = live ? 0.95 : 0.5;
@@ -555,6 +579,19 @@ export function buildTurmView(m: MapDef, tm: TurmMats): TurmView {
         }
       }
       if (band && B) band.rotation.y = bandAngle(B, s.time);
+      gearRing.visible = gearArc.visible = !!s.gear;
+      if (s.gear) {
+        gearRing.position.set(s.gear.x, 0.06, s.gear.z);
+        gearArc.position.set(s.gear.x, 0.07, s.gear.z);
+        gearArc.geometry.setDrawRange(0, Math.round(ARC * s.gear.k) * 6);
+        (gearRing.material as MeshBasicMaterial).opacity = 0.6 + 0.3 * Math.sin(s.time * 6);
+      }
+      for (const { q, ring, fill } of endings) {
+        ring.visible = fill.visible = s.choice.open;
+        const k = s.choice.id === q.id ? s.choice.k : 0;
+        fill.scale.setScalar(Math.max(0.05, k));
+        (ring.material as MeshBasicMaterial).opacity = 0.6 + 0.3 * Math.sin(s.time * 3);
+      }
     },
   };
 }

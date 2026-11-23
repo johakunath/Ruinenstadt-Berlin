@@ -23,10 +23,10 @@ export type BaseId = 'latte' | 'rohr' | 'stahl' | 'machete' | 'brech' | 'vorschl
   | 'mikro' | 'poncho' | 'kmantel' | 'nbrille' | 'nauge' | 'zchip' | 'karm' | 'reflex' | 'bherz'
   | 'npumpe' | 'bassarm' | 'sichel' | 'werkh' | 'aufzieh' | 'zeiger' | 'blaumann' | 'stroh'
   | 'gartenh' | 'pickel' | 'kiezhelm' | 'kiezhand' | 'spreestief' | 'spreering' | 'topfhelm'
-  | 'eisenstief' | 'kiezbox' | 'schaffner' | 'weltuhr' | 'bestellung';
+  | 'eisenstief' | 'kiezbox' | 'schaffner' | 'weltuhr' | 'bestellung' | 'telespargel';
 export type LegendaryId = 'turm' | 'mauer' | 'ring' | 'spaeti' | 'panzer' | 'herz' | 'zitklinge' | 'pbrecher' | 'kraehe'
   | 'rattenmantel' | 'ritter' | 'auge' | 'siegsp' | 'bassarm' | 'pickel' | 'kiezbox'
-  | 'schaffner' | 'weltuhr' | 'bestellung';
+  | 'schaffner' | 'weltuhr' | 'bestellung' | 'telespargel';
 
 /** 2D RAR entries: display and item-value multiplier. */
 export interface RarityDefinition {
@@ -305,6 +305,8 @@ export const LEGENDARY_POWERS: Readonly<Record<LegendaryId, LegendaryPower>> = {
   weltuhr: { description: 'Dein erster Angriff nach einem Sprint ist immer ein Krit' },
   // M18 Wedding: the wish-lamp hammer (only on `fest` maps).
   bestellung: { description: 'Jeder dritte Treffer verbrüht Gegner ringsum mit heißem Tee' },
+  // M17 Fernsehturm: the tower spear, only from Der Zeitwart (Zeitzeichen).
+  telespargel: { description: 'Jeder zwölfte Treffer hält alle Gegner im Umkreis 1,5 Sekunden an' },
 };
 
 /** 2D LEGEL. */
@@ -317,6 +319,7 @@ export const LEGENDARY_ELEMENTS: Readonly<Partial<Record<LegendaryId, ElementId>
   kraehe: 'acid',
   siegsp: 'fire',
   bestellung: 'fire',
+  telespargel: 'shock',
 };
 
 /** 2D SLOTS. */

@@ -28,6 +28,7 @@ import { DT, type Enemy } from '../sim/types';
 import { Animator, type CharacterAssets } from './characters';
 import { groundY } from './ground';
 import { ZAP_TIME } from './status-fx';
+import { buildDialMark, updateDialMark } from './echo-mark';
 import type { LitMaterial, Materials } from './materials';
 import { WeaponRack } from './weapons';
 import {
@@ -89,6 +90,8 @@ const TINTS: Record<EnemyKind, number[]> = {
   // M18 Wedding (board: warm gold under lampions): an amber tea spirit, golden pastry, a ruddy regular, the Sultan.
   teeifrit: [0xffa048, 0xff9040], baklava: [0xd8a050, 0xe0b060], teppich: [0xffffff],
   zugezogene: [0xe8d0c0], hauptgericht: [0xd8a050], bauherr: [0xffffff], sultan: [0xdcb490],
+  // M17: weathered blue-grey steel on the exposed head, neck and hands (board 2: a humanoid robot).
+  zeitwart: [0x7c8a98],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
 type GearKey = EnemyKind | 'brigade';
@@ -115,7 +118,7 @@ const CLOTH: Partial<Record<EnemyKind, number>> = {
   // M16 Charlottenburg 1920: tux black, plum, the Ringvater's dark suit, violet tights under the glass.
   loge: 0x1e1c24, souffleur: 0x3a2244, scherbe: 0x8a6aa8, conferencier: 0x16141a, ringvater: 0x24222a, spiegelpaar: 0x6a5a8a, spiegelbild: 0x5a7aa0, diva: 0x4a2a58,
   // M18 Wedding: amber rags under the samovar, pastry brown, grey trousers, the Sultan's ruby.
-  teeifrit: 0xc87a3a, baklava: 0x8a5a2a, hauptgericht: 0x8a5a2a, zugezogene: 0x2a2a34, sultan: 0x7a1830,
+  teeifrit: 0xc87a3a, baklava: 0x8a5a2a, hauptgericht: 0x8a5a2a, zugezogene: 0x2a2a34, sultan: 0x7a1830, zeitwart: 0x3e4a5a,
 };
 const CLOTH_BRIGADE = 0x34528e;
 /** WP5: rag tints for normal ghouls without own clothing colour (multiplies the painted rags), one per body. */
@@ -150,6 +153,7 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
   teeifrit: { thigh_l: 0.05, thigh_r: 0.05, spine_02: 0.95, Head: 1.08 },
   baklava: { spine_02: 1.3, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 }, hauptgericht: { spine_02: 1.3, upperarm_l: 1.15, upperarm_r: 1.15, Head: 0.05 },
   zugezogene: { spine_02: 0.94, Head: 1.0 }, sultan: { spine_01: 1.25, spine_02: 1.15, Head: 0.95 },
+  zeitwart: { spine_01: 0.9, spine_02: 0.95, Head: 0.92 },
 };
 
 /** Extra stretch of the whole body: x/z, y. */
@@ -159,14 +163,14 @@ const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
   loge: [1.14, 1], souffleur: [0.86, 1.08], scherbe: [0.86, 1.04], conferencier: [0.9, 1.08], ringvater: [1.18, 1], spiegelpaar: [0.9, 1.04], spiegelbild: [0.9, 1.04], diva: [0.9, 1.06],
-  baklava: [1.15, 1], hauptgericht: [1.15, 1], zugezogene: [0.92, 1.04], sultan: [1.1, 1],
+  baklava: [1.15, 1], hauptgericht: [1.15, 1], zugezogene: [0.92, 1.04], sultan: [1.1, 1], zeitwart: [0.88, 1.08],
 };
 /** H3: humanoid bosses stand upright (`EnemyView.straighten`); the Rattenmutter keeps her hunch. */
 const UPRIGHT: Partial<Record<EnemyKind, true>> = {
   feldwebel: true, hauptmann: true, schaffner: true, grenzer: true, brandmeister: true, spreehexe: true,
   tuersteher: true, dirigent: true, bassprediger: true, wurzelmutter: true,
   scherbe: true, conferencier: true, ringvater: true, spiegelpaar: true, spiegelbild: true, diva: true,
-  zugezogene: true, sultan: true, teeifrit: true,
+  zugezogene: true, sultan: true, teeifrit: true, zeitwart: true,
 };
 /** The bones whose zombie-to-upright turn `straighten` applies. */
 const STRAIGHT = ['spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head', 'clavicle_l', 'clavicle_r'] as const;
@@ -180,7 +184,7 @@ const EYES: Partial<Record<EnemyKind, number>> = {
   // M16: violet glass light in the revue ghouls; the reflection's eyes cold blue.
   scherbe: 0xc88cff, loge: 0xc88cff, souffleur: 0xc88cff, conferencier: 0xe8b4ff, spiegelpaar: 0xff8aa8, spiegelbild: 0x8ad8ff, diva: 0xffb4e0,
   // M18: gold eyes in the tea spirit and the host, the regular's bleary amber.
-  teeifrit: 0xffe08a, zugezogene: 0xffb04a, sultan: 0xffd060,
+  teeifrit: 0xffe08a, zugezogene: 0xffb04a, sultan: 0xffd060, zeitwart: 0xffb040,
 };
 /** M12c: on neon maps these get pink cables and two lit implant dots (2D `D.cyber`). */
 const CYBER: Partial<Record<EnemyKind, true>> = { walker: true, runner: true, brute: true };
@@ -193,7 +197,7 @@ interface GearKit {
   neon: LitMaterial; cyan: LitMaterial; violet: LitMaterial; speaker: LitMaterial; cone: LitMaterial; hazard: LitMaterial; paper: LitMaterial; jacket: LitMaterial; lining: LitMaterial;
   vest: LitMaterial; reflect: LitMaterial; plate: LitMaterial; belly: LitMaterial; flesh: LitMaterial; riot: LitMaterial; visor: LitMaterial; spark: LitMaterial;
   // WP5 step 3 (boss looks): coats per district, the Brandmeister's bands, the Rattenmutter's fur, the Turmwächter's tower.
-  garde: LitMaterial; officer: LitMaterial; navy: LitMaterial; turnout: LitMaterial; band: LitMaterial; helmet: LitMaterial;
+  garde: LitMaterial; officer: LitMaterial; navy: LitMaterial; zwcoat: LitMaterial; turnout: LitMaterial; band: LitMaterial; helmet: LitMaterial;
   hair: LitMaterial; white: LitMaterial; fur: LitMaterial; furDark: LitMaterial; grime: LitMaterial; rags: LitMaterial; pink: LitMaterial; eye: LitMaterial;
   tower: LitMaterial; shaft: LitMaterial; beacon: LitMaterial; fire: LitMaterial; window: LitMaterial; helmFire: LitMaterial; helmFlame: LitMaterial; garden: LitMaterial;
   /** Shared vertex-coloured materials of the boss gear (`assemble` with `paint`). */
@@ -244,6 +248,8 @@ function gearKit(m: Materials): GearKit {
     garde: m.surface({ color: 0x34477a, roughness: 0.85, doubleSided: true }),
     officer: m.surface({ color: 0x28355e, roughness: 0.8, doubleSided: true }),
     navy: m.surface({ color: 0x232c44, roughness: 0.85, doubleSided: true }),
+    // M17 Der Zeitwart: the grey-blue GDR work coat of the Zeitnormal's duty officers (board 2).
+    zwcoat: m.surface({ color: 0x4e5e72, roughness: 0.85, doubleSided: true }),
     // Xhain 1981: a sooty turnout coat with yellow reflective bands, a leather fire helmet.
     turnout: m.surface({ color: 0x3c3229, roughness: 0.9, doubleSided: true }),
     band: m.surface({ color: 0xe0b428, emissive: 0x4a3a08, emissiveIntensity: 0.7, roughness: 0.45, doubleSided: true }),
@@ -878,7 +884,9 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
     || kind === 'scherbe' || kind === 'loge' || kind === 'souffleur' || kind === 'conferencier' || kind === 'ringvater' || kind === 'spiegelpaar' || kind === 'spiegelbild' || kind === 'diva'
     || kind.startsWith('revue')
     // M18: every Wedding body and the Zecher dress.
-    || kind === 'teeifrit' || kind === 'baklava' || kind === 'hauptgericht' || kind === 'zugezogene' || kind === 'sultan' || kind.startsWith('fest');
+    || kind === 'teeifrit' || kind === 'baklava' || kind === 'hauptgericht' || kind === 'zugezogene' || kind === 'sultan' || kind.startsWith('fest')
+    // M17: Der Zeitwart.
+    || kind === 'zeitwart';
   const mount = (name: string, parts: Part[], dy = 0, dz = 0, dx = 0): Object3D | undefined => {
     const b = bone(name);
     if (!b) return undefined;
@@ -1641,6 +1649,65 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
       ]);
       break;
     }
+    case 'zeitwart': {
+      // M17 Der Zeitwart (board 2, `docs/style/fernsehturm-zeitwart.webp`): a humanoid robot, the last duty officer of
+      // the Zeitnormal. Long grey-blue work coat with brass buttons and a belt, watch chains across the chest, the
+      // Unruh ticking in an open brass housing on his chest (J2: his heart), a peaked cap with a dial badge, a dial
+      // monocle with an amber lens, the long brass minute hand as his right forearm blade, the short heavy hour hand on
+      // the left, a pendulum on his back. Head and hands are the steel skin (`TINTS`).
+      const fit = new BodyFit(model);
+      const coat = fitCoat(fit, { mat: 'zwcoat', pad: 0.035, hem: 0.22, flare: 0.14, open: 1.3, collar: 'zwcoat' });
+      const o3 = coat.o('spine_03'), o1 = coat.o('spine_01');
+      for (const f of [1.6, 2.5, 3.4]) coat.add('spine_03', [onShell(new SphereGeometry(0.017, 6, 4), coat.chest, o3, f, -0.32, 0.006), 'brass']);
+      for (const f of [2.4, 3.5]) coat.add('spine_01', [onShell(new SphereGeometry(0.017, 6, 4), coat.belly, o1, f, -0.3, 0.006), 'brass']);
+      coat.add('spine_01', [band(coat.belly, o1, 1.2, 1.7, 0.012), 'dark'], [onShell(new BoxGeometry(0.07, 0.055, 0.012), coat.belly, o1, 1.45, 0, 0.016), 'brass']);
+      for (const sd of ['l', 'r'] as const) coat.add(`lowerarm_${sd}`, [band(coat.arm[`lowerarm_${sd}`], coat.o(`lowerarm_${sd}`), 2.4, 3, 0.008), 'brass']);
+      mountCoat(coat);
+      // The Unruh: a brass wheel with spokes and a hairspring in an open ring housing, glowing at its hub.
+      mount('spine_03', [
+        [tf(new TorusGeometry(0.11, 0.016, 6, 24), 0, -0.02, 0.2), 'brass'],
+        [tf(new TorusGeometry(0.075, 0.009, 4, 20), 0, -0.02, 0.21), 'brass'],
+        ...[0, 1, 2].map((i): Part => [tf(new BoxGeometry(0.2, 0.012, 0.012), 0, -0.02, 0.21, 0, 0, (i * Math.PI) / 3), 'brass']),
+        [tf(new SphereGeometry(0.03, 8, 6), 0, -0.02, 0.22), 'spark'],
+        // Watch chains from the buttons to the pockets.
+        [cable([[-0.16, 0.1, 0.17], [-0.06, -0.02, 0.2], [0.08, -0.08, 0.19], [0.18, 0.02, 0.15]], 0.008), 'brass'],
+        [cable([[-0.18, -0.12, 0.16], [-0.04, -0.2, 0.19], [0.14, -0.16, 0.16]], 0.007), 'brass'],
+      ], 0.02);
+      // The pendulum on his back: a rod down from the shoulders and a heavy brass bob at the knees.
+      mount('spine_02', [
+        [tf(new CylinderGeometry(0.012, 0.012, 0.85, 6), 0, -0.3, -0.24), 'brass'],
+        [tf(new CylinderGeometry(0.11, 0.11, 0.04, 18), 0, -0.74, -0.25, Math.PI / 2), 'brass'],
+      ]);
+      // Peaked cap with a dial badge; the dial monocle over the right eye with its amber lens.
+      const head = fit.box(['Head']), hp = fit.at('Head');
+      // The head is drawn smaller (`SHAPE`), so the cap sits lower than the Schaffner's.
+      const at = new Vector3(head.c.x, head.max.y - 0.14, head.c.z - 0.01);
+      const eye = fit.eyes.clone().add(new Vector3(-0.035, 0, 0.03)).sub(at);
+      mount('Head', [
+        ...([
+          [tf(new CylinderGeometry(0.155, 0.138, 0.1, 16).scale(1, 1, 1.1), 0, 0.05, 0), 'zwcoat'],
+          [tf(new CylinderGeometry(0.16, 0.16, 0.02, 16).scale(1, 1, 1.12), 0, 0.1, 0), 'zwcoat'],
+          [tf(new CylinderGeometry(0.141, 0.141, 0.035, 16, 1, true).scale(1, 1, 1.1), 0, 0.018, 0), 'dark'],
+          [tf(new CylinderGeometry(0.14, 0.14, 0.012, 14, 1, false, -1.2, 2.4).scale(1, 1, 1.45), 0, -0.002, 0.012, 0.3), 'dark'],
+          [tf(new CylinderGeometry(0.03, 0.03, 0.01, 14), 0, 0.06, 0.168, Math.PI / 2 - 0.1), 'brass'],
+        ] as Part[]).map(([g, m]): Part => [g.rotateX(0.16), m]),
+        [tf(new TorusGeometry(0.035, 0.007, 4, 16), eye.x, eye.y, eye.z), 'brass'],
+        [tf(new CircleGeometry(0.03, 12), eye.x, eye.y, eye.z + 0.002), 'lamp'],
+        [cable([[eye.x - 0.03, eye.y - 0.02, eye.z], [eye.x - 0.06, eye.y - 0.12, eye.z - 0.04]], 0.004), 'brass'],
+      ], at.y - hp.y, at.z - hp.z, at.x - hp.x);
+      // Clock hands as arms: the long minute hand on the right, the short heavy hour hand on the left.
+      mount('hand_r', [
+        [tf(new BoxGeometry(0.05, 0.9, 0.012), 0, -0.48, 0.03), 'brass'],
+        [tf(new ConeGeometry(0.06, 0.18, 4).scale(1, 1, 0.25), 0, -1.0, 0.03, Math.PI), 'brass'],
+        [tf(new CylinderGeometry(0.045, 0.045, 0.03, 12), 0, 0, 0.03, Math.PI / 2), 'brass'],
+      ]);
+      mount('hand_l', [
+        [tf(new BoxGeometry(0.09, 0.5, 0.016), 0, -0.28, 0.03), 'brass'],
+        [tf(new ConeGeometry(0.1, 0.16, 4).scale(1, 1, 0.25), 0, -0.6, 0.03, Math.PI), 'brass'],
+        [tf(new CylinderGeometry(0.055, 0.055, 0.035, 12), 0, 0, 0.03, Math.PI / 2), 'brass'],
+      ]);
+      break;
+    }
     // M18 Zecher on `fest` maps: a stained shirt over the rags and a mug in the right hand; the Brocken only the mug.
     case 'festShirt':
       mount('spine_03', [...tunic('shirt', 'shirt').slice(0, 2),
@@ -1986,6 +2053,8 @@ export class EnemyView {
   /** M18: the Sultan's carpet, the Bauherr's scaffold and mixer on the Koloss, the code-built Teppichschlinger. */
   private carpet: Group | null = null;
   private scooter: Group | null = null;
+  /** M17: the clock dial under an echo boss or Der Zeitwart (`echo-mark.ts`). */
+  private dial: Group | null = null;
   private bauherr: { group: Group; mixer: Group } | null = null;
   private rug: Rug | null = null;
   private spitT = 0;
@@ -2444,6 +2513,10 @@ export class EnemyView {
       this.inner.add(this.scooter);
     }
     if (this.scooter) this.scooter.visible = false;
+    // M17: echoes stand on a pale dial with a frozen hand, Der Zeitwart on a dial in his era's colour.
+    const dial = !!e.echo || e.kind === 'zeitwart';
+    if (dial && !this.dial) { this.dial = buildDialMark(e.def.radius + 0.9); this.root.add(this.dial); }
+    if (this.dial) this.dial.visible = dial;
     // M18: Der Ewige Bauherr is the Koloss slab under scaffold; a cement mixer turns where the clock ring was.
     if (this.koloss) {
       const own = e.kind === 'bauherr';
@@ -2469,6 +2542,7 @@ export class EnemyView {
     this.root.rotation.y = lerpAngle(e.pfacing, e.facing, alpha);
     if (!frozen) this.time += dt;
     this.frameDt = frozen ? 0 : dt;
+    if (this.dial?.visible) updateDialMark(this.dial, e, this.time);
     // White hit flash: full for half the time, then fading. Runs through hitstop.
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt);
@@ -2479,10 +2553,11 @@ export class EnemyView {
       // E1: shocked bodies strobe cyan, burning ones pulse orange, corroded ones green (set every frame);
       // open ones glow gold, slowed ones cold blue, elites faintly in their color (set once).
       if (this.zap > 0) this.zap = Math.max(0, this.zap - dt);
-      const st = e.state === 'dead' ? 0 : this.zap > 0 ? 6 : e.burn > 0 ? 1 : e.acid > 0 ? 2 : e.open > 0 ? 3 : (e.slow ?? 0) > 0 ? 5 : e.elite ? 4 : 0;
+      const st = e.state === 'dead' ? 0 : this.zap > 0 ? 6 : e.burn > 0 ? 1 : e.acid > 0 ? 2 : e.open > 0 ? 3 : (e.slow ?? 0) > 0 ? 5 : e.elite ? 4 : e.echo ? 7 : 0;
       // M16 Tausch: both the real one and her reflection shimmer white while it winds up.
       const swap = (q: Enemy | undefined): number => (q && q.state === 'special' && q.sp?.kind === 'swap' && q.stateT < q.sp.wind ? q.stateT / q.sp.wind : 0);
-      const shimmer = Math.max(swap(e), swap(host));
+      // M17: Der Zeitwart shimmers gold while he stands in the movement (untouchable, a gear hold).
+      const shimmer = Math.max(swap(e), swap(host), e.zw?.hold ? 0.6 : 0);
       if (shimmer > 0) {
         this.status = -1;
         for (const m of this.mats) m.emissive.setScalar((0.25 + 0.35 * Math.sin(this.time * 30) ** 2) * shimmer);
@@ -2501,7 +2576,8 @@ export class EnemyView {
         }
       } else if (st !== this.status) {
         this.status = st;
-        const hex = st === 3 ? 0x5a4408 : st === 5 ? 0x1c3866 : st === 4 ? new Color(ELITES[e.elite!].color).multiplyScalar(0.16).getHex() : 0x000000;
+        // M17: an echo is pale (a washed-out double of the boss).
+        const hex = st === 3 ? 0x5a4408 : st === 5 ? 0x1c3866 : st === 4 ? new Color(ELITES[e.elite!].color).multiplyScalar(0.16).getHex() : st === 7 ? 0x4a5a6a : 0x000000;
         for (const m of this.mats) m.emissive.setHex(hex);
       }
     }
