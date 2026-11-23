@@ -249,7 +249,7 @@ export function weddingMap(scale = 1): MapDef {
     // Zone 0. The start beside the U-Bahn entrance on the square's tip; the church as a backdrop on the square;
     // the invented Neubau with crane and banner west of the Müllerstraße; the pub closing the Nettelbeckplatz.
     L('ubahn', -3, -9, 145 * DEG, 1.8, 3, 1.5, { name: 'U Leopoldplatz' }),
-    L('nazareth', 2, -36, 0, 9, 6, 2, { name: 'Alte Nazarethkirche' }),
+    L('nazareth', 2, -37.5, 0, 7, 9.5, 2, { name: 'Alte Nazarethkirche' }),
     L('neubau', -44, 4, 0, 12, 8, 2, { name: 'Neubau im Gerüst' }),
     kneipe,
     // Zone 1. The Amtsgericht north-west of the Brunnenplatz, its front to the court.

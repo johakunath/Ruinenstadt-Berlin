@@ -1,4 +1,4 @@
-// Dev tool page: one Köpenick, Xhain, Alexanderplatz, Mitte or Charlottenburg landmark in daylight from several views, for art checks against the
+// Dev tool page: one Köpenick, Xhain, Alexanderplatz, Mitte, Charlottenburg or Wedding landmark in daylight from several views, for art checks against the
 // reference photos (M11d). Never part of the game build.
 //   /tools/landmark-sheet.html?kind=rathaus                three-quarter, front, game camera, top
 //   &views=quarter,game  &variant=1 (dinos)  &w=480&h=400
@@ -10,6 +10,8 @@ import { paintAlexAtlas } from '../src/render/alex-paint';
 import { mitteMap } from '../src/data/mitte';
 import { buildMitteLandmark, MITTE_KINDS, mitteMats } from '../src/render/mitte-world';
 import { charlottenburgMap } from '../src/data/charlottenburg';
+import { weddingMap } from '../src/data/wedding';
+import { buildKneipe, buildWeddingLandmark, makeWeddingMats, WEDDING_KINDS } from '../src/render/wedding-world';
 import { buildGlbProps } from '../src/render/glb-props';
 import { buildCharlottenburgLandmark, CHARLOTTENBURG_KINDS, CHARLOTTENBURG_WEAR } from '../src/render/charlottenburg-world';
 import type { LandmarkKind } from '../src/data/map';
@@ -26,7 +28,7 @@ const kind = (q.get('kind') ?? 'rathaus') as LandmarkKind;
 const variant = Number(q.get('variant') ?? 0);
 const views = (q.get('views') ?? 'quarter,front,game,top').split(',');
 const W = Number(q.get('w') ?? 480), H = Number(q.get('h') ?? 420);
-const def = [...koepenickMap().landmarks, ...alexMap().landmarks, ...mitteMap().landmarks, ...charlottenburgMap().landmarks].find((l) => l.kind === kind && (l.variant ?? 0) === variant)!;
+const def = [...koepenickMap().landmarks, ...alexMap().landmarks, ...mitteMap().landmarks, ...charlottenburgMap().landmarks, ...weddingMap().landmarks].find((l) => l.kind === kind && (l.variant ?? 0) === variant)!;
 const l = { ...def, x: 0, z: 0, rot: 0 };
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
@@ -36,13 +38,18 @@ const materials = new Materials(LOOK, PROFILES.qualitaet);
 const mm = makeMapMats(materials, CHARLOTTENBURG_KINDS.has(kind) && !q.has('old') ? 'charlottenburg' : undefined);
 if (ALEX_KINDS.has(kind)) { const t = paintAlexAtlas(); mm.alex = materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe0a0, emissiveIntensity: 0.8, roughness: 0.6 }); }
 if (MITTE_KINDS.has(kind)) mm.mitte = mitteMats(materials);
+const wedding = WEDDING_KINDS.has(kind) || kind === 'kneipe';
+if (wedding) mm.wedding = makeWeddingMats(materials);
 if (!q.has('clean')) {
   mm.landmarkWear = makeLandmarkWearMaterial(materials);
   if (!ALEX_KINDS.has(kind) && !MITTE_KINDS.has(kind) && !CHARLOTTENBURG_KINDS.has(kind)) mm.landmarkFinishes = makeLandmarkFinishes(materials, mm.slate);
 }
-const b = new ChunkBuilder(mm);
+const b = new ChunkBuilder(mm), up = new ChunkBuilder(mm);
 b.wearLandmark(l, () => {
-  if (ALEX_KINDS.has(kind)) buildAlexLandmark(b, l);
+  // M18: Wedding sights (`?kind=kneipe&up=0` hides the pub's roof and upper walls as the game does inside).
+  if (kind === 'kneipe') buildKneipe(b, up, l);
+  else if (wedding) buildWeddingLandmark(b, l);
+  else if (ALEX_KINDS.has(kind)) buildAlexLandmark(b, l);
   else if (MITTE_KINDS.has(kind)) buildMitteLandmark(b, l);
   else if (CHARLOTTENBURG_KINDS.has(kind)) buildCharlottenburgLandmark(b, l);
   else buildLandmark(b, l);
@@ -53,7 +60,8 @@ scene.add(new HemisphereLight(0xe8f0ff, 0x5a5040, 2.0));
 const sun = new DirectionalLight(0xfff0d8, 2.6);
 sun.position.set(-30, 50, 40);
 scene.add(sun, new GridHelper(80, 40, 0x50606a, 0x6a7a80));
-for (const m of [...b.solid.meshes(), ...b.cards.meshes()]) scene.add(m);
+const parts = [b, ...(q.get('up') === '0' ? [] : [up])];
+for (const m of parts.flatMap((p) => [...p.solid.meshes(), ...p.cards.meshes(), ...p.glows.meshes()])) scene.add(m);
 if (mm.glbProps.length) { const g = new Group(); buildGlbProps(materials, mm.glbProps, g, mm.stucco.map); scene.add(g); }
 // Let the async ground/paint textures arrive.
 await new Promise((r) => setTimeout(r, 1500));
@@ -66,7 +74,8 @@ const tall = ({ rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnho
   zoobahnhof: 16, gedaechtniskirche: 61, kadewe: 18, opernhaus: 28, schlossmitte: 36, belvedere: 19, ehrenhoftor: 8, orangerie: 11, revuepalast: 18,
   loewentor: 7, elefantentor: 11, aquarium: 12, musikpavillon: 8, antilopenhaus: 12, ufapalast: 16, capitol: 9, romanischescafe: 24, gloriapalast: 21,
   marmorhaus: 17, wittenbergplatz: 12, cafewestens: 22, theaterwestens: 24, variete: 14, schillertheater: 21, hochschule: 22, chtor: 16, stuelerbau: 19,
-  schlossfluegel: 15, neuerfluegel: 16, gartentor: 6, mausoleum: 10, chrathaus: 45 } as Record<string, number>)[kind] ?? 12;
+  schlossfluegel: 15, neuerfluegel: 16, gartentor: 6, mausoleum: 10, chrathaus: 45,
+  nazareth: 15, neubau: 30, kneipe: 7, amtsgericht: 24, flakturm: 18, beamtentor: 16, maschinenhalle: 14 } as Record<string, number>)[kind] ?? 12;
 const cam = new PerspectiveCamera(36, W / H, 0.5, 600);
 renderer.setScissorTest(true);
 views.forEach((v, i) => {
@@ -86,6 +95,6 @@ views.forEach((v, i) => {
   renderer.render(scene, cam);
 });
 // Triangles of the landmark (solid and card batches), for budget checks: read from the title.
-const tris = [...b.solid.meshes(), ...b.cards.meshes()].reduce((n, m) => n + (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute('position').count) / 3, 0);
-const draws = b.solid.meshes().length + b.cards.meshes().length;
+const tris = parts.flatMap((p) => [...p.solid.meshes(), ...p.cards.meshes()]).reduce((n, m) => n + (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute('position').count) / 3, 0);
+const draws = parts.reduce((n, p) => n + p.solid.meshes().length + p.cards.meshes().length, 0);
 document.title = `done ${kind} tris=${tris} draws=${draws}`;
