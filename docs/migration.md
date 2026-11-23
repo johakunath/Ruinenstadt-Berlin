@@ -12,7 +12,7 @@ Open work only. Read `CLAUDE.md`, then the linked task and only its source and t
 | M15 Alexanderplatz step 4 photo check for the landmarks built without a downloaded photo | Claude · Opus high | open: `docs/tasks/m15-alexanderplatz.md` |
 | P1b Proxy passes: one draw call per chunk in the pre-pass and the shadow pass (draw calls about −50 %) | Claude · Opus high (spec: Fable high) | open, after Johannes' heat measurements (checks 1 to 3): `docs/tasks/p1b-proxy-passes.md` |
 | M14 balance calibration to Johannes (B9, B10) | Claude · Fable high | after the playtest: `docs/tasks/m14-balance-bot.md`, `docs/balance.md` |
-| Painted textures: T6 Xhain | Codex | open: `docs/asset-pipeline.md` › Texture queue and `docs/tasks/m15-mitte.md` |
+| Painted textures: T6 Xhain, locally first (W1 FLUX.2 klein; Codex only as fallback, Johannes 2026-11-23) | Claude · Opus medium · PC | open: `docs/local-ai-assets.md` › W1, `docs/asset-pipeline.md` › Texture queue and `docs/tasks/m15-mitte.md` |
 | Texture performance and rail follow-up: T1b, plus profile checks for the new painted batches | Claude and Johannes | open: `docs/tasks/t1b-ground-polish.md`, `docs/tasks/pt-hardware-checks.md` |
 | WP4 Hero, weapons and loot visuals: equipment on the hero (P32), pickups per kind (P10), legendary and set looks (P31), 2D #2 close-out, daggers (2D #38). Step 1 (weapon model per base, weapon types, rendered icons) is built | Claude · Opus high (spec: Fable high, done) | open: step 2 (clothing) built 2026-11-19, tunnel set waits for Johannes' pick; step 3 next; `docs/tasks/wp4-equipment-visuals.md` (gates G2 to G4 need Johannes before steps 3, 5, 6b) |
 | Backlog ready to build: P17 Spreepark dinos, P18 ambient animals | Claude · Opus high | open: `docs/backlog.md` |
