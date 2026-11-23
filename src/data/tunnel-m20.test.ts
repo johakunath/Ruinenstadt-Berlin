@@ -329,7 +329,7 @@ describe('M20 trader on the start platform', () => {
 
 describe('tunnel roles (B2 step 3)', () => {
   it('every normal tunnel wave on every line brings fodder, a heavy line and a bulwark, in fewer bodies', () => {
-    for (const line of [0, 1, 2, 3]) {
+    for (const line of LINES.keys()) {
       for (const e of tunnelMap(line).encounters) for (const w of e.waves) {
         if (w.bosses.length) continue;
         for (const k of ['runner', 'zuender', 'brute', 'schild'] as const) expect(w.mix[k] ?? 0, `${line} ${e.name} ${k}`).toBeGreaterThan(0);

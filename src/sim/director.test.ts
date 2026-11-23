@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { koepenickMap } from '../data/koepenick';
 import { generateLots, mapLevel } from '../data/map';
 import { PLAYER } from '../data/combat';
-import { DISTRICT_STEP } from '../data/enemies';
+import { BOSS_DMG_STEP, BOSS_HP_STEP, BOSS_HP_STEPS, DISTRICT_STEP } from '../data/enemies';
 import { createSim, stepSim } from './sim';
 import { setLoadout } from './loadout';
 import { summon } from './ai';
 import { encounterAlive, spawnEnemy, splitElite } from './enemies';
 import { DT, NO_INPUT, type Sim, type SimEvent } from './types';
 import { Level } from './level';
-import { LULL } from './director';
+import { bossScale, LULL } from './director';
 
 const map = koepenickMap(1);
 const level = mapLevel(map, generateLots(map));
@@ -255,6 +255,15 @@ describe('district step (bot campaigns 2026-11-21)', () => {
     const a = first(0), c = first(2);
     expect(c.hp / a.hp).toBeCloseTo(1 + 2 * DISTRICT_STEP.hp, 1);
     expect(c.dmg / a.dmg).toBeCloseTo(1 + 2 * DISTRICT_STEP.dmg, 5);
+  });
+});
+
+describe('boss scaling (B2 step 3)', () => {
+  it('Köpenick bosses are unchanged; later bosses get extra life per step up to the cap and part of the damage step', () => {
+    expect(bossScale(0)).toEqual({ hp: 1, dmg: 1 });
+    expect(bossScale(2).hp).toBeCloseTo((1 + 2 * DISTRICT_STEP.hp) * (1 + 2 * BOSS_HP_STEP), 5);
+    expect(bossScale(2).dmg).toBeCloseTo(1 + 2 * DISTRICT_STEP.dmg * BOSS_DMG_STEP, 5);
+    expect(bossScale(5).hp).toBeCloseTo((1 + 5 * DISTRICT_STEP.hp) * (1 + BOSS_HP_STEPS * BOSS_HP_STEP), 5);
   });
 });
 

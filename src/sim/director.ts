@@ -118,21 +118,37 @@ const GATE_HALF_DEPTH = 0.3;
  * `LULL.time` seconds, they were stuck where the hero cannot reach them (a pocket by the generator, a channel behind
  * the Magendoktor bar, a wall seam): they step out at a free spot near the hero. A boss on its landmark stays.
  */
-export const LULL = { time: 20, max: 3 } as const;
+export const LULL = { time: 20, max: 3, moved: 2, near: 3 } as const;
 export function unstickStragglers(sim: Sim, index: number): void {
   const run = sim.run, p = sim.player;
-  if (sim.events.some((e) => e.type === 'hit' || e.type === 'playerHit' || e.type === 'spawn')) { run.lullT = 0; return; }
   const left = sim.enemies.filter((e) => e.enc === index && e.state !== 'dead' && e.sleep === undefined && e.mirrorOf === undefined);
-  if (left.length === 0 || left.length > LULL.max) { run.lullT = 0; return; }
+  // Only the hero landing a hit on this fight resets the spell: a stuck spitter that keeps hitting her is still stuck.
+  const ids = new Set(left.map((e) => e.id));
+  if (left.length === 0 || left.length > LULL.max || sim.events.some((e) => (e.type === 'hit' && ids.has(e.id)) || e.type === 'spawn')) { run.lullT = 0; return; }
+  if (!run.lullT) for (const e of left) LULL_FROM.set(e, { x: e.x, z: e.z });
   if ((run.lullT = (run.lullT ?? 0) + DT) < LULL.time) return;
   run.lullT = 0;
   for (const e of left) {
-    if (e.home) continue;
+    // A boss on its landmark stays; a body that moves (kites, hides behind cover and comes back) or stands at the hero is not stuck.
+    const from = LULL_FROM.get(e);
+    if (e.home || !from || Math.hypot(e.x - from.x, e.z - from.z) > LULL.moved || Math.hypot(e.x - p.x, e.z - p.z) < LULL.near) continue;
     const q = freeSpot(sim.level, sim.rng, p.x, p.z, 5, 9, e.def.radius + 0.2, (x, z) => !gateBetween(sim, p.x, p.z, x, z));
     if (!q) continue;
     e.x = e.px = q.x;
     e.z = e.pz = q.z;
   }
+}
+/** Where each straggler stood when the quiet spell began. */
+const LULL_FROM = new WeakMap<Enemy, { x: number; z: number }>();
+
+/**
+ * District scaling of a fight boss: the full life step plus `BOSS_HP_STEP` extra life per step (capped at
+ * `BOSS_HP_STEPS`), and `BOSS_DMG_STEP` of the damage step (B2 step 3; the Spreehexe killed a weaker bot five
+ * times with the full damage step while normal fights stayed easy).
+ */
+export function bossScale(strength: number): { hp: number; dmg: number } {
+  const ds = districtScale(strength);
+  return { hp: ds.hp * (1 + BOSS_HP_STEP * Math.min(BOSS_HP_STEPS, Math.max(0, strength))), dmg: 1 + (ds.dmg - 1) * BOSS_DMG_STEP };
 }
 
 /** A closed grating lies between two points (spawns never appear behind one). */
@@ -264,11 +280,8 @@ export function updateDirector(sim: Sim): void {
       // Nothing comes out until it stands.
     } else if (boss) {
       const s = enc.bossAt ?? rimSpot(sim, enc, ENEMIES[boss].radius);
-      // Bosses take the full life step but 40 % of the damage step (verification chains: the Spreehexe killed a weaker
-      // bot 12 times with the full step while normal fights stayed easy).
-      const ds = districtScale(sim.level.strength);
-      const bossHp = 1 + BOSS_HP_STEP * Math.min(BOSS_HP_STEPS, Math.max(0, sim.level.strength));
-      const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp * ds.hp * bossHp, w.dmgMul * df.dmg * (1 + (ds.dmg - 1) * BOSS_DMG_STEP));
+      const bs = bossScale(sim.level.strength);
+      const e = spawnEnemy(sim, s.x, s.z, boss, w.hpMul * df.hp * bs.hp, w.dmgMul * df.dmg * bs.dmg);
       // It stands where the landmark stood: the landmark's colliders leave until it dies.
       if (enc.bossAt) {
         e.home = { x: s.x, z: s.z };

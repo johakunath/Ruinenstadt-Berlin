@@ -548,9 +548,15 @@ export function summon(sim: Sim, e: Enemy, kind: EnemyKind, count: number): void
   const r = ENEMIES[kind].radius;
   const ok = (x: number, z: number): boolean => (!inside || inside(x, z)) && lineClear(sim.level, e.x, e.z, x, z, r * 0.8);
   for (let i = 0; i < n; i++) {
-    // No spot found: a ring around the boss, never its centre (bodies at one point get no push apart).
-    const fa = i * 2.4, fd = e.def.radius + r + 0.1;
-    const q = freeSpot(sim.level, sim.rng, e.x, e.z, e.def.radius + 0.6, e.def.radius + BOSS.summon.spread, r + 0.1, ok) ?? { x: e.x + Math.sin(fa) * fd, z: e.z + Math.cos(fa) * fd };
+    // No spot found: a free point on a ring around the boss (same rules: inside its room, not behind a wall, not in a
+    // collider), else just off its centre (bodies at one point get no push apart).
+    const fd = e.def.radius + r + 0.1;
+    let q = freeSpot(sim.level, sim.rng, e.x, e.z, e.def.radius + 0.6, e.def.radius + BOSS.summon.spread, r + 0.1, ok);
+    for (let k = 0; k < 6 && !q; k++) {
+      const a = i * 2.4 + (k * Math.PI) / 3, x = e.x + Math.sin(a) * fd, z = e.z + Math.cos(a) * fd;
+      if (ok(x, z) && !sim.level.blocked(x, z, r)) q = { x, z };
+    }
+    q ??= { x: e.x + Math.sin(i * 2.4) * 0.05, z: e.z + Math.cos(i * 2.4) * 0.05 };
     // A boss's adds belong to its fight (`Enemy.enc`).
     spawnEnemy(sim, q.x, q.z, kind, e.hpMul, e.dmgMul).enc = e.enc;
   }
