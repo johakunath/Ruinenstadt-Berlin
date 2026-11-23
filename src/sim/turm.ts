@@ -19,8 +19,8 @@ export interface BandDef { x: number; z: number; r0: number; r1: number; period:
 
 /** T10 ending rings: the camp's station ring size, and the seconds the hero stands in one to choose. */
 export const ENDING = { r: 0.65, hold: 1.5 } as const;
-/** Lift ring radius and the seconds the hero stands in it before the ride. */
-export const LIFT = { r: 1.6, ride: 0.8 } as const;
+/** Lift ring radius, the seconds the hero stands in it before the ride, and the reach round the ring left behind in which enemies are removed. */
+export const LIFT = { r: 1.6, ride: 0.8, left: 40 } as const;
 /**
  * Hand hits (start values for the playtest): the hero takes at least `floor` of max life (the 45 % cap holds, a dodge
  * passes through); a normal enemy loses `enemy` of its life, a boss `boss`. One hit per body per pass (`lockout` s).
@@ -67,7 +67,7 @@ export function travelTarget(sim: Sim): { x: number; z: number; lift: boolean } 
   return { x: at.x, z: at.z, lift: false };
 }
 
-/** T2: the hero in an open lift ring for `LIFT.ride` s rides to the next deck; enemies and drops stay behind. */
+/** T2: the hero in an open lift ring for `LIFT.ride` s rides to the next deck; drops stay behind, enemies left on that deck go. */
 export function updateLifts(sim: Sim): void {
   const p = sim.player, L = sim.level.lifts;
   if (p.state === 'dead') { sim.lift = null; return; }
@@ -75,8 +75,11 @@ export function updateLifts(sim: Sim): void {
   if (i < 0) { sim.lift = null; return; }
   const t = sim.lift && sim.lift.i === i ? sim.lift.t + DT : DT;
   if (t < LIFT.ride) { sim.lift = { i, t }; return; }
-  const to = L[i]!.to;
+  const to = L[i]!.to, from = L[i]!.from;
   sim.lift = null;
+  // Nobody rides along: enemies left on the deck below (strays a summon or howl brought after the fight) go, or they
+  // would chase the hero through the floor for good (and hold up the bot). Decks lie 120 m apart, the widest is 26 m.
+  sim.enemies = sim.enemies.filter((e) => Math.hypot(e.x - from.x, e.z - from.z) > LIFT.left);
   p.x = p.px = to.x;
   p.z = p.pz = to.z;
   p.vx = p.vz = 0;
