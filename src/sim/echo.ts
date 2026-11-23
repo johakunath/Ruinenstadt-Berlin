@@ -3,7 +3,7 @@
 // Kodex entry of its own (its kills count for the kind). The render draws it pale with a clock-hand outline.
 import type { Enemy } from './types';
 
-export const ECHO = { hp: 0.28, dmg: 0.65 } as const;
+export const ECHO = { hp: 0.2, dmg: 0.65 } as const;
 
 /** Turns a freshly spawned boss into its echo. */
 export function makeEcho(e: Enemy): void {
