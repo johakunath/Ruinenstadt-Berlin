@@ -253,6 +253,8 @@ export class Bot {
   private readonly shopped = new Set<number>();
   private shopT = 0;
   private shopTarget = NaN;
+  /** `shopTarget` was the travel goal on the last travel step. */
+  private shopActive = false;
 
   /** Between steps: blessings, gear, bag, shopping. */
   manage(): void {
@@ -285,8 +287,8 @@ export class Bot {
     }
     return out;
   }
-  private eventKey: object | null = null;
-  private eventT = 0;
+  /** Seconds spent walking to each run event (given up after `EVENT_GIVE_UP`). */
+  private readonly eventTime = new WeakMap<object, number>();
 
   /** B2: the shop to walk to now: an unvisited Späti counter or the trader close by, while there is Schrott to spend. */
   private shopGoal(): { key: number; x: number; z: number } | null {
@@ -612,7 +614,8 @@ export class Bot {
       const resting = s.rest.at >= 0 && p.hp < s.stats.maxHp;
       const Z = s.content.zone, holding = !!Z && Math.hypot(Z.x - p.x, Z.z - p.z) < Z.r;
       if (Math.hypot(p.x - this.travelX, p.z - this.travelZ) < 0.5 && !resting && !holding && !this.onBoatWait()) {
-        if (!Number.isNaN(this.shopTarget)) this.shopped.add(this.shopTarget);
+        // Only a shop it is walking to now; `shopTarget` keeps the last one after the goal is gone.
+        if (this.shopActive && !Number.isNaN(this.shopTarget)) this.shopped.add(this.shopTarget);
         this.escapeT = 1;
         this.escapeA = this.freeHeading();
       }
@@ -648,15 +651,20 @@ export class Bot {
     // B2 step 2 (P33): run events as Johannes plays them: free the captive (guards fight on their own once
     // the bot is close), open the cache and the timed crate, hold the radio zone. Level 3 of a station needs its
     // survivor; without rescues the camp stopped at level 2 and the Schrott piled up.
-    const ev = best ? null : this.eventGoal();
+    // Only between fights (a radio zone does not fill while one runs) and not when a Späti rest is due first.
+    const restDue = p.hp < s.stats.maxHp * 0.6 && s.level.rests.some((q) => Math.hypot(q.x - p.x, q.z - p.z) < 70);
+    const ev = best || s.run.phase !== 'travel' || restDue ? null : this.eventGoal();
     if (ev) {
-      if (ev.key !== this.eventKey) { this.eventKey = ev.key; this.eventT = 0; }
-      if ((this.eventT += DT) > EVENT_GIVE_UP) this.skip.add(ev.key);
+      // Time is booked per event, so switching between two open events cannot reset the give-up clock.
+      const t = (this.eventTime.get(ev.key) ?? 0) + DT;
+      this.eventTime.set(ev.key, t);
+      if (t > EVENT_GIVE_UP) this.skip.add(ev.key);
       else best = ev;
     }
     const goal = best ? null : this.shopGoal();
     if (goal && goal.key !== this.shopTarget) { this.shopTarget = goal.key; this.shopT = 0; }
     if (goal && (this.shopT += DT) > SHOP.giveUp) this.shopped.add(goal.key);
+    this.shopActive = !!goal;
     if (best) {
       tx = best.x;
       tz = best.z;
@@ -821,16 +829,16 @@ function book<T>(s: Sim, l: Ledger | undefined, k: keyof Ledger, f: () => T): T 
   return r;
 }
 
+/** B2 step 2: run events farther than this are left; one not done within this many seconds is given up. */
+const EVENT_REACH = 60;
+const EVENT_GIVE_UP = 60;
+
 /**
  * B2 rules, first guesses before calibration: a trade offer must beat the worn piece by `lead` item
  * levels and leave `keep` of the Schrott; the bot detours to an unvisited shop within `reach` m while
  * it holds `minScrap` and gives up on one it cannot reach in `giveUp` s; Verband and Molotow are kept
  * at `pouch`; the drill waits for `drillReserve` Schrott above its price.
  */
-/** B2 step 2: run events farther than this are left; one not done within this many seconds is given up. */
-const EVENT_REACH = 60;
-const EVENT_GIVE_UP = 60;
-
 export const SHOP = { lead: 2, keep: 0.3, reach: 50, minScrap: 60, giveUp: 25, pouch: 2, drillReserve: 300 } as const;
 
 /** A legendary or set piece is kept; anything else below the worn piece's item level is salvaged. */

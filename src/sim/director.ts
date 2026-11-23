@@ -110,7 +110,7 @@ export function holdGates(sim: Sim): void {
 }
 /** How far past the bars a body counts as pushed through (farther: it belongs to the next section). */
 const GATE_BAND = 1.5;
-/** Half the depth of a grating's collider (`hz` in `buildMapLevel`). */
+/** Half the depth of a grating's collider (`hz` in `mapLevel`, `src/data/map.ts`). */
 const GATE_HALF_DEPTH = 0.3;
 
 /** A closed grating lies between two points (spawns never appear behind one). */
