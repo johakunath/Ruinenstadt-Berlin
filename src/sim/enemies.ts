@@ -330,9 +330,18 @@ export function updateEnemies(sim: Sim): void {
   }
 }
 
+/** Most a body moves by separation in one step (m). Below the thinnest wall plus a body radius (grating 0.3 + 0.3). */
+const SEP_MAX = 0.3;
+const SEP_FROM: number[] = [];
+
 /** Hard body separation: enemies against each other and against the player. */
 export function resolveBodies(sim: Sim): void {
   const list = sim.enemies;
+  // B2 step 2: separation moves a body at most `SEP_MAX` per step. A crowd shoved bodies through thin walls (the
+  // centre crossed the middle of a 1 m facade wall or a 0.6 m grating, and push-out let it out on the far side).
+  const from = SEP_FROM;
+  from.length = 0;
+  for (const e of list) from.push(e.x, e.z);
   for (let i = 0; i < list.length; i++) {
     const a = list[i] as Enemy;
     if (a.state === 'dead' || a.def.fly) continue;
@@ -357,6 +366,7 @@ export function resolveBodies(sim: Sim): void {
     }
   }
   const p = sim.player;
+  // The hero push below is small (an enemy moves 0.3 to 0.6 of the overlap); the cap runs after it.
   // The dodge passes through enemies; a dead player is no obstacle.
   // Leaps and the Fechtsprung pass over and through bodies too.
   const through = p.state === 'cast' && p.cast !== null && (p.cast.id === 'fecht' || p.cast.id === 'abriss' || p.cast.id === 'stab');
@@ -378,6 +388,13 @@ export function resolveBodies(sim: Sim): void {
       p.z -= (dz / d) * push * (1 - we);
     }
     sim.level.resolve(p, PLAYER.radius);
+  }
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i]!, dx = e.x - from[2 * i]!, dz = e.z - from[2 * i + 1]!, d = Math.hypot(dx, dz);
+    if (d > SEP_MAX) {
+      e.x = from[2 * i]! + (dx / d) * SEP_MAX;
+      e.z = from[2 * i + 1]! + (dz / d) * SEP_MAX;
+    }
   }
   // Separation may have pushed a body into a wall or prop: walls win over crowding.
   for (const e of list) {

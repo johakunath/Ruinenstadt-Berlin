@@ -1995,3 +1995,19 @@ describe('boss adds (B2 step 2)', () => {
     expect(adds.filter((o) => o.z > 1).length).toBe(0);
   });
 });
+
+describe('body separation (B2 step 2)', () => {
+  it('a crowd pressed against a thin wall never ends up behind it', () => {
+    const b = { minX: -30, maxX: 30, minZ: -30, maxZ: 30 };
+    const level = new Level('t', b, { x: 0, z: -6 }, [{ kind: 'box', x: 0, z: 1.5, hx: 20, hz: 0.5, rot: 0 }], null, [], b);
+    for (let seed = 1; seed <= 5; seed++) {
+      const s = createSim({ level, empty: true, seed });
+      // The hero stands just in front, so the crowd is squeezed between her and the wall.
+      s.player.x = s.player.px = 0;
+      s.player.z = s.player.pz = -0.6;
+      for (let i = 0; i < 16; i++) spawnEnemy(s, 0.03 * i - 0.2, 0.5, i % 3 ? 'walker' : 'brute');
+      run(s, 1);
+      expect(s.enemies.filter((e) => e.z > 1).length).toBe(0);
+    }
+  });
+});
