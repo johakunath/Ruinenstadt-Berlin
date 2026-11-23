@@ -56,7 +56,8 @@ export function createSim(opts: SimOptions = {}): Sim {
   // (with whichever crates that run had broken), so a run does not depend on the runs before it.
   reachGrid(level);
   const startAt = opts.startAt ?? 0;
-  const zone = level.encounters[startAt]?.zone ?? 0;
+  // M17: past the last fight (the Fernsehturm's ending choice) the hero starts in the zone of that fight.
+  const zone = level.encounters[Math.min(startAt, level.encounters.length - 1)]?.zone ?? 0;
   const entry = startAt > 0 ? level.zones[zone]?.entry : undefined;
   const equipment = structuredClone(opts.equipment ?? starterEquipment());
   const context = statContext(opts.statContext);

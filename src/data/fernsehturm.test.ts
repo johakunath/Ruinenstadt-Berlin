@@ -439,6 +439,12 @@ describe('Fernsehturm save and resume across decks (step 4)', () => {
     expect(deckAt(TURM_DECKS, back.player.x, back.player.z)?.id).toBe('telecafe');
   });
 
+  it('a retry at the ending choice starts on the Uhrenraum at the choice', () => {
+    const back = createSim({ level, startAt: level.encounters.length });
+    expect(back.run.phase).toBe('choice');
+    expect(deckAt(TURM_DECKS, back.player.x, back.player.z)?.id).toBe('uhrenraum');
+  });
+
   it('a run saved at the ending choice resumes at it', () => {
     const sim = createSim({ level, empty: true, startAt: level.encounters.length });
     const ring = level.ending[0]!;

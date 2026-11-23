@@ -232,6 +232,8 @@ window.addEventListener('keydown', (e) => {
 /** A retry starts at the first encounter of the zone the hero fell in. */
 function checkpoint(): number {
   if (!level) return 0;
+  // M17: a death at the ending choice comes back to it, not to the boss fight.
+  if (sim.run.phase === 'choice') return sim.run.index;
   const i = Math.min(sim.run.index, level.encounters.length - 1);
   const zone = level.encounters[i]?.zone ?? 0;
   return level.encounters.findIndex((e) => e.zone === zone);
