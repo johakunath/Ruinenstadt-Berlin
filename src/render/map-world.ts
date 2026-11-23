@@ -2517,7 +2517,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     buildTunnelExtras(m, mats, materials, chunkOf);
   }
   // M17 Fernsehturm: the decks (`turm-world.ts`).
-  const turmMats = m.decks ? makeTurmMats(materials) : null;
+  const turmMats = m.decks ? makeTurmMats(materials, m.decks) : null;
   if (turmMats) buildTurmWorld(m, mats, turmMats, chunkOf);
   if (m.camp) buildCampWorld(m, mats, makeCampMats(materials, { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy }), chunkOf);
   if (m.rail) {
