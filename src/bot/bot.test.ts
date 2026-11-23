@@ -10,6 +10,8 @@ import type { Sim } from '../sim/types';
 import { nextLevel, stationBuilt } from '../sim/camp';
 import { LINE_FREED } from '../data/lines';
 import { STATIONS } from '../data/camp';
+import { freeSpot } from '../sim/reach';
+import { Rng } from '../sim/math';
 
 /** A weapon like the worn one, `lv` item levels and `f` times its value. */
 const like = (s: Sim, lv: number, f = 1, rarity = s.equipment.w!.rarity): Item => ({ ...structuredClone(s.equipment.w!), id: 9000 + lv * 10 + rarity, itemLevel: lv, value: s.equipment.w!.value * f, rarity, set: undefined, mods: [] });
@@ -69,6 +71,18 @@ describe('bot economy (B2 step 1)', () => {
     for (let i = 0; i < 60 * 40 && !bot.ledger.upgrades; i++) { bot.manage(); stepSim(s, bot.input()); s.player.hp = s.stats.maxHp; }
     expect(bot.ledger.upgrades).toBeGreaterThan(0);
     expect(s.content.tradeAt).toBeGreaterThanOrEqual(0);
+  }, 60_000);
+
+  it('frees a captive whose guards are down: walks over and the survivor joins (B2 step 2)', () => {
+    const s = createSim({ level: koepenickLevel(), seed: 2, empty: true });
+    const p = s.player, e = s.level.encounters[0]!;
+    // Behind the hero, away from the way to the first fight (it would pass a captive on the route anyway).
+    const q = freeSpot(s.level, new Rng(4), p.x, p.z, 8, 14, 0.6, (x, z) => (x - p.x) * (e.x - p.x) + (z - p.z) * (e.z - p.z) < 0)!;
+    s.content.captive = { x: q.x, z: q.z, survivor: 'kurier', free: false };
+    const bot = new Bot(s, SKILL_GOOD, 2);
+    for (let i = 0; i < 60 * 30 && !s.statContext.survivors.kurier; i++) { bot.manage(); stepSim(s, bot.input()); }
+    expect(s.statContext.survivors.kurier).toBe(true);
+    expect(s.content.captive).toBeNull();
   }, 60_000);
 
   it('holds the S3 generator ring until the power comes', () => {

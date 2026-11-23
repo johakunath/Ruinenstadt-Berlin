@@ -83,6 +83,16 @@ export function enclosure(level: Level, x: number, z: number, radius = 3): numbe
   return blocked / n;
 }
 
+/** No collider within `r` of the straight line from a to b (a probe every 0.25 m). */
+export function lineClear(level: Level, ax: number, az: number, bx: number, bz: number, r: number): boolean {
+  const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.25));
+  for (let k = 1; k <= n; k++) {
+    const px = ax + ((bx - ax) * k) / n, pz = az + ((bz - az) * k) / n;
+    if (level.near(px, pz, r + 0.5).some((c) => colliderDistance(c, px, pz) < r)) return false;
+  }
+  return true;
+}
+
 /** A reachable spot between `near` and `far` meters from (x, z) with `clear` meters of room, or null. */
 export function freeSpot(level: Level, rng: Rng, x: number, z: number, near: number, far: number, clear: number, ok: (x: number, z: number) => boolean = () => true): { x: number; z: number } | null {
   for (let t = 0; t < 80; t++) {

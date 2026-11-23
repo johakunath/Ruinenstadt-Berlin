@@ -363,6 +363,11 @@ export interface TunnelDef {
   trader: Point;
   /** The generator on the end platform (collider, render); the hold ring is the last encounter's `hold`. */
   generator: { x: number; z: number; rot: number };
+  /**
+   * B2 step 2: sim-only box from the stopped train's inner side to past the tube wall. The curve left a crevice
+   * behind the train where a spitter hid out of the hero's reach and the fight never ended.
+   */
+  wreck?: { x: number; z: number; rot: number; hx: number; hz: number };
   /** Blue name plates on the station walls that face the camera. */
   signs: Array<{ x: number; z: number; rot: number; text: string }>;
 }
@@ -1942,6 +1947,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   if (plinthGate) colliders.push(plinthGate.collider, ...P!.pts.map((q) => ({ kind: 'circle' as const, x: q.x, z: q.z - PLINTH.post, r: PLINTH.postR })));
   for (const r of m.mirrors ?? []) colliders.push({ kind: 'box', x: r.x, z: r.z, hx: MIRROR.w / 2, hz: MIRROR.thick / 2, rot: r.rot });
   if (T) colliders.push({ kind: 'box', x: T.generator.x, z: T.generator.z, hx: GENERATOR.hx, hz: GENERATOR.hz, rot: T.generator.rot }, ...gates.map((g) => g.collider));
+  if (T?.wreck) colliders.push({ kind: 'box', ...T.wreck });
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !tunnelWalk(m, x, z, 0.3)
     || (!!m.camp && !onCampFloor(m.camp, x, z))
     || (inRailYard(m, x, z) && !m.terraces.some((t) => inPoly(t.poly, x, z) || onStair(t, x, z) !== null)));

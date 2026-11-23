@@ -79,6 +79,10 @@ export function trackTrainPose(a: Pt, b: Pt): { x: number; z: number; rot: numbe
   return { x: (a[0] + b[0]) / 2 + uz * o, z: (a[1] + b[1]) / 2 - ux * o, rot: Math.atan2(ux, uz) };
 }
 
+/** The stopped train's footprint (`propCollider` 'tram': hx 1.15, hz 7.6). */
+const TRAIN_HALF_WIDTH = 1.15;
+const TRAIN_HALF_LENGTH = 7.6;
+
 export type Stretch = 'collapse' | 'flood' | 'wreck';
 /** Free stretches between the fights that take the three special stretches (x ranges). The collapse fits only the first and the last. */
 const SLOTS: ReadonlyArray<readonly [number, number]> = [[116, 152], [202, 236], [318, 350]];
@@ -229,7 +233,11 @@ export function tunnelMap(line = 0): MapDef {
   const kl = Math.hypot(6, 14), [kx, kz] = [206 - (6 / kl) * 1.3, cz(196) + (30 - (14 / kl) * 1.3) * s];
   fixedProps.push({ kind: 'crates', x: kx, z: kz, rot: 0.3, size: 1.2 }, { kind: 'crate', x: kx - 1.6, z: kz - 1.2 * s, rot: 0.8, size: 1 }, { kind: 'crate', x: kx + 1.5, z: kz - 1.4 * s, rot: -0.4, size: 1 });
   // A stopped train in the wreck stretch (left track), campfires in the stations.
-  fixedProps.push({ kind: 'tram', ...trackTrainPose(at(wx - wh), at(wx + wh)), size: 1, railTop: TUNNEL_TRACK.railTop });
+  const train = trackTrainPose(at(wx - wh), at(wx + wh));
+  fixedProps.push({ kind: 'tram', ...train, size: 1, railTop: TUNNEL_TRACK.railTop });
+  // B2 step 2: close the crevice between the train and the outer wall (local +x is away from the centre line).
+  const inner = -TRAIN_HALF_WIDTH, outer = TUNNEL.trackWidth / 2 - TUNNEL_TRACK.tracks[1] + 1.5, mid = (inner + outer) / 2;
+  const wreck = { x: train.x + Math.cos(train.rot) * mid, z: train.z - Math.sin(train.rot) * mid, rot: train.rot, hx: (outer - inner) / 2, hz: TRAIN_HALF_LENGTH };
   fixedProps.push({ kind: 'campfire', x: at(14)[0], z: at(14, -7)[1], rot: 0, size: 1 }, { kind: 'campfire', x: at(256)[0], z: at(256, 7)[1], rot: 0, size: 1 });
   // The collapse: rubble heaps and fallen ceiling slabs and girders across the track bed (they stay inside the blocked band).
   const rr = new Rng(5151);
@@ -264,6 +272,7 @@ export function tunnelMap(line = 0): MapDef {
       trader: { x: at(4)[0], z: at(4, -8.6)[1] },
       // Long side along the platform edge, front towards the track.
       generator: { x: gx, z: gz, rot: Math.atan2(-(cz(413) - cz(411)) / 2, 1) },
+      wreck,
       signs,
     },
     hiddenSpots: [hidden],

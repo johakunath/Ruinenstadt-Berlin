@@ -39,7 +39,13 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-21)
+## Latest (2026-11-23)
+
+- Economy (B2 step 2): Späti and trader stock no longer climbs with every purchase (the 2D rule minus the district step was missing, so each district counted twice and the hero's gear ran away); Schrott pickups ×0.5 (was 0.7) and salvage ×0.5. Bot campaigns arrive at the camp with about 1000 Schrott (was 1500) and keep 700 to 1500 per map.
+- Enemies are no longer shoved through thin walls or closed tunnel gratings by a crowd, boss adds never appear behind a wall, and nothing can hide in the gap behind the stopped tunnel train (each of these held a fight open for good).
+- After a death and retry on the same map, an enemy or event can no longer be placed inside a crate the earlier run had broken.
+
+## 2026-11-21
 
 - Köpenick cutaway (P42): Rathaus (low, at 2 m, for the Böttcherstraße), Schloss and St. Laurentius are cut while the hero is behind them, and so are street-front buildings and houses that hide a street or a fight behind them; the hero keeps her contour under a cut roof.
 - Charlottenburg is on the network: after Mitte the U2-Tunnel West leads to S+U Zoologischer Garten. The sky turns from Blaue Stunde at the Zoo to Premierennacht on the Ku'damm, Mondnacht in the Schlossgarten and Morgengrauen at the Schloss; searchlights over the cinemas, confetti, prism motes and diamond dust.

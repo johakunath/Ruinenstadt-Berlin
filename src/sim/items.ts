@@ -7,6 +7,7 @@ import {
 import * as N from '../data/item-names';
 import type { WeaponModId, MaterialId } from '../data/crafting';
 import { Rng } from './math';
+import { ECONOMY } from '../data/progression';
 
 export interface Item {
   id: number;
@@ -191,9 +192,12 @@ export function avgIl(equipment: Partial<Record<SlotId, Item>>): number {
   return items.length ? Math.round(items.reduce((sum, item) => sum + shownLevel(item), 0) / items.length) : 0;
 }
 
-/** Legendary 100 (was 50) and set pieces 80 (were 20 as rare) since the playtest of 2026-11-20. */
+/**
+ * 2D base values: legendary 100 (was 50) and set pieces 80 (were 20 as rare) since the playtest of 2026-11-20;
+ * B2 step 2 scales them by `ECONOMY.salvage` (0.5: a legendary now pays 50 at item level 0).
+ */
 export function scrapValue(item: Item): number {
-  return Math.round((item.set ? 80 : [3, 8, 20, 100][item.rarity || 0]!) * (1 + item.itemLevel * .08));
+  return Math.round((item.set ? 80 : [3, 8, 20, 100][item.rarity || 0]!) * (1 + item.itemLevel * .08) * ECONOMY.salvage);
 }
 
 const SALVAGE_MATERIALS: Readonly<Record<SlotId, readonly MaterialId[]>> = {

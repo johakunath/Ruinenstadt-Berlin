@@ -90,6 +90,12 @@ class Nav {
     }
   }
 
+  /** Forget the last distance field (a new bot starts without one). */
+  reset(): void {
+    this.tx = NaN;
+    this.tz = NaN;
+  }
+
   /** Inside a ferry lane (pier to pier): the boat will come. */
   onLane(x: number, z: number): boolean {
     for (const f of this.level.ferries) {
@@ -225,6 +231,9 @@ export class Bot {
       nav = new Nav(sim.level);
       navs.set(sim.level, nav);
     }
+    // B2 step 2: the grid is shared per level, its distance field is not; a field left from an earlier run
+    // (reused when the first target lies within 1.5 m) made a run depend on what the process played before.
+    nav.reset();
     this.nav = nav;
   }
 
@@ -244,6 +253,8 @@ export class Bot {
   private readonly shopped = new Set<number>();
   private shopT = 0;
   private shopTarget = NaN;
+  /** `shopTarget` was the travel goal on the last travel step. */
+  private shopActive = false;
 
   /** Between steps: blessings, gear, bag, shopping. */
   manage(): void {
@@ -264,6 +275,20 @@ export class Bot {
       if (talkTo(s)) { shop(s, this.ledger); closeTrade(s); }
     }
   }
+
+  /** B2 step 2: the open run event to walk to (captive, cache, crate, radio zone), nearest first, within `EVENT_REACH`. */
+  private eventGoal(): { key: object; x: number; z: number } | null {
+    const s = this.sim, p = s.player, c = s.content;
+    let out: { key: object; x: number; z: number } | null = null, bd: number = EVENT_REACH;
+    for (const e of [c.captive, c.cache, c.crate, c.zone]) {
+      if (!e || this.skip.has(e)) continue;
+      const d = Math.hypot(e.x - p.x, e.z - p.z);
+      if (d < bd) { bd = d; out = { key: e, x: e.x, z: e.z }; }
+    }
+    return out;
+  }
+  /** Seconds spent walking to each run event (given up after `EVENT_GIVE_UP`). */
+  private readonly eventTime = new WeakMap<object, number>();
 
   /** B2: the shop to walk to now: an unvisited Späti counter or the trader close by, while there is Schrott to spend. */
   private shopGoal(): { key: number; x: number; z: number } | null {
@@ -551,6 +576,21 @@ export class Bot {
   }
   private okX = NaN;
   private okZ = NaN;
+  private travelT = 0;
+  private travelX = NaN;
+  private travelZ = NaN;
+  private escapeT = 0;
+  private escapeA = 0;
+
+  /** A heading whose ground 1.2 m ahead is free (eight tries from a random start), else the random start. */
+  private freeHeading(): number {
+    const p = this.sim.player, L = this.sim.level, a0 = this.rng.range(0, Math.PI * 2);
+    for (let k = 0; k < 8; k++) {
+      const a = a0 + (k * Math.PI) / 4, x = p.x + Math.sin(a) * 1.2, z = p.z + Math.cos(a) * 1.2;
+      if (!L.blocked(x, z, BODY) && !L.near(x, z, BODY + 0.1).some((c) => colliderDistance(c, x, z) < BODY)) return a;
+    }
+    return a0;
+  }
 
   private onBoatWait(): boolean {
     const p = this.sim.player;
@@ -561,6 +601,28 @@ export class Bot {
   private travel(inp: SimInput): void {
     const s = this.sim;
     const p = s.player;
+    // B2 step 2: travel watchdog. Pressed against a Späti wall on a cell the grid calls blocked, `go` found
+    // no way and the bot stood still until the run was given up (Mitte, Leipziger Straße). Not moving for
+    // 4 s (healing in a Späti, holding a radio zone and the ferry aside): drop the shop it was after, walk 1 s to free ground.
+    if (this.escapeT > 0) {
+      this.escapeT -= DT;
+      inp.moveX = Math.sin(this.escapeA);
+      inp.moveZ = Math.cos(this.escapeA);
+      return;
+    }
+    if ((this.travelT += DT) > 4) {
+      const resting = s.rest.at >= 0 && p.hp < s.stats.maxHp;
+      const Z = s.content.zone, holding = !!Z && Math.hypot(Z.x - p.x, Z.z - p.z) < Z.r;
+      if (Math.hypot(p.x - this.travelX, p.z - this.travelZ) < 0.5 && !resting && !holding && !this.onBoatWait()) {
+        // Only a shop it is walking to now; `shopTarget` keeps the last one after the goal is gone.
+        if (this.shopActive && !Number.isNaN(this.shopTarget)) this.shopped.add(this.shopTarget);
+        this.escapeT = 1;
+        this.escapeA = this.freeHeading();
+      }
+      this.travelT = 0;
+      this.travelX = p.x;
+      this.travelZ = p.z;
+    }
     let tx = NaN, tz = NaN;
     // Loot nearby first; give up on a drop after six seconds (behind a wall).
     let best: { x: number; z: number } | null = null;
@@ -586,9 +648,23 @@ export class Bot {
         this.lootT = 0;
       }
     }
+    // B2 step 2 (P33): run events as Johannes plays them: free the captive (guards fight on their own once
+    // the bot is close), open the cache and the timed crate, hold the radio zone. Level 3 of a station needs its
+    // survivor; without rescues the camp stopped at level 2 and the Schrott piled up.
+    // Only between fights (a radio zone does not fill while one runs) and not when a Späti rest is due first.
+    const restDue = p.hp < s.stats.maxHp * 0.6 && s.level.rests.some((q) => Math.hypot(q.x - p.x, q.z - p.z) < 70);
+    const ev = best || s.run.phase !== 'travel' || restDue ? null : this.eventGoal();
+    if (ev) {
+      // Time is booked per event, so switching between two open events cannot reset the give-up clock.
+      const t = (this.eventTime.get(ev.key) ?? 0) + DT;
+      this.eventTime.set(ev.key, t);
+      if (t > EVENT_GIVE_UP) this.skip.add(ev.key);
+      else best = ev;
+    }
     const goal = best ? null : this.shopGoal();
     if (goal && goal.key !== this.shopTarget) { this.shopTarget = goal.key; this.shopT = 0; }
     if (goal && (this.shopT += DT) > SHOP.giveUp) this.shopped.add(goal.key);
+    this.shopActive = !!goal;
     if (best) {
       tx = best.x;
       tz = best.z;
@@ -753,6 +829,10 @@ function book<T>(s: Sim, l: Ledger | undefined, k: keyof Ledger, f: () => T): T 
   return r;
 }
 
+/** B2 step 2: run events farther than this are left; one not done within this many seconds is given up. */
+const EVENT_REACH = 60;
+const EVENT_GIVE_UP = 60;
+
 /**
  * B2 rules, first guesses before calibration: a trade offer must beat the worn piece by `lead` item
  * levels and leave `keep` of the Schrott; the bot detours to an unvisited shop within `reach` m while
@@ -901,6 +981,17 @@ export interface CampaignOptions {
   district?: number;
 }
 
+/** B2 step 2: the enemies still alive when a run stops (kind and position, at most four), to find unreachable ones. */
+function aliveNote(sim: Sim): string {
+  const alive = sim.enemies.filter((e) => e.state !== 'dead');
+  const hero = `; life ${Math.round((100 * sim.player.hp) / sim.stats.maxHp)} %${sim.rest.at >= 0 ? ', in a Späti' : ''}`;
+  if (!alive.length) return hero;
+  const p = sim.player, held = alive.filter((e) => e.enc === sim.run.index && e.sleep === undefined && e.mirrorOf === undefined);
+  // Nearest first; only the ones that hold the current fight open (as `encounterAlive` counts them).
+  held.sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+  return `${hero}; alive ${alive.length}, holding ${held.length}: ${held.slice(0, 4).map((e) => `${e.kind}@${e.x.toFixed(1)},${e.z.toFixed(1)}`).join(' ')}`;
+}
+
 /** One fresh campaign through the map: retries at the zone start after a death, like the game. */
 export function runCampaign(o: CampaignOptions): CampaignReport {
   const level = o.level;
@@ -974,5 +1065,5 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   endExpedition(sim, won, o.district ?? 0);
   const left = sim.inventory.scrap;
   const economy = { ...ledger, start: scrap0, earned: left - scrap0 + ledger.items + ledger.upgrades + ledger.camp, left, itemLevel: wornLevel(sim), weaponLevel: sim.equipment.w?.itemLevel ?? 0 };
-  return { economy, profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}`, power: power(sim.stats), weapon: sim.stats.kind };
+  return { economy, profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}${aliveNote(sim)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }

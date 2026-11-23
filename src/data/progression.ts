@@ -310,7 +310,8 @@ export const CAMP_UPGRADES: readonly { readonly id: CampUpgradeId; readonly name
  * The bot calibrates these in B2 (`docs/tasks/b2-economy-pacing.md`).
  */
 /** `items`: equipment drop rate (playtest 2026-11-20: half of what dropped before). */
-export const ECONOMY = { scrap: 0.7, material: 0.5, campPrice: 1.5, items: 0.5 } as const;
+/** B2 step 2: `salvage` scales the 2D salvage value (it grows with item level and made half the late income). */
+export const ECONOMY = { scrap: 0.5, material: 0.5, campPrice: 1.5, items: 0.5, salvage: 0.5 } as const;
 /** 2D DRILL_D / DRILL_H. */
 export const DRILL = { damage: .02, life: .02 } as const;
 export type ShrineId = 'as' | 'res' | 'gold' | 'spd' | 'zap';

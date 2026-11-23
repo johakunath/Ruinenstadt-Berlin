@@ -189,8 +189,16 @@ export class Level {
     /** Props the hero can break (M4); their colliders are in `colliders` until broken. */
     readonly breakables: BreakableDef[] = [],
   ) {
-    for (const c of colliders) this.insert(c);
+    for (const [i, c] of colliders.entries()) {
+      this.insert(c);
+      this.order.set(c, i);
+    }
   }
+
+  /** Build order of the colliders; `restore` puts them back in it (B2 step 2: a changed order changed the next run). */
+  private readonly order = new Map<Collider, number>();
+  /** A collider was taken out, added or shut since the last `restore`. */
+  private touched = false;
 
   private readonly removed: Collider[] = [];
   /** L2: district index for loot (2D `D.lvl`: item level +3 per district) and item name flavor. Köpenick 0. */
@@ -278,7 +286,10 @@ export class Level {
 
   /** Takes a collider out of the level (a broken prop). `restore` puts it back for the next run. */
   remove(c: Collider): void {
-    if (this.unhash(c)) this.removed.push(c);
+    if (this.unhash(c)) {
+      this.removed.push(c);
+      this.touched = true;
+    }
   }
 
   private readonly shutSet = new Set<Collider>();
@@ -290,6 +301,7 @@ export class Level {
   shut(c: Collider): void {
     if (this.shutSet.has(c)) return;
     this.shutSet.add(c);
+    this.touched = true;
     this.colliders.push(c);
     this.insert(c);
   }
@@ -307,6 +319,7 @@ export class Level {
 
   /** Adds a collider for this run only (a shrine column); `restore` takes it out again. */
   add(c: Collider): void {
+    this.touched = true;
     this.colliders.push(c);
     this.insert(c);
     this.added.push(c);
@@ -324,6 +337,15 @@ export class Level {
       this.insert(c);
     }
     this.removed.length = 0;
+    // Broken props came back at the end of the list and of their hash cells: the next run would push bodies
+    // out of colliders in another order and play differently from the same seed. Rebuild in build order.
+    if (this.touched) {
+      this.touched = false;
+      const at = (c: Collider): number => this.order.get(c) ?? Infinity;
+      this.colliders.sort((a, b) => at(a) - at(b));
+      this.hash.clear();
+      for (const c of this.colliders) this.insert(c);
+    }
   }
 
   /** Sim time the boat positions refer to; the sim sets it every step. */

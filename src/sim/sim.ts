@@ -13,7 +13,7 @@ import { courtyardLevel } from '../data/courtyard';
 import { ELITES, ENEMIES, SPAWN, type EliteMod, type EnemyKind, districtScale } from '../data/enemies';
 import { sectorHitsCircle } from './collide';
 import { ferryPos, onFerryBoat } from './ferry';
-import { focusFlow, followFlow, startRunAt, updateDirector } from './director';
+import { focusFlow, followFlow, holdGates, startRunAt, updateDirector } from './director';
 import { capped, makeElite, randomYardSpot, removeCorpses, resolveBodies, spawnEnemy, spawnPack, updateEnemies, updateSpawner } from './enemies';
 import { FlowField } from './flowfield';
 import type { Level } from './level';
@@ -24,6 +24,7 @@ import { updateRest } from './rest';
 import { createPlayer, releaseSwing, updatePlayer } from './player';
 import { syncCampSolids } from './camp';
 import { DT, type Sim, type SimInput } from './types';
+import { reachGrid } from './reach';
 
 export interface SimOptions {
   difficulty?: DifficultyId;
@@ -48,6 +49,9 @@ export interface SimOptions {
 export function createSim(opts: SimOptions = {}): Sim {
   const level = opts.level ?? courtyardLevel();
   level.restore();
+  // B2 step 2: the reach grid is cached per level; built here on the intact map, not on first use mid-run
+  // (with whichever crates that run had broken), so a run does not depend on the runs before it.
+  reachGrid(level);
   const startAt = opts.startAt ?? 0;
   const zone = level.encounters[startAt]?.zone ?? 0;
   const entry = startAt > 0 ? level.zones[zone]?.entry : undefined;
@@ -164,6 +168,7 @@ export function stepSim(sim: Sim, input: SimInput): void {
   sim.flow.setTarget(p.x, p.z);
   updateEnemies(sim);
   resolveBodies(sim);
+  if (sim.level.gates.length) holdGates(sim);
   playerSweep(sim);
   updateAbilities(sim, input);
   updateStatuses(sim);

@@ -340,10 +340,19 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
   if (at) s.events.push({ type: 'runEvent', kind, phase: 'start', x: at.x, z: at.z });
 }
 
+/**
+ * 2D `tradeLvl`: two above the wave level or the best worn piece, minus the district step that `makeItem`
+ * adds again (worn gear already carries it). B2 step 2: without the minus every district counted twice,
+ * so each Späti visit lifted the stock by 3 levels per district and the hero's power ran away.
+ */
+export function shopLevel(s: Sim, district: number, waveLevel: number): number {
+  return Math.max(0, Math.max(waveLevel, ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2 - 3 * district);
+}
+
 /** The trader's stock (2D: three items, the third two levels higher and sometimes rare). */
 function rollTrader(s: Sim, rng: Rng): TradeOffer[] {
-  const il = Math.max(lootLevel(s), ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
   const ctx = lootContext(s);
+  const il = shopLevel(s, ctx.district, lootLevel(s));
   const n = (s.statContext.survivors.kurier ? 4 : 3) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
   const offers: TradeOffer[] = [];
   for (let i = 0; i < n; i++) {
@@ -485,7 +494,7 @@ export function updateContent(s: Sim): void {
     const desk = L.rests[at]!.desk!;
     let shop = c.shops[at] ?? null;
     if (!shop) {
-      const lvl = Math.max(il, ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2;
+      const lvl = shopLevel(s, ctx().district, il);
       const n = CONTENT.shop.offers + (s.statContext.survivors.kurier ? 1 : 0) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
       const offers: TradeOffer[] = [];
       for (let i = 0; i < n; i++) {

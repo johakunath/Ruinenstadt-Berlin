@@ -6,7 +6,7 @@ import { tunnelName, LINES } from './lines';
 import { lineLayout, TUNNEL, tunnelMap, tunnelZ } from './tunnel';
 import { lateTier } from './enemies';
 import { colliderDistance } from '../sim/collide';
-import { POWER_PAUSE } from '../sim/director';
+import { holdGates, POWER_PAUSE } from '../sim/director';
 import { spawnEnemy } from '../sim/enemies';
 import type { Level } from '../sim/level';
 import { contentMarks, talkTo } from '../sim/runcontent';
@@ -160,6 +160,23 @@ describe('M20 gratings', () => {
     expect(sim.drops.some((d) => d.content.kind === 'heal' && Math.hypot(d.x - gate.x, d.z - gate.z) < 3)).toBe(true);
     createSim({ level, seed: 3 });
     expect(level.colliders).toContain(gate.collider);
+  });
+
+  it('a body pushed through a closed grating goes back in front of it; one farther on stays (B2 step 2)', () => {
+    const sim = createSim({ level, seed: 3 });
+    const g = level.gates[0]!, enc = m.encounters[0]!;
+    const ux = Math.sin(g.rot), uz = Math.cos(g.rot);
+    const front = Math.sign((enc.x - g.x) * ux + (enc.z - g.z) * uz);
+    const along = (b: { x: number; z: number }): number => (b.x - g.x) * ux + (b.z - g.z) * uz;
+    const through = spawnEnemy(sim, g.x - ux * front * 0.5, g.z - uz * front * 0.5, 'walker', 1, 1);
+    const beyond = spawnEnemy(sim, g.x - ux * front * 4, g.z - uz * front * 4, 'walker', 1, 1);
+    holdGates(sim);
+    expect(along(through) * front).toBeGreaterThan(0.3);
+    expect(along(beyond) * front).toBeCloseTo(-4);
+    sim.gateT[0] = 0;
+    const back = spawnEnemy(sim, g.x - ux * front * 0.5, g.z - uz * front * 0.5, 'walker', 1, 1);
+    holdGates(sim);
+    expect(along(back) * front).toBeCloseTo(-0.5);
   });
 
   it('a retry or a resume at a later fight finds the gratings before it open', () => {
