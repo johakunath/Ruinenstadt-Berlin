@@ -13,6 +13,8 @@ import { createSim, stepSim } from './sim';
 import { ENDING } from './turm';
 import { NO_INPUT, type Sim, type SimEvent } from './types';
 import { phaseAt, zwOf } from './zeitwart';
+import { simFromSave, snapshot } from './save';
+import { LEGENDARY_ELEMENTS } from '../data/items';
 
 const map = turmMap();
 const level = mapLevel(map, generateLots(map), generateProps(map, []));
@@ -112,6 +114,24 @@ describe('Der Zeitwart', () => {
     expect(log.some((e) => e.type === 'enemySpecial' && e.kind === 'bass')).toBe(true);
   });
 
+  it('each blink lands with its mark: the landing hit and the boss arrive together (Codex review)', () => {
+    const { sim, boss } = setup();
+    const zw = zwOf(boss);
+    zw.phase = 2;
+    boss.hp = Math.floor(boss.maxHp * 0.3);
+    boss.cd = [9, 0, 9];
+    put(sim, 470, 8);
+    const at: Array<{ t: number; ev: SimEvent }> = [];
+    for (let i = 0; i < 6 * 60; i++) { put(sim, 470, 8); stepSim(sim, NO_INPUT); for (const ev of sim.events) at.push({ t: sim.time, ev }); sim.events.length = 0; }
+    const marks = at.filter((a) => a.ev.type === 'blink' && a.ev.phase === 'mark'), lands = at.filter((a) => a.ev.type === 'blink' && a.ev.phase === 'go');
+    expect(lands.length).toBeGreaterThanOrEqual(Z.blinks);
+    for (let k = 0; k < Z.blinks; k++) {
+      expect(lands[k]!.t - marks[k]!.t).toBeCloseTo(Z.blinkWarn, 1);
+      const m = marks[k]!.ev as { x: number; z: number }, l = lands[k]!.ev as { x: number; z: number };
+      expect(Math.hypot(l.x - m.x, l.z - m.z)).toBeLessThan(1e-6);
+    }
+  });
+
   it('calls the adds of his phase', () => {
     const { sim, boss } = setup();
     put(sim, 470, 8);
@@ -169,6 +189,21 @@ describe('the ending choice (T10)', () => {
     }
   });
 
+  it('winning the last fight opens the choice with a checkpoint; a save there resumes at it (Codex review)', () => {
+    const { sim, boss } = setup();
+    const enc = level.encounters[sim.run.index]!;
+    sim.run.wave = enc.waves.length - 1;
+    sim.god = false;
+    strike(sim, boss, 1e12);
+    const log = run(sim, 4);
+    expect(sim.run.phase).toBe('choice');
+    expect(log.some((e) => e.type === 'choiceOpen')).toBe(true);
+    expect(log.some((e) => e.type === 'checkpoint')).toBe(true);
+    const save = snapshot(sim, map.name, true);
+    expect(save.run).toBeTruthy();
+    expect(simFromSave(save, { level }, true).run.phase).toBe('choice');
+  });
+
   it('leaving the ring resets the wait; nothing is chosen outside both', () => {
     const sim = atChoice();
     const ring = level.ending[1]!;
@@ -196,6 +231,11 @@ describe('Telespargel (M17 legendary spear)', () => {
     expect(item).toBeDefined();
     const it = (item as { item: { kind: string; rarity: number; name: string; slot: string } }).item;
     expect([it.kind, it.rarity, it.name, it.slot]).toEqual(['spear', 3, 'Telespargel', 'w']);
+  });
+
+  it('is always shock, whatever legendary it was rolled as (Codex review)', () => {
+    const sim = createSim({ level, empty: true });
+    for (let i = 0; i < 40; i++) expect(makeTelespargel(sim.rng, sim.lootCtx, 30).element).toBe(LEGENDARY_ELEMENTS.telespargel);
   });
 
   it('Zeitzeichen: every twelfth hit stops every enemy within 5 m', () => {
