@@ -25,6 +25,7 @@ import { createPlayer, releaseSwing, updatePlayer } from './player';
 import { syncCampSolids } from './camp';
 import { DT, type Sim, type SimInput } from './types';
 import { reachGrid } from './reach';
+import { rideBand, updateHands, updateLifts } from './turm';
 
 export interface SimOptions {
   difficulty?: DifficultyId;
@@ -163,6 +164,8 @@ export function stepSim(sim: Sim, input: SimInput): void {
   }
   // After the hitstop check: the boat stands still while the world is frozen.
   rideFerries(sim);
+  // M17: the Telecafé floor band turns what stands on it (T5).
+  if (sim.level.band) rideBand(sim);
   updatePlayer(sim, input);
   followFlow(sim);
   sim.flow.setTarget(p.x, p.z);
@@ -176,6 +179,9 @@ export function stepSim(sim: Sim, input: SimInput): void {
   enemyStrikes(sim);
   updateThreats(sim);
   updateBarriers(sim);
+  // M17 Fernsehturm: clock hands (T4) and the lift (T2).
+  if (sim.level.hands.length) updateHands(sim);
+  if (sim.level.lifts.length) updateLifts(sim);
   removeCorpses(sim);
   if (sim.level.camp) syncCampSolids(sim); // M20: the camp is peaceful; station furniture follows the levels
   else if (sim.level.expedition && sim.stress === 0) updateDirector(sim);

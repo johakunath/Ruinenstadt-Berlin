@@ -42,6 +42,9 @@ import { xhainMap } from './data/xhain';
 import { mitteMap } from './data/mitte';
 import { charlottenburgMap } from './data/charlottenburg';
 import { weddingMap } from './data/wedding';
+import { turmMap } from './data/fernsehturm';
+import { travelTarget } from './sim/turm';
+import { LiftCurtain } from './ui/turm-curtain';
 import { alexMap } from './data/alexanderplatz';
 import { skyFor, zoneSkies } from './render/sky';
 import { MAP_FREED, MAP_NAME, MAP_SUB, MAP_WON, wonLink, type MapId } from './ui/maps';
@@ -86,9 +89,9 @@ input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
 abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
 
-// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), Charlottenburg (M16, ?map=charlottenburg), Wedding (M18, ?map=wedding), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
+// Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), Charlottenburg (M16, ?map=charlottenburg), Wedding (M18, ?map=wedding), the Fernsehturm finale (M17, ?map=turm), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
-  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : opts.map === 'charlottenburg' ? charlottenburgMap(opts.mapScale) : opts.map === 'wedding' ? weddingMap(opts.mapScale) : koepenickMap(opts.mapScale);
+  const def = opts.map === 'lager' ? campMap() : opts.map === 'tunnel' ? tunnelMap(opts.line) : opts.map === 'xhain' ? xhainMap(opts.mapScale) : opts.map === 'alex' ? alexMap(opts.mapScale) : opts.map === 'mitte' ? mitteMap(opts.mapScale) : opts.map === 'charlottenburg' ? charlottenburgMap(opts.mapScale) : opts.map === 'wedding' ? weddingMap(opts.mapScale) : opts.map === 'turm' ? turmMap() : koepenickMap(opts.mapScale);
   const lots = generateLots(def);
   const props = generateProps(def, lots);
   // Dev showcase (`?props=crane,stall:1.5*4`, kind[:size][*count]): rows of six props near the start on the
@@ -111,6 +114,8 @@ const map = opts.map !== 'hof' ? (() => {
 const isTunnel = map?.def.tunnel !== undefined;
 /** M20: the walkable camp at Warschauer Straße: no fights, rings open the stations, the train the network map. */
 const isCamp = map?.def.camp !== undefined;
+/** M17: the dark cut of the lift ride, on the tower only. */
+const liftCurtain = map?.def.decks ? new LiftCurtain() : null;
 const line = isTunnel ? opts.line : 0;
 const mapId: MapId = opts.map;
 /** What a won run is called: the district freed or the line cleared. */
@@ -610,7 +615,7 @@ function start(resumed = false): void {
   if (level) {
     const enc = level.encounters[sim.run.index];
     const zone = enc ? level.zones[enc.zone] : undefined;
-    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : mapId === 'charlottenburg' ? 'Charlottenburg · 1920' : mapId === 'wedding' ? 'Wedding · kommt bald' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : sim.shards ? 'Glas splittert: Wer zerspringt, trifft alle ringsum.' : '');
+    if (zone) ui.banner(zone.name, resumed ? 'Weiter' : sim.run.index === 0 ? (isTunnel ? `Richtung ${stopName(line + 1)}` : mapId === 'xhain' ? 'Xhain · 1981' : mapId === 'alex' ? 'Alexanderplatz · 1989' : mapId === 'mitte' ? 'Mitte · 2089' : mapId === 'charlottenburg' ? 'Charlottenburg · 1920' : mapId === 'wedding' ? 'Wedding · kommt bald' : mapId === 'turm' ? 'Fernsehturm · Stillstand' : MAP_NAME[mapId]) : 'Neustart', sim.wet ? 'Regen: Strom springt weiter, Feuer brennt kürzer.' : sim.shards ? 'Glas splittert: Wer zerspringt, trifft alle ringsum.' : '');
   }
   input.buffer.clear();
   input.enabled = true;
@@ -713,7 +718,15 @@ function drainEvents(): void {
       }
       case 'zoneClear': {
         const zone = level?.zones[ev.zone];
-        if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
+        // M17: a won deck opens the lift (T2).
+        if (map?.def.decks && level?.lifts.some((l) => l.after === sim.run.index - 1)) ui.banner('Aufzug frei', 'Zum Aufzug an der Kerntür');
+        else if (zone && ev.zone < 3) ui.banner(`${zone.name} befreit`, 'Weiter zum nächsten Ziel');
+        break;
+      }
+      case 'lift': {
+        // Lift i joins deck i and deck i + 1.
+        const D = map?.def.decks, from = D?.[ev.index], to = D?.[ev.index + 1];
+        if (from && to) { liftCurtain?.ride(from.height, to.height); ui.banner(to.name, to.height); }
         break;
       }
       case 'checkpoint':
@@ -990,6 +1003,7 @@ function frame(now: number): void {
   }
   if (level && !isCamp) expeditionHud(dt);
   else if (isCamp) { minimap?.show(phase === 'play' && !camp.isOpen && !netBoard.isOpen); minimap?.update(dt, sim.player, [], []); }
+  liftCurtain?.update(sim, dt);
   pollLootPad();
   // Heights are above the local ground (hills and terraces).
   const screenOf = (x: number, y: number, z: number) => renderer!.screenOf(x, y + groundY(x, z), z);
@@ -1041,7 +1055,8 @@ function expeditionHud(dt: number): void {
   // Edge triangles: the objective while travelling, the last three enemies of a wave (2D rule).
   const marks: Array<{ x: number; y: number; color: string }> = [];
   if (renderer && phase === 'play') {
-    if (enc && travel) marks.push({ ...renderer.screenOf(enc.x, 0, enc.z), color: '#43d1cf' });
+    const to = travel ? travelTarget(sim) : null;
+    if (enc && to) marks.push({ ...renderer.screenOf(to.x, 0, to.z), color: '#43d1cf' });
     if (!travel && sim.run.toSpawn <= 0 && sim.run.bossesToSpawn.length === 0 && alive.length <= 3) {
       for (const e of alive) marks.push({ ...renderer.screenOf(e.x, 1, e.z), color: e.def.boss ? '#ff6a2a' : '#c23a2e' });
     }
@@ -1063,10 +1078,12 @@ function expeditionHud(dt: number): void {
   } else if (!enc) {
     ui.objective(winText, null);
   } else if (sim.run.phase === 'travel') {
-    const dx = enc.x - p.x;
-    const dz = enc.z - p.z;
+    // M17: the lift ring or the fight's walkable spot (`travelTarget`); elsewhere the fight centre.
+    const to = travelTarget(sim) ?? enc;
+    const dx = to.x - p.x;
+    const dz = to.z - p.z;
     // The camera looks north: world X is screen right, world -Z is screen up.
-    ui.objective(`${enc.name} · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
+    ui.objective(`${'lift' in to && to.lift ? 'Aufzug' : enc.name} · ${Math.round(Math.hypot(dx, dz))} m`, Math.atan2(dx, -dz));
   } else if (tunnelObjective(sim)) {
     ui.objective(tunnelObjective(sim)!, null);
   } else {

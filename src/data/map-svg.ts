@@ -57,6 +57,18 @@ export function mapSvg(m: MapDef, lots: Lot[], o: MapSvgOptions): string {
     if (r) out.push(`<path d="${path(r.pts)}" fill="none" stroke="#6b5a48" stroke-width="${r.width - 1}" stroke-linecap="round"/>`);
     if (f) out.push(`<path d="${path(f.pts)}" fill="none" stroke="#2f6a86" stroke-width="${f.width}" stroke-linecap="butt" opacity="0.85"/>`);
   }
+  // M17 Fernsehturm: the five decks side by side, cores dark, lift rings and deck names with their height.
+  if (m.decks) {
+    out.push(`<rect x="${B.minX}" y="${B.minZ}" width="${w}" height="${h}" fill="#141414"/>`);
+    for (const d of m.decks) {
+      const shape = d.sides
+        ? `<polygon points="${Array.from({ length: d.sides }, (_, k) => { const a = Math.PI / d.sides! + (k * 2 * Math.PI) / d.sides!; return `${(d.x + Math.sin(a) * d.r).toFixed(2)},${(d.z + Math.cos(a) * d.r).toFixed(2)}`; }).join(' ')}"`
+        : `<circle cx="${d.x}" cy="${d.z}" r="${d.r}"`;
+      out.push(`${shape} fill="#5a554c" stroke="#a89e8c" stroke-width="0.6"/>`, `<circle cx="${d.x}" cy="${d.z}" r="${d.core.r}" fill="#1c1a18"/>`);
+      out.push(`<text x="${d.x}" y="${d.z - d.r - 2}" font-size="4" font-weight="700" text-anchor="middle" fill="#f0e2c8">${d.name} · ${d.height}</text>`);
+    }
+    for (const l of m.turm?.lifts ?? []) out.push(`<circle cx="${l.from.x}" cy="${l.from.z}" r="${l.r}" fill="#43d1cf" fill-opacity="0.4"/>`);
+  }
   // M20 camp (playtest 2026-11-18: the big map showed no stations): rock, the walkable floor, walls,
   // the train, every station with its name and its ring.
   if (m.camp) {

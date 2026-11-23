@@ -9,6 +9,7 @@
 // B2 step 1 (economy, first guesses in `docs/tasks/b2-economy-pacing.md`): salvages what it will not
 // wear, walks to Spätis and traders and buys by item level, builds the camp cheapest first, holds the
 // tunnel generator ring, and books every Schrott it earns and spends in a `Ledger`.
+import { travelTarget } from '../sim/turm';
 import { PLAYER, weaponAttack } from '../data/combat';
 import type { DifficultyId } from '../data/difficulty';
 import { chooseBlessing } from '../sim/blessings';
@@ -512,10 +513,10 @@ export class Bot {
     // M20 generator: the charge runs only while the hero stands in the ring, so fight from inside it.
     const enc = s.level.encounters[s.run.index];
     if (s.run.phase === 'hold' && enc?.hold) {
-      const d = Math.hypot(enc.x - p.x, enc.z - p.z);
+      const c = enc.hold.at ?? enc, d = Math.hypot(c.x - p.x, c.z - p.z);
       if (d > enc.hold.r - 1.5) {
-        mx += ((enc.x - p.x) / (d || 1)) * 4;
-        mz += ((enc.z - p.z) / (d || 1)) * 4;
+        mx += ((c.x - p.x) / (d || 1)) * 4;
+        mz += ((c.z - p.z) / (d || 1)) * 4;
       }
     }
 
@@ -684,8 +685,10 @@ export class Bot {
     if (Number.isNaN(tx)) {
       const enc = s.level.encounters[s.run.index];
       if (!enc) return;
-      tx = enc.x;
-      tz = enc.z;
+      // M17 Fernsehturm: the next fight is a deck up; ride the lift the last fight opened (T2).
+      const to = travelTarget(s)!;
+      tx = to.x;
+      tz = to.z;
     }
     if (this.go(tx, tz)) {
       inp.moveX = this.dir.x;
