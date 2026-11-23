@@ -436,9 +436,9 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   // Zeitnormal, a humanoid robot on the human base. His own brain (`src/sim/zeitwart.ts`): three phases by era pair,
   // a gear hold at each change instead of a rage. The Koloss row of resistances: shock weak, acid resistant.
   zeitwart: {
-    kind: 'zeitwart', name: 'Der Zeitwart', body: 'human', ai: 'zeitwart', res: 'volk', radius: 0.9, scale: 1.9, hp: 6000, speed: 2.6,
+    kind: 'zeitwart', name: 'Der Zeitwart', body: 'human', ai: 'zeitwart', res: 'volk', radius: 0.9, scale: 1.9, hp: 3800, speed: 2.6,
     attackRange: 2.6, windup: 0.6, active: 0.14, recovery: 0.7,
-    reach: 3.2, halfAngle: 75 * DEG, damage: 36, knockbackTaken: 0.05, poise: true, weight: 0, boss: true, noRage: true,
+    reach: 3.2, halfAngle: 75 * DEG, damage: 30, knockbackTaken: 0.05, poise: true, weight: 0, boss: true, noRage: true,
   },
 };
 
