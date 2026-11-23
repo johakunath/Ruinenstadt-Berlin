@@ -474,6 +474,20 @@ export function buildCharlottenburgLandmark(b: ChunkBuilder, l: Landmark): void 
   if (rec && recipe) weather(c, rec, recipe);
 }
 
+/**
+ * M18: the worn-surface pass for a sight of another district: records the stucco and brick walls `build` draws and
+ * weathers them with recipe `g` (as `buildCharlottenburgLandmark`). Opt-in; only the Wedding sights call it.
+ */
+export function wornBuild(c: Ctx, g: Grime, build: () => void): void {
+  const rec = recordWalls(c.b);
+  try {
+    build();
+  } finally {
+    rec.stop();
+  }
+  weather(c, rec, g);
+}
+
 // ---------------------------------------------------------------- worn surfaces (2026-11-19)
 
 /**

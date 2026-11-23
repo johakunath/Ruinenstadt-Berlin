@@ -22,7 +22,7 @@ import type { LightShape } from './world';
 export const BULB = 0xfff2ea;
 /** Stage pink: berry-violet stage and hall light (board: violet, berry). */
 export const PINK = 0xff58c8;
-const LAMP = 0xffb060, FIRE = 0xff8a3c, SHOP = 0xffc890, COLD = 0xd8ecff, TEAL = 0x5fd8c8;
+export const LAMP = 0xffb060, FIRE = 0xff8a3c, SHOP = 0xffc890, COLD = 0xd8ecff, TEAL = 0x5fd8c8;
 
 /** A pooled light at local (x, y, z) of the landmark; `yaw` is local (0 = out of the front, +z). */
 export interface PlanLight { t: 'light'; x: number; y: number; z: number; color: number; i: number; d: number; pool: number; shape?: LightShape; flicker?: number }
@@ -40,11 +40,11 @@ export interface PlanGlow { t: 'glow'; x: number; y: number; z: number; r: numbe
 export interface PlanLantern { t: 'lantern'; x: number; y: number; z: number; post: number; tint?: readonly [number, number, number] }
 export type PlanItem = PlanLight | PlanWash | PlanSpill | PlanGlow | PlanLantern;
 
-const L = (x: number, y: number, z: number, color: number, i: number, d: number, pool: number, shape?: LightShape, flicker = 0.04): PlanLight => ({ t: 'light', x, y, z, color, i, d, pool, shape, flicker });
-const W = (x: number, y: number, z: number, ry: number, w: number, h: number, color: number, dir: PlanWash['dir'], k = 1): PlanWash => ({ t: 'wash', x, y, z, ry, w, h, color, dir, k });
-const S = (x: number, z: number, ry: number, w: number, d: number, color: number, k = 1, y = 0): PlanSpill => ({ t: 'spill', x, y, z, ry, w, d, color, k });
-const G = (x: number, y: number, z: number, r: number, color: number, k = 1, flat = false): PlanGlow => ({ t: 'glow', x, y, z, r, color, k, flat });
-const N = (x: number, y: number, z: number, post = 0, tint?: readonly [number, number, number]): PlanLantern => ({ t: 'lantern', x, y, z, post, tint });
+export const L = (x: number, y: number, z: number, color: number, i: number, d: number, pool: number, shape?: LightShape, flicker = 0.04): PlanLight => ({ t: 'light', x, y, z, color, i, d, pool, shape, flicker });
+export const W = (x: number, y: number, z: number, ry: number, w: number, h: number, color: number, dir: PlanWash['dir'], k = 1): PlanWash => ({ t: 'wash', x, y, z, ry, w, h, color, dir, k });
+export const S = (x: number, z: number, ry: number, w: number, d: number, color: number, k = 1, y = 0): PlanSpill => ({ t: 'spill', x, y, z, ry, w, d, color, k });
+export const G = (x: number, y: number, z: number, r: number, color: number, k = 1, flat = false): PlanGlow => ({ t: 'glow', x, y, z, r, color, k, flat });
+export const N = (x: number, y: number, z: number, post = 0, tint?: readonly [number, number, number]): PlanLantern => ({ t: 'lantern', x, y, z, post, tint });
 const PI = Math.PI, HALF = Math.PI / 2;
 
 /** What each sight gets, in its local frame (x along the main front, z out of it, y up from its ground). */
@@ -322,11 +322,14 @@ export function worldOf(l: Landmark, x: number, z: number): [number, number] {
   return [l.x + x * c + z * s, l.z - x * s + z * c];
 }
 
+/** What a district gives each sight (its own light plan); Charlottenburg's is `plan`. */
+export type LightPlan = (l: Landmark) => PlanItem[];
+
 /** Every light of the map's sights in world x, z with its pool centre (for the fight-circle test). */
-export function landmarkLightPlan(m: MapDef): Array<{ landmark: Landmark; light: PlanLight; x: number; z: number; poolX: number; poolZ: number }> {
+export function landmarkLightPlan(m: MapDef, planOf: LightPlan = plan): Array<{ landmark: Landmark; light: PlanLight; x: number; z: number; poolX: number; poolZ: number }> {
   const out: Array<{ landmark: Landmark; light: PlanLight; x: number; z: number; poolX: number; poolZ: number }> = [];
   for (const l of m.landmarks) {
-    for (const it of plan(l)) {
+    for (const it of planOf(l)) {
       if (it.t !== 'light') continue;
       const yaw = it.shape?.yaw ?? 0, reach = it.shape?.reach ?? 0;
       const [x, z] = worldOf(l, it.x, it.z), [poolX, poolZ] = worldOf(l, it.x + Math.sin(yaw) * reach, it.z + Math.cos(yaw) * reach);
@@ -350,8 +353,13 @@ const bulb = new SphereGeometry(0.07, 5, 3);
 
 /** Dresses every Charlottenburg sight with light (`buildCharlottenburgWorld`); other maps never call it. */
 export function lightCharlottenburgLandmarks(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number): void {
+  lightLandmarks(m, chunkOf, ground, plan);
+}
+
+/** Draws a light plan over the map's sights (Charlottenburg, M18 Wedding: `wedding-lights.ts`). */
+export function lightLandmarks(m: MapDef, chunkOf: (x: number, z: number) => ChunkBuilder, ground: (x: number, z: number) => number, planOf: LightPlan): void {
   for (const l of m.landmarks) {
-    const items = plan(l);
+    const items = planOf(l);
     if (!items.length) continue;
     const b = chunkOf(l.x, l.z), frame = new Matrix4().makeRotationY(l.rot).setPosition(l.x, 0, l.z);
     const pt = (x: number, y: number, z: number): Vector3 => new Vector3(x, y, z).applyMatrix4(frame);

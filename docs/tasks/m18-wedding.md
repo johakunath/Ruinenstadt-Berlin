@@ -2,7 +2,7 @@
 
 Wedding becomes a district (Johannes, 2026-11-21). Concept, decisions W1 to W9, geography check, the Magendoktor facts, enemy outline and 2D reuse: `docs/maps/wedding.md`. Picked: layout C2 `docs/mockups/m18-wedding-c2.svg` and look A `docs/mockups/m18-wedding-look.svg`; both schematic, the anchors below rule. Template: `docs/tasks/m16-charlottenburg.md` and its code. The id M18 was also the endless mode step (built, `src/sim/director.ts`); this file is the district.
 
-Status: step 0 done, step 1 merged (PR #81), step 2 built (draft PR #80, wired into the map), step 3 starts when step 2 is merged.
+Status: done. Step 0 done, step 1 merged (PR #81), step 2 merged (PR #80), step 3 flow merged (PR #85), step 3 sights in the PR named in the handover.
 
 **Scope rule for every session (Johannes, 2026-11-21): small and recycled.** Reuse builders, props, lot types, brains and bodies that exist; build new only what this file names. It does not have to match the other maps, but it has to be decent: readable, no empty stretch, no dark street. When in doubt, do less and write it into the handover.
 
@@ -13,7 +13,7 @@ Status: step 0 done, step 1 merged (PR #81), step 2 built (draft PR #80, wired i
 | 0 | Concept, geography check, decisions, mockups, plan | | Fable high | done 2026-11-21 |
 | 1 | **Map.** Data `src/data/wedding.ts` from the anchors below and tests `src/data/wedding.test.ts` at scale 1 and 1.3 (as `charlottenburg.test.ts`, with the collider flood fill); map SVG `docs/maps/wedding.svg` shown in chat. `?map=wedding`: wiring (`options.ts`, `ui/maps.ts` with freed id 5, `main.ts` banner „Wedding · kommt bald“, bot `mapLevelOf`, `tools/balance.mjs --map=wedding`), `src/render/wedding-world.ts` with massing for the eight sights, the Panke, the plain brick Ringbahn, the hill, the roofless hall. The Magendoktor as a walk-in room with its brawl and boss (E2). The look: `WEDDING_SKY`, weather, lampion chains, awnings, carpets, the Lange Tafel, market stalls, scaffold nets and banners (E4 to E7). Stand-in bosses and enemies; district 5, tier 40 to 62. Smoke test. No title, victory or network link | 0 | Opus high | merged (PR #81) |
 | 2 | **Enemies, bosses, loot.** A short spec `docs/tasks/m12e-wedding-enemies.md` (format of `m12d-charlottenburg-enemies.md`, half its length), then the build: Zecher skins, three board enemies, four bosses (boss 1 is Der Zugezogene, the hipster in the pub), Kodex, sounds from existing sets, the small loot selection. Input: map doc › Enemies. Update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md`. Does not edit `src/data/wedding.ts` unless step 1 is merged; otherwise the swaps go into the handover | 0 (parallel to 1) | Opus high | built 2026-11-21, draft PR #80; wired into `wedding.ts` after PR #81 (handover in `m12e-wedding-enemies.md`) |
-| 3 | **Sights and finish.** The six new sights from photos (`docs/maps/landmarks.md`; look at the photos yourself), built worn: Alte Nazarethkirche, Zum Magendoktor (front and interior), Amtsgericht, Flakturm, Beamtentor, Hochzeitspalast in the Maschinenhalle; the Neubau im Gerüst from existing crane, scaffold and block parts; the U entrance is the existing kind. A light plan per sight (as `charlottenburg-lights.ts`), reveals. Swap the stand-ins for the step 2 roster and set the wave mix. Flow: U9 tunnel (line 4, `LineDef` with `name`, tier as the U2 west pattern), network stop `map: 'wedding'`, title and victory links, camp radio line. Rows for Codex in `docs/asset-pipeline.md` (cloth atlas, sign atlas), screenshots (street, fight, each sight), rows in `docs/tasks/pt-hardware-checks.md`, `docs/status.md`, the queue | 1 merged, 2 merged | Opus high | open |
+| 3 | **Sights and finish.** The six new sights from photos (`docs/maps/landmarks.md`; look at the photos yourself), built worn: Alte Nazarethkirche, Zum Magendoktor (front and interior), Amtsgericht, Flakturm, Beamtentor, Hochzeitspalast in the Maschinenhalle; the Neubau im Gerüst from existing crane, scaffold and block parts; the U entrance is the existing kind. A light plan per sight (as `charlottenburg-lights.ts`), reveals. Swap the stand-ins for the step 2 roster and set the wave mix. Flow: U9 tunnel (line 4, `LineDef` with `name`, tier as the U2 west pattern), network stop `map: 'wedding'`, title and victory links, camp radio line. Rows for Codex in `docs/asset-pipeline.md` (cloth atlas, sign atlas), screenshots (street, fight, each sight), rows in `docs/tasks/pt-hardware-checks.md`, `docs/status.md`, the queue | 1 merged, 2 merged | Opus high | done 2026-11-23: flow PR #85, sights in the following PR (handover step 3) |
 
 ## Anchors (layout C2, scale 1, meters, +X east, +Z south)
 
@@ -73,6 +73,26 @@ Bounds x −55 … 280, z −105 … 125 (335 × 230). Start (0, 0) at the U Leo
 ## Text drafts (the sessions finalise)
 
 Banner „Wedding · kommt bald“; district card „Gold, Tee und Baklava. Sultan Nimmersatt lässt keinen Gast gehen.“; zone names „Leopoldkiez“, „Panke“, „Humboldthain“, „Das ewige Fest“; pub sign „Zum Magendoktor“, box sign „Tag u. Nacht“; banner on the Neubau „Der Wedding kommt bald“; billboards „Eröffnung: bald“; win „Wedding ist da“.
+
+## Decisions in step 3 (2026-11-23, Johannes: no open questions, decide and record)
+
+| # | Topic | Decision |
+|---|---|---|
+| S1 | U9 on the network | Line 4 `{ id: 'U9', color: '#f3791d', ghost: 'Westhafen', name: 'U9-Tunnel' }` (BVG orange); stop 5 Wedding at (77, 42) north of Zoo and Mitte; the route bends west round the Mitte label. Waves: Charlottenburg zone 0 to the ghost station, Wedding zone 0 (Tee-Ifrit, no carpets: no tunnel has flyers) after it, at the Charlottenburg late tier 49 to 54 |
+| S2 | Wedding's victory | Leads back to Köpenick as Charlottenburg's did; the finale session replaces this one link (`wonLink('wedding')` in `src/ui/maps.ts`) |
+| S3 | Alte Nazarethkirche | Footprint turned narrow and deep (14 × 19, was 18 × 12), no tower: the photos show a towerless Schinkel hall; the step 1 tower was the Neue Nazarethkirche behind it |
+| S4 | Hochzeitspalast | No domes (W8: they read as a mosque from above); a central attic with a crown, urns, a balustrade instead. The chandeliers hang on a wire in front of the palace, at the boss circle's north rim (the rim rule) |
+| S5 | Lights | One plan per sight in `src/render/wedding-lights.ts`, drawn by the Charlottenburg runner (`lightLandmarks`); the pub's lamps moved there from its builder. No new colour |
+| S6 | Worn | The shared landmark wear plus Charlottenburg's worn-surface pass (`wornBuild`) on church, court, gate and hall; the Flakturm keeps concrete with hand graffiti and ivy |
+
+## Handover 2026-11-23 (step 3) [Claude · Opus high]
+
+- Built: `src/render/wedding-sights.ts` (six sights and the Neubau from photos, budgets: church 1.7k, court 4.6k, Flakturm 2.1k, gate 1.9k, hall and palace 6.5k, pub 2.3k triangles), `wedding-lights.ts` with tests, five reveals (the Amtsgericht starts at 16 m for scale 1.3), the pub front (mural, sticker door, windows); sign atlas 2 × 12 cells (T11), cloth atlas row T12. Flow (PR #85): U9, stop, links, camp radio, bot `tunnel4`.
+- Photos checked the map doc's memory: see the map doc › Geography check. The Magendoktor has no photo on Commons; its front stays on the step 0 press-photo notes.
+- Wave mix: the step 2 roster everywhere (no stand-ins); the pub and the U9 use the plain kinds as Zecher (pub) or Zeitlose (tunnel).
+- Bot: `--map=wedding --carry` 3/3 won, no deaths, 16.3 min, lowest life 87 % (the Sultan 47 % damage taken); the carried hero barely gets hurt here, so Wedding plays easy after Charlottenburg. For the balance session (W4, B2); no numbers changed here. `--campaign` 1 run: all 11 maps won, U9 15.9 min.
+- Proof: `docs/proof/m18-wedding/step3/` (day sheet, a reveal per sight, street, fight). Leistung readout (cloud): start 175 / 122k, Nettelbeckplatz 125 / 86k, Brunnenstraße 159 / 128k, Maschinenhalle 166 / 172k.
+- Open for the finale session: `wonLink('wedding')`, its own stop and unlock. Hardware: `pt-hardware-checks.md` row 57.
 
 ## Handover 2026-11-21 (step 1) [Claude · Opus high]
 
