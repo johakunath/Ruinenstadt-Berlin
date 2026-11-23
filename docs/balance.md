@@ -2,6 +2,32 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## Whole campaign with the Fernsehturm, skill good (2026-11-23)
+
+`node tools/balance.mjs 3 normal good 1 --campaign` (miss 0.05, react 0.15 to 0.25 s, dodge 0.9, tempo 0.9), all twelve maps including the Fernsehturm, numbers as on `main` after PR #93. A control run with skill `johannes` (1 run, seed 1) also won all twelve maps without a death. Skill only changes combat (aim, reactions, dodging, attack tempo), not shopping or gear picks, so the gaps between runs below come from the loot, not the skill.
+
+| Map | Won | Deaths | Min | Boss fights (time / life taken, three runs) | Item level end (weapon) | Power end |
+|---|---|---|---|---|---|---|
+| Köpenick | 3 | 0.3 | 16.7 | 18 to 49 s, 17 to 160 % | 12.0 (17) | 425 |
+| S3-Tunnel | 3 | 0 | 6.7 | Schaffner 68 to 136 s, 31 to 43 % | 12.0 (18) | 440 |
+| Xhain | 3 | 0 | 17.6 | 22 to 92 s, 9 to 144 % | 14.9 (20) | 748 |
+| U8-Tunnel | 3 | 0 | 8.3 | 90 to 138 s, 64 to 171 % | 14.9 (20) | 856 |
+| Alexanderplatz | 3 | 0 | 22.9 | 27 to 272 s, 1 to 214 % | 18.8 (20) | 1524 |
+| U2-Tunnel | 3 | 0 | 8.9 | 122 to 185 s, 98 to 128 % | 19.6 (20) | 1212 |
+| Mitte | 3 | 0 | 25.8 | 38 to 377 s, 8 to 358 % | 22.8 (20) | 2014 |
+| U2-Tunnel West | 3 | 0 | 11.3 | 149 to 309 s, 43 to 261 % | 22.9 (20) | 1912 |
+| Charlottenburg | 3 | 0 | 33.2 | 81 to 342 s, 10 to 235 % | 25.9 (28) | 2925 |
+| U9-Tunnel | 3 | 0 | 14.6 | 125 to 393 s, 70 to 99 % | 25.6 (28) | 2985 |
+| Wedding | 3 | 0 | 49.6 (17, 42, 90) | 49 to 1423 s, 34 to 721 %; Sultan 155, 705 and 1423 s | 30.9 (28) | 4118 |
+| Fernsehturm | 3 | 0 | 20.0 (11, 20, 29) | 93 to 505 s, 23 to 359 %; Der Zeitwart 128 to 211 s | 31.2 (32) | 4144 |
+
+**Findings:**
+- Nobody dies (1 death in 36 maps), so "never frustrating" holds for deaths. Fight length does not: in two of three runs Sultan Nimmersatt took 12 and 24 minutes and 6 to 7 full life bars of damage, healed back by Verband and leech. Wedding then took 42 and 90 minutes instead of 17. The B2 step 3 runs (skill `johannes`) showed the same Sultan spread (63 to 670 s).
+- Cause in these runs: the weapon stalls. Its item level stays at 20 from Xhain to the U2-Tunnel West (four maps) and at 21 to 28 until Wedding, so power at Wedding is 2200 to 2300 in the slow runs and 7800 in the fast one. Run 3 found a better weapon early and cleared Wedding in 17 minutes.
+- In the slow runs the Fernsehturm fights take 155 to 174 % of max life on average; the finale is long but not lost.
+- Not covered: Leicht and Schwer, skill `weak`, endless mode; feel and getting lost (the bot never gets lost). B9 (bot fitted to Johannes) still waits for his playtest telemetry.
+- Next (not decided): a weapon floor (e.g. the Späti or trader always offers a weapon near the district's drop level, or a weapon pity drop when the worn one is several levels behind) and a cap on boss fight length (Sultan life or his heal), then rerun this command. Backlog P45.
+
 ## Bosses and tunnel roles (B2 step 3, 2026-11-23)
 
 `node tools/balance.mjs 3 normal johannes 1 --campaign`. Before (step 2 economy): district bosses after Köpenick fell in 10 to 30 s for 0 to 20 % of life. Variants (boss damage step / extra life step): 0.7 / 0.3 and 0.7 / 0.6 lost a campaign in Wedding; 1.0 / 0.3 won all but the openers stayed easy and the Spreehexe killed a weak hero five times. Picked: 0.7 / 0.3 with the life step capped at step 3, openers +60 % life, Spreehexe hit 27, tunnel roles, camp prices ×1.8.
