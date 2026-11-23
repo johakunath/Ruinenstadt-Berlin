@@ -18,8 +18,8 @@ export interface ZeitwartState {
   phase: number;
   /** The gear hold running now: seat, charge, seconds to the next add. */
   hold: { seat: Point; p: number; sp: number } | null;
-  /** A Zeitsprung: blinks left, seconds to the next step, the marked spot. */
-  blink: { n: number; t: number; x: number; z: number } | null;
+  /** A Zeitsprung: blinks left, seconds to the next step, the marked spot (`marked`: its warning is down). */
+  blink: { n: number; t: number; x: number; z: number; marked: boolean } | null;
 }
 
 /** Hooks from `ai.ts` (no import back, so the brain file has no cycle). */
@@ -82,7 +82,7 @@ function markBlink(sim: Sim, e: Enemy, q: Point): void {
 
 function startBlink(sim: Sim, e: Enemy): void {
   const q = blinkSpot(sim, e);
-  zwOf(e).blink = { n: Z.blinks, t: Z.blinkWarn, x: q.x, z: q.z };
+  zwOf(e).blink = { n: Z.blinks, t: Z.blinkWarn, x: q.x, z: q.z, marked: true };
   markBlink(sim, e, q);
 }
 
@@ -146,17 +146,25 @@ function holdStep(sim: Sim, e: Enemy, zw: ZeitwartState, B: Blocks): void {
 /** One step of a Zeitsprung: after the mark he is there, sends a shock ring, and marks the next spot. */
 function blinkStep(sim: Sim, e: Enemy, zw: ZeitwartState, B: Blocks): void {
   const b = zw.blink!;
-  b.t -= DT;
-  if (b.t > 0 || e.state === 'special') return;
+  if (!b.marked) {
+    // The gap after a landing: the next mark goes down once the shock ring is out, so the landing hit and the blink
+    // fall together at the end of its warning (Codex review: the mark used to land 0.9 s before him).
+    if (e.state === 'special' || (b.t -= DT) > 0) return;
+    const q = blinkSpot(sim, e);
+    b.x = q.x;
+    b.z = q.z;
+    b.t = Z.blinkWarn;
+    b.marked = true;
+    markBlink(sim, e, q);
+    return;
+  }
+  if ((b.t -= DT) > 0) return;
   e.x = e.px = b.x;
   e.z = e.pz = b.z;
   sim.events.push({ type: 'blink', id: e.id, x: b.x, z: b.z, phase: 'go' });
   B.begin(sim, e, 'bass');
   b.n--;
   if (b.n <= 0) { zw.blink = null; return; }
-  const q = blinkSpot(sim, e);
-  b.x = q.x;
-  b.z = q.z;
-  b.t = Z.blinkGap + Z.blinkWarn;
-  markBlink(sim, e, q);
+  b.t = Z.blinkGap;
+  b.marked = false;
 }

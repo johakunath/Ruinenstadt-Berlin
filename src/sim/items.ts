@@ -123,6 +123,8 @@ export function makeTelespargel(rng: Rng, ctx: LootContext, itemLevel: number): 
   item.kind = 'spear';
   item.name = N.TURM_LEGENDARY_WEAPON;
   item.base = N.BASES[item.name]!;
+  // The roll gave it the element of the legendary it was rolled as (Codex review): the tower spear is shock.
+  item.element = LEGENDARY_ELEMENTS.telespargel;
   item.value = Math.round((item.value / from) * WEAPON_KINDS.spear.damageFactor);
   return item;
 }

@@ -292,7 +292,8 @@ export function updateDirector(sim: Sim): void {
     // M17 (T10): the Fernsehturm ends at the main switch: the choice first, then the victory (`updateEnding`).
     if (sim.level.ending.length) {
       run.phase = 'choice';
-      sim.events.push({ type: 'choiceOpen' });
+      // A checkpoint, so leaving or a profile change before the choice resumes at the rings (Codex review).
+      sim.events.push({ type: 'choiceOpen' }, { type: 'checkpoint' });
       return;
     }
     run.phase = 'won';
