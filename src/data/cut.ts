@@ -94,6 +94,8 @@ export function cutPlan(m: MapDef, lots: readonly Lot[], opts: { off?: boolean; 
   const zones: CutZone[] = [];
   const parts = new Map<number, CutPart>();
   if (opts.off) return { zones, parts: [] };
+  // A building in two zones (a Hinterhof and a street front) is cut at the lower height in both: the geometry is
+  // split once at build time. Decided 2026-11-23 (B2 step 3 leftovers): the hero stays visible either way.
   const flag = (zone: CutZone, id: number, kind: CutPart['kind'], index: number): void => {
     const p = parts.get(id);
     if (p) p.h = Math.min(p.h, zone.h);
