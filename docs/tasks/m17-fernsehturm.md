@@ -209,6 +209,7 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 
 - Built from the two boards: look table above. New files `src/render/turm-city.ts`, `src/render/turm-paint.ts`; `turm-world.ts` rewritten; `TURM_SKIES` in `sky.ts`; a window bursts where a body spawns at the glass (Panorama, Telecafé, Uhrenraum); the lift curtain (step 1) counts the height.
 - Cost: cloud readout on Leistung 61 to 76 draw calls, 29k to 49k triangles per deck; Qualität 121 to 191 calls, 100k to 176k triangles (the Telecafé is the largest). Textures about 25 MB with mips. No new light at runtime; five candles and the well glow join the pool.
+- Proof: `docs/proof/m17-fernsehturm/step2-decks.png` (Panorama, Telecafé, Uhrenraum, foyer) and `step2-telecafe-uhrenraum.png`.
 - Open for Johannes (hardware rows 57 to 59): look per deck, the city image, hand readability, the band, frame rate. Codex: texture row T11.
 
 ## Step 3 spec (2026-11-23) [Claude · Opus high]
