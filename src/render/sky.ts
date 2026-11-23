@@ -185,8 +185,43 @@ export const WEDDING_SKY: Sky = {
   look: { saturation: 1.12, contrast: 1.05, bloom: 0.9 },
 };
 
+/**
+ * M17 Fernsehturm (T7, `docs/maps/fernsehturm.md` › Light and look): one sky per deck, night at the foot, dawn at the
+ * top. The deck is the zone; the lift ride snaps the sky while the curtain is dark, so the decks never blend.
+ * Foyer: the plain night, cold. Schacht: almost black, a green glow from the jungle below. Panoramaetage: deep blue
+ * before dawn. Telecafé: rose and pearl, first light. Uhrenraum: the sun standing on the horizon, pale gold.
+ */
+export const TURM_SKIES: readonly Sky[] = [
+  { ...NIGHT_SKY, id: 'turm-foyer', background: 0x0a1518, fog: 0x0a1518, fogDensity: 0.012, hemi: { sky: 0x6a9aae, ground: 0x1c1a18, intensity: 0.7 }, sun: { color: 0x9cc8e0, intensity: 1.2, from: NIGHT_SKY.sun.from }, lamps: 1.05 },
+  {
+    id: 'turm-schacht', background: 0x030807, fog: 0x06120c, fogDensity: 0.022,
+    env: { top: [0.03, 0.08, 0.06], horizon: [0.01, 0.05, 0.03], lamps: 1.1, intensity: 0.4 },
+    hemi: { sky: 0x2c4a3c, ground: 0x0c2a14, intensity: 0.55 }, sun: { color: 0x6ad890, intensity: 0.6, from: [-4, 24, 6] }, lamps: 1.2,
+    look: { contrast: 1.08 },
+  },
+  {
+    id: 'turm-panorama', background: 0x16204a, fog: 0x1c2450, fogDensity: 0.01,
+    env: { top: [0.12, 0.16, 0.38], horizon: [0.32, 0.2, 0.36], lamps: 1, intensity: 0.6 },
+    hemi: { sky: 0x7088d0, ground: 0x2a2030, intensity: 0.8 }, sun: { color: 0xa8b4ff, intensity: 1.3, from: [14, 18, -16] }, lamps: 1,
+    look: {},
+  },
+  {
+    id: 'turm-telecafe', background: 0x6a4a66, fog: 0x7a5468, fogDensity: 0.008,
+    env: { top: [0.42, 0.36, 0.48], horizon: [0.8, 0.52, 0.5], lamps: 0.9, intensity: 0.75 },
+    hemi: { sky: 0xe0b0c0, ground: 0x3a2826, intensity: 0.9 }, sun: { color: 0xffc0b0, intensity: 1.6, from: [18, 10, -14] }, lamps: 0.95,
+    look: { contrast: 1.04 },
+  },
+  {
+    id: 'turm-uhrenraum', background: 0x7a5a38, fog: 0x8a6a44, fogDensity: 0.008,
+    env: { top: [0.46, 0.4, 0.36], horizon: [1, 0.72, 0.4], lamps: 0.9, intensity: 0.85 },
+    hemi: { sky: 0xf0d0a0, ground: 0x3a2a1c, intensity: 0.85 }, sun: { color: 0xffd08a, intensity: 1.6, from: [22, 7, -10] }, lamps: 0.95,
+    look: { contrast: 1.06, bloom: 0.95 },
+  },
+];
+
 /** Skies blended by zone on this map (`?sky=one`: the Premierennacht everywhere, the fallback of E1), else null. */
 export function zoneSkies(mapId: string | undefined, variant: string | null): readonly Sky[] | null {
+  if (mapId === 'turm') return TURM_SKIES;
   return mapId === 'charlottenburg' && variant !== 'one' ? CHARLOTTENBURG_SKIES : null;
 }
 
@@ -231,6 +266,7 @@ export function mixSky(a: Sky, b: Sky, k: number): Sky {
 export function skyFor(mapId: string | undefined, variant: string | null): Sky {
   if (mapId === 'mitte') return MITTE_SKY;
   if (mapId === 'wedding') return WEDDING_SKY;
+  if (mapId === 'turm') return TURM_SKIES[0]!;
   if (mapId === 'charlottenburg') return CHARLOTTENBURG_SKIES[variant === 'one' ? 1 : 0]!;
   if (mapId !== 'alex') return NIGHT_SKY;
   return ALEX_SKIES[(variant === 'b' || variant === 'c' ? variant : 'a')];

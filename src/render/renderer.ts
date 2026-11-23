@@ -95,6 +95,8 @@ function turmState(sim: Sim, time: number): TurmState {
   const r = sim.run, h = r.hold, ph = r.phase;
   return {
     time,
+    x: sim.player.x,
+    z: sim.player.z,
     index: r.index,
     fighting: ph === 'fight' || ph === 'pause' || ph === 'hold',
     lift: sim.lift ? { i: sim.lift.i, k: Math.min(1, sim.lift.t / LIFT.ride) } : null,
@@ -411,6 +413,17 @@ export class GameRenderer {
         this.fx.burst(ev.x, y(ev.x, ev.z, 1.4), ev.z, 6, 5.5, 2, 60, 7);
         this.cam.shake(0, 0, 0.1);
         break;
+      case 'spawn': {
+        // M17: on the sphere decks a body that comes in at the glass breaks a window (T6 dressing).
+        const deck = this.opts.map?.def.decks ? sim.enemies.find((e) => e.id === ev.id) : undefined;
+        if (!deck) break;
+        const d = this.opts.map!.def.decks!.find((q) => Math.abs(q.x - deck.x) < q.r + 2);
+        if (d && d.id !== 'schacht' && d.id !== 'foyer' && Math.hypot(deck.x - d.x, deck.z - d.z) > d.r - 3) {
+          this.fx.burst(deck.x, 1.6, deck.z, 0.75, 0.9, 1, 22, 5);
+          this.cam.shake(0, 0, 0.05);
+        }
+        break;
+      }
       case 'lift':
         // M17: the ride is a cut (the curtain is dark): camera, sky and lights jump to the next deck.
         this.cam.snap(ev.x, ev.z, groundY(ev.x, ev.z));

@@ -208,12 +208,19 @@ export function turmLayout(): TurmLayout {
       lights.push({ x: p.x, z: p.z, y: 3.2, color, intensity, distance: 12 });
     }
   };
-  ring(foyer, 17, 6, 0xbfe4ff, 10, Math.PI / 6);
+  ring(foyer, 17, 6, 0xe8dcc4, 10, Math.PI / 6);
   lights.push({ x: -13, z: 13.5, y: 2.6, color: 0xffb060, intensity: 16, distance: 10 });
   ring(schacht, 11, 5, 0xffd890, 9, Math.PI / 5);
   ring(panorama, 12, 6, 0xffcf8a, 9, Math.PI / 6);
   ring(telecafe, 12, 6, 0xffc890, 10, Math.PI / 6);
   ring(uhren, 11.5, 6, 0xffd27a, 10);
+  // Candles on four Telecafé tables: low warm light at table height (organic light, guideline › Light).
+  for (const k of [1, 4, 7, 10]) {
+    const p = polar(telecafe, 15.4, (k * Math.PI) / 6 + Math.PI / 12);
+    lights.push({ x: p.x, z: p.z, y: 1, color: 0xffa050, intensity: 4, distance: 5 });
+  }
+  // The shaft: green glow from the jungle below (no shade below 2.5 m).
+  lights.push({ x: schacht.x, z: schacht.z, y: -2, color: 0x50ff80, intensity: 12, distance: 12 });
   for (const d of TURM_DECKS) {
     const door = liftDoor(d);
     lights.push({ x: door.x, z: door.z + 0.6, y: 2.8, color: 0xff5040, intensity: 5, distance: 6 });
