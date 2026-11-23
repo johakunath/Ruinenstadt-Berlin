@@ -16,6 +16,7 @@ import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, ty
 import { spatiColliders, spatiProps, spatiRest } from './spati';
 import { kneipeColliders } from './kneipe';
 import { onCampFloor, type CampLayout } from './camp-map';
+import { deckWalk, type DeckDef, type TurmLayout } from './fernsehturm';
 
 export type Pt = readonly [number, number];
 
@@ -235,6 +236,10 @@ export interface MapDef {
   tunnel?: TunnelDef;
   /** M20 walkable camp: floor polygons, walls, stations and rings (`src/data/camp-map.ts`). */
   camp?: CampLayout;
+  /** M17 Fernsehturm (`src/data/fernsehturm.ts`): only the decks are walkable (outline minus core and bar; no lots, no streets). */
+  decks?: DeckDef[];
+  /** M17: lifts, clock hands, the revolving band, furniture, rest stops and lamps of the tower. */
+  turm?: TurmLayout;
   /** M16b/M19 side passage surprises: fixed hidden blessings and sleeping guards (a mini-boss). */
   hiddenSpots?: Point[];
   guards?: Level['guards'];
@@ -912,7 +917,7 @@ function blockSlot(m: MapDef, s: Street, rng: Rng, occ: Occupancy, lots: Lot[], 
 
 /** Generates buildings along streets and trees on free ground. Deterministic per map seed. */
 export function generateLots(m: MapDef): Lot[] {
-  if (m.tunnel) return [];
+  if (m.tunnel || m.decks) return [];
   const rng = new Rng(m.seed);
   const occ = new Occupancy();
   const lots: Lot[] = [];
@@ -1245,7 +1250,7 @@ function lotFront(lots: Lot[], x: number, z: number, r: number): boolean {
  */
 export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
   if (m.tunnel) return tunnelProps(m);
-  if (m.camp) return [...m.fixedProps];
+  if (m.camp || m.decks) return [...m.fixedProps];
   const rng = new Rng(m.seed + 7);
   const props: Prop[] = [];
   // Späti sandbags and lantern first, so everything else keeps clear of them.
@@ -1929,6 +1934,9 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     for (const [lx, lz, hx, hz, lo = 1, hi = 3] of t.solid) campSolids.push({ station: t.id, lo, hi, collider: { kind: 'box', x: t.x + lx * c + lz * sn, z: t.z - lx * sn + lz * c, hx, hz, rot: t.rot } });
   }
   for (const f of m.camp?.decor ?? []) colliders.push({ kind: 'box', x: f.x, z: f.z, hx: f.w / 2, hz: f.d / 2, rot: 0 });
+  // M17: solid and low cores push bodies out round (the walk grid blocks them too), then the tower furniture.
+  for (const d of m.decks ?? []) if (d.core.kind !== 'well') colliders.push({ kind: 'circle', x: d.x, z: d.z, r: d.core.r });
+  for (const q of m.turm?.solids ?? []) colliders.push(q.round ? { kind: 'circle', x: q.x, z: q.z, r: q.hx } : { kind: 'box', x: q.x, z: q.z, hx: q.hx, hz: q.hz, rot: q.rot });
   colliders.push(...barrierColliders(m));
   if (m.rail) {
     const r = m.rail;
@@ -1937,7 +1945,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
     colliders.push({ kind: 'box', x: left, z: r.z, hx: (r.gapX - r.gapW / 2 - r.minX) / 2, hz: 4, rot: 0 });
     colliders.push({ kind: 'box', x: right, z: r.z, hx: (r.maxX - r.gapX - r.gapW / 2) / 2, hz: 4, rot: 0 });
   }
-  const rests = m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest);
+  const rests = [...m.landmarks.filter((l) => l.kind === 'spati').map(spatiRest), ...(m.turm?.rests ?? [])];
   const breakables = m.camp ? [] : breakableDefs(m, props, propColliders, rests);
   const onPier = (x: number, z: number): boolean => (m.piers ?? []).some((p) => { const dx = x - p.x, dz = z - p.z; return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2; });
   const T = m.tunnel;
@@ -1950,6 +1958,7 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   if (T?.wreck) colliders.push({ kind: 'box', ...T.wreck });
   const ground = new WalkGrid(m.bounds, 0.5, (x, z) => (isWater(m, x, z) && !onBridge(m, x, z) && !onPier(x, z)) || terraceWall(m, x, z) || !tunnelWalk(m, x, z, 0.3)
     || (!!m.camp && !onCampFloor(m.camp, x, z))
+    || (!!m.decks && !deckWalk(m.decks, x, z, 0.3))
     || (inRailYard(m, x, z) && !m.terraces.some((t) => inPoly(t.poly, x, z) || onStair(t, x, z) !== null)));
   const level = new Level(m.id, m.bounds, m.start, colliders, ground, [], m.bounds, m.encounters, m.zones, m.bridges.filter((b) => b.kind === 'ferry'), rests, breakables);
   level.district = m.district ?? 0;
@@ -1957,6 +1966,11 @@ export function mapLevel(m: MapDef, lots: Lot[], props: Prop[] = generateProps(m
   level.strength = m.strength ?? m.district ?? 0;
   level.camp = !!m.camp;
   level.campSolids = campSolids;
+  if (m.turm) {
+    level.lifts = m.turm.lifts.map((l) => ({ ...l, from: { ...l.from }, to: { ...l.to } }));
+    level.hands = m.turm.hands.map((h) => ({ ...h }));
+    level.band = m.turm.band ? { ...m.turm.band } : null;
+  }
   if (m.flavor) level.flavor = m.flavor;
   if (m.tunnel) level.tunnel = true;
   if (m.wet) level.wet = true;

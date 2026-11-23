@@ -34,6 +34,8 @@ import { buildMapWorld } from './map-world';
 import { NIGHT_SKY, skyZoneAt, type Sky } from './sky';
 import { SkyBlend } from './sky-blend';
 import type { TunnelState } from './tunnel-view';
+import type { TurmState } from './turm-world';
+import { LIFT } from '../sim/turm';
 import { bridgeAwareSurface, groundY, setGround } from './ground';
 import { COURTYARD } from '../data/courtyard';
 import type { Lot, MapDef } from '../data/map';
@@ -85,6 +87,18 @@ function tunnelState(sim: Sim, time: number): TunnelState {
     invite: at && r.phase === 'travel',
     // `wave` still counts the last fight while walking up; it is 1 only after the charge.
     power: hi >= 0 && (r.index > hi || (at && (r.phase === 'pause' || r.phase === 'fight') && r.wave >= 1)) ? (h?.on ?? -1e3) : null,
+  };
+}
+
+/** M17 Fernsehturm view state from the sim: the encounter, whether its fight runs, the lift wait, the crank hold. */
+function turmState(sim: Sim, time: number): TurmState {
+  const r = sim.run, h = r.hold, ph = r.phase;
+  return {
+    time,
+    index: r.index,
+    fighting: ph === 'fight' || ph === 'pause' || ph === 'hold',
+    lift: sim.lift ? { i: sim.lift.i, k: Math.min(1, sim.lift.t / LIFT.ride) } : null,
+    hold: ph === 'hold' && h ? { k: h.p / h.need, inside: h.inside } : null,
   };
 }
 
@@ -397,6 +411,17 @@ export class GameRenderer {
         this.fx.burst(ev.x, y(ev.x, ev.z, 1.4), ev.z, 6, 5.5, 2, 60, 7);
         this.cam.shake(0, 0, 0.1);
         break;
+      case 'lift':
+        // M17: the ride is a cut (the curtain is dark): camera, sky and lights jump to the next deck.
+        this.cam.snap(ev.x, ev.z, groundY(ev.x, ev.z));
+        if (this.skyBlend) {
+          this.skyBlend.snap(ev.x, ev.z);
+          this.applySky(this.skyBlend.now);
+          this.scene.environment = this.envs![this.skyBlend.envZone]!;
+        }
+        this.world.follow?.(ev.x, ev.z, true);
+        this.shadowClock.invalidate();
+        break;
       case 'breakableHit':
         this.world.breakables?.hit(ev.id);
         this.fx.debris(ev.x, groundY(ev.x, ev.z) + 0.6, ev.z, ev.kind, 5);
@@ -446,6 +471,7 @@ export class GameRenderer {
     this.world.update(this.time);
     this.world.sync?.(sim.time - DT * (1 - alpha));
     if (this.world.tunnel) this.world.tunnel.update(tunnelState(sim, sim.time - DT * (1 - alpha)), dt);
+    if (this.world.turm) this.world.turm.update(turmState(sim, sim.time - DT * (1 - alpha)), dt);
     if (!this.barriers && sim.level.barriers.length) this.scene.add((this.barriers = new BarrierView(sim.level.barriers)).group);
     this.barriers?.update(sim, dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);

@@ -137,7 +137,8 @@ function rimSpot(sim: Sim, enc: EncounterDef, radius: number): { x: number; z: n
     const q = freeSpot(sim.level, sim.rng, p.x, p.z, 11, 16, radius + 0.2, (x, z) => !gateBetween(sim, p.x, p.z, x, z));
     if (q) return q;
   }
-  let best = { x: enc.x, z: enc.z };
+  // M17: a ring fight's centre is the tower core; fall back to its walkable spot.
+  let best = { x: enc.at?.x ?? enc.x, z: enc.at?.z ?? enc.z };
   let bestScore = -Infinity;
   for (let tries = 0; tries < 14; tries++) {
     const a = sim.rng.range(0, Math.PI * 2);
@@ -199,7 +200,7 @@ export function updateDirector(sim: Sim): void {
       run.phase = 'hold';
       run.hold = { p: 0, need: enc.hold.need, inside: false, sp: 1, elite: false };
       if (enc.waves[0]!.bosses.length === 0) sim.lootWaves++;
-      sim.events.push({ type: 'encounterStart', index: run.index, hp: p.hp }, { type: 'holdStart', index: run.index, x: enc.x, z: enc.z });
+      sim.events.push({ type: 'encounterStart', index: run.index, hp: p.hp }, { type: 'holdStart', index: run.index, x: enc.hold.at?.x ?? enc.x, z: enc.hold.at?.z ?? enc.z });
       return;
     }
     run.phase = 'fight';
@@ -300,8 +301,8 @@ export const POWER_PAUSE = 2.5;
  * out of the tunnel mouth only then too, an elite brute at half charge. Full: `power`, then wave 1.
  */
 function updateHold(sim: Sim, enc: EncounterDef): void {
-  const H = enc.hold!, h = sim.run.hold!, p = sim.player, w = enc.waves[0]!;
-  h.inside = Math.hypot(p.x - enc.x, p.z - enc.z) <= H.r;
+  const H = enc.hold!, h = sim.run.hold!, p = sim.player, w = enc.waves[0]!, c = H.at ?? enc;
+  h.inside = Math.hypot(p.x - c.x, p.z - c.z) <= H.r;
   if (!h.inside) return;
   h.p = Math.min(H.need, h.p + DT);
   h.sp -= DT;
@@ -324,7 +325,7 @@ function updateHold(sim: Sim, enc: EncounterDef): void {
   }
   if (h.p < H.need) return;
   h.on = sim.time;
-  sim.events.push({ type: 'power', index: sim.run.index, x: enc.x, z: enc.z });
+  sim.events.push({ type: 'power', index: sim.run.index, x: c.x, z: c.z });
   sim.run.wave = 1;
   sim.run.phase = 'pause';
   sim.run.pauseT = POWER_PAUSE;

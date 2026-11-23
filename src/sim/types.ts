@@ -59,6 +59,8 @@ export interface Cast {
 }
 
 export interface Player {
+  /** M17 (T4): sim time a clock hand last hit the hero (one hit per pass). */
+  handT?: number;
   x: number;
   z: number;
   /** Previous step, for render interpolation. */
@@ -118,6 +120,8 @@ export interface Player {
 export type EnemyState = 'chase' | 'windup' | 'strike' | 'recover' | 'special' | 'stagger' | 'dead';
 
 export interface Enemy {
+  /** M17 (T4): sim time a clock hand last hit this body. */
+  handT?: number;
   id: number;
   kind: EnemyKind;
   def: EnemyDef;
@@ -295,7 +299,9 @@ export type SimEvent =
   /** M20 tunnel: the hero reached the generator; hold the ring (2D GEN). */
   | { type: 'holdStart'; index: number; x: number; z: number }
   /** M20 tunnel: the generator is charged, the end platform has power ("Strom!"). */
-  | { type: 'power'; index: number; x: number; z: number };
+  | { type: 'power'; index: number; x: number; z: number }
+  /** M17 Fernsehturm: the hero rode lift `index` to (x, z) on the next deck (T2). */
+  | { type: 'lift'; index: number; x: number; z: number };
 
 export type RunPhase = 'travel' | 'fight' | 'pause' | 'hold' | 'won';
 
@@ -373,4 +379,6 @@ export interface Sim {
   wet: boolean;
   /** M16 „Glas splittert“ (from the map; other maps, tunnels and the camp: off): glass bodies burst when they die. */
   shards: boolean;
+  /** M17 Fernsehturm (T2): the open lift ring the hero stands in and for how long, null outside one. */
+  lift?: { i: number; t: number } | null;
 }

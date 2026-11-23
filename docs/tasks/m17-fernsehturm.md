@@ -1,8 +1,24 @@
 # M17 Fernsehturm finale, district 6 [plan: Claude · Fable high; build: Claude · Opus high]
 
-Layout A „Aufstieg“ (Johannes, 2026-11-21). Order: Charlottenburg, Wedding, then this finale (map doc F9). **Do not start any build step before Wedding is complete and merged (Johannes, 2026-11-21).** The style boards (step S) may be made in the meantime. Concept, decisions F1 to F13, geography check, tower facts and proportions, deck table, boss, light, entry, cost and 2D reuse: `docs/maps/fernsehturm.md`. Mockups: `docs/mockups/m17-fernsehturm-layouts.html`, `docs/mockups/m17-tower-proportions.html` (PNGs beside them; schematic, the tables in the map doc rule). Templates: the tunnel (`src/data/tunnel.ts`, `src/render/tunnel-view.ts`) and the camp (`src/data/camp-map.ts`, `src/render/camp-world.ts`) for interiors, `docs/tasks/m16-charlottenburg.md` for the step format.
+Layout A „Aufstieg“ (Johannes, 2026-11-21). Order: Charlottenburg, Wedding, then this finale (map doc F9). The wait for Wedding is lifted (Johannes, 2026-11-23, below): steps 1 to 4 are built in one session, one PR per step. Concept, decisions F1 to F13, geography check, tower facts and proportions, deck table, boss, light, entry, cost and 2D reuse: `docs/maps/fernsehturm.md`. Mockups: `docs/mockups/m17-fernsehturm-layouts.html`, `docs/mockups/m17-tower-proportions.html` (PNGs beside them; schematic, the tables in the map doc rule). Templates: the tunnel (`src/data/tunnel.ts`, `src/render/tunnel-view.ts`) and the camp (`src/data/camp-map.ts`, `src/render/camp-world.ts`) for interiors, `docs/tasks/m16-charlottenburg.md` for the step format.
 
 Notes are short; whoever builds a step writes its handover here (at most 8 lines).
+
+## Johannes' decisions 2026-11-23
+
+- Start now: Wedding's map, enemies and bosses are on `main` (PRs #81, #80). Wedding step 3 (sights, U9, Wedding title link) runs in another session and does not touch the finale. The link from Wedding's victory to the finale is built here (step 4).
+- No open questions: J2 and every choice the files leave open are decided by the builder and recorded here. Step 2's look mockup is waived: the look comes from the two style boards in `docs/style/`.
+- The tower ends finished: five decks, lift, ring fights, hands, echoes, Der Zeitwart with sounds, lines and Kodex, the ending choice (card and flag), the Telespargel, the flow (unlock, network stop, Wedding link, save and resume across decks, bot `--map=turm`, the campaign order in `src/bot/run.ts`). T5 and T9 may be dropped only by their fallback. Step 5 (Codex) and step 6 (Johannes) get rows only.
+- Johannes allowed merging the step PRs after review and green CI.
+
+## Corrections after reading Wedding (step 1, 2026-11-23)
+
+| Assumption | Now |
+|---|---|
+| Telecafé waves 1920 only until Wedding is built | 1920 (Scherbentänzerin, Logenschreck, Souffleur) plus the three Wedding kinds (Tee-Ifrit, Baklava-Brocken, Teppichschlinger), from step 1 on |
+| Telecafé echo: the Diva for now | **Sultan Nimmersatt**, the Wedding district boss: he is Der Ewige Gastgeber, the host of a revolving restaurant fits him exactly. The Diva stays out (one echo per deck pair) |
+| Tier 48 to 70 (F8) | Holds: Wedding is 40 to 62, so +8 per district still gives 48 to 70. District strength 6 (`districtScale`) |
+| `STOPS[5]` Wedding, `STOPS[6]` finale | Not on `main` yet: Wedding's stop comes with Wedding step 3 in the other session. Step 4 adds the finale stop after merging `main`; if Wedding's stop is still missing then, the finale stop gets its own unlock rule and does not depend on the index |
 
 ## Goal
 
@@ -15,7 +31,7 @@ A playable finale `?map=turm`: five decks inside the Fernsehturm, four fights, t
 | 0 | Concept A and B, mockup, geography check, plan | | Fable high | done 2026-11-21, A picked |
 | S | Style boards for the [tower interiors](../style/fernsehturm.webp) and the [boss and gear](../style/fernsehturm-zeitwart.webp). Index in `docs/style-bible.md` | | Johannes, Codex | done 2026-11-21 |
 | P | Tower proportions on map 3 | | | dropped: Johannes keeps the model as it is (map doc F13) |
-| 1 | Engine, data, blockout. `MapDef.decks` and `deckWalk` (T1), the lift (T2), ring encounters (T3), clock hands (T4), revolving band (T5, drop first). `src/data/fernsehturm.ts` from the deck table, tests `src/data/fernsehturm.test.ts` (invariants below), a scripted run wins (`director.test.ts`). Wiring `?map=turm` (`options.ts`, `ui/maps.ts` `MapId`, `main.ts` banner). Blockout render: discs, sills, window band, cores, hands and rings on the FX layer; only the hero's deck visible. Stand-ins: echoes are the plain boss kinds, final boss `diva` | Wedding merged | Opus high | open; first read Wedding's map doc, enemies, boss and stop and correct the assumptions here |
+| 1 | Engine, data, blockout. `MapDef.decks` and `deckWalk` (T1), the lift (T2), ring encounters (T3), clock hands (T4), revolving band (T5, drop first). `src/data/fernsehturm.ts` from the deck table, tests `src/data/fernsehturm.test.ts` (invariants below), a scripted run wins (`director.test.ts`). Wiring `?map=turm` (`options.ts`, `ui/maps.ts` `MapId`, `main.ts` banner). Blockout render: discs, sills, window band, cores, hands and rings on the FX layer; only the hero's deck visible. Stand-ins: echoes are the plain boss kinds, final boss `diva` | Wedding merged | Opus high | built 2026-11-23 (handover below) |
 | 2 | Look. First a look mockup in chat from the style board (the sphere decks and the city image), Johannes confirms. Then: five interiors in `src/render/turm-world.ts`, the city image and cloud cards (T6), one `Sky` per deck (T7), the lift cut with the height counter, cutaway of the cores, window-break effect where a spawn enters. State the Leistung and Ausgewogen cost | 1, S | Opus high, mockup first | open |
 | 3 | Enemies and boss. Spec lines first (wave mix numbers, echo scale, Zeitwart numbers, calibrated with the bot), then build: `echo` modifier (T8), Der Zeitwart from the board (kit below, robot materials on the humanoid base, sounds, spoken lines, Kodex), the gear holds (T9), the ending choice (T10), the spear Telespargel (model, power, icon). Update `docs/enemy-pipeline.md` and `docs/equipment-pipeline.md` | 1, S | Opus high (a Fable pass only if Johannes dislikes the boss) | open |
 | 4 | Flow. Unlock rule and network stop (map doc › Entry), Wedding victory link, save flag `ending`, ending cards, bot `--map=turm` and `mapLevelOf`, tier F8, signature drops, the Wedding kinds in the Telecafé waves. Run-save and resume across decks | 1, 3, Wedding built with its flow step | Opus medium | open |
@@ -134,12 +150,12 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 | # | Question | Answer |
 |---|---|---|
 | J1 | A or B? | A (Johannes, 2026-11-21) |
-| J2 | Boss: Der Zeitwart, holding the Unruh? | Humanoid robot look approved on board 2. The Unruh question remains open |
+| J2 | Boss: Der Zeitwart, holding the Unruh? | Humanoid robot look approved on board 2. **Yes, decided 2026-11-23 (builder, per Johannes' brief): the Unruh is his heart.** It ticks in an open brass housing in his chest and drops when he falls; the hero then sets it into the movement („Uhr stellen“) or keeps it out („Stehen lassen“). Why: the story already says a running clock ends him, so his heart is the part the clock lacks; the choice is about one visible object; the glowing balance wheel gives the robot a readable weak point; „Die Unruh ist dein“ reads as a drop |
 | J3 | Does the ending change anything afterwards? | No: card and flag (took the recommendation) |
 | J4 | Unlock with all other districts freed, no tunnel of its own? | Yes, the game is linear |
 | J5 | Wedding window gag? | No: Wedding is freed by then; it is a played district before the finale |
 | J6 | Tower proportions: variant 3 or 4? | Neither: the model in the game stays (Johannes, 2026-11-21) |
-| J7 | Wedding first? | Yes. The Wedding map is on `main`. The finale waits until [M18 Wedding](m18-wedding.md) is complete and merged |
+| J7 | Wedding first? | Yes. The Wedding map is on `main`. Johannes lifted the wait on 2026-11-23: Wedding's map, enemies and bosses are merged; its step 3 runs beside the finale |
 
 ## Handover 2026-11-21 (step 0) [Claude · Fable high]
 
@@ -168,3 +184,12 @@ Right third: the survivor (brown hair, always a red scarf, worn long brown leath
 
 - Both style boards are linked above and in the style bible. Stillstand covers the tower interiors and the multi-era view. Der Zeitwart covers the humanoid robot boss, the Echo treatment and equipment.
 - Begin step 1 after M18 Wedding is complete and merged.
+
+## Handover 2026-11-23 (step 1) [Claude · Opus high]
+
+- `?map=turm` plays from the foyer door to the stand-in boss: `src/data/fernsehturm.ts` (decks, waves, layout), `src/sim/turm.ts` (lift, hands, band), `src/render/turm-world.ts` (blockout and moving parts), `src/ui/turm-curtain.ts` (dark cut with the height). 19 tests in `fernsehturm.test.ts` cover every invariant above, the scripted run included; smoke test M17.
+- Engine choices: `EncounterDef.at` (walkable spot of a ring fight: travel, bot, spawn fallback) and `hold.at` (the crank ring off the deck centre); `travelTarget` leads to the opened lift. The lift needs no grating: the core is solid, the ring only counts once its fight is won. A ride also saves (`checkpoint`), so resume lands on the right deck.
+- Changed from the anchors: band r 9.5 to 14 (was 8) so the bar's rest strip stays still; Telecafé echo Sultan Nimmersatt (above); hand hits: hero at least 16 % of life, enemies 30 %, bosses 3 % (start values).
+- T5 and T9: T5 built in the sim (bodies, their rollback and drops turn; test). T9 is step 3.
+- Not yet: one night sky for all decks, no city image, no cutaway of the cores (step 2). No new hardware rows: nothing to measure until step 2 has the look.
+
