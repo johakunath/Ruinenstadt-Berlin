@@ -234,6 +234,18 @@ test('M16 step 8: the U2 west tunnel loads with its own name, its first fight br
   expect(errors).toEqual([]);
 });
 
+test('M18 step 3: the U9 tunnel loads with its own name, its first fight brings Charlottenburg enemies', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=tunnel&line=4&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Tunnelmund');
+  expect(await page.evaluate(() => window.__game!.sim().level.zones.map((z) => z.name))).toEqual(['U9-Tunnel', 'Geisterbahnhof Westhafen']);
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.x; s.player.z = s.player.pz = e.z; s.player.hp = 1e9; });
+  await page.waitForFunction(() => window.__game!.sim().enemies.length > 0, null, { timeout: 90_000 });
+  await page.waitForTimeout(1500);
+  expect(errors).toEqual([]);
+});
+
 test('M15: Xhain loads on the Warschauer Brücke, the first fight starts, the map opens', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/?map=xhain&profile=Leistung&seed=7&autostart');
@@ -336,6 +348,34 @@ test('M18: Wedding loads at U Leopoldplatz, the market fight starts, the pub bra
   expect(pub.phase).toBe('fight');
   expect(pub.n).toBeGreaterThan(0);
   expect(pub.inside).toBe(true);
+  await page.keyboard.press('m');
+  await expect(page.locator('.map-svg svg')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('M17: the Fernsehturm loads in the foyer, the first fight starts, the lift rides to the Schacht, the map opens', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?map=turm&profile=Leistung&seed=7&autostart');
+  await page.waitForFunction(() => (window.__game?.sim().tick ?? 0) > 5, null, { timeout: 150_000 });
+  await expect(page.locator('#obj-text')).toContainText('Foyer');
+  await page.evaluate(() => { const s = window.__game!.sim(), e = s.level.encounters[0]!; s.player.x = s.player.px = e.at!.x; s.player.z = s.player.pz = e.at!.z; });
+  await page.waitForFunction(() => window.__game!.sim().run.phase === 'fight', null, { timeout: 90_000 });
+  // T2: win the foyer by hand, then stand in the open lift ring until the ride.
+  const ride = await page.evaluate(() => {
+    const g = window.__game!, s = g.sim(), l = s.level.lifts[0]!;
+    for (const q of s.enemies) { q.state = 'dead'; q.hp = 0; }
+    s.run.index = 1;
+    s.run.phase = 'travel';
+    s.player.x = s.player.px = l.from.x;
+    s.player.z = s.player.pz = l.from.z + 0.9;
+    s.player.invuln = 1e9;
+    g.hold(true);
+    for (let k = 0; k < 90; k++) g.step({ moveX: 0, moveZ: 0 }, 1);
+    g.hold(false);
+    return { x: s.player.x, z: s.player.z, phase: s.run.phase };
+  });
+  expect(ride.x).toBeCloseTo(120, 0);
+  expect(ride.phase).toBe('hold');
   await page.keyboard.press('m');
   await expect(page.locator('.map-svg svg')).toBeVisible();
   expect(errors).toEqual([]);

@@ -15,13 +15,13 @@ import { runCampaign, SKILL_DEFAULT, SKILL_GOOD, SKILL_WEAK, type BotSkill, type
 export const SKILLS: Record<string, BotSkill> = { johannes: SKILL_DEFAULT, good: SKILL_GOOD, weak: SKILL_WEAK };
 
 export type DistrictKey = 'koepenick' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding';
-/** B2: the tunnel of line k (S3 0, U8 1, U2 2, U2 west 3). */
-export type TunnelKey = 'tunnel0' | 'tunnel1' | 'tunnel2' | 'tunnel3';
+/** B2: the tunnel of line k (S3 0, U8 1, U2 2, U2 west 3, U9 4). */
+export type TunnelKey = 'tunnel0' | 'tunnel1' | 'tunnel2' | 'tunnel3' | 'tunnel4';
 export type MapKey = DistrictKey | TunnelKey;
 
 const DEFS: Record<MapKey, () => MapDef> = {
   koepenick: () => koepenickMap(1), xhain: () => xhainMap(1), alex: () => alexMap(1), mitte: () => mitteMap(1), charlottenburg: () => charlottenburgMap(1), wedding: () => weddingMap(1),
-  tunnel0: () => tunnelMap(0), tunnel1: () => tunnelMap(1), tunnel2: () => tunnelMap(2), tunnel3: () => tunnelMap(3),
+  tunnel0: () => tunnelMap(0), tunnel1: () => tunnelMap(1), tunnel2: () => tunnelMap(2), tunnel3: () => tunnelMap(3), tunnel4: () => tunnelMap(4),
 };
 /** Line of a tunnel key, -1 for a district. */
 export const lineOf = (map: MapKey): number => (map.startsWith('tunnel') ? Number(map.slice(6)) : -1);
@@ -51,9 +51,9 @@ export interface BalanceArgs {
 export const CHAIN: DistrictKey[] = ['koepenick', 'xhain', 'alex', 'mitte', 'charlottenburg', 'wedding'];
 /**
  * B2 step 1: the whole game as a player walks it: each district, then the tunnel of its line to the
- * next (the camp opens with the S3). The network ends at Charlottenburg; Wedding follows it directly.
+ * next (the camp opens with the S3). M18: the U9 leads from Charlottenburg to Wedding.
  */
-export const CAMPAIGN: MapKey[] = ['koepenick', 'tunnel0', 'xhain', 'tunnel1', 'alex', 'tunnel2', 'mitte', 'tunnel3', 'charlottenburg', 'wedding'];
+export const CAMPAIGN: MapKey[] = ['koepenick', 'tunnel0', 'xhain', 'tunnel1', 'alex', 'tunnel2', 'mitte', 'tunnel3', 'charlottenburg', 'tunnel4', 'wedding'];
 
 export type ChainArgs = Omit<BalanceArgs, 'map' | 'startAt' | 'until'> & {
   /** B2: play the tunnels (`CAMPAIGN`) instead of counting each line as cleared (`CHAIN`). */

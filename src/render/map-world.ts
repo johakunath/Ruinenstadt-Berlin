@@ -14,6 +14,7 @@ import { GROUND_STEP, meshSurface } from './ground';
 import { buildLotGround } from './lot-ground';
 import { makeLotGroundMats, type LotGroundMats } from './lot-textures';
 import { buildCampWorld, makeCampMats } from './camp-world';
+import { buildTurmView, buildTurmWorld, makeTurmMats } from './turm-world';
 import { onCampFloor } from '../data/camp-map';
 import { buildLandmark, landmarkCutCaps } from './landmarks';
 import { makeLandmarkFinishes } from './landmark-finishes';
@@ -699,7 +700,7 @@ const HEDGED: Partial<Record<Prop['kind'], number>> = { fence: 0.3, picket: 0.3,
  * seed; never on streets, sidewalks, water, bridges, stairs, landmarks, buildings or props.
  */
 function buildGreenery(m: MapDef, lots: Lot[], props: Prop[], chunkOf: (x: number, z: number) => ChunkBuilder): void {
-  if (m.tunnel || m.camp) return;
+  if (m.tunnel || m.camp || m.decks) return;
   const rng = new Rng(m.seed + 137);
   // Blockers in an 8 m hash: rotated boxes (half extents) around buildings and props.
   type Box = { x: number; z: number; rot: number; hx: number; hz: number };
@@ -2384,11 +2385,12 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     return b;
   };
 
-  buildGround(m, mats, group);
+  // M17: the tower decks draw their own floors; below them is the sky (step 2: the city image).
+  if (!m.decks) buildGround(m, mats, group);
   buildStreets(m, mats, chunkOf);
   buildQuays(m, mats, chunkOf);
   buildBoats(m, mats, chunkOf);
-  buildScatter(m, lots, mats, chunkOf);
+  if (!m.decks) buildScatter(m, lots, mats, chunkOf);
   buildGreenery(m, lots, props, chunkOf);
   const boats: Array<{ lane: FerryLane; group: Group }> = [];
   buildBridges(m, chunkOf, boats);
@@ -2514,6 +2516,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     buildTunnel(m, mats, chunkOf);
     buildTunnelExtras(m, mats, materials, chunkOf);
   }
+  // M17 Fernsehturm: the decks (`turm-world.ts`).
+  const turmMats = m.decks ? makeTurmMats(materials) : null;
+  if (turmMats) buildTurmWorld(m, mats, turmMats, chunkOf);
   if (m.camp) buildCampWorld(m, mats, makeCampMats(materials, { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy }), chunkOf);
   if (m.rail) {
     const r = m.rail;
@@ -2525,7 +2530,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     }
   }
   // M11d step 4: beyond the closed edge, building masses and tree rows (render only) on a ground skirt.
-  const edge = m.tunnel || m.camp ? null : edgeRuns(m);
+  const edge = m.tunnel || m.camp || m.decks ? null : edgeRuns(m);
   const backdrop = edge ? edgeBackdrop(m, edge) : { blocks: [], trees: [] };
   if (edge) buildEdgeSkirt(m, mats, edge, group);
   for (const k of backdrop.blocks) {
@@ -2618,6 +2623,10 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     spots.push(...tunnel.spots);
   }
 
+  // M17: clock hands, lift rings, the crank hold ring and the revolving band.
+  const turm = turmMats ? buildTurmView(m, turmMats) : undefined;
+  if (turm) group.add(turm.group);
+
   // M16 step 6c: the live maze riddle parts (crystals, ring, gate leaves, mirror silhouettes).
   const riddles = m.plinths || m.mirrors ? buildRiddleView(m, mats, (x, z) => surfaceAt(m, x, z)) : undefined;
   if (riddles) group.add(riddles.group);
@@ -2664,6 +2673,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     ...(clock ? { clock, clockRig: () => makeClockRig(mats) } : {}),
     breakables: breakableView,
     ...(tunnel ? { tunnel } : {}),
+    ...(turm ? { turm } : {}),
     ...(riddles ? { riddles } : {}),
     hemi,
     setLamps(k: number): void {

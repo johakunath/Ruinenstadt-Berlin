@@ -106,6 +106,17 @@ describe('M20 tunnel generator (every line)', () => {
   expect(u.encounters.at(-1)!.waves[1]!.bosses).toEqual(['schaffner']);
 });
 
+it('U9 (M18 step 3): Charlottenburg enemies to Westhafen, the Wedding feast after it, the Charlottenburg late tier, no carpets', () => {
+  const u = tunnelMap(4), kinds = (z: number): Set<string> => new Set(u.encounters.filter((e) => e.zone === z).flatMap((e) => e.waves.flatMap((w) => Object.keys(w.mix).filter((k) => (w.mix as Record<string, number>)[k]! > 0))));
+  expect(u.name).toBe('U9-Tunnel');
+  expect(u.id).toBe('tunnel-u9');
+  expect(u.encounters.map((e) => e.name)).toEqual(['Tunnelmund', 'Einsturz', 'Geisterbahnhof Westhafen', 'Kehrgleis', 'Zugwrack', 'Generator Leopoldplatz']);
+  expect(kinds(0).has('teeifrit')).toBe(false);
+  expect([...kinds(1)]).toEqual(expect.arrayContaining(['teeifrit']));
+  expect(kinds(1).has('teppich')).toBe(false);
+  expect(u.encounters[0]!.waves[0]!.hpMul).toBeCloseTo((1 + 50 * 0.13) * lateTier(50).hp * TUNNEL.hp);
+});
+
   for (const [k, L] of LINES.entries()) {
     it(`${L.id}: valid, sealed by its gratings and winnable`, () => {
       const { m: mm, level: lv } = build(k);

@@ -1,10 +1,10 @@
 // Which map a page shows and where its title and victory buttons lead (M19 tunnel, M15 Xhain).
 // Each map is its own page load (`?map=`); the chain follows the story: Köpenick freed opens the
 // S3 tunnel, the tunnel ends at Warschauer Straße where Xhain starts and the walkable camp (M20) is.
-export type MapId = 'koepenick' | 'tunnel' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding' | 'hof' | 'lager';
+export type MapId = 'koepenick' | 'tunnel' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding' | 'turm' | 'hof' | 'lager';
 
 /** `MapDef.name` of each map (a saved run belongs to the map with this name). */
-export const MAP_NAME: Record<MapId, string> = { koepenick: 'Köpenick', tunnel: 'S3-Tunnel', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte', charlottenburg: 'Charlottenburg', wedding: 'Wedding', hof: 'Hof', lager: 'S+U Warschauer Straße' };
+export const MAP_NAME: Record<MapId, string> = { koepenick: 'Köpenick', tunnel: 'S3-Tunnel', xhain: 'Xhain', alex: 'Alexanderplatz', mitte: 'Mitte', charlottenburg: 'Charlottenburg', wedding: 'Wedding', turm: 'Fernsehturm', hof: 'Hof', lager: 'S+U Warschauer Straße' };
 /** Line under the title. */
 export const MAP_SUB: Record<MapId, string> = {
   koepenick: 'Köpenick bei Nacht',
@@ -14,6 +14,7 @@ export const MAP_SUB: Record<MapId, string> = {
   mitte: 'Mitte · 2089',
   charlottenburg: 'Charlottenburg · 1920',
   wedding: 'Wedding · kommt bald',
+  turm: 'Fernsehturm · Stillstand',
   hof: 'Köpenick · Hinterhof bei Nacht',
   lager: 'S+U Warschauer Straße · Lager',
 };
@@ -26,14 +27,15 @@ export const MAP_PLAY: Record<MapId, string> = {
   mitte: 'Neue Expedition durch Mitte',
   charlottenburg: 'Neue Expedition durch Charlottenburg',
   wedding: 'Neue Expedition durch den Wedding',
+  turm: 'Hinauf zur Uhr',
   hof: 'Hinterhof',
   lager: 'Lager',
 };
 /** What a won run is called. */
-export const MAP_WON: Record<MapId, string> = { koepenick: 'Köpenick befreit', tunnel: 'S3 frei', xhain: 'Xhain befreit', alex: 'Alex befreit', mitte: 'Mitte befreit', charlottenburg: 'Charlottenburg frei', wedding: 'Wedding ist da', hof: 'Hof frei', lager: '' };
+export const MAP_WON: Record<MapId, string> = { koepenick: 'Köpenick befreit', tunnel: 'S3 frei', xhain: 'Xhain befreit', alex: 'Alex befreit', mitte: 'Mitte befreit', charlottenburg: 'Charlottenburg frei', wedding: 'Wedding ist da', turm: 'Die Unruh ist dein', hof: 'Hof frei', lager: '' };
 /** `camp.freed` id of a won map: districts by index, U-Bahn lines from 100. */
 /** The camp is never won (-1). */
-export const MAP_FREED: Record<MapId, number> = { koepenick: 0, tunnel: 100, xhain: 1, alex: 2, mitte: 3, charlottenburg: 4, wedding: 5, hof: 0, lager: -1 };
+export const MAP_FREED: Record<MapId, number> = { koepenick: 0, tunnel: 100, xhain: 1, alex: 2, mitte: 3, charlottenburg: 4, wedding: 5, turm: 6, hof: 0, lager: -1 };
 
 export interface MapLink { id: 'go-tunnel' | 'go-xhain'; to: MapId; html: string }
 
@@ -47,15 +49,16 @@ export function titleLinks(map: MapId, freed: readonly number[]): MapLink[] {
   } else if (map === 'tunnel') {
     out.push({ id: 'go-tunnel', to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' });
     if (freed.includes(100)) out.push(xhain);
-  } else if (map === 'xhain' || map === 'alex' || map === 'mitte' || map === 'charlottenburg' || map === 'wedding') {
+  } else if (map === 'xhain' || map === 'alex' || map === 'mitte' || map === 'charlottenburg' || map === 'wedding' || map === 'turm') {
     out.push({ id: 'go-tunnel', to: 'koepenick', html: '<b>Köpenick</b><small>Ausrüstung bleibt</small>' });
   }
   return out;
 }
 
-/** The map the victory screen leads on to (`line`: the tunnel line won or to ride). M15: Xhain → U8 → Alexanderplatz → U2 → Mitte. */
+/** The map the victory screen leads on to (`line`: the tunnel line won or to ride). M15: Xhain → U8 → Alexanderplatz → U2 → Mitte; M16 → U2 west → Charlottenburg; M18 → U9 → Wedding. */
 export function wonLink(map: MapId, line = 0): { to: MapId; line?: number; html: string } | null {
   if (map === 'koepenick') return { to: 'tunnel', html: '<b>In den S3-Tunnel</b><small>Richtung Warschauer Straße</small>' };
+  if (map === 'tunnel' && line === 4) return { to: 'wedding', html: '<b>Weiter in den Wedding</b><small>Ausstieg Leopoldplatz</small>' };
   if (map === 'tunnel' && line === 3) return { to: 'charlottenburg', html: '<b>Weiter nach Charlottenburg</b><small>Ausstieg Zoologischer Garten</small>' };
   if (map === 'tunnel' && line === 2) return { to: 'mitte', html: '<b>Weiter nach Mitte</b><small>Ausstieg Potsdamer Platz</small>' };
   if (map === 'tunnel' && line === 1) return { to: 'alex', html: '<b>Weiter zum Alex</b><small>Ausstieg Alexanderplatz</small>' };
@@ -63,7 +66,9 @@ export function wonLink(map: MapId, line = 0): { to: MapId; line?: number; html:
   if (map === 'xhain') return { to: 'tunnel', line: 1, html: '<b>In die U8</b><small>Richtung Alexanderplatz</small>' };
   if (map === 'alex') return { to: 'tunnel', line: 2, html: '<b>In die U2</b><small>Richtung Potsdamer Platz</small>' };
   if (map === 'mitte') return { to: 'tunnel', line: 3, html: '<b>In die U2</b><small>Richtung Zoologischer Garten</small>' };
-  if (map === 'charlottenburg') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
+  if (map === 'charlottenburg') return { to: 'tunnel', line: 4, html: '<b>In die U9</b><small>Richtung Leopoldplatz</small>' };
+  // M18: the finale session (M17) replaces this with the way up the Fernsehturm.
+  if (map === 'wedding') return { to: 'koepenick', html: '<b>Zurück nach Köpenick</b><small>Ausrüstung bleibt</small>' };
   return null;
 }
 
