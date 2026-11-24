@@ -2346,6 +2346,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   wet = sky.wet;
   const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' || m.id === 'charlottenburg' || m.id === 'xhain' ? m.id : undefined);
   const mats = makeMapMats(materials, district);
+  // T14 first step (local FLUX.2 klein): Wedding's cloth (awnings, curtains, carpets, table linen, all tinted in code) gets
+  // a worn woven map with creases and stains; same material, 0 draw calls. The ruby/emerald atlas stays open.
+  if (m.id === 'wedding') swapPaintedMap([mats.linen], new URL('../../assets/textures/wedding/cloth.webp', import.meta.url).href, materials.profile.anisotropy);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
   let railMats: MapMats | undefined;
