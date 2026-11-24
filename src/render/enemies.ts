@@ -30,6 +30,7 @@ import { groundY } from './ground';
 import { ZAP_TIME } from './status-fx';
 import { buildDialMark, updateDialMark } from './echo-mark';
 import type { LitMaterial, Materials } from './materials';
+import { loadPaintedTexture } from './surface-textures';
 import { WeaponRack } from './weapons';
 import {
   alexKit, assemble as assembleAlex, buildClockLegs, buildKern, buildKoloss, CLOCK_LEG, KOLOSS, domeParts, emblemParts, keyParts, reachLeg, shieldParts, tf as tfAlex, zombieAlexGear,
@@ -311,6 +312,15 @@ function gearKit(m: Materials): GearKit {
   };
   // The intensity each material was made with (animated glows change theirs; `assemble` sorts by this one).
   for (const mat of Object.values(kit)) mat.userData.baseEmissive ??= mat.emissiveIntensity;
+  // T8 (local FLUX.2 klein): matted, dirty fur for the Rattenmutter and the other fur parts. Neutral grey, so the
+  // kit colours keep the hue; repeated 3 × 3 on the primitives' own UVs so the strands stay small.
+  if (typeof document !== 'undefined') {
+    const furMats = [kit.fur, kit.furDark];
+    loadPaintedTexture(new URL('../../assets/textures/enemies/fur.webp', import.meta.url).href, 4, (t) => {
+      t.repeat.set(3, 3);
+      for (const mat of furMats) { mat.map = t; mat.needsUpdate = true; }
+    });
+  }
   return kit;
 }
 
@@ -322,12 +332,15 @@ const tf = (g: BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, 
 };
 
 /** Merges parts per material into a few meshes. */
+/** Kit materials with a painted map (T8 fur): never baked into the shared vertex-coloured mesh, or the map is lost. */
+const TEXTURED: ReadonlySet<keyof GearKit | 'pulse'> = new Set<keyof GearKit>(['fur', 'furDark']);
+
 function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial, paint = false): Group {
   const by = new Map<keyof GearKit | 'pulse', BufferGeometry[]>();
   // WP5 step 3 (`paint`): the boss coats would cost one draw per material per bone. Unlit materials share one
   // vertex-coloured mesh per bone; metal keeps its shine only where it is a large part of the bone's gear.
   const family = (m: keyof GearKit | 'pulse'): keyof GearKit | 'pulse' => {
-    if (!paint || m === 'pulse') return m;
+    if (!paint || m === 'pulse' || TEXTURED.has(m)) return m;
     const mat = k[m];
     // By the intensity the material was made with: some glows are animated (the tower's window ring dims on
     // death), and a body built meanwhile must still keep them as glows (review fix).
