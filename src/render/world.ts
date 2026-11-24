@@ -14,7 +14,7 @@ import { Rng } from '../sim/math';
 import { BatchSet, boxGeo } from './batch';
 import { loadGroundTexture } from './ground-textures';
 import { loadLotPropTextures } from './lot-textures';
-import { swapPaintedMap } from './surface-textures';
+import { loadPaintedTexture, swapPaintedMap } from './surface-textures';
 import { Materials, type LitMaterial } from './materials';
 import {
   paintAwning, paintBrick, paintCarPaint, paintCloth, paintCobbles, paintConcrete, paintCorrugated, paintGraffiti, paintLattice, paintTarp, paintDoor, paintFern, paintGlow, paintIvy, paintMetal, paintPlaster, paintMarket, paintStallTarp,
@@ -184,7 +184,7 @@ export interface Mats {
   graffiti: LitMaterial;
 }
 
-/** Charlottenburg's worn 1920 stucco (T9a, local FLUX.2 klein, `docs/local-ai-assets.md` LA1). */
+/** Charlottenburg's worn 1920 stucco (T9a, local FLUX.2 klein, `docs/local-ai-assets.md` LA1; one tile = 4 m since 2026-11-24). */
 const CHARLOTTENBURG_STUCCO = new URL('../../assets/textures/charlottenburg/stucco.webp', import.meta.url).href;
 /** T6 Xhain (local FLUX.2 klein): red-brown Stadtbahn viaduct brick and the Wall's panel concrete. */
 const XHAIN_BRICK = new URL('../../assets/textures/xhain/viaduct-brick.webp', import.meta.url).href;
@@ -269,13 +269,20 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel' | 'charlotte
   // Alexanderplatz and the tunnels supply their own versions of these surfaces.
   if (district !== 'alex') sources.push(
     [district === 'xhain' ? XHAIN_BRICK : new URL('../../assets/textures/common/brick.webp', import.meta.url).href, [mats.brick]],
-    [district === 'charlottenburg' ? CHARLOTTENBURG_STUCCO : new URL('../../assets/textures/common/stucco.webp', import.meta.url).href, [mats.stucco]],
   );
+  if (district !== 'alex' && district !== 'charlottenburg') sources.push([new URL('../../assets/textures/common/stucco.webp', import.meta.url).href, [mats.stucco]]);
   if (!district || district === 'charlottenburg') sources.push([new URL('../../assets/textures/common/concrete.webp', import.meta.url).href, [mats.concrete]]);
   if (district === 'xhain') sources.push([XHAIN_CONCRETE, [mats.concrete]]);
   // T9i: black paint flaking to rust on the 1920 wrought iron (local FLUX.2 klein); other districts keep the painted map.
   if (district === 'charlottenburg') sources.push([new URL('../../assets/textures/charlottenburg/iron.webp', import.meta.url).href, [mats.iron]]);
   for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat);
+  // T9a: one Charlottenburg stucco tile covers 4 m (repeat 0.5), so its repairs repeat half as often on long walls.
+  if (district === 'charlottenburg') loadPaintedTexture(CHARLOTTENBURG_STUCCO, o.anisotropy, (t) => {
+    t.repeat.set(0.5, 0.5);
+    mats.stucco.map?.dispose();
+    mats.stucco.map = t;
+    mats.stucco.needsUpdate = true;
+  });
   if (district !== 'tunnel') loadLotPropTextures(mats);
   return mats;
 }
