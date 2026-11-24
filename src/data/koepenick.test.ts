@@ -420,7 +420,7 @@ describe('M11d dinosaurs (Codex review)', () => {
     const m = koepenickMap(1);
     // Points on the statues' footprints (local frame, src/render/landmarks.ts DINO_GLB): legs, body, head, feet.
     const probes = [
-      [[-0.7, 0.25], [-2, -1.5], [0.5, 1.5]],
+      [[1, 0.5], [-1, -1.5], [3, -0.5], [3.2, -5]],
       [[-0.4, 3.7], [3, 1.5], [1.8, -1.2], [0, 0.5]],
       [[-1.7, 2.9], [-0.6, 0.4], [4.1, -0.3]],
     ];

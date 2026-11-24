@@ -680,7 +680,7 @@ function chain(b: ChunkBuilder, mat: Material, F: Frame, pts: Array<[number, num
  * footprints as the code figures below (`DINO_PARTS` stays the collision), placed at the centre of the code figure.
  */
 const DINO_GLB: Partial<Record<number, { kind: GlbPropKind; x: number; z: number }>> = {
-  0: { kind: 'sauropod', x: 0, z: 0.25 },
+  0: { kind: 'sauropod', x: 0, z: 0 },
   1: { kind: 'triceratops', x: 0.6, z: 0 },
   2: { kind: 'rex', x: 0.6, z: -0.6 },
 };

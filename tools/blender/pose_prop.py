@@ -1,6 +1,6 @@
 """Turns a prepared static prop into a resting pose (docs/local-ai-assets.md W6), e.g. a statue that fell over.
 
-    blender -b --python tools/blender/pose_prop.py -- --in prop.glb --out posed.glb [--yaw 0] [--roll 180] [--sink 0]
+    blender -b --python tools/blender/pose_prop.py -- --in prop.glb --out posed.glb [--yaw 0] [--roll 180] [--sink 0] [--cut z,y]
 
 --yaw   degrees around the up axis first (so the head points along +Z, the game's local forward)
 --roll  degrees around the length axis (+Z) after that: 180 = on its back, 90 / -90 = on its side
@@ -21,6 +21,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--yaw", type=float, default=0.0)
 ap.add_argument("--roll", type=float, default=0.0)
 ap.add_argument("--sink", type=float, default=0.0)
+ap.add_argument("--cut", default="", help="z,y in glTF metres: delete faces in front of z and below y (a stray part Pixal3D guessed)")
 a = ap.parse_args(argv)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -35,6 +36,16 @@ obj = bpy.context.view_layer.objects.active
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 # Blender is Z-up; glTF +Z (forward) is Blender -Y, glTF up is Blender +Z.
+if a.cut:
+    import bmesh
+    cz, cy = (float(v) for v in a.cut.split(","))
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    gone = [f for f in bm.faces if -f.calc_center_median().y > cz and f.calc_center_median().z < cy]
+    bmesh.ops.delete(bm, geom=gone, context="FACES")
+    bm.to_mesh(obj.data)
+    bm.free()
+    print("POSE cut %d faces" % len(gone))
 rot = Matrix.Rotation(math.radians(a.roll), 4, Vector((0, -1, 0))) @ Matrix.Rotation(math.radians(a.yaw), 4, "Z")
 obj.data.transform(rot)
 pts = [v.co for v in obj.data.vertices]
