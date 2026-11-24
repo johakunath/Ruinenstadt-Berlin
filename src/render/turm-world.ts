@@ -69,6 +69,12 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
     coreMat.map = t;
     coreMat.needsUpdate = true;
   });
+  // T11 (2) Telecafé cloth: the Wedding cloth map (T14, neutral off-white) under the vertex tints (white cloths, cobalt and mustard booths).
+  const clothMat = materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true });
+  loadPaintedTexture(new URL('../../assets/textures/wedding/cloth.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
+    clothMat.map = t;
+    clothMat.needsUpdate = true;
+  });
   const dialMat = materials.surface({ map: paintDial(), roughness: 0.5 });
   // T11 (2): painted clock face (local FLUX.2 klein from the canvas dial; same hands, aged enamel).
   loadPaintedTexture(new URL('../../assets/textures/turm/dial.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
@@ -82,7 +88,7 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
     brass: materials.surface({ color: 0xc8963c, roughness: 0.32, metalness: 0.85, emissive: 0x3a2408, emissiveIntensity: 0.7 }),
     enamel: materials.surface({ color: 0xffffff, roughness: 0.45, vertexColors: true }),
     core: coreMat,
-    cloth: materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true }),
+    cloth: clothMat,
     lamp: materials.surface({ color: 0xfff0d0, roughness: 0.4, emissive: 0xffc070, emissiveIntensity: 2.4 }),
     dial: dialMat,
     band: materials.surface({ map: paintBand(flat), roughness: 0.4 }),
