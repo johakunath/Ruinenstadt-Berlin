@@ -69,6 +69,13 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
     coreMat.map = t;
     coreMat.needsUpdate = true;
   });
+  const dialMat = materials.surface({ map: paintDial(), roughness: 0.5 });
+  // T11 (2): painted clock face (local FLUX.2 klein from the canvas dial; same hands, aged enamel).
+  loadPaintedTexture(new URL('../../assets/textures/turm/dial.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
+    dialMat.map?.dispose();
+    dialMat.map = t;
+    dialMat.needsUpdate = true;
+  }, false);
   return {
     floors,
     steel: materials.surface({ color: 0xffffff, roughness: 0.42, metalness: 0.55, vertexColors: true }),
@@ -77,7 +84,7 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
     core: coreMat,
     cloth: materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true }),
     lamp: materials.surface({ color: 0xfff0d0, roughness: 0.4, emissive: 0xffc070, emissiveIntensity: 2.4 }),
-    dial: materials.surface({ map: paintDial(), roughness: 0.5 }),
+    dial: dialMat,
     band: materials.surface({ map: paintBand(flat), roughness: 0.4 }),
     ribs: materials.surface({ color: 0x4a5866, roughness: 0.5, metalness: 0.6 }),
   };
