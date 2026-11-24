@@ -93,8 +93,8 @@ export function weaponGlow(model: WeaponModel, element: ElementId | undefined): 
 // ---------------------------------------------------------------- parts kit (no WebGL: unit tested)
 
 export type WeaponSlot = 'metal' | 'matte' | 'glow';
-/** Matte grain cell of `paintGrain`: wood, cloth, plain, concrete. */
-export type Grain = 0 | 1 | 2 | 3;
+/** Matte grain cell of `paintGrain`: wood, cloth, plain, concrete; T9 tweed, knit, straw. */
+export type Grain = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export interface Paint { slot: WeaponSlot; hex: number; grain: Grain }
 
 /** Mean sRGB tone of the grey metal map; metal vertex colours are divided by it. */
@@ -106,6 +106,10 @@ export const wood = (hex: number): Paint => ({ slot: 'matte', hex, grain: 0 });
 export const cloth = (hex: number): Paint => ({ slot: 'matte', hex, grain: 1 });
 export const plain = (hex: number): Paint => ({ slot: 'matte', hex, grain: 2 });
 export const stone = (hex: number): Paint => ({ slot: 'matte', hex, grain: 3 });
+/** T9 painted cloth cells (hero hats). */
+export const tweed = (hex: number): Paint => ({ slot: 'matte', hex, grain: 4 });
+export const knit = (hex: number): Paint => ({ slot: 'matte', hex, grain: 5 });
+export const straw = (hex: number): Paint => ({ slot: 'matte', hex, grain: 6 });
 /** Glow parts: the element or signature colour; `GLOW_WHITE` glows a faint white whatever the colour (D1, Fernsehturm-Splitter). */
 const GLOW: Paint = { slot: 'glow', hex: 0x000000, grain: 2 };
 const GLOW_WHITE: Paint = { slot: 'glow', hex: 0xffffff, grain: 2 };
@@ -172,11 +176,11 @@ export class Parts {
       const u0 = paint.grain === 1 ? 0.5 : 0, pad = 2 / 1024, k = 0.5 - 2 * pad;
       for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + pad + Math.min(1, Math.max(0, uv.getX(i))) * k, Math.min(1, Math.max(0, uv.getY(i))));
     }
-    // Matte parts sample their cell of the grain atlas (cell 0 top left = v 0.5..1).
+    // Matte parts sample their cell of the 4 × 2 grain atlas (row 0 = cells 0 to 3 at v 0.5..1).
     if (paint.slot === 'matte') {
       const uv = g.attributes.uv!;
-      const u0 = (paint.grain % 2) * 0.5, v0 = paint.grain < 2 ? 0.5 : 0, pad = 2 / 512, k = 0.5 - 2 * pad;
-      for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + pad + Math.min(1, Math.max(0, uv.getX(i))) * k, v0 + pad + Math.min(1, Math.max(0, uv.getY(i))) * k);
+      const u0 = (paint.grain % 4) * 0.25, v0 = paint.grain < 4 ? 0.5 : 0, pu = 2 / 1024, pv = 2 / 512, ku = 0.25 - 2 * pu, kv = 0.5 - 2 * pv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + pu + Math.min(1, Math.max(0, uv.getX(i))) * ku, v0 + pv + Math.min(1, Math.max(0, uv.getY(i))) * kv);
     }
     this.list.push({ geo: g, slot: paint.slot, soft, tag: this.tag });
     return this;

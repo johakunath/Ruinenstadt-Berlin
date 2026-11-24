@@ -2,7 +2,7 @@
 // hair and skull seen from inside the head (`HeadMap`): smooth, symmetric, never inside a strand, so a hat
 // sits on the hair instead of in it. Looks: docs/mockups/wp4-clothes/items.mjs (Johannes, 2026-11-19).
 import { BufferAttribute, BufferGeometry, Matrix4, Vector3 } from 'three';
-import { basis, bright, cloth, glow, headSampler, metal, plain, type GearKit, type HeroSource, type Sampler } from './gear-kit';
+import { basis, bright, cloth, glow, headSampler, knit as knitCells, metal, plain, straw as strawCells, tweed as tweedCells, type GearKit, type HeroSource, type Sampler } from './gear-kit';
 import type { GearBuilder } from './gear';
 import { ball, box, cone, cyl, flat, ring } from './weapons';
 
@@ -387,7 +387,7 @@ function flatCap(k: GearKit): void {
   k.on('Head', () => {
     const sh = new Shell(headMap(k, 'hair'), 0.007, { y: 1.7, rx: 0.112, front: 0.125, back: 0.122, up: 0.102, down: 0.12, m: 2.2 });
     const rim = rim3(1.704, 1.676, 1.664), eRim = memo((a) => sh.eAt(rim(a), a));
-    const tweed = cloth(0x6a5640), bill = cloth(0x55452f);
+    const tweed = tweedCells(0x6a5640), bill = tweedCells(0x55452f);
     // Flat top, lower towards the front; full over the bill (3 cm), a little at the sides, snug behind.
     const top = (z: number): number => 1.791 - 0.3 * Math.max(0, z + 0.03) + 0.5 * Math.max(0, -0.05 - z);
     const full = (u: number, v: number): number => {
@@ -405,7 +405,7 @@ function flatCap(k: GearKit): void {
 function beanie(k: GearKit): void {
   k.on('Head', () => {
     const sh = new Shell(headMap(k, 'hair'), 0.008, { y: 1.67, rx: 0.1, front: 0.115, back: 0.115, up: 0.128, down: 0.12, m: 2.1 });
-    const rim = rim3(1.696, 1.664, 1.648), knit = cloth(0xb0302a), cuffCol = cloth(0xa02c26), line = cloth(0x7c201c);
+    const rim = rim3(1.696, 1.664, 1.648), knit = knitCells(0xb0302a), cuffCol = knitCells(0xa02c26), line = cloth(0x7c201c);
     const eAt = (a: number, dy: number, x = 0): number => sh.eAt(rim(a) + dy, a, x);
     const crown = (a: number, v: number): number => mix(eAt(a, 0.03), Math.PI / 2, v);
     k.add(sh.geo({ segs: 24, rows: 6, e: crown }), knit);
@@ -499,7 +499,7 @@ function strawHat(k: GearKit): void {
   k.on('Head', () => {
     const sh = new Shell(headMap(k, 'hair'), 0.012, { y: 1.71, rx: 0.11, front: 0.125, back: 0.122, up: 0.098, down: 0.12, m: 3 });
     const rim = rimY(1.732, 1.69), eRim = memo((a) => sh.eAt(rim(a), a));
-    const straw = cloth(0xe0c070), weave = cloth(0xc0a050);
+    const straw = strawCells(0xe0c070), weave = strawCells(0xc0a050);
     k.add(sh.geo({ segs: 20, rows: 6, e: (a, v) => mix(eRim(a), Math.PI / 2, v) }), straw);
     const b: BrimOpts = { e: eRim, segs: 32, rows: 3, w: (a) => 0.118 + 0.006 * Math.cos(a), drop: (a) => 0.024 - 0.02 * Math.max(0, Math.cos(a)) ** 2, thick: 0.006 };
     k.add(brim(sh, b), straw);

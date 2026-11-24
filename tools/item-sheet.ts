@@ -18,6 +18,7 @@ import { Materials } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
 import { GUNS, WeaponRack, hasBuilder, weaponGeometry } from '../src/render/weapons';
 import { ITEM_ICONS } from '../src/ui/item-icons';
+import { grainReady } from '../src/render/paint';
 
 const q = new URLSearchParams(location.search);
 const mode = q.get('mode') ?? 'weapons';
@@ -60,6 +61,7 @@ const rim = new DirectionalLight(0x9fd6dc, mode === 'icons' ? 2.2 : 0);
 rim.position.set(3, 1, -4);
 scene.add(sun, rim);
 const rack = new WeaponRack(materials);
+await grainReady(); // T9: painted grain cells
 scene.add(rack.group);
 const cam = new OrthographicCamera(-1, 1, 1, -1, -10, 10);
 cam.position.set(0, 0, 5);
