@@ -21,6 +21,7 @@ Routes per asset group, licences and the full workflows: `docs/local-ai-assets.m
 ## Learnings
 
 - **Start from the old image.** img2img from the texture or icon being replaced (`--init`) keeps scale, palette and layout; pure text-to-image drifts to photos or cartoons. Denoise: 0.7 for irregular surfaces (plaster, rust), at most 0.55 for regular rows (roof tiles, slate, brick: at 0.65 the rows break up), 0.9 plus `--ref` for icons.
+- **Brick and tile size come from the start image** (img2img keeps its row count). For smaller bricks, tile the start image 2 × 2 before generating, never the finished pick (its dark bricks then form a grid). Do not start from a placeholder with gradients (soot runs): they carry into every variant.
 - **Describe the surface, not the object.** "Railing" or "roof" in a texture prompt draws railings and roofs; say "a plain flat sheet, no objects, no bars". If an icon loses a key detail (the emerald), rerun from the best pick at 0.75 and name the detail first.
 - **Prompt words that work:** "semi-realistic hand-painted game texture", "even density over the whole square, no edges, no border", "flat albedo, no light direction, no shadows". "Painterly" alone gives cartoon outlines and drawn shadows.
 - **Generate many, pick few.** About 4 s per 1024 px image (16 s for the first): make 8 or more per job with consecutive seeds and judge them on one contact sheet. One prompt per image: `--batch` is only ~10 % faster and its images barely differ.

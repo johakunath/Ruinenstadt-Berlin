@@ -3,7 +3,7 @@
 // Ostbahnhof, U1 stations with Schlesisches Tor, St. Thomas, Bethanien, Rauch-Haus, NKZ, the BT-11
 // watchtower, the Görlitzer Bahnhof ruin and the old freight yard in the Görli), plus Kreuzberg dressing
 // on the generated lots (graffiti, squat banners). Colliders live in `src/data/map.ts`; this only draws.
-// Code-painted placeholders (no image files); 2D reference `js/geo.js` (oberbaum, ostbahnhof, viaduct,
+// Painted maps from T6 (`assets/textures/xhain/`, code placeholders as the fallback); 2D reference `js/geo.js` (oberbaum, ostbahnhof, viaduct,
 // esg) for colors and silhouettes; Köpenick helpers reused: `walls`, `gableRoof`, `gableEnds`, `steppedGable`,
 // `buildAltbauLot` (Rauch-Haus, NKZ), the rubble and tank-trap props, the M11c graffiti atlas.
 //
@@ -24,6 +24,7 @@ import { Rng } from '../sim/math';
 import { rectPoly, type CutPart } from '../data/cut';
 import { Materials, type LitMaterial } from './materials';
 import { paintGlow, paintMetal, type PaintOptions } from './paint';
+import { swapPaintedMap } from './surface-textures';
 import { buildProp, FLOOR_H, GROUND_H, PARAPET, Run } from './world';
 import { blockFacades, buildAltbauLot, gableEnds, gableRoof, lm, lp, steppedGable, walls, type ChunkBuilder, type MapMats } from './map-world';
 
@@ -295,7 +296,7 @@ function xhainMats(materials: Materials): XMats {
   });
   const beam = Materials.glow(beamTex, 0xd8ecff, 0.3);
   beam.side = DoubleSide;
-  return {
+  const X: XMats = {
     steel: materials.surface({ map: paintMetal('#3f6a4a', o, 83, 0.7).map, roughness: 0.6, metalness: 0.35, vertexColors: true }),
     yellow: materials.surface({ map: paintYellowBrick(o.anisotropy), roughness: 0.9, vertexColors: true }),
     signs: materials.surface({ map: signMap, emissiveMap: signGlow, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.55 }),
@@ -306,6 +307,12 @@ function xhainMats(materials: Materials): XMats {
     cold: Materials.glow(paintGlow('rgba(225,240,255,0.95)', 'rgba(200,225,255,0)'), 0xd8ecff, 0.35),
     beam,
   };
+  // T6 (local FLUX.2 klein, `docs/local-ai-assets.md` W1): painted maps replace the code placeholders once
+  // loaded; same materials, so no draw call change. The viaduct brick and Wall concrete swap in `makeMats`.
+  swapPaintedMap([X.steel], new URL('../../assets/textures/xhain/steel.webp', import.meta.url).href, o.anisotropy);
+  swapPaintedMap([X.yellow], new URL('../../assets/textures/xhain/yellow-brick.webp', import.meta.url).href, o.anisotropy);
+  swapPaintedMap([X.sand], new URL('../../assets/textures/xhain/sand.webp', import.meta.url).href, o.anisotropy);
+  return X;
 }
 
 // ---------------------------------------------------------------- shared helpers

@@ -26,6 +26,7 @@ How Claude drives ComfyUI: export a workflow from the ComfyUI menu with "Export 
 | 2026-11-22 | FLUX.2 klein is fast and free and good for textures. Several views of one object do not match each other: never feed FLUX multi-angle sheets into image-to-3D | Johannes, another game |
 | 2026-11-22 | Pixal3D works locally for simple static props (toy race cars) | Johannes, another game |
 | 2026-11-22 | LA1: about 4 s per 1024 px image on the 4070 (16 s for the first, model load). Plain text-to-image comes out photographic, and asked for "painterly" it turns cartoonish with drawn shadows. Best: img2img from the texture it replaces (`--init`, denoise 0.7) with a "semi-realistic hand-painted" prompt; it keeps scale and palette and adds the wear. Ask for "even density, nothing along the edges" or features pile up at the border. Generated colours drift (here greenish): always run `tools/texture-tile.mjs --match` against the old texture | LA1 |
+| 2026-11-24 | Brick size comes from the start image: img2img keeps the row count of `--init`. For smaller bricks than the start image, tile the start image 2 × 2 first; tiling the finished pick instead shows its dark bricks as a regular grid. A placeholder with a top-to-bottom gradient (soot runs) carries it into every variant: start from a clean texture instead | T6 |
 | 2026-11-22 | Image-to-3D gives a fused mesh with no clean topology and no rig. Use it for things that do not bend: props, and parts that hang rigidly on one bone | Scouting session |
 
 ## Which route for which asset
@@ -137,3 +138,10 @@ As `docs/blender-pipeline.md`: a function in `tools/blender/hero_clothes.py`, we
 - **Open:** Johannes looks at both pieces in the inventory preview, then decides on the body and face (3D15).
 
 Downloads, each needing Johannes' OK first: for LA2 the two Pixal3D files named in W5 (if not already on the PC); for LA3 Quaternius Modular Character Outfits Fantasy (CC0, itch.io slug `modular-character-outfits-fantasy`; already used for the Stiefel des Spreegeists in WP4, but not on this PC: `assets-src/` is missing here). LA1 needs nothing new.
+
+### T6 handover (2026-11-24, built)
+
+- Five 1024 px WebPs in `assets/textures/xhain/` (55 to 168 KB): `wall-concrete` and `viaduct-brick` replace the common concrete and brick on the Xhain map (`makeMats` district `xhain`), `steel`, `yellow-brick` and `sand` replace the code maps of `xhainMats` (`xhain-world.ts`); the code placeholders stay the fallback. About 45 minutes, 56 images. [Before and after](proof/t6-xhain/before-after.jpg).
+- Inits: common concrete and brick files; the placeholders `paintSand`, `paintMetal`, `paintYellowBrick` dumped from the dev server. Sand needed a second round (the first drew cartoon bare footprints), yellow brick a third (see Lessons).
+- Cost: same materials, so 0 draw calls on every profile. GPU memory on Xhain about +14 MB (sand 256 → 1024, steel and yellow 512 → 1024; concrete and brick only swap files).
+- Not judged in game: cloud-style software rendering at night shows nothing useful. Johannes checks the look on the PC (Playtest row).

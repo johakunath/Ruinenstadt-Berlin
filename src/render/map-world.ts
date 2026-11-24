@@ -288,7 +288,7 @@ export function emissive(materials: Materials, t: { map: Texture; emissiveMap: T
   return materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: color, emissiveIntensity: intensity, roughness: 0.6 });
 }
 
-export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 'tunnel' | 'charlottenburg'): MapMats {
+export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 'tunnel' | 'charlottenburg' | 'xhain'): MapMats {
   const base = makeMats(materials, district === 'mitte' ? undefined : district);
   const o: PaintOptions = { flatten: materials.look.flatten, normalMaps: materials.profile.normalMaps, anisotropy: materials.profile.anisotropy };
   const dirt = paintDirt(o).map;
@@ -2322,7 +2322,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   // M18 Wedding: a street of shops under the lampions (awnings come from `wedding-world.ts`).
   shopShare = m.id === 'charlottenburg' ? [0.8, 0.55] : m.id === 'wedding' ? [0.7, 0.45] : [0.4, 0.22];
   wet = sky.wet;
-  const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' || m.id === 'charlottenburg' ? m.id : undefined);
+  const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' || m.id === 'charlottenburg' || m.id === 'xhain' ? m.id : undefined);
   const mats = makeMapMats(materials, district);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
