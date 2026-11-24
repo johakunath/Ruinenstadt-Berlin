@@ -2701,8 +2701,10 @@ export class EnemyView {
       case 'chase':
         // M16: the Diva glides (stands in her pose while she moves); M18: the Sultan floats on his carpet the same way.
         // H4 (Johannes): an own body marches upright and stands at sabre guard. Walk_Formal_Loop has the zombie
-        // walk's stride and cycle (0.69 m per 1.33 s, measured), so the same speed constant keeps the feet planted.
-        if (e.speed > 0.2 && def.ai !== 'diva') a.loop(this.ownBody ? 'Walk_Formal_Loop' : 'Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * def.scale))));
+        // walk's stride and cycle (0.69 m per 1.33 s, measured), so the same speed constant keeps the feet planted;
+        // its legs are also `BUILD` taller.
+        const legs = def.scale * (this.ownBody ? BUILD[e.kind]?.[1] ?? 1 : 1);
+        if (e.speed > 0.2 && def.ai !== 'diva') a.loop(this.ownBody ? 'Walk_Formal_Loop' : 'Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * legs))));
         else a.loop(this.ownBody ? 'Sword_Idle' : def.ai === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop', 0.25);
         // Open: bent over, catching breath.
         if (e.open > 0) pitch = 0.32;
@@ -2772,6 +2774,8 @@ export class EnemyView {
             break;
           case 'lunge': case 'charge': case 'pounce': case 'leap':
             if (going) a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05);
+            // H4: an own body raises the sabre overhead instead of the ghouls' crouch.
+            else if (this.ownBody) a.pose(SLASH.clip, lerp(SLASH.start, SLASH.swing, w), 0.12);
             else {
               a.pose('Zombie_Scratch', lerp(0.05, 0.35, w), 0.12);
               pitch = 0.3 * w;

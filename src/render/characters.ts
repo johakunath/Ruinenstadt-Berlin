@@ -39,7 +39,7 @@ export interface CharacterAssets {
   human?: Object3D;
   /** H3: the base of the female humanoid bosses and its clips (hero proportions). */
   female?: { body: Object3D; clips: Map<string, AnimationClip> };
-  /** H4: own boss bodies on the human skeleton (clips: `zombieClips`, like `human`). */
+  /** H4: own boss bodies on the human skeleton; `clips`: the enemy set plus the upright `BOSS_CLIPS`, fitted like `zombieClips`. */
   bosses?: { feldwebel?: Object3D; clips: Map<string, AnimationClip> };
   heroClips: Map<string, AnimationClip>;
   zombieClips: Map<string, AnimationClip>;
