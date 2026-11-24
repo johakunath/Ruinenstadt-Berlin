@@ -442,8 +442,8 @@ function palast(c: Ctx): void {
   cyl(c, M.enamel, 3.5, 1.82, z0 + 5.6, 0.08, 0.35, W.gold, 6);
   blk(c, M.wood, -3.5, 0.47, z0 + 5.4, 1.8, 0.75, 0.9, [0.85, 0.6, 0.4]);
   for (const [dx, kind] of [[-0.5, 'velvet'], [0.1, 'brocade'], [0.6, 'brocade']] as const) clothBlk(c, kind, -3.5 + dx, 1.22, z0 + 5.4, 0.42, 0.36, 0.42);
-  // The ruby runner: seven carpets end to end, so each keeps its gold border (one 20 m carpet smears).
-  for (let k = 0; k < 7; k++) clothBlk(c, 'carpet', 0, 0, z0 + 5 + (k + 0.5) * (20 / 7), 3, 0.03, 20 / 7 - 0.04);
+  // The ruby runner: one long carpet (its own atlas strip, `runner`).
+  clothBlk(c, 'runner', 0, 0, z0 + 15, 3, 0.03, 20);
   for (const s of [-1, 1]) blk(c, M.enamel, s * 1.5, 0, z0 + 15, 0.08, 0.035, 20, W.gold);
   // Chandeliers on a wire between the side walls, in front of the palace (their light is in the plan, at the rim).
   const cz = z0 + 3.2;

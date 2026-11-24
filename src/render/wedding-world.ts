@@ -203,17 +203,22 @@ export function makeWeddingMats(materials: Materials): WeddingMats {
   return { signs: materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe6b0, emissiveIntensity: 1.2, roughness: 0.6 }), cloth };
 }
 
-export type ClothKind = 'velvet' | 'carpet' | 'linen' | 'brocade';
-/** Atlas quarter of each cloth kind: [column, row from the bottom]. */
-const CLOTH_CELL: Readonly<Record<ClothKind, readonly [number, number]>> = { velvet: [0, 1], carpet: [1, 1], linen: [0, 0], brocade: [1, 0] };
+export type ClothKind = 'velvet' | 'carpet' | 'linen' | 'brocade' | 'runner';
+/**
+ * Atlas region of each cloth kind as [u0, v0, u1, v1]. The runner is one long carpet (painted 3:20, squeezed into
+ * a 256 × 512 strip, so it gets its proportions back when stretched over the 3 × 20 m runner).
+ */
+const CLOTH_CELL: Readonly<Record<ClothKind, readonly [number, number, number, number]>> = {
+  velvet: [0, 0.5, 0.5, 1], carpet: [0.5, 0.5, 1, 1], linen: [0, 0, 0.5, 0.5], brocade: [0.5, 0, 0.75, 0.5], runner: [0.75, 0, 1, 0.5],
+};
 /** Tints for the plain linen where no cloth atlas exists (tools, other builders). */
-const CLOTH_FALLBACK: Readonly<Record<ClothKind, RGB>> = { velvet: [0.9, 0.16, 0.22], carpet: [0.62, 0.1, 0.16], linen: [1.45, 1.4, 1.35], brocade: [0.2, 0.65, 0.42] };
+const CLOTH_FALLBACK: Readonly<Record<ClothKind, RGB>> = { velvet: [0.9, 0.16, 0.22], carpet: [0.62, 0.1, 0.16], linen: [1.45, 1.4, 1.35], brocade: [0.2, 0.65, 0.42], runner: [0.9, 0.16, 0.22] };
 
 /** A box whose every face shows its kind's whole atlas quarter once (a carpet keeps its border, a cloth its fringe). */
 function clothGeo(kind: ClothKind, sx: number, sy: number, sz: number): BufferGeometry {
   return cached(`wcloth-${kind}-${sx.toFixed(2)}-${sy.toFixed(2)}-${sz.toFixed(2)}`, () => {
-    const g = new BoxGeometry(sx, sy, sz), uv = g.getAttribute('uv'), [cu, cv] = CLOTH_CELL[kind];
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, cu * 0.5 + 0.008 + uv.getX(i) * 0.484, cv * 0.5 + 0.008 + uv.getY(i) * 0.484);
+    const g = new BoxGeometry(sx, sy, sz), uv = g.getAttribute('uv'), [u0, v0, u1, v1] = CLOTH_CELL[kind], e = 0.004;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + e + uv.getX(i) * (u1 - u0 - 2 * e), v0 + e + uv.getY(i) * (v1 - v0 - 2 * e));
     return g;
   });
 }
