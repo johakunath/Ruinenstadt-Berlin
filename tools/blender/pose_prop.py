@@ -5,6 +5,8 @@
 --yaw   degrees around the up axis first (so the head points along +Z, the game's local forward)
 --roll  degrees around the length axis (+Z) after that: 180 = on its back, 90 / -90 = on its side
 --sink  metres pushed into the ground afterwards (a fallen figure rests on its bulk, not on one point)
+--level first turn the mesh so its bounding box is smallest (a box-like prop such as a car seen from above comes out
+        of Pixal3D tilted; this squares it to the axes). Check the sheet after: it may need --yaw 90/180 or --roll 180
 The result stands on the ground (lowest point y = 0) and is centred on x and z. Run before bake_low.py.
 """
 import argparse
@@ -21,6 +23,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--yaw", type=float, default=0.0)
 ap.add_argument("--roll", type=float, default=0.0)
 ap.add_argument("--sink", type=float, default=0.0)
+ap.add_argument("--level", action="store_true")
 ap.add_argument("--cut", default="", help="z,y in glTF metres: delete faces in front of z and below y (a stray part Pixal3D guessed)")
 a = ap.parse_args(argv)
 
@@ -46,6 +49,28 @@ if a.cut:
     bm.to_mesh(obj.data)
     bm.free()
     print("POSE cut %d faces" % len(gone))
+if a.level:
+    import numpy as np
+    P = np.array([v.co[:] for v in obj.data.vertices])[::max(1, len(obj.data.vertices) // 4000)]
+    P = P - P.mean(axis=0)
+
+    def rmat(x, y, z):
+        cx, sx, cy, sy, cz, sz = math.cos(x), math.sin(x), math.cos(y), math.sin(y), math.cos(z), math.sin(z)
+        return np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]]) @ np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]]) @ np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+
+    def vol(r):
+        q = P @ r.T
+        return float(np.prod(q.max(axis=0) - q.min(axis=0)))
+
+    best, step, span = (0.0, 0.0, 0.0), math.radians(5), math.radians(45)
+    for _ in range(3):
+        grid = np.arange(-span, span + 1e-6, step)
+        cands = [(best[0] + x, best[1] + y, best[2] + z) for x in grid for y in grid for z in grid]
+        best = min(cands, key=lambda e: vol(rmat(*e)))
+        span, step = step, step / 5
+    R = rmat(*best)
+    obj.data.transform(Matrix([list(R[0]) + [0], list(R[1]) + [0], list(R[2]) + [0], [0, 0, 0, 1]]))
+    print("POSE level %.1f %.1f %.1f deg" % tuple(math.degrees(e) for e in best))
 rot = Matrix.Rotation(math.radians(a.roll), 4, Vector((0, -1, 0))) @ Matrix.Rotation(math.radians(a.yaw), 4, "Z")
 obj.data.transform(rot)
 pts = [v.co for v in obj.data.vertices]

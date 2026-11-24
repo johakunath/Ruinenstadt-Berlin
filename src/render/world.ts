@@ -27,6 +27,7 @@ import { buildMitteProp } from './props-mitte';
 import { buildEdgeProp } from './props-edge';
 import { buildPlantProp } from './vegetation';
 import { buildGdrProp } from './props-gdr';
+import type { GlbPlacement } from './glb-props';
 
 export const GROUND_H = 4.3;
 export const FLOOR_H = 3.5;
@@ -141,6 +142,8 @@ export class Run {
 
 export interface Mats {
   profile: Materials['profile'];
+  /** Placements of the local AI props (`glb-props.ts`); only maps that draw them have the list. */
+  glbProps?: GlbPlacement[];
   plaster: Record<string, LitMaterial>;
   brick: LitMaterial;
   stucco: LitMaterial;

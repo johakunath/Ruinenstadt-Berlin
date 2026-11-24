@@ -2,6 +2,8 @@
 // reference photos (M11d). Never part of the game build.
 //   /tools/landmark-sheet.html?kind=rathaus                three-quarter, front, game camera, top
 //   &views=quarter,game  &variant=1 (dinos)  &w=480&h=400
+//   ?props=car*6,bus  a row of props instead (seeded 1, 2, …, 5 m apart, all facing +z; `&kind` unused);
+//   &only=6,7 keeps those of the row, &size=4 frames closer, &code without the local AI props
 import { Color, DirectionalLight, GridHelper, Group, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { koepenickMap } from '../src/data/koepenick';
 import { alexMap } from '../src/data/alexanderplatz';
@@ -20,6 +22,9 @@ import { makeLandmarkFinishes } from '../src/render/landmark-finishes';
 import { makeLandmarkWearMaterial } from '../src/render/landmark-wear';
 import { LOOK } from '../src/render/looks';
 import { ChunkBuilder, makeMapMats } from '../src/render/map-world';
+import { buildProp } from '../src/render/world';
+import type { Prop } from '../src/data/courtyard';
+import { Rng } from '../src/sim/math';
 import { Materials } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
 
@@ -28,7 +33,8 @@ const kind = (q.get('kind') ?? 'rathaus') as LandmarkKind;
 const variant = Number(q.get('variant') ?? 0);
 const views = (q.get('views') ?? 'quarter,front,game,top').split(',');
 const W = Number(q.get('w') ?? 480), H = Number(q.get('h') ?? 420);
-const def = [...koepenickMap().landmarks, ...alexMap().landmarks, ...mitteMap().landmarks, ...charlottenburgMap().landmarks, ...weddingMap().landmarks].find((l) => l.kind === kind && (l.variant ?? 0) === variant)!;
+const propList = (q.get('props') ?? '').split(',').filter(Boolean).flatMap((k) => { const [kd = '', n] = k.split('*'); return Array.from({ length: Number(n) || 1 }, () => kd as Prop['kind']); });
+const def = propList.length ? { ...koepenickMap().landmarks[0]!, hx: propList.length * 2.5, hz: 3 } : [...koepenickMap().landmarks, ...alexMap().landmarks, ...mitteMap().landmarks, ...charlottenburgMap().landmarks, ...weddingMap().landmarks].find((l) => l.kind === kind && (l.variant ?? 0) === variant)!;
 const l = { ...def, x: 0, z: 0, rot: 0 };
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
@@ -44,8 +50,17 @@ if (!q.has('clean')) {
   mm.landmarkWear = makeLandmarkWearMaterial(materials);
   if (!ALEX_KINDS.has(kind) && !MITTE_KINDS.has(kind) && !CHARLOTTENBURG_KINDS.has(kind)) mm.landmarkFinishes = makeLandmarkFinishes(materials, mm.slate);
 }
+// &code: no local AI props (the code fallbacks, for before/after).
+if (q.has('code')) (mm as { glbProps?: unknown }).glbProps = undefined;
 const b = new ChunkBuilder(mm), up = new ChunkBuilder(mm);
-b.wearLandmark(l, () => {
+// &only=6,7 builds only those (same seeds), side by side round the origin.
+const only = q.get('only')?.split(',').map(Number);
+if (propList.length) propList.forEach((k, i) => {
+  if (only && !only.includes(i)) return;
+  const n = only ? only.indexOf(i) : i, of = only ? only.length : propList.length;
+  buildProp(b, { kind: k, x: (n - (of - 1) / 2) * 5, z: 0, rot: 0, size: 1 } as Prop, new Rng(i + 1));
+});
+else b.wearLandmark(l, () => {
   // M18: Wedding sights (`?kind=kneipe&up=0` hides the pub's roof and upper walls as the game does inside).
   if (kind === 'kneipe') buildKneipe(b, up, l);
   else if (wedding) buildWeddingLandmark(b, l);
@@ -62,11 +77,11 @@ sun.position.set(-30, 50, 40);
 scene.add(sun, new GridHelper(80, 40, 0x50606a, 0x6a7a80));
 const parts = [b, ...(q.get('up') === '0' ? [] : [up])];
 for (const m of parts.flatMap((p) => [...p.solid.meshes(), ...p.cards.meshes(), ...p.glows.meshes()])) scene.add(m);
-if (mm.glbProps.length) { const g = new Group(); buildGlbProps(materials, mm.glbProps, g, mm.stucco.map); scene.add(g); }
+if (mm.glbProps?.length) { const g = new Group(); buildGlbProps(materials, mm.glbProps, g, mm.stucco.map); scene.add(g); }
 // Let the async ground/paint textures arrive.
 await new Promise((r) => setTimeout(r, Number(q.get('wait') ?? 1500)));
-const size = Math.max(l.hx, l.hz, 6);
-const tall = ({ rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnhof: 10, schloss: 18, forum: 10, dino: 5, spati: 4,
+const size = Number(q.get('size') ?? Math.max(l.hx, l.hz, 6));
+const tall = propList.length ? 4 : ({ rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnhof: 10, schloss: 18, forum: 10, dino: 5, spati: 4,
   weltzeituhr: 11, dom: 32, rotesrathaus: 42, fernsehturm: 30, marienkirche: 32, neptunbrunnen: 6, nikolaikirche: 28, brunnen: 7, hotelstadtberlin: 50,
   sbahnalex: 12, sbahnhackescher: 12, hausdeslehrers: 36, kongresshalle: 9, kino: 13, cafemoskau: 14, altesmuseum: 12, palast: 16,
   tor: 23, reichstag: 30, bundesbau: 18, kanzleramt: 26, siegessaeule: 50, sony: 36, stage: 5, bahntower: 70, kollhoff: 68, verkehrsturm: 9, klinik: 4,

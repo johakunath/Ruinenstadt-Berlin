@@ -3,7 +3,7 @@
 // kind costs one draw call. Landmark builders record placements in `MapMats.glbProps`; `buildGlbProps` makes
 // the mesh and its material at build time (so the shader compiles with the rest) and fills in the geometry
 // and texture when the file has loaded. The file loads while the characters load, before the first frame.
-import { BufferAttribute, BufferGeometry, InstancedMesh, type Group, type Matrix4, type Mesh, type MeshStandardMaterial, type Texture } from 'three';
+import { BufferAttribute, BufferGeometry, Color, InstancedMesh, type Group, type Matrix4, type Mesh, type MeshStandardMaterial, type Texture } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Materials } from './materials';
 
@@ -16,10 +16,14 @@ const PROPS = {
   sauropod: { url: new URL('../../assets/props/dino-sauropod.glb', import.meta.url).href, tint: [0.85, 0.85, 0.85] },
   triceratops: { url: new URL('../../assets/props/dino-triceratops.glb', import.meta.url).href, tint: [0.85, 0.85, 0.85] },
   rex: { url: new URL('../../assets/props/dino-rex.glb', import.meta.url).href, tint: [0.85, 0.85, 0.85] },
+  /** P3 small East German car (Trabant-like), a wreck without wheels (the builder adds them), 3.56 m long,
+   * origin at the bottom centre of the shell, nose along +Z. Desaturated paint: each copy gets its car tint. */
+  trabi: { url: new URL('../../assets/props/car-trabi.glb', import.meta.url).href, tint: [1, 1, 1] },
 } as const;
 
 export type GlbPropKind = keyof typeof PROPS;
-export interface GlbPlacement { kind: GlbPropKind; m: Matrix4 }
+/** `tint` (linear RGB) multiplies the kind's tint for this copy only (car paint). */
+export interface GlbPlacement { kind: GlbPropKind; m: Matrix4; tint?: readonly [number, number, number] }
 
 /** One instanced mesh per kind in `placements`; `placeholder` is any loaded surface map (kept, never disposed). */
 export function buildGlbProps(materials: Materials, placements: readonly GlbPlacement[], parent: Group, placeholder: Texture | null): void {
@@ -32,6 +36,7 @@ export function buildGlbProps(materials: Materials, placements: readonly GlbPlac
     for (const [name, size] of [['position', 3], ['normal', 3], ['uv', 2], ['color', 3]] as const) stub.setAttribute(name, new BufferAttribute(new Float32Array(3 * size), size));
     const mesh = new InstancedMesh(stub, material, list.length);
     list.forEach((p, i) => mesh.setMatrixAt(i, p.m));
+    if (list.some((p) => p.tint)) { const c = new Color(); list.forEach((p, i) => mesh.setColorAt(i, c.setRGB(...(p.tint ?? [1, 1, 1])))); }
     mesh.count = 0;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
