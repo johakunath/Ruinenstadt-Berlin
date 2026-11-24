@@ -135,6 +135,14 @@ function carGeo(kind: keyof typeof CAR_TYPES): { lower: BufferGeometry; cabin: B
 }
 
 const TRABI_SHARE = 0.35;
+/** P3: whether a car prop is drawn as the Trabi (on maps with local AI props): a hash of its position, so decorations
+ * built elsewhere (Wedding ribbons, Mitte roof sensors) can find the Trabi's roof and the code cars keep their rng. */
+export function isTrabi(p: Prop): boolean {
+  const v = Math.sin(p.x * 12.9898 + p.z * 78.233) * 43758.5453;
+  return v - Math.floor(v) < TRABI_SHARE;
+}
+/** Roof top of the Trabi shell above its ground (code cars: about 1.45 m). */
+export const TRABI_ROOF = 1.69;
 /** Height of the shell's cut sills above the ground (the GLB is cut there, Pixal3D's wheels fell apart; 0.15 tucks the code wheels into the arches, Johannes 2026-11-24) and its axles (z). */
 const TRABI = { lift: 0.15, x: 0.7, front: 1.17, rear: -1.04, r: 0.27 } as const;
 
@@ -176,7 +184,7 @@ function sideSlab(base: Matrix4, x: number, z0: number, y0: number, z1: number, 
 export function buildCar(b: Builder, p: Prop, rng: Rng): void {
   const m = b.mats;
   // P3: on maps with local AI props about a third of the cars are the small East German car (Trabant-like).
-  if (m.glbProps && rng.next() < TRABI_SHARE) { buildTrabi(b, p, rng, m.glbProps); return; }
+  if (m.glbProps && isTrabi(p)) { buildTrabi(b, p, rng, m.glbProps); return; }
   const kind = rng.pick(['saloon', 'saloon', 'hatch', 'estate'] as const);
   const t = CAR_TYPES[kind];
   const geo = carGeo(kind);
