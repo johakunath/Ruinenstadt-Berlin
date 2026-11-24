@@ -4,7 +4,7 @@ Decimating a Pixal3D mesh with its texture breaks the texture into facets below 
 mesh gets its own UVs and the colour is baked from the high mesh (Cycles, selected to active).
 
     blender -b --python tools/blender/bake_low.py -- --in high.glb --out low.glb --tris 2000 --tex 512
-        [--tint ref.png]   per-channel mean of the baked texture moved to the reference picture's object pixels
+        [--tint ref.png] [--remesh 0.03]   per-channel mean of the baked texture moved to the reference picture's object pixels
                            (Pixal3D drifts greyer; the reference is the FLUX picture on black)
 
 Run `tools/comfy/prepare_toy_model.py --tris 60000` first: it merges, sizes and places the origin.
@@ -22,6 +22,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--tris", type=int, default=2000)
 ap.add_argument("--tex", type=int, default=512)
 ap.add_argument("--tint", default="")
+ap.add_argument("--remesh", type=float, default=0.0, help="voxel size in m: fuse loose pieces (rubble) before decimating")
 a = ap.parse_args(argv)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -49,6 +50,13 @@ bpy.ops.object.mode_set(mode="EDIT")
 bpy.ops.mesh.select_all(action="SELECT")
 bpy.ops.mesh.remove_doubles(threshold=0.002)
 bpy.ops.object.mode_set(mode="OBJECT")
+if a.remesh > 0:
+    # Many loose pieces (a rubble heap) stop the decimate far above the target: fuse them into one surface first.
+    rem = low.modifiers.new("Remesh", "REMESH")
+    rem.mode = "VOXEL"
+    rem.voxel_size = a.remesh
+    bpy.ops.object.modifier_apply(modifier=rem.name)
+    tris = sum(len(p.vertices) - 2 for p in low.data.polygons)
 dec = low.modifiers.new("Decimate", "DECIMATE")
 dec.ratio = min(1.0, a.tris / max(1, tris))
 bpy.ops.object.modifier_apply(modifier=dec.name)
