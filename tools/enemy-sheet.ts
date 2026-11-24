@@ -68,6 +68,12 @@ async function portraits(): Promise<void> {
   canvas.style.display = 'none';
   const materials = new Materials(LOOK, PROFILES.qualitaet);
   const assets = await loadCharacters(materials, true);
+  // Painted kit maps (T8 fur and wool, T10 carpet) load after the first body is built: build one, then wait.
+  {
+    const sim0 = createSim({ empty: true });
+    new EnemyView(assets, materials, ENEMIES.walker.body, false).assign(spawnEnemy(sim0, 0, 0, 'walker'), false, null);
+    await new Promise((r) => setTimeout(r, Number(q.get('wait') ?? 1500)));
+  }
   const scene = new Scene();
   const fill = new HemisphereLight(0x9aa8c0, 0x2a1e14, 1.1);
   const key = new DirectionalLight(0xffd3a0, 3.6);
