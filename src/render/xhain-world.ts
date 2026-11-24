@@ -483,22 +483,25 @@ function buildWall(c: Ctx, w: Wall): void {
       b.box(M.concrete, sub(base, -s * 0.12, 0.1, 0), 0.36, 0.5, ew - 0.03, k3(tint, 0.82));
       b.geo(M.concrete, pipeGeo(ew - 0.02), sub(base, s * 0.18, 3.4, 0), k3(tint, 1.04));
       if (esg) {
+        // Long murals (Johannes 2026-11-24): eight wide paintings (`murals.webp`, 2 × 4 cells of 4:1), each across
+        // 10 to 11 elements (12 to 13 m), one after the other in order so neighbours never repeat.
         if (run >= runLen) {
           run = 0;
-          runLen = 3 + rng.int(4);
-          let p = rng.int(8);
-          if (p === panel) p = (p + 3) % 8;
-          panel = p;
+          runLen = 10 + rng.int(2);
+          panel = panel < 0 ? rng.int(8) : (panel + 1) % 8;
         }
-        const u0 = (panel % 4) / 4 + (run / runLen) * 0.25, u1 = (panel % 4) / 4 + ((run + 1) / runLen) * 0.25;
-        const v0 = 0.5 - Math.floor(panel / 4) / 2;
+        const col = (panel % 2) / 2, f0 = run / runLen, f1 = (run + 1) / runLen;
+        const v0 = 0.75 - Math.floor(panel / 2) / 4;
         run++;
         const fade: RGB = k3([1, 1, 1], rng.range(0.85, 1.05));
         // River side (West face) and street side (East face above the foot).
         for (const [x, out, y0] of [[s * 0.312, s, 0.12], [s * 0.048, -s, 0.4]] as Array<[number, number, number]>) {
           const za = out > 0 ? ew / 2 - 0.015 : -ew / 2 + 0.015, zb = -za;
           const p = [new Vector3(x, y0, za), new Vector3(x, y0, zb), new Vector3(x, 3.3, zb), new Vector3(x, 3.3, za)].map((v) => v.applyMatrix4(base));
-          b.solid.of(c.X.murals).quad(p as [Vector3, Vector3, Vector3, Vector3], [u0, v0 + 0.5 * (y0 / 3.3) * 0.15, u1, v0 + 0.5], [fade]);
+          // The face whose quad starts at the far end runs the mural backwards along the wall, so each element's
+          // slice still joins its neighbours (otherwise every slice is mirrored and the painting breaks up).
+          const [ua, ub] = za > 0 ? [col + (1 - f1) * 0.5, col + (1 - f0) * 0.5] : [col + f0 * 0.5, col + f1 * 0.5];
+          b.solid.of(c.X.murals).quad(p as [Vector3, Vector3, Vector3, Vector3], [ua, v0 + 0.25 * (y0 / 3.3) * 0.15, ub, v0 + 0.25], [fade]);
         }
         if (rng.next() < 0.12) tag(b, sub(base, s * 0.325, rng.range(0.5, 1.4), 0, s > 0 ? Math.PI / 2 : -Math.PI / 2), rng.range(0.6, 1.1), rng);
       } else if (rng.next() < 0.3) {
