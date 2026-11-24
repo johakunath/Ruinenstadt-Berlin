@@ -24,6 +24,7 @@ import type { LitMaterial, Materials } from './materials';
 import type { ChunkBuilder, MapMats } from './map-world';
 import { buildCityView } from './turm-city';
 import { paintBand, paintDeckFloor, paintDial, paintEnamel } from './turm-paint';
+import { loadPaintedTexture } from './surface-textures';
 
 type RGB = readonly [number, number, number];
 type Box = (mat: Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, color?: RGB, ry?: number) => void;
@@ -49,12 +50,20 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
   for (const d of decks) floors[d.id] = materials.surface({ map: paintDeckFloor(d, flat), roughness: d.id === 'schacht' ? 0.85 : 0.32, metalness: d.id === 'schacht' ? 0.4 : 0.05 });
   const core = paintEnamel('#c4521e', flat);
   core.repeat.set(8, 1);
+  const coreMat = materials.surface({ map: core, roughness: 0.48 });
+  // T11 (2): painted enamel core (local FLUX.2 klein); the canvas stays the fallback, same material and repeat.
+  loadPaintedTexture(new URL('../../assets/textures/turm/enamel.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
+    t.repeat.set(8, 1);
+    coreMat.map?.dispose();
+    coreMat.map = t;
+    coreMat.needsUpdate = true;
+  });
   return {
     floors,
     steel: materials.surface({ color: 0xffffff, roughness: 0.42, metalness: 0.55, vertexColors: true }),
     brass: materials.surface({ color: 0xc8963c, roughness: 0.32, metalness: 0.85, emissive: 0x3a2408, emissiveIntensity: 0.7 }),
     enamel: materials.surface({ color: 0xffffff, roughness: 0.45, vertexColors: true }),
-    core: materials.surface({ map: core, roughness: 0.48 }),
+    core: coreMat,
     cloth: materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true }),
     lamp: materials.surface({ color: 0xfff0d0, roughness: 0.4, emissive: 0xffc070, emissiveIntensity: 2.4 }),
     dial: materials.surface({ map: paintDial(), roughness: 0.5 }),
