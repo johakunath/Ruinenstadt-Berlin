@@ -48,6 +48,17 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
   const flat = materials.look.flatten;
   const floors = {} as Record<DeckDef['id'], LitMaterial>;
   for (const d of decks) floors[d.id] = materials.surface({ map: paintDeckFloor(d, flat), roughness: d.id === 'schacht' ? 0.85 : 0.32, metalness: d.id === 'schacht' ? 0.4 : 0.05 });
+  // T11 (3): painted deck floors (local FLUX.2 klein from the canvas layouts); the Schacht grating keeps its canvas.
+  const FLOOR_URL: Partial<Record<DeckDef['id'], string>> = {
+    foyer: new URL('../../assets/textures/turm/floor-foyer.webp', import.meta.url).href,
+    panorama: new URL('../../assets/textures/turm/floor-panorama.webp', import.meta.url).href,
+    telecafe: new URL('../../assets/textures/turm/floor-telecafe.webp', import.meta.url).href,
+    uhrenraum: new URL('../../assets/textures/turm/floor-uhrenraum.webp', import.meta.url).href,
+  };
+  for (const d of decks) {
+    const url = FLOOR_URL[d.id], mat = floors[d.id];
+    if (url) loadPaintedTexture(url, materials.profile.anisotropy, (t) => { mat.map?.dispose(); mat.map = t; mat.needsUpdate = true; }, false);
+  }
   const core = paintEnamel('#c4521e', flat);
   core.repeat.set(8, 1);
   const coreMat = materials.surface({ map: core, roughness: 0.48 });
