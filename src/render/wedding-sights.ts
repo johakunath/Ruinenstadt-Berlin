@@ -23,8 +23,13 @@ import { archHead, archWindow, BACK, frustum, FRONT, LEFT, pane, RIGHT, sub } fr
 import type { ChunkBuilder } from './map-world';
 import type { LitMaterial } from './materials';
 import { buildUrbanProp } from './props-urban';
-import { sign, SIGN, W } from './wedding-world';
+import { cloth, sign, SIGN, W, type ClothKind } from './wedding-world';
 
+
+/** `blk` for a T14 cloth piece (`cloth` in wedding-world.ts): box standing on local y, centred at local (x, z). */
+function clothBlk(c: Ctx, kind: ClothKind, x: number, y: number, z: number, w: number, h: number, d: number, shade = 1, ry = 0): void {
+  cloth(c.b, kind, lm(c.l, x, y + h / 2, z, ry), w, h, d, shade);
+}
 /** Tints from the photos (on the shared base materials). */
 const T = {
   nazBrick: [1.04, 0.56, 0.42], nazDark: [0.72, 0.38, 0.3], terracotta: [1.1, 0.72, 0.5], granite: [0.66, 0.64, 0.62],
@@ -395,10 +400,10 @@ function palast(c: Ctx): void {
     blk(c, M.dark, x, 0, F + 0.03, 3, 4.6, 0.02);
     archHead(b, M.dark, m, 3, false, 0.04);
     for (const s of [-1, 1]) {
-      blk(c, M.linen, x + s * 1.2, 0, F + 0.1, 0.6, 4.4, 0.14, W.ruby);
+      clothBlk(c, 'velvet', x + s * 1.2, 0, F + 0.1, 0.6, 4.4, 0.14);
       blk(c, M.enamel, x + s * 1.2, 1.7, F + 0.18, 0.66, 0.14, 0.06, W.gold);
     }
-    blk(c, M.linen, x, 4.15, F + 0.12, 3.2, 0.5, 0.16, W.ruby);
+    clothBlk(c, 'velvet', x, 4.15, F + 0.12, 3.2, 0.5, 0.16);
     blk(c, M.enamel, x, 4.05, F + 0.2, 3.2, 0.1, 0.04, W.gold);
   }
   for (const x of [-14, -8.4, -2.8, 2.8, 8.4, 14]) {
@@ -422,22 +427,23 @@ function palast(c: Ctx): void {
   for (let k = 0; k < 3; k++) b.geo(M.lampGlass, cached('jewel', () => new SphereGeometry(0.14, 6, 4)), lm(c.l, -0.7 + k * 0.7, 11.45, z0 + 1.42), k === 1 ? [0.4, 1.3, 1.2] : [1.7, 1.2, 0.4]);
   // Worn gilding: flaked patches, one curtain torn down on the floor, a scaffold with an emerald net at the east end.
   for (let i = 0; i < 6; i++) blk(c, M.enamel, c.rng.range(-14, 14), c.rng.range(0.6, 6.8), F + 0.025, c.rng.range(0.4, 1.0), c.rng.range(0.3, 0.7), 0.02, T.flake);
-  blk(c, M.linen, 9.6, 0, F + 1.2, 1.4, 0.18, 2.2, W.rubyDark);
+  clothBlk(c, 'velvet', 9.6, 0, F + 1.2, 1.4, 0.18, 2.2, 0.8);
   scaffold(c, lm(c.l, 12.6, 0, F + 0.1), 4.6, 8.2, 0.9);
   tarp(c, lm(c.l, 12.6, 8.4, F + 1.1), 4.2, 5.6, W.emerald);
   // Dais in two steps, the throne with its round crest, the wedding cake and the gift table; the ruby runner.
-  blk(c, M.linen, 0, 0, z0 + 4.5, 9, 0.25, 4.5, W.ruby);
-  blk(c, M.linen, 0, 0.25, z0 + 4.0, 7, 0.22, 3.4, W.ruby);
+  clothBlk(c, 'carpet', 0, 0, z0 + 4.5, 9, 0.25, 4.5);
+  clothBlk(c, 'carpet', 0, 0.25, z0 + 4.0, 7, 0.22, 3.4);
   blk(c, M.enamel, 0, 0.24, z0 + 6.74, 9, 0.04, 0.06, W.gold);
   blk(c, M.enamel, 0, 0.47, z0 + 3.0, 2.4, 3.2, 0.5, W.gold);
   b.geo(M.enamel, cached('throne-crest', () => new CylinderGeometry(1.2, 1.2, 0.5, 14)), lm(c.l, 0, 3.6, z0 + 3.0).multiply(new Matrix4().makeRotationX(Math.PI / 2)), T.goldHi);
-  blk(c, M.linen, 0, 0.47, z0 + 3.9, 1.8, 0.95, 1.3, W.rubyDark);
+  clothBlk(c, 'velvet', 0, 0.47, z0 + 3.9, 1.8, 0.95, 1.3, 0.8);
   for (const s of [-1, 1]) blk(c, M.enamel, s * 1.05, 0.47, z0 + 3.9, 0.3, 1.4, 1.3, W.gold);
   for (const [r, y] of [[0.62, 0.47], [0.46, 0.92], [0.3, 1.37]] as const) cyl(c, M.linen, 3.5, y, z0 + 5.6, r, 0.45, T.white, 12);
   cyl(c, M.enamel, 3.5, 1.82, z0 + 5.6, 0.08, 0.35, W.gold, 6);
   blk(c, M.wood, -3.5, 0.47, z0 + 5.4, 1.8, 0.75, 0.9, [0.85, 0.6, 0.4]);
-  for (const [dx, col] of [[-0.5, W.ruby], [0.1, W.emerald], [0.6, W.gold]] as const) blk(c, M.linen, -3.5 + dx, 1.22, z0 + 5.4, 0.42, 0.36, 0.42, col);
-  blk(c, M.linen, 0, 0, z0 + 15, 3, 0.03, 20, W.ruby);
+  for (const [dx, kind] of [[-0.5, 'velvet'], [0.1, 'brocade'], [0.6, 'brocade']] as const) clothBlk(c, kind, -3.5 + dx, 1.22, z0 + 5.4, 0.42, 0.36, 0.42);
+  // The ruby runner: seven carpets end to end, so each keeps its gold border (one 20 m carpet smears).
+  for (let k = 0; k < 7; k++) clothBlk(c, 'carpet', 0, 0, z0 + 5 + (k + 0.5) * (20 / 7), 3, 0.03, 20 / 7 - 0.04);
   for (const s of [-1, 1]) blk(c, M.enamel, s * 1.5, 0, z0 + 15, 0.08, 0.035, 20, W.gold);
   // Chandeliers on a wire between the side walls, in front of the palace (their light is in the plan, at the rim).
   const cz = z0 + 3.2;

@@ -12,7 +12,7 @@
 // Cost: one new material, the sign atlas (`makeWeddingMats`: one draw call per chunk that shows a sign). Cloth is the
 // existing linen batch tinted ruby, gold the enamel batch, nets the burlap batch: no other new batch. No new glow
 // colour (lamp 0xffb060, string lights 0xffc890, fire 0xff8a3c, teal 0x5fd8c8). Lights: pooled spots only.
-import { CylinderGeometry, Matrix4, PlaneGeometry, type BufferGeometry } from 'three';
+import { BoxGeometry, CylinderGeometry, Matrix4, PlaneGeometry, type BufferGeometry } from 'three';
 import { WALL_KIND, inPoly, lineDist, streetDist, type Landmark, type LandmarkKind, type Lot, type MapDef, type Pt, type Wall } from '../data/map';
 import type { Prop } from '../data/courtyard';
 import { KNEIPE, KNEIPE_STOOLS, kneipeParts } from '../data/kneipe';
@@ -26,6 +26,7 @@ import { lightWeddingLandmarks } from './wedding-lights';
 import { lm, type ChunkBuilder } from './map-world';
 import { canvas, toTexture } from './paint';
 import type { Materials, LitMaterial } from './materials';
+import { loadPaintedTexture } from './surface-textures';
 
 /** Sights this file draws on the Wedding map (the U entrance kind is Mitte's, drawn here without Mitte's atlas). */
 export const WEDDING_KINDS = new Set<LandmarkKind>(['ubahn', 'nazareth', 'neubau', 'amtsgericht', 'flakturm', 'beamtentor', 'maschinenhalle']);
@@ -186,13 +187,42 @@ function paintSigns(): { map: ReturnType<typeof toTexture>; emissiveMap: ReturnT
   return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
 }
 
-export interface WeddingMats { signs: LitMaterial }
+export interface WeddingMats { signs: LitMaterial; cloth: LitMaterial }
 
-/** The sign atlas material (Wedding only). */
+/** The sign atlas material and the T14 cloth atlas (Wedding only; the cloth is the second Wedding material). */
 export function makeWeddingMats(materials: Materials): WeddingMats {
-  if (typeof document === 'undefined') return { signs: materials.surface({ color: 0x884422, roughness: 0.6 }) };
+  const cloth = materials.surface({ color: 0xffffff, roughness: 0.9, vertexColors: true });
+  if (typeof document === 'undefined') return { signs: materials.surface({ color: 0x884422, roughness: 0.6 }), cloth };
+  // T14 (local FLUX.2 klein): ruby velvet with a gold fringe, a worn ruby carpet with a gold border, stained table
+  // linen, emerald and gold brocade, one 512 px quarter each (`CLOTH_CELL`). Plain white until it has loaded.
+  loadPaintedTexture(new URL('../../assets/textures/wedding/cloth-atlas.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
+    cloth.map = t;
+    cloth.needsUpdate = true;
+  }, false);
   const t = paintSigns();
-  return { signs: materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe6b0, emissiveIntensity: 1.2, roughness: 0.6 }) };
+  return { signs: materials.surface({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xffe6b0, emissiveIntensity: 1.2, roughness: 0.6 }), cloth };
+}
+
+export type ClothKind = 'velvet' | 'carpet' | 'linen' | 'brocade';
+/** Atlas quarter of each cloth kind: [column, row from the bottom]. */
+const CLOTH_CELL: Readonly<Record<ClothKind, readonly [number, number]>> = { velvet: [0, 1], carpet: [1, 1], linen: [0, 0], brocade: [1, 0] };
+/** Tints for the plain linen where no cloth atlas exists (tools, other builders). */
+const CLOTH_FALLBACK: Readonly<Record<ClothKind, RGB>> = { velvet: [0.9, 0.16, 0.22], carpet: [0.62, 0.1, 0.16], linen: [1.45, 1.4, 1.35], brocade: [0.2, 0.65, 0.42] };
+
+/** A box whose every face shows its kind's whole atlas quarter once (a carpet keeps its border, a cloth its fringe). */
+function clothGeo(kind: ClothKind, sx: number, sy: number, sz: number): BufferGeometry {
+  return cached(`wcloth-${kind}-${sx.toFixed(2)}-${sy.toFixed(2)}-${sz.toFixed(2)}`, () => {
+    const g = new BoxGeometry(sx, sy, sz), uv = g.getAttribute('uv'), [cu, cv] = CLOTH_CELL[kind];
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, cu * 0.5 + 0.008 + uv.getX(i) * 0.484, cv * 0.5 + 0.008 + uv.getY(i) * 0.484);
+    return g;
+  });
+}
+
+/** One cloth piece (awning, curtain, carpet, tablecloth, parcel) in the Wedding cloth atlas; `shade` darkens it. */
+export function cloth(b: ChunkBuilder, kind: ClothKind, m: Matrix4, sx: number, sy: number, sz: number, shade = 1): void {
+  const mat = b.mm.wedding?.cloth;
+  if (!mat) return b.box(b.mm.linen, m, sx, sy, sz, CLOTH_FALLBACK[kind]);
+  b.geo(mat, clothGeo(kind, sx, sy, sz), m, [shade, shade, shade]);
 }
 
 /** A unit plane (facing +z) with the UVs of one atlas cell. */
@@ -276,7 +306,7 @@ export function buildKneipe(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): voi
         break;
       case 'bench':
         b.box(M.darkWood, sub(m, 0, 0.23, 0), p.hx * 2, 0.46, p.hz * 2, W.wood);
-        b.box(M.linen, sub(m, 0, 0.48, 0), p.hx * 2 - 0.05, 0.06, p.hz * 2 - 0.05, W.rubyDark);
+        cloth(b, 'velvet', sub(m, 0, 0.48, 0), p.hx * 2 - 0.05, 0.06, p.hz * 2 - 0.05, 0.85);
         break;
       case 'ecktisch':
         b.box(M.wood, sub(m, 0, 0.76, 0), p.hx * 2, 0.08, p.hz * 2, [0.85, 0.6, 0.4]);
@@ -351,7 +381,7 @@ export function buildKneipe(b: ChunkBuilder, up: ChunkBuilder, l: Landmark): voi
   for (const x of [-3.5, 3.5]) {
     up.box(M.darkWood, K(l, x, 1.85, fz), 1.8, 1.4, 0.06, W.wood);
     up.box(M.lampGlass, K(l, x, 1.85, fz - 0.04), 1.6, 1.2, 0.02, [0.85, 0.5, 0.22]);
-    up.box(M.linen, K(l, x, 2.3, fz - 0.07), 1.6, 0.36, 0.02, W.rubyDark);
+    cloth(up, 'velvet', K(l, x, 2.3, fz - 0.07), 1.6, 0.36, 0.02, 0.85);
     up.box(M.darkWood, K(l, x, 1.85, fz - 0.08), 0.06, 1.2, 0.03, W.wood);
   }
   b.box(M.darkWood, K(l, -(door / 2 + 0.55), 1.05, fz - 0.03), 1.0, 2.1, 0.05, [0.4, 0.28, 0.2]);
@@ -399,10 +429,10 @@ function buildGirder(chunkOf: (x: number, z: number) => ChunkBuilder, a: Pt, c: 
 function dressFront(b: ChunkBuilder, m: Matrix4, w: number, carpet: boolean): void {
   const M = b.mm;
   b.solid.excludeOccluder(() => {
-    b.box(M.linen, sub(m, 0, 2.95, 0.75, 0, 0.32), w, 0.05, 1.6, W.ruby);
+    cloth(b, 'velvet', sub(m, 0, 2.95, 0.75, 0, 0.32), w, 0.05, 1.6);
     b.box(M.enamel, sub(m, 0, 2.62, 1.52), w, 0.2, 0.03, W.gold);
     if (carpet) {
-      b.box(M.linen, sub(m, 0, 0.02, 2.2), Math.min(2.2, w * 0.6), 0.02, 2.6, W.rubyDark);
+      cloth(b, 'carpet', sub(m, 0, 0.02, 2.2), Math.min(2.2, w * 0.6), 0.02, 2.6, 0.9);
       for (const s of [-1, 1]) b.box(M.enamel, sub(m, s * Math.min(1.05, w * 0.3 - 0.05), 0.03, 2.2), 0.08, 0.02, 2.6, W.gold);
     }
   });
@@ -480,7 +510,7 @@ export function buildWeddingWorld(m: MapDef, lots: readonly Lot[], props: readon
   for (const p of m.fixedProps) {
     if (p.kind !== 'beerTable' || !tafel || Math.hypot(p.x - tafel.x, p.z - tafel.z) > tafel.r + 4) continue;
     const b = chunkOf(p.x, p.z), M = b.mm, fm = new Matrix4().makeRotationY(p.rot).setPosition(p.x, ground(p.x, p.z), p.z);
-    b.box(M.linen, sub(fm, 0, 0.8, 0), 2.3, 0.03, 0.9, W.ruby);
+    cloth(b, 'linen', sub(fm, 0, 0.8, 0), 2.3, 0.03, 0.9);
     b.box(M.enamel, sub(fm, 0, 0.82, 0), 2.3, 0.02, 0.25, W.gold);
     b.geo(M.enamel, cached('samowar', () => new CylinderGeometry(0.14, 0.18, 0.5, 8)), sub(fm, -0.6, 1.07, 0), W.gold);
     b.geo(M.lampGlass, cached('glas', () => new CylinderGeometry(0.05, 0.04, 0.16, 6)), sub(fm, 0.5, 0.9, 0.15), [1.7, 1.2, 0.4]);
