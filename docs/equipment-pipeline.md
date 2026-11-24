@@ -96,11 +96,11 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Mantel des Tunnelläufers | mantel | a | set tunnel | wear:mantel:tunnel | yes | I98 | yes: rendered from the look | none | 3 |
 | Kaftan des Ewigen Gasts | mantel | a | set gast (M18) | wear:mantel:gast (emerald coat, ruby hem and trousers, gold cuffs and buttons, plain belt) | yes | I104 | yes: rendered from the look | none | 3 |
 | Bauhelm | helm | h | normal | wear:helm | yes | I22 | yes: rendered from the look | none | 2 |
-| Schiebermütze | schieber | h | normal | wear:schieber | yes | I23 | yes: rendered from the look | T | 2 |
-| Wollmütze | muetze | h | normal | wear:muetze | yes | I24 | yes: rendered from the look | T | 2 |
+| Schiebermütze | schieber | h | normal | wear:schieber | yes | I23 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 2 |
+| Wollmütze | muetze | h | normal | wear:muetze | yes | I24 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 2 |
 | Gasmaske | maske | h | normal | wear:maske | yes | I25 | yes: rendered from the look | none | 2 |
 | Neonbrille | nbrille | h | neon | wear:nbrille | yes | I65 | yes: rendered from the look | E | 4 |
-| Strohhut | stroh | h | GDR | wear:stroh | yes | I76 | yes: rendered from the look | T | 4 |
+| Strohhut | stroh | h | GDR | wear:stroh | yes | I76 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 4 |
 | Pickelhaube des Hauptmanns | pickel | h | legendary | wear:pickel | yes | I78 | yes: rendered from the look | E | 3 |
 | Helm der Kiezwache | kiezhelm | h | set kiez | wear:kiezhelm | yes | I79 | yes: rendered from the look | none | 3 |
 | Topfhelm der Zitadelle | topfhelm | h | set zit | wear:topfhelm | yes | I83 | yes: rendered from the look | none | 3 |

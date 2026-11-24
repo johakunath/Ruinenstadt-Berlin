@@ -495,26 +495,33 @@ export function paintMetalAtlas(o: PaintOptions, tone = '#a0a0a0', seed = 73): S
   return { map: toTexture(c, false, o.anisotropy) };
 }
 
-/** Mean sRGB tone of each `paintGrain` cell; weapon vertex colours are divided by it (WP4 D1). */
-export const GRAIN_TONE = [0xb4, 0xc4, 0xcc, 0xb8] as const;
+/** Mean sRGB tone of each `paintGrain` cell; weapon vertex colours are divided by it (WP4 D1). Cells 4 to 6 are measured from `grain-cloth.webp`. */
+export const GRAIN_TONE = [0xb4, 0xc4, 0xcc, 0xb8, 0xba, 0xb7, 0xb4] as const;
+
+/** T9 (local FLUX.2 klein): tweed, knit and straw, 256 px each side by side, neutral grey. */
+const GRAIN_CLOTH = new URL('../../assets/textures/hero/grain-cloth.webp', import.meta.url).href;
+const grainLoads: Promise<void>[] = [];
+/** Resolves once every grain atlas made so far has its painted cells (or failed to load them): render tools wait for it. */
+export const grainReady = (): Promise<void> => Promise.all(grainLoads).then(() => undefined);
 
 /**
- * Neutral grey grain atlas for vertex-coloured matte parts (WP4 D1), 2 × 2 cells of 256 px:
- * 0 wood (grain along v, 8 planks across u), 1 cloth weave, 2 plain (faint mottle), 3 concrete.
- * Cell 0 sits top left in the canvas, i.e. at v 0.5..1 once flipped.
+ * Neutral grey grain atlas for vertex-coloured matte parts (WP4 D1), 4 × 2 cells of 256 px:
+ * row 0: 0 wood (grain along v, 8 planks across u), 1 cloth weave, 2 plain (faint mottle), 3 concrete;
+ * row 1: 4 tweed, 5 knit, 6 straw (T9 painted cells, the weave until the image is in), 7 spare.
+ * Row 0 sits at the top of the canvas, i.e. at v 0.5..1 once flipped.
  */
 export function paintGrain(o: PaintOptions, seed = 57): Surface {
   const S = 256;
   const rng = new Rng(seed);
-  const [c, ctx] = canvas(S * 2, S * 2);
+  const [c, ctx] = canvas(S * 4, S * 2);
   const hex = (t: number): string => `#${t.toString(16).repeat(3)}`;
   const cell = (i: number, draw: () => void): void => {
     ctx.save();
-    ctx.translate((i % 2) * S, (i >> 1) * S);
+    ctx.translate((i % 4) * S, (i >> 2) * S);
     ctx.beginPath();
     ctx.rect(0, 0, S, S);
     ctx.clip();
-    ctx.fillStyle = hex(GRAIN_TONE[i]!);
+    ctx.fillStyle = hex(GRAIN_TONE[Math.min(i, GRAIN_TONE.length - 1)]!);
     ctx.fillRect(0, 0, S, S);
     draw();
     ctx.restore();
@@ -529,19 +536,29 @@ export function paintGrain(o: PaintOptions, seed = 57): Surface {
     ctx.fillStyle = 'rgba(20,20,20,0.6)';
     for (let i = 0; i < 8; i++) ctx.fillRect(i * 32 + 30, 0, 2, S);
   });
-  cell(1, () => {
-    const t = hex(GRAIN_TONE[1]);
+  const weave = (t: string): void => {
     strokes(ctx, rng, S, S, { count: 500, colors: [shade(t, 0.25), shade(t, -0.3)], len: [6, 20], width: [1, 3], alpha: [0.15, 0.4], angle: 0, spread: 0.08 });
     strokes(ctx, rng, S, S, { count: 500, colors: [shade(t, 0.2), shade(t, -0.3)], len: [6, 20], width: [1, 3], alpha: [0.15, 0.4], angle: Math.PI / 2, spread: 0.08 });
-  });
+  };
+  cell(1, () => weave(hex(GRAIN_TONE[1])));
   cell(2, () => mottle(ctx, rng, S, S, 6, [shade(hex(GRAIN_TONE[2]), -0.15), shade(hex(GRAIN_TONE[2]), 0.1)], [30, 80], 0.25));
   cell(3, () => {
     const t = hex(GRAIN_TONE[3]);
     mottle(ctx, rng, S, S, 14, [shade(t, -0.25), shade(t, 0.15)], [20, 70], 0.35);
     strokes(ctx, rng, S, S, { count: 900, colors: ['#404040', '#e0e0e0'], len: [1, 4], width: [1, 3], alpha: [0.2, 0.5] });
   });
-  flatten(ctx, S * 2, S * 2, o.flatten);
-  return { map: toTexture(c, false, o.anisotropy) };
+  for (const i of [4, 5, 6]) cell(i, () => weave(hex(GRAIN_TONE[i]!)));
+  cell(7, () => {});
+  flatten(ctx, S * 4, S, o.flatten);
+  const map = toTexture(c, false, o.anisotropy);
+  // The painted cells replace the weave once loaded (not flattened: they are calm already).
+  const img = new Image();
+  grainLoads.push(new Promise((done) => {
+    img.onload = (): void => { ctx.drawImage(img, 0, S, S * 3, S); map.needsUpdate = true; done(); };
+    img.onerror = (): void => done();
+  }));
+  img.src = GRAIN_CLOTH;
+  return { map };
 }
 
 /** Awning stripes, red and cream, sun-bleached and dirty. */

@@ -27,6 +27,7 @@ import { buildMitteProp } from './props-mitte';
 import { buildEdgeProp } from './props-edge';
 import { buildPlantProp } from './vegetation';
 import { buildGdrProp } from './props-gdr';
+import type { GlbPlacement } from './glb-props';
 
 export const GROUND_H = 4.3;
 export const FLOOR_H = 3.5;
@@ -141,6 +142,8 @@ export class Run {
 
 export interface Mats {
   profile: Materials['profile'];
+  /** Placements of the local AI props (`glb-props.ts`); only maps that draw them have the list. */
+  glbProps?: GlbPlacement[];
   plaster: Record<string, LitMaterial>;
   brick: LitMaterial;
   stucco: LitMaterial;
@@ -977,9 +980,9 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       break;
     }
     case 'bus': {
-      // Articulated-length city bus without livery: cream body, window band, doors, six wheels.
-      const L = 11;
-      const W = 2.5;
+      // City bus without livery at a real BVG standard bus' size (P44: 12 × 2.55 m): cream body, window band, doors, six wheels.
+      const L = 12;
+      const W = 2.55;
       const tilt = at(p, 0, 0, 0, 0.012, 0, rng.range(-0.03, 0.03));
       const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
       const paint = m.carPaint;

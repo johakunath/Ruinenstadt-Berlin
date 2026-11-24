@@ -4,10 +4,10 @@
 // the bind positions of some mesh nodes round an axis, and `radius(t, angle)` is the outermost surface at
 // that height and angle, so belts, hats, shafts and plates hug the coat, the hair or the leg they cover.
 import { BufferAttribute, BufferGeometry, Matrix4, Vector3, type Object3D, type SkinnedMesh } from 'three';
-import { Parts, bright, cloth, metal, plain, wood, type Paint } from './weapons';
+import { Parts, bright, cloth, knit, metal, plain, straw, tweed, wood, type Paint } from './weapons';
 
 export type { Paint };
-export { bright, cloth, metal, plain, wood };
+export { bright, cloth, knit, metal, plain, straw, tweed, wood };
 /** A glowing gear part in its own colour (the gear glow material takes the vertex colour as emission). */
 export const glow = (hex: number): Paint => ({ slot: 'glow', hex, grain: 2 });
 

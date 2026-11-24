@@ -171,7 +171,7 @@ export function propCollider(p: Prop): Collider | null {
     case 'campfire':
       return { kind: 'circle', x: p.x, z: p.z, r: 0.7 };
     case 'bus':
-      return { kind: 'box', x: p.x, z: p.z, hx: 1.28, hz: 5.5, rot: p.rot };
+      return { kind: 'box', x: p.x, z: p.z, hx: 1.3, hz: 6, rot: p.rot };
     case 'tram':
       return { kind: 'box', x: p.x, z: p.z, hx: 1.15, hz: 7.6, rot: p.rot };
     case 'bauzaun':
