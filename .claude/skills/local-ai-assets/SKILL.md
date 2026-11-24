@@ -27,6 +27,7 @@ Routes per asset group, licences and the full workflows: `docs/local-ai-assets.m
 - **Generate many, pick few.** About 4 s per 1024 px image (16 s for the first): make 8 or more per job with consecutive seeds and judge them on one contact sheet. One prompt per image: `--batch` is only ~10 % faster and its images barely differ.
 - **Keep the GPU on one model.** The text encoder (7.7 GB) and FLUX (7.4 GB) do not both fit in 12 GB; adding the BiRefNet cut-out (`--cutout 1`) to every run made it swap and slowed images from 8 s to 37 s. Generate without cut-out, then cut out only the picks.
 - **Nothing heavy beside it.** A 300 MB download and unzip during a run made ComfyUI restage the models from disk: one image took 280 s instead of 4. Generate when the disk and GPU are idle.
+- **Never img2img a UV atlas** (body skin): FLUX moves the islands even at 0.45. Paint a seamless tile and multiply it over the atlas in code (`decay()` in `tools/build-human.mjs`).
 - **Hero cloth:** img2img from the piece's neutral swatch (`assets/textures/hero/`), `--match` it, and skip glossy candidates: baked highlights fight the game light.
 - **Colour always drifts** (greenish on plaster): match it to the old texture with `texture-tile.mjs --match`, or the code tints stop fitting.
 - **Several views of one object do not match** each other; do not feed FLUX multi-angle sheets to image-to-3D. A round object (urn, column, barrel) works: one FLUX side view serves as all four Pixal3D views.
