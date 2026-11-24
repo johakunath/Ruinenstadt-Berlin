@@ -785,7 +785,9 @@ export function torBarriers(l: Landmark): BarrierDef[] {
 /** Every blocking box of a landmark: the footprint plus the parts of figures that reach past it (or only the parts of an open one). */
 export function landmarkColliders(l: Landmark): Collider[] {
   const open = OPEN_PARTS[l.kind];
-  const out: Collider[] = open ? [] : [landmarkCollider(l)];
+  // P17 (Codex review of PR 97): the Spreepark statues block only with their fitted parts; their footprint
+  // (`hx`, `hz`, `clear`) only keeps trees, lots and props away (the triceratops' is larger than the statue).
+  const out: Collider[] = open || l.kind === 'dino' ? [] : [landmarkCollider(l)];
   const parts = l.kind === 'dino' ? DINO_PARTS[l.variant ?? 0] ?? [] : open ?? [];
   const c = Math.cos(l.rot), sn = Math.sin(l.rot);
   for (const p of parts) out.push({ kind: 'box', x: l.x + c * p.x + sn * p.z, z: l.z - sn * p.x + c * p.z, hx: p.hx, hz: p.hz, rot: l.rot + p.rot });

@@ -169,6 +169,8 @@ export interface Mats {
   /** Stall tarps in four colors, right half torn (alpha-tested, double-sided). */
   stallTarp: LitMaterial;
   dark: MeshBasicMaterial;
+  /** Never drawn (`visible: false`): proxy geometry that only feeds the captured contour occluder mask. */
+  hidden: MeshBasicMaterial;
   // M11c urban props (`props-urban.ts`, cars): light bases, the vertex tint gives the color.
   carPaint: LitMaterial;
   carGlass: LitMaterial;
@@ -241,6 +243,7 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel' | 'charlotte
     market: m.surface({ map: paintMarket(o).map, roughness: 0.8, vertexColors: true }),
     stallTarp: m.surface({ map: paintStallTarp(o).map, alphaTest: 0.5, doubleSided: true, roughness: 0.9, vertexColors: true }),
     dark: new MeshBasicMaterial({ color: 0x06090a }),
+    hidden: new MeshBasicMaterial({ visible: false }),
     carPaint: m.surface({ map: paintCarPaint(o).map, roughness: 0.55, metalness: 0.1, vertexColors: true }),
     carGlass: m.surface({ color: 0x4d6266, emissive: 0x0c1416, roughness: 0.18, metalness: 0.05, vertexColors: true }),
     enamel: m.surface({ map: paintMetal('#e2ddd0', o, 61, 0.8).map, roughness: 0.65, metalness: 0.2, vertexColors: true }),

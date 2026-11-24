@@ -679,10 +679,10 @@ function chain(b: ChunkBuilder, mat: Material, F: Frame, pts: Array<[number, num
  * P17 (local FLUX.2 klein + Pixal3D, `docs/local-ai-assets.md`): sculpted statues in the same fallen poses and
  * footprints as the code figures below (`DINO_PARTS` stays the collision), placed at the centre of the code figure.
  */
-const DINO_GLB: Partial<Record<number, { kind: GlbPropKind; x: number; z: number }>> = {
-  0: { kind: 'sauropod', x: 0, z: 0 },
-  1: { kind: 'triceratops', x: 0.6, z: 0 },
-  2: { kind: 'rex', x: 0.6, z: -0.6 },
+const DINO_GLB: Partial<Record<number, { kind: GlbPropKind; x: number; z: number; size: readonly [number, number, number] }>> = {
+  0: { kind: 'sauropod', x: 0, z: 0, size: [7.4, 10.9, 12] },
+  1: { kind: 'triceratops', x: 0.6, z: 0, size: [8, 5.3, 9.7] },
+  2: { kind: 'rex', x: 0.6, z: -0.6, size: [7.6, 5.9, 10] },
 };
 
 function dino(b: ChunkBuilder, l: Landmark): void {
@@ -690,6 +690,10 @@ function dino(b: ChunkBuilder, l: Landmark): void {
   const glb = DINO_GLB[l.variant ?? 0];
   if (glb && M.glbProps) {
     M.glbProps.push({ kind: glb.kind, m: frameOf(l)(glb.x, b.solid.lift, glb.z) });
+    // The instanced GLB is outside the chunk batches, so the hero contour would not know it (Codex review of
+    // PR 97): an invisible box over the statue goes into the captured occluder mask instead (no draw call).
+    const [sx, sy, sz] = glb.size;
+    b.box(M.hidden, frameOf(l)(glb.x, sy / 2, glb.z), sx, sy, sz);
     return;
   }
   const fiberglass = M.landmarkFinishes?.fiberglass ?? M.mossy;
