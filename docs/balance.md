@@ -5,7 +5,7 @@ Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance 
 ## P45 fix: boss loot, pity weapon, Sultan life (2026-11-24)
 
 Johannes, 2026-11-24: "fix P45 with whatever you would recommend" (his OK replaces the Fable decision pass in the backlog row). `node tools/balance.mjs 3 normal good 1 --campaign` and the same with skill `johannes`, after three changes:
-1. **Bot bug:** the bot left a map at the victory, so it never picked up the last boss's loot (the guaranteed legendary of most district bosses). It now takes the items before it leaves, as a player who stays after the boss does. Before this, bot power stalled from Charlottenburg on in about half the runs.
+1. **Bot bug:** the bot left a map at the victory, so it never picked up the last boss's loot (the guaranteed legendary of most district bosses). It now takes the items within 15 m of the hero before it leaves, as a player who stays after the boss does (a full bag first salvages its weakest piece for a better one). Before this, bot power stalled from Charlottenburg on in about half the runs.
 2. **Pity weapon** (`pityWeapon`, `src/sim/loot.ts`): a legendary weapon is worth 2.6 times its level, a rare 1.8 times, so an early legendary outvalues every rare for two or three districts. When the worn weapon is `WEAPON_PITY_LAG` (5) item levels below the district boss's guaranteed legendary, that legendary becomes a weapon of the worn class.
 3. **Sultan Nimmersatt** life 4400 → 3600 (still above Der Ewige Bauherr's 3200). He took 2 to 8 times longer than the Diva at the same power.
 
@@ -13,14 +13,14 @@ A first try, a rare weapon of the worn class in every Späti, changed nothing (t
 
 | | Before (6 campaigns, 2026-11-23) | After (6 campaigns) |
 |---|---|---|
-| Won | 36 of 36 maps | 36 of 36 maps |
+| Won | 36 of 36 maps | 35 of 36 maps (one bot stall in the Fernsehturm Schacht, below) |
 | Deaths per campaign | 0 to 0.3 | 0.3 (good), 0.7 (johannes), all in Köpenick |
-| Sultan fight | 63 to 1423 s | 86 to 296 s |
-| Wedding | 17 to 90 min | 18 to 31 min |
-| Fernsehturm | 9 to 29 min | 12 to 17 min |
-| Power at the end of Wedding | 2200 to 7800 | 2800 to 4000 |
+| Sultan fight | 63 to 1423 s | 96 to 419 s |
+| Wedding | 17 to 90 min | 18 to 41 min |
+| Fernsehturm | 9 to 29 min | 10 to 26 min |
+| Power at the end of Wedding | 2200 to 7800 | 2900 to 4500 |
 
-The spread is much smaller: no run stalls and none runs away. Still open: Leicht, Schwer, skill `weak`, endless mode; B9 (bot fitted to Johannes) waits for his playtest.
+The spread is much smaller: no run stalls on power and none runs away. One good-bot run stopped on the Fernsehturm in the Schacht deck in travel, at full life, with one enemy alive (the stall valve after 10 min); a replay with the same seeds won, and P45 does not touch the tower. Backlog P46. Still open: Leicht, Schwer, skill `weak`, endless mode; B9 (bot fitted to Johannes) waits for his playtest.
 
 ## Whole campaign with the Fernsehturm, skill good (2026-11-23)
 
