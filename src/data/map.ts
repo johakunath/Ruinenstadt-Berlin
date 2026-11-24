@@ -1386,7 +1386,7 @@ export function generateProps(m: MapDef, lots: Lot[]): Prop[] {
         const van = roll < 0.35;
         const bus = roll > 0.8 && s.width >= 7;
         if (bus) {
-          // A broken-down bus along the lane, 11 m long: needs room and no fight nearby.
+          // A broken-down bus along the lane, 12 m long: needs room and no fight nearby.
           if (hit(x, z, 6) || m.encounters.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 8)) continue;
           const off = (s.width / 2 - 1.5) * rng.pick([-1, 1]);
           props.push({ kind: 'bus', x: x - ((bz - az) / len) * off, z: z + ((bx - ax) / len) * off, rot: Math.atan2(bx - ax, bz - az) + rng.range(-0.08, 0.08), size: 1 });
