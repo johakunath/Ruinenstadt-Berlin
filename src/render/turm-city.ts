@@ -6,6 +6,7 @@
 // Cost: the plane is 1 draw call (unlit, no fog, FX layer, no shadow, not in the pre-pass), one 1024² texture
 // (about 5 MB with mips); the clouds are 1 instanced draw call with one 128² texture. Both follow the hero's deck and
 // hide on the foyer and the shaft. Same on Ausgewogen and Leistung.
+import { loadPaintedTexture } from './surface-textures';
 import { CanvasTexture, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace, type Texture } from 'three';
 import { Rng } from '../sim/math';
 import { FX_LAYER } from './layers';
@@ -175,6 +176,13 @@ export function buildCityView(): CityView {
   const group = new Group();
   group.name = 'turm-city';
   const mat = new MeshBasicMaterial({ map: paintCity(), fog: false, depthWrite: false });
+  // T11 (local FLUX.2 klein from the painted layout, `docs/local-ai-assets.md`): the painted city replaces the
+  // canvas once loaded; the canvas stays the fallback. Same plane and material, no cost change beyond the file.
+  loadPaintedTexture(new URL('../../assets/textures/turm/city.webp', import.meta.url).href, 4, (t) => {
+    mat.map?.dispose();
+    mat.map = t;
+    mat.needsUpdate = true;
+  }, false);
   const plane = new Mesh(new PlaneGeometry(CITY.half * 2, CITY.half * 2).rotateX(-Math.PI / 2), mat);
   plane.position.y = -CITY.depth;
   plane.layers.set(FX_LAYER);
