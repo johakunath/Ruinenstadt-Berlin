@@ -16,7 +16,9 @@ const CLIPS = {
     // H1: hammer standing pose (both hands on the handle, left hand by IK).
     'Pistol_Idle_Loop',
     // WP4 1h: the Neonflinte (an assault rifle) shoots from the pistol clip.
-    'Pistol_Shoot'],
+    'Pistol_Shoot',
+    // H4: an upright, stiff walk for bosses with an own body (the Feldwebel marches).
+    'Walk_Formal_Loop'],
   'UAL2_Standard.glb': [
     'Sword_Regular_A', 'Sword_Regular_A_Rec', 'Sword_Regular_B', 'Sword_Regular_B_Rec', 'Sword_Regular_C', 'Sword_Dash',
     'Zombie_Idle_Loop', 'Zombie_Walk_Fwd_Loop', 'Zombie_Scratch', 'Hit_Knockback',
