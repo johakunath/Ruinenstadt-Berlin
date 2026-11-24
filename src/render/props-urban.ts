@@ -149,7 +149,8 @@ function buildTrabi(b: Builder, p: Prop, rng: Rng, glb: NonNullable<Builder['mat
   const roll = ((sink[1]! + sink[3]!) - (sink[0]! + sink[2]!)) / 2 / (2 * TRABI.x);
   const base = at(p, rng.range(-0.08, 0.08), -(sink.reduce((a, v) => a + v, 0) / 4), rng.range(-0.1, 0.1), pitch, rng.range(-0.03, 0.03), roll);
   const tint = mulT(rng.pick(CAR_TINTS), rng.range(0.9, 1.08));
-  glb.push({ kind: 'trabi', m: L(base, 0, TRABI.lift, 0), tint });
+  // The batches add the chunk's height offset (`on`, terraces and decks) themselves; the GLB placement needs it too.
+  glb.push({ kind: 'trabi', m: new Matrix4().makeTranslation(0, b.solid.lift, 0).multiply(L(base, 0, TRABI.lift, 0)), tint });
   const tire = new CylinderGeometry(TRABI.r, TRABI.r, 0.15, 10);
   const hub = new CircleGeometry(0.13, 6);
   wheels.forEach(([x, z], i) => {
