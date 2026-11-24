@@ -2,6 +2,26 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## P45 fix: boss loot, pity weapon, Sultan life (2026-11-24)
+
+Johannes, 2026-11-24: "fix P45 with whatever you would recommend" (his OK replaces the Fable decision pass in the backlog row). `node tools/balance.mjs 3 normal good 1 --campaign` and the same with skill `johannes`, after three changes:
+1. **Bot bug:** the bot left a map at the victory, so it never picked up the last boss's loot (the guaranteed legendary of most district bosses). It now takes the items within 15 m of the hero before it leaves, as a player who stays after the boss does (a full bag first salvages its weakest piece for a better one). Before this, bot power stalled from Charlottenburg on in about half the runs.
+2. **Pity weapon** (`pityWeapon`, `src/sim/loot.ts`): a legendary weapon is worth 2.6 times its level, a rare 1.8 times, so an early legendary outvalues every rare for two or three districts. When the worn weapon is `WEAPON_PITY_LAG` (5) item levels below the district boss's guaranteed legendary, that legendary becomes a weapon of the worn class.
+3. **Sultan Nimmersatt** life 4400 → 3600 (still above Der Ewige Bauherr's 3200). He took 2 to 8 times longer than the Diva at the same power.
+
+A first try, a rare weapon of the worn class in every Späti, changed nothing (the worn legendary outvalued it) and was dropped.
+
+| | Before (6 campaigns, 2026-11-23) | After (6 campaigns) |
+|---|---|---|
+| Won | 36 of 36 maps | 35 of 36 maps (one bot stall in the Fernsehturm Schacht, below) |
+| Deaths per campaign | 0 to 0.3 | 0.3 (good), 0.7 (johannes), all in Köpenick |
+| Sultan fight | 63 to 1423 s | 96 to 419 s |
+| Wedding | 17 to 90 min | 18 to 41 min |
+| Fernsehturm | 9 to 29 min | 10 to 26 min |
+| Power at the end of Wedding | 2200 to 7800 | 2900 to 4500 |
+
+The spread is much smaller: no run stalls on power and none runs away. One good-bot run stopped on the Fernsehturm in the Schacht deck in travel, at full life, with one enemy alive (the stall valve after 10 min); a replay with the same seeds won, and P45 does not touch the tower. Backlog P46. Still open: Leicht, Schwer, skill `weak`, endless mode; B9 (bot fitted to Johannes) waits for his playtest.
+
 ## Whole campaign with the Fernsehturm, skill good (2026-11-23)
 
 `node tools/balance.mjs 3 normal good 1 --campaign` (miss 0.05, react 0.15 to 0.25 s, dodge 0.9, tempo 0.9), all twelve maps including the Fernsehturm, numbers as on `main` after PR #93. A control run with skill `johannes` (1 run, seed 1) also won all twelve maps without a death. Skill only changes combat (aim, reactions, dodging, attack tempo), not shopping or gear picks, so the gaps between runs below come from the loot, not the skill.
@@ -26,7 +46,7 @@ Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance 
 - Cause in these runs: the weapon stalls. Its item level stays at 20 from Xhain to the U2-Tunnel West (four maps) and at 21 to 28 until Wedding, so power at Wedding is 2200 to 2300 in the slow runs and 7800 in the fast one. Run 3 found a better weapon early and cleared Wedding in 17 minutes.
 - In the slow runs the Fernsehturm fights take 155 to 174 % of max life on average; the finale is long but not lost.
 - Not covered: Leicht and Schwer, skill `weak`, endless mode; feel and getting lost (the bot never gets lost). B9 (bot fitted to Johannes) still waits for his playtest telemetry.
-- Next (not decided): a weapon floor (e.g. the Späti or trader always offers a weapon near the district's drop level, or a weapon pity drop when the worn one is several levels behind) and a cap on boss fight length (Sultan life or his heal), then rerun this command. Backlog P45.
+- Fixed 2026-11-24 (P45, section above): the cause was mainly a bot bug (final boss loot never picked up), plus a pity weapon and less Sultan life.
 
 ## Bosses and tunnel roles (B2 step 3, 2026-11-23)
 

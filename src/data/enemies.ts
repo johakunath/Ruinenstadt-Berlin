@@ -426,8 +426,10 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   },
   // District boss in the Hochzeitspalast: the eternal host on his carpet. The Diva's brain (`BOSS.sultan`): tea glass
   // fans, carpet strips, tea spirits; three courses instead of gown tiers (no rage).
+  // P45 (bot campaigns 2026-11-23): at the Diva's 4400 he took 12 to 24 min (6 to 7 life bars healed back) whenever the
+  // hero came to Wedding at about 2000 power, while the Diva took 1.5 to 3 min at the same power; 3600 life (still above the Bauherr) plus the pity weapon in `loot.ts`.
   sultan: {
-    kind: 'sultan', name: 'Sultan Nimmersatt', body: 'human', ai: 'diva', res: 'tee', radius: 0.95, scale: 1.85, hp: 4400, speed: 2.4,
+    kind: 'sultan', name: 'Sultan Nimmersatt', body: 'human', ai: 'diva', res: 'tee', radius: 0.95, scale: 1.85, hp: 3600, speed: 2.4,
     attackRange: 2.3, windup: 0.6, active: 0.14, recovery: 0.75,
     reach: 2.8, halfAngle: 70 * DEG, damage: 34, knockbackTaken: 0.1, poise: true, weight: 0, boss: true, noRage: true,
   },

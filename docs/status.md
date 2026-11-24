@@ -40,7 +40,11 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-23)
+## Latest (2026-11-24)
+
+- When your weapon has fallen five or more item levels behind, a district boss's guaranteed legendary is a weapon of the class you use. Sultan Nimmersatt has less life (4400 → 3600); his fight took up to 24 minutes in bot campaigns, now at most 5.
+
+## 2026-11-23
 
 - Wedding is on the network: after Charlottenburg the U9 leads from Zoologischer Garten to U Leopoldplatz (ghost station Westhafen); Wedding sits north of Zoo and Mitte on the network map.
 - Wedding sights built from photos and worn: the Alte Nazarethkirche, Zum Magendoktor's front (watchman mural, sticker door, lit windows), the Amtsgericht, the Flakturm over the Humboldthöhe, the Beamtentor with its gold lettering, the Hochzeitspalast in the roofless AEG hall (velvet, chandeliers, throne, wedding cake), the Neubau im Gerüst; each lit by its own lamps, five with a reveal shot.

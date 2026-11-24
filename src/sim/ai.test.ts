@@ -1874,7 +1874,7 @@ describe('Wedding roster (M18, spec m12e)', () => {
 
   it('the Wedding bosses sit on the ladder; all but the Sultan rage below half life', () => {
     const kinds = ['zugezogene', 'hauptgericht', 'bauherr', 'sultan'] as const;
-    expect(kinds.map((k) => ENEMIES[k].hp)).toEqual([1600, 2200, 3200, 4400]); // B2 step 3: the opener raised
+    expect(kinds.map((k) => ENEMIES[k].hp)).toEqual([1600, 2200, 3200, 3600]); // B2 step 3: the opener raised; P45: the Sultan 4400 → 3600
     expect(kinds.map((k) => ENEMIES[k].damage)).toEqual([26, 30, 32, 34]);
     for (const kind of kinds) {
       const s = fresh();
