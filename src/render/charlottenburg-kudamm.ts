@@ -688,46 +688,46 @@ function variete(c: Ctx): void {
  * fallen balustrade run, rubble.
  */
 function hochschule(c: Ctx): void {
-  const { M, l } = c, F = frameOf(l), ST: RGB = SAND, RU: RGB = SAND_D, FZ = 2.6, H = 17, rim = { mat: M.stucco, color: SAND_L };
+  const { M, l } = c, F = frameOf(l), ST: RGB = SAND, RU: RGB = SAND_D, FZ = 2.6, H = 17, rim = { mat: M.stone, color: SAND_L };
   const dep = FZ + l.hz - 0.5, cz = FZ - dep / 2;
   // Body: rusticated ground floor, upper floors, cornice, balustrade (one run fallen), slate hip roof.
-  bx(c, M.stucco, F, 0, 0, cz, 28, 5, dep, RU);
-  bx(c, M.stucco, F, 0, 5, cz, 27.6, H - 5, dep - 0.3, ST);
-  for (let y = 0.8; y < 4.8; y += 0.6) bx(c, M.stucco, F, 0, y, FZ + 0.01, 28, 0.06, 0.04, [0.55, 0.48, 0.42]);
-  bx(c, M.stucco, F, 0, 4.8, FZ + 0.08, 28.2, 0.4, 0.4, ST);
-  bx(c, M.stucco, F, 0, H - 0.5, cz, 28.4, 0.6, dep + 0.5, ST);
+  bx(c, M.stone, F, 0, 0, cz, 28, 5, dep, RU);
+  bx(c, M.stone, F, 0, 5, cz, 27.6, H - 5, dep - 0.3, ST);
+  for (let y = 0.8; y < 4.8; y += 0.6) bx(c, M.stone, F, 0, y, FZ + 0.01, 28, 0.06, 0.04, [0.55, 0.48, 0.42]);
+  bx(c, M.stone, F, 0, 4.8, FZ + 0.08, 28.2, 0.4, 0.4, ST);
+  bx(c, M.stone, F, 0, H - 0.5, cz, 28.4, 0.6, dep + 0.5, ST);
   for (const [x0, x1] of [[-13.8, -6], [-3, 3], [6, 9.5], [11.8, 13.8]] as const) {
-    bx(c, M.stucco, F, (x0 + x1) / 2, H + 0.1, FZ - 0.05, x1 - x0, 0.15, 0.4, ST);
-    for (let x = x0 + 0.3; x < x1; x += 0.55) cy(c, M.stucco, F(x, H + 0.6, FZ - 0.05), 0.1, 0.12, 0.9, 6, ST);
-    bx(c, M.stucco, F, (x0 + x1) / 2, H + 1.05, FZ - 0.05, x1 - x0, 0.18, 0.45, ST);
+    bx(c, M.stone, F, (x0 + x1) / 2, H + 0.1, FZ - 0.05, x1 - x0, 0.15, 0.4, ST);
+    for (let x = x0 + 0.3; x < x1; x += 0.55) cy(c, M.stone, F(x, H + 0.6, FZ - 0.05), 0.1, 0.12, 0.9, 6, ST);
+    bx(c, M.stone, F, (x0 + x1) / 2, H + 1.05, FZ - 0.05, x1 - x0, 0.18, 0.45, ST);
   }
   c.b.geo(M.slate, frustum(27.6, dep - 0.8, 1.4, 25, dep - 3.2), F(0, H + 0.1, cz - 0.3), C.slate);
   // Windows: arched in the rustica, pedimented on the piano nobile, plain above, a small attic row.
   row(c, F, -14, 14, FZ, 2.6, 10, 1.3, 2.2, true, 0.15, undefined, 0, (i) => i === 4 || i === 5);
   // Arcaded windows on every floor (the postcard: rows of round arches, pilasters between them).
   for (const [y, h] of [[7.0, 2.6], [11.0, 2.4], [14.6, 1.6]] as const) row(c, F, -14, 14, FZ, y, 10, 1.3, h, true, 0.2, rim, 0, (i) => i === 4 || i === 5);
-  for (let i = 0; i <= 10; i++) if (i < 4 || i > 6) bx(c, M.stucco, F, -14 + i * 2.8, 5.2, FZ + 0.08, 0.4, H - 5.7, 0.16, SAND_L);
-  for (const y of [9.0, 12.9]) bx(c, M.stucco, F, 0, y, FZ + 0.08, 28, 0.25, 0.2, SAND_L);
+  for (let i = 0; i <= 10; i++) if (i < 4 || i > 6) bx(c, M.stone, F, -14 + i * 2.8, 5.2, FZ + 0.08, 0.4, H - 5.7, 0.16, SAND_L);
+  for (const y of [9.0, 12.9]) bx(c, M.stone, F, 0, y, FZ + 0.08, 28, 0.25, 0.2, SAND_L);
   // Corner projections.
   for (const s of [-1, 1]) {
-    bx(c, M.stucco, F, s * 12.3, 0, FZ + 0.35, 3.4, H + 0.8, 0.7, ST);
-    bx(c, M.stucco, F, s * 12.3, H + 0.8, FZ + 0.3, 3.6, 0.5, 0.8, ST);
+    bx(c, M.stone, F, s * 12.3, 0, FZ + 0.35, 3.4, H + 0.8, 0.7, ST);
+    bx(c, M.stone, F, s * 12.3, H + 0.8, FZ + 0.3, 3.6, 0.5, 0.8, ST);
   }
   // Central projection: three-arched portal, giant columns, tall arched windows, attic with statues.
   const cx = 0, cw = 8.4, pz = FZ + 1.2;
-  bx(c, M.stucco, F, cx, 0, FZ + 0.6, cw, 5, 1.2, RU);
-  bx(c, M.stucco, F, cx, 5, FZ + 0.6, cw, H + 1.6 - 5, 1.2, ST);
+  bx(c, M.stone, F, cx, 0, FZ + 0.6, cw, 5, 1.2, RU);
+  bx(c, M.stone, F, cx, 5, FZ + 0.6, cw, H + 1.6 - 5, 1.2, ST);
   for (const x of [-2.5, 0, 2.5]) {
     bx(c, M.dark, F, x, 0.2, pz + 0.01, 1.9, 3.3, 0.04);
     archHead(c.b, c.M.dark, F(x, 3.5, pz + 0.01), 1.9, false, 0.01);
-    archHead(c.b, c.M.stucco, F(x, 3.5, pz + 0.02), 2.4, false, 0.0, RU);
-    bx(c, M.stucco, F, x, 0, pz - 0.1, 2.3, 0.2, 0.6, RU);
+    archHead(c.b, c.M.stone, F(x, 3.5, pz + 0.02), 2.4, false, 0.0, RU);
+    bx(c, M.stone, F, x, 0, pz - 0.1, 2.3, 0.2, 0.6, RU);
   }
-  for (const x of [-3.9, -1.25, 1.25, 3.9]) bx(c, M.stucco, F, x, 5.0, pz + 0.1, 0.6, H + 1.6 - 5, 0.2, SAND_L);
+  for (const x of [-3.9, -1.25, 1.25, 3.9]) bx(c, M.stone, F, x, 5.0, pz + 0.1, 0.6, H + 1.6 - 5, 0.2, SAND_L);
   for (const x of [-2.55, 0, 2.55]) for (const [y, h] of [[7.6, 3.4], [12.4, 3.0]] as const) arch(c, F(x, y, pz), 1.6, h, 0.25, 0, rim);
-  bx(c, M.stucco, F, cx, H + 0.2, FZ + 0.65, cw + 0.6, 0.9, 1.5, ST);
-  bx(c, M.stucco, F, cx, H + 1.1, FZ + 0.5, cw - 0.4, 2.4, 1.0, ST);
-  bx(c, M.stucco, F, cx, H + 3.5, FZ + 0.5, cw, 0.4, 1.2, ST);
+  bx(c, M.stone, F, cx, H + 0.2, FZ + 0.65, cw + 0.6, 0.9, 1.5, ST);
+  bx(c, M.stone, F, cx, H + 1.1, FZ + 0.5, cw - 0.4, 2.4, 1.0, ST);
+  bx(c, M.stone, F, cx, H + 3.5, FZ + 0.5, cw, 0.4, 1.2, ST);
   cy(c, M.iron, F(0, H + 6.2, FZ - 0.2), 0.05, 0.05, 4.6, 4, C.iron);
   // Front lawn with a low stone kerb, two lamp posts, the path to the portal.
   bx(c, M.mossy, F, -8.5, 0, (FZ + l.hz) / 2 + 0.5, 10, 0.08, l.hz - FZ - 1.2, [0.42, 0.52, 0.34]);
@@ -737,7 +737,7 @@ function hochschule(c: Ctx): void {
     c.b.geo(M.lampGlass, cached('kd-lantern', () => new CylinderGeometry(0.16, 0.12, 0.42, 6)), F(s * 3.5, 3.4, l.hz - 1));
   }
   // Wear: the fallen balustrade run lies on the lawn; boarded portal leaf; rubble.
-  for (let i = 0; i < 6; i++) bx(c, M.stucco, F, 4.6 + i * 0.55 + c.rng.range(-0.1, 0.1), 0, FZ + 1.6 + c.rng.range(0, 1.2), 0.25, 0.25, 0.9, ST, c.rng.range(0, 3), Math.PI / 2);
+  for (let i = 0; i < 6; i++) bx(c, M.stone, F, 4.6 + i * 0.55 + c.rng.range(-0.1, 0.1), 0, FZ + 1.6 + c.rng.range(0, 1.2), 0.25, 0.25, 0.9, ST, c.rng.range(0, 3), Math.PI / 2);
   rubble(c, F, 3.5, 9, FZ + 1.4, 0.8, 8, ST);
   rubble(c, F, -12, -9, FZ + 1.2, 0.6, 4, ST);
   // 2026-11-19: sandbags in the left portal arch, a scaffold with a tarp on the west corner projection.
@@ -758,59 +758,59 @@ function hochschule(c: Ctx): void {
  * Worn: one column broken off with its drums on the steps, boarded windows, a missing statue, holes in the roof, rubble.
  */
 function opernhaus(c: Ctx): void {
-  const { M, l } = c, F = frameOf(l), FZ = 4.8, H = 13.5, rim = { mat: M.stucco, color: LIME };
+  const { M, l } = c, F = frameOf(l), FZ = 4.8, H = 13.5, rim = { mat: M.stone, color: LIME };
   // Plinth, front block, entablature with the name, attic with statues.
-  bx(c, M.stucco, F, 0, 0, FZ - 3.4, 22, 1.3, 6.8, LIME_D);
-  bx(c, M.stucco, F, 0, 1.3, FZ - 3.5, 21.6, H - 1.3, 6.6, LIME);
-  bx(c, M.stucco, F, 0, H, FZ - 2.95, 22.4, 1.4, 7.2, LIME);
-  bx(c, M.stucco, F, 0, H + 1.4, FZ - 3.2, 22.8, 0.35, 7.4, LIME_D);
-  bx(c, M.stucco, F, 0, H + 1.75, FZ - 3.6, 21.4, 1.6, 6.2, LIME);
+  bx(c, M.stone, F, 0, 0, FZ - 3.4, 22, 1.3, 6.8, LIME_D);
+  bx(c, M.stone, F, 0, 1.3, FZ - 3.5, 21.6, H - 1.3, 6.6, LIME);
+  bx(c, M.stone, F, 0, H, FZ - 2.95, 22.4, 1.4, 7.2, LIME);
+  bx(c, M.stone, F, 0, H + 1.4, FZ - 3.2, 22.8, 0.35, 7.4, LIME_D);
+  bx(c, M.stone, F, 0, H + 1.75, FZ - 3.6, 21.4, 1.6, 6.2, LIME);
   plate(c, R.oper, F(0, H + 0.7, FZ + 0.67), 11, 1.0);
   // Paired giant columns on pedestals, tall arched windows between the pairs, doors at their foot.
   const pairs = [-9.2, -5.5, -1.85, 1.85, 5.5, 9.2];
   pairs.forEach((x, i) => {
     for (const d of [-0.55, 0.55]) {
       const broken = i === 4 && d > 0;
-      bx(c, M.stucco, F, x + d, 1.3, FZ + 0.1, 0.95, 1.0, 0.95, LIME_D);
-      cy(c, M.stucco, F(x + d, broken ? 2.3 + 2.6 : 2.3 + (H - 3.1) / 2, FZ + 0.1), 0.38, 0.42, broken ? 5.2 : H - 3.1, 10, LIME);
-      if (!broken) bx(c, M.stucco, F, x + d, H - 0.8, FZ + 0.1, 1.0, 0.8, 1.0, LIME_D);
+      bx(c, M.stone, F, x + d, 1.3, FZ + 0.1, 0.95, 1.0, 0.95, LIME_D);
+      cy(c, M.stone, F(x + d, broken ? 2.3 + 2.6 : 2.3 + (H - 3.1) / 2, FZ + 0.1), 0.38, 0.42, broken ? 5.2 : H - 3.1, 10, LIME);
+      if (!broken) bx(c, M.stone, F, x + d, H - 0.8, FZ + 0.1, 1.0, 0.8, 1.0, LIME_D);
     }
-    if (i !== 2) { bx(c, M.stucco, F, x, H + 3.35, FZ - 0.4, 1.0, 0.45, 0.9, LIME_D); figure(c, x, H + 3.8, FZ - 0.4, 2.3, LIME_D); }
+    if (i !== 2) { bx(c, M.stone, F, x, H + 3.35, FZ - 0.4, 1.0, 0.45, 0.9, LIME_D); figure(c, x, H + 3.8, FZ - 0.4, 2.3, LIME_D); }
   });
   for (let i = 0; i < 5; i++) {
     const x = (pairs[i]! + pairs[i + 1]!) / 2;
     arch(c, F(x, 7.4, FZ - 0.18), 2.0, 5.4, 0.3, i === 3 ? 2 : 0, rim);
     bx(c, M.dark, F, x, 1.3, FZ - 0.18, 1.8, 2.7, 0.04);
     plate(c, R.foyer, F(x, 2.6, FZ - 0.14), 1.7, 2.5);
-    bx(c, M.stucco, F, x, 4.0, FZ - 0.05, 2.4, 0.3, 0.3, LIME_D);
+    bx(c, M.stone, F, x, 4.0, FZ - 0.05, 2.4, 0.3, 0.3, LIME_D);
   }
   plate(c, R.oper, F(0, 4.55, FZ + 0.12), 3.2, 0.34);
   // The broken column's drums on the steps.
-  for (let k = 0; k < 3; k++) cy(c, M.stucco, F(6.6 + k * 0.9, 0.4, FZ + 1.6 + (k % 2) * 0.5).multiply(new Matrix4().makeRotationZ(Math.PI / 2 + k * 0.2)), 0.4, 0.4, 0.9, 10, LIME);
+  for (let k = 0; k < 3; k++) cy(c, M.stone, F(6.6 + k * 0.9, 0.4, FZ + 1.6 + (k % 2) * 0.5).multiply(new Matrix4().makeRotationZ(Math.PI / 2 + k * 0.2)), 0.4, 0.4, 0.9, 10, LIME);
   // Broad steps before the front.
-  for (let i = 0; i < 4; i++) bx(c, M.stucco, F, 0, 0, FZ + (2.6 - i * 0.6) / 2, 20.5 - i * 0.4, 0.15 * (i + 1) + 0.2, 2.6 - i * 0.6, LIME_D);
+  for (let i = 0; i < 4; i++) bx(c, M.stone, F, 0, 0, FZ + (2.6 - i * 0.6) / 2, 20.5 - i * 0.4, 0.15 * (i + 1) + 0.2, 2.6 - i * 0.6, LIME_D);
   // Side wings: lower, an arcade of square piers below, the balustraded terrace above.
   for (const s of [-1, 1]) {
     const wx = s * 12.4;
-    bx(c, M.stucco, F, wx, 0, FZ - 3.8, 3.2, 9, 6.0, LIME);
-    bx(c, M.stucco, F, wx, 9, FZ - 3.8, 3.4, 0.5, 6.2, LIME_D);
+    bx(c, M.stone, F, wx, 0, FZ - 3.8, 3.2, 9, 6.0, LIME);
+    bx(c, M.stone, F, wx, 9, FZ - 3.8, 3.4, 0.5, 6.2, LIME_D);
     for (const z of [FZ - 1.2, FZ - 3.8, FZ - 6.2]) for (const x of [wx - s * 1.4]) bx(c, M.dark, F, x + s * 0.02, 0.5, z, 0.4, 2.6, 1.6, undefined, 0);
     row(c, F, wx - 1.4, wx + 1.4, FZ - 0.8, 5.5, 1, 1.2, 2.2, false, 0.2, rim);
-    bx(c, M.stucco, F, wx, 0.3, FZ - 0.75, 1.6, 2.8, 0.05, LIME_D);
+    bx(c, M.stone, F, wx, 0.3, FZ - 0.75, 1.6, 2.8, 0.05, LIME_D);
     plate(c, R.poster, F(wx, 2.0, FZ - 0.7), 1.2, 2.3);
-    bx(c, M.stucco, F, wx, 9.5, FZ - 0.9, 3.2, 0.12, 0.25, LIME_D);
-    for (let x = wx - 1.4; x <= wx + 1.4; x += 0.4) cy(c, M.stucco, F(x, 9.9, FZ - 0.9), 0.08, 0.1, 0.7, 5, LIME);
-    bx(c, M.stucco, F, wx, 10.25, FZ - 0.9, 3.2, 0.14, 0.3, LIME_D);
+    bx(c, M.stone, F, wx, 9.5, FZ - 0.9, 3.2, 0.12, 0.25, LIME_D);
+    for (let x = wx - 1.4; x <= wx + 1.4; x += 0.4) cy(c, M.stone, F(x, 9.9, FZ - 0.9), 0.08, 0.1, 0.7, 5, LIME);
+    bx(c, M.stone, F, wx, 10.25, FZ - 0.9, 3.2, 0.14, 0.3, LIME_D);
   }
   // The hall behind (hipped slate roof with two holes) and the square stage tower with its flat, railed top.
-  bx(c, M.stucco, F, 0, 0, -3.6, 21, 16, 5.6, LIME_D);
+  bx(c, M.stone, F, 0, 0, -3.6, 21, 16, 5.6, LIME_D);
   c.b.geo(M.slate, frustum(22.4, 9.2, 4.6, 14, 1.6), F(0, 16.8, -2.4), C.slate);
   for (const [x, z] of [[-4, -1.2], [5.5, -3]] as const) c.b.box(M.dark, F(x, 19.0, z, 0, -0.5), 1.6, 0.05, 1.3);
-  bx(c, M.stucco, F, 0, 0, -6.6, 13, 21, 2.8, LIME);
-  bx(c, M.stucco, F, 0, 16, -6.0, 13.4, 5, 4.2, LIME);
+  bx(c, M.stone, F, 0, 0, -6.6, 13, 21, 2.8, LIME);
+  bx(c, M.stone, F, 0, 16, -6.0, 13.4, 5, 4.2, LIME);
   row(c, F, -6, 6, -3.9, 18.4, 5, 0.9, 1.6, false, 0.1);
   c.b.geo(M.slate, frustum(13.6, 4.6, 3.6, 7, 1.4), F(0, 21, -6.0), C.slate);
-  cy(c, M.stucco, F(0, 25, -6.0), 1.6, 1.6, 0.8, 12, LIME_D);
+  cy(c, M.stone, F(0, 25, -6.0), 1.6, 1.6, 0.8, 12, LIME_D);
   cy(c, M.iron, F(0, 27, -6.0), 0.05, 0.05, 3.2, 4, C.iron);
   // Iron lamp posts and poster cases on the forecourt (inside the footprint).
   for (const x of [-10.5, 10.5]) {
@@ -825,9 +825,9 @@ function opernhaus(c: Ctx): void {
   // and tipped; bills beside the poster cases of the side wings.
   bx(c, M.darkWood, F, 6.05, 7.5, FZ + 0.1, 0.28, H - 0.8 - 7.5, 0.28, TIMBER_POST);
   for (const s of [-1, 1]) c.b.box(M.darkWood, F(6.05 + s * 0.55, H - 2.2, FZ + 0.1, 0, 0, s * 0.62), 0.12, 2.4, 0.12, TIMBER_POST);
-  bx(c, M.stucco, F, -6.4, 0.12, FZ + 1.9, 1.1, 0.22, 0.55, LIME_D, 0.3, 0.12);
+  bx(c, M.stone, F, -6.4, 0.12, FZ + 1.9, 1.1, 0.22, 0.55, LIME_D, 0.3, 0.12);
   bx(c, M.dark, F, -6.4, 0.2, FZ + 2.31, 0.9, 0.14, 0.02);
-  bx(c, M.stucco, F, 2.8, 0.42, FZ + 1.1, 0.8, 0.18, 0.5, LIME_D, -0.4, -0.15);
+  bx(c, M.stone, F, 2.8, 0.42, FZ + 1.1, 0.8, 0.18, 0.5, LIME_D, -0.4, -0.15);
   for (const s of [-1, 1]) {
     const wm = F(s * 12.4, 0, FZ - 0.8 + 0.01);
     bills(c, wm, [[s > 0 ? 'variete' : 'kino', -1.2, 1.6, 1.05], [s > 0 ? 'sechstage' : 'revue', 1.2, 1.65, 1.05, 0.03]]);
@@ -858,63 +858,63 @@ function timberGable(c: Ctx, m: Matrix4, w: number, h: number): void {
  * Worn: boarded arches, a broken balustrade, a fallen statue and rubble.
  */
 function theaterwestens(c: Ctx): void {
-  const { M, l } = c, F = frameOf(l), CR: RGB = [1.6, 2.1, 2.55], CRD: RGB = [1.2, 1.55, 1.9], FZ = 2.6, rim = { mat: M.stucco, color: [1.75, 2.3, 2.8] as RGB };
+  const { M, l } = c, F = frameOf(l), CR: RGB = [1.6, 2.1, 2.55], CRD: RGB = [1.2, 1.55, 1.9], FZ = 2.6, rim = { mat: M.stone, color: [1.75, 2.3, 2.8] as RGB };
   // Front block and pavilions.
-  bx(c, M.stucco, F, -0.4, 0, FZ - 2.6, 9.6, 5, 5.2, CRD);
-  bx(c, M.stucco, F, -0.4, 5, FZ - 2.7, 9.4, 7, 5.0, CR);
-  for (let y = 0.7; y < 4.8; y += 0.55) bx(c, M.stucco, F, -0.4, y, FZ + 0.01, 9.6, 0.06, 0.04, [0.8, 1.0, 1.2]);
-  bx(c, M.stucco, F, -0.4, 11.9, FZ - 2.5, 9.8, 0.4, 5.6, CRD);
+  bx(c, M.stone, F, -0.4, 0, FZ - 2.6, 9.6, 5, 5.2, CRD);
+  bx(c, M.stone, F, -0.4, 5, FZ - 2.7, 9.4, 7, 5.0, CR);
+  for (let y = 0.7; y < 4.8; y += 0.55) bx(c, M.stone, F, -0.4, y, FZ + 0.01, 9.6, 0.06, 0.04, [0.8, 1.0, 1.2]);
+  bx(c, M.stone, F, -0.4, 11.9, FZ - 2.5, 9.8, 0.4, 5.6, CRD);
   plate(c, R.tdw, F(-0.4, 11.35, FZ + 0.08), 8.6, 0.85);
-  bx(c, M.stucco, F, -0.4, 12.3, FZ - 2.7, 9.4, 1.4, 5.0, CR);
+  bx(c, M.stone, F, -0.4, 12.3, FZ - 2.7, 9.4, 1.4, 5.0, CR);
   // Ground-floor arcade: five arched doors (lit foyer), poster cases on the piers, steps.
   for (let i = 0; i < 5; i++) {
     const x = -4.4 + i * 1.95;
     bx(c, M.dark, F, x, 0.3, FZ + 0.01, 1.3, 2.6, 0.04);
     archHead(c.b, M.dark, F(x, 2.9, FZ + 0.01), 1.3, false, 0.01);
     if (i === 1) c.b.wearWindow(F(x, 1.75, FZ + 0.02), 1.3, 2.9, true); else plate(c, R.foyer, F(x, 1.6, FZ + 0.05), 1.2, 2.5);
-    archHead(c.b, M.stucco, F(x, 2.9, FZ + 0.02), 1.8, false, 0, CRD);
+    archHead(c.b, M.stone, F(x, 2.9, FZ + 0.02), 1.8, false, 0, CRD);
     if (i < 4) { bx(c, M.darkWood, F, x + 0.98, 0.8, FZ + 0.06, 0.5, 1.6, 0.08, [0.4, 0.3, 0.26]); plate(c, i % 2 ? R.posterB : R.poster, F(x + 0.98, 1.6, FZ + 0.11), 0.42, 1.45); }
   }
-  for (let i = 0; i < 2; i++) bx(c, M.stucco, F, -0.4, 0, FZ + 0.4 - i * 0.2, 10 - i * 0.5, 0.15 * (i + 1), 0.8 + i * 0.4, CRD);
+  for (let i = 0; i < 2; i++) bx(c, M.stone, F, -0.4, 0, FZ + 0.4 - i * 0.2, 10 - i * 0.5, 0.15 * (i + 1), 0.8 + i * 0.4, CRD);
   for (const x of [-5.4, 4.6]) {
     cy(c, M.iron, F(x, 1.5, FZ + 1.1), 0.07, 0.12, 3.0, 6, C.iron);
     for (const d of [-0.4, 0, 0.4]) c.b.geo(M.lampGlass, cached('kd-globe', () => new SphereGeometry(0.15, 6, 4)), F(x + d, 3.1 + (d ? 0 : 0.3), FZ + 1.1));
     c.b.box(M.iron, F(x, 3.0, FZ + 1.1), 0.9, 0.06, 0.06, C.iron);
   }
   // Balcony on consoles over the arcade (one run broken off).
-  bx(c, M.stucco, F, -0.4, 5.0, FZ + 0.45, 9.4, 0.25, 0.9, CRD);
-  for (let x = -4.9; x < 4.2; x += 0.32) if (x < 0.8 || x > 2.2) cy(c, M.stucco, F(x, 5.6, FZ + 0.82), 0.06, 0.08, 0.7, 5, CR);
-  bx(c, M.stucco, F, -2.05, 5.95, FZ + 0.82, 5.8, 0.14, 0.24, CRD);
-  bx(c, M.stucco, F, 3.3, 5.95, FZ + 0.82, 1.9, 0.14, 0.24, CRD);
+  bx(c, M.stone, F, -0.4, 5.0, FZ + 0.45, 9.4, 0.25, 0.9, CRD);
+  for (let x = -4.9; x < 4.2; x += 0.32) if (x < 0.8 || x > 2.2) cy(c, M.stone, F(x, 5.6, FZ + 0.82), 0.06, 0.08, 0.7, 5, CR);
+  bx(c, M.stone, F, -2.05, 5.95, FZ + 0.82, 5.8, 0.14, 0.24, CRD);
+  bx(c, M.stone, F, 3.3, 5.95, FZ + 0.82, 1.9, 0.14, 0.24, CRD);
   // Piano nobile: five tall arched windows between paired columns, oculi above.
   for (let i = 0; i < 5; i++) arch(c, F(-4.4 + i * 1.95, 8.2, FZ), 1.1, 3.4, 0.35, i === 3 ? 2 : 0, rim);
-  for (let i = 0; i < 6; i++) for (const d of [-0.18, 0.18]) cy(c, M.stucco, F(-5.38 + i * 1.95 + d, 7.95, FZ + 0.18), 0.13, 0.15, 5.6, 8, CR);
+  for (let i = 0; i < 6; i++) for (const d of [-0.18, 0.18]) cy(c, M.stone, F(-5.38 + i * 1.95 + d, 7.95, FZ + 0.18), 0.13, 0.15, 5.6, 8, CR);
   // Attic: balustrade, statues over the pairs, the crowned centre group.
   for (let i = 0; i < 6; i++) if (i !== 4) figure(c, -5.38 + i * 1.95, 13.7, FZ - 0.3, 1.6, CRD);
-  bx(c, M.stucco, F, -0.4, 13.7, FZ - 0.6, 2.6, 2.2, 1.2, CR);
-  c.b.geo(M.stucco, cached('kd-tdw-crown', () => new CircleGeometry(1.3, 10, 0, Math.PI)), F(-0.4, 15.9, FZ - 0.0), CR);
+  bx(c, M.stone, F, -0.4, 13.7, FZ - 0.6, 2.6, 2.2, 1.2, CR);
+  c.b.geo(M.stone, cached('kd-tdw-crown', () => new CircleGeometry(1.3, 10, 0, Math.PI)), F(-0.4, 15.9, FZ - 0.0), CR);
   figure(c, -0.4, 15.9, FZ - 0.6, 2.4, [0.6, 0.85, 0.75], M.enamel);
   // Left pavilion: narrow, a slim turret with a lantern spire.
-  bx(c, M.stucco, F, -5.4, 0, FZ - 2.4, 1.2, 14, 5.4, CR);
-  bx(c, M.stucco, F, -5.4, 14, FZ - 0.6, 1.4, 1.6, 1.4, CRD);
+  bx(c, M.stone, F, -5.4, 0, FZ - 2.4, 1.2, 14, 5.4, CR);
+  bx(c, M.stone, F, -5.4, 14, FZ - 0.6, 1.4, 1.6, 1.4, CRD);
   cy(c, M.slate, F(-5.4, 16.3, FZ - 0.6), 0.25, 0.8, 1.4, 8, C.slate);
-  cy(c, M.stucco, F(-5.4, 17.4, FZ - 0.6), 0.35, 0.35, 0.8, 8, CRD);
+  cy(c, M.stone, F(-5.4, 17.4, FZ - 0.6), 0.35, 0.35, 0.8, 8, CRD);
   cy(c, M.slate, F(-5.4, 18.9, FZ - 0.6), 0.02, 0.42, 2.2, 8, C.slate);
   // Right pavilion: wider, its side gable, the tall lantern tower over the corner.
-  bx(c, M.stucco, F, 4.9, 0, FZ - 2.6, 2.2, 5, 5.6, CRD);
-  bx(c, M.stucco, F, 4.9, 5, FZ - 2.6, 2.2, 9.5, 5.4, CR);
+  bx(c, M.stone, F, 4.9, 0, FZ - 2.6, 2.2, 5, 5.6, CRD);
+  bx(c, M.stone, F, 4.9, 5, FZ - 2.6, 2.2, 9.5, 5.4, CR);
   arch(c, F(4.9, 2.6, FZ + 0.2), 1.1, 2.2, 0.3, 0, rim);
   arch(c, F(4.9, 8.2, FZ + 0.2), 1.1, 3.4, 0.3, 1, rim);
   for (const [y, h] of [[2.6, 2.2], [8.2, 2.6]] as const) row(c, F, -2.4, 2.4, 6.01, y, 2, 0.9, h, true, 0.3, rim, Math.PI / 2);
-  pediment(c, M.stucco, F(6.0, 14.5, FZ - 2.6, Math.PI / 2), 5.4, 2.2, 0.4, CR);
+  pediment(c, M.stone, F(6.0, 14.5, FZ - 2.6, Math.PI / 2), 5.4, 2.2, 0.4, CR);
   c.b.geo(M.slate, frustum(2.2, 5.4, 2.2, 0.3, 5.4), F(4.9, 14.5, FZ - 2.6), C.slate);
-  bx(c, M.stucco, F, 4.9, 14.5, FZ - 0.4, 1.8, 2.0, 1.8, CR);
+  bx(c, M.stone, F, 4.9, 14.5, FZ - 0.4, 1.8, 2.0, 1.8, CR);
   c.b.geo(M.slate, frustum(2.0, 2.0, 1.6, 0.9, 0.9), F(4.9, 16.5, FZ - 0.4), C.slate);
-  cy(c, M.stucco, F(4.9, 18.5, FZ - 0.4), 0.5, 0.5, 1.2, 8, CRD);
+  cy(c, M.stone, F(4.9, 18.5, FZ - 0.4), 0.5, 0.5, 1.2, 8, CRD);
   for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2; bx(c, M.dark, F, 4.9 + Math.sin(a) * 0.51, 18.1, FZ - 0.4 + Math.cos(a) * 0.51, 0.3, 0.7, 0.3, undefined, a); }
   cy(c, M.slate, F(4.9, 20.4, FZ - 0.4), 0.02, 0.6, 2.6, 8, C.slate);
   // The stage house behind: brick and half-timbered gables (east and west), slate roof.
-  bx(c, M.stucco, F, 0, 0, -l.hz + 1.7, 11, 15, 3.4, CRD);
+  bx(c, M.stone, F, 0, 0, -l.hz + 1.7, 11, 15, 3.4, CRD);
   c.b.geo(M.slate, frustum(11, 3.6, 3.2, 11, 0.2), F(0, 15, -l.hz + 1.7), C.slate);
   for (const s of [-1, 1]) timberGable(c, F(s * 5.52, 15, -l.hz + 1.7, (s * Math.PI) / 2), 3.4, 3.1);
   c.b.geo(M.slate, frustum(9.4, 5.0, 2.4, 8, 1.2), F(-0.4, 13.7, FZ - 2.7), C.slate);
@@ -1230,31 +1230,31 @@ function chtor(c: Ctx): void {
   OPEN_PARTS_CHTOR.forEach((p, k) => {
     const s = Math.sign(p.x), inner = p.x - s * p.hx, W = p.hx * 2, Dz = p.hz * 2;
     // Plinth with a cornice.
-    bx(c, M.stucco, F, p.x, 0, p.z, W, 1.6, Dz, SD);
-    bx(c, M.stucco, F, p.x, 1.6, p.z, W + 0.1, 0.25, Dz + 0.1, SS);
+    bx(c, M.stone, F, p.x, 0, p.z, W, 1.6, Dz, SD);
+    bx(c, M.stone, F, p.x, 1.6, p.z, W + 0.1, 0.25, Dz + 0.1, SS);
     // The pylon on the road side (inner) and the open colonnade on the outer side.
     const px = inner + s * 1.75;
-    bx(c, M.stucco, F, px, 1.85, p.z, 1.4, 7.6, Dz - 0.4, SS);
+    bx(c, M.stone, F, px, 1.85, p.z, 1.4, 7.6, Dz - 0.4, SS);
     bx(c, M.dark, F, px - s * 0.71, 3.2, p.z, 0.04, 3.6, 1.4);
     archHead(c.b, M.dark, F(px - s * 0.72, 6.8, p.z, -s * Math.PI / 2), 1.4, false, 0.0);
     const cols = [-p.hz + 0.45, 0, p.hz - 0.45];
     for (const x of [inner + s * 3.2, inner + s * (W - 0.45)]) for (const z of cols) {
       const fallen = k === 1 && z > 0 && x === inner + s * (W - 0.45);
-      cy(c, M.stucco, F(p.x + (x - p.x), 1.85 + (fallen ? 1.6 : 3.4), p.z + z), 0.3, 0.34, fallen ? 3.2 : 6.8, 10, SS);
-      if (!fallen) bx(c, M.stucco, F, x, 8.6, p.z + z, 0.8, 0.45, 0.8, SD);
+      cy(c, M.stone, F(p.x + (x - p.x), 1.85 + (fallen ? 1.6 : 3.4), p.z + z), 0.3, 0.34, fallen ? 3.2 : 6.8, 10, SS);
+      if (!fallen) bx(c, M.stone, F, x, 8.6, p.z + z, 0.8, 0.45, 0.8, SD);
     }
     // Entablature, attic, the crown over the pylon.
     const ex0 = inner + s * 1.05, ex1 = inner + s * W, em = (ex0 + ex1) / 2, ew = Math.abs(ex1 - ex0);
-    bx(c, M.stucco, F, em, 9.05, p.z, ew, 0.9, Dz, SS);
-    bx(c, M.stucco, F, em, 9.95, p.z, ew + 0.2, 0.3, Dz + 0.2, SD);
-    bx(c, M.stucco, F, px, 10.25, p.z, 1.4, 1.8, Dz - 1.2, SS);
-    pediment(c, M.stucco, F(px, 12.05, p.z, Math.PI / 2), Dz - 1.2, 0.9, 1.4, SS);
-    cy(c, M.stucco, F(px, 13.3, p.z), 0.35, 0.5, 0.6, 8, SD);
+    bx(c, M.stone, F, em, 9.05, p.z, ew, 0.9, Dz, SS);
+    bx(c, M.stone, F, em, 9.95, p.z, ew + 0.2, 0.3, Dz + 0.2, SD);
+    bx(c, M.stone, F, px, 10.25, p.z, 1.4, 1.8, Dz - 1.2, SS);
+    pediment(c, M.stone, F(px, 12.05, p.z, Math.PI / 2), Dz - 1.2, 0.9, 1.4, SS);
+    cy(c, M.stone, F(px, 13.3, p.z), 0.35, 0.5, 0.6, 8, SD);
     c.b.geo(M.enamel, cached('kd-urn', () => new SphereGeometry(0.45, 8, 5)), F(px, 13.9, p.z).multiply(new Matrix4().makeScale(1, 1.3, 1)), BR);
     cy(c, M.enamel, F(px, 14.7, p.z), 0.02, 0.18, 0.8, 6, BR);
     // The bronze statue on its pedestal before the pylon, facing the road.
     const sx = inner + s * 0.55, rot = -s * Math.PI / 2;
-    bx(c, M.stucco, F, sx, 1.85, p.z, 0.9, 1.2, 1.4, SD);
+    bx(c, M.stone, F, sx, 1.85, p.z, 0.9, 1.2, 1.4, SD);
     const f = F(sx, 3.05, p.z, rot);
     cy(c, M.enamel, sub(f, 0, 0.75, 0), 0.24, 0.42, 1.5, 8, BR);
     cy(c, M.enamel, sub(f, 0, 1.85, 0), 0.26, 0.22, 0.7, 8, BR);

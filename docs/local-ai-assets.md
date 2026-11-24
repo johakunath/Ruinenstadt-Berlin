@@ -145,3 +145,10 @@ Downloads, each needing Johannes' OK first: for LA2 the two Pixal3D files named 
 - Inits: common concrete and brick files; the placeholders `paintSand`, `paintMetal`, `paintYellowBrick` dumped from the dev server. Sand needed a second round (the first drew cartoon bare footprints), yellow brick a third (see Lessons).
 - Cost: same materials, so 0 draw calls on every profile. GPU memory on Xhain about +14 MB (sand 256 → 1024, steel and yellow 512 → 1024; concrete and brick only swap files).
 - Not judged in game: cloud-style software rendering at night shows nothing useful. Johannes checks the look on the PC (Playtest row).
+
+### T9b to T9d handover (2026-11-24, built)
+
+- Three new Charlottenburg materials in `makeMapMats` (`stone`, `tuff`, `schlossWall`; other maps alias the stucco, so nothing changes there). Swapped per sight function in `charlottenburg-citywest.ts`, `-kudamm.ts`, `-schloss.ts`; the wear recorder (`recordWalls`) counts them as walls. Marmorhaus stays on stucco (white marble).
+- Start images for regular stone are drawn in code (seamless SVG ashlar, joints and courses at the target size), then img2img at 0.68: at 0.55 the stone stayed flat and new. Matching to the stucco keeps the code tints right; `--keep 1` or 0.85 keeps the soot (`texture-tile.mjs`).
+- Cost on Charlottenburg: +1 draw call per material in the chunks that show those sights (at most +3 where the Schloss, its plinths and a stone sight meet), three 1024 px textures (about 4.2 MB with mipmaps). Other maps: 0.
+- [Before and after](proof/t9-charlottenburg-stone/before-after.jpg). The Schloss change is subtle; the trims have no own sheet yet.

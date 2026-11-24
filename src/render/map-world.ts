@@ -76,6 +76,13 @@ interface LightSpot {
 }
 
 export interface MapMats extends Mats, LotGroundMats {
+  /**
+   * Charlottenburg stone (T9b sandstone and limestone, T9c tuff) and the Schloss plaster (T9d): own painted
+   * maps on Charlottenburg, one draw call each in the chunks that use them; elsewhere the stucco itself.
+   */
+  stone: LitMaterial;
+  tuff: LitMaterial;
+  schlossWall: LitMaterial;
   railSteel: LitMaterial;
   ground: LitMaterial;
   /** Ground scatter atlas (puddles, leaves, trash, rubble). */
@@ -297,6 +304,9 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
   const m: MapMats = {
     ...base,
     ...makeLotGroundMats(materials, dirt, district !== 'tunnel'),
+    stone: base.stucco,
+    tuff: base.stucco,
+    schlossWall: base.stucco,
     railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
@@ -343,6 +353,16 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
   const charl = district === 'charlottenburg';
   swapPaintedMap([m.roof], charl ? new URL('../../assets/textures/charlottenburg/roof-tiles.webp', import.meta.url).href : new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href, o.anisotropy);
   if (charl) swapPaintedMap([m.slate], new URL('../../assets/textures/charlottenburg/slate.webp', import.meta.url).href, o.anisotropy);
+  if (charl) {
+    const own = (url: string): LitMaterial => {
+      const mat = materials.surface({ map: base.stucco.map!.clone(), roughness: 0.85, vertexColors: true });
+      swapPaintedMap([mat], url, o.anisotropy);
+      return mat;
+    };
+    m.stone = own(new URL('../../assets/textures/charlottenburg/stone.webp', import.meta.url).href);
+    m.tuff = own(new URL('../../assets/textures/charlottenburg/tuff.webp', import.meta.url).href);
+    m.schlossWall = own(new URL('../../assets/textures/charlottenburg/schloss.webp', import.meta.url).href);
+  }
   return m;
 }
 

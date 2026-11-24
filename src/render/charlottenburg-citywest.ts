@@ -533,19 +533,19 @@ function loewentor(k: K): void {
   const { M } = k, H = 4.2, ST = T.sand;
   for (const p of OPEN_PARTS.loewentor!) {
     const w = p.hx * 2, d = p.hz * 2;
-    bx(k, M.stucco, p.x, 0, p.z, w + 0.2, 0.9, d + 0.2, T.sandDark);
-    bx(k, M.stucco, p.x, 0.9, p.z, w, H - 0.9, d, ST);
+    bx(k, M.stone, p.x, 0, p.z, w + 0.2, 0.9, d + 0.2, T.sandDark);
+    bx(k, M.stone, p.x, 0.9, p.z, w, H - 0.9, d, ST);
     // Rustication joints.
-    for (let y = 1.5; y < H - 0.4; y += 0.6) bx(k, M.stucco, p.x, y, p.z, w + 0.04, 0.06, d + 0.04, T.sandDark);
-    bx(k, M.stucco, p.x, H, p.z, w + 0.3, 0.35, d + 0.3, T.stone);
-    bx(k, M.stucco, p.x, H + 0.35, p.z, w - 0.2, 0.35, d - 0.2, ST);
+    for (let y = 1.5; y < H - 0.4; y += 0.6) bx(k, M.stone, p.x, y, p.z, w + 0.04, 0.06, d + 0.04, T.sandDark);
+    bx(k, M.stone, p.x, H, p.z, w + 0.3, 0.35, d + 0.3, T.stone);
+    bx(k, M.stone, p.x, H + 0.35, p.z, w - 0.2, 0.35, d - 0.2, ST);
     const headless = p.x > 0;
     const m = k.F(p.x, H + 0.7, p.z);
     lion(k, m, T.stone, !headless);
     if (headless) {
       // The head lies at the pillar foot; a broken stump in its place.
-      k.b.box(M.stucco, sub(m, 0, 0.85, 0.82), 0.34, 0.3, 0.3, T.sandDark);
-      blob(k, M.stucco, k.F(p.x + p.hx + 0.12, 0.2, p.z + 1.0), 0.2, 0.2, 0.22, T.stone);
+      k.b.box(M.stone, sub(m, 0, 0.85, 0.82), 0.34, 0.3, 0.3, T.sandDark);
+      blob(k, M.stone, k.F(p.x + p.hx + 0.12, 0.2, p.z + 1.0), 0.2, 0.2, 0.22, T.stone);
     }
     // Lanterns on brackets at the passage side.
     const s = -Math.sign(p.x), lx = p.x + s * (p.hx + 0.25);
@@ -570,7 +570,7 @@ function loewentor(k: K): void {
     const om = k.F(s * (3.6 + 1.1 + 0.02), 0, 0, (s * Math.PI) / 2);
     bills(k, om, s > 0 ? [['zoo', -0.5, 2.1, 1.3], ['sechstage', 0.35, 2.0, 1.2, 0.04]] : [['kabarett', 0.2, 2.1, 1.2]]);
     scraps(k, om, [['boxen', s > 0 ? 0.95 : -0.6, 2.5, 0.4, 0.5, [0, 0, 0.8, 0.5]]]);
-    blob(k, M.stucco, k.F(s * 3.6, H + 1.32, -0.3), 0.36, 0.12, 0.6, [0.52, 0.66, 0.42], 6);
+    blob(k, M.stone, k.F(s * 3.6, H + 1.32, -0.3), 0.36, 0.12, 0.6, [0.52, 0.66, 0.42], 6);
   }
   rubble(k, -5, -2.6, -1.4, 1.4, 6, T.sand);
 }
@@ -607,8 +607,8 @@ function elephant(k: K, m: Matrix4, t: RGB): void {
 function elefantentor(k: K): void {
   const { b, M } = k, ST = T.stone, LQ = M.carPaint, OCH: RGB = [0.86, 0.44, 0.24], TILE: RGB = [0.5, 0.95, 0.95];
   for (const p of OPEN_PARTS.elefantentor!) {
-    bx(k, M.stucco, p.x, 0, p.z, p.hx * 2, 0.85, p.hz * 2, T.sandDark);
-    bx(k, M.stucco, p.x, 0.85, p.z, p.hx * 2 + 0.12, 0.14, p.hz * 2 + 0.12, ST);
+    bx(k, M.stone, p.x, 0, p.z, p.hx * 2, 0.85, p.hz * 2, T.sandDark);
+    bx(k, M.stone, p.x, 0.85, p.z, p.hx * 2 + 0.12, 0.14, p.hz * 2 + 0.12, ST);
     elephant(k, k.F(p.x, 0.99, p.z + 0.05).multiply(new Matrix4().makeScale(1.1, 1.1, 1.1)), ST);
     // The painted pillar on its back: shaft, gilt rings, a bracket capital.
     bx(k, LQ, p.x, 2.85, p.z - 0.35, 0.72, 2.6, 0.72, OCH);
@@ -983,25 +983,25 @@ function capitol(k: K): void {
  */
 function gedaechtniskirche(k: K): void {
   const { b, M, l } = k, ST = T.tuff, DK = T.tuffDark, LT = T.tuffLight, SL = T.slate, CU = T.slate;
-  const rimS = { mat: M.stucco, t: LT };
+  const rimS = { mat: M.tuff, t: LT };
   /** A rose window on `m` (wall face): dark disc, stone ring, tracery spokes and hub. */
   const rose = (m: Matrix4, r: number): void => {
     b.geo(M.dark, cached(`cw-rose${r}`, () => new CircleGeometry(r, 16)), sub(m, 0, 0, 0.03));
-    b.geo(M.stucco, cached(`cw-rose-rim${r}`, () => new RingGeometry(r, r + 0.35, 16)), sub(m, 0, 0, 0.05), LT);
-    for (let i = 0; i < 8; i++) b.box(M.stucco, sub(m, 0, 0, 0.06, 0, 0, (i * Math.PI) / 8), 2 * r, 0.1, 0.05, LT);
-    b.geo(M.stucco, cached(`cw-rose-hub${r}`, () => new CircleGeometry(r * 0.26, 10)), sub(m, 0, 0, 0.08), LT);
+    b.geo(M.tuff, cached(`cw-rose-rim${r}`, () => new RingGeometry(r, r + 0.35, 16)), sub(m, 0, 0, 0.05), LT);
+    for (let i = 0; i < 8; i++) b.box(M.tuff, sub(m, 0, 0, 0.06, 0, 0, (i * Math.PI) / 8), 2 * r, 0.1, 0.05, LT);
+    b.geo(M.tuff, cached(`cw-rose-hub${r}`, () => new CircleGeometry(r * 0.26, 10)), sub(m, 0, 0, 0.08), LT);
   };
   /** A portal on `m` (wall face): projecting frame, deep arch, columns, a small gable over it. */
   const portal = (m: Matrix4, w: number, h: number): void => {
-    b.box(M.stucco, sub(m, 0, (h + 0.8) / 2, 0.2), w + 1.6, h + 0.8, 0.4, LT);
-    opening(k, sub(m, 0, 0, 0.41), w, h, { mat: M.stucco, t: DK });
-    for (const x of [-(w / 2 + 0.55), -(w / 2 + 0.2), w / 2 + 0.2, w / 2 + 0.55]) b.geo(M.stucco, cy(0.12, 0.12, h - w / 2, 6), sub(m, x, (h - w / 2) / 2, 0.55), DK);
-    b.geo(M.stucco, frustum(w + 2, 0.5, 1.0, 0.1, 0.5), sub(m, 0, h + 0.8, 0.2), ST);
+    b.box(M.tuff, sub(m, 0, (h + 0.8) / 2, 0.2), w + 1.6, h + 0.8, 0.4, LT);
+    opening(k, sub(m, 0, 0, 0.41), w, h, { mat: M.tuff, t: DK });
+    for (const x of [-(w / 2 + 0.55), -(w / 2 + 0.2), w / 2 + 0.2, w / 2 + 0.55]) b.geo(M.tuff, cy(0.12, 0.12, h - w / 2, 6), sub(m, x, (h - w / 2) / 2, 0.55), DK);
+    b.geo(M.tuff, frustum(w + 2, 0.5, 1.0, 0.1, 0.5), sub(m, 0, h + 0.8, 0.2), ST);
   };
   /** A square tower with a pyramid helm (copper), an arcade storey and a cornice. */
   const tower = (x: number, z: number, w: number, h: number, helm: number, broken = false): void => {
-    bx(k, M.stucco, x, 0, z, w, h, w, ST);
-    for (const y of [h * 0.45, h - 0.4]) bx(k, M.stucco, x, y, z, w + 0.2, 0.3, w + 0.2, LT);
+    bx(k, M.tuff, x, 0, z, w, h, w, ST);
+    for (const y of [h * 0.45, h - 0.4]) bx(k, M.tuff, x, y, z, w + 0.2, 0.3, w + 0.2, LT);
     for (const [ry, ox, oz] of [[0, 0, 1], [Math.PI, 0, -1], [-Math.PI / 2, -1, 0], [Math.PI / 2, 1, 0]] as const) {
       const m = k.F(x + ox * (w / 2 + 0.01), 0, z + oz * (w / 2 + 0.01), ry);
       for (const dx of [-w * 0.2, w * 0.2]) archWin(k, sub(m, dx, h - 3.4, 0), w * 0.26, 2.2, 0.12);
@@ -1015,42 +1015,42 @@ function gedaechtniskirche(k: K): void {
     bx(k, M.enamel, x, h + helm, z, 0.08, 0.7, 0.08, T.gold);
   };
   // Plinth along the whole church.
-  bx(k, M.stucco, 0.5, 0, 0, 2 * l.hx - 1.2, 1.0, 2 * l.hz - 0.4, DK);
+  bx(k, M.tuff, 0.5, 0, 0, 2 * l.hx - 1.2, 1.0, 2 * l.hz - 0.4, DK);
   // Nave (x −4.4 … 2.2), 7 m wide, gable roof, a dwarf gallery under the eaves, round-arched windows.
   const NX0 = -4.4, NX1 = 2.2, NW = 7, NH = 12.5;
-  bx(k, M.stucco, (NX0 + NX1) / 2, 0, 0, NX1 - NX0, NH, NW, ST);
+  bx(k, M.tuff, (NX0 + NX1) / 2, 0, 0, NX1 - NX0, NH, NW, ST);
   b.geo(M.slate, frustum(NX1 - NX0, NW + 0.4, 4.2, NX1 - NX0, 0.2, SLOPES), k.F((NX0 + NX1) / 2, NH, 0), SL);
   // The hole in the roof: dark patch and bare rafters.
   b.box(M.dark, k.F(-0.6, NH + 1.7, NW / 4 + 0.05, 0, -0.69), 2.2, 0.04, 2.2);
   for (const x of [-1.4, -0.6, 0.2]) b.box(M.darkWood, k.F(x, NH + 1.75, NW / 4 + 0.12, 0, -0.69), 0.12, 0.12, 2.6, T.wood);
   for (const s of [-1, 1]) {
-    bx(k, M.stucco, (NX0 + NX1) / 2, NH - 0.9, s * (NW / 2 + 0.05), NX1 - NX0, 0.9, 0.12, LT);
-    for (let x = NX0 + 0.4; x < NX1 - 0.2; x += 0.55) post(k, M.stucco, x, NH - 0.9, s * (NW / 2 + 0.16), 0.07, 0.8, LT, 5);
+    bx(k, M.tuff, (NX0 + NX1) / 2, NH - 0.9, s * (NW / 2 + 0.05), NX1 - NX0, 0.9, 0.12, LT);
+    for (let x = NX0 + 0.4; x < NX1 - 0.2; x += 0.55) post(k, M.tuff, x, NH - 0.9, s * (NW / 2 + 0.16), 0.07, 0.8, LT, 5);
     for (const x of [-2.8, -0.6, 1.4]) archWin(k, k.F(x, 4.0, s * (NW / 2 + 0.01), s < 0 ? Math.PI : 0), 1.2, 4.6, 0.45, rimS);
   }
   // Transept (x 2.2 … 8.4) to the full depth, gables north and south with the rose window and a portal.
   const TX = 5.3, TW = 6.2, TH = 13.5, TD = 2 * l.hz - 1.4;
-  bx(k, M.stucco, TX, 0, 0, TW, TH, TD, ST);
+  bx(k, M.tuff, TX, 0, 0, TW, TH, TD, ST);
   const tr = k.F(TX, TH, 0, Math.PI / 2);
   b.geo(M.slate, frustum(TD, TW + 0.3, 4.4, TD, 0.2, SLOPES), tr, SL);
-  b.geo(M.stucco, frustum(TD - 0.02, TW - 0.02, 4.3, TD - 0.02, 0.1, ENDS), tr, ST);
+  b.geo(M.tuff, frustum(TD - 0.02, TW - 0.02, 4.3, TD - 0.02, 0.1, ENDS), tr, ST);
   b.shadowBox(k.F(2, NH / 2, 0), 13, NH, TD);
   for (const s of [-1, 1]) {
     const fz = s * (TD / 2 + 0.01), ry = s < 0 ? Math.PI : 0;
     rose(k.F(TX, 9.4, fz, ry), 1.75);
     for (const x of [-1.6, 1.6]) archWin(k, k.F(TX + x, 4.8, fz, ry), 0.9, 2.6, 0.45, rimS);
     // Gable arcade in steps and a cross on top.
-    for (let i = 0; i < 5; i++) post(k, M.stucco, TX - 1.6 + i * 0.8, TH + 0.3, fz + s * 0.12, 0.08, 1.4 - Math.abs(i - 2) * 0.3, LT, 5);
-    bx(k, M.stucco, TX, TH + 4.3, s * (TD / 2 - 0.3), 0.18, 1.0, 0.18, LT);
-    bx(k, M.stucco, TX, TH + 4.9, s * (TD / 2 - 0.3), 0.6, 0.18, 0.18, LT);
+    for (let i = 0; i < 5; i++) post(k, M.tuff, TX - 1.6 + i * 0.8, TH + 0.3, fz + s * 0.12, 0.08, 1.4 - Math.abs(i - 2) * 0.3, LT, 5);
+    bx(k, M.tuff, TX, TH + 4.3, s * (TD / 2 - 0.3), 0.18, 1.0, 0.18, LT);
+    bx(k, M.tuff, TX, TH + 4.9, s * (TD / 2 - 0.3), 0.6, 0.18, 0.18, LT);
     // The south portal is what the game camera sees.
     if (s > 0) portal(k.F(TX, 0, TD / 2), 1.8, 3.4);
   }
   // The crossing: an octagonal drum with a ring of gablets and arcade windows under an octagonal pyramid roof.
-  b.geo(M.stucco, cy(3.0, 3.0, 3.2, 8), k.F(TX, TH + 1.6, 0), ST);
+  b.geo(M.tuff, cy(3.0, 3.0, 3.2, 8), k.F(TX, TH + 1.6, 0), ST);
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2 + Math.PI / 8, gm = k.F(TX + Math.sin(a) * 2.78, TH + 3.2, Math.cos(a) * 2.78, a);
-    b.geo(M.stucco, frustum(2.3, 0.3, 1.2, 0.1, 0.3), gm, ST);
+    b.geo(M.tuff, frustum(2.3, 0.3, 1.2, 0.1, 0.3), gm, ST);
     for (const x of [-0.45, 0.45]) archWin(k, sub(gm, x, -1.6, 0.16), 0.36, 1.3, 0.2);
   }
   b.geo(M.slate, cached('cw-crossing', () => new ConeGeometry(3.2, 8.5, 8)), k.F(TX, TH + 3.2 + 4.25, 0, Math.PI / 8), SL);
@@ -1058,25 +1058,25 @@ function gedaechtniskirche(k: K): void {
   bx(k, M.enamel, TX, TH + 12.3, 0, 0.55, 0.1, 0.1, T.gold);
   // Choir (x 8.4 … 10.6) and the polygonal apse with its ring of small arched windows.
   const CX0 = 8.4, CX1 = 10.6, CW = 6, CH = 11.5;
-  bx(k, M.stucco, (CX0 + CX1) / 2, 0, 0, CX1 - CX0, CH, CW, ST);
+  bx(k, M.tuff, (CX0 + CX1) / 2, 0, 0, CX1 - CX0, CH, CW, ST);
   b.geo(M.slate, frustum(CX1 - CX0, CW + 0.3, 3.4, CX1 - CX0, 0.2, SLOPES), k.F((CX0 + CX1) / 2, CH, 0), SL);
-  b.geo(M.stucco, cy(2.4, 2.4, CH - 2, 7, false, 0, Math.PI), k.F(CX1, (CH - 2) / 2, 0), ST);
+  b.geo(M.tuff, cy(2.4, 2.4, CH - 2, 7, false, 0, Math.PI), k.F(CX1, (CH - 2) / 2, 0), ST);
   b.geo(M.slate, cached('cw-apse-roof', () => new ConeGeometry(2.6, 2.4, 7, 1, false, 0, Math.PI)), k.F(CX1, CH - 2 + 1.2, 0), SL);
   for (let i = 0; i < 5; i++) { const a = 0.3 + i * 0.64; archWin(k, k.F(CX1 + Math.sin(a) * 2.32, 5.6, Math.cos(a) * 2.32, a), 0.6, 2.0, 0.4); }
-  b.geo(M.stucco, cy(2.5, 2.5, 0.3, 7, false, 0, Math.PI), k.F(CX1, 4.2, 0), LT);
+  b.geo(M.tuff, cy(2.5, 2.5, 0.3, 7, false, 0, Math.PI), k.F(CX1, 4.2, 0), LT);
   // The two choir towers (four small towers in all with the west pair).
   for (const s of [-1, 1]) tower(CX0 + 0.9, s * (l.hz - 1.1), 1.9, 19, 9);
   // West front (x −13 … −10.6): a gabled porch front with three portals, the rose window, a gable arcade.
   const WX0 = -l.hx, WX1 = -10.6, WW = 8.4, WH = 12;
-  bx(k, M.stucco, (WX0 + WX1) / 2, 0, 0, WX1 - WX0, WH, WW, ST);
+  bx(k, M.tuff, (WX0 + WX1) / 2, 0, 0, WX1 - WX0, WH, WW, ST);
   const wg = k.F((WX0 + WX1) / 2, WH, 0);
-  b.geo(M.stucco, frustum(WX1 - WX0, WW, 4.4, WX1 - WX0, 0.2, ENDS), wg, ST);
+  b.geo(M.tuff, frustum(WX1 - WX0, WW, 4.4, WX1 - WX0, 0.2, ENDS), wg, ST);
   b.geo(M.slate, frustum(WX1 - WX0 + 0.1, WW + 0.3, 4.45, WX1 - WX0 + 0.1, 0.2, SLOPES), wg, SL);
   const wf = k.F(WX0 - 0.01, 0, 0, -Math.PI / 2);
   for (const z of [-2.4, 0, 2.4]) {
     const m = sub(wf, z, 0, 0);
-    opening(k, sub(m, 0, 0, 0.4), z === 0 ? 1.8 : 1.4, z === 0 ? 3.8 : 3.2, { mat: M.stucco, t: DK });
-    b.box(M.stucco, sub(m, 0, 2.2, 0.2), 2.3, 4.4, 0.4, LT);
+    opening(k, sub(m, 0, 0, 0.4), z === 0 ? 1.8 : 1.4, z === 0 ? 3.8 : 3.2, { mat: M.tuff, t: DK });
+    b.box(M.tuff, sub(m, 0, 2.2, 0.2), 2.3, 4.4, 0.4, LT);
   }
   rose(sub(wf, 0, 8.2, 0), 1.8);
   for (const z of [-1.2, 0, 1.2]) archWin(k, sub(wf, z, 12.6, 0), 0.6, 1.6, 0.2);
@@ -1087,25 +1087,25 @@ function gedaechtniskirche(k: K): void {
   for (const s of [-1, 1]) tower(-l.hx + 0.95, s * (l.hz - 0.95), 1.8, 18.5, 7, s > 0);
   // Main tower rising behind the west front: shaft, clock, belfry, four corner gables, pinnacles, spire.
   const MX = -7.5, MW = 6.2, MH = 30;
-  bx(k, M.stucco, MX, 0, 0, MW, MH, MW, ST);
-  for (const y of [WH + 0.6, 22.5]) bx(k, M.stucco, MX, y, 0, MW + 0.3, 0.35, MW + 0.3, LT);
+  bx(k, M.tuff, MX, 0, 0, MW, MH, MW, ST);
+  for (const y of [WH + 0.6, 22.5]) bx(k, M.tuff, MX, y, 0, MW + 0.3, 0.35, MW + 0.3, LT);
   b.shadowBox(k.F(MX, MH / 2, 0), MW, MH, MW);
   for (const [ry, ox, oz] of [[0, 0, MW / 2 + 0.01], [Math.PI, 0, -MW / 2 - 0.01], [-Math.PI / 2, -MW / 2 - 0.01, 0]] as const) {
     const m = k.F(MX + ox, 0, oz, ry);
     for (const x of [-1.0, 1.0]) archWin(k, sub(m, x, 15.0, 0), 0.8, 3.4, 0.3, rimS);
     b.geo(M.clock, cached('cw-kwg-clock', () => new CircleGeometry(0.95, 18)), sub(m, 0, 20.6, 0.06));
-    b.geo(M.stucco, cached('cw-kwg-clockrim', () => new RingGeometry(0.95, 1.2, 18)), sub(m, 0, 20.6, 0.05), LT);
+    b.geo(M.tuff, cached('cw-kwg-clockrim', () => new RingGeometry(0.95, 1.2, 18)), sub(m, 0, 20.6, 0.05), LT);
     for (const x of [-1.9, -0.65, 0.65, 1.9]) archWin(k, sub(m, x, 23.6, 0), 0.75, 4.6, 0.12, rimS);
   }
   const GY = MH;
-  bx(k, M.stucco, MX, MH - 0.4, 0, MW + 0.4, 0.4, MW + 0.4, LT);
+  bx(k, M.tuff, MX, MH - 0.4, 0, MW + 0.4, 0.4, MW + 0.4, LT);
   for (const [ry, ox, oz] of [[0, 0, 1], [Math.PI / 2, 1, 0], [Math.PI, 0, -1], [-Math.PI / 2, -1, 0]] as const) {
     const g = k.F(MX + ox * (MW / 2), GY, oz * (MW / 2), ry);
-    b.geo(M.stucco, frustum(MW - 1.2, 0.4, 3.0, 0.2, 0.4), sub(g, 0, 0, -0.2), ST);
+    b.geo(M.tuff, frustum(MW - 1.2, 0.4, 3.0, 0.2, 0.4), sub(g, 0, 0, -0.2), ST);
     for (const x of [-0.7, 0.7]) archWin(k, sub(g, x, 0.4, 0.01), 0.55, 1.7, 0.1);
   }
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    post(k, M.stucco, MX + sx * (MW / 2 - 0.35), GY, sz * (MW / 2 - 0.35), 0.38, 2.2, ST, 6);
+    post(k, M.tuff, MX + sx * (MW / 2 - 0.35), GY, sz * (MW / 2 - 0.35), 0.38, 2.2, ST, 6);
     b.geo(M.slate, cached('cw-pin', () => new ConeGeometry(0.45, 3.2, 6)), k.F(MX + sx * (MW / 2 - 0.35), GY + 3.8, sz * (MW / 2 - 0.35)), CU);
   }
   b.geo(M.slate, cy(0.08, MW / 2 - 0.5, 26, 8), k.F(MX, GY + 13, 0), CU);
@@ -1113,12 +1113,12 @@ function gedaechtniskirche(k: K): void {
   bx(k, M.enamel, MX, GY + 26.4, 0, 0.12, 1.6, 0.12, T.gold);
   bx(k, M.enamel, MX, GY + 27.3, 0, 0.7, 0.12, 0.12, T.gold);
   // Steps before the south portals, rubble at the foot of the south side.
-  for (let i = 0; i < 3; i++) bx(k, M.stucco, TX, 0, l.hz - 0.35 - i * 0.12, 4.6 - i * 0.5, 0.1 * (i + 1), 0.6 - i * 0.24, DK);
+  for (let i = 0; i < 3; i++) bx(k, M.tuff, TX, 0, l.hz - 0.35 - i * 0.12, 4.6 - i * 0.5, 0.1 * (i + 1), 0.6 - i * 0.24, DK);
   // 2026-11-19: sandbags half up the south portal, a scaffold with a tarp on the nave's south wall, a step slab
   // broken out and tipped, a slipped patch on the nave roof showing the battens.
   sandbags(k, k.F(TX, 0, TD / 2 + 0.2), 1.7, 3, new Rng(1895));
   scaffold(k, k.F(-2.0, 1.0, NW / 2 + 0.02), 3.4, 7.2, 0.7);
-  b.box(M.stucco, k.F(TX + 1.6, 0.12, l.hz - 0.45, 0.25, 0.2), 0.9, 0.18, 0.5, DK);
+  b.box(M.tuff, k.F(TX + 1.6, 0.12, l.hz - 0.45, 0.25, 0.2), 0.9, 0.18, 0.5, DK);
   battens(k, slope(k, -3.2, NH, NW / 2 + 0.2, NW / 2 + 0.1, 4.2, 0.42), 1.6, 1.3, M.slate, SL);
   rubble(k, -12.5, 12, l.hz - 0.6, l.hz - 0.05, 12, ST);
   rubble(k, -2, 1.5, NW / 2 + 0.2, NW / 2 + 1.2, 5, T.slate);
