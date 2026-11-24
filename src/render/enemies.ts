@@ -18,7 +18,7 @@
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
   AnimationMixer, BoxGeometry, BufferGeometry, CatmullRomCurve3, CircleGeometry, Color, ExtrudeGeometry, Float32BufferAttribute, IcosahedronGeometry, LatheGeometry, OctahedronGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, PlaneGeometry, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
-  type AnimationClip, type Bone, type Object3D, type SkinnedMesh,
+  type AnimationClip, type Bone, type Object3D, type SkinnedMesh, type Texture,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -1943,6 +1943,21 @@ const RUG = { w: 0.75, l: 1.5, nx: 4, nz: 16 } as const;
  * The carpet along +z (front edge at +l/2), painted in vertex colours (ruby field, gold border, an emerald
  * medallion and stripes). Draws: cloth, face paint, eyes: 3.
  */
+/** T10 (local FLUX.2 klein from the old vertex pattern): one painted carpet shared by every rug; it replaces the vertex colours. */
+let rugMap: Texture | undefined;
+const rugWaiting: LitMaterial[] = [];
+function paintRug(mat: LitMaterial): void {
+  const apply = (m: LitMaterial, t: Texture): void => { m.map = t; m.vertexColors = false; m.needsUpdate = true; };
+  if (rugMap) return apply(mat, rugMap);
+  if (typeof document === 'undefined') return;
+  rugWaiting.push(mat);
+  if (rugWaiting.length > 1) return;
+  loadPaintedTexture(new URL('../../assets/textures/wedding/rug.webp', import.meta.url).href, 4, (t) => {
+    rugMap = t;
+    for (const m of rugWaiting.splice(0)) apply(m, t);
+  }, false);
+}
+
 function buildRug(materials: Materials, castShadow: boolean): Rug {
   const { w, l, nx, nz } = RUG;
   const g = new PlaneGeometry(w, l, nx * 2, nz).rotateX(-Math.PI / 2);
@@ -1958,6 +1973,7 @@ function buildRug(materials: Materials, castShadow: boolean): Rug {
   }
   g.setAttribute('color', new Float32BufferAttribute(col, 3));
   const clothMat = materials.surface({ color: 0xffffff, roughness: 0.9, vertexColors: true, doubleSided: true });
+  paintRug(clothMat);
   const cloth = new Mesh(g, clothMat);
   cloth.castShadow = castShadow;
   const model = new Group();
