@@ -125,11 +125,16 @@ describe('kill drops', () => {
       const weapons = sm.drops.filter((d) => d.content.kind === 'item' && d.content.item.rarity === 3 && d.content.item.slot === 'w' && d.content.item.kind === 'spear');
       expect(weapons.length).toBeGreaterThanOrEqual(1);
     }
-    // No lag: the slot stays random (the forced draw is skipped).
+    // No lag, a set weapon, the Fernsehturm: no pity weapon.
     const sm = createSim({ empty: true, seed: 3 });
     sm.equipment.w = makeItem(new Rng(1), lootContext(sm), 40, 3, 'w', 'spear');
     expect(pityWeapon(sm, 10)).toBeUndefined();
     expect(pityWeapon(sm, 40 + WEAPON_PITY_LAG)).toBe('spear');
+    sm.lootCtx.district = 4;
+    sm.equipment.w = { ...sm.equipment.w!, itemLevel: 30, set: 'kiez' };
+    expect(pityWeapon(sm, 44)).toBeUndefined();
+    sm.lootCtx.turm = true;
+    expect(pityWeapon(sm, 99)).toBeUndefined();
   });
 
   it('M12b: rats drop rarely and give no scrap; Xhain bosses drop like the others, the Spreehexe like the Hauptmann', () => {

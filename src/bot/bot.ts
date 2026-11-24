@@ -16,7 +16,7 @@ import { chooseBlessing } from '../sim/blessings';
 import { colliderDistance, type Collider } from '../sim/collide';
 import { ferryPos } from '../sim/ferry';
 import { BAG_SIZE, collectItem, equipItem, salvageItem } from '../sim/inventory';
-import type { Item } from '../sim/items';
+import { shownLevel, type Item } from '../sim/items';
 import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
 import { profileOf, type SaveProfile } from '../sim/save';
@@ -1005,6 +1005,15 @@ function aliveNote(sim: Sim): string {
 }
 
 /** One fresh campaign through the map: retries at the zone start after a death, like the game. */
+/** P45: the last boss's drops land within a few metres of it; the hero stands next to it when it falls. */
+const BOSS_LOOT_RANGE = 15;
+/** Salvages the weakest unlocked bag item when it is weaker than `item` (a player clears the bag for a legendary). */
+function makeRoom(sim: Sim, item: Item): void {
+  let worst = -1;
+  sim.inventory.bag.forEach((b, i) => { if (!b.locked && (worst < 0 || shownLevel(b) < shownLevel(sim.inventory.bag[worst]!))) worst = i; });
+  if (worst >= 0 && shownLevel(sim.inventory.bag[worst]!) <= shownLevel(item)) salvageItem(sim, worst);
+}
+
 export function runCampaign(o: CampaignOptions): CampaignReport {
   const level = o.level;
   let seed = o.seed ?? 1;
@@ -1076,9 +1085,15 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   const at = Math.min(sim.run.index, level.encounters.length - 1);
   // P45: the hero may stay after the last boss (2D and 3D), and a player picks up its loot, the guaranteed legendary
   // first. The bot used to leave at the victory, so every final boss's items were lost and its power stalled.
+  // Only what lies near the hero (the boss's drops), not loot left elsewhere on the map; a full bag makes room first.
   if (won) {
-    const loot = sim.drops.flatMap((d) => (d.content.kind === 'item' ? [d.content.item] : [])).sort((a, b) => b.rarity - a.rarity);
-    for (const item of loot) if (collectItem(sim, item)) sim.drops = sim.drops.filter((d) => !(d.content.kind === 'item' && d.content.item.id === item.id));
+    const p = sim.player;
+    const loot = sim.drops.filter((d) => d.content.kind === 'item' && Math.hypot(d.x - p.x, d.z - p.z) < BOSS_LOOT_RANGE)
+      .map((d) => (d.content as { item: Item }).item).sort((a, b) => b.rarity - a.rarity);
+    for (const item of loot) {
+      if (sim.inventory.bag.length >= BAG_SIZE) makeRoom(sim, item);
+      if (collectItem(sim, item)) sim.drops = sim.drops.filter((d) => !(d.content.kind === 'item' && d.content.item.id === item.id));
+    }
     equipBest(sim, true);
   }
   endExpedition(sim, won, o.district ?? 0);

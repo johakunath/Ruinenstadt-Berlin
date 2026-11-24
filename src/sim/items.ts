@@ -66,7 +66,10 @@ function wearNames(rng: Rng, ctx: LootContext, all: readonly string[]): readonly
 /** M17: share of legendaries on the Fernsehturm that are Fernsehturm-Splitter or Auge des Fernsehturms. */
 export const TOWER_SHARE = 1 / 3;
 
-/** `forcedWeapon` (P45): with `forcedSlot` 'w', the weapon class; skips the class draw, other draws keep their order. */
+/**
+ * `forcedWeapon` (P45): with `forcedSlot` 'w', the weapon class. It skips the class draw and the `fest` lamp draw; the
+ * forced slot itself already skips the tower, neon implant and slot draws. The rarity and value draws keep their order.
+ */
 export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarity = 0, forcedSlot?: SlotId, forcedWeapon?: WeaponKindId): Item {
   itemLevel += 3 * ctx.district;
   const cy = ctx.flavor === 'neon', gd = ctx.flavor === 'gdr';

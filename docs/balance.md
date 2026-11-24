@@ -4,7 +4,7 @@ Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance 
 
 ## P45 fix: boss loot, pity weapon, Sultan life (2026-11-24)
 
-`node tools/balance.mjs 3 normal good 1 --campaign` and the same with skill `johannes`, after three changes:
+Johannes, 2026-11-24: "fix P45 with whatever you would recommend" (his OK replaces the Fable decision pass in the backlog row). `node tools/balance.mjs 3 normal good 1 --campaign` and the same with skill `johannes`, after three changes:
 1. **Bot bug:** the bot left a map at the victory, so it never picked up the last boss's loot (the guaranteed legendary of most district bosses). It now takes the items before it leaves, as a player who stays after the boss does. Before this, bot power stalled from Charlottenburg on in about half the runs.
 2. **Pity weapon** (`pityWeapon`, `src/sim/loot.ts`): a legendary weapon is worth 2.6 times its level, a rare 1.8 times, so an early legendary outvalues every rare for two or three districts. When the worn weapon is `WEAPON_PITY_LAG` (5) item levels below the district boss's guaranteed legendary, that legendary becomes a weapon of the worn class.
 3. **Sultan Nimmersatt** life 4400 → 3600 (still above Der Ewige Bauherr's 3200). He took 2 to 8 times longer than the Diva at the same power.

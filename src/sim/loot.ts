@@ -169,13 +169,16 @@ const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spree
 /**
  * P45 (bot campaigns 2026-11-23): a legendary weapon is worth 2.6 times its level, a rare 1.8 times, so an early
  * legendary outvalues every rare for two or three districts and the hero's power stalls (Sultan fights of 8 to 24 min).
- * The district boss's guaranteed legendary then becomes a weapon of the worn class.
+ * The district boss's guaranteed legendary then becomes a weapon of the worn class. Not on the Fernsehturm, where the
+ * forced slot would skip the tower's own legendaries (`TOWER_SHARE`). Set pieces carry no district step in their
+ * item level (`makeSetItem`), so a worn set weapon is compared with this district's step added.
  */
 export const WEAPON_PITY_LAG = 5;
 export function pityWeapon(sim: Sim, dropLevel: number): WeaponKindId | undefined {
-  const w = sim.equipment.w;
-  if (!w || !(w.kind in WEAPON_KINDS) || w.itemLevel > dropLevel - WEAPON_PITY_LAG) return undefined;
-  return w.kind as WeaponKindId;
+  const w = sim.equipment.w, ctx = sim.lootCtx;
+  if (!w || ctx.turm || !(w.kind in WEAPON_KINDS)) return undefined;
+  const worn = w.itemLevel + (w.set ? 3 * ctx.district : 0);
+  return worn > dropLevel - WEAPON_PITY_LAG ? undefined : w.kind as WeaponKindId;
 }
 
 /** 2D `kill()`: bosses drop first, then one of material, item or heal. Scrap is credited at once. */
