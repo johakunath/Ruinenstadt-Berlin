@@ -259,18 +259,18 @@ function schlossmitte(c: Ctx): void {
   const M = c.M, H = 11.6, FZ = 6.5, RZ = 7.3, LH = 9.2, O = F(c, 0, 0, 0);
   const rows: Row[] = [{ y: 2.3, h: 2.3, hood: true }, { y: 6.6, h: 2.9, arch: true }, { y: 10.0, h: 1.1, w: 1.0 }];
   // Centre body and the risalit, the links (two storeys) out to the wings.
-  bb(c, M.stucco, O, 0, 0, -0.75, 34, H, 14.5, YEL);
-  bb(c, M.stucco, O, 0, 0, 6.9, 12, H, 0.8, YEL);
+  bb(c, M.schlossWall, O, 0, 0, -0.75, 34, H, 14.5, YEL);
+  bb(c, M.schlossWall, O, 0, 0, 6.9, 12, H, 0.8, YEL);
   for (const s of [-1, 1]) {
-    bb(c, M.stucco, O, s * 23, 0, 0, 12, LH, 16, YEL);
+    bb(c, M.schlossWall, O, s * 23, 0, 0, 12, LH, 16, YEL);
     const lf = F(c, s * 23, 0, 8);
-    bb(c, M.stucco, lf, 0, 0, 0.06, 12, 0.6, 0.14, SAND);
+    bb(c, M.stone, lf, 0, 0, 0.06, 12, 0.6, 0.14, SAND);
     face(c, lf, 12, 4, [{ y: 2.3, h: 2.3, hood: true }, { y: 6.4, h: 2.4, hood: true }], 0);
     band(c, lf, 12, LH - 0.5, 0.5, 0.35);
     roof(c, M.roof, s * 23, LH, 0, 12.3, 16.3, 2.8, 10, 12, RED);
     for (let i = 0; i < 4; i++) dormer(c, F(c, s * 23 - 4.5 + i * 3, LH + 0.2, 7.3));
   }
-  bb(c, M.stucco, O, 0, 0, FZ + 0.06, 34, 0.7, 0.14, SAND);
+  bb(c, M.stone, O, 0, 0, FZ + 0.06, 34, 0.7, 0.14, SAND);
   // Court front: four axes either side of the risalit, its three arched axes (portal and two mirror arches).
   for (const s of [-1, 1]) {
     const fm = F(c, s * 11.5, 0, FZ);
@@ -297,7 +297,7 @@ function schlossmitte(c: Ctx): void {
     bb(c, M.iron, R, s * 1.75, 2.9, 0.25, 0.08, 0.5, 0.4, IRON);
     bb(c, M.lampGlass, R, s * 1.75, 3.0, 0.45, 0.26, 0.42, 0.26);
   }
-  for (let i = 0; i < 3; i++) bb(c, M.stucco, R, 0, 0, 0.25 + i * 0.2, 5.4 - i * 0.6, 0.15 * (3 - i), 0.22, SAND);
+  for (let i = 0; i < 3; i++) bb(c, M.stone, R, 0, 0, 0.25 + i * 0.2, 5.4 - i * 0.6, 0.15 * (3 - i), 0.22, SAND);
   for (let i = 0; i < 6; i++) c.b.box(M.railSteel, F(c, c.rng.range(-3, 3), 0.48, RZ + c.rng.range(0.2, 0.7), c.rng.range(0, 3)), c.rng.range(0.1, 0.3), 0.02, c.rng.range(0.1, 0.25), MIRROR);
   // Side fronts of the centre over the links (east and west), seen at a grazing angle above the link roofs.
   for (const s of [-1, 1]) face(c, F(c, s * 17, 0, -0.75, (s * Math.PI) / 2), 14.5, 4, [rows[2]!], 0, undefined, 0.2);
@@ -327,7 +327,7 @@ function dormer(c: Ctx, m: Matrix4): void {
  */
 function tower(c: Ctx): void {
   const M = c.M, T = F(c, 0, 0, 0), y0 = 11.6;
-  bb(c, M.stucco, T, 0, y0, 0, 9.6, 3.4, 9.6, YEL);
+  bb(c, M.schlossWall, T, 0, y0, 0, 9.6, 3.4, 9.6, YEL);
   for (let k = 0; k < 4; k++) {
     const fm = sub(T, Math.sin((k * Math.PI) / 2) * 4.8, y0, Math.cos((k * Math.PI) / 2) * 4.8, (k * Math.PI) / 2);
     if (k === 0 || k === 1 || k === 3) face(c, fm, 9.6, 3, [{ y: 1.6, h: 1.5, arch: true }], 3.4);
@@ -335,7 +335,7 @@ function tower(c: Ctx): void {
   }
   // Drum: octagonal, tall arched windows between paired pilasters, the clock on the court side.
   const yd = y0 + 3.4, R = 3.6, HD = 6.4;
-  cy(c, M.stucco, T, 0, yd, 0, R, HD, YEL, 8);
+  cy(c, M.schlossWall, T, 0, yd, 0, R, HD, YEL, 8);
   for (let i = 0; i < 8; i++) {
     const a = (i * Math.PI) / 4, wm = sub(T, Math.sin(a) * R * 0.925, yd + 2.7, Math.cos(a) * R * 0.925, a);
     c.b.box(M.stucco, wm, 1.5, 3.4, 0.08, TRIM);
@@ -365,7 +365,7 @@ function tower(c: Ctx): void {
   // Lantern: tall, lit arches (a beacon on the axis at night), a small cap, the spike, the globe and the Fortuna.
   const yl = yb + RD * SY - 0.3;
   cy(c, M.stucco, T, 0, yl, 0, 1.15, 0.4, TRIM, 8);
-  cy(c, M.stucco, T, 0, yl + 0.4, 0, 0.95, 2.6, YEL, 8);
+  cy(c, M.schlossWall, T, 0, yl + 0.4, 0, 0.95, 2.6, YEL, 8);
   for (let i = 0; i < 8; i += 2) {
     const a = (i * Math.PI) / 4 + Math.PI / 8;
     pane(c.b, sub(T, Math.sin(a) * 0.93, yl + 1.55, Math.cos(a) * 0.93, a), 0.5, 1.5, c.rng, 1);
@@ -403,9 +403,9 @@ function fortuna(c: Ctx, m: Matrix4, h: number): void {
 function schlossfluegel(c: Ctx): void {
   const M = c.M, l = c.l, v = l.variant ?? 0, side = v === 2 ? -1 : 1, W = l.hx * 2, D = l.hz * 2, H = 9.2;
   const rows: Row[] = [{ y: 2.5, h: 2.4, hood: true }, { y: 6.6, h: 2.4, hood: true }];
-  bb(c, M.stucco, F(c, 0, 0, 0), 0, 0, 0, W, H, D, YEL);
+  bb(c, M.schlossWall, F(c, 0, 0, 0), 0, 0, 0, W, H, D, YEL);
   const court = F(c, side * l.hx, 0, 0, (side * Math.PI) / 2);
-  bb(c, M.stucco, court, 0, 0, 0.08, D, 0.6, 0.18, SAND);
+  bb(c, M.stone, court, 0, 0, 0.08, D, 0.6, 0.18, SAND);
   face(c, court, D, Math.max(2, Math.round(D / 3.3)), rows, 0);
   band(c, court, D, 4.4, 0.2, 0.16);
   band(c, court, D, H - 0.5, 0.5, 0.35);
@@ -441,9 +441,9 @@ function schlossfluegel(c: Ctx): void {
 function neuerfluegel(c: Ctx): void {
   const M = c.M, l = c.l, W = l.hx * 2, D = l.hz * 2, H = 10.2, FZ = l.hz - 1.0;
   const rows: Row[] = [{ y: 2.1, h: 1.9, hood: true }, { y: 6.9, h: 3.2, hood: true }];
-  bb(c, M.stucco, F(c, 0, 0, 0), 0, 0, -1.0, W, H, D - 2, YEL);
-  bb(c, M.stucco, F(c, 0, 0, 0), 0, 0, FZ - 0.3, 13, H + 1.0, 1.2 + 0.3, YEL);
-  bb(c, M.stucco, F(c, 0, 0, 0), 0, 0, FZ + 0.06, W, 0.6, 0.14, SAND);
+  bb(c, M.schlossWall, F(c, 0, 0, 0), 0, 0, -1.0, W, H, D - 2, YEL);
+  bb(c, M.schlossWall, F(c, 0, 0, 0), 0, 0, FZ - 0.3, 13, H + 1.0, 1.2 + 0.3, YEL);
+  bb(c, M.stone, F(c, 0, 0, 0), 0, 0, FZ + 0.06, W, 0.6, 0.14, SAND);
   // Side parts: small ground floor windows, tall upper windows behind iron balcony rails, pilasters.
   for (const s of [-1, 1]) {
     const fm = F(c, s * 12.75, 0, FZ);
@@ -470,7 +470,7 @@ function neuerfluegel(c: Ctx): void {
   for (let k = 0; k < 24; k++) quad(c, M.iron, P, -6 + k * 0.52, 5.4, 0.53, 0.03, 0.8, IRON);
   bb(c, M.iron, P, 0, 5.75, 0.5, 12.2, 0.05, 0.06, IRON);
   band(c, P, 13, H - 0.2, 0.55, 0.42);
-  bb(c, M.stucco, P, 0, H + 0.35, -0.3, 13, 0.85, 0.6, YEL);
+  bb(c, M.schlossWall, P, 0, H + 0.35, -0.3, 13, 0.85, 0.6, YEL);
   for (let i = 0; i < 6; i++) if (i !== 4) urn(c, P, -5.5 + i * 2.2, H + 1.2, -0.3, 1.25, TRIM);
   // East end (toward the garden gate).
   face(c, F(c, l.hx, 0, -1.0, Math.PI / 2), D - 2, 3, rows, H - 0.6);
@@ -580,12 +580,12 @@ function ehrenhoftor(c: Ctx): void {
   // Railing between the gate piers and the wings, intermediate piers with urns.
   const posts = [-l.hx + 0.4, -15, -8, 8, 15, l.hx - 0.4];
   for (const x of posts) {
-    bb(c, M.stucco, G, x, 0, 0, 0.9, 3.0, 0.9, SAND);
+    bb(c, M.stone, G, x, 0, 0, 0.9, 3.0, 0.9, SAND);
     bb(c, M.stucco, G, x, 3.0, 0, 1.05, 0.22, 1.05, TRIM);
     urn(c, G, x, 3.22, 0, 0.9, SAND);
   }
   const run = (x0: number, x1: number, h: number): void => {
-    bb(c, M.stucco, G, (x0 + x1) / 2, 0, 0, x1 - x0, 0.55, 0.7, SAND);
+    bb(c, M.stone, G, (x0 + x1) / 2, 0, 0, x1 - x0, 0.55, 0.7, SAND);
     bb(c, M.stucco, G, (x0 + x1) / 2, 0.55, 0, x1 - x0, 0.1, 0.8, TRIM);
     const n = Math.round((x1 - x0) / 0.2);
     for (let i = 0; i <= n; i++) {
@@ -633,7 +633,7 @@ function ehrenhoftor(c: Ctx): void {
   // fighting gladiators on them, lunging toward the gate.
   for (const s of [-1, 1]) {
     const x = s * GP, ST = onStucco(0xd2c4a6);
-    bb(c, M.stucco, G, x, 0, 0, 2.2, 0.6, 1.2, SAND);
+    bb(c, M.stone, G, x, 0, 0, 2.2, 0.6, 1.2, SAND);
     bb(c, M.stucco, G, x, 0.6, 0, 2.0, PH - 0.6, 1.1, ST);
     for (const z of [-1, 1]) {
       const fm = sub(G, x, 0, z * 0.55, z > 0 ? 0 : Math.PI);
@@ -702,7 +702,7 @@ function stuelerbau(c: Ctx): void {
 function gartentor(c: Ctx): void {
   const M = c.M, parts = OPEN_PARTS.gartentor ?? [], G = F(c, 0, 0, 0), PH = 3.2;
   for (const p of parts) {
-    bb(c, M.stucco, G, p.x, 0, p.z, p.hx * 2, 0.4, p.hz * 2, SAND);
+    bb(c, M.stone, G, p.x, 0, p.z, p.hx * 2, 0.4, p.hz * 2, SAND);
     bb(c, M.stucco, G, p.x, 0.4, p.z, p.hx * 2 - 0.15, PH - 0.4, p.hz * 2 - 0.15, YEL);
     for (const s of [-1, 1]) bb(c, M.stucco, G, p.x, 1.0, p.z + s * (p.hz - 0.07), 0.7, 1.6, 0.04, TRIM);
     bb(c, M.stucco, G, p.x, PH, p.z, p.hx * 2 + 0.15, 0.25, p.hz * 2 + 0.15, TRIM);
@@ -747,13 +747,13 @@ function belvedere(c: Ctx): void {
     c.b.geo(mat, cached(`sc-ov${top}-${seg}`, () => new CylinderGeometry(top, 1, 1, seg)), sub(B, 0, y + h / 2, 0).multiply(new Matrix4().makeScale(sx, h, sz)), t);
   };
   oval(0, G1, RX, RZ, M.stucco, WHITE);
-  oval(G1, H - G1 + 1.2, RX, RZ, M.stucco, PEARL);
+  oval(G1, H - G1 + 1.2, RX, RZ, M.schlossWall, PEARL);
   const rows: Row[] = [{ y: 1.9, h: 1.8 }, { y: 5.6, h: 2.2, hood: true }, { y: 9.1, h: 1.7 }];
   for (const [ax, az, w] of [[1, 0, 3.6], [-1, 0, 3.6], [0, 1, 4.0], [0, -1, 4.0]] as const) {
     const out = ax ? l.hx : l.hz, inn = (ax ? RX : RZ) - 1.2, len = out - inn, ry = Math.atan2(ax, az);
     const wm = F(c, ax * (inn + len / 2), 0, az * (inn + len / 2), ry);
     bb(c, M.stucco, wm, 0, 0, 0, w, G1, len, WHITE);
-    bb(c, M.stucco, wm, 0, G1, 0, w, H - G1, len, PEARL);
+    bb(c, M.schlossWall, wm, 0, G1, 0, w, H - G1, len, PEARL);
     const fm = sub(wm, 0, 0, len / 2);
     face(c, fm, w, 1, rows, 0, undefined, 0.3, WHITE);
     for (const s of [-1, 1]) {

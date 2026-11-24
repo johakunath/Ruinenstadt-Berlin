@@ -3,7 +3,7 @@
 // reference images and an optional start image (img2img). Start ComfyUI first (`ComfyUI starten.bat`).
 //
 //   node tools/comfy.mjs --prompt "..." [--ref a.png]... [--init start.png --denoise 0.6]
-//                        [--size 1024] [--count 8] [--batch 1] [--seed 1] [--steps 4] [--out dir] [--name stucco]
+//                        [--size 1024] [--width w --height h] [--count 8] [--batch 1] [--seed 1] [--steps 4] [--out dir] [--name stucco]
 //
 // --ref     reference image(s): style or content the model looks at (FLUX.2 ReferenceLatent, as in the
 //           ComfyUI template `image_flux2_klein_image_edit_4b_distilled`)
@@ -25,7 +25,7 @@ function args(argv) {
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, ''), v = argv[++i];
     if (k === 'ref') o.ref.push(v);
-    else o[k] = ['size', 'count', 'batch', 'seed', 'steps', 'denoise', 'cutout'].includes(k) ? Number(v) : v;
+    else o[k] = ['size', 'width', 'height', 'count', 'batch', 'seed', 'steps', 'denoise', 'cutout'].includes(k) ? Number(v) : v;
   }
   if (o.cut) {
     // --cut a.png b.png ...: the files up to the next option.
@@ -59,14 +59,14 @@ function cutGraph(name) {
 }
 
 /** API-format graph. Node ids are strings; an input [id, slot] links to another node's output. */
-export function graph({ prompt, refs, init, size, seed, steps, denoise, cutout, batch = 1 }) {
+export function graph({ prompt, refs, init, size, width = size, height = size, seed, steps, denoise, cutout, batch = 1 }) {
   const g = {
     unet: { class_type: 'UNETLoader', inputs: { unet_name: MODEL.unet, weight_dtype: 'default' } },
     clip: { class_type: 'CLIPLoader', inputs: { clip_name: MODEL.clip, type: 'flux2', device: 'default' } },
     vae: { class_type: 'VAELoader', inputs: { vae_name: MODEL.vae } },
     pos0: { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['clip', 0] } },
     neg0: { class_type: 'ConditioningZeroOut', inputs: { conditioning: ['pos0', 0] } },
-    sched: { class_type: 'Flux2Scheduler', inputs: { steps, width: size, height: size } },
+    sched: { class_type: 'Flux2Scheduler', inputs: { steps, width, height } },
     sampler: { class_type: 'KSamplerSelect', inputs: { sampler_name: 'euler' } },
     noise: { class_type: 'RandomNoise', inputs: { noise_seed: seed } },
   };
@@ -83,14 +83,14 @@ export function graph({ prompt, refs, init, size, seed, steps, denoise, cutout, 
   let sigmas = ['sched', 0], latent;
   if (init) {
     g.initLoad = { class_type: 'LoadImage', inputs: { image: init } };
-    g.initScale = { class_type: 'ImageScale', inputs: { image: ['initLoad', 0], upscale_method: 'lanczos', width: size, height: size, crop: 'center' } };
+    g.initScale = { class_type: 'ImageScale', inputs: { image: ['initLoad', 0], upscale_method: 'lanczos', width, height, crop: 'center' } };
     g.initEnc = { class_type: 'VAEEncode', inputs: { pixels: ['initScale', 0], vae: ['vae', 0] } };
     g.split = { class_type: 'SplitSigmasDenoise', inputs: { sigmas: ['sched', 0], denoise } };
     sigmas = ['split', 1];
     latent = ['initEnc', 0];
     if (batch > 1) { g.repeat = { class_type: 'RepeatLatentBatch', inputs: { samples: latent, amount: batch } }; latent = ['repeat', 0]; }
   } else {
-    g.empty = { class_type: 'EmptyFlux2LatentImage', inputs: { width: size, height: size, batch_size: batch } };
+    g.empty = { class_type: 'EmptyFlux2LatentImage', inputs: { width, height, batch_size: batch } };
     latent = ['empty', 0];
   }
   g.run = { class_type: 'SamplerCustomAdvanced', inputs: { noise: ['noise', 0], guider: ['guider', 0], sampler: ['sampler', 0], sigmas, latent_image: latent } };

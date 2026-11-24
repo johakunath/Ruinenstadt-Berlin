@@ -200,8 +200,9 @@ export function koepenickMap(scale = 1): MapDef {
     // P42 follow-up: cut too; its lid follows the tower and the roof terrace (`landmarkCutCaps`), not the beer garden.
     { ...L('mueggelturm', 147, 124, 0, 6, 5, 6), cut: {} },
     L('riesenrad', -137, -51, 30 * DEG, 6.5, 3.5, 10),
+    // P17 (2026-11-24): the triceratops statue lies low, so its footprint keeps trees well clear (the others fit).
     { ...L('dino', -96, -4, 200 * DEG, 2, 3.5, 1), variant: 0 },
-    { ...L('dino', -140, -14, 120 * DEG, 2, 3, 1), variant: 1 },
+    { ...L('dino', -140, -14, 120 * DEG, 4.5, 5, 3), variant: 1 },
     { ...L('dino', -126, 36, 300 * DEG, 2.5, 3, 1), variant: 2 },
     // Späti rest stops, one per zone beside the route (front to the street; hx/hz are world extents).
     { ...L('spati', -12, -98, 0, 5.5, 4, 2), name: 'Späti am Bahnhof' },

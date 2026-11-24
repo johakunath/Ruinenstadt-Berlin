@@ -1,6 +1,6 @@
 # M11c Spreepark dinos: detailed statues, small dinos, nests [Claude · Opus medium]
 
-Status: open (prepared 2026-11-17, Johannes: "Dinos ein kleines bisschen detaillierter, kleinere Dinos, Nest mit Eiern, organischer"). Read `.claude/skills/combat-animation/SKILL.md` before touching an enemy.
+Status: step 1 built 2026-11-24 with local Pixal3D statues (`docs/local-ai-assets.md` › P17); steps 2 to 4 open (prepared 2026-11-17, Johannes: "Dinos ein kleines bisschen detaillierter, kleinere Dinos, Nest mit Eiern, organischer"). Read `.claude/skills/combat-animation/SKILL.md` before touching an enemy.
 
 ## Goal
 

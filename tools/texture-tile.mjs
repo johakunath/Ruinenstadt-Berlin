@@ -13,7 +13,8 @@
 // --band 0: no blend (tiles, slates and other regular rows: a seamless --init keeps them nearly seamless).
 // --gain: multiply the brightness after matching (a darker or lighter surface than the old file, e.g. black iron).
 // --match: per channel mean and spread moved to the old texture's, so vertex tints in code keep their look;
-// the spread is never raised (contrast stays medium-low).
+// the spread is never raised (contrast stays medium-low); --keep (default 0.7) is the least share of the
+// generated contrast kept, 1 for sooty or patchy surfaces whose reference is flatter (T9c tuff).
 import sharp from 'sharp';
 
 const argv = process.argv.slice(2);

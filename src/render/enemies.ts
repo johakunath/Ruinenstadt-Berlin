@@ -18,7 +18,7 @@
 // One-shot poses follow sim time, so wind-up, release and hitbox always agree.
 import {
   AnimationMixer, BoxGeometry, BufferGeometry, CatmullRomCurve3, CircleGeometry, Color, ExtrudeGeometry, Float32BufferAttribute, IcosahedronGeometry, LatheGeometry, OctahedronGeometry, Quaternion, Shape, Vector2, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, PlaneGeometry, SphereGeometry, Sphere, TorusGeometry, TubeGeometry, Vector3,
-  type AnimationClip, type Bone, type Object3D, type SkinnedMesh,
+  type AnimationClip, type Bone, type Object3D, type SkinnedMesh, type Texture,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -30,6 +30,7 @@ import { groundY } from './ground';
 import { ZAP_TIME } from './status-fx';
 import { buildDialMark, updateDialMark } from './echo-mark';
 import type { LitMaterial, Materials } from './materials';
+import { loadPaintedTexture } from './surface-textures';
 import { WeaponRack } from './weapons';
 import {
   alexKit, assemble as assembleAlex, buildClockLegs, buildKern, buildKoloss, CLOCK_LEG, KOLOSS, domeParts, emblemParts, keyParts, reachLeg, shieldParts, tf as tfAlex, zombieAlexGear,
@@ -311,6 +312,21 @@ function gearKit(m: Materials): GearKit {
   };
   // The intensity each material was made with (animated glows change theirs; `assemble` sorts by this one).
   for (const mat of Object.values(kit)) mat.userData.baseEmissive ??= mat.emissiveIntensity;
+  // T8 (local FLUX.2 klein): matted, dirty fur for the Rattenmutter and the other fur parts. Neutral grey, so the
+  // kit colours keep the hue; repeated 3 × 3 on the primitives' own UVs so the strands stay small.
+  if (typeof document !== 'undefined') {
+    const furMats = [kit.fur, kit.furDark];
+    loadPaintedTexture(new URL('../../assets/textures/enemies/fur.webp', import.meta.url).href, 4, (t) => {
+      t.repeat.set(3, 3);
+      for (const mat of furMats) { mat.map = t; mat.needsUpdate = true; }
+    });
+    // T8: worn wool for the uniform and turnout coats (the kit colour gives Prussian blue, navy, grey-blue, soot).
+    const coatMats = [kit.garde, kit.officer, kit.navy, kit.zwcoat, kit.turnout];
+    loadPaintedTexture(new URL('../../assets/textures/enemies/wool.webp', import.meta.url).href, 4, (t) => {
+      t.repeat.set(2, 2);
+      for (const mat of coatMats) { mat.map = t; mat.needsUpdate = true; }
+    });
+  }
   return kit;
 }
 
@@ -322,12 +338,15 @@ const tf = (g: BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, 
 };
 
 /** Merges parts per material into a few meshes. */
+/** Kit materials with a painted map (T8 fur and coat wool): never baked into the shared vertex-coloured mesh, or the map is lost. */
+const TEXTURED: ReadonlySet<keyof GearKit | 'pulse'> = new Set<keyof GearKit>(['fur', 'furDark', 'garde', 'officer', 'navy', 'zwcoat', 'turnout']);
+
 function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial, paint = false): Group {
   const by = new Map<keyof GearKit | 'pulse', BufferGeometry[]>();
   // WP5 step 3 (`paint`): the boss coats would cost one draw per material per bone. Unlit materials share one
   // vertex-coloured mesh per bone; metal keeps its shine only where it is a large part of the bone's gear.
   const family = (m: keyof GearKit | 'pulse'): keyof GearKit | 'pulse' => {
-    if (!paint || m === 'pulse') return m;
+    if (!paint || m === 'pulse' || TEXTURED.has(m)) return m;
     const mat = k[m];
     // By the intensity the material was made with: some glows are animated (the tower's window ring dims on
     // death), and a body built meanwhile must still keep them as glows (review fix).
@@ -1924,6 +1943,21 @@ const RUG = { w: 0.75, l: 1.5, nx: 4, nz: 16 } as const;
  * The carpet along +z (front edge at +l/2), painted in vertex colours (ruby field, gold border, an emerald
  * medallion and stripes). Draws: cloth, face paint, eyes: 3.
  */
+/** T10 (local FLUX.2 klein from the old vertex pattern): one painted carpet shared by every rug; it replaces the vertex colours. */
+let rugMap: Texture | undefined;
+const rugWaiting: LitMaterial[] = [];
+function paintRug(mat: LitMaterial): void {
+  const apply = (m: LitMaterial, t: Texture): void => { m.map = t; m.vertexColors = false; m.needsUpdate = true; };
+  if (rugMap) return apply(mat, rugMap);
+  if (typeof document === 'undefined') return;
+  rugWaiting.push(mat);
+  if (rugWaiting.length > 1) return;
+  loadPaintedTexture(new URL('../../assets/textures/wedding/rug.webp', import.meta.url).href, 4, (t) => {
+    rugMap = t;
+    for (const m of rugWaiting.splice(0)) apply(m, t);
+  }, false);
+}
+
 function buildRug(materials: Materials, castShadow: boolean): Rug {
   const { w, l, nx, nz } = RUG;
   const g = new PlaneGeometry(w, l, nx * 2, nz).rotateX(-Math.PI / 2);
@@ -1939,6 +1973,7 @@ function buildRug(materials: Materials, castShadow: boolean): Rug {
   }
   g.setAttribute('color', new Float32BufferAttribute(col, 3));
   const clothMat = materials.surface({ color: 0xffffff, roughness: 0.9, vertexColors: true, doubleSided: true });
+  paintRug(clothMat);
   const cloth = new Mesh(g, clothMat);
   cloth.castShadow = castShadow;
   const model = new Group();

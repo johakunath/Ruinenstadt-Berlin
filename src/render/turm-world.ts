@@ -24,6 +24,7 @@ import type { LitMaterial, Materials } from './materials';
 import type { ChunkBuilder, MapMats } from './map-world';
 import { buildCityView } from './turm-city';
 import { paintBand, paintDeckFloor, paintDial, paintEnamel } from './turm-paint';
+import { loadPaintedTexture } from './surface-textures';
 
 type RGB = readonly [number, number, number];
 type Box = (mat: Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, color?: RGB, ry?: number) => void;
@@ -47,17 +48,49 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
   const flat = materials.look.flatten;
   const floors = {} as Record<DeckDef['id'], LitMaterial>;
   for (const d of decks) floors[d.id] = materials.surface({ map: paintDeckFloor(d, flat), roughness: d.id === 'schacht' ? 0.85 : 0.32, metalness: d.id === 'schacht' ? 0.4 : 0.05 });
+  // T11 (3): painted deck floors (local FLUX.2 klein from the canvas layouts); the Schacht grating keeps its canvas.
+  const FLOOR_URL: Partial<Record<DeckDef['id'], string>> = {
+    foyer: new URL('../../assets/textures/turm/floor-foyer.webp', import.meta.url).href,
+    panorama: new URL('../../assets/textures/turm/floor-panorama.webp', import.meta.url).href,
+    telecafe: new URL('../../assets/textures/turm/floor-telecafe.webp', import.meta.url).href,
+    uhrenraum: new URL('../../assets/textures/turm/floor-uhrenraum.webp', import.meta.url).href,
+  };
+  for (const d of decks) {
+    const url = FLOOR_URL[d.id], mat = floors[d.id];
+    if (url) loadPaintedTexture(url, materials.profile.anisotropy, (t) => { mat.map?.dispose(); mat.map = t; mat.needsUpdate = true; }, false);
+  }
   const core = paintEnamel('#c4521e', flat);
   core.repeat.set(8, 1);
+  const coreMat = materials.surface({ map: core, roughness: 0.48 });
+  // T11 (2): painted enamel core (local FLUX.2 klein); the canvas stays the fallback, same material and repeat.
+  loadPaintedTexture(new URL('../../assets/textures/turm/enamel.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
+    t.repeat.set(8, 1);
+    coreMat.map?.dispose();
+    coreMat.map = t;
+    coreMat.needsUpdate = true;
+  });
+  // T11 (2) Telecafé cloth: the Wedding cloth map (T14, neutral off-white) under the vertex tints (white cloths, cobalt and mustard booths).
+  const clothMat = materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true });
+  loadPaintedTexture(new URL('../../assets/textures/wedding/cloth.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
+    clothMat.map = t;
+    clothMat.needsUpdate = true;
+  });
+  const dialMat = materials.surface({ map: paintDial(), roughness: 0.5 });
+  // T11 (2): painted clock face (local FLUX.2 klein from the canvas dial; same hands, aged enamel).
+  loadPaintedTexture(new URL('../../assets/textures/turm/dial.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
+    dialMat.map?.dispose();
+    dialMat.map = t;
+    dialMat.needsUpdate = true;
+  }, false);
   return {
     floors,
     steel: materials.surface({ color: 0xffffff, roughness: 0.42, metalness: 0.55, vertexColors: true }),
     brass: materials.surface({ color: 0xc8963c, roughness: 0.32, metalness: 0.85, emissive: 0x3a2408, emissiveIntensity: 0.7 }),
     enamel: materials.surface({ color: 0xffffff, roughness: 0.45, vertexColors: true }),
-    core: materials.surface({ map: core, roughness: 0.48 }),
-    cloth: materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true }),
+    core: coreMat,
+    cloth: clothMat,
     lamp: materials.surface({ color: 0xfff0d0, roughness: 0.4, emissive: 0xffc070, emissiveIntensity: 2.4 }),
-    dial: materials.surface({ map: paintDial(), roughness: 0.5 }),
+    dial: dialMat,
     band: materials.surface({ map: paintBand(flat), roughness: 0.4 }),
     ribs: materials.surface({ color: 0x4a5866, roughness: 0.5, metalness: 0.6 }),
   };

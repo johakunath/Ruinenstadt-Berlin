@@ -531,7 +531,7 @@ interface Recording { walls: WallRec[]; holes: HoleRec[]; stop(): void }
 const BRICK_RED: RGB = [1.05, 0.56, 0.42];
 
 /**
- * Records the stucco and brick boxes (walls) and the window and door rectangles a builder draws, by wrapping
+ * Records the stucco, stone, tuff, Schloss plaster and brick boxes (walls) and the window and door rectangles a builder draws, by wrapping
  * `b.box` and `b.wearWindow` on this builder instance only while one Charlottenburg sight is built (opt-in:
  * other maps never call it).
  */
@@ -540,7 +540,7 @@ function recordWalls(b: ChunkBuilder): Recording {
   const box = b.box, wearWindow = b.wearWindow;
   const own = b as { box: ChunkBuilder['box']; wearWindow: ChunkBuilder['wearWindow'] };
   own.box = (mat, t, sx, sy, sz, color, ...rest) => {
-    if (mat === M.stucco || mat === M.brick) walls.push({ t: t.clone(), inv: t.clone().invert(), sx, sy, sz, tint: color ?? [1, 1, 1], mat });
+    if (mat === M.stucco || mat === M.brick || mat === M.stone || mat === M.tuff || mat === M.schlossWall) walls.push({ t: t.clone(), inv: t.clone().invert(), sx, sy, sz, tint: color ?? [1, 1, 1], mat });
     else if ((mat === M.dark || mat === M.door || mat === M.shop || mat === M.glass) && sz < 0.2) holes.push({ t: t.clone(), w: sx, h: sy });
     box.call(b, mat, t, sx, sy, sz, color, ...rest);
   };

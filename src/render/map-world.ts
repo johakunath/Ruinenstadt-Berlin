@@ -76,6 +76,13 @@ interface LightSpot {
 }
 
 export interface MapMats extends Mats, LotGroundMats {
+  /**
+   * Charlottenburg stone (T9b sandstone and limestone, T9c tuff) and the Schloss plaster (T9d): own painted
+   * maps on Charlottenburg, one draw call each in the chunks that use them; elsewhere the stucco itself.
+   */
+  stone: LitMaterial;
+  tuff: LitMaterial;
+  schlossWall: LitMaterial;
   railSteel: LitMaterial;
   ground: LitMaterial;
   /** Ground scatter atlas (puddles, leaves, trash, rubble). */
@@ -297,6 +304,9 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
   const m: MapMats = {
     ...base,
     ...makeLotGroundMats(materials, dirt, district !== 'tunnel'),
+    stone: base.stucco,
+    tuff: base.stucco,
+    schlossWall: base.stucco,
     railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
@@ -343,6 +353,18 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
   const charl = district === 'charlottenburg';
   swapPaintedMap([m.roof], charl ? new URL('../../assets/textures/charlottenburg/roof-tiles.webp', import.meta.url).href : new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href, o.anisotropy);
   if (charl) swapPaintedMap([m.slate], new URL('../../assets/textures/charlottenburg/slate.webp', import.meta.url).href, o.anisotropy);
+  if (charl) {
+    const own = (url: string): LitMaterial => {
+      const mat = materials.surface({ map: base.stucco.map!.clone(), roughness: 0.85, vertexColors: true });
+      swapPaintedMap([mat], url, o.anisotropy);
+      return mat;
+    };
+    m.stone = own(new URL('../../assets/textures/charlottenburg/stone.webp', import.meta.url).href);
+    m.tuff = own(new URL('../../assets/textures/charlottenburg/tuff.webp', import.meta.url).href);
+    m.schlossWall = own(new URL('../../assets/textures/charlottenburg/schloss.webp', import.meta.url).href);
+    // T9j: on Charlottenburg `mossy` is only greenery (maze and garden hedges, lawn strips, firs): clipped box leaves.
+    swapPaintedMap([m.mossy], new URL('../../assets/textures/charlottenburg/hedge.webp', import.meta.url).href, o.anisotropy);
+  }
   return m;
 }
 
@@ -2324,6 +2346,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   wet = sky.wet;
   const district = m.tunnel ? 'tunnel' : (m.id === 'alex' || m.id === 'mitte' || m.id === 'charlottenburg' || m.id === 'xhain' ? m.id : undefined);
   const mats = makeMapMats(materials, district);
+  // T14 first step (local FLUX.2 klein): Wedding's cloth (awnings, curtains, carpets, table linen, all tinted in code) gets
+  // a worn woven map with creases and stains; same material, 0 draw calls. The ruby/emerald atlas stays open.
+  if (m.id === 'wedding') swapPaintedMap([mats.linen], new URL('../../assets/textures/wedding/cloth.webp', import.meta.url).href, materials.profile.anisotropy);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
   let railMats: MapMats | undefined;

@@ -64,7 +64,7 @@ const parts = [b, ...(q.get('up') === '0' ? [] : [up])];
 for (const m of parts.flatMap((p) => [...p.solid.meshes(), ...p.cards.meshes(), ...p.glows.meshes()])) scene.add(m);
 if (mm.glbProps.length) { const g = new Group(); buildGlbProps(materials, mm.glbProps, g, mm.stucco.map); scene.add(g); }
 // Let the async ground/paint textures arrive.
-await new Promise((r) => setTimeout(r, 1500));
+await new Promise((r) => setTimeout(r, Number(q.get('wait') ?? 1500)));
 const size = Math.max(l.hx, l.hz, 6);
 const tall = ({ rathaus: 42, kirche: 36, mueggelturm: 33, riesenrad: 38, sbahnhof: 10, schloss: 18, forum: 10, dino: 5, spati: 4,
   weltzeituhr: 11, dom: 32, rotesrathaus: 42, fernsehturm: 30, marienkirche: 32, neptunbrunnen: 6, nikolaikirche: 28, brunnen: 7, hotelstadtberlin: 50,
