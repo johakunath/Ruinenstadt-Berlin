@@ -183,11 +183,13 @@ if (base === 'human1' || base === 'human2') {
   if (base === 'human2') assets.zombieClips = new Map([...assets.zombieClips.keys()].map((k) => [k, assets.heroClips.get(k)!]));
 }
 const scene = new Scene();
-scene.background = new Color(0x26343a);
+// `bg=000000`: plain background without the grid (pictures for image-to-3D, H4).
+scene.background = new Color(q.get('bg') ? parseInt(q.get('bg')!, 16) : 0x26343a);
 scene.add(new HemisphereLight(0xdfeeff, 0x3a3020, 2.2));
 const sun = new DirectionalLight(0xfff0d8, 2.5);
 sun.position.set(2, 5, 3);
-scene.add(sun, new GridHelper(16, 16, 0x5a6a70, 0x3a4a50));
+scene.add(sun);
+if (!q.get('bg')) scene.add(new GridHelper(16, 16, 0x5a6a70, 0x3a4a50));
 const sim = createSim({ empty: true });
 const cam = new PerspectiveCamera(32, W / H, 0.1, 80);
 const view = q.get('view') ?? 'side';

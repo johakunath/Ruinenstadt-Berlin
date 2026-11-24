@@ -2122,6 +2122,8 @@ export class EnemyView {
   private readonly bones = new Map<string, Object3D>();
   /** H3: this body stands upright (humanoid bosses): the zombie clips' hunch is taken out of the spine. */
   private upright = false;
+  /** H4: this view shows a boss's own skinned body (`CharacterAssets.bosses`): no code gear, no bone proportions. */
+  private ownBody = false;
   /** H3: per spine bone, the turn from the zombie idle pose to the upright idle pose (local space). */
   private straight: Array<{ bone: Object3D; fix: Quaternion; arm: boolean; pre: Quaternion; post: Quaternion; set: boolean }> | null = null;
   /** H3: how much of the arm fix applies (eases with the clip fade between walking and striking). */
@@ -2180,7 +2182,9 @@ export class EnemyView {
     const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
     this.skin = skin;
-    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
+    const ownSrc = body === 'feldwebel' ? assets.bosses?.feldwebel : undefined;
+    this.ownBody = !!ownSrc;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' || body === 'feldwebel' ? ownSrc ?? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
     // (crow, rat and the code-built bodies returned above)
     const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? (body === 'female' && assets.female ? assets.female.clips : assets.zombieClips) : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
@@ -2472,9 +2476,11 @@ export class EnemyView {
     if (this.skin === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
-      for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) this.bones.get(n)?.scale.setScalar(v);
+      // H4: an own body keeps the broader chest but not the smaller head (its helmet is part of the mesh).
+      for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) if (!this.ownBody || n !== 'Head') this.bones.get(n)?.scale.setScalar(v);
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
-      let gear = this.gear.get(key);
+      // H4: an own body carries its uniform and helmet; only the weapon rack (below) stays.
+      let gear = this.ownBody ? [] : this.gear.get(key);
       if (!gear) {
         gear = this.inIdle(() => gearFor(key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
         this.gear.set(key, gear);
