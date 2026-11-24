@@ -312,6 +312,8 @@ function xhainMats(materials: Materials): XMats {
   swapPaintedMap([X.steel], new URL('../../assets/textures/xhain/steel.webp', import.meta.url).href, o.anisotropy);
   swapPaintedMap([X.yellow], new URL('../../assets/textures/xhain/yellow-brick.webp', import.meta.url).href, o.anisotropy);
   swapPaintedMap([X.sand], new URL('../../assets/textures/xhain/sand.webp', import.meta.url).href, o.anisotropy);
+  // One track per tile across (rails at the same u as `paintTrackBed`), five sleepers along.
+  swapPaintedMap([X.trackBed], new URL('../../assets/textures/xhain/track-bed.webp', import.meta.url).href, o.anisotropy);
   return X;
 }
 
