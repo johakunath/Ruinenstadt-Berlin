@@ -362,6 +362,8 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
     m.stone = own(new URL('../../assets/textures/charlottenburg/stone.webp', import.meta.url).href);
     m.tuff = own(new URL('../../assets/textures/charlottenburg/tuff.webp', import.meta.url).href);
     m.schlossWall = own(new URL('../../assets/textures/charlottenburg/schloss.webp', import.meta.url).href);
+    // T9j: on Charlottenburg `mossy` is only greenery (maze and garden hedges, lawn strips, firs): clipped box leaves.
+    swapPaintedMap([m.mossy], new URL('../../assets/textures/charlottenburg/hedge.webp', import.meta.url).href, o.anisotropy);
   }
   return m;
 }
