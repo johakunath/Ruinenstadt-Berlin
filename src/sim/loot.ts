@@ -4,7 +4,7 @@ import { ECONOMY } from '../data/progression';
 import { INGREDIENTS, type IngredientId, type MaterialId } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
 import { ENEMIES, type EnemyKind } from '../data/enemies';
-import { RARITIES } from '../data/items';
+import { RARITIES, WEAPON_KINDS, type WeaponKindId } from '../data/items';
 import { colliderDistance } from './collide';
 import { collectItem, BAG_SIZE } from './inventory';
 import { isUpgrade, lootItem, makeItem, makeTelespargel, type Item } from './items';
@@ -166,6 +166,21 @@ export const TELESPARGEL_AGAIN = 1 / 3;
 /** District bosses: three items and a legendary (2D `big`). */
 const DISTRICT_BOSS: Partial<Record<EnemyKind, true>> = { hauptmann: true, spreehexe: true, bassprediger: true, weltzeituhr: true, diva: true, sultan: true, zeitwart: true };
 
+/**
+ * P45 (bot campaigns 2026-11-23): a legendary weapon is worth 2.6 times its level, a rare 1.8 times, so an early
+ * legendary outvalues every rare for two or three districts and the hero's power stalls (Sultan fights of 8 to 24 min).
+ * The district boss's guaranteed legendary then becomes a weapon of the worn class. Not on the Fernsehturm, where the
+ * forced slot would skip the tower's own legendaries (`TOWER_SHARE`). Set pieces carry no district step in their
+ * item level (`makeSetItem`), so a worn set weapon is compared with this district's step added.
+ */
+export const WEAPON_PITY_LAG = 5;
+export function pityWeapon(sim: Sim, dropLevel: number): WeaponKindId | undefined {
+  const w = sim.equipment.w, ctx = sim.lootCtx;
+  if (!w || ctx.turm || !(w.kind in WEAPON_KINDS)) return undefined;
+  const worn = w.itemLevel + (w.set ? 3 * ctx.district : 0);
+  return worn > dropLevel - WEAPON_PITY_LAG ? undefined : w.kind as WeaponKindId;
+}
+
 /** 2D `kill()`: bosses drop first, then one of material, item or heal. Scrap is credited at once. */
 export function killDrops(sim: Sim, e: Enemy): void {
   const kind = e.kind;
@@ -187,7 +202,11 @@ export function killDrops(sim: Sim, e: Enemy): void {
       spawnDrop(sim, e.x, e.z, { kind: 'item', item: lootItem(sim.rng, c, il + 2, big ? 2 : 1, 0.12) }, spread(sim, 1.3), spread(sim, 1.3));
     }
     // Guaranteed until M6 can remember the first kill per district (then 30 % afterwards).
-    if (big) spawnDrop(sim, e.x, e.z, { kind: 'item', item: makeItem(sim.rng, c, il + 3, 3) }, 0, -0.8);
+    // P45: a weapon of the worn class when the worn weapon lags this drop by `WEAPON_PITY_LAG` levels.
+    if (big) {
+      const pity = pityWeapon(sim, il + 3 + 3 * c.district);
+      spawnDrop(sim, e.x, e.z, { kind: 'item', item: makeItem(sim.rng, c, il + 3, 3, pity && 'w', pity) }, 0, -0.8);
+    }
   }
   if (boss) spawnDrop(sim, e.x, e.z, { kind: 'heal' }, 0, 0.7);
   // M17: Der Zeitwart drops the Telespargel for certain until it was found once, then a third of the time.

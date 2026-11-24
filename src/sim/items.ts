@@ -66,7 +66,11 @@ function wearNames(rng: Rng, ctx: LootContext, all: readonly string[]): readonly
 /** M17: share of legendaries on the Fernsehturm that are Fernsehturm-Splitter or Auge des Fernsehturms. */
 export const TOWER_SHARE = 1 / 3;
 
-export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarity = 0, forcedSlot?: SlotId): Item {
+/**
+ * `forcedWeapon` (P45): with `forcedSlot` 'w', the weapon class. It skips the class draw and the `fest` lamp draw; the
+ * forced slot itself already skips the tower, neon implant and slot draws. The rarity and value draws keep their order.
+ */
+export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarity = 0, forcedSlot?: SlotId, forcedWeapon?: WeaponKindId): Item {
   itemLevel += 3 * ctx.district;
   const cy = ctx.flavor === 'neon', gd = ctx.flavor === 'gdr';
   const rarity = rollRarity(rng, ctx, minRarity), roll = rng.next();
@@ -80,8 +84,8 @@ export function makeItem(rng: Rng, ctx: LootContext, itemLevel: number, minRarit
   let kind: ItemKindId, name: string, value: number;
   if (slot === 'w') {
     // M18: on `fest` maps 40 % of legendary weapons are Die Letzte Bestellung (draws only there).
-    const lamp = rarity === 3 && ctx.flavor === 'fest' && rng.next() < .4;
-    const weapon = tower ? 'blade' : lamp ? 'hammer' : rng.pick<WeaponKindId>(['blade', 'blade', 'hammer', 'sling', 'spear']);
+    const lamp = !forcedWeapon && rarity === 3 && ctx.flavor === 'fest' && rng.next() < .4;
+    const weapon = tower ? 'blade' : lamp ? 'hammer' : forcedWeapon ?? rng.pick<WeaponKindId>(['blade', 'blade', 'hammer', 'sling', 'spear']);
     kind = weapon;
     name = tower ? 'Fernsehturm-Splitter' : lamp ? N.FEST_LEGENDARY_WEAPON : rng.pick(rarity === 3 ? N.LEGENDARY_WEAPON_NAMES[weapon]
       : cy && rng.next() < .45 ? N.NEON_WEAPON_NAMES[weapon]
