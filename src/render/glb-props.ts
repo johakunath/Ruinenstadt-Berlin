@@ -12,6 +12,10 @@ import type { Materials } from './materials';
 const PROPS = {
   /** Weathered sandstone garden urn on its pedestal, 1.6 m high, origin at the bottom centre (Schlossgarten). */
   urn: { url: new URL('../../assets/props/urn.glb', import.meta.url).href, tint: [0.72, 0.62, 0.48] },
+  /** P17 Spreepark statues, posed as they fell (fibreglass, faded paint), origin at the bottom centre. */
+  sauropod: { url: new URL('../../assets/props/dino-sauropod.glb', import.meta.url).href, tint: [0.85, 0.85, 0.85] },
+  triceratops: { url: new URL('../../assets/props/dino-triceratops.glb', import.meta.url).href, tint: [0.85, 0.85, 0.85] },
+  rex: { url: new URL('../../assets/props/dino-rex.glb', import.meta.url).href, tint: [0.85, 0.85, 0.85] },
 } as const;
 
 export type GlbPropKind = keyof typeof PROPS;

@@ -28,6 +28,7 @@ SHEET_NODES = {364, 338, 341, 342, 345, 348, 349, 350, 351, 352, 353, 192, 193, 
 SKIP_TYPES = {"Note", "MarkdownNote"}  # previews stay: here they pass images on
 CONDITIONING_NODE = 324
 UPSAMPLE_NODE = 94
+SINGLE_LOAD_NODE = 122  # LoadImage of 3d_pixal3d_trellis2_image_to_model.json
 
 
 def http(server, path, data=None):
@@ -73,7 +74,7 @@ def is_widget(spec):
     kind = spec[0]
     if isinstance(kind, list):
         return True  # combo
-    return kind in ("INT", "FLOAT", "STRING", "BOOLEAN", "COMBO", "LOAD_3D")
+    return kind in ("INT", "FLOAT", "STRING", "BOOLEAN", "COMBO", "LOAD_3D", "COLOR")
 
 
 def to_api(workflow, object_info):
@@ -125,7 +126,8 @@ def to_api(workflow, object_info):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--views", required=True)
+    ap.add_argument("--views", default="", help="folder with <name>_front/left/back/right.png (four-view template)")
+    ap.add_argument("--image", default="", help="one picture on black: the single-image template (needs pixal3d_int8_convrot, trellis_2_int8_convrot, MoGe)")
     ap.add_argument("--name", required=True)
     ap.add_argument("--server", default="http://127.0.0.1:8188")
     ap.add_argument("--comfy", default=os.path.join(os.path.expanduser("~"), "AI projects Local", "ComfyUI"))
@@ -134,10 +136,15 @@ def main():
     args = ap.parse_args()
 
     template = os.path.join(args.comfy, ".venv", "Lib", "site-packages", "comfyui_workflow_templates_json",
-                            "templates", "3d_pixal3d_multi_views.json")
+                            "templates", "3d_pixal3d_trellis2_image_to_model.json" if args.image else "3d_pixal3d_multi_views.json")
     with open(template, encoding="utf-8") as f:
         wf = json.load(f)
     object_info = http(args.server, "/object_info")
+    if args.image:
+        # Single image: point the template's LoadImage at the picture; it cuts the object out itself (BiRefNet).
+        load = next(n for n in wf["nodes"] if n["id"] == SINGLE_LOAD_NODE)
+        load["widgets_values"][0] = upload(args.server, args.image)
+        return queue(args, wf, object_info, os.path.dirname(os.path.abspath(args.image)))
 
     # Drop the sheet-cutting nodes and wire four LoadImage nodes straight into the conditioning.
     wf["nodes"] = [n for n in wf["nodes"] if n["id"] not in SHEET_NODES]
@@ -152,12 +159,16 @@ def main():
         cond["inputs"][slot]["link"] = next_link
         wf["links"].append([next_link, nid, 0, CONDITIONING_NODE, slot, "IMAGE"])
         next_link += 1
+    return queue(args, wf, object_info, args.views)
+
+
+def queue(args, wf, object_info, folder):
     if args.resolution:
         up = next(n for n in wf["nodes"] if n["id"] == UPSAMPLE_NODE)
         up["widgets_values"][0] = args.resolution
 
     prompt = to_api(wf, object_info)
-    with open(os.path.join(args.views, "%s_prompt.json" % args.name), "w", encoding="utf-8") as f:
+    with open(os.path.join(folder, "%s_prompt.json" % args.name), "w", encoding="utf-8") as f:
         json.dump(prompt, f, indent=1)
     started = time.time()
     res = http(args.server, "/prompt", {"prompt": prompt, "client_id": "local-game-assets"})

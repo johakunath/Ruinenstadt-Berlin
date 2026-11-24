@@ -418,11 +418,11 @@ describe('M11d closed map edge (step 4)', () => {
 describe('M11d dinosaurs (Codex review)', () => {
   it('block at their necks, heads and tails, not only at the body', () => {
     const m = koepenickMap(1);
-    // Points on the drawn figures (local frame, src/render/landmarks.ts): head, neck middle, tail middle, body.
+    // Points on the statues' footprints (local frame, src/render/landmarks.ts DINO_GLB): legs, body, head, feet.
     const probes = [
-      [[3.1, 8.1], [1.2, 5], [-1.8, -5.4], [0, 0]],
-      [[0.5, 4.6], [2.3, 1.4], [-0.6, -3.8], [0, 0]],
-      [[-2.2, 3], [2.2, 0.6], [0.8, -4], [0, -1.6]],
+      [[-0.7, 0.25], [-2, -1.5], [0.5, 1.5]],
+      [[-0.4, 3.7], [3, 1.5], [1.8, -1.2], [0, 0.5]],
+      [[-1.7, 2.9], [-0.6, 0.4], [4.1, -0.3]],
     ];
     for (const l of m.landmarks.filter((k) => k.kind === 'dino')) {
       const cs = landmarkColliders(l), c = Math.cos(l.rot), sn = Math.sin(l.rot);

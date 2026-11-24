@@ -3,6 +3,7 @@
 // The game camera (18.5 m, 44°) shows about 6 m of height at the hero, so each building carries its
 // recognizable cues low (portal, statue, arches, lettering, roof shapes seen from above); towers and
 // the wheel keep real proportions for zoomed-out views and the minimap.
+import type { GlbPropKind } from './glb-props';
 import { BufferAttribute, BufferGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, Euler, Matrix4, PlaneGeometry, Quaternion, SphereGeometry, TorusGeometry, Vector3, type Material } from 'three';
 import type { Landmark, Pt } from '../data/map';
 import { rectPoly } from '../data/cut';
@@ -674,8 +675,23 @@ function chain(b: ChunkBuilder, mat: Material, F: Frame, pts: Array<[number, num
  * The fallen Spreepark figures (fibreglass from Mirapolis): a sauropod on its back with its legs in
  * the air, a triceratops tipped on its side, a T-Rex broken apart (the one that stayed in the park).
  */
+/**
+ * P17 (local FLUX.2 klein + Pixal3D, `docs/local-ai-assets.md`): sculpted statues in the same fallen poses and
+ * footprints as the code figures below (`DINO_PARTS` stays the collision), placed at the centre of the code figure.
+ */
+const DINO_GLB: Partial<Record<number, { kind: GlbPropKind; x: number; z: number }>> = {
+  0: { kind: 'sauropod', x: 0, z: 0.25 },
+  1: { kind: 'triceratops', x: 0.6, z: 0 },
+  2: { kind: 'rex', x: 0.6, z: -0.6 },
+};
+
 function dino(b: ChunkBuilder, l: Landmark): void {
   const M = b.mm;
+  const glb = DINO_GLB[l.variant ?? 0];
+  if (glb && M.glbProps) {
+    M.glbProps.push({ kind: glb.kind, m: frameOf(l)(glb.x, b.solid.lift, glb.z) });
+    return;
+  }
   const fiberglass = M.landmarkFinishes?.fiberglass ?? M.mossy;
   const F = frameOf(l);
   const ell = (rx: number, ry: number, rz: number, x: number, y: number, z: number, color: RGB, rot = 0): void => {

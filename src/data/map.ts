@@ -712,12 +712,13 @@ export function landmarkCollider(l: Landmark): Collider {
  * `src/render/landmarks.ts` (x along the front, z out of it): center, half extents, turn.
  */
 export const DINO_PARTS: ReadonlyArray<ReadonlyArray<{ x: number; z: number; hx: number; hz: number; rot: number }>> = [
-  // Sauropod on its back: neck and head toward +z, tail toward -z.
-  [{ x: 1.3, z: 5.15, hx: 0.75, hz: 2.7, rot: 0.5 }, { x: 3.1, z: 8.1, hx: 0.6, hz: 0.9, rot: 0.4 }, { x: -1.7, z: -5.3, hx: 0.65, hz: 2.9, rot: Math.atan2(-3.4, -4.6) }],
-  // Triceratops on its side: head with frill and horns, legs sideways, short tail.
-  [{ x: 0.5, z: 4.6, hx: 1.6, hz: 1.4, rot: 0 }, { x: 1.7, z: 0, hx: 0.8, hz: 1.9, rot: 0 }, { x: -0.6, z: -3.9, hx: 0.5, hz: 1.2, rot: Math.atan2(-1.2, -2.4) }],
-  // Broken T-Rex: toppled body, tail, the torn-off head.
-  [{ x: 2.2, z: 0.6, hx: 1.3, hz: 2.6, rot: 0 }, { x: 0.9, z: -4, hx: 0.6, hz: 2.1, rot: Math.atan2(-1.4, -4.2) }, { x: -2.2, z: 3, hx: 0.7, hz: 1.1, rot: 0.7 }],
+  // P17 statues (local Pixal3D models, `src/render/landmarks.ts` DINO_GLB), fitted to their footprint below 2.5 m.
+  // Standing sauropod (head toward +z): legs and belly only; neck and tail are overhead.
+  [{ x: -0.7, z: 0.25, hx: 2.2, hz: 2.6, rot: 0 }],
+  // Triceratops on its side, legs toward +x: frill and head, chest with the front legs, hips with the hind legs.
+  [{ x: -0.4, z: 3.7, hx: 1.8, hz: 1.2, rot: 0 }, { x: 0.6, z: 1.5, hx: 4.0, hz: 1.2, rot: 0 }, { x: 1.8, z: -1.2, hx: 2.6, hz: 1.3, rot: 0 }],
+  // T-Rex on its side, legs toward +x, the tail raised overhead: head, body, feet.
+  [{ x: -1.7, z: 2.9, hx: 1.8, hz: 1.3, rot: 0 }, { x: -0.6, z: 0.4, hx: 1.8, hz: 1.7, rot: 0 }, { x: 4.1, z: -0.3, hx: 0.5, hz: 0.9, rot: 0 }],
 ];
 
 /**
