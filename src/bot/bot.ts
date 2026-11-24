@@ -15,7 +15,7 @@ import type { DifficultyId } from '../data/difficulty';
 import { chooseBlessing } from '../sim/blessings';
 import { colliderDistance, type Collider } from '../sim/collide';
 import { ferryPos } from '../sim/ferry';
-import { BAG_SIZE, equipItem, salvageItem } from '../sim/inventory';
+import { BAG_SIZE, collectItem, equipItem, salvageItem } from '../sim/inventory';
 import type { Item } from '../sim/items';
 import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
@@ -1074,6 +1074,13 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   }
   kills += sim.kills;
   const at = Math.min(sim.run.index, level.encounters.length - 1);
+  // P45: the hero may stay after the last boss (2D and 3D), and a player picks up its loot, the guaranteed legendary
+  // first. The bot used to leave at the victory, so every final boss's items were lost and its power stalled.
+  if (won) {
+    const loot = sim.drops.flatMap((d) => (d.content.kind === 'item' ? [d.content.item] : [])).sort((a, b) => b.rarity - a.rarity);
+    for (const item of loot) if (collectItem(sim, item)) sim.drops = sim.drops.filter((d) => !(d.content.kind === 'item' && d.content.item.id === item.id));
+    equipBest(sim, true);
+  }
   endExpedition(sim, won, o.district ?? 0);
   const left = sim.inventory.scrap;
   const economy = { ...ledger, start: scrap0, earned: left - scrap0 + ledger.items + ledger.upgrades + ledger.camp, left, itemLevel: wornLevel(sim), weaponLevel: sim.equipment.w?.itemLevel ?? 0 };
