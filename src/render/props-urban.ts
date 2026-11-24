@@ -135,8 +135,8 @@ function carGeo(kind: keyof typeof CAR_TYPES): { lower: BufferGeometry; cabin: B
 }
 
 const TRABI_SHARE = 0.35;
-/** The Trabi shell's sill height (the GLB is cut there; Pixal3D's wheels fell apart) and its axles (z). */
-const TRABI = { lift: 0.33, x: 0.7, front: 1.17, rear: -1.04, r: 0.27 } as const;
+/** Height of the shell's cut sills above the ground (the GLB is cut there, Pixal3D's wheels fell apart; 0.15 tucks the code wheels into the arches, Johannes 2026-11-24) and its axles (z). */
+const TRABI = { lift: 0.15, x: 0.7, front: 1.17, rear: -1.04, r: 0.27 } as const;
 
 /** P3: the local Pixal3D shell (`glb-props.ts` kind `trabi`, one draw call for all of a map) on code wheels. */
 function buildTrabi(b: Builder, p: Prop, rng: Rng, glb: NonNullable<Builder['mats']['glbProps']>): void {
