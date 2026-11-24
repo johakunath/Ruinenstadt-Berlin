@@ -320,6 +320,12 @@ function gearKit(m: Materials): GearKit {
       t.repeat.set(3, 3);
       for (const mat of furMats) { mat.map = t; mat.needsUpdate = true; }
     });
+    // T8: worn wool for the uniform and turnout coats (the kit colour gives Prussian blue, navy, grey-blue, soot).
+    const coatMats = [kit.garde, kit.officer, kit.navy, kit.zwcoat, kit.turnout];
+    loadPaintedTexture(new URL('../../assets/textures/enemies/wool.webp', import.meta.url).href, 4, (t) => {
+      t.repeat.set(2, 2);
+      for (const mat of coatMats) { mat.map = t; mat.needsUpdate = true; }
+    });
   }
   return kit;
 }
@@ -332,8 +338,8 @@ const tf = (g: BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, 
 };
 
 /** Merges parts per material into a few meshes. */
-/** Kit materials with a painted map (T8 fur): never baked into the shared vertex-coloured mesh, or the map is lost. */
-const TEXTURED: ReadonlySet<keyof GearKit | 'pulse'> = new Set<keyof GearKit>(['fur', 'furDark']);
+/** Kit materials with a painted map (T8 fur and coat wool): never baked into the shared vertex-coloured mesh, or the map is lost. */
+const TEXTURED: ReadonlySet<keyof GearKit | 'pulse'> = new Set<keyof GearKit>(['fur', 'furDark', 'garde', 'officer', 'navy', 'zwcoat', 'turnout']);
 
 function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMaterial, paint = false): Group {
   const by = new Map<keyof GearKit | 'pulse', BufferGeometry[]>();
