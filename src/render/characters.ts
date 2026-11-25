@@ -2,12 +2,13 @@
 // sim state into poses. One-shot clips (attack, dodge, hit, death) are driven by sim time, so
 // the pose always matches the hitbox and freezes with hitstop; loops run on their own clock.
 import { groundY } from './ground';
-import type { HeroLook } from '../data/hero-look';
+import { DETAILS, type DetailId, type HeroLook } from '../data/hero-look';
+import { DETAIL_PIECES, ensureDetail } from './hero-wear';
 import { HeroModel } from './hero-model';
 import { HERO_LAYER } from './layers';
 import {
-  AnimationClip, AnimationMixer, Group, LoopRepeat, Mesh, SRGBColorSpace, TextureLoader,
-  Vector3, type AnimationAction, type BufferGeometry, type Object3D,
+  AnimationClip, AnimationMixer, Color, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, LoopRepeat, Mesh, RGBAFormat, RepeatWrapping, SRGBColorSpace, TextureLoader,
+  Vector3, type AnimationAction, type BufferGeometry, type Object3D, type Texture,
 } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import animsUrl from '../../assets/characters/anims.glb?url';
@@ -115,6 +116,63 @@ async function loadClothing(anisotropy: number) {
   }));
 }
 
+/**
+ * KA part B: the packed detail texture, one tiling grey material per channel (R denim, G chainmail, B patchwork),
+ * 256 px, sRGB, repeating. Until step B2 delivers `detail.webp` every channel is flat at its `DETAILS` tone.
+ */
+function detailTexture(anisotropy: number): DataTexture {
+  const S = 256, data = new Uint8Array(S * S * 4), ids = Object.keys(DETAILS) as DetailId[];
+  const tone = [0, 1, 2].map((c) => DETAILS[ids.find((d) => DETAILS[d].channel === c)!].tone);
+  for (let i = 0; i < S * S; i++) data.set([tone[0]!, tone[1]!, tone[2]!, 255], i * 4);
+  const t = new DataTexture(data, S, S, RGBAFormat);
+  t.colorSpace = SRGBColorSpace;
+  t.wrapS = t.wrapT = RepeatWrapping;
+  t.magFilter = LinearFilter;
+  t.minFilter = LinearMipmapLinearFilter;
+  t.generateMipmaps = true;
+  t.anisotropy = anisotropy;
+  t.needsUpdate = true;
+  return t;
+}
+
+/**
+ * Patches a clothing material with the second, tiling detail sampler: where a vertex's `detailW` (one channel per
+ * detail) is set, the detail replaces the coat swatch; the vertex colours (palette, bands, spots, occlusion) still
+ * multiply it. `gain` = linear coat swatch tone ÷ linear detail tone per channel, so a role keeps its brightness.
+ */
+function withDetail(mat: LitMaterial, detail: Texture, gain: Vector3): void {
+  mat.onBeforeCompile = (sh): void => {
+    sh.uniforms.detailMap = { value: detail };
+    sh.uniforms.detailGain = { value: gain };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <uv_pars_vertex>', `#include <uv_pars_vertex>
+attribute vec4 detailW;
+attribute vec2 detailUv;
+varying vec3 vDetailW;
+varying vec2 vDetailUv;`)
+      .replace('#include <uv_vertex>', `#include <uv_vertex>
+vDetailW = detailW.rgb;
+vDetailUv = detailUv;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <map_pars_fragment>', `#include <map_pars_fragment>
+uniform sampler2D detailMap;
+uniform vec3 detailGain;
+varying vec3 vDetailW;
+varying vec2 vDetailUv;`)
+      .replace('#include <map_fragment>', [
+        '#ifdef USE_MAP',
+        '  vec4 sampledDiffuseColor = texture2D( map, vMapUv );',
+        '  float detailK = min( 1.0, vDetailW.r + vDetailW.g + vDetailW.b );',
+        '  vec3 detailTex = texture2D( detailMap, vDetailUv ).rgb;',
+        '  sampledDiffuseColor.rgb = sampledDiffuseColor.rgb * ( 1.0 - detailK ) + vec3( dot( detailTex, vDetailW * detailGain ) );',
+        '  diffuseColor *= sampledDiffuseColor;',
+        '#endif',
+      ].join('\n'));
+  };
+  mat.customProgramCacheKey = (): string => 'hero-detail';
+  mat.needsUpdate = true;
+}
+
 /** Fits a clip to a body: scales the hip track to its leg length, optionally drops finger tracks. */
 function fitClip(clip: AnimationClip, hipScale: number, dropFingers: boolean): AnimationClip {
   const out = clip.clone();
@@ -160,6 +218,11 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
   const ownGltfs = await ownLoad;
   for (const g of new Set([heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs])) if (g) prepare(g.scene, materials);
+  const detail = detailTexture(materials.profile.anisotropy), swatch = new Color().setRGB(225 / 255, 0, 0, SRGBColorSpace).r;
+  const detailGain = new Vector3(...[0, 1, 2].map((c) => {
+    const id = (Object.keys(DETAILS) as DetailId[]).find((d) => DETAILS[d].channel === c)!;
+    return swatch / new Color().setRGB(DETAILS[id].tone / 255, 0, 0, SRGBColorSpace).r;
+  }) as [number, number, number]);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
@@ -167,6 +230,10 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
       // The source GLB can deduplicate materials across differently textured pieces.
       piece.material = piece.material.clone();
       piece.material.map = texture;
+      if (DETAIL_PIECES.has(name)) {
+        ensureDetail(name, piece.geometry);
+        withDetail(piece.material, detail, detailGain);
+      }
     } else texture.dispose();
   }
   const named = (g: GLTF): Map<string, AnimationClip> => new Map(g.animations.map((c) => [c.name, c]));

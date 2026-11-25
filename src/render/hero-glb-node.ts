@@ -19,7 +19,7 @@ export interface HeroGlb {
   source: HeroSource;
   /** Bone names in skin order. */
   bones: string[];
-  /** A stand-in skinned mesh per node (geometry with position, normal, color, skin attributes and index; skeleton bone names). */
+  /** A stand-in skinned mesh per node (geometry with position, normal, uv, color, skin attributes and index; skeleton bone names). */
   mesh(node: string): SkinnedMesh;
 }
 
@@ -56,7 +56,7 @@ export function readHeroGlb(): HeroGlb {
     if (n.mesh === undefined || !n.name) continue;
     const prim = json.meshes[n.mesh]!.primitives[0]!;
     const g = new BufferGeometry();
-    for (const [name, attr] of [['POSITION', 'position'], ['NORMAL', 'normal'], ['COLOR_0', 'color'], ['JOINTS_0', 'skinIndex'], ['WEIGHTS_0', 'skinWeight']] as const) {
+    for (const [name, attr] of [['POSITION', 'position'], ['NORMAL', 'normal'], ['TEXCOORD_0', 'uv'], ['COLOR_0', 'color'], ['JOINTS_0', 'skinIndex'], ['WEIGHTS_0', 'skinWeight']] as const) {
       const i = prim.attributes[name];
       if (i === undefined) continue;
       const { data, size } = read(i);

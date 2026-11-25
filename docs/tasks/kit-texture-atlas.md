@@ -210,6 +210,8 @@ Kill rule: tea glass and mirror are small parts. If the before/after shows no vi
 
 ### B1 Coat detail mechanism [Claude · Opus high]
 
+Built 2026-11-25 (Opus): the chart test holds on `hero.glb`; existing looks pixel-identical (look sheet `group=all`, 0.000 %); [checker proof](../proof/t9-detail/checker.jpg) (a temporary checker in each channel on the Lederjacke trousers, Kettenhemd and Späti coat: square, one size on every chart, no swimming in the walk). The node GLB reader (`hero-glb-node.ts`) now loads `uv`.
+
 1. Pin finding 5 with a test: for every `a_mantel` vertex, `uv` within its chart is a linear function of the two axes of the chart table (residual < 1e-3), so a later re-unwrap fails loudly. If it fails, stop and see Questions.
 2. `DetailId`, `DETAILS`, `Palette.detail`; `detailAttributes`; `pieceVariant` and the zero pair.
 3. `withDetail` and the loader with a code-made placeholder strip (three flat grey cells at tone 225 with a faint weave) until B2 delivers the file.

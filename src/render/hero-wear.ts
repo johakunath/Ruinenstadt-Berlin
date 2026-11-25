@@ -5,7 +5,7 @@
 // source except the ones it changes, built once and shared by all hero bodies (0 draw calls, no new
 // shader: the attribute set stays the same).
 import { BufferAttribute, BufferGeometry, Color, type SkinnedMesh } from 'three';
-import { PALETTES, type Role } from '../data/hero-look';
+import { DETAILS, PALETTES, type Role } from '../data/hero-look';
 
 /** Source colours of tools/blender/hero_clothes.py (sRGB), per piece and role. */
 const SOURCE: Readonly<Record<string, Readonly<Partial<Record<Role, string>>>>> = {
@@ -172,6 +172,61 @@ function puffed(geo: BufferGeometry, info: PieceInfo, puff: number): BufferAttri
   return new BufferAttribute(out, 3);
 }
 
+// ---------------------------------------------------------------- KA part B: coat detail
+
+/** Pieces whose material samples the packed detail texture (`withDetail` in `characters.ts`). */
+export const DETAIL_PIECES: ReadonlySet<string> = new Set(['a_mantel']);
+
+/**
+ * The coat's UVs are a fixed box projection (`unwrap` in `tools/blender/hero_clothes.py`): six charts in a 3 × 2
+ * grid of the GLB's own uv, each linear in two axes of the bind position. Axes (0 x, 1 y, 2 z) per chart
+ * `col + 3 × row`, measured on the committed hero.glb; `hero-wear.test.ts` fails if the coat is unwrapped again.
+ */
+export const CHART_AXES: ReadonlyArray<readonly [0 | 1 | 2, 0 | 1 | 2]> = [[0, 1], [0, 2], [0, 2], [2, 1], [2, 1], [0, 1]];
+/** Chart (0..5) of a uv: column floor(u × 3), row floor(v × 2). */
+export const chartOf = (u: number, v: number): number => Math.min(2, Math.max(0, Math.floor(u * 3))) + 3 * Math.min(1, Math.max(0, Math.floor(v * 2)));
+
+const zeros = new WeakMap<BufferGeometry, { w: BufferAttribute; uv: BufferAttribute }>();
+/** The shared all-zero pair of a source geometry (looks without detail: the material then shows the coat swatch). */
+function zeroPair(geo: BufferGeometry): { w: BufferAttribute; uv: BufferAttribute } {
+  let z = zeros.get(geo);
+  if (!z) {
+    const n = geo.attributes.position!.count;
+    z = { w: new BufferAttribute(new Uint8Array(n * 4), 4, true), uv: new BufferAttribute(new Float32Array(n * 2), 2) };
+    zeros.set(geo, z);
+  }
+  return z;
+}
+
+/** Gives a detail piece's source geometry the zero pair, so every variant and the source itself carry both attributes. */
+export function ensureDetail(piece: string, geo: BufferGeometry): void {
+  if (!DETAIL_PIECES.has(piece) || geo.attributes.detailW) return;
+  const z = zeroPair(geo);
+  geo.setAttribute('detailW', z.w);
+  geo.setAttribute('detailUv', z.uv);
+}
+
+/**
+ * Detail weight (one channel at 255 per detail role, rgb) and tiling UVs (bind position in metres along the two
+ * axes of the vertex's chart, ÷ the detail's tile) of a source geometry in a palette. A palette without `detail`
+ * returns the shared zero pair.
+ */
+export function detailAttributes(geo: BufferGeometry, info: PieceInfo, paletteId: string): { w: BufferAttribute; uv: BufferAttribute } {
+  const detail = PALETTES[paletteId]?.detail;
+  if (!detail || !Object.keys(detail).length) return zeroPair(geo);
+  const pos = geo.attributes.position!, src = geo.attributes.uv!, n = pos.count;
+  const w = new Uint8Array(n * 4), uv = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    const id = detail[ROLE_IDS[info.role[i]!]!];
+    const [a, b] = CHART_AXES[chartOf(src.getX(i), src.getY(i))]!;
+    const tile = id ? DETAILS[id].tile : 1;
+    uv[i * 2] = pos.getComponent(i, a) / tile;
+    uv[i * 2 + 1] = pos.getComponent(i, b) / tile;
+    if (id) w[i * 4 + DETAILS[id].channel] = 255;
+  }
+  return { w: new BufferAttribute(w, 4, true), uv: new BufferAttribute(uv, 2) };
+}
+
 const variants = new WeakMap<BufferGeometry, Map<string, BufferGeometry>>();
 
 /**
@@ -193,6 +248,12 @@ export function pieceVariant(mesh: SkinnedMesh, piece: string, source: BufferGeo
   for (const [name, attr] of Object.entries(source.attributes)) geo.setAttribute(name, attr);
   geo.setIndex(cut ? cutIndex(source, info, cut) : source.index);
   if (paletteId || cut) geo.setAttribute('color', tintColors(source, piece, info, paletteId, cut));
+  if (DETAIL_PIECES.has(piece)) {
+    ensureDetail(piece, source);
+    const d = detailAttributes(source, info, paletteId);
+    geo.setAttribute('detailW', d.w);
+    geo.setAttribute('detailUv', d.uv);
+  }
   if (puff) geo.setAttribute('position', puffed(source, info, puff));
   geo.boundingSphere = source.boundingSphere;
   geo.boundingBox = source.boundingBox;
