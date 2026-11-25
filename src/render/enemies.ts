@@ -75,10 +75,12 @@ const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: B
   zeitwart: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['spine_03', 'spine_02', 'hand_r', 'hand_l'] , shape: true },
   diva: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['tier', 'Head'] , shape: true },
   // Round 3 (Johannes 2026-11-25: all ten, faces visible, hats in the mesh). Held props stay code: the Kelle, the
-  // clipboard, the baton, the cane, the spoon sceptre; the Sultan's glowing urn and his trays (they go at 66 % and 33 %).
+  // clipboard, the baton, the cane, the spoon sceptre.
   spiegelpaar: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH },
   spiegelbild: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, tint: 0xa8d4ff },
-  sultan: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['tier', 'spine_01', 'hand_r'] },
+  // The Sultan's model has its own platter shoulders and belly: the code trays and urn clipped through them
+  // (Johannes), so only the spoon sceptre stays (the trays no longer drop at 66 % and 33 %).
+  sultan: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_r'] },
   conferencier: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
   dirigent: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
   tuersteher: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] },

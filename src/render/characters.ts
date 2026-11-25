@@ -51,6 +51,10 @@ export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' 
   brandmeister: { url: new URL('../../assets/characters/boss-brandmeister.glb', import.meta.url).href, base: 'human' },
   wurzelmutter: { url: new URL('../../assets/characters/boss-wurzelmutter.glb', import.meta.url).href, base: 'female' },
   ringvater: { url: new URL('../../assets/characters/boss-ringvater.glb', import.meta.url).href, base: 'human' },
+  sultan: { url: new URL('../../assets/characters/boss-sultan.glb', import.meta.url).href, base: 'human' },
+  conferencier: { url: new URL('../../assets/characters/boss-conferencier.glb', import.meta.url).href, base: 'human' },
+  dirigent: { url: new URL('../../assets/characters/boss-dirigent.glb', import.meta.url).href, base: 'human' },
+  bassprediger: { url: new URL('../../assets/characters/boss-bassprediger.glb', import.meta.url).href, base: 'human' },
 };
 
 export interface CharacterAssets {
