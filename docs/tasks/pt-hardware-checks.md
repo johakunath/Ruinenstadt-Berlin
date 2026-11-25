@@ -14,6 +14,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 
 | Area | What to try | Task file |
 |---|---|---|
+| Coat detail (KA B2) | Lederjacke, Kettenhemd der Zitadelle, Mantel des letzten Späti: do denim, chainmail and patchwork read at the game camera on Qualität, Ausgewogen and Leistung, and on the inventory doll (turn it once)? Mail not too bright or flickering at a distance? | `docs/tasks/kit-texture-atlas.md` |
 | Painted filo and brass (KA A2) | Wedding: do the Baklava-Brocken and the Hauptgericht read as flaky pastry (crust on top, layers on the sides) and not as wood? Brass on the samovar and the Sultan still brass? | `docs/tasks/kit-texture-atlas.md` |
 | Local art round 4 (2026-11-25) | Look: Charlottenburg posters on the walls (City West, Ku'damm), the Ku'damm curtain, marble and glass, the Aquarium reliefs; Wedding signs, the Magendoktor mural and door, the Beamtentor lettering. A short hitch when the painted atlases arrive (one re-upload each)? | `docs/local-ai-assets.md` › Round 4 |
 | Boss bodies (H4) | Every humanoid boss now has an own body (`?spawn=` any of them, e.g. `sultan,conferencier,dirigent,bassprediger,spiegelpaar`): the Pixal3D bodies with upright clips. Do they read at the game camera? Tearing at shoulders, knees or long coats and capes in walk, attack, charge and death? The Diva's gown tiers still break at 66 % and 33 %; the Zugezogene's cup sits a little off his hand | `docs/tasks/h3-humanoid-bosses.md` steps 6 and 7 |

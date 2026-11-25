@@ -270,6 +270,7 @@ Not used in gate 1: Mixamo, Kenney, KayKit, Poly Haven.
 | `textures/hero/boots.webp` | OpenAI image generation | Codex for Johannes | Own work | Cracked boot leather, neutral albedo, 512 px |
 | `textures/hero/sneakers.webp` | OpenAI image generation | Codex for Johannes | Own work | Worn sneaker canvas, neutral albedo, 512 px |
 | `textures/hero/gloves.webp` | OpenAI image generation | Codex for Johannes | Own work | Rubbed glove leather, neutral albedo, 512 px |
+| `textures/hero/detail.webp` | FLUX.2 klein 4B (Apache 2.0), local ComfyUI (`tools/comfy.mjs`): grey strip of three seamless 256 px tiles. Denim (text to image, seed 5); chainmail (img2img at 0.55 from a code-drawn ring grid, 8 rings across, seed 2); patchwork (img2img at 0.45 from a 5 × 5 grid of crops of this repo's own cloth textures, seed 31). Composed with `assets-src/ai/ka-b2/compose.mjs` | Claude (for Johannes) | Own work | KA B2 (T9), 2026-11-25; each cell moved to mean tone 180 |
 | `textures/hero/scarf.webp` | OpenAI image generation | Codex for Johannes | Own work | Scarf knit, neutral albedo, 512 px |
 | `textures/alex/signs.webp` | OpenAI image generation, Pioneer palette and 2D GDR art reference | Codex for Johannes | Own work | Painted mosaics, enamel, brushed aluminum and glazing packed around existing exact signage, 2048 × 1536 WebP |
 | `textures/alex/stone-atlas.webp` | OpenAI image generation, 2D Alexanderplatz limestone, copper and relief references | Codex for Johannes | Own work | Sandstone, verdigris copper and terracotta frieze, 2048 × 2048 WebP |

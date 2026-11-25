@@ -1,5 +1,6 @@
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { CUT, PALETTES, type Palette } from '../data/hero-look';
+import { CUT, DETAILS, PALETTES, type Palette } from '../data/hero-look';
 import { readHeroGlb } from './hero-glb-node';
 import { CHART_AXES, ROLE_IDS, chartOf, detailAttributes, ensureDetail, pieceInfo, pieceVariant } from './hero-wear';
 
@@ -150,13 +151,23 @@ describe('coat detail (KA part B)', () => {
 
   it('a palette without detail shares the zero pair, and variants stay cached', () => {
     const info = pieceInfo(coat, 'a_mantel');
-    const a = detailAttributes(src, info, 'leder'), b = detailAttributes(src, info, '');
+    const a = detailAttributes(src, info, 'mantel'), b = detailAttributes(src, info, '');
     expect(a.w).toBe(b.w);
     expect(Array.from(a.w.array).every((x) => x === 0)).toBe(true);
-    const v1 = pieceVariant(coat, 'a_mantel', src, 'leder', 0, 0), v2 = pieceVariant(coat, 'a_mantel', src, 'leder', 0, 0);
+    const v1 = pieceVariant(coat, 'a_mantel', src, 'mantel', 0, 0), v2 = pieceVariant(coat, 'a_mantel', src, 'mantel', 0, 0);
     expect(v1).toBe(v2);
     expect(v1.attributes.detailW).toBe(a.w);
     ensureDetail('a_mantel', src);
     expect(src.attributes.detailW).toBe(a.w);
+  });
+
+  it('DETAILS tones match the mean of each cell of detail.webp (within 2), one cell per channel', async () => {
+    const { data, info } = await sharp('assets/textures/hero/detail.webp').greyscale().raw().toBuffer({ resolveWithObject: true });
+    expect([info.width, info.height]).toEqual([768, 256]);
+    for (const d of Object.values(DETAILS)) {
+      let sum = 0;
+      for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) sum += data[y * 768 + d.channel * 256 + x]!;
+      expect(Math.abs(sum / 65536 - d.tone)).toBeLessThanOrEqual(2);
+    }
   });
 });
