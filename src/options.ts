@@ -112,9 +112,38 @@ export function storedProfile(s: { profile?: string; pv?: number }): ProfileId |
   return s.profile as ProfileId;
 }
 
-/** Phones and tablets start on Leistung (Johannes, 2026-11-20), everything else on Qualität. */
+/**
+ * Steam Deck (playtest 2026-11-25): its browsers report a plain desktop Linux and a fine pointer, so it
+ * looked like a PC. Told apart by a Linux browser on the Deck's 1280×800 screen (LCD and OLED, either way round).
+ */
+export function isSteamDeck(ua: string, width: number, height: number): boolean {
+  if (!/Linux/.test(ua) || /Android/.test(ua)) return false;
+  const w = Math.max(width, height), h = Math.min(width, height);
+  // A few pixels of slack: the page zoom below is read from the window size, which can include a frame.
+  return Math.abs(w - 1280) <= 8 && Math.abs(h - 800) <= 8;
+}
+
+/**
+ * The Deck test with the browser's numbers. `devicePixelRatio` holds the display scale (Chrome's scale
+ * factor) times the page zoom. Firefox scales `screen` with the page zoom, so screen × ratio is the panel;
+ * Chrome keeps `screen` and only the ratio grows (Codex review, PR #110: at 110 % zoom the Deck was missed),
+ * so there the page zoom (outer ÷ inner window width) comes off again. Either reading may match.
+ */
+export function isSteamDeckScreen(ua: string, screenW: number, screenH: number, dpr: number, outerW: number, innerW: number): boolean {
+  const zoom = outerW > 0 && innerW > 0 ? outerW / innerW : 1;
+  return [dpr, dpr / zoom].some((k) => isSteamDeck(ua, screenW * k, screenH * k));
+}
+
+/** This browser runs on a Steam Deck, whatever Chrome's scale factor or page zoom. */
+export function onSteamDeck(): boolean {
+  if (typeof screen === 'undefined' || typeof navigator === 'undefined') return false;
+  return isSteamDeckScreen(navigator.userAgent, screen.width, screen.height, window.devicePixelRatio || 1, window.outerWidth, window.innerWidth);
+}
+
+/** Phones, tablets and the Steam Deck start on Leistung (Johannes, 2026-11-20 and 2026-11-25), everything else on Qualität. */
 function defaultProfile(): ProfileId {
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  if (onSteamDeck()) return 'leistung';
   return !coarse && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? 'qualitaet' : 'leistung';
 }
 

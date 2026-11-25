@@ -16,7 +16,7 @@ import type { Item } from './sim/items';
 import { GameAudio } from './audio/audio';
 import { HIT_FEEL } from './data/combat';
 import { Input } from './input/input';
-import { GO_KEY, reloadWith, RESUME_KEY } from './options';
+import { GO_KEY, onSteamDeck, reloadWith, RESUME_KEY } from './options';
 import { opts, settingHooks } from './ui/settings';
 import { optionsScreen } from './ui/options-screen';
 import { startScreen } from './ui/start';
@@ -70,6 +70,7 @@ import { clearSave, deviceClass, loadSave, writeSave } from './save';
 import { cloudSave } from './cloud';
 import type { Prop } from './data/courtyard';
 import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
+import { activePad } from './input/pad';
 
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
@@ -80,6 +81,8 @@ audio.setVolume(opts.sound ? opts.volume : 0);
 audio.setMusic(opts.music);
 audio.setEco(opts.profile !== 'qualitaet');
 const input = new Input(canvas);
+// The Steam Deck plays with its controller: pad labels and aim assist from the start (Johannes, 2026-11-25).
+if (onSteamDeck()) input.device = 'gamepad';
 const abilitiesUi = new AbilitiesUi(input);
 /** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
 function talk(): void {
@@ -203,7 +206,7 @@ function finishLootExit(leave: boolean): void {
  */
 let lootPadDown: boolean[] = [];
 function pollLootPad(): void {
-  const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
+  const pad = activePad();
   if (!pad) { lootPadDown = []; return; }
   const down = pad.buttons.map((b) => b.pressed || b.value > 0.5);
   const edge = (i: number): boolean => !!down[i] && !lootPadDown[i];
@@ -431,6 +434,14 @@ const menu = new Menu({
   blocked: () => optionsScreen().isOpen,
 }, inventory);
 optionsScreen().onClose = () => menu.resetPad();
+// Optionen › Steuerung and the play screen labels show the same device, both ways (playtest 2026-11-25).
+optionsScreen().currentDevice = () => !input.used ? null : input.device === 'gamepad' ? 'pad' : input.device === 'touch' ? 'touch' : 'key';
+optionsScreen().onDevice = (d) => {
+  if (d === 'pad') input.device = 'gamepad';
+  else if (d === 'touch') input.device = 'touch';
+  else if (input.device !== 'mouse') input.device = 'keyboard';
+};
+if (optionsScreen().picked) optionsScreen().onDevice(optionsScreen().picked!);
 input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
 // M13: the camp between expeditions, from the title and the victory screen.
 const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); if (isCamp && phase === 'play') { input.enabled = true; input.clear(); } });

@@ -1,5 +1,6 @@
 // U3: focus navigation shared by the start screen, the options screen and the pause menu.
 // Arrow keys, D-pad and stick move to the nearest control in that direction; A presses, B goes back.
+import { activePad } from '../input/pad';
 
 // SVG places on the title's network map count too (Codex review, PR #57: no pad path to them).
 const FOCUSABLE = 'button:not(:disabled),input,summary,svg g[role=button]:not(.lock)';
@@ -58,7 +59,7 @@ export class PadNav {
   constructor(private readonly root: HTMLElement, private readonly active: () => boolean, private readonly back?: () => void) {}
   reset(): void { this.down = Array.from({ length: 20 }, () => true); }
   poll(now: number): void {
-    const pad = [...(navigator.getGamepads?.() ?? [])].find(p => p?.connected);
+    const pad = activePad();
     if (!pad) { this.down = []; return; }
     const down = pad.buttons.map(b => b.pressed), prev = this.down, edge = (i: number): boolean => !!down[i] && !prev[i];
     this.down = down;

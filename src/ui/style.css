@@ -862,6 +862,17 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
   .leg { font-size: 14px; }
   .map-svg svg { max-height: calc(100dvh - 60px); }
 }
+/* Tabs, info line and cog fit one row from about 1130 px. Narrower (tablet, Steam Deck), the cog stayed with the
+   info line and both wrapped to a second row on the right (playtest 2026-11-25): the cog stays at the top beside
+   the fullscreen button and the ×, the info line goes under the tabs. */
+@media (max-width: 1129px) {
+  #menu .menu-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 4px 8px; padding-right: 0; }
+  #menu .menu-side { display: contents; }
+  #menu .menu-tabs { grid-area: 1 / 1; min-width: 0; }
+  #menu-opt { grid-area: 1 / 2; align-self: start; margin-right: 104px; }
+  #menu .menu-res { grid-area: 2 / 1 / 3 / -1; justify-content: flex-start; }
+  #menu .menu-res:empty { display: none; }
+}
 @media (orientation: landscape) and (max-height: 620px), (orientation: portrait) and (max-width: 699px) {
   #menu .menu-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding-right: 0; }
   #menu .menu-side { display: contents; }
@@ -978,6 +989,9 @@ html, body { font-family: var(--f-ui); background: var(--ash); }
 .tr-x { position: fixed; top: var(--gut-t); right: var(--gut-r); z-index: 3; font: 400 32px/1 var(--f-ui); }
 #fsb { position: fixed; top: var(--gut-t); right: var(--gut-r); z-index: 70; }
 #fsb svg { width: 22px; height: 22px; display: block; }
+/* The pause menu's cog: the same 44 px box as the fullscreen button and the × beside it (playtest 2026-11-25). */
+#menu #menu-opt { width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; background: rgba(13, 9, 7, .62); border: 1px solid var(--edge); border-radius: 3px; }
+#menu #menu-opt svg { width: 22px; height: 22px; display: block; }
 body:has(#hud:not([hidden])) #fsb, body:has(#menu:not([hidden])) #fsb, body:has(#optv:not([hidden])) #fsb, body:has(#camp:not([hidden])) #fsb, body:has(#trade:not([hidden])) #fsb { right: calc(var(--gut-r) + 52px); }
 /* The camp head keeps clear of the two corner buttons and of the panel edge (playtest 2026-11-18: on a wide
    tablet outside fullscreen the 1240 px query missed, and the title sat on the border). */

@@ -6,6 +6,7 @@ import { PadNav, keyNav } from './focus';
 import { optionsScreen } from './options-screen';
 import { MAP_PLAY } from './maps';
 import { opts, profileSeg, row, toggle, volumeRange } from './settings';
+import { onSteamDeck } from '../options';
 
 export class StartScreen {
   readonly root = document.getElementById('title') as HTMLElement;
@@ -104,9 +105,11 @@ export class StartScreen {
   /** One line, for the device in use. */
   private keysHint(): void {
     const touch = matchMedia('(pointer: coarse)').matches;
-    this.root.querySelector('#keys-hint')!.textContent = touch
-      ? 'Links ziehen läuft, rechts Schlag, Rolle und Kräfte.'
-      : 'WASD laufen · Maus schlägt und zielt · Leertaste Rolle · E Kraft · Esc Pause';
+    this.root.querySelector('#keys-hint')!.textContent = onSteamDeck()
+      ? 'Stick laufen · A Schlag · B Rolle · Y Kraft · Start Pause'
+      : touch
+        ? 'Links ziehen läuft, rechts Schlag, Rolle und Kräfte.'
+        : 'WASD laufen · Maus schlägt und zielt · Leertaste Rolle · E Kraft · Esc Pause';
   }
 }
 

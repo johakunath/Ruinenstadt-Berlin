@@ -16,6 +16,7 @@ import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
 import { uiIcon } from './ui-icons';
 import { itemCard } from './inventory';
 import { SLOT_NAMES } from '../data/items';
+import { activePad } from '../input/pad';
 
 const QUALITY_COLOR = ['#e8ddd0', '#7d9bff', '#f2d14b', '#b48cff'] as const;
 const VERBAND = '<path d="M9 21h30v8H9z" fill="#ead9c0"/><path d="M20 10h8v28h-8z" fill="#ead9c0"/><path d="M21 18h6v12h-6zM16 22h16v4H16z" fill="#c23a2e"/>';
@@ -319,7 +320,7 @@ export class AbilitiesUi {
       this.tradeSig = '';
     }
 
-    const pad = Array.from(navigator.getGamepads?.() ?? []).find((p) => p?.connected);
+    const pad = activePad();
     const down = pad?.buttons.map((b) => b.pressed) ?? [];
     const edge = (i: number): boolean => !!down[i] && !this.padDown[i];
     if (padBlocked) { /* only track */ } else if (this.open) {
