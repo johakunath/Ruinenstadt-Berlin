@@ -120,6 +120,6 @@ Sources: kinds and bodies `src/data/enemies.ts` (`ENEMIES[].body`), gear `gearFo
 |---|---|
 | Gear, colours, proportions, procedural bodies (crow, rat, drone, Kernspeier, Koloss) | Code: `src/render/enemies.ts`, `src/render/enemies-alex.ts` (one material per colour, parts merged) |
 | New creature or mech from a CC0 pack | Node conversion: `tools/build-creatures.mjs` (FBXLoader, bake to meters, vertex-colour repaint, glTF export); licence row in `assets/LICENSES.md` |
-| Painted textures and painted busts | Local first (FLUX.2 klein, `docs/local-ai-assets.md`), Codex as fallback; Claude does the performance integration |
+| Painted textures and painted busts | Local first (FLUX.2 klein, `docs/local-ai-assets.md`; Codex paused 2026-11-23, no fallback); Claude does the performance integration |
 | Rigid boss parts on one bone (rat head, helmets, sunflower head) | Image-to-3D (Pixal3D) plus Blender clean-up, fixed to the bone like rigid gear (`docs/local-ai-assets.md` W4 to W6) |
 | Rigging a new body or retargeting animations | Blender (headless, as in `npm run assets:hero`), only for this |
