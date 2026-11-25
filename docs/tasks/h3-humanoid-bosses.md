@@ -17,6 +17,7 @@ Johannes, 2026-11-19, after the H2 looks (`docs/tasks/wp5-enemies.md` › step 3
 | 3 | Turmwächter on a robot base: `mech.glb` (Leela, own clips, as the Uhrwerkläufer) as the Fernsehturm on two legs: sphere head, window ring, antenna, ribbed shaft, sparks | built 2026-11-19 |
 | 4 | Rattenmutter head: ears half again bigger with veins and a tear, 34 matted tufts in two shades, grime on muzzle and eyes, a scar, a chipped incisor. Brandmeister: fire brighter (emissive pulses 2.8 to 4.4), it sways, embers fly off the helmet (pooled particles, `src/render/threats.ts`) | built in code 2026-11-19; painted fur and skin: Codex T8 |
 
+| 6 | H4 trial (Johannes 2026-11-24, option A): the Feldwebel as one Pixal3D body skinned to the human skeleton (`docs/local-ai-assets.md` › W8). Next after Johannes' verdict: a second picture with an oversized gold spike and epaulettes for readability, Kodex X04, then the other humanoid bosses one by one | built 2026-11-24; Johannes 2026-11-25: look ok, made bigger, upright stand, march and sabre cut (own clip set) |
 | 5 | Johannes' look notes: Brandmeister leaves burning ground where he walks (2D boss trail: every 0.4 s, r 26 px, 4 s, 0.35 of his hit; `passive` in `src/sim/ai.ts`, test in `ai-wp5.test.ts`) and his head flames stand 1.65× higher; the Feldwebel's Pickelhaube sits higher and is narrower at the bottom, his epaulettes are 1.35× wider and bigger | built 2026-11-19 |
 
 ## Cost

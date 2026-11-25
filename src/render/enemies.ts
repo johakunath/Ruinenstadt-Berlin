@@ -46,6 +46,9 @@ const DEATH_FROM = 0.35;
 /** Clip time of Zombie_Scratch at which the claw lands. */
 const SCRATCH_HIT = 0.55;
 const SCRATCH_SWIPE = 0.16;
+/** H4: an own body's melee is an upright overhead sabre cut (Sword_Attack, measured with tools/clip-swing.mjs: the
+ * sabre rises behind the head until 0.333 s, comes down in front until 0.466 s, the stance is back at 1.27 s). */
+const SLASH = { clip: 'Sword_Attack', start: 0.1, swing: 0.333, hit: 0.466, end: 1.27 } as const;
 const WALK_CLIP_SPEED = 1.15;
 /** M12c Türsteher grab: Zombie_Scratch at the end of the swipe, hunched with both hands in front (clutching), held while the hero is caught. */
 const GRAB_HOLD = 0.68;
@@ -159,7 +162,7 @@ const SHAPE: Partial<Record<EnemyKind, Record<string, number>>> = {
 
 /** Extra stretch of the whole body: x/z, y. */
 const BUILD: Partial<Record<EnemyKind, [number, number]>> = {
-  runner: [0.86, 1], brute: [1.12, 1], spitter: [1.12, 0.97], schild: [1.08, 1], heuler: [0.9, 1.04], feldwebel: [1.1, 1], hauptmann: [1.1, 1],
+  runner: [0.86, 1], brute: [1.12, 1], spitter: [1.12, 0.97], schild: [1.08, 1], heuler: [0.9, 1.04], feldwebel: [1.18, 1.12], hauptmann: [1.1, 1],
   grenzer: [1, 1.04], brandmeister: [1.12, 1], rattenmutter: [1.15, 0.85], spreehexe: [0.86, 1.16],
   kabel: [0.78, 1.04], bass: [1.08, 1], tuersteher: [1.16, 1], dirigent: [0.88, 1.08], bassprediger: [1, 1.03],
   wurzelmutter: [1.1, 1],
@@ -2122,6 +2125,8 @@ export class EnemyView {
   private readonly bones = new Map<string, Object3D>();
   /** H3: this body stands upright (humanoid bosses): the zombie clips' hunch is taken out of the spine. */
   private upright = false;
+  /** H4: this view shows a boss's own skinned body (`CharacterAssets.bosses`): no code gear, no bone proportions. */
+  private ownBody = false;
   /** H3: per spine bone, the turn from the zombie idle pose to the upright idle pose (local space). */
   private straight: Array<{ bone: Object3D; fix: Quaternion; arm: boolean; pre: Quaternion; post: Quaternion; set: boolean }> | null = null;
   /** H3: how much of the arm fix applies (eases with the clip fade between walking and striking). */
@@ -2180,9 +2185,11 @@ export class EnemyView {
     const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
     this.skin = skin;
-    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' ? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
+    const ownSrc = body === 'feldwebel' ? assets.bosses?.feldwebel : undefined;
+    this.ownBody = !!ownSrc;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' || body === 'feldwebel' ? ownSrc ?? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
     // (crow, rat and the code-built bodies returned above)
-    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? (body === 'female' && assets.female ? assets.female.clips : assets.zombieClips) : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
+    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? (ownSrc && assets.bosses ? assets.bosses.clips : body === 'female' && assets.female ? assets.female.clips : assets.zombieClips) : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
     this.model = model;
     this.inner.add(model);
@@ -2472,9 +2479,11 @@ export class EnemyView {
     if (this.skin === 'zombie' && this.model) {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
-      for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) this.bones.get(n)?.scale.setScalar(v);
+      // H4: an own body keeps the broader chest but not the smaller head (its helmet is part of the mesh).
+      for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) if (!this.ownBody || n !== 'Head') this.bones.get(n)?.scale.setScalar(v);
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
-      let gear = this.gear.get(key);
+      // H4: an own body carries its uniform and helmet; only the weapon rack (below) stays.
+      let gear = this.ownBody ? [] : this.gear.get(key);
       if (!gear) {
         gear = this.inIdle(() => gearFor(key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
         this.gear.set(key, gear);
@@ -2691,18 +2700,25 @@ export class EnemyView {
     switch (e.state) {
       case 'chase':
         // M16: the Diva glides (stands in her pose while she moves); M18: the Sultan floats on his carpet the same way.
-        if (e.speed > 0.2 && def.ai !== 'diva') a.loop('Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * def.scale))));
-        else a.loop(def.ai === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop', 0.25);
+        // H4 (Johannes): an own body marches upright and stands at sabre guard. Walk_Formal_Loop has the zombie
+        // walk's stride and cycle (0.69 m per 1.33 s, measured), so the same speed constant keeps the feet planted;
+        // its legs are also `BUILD` taller.
+        const legs = def.scale * (this.ownBody ? BUILD[e.kind]?.[1] ?? 1 : 1);
+        if (e.speed > 0.2 && def.ai !== 'diva') a.loop(this.ownBody ? 'Walk_Formal_Loop' : 'Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * legs))));
+        else a.loop(this.ownBody ? 'Sword_Idle' : def.ai === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop', 0.25);
         // Open: bent over, catching breath.
         if (e.open > 0) pitch = 0.32;
         break;
       case 'windup':
-        a.pose('Zombie_Scratch', lerp(0.05, SCRATCH_HIT, Math.min(1, t / def.windup)), 0.12);
+        if (this.ownBody) a.pose(SLASH.clip, lerp(SLASH.start, SLASH.swing, Math.min(1, t / def.windup)), 0.12);
+        else a.pose('Zombie_Scratch', lerp(0.05, SCRATCH_HIT, Math.min(1, t / def.windup)), 0.12);
         break;
       case 'strike':
-        a.pose('Zombie_Scratch', SCRATCH_HIT + SCRATCH_SWIPE * Math.min(1, t / def.active), 0.03);
+        if (this.ownBody) a.pose(SLASH.clip, lerp(SLASH.swing, SLASH.hit, Math.min(1, t / def.active)), 0.03);
+        else a.pose('Zombie_Scratch', SCRATCH_HIT + SCRATCH_SWIPE * Math.min(1, t / def.active), 0.03);
         break;
       case 'recover': {
+        if (this.ownBody) { a.pose(SLASH.clip, lerp(SLASH.hit, SLASH.end, Math.min(1, t / def.recovery)), 0.05); break; }
         const from = SCRATCH_HIT + SCRATCH_SWIPE;
         a.pose('Zombie_Scratch', lerp(from, a.duration('Zombie_Scratch'), Math.min(1, t / def.recovery)), 0.05);
         break;
@@ -2758,6 +2774,8 @@ export class EnemyView {
             break;
           case 'lunge': case 'charge': case 'pounce': case 'leap':
             if (going) a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05);
+            // H4: an own body raises the sabre overhead instead of the ghouls' crouch.
+            else if (this.ownBody) a.pose(SLASH.clip, lerp(SLASH.start, SLASH.swing, w), 0.12);
             else {
               a.pose('Zombie_Scratch', lerp(0.05, 0.35, w), 0.12);
               pitch = 0.3 * w;

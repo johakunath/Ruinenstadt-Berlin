@@ -98,6 +98,18 @@ Claude then converts it in Node (`@gltf-transform`): texture to WebP at the budg
 
 As `docs/blender-pipeline.md`: a function in `tools/blender/hero_clothes.py`, weights from the body, joined into `hero.glb`, listed in `PIECES`. Shapes come from Quaternius Modular Character Outfits where one fits; the cloth albedo comes from W1.
 
+### W8 Skinned boss body (H4 trial, Feldwebel, 2026-11-24)
+
+A whole boss as one skinned mesh on the enemy skeleton, so every clip of the base body plays on it.
+
+1. `tools/blender/front_ref.py assets/characters/human1.glb front.png`: orthographic front view of the base body in its rest pose (T-pose) on black. (Three.js `skeleton.pose()` in the enemy sheet did not give the rest pose; Blender does.)
+2. FLUX img2img from it at denoise 0.85 with the boss described from head to boots, "T-pose with both arms held straight out to the sides, empty hands, … plain pure black background, flat even light, no weapon": all 12 picks kept the pose. [Picks](proof/h4-feldwebel/flux-picks.jpg).
+3. Pixal3D single image (13 min), `prepare_toy_model.py --height 1.83 --tris 60000`, `bake_low.py --tris 8000 --tex 1024` (no remesh needed: one closed figure). [Mesh](proof/h4-feldwebel/mesh.jpg).
+4. `tools/blender/boss_body.py --base assets/characters/human1.glb --mesh low.glb --out assets/characters/boss-<kind>.glb --name <kind> --gain 1.3`: fits it to the base's rest pose (scale came out 0.999 × 1.000: the picture kept the pose), copies the base's skin weights from the nearest surface (Data Transfer), exports with the base armature. Weapons stay the weapon rack.
+5. Game: a body kind of its own (`BodyKind` `feldwebel`, `CharacterAssets.bosses`), loaded with the human base; no code gear, the bone proportions (`SHAPE`) without the head.
+
+Result: the clips deform cleanly. Johannes 2026-11-25: look ok, a bit bigger (render build 1.18 × 1.12), and less like a zombie: own bodies get `CharacterAssets.bosses.clips`, the enemy set plus `Sword_Idle` (stand), `Walk_Formal_Loop` (march; same stride and cycle as the zombie walk, 0.69 m per 1.33 s, measured in three.js) and `Sword_Attack` (overhead cut: wind-up 0.1 to 0.333 s, cut to 0.466 s, back at 1.27 s, `tools/clip-swing.mjs`); `anims.glb` +24 KB. [Stand, march, wind-up, cut, recover](proof/h4-feldwebel/moves.jpg). Up close much more detail; at the game camera the exaggerated gold Pickelhaube and epaulettes of the code model read better than the FLUX helmet ([before and after](proof/h4-feldwebel/before-after.jpg)): a second picture should ask for an oversized gold spike and eagle and huge epaulettes. Cost: 7,937 triangles (code model 8,238), 3 draw calls fewer, +0.7 MB GLB on maps with human bosses. The Kodex portrait (X04) is not re-rendered yet: its framing needs the new body.
+
 ## Trials (first three, backlog LA1 to LA3)
 
 | # | Trial | Done when | Owner |

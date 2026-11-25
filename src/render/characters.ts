@@ -17,6 +17,8 @@ import zombieUrl from '../../assets/characters/zombie.glb?url';
 import humanUrl from '../../assets/characters/human1.glb?url';
 // H3 (Johannes, base C): the female humanoid bosses (Spreehexe, Wurzel-Mutter) on the UBC Superhero_Female.
 import femaleUrl from '../../assets/characters/human2.glb?url';
+// H4: bosses with an own skinned body on the human skeleton (Pixal3D, tools/blender/boss_body.py), loaded with the human base.
+import bossFeldwebelUrl from '../../assets/characters/boss-feldwebel.glb?url';
 import raptorUrl from '../../assets/characters/raptor.glb?url';
 import rexUrl from '../../assets/characters/rex.glb?url';
 import mechUrl from '../../assets/characters/mech.glb?url';
@@ -37,6 +39,8 @@ export interface CharacterAssets {
   human?: Object3D;
   /** H3: the base of the female humanoid bosses and its clips (hero proportions). */
   female?: { body: Object3D; clips: Map<string, AnimationClip> };
+  /** H4: own boss bodies on the human skeleton; `clips`: the enemy set plus the upright `BOSS_CLIPS`, fitted like `zombieClips`. */
+  bosses?: { feldwebel?: Object3D; clips: Map<string, AnimationClip> };
   heroClips: Map<string, AnimationClip>;
   zombieClips: Map<string, AnimationClip>;
   /** Dinosaurs (M12): own skeletons and clips (Idle, Walk, Run, Attack, Jump, Death). */
@@ -53,6 +57,8 @@ export interface CharacterAssets {
 
 const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
 // The last four carry the specials: slam, lunge, throw, command.
+/** H4: upright clips for the bosses with an own body (stand at sabre guard, march, slash), on top of the enemy set. */
+const BOSS_CLIPS = /^(Sword_Idle|Walk_Formal_Loop|Sword_Attack)$/;
 const ZOMBIE_CLIPS = /^(Zombie_|Hit_|Death01$|Idle_Loop$|Sword_Heavy_Combo$|Shield_Dash$|OverhandThrow$|Spell_Simple_Shoot$)/;
 
 // Neutral albedo swatches multiply the GLB's vertex colours and baked occlusion. UVs use glTF's
@@ -121,8 +127,8 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const clothingLoad = loadClothing(materials.profile.anisotropy);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
-  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
-  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf]) if (g) prepare(g.scene, materials);
+  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, feldwebelGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null, humans ? bossFeldwebelUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined, GLTF | undefined];
+  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, feldwebelGltf]) if (g) prepare(g.scene, materials);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
@@ -138,14 +144,16 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const heroClips = new Map<string, AnimationClip>();
   const zombieClips = new Map<string, AnimationClip>();
   const femaleClips = new Map<string, AnimationClip>();
+  const bossClips = new Map<string, AnimationClip>();
   for (const clip of animGltf.animations) {
     heroClips.set(clip.name, fitClip(clip, hipLen(heroGltf.scene) / src, false));
     // Enemies only get the clips they play: every clip costs bindings per body.
     if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
+    if (feldwebelGltf && (ZOMBIE_CLIPS.test(clip.name) || BOSS_CLIPS.test(clip.name))) bossClips.set(clip.name, zombieClips.get(clip.name) ?? fitClip(clip, hipLen(zombieGltf.scene) / src, true));
     // The female base has the hero's proportions: the enemy clip set, fitted to her hips.
     if (femaleGltf && ZOMBIE_CLIPS.test(clip.name)) femaleClips.set(clip.name, fitClip(clip, hipLen(femaleGltf.scene) / src, true));
   }
-  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, female: femaleGltf ? { body: femaleGltf.scene, clips: femaleClips } : undefined, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
+  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, female: femaleGltf ? { body: femaleGltf.scene, clips: femaleClips } : undefined, bosses: feldwebelGltf ? { feldwebel: feldwebelGltf.scene, clips: bossClips } : undefined, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
   if (mechLoad) {
     const [small, big] = await mechLoad;
     prepare(small.scene, materials);
