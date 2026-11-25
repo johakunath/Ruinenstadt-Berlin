@@ -14,7 +14,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 
 | Area | What to try | Task file |
 |---|---|---|
-| Steam Deck (2026-11-25) | Chrome in Game Mode per `docs/steam-deck.md`: starts on Leistung without `?profile=`; pad labels show on the first press; Optionen › Steuerung › Controller or Tastatur switches the action bar labels; UI size at scale factor 1.5 (try 1.25 if too big); fps and heat on Leistung | `docs/steam-deck.md` |
+| Steam Deck (2026-11-25) | Chrome in Game Mode per `docs/steam-deck.md`: starts on Leistung without `?profile=`; pad labels show on the first press; Optionen › Steuerung › Controller or Tastatur switches the action bar labels; controller labels from the start; UI size at scale factor 1.25 or 1.5; menu header: cog at the top on the tablet too; fps and heat on Leistung | `docs/steam-deck.md` |
 | P3 Wartburg and BVG bus (2026-11-25) | Wartburg wrecks (a fifth of the cars, next to the Trabis) and the yellow BVG bus wreck instead of the box bus: do they read at the game camera, also on the phone? Cost per map where they appear: +1 draw call each kind (+1 in the shadow pass), drawn whole; Wartburg 1,728 and bus 3,993 triangles per copy | `docs/backlog.md` › P3 |
 | T9 decals in code | Weste der Kiezwache: does "KIEZWACHE" read on the back at the game camera and on the doll? Kettenhemd der Zitadelle: the gold tower on the tabard shield | `docs/asset-pipeline.md` › T9 |
 | Coat detail (KA B2) | Lederjacke, Kettenhemd der Zitadelle, Mantel des letzten Späti: do denim, chainmail and patchwork read at the game camera on Qualität, Ausgewogen and Leistung, and on the inventory doll (turn it once)? Mail not too bright or flickering at a distance? | `docs/tasks/kit-texture-atlas.md` |

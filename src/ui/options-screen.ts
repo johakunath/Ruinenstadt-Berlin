@@ -6,12 +6,13 @@ import { backupSave, loadSave, parseSaveCode, saveCode, writeSave } from '../sav
 import { DEVICE_SVG, type ControlDevice } from './controls-gfx';
 import { keyNav, PadNav } from './focus';
 import { profileSeg, row, segment, syncSettings, toggle, volumeRange } from './settings';
+import { onSteamDeck } from '../options';
 
 const DEVICES: Array<[ControlDevice, string]> = [['touch', 'Touch'], ['key', 'Tastatur und Maus'], ['pad', 'Controller']];
 
 /** The device shown first: a connected pad, then touch, else keyboard and mouse (2D ctlDev). */
 function guessDevice(): ControlDevice {
-  if ([...(navigator.getGamepads?.() ?? [])].some(p => p?.connected)) return 'pad';
+  if (onSteamDeck() || [...(navigator.getGamepads?.() ?? [])].some(p => p?.connected)) return 'pad';
   return matchMedia('(pointer: coarse)').matches ? 'touch' : 'key';
 }
 

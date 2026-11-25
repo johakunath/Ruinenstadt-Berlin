@@ -16,7 +16,7 @@ import type { Item } from './sim/items';
 import { GameAudio } from './audio/audio';
 import { HIT_FEEL } from './data/combat';
 import { Input } from './input/input';
-import { GO_KEY, reloadWith, RESUME_KEY } from './options';
+import { GO_KEY, onSteamDeck, reloadWith, RESUME_KEY } from './options';
 import { opts, settingHooks } from './ui/settings';
 import { optionsScreen } from './ui/options-screen';
 import { startScreen } from './ui/start';
@@ -81,6 +81,8 @@ audio.setVolume(opts.sound ? opts.volume : 0);
 audio.setMusic(opts.music);
 audio.setEco(opts.profile !== 'qualitaet');
 const input = new Input(canvas);
+// The Steam Deck plays with its controller: pad labels and aim assist from the start (Johannes, 2026-11-25).
+if (onSteamDeck()) input.device = 'gamepad';
 const abilitiesUi = new AbilitiesUi(input);
 /** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
 function talk(): void {
