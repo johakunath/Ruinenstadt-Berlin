@@ -39,6 +39,9 @@ import type { EnemyKind } from '../data/enemies';
 export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' | 'female' }>> = {
   feldwebel: { url: new URL('../../assets/characters/boss-feldwebel.glb', import.meta.url).href, base: 'human' },
   spreehexe: { url: new URL('../../assets/characters/boss-spreehexe.glb', import.meta.url).href, base: 'female' },
+  hauptmann: { url: new URL('../../assets/characters/boss-hauptmann.glb', import.meta.url).href, base: 'human' },
+  grenzer: { url: new URL('../../assets/characters/boss-grenzer.glb', import.meta.url).href, base: 'human' },
+  zugezogene: { url: new URL('../../assets/characters/boss-zugezogene.glb', import.meta.url).href, base: 'human' },
 };
 
 export interface CharacterAssets {

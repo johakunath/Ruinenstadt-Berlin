@@ -53,14 +53,20 @@ const SLASH = { clip: 'Sword_Attack', start: 0.1, swing: 0.333, hit: 0.466, end:
 interface Blow { clip: string; start: number; swing: number; hit: number; end: number }
 /**
  * H4: how a boss with an own body (`OWN_BODIES`) stands, walks and strikes, instead of the ghoul clips.
- * `keep`: gear still built in code on top of the body (a glowing tell). Walks need the zombie walk's stride and
+ * `keep`: bones whose code gear stays on top of the body (a glowing tell, a held prop, parts that break off; fitted
+ * coats never stay; `tier` keeps the parts that break off at 66 % and 33 %); the rest is in the mesh. Walks need the zombie walk's stride and
  * cycle (0.69 m per 1.33 s; Walk_Formal_Loop and Walk_Loop measured), so `WALK_CLIP_SPEED` keeps the feet planted.
  */
-const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: Blow; keep?: GearKey }>> = {
+const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: Blow; keep?: readonly string[] }>> = {
   // Johannes 2026-11-25: stands at sabre guard, marches, cuts overhead (also the charge's wind-up).
   feldwebel: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH },
   // The punk witch stands and walks upright, rakes overhead with the free hand; the acid orb stays a glowing tell.
-  spreehexe: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: 'hexeOrb' },
+  spreehexe: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] },
+  // The captain like his sergeant (sabre from the rack); the border guard marches with his rifle (code, right hand);
+  // the newcomer strolls with his oat-milk coffee (code, left hand; the e-scooter is its own group).
+  hauptmann: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH },
+  grenzer: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
+  zugezogene: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] },
 };
 /** H4: the own-body kind a view of this enemy kind is pooled under, if it has one. */
 export const ownKind = (kind: EnemyKind): EnemyKind | undefined => (OWN_BODIES[kind] ? kind : undefined);
@@ -115,8 +121,7 @@ const TINTS: Record<EnemyKind, number[]> = {
   zeitwart: [0x7c8a98],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
-/** `hexeOrb`: only the Spreehexe's acid orb, on her own body (H4). */
-type GearKey = EnemyKind | 'brigade' | 'hexeOrb';
+type GearKey = EnemyKind | 'brigade';
 /** M16: the 1920s dress of the plain Zeitlose on `revue` maps (render only, as the neon cables). */
 type RevueKey = 'revueTails' | 'revueUsher' | 'revuePage' | 'revueHand' | 'revueTray';
 const REVUE: Partial<Record<EnemyKind, readonly RevueKey[]>> = { walker: ['revueTails', 'revueUsher'], runner: ['revuePage'], brute: ['revueHand'], spitter: ['revueTray'] };
@@ -947,6 +952,8 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
   const mountCoat = (coat: Coat, hang = 0.5): void => {
     for (const [b, list] of coat.parts) {
       const g = mount(b, list);
+      // H4: an own body has its coat in the mesh; `OWN_MOVES.keep` never keeps these.
+      if (g) g.userData.coat = true;
       if (b === 'pelvis') hangOn(g, hang);
     }
   };
@@ -1199,10 +1206,6 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
       ], 0.06);
       mount('spine_03', [...tunic('dark', 'dark'), [tf(new BoxGeometry(0.05, 0.05, 0.05), -0.12, 0.05, 0.19), 'steel'], [tf(new BoxGeometry(0.05, 0.05, 0.05), 0.12, 0.05, 0.19), 'steel']], 0.08);
       mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.36, 0.86, 10, 1, true, Math.PI * 0.55, Math.PI * 1.9), 0, -0.4, 0), 'dark']]);
-      mount('hand_l', [[tf(new SphereGeometry(0.1, 10, 8), 0, -0.14, 0), 'acid'], [tf(new TorusGeometry(0.14, 0.008, 4, 14), 0, -0.14, 0, Math.PI / 2), 'acid']]);
-      break;
-    case 'hexeOrb':
-      // H4: on her own body only the acid orb is code (it glows).
       mount('hand_l', [[tf(new SphereGeometry(0.1, 10, 8), 0, -0.14, 0), 'acid'], [tf(new TorusGeometry(0.14, 0.008, 4, 14), 0, -0.14, 0, Math.PI / 2), 'acid']]);
       break;
     case 'cyber':
@@ -2510,10 +2513,12 @@ export class EnemyView {
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
       // H4: an own body carries its uniform and helmet; only the weapon rack (below) stays.
       const keep = this.moves?.keep;
-      let gear = this.ownBody && !keep ? [] : this.gear.get(keep ?? key);
+      let gear = this.ownBody && !keep ? [] : this.gear.get(key);
       if (!gear) {
-        gear = this.inIdle(() => gearFor(keep ?? key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
-        this.gear.set(keep ?? key, gear);
+        gear = this.inIdle(() => gearFor(key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
+        // H4: on an own body only the gear on the `keep` bones stays.
+        if (keep) gear = gear.filter((g) => { const on = g.userData.tier ? keep.includes('tier') : keep.includes(g.parent?.name ?? '') && !g.userData.coat; if (!on) g.removeFromParent(); return on; });
+        this.gear.set(key, gear);
       }
       for (const g of gear) g.visible = true;
       this.hanging = gear.filter((g) => g.userData.hang !== undefined);
