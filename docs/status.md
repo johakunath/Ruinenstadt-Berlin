@@ -42,7 +42,11 @@ What is in the game now. Updated 2026-11-25. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-24)
+## Latest (2026-11-25)
+
+- Charlottenburg's period posters have painted pictures (a fan dancer, Madame Dubarry, a mask, a juggler, an elephant, linen, boxers, a cyclist) under their lettering; the Ku'damm velvet, marble and glass and the Aquarium reliefs are painted. Wedding's signs are worn enamel and wood, the Beamtentor's capitals sit on real brick, the Magendoktor has a painted night watchman and a sticker door.
+
+## 2026-11-24
 
 - When your weapon has fallen five or more item levels behind, a district boss's guaranteed legendary is a weapon of the class you use. Sultan Nimmersatt has less life (4400 → 3600); his fight took up to 24 minutes in bot campaigns, now at most 5.
 

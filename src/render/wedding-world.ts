@@ -157,6 +157,41 @@ export function weddingSpatiSign(up: ChunkBuilder, m: Matrix4, name: string | un
   return true;
 }
 
+/**
+ * T13: the boards painted locally with FLUX.2 klein from the code boards (lettering left out): worn enamel, wood
+ * and mosaic, the night watchman mural and the sticker door, one 512 × 128 cell each as in `CELLS`. FLUX cannot
+ * letter, so the code keeps the lettering on top; the emissive map stays the code's.
+ */
+const SIGN_ART_URL = new URL('../../assets/textures/wedding/signs.webp', import.meta.url).href;
+
+/** The colour atlas: each code board, or with `art` the painted one, then its lettering (`letters` false: boards only). */
+export function paintSignColour(g: CanvasRenderingContext2D, art?: CanvasImageSource, letters = true): void {
+  CELLS.forEach((s, i) => {
+    const x = (i % 2) * 512, y = Math.floor(i / 2) * 128;
+    if (art) g.drawImage(art, x, y, 512, 128, x, y, 512, 128);
+    else {
+      g.fillStyle = s.bg;
+      g.fillRect(x, y, 512, 128);
+      g.strokeStyle = 'rgba(255,255,255,0.25)';
+      g.lineWidth = 6;
+      g.strokeRect(x + 6, y + 6, 500, 116);
+      // A worn board: a few darker smudges.
+      g.fillStyle = 'rgba(0,0,0,0.18)';
+      for (let k = 0; k < 6; k++) g.fillRect(x + ((k * 97 + i * 31) % 480), y + ((k * 53 + i * 17) % 100), 30, 14);
+      if (s.paint) s.paint(g, x, y, false);
+    }
+    if (letters && s.text) letter(g, s, x, y, s.fg);
+  });
+}
+
+function letter(k: CanvasRenderingContext2D, s: Cell, x: number, y: number, col: string): void {
+  k.fillStyle = col;
+  k.font = s.font;
+  k.textAlign = 'center';
+  k.textBaseline = 'middle';
+  k.fillText(s.text, x + 256, y + 68, 480);
+}
+
 /** Painted sign atlas: colour map and emissive map (letters glow, the board a little). */
 function paintSigns(): { map: ReturnType<typeof toTexture>; emissiveMap: ReturnType<typeof toTexture> } {
   const H = ROWS * 128, [c, g] = canvas(1024, H), [e, ge] = canvas(1024, H);
@@ -164,28 +199,31 @@ function paintSigns(): { map: ReturnType<typeof toTexture>; emissiveMap: ReturnT
   ge.fillRect(0, 0, 1024, H);
   CELLS.forEach((s, i) => {
     const x = (i % 2) * 512, y = Math.floor(i / 2) * 128;
-    g.fillStyle = s.bg;
-    g.fillRect(x, y, 512, 128);
-    g.strokeStyle = 'rgba(255,255,255,0.25)';
-    g.lineWidth = 6;
-    g.strokeRect(x + 6, y + 6, 500, 116);
-    // A worn board: a few darker smudges.
-    g.fillStyle = 'rgba(0,0,0,0.18)';
-    for (let k = 0; k < 6; k++) g.fillRect(x + ((k * 97 + i * 31) % 480), y + ((k * 53 + i * 17) % 100), 30, 14);
     const lum = Math.round(40 * s.glow);
     ge.fillStyle = `rgb(${lum},${lum},${lum})`;
     ge.fillRect(x, y, 512, 128);
-    if (s.paint) { s.paint(g, x, y, false); s.paint(ge, x, y, true); }
-    if (!s.text) return;
-    for (const [k, col] of [[g, s.fg], [ge, `rgb(${Math.round(255 * s.glow)},${Math.round(255 * s.glow)},${Math.round(255 * s.glow)})`]] as const) {
-      k.fillStyle = col;
-      k.font = s.font;
-      k.textAlign = 'center';
-      k.textBaseline = 'middle';
-      k.fillText(s.text, x + 256, y + 68, 480);
-    }
+    if (s.paint) s.paint(ge, x, y, true);
+    const v = Math.round(255 * s.glow);
+    if (s.text) letter(ge, s, x, y, `rgb(${v},${v},${v})`);
   });
-  return { map: toTexture(c, false), emissiveMap: toTexture(e, false) };
+  paintSignColour(g);
+  const map = toTexture(c, false), emissiveMap = toTexture(e, false);
+  // T13: the painted boards replace the code ones once loaded (one re-upload of the colour map). The painted
+  // mural's lantern and moon sit elsewhere than the code's, so that cell's glow comes from its brightest pixels.
+  const img = new Image();
+  img.onload = () => {
+    paintSignColour(g, img);
+    map.needsUpdate = true;
+    const x = (SIGN.waechter % 2) * 512, y = Math.floor(SIGN.waechter / 2) * 128, px = g.getImageData(x, y, 512, 128), d = px.data;
+    for (let k = 0; k < d.length; k += 4) {
+      const t = Math.min(1, Math.max(0, (Math.max(d[k]!, d[k + 1]!, d[k + 2]!) - 175) / 60));
+      d[k] = d[k]! * t; d[k + 1] = d[k + 1]! * t; d[k + 2] = d[k + 2]! * t;
+    }
+    ge.putImageData(px, x, y);
+    emissiveMap.needsUpdate = true;
+  };
+  img.src = SIGN_ART_URL;
+  return { map, emissiveMap };
 }
 
 export interface WeddingMats { signs: LitMaterial; cloth: LitMaterial }

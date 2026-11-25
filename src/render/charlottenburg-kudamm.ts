@@ -21,7 +21,7 @@
 import { BufferGeometry, CircleGeometry, CylinderGeometry, Matrix4, MeshStandardMaterial, PlaneGeometry, SphereGeometry, TorusGeometry, type Material } from 'three';
 import { OPEN_PARTS, type LandmarkKind } from '../data/map';
 import { Rng } from '../sim/math';
-import { battens, C, cached, paintPosters, POSTERS, POSTER_CELL, sandbags, scaffold, shutter, slope, tarp, type Ctx, type Grime, type RGB } from './charlottenburg-world';
+import { battens, C, cached, onPosterArt, paintPosters, POSTERS, POSTER_CELL, sandbags, scaffold, shutter, slope, tarp, type Ctx, type Grime, type RGB } from './charlottenburg-world';
 import { archHead, ENDS, frameOf, frustum, pane, sub, type Frame } from './landmarks';
 import type { MapMats } from './map-world';
 import type { LitMaterial } from './materials';
@@ -91,7 +91,7 @@ function bulb(g: CanvasRenderingContext2D, x: number, y: number, r: number, col:
 }
 
 /** The atlas; `glow` paints the emissive version (letters, bulbs, lit foyers bright; stone, velvet and marble dark). */
-function paintAtlas(g: CanvasRenderingContext2D, glow: boolean): void {
+export function paintAtlas(g: CanvasRenderingContext2D, glow: boolean): void {
   g.fillStyle = '#000';
   g.fillRect(0, 0, 1024, 1024);
   g.textAlign = 'center';
@@ -323,6 +323,14 @@ function paintAtlas(g: CanvasRenderingContext2D, glow: boolean): void {
   }
 }
 
+/**
+ * T9f/T9h: the text-free regions painted locally with FLUX.2 klein from the code ones (velvet, marble,
+ * conservatory panes, the glass vault), at the same atlas coordinates in `kudamm.webp`. The glow map takes the
+ * painted region darkened to the code glow's share (measured), so lit glass keeps its facets.
+ */
+const KUDAMM_ART_URL = new URL('../../assets/textures/charlottenburg/kudamm.webp', import.meta.url).href;
+const KUDAMM_ART: ReadonlyArray<readonly [Region, number]> = [[R.curtain, 0.09], [R.marble, 0], [R.pane, 0.41], [R.paneDark, 0.22], [R.vault, 0.27]];
+
 const atlases = new WeakMap<MapMats, LitMaterial>();
 function atlas(c: Ctx): LitMaterial {
   let a = atlases.get(c.M);
@@ -332,7 +340,22 @@ function atlas(c: Ctx): LitMaterial {
     paintAtlas(g2, true);
     paintPosters(g1, 0, 1024, false);
     paintPosters(g2, 0, 1024, true);
-    a = new MeshStandardMaterial({ map: toTexture(c1, false, c.M.profile.anisotropy), emissiveMap: toTexture(c2, false, 4), emissive: 0xffffff, emissiveIntensity: 1, roughness: 0.6 });
+    const map = toTexture(c1, false, c.M.profile.anisotropy);
+    a = new MeshStandardMaterial({ map, emissiveMap: toTexture(c2, false, 4), emissive: 0xffffff, emissiveIntensity: 1, roughness: 0.6 });
+    // T9g: the painted poster pictures replace the code ones once loaded (one re-upload).
+    onPosterArt((art) => { paintPosters(g1, 0, 1024, false, art); map.needsUpdate = true; });
+    const emissiveMap = a.emissiveMap!, img = new Image();
+    img.onload = () => {
+      for (const [[x, y, w, h], glow] of KUDAMM_ART) {
+        g1.drawImage(img, x, y, w, h, x, y, w, h);
+        g2.drawImage(img, x, y, w, h, x, y, w, h);
+        g2.fillStyle = `rgba(0,0,0,${1 - glow})`;
+        g2.fillRect(x, y, w, h);
+      }
+      map.needsUpdate = true;
+      emissiveMap.needsUpdate = true;
+    };
+    img.src = KUDAMM_ART_URL;
     atlases.set(c.M, a);
   }
   return a;
