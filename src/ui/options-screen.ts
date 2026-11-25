@@ -22,6 +22,12 @@ export class OptionsScreen {
   private readonly pad: PadNav;
   /** Called after the screen closed (the pause menu takes the pad back). */
   onClose: () => void = () => {};
+  /** The device the game is played with once it runs (main.ts); null shows the guess. */
+  currentDevice: () => ControlDevice | null = () => null;
+  /** A device picked under Steuerung: the play screen labels follow it (playtest 2026-11-25). */
+  onDevice: (d: ControlDevice) => void = () => {};
+  /** The last device picked, also before the game loaded (main.ts applies it on load). */
+  picked: ControlDevice | null = null;
 
   constructor() {
     const r = this.root;
@@ -60,7 +66,7 @@ export class OptionsScreen {
     r.querySelector('#opt-close')!.addEventListener('click', () => this.close());
     r.querySelector('[data-opt="dev"]')!.addEventListener('click', e => {
       const b = (e.target as Element).closest<HTMLButtonElement>('button[data-v]');
-      if (b) { this.dev = b.dataset.v as ControlDevice; this.renderDevice(); }
+      if (b) { this.dev = b.dataset.v as ControlDevice; this.renderDevice(); this.picked = this.dev; this.onDevice(this.dev); }
     });
     r.querySelector('#save-copy')!.addEventListener('click', e => void copySave(e.currentTarget as HTMLButtonElement));
     r.querySelector('#save-load')!.addEventListener('click', loadSaveCode);
@@ -93,7 +99,7 @@ export class OptionsScreen {
   pollPad(now: number): void { this.pad.poll(now); }
 
   private renderDevice(): void {
-    const d = this.dev ?? guessDevice();
+    const d = this.dev ?? this.currentDevice() ?? guessDevice();
     for (const b of this.root.querySelectorAll<HTMLButtonElement>('[data-opt="dev"] button')) { const on = b.dataset.v === d; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
     this.root.querySelector('.ctl-gfx')!.innerHTML = DEVICE_SVG[d]();
   }

@@ -1,6 +1,7 @@
 // Devices → actions. Keyboard and mouse, gamepad (standard mapping) and touch all feed the same
 // move vector and the same input buffer. `poll` runs every render frame, also during hitstop.
 import { ActionBuffer, type Action } from './buffer';
+import { activePad } from './pad';
 
 export type Device = 'keyboard' | 'mouse' | 'gamepad' | 'touch';
 
@@ -31,9 +32,12 @@ export class Input {
   private mouseOriginX = 0;
   private mouseOriginY = 0;
   private activeDevice: Device = 'keyboard';
+  /** False until a device was used or picked (the starting 'keyboard' is only a default). */
+  used = false;
   /** The device that pressed the last action. Mouse aims at the cursor, the others use aim assist. */
   get device(): Device { return this.activeDevice; }
   set device(device: Device) {
+    this.used = true;
     if (device !== this.activeDevice) {
       this.mouseOriginX = this.pointerX;
       this.mouseOriginY = this.pointerY;
@@ -92,6 +96,8 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
+    // A pad that shows up (Chrome: on its first press) brings the pad labels right away (Steam Deck, 2026-11-25).
+    window.addEventListener('gamepadconnected', () => { this.device = 'gamepad'; });
     target.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;
       // A real move (not a jitter) after the pad or touch hands the labels and the aim back to the mouse.
@@ -162,11 +168,9 @@ export class Input {
 
     this.stickX = 0;
     this.stickZ = 0;
-    this.pad = null;
-    const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
-    for (const pad of pads) {
-      if (!pad || !pad.connected) continue;
-      this.pad = pad;
+    this.pad = activePad();
+    const pad = this.pad;
+    if (pad) {
       const lx = pad.axes[0] ?? 0;
       const lz = pad.axes[1] ?? 0;
       const lm = Math.hypot(lx, lz);
@@ -175,7 +179,8 @@ export class Input {
         const s = Math.min(1, (lm - DEADZONE) / (1 - DEADZONE)) / lm;
         x += lx * s;
         z += lz * s;
-        this.device = 'gamepad';
+        // Only in play: a stick move in a menu must not undo the device picked in Optionen › Steuerung.
+        if (this.enabled) this.device = 'gamepad';
       }
       const rx = pad.axes[2] ?? 0;
       const rz = pad.axes[3] ?? 0;
@@ -198,7 +203,8 @@ export class Input {
       if (edge(11) && this.enabled) this.onZoom(0);
       if (edge(PAD_MENU)) this.onMenu();
       this.padDown = down;
-      break;
+    } else {
+      this.padDown = [];
     }
     const len = Math.hypot(x, z);
     if (len > 1) {

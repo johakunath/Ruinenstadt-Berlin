@@ -3,6 +3,7 @@
 // stars). The choice changes no rule; it is kept as `camp.ending`. Uses the intro card's panel style.
 import sunriseArt from '../../assets/ui/ending-gestellt.webp?url';
 import patchworkArt from '../../assets/ui/ending-gelassen.webp?url';
+import { activePad } from '../input/pad';
 
 export type Ending = 'gestellt' | 'gelassen';
 
@@ -64,7 +65,7 @@ export class EndingCard {
 
   /** Pad A or B closes it. */
   pollPad(): void {
-    const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
+    const pad = activePad();
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map((b) => b.pressed), prev = this.padDown;
     this.padDown = down;

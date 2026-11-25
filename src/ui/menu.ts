@@ -14,6 +14,7 @@ import { esc, itemIcon, InventoryUi, resIcon } from './inventory';
 import { moveFocus } from './focus';
 import { KEEPER_PORTRAIT, portraitUrl } from './portraits';
 import { uiIcon } from './ui-icons';
+import { activePad } from '../input/pad';
 
 export type TabId = 'inv' | 'karte' | 'segen' | 'kodex';
 const TAB_NAME: Record<TabId, string> = { inv: 'Inventar', karte: 'Karte', segen: 'Segen', kodex: 'Kodex' };
@@ -208,7 +209,7 @@ export class Menu {
   }
   /** Pad: LB/RB tabs, B closes, A presses, D-pad and stick move to the nearest button in that direction. */
   pollPad(now: number): void {
-    const pad = [...(navigator.getGamepads?.() ?? [])].find(p => p?.connected);
+    const pad = activePad();
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map(b => b.pressed), prev = this.padDown, edge = (i: number): boolean => !!down[i] && !prev[i];
     this.padDown = down;

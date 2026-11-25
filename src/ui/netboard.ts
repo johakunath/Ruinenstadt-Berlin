@@ -3,6 +3,7 @@
 // tunnel; places without a 3D map yet stay grey ("kommt bald"). Ported layout and colors.
 import { campOpen, FINALE, LINE_FREED, LINES, linePlayable, NET_BADGES, NET_ROUTES, nextDestination, stopName, STOPS, turmOpen } from '../data/lines';
 import { keyNav } from './focus';
+import { activePad } from '../input/pad';
 
 export type NetGo = { map: 'koepenick' | 'xhain' | 'alex' | 'mitte' | 'charlottenburg' | 'wedding' | 'turm' } | { map: 'tunnel'; line: number };
 
@@ -84,7 +85,7 @@ export class NetBoard {
 
   /** Pad: D-pad/stick moves between the stops, lines and buttons, A presses, B closes. */
   pollPad(now: number): void {
-    const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
+    const pad = activePad();
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map((b) => b.pressed), prev = this.padDown, edge = (i: number): boolean => !!down[i] && !prev[i];
     this.padDown = down;

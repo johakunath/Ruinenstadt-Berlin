@@ -70,6 +70,7 @@ import { clearSave, deviceClass, loadSave, writeSave } from './save';
 import { cloudSave } from './cloud';
 import type { Prop } from './data/courtyard';
 import { profileOf, simFromSave, snapshot, type SaveV1 } from './sim/save';
+import { activePad } from './input/pad';
 
 
 type Phase = 'title' | 'play' | 'dead' | 'won';
@@ -203,7 +204,7 @@ function finishLootExit(leave: boolean): void {
  */
 let lootPadDown: boolean[] = [];
 function pollLootPad(): void {
-  const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
+  const pad = activePad();
   if (!pad) { lootPadDown = []; return; }
   const down = pad.buttons.map((b) => b.pressed || b.value > 0.5);
   const edge = (i: number): boolean => !!down[i] && !lootPadDown[i];
@@ -431,6 +432,14 @@ const menu = new Menu({
   blocked: () => optionsScreen().isOpen,
 }, inventory);
 optionsScreen().onClose = () => menu.resetPad();
+// Optionen › Steuerung and the play screen labels show the same device, both ways (playtest 2026-11-25).
+optionsScreen().currentDevice = () => !input.used ? null : input.device === 'gamepad' ? 'pad' : input.device === 'touch' ? 'touch' : 'key';
+optionsScreen().onDevice = (d) => {
+  if (d === 'pad') input.device = 'gamepad';
+  else if (d === 'touch') input.device = 'touch';
+  else if (input.device !== 'mouse') input.device = 'keyboard';
+};
+if (optionsScreen().picked) optionsScreen().onDevice(optionsScreen().picked!);
 input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
 // M13: the camp between expeditions, from the title and the victory screen.
 const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); if (isCamp && phase === 'play') { input.enabled = true; input.clear(); } });

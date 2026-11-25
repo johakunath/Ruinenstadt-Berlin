@@ -5,6 +5,7 @@ import standstillArt from '../../assets/ui/intro-standstill.webp?url';
 import streetArt from '../../assets/ui/intro-fight.webp?url';
 import koepenickArt from '../../assets/ui/intro-koepenick.webp?url';
 import controlsArt from '../../assets/ui/intro-controls.webp?url';
+import { activePad } from '../input/pad';
 
 const PAGES: ReadonlyArray<readonly [string, string, string]> = [
   ['Berlin steht still', 'Die Weltzeituhr ist zerbrochen. Jeder Bezirk hängt in seiner eigenen Zeit fest, voller Zeitloser.', standstillArt],
@@ -82,7 +83,7 @@ export class IntroUi {
   }
   /** Pad A continues, B skips. */
   pollPad(): void {
-    const pad = [...(navigator.getGamepads?.() ?? [])].find(p => p?.connected);
+    const pad = activePad();
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map(b => b.pressed), prev = this.padDown;
     this.padDown = down;

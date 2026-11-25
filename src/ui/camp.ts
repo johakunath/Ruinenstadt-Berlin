@@ -12,6 +12,7 @@ import type { Item } from '../sim/items';
 import type { Sim } from '../sim/types';
 import { esc, itemCard, itemIcon, resIcon } from './inventory';
 import { KEEPER_PORTRAIT, portraitUrl } from './portraits';
+import { activePad } from '../input/pad';
 
 const MAT_IDS: MaterialId[] = ['metall', 'stoff', 'kabel', 'chemie'];
 const ING_IDS: IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
@@ -66,7 +67,7 @@ export class CampUi {
   close(): void { if (!this.isOpen) return; this.root.hidden = true; this.previous?.focus?.(); this.onClose(); }
   /** Pad: D-pad/stick moves (nearest button in that direction), A presses, B closes. */
   pollPad(now: number): void {
-    const pad = [...(navigator.getGamepads?.() ?? [])].find(p => p?.connected);
+    const pad = activePad();
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map(b => b.pressed), prev = this.padDown, edge = (i: number): boolean => !!down[i] && !prev[i];
     this.padDown = down;

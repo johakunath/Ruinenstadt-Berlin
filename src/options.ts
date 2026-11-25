@@ -112,9 +112,21 @@ export function storedProfile(s: { profile?: string; pv?: number }): ProfileId |
   return s.profile as ProfileId;
 }
 
-/** Phones and tablets start on Leistung (Johannes, 2026-11-20), everything else on Qualität. */
+/**
+ * Steam Deck (playtest 2026-11-25): its browsers report a plain desktop Linux and a fine pointer, so it
+ * looked like a PC. Told apart by a Linux browser on the Deck's 1280×800 screen (LCD and OLED, either way round).
+ */
+export function isSteamDeck(ua: string, width: number, height: number): boolean {
+  if (!/Linux/.test(ua) || /Android/.test(ua)) return false;
+  const w = Math.round(Math.max(width, height)), h = Math.round(Math.min(width, height));
+  return w === 1280 && h === 800;
+}
+
+/** Phones, tablets and the Steam Deck start on Leistung (Johannes, 2026-11-20 and 2026-11-25), everything else on Qualität. */
 function defaultProfile(): ProfileId {
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const dpr = window.devicePixelRatio || 1;
+  if (isSteamDeck(navigator.userAgent, screen.width * dpr, screen.height * dpr)) return 'leistung';
   return !coarse && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? 'qualitaet' : 'leistung';
 }
 
