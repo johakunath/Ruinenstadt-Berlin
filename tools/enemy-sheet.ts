@@ -35,6 +35,8 @@ const PORTRAIT: Partial<Record<EnemyKind, { top?: number; yaw?: number; pitch?: 
   // The shield from its open side.
   schild: { yaw: -30 },
   // Thin bodies under tall plumes and crests, the Diva inside her feather fans: closer, a little lower.
+  // H4: the officers' own bodies lean into their sabre guard: a little wider and higher, so the helmet stays in.
+  feldwebel: { zoom: 0.95, lift: 0.18, yaw: 20 }, hauptmann: { zoom: 0.95, lift: 0.18, yaw: 20 },
   scherbe: { zoom: 1.4, lift: -0.1 }, spreehexe: { zoom: 1.3, lift: -0.08 }, spiegelpaar: { zoom: 1.4, lift: -0.1 }, diva: { zoom: 2.3, lift: -0.08, yaw: 8 },
 };
 
@@ -47,6 +49,7 @@ function visibleBox(root: Object3D): Box3 {
     if (!m.isMesh) return;
     const mat = Array.isArray(m.material) ? m.material[0] : m.material;
     if (mat && (mat.blending === 2 || mat.depthWrite === false)) return; // additive glows and flat decals
+    if (m.name.startsWith('weapon-')) return; // H4: a sabre held at guard would push the head down the frame
     // Skinned and instanced meshes bound their posed or instanced geometry.
     const own = (m as SkinnedMesh).isSkinnedMesh || (m as unknown as InstancedMesh).isInstancedMesh ? (m as SkinnedMesh) : null;
     if (own) { own.computeBoundingBox(); b.copy(own.boundingBox!); }

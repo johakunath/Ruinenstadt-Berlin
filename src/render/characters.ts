@@ -42,6 +42,8 @@ export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' 
   hauptmann: { url: new URL('../../assets/characters/boss-hauptmann.glb', import.meta.url).href, base: 'human' },
   grenzer: { url: new URL('../../assets/characters/boss-grenzer.glb', import.meta.url).href, base: 'human' },
   zugezogene: { url: new URL('../../assets/characters/boss-zugezogene.glb', import.meta.url).href, base: 'human' },
+  zeitwart: { url: new URL('../../assets/characters/boss-zeitwart.glb', import.meta.url).href, base: 'human' },
+  diva: { url: new URL('../../assets/characters/boss-diva.glb', import.meta.url).href, base: 'female' },
 };
 
 export interface CharacterAssets {
@@ -134,12 +136,13 @@ function prepare(scene: Object3D, materials: Materials): void {
 }
 
 /** `mechs`: true loads both mechs, 'small' only Leela (448 KB instead of 1.3 MB). */
-export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true): Promise<CharacterAssets> {
+/** `bosses`: the boss kinds that can appear; own bodies (H4) load only for these (omitted: all, as in the tools). */
+export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true, bosses?: readonly string[]): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
-  const own = (Object.entries(OWN_BODIES) as Array<[EnemyKind, { url: string; base: 'human' | 'female' }]>).filter(([, o]) => (o.base === 'human' ? humans : females));
+  const own = (Object.entries(OWN_BODIES) as Array<[EnemyKind, { url: string; base: 'human' | 'female' }]>).filter(([k, o]) => (o.base === 'human' ? humans : females) && (!bosses || bosses.includes(k)));
   const ownLoad = Promise.all(own.map(([, o]) => loader.loadAsync(o.url)));
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
   const ownGltfs = await ownLoad;

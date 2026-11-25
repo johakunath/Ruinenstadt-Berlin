@@ -67,6 +67,10 @@ const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: B
   hauptmann: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH },
   grenzer: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
   zugezogene: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] },
+  // The clock robot marches; the glowing Unruh and watch chains (chest), the pendulum (back) and the clock-hand
+  // blades (hands) stay code. The Diva keeps her breakable gown tiers and the halo with its mask (head).
+  zeitwart: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['spine_03', 'spine_02', 'hand_r', 'hand_l'] },
+  diva: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['tier', 'Head'] },
 };
 /** H4: the own-body kind a view of this enemy kind is pooled under, if it has one. */
 export const ownKind = (kind: EnemyKind): EnemyKind | undefined => (OWN_BODIES[kind] ? kind : undefined);
