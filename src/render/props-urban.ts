@@ -134,35 +134,49 @@ function carGeo(kind: keyof typeof CAR_TYPES): { lower: BufferGeometry; cabin: B
   };
 }
 
-const TRABI_SHARE = 0.35;
-/** P3: whether a car prop is drawn as the Trabi (on maps with local AI props): a hash of its position, so decorations
- * built elsewhere (Wedding ribbons, Mitte roof sensors) can find the Trabi's roof and the code cars keep their rng. */
-export function isTrabi(p: Prop): boolean {
-  const v = Math.sin(p.x * 12.9898 + p.z * 78.233) * 43758.5453;
-  return v - Math.floor(v) < TRABI_SHARE;
+/**
+ * P3: an East German car from the local AI pipeline, a Pixal3D shell cut below the sills (its wheels fell apart)
+ * on code wheels. `lift`: height of the cut sills above the ground (lower than real, so the code wheels tuck into
+ * the arches, Johannes 2026-11-24); axles at `front` and `rear` (z), `x` half track, `r` wheel radius. `roof`,
+ * `bonnet` (top y, middle z, length) and `nose` (z) place decorations built elsewhere (Wedding ribbons, Mitte
+ * roof sensors). `share`: part of a map's cars.
+ */
+export interface ModelCar {
+  kind: 'trabi' | 'wartburg';
+  share: number; lift: number; x: number; front: number; rear: number; r: number;
+  roof: number; bonnet: { y: number; z: number; len: number }; nose: number;
 }
-/** Roof top of the Trabi shell above its ground (code cars: about 1.45 m). */
-export const TRABI_ROOF = 1.69;
-/** Height of the shell's cut sills above the ground (the GLB is cut there, Pixal3D's wheels fell apart; 0.15 tucks the code wheels into the arches, Johannes 2026-11-24) and its axles (z). */
-const TRABI = { lift: 0.15, x: 0.7, front: 1.17, rear: -1.04, r: 0.27 } as const;
+const MODEL_CARS: readonly ModelCar[] = [
+  { kind: 'trabi', share: 0.35, lift: 0.15, x: 0.7, front: 1.17, rear: -1.04, r: 0.27, roof: 1.69, bonnet: { y: 1.09, z: 1.2, len: 1.1 }, nose: 1.82 },
+  // The Wartburg 353 (4.22 m, wheelbase 2.47 m measured on the shell).
+  { kind: 'wartburg', share: 0.2, lift: 0.22, x: 0.68, front: 1.31, rear: -1.16, r: 0.3, roof: 1.54, bonnet: { y: 1.03, z: 1.45, len: 1.1 }, nose: 2.15 },
+];
+/** The model car a car prop is drawn as on maps with local AI props, or none (a code car): a hash of its position,
+ * so decorations built elsewhere find the same car and the code cars keep their rng. */
+export function modelCar(p: Prop): ModelCar | undefined {
+  const v = Math.sin(p.x * 12.9898 + p.z * 78.233) * 43758.5453;
+  let f = v - Math.floor(v);
+  for (const c of MODEL_CARS) { if (f < c.share) return c; f -= c.share; }
+  return undefined;
+}
 
-/** P3: the local Pixal3D shell (`glb-props.ts` kind `trabi`, one draw call for all of a map) on code wheels. */
-function buildTrabi(b: Builder, p: Prop, rng: Rng, glb: NonNullable<Builder['mats']['glbProps']>): void {
+/** P3: a model car's shell (`glb-props.ts`, one draw call per kind for all of a map) on code wheels. */
+function buildModelCar(b: Builder, p: Prop, rng: Rng, glb: NonNullable<Builder['mats']['glbProps']>, car: ModelCar): void {
   const m = b.mats;
   // One flat tyre on some: that corner sinks, the shell tilts with it.
   const flat = rng.next() < 0.35 ? rng.int(4) : -1;
-  const wheels: Array<[number, number]> = [[TRABI.x, TRABI.front], [-TRABI.x, TRABI.front], [TRABI.x, TRABI.rear], [-TRABI.x, TRABI.rear]];
+  const wheels: Array<[number, number]> = [[car.x, car.front], [-car.x, car.front], [car.x, car.rear], [-car.x, car.rear]];
   const sink = wheels.map((_, i): number => (i === flat ? 0.08 : 0));
-  const pitch = ((sink[0]! + sink[1]!) - (sink[2]! + sink[3]!)) / 2 / (TRABI.front - TRABI.rear);
-  const roll = ((sink[1]! + sink[3]!) - (sink[0]! + sink[2]!)) / 2 / (2 * TRABI.x);
+  const pitch = ((sink[0]! + sink[1]!) - (sink[2]! + sink[3]!)) / 2 / (car.front - car.rear);
+  const roll = ((sink[1]! + sink[3]!) - (sink[0]! + sink[2]!)) / 2 / (2 * car.x);
   const base = at(p, rng.range(-0.08, 0.08), -(sink.reduce((a, v) => a + v, 0) / 4), rng.range(-0.1, 0.1), pitch, rng.range(-0.03, 0.03), roll);
   const tint = mulT(rng.pick(CAR_TINTS), rng.range(0.9, 1.08));
   // The batches add the chunk's height offset (`on`, terraces and decks) themselves; the GLB placement needs it too.
-  glb.push({ kind: 'trabi', m: new Matrix4().makeTranslation(0, b.solid.lift, 0).multiply(L(base, 0, TRABI.lift, 0)), tint });
-  const tire = new CylinderGeometry(TRABI.r, TRABI.r, 0.15, 10);
+  glb.push({ kind: car.kind, m: new Matrix4().makeTranslation(0, b.solid.lift, 0).multiply(L(base, 0, car.lift, 0)), tint });
+  const tire = new CylinderGeometry(car.r, car.r, 0.15, 10);
   const hub = new CircleGeometry(0.13, 6);
   wheels.forEach(([x, z], i) => {
-    const s = Math.sign(x), f = i === flat ? 0.75 : 1, y = TRABI.r * f + sink[i]! - 0.01;
+    const s = Math.sign(x), f = i === flat ? 0.75 : 1, y = car.r * f + sink[i]! - 0.01;
     b.geo(m.rubber, tire, S(L(base, x, y, z, 0, 0, Math.PI / 2), f, 1, 1));
     b.geo(m.enamel, hub, L(base, x + s * 0.09, y, z, 0, s * Math.PI / 2), g3(0.8));
   });
@@ -183,8 +197,9 @@ function sideSlab(base: Matrix4, x: number, z0: number, y0: number, z1: number, 
  */
 export function buildCar(b: Builder, p: Prop, rng: Rng): void {
   const m = b.mats;
-  // P3: on maps with local AI props about a third of the cars are the small East German car (Trabant-like).
-  if (m.glbProps && isTrabi(p)) { buildTrabi(b, p, rng, m.glbProps); return; }
+  // P3: on maps with local AI props about a third of the cars are Trabis and a fifth Wartburgs (model cars).
+  const model = m.glbProps ? modelCar(p) : undefined;
+  if (model) { buildModelCar(b, p, rng, m.glbProps!, model); return; }
   const kind = rng.pick(['saloon', 'saloon', 'hatch', 'estate'] as const);
   const t = CAR_TYPES[kind];
   const geo = carGeo(kind);

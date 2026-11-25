@@ -984,6 +984,14 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
       const L = 12;
       const W = 2.55;
       const tilt = at(p, 0, 0, 0, 0.012, 0, rng.range(-0.03, 0.03));
+      // P3: on maps with local AI props, the BVG bus wreck from the local pipeline (one draw call per map, it casts
+      // its own shadow); the box bus stays the fallback. The batches add the chunk's height offset themselves, the
+      // GLB placement needs it too.
+      if (m.glbProps) {
+        const k = rng.range(0.88, 1.04);
+        m.glbProps.push({ kind: 'bus', m: new Matrix4().makeTranslation(0, b.solid.lift, 0).multiply(tilt), tint: [k, k, k] });
+        break;
+      }
       const part = (x: number, y: number, z: number): Matrix4 => tilt.clone().multiply(new Matrix4().makeTranslation(x, y, z));
       const paint = m.carPaint;
       const tint = TRANSIT_PAINT[rng.pick(['cream', 'ochre', 'oxblood'] as const)];

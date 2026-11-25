@@ -19,6 +19,10 @@ const PROPS = {
   /** P3 small East German car (Trabant-like), a wreck without wheels (the builder adds them), 3.56 m long,
    * origin at the bottom centre of the shell, nose along +Z. Desaturated paint: each copy gets its car tint. */
   trabi: { url: new URL('../../assets/props/car-trabi.glb', import.meta.url).href, tint: [1, 1, 1] },
+  /** P3 East German saloon (Wartburg-like), the same make-up as the Trabi: 4.22 m, cut below the sills. */
+  wartburg: { url: new URL('../../assets/props/car-wartburg.glb', import.meta.url).href, tint: [1, 1, 1] },
+  /** P3 BVG standard bus wreck, faded yellow, 12 × 2.55 m with its own wheels, origin at the bottom centre, nose along +Z. */
+  bus: { url: new URL('../../assets/props/bus-bvg.glb', import.meta.url).href, tint: [1, 1, 1] },
 } as const;
 
 export type GlbPropKind = keyof typeof PROPS;

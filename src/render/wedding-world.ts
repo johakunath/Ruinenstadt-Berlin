@@ -23,7 +23,7 @@ import { cached, scaffold, tarp, buildFence, type Ctx, type RGB } from './charlo
 import { sub } from './landmarks';
 import { buildWeddingSight } from './wedding-sights';
 import { lightWeddingLandmarks } from './wedding-lights';
-import { isTrabi, TRABI_ROOF } from './props-urban';
+import { modelCar } from './props-urban';
 import { lm, type ChunkBuilder } from './map-world';
 import { canvas, toTexture } from './paint';
 import type { Materials, LitMaterial } from './materials';
@@ -544,11 +544,11 @@ export function buildWeddingWorld(m: MapDef, lots: readonly Lot[], props: readon
     if (i % 2) return;
     const b = chunkOf(p.x, p.z), M = b.mm, fm = new Matrix4().makeRotationY(p.rot).setPosition(p.x, ground(p.x, p.z), p.z);
     b.solid.excludeOccluder(() => {
-      // P3: the Trabi is shorter with a higher bonnet (top 1.06 m from z 0.9 to 1.5, nose at 1.78) and roof.
-      const t = isTrabi(p);
-      for (const s of [-0.35, 0.35]) b.box(M.linen, sub(fm, s, t ? 1.09 : 1.02, t ? 1.2 : 1.1, 0, 0.12), 0.12, 0.03, t ? 1.1 : 1.9, [1.45, 1.4, 1.35]);
-      b.box(M.linen, sub(fm, 0, 0.95, t ? 1.82 : 2.05), 0.5, 0.22, 0.08, [1.45, 1.4, 1.35]);
-      b.box(M.linen, sub(fm, 0, t ? TRABI_ROOF + 0.02 : 1.55, -0.2), 1.3, 0.03, 0.15, W.ruby);
+      // P3: the model cars (Trabi, Wartburg) have their own bonnet, nose and roof; code cars the values here.
+      const c = modelCar(p), bon = c?.bonnet ?? { y: 1.02, z: 1.1, len: 1.9 };
+      for (const s of [-0.35, 0.35]) b.box(M.linen, sub(fm, s, bon.y, bon.z, 0, 0.12), 0.12, 0.03, bon.len, [1.45, 1.4, 1.35]);
+      b.box(M.linen, sub(fm, 0, 0.95, c?.nose ?? 2.05), 0.5, 0.22, 0.08, [1.45, 1.4, 1.35]);
+      b.box(M.linen, sub(fm, 0, c ? c.roof + 0.02 : 1.55, -0.2), 1.3, 0.03, 0.15, W.ruby);
     });
   });
   // The Lange Tafel (E7): ruby cloths with a gold runner on the beer tables, samovars and tea glasses.
