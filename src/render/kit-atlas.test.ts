@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BoxGeometry, Color, CylinderGeometry, SRGBColorSpace, type BufferGeometry } from 'three';
-import { cellRect, KIT_CELLS, KIT_TONE, paintPart } from './kit-atlas';
+import sharp from 'sharp';
+import { cellRect, KIT_ATLAS, KIT_CELLS, KIT_TONE, paintPart } from './kit-atlas';
 
 const flat = (g: BufferGeometry): BufferGeometry => g.toNonIndexed();
 /** sRGB channel values (0..255) of vertex `i`'s colour times the linear tone of `cell`. */
@@ -76,6 +77,20 @@ describe('kit atlas (KA part A)', () => {
       const [u0, v0, u1, v1] = cellRect(i);
       expect(u0).toBeGreaterThan(0); expect(v0).toBeGreaterThan(0); expect(u1).toBeLessThan(1); expect(v1).toBeLessThan(1);
       expect(u1).toBeGreaterThan(u0); expect(v1).toBeGreaterThan(v0);
+    }
+  });
+
+  it('KIT_TONE matches the mean of each cell of kit.webp inside its padding (within 2)', async () => {
+    const { data, info } = await sharp('assets/textures/enemies/kit.webp').removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { cols, rows, cell, pad } = KIT_ATLAS;
+    expect([info.width, info.height]).toEqual([cols * cell, rows * cell]);
+    for (let i = 0; i < cols * rows; i++) {
+      const x0 = (i % cols) * cell, y0 = Math.floor(i / cols) * cell, sum = [0, 0, 0];
+      let n = 0;
+      for (let y = y0 + pad; y < y0 + cell - pad; y++) for (let x = x0 + pad; x < x0 + cell - pad; x++, n++) {
+        for (let c = 0; c < 3; c++) sum[c]! += data[(y * info.width + x) * 3 + c]!;
+      }
+      sum.forEach((v, c) => expect(Math.abs(v / n - KIT_TONE[i]![c]!)).toBeLessThanOrEqual(2));
     }
   });
 });

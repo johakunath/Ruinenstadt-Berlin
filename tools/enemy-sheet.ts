@@ -201,12 +201,12 @@ const view = q.get('view') ?? 'side';
 renderer.setScissorTest(true);
 const state = (q.get('state') ?? 'chase') as EnemyState;
 const special = q.get('special') as SpecialKind | null;
-// `wait=ms`: build one view first so the gear kit loads its painted maps (T8 fur), then render with them.
-if (q.get('wait')) {
-  new EnemyView(assets, materials, ENEMIES[kinds[0]!].body, false, { own: ownKind(kinds[0]!) }).assign(spawnEnemy(sim, 0, 0, kinds[0]!), false, null);
-  sim.enemies.length = 0;
-  await new Promise((r) => setTimeout(r, Number(q.get('wait'))));
-}
+// Build one view first so the gear kit starts loading its painted maps, then wait for the kit atlas (KA) and,
+// with `wait=ms`, for the timed ones (T8 fur and wool).
+new EnemyView(assets, materials, ENEMIES[kinds[0]!].body, false, { own: ownKind(kinds[0]!) }).assign(spawnEnemy(sim, 0, 0, kinds[0]!), false, null);
+sim.enemies.length = 0;
+if (q.get('wait')) await new Promise((r) => setTimeout(r, Number(q.get('wait'))));
+await kitReady();
 for (let i = 0; i < n; i++) {
   const k = kinds[kind ? 0 : i]!;
   const def = ENEMIES[k];
