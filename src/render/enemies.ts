@@ -90,6 +90,8 @@ const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: B
   bassprediger: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH },
   wurzelmutter: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH },
   ringvater: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH },
+  // LA4d: the dancer stands and walks upright; plume, tiara, mask, pearls, bodice and shard tutu are in the mesh.
+  scherbe: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH },
 };
 /** H4: the own-body kind a view of this enemy kind is pooled under, if it has one. */
 export const ownKind = (kind: EnemyKind): EnemyKind | undefined => (OWN_BODIES[kind] ? kind : undefined);

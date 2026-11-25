@@ -37,7 +37,8 @@ import type { EnemyKind } from '../data/enemies';
  * `tools/blender/boss_body.py`, `docs/local-ai-assets.md` › W8), on the skeleton of their base: `human` (human1.glb)
  * or `female` (human2.glb). Loaded with their base; their clips are the base's enemy set plus `BOSS_CLIPS`.
  */
-export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' | 'female' }>> = {
+/** `normal`: a normal kind (LA4d); it loads wherever its base loads, since lots, waves and summons all bring it. */
+export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' | 'female'; normal?: true }>> = {
   feldwebel: { url: new URL('../../assets/characters/boss-feldwebel.glb', import.meta.url).href, base: 'human' },
   spreehexe: { url: new URL('../../assets/characters/boss-spreehexe.glb', import.meta.url).href, base: 'female' },
   hauptmann: { url: new URL('../../assets/characters/boss-hauptmann.glb', import.meta.url).href, base: 'human' },
@@ -56,6 +57,8 @@ export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' 
   conferencier: { url: new URL('../../assets/characters/boss-conferencier.glb', import.meta.url).href, base: 'human' },
   dirigent: { url: new URL('../../assets/characters/boss-dirigent.glb', import.meta.url).href, base: 'human' },
   bassprediger: { url: new URL('../../assets/characters/boss-bassprediger.glb', import.meta.url).href, base: 'human' },
+  // LA4d: the first normal enemy with an own body (Charlottenburg; summoned by the Conférencier and the Diva).
+  scherbe: { url: new URL('../../assets/characters/body-scherbe.glb', import.meta.url).href, base: 'female', normal: true },
 };
 
 export interface CharacterAssets {
@@ -239,7 +242,7 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const detail = detailTexture(materials.profile.anisotropy), detailLoad = loadDetail(detail);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
-  const own = (Object.entries(OWN_BODIES) as Array<[EnemyKind, { url: string; base: 'human' | 'female' }]>).filter(([k, o]) => (o.base === 'human' ? humans : females) && (!bosses || bosses.includes(k)));
+  const own = (Object.entries(OWN_BODIES) as Array<[EnemyKind, { url: string; base: 'human' | 'female'; normal?: true }]>).filter(([k, o]) => (o.base === 'human' ? humans : females) && (!bosses || bosses.includes(k) || o.normal));
   // One load per file (the Spiegelbild shares the Spiegelpaar's), each kind gets its own clone in the view.
   const files = new Map<string, Promise<GLTF>>();
   const ownLoad = Promise.all(own.map(([, o]) => { let f = files.get(o.url); if (!f) files.set(o.url, (f = loader.loadAsync(o.url))); return f; }));
