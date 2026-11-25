@@ -10,6 +10,31 @@ export const SRC = 'assets-src';
 export const OUT = 'assets/characters';
 export const io = new NodeIO();
 
+// T8 (local FLUX.2 klein): decayed undead skin (bruises, veins, grime; busts X01, X04, X05, X10). FLUX moves the
+// UV islands when it repaints the atlas itself, so a seamless decay tile is laid over it instead: each pixel is
+// multiplied by the tile's colour relative to its mean, only on skin (dark islands such as the briefs stay).
+// Used on the human boss bases (tools/build-human.mjs) and, since LA4, on the zombie (tools/build-assets.mjs).
+const DECAY = new URL('../assets/textures/enemies/decay.webp', import.meta.url);
+
+/** `img` is the prepared body atlas (size × size); `repeat` tiles across it (2: veins about a finger thick). */
+export async function decay(img, size, { repeat = 2, strength = 0.6 } = {}) {
+  const base = await img.removeAlpha().raw().toBuffer();
+  const t = Math.round(size / repeat);
+  const tile = await sharp(fs.readFileSync(DECAY)).resize(t, t).removeAlpha().raw().toBuffer();
+  const mean = [0, 1, 2].map((c) => { let s = 0; for (let i = c; i < tile.length; i += 3) s += tile[i]; return s / (tile.length / 3); });
+  const out = Buffer.alloc(base.length);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const i = (y * size + x) * 3, j = ((y % t) * t + (x % t)) * 3;
+    const lum = 0.3 * base[i] + 0.59 * base[i + 1] + 0.11 * base[i + 2];
+    const skin = Math.min(1, Math.max(0, (lum - 95) / 50)) * strength;
+    for (let c = 0; c < 3; c++) {
+      const ratio = Math.min(1.35, Math.max(0.35, tile[j + c] / mean[c]));
+      out[i + c] = Math.min(255, Math.round(base[i + c] * (1 + (ratio - 1) * skin)));
+    }
+  }
+  return sharp(out, { raw: { width: size, height: size, channels: 3 } });
+}
+
 
 /** Reads a .gltf whose image file names do not all exist (the pack has a few broken references). */
 export async function readGltf(file) {

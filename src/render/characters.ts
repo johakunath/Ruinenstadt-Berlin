@@ -8,7 +8,7 @@ import { HeroModel } from './hero-model';
 import { HERO_LAYER } from './layers';
 import {
   AnimationClip, AnimationMixer, Color, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, LoopRepeat, Mesh, RGBAFormat, RepeatWrapping, SRGBColorSpace, TextureLoader, ImageLoader,
-  Vector3, type AnimationAction, type BufferGeometry, type Object3D, type Texture,
+  Vector3, Vector4, type AnimationAction, type BufferGeometry, type Object3D, type Texture,
 } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import animsUrl from '../../assets/characters/anims.glb?url';
@@ -116,17 +116,18 @@ async function loadClothing(anisotropy: number) {
   }));
 }
 
-/** KA B2: the grey detail strip (denim | mail | patch, 256 px cells; local FLUX.2 klein, `docs/local-ai-assets.md`). */
+/** KA B2: the grey detail strip (denim | mail | patch | fur, 256 px cells; local FLUX.2 klein, `docs/local-ai-assets.md`). */
 const DETAIL_URL = new URL('../../assets/textures/hero/detail.webp', import.meta.url).href;
 
 /**
- * KA part B: the packed detail texture, one tiling grey material per channel (R denim, G chainmail, B patchwork),
- * 256 px, sRGB, repeating. Every channel is flat at its `DETAILS` tone until `loadDetail` packs the strip in.
+ * KA part B: the packed detail texture, one tiling grey material per channel (R denim, G chainmail, B patchwork,
+ * A fur since LA4), 256 px, sRGB, repeating. The GPU decodes only RGB from sRGB; `withDetail` decodes alpha itself.
+ * Every channel is flat at its `DETAILS` tone until `loadDetail` packs the strip in.
  */
 function detailTexture(anisotropy: number): DataTexture {
   const S = 256, data = new Uint8Array(S * S * 4), ids = Object.keys(DETAILS) as DetailId[];
-  const tone = [0, 1, 2].map((c) => DETAILS[ids.find((d) => DETAILS[d].channel === c)!].tone);
-  for (let i = 0; i < S * S; i++) data.set([tone[0]!, tone[1]!, tone[2]!, 255], i * 4);
+  const tone = [0, 1, 2, 3].map((c) => DETAILS[ids.find((d) => DETAILS[d].channel === c)!].tone);
+  for (let i = 0; i < S * S; i++) data.set(tone, i * 4);
   const t = new DataTexture(data, S, S, RGBAFormat);
   t.colorSpace = SRGBColorSpace;
   t.wrapS = t.wrapT = RepeatWrapping;
@@ -147,12 +148,12 @@ async function loadDetail(t: DataTexture): Promise<void> {
   try {
     const img = await new ImageLoader().loadAsync(DETAIL_URL);
     const S = t.image.width, c = document.createElement('canvas');
-    c.width = S * 3;
+    c.width = S * 4;
     c.height = S;
     const g = c.getContext('2d', { willReadFrequently: true })!;
-    g.drawImage(img, 0, 0, S * 3, S);
-    const px = g.getImageData(0, 0, S * 3, S).data, out = t.image.data as Uint8Array;
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) for (let ch = 0; ch < 3; ch++) out[(y * S + x) * 4 + ch] = px[(y * S * 3 + ch * S + x) * 4]!;
+    g.drawImage(img, 0, 0, S * 4, S);
+    const px = g.getImageData(0, 0, S * 4, S).data, out = t.image.data as Uint8Array;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) for (let ch = 0; ch < 4; ch++) out[(y * S + x) * 4 + ch] = px[(y * S * 4 + ch * S + x) * 4]!;
     t.needsUpdate = true;
   } catch {
     // Flat tones stay.
@@ -164,7 +165,7 @@ async function loadDetail(t: DataTexture): Promise<void> {
  * detail) is set, the detail replaces the coat swatch; the vertex colours (palette, bands, spots, occlusion) still
  * multiply it. `gain` = linear coat swatch tone ÷ linear detail tone per channel, so a role keeps its brightness.
  */
-function withDetail(mat: LitMaterial, detail: Texture, gain: Vector3): void {
+function withDetail(mat: LitMaterial, detail: Texture, gain: Vector4): void {
   mat.onBeforeCompile = (sh): void => {
     sh.uniforms.detailMap = { value: detail };
     sh.uniforms.detailGain = { value: gain };
@@ -172,22 +173,24 @@ function withDetail(mat: LitMaterial, detail: Texture, gain: Vector3): void {
       .replace('#include <uv_pars_vertex>', `#include <uv_pars_vertex>
 attribute vec4 detailW;
 attribute vec2 detailUv;
-varying vec3 vDetailW;
+varying vec4 vDetailW;
 varying vec2 vDetailUv;`)
       .replace('#include <uv_vertex>', `#include <uv_vertex>
-vDetailW = detailW.rgb;
+vDetailW = detailW;
 vDetailUv = detailUv;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <map_pars_fragment>', `#include <map_pars_fragment>
 uniform sampler2D detailMap;
-uniform vec3 detailGain;
-varying vec3 vDetailW;
+uniform vec4 detailGain;
+varying vec4 vDetailW;
 varying vec2 vDetailUv;`)
       .replace('#include <map_fragment>', [
         '#ifdef USE_MAP',
         '  vec4 sampledDiffuseColor = texture2D( map, vMapUv );',
-        '  float detailK = min( 1.0, vDetailW.r + vDetailW.g + vDetailW.b );',
-        '  vec3 detailTex = texture2D( detailMap, vDetailUv ).rgb;',
+        '  float detailK = min( 1.0, vDetailW.r + vDetailW.g + vDetailW.b + vDetailW.a );',
+        '  vec4 detailTex = texture2D( detailMap, vDetailUv );',
+        // Alpha is not sRGB-decoded by the GPU: decode it as the RGB channels are.
+        '  detailTex.a = detailTex.a < 0.04045 ? detailTex.a * 0.0773993808 : pow( detailTex.a * 0.9478672986 + 0.0521327014, 2.4 );',
         '  sampledDiffuseColor.rgb = sampledDiffuseColor.rgb * ( 1.0 - detailK ) + vec3( dot( detailTex, vDetailW * detailGain ) );',
         '  diffuseColor *= sampledDiffuseColor;',
         '#endif',
@@ -245,10 +248,10 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   for (const g of new Set([heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs])) if (g) prepare(g.scene, materials);
   await detailLoad;
   const swatch = new Color().setRGB(225 / 255, 0, 0, SRGBColorSpace).r;
-  const detailGain = new Vector3(...[0, 1, 2].map((c) => {
+  const detailGain = new Vector4(...[0, 1, 2, 3].map((c) => {
     const id = (Object.keys(DETAILS) as DetailId[]).find((d) => DETAILS[d].channel === c)!;
     return swatch / new Color().setRGB(DETAILS[id].tone / 255, 0, 0, SRGBColorSpace).r;
-  }) as [number, number, number]);
+  }) as [number, number, number, number]);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;

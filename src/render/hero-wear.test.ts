@@ -163,10 +163,11 @@ describe('coat detail (KA part B)', () => {
 
   it('DETAILS tones match the mean of each cell of detail.webp (within 2), one cell per channel', async () => {
     const { data, info } = await sharp('assets/textures/hero/detail.webp').greyscale().raw().toBuffer({ resolveWithObject: true });
-    expect([info.width, info.height]).toEqual([768, 256]);
+    const W = 256 * Object.keys(DETAILS).length;
+    expect([info.width, info.height]).toEqual([W, 256]);
     for (const d of Object.values(DETAILS)) {
       let sum = 0;
-      for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) sum += data[y * 768 + d.channel * 256 + x]!;
+      for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) sum += data[y * W + d.channel * 256 + x]!;
       expect(Math.abs(sum / 65536 - d.tone)).toBeLessThanOrEqual(2);
     }
   });

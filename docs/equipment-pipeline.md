@@ -88,7 +88,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Blaumann | blaumann | a | GDR | wear:blaumann | yes | I75 | yes: rendered from the look | none | 4 |
 | Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look (patchwork, KA B2) | E | 3 |
 | Panzer vom Tempelhofer Feld | panzer | a | legendary | wear:panzer | yes | I50 | yes: rendered from the look | E | 3 |
-| Mantel der Rattenmutter | rattenmantel | a | legendary | wear:rattenmantel | yes | I54 | yes: rendered from the look | T, E | 3 |
+| Mantel der Rattenmutter | rattenmantel | a | legendary | wear:rattenmantel | yes | I54 | yes: rendered from the look | E | 3 |
 | Rüstung des Zitadellenritters | ritter | a | legendary | wear:ritter | yes | I55 | yes: rendered from the look | E | 3 |
 | Weste der Kiezwache | weste | a | set kiez | wear:weste:kiez | yes | I93 | yes: rendered from the look | none | 3 |
 | Mantel des Spreegeists | mantel | a | set spree | wear:mantel:spree | yes | I94 | yes: rendered from the look | none | 3 |
