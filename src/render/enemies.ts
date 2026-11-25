@@ -27,6 +27,7 @@ import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Enemy } from '../sim/types';
 import { Animator, OWN_BODIES, type CharacterAssets } from './characters';
 import { groundY } from './ground';
+import { KIT_CELLS, kitAtlas, paintPart } from './kit-atlas';
 import { ZAP_TIME } from './status-fx';
 import { buildDialMark, updateDialMark } from './echo-mark';
 import type { LitMaterial, Materials } from './materials';
@@ -360,6 +361,11 @@ function gearKit(m: Materials): GearKit {
   };
   // The intensity each material was made with (animated glows change theirs; `assemble` sorts by this one).
   for (const mat of Object.values(kit)) mat.userData.baseEmissive ??= mat.emissiveIntensity;
+  // KA: the shared kit atlas on the two baked materials (flat cells until painted ones arrive: no visible change).
+  if (typeof document !== 'undefined' && !kit.paint.map) {
+    kit.paint.map = kit.metal.map = kitAtlas(m.profile.smallTextures);
+    kit.paint.needsUpdate = kit.metal.needsUpdate = true;
+  }
   // T8 (local FLUX.2 klein): matted, dirty fur for the Rattenmutter and the other fur parts. Neutral grey, so the
   // kit colours keep the hue; repeated 3 × 3 on the primitives' own UVs so the strands stay small.
   if (typeof document !== 'undefined') {
@@ -410,11 +416,8 @@ function assemble(k: GearKit, parts: Part[], castShadow: boolean, pulse?: LitMat
     let f = family(m);
     if (f === 'metal' && (tris.get('metal') ?? 0) < total * 0.3) f = 'paint';
     const flat = g.index ? g.toNonIndexed() : g;
-    if (f === 'paint' || f === 'metal') {
-      const c = k[m as keyof GearKit].color, n = flat.attributes.position!.count, col = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
-      flat.setAttribute('color', new Float32BufferAttribute(col, 3));
-    }
+    // KA: baked parts read their kit material's cell of the shared atlas (cell 0, plain, for the rest).
+    if (f === 'paint' || f === 'metal') paintPart(flat, k[m as keyof GearKit].color.getHex(), KIT_CELLS[m]);
     const list = by.get(f) ?? [];
     list.push(flat);
     by.set(f, list);
