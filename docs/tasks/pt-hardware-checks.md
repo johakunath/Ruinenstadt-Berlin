@@ -14,6 +14,7 @@ Built features nobody has played yet. Delete a row once Johannes has played it; 
 
 | Area | What to try | Task file |
 |---|---|---|
+| T9 decals in code | Weste der Kiezwache: does "KIEZWACHE" read on the back at the game camera and on the doll? Kettenhemd der Zitadelle: the gold tower on the tabard shield | `docs/asset-pipeline.md` › T9 |
 | Coat detail (KA B2) | Lederjacke, Kettenhemd der Zitadelle, Mantel des letzten Späti: do denim, chainmail and patchwork read at the game camera on Qualität, Ausgewogen and Leistung, and on the inventory doll (turn it once)? Mail not too bright or flickering at a distance? | `docs/tasks/kit-texture-atlas.md` |
 | Painted filo and brass (KA A2) | Wedding: do the Baklava-Brocken and the Hauptgericht read as flaky pastry (crust on top, layers on the sides) and not as wood? Brass on the samovar and the Sultan still brass? | `docs/tasks/kit-texture-atlas.md` |
 | Local art round 4 (2026-11-25) | Look: Charlottenburg posters on the walls (City West, Ku'damm), the Ku'damm curtain, marble and glass, the Aquarium reliefs; Wedding signs, the Magendoktor mural and door, the Beamtentor lettering. A short hitch when the painted atlases arrive (one re-upload each)? | `docs/local-ai-assets.md` › Round 4 |

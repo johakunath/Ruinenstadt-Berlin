@@ -177,7 +177,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     panzer: { palette: 'panzer', scarf: 'none', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },
     rattenmantel: { palette: 'rattenmantel', scarf: 'scarf:acid', puff: 0.018, gear: ['collar-fur', 'belt-rattails'] },
     ritter: { palette: 'ritter', scarf: 'none', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'] },
-    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'kneepads-orange'] },
+    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'print-kiez', 'kneepads-orange'] },
     'mantel:spree': { palette: 'mantel:spree', scarf: 'none', gear: ['collar-reed', 'seams-spree', 'belt-sash'] },
     'kette:zit': { cut: CUT.knee, palette: 'kette:zit', scarf: 'none', gear: ['tabard', 'belt-knight-short'] },
     'mantel:tunnel': { palette: 'mantel:tunnel', scarf: 'none', gear: ['harness', 'kneepads-teal', 'belt-tunnel'] },
