@@ -32,8 +32,7 @@ export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | '
  * (`human1.glb`, the zombie's body without the zombie repaint, same skeleton and clips); `female` the female ones
  * (`human2.glb`, UBC Superhero_Female, the hero's proportions). M18: `carpet` the code-built Teppichschlinger.
  */
-/** `feldwebel`: H4 own skinned body (`assets/characters/boss-feldwebel.glb`) on the human skeleton and clips. */
-export type BodyKind = 'zombie' | 'human' | 'feldwebel' | 'female' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock' | 'carpet';
+export type BodyKind = 'zombie' | 'human' | 'female' | 'raptor' | 'rex' | 'crow' | 'rat' | 'drone' | 'mech' | 'mechBig' | 'kern' | 'koloss' | 'clock' | 'carpet';
 /** How it moves and which special it uses (`src/sim/ai.ts`). */
 export type AiKind = 'melee' | 'brute' | 'spitter' | 'pouncer' | 'crow' | 'rat' | 'bass' | 'wurzler' | 'kernspeier' | 'zuender' | 'heuler' | 'spiegelbild' | BossKind;
 /** Elite modifiers (2D `EMN`): each adds a telegraphed special and a punish window after it. */
@@ -274,7 +273,7 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
   },
   // Zone bosses.
   feldwebel: {
-    kind: 'feldwebel', name: 'Der Feldwebel', body: 'feldwebel', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
+    kind: 'feldwebel', name: 'Der Feldwebel', body: 'human', ai: 'feldwebel', res: 'koloss', radius: 0.7, scale: 1.45, hp: 900, speed: 2.5,
     attackRange: 2.1, windup: 0.7, active: 0.14, recovery: 0.8,
     reach: 2.6, halfAngle: 65 * DEG, damage: 24, knockbackTaken: 0.3, poise: true, weight: 0, boss: true,
   },

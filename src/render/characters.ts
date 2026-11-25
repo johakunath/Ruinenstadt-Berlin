@@ -17,8 +17,6 @@ import zombieUrl from '../../assets/characters/zombie.glb?url';
 import humanUrl from '../../assets/characters/human1.glb?url';
 // H3 (Johannes, base C): the female humanoid bosses (Spreehexe, Wurzel-Mutter) on the UBC Superhero_Female.
 import femaleUrl from '../../assets/characters/human2.glb?url';
-// H4: bosses with an own skinned body on the human skeleton (Pixal3D, tools/blender/boss_body.py), loaded with the human base.
-import bossFeldwebelUrl from '../../assets/characters/boss-feldwebel.glb?url';
 import raptorUrl from '../../assets/characters/raptor.glb?url';
 import rexUrl from '../../assets/characters/rex.glb?url';
 import mechUrl from '../../assets/characters/mech.glb?url';
@@ -31,6 +29,22 @@ import { KIND_HANDS } from '../data/weapon-look';
 import { THRUST, TWO_HAND_STAND, WeaponRack, thrustWeight, weaponModel } from './weapons';
 import { FIST_CLIP, LeftHandIk, easeGrip } from './hand-ik';
 import type { LitMaterial, Materials } from './materials';
+import type { EnemyKind } from '../data/enemies';
+
+/**
+ * H4: bosses with an own skinned body (Pixal3D on a FLUX picture of the base in its rest pose,
+ * `tools/blender/boss_body.py`, `docs/local-ai-assets.md` › W8), on the skeleton of their base: `human` (human1.glb)
+ * or `female` (human2.glb). Loaded with their base; their clips are the base's enemy set plus `BOSS_CLIPS`.
+ */
+export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' | 'female' }>> = {
+  feldwebel: { url: new URL('../../assets/characters/boss-feldwebel.glb', import.meta.url).href, base: 'human' },
+  spreehexe: { url: new URL('../../assets/characters/boss-spreehexe.glb', import.meta.url).href, base: 'female' },
+  hauptmann: { url: new URL('../../assets/characters/boss-hauptmann.glb', import.meta.url).href, base: 'human' },
+  grenzer: { url: new URL('../../assets/characters/boss-grenzer.glb', import.meta.url).href, base: 'human' },
+  zugezogene: { url: new URL('../../assets/characters/boss-zugezogene.glb', import.meta.url).href, base: 'human' },
+  zeitwart: { url: new URL('../../assets/characters/boss-zeitwart.glb', import.meta.url).href, base: 'human' },
+  diva: { url: new URL('../../assets/characters/boss-diva.glb', import.meta.url).href, base: 'female' },
+};
 
 export interface CharacterAssets {
   hero: Object3D;
@@ -39,8 +53,8 @@ export interface CharacterAssets {
   human?: Object3D;
   /** H3: the base of the female humanoid bosses and its clips (hero proportions). */
   female?: { body: Object3D; clips: Map<string, AnimationClip> };
-  /** H4: own boss bodies on the human skeleton; `clips`: the enemy set plus the upright `BOSS_CLIPS`, fitted like `zombieClips`. */
-  bosses?: { feldwebel?: Object3D; clips: Map<string, AnimationClip> };
+  /** H4: own boss bodies (`OWN_BODIES`) by kind; clips per base: the enemy set plus the upright `BOSS_CLIPS`. */
+  bosses?: { bodies: Map<EnemyKind, Object3D>; human: Map<string, AnimationClip>; female: Map<string, AnimationClip> };
   heroClips: Map<string, AnimationClip>;
   zombieClips: Map<string, AnimationClip>;
   /** Dinosaurs (M12): own skeletons and clips (Idle, Walk, Run, Attack, Jump, Death). */
@@ -57,8 +71,8 @@ export interface CharacterAssets {
 
 const FINGERS = /^(index|middle|ring|pinky|thumb)_/;
 // The last four carry the specials: slam, lunge, throw, command.
-/** H4: upright clips for the bosses with an own body (stand at sabre guard, march, slash), on top of the enemy set. */
-const BOSS_CLIPS = /^(Sword_Idle|Walk_Formal_Loop|Sword_Attack)$/;
+/** H4: upright clips for the bosses with an own body (stand, walk or march, sabre cut), on top of the enemy set. */
+const BOSS_CLIPS = /^(Sword_Idle|Walk_Formal_Loop|Walk_Loop|Sword_Attack)$/;
 const ZOMBIE_CLIPS = /^(Zombie_|Hit_|Death01$|Idle_Loop$|Sword_Heavy_Combo$|Shield_Dash$|OverhandThrow$|Spell_Simple_Shoot$)/;
 
 // Neutral albedo swatches multiply the GLB's vertex colours and baked occlusion. UVs use glTF's
@@ -122,13 +136,17 @@ function prepare(scene: Object3D, materials: Materials): void {
 }
 
 /** `mechs`: true loads both mechs, 'small' only Leela (448 KB instead of 1.3 MB). */
-export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true): Promise<CharacterAssets> {
+/** `bosses`: the boss kinds that can appear; own bodies (H4) load only for these (omitted: all, as in the tools). */
+export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true, bosses?: readonly string[]): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
-  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, feldwebelGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null, humans ? bossFeldwebelUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined, GLTF | undefined];
-  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, feldwebelGltf]) if (g) prepare(g.scene, materials);
+  const own = (Object.entries(OWN_BODIES) as Array<[EnemyKind, { url: string; base: 'human' | 'female' }]>).filter(([k, o]) => (o.base === 'human' ? humans : females) && (!bosses || bosses.includes(k)));
+  const ownLoad = Promise.all(own.map(([, o]) => loader.loadAsync(o.url)));
+  const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
+  const ownGltfs = await ownLoad;
+  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs]) if (g) prepare(g.scene, materials);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
@@ -144,16 +162,20 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const heroClips = new Map<string, AnimationClip>();
   const zombieClips = new Map<string, AnimationClip>();
   const femaleClips = new Map<string, AnimationClip>();
-  const bossClips = new Map<string, AnimationClip>();
+  const bossHuman = new Map<string, AnimationClip>(), bossFemale = new Map<string, AnimationClip>();
   for (const clip of animGltf.animations) {
     heroClips.set(clip.name, fitClip(clip, hipLen(heroGltf.scene) / src, false));
     // Enemies only get the clips they play: every clip costs bindings per body.
     if (ZOMBIE_CLIPS.test(clip.name)) zombieClips.set(clip.name, fitClip(clip, hipLen(zombieGltf.scene) / src, true));
-    if (feldwebelGltf && (ZOMBIE_CLIPS.test(clip.name) || BOSS_CLIPS.test(clip.name))) bossClips.set(clip.name, zombieClips.get(clip.name) ?? fitClip(clip, hipLen(zombieGltf.scene) / src, true));
     // The female base has the hero's proportions: the enemy clip set, fitted to her hips.
     if (femaleGltf && ZOMBIE_CLIPS.test(clip.name)) femaleClips.set(clip.name, fitClip(clip, hipLen(femaleGltf.scene) / src, true));
+    // H4: the own boss bodies share the fitted enemy clips and add the upright ones.
+    if (own.length && (ZOMBIE_CLIPS.test(clip.name) || BOSS_CLIPS.test(clip.name))) {
+      bossHuman.set(clip.name, zombieClips.get(clip.name) ?? fitClip(clip, hipLen(zombieGltf.scene) / src, true));
+      if (femaleGltf) bossFemale.set(clip.name, femaleClips.get(clip.name) ?? fitClip(clip, hipLen(femaleGltf.scene) / src, true));
+    }
   }
-  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, female: femaleGltf ? { body: femaleGltf.scene, clips: femaleClips } : undefined, bosses: feldwebelGltf ? { feldwebel: feldwebelGltf.scene, clips: bossClips } : undefined, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
+  const out: CharacterAssets = { hero: heroGltf.scene, zombie: zombieGltf.scene, human: humanGltf?.scene, female: femaleGltf ? { body: femaleGltf.scene, clips: femaleClips } : undefined, bosses: own.length ? { bodies: new Map(own.map(([k], i) => [k, ownGltfs[i]!.scene])), human: bossHuman, female: bossFemale } : undefined, heroClips, zombieClips, raptor: raptorGltf.scene, rex: rexGltf.scene, raptorClips: named(raptorGltf), rexClips: named(rexGltf) };
   if (mechLoad) {
     const [small, big] = await mechLoad;
     prepare(small.scene, materials);

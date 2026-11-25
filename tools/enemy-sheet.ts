@@ -15,7 +15,7 @@ import { ACESFilmicToneMapping, Box3, Color, DirectionalLight, GridHelper, Hemis
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ELITES, ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
 import { loadCharacters } from '../src/render/characters';
-import { EnemyView } from '../src/render/enemies';
+import { EnemyView, ownKind } from '../src/render/enemies';
 import { LOOK } from '../src/render/looks';
 import { Materials, type LitMaterial } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
@@ -35,6 +35,8 @@ const PORTRAIT: Partial<Record<EnemyKind, { top?: number; yaw?: number; pitch?: 
   // The shield from its open side.
   schild: { yaw: -30 },
   // Thin bodies under tall plumes and crests, the Diva inside her feather fans: closer, a little lower.
+  // H4: the officers' own bodies lean into their sabre guard: a little wider and higher, so the helmet stays in.
+  feldwebel: { zoom: 0.95, lift: 0.18, yaw: 20 }, hauptmann: { zoom: 0.95, lift: 0.18, yaw: 20 },
   scherbe: { zoom: 1.4, lift: -0.1 }, spreehexe: { zoom: 1.3, lift: -0.08 }, spiegelpaar: { zoom: 1.4, lift: -0.1 }, diva: { zoom: 2.3, lift: -0.08, yaw: 8 },
 };
 
@@ -47,6 +49,7 @@ function visibleBox(root: Object3D): Box3 {
     if (!m.isMesh) return;
     const mat = Array.isArray(m.material) ? m.material[0] : m.material;
     if (mat && (mat.blending === 2 || mat.depthWrite === false)) return; // additive glows and flat decals
+    if (m.name.startsWith('weapon-')) return; // H4: a sabre held at guard would push the head down the frame
     // Skinned and instanced meshes bound their posed or instanced geometry.
     const own = (m as SkinnedMesh).isSkinnedMesh || (m as unknown as InstancedMesh).isInstancedMesh ? (m as SkinnedMesh) : null;
     if (own) { own.computeBoundingBox(); b.copy(own.boundingBox!); }
@@ -92,7 +95,7 @@ async function portraits(): Promise<void> {
     e.state = 'chase';
     e.speed = 0;
     if (def.wake) e.wake = 0;
-    const v = new EnemyView(assets, materials, def.body, false);
+    const v = new EnemyView(assets, materials, def.body, false, { own: ownKind(k) });
     v.assign(e, false, null);
     scene.add(v.root);
     for (let s = 0; s < 30; s++) v.update(e, 0, 1 / 30, false, 0);
@@ -198,7 +201,7 @@ const state = (q.get('state') ?? 'chase') as EnemyState;
 const special = q.get('special') as SpecialKind | null;
 // `wait=ms`: build one view first so the gear kit loads its painted maps (T8 fur), then render with them.
 if (q.get('wait')) {
-  new EnemyView(assets, materials, ENEMIES[kinds[0]!].body, false).assign(spawnEnemy(sim, 0, 0, kinds[0]!), false, null);
+  new EnemyView(assets, materials, ENEMIES[kinds[0]!].body, false, { own: ownKind(kinds[0]!) }).assign(spawnEnemy(sim, 0, 0, kinds[0]!), false, null);
   sim.enemies.length = 0;
   await new Promise((r) => setTimeout(r, Number(q.get('wait'))));
 }
@@ -224,7 +227,7 @@ for (let i = 0; i < n; i++) {
   if (q.get('guard') === '0') e.guardOpen = 2;
   if (q.get('wake') === 'strip') e.wake = (def.wake ?? 0) * (1 - f);
   else if (q.get('wake') !== null) e.wake = Number(q.get('wake'));
-  const v = new EnemyView(assets, materials, def.body, false);
+  const v = new EnemyView(assets, materials, def.body, false, { own: ownKind(k) });
   v.assign(e, q.get('neon') === '1', q.get('revue') === '1' ? 'revue' : q.get('fest') === '1' ? 'fest' : null);
   scene.add(v.root);
   // Let fades and springs settle on the pose.

@@ -1176,7 +1176,13 @@ function humansFor(): boolean {
   if (isCamp) return false;
   const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
   const kinds: string[] = [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
-  return own.length === 0 || kinds.some((k) => { const b = (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body; return b === 'human' || b === 'feldwebel'; });
+  return own.length === 0 || kinds.some((k) => (ENEMIES as Record<string, { body: string } | undefined>)[k]?.body === 'human');
+}
+/** H4: boss kinds that can appear here (own bodies load only for these); undefined where any may (maps without own bosses). */
+function bossesFor(): string[] | undefined {
+  const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
+  if (isCamp) return [];
+  return own.length === 0 ? undefined : [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
 }
 /** H3: the female boss base (Spreehexe, Wurzel-Mutter), where one of them can appear. */
 function femalesFor(): boolean {
@@ -1198,6 +1204,7 @@ export const ready: Promise<boolean> = GameRenderer.create(canvas, {
   mechs: mechsFor(),
   humans: humansFor(),
   females: femalesFor(),
+  bosses: bossesFor(),
 })
   .then((r) => {
     renderer = r;

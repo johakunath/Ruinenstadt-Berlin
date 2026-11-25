@@ -71,6 +71,17 @@ bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.02)
 bpy.ops.object.mode_set(mode="OBJECT")
 bpy.ops.object.shade_smooth()
 
+# A DIFFUSE colour bake of a metallic surface is black: Pixal3D sometimes paints metallic near 1 (the Spreehexe, H4),
+# so the high mesh is baked as a plain dielectric.
+for slot in high.material_slots:
+    m = slot.material
+    if m and m.use_nodes:
+        for n in m.node_tree.nodes:
+            if n.type == "BSDF_PRINCIPLED":
+                for l in list(n.inputs["Metallic"].links):
+                    m.node_tree.links.remove(l)
+                n.inputs["Metallic"].default_value = 0.0
+
 img = bpy.data.images.new("baked", a.tex, a.tex, alpha=False)
 mat = bpy.data.materials.new("baked")
 mat.use_nodes = True
