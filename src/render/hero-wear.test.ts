@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CUT, PALETTES } from '../data/hero-look';
+import { CUT, PALETTES, type Palette } from '../data/hero-look';
 import { readHeroGlb } from './hero-glb-node';
-import { ROLE_IDS, pieceInfo, pieceVariant } from './hero-wear';
+import { CHART_AXES, ROLE_IDS, chartOf, detailAttributes, ensureDetail, pieceInfo, pieceVariant } from './hero-wear';
 
 const glb = readHeroGlb();
 const counts = (node: string): Record<string, number> => {
@@ -88,5 +88,75 @@ describe('piece variants', () => {
     expect(g.attributes.normal).toBe(src.attributes.normal);
     expect(pieceVariant(coat, 'a_mantel', src, 'feuer', CUT.thigh, 0.012)).toBe(g);
     expect(pieceVariant(coat, 'a_mantel', src, '', 0, 0)).toBe(src);
+  });
+});
+
+describe('coat detail (KA part B)', () => {
+  const coat = glb.mesh('a_mantel');
+  const src = coat.geometry;
+
+  it('the coat uv is linear in the two bind axes of each chart (fails if the coat is unwrapped again)', () => {
+    const pos = src.attributes.position!, uv = src.attributes.uv!;
+    const byChart = new Map<number, number[]>();
+    for (let i = 0; i < pos.count; i++) { const c = chartOf(uv.getX(i), uv.getY(i)); (byChart.get(c) ?? byChart.set(c, []).get(c)!).push(i); }
+    expect(byChart.size).toBe(6);
+    for (const [c, ids] of byChart) {
+      const [a, b] = CHART_AXES[c]!;
+      for (const comp of [0, 1] as const) {
+        // Least squares fit uv = p·A + q·B + r over the chart, then the worst residual.
+        let sAA = 0, sAB = 0, sBB = 0, sA = 0, sB = 0, sU = 0, sAU = 0, sBU = 0;
+        const n = ids.length;
+        for (const i of ids) {
+          const A = pos.getComponent(i, a), B = pos.getComponent(i, b), U = uv.getComponent(i, comp);
+          sAA += A * A; sAB += A * B; sBB += B * B; sA += A; sB += B; sU += U; sAU += A * U; sBU += B * U;
+        }
+        const M = [[sAA, sAB, sA], [sAB, sBB, sB], [sA, sB, n]], y = [sAU, sBU, sU];
+        const det = (m: number[][]): number => m[0]![0]! * (m[1]![1]! * m[2]![2]! - m[1]![2]! * m[2]![1]!) - m[0]![1]! * (m[1]![0]! * m[2]![2]! - m[1]![2]! * m[2]![0]!) + m[0]![2]! * (m[1]![0]! * m[2]![1]! - m[1]![1]! * m[2]![0]!);
+        const D = det(M), col = (k: number): number[][] => M.map((row, r) => row.map((v, j) => (j === k ? y[r]! : v)));
+        const [p, q, r] = [0, 1, 2].map((k) => det(col(k)) / D) as [number, number, number];
+        let worst = 0;
+        for (const i of ids) worst = Math.max(worst, Math.abs(p * pos.getComponent(i, a) + q * pos.getComponent(i, b) + r - uv.getComponent(i, comp)));
+        expect(worst, `chart ${c} uv.${comp ? 'v' : 'u'}`).toBeLessThan(1e-3);
+      }
+    }
+  });
+
+  it('a palette with detail weights only its roles, in the detail channel', () => {
+    (PALETTES as Record<string, Palette>)['test:denim'] = { roles: { trousers: '#3a4a6a' }, detail: { trousers: 'denim' } };
+    const info = pieceInfo(coat, 'a_mantel');
+    const g = pieceVariant(coat, 'a_mantel', src, 'test:denim', 0, 0);
+    const w = g.attributes.detailW!, trousers = ROLE_IDS.indexOf('trousers');
+    let on = 0;
+    for (let i = 0; i < w.count; i++) {
+      const isT = info.role[i] === trousers;
+      expect([w.getX(i), w.getY(i), w.getZ(i)]).toEqual(isT ? [1, 0, 0] : [0, 0, 0]);
+      if (isT) on++;
+    }
+    expect(on).toBe(1479);
+    delete (PALETTES as Record<string, Palette>)['test:denim'];
+  });
+
+  it('detailUv advances by 1 per tile along both chart axes', () => {
+    (PALETTES as Record<string, Palette>)['test:mail'] = { roles: {}, detail: { coat: 'mail' } };
+    const info = pieceInfo(coat, 'a_mantel');
+    const d = detailAttributes(src, info, 'test:mail'), pos = src.attributes.position!, uv = src.attributes.uv!;
+    for (const i of [0, 100, 1000, 3000]) {
+      const [a, b] = CHART_AXES[chartOf(uv.getX(i), uv.getY(i))]!, tile = ROLE_IDS[info.role[i]!] === 'coat' ? 0.3 : 1;
+      expect(d.uv.getX(i)).toBeCloseTo(pos.getComponent(i, a) / tile, 6);
+      expect(d.uv.getY(i)).toBeCloseTo(pos.getComponent(i, b) / tile, 6);
+    }
+    delete (PALETTES as Record<string, Palette>)['test:mail'];
+  });
+
+  it('a palette without detail shares the zero pair, and variants stay cached', () => {
+    const info = pieceInfo(coat, 'a_mantel');
+    const a = detailAttributes(src, info, 'leder'), b = detailAttributes(src, info, '');
+    expect(a.w).toBe(b.w);
+    expect(Array.from(a.w.array).every((x) => x === 0)).toBe(true);
+    const v1 = pieceVariant(coat, 'a_mantel', src, 'leder', 0, 0), v2 = pieceVariant(coat, 'a_mantel', src, 'leder', 0, 0);
+    expect(v1).toBe(v2);
+    expect(v1.attributes.detailW).toBe(a.w);
+    ensureDetail('a_mantel', src);
+    expect(src.attributes.detailW).toBe(a.w);
   });
 });

@@ -62,7 +62,16 @@ export type Role = 'coat' | 'hem' | 'cuff' | 'leather' | 'brass' | 'trousers' | 
 export interface Band { roles: readonly Role[]; axis: 'y' | 'x'; from: number; to: number; hex: string; wave?: number }
 /** A patch painted on roles round a point of the bind pose (m); `front`/`back` limit it to one side. */
 export interface Spot { roles: readonly Role[]; x: number; y: number; r: number; hex: string; side?: 'front' | 'back' }
-export interface Palette { roles: Partial<Record<Role, string>>; bands?: readonly Band[]; spots?: readonly Spot[] }
+/**
+ * KA part B (`docs/tasks/kit-texture-atlas.md`): a second, tiling material on chosen roles of a detail piece
+ * (`DETAIL_PIECES` in `src/render/hero-wear.ts`). One packed texture holds the three, one per colour channel.
+ */
+export type DetailId = 'denim' | 'mail' | 'patch';
+/** Channel in the packed detail texture, tile size (m), and the cell's mean sRGB tone (225 = the coat swatch: no change until B2 measures it). */
+export const DETAILS: Readonly<Record<DetailId, { channel: 0 | 1 | 2; tile: number; tone: number }>> = {
+  denim: { channel: 0, tile: 0.5, tone: 225 }, mail: { channel: 1, tile: 0.3, tone: 225 }, patch: { channel: 2, tile: 0.5, tone: 225 },
+};
+export interface Palette { roles: Partial<Record<Role, string>>; bands?: readonly Band[]; spots?: readonly Spot[]; detail?: Partial<Record<Role, DetailId>> }
 
 const COAT: readonly Role[] = ['coat', 'hem', 'cuff'];
 
