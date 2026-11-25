@@ -1,6 +1,6 @@
 # Status
 
-What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › Queue.
+What is in the game now. Updated 2026-11-25. Next work: `docs/migration.md` › Queue.
 
 ## In the game
 
@@ -21,6 +21,8 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 | Run content | Between fights: ambush, horde, trader, rescue, cache, radio zone, supply drop; three Litfaßsäule shrines (60 s buff); Döner; all saved with the checkpoint |
 | Combat | 3-hit chain, dodge with i-frames, dash strike, swept arcs, hitstop, knockback, stagger, poise, aim assist. Gear scales damage, max HP, movement, attack timing, reach, resistance, regen, leech and dodge cooldown; seeded 2× crits |
 | Enemies | Six types that each want another answer (M12): Schlurfer, Hetzer, Brocken (marks a circle), Speier (keeps distance, spits), Raptor (pounces along a line), Krähe (circles and dives). Elites Flink, Brennend, Spaltend, Gepanzert with a special and a punish window (gold ring, +30 % damage). Element resistances as in 2D. Bosses: Feldwebel (charge, calls men), Turmwächter (barrage, shot ring, slam), Rex (bite, charge, roar rings, tail), Hauptmann (slam, shot ring, calls men); all rage below half life. Small life bars over hurt enemies. Raptor and Rex are CC0 dinosaur models, the crow and the uniforms are built in code |
+| Boss bodies (H4, 2026-11-24/25) | Every humanoid boss (Feldwebel, Hauptmann, Schaffner, Grenzer, Brandmeister, Spreehexe, Türsteher, Dirigent, Bassprediger, Wurzel-Mutter, Conférencier, Ringvater, Spiegelpaar with her Spiegelbild, Diamantene Diva, Zugezogener, Sultan, Zeitwart) has its own painted 3D body (local FLUX picture, Pixal3D, skinned to the boss skeleton): faces visible, hats and costumes in one piece, upright stand, walk and overhead blow instead of the ghoul clips. Code parts stay only where they glow, are held or break off (acid orb, sabres, rifle, Kelle, cane, baton, flames, Unruh and blades, the Diva's gown tiers). Kodex portraits re-rendered. A map loads only the bodies of the bosses it can spawn |
+| Local art (2026-11-24/25) | Painted textures from the local models in every district (Xhain, Charlottenburg, Wedding, Fernsehturm), decayed boss skin, tweed, knit and straw on the hats; a third of the parked cars are Trabi wrecks; the city bus is BVG size (12 m) |
 | Feedback | Hit flash, sparks, smear, shake, rumble, telegraphs, element status marks on enemies (E1: flame, acid puddle and drips, shock arcs, slow ring; one draw call), ported 2D synth effects and adaptive music (S1); persistent Musik toggle and volume |
 | HUD | Objective with distance and arrow, minimap (tap opens the map), edge triangles to the objective and the last enemies of a wave, wave banner, boss bar, victory screen, one pause button (pulses when the bag holds an upgrade) |
 | Playtest fixes 2026-11-20 | Bag 30 slots; Verschrotten chips fixed in a 2×2 grid, a rarity takes itself and below, greyed when empty; the salvage button says when a second tap is needed; a one-time Verschrotten tip; worn pieces come off by double tap or drag; legendary 100 and set pieces 80 base Schrott. Comparison column capped on wide screens. Blessing cards by stick and D-pad with a visible mark. Damage numbers a third bigger. Desktop action buttons and key labels bigger; labels follow the last device (keys, mouse, pad); boss bar above them and a gold bar over every boss. Buffs as icon tiles left of the minimap. Balance (no bot run yet): normal enemies ×2 life (`NORMAL_HP`), equipment drops halved (`ECONOMY.items`), hero swings at 85 % tempo (`HERO_TEMPO`), blessings cut (Kiezwut 8 %, Adlerblick 5 %, Akkordarbeit 8 %, Pulverfass 15 %, Dicke Bertha 15 %, Husarenritt 20 %, Jagdfieber 4 %, Retourkutsche +50 %). Kodex portraits are renders of the 3D bodies (`tools/kodex-portraits.mjs`) |
@@ -40,7 +42,11 @@ What is in the game now. Updated 2026-11-20. Next work: `docs/migration.md` › 
 | Balance | A bot plays whole campaigns without a browser (`node tools/balance.mjs`, M14); numbers in `docs/balance.md` |
 | CI | Type check, unit tests, build, Playwright smoke, Pages deploy from `main` |
 
-## Latest (2026-11-24)
+## Latest (2026-11-25)
+
+- Charlottenburg's period posters have painted pictures (a fan dancer, Madame Dubarry, a mask, a juggler, an elephant, linen, boxers, a cyclist) under their lettering; the Ku'damm velvet, marble and glass and the Aquarium reliefs are painted. Wedding's signs are worn enamel and wood, the Beamtentor's capitals sit on real brick, the Magendoktor has a painted night watchman and a sticker door.
+
+## 2026-11-24
 
 - When your weapon has fallen five or more item levels behind, a district boss's guaranteed legendary is a weapon of the class you use. Sultan Nimmersatt has less life (4400 → 3600); his fight took up to 24 minutes in bot campaigns, now at most 5.
 

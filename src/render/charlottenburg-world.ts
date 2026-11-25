@@ -915,13 +915,38 @@ export const POSTERS = ['revue', 'kino', 'kabarett', 'variete', 'zoo', 'weissewo
 export const POSTER_CELL = { w: 128, h: 256 } as const;
 
 /**
+ * T9g: the picture band of each poster (y from the cell's top, between its lettering), painted locally with
+ * FLUX.2 klein from the code picture. `posters.webp` holds them in the same 1024 × 256 cells, faded into the
+ * poster colour at the band's edges; FLUX cannot letter, so the code keeps the lettering and the wear.
+ */
+const POSTER_ART_Y: Readonly<Record<(typeof POSTERS)[number], readonly [number, number]>> = {
+  revue: [70, 208], kino: [44, 156], kabarett: [46, 160], variete: [10, 180],
+  zoo: [68, 174], weissewoche: [78, 176], boxen: [48, 190], sechstage: [76, 200],
+};
+const POSTER_ART_URL = new URL('../../assets/textures/charlottenburg/posters.webp', import.meta.url).href;
+let posterArt: HTMLImageElement | 'loading' | undefined;
+const posterWaiters: Array<(art: HTMLImageElement) => void> = [];
+/** Calls `fn` with the painted poster pictures: at once once loaded, else when they arrive (never if they fail). */
+export function onPosterArt(fn: (art: HTMLImageElement) => void): void {
+  if (typeof document === 'undefined') return;
+  if (posterArt instanceof HTMLImageElement) { fn(posterArt); return; }
+  posterWaiters.push(fn);
+  if (posterArt) return;
+  posterArt = 'loading';
+  const img = new Image();
+  img.onload = () => { posterArt = img; for (const w of posterWaiters.splice(0)) w(img); };
+  img.src = POSTER_ART_URL;
+}
+
+/**
  * Eight peeling period posters in a 1024 × 256 strip at (x0, y0) of a sign atlas (City West and Ku'damm both
  * paint it into their own atlas, no new material): a revue, a film (Madame Dubarry, Ufa-Palast 1919), the
  * cabaret Schall und Rauch, the Wintergarten Varieté, a Zoo concert, the KaDeWe white week, a boxing night and
  * the six-day race at the Sportpalast. Each is faded, torn at an edge to the plaster with a scrap of an older
- * bill under it, glue-stained. `glow` paints the emissive map: posters are unlit (black).
+ * bill under it, glue-stained. `glow` paints the emissive map: posters are unlit (black). `art` (T9g, from
+ * `onPosterArt`) lays the painted pictures over the code ones before the wear.
  */
-export function paintPosters(g: CanvasRenderingContext2D, x0: number, y0: number, glow: boolean): void {
+export function paintPosters(g: CanvasRenderingContext2D, x0: number, y0: number, glow: boolean, art?: CanvasImageSource): void {
   const { w: W, h: H } = POSTER_CELL;
   g.fillStyle = '#000';
   g.fillRect(x0, y0, W * 8, H);
@@ -1030,6 +1055,10 @@ export function paintPosters(g: CanvasRenderingContext2D, x0: number, y0: number
         text('RENNEN', cx, y + 60, pw - 8, 26, '#f0c040');
         text('SPORTPALAST', cx, y + 214, pw - 10, 15, '#f0e8d0');
         break;
+    }
+    if (art) {
+      const [a0, a1] = POSTER_ART_Y[kind];
+      g.drawImage(art, i * W + m, a0, pw, a1 - a0, px0, y + a0, pw, a1 - a0);
     }
     // Wear: faded paper, glue stains, a torn edge down to the plaster with the older bill showing.
     g.fillStyle = `rgba(232,222,200,${rng.range(0.1, 0.28)})`; g.fillRect(px0, py0, pw, ph);

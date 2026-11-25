@@ -27,7 +27,7 @@ import { archHead, cached, ENDS, frameOf, frustum, pane, SLOPES, sub, type Frame
 import type { MapMats } from './map-world';
 import type { LitMaterial } from './materials';
 import { canvas, toTexture } from './paint';
-import { battens, paintPosters, POSTERS, sandbags, scaffold, shutter, slope, tarp, wallFace, wornFace, wornSpot, type Ctx, type Grime, type RGB } from './charlottenburg-world';
+import { battens, onPosterArt, paintPosters, POSTERS, sandbags, scaffold, shutter, slope, tarp, wallFace, wornFace, wornSpot, type Ctx, type Grime, type RGB } from './charlottenburg-world';
 
 /** The kinds this file owns (one builder each once step 4 is done). */
 export const CITYWEST_KINDS: ReadonlySet<LandmarkKind> = new Set<LandmarkKind>(['zoobahnhof', 'loewentor', 'elefantentor', 'aquarium', 'musikpavillon', 'antilopenhaus', 'ufapalast', 'capitol', 'gedaechtniskirche', 'romanischescafe', 'kadewe', 'wittenbergplatz']);
@@ -68,6 +68,7 @@ const T = {
 /** Rows of the 1024 × 1536 atlas (12 rows of 128 px); `cell` splits a row; rows 10 and 11 hold the period posters (`posterUV`). */
 const ROW = { kadewe: 0, ufa: 1, station: 2, cafe: 3, pair: 4, ubahn: 5, posters: 6, shops: 7, reliefs: 8, emblems: 9, bills: 10 } as const;
 const ROWS = 12;
+const CITYWEST_ART_URL = new URL('../../assets/textures/charlottenburg/citywest.webp', import.meta.url).href;
 
 function fit(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, size: number, font: string): void {
   let s = size;
@@ -80,7 +81,7 @@ const SERIF = 'bold %px Georgia, "Times New Roman", serif';
 const SANS = 'bold %px "Arial Narrow", Arial, sans-serif';
 
 /** `glow` paints the emissive version: lit letters and bulbs bright, stone and enamel black or faint. */
-function paintSigns(glow: boolean): Texture {
+export function paintSigns(glow: boolean): Texture {
   // `br` only picks dead bulbs, so both maps get the same pattern (`rng` is only used for grime, colour map only).
   const S = 1024, H = 128, rng = new Rng(1920), br = new Rng(1925);
   const [c, g] = canvas(S, H * ROWS);
@@ -259,7 +260,22 @@ function paintSigns(glow: boolean): Texture {
     g.globalAlpha = 1;
   }
   paintPosters(g, 0, ROW.bills * H, glow);
-  return toTexture(c, true, 4);
+  const tex = toTexture(c, true, 4);
+  // T9g: the painted poster pictures replace the code ones once loaded (one re-upload).
+  if (!glow) onPosterArt((art) => { paintPosters(g, 0, ROW.bills * H, false, art); tex.needsUpdate = true; });
+  // T9f: the text-free regions painted locally (FLUX.2 klein from the code ones) at the same coordinates in
+  // `citywest.webp`: the four Aquarium terracotta reliefs and the premiere portrait. The glow map takes the painted
+  // region darkened to the code glow's share (measured: reliefs unlit, the portrait 0.51).
+  const art = new Image();
+  art.onload = () => {
+    for (const [x, y, w, h, share] of [[0, ROW.reliefs * H, S, H, 0], [256, ROW.emblems * H, 256, H, 0.51]] as const) {
+      g.drawImage(art, x, y, w, h, x, y, w, h);
+      if (glow) { g.fillStyle = `rgba(0,0,0,${1 - share})`; g.fillRect(x, y, w, h); }
+    }
+    tex.needsUpdate = true;
+  };
+  art.src = CITYWEST_ART_URL;
+  return tex;
 }
 
 const signMats = new WeakMap<MapMats, LitMaterial>();
