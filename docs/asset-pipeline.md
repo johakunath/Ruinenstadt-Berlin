@@ -25,7 +25,7 @@ Every new map, building type or prop goes through these steps in order. A step d
 | Step | Who | Does | Done when |
 |---|---|---|---|
 | 1. Build | Claude | Builds geometry in code (`src/render`). Paints placeholder textures in code (`src/render/paint.ts`), like ground variant C: blended surfaces plus scatter | Playable, readable at game camera. Johannes approved the direction (mockup first for critical looks) |
-| 2. Texture | Local first (Claude or Johannes on the PC, `docs/local-ai-assets.md` W1), Codex as fallback | Generates the texture images with image generation, then the initial integration (below) | Images load in game, code placeholder kept as fallback, row in `assets/LICENSES.md` |
+| 2. Texture | Local first (Claude or Johannes on the PC, `docs/local-ai-assets.md` W1; Codex paused 2026-11-23) | Generates the texture images with image generation, then the initial integration (below) | Images load in game, code placeholder kept as fallback, row in `assets/LICENSES.md` |
 | 3. Performance | Claude | Compression (KTX2 or smaller WebP), mipmaps, atlas merges, draw call and memory checks on both profiles | PC and Tab S9 budgets hold (`docs/plan-3d.md`) |
 | 4. Playtest | Johannes | Looks at it on the Tab S9 | Notes go to `docs/playtests.md` |
 

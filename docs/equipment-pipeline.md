@@ -3,7 +3,7 @@
 Index of every equipment base and named item with its 3D model, hero look, inventory icon and what is missing.
 Rule: every session that touches equipment art, models, icons or effects updates this file in the same PR.
 **Plan (2026-11-19): `docs/tasks/wp4-equipment-visuals.md`** decides how every row below gets its model (one weapon model per base, rigid gear built in code, palettes per base, pickups per kind, legendary effects) and in which order. The index stays the status; the task file is the plan.
-**Clothing looks (2026-11-19):** built in 3D from the approved mockups (`docs/mockups/wp4-clothes/`), decisions in the task file › Step 2 looks. Talisman, ring and implant stay icon-only. Needs: T = Codex texture T9, E = WP4 step 5 effect, M = Blender piece.
+**Clothing looks (2026-11-19):** built in 3D from the approved mockups (`docs/mockups/wp4-clothes/`), decisions in the task file › Step 2 looks. Talisman, ring and implant stay icon-only. Needs: T = painted texture (local, T8 or T9), E = WP4 step 5 effect, M = Blender piece.
 Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key from `src/data/weapon-look.ts`); `wear:x` = the look of `WEAR` in `src/data/hero-look.ts` (palette on a hero.glb piece, coat cut, gear parts from `src/render/gear*.ts`; WP4 step 2); `piece:x` = hero.glb node; `none` = nothing in 3D. Hero `yes` = equipping changes the hero mesh, `same` = shows the no-item default, `-` = not shown. Icon `yes/partly/no` compares the painted icon (`src/ui/item-icons.ts`, `assets/inventory/*.webp`) with what the game shows. Needs: M model or piece, I icon re-render, E effect, T texture.
 
 ## Facts checked in code (2026-11-18)
@@ -198,7 +198,7 @@ Not part of WP4: there the models follow the painted icons, and Codex repaints t
 | Colours and simple surfaces | Code: vertex colours, code-painted canvas textures (`src/render/paint.ts`) |
 | UI glyphs, set marks | Code: SVG |
 | Effects (glow, trails, flashes) | Code: emissive parts, instanced sprites on `FX_LAYER`, no new lights |
-| Painted texture images, painted icons | Local first (FLUX.2 klein on the PC, `docs/local-ai-assets.md` W1 to W3), Codex as fallback; Claude does the performance integration (`docs/asset-pipeline.md`) |
+| Painted texture images, painted icons | Local first (FLUX.2 klein on the PC, `docs/local-ai-assets.md` W1 to W3; Codex paused 2026-11-23, no fallback); Claude does the performance integration (`docs/asset-pipeline.md`) |
 | Static pickups and props with organic detail (P10 pickups per item kind) | Image-to-3D (Pixal3D) plus Blender clean-up (`docs/local-ai-assets.md` W4 to W6) |
 | Rigid hero equipment (hats, plates, cuffs, talisman, ring, implants) | Code: parts skinned rigidly to the bones at equip time and merged into one gear mesh (`src/render/gear.ts`, WP4 D2) |
 | Colours per item base on existing pieces | Code: palette that recolours the piece's vertex colours (WP4 D2) |

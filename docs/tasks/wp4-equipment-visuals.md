@@ -1,6 +1,6 @@
 # WP4 Hero, weapons and loot visuals [Claude · Fable high (spec) · Opus high (build) · Codex (icons)]
 
-Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (icons, Codex) and steps 2 to 6 open. Step 2 (clothing) and step 4 (2D #2 close-out) built 2026-11-19 (handover at the end); tunnel set waits for Johannes' pick. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
+Status: step 0 (this spec) done 2026-11-19 (Fable 5.2 high). Step 1a to 1d built 2026-11-19 (handover at the end); 1e (painted icons) replaced by D10 (icons rendered from the models) and steps 2 to 6 open. Step 2 (clothing) and step 4 (2D #2 close-out) built 2026-11-19 (handover at the end); tunnel set waits for Johannes' pick. Covers backlog P29, P32, P10, P31 and 2D backlog #2 and #38. Notes are Fable's; Opus writes final prose where it touches other docs.
 
 ## Goal
 Every weapon base, armor, hat, glove, boot, talisman, ring and implant shows on the hero, legendaries and sets have their own look, ground loot shows what it is, and daggers come in as dual wield. Draw calls on the hero go down, not up.
