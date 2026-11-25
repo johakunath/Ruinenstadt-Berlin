@@ -26,6 +26,7 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 - WP5 step 3 (H2): coats are fitted to the skinned body at build time (`BodyFit`, `fitCoat` in `src/render/enemies.ts`): ring shells per bone, skirts open at the front and hang (`hangSkirts`). Reuse them for any new coat on the zombie rig.
 - Kodex (2026-11-20, Johannes' playtest): every enemy and boss portrait (E, X) and the four elite portraits (L, a Brocken with the mod's tint and a rim light in its colour) are renders of the in-game 3D bodies (`tools/kodex-portraits.mjs`), so all 40 Kodex kinds match their body; the painted 2D and Codex busts are replaced (in git history). SVG glyphs remain as fallbacks. Survivor portraits S01 to S07 are unchanged.
 - Voices (S3, WP5 step 4): the 16 human, robot and machine bosses each say three lines (`assets/voices/<kind>-<trigger>.ogg`: start, rage, signature special; table in `tools/voices.mjs`, rules in `src/audio/voices.ts`). No voice: the Rex and every normal kind. New boss: add its three lines and its `SIGNATURE` entry.
+- Zombie skin (LA4, 2026-11-25): the T8 decay tile (cracks, veins, bruises) is multiplied over the `zombie.glb` skin atlas at build time (`decay()` in `tools/character-lib.mjs`, repeat 1.5, strength 0.85), so every kind on the zombie body and its Kodex portrait has it; 0 draw calls, +37 KB. [Before and after](proof/la4-zombie-skin/before-after.jpg), [game camera](proof/la4-zombie-skin/game-camera.jpg).
 - Elite tiers in every map: an elite Brocken guards one side passage (`guards` in each map file; the tunnel "mini-boss" is this guard).
 
 ## Index
@@ -34,10 +35,10 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte, C Charlottenbu
 
 | Name | Kind | Role | Maps | Body | Refined | Kodex | Matches 3D | Needs | Prio |
 |---|---|---|---|---|---|---|---|---|---|
-| Schlurfer | walker | normal | K X T A M | zombie, no gear (cyber cables on M) | ok | E01 (3D render) | yes | final skin pass | P1 |
-| Hetzer | runner | normal | K X T A M | zombie, longer arms (cyber on M) | ok | E09 (3D render) | yes | final skin pass | P1 |
-| Brocken | brute | normal, elite guard | K X T A M | zombie+gear: open orange high-vis vest with reflective bands, collar | ok | E02 (3D render) | yes | final skin pass | P1 |
-| Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils, bloated belly | ok | E03 (3D render) | yes | final skin pass | P1 |
+| Schlurfer | walker | normal | K X T A M | zombie, no gear (cyber cables on M) | ok | E01 (3D render) | yes | none | P1 |
+| Hetzer | runner | normal | K X T A M | zombie, longer arms (cyber on M) | ok | E09 (3D render) | yes | none | P1 |
+| Brocken | brute | normal, elite guard | K X T A M | zombie+gear: open orange high-vis vest with reflective bands, collar | ok | E02 (3D render) | yes | none | P1 |
+| Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils, bloated belly | ok | E03 (3D render) | yes | none | P1 |
 | Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0) | ok | E11 (3D render) | yes | none | P1 |
 | Krähe | crow | normal | K X A M | code (body, wings, beak) | ok | E05 (3D render) | yes | none | P1 |
 | Der Feldwebel | feldwebel | boss | K | H4 trial (2026-11-24): own skinned body `boss-feldwebel.glb` (FLUX + Pixal3D on the human skeleton, `docs/local-ai-assets.md` › W8), sabre from the rack; before: human+gear (WP5 H2, pick A) with Pickelhaube, greatcoat, epaulettes, moustache | ok, trial | X04 (3D render) | yes | hardware look check | P1 |

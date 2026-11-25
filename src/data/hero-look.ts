@@ -64,12 +64,13 @@ export interface Band { roles: readonly Role[]; axis: 'y' | 'x'; from: number; t
 export interface Spot { roles: readonly Role[]; x: number; y: number; r: number; hex: string; side?: 'front' | 'back' }
 /**
  * KA part B (`docs/tasks/kit-texture-atlas.md`): a second, tiling material on chosen roles of a detail piece
- * (`DETAIL_PIECES` in `src/render/hero-wear.ts`). One packed texture holds the three, one per colour channel.
+ * (`DETAIL_PIECES` in `src/render/hero-wear.ts`). One packed texture holds the four, one per channel (LA4: fur in alpha).
  */
-export type DetailId = 'denim' | 'mail' | 'patch';
+export type DetailId = 'denim' | 'mail' | 'patch' | 'fur';
 /** Channel in the packed detail texture (= its cell in `detail.webp`), tile size (m), and the cell's mean sRGB tone (measured; a test reads the file again). */
-export const DETAILS: Readonly<Record<DetailId, { channel: 0 | 1 | 2; tile: number; tone: number }>> = {
+export const DETAILS: Readonly<Record<DetailId, { channel: 0 | 1 | 2 | 3; tile: number; tone: number }>> = {
   denim: { channel: 0, tile: 0.5, tone: 180 }, mail: { channel: 1, tile: 0.3, tone: 180 }, patch: { channel: 2, tile: 0.5, tone: 180 },
+  fur: { channel: 3, tile: 0.4, tone: 180 },
 };
 export interface Palette { roles: Partial<Record<Role, string>>; bands?: readonly Band[]; spots?: readonly Spot[]; detail?: Partial<Record<Role, DetailId>> }
 
@@ -109,7 +110,8 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
       { roles: COAT, x: 0.44, y: 1.42, r: 0.04, hex: '#d8c040' }, { roles: COAT, x: -0.36, y: 1.42, r: 0.04, hex: '#2f8a4a' },
     ] },
   panzer: { roles: { coat: '#4a4640', hem: '#2e2c28', cuff: '#2e2c28', trousers: '#33312c', leather: '#2a2420', brass: '#c8ccd0' } },
-  rattenmantel: { roles: { coat: '#5a4c40', hem: '#3a3028', cuff: '#3a3028', trousers: '#2e2a26', leather: '#2a2018', brass: '#97c459' },
+  // LA4: the T8 rat fur (KA B2 detail, alpha channel) on coat, hem and cuffs.
+  rattenmantel: { roles: { coat: '#5a4c40', hem: '#3a3028', cuff: '#3a3028', trousers: '#2e2a26', leather: '#2a2018', brass: '#97c459' }, detail: { coat: 'fur', hem: 'fur', cuff: 'fur' },
     spots: [
       { roles: COAT, x: 0.12, y: 0.78, r: 0.07, hex: '#4a3e34' }, { roles: COAT, x: -0.1, y: 0.62, r: 0.07, hex: '#6a5a4c' },
       { roles: COAT, x: -0.14, y: 0.9, r: 0.06, hex: '#4a3e34' }, { roles: COAT, x: 0.08, y: 1.2, r: 0.06, hex: '#6a5a4c' },

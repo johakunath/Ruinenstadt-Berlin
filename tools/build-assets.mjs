@@ -7,7 +7,11 @@
 import { mergeDocuments, resample, simplify, weld } from '@gltf-transform/functions';
 import { MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
-import { SRC, dress, finish, hash, io, readGltf, slimMaterials, stripAttributes } from './character-lib.mjs';
+import { SRC, decay, dress, finish, hash, io, readGltf, slimMaterials, stripAttributes } from './character-lib.mjs';
+
+// LA4: the decay tile on the zombie skin, larger and stronger than on the humans (repeat 2, strength 0.6): at the
+// game camera only this setting still reads (docs/proof/la4-zombie-skin/).
+const ZOMBIE_DECAY = { repeat: 1.5, strength: 0.85 };
 
 const CLIPS = {
   'UAL1_Standard.glb': ['Idle_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Roll', 'Hit_Chest', 'Death01', 'Sword_Idle',
@@ -51,7 +55,9 @@ async function buildZombie() {
     }
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><filter id="b"><feGaussianBlur stdDeviation="4"/></filter><g filter="url(#b)">${blots}</g></svg>`;
     const base = await img.modulate({ saturation: 0.25, brightness: 1.35 }).tint({ r: 196, g: 200, b: 176 }).toBuffer();
-    return sharp(base).composite([{ input: Buffer.from(svg), blend: 'multiply' }]);
+    const blotted = await sharp(base).composite([{ input: Buffer.from(svg), blend: 'multiply' }]).png().toBuffer();
+    // LA4 skin pass: the T8 decay tile (cracks, veins, bruises) over the blots, as on the human bosses.
+    return decay(sharp(blotted), size, ZOMBIE_DECAY);
   });
   const skin = root.listSkins()[0];
   const bodyNode = root.listNodes().find((n) => n.getName() === 'SuperHero_Male');

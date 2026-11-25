@@ -64,6 +64,23 @@ If a texture would need any of those changes, Codex writes the question into the
 4. Keep UV scale: the image covers the same world size as the painted texture it replaces.
 5. Run `npm run check` and the e2e test once, and add before and after screenshots to the PR.
 
+## Texture memory (LA4, 2026-11-25)
+
+`node tools/texmem.mjs "autostart&map=<id>&profile=<P>"` (dev server running) counts GPU texture memory at GL level after the run starts: image textures (files, canvases, data) and render targets, with mips, plus the largest images by file. MiB, images + render targets:
+
+| Map | Qualität | Leistung |
+|---|---|---|
+| Köpenick | 175.9 + 98.7 | 138.0 + 44.6 |
+| Xhain | 112.9 + 98.7 | 98.0 + 44.6 |
+| Alexanderplatz | 182.6 + 98.7 | 155.0 + 44.6 |
+| Mitte | 156.3 + 98.7 | 137.4 + 44.6 |
+| Charlottenburg | 165.0 + 110.7 | 148.7 + 56.6 |
+| Wedding | 141.7 + 98.7 | 126.5 + 44.6 |
+| Fernsehturm | 42.0 + 97.1 | 36.7 + 50.7 |
+| Tunnel | | 94.3 + 44.6 |
+
+Most of the image memory is 1024 px tiling surfaces at 5.3 MiB each (T1 to T7, M11c, the local rounds); Leistung loads them at full size, because nothing passes the `maxEdge` cap of `loadPaintedTexture` (backlog P47). The real devices' numbers stay hardware checks 33 and 38.
+
 ## Recycling 2D art
 
 Read only: `johakunath/Ruinenstadt` `assets/buildings/koep-*.webp` (asphalt, pavement, path, plaza, water, bridge, walls, roofs, shop front, ivy, damage), and the same for other districts. They are 110 to 272 px, too small to use directly in 3D. Use them as style references or image-to-image input so 3D surfaces keep the 2D colors. `assets/manifest.json` there says what each one is for.

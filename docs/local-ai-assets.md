@@ -219,6 +219,11 @@ FLUX cannot letter, so every sign and poster is split: FLUX paints the picture o
 - Tried and dropped: T11 steel ribs (`turm/ribs.webp` on the tower's rib material, 0 draw calls): at metalness 0.6 in the dark deck the ribs reflect the room and the paint does not show at all. A cut-glass map on the kit's `glass`, `smoke` and `frost` (0 draw calls, they glow and stay out of the paint bake): no visible change on the Diva at game scale, and it would load on every map. Picks and before/after in `assets-src/ai/t11-ribs`, `assets-src/ai/t9h-glass`.
 - GPU queue: ComfyUI is shared with other projects' sessions; a Pixal3D job there holds the GPU 5 to 15 min and FLUX jobs wait behind it (`/queue` shows it).
 
+### Round 6: former Codex jobs (LA4, 2026-11-25)
+
+- Zombie skin: no new image. The T8 decay tile now goes over `zombie.glb` too (`decay()` moved to `tools/character-lib.mjs`). At the humans' strength (repeat 2, 0.6) it vanished at the game camera; repeat 1.5 and 0.85 still read there. Compare enemy renders with `SEED=n node tools/enemy-sheet.mjs …`: without it every render picks a random tint.
+- Rattenmantel fur: the T8 fur as a fourth coat-detail cell in the alpha channel (`hero/detail.webp` is 1024 × 256 now). The GPU does not sRGB-decode alpha, so `withDetail` decodes it in the shader.
+
 ### Round 5: atlas cells for baked materials (2026-11-25)
 
 - KA A2 enemy kit atlas: `enemies/kit.webp` cells 1 to 3 (filo side, filo top, brass), `docs/tasks/kit-texture-atlas.md`. Text to image, 8 per cell; the picks show the whole object (a pastry stack, a tray), so crop the middle, then `texture-tile.mjs --size 256`. `compose.mjs` pulls each cell to grey around one tone (saturation 0.2, contrast 0.7, highlights above tone + 30 compressed: FLUX's glossy glaze otherwise blows out once the dark pick is brightened). The vertex colour carries the hue. Cell means go into `KIT_TONE`; a unit test measures the file again.

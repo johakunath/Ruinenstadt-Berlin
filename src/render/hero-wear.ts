@@ -207,7 +207,7 @@ export function ensureDetail(piece: string, geo: BufferGeometry): void {
 }
 
 /**
- * Detail weight (one channel at 255 per detail role, rgb) and tiling UVs (bind position in metres along the two
+ * Detail weight (one channel at 255 per detail role, rgba) and tiling UVs (bind position in metres along the two
  * axes of the vertex's chart, ÷ the detail's tile) of a source geometry in a palette. A palette without `detail`
  * returns the shared zero pair.
  */
