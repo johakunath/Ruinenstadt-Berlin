@@ -7,7 +7,7 @@ import { DETAIL_PIECES, ensureDetail } from './hero-wear';
 import { HeroModel } from './hero-model';
 import { HERO_LAYER } from './layers';
 import {
-  AnimationClip, AnimationMixer, Color, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, LoopRepeat, Mesh, RGBAFormat, RepeatWrapping, SRGBColorSpace, TextureLoader,
+  AnimationClip, AnimationMixer, Color, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, LoopRepeat, Mesh, RGBAFormat, RepeatWrapping, SRGBColorSpace, TextureLoader, ImageLoader,
   Vector3, type AnimationAction, type BufferGeometry, type Object3D, type Texture,
 } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -116,9 +116,12 @@ async function loadClothing(anisotropy: number) {
   }));
 }
 
+/** KA B2: the grey detail strip (denim | mail | patch, 256 px cells; local FLUX.2 klein, `docs/local-ai-assets.md`). */
+const DETAIL_URL = new URL('../../assets/textures/hero/detail.webp', import.meta.url).href;
+
 /**
  * KA part B: the packed detail texture, one tiling grey material per channel (R denim, G chainmail, B patchwork),
- * 256 px, sRGB, repeating. Until step B2 delivers `detail.webp` every channel is flat at its `DETAILS` tone.
+ * 256 px, sRGB, repeating. Every channel is flat at its `DETAILS` tone until `loadDetail` packs the strip in.
  */
 function detailTexture(anisotropy: number): DataTexture {
   const S = 256, data = new Uint8Array(S * S * 4), ids = Object.keys(DETAILS) as DetailId[];
@@ -133,6 +136,27 @@ function detailTexture(anisotropy: number): DataTexture {
   t.anisotropy = anisotropy;
   t.needsUpdate = true;
   return t;
+}
+
+/**
+ * Packs cell i of the grey strip into channel i of `t` (lossy WebP cannot keep packed channels apart, so the file
+ * is grey and the packing happens here). A missing file keeps the flat tones (the look before B2).
+ */
+async function loadDetail(t: DataTexture): Promise<void> {
+  if (typeof document === 'undefined') return;
+  try {
+    const img = await new ImageLoader().loadAsync(DETAIL_URL);
+    const S = t.image.width, c = document.createElement('canvas');
+    c.width = S * 3;
+    c.height = S;
+    const g = c.getContext('2d', { willReadFrequently: true })!;
+    g.drawImage(img, 0, 0, S * 3, S);
+    const px = g.getImageData(0, 0, S * 3, S).data, out = t.image.data as Uint8Array;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) for (let ch = 0; ch < 3; ch++) out[(y * S + x) * 4 + ch] = px[(y * S * 3 + ch * S + x) * 4]!;
+    t.needsUpdate = true;
+  } catch {
+    // Flat tones stay.
+  }
 }
 
 /**
@@ -209,6 +233,7 @@ function prepare(scene: Object3D, materials: Materials): void {
 export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true, bosses?: readonly string[]): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
+  const detail = detailTexture(materials.profile.anisotropy), detailLoad = loadDetail(detail);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
   const own = (Object.entries(OWN_BODIES) as Array<[EnemyKind, { url: string; base: 'human' | 'female' }]>).filter(([k, o]) => (o.base === 'human' ? humans : females) && (!bosses || bosses.includes(k)));
@@ -218,7 +243,8 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
   const ownGltfs = await ownLoad;
   for (const g of new Set([heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs])) if (g) prepare(g.scene, materials);
-  const detail = detailTexture(materials.profile.anisotropy), swatch = new Color().setRGB(225 / 255, 0, 0, SRGBColorSpace).r;
+  await detailLoad;
+  const swatch = new Color().setRGB(225 / 255, 0, 0, SRGBColorSpace).r;
   const detailGain = new Vector3(...[0, 1, 2].map((c) => {
     const id = (Object.keys(DETAILS) as DetailId[]).find((d) => DETAILS[d].channel === c)!;
     return swatch / new Color().setRGB(DETAILS[id].tone / 255, 0, 0, SRGBColorSpace).r;

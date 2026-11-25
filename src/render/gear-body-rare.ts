@@ -417,6 +417,10 @@ function tabard(k: GearKit): void {
   onTorso(k, s, R, 1.255, 0, 0.012, () => {
     k.add(flat([[-0.042, 0.055], [0.042, 0.055], [0.042, -0.01], [0, -0.062], [-0.042, -0.01]], 0.004), gold);
     k.add(flat([[-0.028, 0.04], [0.028, 0.04], [0.028, -0.006], [0, -0.042], [-0.028, -0.006]], 0.004), plain(0x8a1c1c), 0, 0, 0.003);
+    // T9 crest in code: the Zitadelle's Juliusturm in gold, three merlons, a dark gate.
+    k.add(flat([[-0.011, -0.026], [0.011, -0.026], [0.011, 0.014], [-0.011, 0.014]], 0.003), gold, 0, 0, 0.006);
+    for (const x of [-0.0085, 0, 0.0085]) k.add(flat([[-0.003, 0.014], [0.003, 0.014], [0.003, 0.022], [-0.003, 0.022]], 0.003), gold, x, 0, 0.006);
+    k.add(flat([[-0.004, -0.026], [0.004, -0.026], [0.004, -0.014], [0, -0.01], [-0.004, -0.014]], 0.002), plain(0x3a0c0c), 0, 0, 0.008);
   });
   k.on('pelvis', () => {
     k.add(patch(sk, A, apron, 8, 3, (_u, v) => 0.024 + 0.006 * (1 - v)), red);
@@ -466,7 +470,54 @@ function capsChest(k: GearKit): void {
 const FONT: Readonly<Record<string, readonly string[]>> = {
   S: ['###', '#..', '###', '..#', '###'], P: ['###', '#.#', '###', '#..', '#..'], A: ['.#.', '#.#', '###', '#.#', '#.#'],
   T: ['###', '.#.', '.#.', '.#.', '.#.'], I: ['#', '#', '#', '#', '#'], ':': ['#.#'],
+  K: ['#.#', '#.#', '##.', '#.#', '#.#'], E: ['###', '#..', '##.', '#..', '###'], Z: ['###', '..#', '.#.', '#..', '###'],
+  W: ['#...#', '#...#', '#.#.#', '#.#.#', '.#.#.'], C: ['###', '#..', '#..', '#..', '###'], H: ['#.#', '#.#', '###', '#.#', '#.#'],
 };
+
+/** Pixel runs of one letter as quads (one per run of '#'), centred on the frame, `px` per pixel, facing +Z. */
+function letter(k: GearKit, c: string, px: number, paint: Paint): void {
+  const rows = FONT[c]!, w = rows[0]!.length;
+  rows.forEach((row, ry) => {
+    for (let j = 0; j < row.length;) {
+      if (row[j] !== '#') { j++; continue; }
+      let e = j;
+      while (row[e + 1] === '#') e++;
+      k.add(quad((e - j + 1) * px * 0.92, px * 0.92), paint, ((j + e + 1) / 2 - w / 2) * px, ((rows.length - 1) / 2 - ry) * px, 0);
+      j = e + 1;
+    }
+  });
+}
+
+/**
+ * T9 decal in code (FLUX cannot letter): "KIEZWACHE" in orange pixel letters across the upper back of the vest.
+ * One frame per letter round the torso, so the line follows the back's curve instead of floating off it.
+ */
+function printKiez(k: GearKit): void {
+  const s = trunk(k, ['a_weste']);
+  const t = 1.36, px = 0.0052, word = [...'KIEZWACHE'];
+  const R = field(s, t - 0.03, t + 0.03, Math.PI - 1, Math.PI + 1, { nt: 3, na: 16, smooth: 1 });
+  const widths = word.map((c) => FONT[c]![0]!.length);
+  const total = widths.reduce((p, w) => p + w, 0) + word.length - 1;
+  const paint = plain(KIEZ.orange);
+  // Arc length along the vest surface from the middle of the back, per angle step (the back is flatter than a circle).
+  const step = 0.01, arcs = [0];
+  for (let a = Math.PI + step, p = s.point(t, Math.PI, R(t, Math.PI)); a <= Math.PI + 1; a += step) {
+    const q = s.point(t, a, R(t, a));
+    arcs.push(arcs[arcs.length - 1]! + q.distanceTo(p));
+    p = q;
+  }
+  const angleAt = (d: number): number => {
+    const m = Math.abs(d), i = Math.max(0, arcs.findIndex((x) => x >= m) - 1), f = (m - arcs[i]!) / Math.max(1e-6, arcs[i + 1]! - arcs[i]!);
+    return Math.PI + Math.sign(d) * (i + f) * step;
+  };
+  let cx = -total / 2;
+  word.forEach((c, n) => {
+    // Seen from behind, reading to the right runs towards larger angles (the hero's right side).
+    const a = angleAt((cx + widths[n]! / 2) * px);
+    onTorso(k, s, R, t, a, 0.004, () => letter(k, c, px, paint));
+    cx += widths[n]! + 1;
+  });
+}
 
 /** Neon sign "SPÄTI" on a dark plate on the lower right chest: glowing pink pixel letters (one quad per run) and frame. */
 function signSpaeti(k: GearKit): void {
@@ -707,6 +758,7 @@ export const BODY_RARE_GEAR: Readonly<Record<string, GearBuilder>> = {
   whistle,
   armband,
   'belt-duty': beltDuty,
+  'print-kiez': printKiez,
   // Spreegeist
   'collar-reed': collarReed,
   'seams-spree': seamsSpree,

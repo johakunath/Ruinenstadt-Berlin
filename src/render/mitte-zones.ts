@@ -15,7 +15,7 @@ import type { Prop } from '../data/courtyard';
 import { Rng } from '../sim/math';
 import { blockFacades, lm, lp, type ChunkBuilder, type MapMats } from './map-world';
 import { FLOOR_H, GROUND_H, PARAPET, Run, windowAt } from './world';
-import { graffitiCell, isTrabi, TRABI_ROOF } from './props-urban';
+import { graffitiCell, modelCar } from './props-urban';
 import { neonCell, NEON_WORDS } from './mitte-paint';
 import type { MitteMats, RGB } from './mitte-world';
 
@@ -150,9 +150,9 @@ export function dressZones(m: MapDef, lots: readonly Lot[], props: readonly Prop
       let post = false;
       for (const p of props) {
         if (p.kind !== 'car' || !inLot(p)) continue;
-        const pb = chunkOf(p.x, p.z), fr = frameOf(p.x, p.z, p.rot), on = rng.next() < 0.4, up = isTrabi(p) ? TRABI_ROOF - 1.48 : 0;
+        const pb = chunkOf(p.x, p.z), fr = frameOf(p.x, p.z, p.rot), on = rng.next() < 0.4, up = (modelCar(p)?.roof ?? 1.48) - 1.48;
         pb.on(ground(p.x, p.z), () => {
-          // The roof sensor of a self-driving car; a few still glow (higher on the Trabi's roof, P3).
+          // The roof sensor of a self-driving car; a few still glow (on a model car's own roof, P3).
           pb.box(M.iron, lm(fr, 0, 1.52 + up, -0.2), 0.5, 0.08, 0.5, [0.2, 0.2, 0.22]);
           pb.geo(M.lampGlass, cachedDome, lm(fr, 0, 1.56 + up, -0.2), on ? scale(CYAN, glow * 0.5) : [0.15, 0.17, 0.2]);
           if (!post && on) {

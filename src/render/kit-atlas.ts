@@ -9,23 +9,28 @@ import { BufferAttribute, CanvasTexture, Color, SRGBColorSpace, type BufferGeome
 export const KIT_ATLAS = { cols: 4, rows: 2, cell: 256, pad: 4 } as const;
 
 /**
- * Mean sRGB tone per cell (r, g, b); cell 0 is plain white. Until a painted cell is measured (steps A2, A3) it
- * is a flat 0xb8, and the canvas paints exactly that tone, so colours equal the flat kit colours.
+ * Mean sRGB tone per cell (r, g, b) inside its padding, measured from `kit.webp` (a test measures it again);
+ * cell 0 is plain white, unpainted cells a flat 0xb8. Before the image is in, the canvas paints each cell this
+ * flat tone, so colours equal the plain kit colours from the first frame.
  */
 export const KIT_TONE: ReadonlyArray<readonly [number, number, number]> = [
-  [255, 255, 255], [0xb8, 0xb8, 0xb8], [0xb8, 0xb8, 0xb8], [0xb8, 0xb8, 0xb8],
-  [0xb8, 0xb8, 0xb8], [0xb8, 0xb8, 0xb8], [0xb8, 0xb8, 0xb8], [0xb8, 0xb8, 0xb8],
+  [255, 255, 255], [193, 181, 166], [192, 179, 164], [187, 182, 168],
+  [191, 181, 182], [0xb8, 0xb8, 0xb8], [0xb8, 0xb8, 0xb8], [0xb8, 0xb8, 0xb8],
 ];
+
+/** The painted cells (A2: filo side, filo top, brass; A3: ear skin; local FLUX.2 klein, `docs/local-ai-assets.md` round 5). */
+export const KIT_ART_URL = new URL('../../assets/textures/enemies/kit.webp', import.meta.url).href;
 
 /** A kit material's cell, and optionally a second cell for its up-facing triangles (the camera looks down). */
 export interface KitCell { cell: number; top?: number }
 
 /**
  * Kit materials with a painted cell; every other material uses cell 0. String keys, so this file does not import
- * `enemies.ts`. Cells: 0 plain, 1 filo side, 2 filo top, 3 brass, 4 ear skin, 5 mirror, 6 tea glass, 7 spare.
+ * `enemies.ts`. Cells: 0 plain, 1 filo side, 2 filo top, 3 brass, 4 ear skin, 5 to 7 spare. Mirror and tea glass
+ * (A3) were painted and dropped: their parts are 3 to 6 cm and showed no change at the game camera.
  */
 export const KIT_CELLS: Readonly<Record<string, KitCell>> = {
-  filo: { cell: 1, top: 2 }, brass: { cell: 3 }, pink: { cell: 4 }, mirror: { cell: 5 }, tea: { cell: 6 }, urn: { cell: 6 },
+  filo: { cell: 1, top: 2 }, brass: { cell: 3 }, pink: { cell: 4 },
 };
 
 /** UV rect [u0, v0, u1, v1] of cell `i` inside its padding (v up: row 0 is the top half of the canvas). */
@@ -103,9 +108,16 @@ export function kitAtlas(smallTextures: boolean): Texture {
     g.fillStyle = `rgb(${r},${gr},${b})`;
     g.fillRect((i % cols) * cell * s, Math.floor(i / cols) * cell * s, cell * s, cell * s);
   });
-  atlas = new CanvasTexture(c);
-  atlas.colorSpace = SRGBColorSpace;
-  atlas.anisotropy = 1;
-  ready = Promise.resolve();
-  return atlas;
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 1;
+  atlas = tex;
+  // The painted cells replace the flat ones once loaded: one redraw and one re-upload (round 4 pattern).
+  ready = new Promise((done) => {
+    const img = new Image();
+    img.onload = () => { g.drawImage(img, 0, 0, c.width, c.height); tex.needsUpdate = true; done(); };
+    img.onerror = () => done();
+    img.src = KIT_ART_URL;
+  });
+  return tex;
 }

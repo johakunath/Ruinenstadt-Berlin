@@ -1,6 +1,6 @@
 # KA Kit texture atlas and hero coat detail [spec: Claude · Fable high; build: Claude · Opus high]
 
-Status: designed 2026-11-25 (Fable 5.2). A1 built 2026-11-25 (Opus): `src/render/kit-atlas.ts`, flat cells, no visible change (enemy sheets: same `calls=`, differences only where the animation pose moved). Two rendering designs that unblock the last local texture items. Part A and part B touch different files and can be built in parallel sessions; the art steps need the PC (ComfyUI).
+Status: designed 2026-11-25 (Fable 5.2). A1 built 2026-11-25 (Opus): `src/render/kit-atlas.ts`, flat cells, no visible change (enemy sheets: same `calls=`, differences only where the animation pose moved). A2 built 2026-11-25 (Opus): filo and brass cells in `kit.webp`, `KIT_TONE` measured, calls unchanged, Kodex E23 and X25 rendered again ([proof](../proof/t10-kit/)). A3 built 2026-11-25 (Opus): ear skin in cell 4 (Rattenmutter, Kodex X06); mirror and tea glass painted, tried in game and dropped by the kill rule (no change at the game camera; the `KIT_GLOWS` code was not kept). B2 built 2026-11-25 (Opus): `detail.webp` (denim, mail, patch at tone 180), palettes `leder`, `kette:zit`, `spaeti`, hero draws unchanged, icons I17, I49, I57 ([proof](../proof/t9-detail/before-after.jpg)). Two rendering designs that unblock the last local texture items. Part A and part B touch different files and can be built in parallel sessions; the art steps need the PC (ComfyUI).
 
 ## Goal
 

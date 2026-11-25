@@ -78,7 +78,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | E | 3 |
 | Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | E | 3 |
 | Rohrzange des Tunnelläufers | zange | w | set tunnel | model:zange:tunnel | yes | I101 | yes: rendered from the model | E | 3 |
-| Lederjacke | leder | a | normal | wear:leder | yes | I17 | yes: rendered from the look | T | 2 |
+| Lederjacke | leder | a | normal | wear:leder | yes | I17 | yes: rendered from the look (denim, KA B2) | - | 2 |
 | Arbeitsmantel | mantel | a | normal | wear:mantel | yes | I18 | yes: rendered from the look | none | 2 |
 | Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |
 | Feuerwehrjacke | feuer | a | normal | wear:feuer | yes | I20 | yes: rendered from the look | none | 2 |
@@ -86,13 +86,13 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Regenponcho | poncho | a | neon | wear:poncho (own `a_poncho` piece, B1, 2026-11-22) | yes | I63 | yes: rendered from the look | none | 4 |
 | Kabelmantel | kmantel | a | neon | wear:kmantel | yes | I64 | yes: rendered from the look | none | 4 |
 | Blaumann | blaumann | a | GDR | wear:blaumann | yes | I75 | yes: rendered from the look | none | 4 |
-| Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look | T, E | 3 |
+| Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look (patchwork, KA B2) | E | 3 |
 | Panzer vom Tempelhofer Feld | panzer | a | legendary | wear:panzer | yes | I50 | yes: rendered from the look | E | 3 |
 | Mantel der Rattenmutter | rattenmantel | a | legendary | wear:rattenmantel | yes | I54 | yes: rendered from the look | T, E | 3 |
 | Rüstung des Zitadellenritters | ritter | a | legendary | wear:ritter | yes | I55 | yes: rendered from the look | E | 3 |
 | Weste der Kiezwache | weste | a | set kiez | wear:weste:kiez | yes | I93 | yes: rendered from the look | none | 3 |
 | Mantel des Spreegeists | mantel | a | set spree | wear:mantel:spree | yes | I94 | yes: rendered from the look | none | 3 |
-| Kettenhemd der Zitadelle | kette | a | set zit | wear:kette:zit | yes | I57 | yes: rendered from the look | T | 3 |
+| Kettenhemd der Zitadelle | kette | a | set zit | wear:kette:zit | yes | I57 | yes: rendered from the look (chainmail, KA B2) | - | 3 |
 | Mantel des Tunnelläufers | mantel | a | set tunnel | wear:mantel:tunnel | yes | I98 | yes: rendered from the look | none | 3 |
 | Kaftan des Ewigen Gasts | mantel | a | set gast (M18) | wear:mantel:gast (emerald coat, ruby hem and trousers, gold cuffs and buttons, plain belt) | yes | I104 | yes: rendered from the look | none | 3 |
 | Bauhelm | helm | h | normal | wear:helm | yes | I22 | yes: rendered from the look | none | 2 |

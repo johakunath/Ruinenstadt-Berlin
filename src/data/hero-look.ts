@@ -67,9 +67,9 @@ export interface Spot { roles: readonly Role[]; x: number; y: number; r: number;
  * (`DETAIL_PIECES` in `src/render/hero-wear.ts`). One packed texture holds the three, one per colour channel.
  */
 export type DetailId = 'denim' | 'mail' | 'patch';
-/** Channel in the packed detail texture, tile size (m), and the cell's mean sRGB tone (225 = the coat swatch: no change until B2 measures it). */
+/** Channel in the packed detail texture (= its cell in `detail.webp`), tile size (m), and the cell's mean sRGB tone (measured; a test reads the file again). */
 export const DETAILS: Readonly<Record<DetailId, { channel: 0 | 1 | 2; tile: number; tone: number }>> = {
-  denim: { channel: 0, tile: 0.5, tone: 225 }, mail: { channel: 1, tile: 0.3, tone: 225 }, patch: { channel: 2, tile: 0.5, tone: 225 },
+  denim: { channel: 0, tile: 0.5, tone: 180 }, mail: { channel: 1, tile: 0.3, tone: 180 }, patch: { channel: 2, tile: 0.5, tone: 180 },
 };
 export interface Palette { roles: Partial<Record<Role, string>>; bands?: readonly Band[]; spots?: readonly Spot[]; detail?: Partial<Record<Role, DetailId>> }
 
@@ -80,7 +80,9 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
   // Körper: Köpenick
   mantel: { roles: { coat: '#6b6538', hem: '#4a4626', cuff: '#4a4626', trousers: '#4a4038', leather: '#3a2414' } },
   // Körper: Xhain
-  leder: { roles: { coat: '#2a2426', hem: '#1a1416', cuff: '#1a1416', trousers: '#3a4a6a', leather: '#141012', brass: '#d8dce0' } },
+  // KA B2: denim jeans with worn, lighter knees.
+  leder: { roles: { coat: '#2a2426', hem: '#1a1416', cuff: '#1a1416', trousers: '#3a4a6a', leather: '#141012', brass: '#d8dce0' }, detail: { trousers: 'denim' },
+    spots: [{ roles: ['trousers'], x: 0.1, y: 0.5, r: 0.06, hex: '#5a6e94', side: 'front' }, { roles: ['trousers'], x: -0.1, y: 0.5, r: 0.06, hex: '#5a6e94', side: 'front' }] },
   feuer: { roles: { coat: '#a8281a', hem: '#e8d36a', cuff: '#6a160e', trousers: '#2a2c38', leather: '#1e1a1a', brass: '#b8bcc0' },
     bands: [{ roles: COAT, axis: 'y', from: 1.24, to: 1.275, hex: '#e8d36a' }, { roles: COAT, axis: 'x', from: 0.47, to: 0.5, hex: '#e8d36a' }, { roles: ['trousers'], axis: 'y', from: 0.25, to: 0.285, hex: '#e8d36a' }] },
   bvg: { roles: { coat: '#26304a', hem: '#f2c230', cuff: '#f2c230', trousers: '#222a40', leather: '#141620', brass: '#f2c230' } },
@@ -95,10 +97,11 @@ export const PALETTES: Readonly<Record<string, Palette>> = {
     bands: [{ roles: ['vest'], axis: 'y', from: 1.13, to: 1.16, hex: '#f08a24' }, { roles: ['vest'], axis: 'y', from: 1.19, to: 1.22, hex: '#f08a24' }] },
   'mantel:spree': { roles: { coat: '#1f7a6a', hem: '#0e4a40', cuff: '#0e4a40', trousers: '#1e3a36', leather: '#2aa890', brass: '#cfe8e0' },
     bands: [{ roles: COAT, axis: 'y', from: 0.6, to: 0.635, hex: '#7fe0c8', wave: 0.018 }, { roles: COAT, axis: 'y', from: 0.665, to: 0.69, hex: '#5ac8b0', wave: 0.018 }] },
-  // Steel darker than the mockup's base: there the mail ring pattern darkens it (texture from Codex later).
-  'kette:zit': { roles: { coat: '#6c727a', hem: '#4a5058', cuff: '#4a5058', trousers: '#3a3c42', leather: '#5a2a1a', brass: '#e0b040' } },
+  // Steel darker than the mockup's base; the mail rings (KA B2 detail) sit on coat, hem and cuffs.
+  'kette:zit': { roles: { coat: '#6c727a', hem: '#4a5058', cuff: '#4a5058', trousers: '#3a3c42', leather: '#5a2a1a', brass: '#e0b040' }, detail: { coat: 'mail', hem: 'mail', cuff: 'mail' } },
   // Körper: legendaries
-  spaeti: { roles: { coat: '#5a2a78', hem: '#3a1a50', cuff: '#3a1a50', trousers: '#2a2430', leather: '#2a1a1a', brass: '#f2d14b' },
+  // KA B2: patchwork squares under the coloured patches.
+  spaeti: { roles: { coat: '#5a2a78', hem: '#3a1a50', cuff: '#3a1a50', trousers: '#2a2430', leather: '#2a1a1a', brass: '#f2d14b' }, detail: { coat: 'patch', hem: 'patch', cuff: 'patch' },
     spots: [
       { roles: COAT, x: -0.12, y: 0.98, r: 0.045, hex: '#e07020', side: 'front' }, { roles: COAT, x: 0.13, y: 0.84, r: 0.05, hex: '#2f8a4a', side: 'front' },
       { roles: COAT, x: -0.16, y: 0.66, r: 0.05, hex: '#d8c040', side: 'front' }, { roles: COAT, x: 0.1, y: 0.6, r: 0.045, hex: '#c8302a', side: 'front' },
@@ -174,7 +177,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     panzer: { palette: 'panzer', scarf: 'none', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },
     rattenmantel: { palette: 'rattenmantel', scarf: 'scarf:acid', puff: 0.018, gear: ['collar-fur', 'belt-rattails'] },
     ritter: { palette: 'ritter', scarf: 'none', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'] },
-    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'kneepads-orange'] },
+    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'print-kiez', 'kneepads-orange'] },
     'mantel:spree': { palette: 'mantel:spree', scarf: 'none', gear: ['collar-reed', 'seams-spree', 'belt-sash'] },
     'kette:zit': { cut: CUT.knee, palette: 'kette:zit', scarf: 'none', gear: ['tabard', 'belt-knight-short'] },
     'mantel:tunnel': { palette: 'mantel:tunnel', scarf: 'none', gear: ['harness', 'kneepads-teal', 'belt-tunnel'] },
