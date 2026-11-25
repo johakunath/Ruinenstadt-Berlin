@@ -16,6 +16,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ELITES, ENEMIES, type EliteMod, type EnemyKind } from '../src/data/enemies';
 import { loadCharacters } from '../src/render/characters';
 import { EnemyView, ownKind } from '../src/render/enemies';
+import { kitReady } from '../src/render/kit-atlas';
 import { LOOK } from '../src/render/looks';
 import { Materials, type LitMaterial } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
@@ -76,6 +77,7 @@ async function portraits(): Promise<void> {
     const sim0 = createSim({ empty: true });
     new EnemyView(assets, materials, ENEMIES.walker.body, false).assign(spawnEnemy(sim0, 0, 0, 'walker'), false, null);
     await new Promise((r) => setTimeout(r, Number(q.get('wait') ?? 1500)));
+    await kitReady();
   }
   const scene = new Scene();
   const fill = new HemisphereLight(0x9aa8c0, 0x2a1e14, 1.1);

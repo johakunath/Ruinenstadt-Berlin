@@ -1,6 +1,6 @@
 # KA Kit texture atlas and hero coat detail [spec: Claude · Fable high; build: Claude · Opus high]
 
-Status: designed 2026-11-25 (Fable 5.2, design only, nothing built). Two rendering designs that unblock the last local texture items. Part A and part B touch different files and can be built in parallel sessions; the art steps need the PC (ComfyUI).
+Status: designed 2026-11-25 (Fable 5.2). A1 built 2026-11-25 (Opus): `src/render/kit-atlas.ts`, flat cells, no visible change (enemy sheets: same `calls=`, differences only where the animation pose moved). Two rendering designs that unblock the last local texture items. Part A and part B touch different files and can be built in parallel sessions; the art steps need the PC (ComfyUI).
 
 ## Goal
 
