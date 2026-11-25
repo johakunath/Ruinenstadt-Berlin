@@ -36,9 +36,10 @@ const PORTRAIT: Partial<Record<EnemyKind, { top?: number; yaw?: number; pitch?: 
   // The shield from its open side.
   schild: { yaw: -30 },
   // Thin bodies under tall plumes and crests, the Diva inside her feather fans: closer, a little lower.
+  // LA4d: the dancer's own body (short plume) from three-quarters, down to the shard tutu.
   // H4: the officers' own bodies lean into their sabre guard: a little wider and higher, so the helmet stays in.
   feldwebel: { zoom: 0.95, lift: 0.18, yaw: 20 }, hauptmann: { zoom: 0.95, lift: 0.18, yaw: 20 },
-  scherbe: { zoom: 1.4, lift: -0.1 }, spreehexe: { zoom: 1.3, lift: -0.08 }, spiegelpaar: { zoom: 0.95 }, sultan: { zoom: 1.5, lift: 0.04 }, diva: { zoom: 2.3, lift: -0.08, yaw: 8 },
+  scherbe: { zoom: 0.85, yaw: 22 }, spreehexe: { zoom: 1.3, lift: -0.08 }, spiegelpaar: { zoom: 0.95 }, sultan: { zoom: 1.5, lift: 0.04 }, diva: { zoom: 2.3, lift: -0.08, yaw: 8 },
 };
 
 /** Bounding box of the visible meshes, skinned ones in their current pose. */
