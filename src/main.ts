@@ -1182,7 +1182,10 @@ function humansFor(): boolean {
 function bossesFor(): string[] | undefined {
   const own = level?.encounters.flatMap((e) => e.waves.flatMap((w) => w.bosses)) ?? [];
   if (isCamp) return [];
-  return own.length === 0 ? undefined : [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
+  const kinds = [...opts.spawn.map((k) => k.split('+')[0]!), ...own];
+  // Bosses that bring another: the Spiegelpaar her reflection.
+  if (kinds.includes('spiegelpaar')) kinds.push('spiegelbild');
+  return own.length === 0 ? undefined : kinds;
 }
 /** H3: the female boss base (Spreehexe, Wurzel-Mutter), where one of them can appear. */
 function femalesFor(): boolean {

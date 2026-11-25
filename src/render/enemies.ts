@@ -54,23 +54,41 @@ interface Blow { clip: string; start: number; swing: number; hit: number; end: n
 /**
  * H4: how a boss with an own body (`OWN_BODIES`) stands, walks and strikes, instead of the ghoul clips.
  * `keep`: bones whose code gear stays on top of the body (a glowing tell, a held prop, parts that break off; fitted
- * coats never stay; `tier` keeps the parts that break off at 66 % and 33 %); the rest is in the mesh. Walks need the zombie walk's stride and
+ * coats never stay; `tier` keeps the parts that break off at 66 % and 33 %; `#0` the first gear group only, e.g. the
+ * Brandmeister's flickering flames without his helmet); the rest is in the mesh. `tint`: colour over the whole body
+ * (the Spiegelbild is the Spiegelpaar's body in frost glass). `shape`: also the code bodies' bone proportions (`SHAPE`, not
+ * the head), kept for the bosses approved with them; the others are proportioned in their mesh. Walks need the zombie walk's stride and
  * cycle (0.69 m per 1.33 s; Walk_Formal_Loop and Walk_Loop measured), so `WALK_CLIP_SPEED` keeps the feet planted.
  */
-const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: Blow; keep?: readonly string[] }>> = {
+const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: Blow; keep?: readonly string[]; tint?: number; shape?: true }>> = {
   // Johannes 2026-11-25: stands at sabre guard, marches, cuts overhead (also the charge's wind-up).
-  feldwebel: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH },
+  feldwebel: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH , shape: true },
   // The punk witch stands and walks upright, rakes overhead with the free hand; the acid orb stays a glowing tell.
-  spreehexe: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] },
+  spreehexe: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] , shape: true },
   // The captain like his sergeant (sabre from the rack); the border guard marches with his rifle (code, right hand);
   // the newcomer strolls with his oat-milk coffee (code, left hand; the e-scooter is its own group).
-  hauptmann: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH },
-  grenzer: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
-  zugezogene: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] },
+  hauptmann: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH , shape: true },
+  grenzer: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] , shape: true },
+  zugezogene: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] , shape: true },
   // The clock robot marches; the glowing Unruh and watch chains (chest), the pendulum (back) and the clock-hand
   // blades (hands) stay code. The Diva keeps her breakable gown tiers and the halo with its mask (head).
-  zeitwart: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['spine_03', 'spine_02', 'hand_r', 'hand_l'] },
-  diva: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['tier', 'Head'] },
+  zeitwart: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['spine_03', 'spine_02', 'hand_r', 'hand_l'] , shape: true },
+  diva: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['tier', 'Head'] , shape: true },
+  // Round 3 (Johannes 2026-11-25: all ten, faces visible, hats in the mesh). Held props stay code: the Kelle, the
+  // clipboard, the baton, the cane, the spoon sceptre.
+  spiegelpaar: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH },
+  spiegelbild: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, tint: 0xa8d4ff },
+  // The Sultan's model has its own platter shoulders and belly: the code trays and urn clipped through them
+  // (Johannes), so only the spoon sceptre stays (the trays no longer drop at 66 % and 33 %).
+  sultan: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_r'] },
+  conferencier: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
+  dirigent: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
+  tuersteher: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: ['hand_l'] },
+  schaffner: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['hand_r'] },
+  brandmeister: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH, keep: ['#0'] },
+  bassprediger: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH },
+  wurzelmutter: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH },
+  ringvater: { idle: 'Idle_Loop', walk: 'Walk_Formal_Loop', blow: SLASH },
 };
 /** H4: the own-body kind a view of this enemy kind is pooled under, if it has one. */
 export const ownKind = (kind: EnemyKind): EnemyKind | undefined => (OWN_BODIES[kind] ? kind : undefined);
@@ -2466,6 +2484,8 @@ export class EnemyView {
         if (vary) m.color.offsetHSL(r(1) * 0.12, r(2) * 0.3, r(3) * 0.22);
       }
       m.emissive.setScalar(0);
+      // H4: an own body in another colour (the Spiegelbild in cold frost glass; status glows own the emissive).
+      if (this.ownBody && this.moves?.tint !== undefined) m.color.set(this.moves.tint);
     }
     const key: GearKey = this.opts.gdr && e.kind === 'walker' ? 'brigade' : e.kind;
     for (const m of this.cloth) {
@@ -2513,7 +2533,7 @@ export class EnemyView {
       // Proportions and gear of this kind; everything else back to plain.
       for (const bone of this.bones.values()) bone.scale.setScalar(1);
       // H4: an own body keeps the broader chest but not the smaller head (its helmet is part of the mesh).
-      for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) if (!this.ownBody || n !== 'Head') this.bones.get(n)?.scale.setScalar(v);
+      if (!this.ownBody || this.moves?.shape) for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) if (!this.ownBody || n !== 'Head') this.bones.get(n)?.scale.setScalar(v);
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
       // H4: an own body carries its uniform and helmet; only the weapon rack (below) stays.
       const keep = this.moves?.keep;
@@ -2521,7 +2541,7 @@ export class EnemyView {
       if (!gear) {
         gear = this.inIdle(() => gearFor(key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
         // H4: on an own body only the gear on the `keep` bones stays.
-        if (keep) gear = gear.filter((g) => { const on = g.userData.tier ? keep.includes('tier') : keep.includes(g.parent?.name ?? '') && !g.userData.coat; if (!on) g.removeFromParent(); return on; });
+        if (keep) gear = gear.filter((g, i) => { const on = keep.includes(`#${i}`) || (g.userData.tier ? keep.includes('tier') : keep.includes(g.parent?.name ?? '') && !g.userData.coat); if (!on) g.removeFromParent(); return on; });
         this.gear.set(key, gear);
       }
       for (const g of gear) g.visible = true;

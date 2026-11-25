@@ -44,6 +44,17 @@ export const OWN_BODIES: Partial<Record<EnemyKind, { url: string; base: 'human' 
   zugezogene: { url: new URL('../../assets/characters/boss-zugezogene.glb', import.meta.url).href, base: 'human' },
   zeitwart: { url: new URL('../../assets/characters/boss-zeitwart.glb', import.meta.url).href, base: 'human' },
   diva: { url: new URL('../../assets/characters/boss-diva.glb', import.meta.url).href, base: 'female' },
+  spiegelpaar: { url: new URL('../../assets/characters/boss-spiegelpaar.glb', import.meta.url).href, base: 'female' },
+  // Her reflection: the same body, mirrored and in frost glass (`OWN_MOVES.spiegelbild.tint`).
+  spiegelbild: { url: new URL('../../assets/characters/boss-spiegelpaar.glb', import.meta.url).href, base: 'female' },  tuersteher: { url: new URL('../../assets/characters/boss-tuersteher.glb', import.meta.url).href, base: 'human' },
+  schaffner: { url: new URL('../../assets/characters/boss-schaffner.glb', import.meta.url).href, base: 'human' },
+  brandmeister: { url: new URL('../../assets/characters/boss-brandmeister.glb', import.meta.url).href, base: 'human' },
+  wurzelmutter: { url: new URL('../../assets/characters/boss-wurzelmutter.glb', import.meta.url).href, base: 'female' },
+  ringvater: { url: new URL('../../assets/characters/boss-ringvater.glb', import.meta.url).href, base: 'human' },
+  sultan: { url: new URL('../../assets/characters/boss-sultan.glb', import.meta.url).href, base: 'human' },
+  conferencier: { url: new URL('../../assets/characters/boss-conferencier.glb', import.meta.url).href, base: 'human' },
+  dirigent: { url: new URL('../../assets/characters/boss-dirigent.glb', import.meta.url).href, base: 'human' },
+  bassprediger: { url: new URL('../../assets/characters/boss-bassprediger.glb', import.meta.url).href, base: 'human' },
 };
 
 export interface CharacterAssets {
@@ -143,10 +154,12 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
   const own = (Object.entries(OWN_BODIES) as Array<[EnemyKind, { url: string; base: 'human' | 'female' }]>).filter(([k, o]) => (o.base === 'human' ? humans : females) && (!bosses || bosses.includes(k)));
-  const ownLoad = Promise.all(own.map(([, o]) => loader.loadAsync(o.url)));
+  // One load per file (the Spiegelbild shares the Spiegelpaar's), each kind gets its own clone in the view.
+  const files = new Map<string, Promise<GLTF>>();
+  const ownLoad = Promise.all(own.map(([, o]) => { let f = files.get(o.url); if (!f) files.set(o.url, (f = loader.loadAsync(o.url))); return f; }));
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
   const ownGltfs = await ownLoad;
-  for (const g of [heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs]) if (g) prepare(g.scene, materials);
+  for (const g of new Set([heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs])) if (g) prepare(g.scene, materials);
   for (const { name, texture } of await clothingLoad) {
     if (!texture) continue;
     const piece = heroGltf.scene.getObjectByName(name) as Mesh<BufferGeometry, LitMaterial> | undefined;
