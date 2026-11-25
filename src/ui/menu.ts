@@ -246,7 +246,7 @@ const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
   // M16 Charlottenburg; the Spiegelbild is not in the Kodex and shares the Spiegelpaar's id.
   scherbe: 'E19', loge: 'E20', souffleur: 'E21', spiegelbild: 'X22',
   conferencier: 'X20', ringvater: 'X21', spiegelpaar: 'X22', diva: 'X23',
-  // M18 Wedding (ids reserved for Codex busts; glyphs until then).
+  // M18 Wedding.
   teeifrit: 'E22', baklava: 'E23', teppich: 'E24',
   zugezogene: 'X24', hauptgericht: 'X25', bauherr: 'X26', sultan: 'X27',
   // M17 Fernsehturm.
