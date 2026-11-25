@@ -14,10 +14,10 @@ import { DT, type Sim, type SimEvent } from '../sim/types';
 import { FollowCamera } from './camera';
 import { LandmarkReveal } from './reveal';
 import { HeroView, loadCharacters, type CharacterAssets } from './characters';
-import { EnemyView } from './enemies';
+import { EnemyView, ownKind } from './enemies';
 import { ENEMY_LAYER } from './layers';
 import { threatShake } from './threats';
-import { BOSS, type BodyKind } from '../data/enemies';
+import { BOSS } from '../data/enemies';
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
 import { LootView } from './loot';
@@ -168,7 +168,7 @@ export class GameRenderer {
   /** V1: living enemies nearest the hero, for their contour behind buildings (half height in m). */
   private outlined: Array<{ root: Object3D; size: number; d: number }> = [];
   /** Spare views per body rig. */
-  private readonly pool = new Map<BodyKind, EnemyView[]>();
+  private readonly pool = new Map<string, EnemyView[]>();
   private readonly debug: HitDebug | null;
   /** Soft fill that travels with the hero so the fight reads against the dark ground. */
   private readonly heroLight = new PointLight(0xffe2bd, 9, 7, 1.4);
@@ -331,9 +331,9 @@ export class GameRenderer {
 
   private release(view: EnemyView): void {
     view.root.visible = false;
-    const list = this.pool.get(view.body) ?? [];
+    const list = this.pool.get(view.poolKey) ?? [];
     list.push(view);
-    this.pool.set(view.body, list);
+    this.pool.set(view.poolKey, list);
   }
 
   /**
@@ -511,7 +511,8 @@ export class GameRenderer {
       seen.add(e.id);
       let view = this.views.get(e.id);
       if (!view) {
-        view = this.pool.get(e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows, { gdr: this.opts.map?.def.id === 'alex', clockRig: this.world.clockRig });
+        const own = this.assets.bosses?.bodies.has(e.kind) ? ownKind(e.kind) : undefined;
+        view = this.pool.get(own ?? e.def.body)?.pop() ?? new EnemyView(this.assets, this.materials, e.def.body, profile.enemyShadows, { gdr: this.opts.map?.def.id === 'alex', clockRig: this.world.clockRig, own });
         if (!view.root.parent) this.scene.add(view.root);
         view.assign(e, sim.level.flavor === 'neon', sim.level.flavor === 'revue' || sim.level.flavor === 'fest' ? sim.level.flavor : null);
         view.root.traverse((o) => { if ((o as Mesh).isMesh) o.layers.enable(ENEMY_LAYER); });

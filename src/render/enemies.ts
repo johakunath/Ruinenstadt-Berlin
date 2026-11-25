@@ -25,7 +25,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { BOSS, ELITES, SPAWN, THREAT, type BodyKind, type EnemyKind } from '../data/enemies';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Enemy } from '../sim/types';
-import { Animator, type CharacterAssets } from './characters';
+import { Animator, OWN_BODIES, type CharacterAssets } from './characters';
 import { groundY } from './ground';
 import { ZAP_TIME } from './status-fx';
 import { buildDialMark, updateDialMark } from './echo-mark';
@@ -49,6 +49,23 @@ const SCRATCH_SWIPE = 0.16;
 /** H4: an own body's melee is an upright overhead sabre cut (Sword_Attack, measured with tools/clip-swing.mjs: the
  * sabre rises behind the head until 0.333 s, comes down in front until 0.466 s, the stance is back at 1.27 s). */
 const SLASH = { clip: 'Sword_Attack', start: 0.1, swing: 0.333, hit: 0.466, end: 1.27 } as const;
+/** A one-shot melee clip: the pose at the start of the wind-up, the first and last frame of the blow, the end of the recovery (clip seconds). */
+interface Blow { clip: string; start: number; swing: number; hit: number; end: number }
+/**
+ * H4: how a boss with an own body (`OWN_BODIES`) stands, walks and strikes, instead of the ghoul clips.
+ * `keep`: gear still built in code on top of the body (a glowing tell). Walks need the zombie walk's stride and
+ * cycle (0.69 m per 1.33 s; Walk_Formal_Loop and Walk_Loop measured), so `WALK_CLIP_SPEED` keeps the feet planted.
+ */
+const OWN_MOVES: Partial<Record<EnemyKind, { idle: string; walk: string; blow: Blow; keep?: GearKey }>> = {
+  // Johannes 2026-11-25: stands at sabre guard, marches, cuts overhead (also the charge's wind-up).
+  feldwebel: { idle: 'Sword_Idle', walk: 'Walk_Formal_Loop', blow: SLASH },
+  // The punk witch stands and walks upright, rakes overhead with the free hand; the acid orb stays a glowing tell.
+  spreehexe: { idle: 'Idle_Loop', walk: 'Walk_Loop', blow: SLASH, keep: 'hexeOrb' },
+};
+/** H4: the own-body kind a view of this enemy kind is pooled under, if it has one. */
+export const ownKind = (kind: EnemyKind): EnemyKind | undefined => (OWN_BODIES[kind] ? kind : undefined);
+/** H4: an own body's render height factor (`BUILD`), for what sits over its head (the health bar). */
+export const ownHeight = (kind: EnemyKind): number => (OWN_BODIES[kind] ? BUILD[kind]?.[1] ?? 1 : 1);
 const WALK_CLIP_SPEED = 1.15;
 /** M12c Türsteher grab: Zombie_Scratch at the end of the swipe, hunched with both hands in front (clutching), held while the hero is caught. */
 const GRAB_HOLD = 0.68;
@@ -98,7 +115,8 @@ const TINTS: Record<EnemyKind, number[]> = {
   zeitwart: [0x7c8a98],
 };
 /** Gear and cloth keys: the kinds, plus the Brigadeghul (the walker on Alexanderplatz). */
-type GearKey = EnemyKind | 'brigade';
+/** `hexeOrb`: only the Spreehexe's acid orb, on her own body (H4). */
+type GearKey = EnemyKind | 'brigade' | 'hexeOrb';
 /** M16: the 1920s dress of the plain Zeitlose on `revue` maps (render only, as the neon cables). */
 type RevueKey = 'revueTails' | 'revueUsher' | 'revuePage' | 'revueHand' | 'revueTray';
 const REVUE: Partial<Record<EnemyKind, readonly RevueKey[]>> = { walker: ['revueTails', 'revueUsher'], runner: ['revuePage'], brute: ['revueHand'], spitter: ['revueTray'] };
@@ -1183,6 +1201,10 @@ function gearFor(kind: GearKey | RevueKey | FestKey | 'cyber', model: Object3D, 
       mount('pelvis', [[tf(new CylinderGeometry(0.22, 0.36, 0.86, 10, 1, true, Math.PI * 0.55, Math.PI * 1.9), 0, -0.4, 0), 'dark']]);
       mount('hand_l', [[tf(new SphereGeometry(0.1, 10, 8), 0, -0.14, 0), 'acid'], [tf(new TorusGeometry(0.14, 0.008, 4, 14), 0, -0.14, 0, Math.PI / 2), 'acid']]);
       break;
+    case 'hexeOrb':
+      // H4: on her own body only the acid orb is code (it glows).
+      mount('hand_l', [[tf(new SphereGeometry(0.1, 10, 8), 0, -0.14, 0), 'acid'], [tf(new TorusGeometry(0.14, 0.008, 4, 14), 0, -0.14, 0, Math.PI / 2), 'acid']]);
+      break;
     case 'cyber':
       // Neon maps (2D `D.cyber`): three pink cables and two implant dots on the plain bodies.
       mount('neck_01', cables(3, 0.16));
@@ -2127,6 +2149,9 @@ export class EnemyView {
   private upright = false;
   /** H4: this view shows a boss's own skinned body (`CharacterAssets.bosses`): no code gear, no bone proportions. */
   private ownBody = false;
+  /** Pool of this view: its own-body kind, else its body. */
+  get poolKey(): string { return this.ownBody ? this.opts.own! : this.body; }
+  private moves: (typeof OWN_MOVES)[EnemyKind];
   /** H3: per spine bone, the turn from the zombie idle pose to the upright idle pose (local space). */
   private straight: Array<{ bone: Object3D; fix: Quaternion; arm: boolean; pre: Quaternion; post: Quaternion; set: boolean }> | null = null;
   /** H3: how much of the arm fix applies (eases with the clip fade between walking and striking). */
@@ -2136,7 +2161,7 @@ export class EnemyView {
   private rack: WeaponRack | null = null;
 
   /** `gdr`: Alexanderplatz (walkers wear the Brigadeghul's Blaumann); `clockRig`: the map's maker of Weltzeituhr rigs. */
-  constructor(assets: CharacterAssets, private readonly materials: Materials, readonly body: BodyKind, private readonly castShadow: boolean, private readonly opts: { gdr?: boolean; clockRig?: () => ClockRig } = {}) {
+  constructor(assets: CharacterAssets, private readonly materials: Materials, readonly body: BodyKind, private readonly castShadow: boolean, private readonly opts: { gdr?: boolean; clockRig?: () => ClockRig; own?: EnemyKind } = {}) {
     this.root.add(this.inner);
     if (body === 'kern') {
       this.kern = buildKern(materials, castShadow);
@@ -2185,11 +2210,12 @@ export class EnemyView {
     const mech = body === 'mech' ? assets.mech : body === 'mechBig' && assets.mech?.big ? assets.mech : undefined;
     const skin = mech ? (body as 'mech' | 'mechBig') : body === 'raptor' || body === 'rex' ? body : 'zombie';
     this.skin = skin;
-    const ownSrc = body === 'feldwebel' ? assets.bosses?.feldwebel : undefined;
+    const ownSrc = opts.own ? assets.bosses?.bodies.get(opts.own) : undefined;
     this.ownBody = !!ownSrc;
-    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? (body === 'human' || body === 'feldwebel' ? ownSrc ?? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
+    this.moves = ownSrc ? OWN_MOVES[opts.own!] : undefined;
+    const src = skin === 'mech' ? mech!.small : skin === 'mechBig' ? mech!.big! : skin === 'zombie' ? ownSrc ?? (body === 'human' ? assets.human ?? assets.zombie : body === 'female' ? assets.female?.body ?? assets.zombie : assets.zombie) : skin === 'raptor' ? assets.raptor : assets.rex;
     // (crow, rat and the code-built bodies returned above)
-    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? (ownSrc && assets.bosses ? assets.bosses.clips : body === 'female' && assets.female ? assets.female.clips : assets.zombieClips) : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
+    const clips: Map<string, AnimationClip> = skin === 'mech' ? mech!.smallClips : skin === 'mechBig' ? mech!.bigClips! : skin === 'zombie' ? (ownSrc && assets.bosses ? (body === 'female' ? assets.bosses.female : assets.bosses.human) : body === 'female' && assets.female ? assets.female.clips : assets.zombieClips) : skin === 'raptor' ? assets.raptorClips : assets.rexClips;
     const model = cloneSkinned(src);
     this.model = model;
     this.inner.add(model);
@@ -2483,10 +2509,11 @@ export class EnemyView {
       for (const [n, v] of Object.entries(SHAPE[e.kind] ?? {})) if (!this.ownBody || n !== 'Head') this.bones.get(n)?.scale.setScalar(v);
       for (const list of this.gear.values()) for (const g of list) g.visible = false;
       // H4: an own body carries its uniform and helmet; only the weapon rack (below) stays.
-      let gear = this.ownBody ? [] : this.gear.get(key);
+      const keep = this.moves?.keep;
+      let gear = this.ownBody && !keep ? [] : this.gear.get(keep ?? key);
       if (!gear) {
-        gear = this.inIdle(() => gearFor(key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
-        this.gear.set(key, gear);
+        gear = this.inIdle(() => gearFor(keep ?? key, this.model!, this.materials, this.castShadow, this.pulse ?? undefined));
+        this.gear.set(keep ?? key, gear);
       }
       for (const g of gear) g.visible = true;
       this.hanging = gear.filter((g) => g.userData.hang !== undefined);
@@ -2704,21 +2731,22 @@ export class EnemyView {
         // walk's stride and cycle (0.69 m per 1.33 s, measured), so the same speed constant keeps the feet planted;
         // its legs are also `BUILD` taller.
         const legs = def.scale * (this.ownBody ? BUILD[e.kind]?.[1] ?? 1 : 1);
-        if (e.speed > 0.2 && def.ai !== 'diva') a.loop(this.ownBody ? 'Walk_Formal_Loop' : 'Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * legs))));
-        else a.loop(this.ownBody ? 'Sword_Idle' : def.ai === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop', 0.25);
+        const mv = this.moves;
+        if (e.speed > 0.2 && def.ai !== 'diva') a.loop(mv?.walk ?? 'Zombie_Walk_Fwd_Loop', 0.2, Math.min(2.8, Math.max(0.8, e.speed / (WALK_CLIP_SPEED * legs))));
+        else a.loop(mv?.idle ?? (def.ai === 'diva' ? 'Idle_Loop' : 'Zombie_Idle_Loop'), 0.25);
         // Open: bent over, catching breath.
         if (e.open > 0) pitch = 0.32;
         break;
       case 'windup':
-        if (this.ownBody) a.pose(SLASH.clip, lerp(SLASH.start, SLASH.swing, Math.min(1, t / def.windup)), 0.12);
+        if (this.moves) { const b = this.moves.blow; a.pose(b.clip, lerp(b.start, b.swing, Math.min(1, t / def.windup)), 0.12); }
         else a.pose('Zombie_Scratch', lerp(0.05, SCRATCH_HIT, Math.min(1, t / def.windup)), 0.12);
         break;
       case 'strike':
-        if (this.ownBody) a.pose(SLASH.clip, lerp(SLASH.swing, SLASH.hit, Math.min(1, t / def.active)), 0.03);
+        if (this.moves) { const b = this.moves.blow; a.pose(b.clip, lerp(b.swing, b.hit, Math.min(1, t / def.active)), 0.03); }
         else a.pose('Zombie_Scratch', SCRATCH_HIT + SCRATCH_SWIPE * Math.min(1, t / def.active), 0.03);
         break;
       case 'recover': {
-        if (this.ownBody) { a.pose(SLASH.clip, lerp(SLASH.hit, SLASH.end, Math.min(1, t / def.recovery)), 0.05); break; }
+        if (this.moves) { const b = this.moves.blow; a.pose(b.clip, lerp(b.hit, b.end, Math.min(1, t / def.recovery)), 0.05); break; }
         const from = SCRATCH_HIT + SCRATCH_SWIPE;
         a.pose('Zombie_Scratch', lerp(from, a.duration('Zombie_Scratch'), Math.min(1, t / def.recovery)), 0.05);
         break;
@@ -2775,7 +2803,7 @@ export class EnemyView {
           case 'lunge': case 'charge': case 'pounce': case 'leap':
             if (going) a.pose('Shield_Dash', lerp(0, 0.3, g), 0.05);
             // H4: an own body raises the sabre overhead instead of the ghouls' crouch.
-            else if (this.ownBody) a.pose(SLASH.clip, lerp(SLASH.start, SLASH.swing, w), 0.12);
+            else if (this.moves) a.pose(this.moves.blow.clip, lerp(this.moves.blow.start, this.moves.blow.swing, w), 0.12);
             else {
               a.pose('Zombie_Scratch', lerp(0.05, 0.35, w), 0.12);
               pitch = 0.3 * w;
