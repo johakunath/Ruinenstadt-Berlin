@@ -299,10 +299,11 @@ export class Critters {
     for (let p = 0; p < (fill ? FILL_PROBES : PROBES); p++) {
       const g = pool.herds.findIndex((h) => !h.on);
       if (g < 0) return;
-      // A fill aims every other probe at the visible ground (about 32 × 18 m around the view centre), the rest at the ring.
+      // A fill aims every other probe at the visible ground (about 24 × 15 m: 12 m north to 3 m south of the hero at
+      // the normal zoom), the rest at the ring.
       const r = this.rng.range(RING.min, RING.max), ang = this.rng.next() * TAU, view = fill && p % 2 === 0;
-      const x = view ? this.cx + this.rng.range(-16, 16) : this.cx + Math.sin(ang) * r;
-      const z = view ? this.cz + this.rng.range(-8, 9) : this.cz + Math.cos(ang) * r;
+      const x = view ? this.cx + this.rng.range(-12, 12) : this.cx + Math.sin(ang) * r;
+      const z = view ? this.cz + this.rng.range(-8, 7) : this.cz + Math.cos(ang) * r;
       if (x < B.minX + 2 || x > B.maxX - 2 || z < B.minZ + 2 || z > B.maxZ - 2) continue;
       // Herds of one kind keep apart, and nothing appears right next to the hero.
       if (Math.hypot(x - this.threats[0]!.x, z - this.threats[0]!.z) < d.scare[0] + 1.5) continue;
