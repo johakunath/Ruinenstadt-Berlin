@@ -9,7 +9,7 @@ import { HERO_REGIONS, type BodyRegion } from '../data/hero-contract';
 import { PIECES, hiddenRegions, lookNodes, sameLook, type HeroLook } from '../data/hero-look';
 import { GEAR_SLOTS, gearGeometry, gearMaterials, type GearSlot } from './gear';
 import { aiGearMaterial } from './gear-ai';
-import { aiOutfitGeometry, aiOutfitMaterial, hasAiOutfit, loadAiOutfit } from './outfit-ai';
+import { OWN_SCARF, aiOutfitGeometry, aiOutfitMaterial, hasAiOutfit, loadAiOutfit } from './outfit-ai';
 import { heroSource, type HeroSource } from './gear-kit';
 import { pieceVariant } from './hero-wear';
 import type { Materials } from './materials';
@@ -136,8 +136,8 @@ export class HeroModel {
     for (const [node, o] of this.pieces) o.visible = shown.has(node);
     for (const [r, o] of this.regions) o.visible = !hidden.has(r);
     if (this.hair) this.hair.visible = !look.hideHair;
-    // W10: an AI outfit brings its own collar or scarf (the Späti and Rattenmutter pictures have one): no second scarf.
-    if (this.scarfMesh) this.scarfMesh.visible = !look.hideScarf && !aiGeo;
+    // W10: the Späti and Rattenmutter outfits bring their own scarf: no second one.
+    if (this.scarfMesh) this.scarfMesh.visible = !look.hideScarf && !(aiGeo && look.aiOutfit && OWN_SCARF.has(look.aiOutfit));
     const outfit = PIECES[look.outfit]?.node, boots = PIECES[look.boots]?.node, gloves = look.gloves ? PIECES[look.gloves]?.node : undefined;
     for (const [mesh, geo] of this.sourceGeo) {
       const n = mesh.name;

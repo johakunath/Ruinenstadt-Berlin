@@ -15,6 +15,9 @@ const SURFACE: Readonly<Record<string, readonly [number, number]>> = {
   leder: [0.55, 0.05],
 };
 
+/** Outfits whose picture has its own scarf: the hero's scarf hides under them (the red coat scarf stays on the others, Johannes 2026-11-19). */
+export const OWN_SCARF: ReadonlySet<string> = new Set(['spaeti', 'rattenmantel']);
+
 const urls = import.meta.glob('../../assets/gear/outfit-*.glb', { query: '?url', import: 'default' }) as Record<string, () => Promise<string>>;
 
 interface Source { geo: BufferGeometry; joints: string[]; map: Texture }
