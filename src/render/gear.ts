@@ -10,6 +10,7 @@ import { BODY_GEAR } from './gear-body';
 import { BODY_RARE_GEAR } from './gear-body-rare';
 import { LIMB_GEAR } from './gear-limbs';
 import { TUNNEL_GEAR } from './gear-tunnel';
+import { FX_GEAR } from './gear-fx-parts';
 import type { LitMaterial, Materials } from './materials';
 import { paintGrain, paintMetalAtlas } from './paint';
 import { box } from './weapons';
@@ -23,7 +24,10 @@ const WARM: GearBuilder = (k) => k.on('Head', () => {
   k.add(box(0.001, 0.001, 0.001), plain(0x808080), 0, 1.6, 0).add(box(0.001, 0.001, 0.001), metal(0x808080), 0, 1.6, 0).add(box(0.001, 0.001, 0.001), glow(0x101010), 0, 1.6, 0);
 });
 
-export const GEAR: Readonly<Record<string, GearBuilder>> = { warm: WARM, ...HEAD_GEAR, ...BODY_GEAR, ...BODY_RARE_GEAR, ...LIMB_GEAR, ...TUNNEL_GEAR };
+export const GEAR: Readonly<Record<string, GearBuilder>> = { warm: WARM, ...HEAD_GEAR, ...BODY_GEAR, ...BODY_RARE_GEAR, ...LIMB_GEAR, ...TUNNEL_GEAR, ...FX_GEAR };
+
+/** WP4 step 5: one pulse factor on every gear glow part (the legendary glow edge, D5); set each frame by `GearFx`. */
+export const GEAR_PULSE = { value: 1 };
 
 /**
  * Triangle budget of all gear of one look and of its glow parts. D3 planned 2,500; raised to 3,200 for
@@ -80,7 +84,8 @@ export function gearMaterials(materials: Materials): Record<GearSlot, Material> 
   const o = { flatten: materials.look.flatten, normalMaps: false, anisotropy: 1 };
   const glowMat: LitMaterial = materials.surface({ color: 0x101010, roughness: 0.6, vertexColors: true, doubleSided: true });
   glowMat.onBeforeCompile = (sh): void => {
-    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance = vColor.rgb * 2.2;');
+    sh.uniforms.gearPulse = GEAR_PULSE;
+    sh.fragmentShader = 'uniform float gearPulse;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance = vColor.rgb * 2.2 * gearPulse;');
   };
   glowMat.customProgramCacheKey = (): string => 'gear-glow';
   m = {

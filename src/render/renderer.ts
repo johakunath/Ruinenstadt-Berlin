@@ -3,6 +3,8 @@
 import { ALEX_WEATHER, CHARLOTTENBURG_WEATHER, KOEPENICK_WEATHER, MITTE_WEATHER, Weather, WEDDING_WEATHER, XHAIN_WEATHER } from './weather';
 import { HeroPreview, type PreviewState } from './hero-preview';
 import { heroLook } from '../data/hero-look';
+import { GEAR_FX_DEFAULT, GEAR_FX_SPRITES, fxLook, type GearFxVariant } from '../data/gear-fx';
+import { GearFx, type GearFxStats } from './gear-fx';
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
   SphereGeometry, Vector3,
@@ -76,6 +78,8 @@ export interface RendererOptions {
   females?: boolean;
   /** H4: the boss kinds that can appear (own bodies are loaded only for these); omitted: all. */
   bosses?: readonly string[];
+  /** WP4 step 5 G3: legendary effect variant (`?gearfx=A|B|C`, default B). */
+  gearFx?: GearFxVariant;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -166,6 +170,8 @@ export class GameRenderer {
   private readonly campView: CampStationsView | null;
   private readonly campLayout: CampLayout | null;
   private readonly hero: HeroView;
+  /** WP4 step 5: legendary and set effects (glow pulse, particles, proc flashes), one draw call. */
+  private readonly gearFx: GearFx;
   private readonly views = new Map<number, EnemyView>();
   /** V1: living enemies nearest the hero, for their contour behind buildings (half height in m). */
   private outlined: Array<{ root: Object3D; size: number; d: number }> = [];
@@ -212,6 +218,8 @@ export class GameRenderer {
     this.scene.add(world.group);
     this.hero = new HeroView(assets, materials);
     this.scene.add(this.hero.root, this.heroLight);
+    this.gearFx = new GearFx(GEAR_FX_SPRITES[opts.profile.id], opts.gearFx ?? GEAR_FX_DEFAULT);
+    this.scene.add(this.gearFx.mesh);
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     // M11c: weather per zone (Köpenick only; the tunnel stays dry).
@@ -258,6 +266,8 @@ export class GameRenderer {
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
     // the first frame applies the real look.
     game.hero.body.showAll();
+    // The effect sprites too (hidden until something shows), so the first proc never compiles.
+    game.gearFx.mesh.visible = true;
     await renderer.compileAsync(game.scene, game.cam.camera);
     return game;
   }
@@ -355,8 +365,19 @@ export class GameRenderer {
     return p ? { x: p.x, z: p.z } : null;
   }
 
+  /** WP4 step 5 effect numbers of the last frame (sprites, emitters, CPU ms) for the perf hook. */
+  get gearFxStats(): GearFxStats {
+    return this.gearFx.stats;
+  }
+
+  /** Debug hook (G3 sheets): switch the legendary effect variant without a reload. */
+  setGearFx(v: GearFxVariant): void {
+    this.gearFx.setVariant(v);
+  }
+
   onEvent(ev: SimEvent, sim: Sim): void {
     this.fx.onEvent(ev);
+    this.gearFx.onEvent(ev, sim);
     const y = (x: number, z: number, h: number): number => groundY(x, z) + h;
     const ts = threatShake(ev);
     if (ts > 0) this.cam.shake(0, 0, ts);
@@ -503,7 +524,8 @@ export class GameRenderer {
     this.barriers?.update(sim, dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
-    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', set: w?.set, element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', set: w?.set, element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: fxLook(heroLook(sim.equipment), sim.stats.legendary) });
+    this.gearFx.update(sim, this.hero, alpha, dt);
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();

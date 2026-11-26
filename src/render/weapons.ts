@@ -115,6 +115,11 @@ const GLOW: Paint = { slot: 'glow', hex: 0x000000, grain: 2 };
 const GLOW_WHITE: Paint = { slot: 'glow', hex: 0xffffff, grain: 2 };
 /** A faint cold-white gleam (30 % of the white mix): a fixed per-base accent, tinted by an element when there is one. */
 const GLEAM: Paint = { slot: 'glow', hex: 0x959595, grain: 2 };
+/**
+ * Glow edge of a legendary (WP4 step 5, D5): always the base's signature colour, also when the item's element
+ * lights the other glow parts (green vertex colour picks the `sigGlow` uniform in the glow shader).
+ */
+const SIG: Paint = { slot: 'glow', hex: 0x00ff00, grain: 2 };
 
 /** Shared paints. The first seven are the old per-material colours (pre-WP4 kit). */
 const P = {
@@ -237,6 +242,25 @@ export function cord(b: Parts, a: readonly [number, number, number], c: readonly
     g.applyQuaternion(_q.setFromUnitVectors(UP, _d.normalize()));
     b.add(g, paint, (_a.x + _b.x) / 2, (_a.y + _b.y) / 2, (_a.z + _b.z) / 2, 0, 0, 0, true);
     _a.copy(_b);
+  }
+}
+
+/** A straight bar of square section `w` from `a` to `c` (glow edges along a cone, WP4 step 5). */
+function bar(b: Parts, a: readonly [number, number, number], c: readonly [number, number, number], w: number, paint: Paint): void {
+  _d.set(c[0] - a[0], c[1] - a[1], c[2] - a[2]);
+  const g = box(w, _d.length() + w, w);
+  g.applyQuaternion(_q.setFromUnitVectors(UP, _d.normalize()));
+  b.add(g, paint, (a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2);
+}
+
+/**
+ * Glow edge (WP4 step 5, D5): thin strips along the outline `pts` of a flat part (XY plane), from point `i0`
+ * to `i1`, `w` wide and `d` deep (a little deeper than the part, so the rim shows on both faces).
+ */
+function edge(b: Parts, pts: ReadonlyArray<readonly [number, number]>, i0: number, i1: number, w: number, d: number, paint: Paint): void {
+  for (let i = i0; i < i1; i++) {
+    const [x0, y0] = pts[i]!, [x1, y1] = pts[i + 1]!;
+    b.add(box(Math.hypot(x1 - x0, y1 - y0) + w * 0.6, w, d), paint, (x0 + x1) / 2, (y0 + y1) / 2, 0, 0, 0, Math.atan2(y1 - y0, x1 - x0));
   }
 }
 
@@ -727,6 +751,8 @@ function turm(b: Parts): void {
     .add(ball(0.034, 10, 8), metal(0xb8bcc4), 0, -0.15, 0)
     .add(cyl(0.035, 0.035, 0.01, 10), plain(0x2a3a4a), 0, -0.15, 0)
     .add(cyl(0.004, 0.004, 0.06, 4), P.steel, 0, -0.205, 0);
+  // Step 5: the blue glow edge round the shard (above the claw), in the signature colour whatever the element.
+  edge(b, shard, 0, 10, 0.007, 0.026, SIG);
   ribbon(b, 0.06, 0.22, 0.026);
 }
 
@@ -744,6 +770,8 @@ function zitklinge(b: Parts): void {
     .add(ring(0.021, 0.004, 4, 10), P.brass, 0, 0.0, 0, Math.PI / 2)
     .add(ring(0.021, 0.004, 4, 10), P.brass, 0, 0.08, 0, Math.PI / 2)
     .add(ball(0.03, 10, 8), P.brass, 0, -0.13, 0);
+  // Step 5: cyan glow edges along both cutting edges (the crackle is GearFx sparks).
+  edge(b, [[-0.031, 0.2], ...blade.slice(1, 4), [0.031, 0.2]], 0, 4, 0.005, 0.015, SIG);
 }
 
 /** Chipped paint (look 2): a patch broken into small pieces with gaps, on a face at z (sign = side). */
@@ -818,7 +846,8 @@ function pbrecher(b: Parts): void {
 function ringbahn(b: Parts): void {
   fork(b, { arm: metal(0xd8641e), wrap: P.rubber, band: plain(0xe8b23a), rubber: P.rubber, pouch: P.leather });
   for (const sx of [-1, 1]) b.add(cyl(0.02, 0.02, 0.022), plain(0xe8b23a), ...armAt(sx, 0.92), 0, 0, 0, -sx * ARM_RZ);
-  b.add(ring(0.04, 0.007, 4, 16), GLOW, 0, 0.25, 0)
+  // Step 5: the ring glows S-Bahn orange (signature) also with the shock element.
+  b.add(ring(0.04, 0.007, 4, 16), SIG, 0, 0.25, 0)
     .add(cyl(0.022, 0.022, 0.008, 12), plain(0x2f8a4a), 0, 0.17, 0.02, Math.PI / 2)
     .add(box(0.012, 0.024, 0.004), plain(0xf0f0e8), 0, 0.17, 0.025);
   ribbon(b, 0.1, 0.18, 0.025, plain(0xe8b23a));
@@ -852,7 +881,7 @@ function siegsp(b: Parts): void {
     .add(cyl(0.012, 0.026, 0.1, 8), gold, 0, 1.33, 0.006)
     .add(ball(0.014, 8, 6), gold, 0, 1.395, 0.006)
     .add(ring(0.038, 0.008, 4, 14), gold, 0, 1.43, 0, Math.PI / 2)
-    .add(ball(0.02, 8, 6), GLOW, 0, 1.43, 0)
+    .add(ball(0.02, 8, 6), SIG, 0, 1.43, 0)
     .add(cyl(0.026, 0.026, 0.04), gold, 0, 1.25, 0)
     .add(cyl(0.022, 0.022, 0.03), bright, 0, 0.9, 0)
     .add(cyl(0.022, 0.022, 0.03), bright, 0, 0.3, 0)
@@ -861,6 +890,8 @@ function siegsp(b: Parts): void {
     .add(ring(0.025, 0.004, 4, 10), gold, 0, -0.13, 0, Math.PI / 2)
     .add(cone(0.022, 0.08, 6), gold, 0, -0.62, 0, Math.PI, 0, 0);
   for (let k = 0; k < 10; k++) b.add(scaled(ball(0.011, 5, 3), 1, 0.5, 2), leaf, Math.cos(k * Math.PI / 5) * 0.038, 1.43, Math.sin(k * Math.PI / 5) * 0.038, 0, -k * Math.PI / 5, 0);
+  // Step 5: the gold tip: glow edges along the blade's two cutting edges (the flat cone turned 45°) and the wreath bead above.
+  for (const s of [1, -1]) bar(b, [s * 0.0297, 1.445, -s * 0.0297], [0, 1.715, 0], 0.005, SIG);
 }
 
 /** Morgenstern der Zitadelle (I48, set Zitadelle): a big spiked iron ball (two-handed rule), dark shaft, iron fittings. */
@@ -1018,6 +1049,10 @@ export class WeaponRack {
   private shown: WeaponModel | null = null;
   /** Thrust weight of the current frame (`aimThrust`). */
   private thrustW = 0;
+  /** Step 5 glow edge: the signature colour times its intensity (linear); the shown glow before any pulse. */
+  private readonly sig = { value: new Color(0, 0, 0) };
+  private readonly sigBase = new Color(0, 0, 0);
+  private glowBase = 0;
 
   constructor(materials: Materials) {
     const o = { flatten: materials.look.flatten, normalMaps: false, anisotropy: 1 };
@@ -1028,9 +1063,11 @@ export class WeaponRack {
       // The only emissive parts: element strip or signature glow, so they read at a glance (bloom picks them up).
       glow: materials.surface({ color: 0x1a1512, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.6, vertexColors: true }),
     };
-    // Vertex colour 1 (`GLOW_WHITE`) turns a glow part a faint white whatever the element or signature colour.
+    // Vertex colour 1 (`GLOW_WHITE`) turns a glow part a faint white whatever the element or signature colour;
+    // pure green (`SIG`, step 5) takes the base's signature colour (`sigGlow`), also when an element lights the rest.
     this.mats.glow.onBeforeCompile = (sh): void => {
-      sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance = mix(totalEmissiveRadiance, vec3(0.55), vColor.r);');
+      sh.uniforms.sigGlow = this.sig;
+      sh.fragmentShader = 'uniform vec3 sigGlow;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance = mix(totalEmissiveRadiance, sigGlow, clamp(vColor.g - vColor.r, 0.0, 1.0));\n  totalEmissiveRadiance = mix(totalEmissiveRadiance, vec3(0.55), vColor.r);');
     };
     this.mats.glow.customProgramCacheKey = (): string => 'weapon-glow';
     // Grip offset in the hand bone's frame (checked with `?cam=5,30` close-ups).
@@ -1071,7 +1108,11 @@ export class WeaponRack {
   show(model: WeaponModel, element: ElementId | undefined): void {
     const glow = weaponGlow(model, element);
     this.mats.glow.emissive.setHex(glow?.color ?? 0);
-    this.mats.glow.emissiveIntensity = glow?.intensity ?? 0;
+    this.glowBase = glow?.intensity ?? 0;
+    this.mats.glow.emissiveIntensity = this.glowBase;
+    const sig = (WEAPON_LOOKS[model] as { glow?: string }).glow;
+    if (sig) this.sigBase.setStyle(sig).multiplyScalar(SIGNATURE_INTENSITY); else this.sigBase.setRGB(0, 0, 0);
+    this.sig.value.copy(this.sigBase);
     let s = this.models.get(model);
     if (model !== this.shown) {
       this.shown = model;
@@ -1096,6 +1137,23 @@ export class WeaponRack {
       s.group.visible = true;
     }
     if (s?.glow) s.glow.visible = glow !== null || !!(WEAPON_LOOKS[model] as { gleam?: true }).gleam;
+  }
+
+  /** Step 5 (D5): scales the shown glow (element and signature) by `k` for this frame: the slow pulse and a proc's flare. */
+  pulse(k: number): void {
+    this.mats.glow.emissiveIntensity = this.glowBase * k;
+    this.sig.value.copy(this.sigBase).multiplyScalar(k);
+  }
+
+  /** The shown model (step 5 anchors), null before the first `show`. */
+  get model(): WeaponModel | null {
+    return this.shown;
+  }
+
+  /** World position of model point (x, y, z) of the shown model (grip at the origin, tip up +Y). */
+  point(x: number, y: number, z: number, out: Vector3): Vector3 {
+    this.group.updateWorldMatrix(true, false);
+    return this.group.localToWorld(out.set(x, y, z));
   }
 
   /** World height of the shown model's tip while a thrust turns it (C1), else NaN. The tip sits at the base's length (D8). */

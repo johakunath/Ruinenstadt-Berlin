@@ -4,6 +4,8 @@
 //   ?map=tunnel&line=1 (a tunnel line, S3 default)
 //   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
 //   ?cut=off (no V1 B cutaway)   ?cut=4.3 (yard cut height in meters, look test)
+//   ?gearfx=A|B|C (WP4 step 5 G3: legendary effects, default B)   ?gear=turm,spaeti,kiez (debug: wear these legendaries and sets; never saved)
+import { gearFxVariant, type GearFxVariant } from './data/gear-fx';
 import { PROFILES, type ProfileId } from './render/profile';
 import type { MapId } from './ui/maps';
 export type { MapId } from './ui/maps';
@@ -53,6 +55,10 @@ export interface Options {
   tp: { x: number; z: number } | null;
   /** Debug: ?god (or ?tp) makes the hero take no damage. */
   god: boolean;
+  /** WP4 step 5 G3: ?gearfx=A|B|C, legendary and set effects (default B until Johannes picks). */
+  gearFx: GearFxVariant;
+  /** Debug: ?gear=turm,spaeti,kiez puts on these legendaries (by base) and sets (all pieces) at the start; the run is not saved. */
+  gear: string[];
 }
 
 const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'alex', 'mitte', 'charlottenburg', 'wedding', 'turm', 'lager'];
@@ -186,6 +192,8 @@ export function readOptions(): Options {
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
     tp: parseTp(q.get('tp')),
     god: q.has('god') || q.has('tp'),
+    gearFx: gearFxVariant(q.get('gearfx')),
+    gear: (q.get('gear') ?? '').split(/[, ]/).filter(Boolean),
   };
 }
 
