@@ -1,6 +1,6 @@
 // WP4 step 5 proof sheets of the legendary and set effects, rendered in the real game (dev server running).
 //   PORT=5178 node tools/gear-fx-sheet.mjs g3 docs/proof/wp4/step5        G3: g3-A.jpg, g3-B.jpg, g3-C.jpg, g3-compare.jpg
-//   PORT=5178 node tools/gear-fx-sheet.mjs items docs/proof/wp4/step5     every item of the step 5 table: items-weapons.jpg, items-wear.jpg
+//   PORT=5178 node tools/gear-fx-sheet.mjs items docs/proof/wp4/step5     every item of the step 5 table: items-weapons.jpg, items-wear.jpg (ONLY=wear: the second)
 //   PORT=5178 VARIANTS=C node tools/gear-fx-sheet.mjs strip docs/proof/wp4/step5   re-render only the proc strips into the g3 sheets
 //   PORT=5178 node tools/gear-fx-sheet.mjs probe out-prefix "map=xhain&cam=7,16" 0,-10   frames with the hero moved north (framing)
 // Frames run on a gated 60 Hz clock: the sim is held and stepped by hand, one rendered frame per step, so particles
@@ -232,7 +232,7 @@ if (mode === 'probe') {
     return out;
   };
   const pairs = (cells, per) => { const rows = []; for (let i = 0; i < cells.length; i += per) rows.push(cells.slice(i, i + per).flat()); return rows; };
-  await sheet(join(outDir, 'items-weapons.jpg'), 1800, pairs(await run(WEAPONS), 3), 'Step 5 Waffen (Variante B, Xhain nah): je Ruhe | Proc');
+  if (process.env.ONLY !== 'wear') await sheet(join(outDir, 'items-weapons.jpg'), 1800, pairs(await run(WEAPONS), 3), 'Step 5 Waffen (Variante B, Xhain nah): je Ruhe | Proc');
   await sheet(join(outDir, 'items-wear.jpg'), 1800, pairs(await run(WEAR), 3), 'Step 5 Kleidung, Ring, Talismane, Implantat (B) und Sets (C, alle Teile): je Ruhe | Proc');
   await page.close();
 }
