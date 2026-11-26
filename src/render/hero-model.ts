@@ -9,7 +9,7 @@ import { HERO_REGIONS, type BodyRegion } from '../data/hero-contract';
 import { PIECES, hiddenRegions, lookNodes, sameLook, type HeroLook } from '../data/hero-look';
 import { GEAR_SLOTS, gearGeometry, gearMaterials, type GearSlot } from './gear';
 import { aiGearMaterial } from './gear-ai';
-import { OWN_SCARF, aiOutfitGeometry, aiOutfitMaterial, hasAiOutfit, loadAiOutfit } from './outfit-ai';
+import { OUTFIT_CUT, OWN_SCARF, aiOutfitGeometry, aiOutfitMaterial, hasAiOutfit, loadAiOutfit } from './outfit-ai';
 import { heroSource, type HeroSource } from './gear-kit';
 import { pieceVariant } from './hero-wear';
 import type { Materials } from './materials';
@@ -132,6 +132,8 @@ export class HeroModel {
       if (node) shown.delete(node);
       hidden.add('torso');
       hidden.add('arms');
+      // Sneakers end below the outfit's cut: the shins show between them (else the leg would be see-through there).
+      if ((PIECES[look.boots]?.top ?? 0) < OUTFIT_CUT) hidden.delete('legs');
     }
     for (const [node, o] of this.pieces) o.visible = shown.has(node);
     for (const [r, o] of this.regions) o.visible = !hidden.has(r);

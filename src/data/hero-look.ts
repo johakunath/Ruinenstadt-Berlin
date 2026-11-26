@@ -42,6 +42,8 @@ export interface HeroLook {
 export interface Piece {
   node: string;
   hides: readonly BodyRegion[];
+  /** Footwear: height of its top edge in the rest pose (m); below an AI outfit's cut the legs must show (W10). */
+  top?: number;
 }
 
 export const PIECES: Readonly<Record<string, Piece>> = {
@@ -49,10 +51,10 @@ export const PIECES: Readonly<Record<string, Piece>> = {
   weste: { node: 'a_weste', hides: ['torso', 'legs'] },
   // B1 (LA3): rain poncho over a dark shirt and trousers (tools/blender/hero_clothes.py `poncho`).
   poncho: { node: 'a_poncho', hides: ['torso', 'arms', 'legs'] },
-  stiefel: { node: 'f_stiefel', hides: ['feet'] },
-  turnsch: { node: 'f_turnsch', hides: ['feet'] },
+  stiefel: { node: 'f_stiefel', hides: ['feet'], top: 0.349 },
+  turnsch: { node: 'f_turnsch', hides: ['feet'], top: 0.122 },
   // LA3: wrapped knee boots, Quaternius Outfits Fantasy (Female_Ranger_Feet), `ranger_boots` in hero_clothes.py.
-  wickel: { node: 'f_wickel', hides: ['feet'] },
+  wickel: { node: 'f_wickel', hides: ['feet'], top: 0.556 },
   handsch: { node: 'g_handsch', hides: ['hands'] },
 };
 

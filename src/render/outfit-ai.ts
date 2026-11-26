@@ -15,6 +15,9 @@ const SURFACE: Readonly<Record<string, readonly [number, number]>> = {
   leder: [0.55, 0.05],
 };
 
+/** Lowest point of every AI outfit (m): `tools/blender/hero_outfit.py --boot`. Footwear ending lower leaves the shins bare. */
+export const OUTFIT_CUT = 0.3;
+
 /** Outfits whose picture has its own scarf: the hero's scarf hides under them (the red coat scarf stays on the others, Johannes 2026-11-19). */
 export const OWN_SCARF: ReadonlySet<string> = new Set(['spaeti', 'rattenmantel']);
 
