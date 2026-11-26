@@ -101,9 +101,11 @@ describe('blessing choice (2D offerPerks)', () => {
     offerBlessings(s);
     const first = s.abilities.offers.map((o) => o.id).join();
     expect(rerollBlessings(s)).toBe(false);
-    s.inventory.scrap = 100;
+    s.inventory.scrap = rerollCost(s) - 1;
+    expect(rerollBlessings(s)).toBe(false);
+    s.inventory.scrap = 500;
     expect(rerollBlessings(s)).toBe(true);
-    expect(s.inventory.scrap).toBe(100 - rerollCost(s));
+    expect(s.inventory.scrap).toBe(500 - rerollCost(s));
     expect(s.abilities.offers.map((o) => o.id).join()).not.toBe(first);
     expect(rerollBlessings(s)).toBe(false);
     offerBlessings(s, true);

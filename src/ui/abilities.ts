@@ -212,7 +212,7 @@ export class AbilitiesUi {
     const fc = p.weapon ? '#b48cff' : fams.length ? FAMILIES[fams[0]!].color : '#6a5a48';
     b.style.setProperty('--fc', fc);
     b.style.setProperty('--i', String(i));
-    b.innerHTML = `<span class="pnum">${i + 1}</span><span class="pfam">${fams.map((f) => familyIcon(f, p.duo ? true : held.has(f))).join('')}</span>${perkIcon(o.id, o.quality)}<span class="prar">${rarity}</span><span class="pn">${p.name}</span><span class="pd">${p.description}</span><span class="pl">${level}</span>`;
+    b.innerHTML = `<span class="pfam">${fams.map((f) => familyIcon(f, p.duo ? true : held.has(f))).join('')}</span>${perkIcon(o.id, o.quality)}<span class="prar">${rarity}</span><span class="pn">${p.name}</span><span class="pd">${p.description}</span><span class="pl">${level}</span>`;
     b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') this.focus(i); });
     b.addEventListener('click', () => {
       if (performance.now() - this.openedAt < 350) return;

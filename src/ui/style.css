@@ -783,14 +783,14 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .krult .krd { margin-left: auto; max-width: 55%; color: var(--bone); }
 .inv-tab footer { min-height: 20px; color: var(--ember); font-size: 15px; }
 /* Segen tab (2D segenTab). */
-.segen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 14px; align-items: start; }
-.sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; }
-.menu-panel .sgb { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 6px; font: 500 17px var(--f-ui); position: relative; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; color: var(--bone); }
+.segen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 14px; align-items: start; }
+.sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 7px; }
+.menu-panel .sgb { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 5px; font: 500 16px var(--f-ui); position: relative; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; color: var(--bone); }
 .sgb.sel { border-color: var(--ember) !important; background: #2a1d12 !important; }
-.sgb .perk-icon { width: 62px; height: 62px; }
-.sgdet { font-size: 18px; } .sgdet h3 { font-size: 22px; } .sgdet .sub, .sgdet .inv-hint { font-size: 16px; }
-.sgf { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; } .sgfam { width: 9px; height: 9px; border-radius: 50%; display: block; }
-.sgd { display: flex; gap: 3px; } .sgd i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--ember); } .sgd i.f { background: var(--ember); }
+.sgb .perk-icon { width: 54px; height: 54px; }
+.sgdet { font-size: 17px; } .sgdet h3 { font-size: 21px; } .sgdet .sub, .sgdet .inv-hint { font-size: 15px; }
+.sgf { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; } .sgfam { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.sgd { display: flex; gap: 3px; } .sgd i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ember); } .sgd i.f { background: var(--ember); }
 /* Kodex: the 2D card list (`css/style.css` .box gap 14, .lbl, .cols2, .upg.kx, .kimg, .ksil, .kset). */
 .kodex { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .kodex .lbl { text-align: center; }

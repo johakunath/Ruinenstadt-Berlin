@@ -23,7 +23,8 @@ export function heldFamilies(s: Sim): Set<PerkFamilyId> {
 /** Umbau cards appear from this wave on. */
 export const UMBAU_FROM = 3;
 const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;
-export const rerollCost = (s: Sim): number => 20 + Math.round(waveE(s) * 8);
+/** Four times the 2D price (Johannes, 2026-11-26: rerolling was too cheap; maps end with 900 to 2800 Schrott left). */
+export const rerollCost = (s: Sim): number => 80 + Math.round(waveE(s) * 32);
 
 function eligible(s: Sim, held: Set<PerkFamilyId>): PerkDefinition[] {
   const els = s.stats.elements;
