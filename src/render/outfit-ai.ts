@@ -10,6 +10,9 @@ import type { Materials } from './materials';
 /** Roughness and metalness per outfit (uniforms only: every outfit shares one shader). */
 const SURFACE: Readonly<Record<string, readonly [number, number]>> = {
   ritter: [0.45, 0.55],
+  panzer: [0.5, 0.45],
+  'kette-zit': [0.6, 0.3],
+  leder: [0.55, 0.05],
 };
 
 const urls = import.meta.glob('../../assets/gear/outfit-*.glb', { query: '?url', import: 'default' }) as Record<string, () => Promise<string>>;

@@ -136,7 +136,8 @@ export class HeroModel {
     for (const [node, o] of this.pieces) o.visible = shown.has(node);
     for (const [r, o] of this.regions) o.visible = !hidden.has(r);
     if (this.hair) this.hair.visible = !look.hideHair;
-    if (this.scarfMesh) this.scarfMesh.visible = !look.hideScarf;
+    // W10: an AI outfit brings its own collar or scarf (the Späti and Rattenmutter pictures have one): no second scarf.
+    if (this.scarfMesh) this.scarfMesh.visible = !look.hideScarf && !aiGeo;
     const outfit = PIECES[look.outfit]?.node, boots = PIECES[look.boots]?.node, gloves = look.gloves ? PIECES[look.gloves]?.node : undefined;
     for (const [mesh, geo] of this.sourceGeo) {
       const n = mesh.name;
