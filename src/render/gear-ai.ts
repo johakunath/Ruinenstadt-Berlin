@@ -24,13 +24,14 @@ const SURFACES = { lacquer: [0.5, 0.15], cloth: [0.92, 0], metal: [0.42, 0.6], s
 export const AI_GEAR: Readonly<Record<string, AiFit>> = {
   // Start values from the code hats' bind-space boxes (width, lowest point, centre depth), then tuned on the look sheet.
   'hat-pickel': { width: 0.29, bottom: 1.67, z: -0.02, surface: 'lacquer' }, // Pickelhaube des Hauptmanns
-  'hat-hard': { width: 0.29, bottom: 1.66, z: -0.005 }, // Bauhelm
-  'hat-kiez': { width: 0.29, bottom: 1.66, z: -0.005 }, // Helm der Kiezwache
+  'hat-hard': { width: 0.29, bottom: 1.695, z: -0.005 }, // Bauhelm
+  'hat-kiez': { width: 0.29, bottom: 1.695, z: -0.005 }, // Helm der Kiezwache
   'hat-flatcap': { width: 0.27, bottom: 1.665, z: 0.014, surface: 'cloth' }, // Schiebermütze
-  'hat-beanie': { width: 0.275, bottom: 1.65, z: -0.015, surface: 'cloth' }, // Wollmütze
+  'hat-beanie': { width: 0.265, bottom: 1.695, z: -0.015, surface: 'cloth' }, // Wollmütze
   'hat-straw': { width: 0.47, bottom: 1.66, z: -0.008, surface: 'straw' }, // Strohhut
+  // Not AI: the Gasmaske (the Pixal3D straps stood up like horns; the code mask is fitted to the face), the Neonbrille and
+  // the Stirnlampe (their lenses and lamp glow).
   'hat-greathelm': { width: 0.27, bottom: 1.5, z: -0.012, surface: 'metal' }, // Topfhelm der Zitadelle (hides the hair)
-  'hat-gasmask': { width: 0.25, bottom: 1.5, z: 0.04 }, // Gasmaske
 };
 
 const urls = import.meta.glob('../../assets/gear/*.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
