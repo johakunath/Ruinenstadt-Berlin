@@ -20,7 +20,9 @@ for (const id of ids) {
   for (const m of d.getRoot().listMaterials()) m.setNormalTexture(null).setMetallicRoughnessTexture(null).setOcclusionTexture(null).setEmissiveTexture(null);
   await d.transform(prune());
   for (const t of d.getRoot().listTextures()) {
-    const img = await sharp(Buffer.from(t.getImage())).resize(512, 512, { fit: 'inside' }).jpeg({ quality: 85 }).toBuffer();
+    // Hats 512 px; outfits (W10, a whole torso) 1024 px.
+    const edge = id.startsWith('outfit-') ? 1024 : 512;
+    const img = await sharp(Buffer.from(t.getImage())).resize(edge, edge, { fit: 'inside' }).jpeg({ quality: 85 }).toBuffer();
     t.setImage(img).setMimeType('image/jpeg');
   }
   await d.transform(weld(), dedup(), prune());

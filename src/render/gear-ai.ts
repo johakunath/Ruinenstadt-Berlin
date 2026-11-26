@@ -82,7 +82,8 @@ export async function loadAiGear(anisotropy: number): Promise<void> {
   }));
 }
 
-const placeholder = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+/** 1 × 1 white map: keeps USE_MAP on so every AI piece shares one shader. */
+export const placeholder = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 placeholder.colorSpace = SRGBColorSpace;
 placeholder.needsUpdate = true;
 const mats = new WeakMap<Materials, Map<string, Material>>();

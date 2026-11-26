@@ -9,6 +9,7 @@ import { HERO_REGIONS, type BodyRegion } from '../data/hero-contract';
 import { PIECES, hiddenRegions, lookNodes, sameLook, type HeroLook } from '../data/hero-look';
 import { GEAR_SLOTS, gearGeometry, gearMaterials, type GearSlot } from './gear';
 import { aiGearMaterial } from './gear-ai';
+import { aiOutfitGeometry, aiOutfitMaterial, hasAiOutfit, loadAiOutfit } from './outfit-ai';
 import { heroSource, type HeroSource } from './gear-kit';
 import { pieceVariant } from './hero-wear';
 import type { Materials } from './materials';
@@ -49,6 +50,8 @@ export class HeroModel {
   private readonly src: HeroSource;
   private readonly boneNames: string[] = [];
   private readonly materials: Materials | undefined;
+  /** W10: the Pixal3D outfit of the armor, on the hero skeleton (only with `materials`). */
+  private outfitMesh: SkinnedMesh | undefined;
 
   constructor(source: Object3D, materials?: Materials) {
     this.model = cloneSkinned(source);
@@ -80,6 +83,14 @@ export class HeroModel {
           anchor.parent!.add(g);
           this.gear.set(slot, g);
         }
+        const o = new SkinnedMesh(new BufferGeometry(), aiOutfitMaterial(materials, ''));
+        o.name = 'outfit_ai';
+        o.castShadow = true;
+        o.frustumCulled = false;
+        o.visible = false;
+        o.bind(anchor.skeleton, anchor.bindMatrix);
+        anchor.parent!.add(o);
+        this.outfitMesh = o;
       }
     }
     for (const r of HERO_REGIONS) {
@@ -112,8 +123,16 @@ export class HeroModel {
    */
   setLook(look: HeroLook): boolean {
     if (this.look && sameLook(this.look, look)) return false;
+    const aiGeo = this.aiOutfit(look);
     const shown = new Set(lookNodes(look));
     const hidden = hiddenRegions(look);
+    // W10: the AI outfit replaces the outfit piece and covers torso and arms; the armor's code gear goes.
+    if (aiGeo) {
+      const node = PIECES[look.outfit]?.node;
+      if (node) shown.delete(node);
+      hidden.add('torso');
+      hidden.add('arms');
+    }
     for (const [node, o] of this.pieces) o.visible = shown.has(node);
     for (const [r, o] of this.regions) o.visible = !hidden.has(r);
     if (this.hair) this.hair.visible = !look.hideHair;
@@ -124,9 +143,27 @@ export class HeroModel {
       const tint = n === outfit ? look.tint.outfit : n === boots ? look.tint.boots : n === gloves ? look.tint.gloves : n === 'scarf' ? look.tint.scarf : '';
       mesh.geometry = pieceVariant(mesh, n, geo, tint, n === outfit ? look.cut : 0, n === outfit ? look.puff : 0);
     }
-    this.showGear(look.gear);
-    this.look = { ...look, gear: [...look.gear], covers: [...look.covers] };
+    this.showGear(aiGeo ? look.gear.filter((id) => !look.armorGear.includes(id)) : look.gear);
+    if (this.outfitMesh) {
+      this.outfitMesh.visible = !!aiGeo;
+      if (aiGeo && this.materials && look.aiOutfit) {
+        this.outfitMesh.geometry = aiGeo;
+        this.outfitMesh.material = aiOutfitMaterial(this.materials, look.aiOutfit);
+        const layers = (this.hair as Mesh | undefined)?.layers.mask;
+        if (layers !== undefined) this.outfitMesh.layers.mask = layers;
+      }
+    }
+    this.look = { ...look, gear: [...look.gear], covers: [...look.covers], armorGear: [...look.armorGear] };
     return true;
+  }
+
+  /** The AI outfit geometry of the look if loaded; otherwise starts the load and re-applies the look when it is in. */
+  private aiOutfit(look: HeroLook): BufferGeometry | undefined {
+    const id = look.aiOutfit;
+    if (!id || !this.materials || !this.outfitMesh || !hasAiOutfit(id)) return undefined;
+    const geo = aiOutfitGeometry(id, this.boneNames);
+    if (!geo) void loadAiOutfit(id, this.materials.profile.anisotropy).then(() => { this.look = null; });
+    return geo;
   }
 
   /** Puts the merged gear of `ids` on the gear meshes (hidden when a slot has no part). */

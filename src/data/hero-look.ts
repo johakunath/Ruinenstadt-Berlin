@@ -29,6 +29,13 @@ export interface HeroLook {
   hideScarf: boolean;
   /** Body regions under gear (boxing gloves cover the hands). */
   covers: readonly BodyRegion[];
+  /**
+   * W10: the armor's Pixal3D outfit (`assets/gear/outfit-<id>.glb`), or null. While it is loaded the renderer shows
+   * it instead of the outfit piece and drops `armorGear`; until then (and without it) the code look above stands.
+   */
+  aiOutfit: string | null;
+  /** The armor's own gear ids (dropped under an AI outfit, which has its own plates and belts). */
+  armorGear: readonly string[];
 }
 
 /** A clothing piece: its mesh node in hero.glb and the body regions it hides. */
@@ -156,6 +163,8 @@ interface Wear {
   gear?: readonly string[];
   hideHair?: boolean;
   covers?: readonly BodyRegion[];
+  /** W10: Pixal3D outfit id (the armor slot only). */
+  ai?: string;
 }
 
 /** Shoulder volume of every outfit (Johannes, 2026-11-19: more volume round the shoulders). */
@@ -178,7 +187,7 @@ export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string
     spaeti: { palette: 'spaeti', scarf: 'scarf:gold', gear: ['caps', 'sign-spaeti', 'belt-caps'] },
     panzer: { palette: 'panzer', scarf: 'none', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },
     rattenmantel: { palette: 'rattenmantel', scarf: 'scarf:acid', puff: 0.018, gear: ['collar-fur', 'belt-rattails'] },
-    ritter: { palette: 'ritter', scarf: 'none', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'] },
+    ritter: { palette: 'ritter', scarf: 'none', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'], ai: 'ritter' },
     'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'print-kiez', 'kneepads-orange'] },
     'mantel:spree': { palette: 'mantel:spree', scarf: 'none', gear: ['collar-reed', 'seams-spree', 'belt-sash'] },
     'kette:zit': { cut: CUT.knee, palette: 'kette:zit', scarf: 'none', gear: ['tabard', 'belt-knight-short'] },
@@ -243,6 +252,8 @@ export function heroLook(equipment: Readonly<Partial<Record<SlotId, Equipped>>>)
     hideHair: !!h?.hideHair,
     hideScarf: a?.scarf === 'none',
     covers: [...(g?.covers ?? [])],
+    aiOutfit: a?.ai ?? null,
+    armorGear: [...(a?.gear ?? [])],
   };
 }
 
@@ -259,5 +270,5 @@ export function hiddenRegions(look: HeroLook): Set<BodyRegion> {
 export function sameLook(a: HeroLook, b: HeroLook): boolean {
   return a.outfit === b.outfit && a.cut === b.cut && a.boots === b.boots && a.gloves === b.gloves && a.puff === b.puff && a.hideHair === b.hideHair && a.hideScarf === b.hideScarf
     && a.tint.outfit === b.tint.outfit && a.tint.boots === b.tint.boots && a.tint.gloves === b.tint.gloves && a.tint.scarf === b.tint.scarf
-    && a.gear.length === b.gear.length && a.gear.every((id, i) => id === b.gear[i]) && a.covers.join() === b.covers.join();
+    && a.gear.length === b.gear.length && a.gear.every((id, i) => id === b.gear[i]) && a.covers.join() === b.covers.join() && a.aiOutfit === b.aiOutfit;
 }
