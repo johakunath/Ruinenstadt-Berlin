@@ -29,6 +29,11 @@ describe('P18 critter sites', () => {
     expect(duckSite(K, 30, -47)).toBe(true); // the Spree east of the Dammbrücke
     expect(duckSite(K, 10, 0)).toBe(false); // the Altstadt
     expect(duckSite(K, 6, -46)).toBe(false); // under the Dammbrücke
+    expect(duckSite(K, -17.5, 104)).toBe(false); // the ferry lane over the Dahme
+    // Clear of the bank (and the boat wrecks moored along it): nothing within 3.5 m of dry land.
+    for (let x = 20; x <= 60; x += 0.5) for (let z = -60; z <= -30; z += 0.5) {
+      if (duckSite(K, x, z)) for (const [dx, dz] of [[3.4, 0], [-3.4, 0], [0, 3.4], [0, -3.4]] as const) expect(isWater(koep, x + dx, z + dz)).toBe(true);
+    }
   });
 
   it('pigeons walk on the Altstadt cobbles, not in the Müggelberge forest', () => {

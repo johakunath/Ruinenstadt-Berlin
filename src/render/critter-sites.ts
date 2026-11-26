@@ -53,11 +53,20 @@ export interface SiteWorld {
   index: ColliderIndex;
 }
 
-/** Open water a duck can swim on: water here and 1.6 m around, not under a bridge deck. */
+/** Ducks keep this far from the bank: the boat wrecks lie up to about 3.2 m out (`buildBoats` in map-world.ts). */
+const BANK = 3.5;
+
+/** Open water a duck can swim on: water here and `BANK` m around, not under a bridge deck or a pond jetty. */
 export function duckSite(w: SiteWorld, x: number, z: number): boolean {
   const m = w.m;
   if (m.tunnel || m.decks || !isWater(m, x, z)) return false;
-  for (const [dx, dz] of AROUND) if (!isWater(m, x + dx * 1.6, z + dz * 1.6)) return false;
+  for (const [dx, dz] of AROUND) if (!isWater(m, x + dx * 1.6, z + dz * 1.6) || !isWater(m, x + dx * BANK, z + dz * BANK)) return false;
+  // Pond jetties, and the whole lane of a ferry (its boat shuttles across).
+  const inside = (p: { x: number; z: number; rot: number; len: number; width: number }, pad: number): boolean => {
+    const dx = x - p.x, dz = z - p.z;
+    return Math.abs(dx * Math.sin(p.rot) + dz * Math.cos(p.rot)) <= p.len / 2 + pad && Math.abs(-dx * Math.cos(p.rot) + dz * Math.sin(p.rot)) <= p.width / 2 + pad;
+  };
+  if ((m.piers ?? []).some((p) => inside(p, 1)) || m.bridges.some((b) => b.kind === 'ferry' && inside(b, 3))) return false;
   return !onBridge(m, x, z, 2);
 }
 
