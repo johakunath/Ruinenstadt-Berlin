@@ -10,6 +10,7 @@ import { cooldownOf, powerOf, selectPower, type Offer } from '../sim/abilities';
 import { chooseBlessing, heldFamilies, perkOf, rerollBlessings, rerollCost } from '../sim/blessings';
 import type { Sim } from '../sim/types';
 import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
+import { supplyIcon } from './prop-icon';
 import { uiIcon } from './ui-icons';
 import { activePad } from '../input/pad';
 
@@ -86,8 +87,8 @@ export class AbilitiesUi {
     make('power', 'Kraft');
     make('swap', 'Kraft wechseln');
     make('ultimate', 'Ultimative Kraft');
-    this.actions.verband.icon.innerHTML = svg(VERBAND);
-    this.actions.molotow.icon.innerHTML = svg(MOLOTOW);
+    this.actions.verband.icon.innerHTML = supplyIcon('verband', svg(VERBAND));
+    this.actions.molotow.icon.innerHTML = supplyIcon('molotow', svg(MOLOTOW));
     this.actions.swap.icon.innerHTML = svg(SWAP);
     this.input.onSwap = () => this.swap();
 
@@ -247,7 +248,7 @@ export class AbilitiesUi {
     if (a.guard > 0) chips.push(['Deckung', '#9aa4b0', a.guard, pg('gully')]);
     if (a.banner) chips.push(['Standarte', '#f2d14b', a.banner.t, pg('stand')]);
     if (a.fed > 0) chips.push(['Satt', '#f2a04b', a.fed, svg(MEAL)]);
-    if (a.hot > 0) chips.push(['Verband', '#8fd16a', a.hot, svg(VERBAND)]);
+    if (a.hot > 0) chips.push(['Verband', '#8fd16a', a.hot, supplyIcon('verband', svg(VERBAND))]);
     if (a.hus > 0 && (sim.statContext.perks.husar ?? 0) > 0) chips.push(['Husarenritt', '#9fd8c8', a.hus, perkIcon('husar')]);
     if (a.jagd.n > 0) chips.push([`Jagdfieber ×${a.jagd.n}`, '#e05050', a.jagd.t, perkIcon('jagd')]);
     if (a.streak.n >= 5) chips.push([`Serie ${a.streak.n}`, '#e05050', a.streak.t, perkIcon('rush')]);

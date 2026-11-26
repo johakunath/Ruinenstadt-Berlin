@@ -1,5 +1,6 @@
 // U1: the inventory tab of the pause menu, laid out as the 2D bag (`js/panels.js` renderInv, detail;
 // `js/items.js` cmpRows, cmpBlock, statLine): doll and stats, bag with salvage chips, detail column.
+import { modIcon } from './prop-icon';
 import { WEAPON_MODS, type WeaponModId } from '../data/crafting';
 import { AFFIXES, ATTRIBUTE_STATS, ELEMENTS, IMPLICITS, IMPLANT_MODES, LEGENDARY_POWERS, RARITIES, SETS, SLOTS, SLOT_MAIN_STATS, SLOT_NAMES, WEAPON_KINDS, type AffixId, type AttributeKindId, type BaseId, type LegendaryId, type SlotId, type WeaponKindId } from '../data/items';
 import { POWERS } from '../data/powers';
@@ -321,7 +322,7 @@ export class InventoryUi {
       const inW = on.includes(m.id), n = sim.inventory.mods[m.id] ?? 0;
       const btn = inW ? `<button type="button" data-action="modOut" data-value="${m.id}" data-key="mod-${m.id}">Ausbauen</button>`
         : `<button type="button" class="primary" data-action="modIn" data-value="${m.id}" data-key="mod-${m.id}" ${on.length >= slots ? 'disabled' : ''}>Einbauen</button>`;
-      return `<div class="row-c"><div><b>${m.name}${inW ? ' · eingebaut' : ` · ${n} da`}</b><small>${m.description}</small></div>${btn}</div>`;
+      return `<div class="row-c has-ic">${modIcon(m.id)}<div><b>${m.name}${inW ? ' · eingebaut' : ` · ${n} da`}</b><small>${m.description}</small></div>${btn}</div>`;
     }).join('');
     return `<div class="krsel"><small class="clab">Aufsätze ${on.length}/${slots}</small>${rows || '<p class="inv-hint">Noch keine gebaut. Das Zeughaus im Lager baut sie.</p>'}</div>`;
   }

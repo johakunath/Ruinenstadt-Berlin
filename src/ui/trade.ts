@@ -22,6 +22,7 @@ import type { Sim } from '../sim/types';
 import { perkIcon } from './abilities';
 import { pollDt, scrollParent, stickScroll } from './drag-scroll';
 import { controls, moveFocus } from './focus';
+import { modIcon, supplyIcon } from './prop-icon';
 import { FAMILY_GLYPHS } from './glyphs';
 import { artUrl, esc, itemCard, itemIcon, RES_ICON, resIcon } from './inventory';
 
@@ -36,6 +37,7 @@ const QUALITY_COLOR = ['#e8ddd0', '#7d9bff', '#f2d14b', '#b48cff'] as const;
 const VERBAND = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M9 21h30v8H9z" fill="#ead9c0"/><path d="M20 10h8v28h-8z" fill="#ead9c0"/><path d="M21 18h6v12h-6zM16 22h16v4H16z" fill="#c23a2e"/></svg>';
 const MOLOTOW = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 20h10l3 7v13a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V27z" fill="#6a8a5a"/><path d="M21 12h6v8h-6z" fill="#8a9a7a"/><path d="M24 2c4 4 4 7 1 10-4-2-4-6-1-10z" fill="#ff8a3d"/><path d="M17 30h14v6H17z" fill="#c9b58c"/></svg>';
 const MOD = `<svg viewBox="0 0 24 24" aria-hidden="true">${FAMILY_GLYPHS.mod[1]}</svg>`;
+const modIc = (id: string): string => modIcon(id, MOD);
 const PAD_HINT: Record<TabId, string> = {
   waren: '<span><b>A</b>Kaufen</span>',
   segen: '<span><b>A</b>Kaufen</span><span><b>Y</b>Tauschen</span>',
@@ -274,7 +276,7 @@ export class TradeUi {
       return this.tile(`g${i}`, `<span class="inv-cell" style="--rarity:${color(it)}">${itemIcon(it)}<small>${shownLevel(it)}</small>${up ? '<b class="inv-up">▲</b>' : ''}</span>`, it.name, cost(o.price), cash >= o.price);
     }).join('');
     const m = shop?.mod ? WEAPON_MODS.find((x) => x.id === shop.mod!.id)! : null;
-    const mod = shop ? (m ? this.tile('mod', `<span class="inv-cell" style="--rarity:${m.spati ? '#f2d14b' : '#7d9bff'}">${MOD}</span>`, m.name, cost(modPrice(s, m.id)), cash >= modPrice(s, m.id)) : '<div class="trade-tile sold"><span class="inv-cell empty"></span><span class="tn">Verkauft</span></div>') : '';
+    const mod = shop ? (m ? this.tile('mod', `<span class="inv-cell" style="--rarity:${m.spati ? '#f2d14b' : '#7d9bff'}">${modIc(m.id)}</span>`, m.name, cost(modPrice(s, m.id)), cash >= modPrice(s, m.id)) : '<div class="trade-tile sold"><span class="inv-cell empty"></span><span class="tn">Verkauft</span></div>') : '';
     const sup = this.supplies(s).map((u) => this.tile(`s-${u.id}`, `<span class="inv-cell empty">${u.icon}${u.have ? `<small>${u.have}</small>` : ''}</span>`, u.name, u.full ? 'Voll' : cost(u.price), !u.full && cash >= u.price)).join('');
     return `<div class="trade-cols"><section class="trade-list"><h3>${shop ? 'Ausrüstung und Aufsatz' : 'Ausrüstung'}</h3><div class="trade-tiles">${gear}${mod}</div><h3>Vorräte</h3><div class="trade-tiles">${sup}</div></section><section class="trade-detail inv-detail">${this.detail(s)}</section></div>`;
   }
@@ -286,9 +288,9 @@ export class TradeUi {
         out.push({ id, name: u.name, text: `+${u.perLevel}% ${id === 'dmg' ? 'Schaden' : 'Leben'}, bleibt. Mehr im Lager.`, have: `${l}/${SPATI_UPGRADE.max}`, price: spatiUpgradeCost(s, id), full: l >= SPATI_UPGRADE.max, icon: `<img src="${artUrl(RES_ICON.metall)}" alt="">` });
       }
       const cons = s.inventory.consumables ?? { verband: 0, molotow: 0 };
-      for (const c of CONSUMABLES) out.push({ id: c.id, name: c.name, text: c.description, have: `${cons[c.id]}/3`, price: c.scrapCost, full: cons[c.id] >= 3, icon: c.id === 'verband' ? VERBAND : MOLOTOW });
+      for (const c of CONSUMABLES) out.push({ id: c.id, name: c.name, text: c.description, have: `${cons[c.id]}/3`, price: c.scrapCost, full: cons[c.id] >= 3, icon: c.id === 'verband' ? supplyIcon('verband', VERBAND) : supplyIcon('molotow', MOLOTOW) });
     }
-    out.push({ id: 'heal', name: 'Verbandskasten', text: 'Heilt dich vollständig.', have: '', price: healPrice(s), full: s.player.hp >= s.stats.maxHp, icon: VERBAND });
+    out.push({ id: 'heal', name: 'Verbandskasten', text: 'Heilt dich vollständig.', have: '', price: healPrice(s), full: s.player.hp >= s.stats.maxHp, icon: supplyIcon('heal', VERBAND) });
     return out;
   }
 
@@ -307,7 +309,7 @@ export class TradeUi {
       if (!o) return '<p class="inv-hint">Verkauft.</p>';
       const m = WEAPON_MODS.find((x) => x.id === o.id)!, w = s.equipment.w, slots = modSlots(w), on = w?.mods?.length ?? 0, price = modPrice(s, m.id);
       const where = w && on < slots ? `Wird gleich in ${esc(w.name)} eingebaut.` : 'Kein Platz frei: kommt ins Inventar.';
-      return `<article class="inv-card" style="--rarity:${m.spati ? '#f2d14b' : '#7d9bff'}"><small class="clab">Aufsatz${m.spati ? ' · stark, nur im Späti' : ''}</small><div class="inv-card-head"><span class="trade-ic">${MOD}</span><div><h3>${esc(m.name)}</h3><p class="sub">Waffe ${on}/${slots} Aufsätze</p></div></div><p>${esc(m.description)}</p><p class="inv-hint">${where}</p></article>${button('Kaufen', price, cash >= price)}`;
+      return `<article class="inv-card" style="--rarity:${m.spati ? '#f2d14b' : '#7d9bff'}"><small class="clab">Aufsatz${m.spati ? ' · stark, nur im Späti' : ''}</small><div class="inv-card-head"><span class="trade-ic">${modIc(m.id)}</span><div><h3>${esc(m.name)}</h3><p class="sub">Waffe ${on}/${slots} Aufsätze</p></div></div><p>${esc(m.description)}</p><p class="inv-hint">${where}</p></article>${button('Kaufen', price, cash >= price)}`;
     }
     if (p.k === 'sup') {
       const u = this.supplies(s).find((x) => x.id === p.id);

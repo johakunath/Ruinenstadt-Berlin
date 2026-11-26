@@ -83,12 +83,14 @@ if (mode === 'icons') {
   const out: Record<string, string> = {};
   const items: Item[] = [];
   for (const slot of ['a', 'h', 'g', 'f'] as const) for (const key of Object.keys(WEAR[slot])) { const [base, set] = key.split(':'); items.push({ slot, base: base!, set: set as SetId | undefined }); }
+  // W10: the AI outfits load on first wear; the icons wait for them.
+  await Promise.all(items.map((it) => heroLook(equip([it])).aiOutfit).filter((id): id is string => !!id).map((id) => loadAiOutfit(id, 4)));
   for (const it of items) {
     const look = heroLook(equip([it]));
     body.setLook(look);
     // The item's own piece node (PIECES: coat, vest, poncho; boots, sneakers, wrapped boots; gloves).
     const node = (piece: string): string => PIECES[piece]?.node ?? '';
-    const keep = (n: string): boolean => n.startsWith('gear_') || (it.slot === 'a' && n === node(look.outfit)) || (it.slot === 'f' && n === node(look.boots)) || (it.slot === 'g' && n === 'g_handsch' && !!look.gloves);
+    const keep = (n: string): boolean => n.startsWith('gear_') || (it.slot === 'a' && (n === node(look.outfit) || n === 'outfit_ai')) || (it.slot === 'f' && n === node(look.boots)) || (it.slot === 'g' && n === 'g_handsch' && !!look.gloves);
     const shown: Object3D[] = [];
     body.model.traverse((o) => { if ((o as Mesh).isMesh) { if (o.visible && !keep(o.name)) { o.visible = false; shown.push(o); } } });
     // Three-quarter view from the front left, a little from above; gloves and boots nearly from the side,
