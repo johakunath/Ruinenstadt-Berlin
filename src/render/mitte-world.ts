@@ -64,8 +64,9 @@ export function mitteMats(materials: Materials): MitteMats {
     gold: materials.surface({ map: paintGoldPanels(o).map, roughness: 0.45, metalness: 0.55, vertexColors: true }),
     neon: new MeshBasicMaterial({ map: paintNeonAtlas(), vertexColors: true }),
   };
-  swapPaintedMap([mats.sandstone], TEXTURES.sandstone, o.anisotropy);
-  swapPaintedMap([mats.curtain], TEXTURES.curtain, o.anisotropy);
+  // P47: the two tiling surfaces opt into the profile's cap (512 px on Leistung); the lettered neon atlas does not.
+  swapPaintedMap([mats.sandstone], TEXTURES.sandstone, o.anisotropy, true, materials.profile.tileEdge);
+  swapPaintedMap([mats.curtain], TEXTURES.curtain, o.anisotropy, true, materials.profile.tileEdge);
   loadPaintedTexture(TEXTURES.neon, o.anisotropy, texture => {
     mats.neon.map?.dispose();
     mats.neon.map = texture;

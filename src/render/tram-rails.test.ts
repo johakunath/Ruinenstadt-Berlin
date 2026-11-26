@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tramOffsetPoint, TRAM_GAUGE, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
+import { railRoughness, tramOffsetPoint, TRAM_GAUGE, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 
 describe('embedded tram rails', () => {
   it('uses standard gauge measured between the running faces of both tracks', () => {
@@ -23,5 +23,14 @@ describe('embedded tram rails', () => {
     expect(tramOffsetPoint([[0, 0], [0, 10]], 0, 1)).toEqual([1, 0]);
     expect(tramOffsetPoint([[0, 0], [0, 10]], 1, 1)).toEqual([1, 10]);
     expect(tramOffsetPoint([[0, 0], [0, 10], [10, 10]], 1, -1)).toEqual([-1, 11]);
+  });
+});
+
+describe('rail steel look (T1b)', () => {
+  it('is rougher by default, keeps the old look on ?rails=old and the mirror gloss in Charlottenburg', () => {
+    expect(railRoughness('')).toBe(0.5);
+    expect(railRoughness('?rails=new&map=xhain', 'xhain')).toBe(0.5);
+    expect(railRoughness('?rails=old')).toBe(0.34);
+    expect(railRoughness('', 'charlottenburg')).toBe(0.34);
   });
 });

@@ -309,13 +309,15 @@ function xhainMats(materials: Materials): XMats {
   };
   // T6 (local FLUX.2 klein, `docs/local-ai-assets.md` W1): painted maps replace the code placeholders once
   // loaded; same materials, so no draw call change. The viaduct brick and Wall concrete swap in `makeMats`.
-  swapPaintedMap([X.steel], new URL('../../assets/textures/xhain/steel.webp', import.meta.url).href, o.anisotropy);
-  swapPaintedMap([X.yellow], new URL('../../assets/textures/xhain/yellow-brick.webp', import.meta.url).href, o.anisotropy);
-  swapPaintedMap([X.sand], new URL('../../assets/textures/xhain/sand.webp', import.meta.url).href, o.anisotropy);
+  // P47: tiling surfaces opt into the profile's cap (512 px on Leistung); the murals (pictures) stay at full size.
+  const tile = materials.profile.tileEdge;
+  swapPaintedMap([X.steel], new URL('../../assets/textures/xhain/steel.webp', import.meta.url).href, o.anisotropy, true, tile);
+  swapPaintedMap([X.yellow], new URL('../../assets/textures/xhain/yellow-brick.webp', import.meta.url).href, o.anisotropy, true, tile);
+  swapPaintedMap([X.sand], new URL('../../assets/textures/xhain/sand.webp', import.meta.url).href, o.anisotropy, true, tile);
   // East Side Gallery murals: eight painted panels in the same 4 × 2 atlas cells as `muralPanel` (not repeated).
   swapPaintedMap([X.murals], new URL('../../assets/textures/xhain/murals.webp', import.meta.url).href, o.anisotropy, false);
   // One track per tile across (rails at the same u as `paintTrackBed`), five sleepers along.
-  swapPaintedMap([X.trackBed], new URL('../../assets/textures/xhain/track-bed.webp', import.meta.url).href, o.anisotropy);
+  swapPaintedMap([X.trackBed], new URL('../../assets/textures/xhain/track-bed.webp', import.meta.url).href, o.anisotropy, true, tile);
   return X;
 }
 

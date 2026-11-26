@@ -53,7 +53,7 @@ import { buildGlbProps, type GlbPlacement } from './glb-props';
 import { loadGroundTexture } from './ground-textures';
 import { swapPaintedMap } from './surface-textures';
 import { blobGeo, buildFlowers, buildPlantProp, buildUndergrowth, cardGeo, fringe, mtx, plantMats } from './vegetation';
-import { tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
+import { railRoughness, tramOffsetPoint, TRAM_RAILS, TRAM_SECTION } from './tram-rails';
 import { TRAM_BRIDGE_DECK } from '../data/tram';
 import { canvas, toTexture, paintAsphalt, paintConcrete, paintDirt, paintFern, paintGrass, paintLeafLitter, paintLitter, paintPaving, paintRoofTiles, paintTextSign, paintSlate, paintClock, paintSRoundel, paintLettering, paintWaterNormal, type PaintOptions } from './paint';
 import {
@@ -307,7 +307,7 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
     stone: base.stucco,
     tuff: base.stucco,
     schlossWall: base.stucco,
-    railSteel: materials.surface({ color: 0xbfc6c2, roughness: 0.34, metalness: 0.6, vertexColors: true }),
+    railSteel: materials.surface({ color: 0xbfc6c2, roughness: railRoughness(typeof location === 'undefined' ? '' : location.search, district), metalness: 0.6, vertexColors: true }),
     ground: groundMaterial(materials, o, uDirt),
     litter: materials.surface({ map: paintLitter(), alphaTest: 0.5, roughness: 0.55, vertexColors: true }),
     asphalt: materials.surface({ map: asphalt, roughness: 0.85, vertexColors: true }),
@@ -337,33 +337,36 @@ export function makeMapMats(materials: Materials, district?: 'alex' | 'mitte' | 
     stationName: emissive(materials, paintLettering('BERLIN-KÖPENICK', '#d8cdb0', '#0d6a3a', 0.7, 0.62), 0x40e080, 0.55),
     ratskeller: emissive(materials, paintLettering('RATSKELLER', '#1e2a22', '#d9b25a', 1, 0.3), 0xffc060, 1.1),
   };
-  loadGroundTexture('dirt', o.anisotropy, texture => {
+  // P47: every tiling surface opts into the profile's cap (512 px on Leistung); see `loadPaintedTexture`.
+  const tile = materials.profile.tileEdge;
+  loadGroundTexture('dirt', o.anisotropy, tile, texture => {
     uDirt.value = m.path.map = texture;
     dirt.dispose();
   });
-  loadGroundTexture('litter', o.anisotropy, texture => {
+  // The litter atlas's decals are 1 to 3 m, so a 256 px cell still beats the ground's 102 px per metre.
+  loadGroundTexture('litter', o.anisotropy, tile, texture => {
     m.litter.map?.dispose();
     m.litter.map = texture;
   });
-  loadGroundTexture(district === 'mitte' ? 'mitteAsphalt' : 'asphalt', o.anisotropy, texture => {
+  loadGroundTexture(district === 'mitte' ? 'mitteAsphalt' : 'asphalt', o.anisotropy, tile, texture => {
     m.asphalt.map = m.tar.map = texture;
     asphalt.dispose();
   });
   // T9e: Charlottenburg has its own worn roof tiles and slate (local FLUX.2 klein); elsewhere slate stays painted.
   const charl = district === 'charlottenburg';
-  swapPaintedMap([m.roof], charl ? new URL('../../assets/textures/charlottenburg/roof-tiles.webp', import.meta.url).href : new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href, o.anisotropy);
-  if (charl) swapPaintedMap([m.slate], new URL('../../assets/textures/charlottenburg/slate.webp', import.meta.url).href, o.anisotropy);
+  swapPaintedMap([m.roof], charl ? new URL('../../assets/textures/charlottenburg/roof-tiles.webp', import.meta.url).href : new URL('../../assets/textures/common/roof-tiles.webp', import.meta.url).href, o.anisotropy, true, tile);
+  if (charl) swapPaintedMap([m.slate], new URL('../../assets/textures/charlottenburg/slate.webp', import.meta.url).href, o.anisotropy, true, tile);
   if (charl) {
     const own = (url: string): LitMaterial => {
       const mat = materials.surface({ map: base.stucco.map!.clone(), roughness: 0.85, vertexColors: true });
-      swapPaintedMap([mat], url, o.anisotropy);
+      swapPaintedMap([mat], url, o.anisotropy, true, tile);
       return mat;
     };
     m.stone = own(new URL('../../assets/textures/charlottenburg/stone.webp', import.meta.url).href);
     m.tuff = own(new URL('../../assets/textures/charlottenburg/tuff.webp', import.meta.url).href);
     m.schlossWall = own(new URL('../../assets/textures/charlottenburg/schloss.webp', import.meta.url).href);
     // T9j: on Charlottenburg `mossy` is only greenery (maze and garden hedges, lawn strips, firs): clipped box leaves.
-    swapPaintedMap([m.mossy], new URL('../../assets/textures/charlottenburg/hedge.webp', import.meta.url).href, o.anisotropy);
+    swapPaintedMap([m.mossy], new URL('../../assets/textures/charlottenburg/hedge.webp', import.meta.url).href, o.anisotropy, true, tile);
   }
   return m;
 }
@@ -379,12 +382,13 @@ function groundMaterial(materials: Materials, o: PaintOptions, uDirt: { value: T
   const mat = materials.surface({ map: paintGrass(o).map, roughness: 0.95, vertexColors: true });
   const uPave = { value: paintPaving(o).map };
   const uLeaf = { value: paintLeafLitter(o).map };
-  loadGroundTexture('grass', o.anisotropy, texture => {
+  const tile = materials.profile.tileEdge;
+  loadGroundTexture('grass', o.anisotropy, tile, texture => {
     mat.map?.dispose();
     mat.map = texture;
   });
   for (const [surface, uniform] of [['paving', uPave], ['leaves', uLeaf]] as const) {
-    loadGroundTexture(surface, o.anisotropy, texture => {
+    loadGroundTexture(surface, o.anisotropy, tile, texture => {
       uniform.value.dispose();
       uniform.value = texture;
     });
@@ -2348,7 +2352,9 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
   const mats = makeMapMats(materials, district);
   // T14 first step (local FLUX.2 klein): Wedding's cloth (awnings, curtains, carpets, table linen, all tinted in code) gets
   // a worn woven map with creases and stains; same material, 0 draw calls. The ruby/emerald atlas stays open.
-  if (m.id === 'wedding') swapPaintedMap([mats.linen], new URL('../../assets/textures/wedding/cloth.webp', import.meta.url).href, materials.profile.anisotropy);
+  // P47: tiling surfaces opt into the profile's cap (512 px on Leistung); atlases of 2 × 2 tiling cells take twice that.
+  const tile = materials.profile.tileEdge;
+  if (m.id === 'wedding') swapPaintedMap([mats.linen], new URL('../../assets/textures/wedding/cloth.webp', import.meta.url).href, materials.profile.anisotropy, true, tile);
   // Wet streets mirror the sky environment and the lamps.
   if (wet) for (const k of [mats.ground, mats.asphalt, mats.path, mats.tar, mats.litter]) k.roughness *= wet.gloss;
   let railMats: MapMats | undefined;
@@ -2358,18 +2364,18 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     const anisotropy = materials.profile.anisotropy;
     mats.alex = emissive(materials, paintAlexAtlas(), 0xffe0a0, 0.8);
     swapPaintedMap([mats.alex], ALEX_TEXTURES.signs, anisotropy, false);
-    swapPaintedMap([mats.concrete], ALEX_TEXTURES.wbs70, anisotropy);
+    swapPaintedMap([mats.concrete], ALEX_TEXTURES.wbs70, anisotropy, true, tile);
     const stucco = mats.stucco.map!;
     mats.stucco.map = paintAlexStoneAtlas(stucco, anisotropy);
     mats.alexStoneAtlas = true;
     stucco.dispose();
-    swapPaintedMap([mats.stucco], ALEX_STONE_URL, anisotropy, false);
+    swapPaintedMap([mats.stucco], ALEX_STONE_URL, anisotropy, false, tile * 2);
     // Railway chunks reuse their one brick batch, with a different base map from the Rathaus.
     const railBrick = mats.brick.clone();
     railBrick.map = railBrick.map?.clone() ?? null;
     railMats = { ...mats, brick: railBrick };
-    swapPaintedMap([mats.brick], ALEX_TEXTURES.rathausBrick, anisotropy);
-    swapPaintedMap([railBrick], ALEX_TEXTURES.stadtbahnBrick, anisotropy);
+    swapPaintedMap([mats.brick], ALEX_TEXTURES.rathausBrick, anisotropy, true, tile);
+    swapPaintedMap([railBrick], ALEX_TEXTURES.stadtbahnBrick, anisotropy, true, tile);
     const posters = materials.surface({ map: paintPosterFallback(), alphaTest: 0.5, doubleSided: true, roughness: 0.85 });
     mats.posters = posters;
     railMats.posters = posters;
@@ -2379,7 +2385,7 @@ export function buildMapWorld(materials: Materials, m: MapDef, lots: Lot[], prop
     mats.tunnelConcrete = true;
     mats.concrete.map?.dispose();
     mats.concrete.map = paintTunnelAtlas({ flatten: materials.look.flatten, normalMaps: false, anisotropy: materials.profile.anisotropy });
-    swapPaintedMap([mats.concrete], TUNNEL_WALLS_URL, materials.profile.anisotropy, false);
+    swapPaintedMap([mats.concrete], TUNNEL_WALLS_URL, materials.profile.anisotropy, false, tile * 2);
   }
   if (m.id === 'mitte') mats.mitte = mitteMats(materials);
   if (m.id === 'wedding') mats.wedding = makeWeddingMats(materials);

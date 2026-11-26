@@ -68,13 +68,13 @@ export function makeTurmMats(materials: Materials, decks: readonly DeckDef[]): T
     coreMat.map?.dispose();
     coreMat.map = t;
     coreMat.needsUpdate = true;
-  });
+  }, true, materials.profile.tileEdge); // P47: tiling, so it opts into the cap (512 px on Leistung)
   // T11 (2) Telecafé cloth: the Wedding cloth map (T14, neutral off-white) under the vertex tints (white cloths, cobalt and mustard booths).
   const clothMat = materials.surface({ color: 0xffffff, roughness: 0.92, vertexColors: true });
   loadPaintedTexture(new URL('../../assets/textures/wedding/cloth.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
     clothMat.map = t;
     clothMat.needsUpdate = true;
-  });
+  }, true, materials.profile.tileEdge);
   const dialMat = materials.surface({ map: paintDial(), roughness: 0.5 });
   // T11 (2): painted clock face (local FLUX.2 klein from the canvas dial; same hands, aged enamel).
   loadPaintedTexture(new URL('../../assets/textures/turm/dial.webp', import.meta.url).href, materials.profile.anisotropy, (t) => {
