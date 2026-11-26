@@ -323,6 +323,8 @@ export class Critters {
       if (!slot) break;
       const r = i === 0 ? 0 : d.spread * Math.sqrt(rng.next()), ang = rng.next() * TAU;
       const ax = x + Math.sin(ang) * r, az = z + Math.cos(ang) * r;
+      // Members keep a body length apart (the herd's slots were all free, so its live ones are this spawn's).
+      if (pool.animals.some((q) => q.on && q.g === g && Math.hypot(q.x - ax, q.z - az) < d.length * 0.9)) continue;
       if (i > 0 && !site(pool.kind, w, ax, az)) continue;
       this.born(pool.kind, slot, g, ax, az);
       placed++;
