@@ -13,18 +13,23 @@ export interface AiFit {
   width: number;
   bottom: number;
   z: number;
+  /** How it takes the light (uniforms only, so every piece shares one shader): default lacquer. */
+  surface?: keyof typeof SURFACES;
 }
+
+/** Roughness and metalness per surface kind. */
+const SURFACES = { lacquer: [0.5, 0.15], cloth: [0.92, 0], metal: [0.42, 0.6], straw: [0.85, 0] } as const;
 
 /** Gear ids made with Pixal3D (`assets/gear/<id>.glb`, built by tools/build-ai-gear.mjs) and their fit. */
 export const AI_GEAR: Readonly<Record<string, AiFit>> = {
   // Start values from the code hats' bind-space boxes (width, lowest point, centre depth), then tuned on the look sheet.
-  'hat-pickel': { width: 0.29, bottom: 1.67, z: -0.02 }, // Pickelhaube des Hauptmanns
+  'hat-pickel': { width: 0.29, bottom: 1.67, z: -0.02, surface: 'lacquer' }, // Pickelhaube des Hauptmanns
   'hat-hard': { width: 0.29, bottom: 1.66, z: -0.005 }, // Bauhelm
   'hat-kiez': { width: 0.29, bottom: 1.66, z: -0.005 }, // Helm der Kiezwache
-  'hat-flatcap': { width: 0.27, bottom: 1.665, z: 0.014 }, // Schiebermütze
-  'hat-beanie': { width: 0.275, bottom: 1.65, z: -0.015 }, // Wollmütze
-  'hat-straw': { width: 0.47, bottom: 1.66, z: -0.008 }, // Strohhut
-  'hat-greathelm': { width: 0.27, bottom: 1.5, z: -0.012 }, // Topfhelm der Zitadelle (hides the hair)
+  'hat-flatcap': { width: 0.27, bottom: 1.665, z: 0.014, surface: 'cloth' }, // Schiebermütze
+  'hat-beanie': { width: 0.275, bottom: 1.65, z: -0.015, surface: 'cloth' }, // Wollmütze
+  'hat-straw': { width: 0.47, bottom: 1.66, z: -0.008, surface: 'straw' }, // Strohhut
+  'hat-greathelm': { width: 0.27, bottom: 1.5, z: -0.012, surface: 'metal' }, // Topfhelm der Zitadelle (hides the hair)
   'hat-gasmask': { width: 0.25, bottom: 1.5, z: 0.04 }, // Gasmaske
 };
 
@@ -85,6 +90,9 @@ export function aiGearMaterial(materials: Materials, ids: readonly string[]): Ma
   if (!byId) mats.set(materials, (byId = new Map()));
   const id = ids.find((i) => loaded.has(i)) ?? '';
   let m = byId.get(id);
-  if (!m) byId.set(id, (m = materials.surface({ map: loaded.get(id)?.map ?? placeholder, roughness: 0.55, metalness: 0.15, doubleSided: true })));
+  if (!m) {
+    const [roughness, metalness] = SURFACES[AI_GEAR[id]?.surface ?? 'lacquer'];
+    byId.set(id, (m = materials.surface({ map: loaded.get(id)?.map ?? placeholder, roughness, metalness, doubleSided: true })));
+  }
   return m;
 }
