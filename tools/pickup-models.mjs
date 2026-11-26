@@ -29,8 +29,8 @@ const MODELS = {
   hands: { reused: 'hands', rot: [0, 0, 0], size: 0.42, tris: 260 },
   feet: { reused: 'feet-turnsch', rot: [0, 90, 0], size: 0.44, tris: 260 },
   // Pixal3D props from the FLUX pictures (three-quarter view, standing as drawn).
-  talisman: { rot: [0, 0, 0], size: 0.36 },
-  ring: { rot: [0, 0, 0], size: 0.32 },
+  talisman: { rot: [-65, 0, 0], size: 0.56 },
+  ring: { rot: [-55, 0, 0], size: 0.32 },
   implant: { rot: [0, 0, 0], size: 0.36 },
   heal: { rot: [0, 0, 0], size: 0.36 },
   food: { rot: [0, 0, 0], size: 0.42 },
