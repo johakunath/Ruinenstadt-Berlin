@@ -15,6 +15,7 @@ import { moveFocus } from './focus';
 import { KEEPER_PORTRAIT, portraitUrl } from './portraits';
 import { uiIcon } from './ui-icons';
 import { activePad } from '../input/pad';
+import { closeOnTap, pollDt, scrollParent, stickScroll } from './drag-scroll';
 
 export type TabId = 'inv' | 'karte' | 'segen' | 'kodex';
 const TAB_NAME: Record<TabId, string> = { inv: 'Inventar', karte: 'Karte', segen: 'Segen', kodex: 'Kodex' };
@@ -89,6 +90,8 @@ export class Menu {
   readonly root = document.createElement('div');
   private readonly tabsEl = document.createElement('nav');
   private readonly resEl = document.createElement('div');
+  /** Last pad poll time, for the stick scroll speed. */
+  private stickLast = 0;
   private readonly bodies: Record<TabId, HTMLElement>;
   tab: TabId = 'inv';
   private segenSel: PerkId | null = null;
@@ -129,8 +132,8 @@ export class Menu {
     document.body.append(this.root);
     this.tabsEl.addEventListener('click', e => { const b = (e.target as Element).closest<HTMLElement>('[data-t]'); if (b) this.select(b.dataset.t as TabId); });
     this.bodies.segen.addEventListener('click', e => { const b = (e.target as Element).closest<HTMLElement>('[data-sg]'); if (b) { this.segenSel = b.dataset.sg as PerkId; this.renderTab(); this.bodies.segen.querySelector<HTMLElement>(`[data-sg="${b.dataset.sg}"]`)?.focus(); } });
-    // A tap beside the panel closes the menu (as the old map overlay did).
-    this.root.addEventListener('click', e => { if (e.target === this.root) this.close(); });
+    // A tap beside the panel closes the menu (as the old map overlay did); a drag that ends there does not.
+    closeOnTap(this.root, () => this.close());
     this.root.addEventListener('keydown', e => {
       // Tab moves focus and wraps inside the menu; [ ] switch tabs; arrow keys move like the pad.
       if (e.code === 'Tab') {
@@ -210,11 +213,19 @@ export class Menu {
   /** Pad: LB/RB tabs, B closes, A presses, D-pad and stick move to the nearest button in that direction. */
   pollPad(now: number): void {
     const pad = activePad();
+    // Steam Deck playtest 2026-11-26: the cog shows its pad button (Y) while a pad is there.
+    this.root.classList.toggle('pad', !!pad);
     if (!pad) { this.padDown = []; return; }
     const down = pad.buttons.map(b => b.pressed), prev = this.padDown, edge = (i: number): boolean => !!down[i] && !prev[i];
     this.padDown = down;
     if (!this.isOpen || this.host.blocked()) return;
     if (edge(1)) { this.close(); return; }
+    // Y opens Optionen: LB/RB only switch tabs, so the cog was out of the pad's reach.
+    if (edge(3)) { this.host.options(); return; }
+    const a = document.activeElement;
+    const dt = pollDt(now, this.stickLast);
+    this.stickLast = now;
+    stickScroll(scrollParent(a && this.root.contains(a) ? a : this.bodies[this.tab]) ?? scrollParent(this.bodies[this.tab]), pad.axes[3] ?? 0, dt);
     if (edge(4) || edge(5)) { this.step(edge(5) ? 1 : -1); return; }
     if (edge(0)) { const a = document.activeElement as HTMLElement | null; if (a && this.root.contains(a)) a.click(); else this.focusFirst(); return; }
     if (now < this.padNext) return;

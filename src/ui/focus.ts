@@ -1,6 +1,7 @@
 // U3: focus navigation shared by the start screen, the options screen and the pause menu.
 // Arrow keys, D-pad and stick move to the nearest control in that direction; A presses, B goes back.
 import { activePad } from '../input/pad';
+import { pollDt, scrollParent, stickScroll } from './drag-scroll';
 
 // SVG places on the title's network map count too (Codex review, PR #57: no pad path to them).
 const FOCUSABLE = 'button:not(:disabled),input,summary,svg g[role=button]:not(.lock)';
@@ -56,6 +57,7 @@ export function keyNav(root: HTMLElement, back: () => void): void {
 export class PadNav {
   private down: boolean[] = [];
   private next = 0;
+  private last = 0;
   constructor(private readonly root: HTMLElement, private readonly active: () => boolean, private readonly back?: () => void) {}
   reset(): void { this.down = Array.from({ length: 20 }, () => true); }
   poll(now: number): void {
@@ -66,6 +68,11 @@ export class PadNav {
     if (!this.active()) return;
     if (edge(1) && this.back) { this.back(); return; }
     if (edge(0)) { const a = document.activeElement as HTMLElement | null; if (a && this.root.contains(a) && a !== this.root) press(a); else controls(this.root)[0]?.focus(); return; }
+    // Right stick scrolls the screen (Steam Deck playtest 2026-11-26).
+    const f = document.activeElement;
+    const dt = pollDt(now, this.last);
+    this.last = now;
+    stickScroll(scrollParent(f && this.root.contains(f) ? f : this.root) ?? scrollParent(this.root), pad.axes[3] ?? 0, dt);
     if (now < this.next) return;
     const ax = pad.axes[0] ?? 0, ay = pad.axes[1] ?? 0;
     const dx = down[14] || ax < -.5 ? -1 : down[15] || ax > .5 ? 1 : 0, dy = down[12] || ay < -.5 ? -1 : down[13] || ay > .5 ? 1 : 0;

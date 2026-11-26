@@ -261,7 +261,7 @@ describe('M16b side passages (variant A)', () => {
     const cache = m.fixedProps.find(p => p.kind === 'crates')!;
     expect(near(cache.x + 2, cache.z - 2) || near(cache.x - 2, cache.z + 2), 'cache').toBe(true);
     for (const e of m.encounters) for (const g of m.guards!) expect(Math.hypot(e.x - g.x, e.z - g.z)).toBeGreaterThan(e.r + 8);
-  });
+  }, 20_000); // builds the whole Köpenick map: about 2 s alone locally, over 5 s on a busy CI runner (PR #112)
 });
 
 describe('M11d street profiles', () => {

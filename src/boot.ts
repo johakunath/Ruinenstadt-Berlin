@@ -17,8 +17,10 @@ import { pickIsHere, selectHere, titleNet } from './ui/title-net';
 import { startScreen } from './ui/start';
 import { initAccount } from './ui/account';
 import { activeSlot, slotKey } from './save';
+import { initDragScroll } from './ui/drag-scroll';
 
 
+initDragScroll();
 const start = startScreen();
 const options = optionsScreen();
 bindSettings();

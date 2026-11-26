@@ -573,7 +573,7 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 #blessings { z-index: 30; background: radial-gradient(ellipse at center, rgba(40, 22, 8, 0.55), rgba(6, 12, 14, 0.9)); }
 .panel.bless { width: min(980px, 100%); padding: 22px 22px 16px; gap: 10px; background: linear-gradient(#1d1712, #120d0a); border-color: #050403; outline-color: rgba(239, 159, 39, 0.35); }
 .panel.bless h2 { color: #ef9f27; font-size: 24px; text-shadow: 0 0 18px rgba(239, 159, 39, 0.45); }
-.panel.bless .sub { margin: 0; font-size: 13px; opacity: 0.7; }
+.panel.bless .sub { margin: 0; font-size: 16px; opacity: 0.85; }
 #blessing-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 6px; }
 .pcard { position: relative; display: grid; grid-template-rows: auto auto auto 1fr auto; justify-items: center; gap: 5px; margin: 0; padding: 18px 14px 14px; min-height: 250px; text-align: center; color: var(--cream); font: inherit; cursor: pointer; border-radius: 8px; border: 2px solid #4a3c2e; border-top: 4px solid var(--fc); background: linear-gradient(170deg, color-mix(in srgb, var(--fc) 13%, #221a14), #17110d 62%); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5); animation: card-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; animation-delay: calc(var(--i) * 70ms); transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
 @keyframes card-in { from { opacity: 0; transform: translateY(26px) scale(0.94); } }
@@ -583,10 +583,10 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 .pcard .pfam { position: absolute; right: 8px; top: 7px; display: flex; gap: 4px; }
 .pcard .fam { width: 20px; height: 20px; opacity: 0.4; filter: grayscale(0.6); }
 .pcard .fam.on { opacity: 1; filter: drop-shadow(0 0 5px var(--fc)); }
-.prar { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #a3978a; }
-.pn { font: 700 21px/1.1 Georgia, 'Times New Roman', serif; letter-spacing: 0.03em; color: #f2c078; }
-.pd { font-size: 14px; line-height: 1.35; align-self: start; }
-.pl { font-size: 12px; color: #a3978a; }
+.prar { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #a3978a; }
+.pn { font: 700 24px/1.1 Georgia, 'Times New Roman', serif; letter-spacing: 0.03em; color: #f2c078; }
+.pd { font-size: 17px; line-height: 1.35; align-self: start; }
+.pl { font-size: 14px; color: #a3978a; }
 .pcard.fon .pl { color: var(--fc); }
 .pcard.ra { border-color: #7d9bff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), 0 0 20px rgba(125, 155, 255, 0.28); }
 .pcard.ra .prar { color: #7d9bff; }
@@ -612,7 +612,7 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
   #blessing-choices { gap: 8px; margin-top: 2px; }
   .pcard { min-height: 0; padding: 10px 8px 8px; gap: 2px; }
   .pcard .perk-icon { width: 42px; height: 42px; }
-  .pn { font-size: 15px; } .pd { font-size: 12px; } .prar { font-size: 9px; } .pl { font-size: 11px; }
+  .pn { font-size: 17px; } .pd { font-size: 14px; } .prar { font-size: 10px; } .pl { font-size: 12px; }
   .pcard .fam { width: 15px; height: 15px; }
   .held .perk-icon { width: 22px; height: 22px; }
   #bless-reroll { padding: 6px 10px; font-size: 12px; }
@@ -784,32 +784,33 @@ canvas.inv-portrait:focus-visible { outline: 2px solid var(--bone); outline-offs
 .inv-tab footer { min-height: 20px; color: var(--ember); font-size: 15px; }
 /* Segen tab (2D segenTab). */
 .segen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 14px; align-items: start; }
-.sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
-.menu-panel .sgb { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; font: 500 14px var(--f-ui); position: relative; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; color: var(--bone); }
+.sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 7px; }
+.menu-panel .sgb { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 5px; font: 500 16px var(--f-ui); position: relative; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; color: var(--bone); }
 .sgb.sel { border-color: var(--ember) !important; background: #2a1d12 !important; }
-.sgb .perk-icon { width: 46px; height: 46px; }
-.sgf { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; } .sgfam { width: 7px; height: 7px; border-radius: 50%; display: block; }
-.sgd { display: flex; gap: 2px; } .sgd i { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--ember); } .sgd i.f { background: var(--ember); }
+.sgb .perk-icon { width: 54px; height: 54px; }
+.sgdet { font-size: 17px; } .sgdet h3 { font-size: 21px; } .sgdet .sub, .sgdet .inv-hint { font-size: 15px; }
+.sgf { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; } .sgfam { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.sgd { display: flex; gap: 3px; } .sgd i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ember); } .sgd i.f { background: var(--ember); }
 /* Kodex: the 2D card list (`css/style.css` .box gap 14, .lbl, .cols2, .upg.kx, .kimg, .ksil, .kset). */
 .kodex { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .kodex .lbl { text-align: center; }
-.kodex .hint { font-size: 16px; margin: 0; }
+.kodex .hint { font-size: 18px; margin: 0; }
 .kodex .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .kx { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; padding: 12px 14px; }
-.kx .un { font-size: 20px; font-weight: 600; line-height: 1.2; }
-.kx .ud { font-size: 16px; color: var(--dim); line-height: 1.25; }
+.kx .un { font-size: 23px; font-weight: 600; line-height: 1.2; }
+.kx .ud { font-size: 18px; color: var(--dim); line-height: 1.3; }
 .kx .ok { color: var(--good); }
 /* Kodex › Funde (m16c). */
 .kf { display: grid; gap: 8px; background: var(--panel2d); border: 1px solid var(--edge); border-radius: 4px; padding: 12px 14px; }
-.kf .un { font-size: 20px; font-weight: 600; } .kf .ud { font-size: 16px; color: var(--dim); } .kf .ok { color: var(--good); }
+.kf .un { font-size: 23px; font-weight: 600; } .kf .ud { font-size: 18px; color: var(--dim); } .kf .ok { color: var(--good); }
 .kf.dim .un { color: var(--dim); }
 .kfrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .kfr { width: 20px; height: 20px; border-radius: 50%; border: 2px dashed #4c453a; } .kfr.on { border: 2px solid #d9a940; background: rgba(217, 169, 64, .15); }
 .kx.kk { grid-template-columns: minmax(0, 1fr); padding: 8px 12px; } .kx.kk.dim { border-style: dashed; }
-.kimg { width: 64px; height: 64px; flex: none; border-radius: 4px; background: radial-gradient(circle at 50% 60%, #3a2c22, #120d0a 72%); border: 1px solid var(--ring, var(--edge)); display: grid; place-items: center; overflow: hidden; color: var(--ember); }
+.kimg { width: 76px; height: 76px; flex: none; border-radius: 4px; background: radial-gradient(circle at 50% 60%, #3a2c22, #120d0a 72%); border: 1px solid var(--ring, var(--edge)); display: grid; place-items: center; overflow: hidden; color: var(--ember); }
 .kimg[style] { box-shadow: inset 0 0 0 1px var(--ring), 0 0 8px color-mix(in srgb, var(--ring) 45%, transparent); }
 .kimg > img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.kimg > .kgly { width: 44px; height: 44px; }
+.kimg > .kgly { width: 52px; height: 52px; }
 .kdim > img, .kdim > .kgly { opacity: .25; filter: grayscale(1); }
 .ksil { position: relative; }
 .ksil > img, .ksil > .kgly { filter: brightness(0) opacity(.5); }
@@ -1214,3 +1215,6 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 @keyframes hg-flow { to { stroke-dashoffset: -5; } }
 @media (prefers-reduced-motion: reduce) { .hourglass, .hg-sand-top, .hg-sand-bot, .hg-stream { animation: none; } }
 #loadbox.failed { pointer-events: none; background: none; }
+/* Steam Deck playtest 2026-11-26: with a pad, the pause menu's cog shows its button (Y opens Optionen). */
+#menu #menu-opt { position: relative; }
+#menu.pad #menu-opt::after { content: 'Y'; position: absolute; right: -6px; bottom: -6px; min-width: 16px; padding: 1px 3px; border-radius: 4px; border: 1px solid #8a7a5e; background: rgba(6, 10, 12, 0.92); color: #f2d14b; font: 700 11px/1.2 system-ui, sans-serif; text-align: center; pointer-events: none; }
