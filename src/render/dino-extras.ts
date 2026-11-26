@@ -4,7 +4,8 @@
 // on the raptor's neck, raised rib bars on the flanks, claw scars on a thigh, the raptor's sickle claws.
 // Everything is built once per loaded GLB in the rest pose and merged into the body mesh. Each extra copies the
 // skin weights of the hide vertex under it, so it bends with the body; it shares the body's material, so the
-// extras cost no draw call (also none in the shadow pass), only triangles (raptor +~300, Rex +~300).
+// extras cost no draw call (also none in the shadow pass), only triangles (raptor 1,248 → 1,658, Rex 1,820 → 2,116),
+// and a few milliseconds of ray casts once at load.
 import { BufferAttribute, BufferGeometry, Color, DoubleSide, Matrix3, Matrix4, Mesh, MeshBasicMaterial, Raycaster, Vector3, type Object3D, type SkinnedMesh } from 'three';
 
 type Rgb = readonly [number, number, number];
@@ -38,7 +39,7 @@ function repaint(geo: BufferGeometry): void {
   col.needsUpdate = true;
 }
 
-interface Anchor { skin: [number, number, number, number]; weight: [number, number, number, number]; inv: Matrix4; normal: Matrix3; flip: boolean; bone: string }
+interface Anchor { skin: [number, number, number, number]; weight: [number, number, number, number]; inv: Matrix4; normal: Matrix3; flip: boolean }
 
 /** Adds the extras to the body of a loaded raptor or Rex scene (once per GLB; clones share the geometry). Returns the triangles added. */
 export function dressDino(scene: Object3D, kind: DinoKind): number {
@@ -86,7 +87,7 @@ export function dressDino(scene: Object3D, kind: DinoKind): number {
       for (let e = 0; e < 16; e++) m.elements[e]! += b.elements[e]! * w;
     }
     const full = new Matrix4().copy(mesh.matrixWorld).multiply(mesh.bindMatrixInverse).multiply(m).multiply(mesh.bindMatrix);
-    return { skin, weight, inv: full.clone().invert(), normal: new Matrix3().setFromMatrix4(full).transpose(), flip: full.determinant() < 0, bone: mainBone(i) };
+    return { skin, weight, inv: full.clone().invert(), normal: new Matrix3().setFromMatrix4(full).transpose(), flip: full.determinant() < 0 };
   };
   const nearest = (p: Vector3, ok: (bone: string) => boolean = () => true): number => {
     let best = -1, d = Infinity;
@@ -279,5 +280,6 @@ export function dressDino(scene: Object3D, kind: DinoKind): number {
   geo.computeBoundingSphere();
   hitGeo.setIndex(null);
   hitGeo.dispose();
+  (hitMesh.material as MeshBasicMaterial).dispose();
   return tris.length;
 }

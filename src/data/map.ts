@@ -11,7 +11,7 @@ import type { BreakableDef } from '../sim/breakables';
 import { restAt, type RestArea } from '../sim/rest';
 import { onFerryPier } from '../sim/ferry';
 import { snapReachable } from '../sim/reach';
-import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
+import { EDGE_FRONT, NEST_RADIUS, propCollider, type Prop } from './courtyard';
 import { lotContent, SPECIAL_SHARE, SPECIAL_SIZE, type LotContent, type Pier, type SpecialKind } from './lots';
 import { spatiColliders, spatiProps, spatiRest } from './spati';
 import { kneipeColliders } from './kneipe';
@@ -638,6 +638,8 @@ export function heightAt(m: MapDef, x: number, z: number): number {
 export const LAMP_SPACING = { main: 24, side: 20 } as const;
 /** Distance of a lamp from the street edge. */
 export const LAMP_CURB = 0.45;
+/** P17: area trees keep their trunk this far outside a fixed nest's footprint, so the nest shows from the game camera. */
+export const NEST_TREE_CLEAR = 2.2;
 /** Share of street lamps that still work. */
 const LAMP_LIT = 0.3;
 /** Two lamps of crossing streets never stand closer than this. */
@@ -1080,7 +1082,11 @@ export function generateLots(m: MapDef): Lot[] {
       const w = rng.range(3.5, 6.5);
       if (!occ.free(px, pz, 0, 1, 1)) continue;
       occ.take(px, pz, 0, 1, 1);
-      lots.push({ kind: 'tree', x: px, z: pz, rot: rng.range(0, Math.PI * 2), w, d: w, floors: 0, seed: rng.int(1e6), jungle: area?.jungle });
+      const tree: Lot = { kind: 'tree', x: px, z: pz, rot: rng.range(0, Math.PI * 2), w, d: w, floors: 0, seed: rng.int(1e6), jungle: area?.jungle };
+      // P17: no trunk in or crown right over a fixed nest. Decided after every draw, so the random stream (and every
+      // other lot) stays as it was; only this tree is left out.
+      if (m.fixedProps.some((p) => p.kind === 'nest' && Math.hypot(px - p.x, pz - p.z) < NEST_RADIUS * p.size + NEST_TREE_CLEAR)) continue;
+      lots.push(tree);
     }
   }
   return lots;

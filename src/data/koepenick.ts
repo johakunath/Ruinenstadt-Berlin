@@ -40,9 +40,10 @@ export function waveTier(g: number, bosses: BossKind[] = [], zone = g < 6 ? 0 : 
   };
 }
 
-/** A boss fight: the boss plus a few adds of the zone's last tier (no elites beside a boss). */
+/** A boss fight: the boss plus a few adds of the zone's last tier (no elites beside a boss, P17: no Kompso pack, which would bring three bodies for one add). */
 function bossWave(g: number, boss: BossKind, adds: number, zone: number): WaveDef {
-  return { ...waveTier(g, [boss], zone), count: adds, maxAlive: 4, elite: 0 };
+  const w = waveTier(g, [boss], zone);
+  return { ...w, mix: { ...w.mix, kompso: 0 }, count: adds, maxAlive: 4, elite: 0 };
 }
 
 const NORMAL_HEAL = 0.3;

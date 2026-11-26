@@ -137,7 +137,8 @@ export function creditScrap(sim: Sim, amount: number, x: number, z: number, from
 
 // 2D drop chances and Schrott by role (ghoul, raser, brute, spitter, crow; M12c kabel 0.12, bass 0.45, drones as crows; WP5 bomb 0.22, shield 0.4, howl 0.45).
 // M16 (spec m12d): Scherbentänzerin and Souffleur drop Stoff at the Kabelghul's chance, the Logenbrecher Metall at the Boxenkopf's.
-const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, kompso: 0.05, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15, uhrwerk: 0.4, wurzler: 0.3, kernspeier: 0.2, zuender: 0.22, schild: 0.4, heuler: 0.45, scherbe: 0.12, souffleur: 0.12, loge: 0.45, teeifrit: 0.24, baklava: 0.4, teppich: 0.15 };
+// P17: a Kompso pack (three bodies, one wave unit) drops about as much as one raptor.
+const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, kompso: 0.1, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15, uhrwerk: 0.4, wurzler: 0.3, kernspeier: 0.2, zuender: 0.22, schild: 0.4, heuler: 0.45, scherbe: 0.12, souffleur: 0.12, loge: 0.45, teeifrit: 0.24, baklava: 0.4, teppich: 0.15 };
 const SCRAP: Partial<Record<EnemyKind, number>> = {
   walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, kompso: 1, crow: 1, rat: 0, kabel: 1, bass: 4, drone: 1, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70, schaffner: 60,
   grenzer: 40, brandmeister: 40, rattenmutter: 40, spreehexe: 70, tuersteher: 40, wachdrohne: 40, dirigent: 40, bassprediger: 70,
