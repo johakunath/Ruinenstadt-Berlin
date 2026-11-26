@@ -41,15 +41,20 @@ export function makeLotGroundMats(materials: Materials, dirt: Texture, active: b
   return { gravel, marking };
 }
 
-/** Multiply the woven albedo into the existing colours, then restore their authored torn edges. */
-function weatherCloth(material: LitMaterial, albedo: CanvasImageSource, anisotropy: number): void {
+/**
+ * Multiply the woven albedo into the existing colours, then restore their authored torn edges. `flipped`: the albedo
+ * is stored bottom row first (an ImageBitmap decoded for `flipY = false`), so it is drawn mirrored back.
+ */
+function weatherCloth(material: LitMaterial, albedo: CanvasImageSource, anisotropy: number, flipped: boolean): void {
   const fallback = material.map;
   if (!fallback || !(fallback.image instanceof HTMLCanvasElement)) return;
   const source = fallback.image;
   const [c, ctx] = canvas(source.width, source.height);
   ctx.drawImage(source, 0, 0);
   ctx.globalCompositeOperation = 'multiply';
+  if (flipped) ctx.setTransform(1, 0, 0, -1, 0, c.height);
   ctx.drawImage(albedo, 0, 0, c.width, c.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'destination-in';
   ctx.drawImage(source, 0, 0);
   material.map = toTexture(c, false, anisotropy);
@@ -64,9 +69,10 @@ export function loadLotPropTextures(mats: Mats): void {
   swapPaintedMap([mats.stoneMoss], urls.stone, anisotropy);
   swapPaintedMap([mats.brickRuin], urls.ruin, anisotropy, true, performance ? 512 : 1024);
   loadPaintedTexture(urls.tarp, anisotropy, (image: Texture) => {
-    if (image.image instanceof HTMLImageElement) {
-      weatherCloth(mats.tarp, image.image, anisotropy);
-      weatherCloth(mats.stallTarp, image.image, anisotropy);
+    const albedo = image.image as CanvasImageSource | null;
+    if (albedo) {
+      weatherCloth(mats.tarp, albedo, anisotropy, !image.flipY);
+      weatherCloth(mats.stallTarp, albedo, anisotropy, !image.flipY);
     }
     image.dispose();
   });

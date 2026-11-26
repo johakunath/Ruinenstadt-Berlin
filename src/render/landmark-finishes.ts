@@ -19,6 +19,7 @@ export function makeLandmarkFinishes(materials: Materials, slate: ReturnType<Mat
     [finishes.granite, new URL('../../assets/textures/landmarks/forum-granite.webp', import.meta.url).href],
     [finishes.fiberglass, new URL('../../assets/textures/landmarks/fiberglass.webp', import.meta.url).href],
   ] as const;
-  for (const [mat, url] of sources) swapPaintedMap([mat], url, o.anisotropy);
+  // P47: all five are tiling surfaces, so they opt into the profile's cap (512 px on Leistung).
+  for (const [mat, url] of sources) swapPaintedMap([mat], url, o.anisotropy, true, materials.profile.tileEdge);
   return finishes;
 }

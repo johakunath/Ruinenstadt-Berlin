@@ -37,3 +37,12 @@ export function tramOffsetPoint(points: readonly Pt[], index: number, offset: nu
   const scale = Math.min(2, 1 / Math.max(0.001, mx * outgoing[1] - mz * outgoing[0]));
   return [p[0] + mx * offset * scale, p[1] + mz * offset * scale];
 }
+
+/**
+ * T1b: rail heads at roughness 0.5; at 0.34 (with metalness 0.6 and bloom) they blew out to a white streak near
+ * lamps. `?rails=old` shows the look before for a side by side; any other value or none is the new one.
+ * Charlottenburg keeps 0.34: there the shared `railSteel` is the Schloss mirrors and chandelier, and no rails.
+ */
+export function railRoughness(search: string, district?: string): number {
+  return district === 'charlottenburg' || new URLSearchParams(search).get('rails') === 'old' ? 0.34 : 0.5;
+}
