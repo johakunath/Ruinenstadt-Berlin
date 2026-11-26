@@ -16,7 +16,7 @@ import type { Prop } from './courtyard';
 /**
  * Difficulty of normal wave number `g` (0 … 19 over the whole district) in `zone`. Each zone
  * teaches its own types one at a time (M12): Bahnhofsviertel Hetzer, then Speier, then Brocken;
- * Müggelberge adds Krähen; the Spreepark adds Raptoren. Elites from the fourth wave (2D chance).
+ * Müggelberge adds Krähen; the Spreepark adds Raptoren, then packs of three Kompsos (P17). Elites from the fourth wave (2D chance).
  */
 export function waveTier(g: number, bosses: BossKind[] = [], zone = g < 6 ? 0 : g < 13 ? 1 : 2): WaveDef {
   const mix: Partial<Record<EnemyKind, number>> = {
@@ -26,6 +26,8 @@ export function waveTier(g: number, bosses: BossKind[] = [], zone = g < 6 ? 0 : 
     brute: g < 4 ? 0 : 0.3 + g * 0.12,
     crow: zone === 1 ? 1.6 + (g - 6) * 0.15 : zone === 2 ? 0.6 : 0,
     raptor: zone === 2 ? 1.6 + (g - 13) * 0.4 : 0,
+    // P17: one weight unit is a pack of three; from the Flugfeld on, a little more each wave.
+    kompso: zone === 2 && g >= 15 ? 0.7 + (g - 15) * 0.15 : 0,
   };
   return {
     count: Math.round((5 + g * 0.45) * lateTier(g).count),
@@ -284,7 +286,10 @@ export function koepenickMap(scale = 1): MapDef {
       ...lane(streets.find(st => st.name === 'Kietzgasse')!, 'fence'),
       ...lane(streets.find(st => st.name === 'Hangarweg')!, 'bauzaun'),
       { kind: 'tram', x: tramA[0] + (tramB[0] - tramA[0]) * tramT + Math.cos(tramRot) * 1.5,
-      z: tramA[1] + (tramB[1] - tramA[1]) * tramT - Math.sin(tramRot) * 1.5, rot: tramRot, size: 1 }],
+      z: tramA[1] + (tramB[1] - tramA[1]) * tramT - Math.sin(tramRot) * 1.5, rot: tramRot, size: 1 },
+      // P17: dinosaur nests beside the statues (sauropod, triceratops, T-Rex) and below the Riesenrad platform,
+      // off the park path and outside the fight circles.
+      ...([[-104, -8, 0.4, 1], [-137, -24, 2.1, 1.1], [-133, 41, 4, 0.9], [-120, -48, 5.3, 1]] as const).map(([x, z, rot, size]): Prop => ({ kind: 'nest', x: x * s, z: z * s, rot, size }))],
     seed: 1906,
   };
 }

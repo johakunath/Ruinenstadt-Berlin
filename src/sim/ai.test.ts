@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BOSS, ENEMIES, NORMAL_HP, THREAT, type EnemyKind } from '../data/enemies';
 import { waveTier } from '../data/koepenick';
+import { DINO_BITE } from '../data/combat';
 import { ignite, killEnemy, knock, strike } from './combat';
 import { aliveCount, capped, makeElite, pickKind, spawnEnemy, spawnPack } from './enemies';
 import { fireShot, inZone, threatBy } from './threats';
@@ -265,6 +266,16 @@ describe('zones teach their types (Köpenick mix)', () => {
     expect(waveTier(12).mix.raptor).toBe(0);
     expect(waveTier(13).mix.raptor).toBeGreaterThan(0);
   });
+
+  it('P17: Kompso packs only in the Spreepark zone, from the Flugfeld on, and a little more each wave', () => {
+    for (let g = 0; g < 15; g++) expect(waveTier(g).mix.kompso ?? 0).toBe(0);
+    expect(waveTier(15).mix.kompso).toBeGreaterThan(0);
+    expect(waveTier(19).mix.kompso).toBeGreaterThan(waveTier(15).mix.kompso!);
+    // A small share: well below the raptors of the same wave (each unit is a pack of three).
+    for (const g of [15, 17, 19]) expect(waveTier(g).mix.kompso!).toBeLessThan(waveTier(g).mix.raptor! / 2);
+    // The tunnels reuse the tier at zone 0: no Kompsos there.
+    expect(waveTier(19, [], 0).mix.kompso).toBe(0);
+  });
 });
 
 describe('bosses (2D patterns)', () => {
@@ -388,6 +399,53 @@ describe('Xhain roster (M12b)', () => {
     }
     expect(side).toBeGreaterThan(0.15);
     expect(has(evs, 'playerHit')).toBe(true);
+  });
+
+  it('P17: the Kompso is a half-size raptor on the rat brain: a pack of three, weaker than a Hetzer, faster than a rat, never elite', () => {
+    const k = ENEMIES.kompso, r = ENEMIES.raptor, h = ENEMIES.runner, rat = ENEMIES.rat;
+    expect([k.body, k.ai, k.res, k.classes]).toEqual(['raptor', 'rat', r.res, ['tiere']]);
+    expect(k.scale).toBe(r.scale / 2);
+    expect(k.hp).toBeLessThan(h.hp);
+    expect(k.hp).toBeGreaterThan(rat.hp);
+    expect(k.damage).toBeLessThan(h.damage);
+    expect(k.speed).toBeGreaterThan(rat.speed);
+    expect(k.radius).toBeLessThan(r.radius * 0.6);
+    // A quick snap: the wind-up is the rat's, shorter than the raptor's.
+    expect(k.windup).toBeLessThanOrEqual(rat.windup);
+    expect(k.windup).toBeLessThan(r.windup);
+    expect(k.weight).toBe(0);
+    expect(k.pack).toBe(3);
+    const s = fresh();
+    const lead = spawnPack(s, s.player.x, s.player.z + 6, 'kompso');
+    expect(s.enemies.filter((q) => q.kind === 'kompso')).toHaveLength(3);
+    for (const q of s.enemies) expect(Math.hypot(q.x - lead.x, q.z - lead.z)).toBeLessThan(1.2);
+    makeElite(s, lead, 'brennend');
+    expect(lead.elite).toBeUndefined();
+    // Its bite on the raptor's Attack clip (0.83 s): the wind-up ends inside the measured lunge (0.27 to 0.37 s), the
+    // active frames end at the furthest reach (0.40 s), before the raptor's long bite would.
+    const b = DINO_BITE.kompso;
+    expect(b.hit).toBeGreaterThanOrEqual(0.27);
+    expect(b.hit).toBeLessThanOrEqual(0.37);
+    expect(b.hit + b.swipe).toBeCloseTo(0.4, 2);
+    expect(b.hit + b.swipe).toBeLessThan(DINO_BITE.raptor.hit + DINO_BITE.raptor.swipe);
+  });
+
+  it('P17: a Kompso zig-zags in and bites, but only from its own short range', () => {
+    const s = fresh();
+    const e = put(s, 'kompso', 0, 9);
+    let side = 0;
+    const evs: SimEvent[] = [];
+    for (let i = 0; i < 180; i++) {
+      evs.push(...run(s, 1 / 60));
+      if (Math.hypot(e.x - s.player.x, e.z - s.player.z) > 2) side = Math.max(side, Math.abs(e.x - s.player.x));
+    }
+    expect(side).toBeGreaterThan(0.15);
+    expect(has(evs, 'playerHit')).toBe(true);
+    // Held 1.3 m away (past its 0.95 m range), it never starts a bite.
+    const far = fresh();
+    const f = put(far, 'kompso', 0, 1.3);
+    f.def = { ...f.def, speed: 0 };
+    expect(has(run(far, 3), 'playerHit')).toBe(false);
   });
 
   it('Der Grenzer fires a Feuerstoß and five-shot volleys, calls two Hetzer with „Alarm!“ and keeps his distance', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { colliderDistance } from '../sim/collide';
 import { koepenickMap } from './koepenick';
-import { EDGE_FRONT, propCollider, type Prop } from './courtyard';
+import { EDGE_FRONT, NEST_RADIUS, propCollider, type Prop } from './courtyard';
 import { PLAYER } from './combat';
 import { EDGE_CLEAR, edgeBackdrop, edgeDist, edgeRuns, edgeStyleAt, generateLots, generateProps, isWater, landmarkColliders, LAMP_CURB, LAMP_SPACING, LIGHT_PROPS, lightCover, lineDist, mapLevel, onBridge, SAME_KIND_GAP, sidePt, streetDist } from './map';
 
@@ -411,6 +411,34 @@ describe('M11d closed map edge (step 4)', () => {
           expect(items.some((k) => Math.hypot(k.x - x, k.z - z) < 12), `${r.kind} ${x.toFixed(0)},${z.toFixed(0)}`).toBe(true);
         }
       }
+    });
+  }
+});
+
+describe('P17 nests', () => {
+  for (const scale of [1, 1.3]) {
+    it(`three or four in the Spreepark near the statues, off streets, fights, landmarks and water, kept with an r 1 footprint (scale ${scale})`, () => {
+      const m = koepenickMap(scale), lots = generateLots(m), props = generateProps(m, lots);
+      const nests = m.fixedProps.filter((p) => p.kind === 'nest');
+      expect(nests.length).toBeGreaterThanOrEqual(3);
+      expect(nests.length).toBeLessThanOrEqual(4);
+      const statues = m.landmarks.filter((l) => l.kind === 'dino');
+      for (const n of nests) {
+        const at = `${n.x.toFixed(0)},${n.z.toFixed(0)}`;
+        const r = NEST_RADIUS * n.size;
+        expect(propCollider(n)).toEqual({ kind: 'circle', x: n.x, z: n.z, r });
+        expect(r).toBeGreaterThan(0.85);
+        expect(r).toBeLessThan(1.2);
+        expect(props.includes(n), at).toBe(true);
+        expect(isWater(m, n.x, n.z), at).toBe(false);
+        const sd = streetDist(m, n.x, n.z);
+        expect(sd.d, `${at} on ${sd.street?.name}`).toBeGreaterThan(r + 1);
+        for (const e of m.encounters) expect(Math.hypot(n.x - e.x, n.z - e.z), `${at} in ${e.id}`).toBeGreaterThan(e.r + r);
+        for (const l of m.landmarks) expect(Math.hypot(n.x - l.x, n.z - l.z), `${at} on ${l.kind}`).toBeGreaterThan(Math.hypot(l.hx, l.hz) + r);
+      }
+      // Most stand beside a statue (within 14 m of one, scaled); the last one may sit by the Riesenrad.
+      const near = nests.filter((n) => statues.some((l) => Math.hypot(n.x - l.x, n.z - l.z) < 14 * scale));
+      expect(near.length).toBeGreaterThanOrEqual(3);
     });
   }
 });

@@ -528,7 +528,7 @@ export class GameRenderer {
       view.update(e, alpha, dt, frozen, skip, e.mirrorOf !== undefined ? sim.enemies.find((q) => q.id === e.mirrorOf) : undefined);
       if (e.state !== 'dead') {
         const b = e.def.body;
-        live.push({ root: view.root, size: b === 'rex' ? 2.4 : b === 'raptor' ? 1.1 : b === 'crow' ? 0.6 : b === 'rat' ? 0.35 : b === 'drone' ? (e.def.boss ? 1 : 0.4) : e.def.scale, d: Math.hypot(e.x - p.x, e.z - p.z) });
+        live.push({ root: view.root, size: b === 'rex' ? 2.4 : b === 'raptor' ? 1.1 * e.def.scale : b === 'crow' ? 0.6 : b === 'rat' ? 0.35 : b === 'drone' ? (e.def.boss ? 1 : 0.4) : e.def.scale, d: Math.hypot(e.x - p.x, e.z - p.z) });
       }
     }
     live.sort((a, b) => a.d - b.d);
