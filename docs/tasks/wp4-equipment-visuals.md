@@ -549,3 +549,9 @@ Johannes, 2026-11-19: no painted item icons any more.
 - Default until Johannes says otherwise: every hat, helmet and mask as a Pixal3D piece on the `Head` bone, fitted to the code hat's bind-space box, AI hats in one shared atlas and a fourth gear slot; legendary and set armors plus one signature coat per district as W8 outfits on the hero skeleton (head and hair stay the hero's). Gloves and boots stay code. Prove one hat (Pickelhaube) end to end first.
 - Builders paused with uncommitted work in `.claude/worktrees/agent-*` (animals, dinos 2–4, pickups G2, legendary FX G3, T1b/P47); the trade screen phase 1 is committed on `worktree-agent-a97916d18b562ba86` (mockups A, B, C; recommendation C). Resume at most two at a time (`docs/workflow.md` › Token budget).
 
+## State 2026-11-26 evening (Opus 5.5, branch finish-visuals, not pushed)
+- Merged: P18 animals, M13b trade screen (layout C), P17 dinos 2–4, T1b and P47; head lamp (step 5b); AI hats W9 (Pickelhaube, Bauhelm, Kiezwache, Strohhut, Schiebermütze; fit levelled and boxed like the code hats); AI outfits W10 (Ritter, Arbeitsmantel, Lederjacke, Blaumann, Kabelmantel).
+- Running locally (no agent): `assets-src/ai/outfits/build.sh spaeti:1 panzer:1 rattenmantel:1 weste-kiez:1 mantel-spree:1` writes `assets/gear/outfit-*.glb` (check each on the look sheet against `?aigear=0`, then commit); FLUX for the icon props (`assets-src/ai/props/flux.sh`). Still to do: kette-zit and mantel-tunnel pictures and builds; Pixal3D for the 17 icon props, `PAGES=props node tools/item-icons.mjs`, then `PAGES=wear` for the hat and armor icons.
+- Paused builders with work in their worktrees: legendary FX step 5 (G3 variants), pickups step 3 (G2 variants). Resume one or two at a time.
+- Before the PR: full `npm run check` on an idle PC, e2e, review, equipment-pipeline rows for W9/W10, CLAUDE.md URL options (`?lamp`, `?aigear`, `?rails`, `?ground`).
+
