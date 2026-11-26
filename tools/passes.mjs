@@ -32,6 +32,8 @@ await page.addInitScript((fake60) => {
 }, FRAMES > 1);
 await page.goto(`http://localhost:${process.env.PORT ?? 5173}/?` + query, { waitUntil: 'load' });
 await page.waitForFunction(() => document.getElementById('loading')?.hidden === true, null, { timeout: 120000 });
+// The renderer exists (software GL takes about 30 s to build and compile it).
+await page.waitForFunction(() => window.__game?.perf() != null, null, { timeout: 180000 });
 await page.waitForTimeout(3000);
 const record = (n) => page.evaluate((n) => new Promise((res) => {
   const g = window.__gl, frames = [];

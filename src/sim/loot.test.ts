@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/progression';
 import { describe, expect, it } from 'vitest';
 import { BAG_SIZE, collectItem } from './inventory';
 import { makeItem } from './items';
-import { FIRST_KOEPENICK, killDrops, lootContext, lootLevel, pityWeapon, spawnDrop, TUNNEL_ITEMS, updateDrops, WEAPON_PITY_LAG } from './loot';
+import { FIRST_KOEPENICK, killDrops, LOOT, lootContext, lootLevel, pityWeapon, spawnDebugDrops, spawnDrop, TUNNEL_ITEMS, updateDrops, WEAPON_PITY_LAG } from './loot';
 import { Rng } from './math';
 import { Level, WalkGrid } from './level';
 import { createSim, stepSim } from './sim';
@@ -19,6 +19,27 @@ function itemDrop(sim: Sim, x: number, z: number) {
 function land(sim: Sim, ticks = 60): void {
   for (let i = 0; i < ticks; i++) updateDrops(sim);
 }
+
+describe('debug drops (?drops=N, WP4 step 3)', () => {
+  it('lays N landed drops outside the pickup reach, items with fresh ids, without drawing random numbers', () => {
+    const sim = flat();
+    const before = sim.rng.next();
+    const again = flat();
+    const out = spawnDebugDrops(again, 20);
+    expect(out).toHaveLength(20);
+    expect(again.drops).toHaveLength(20);
+    expect(again.rng.next()).toBe(before);
+    for (const d of out) {
+      expect(d.landed).toBe(true);
+      expect(Math.hypot(d.x - again.player.x, d.z - again.player.z)).toBeGreaterThan(LOOT.pickupRadius * 1.5);
+    }
+    const ids = out.flatMap((d) => (d.content.kind === 'item' ? [d.content.item.id] : []));
+    expect(new Set(ids).size).toBe(ids.length);
+    // Nothing is picked up while the hero stands still.
+    land(again, 30);
+    expect(again.drops).toHaveLength(20);
+  });
+});
 
 describe('kill drops', () => {
   it('tunnels drop fewer items (playtest 2026-11-20)', () => {

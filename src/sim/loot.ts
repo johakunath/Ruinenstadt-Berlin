@@ -10,6 +10,7 @@ import { collectItem, BAG_SIZE } from './inventory';
 import { isUpgrade, lootItem, makeItem, makeTelespargel, type Item } from './items';
 import type { Breakable } from './breakables';
 import { DT, type Enemy, type Sim } from './types';
+import { DEBUG_DROPS, PICKUP_SAMPLES } from '../data/pickups';
 import { addConsumable, CONSUMABLE } from './abilities';
 import { healPlayer } from './heal';
 import { pk } from './combat';
@@ -124,6 +125,29 @@ export function spawnDrop(sim: Sim, x: number, z: number, content: DropContent, 
   sim.events.push({ type: 'drop', id: d.id, x, z, rarity, set: content.kind === 'item' && !!content.item.set });
   if (rarity >= 3) sim.events.push({ type: 'legendary', x, z });
   return d;
+}
+
+/**
+ * Debug (`?drops=N`, WP4 step 3 proof): N drops already lying round the hero, `DEBUG_DROPS` in order (the first 12 mix
+ * every rarity and model group), on two rings outside the pickup reach. Items get fresh ids; no random numbers drawn.
+ */
+export function spawnDebugDrops(sim: Sim, n: number): Drop[] {
+  const out: Drop[] = [];
+  const p = sim.player, ctx = lootContext(sim);
+  for (let i = 0; i < n; i++) {
+    const [model, rarity] = DEBUG_DROPS[i % DEBUG_DROPS.length]!;
+    const content = PICKUP_SAMPLES[model](rarity);
+    if (content.kind === 'item') content.item.id = ctx.itemId = (ctx.itemId ?? 0) + 1;
+    // Inner ring of 12 at 2.6 m, then rings 1.4 m further out; a blocked spot moves outwards.
+    const ring = i < 12 ? 0 : 1 + Math.floor((i - 12) / 16), per = ring === 0 ? 12 : 16;
+    const a = ((i < 12 ? i : (i - 12) % 16) / per) * Math.PI * 2 + ring * 0.2;
+    let r = 2.6 + 1.4 * ring;
+    while (r < 8 && !free(sim, p.x + Math.sin(a) * r, p.z + Math.cos(a) * r)) r += 0.5;
+    const d: Drop = { id: sim.nextId++, x: p.x + Math.sin(a) * r, z: p.z + Math.cos(a) * r, vx: 0, vz: 0, h: 0, vh: 0, t: 0, landed: true, content };
+    sim.drops.push(d);
+    out.push(d);
+  }
+  return out;
 }
 
 const spread = (sim: Sim, m: number): number => sim.rng.range(-m, m);
