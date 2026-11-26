@@ -16,7 +16,7 @@ const old = {
 };
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const places = [[10, -20], [130, -120]];
+const places = [[-10.5, -20], [130, -120]];
 try {
   for (const profile of ['Qualität', 'Leistung']) {
     const shots = [];
