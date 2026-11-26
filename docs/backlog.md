@@ -16,7 +16,6 @@ Still to merge from the 2D `BACKLOG.md`, each when its migration step starts, no
 | 25, 33 | Meals and ingredients, garden | M13 |
 | 26, 36 | Attachment follow-ups, weapons by crafting quests | M13 |
 | 28 | Line of sight | Not planned |
-| 38 | Daggers and dual wield: options and recommendation in `docs/tasks/wp4-equipment-visuals.md` › D6 | WP4 step 6 |
 | 41 | Quests | After M13 |
 
 | # | Item | Source | Earliest |

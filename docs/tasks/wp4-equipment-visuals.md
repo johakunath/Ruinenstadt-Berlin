@@ -151,7 +151,7 @@ One PR per step (review rule: one Codex review per PR). Steps 1 and 2 touch diff
 | G1 | 1, 2 | Routine: build, show, continue | Sheets: every weapon next to its icon; every look front and back, doll and game camera |
 | G2 | 3 | **Choice before the build** | Mockup, three variants of a pickup: A natural colours on the rarity ring and beam (recommended, slight emissive in rarity colour); B model tinted in the rarity colour like today's crystal; C small model above today's crystal |
 | G3 | 5 | **Choice before the rollout** | Look sheet on Fernsehturm-Splitter and Mantel des letzten Späti: A glow edge only; B glow edge and sparse particles (recommended); C B plus a ground aura |
-| G4 | 6 | **Design choice** | D6 table; A can be built without waiting |
+| G4 | 6 | **Decided: skip** (Johannes, 2026-11-26: no daggers or dual wield; step 6 dropped) | D6 table |
 | G5 | 2 | After the sheet | Rings: keep all or only legendary and set |
 | G6 | 2 | After the sheet | Jacket with sleeves and poncho as Blender pieces: yes or leave |
 

@@ -2,7 +2,7 @@
 
 Decided by Johannes on 2026-11-22. **Local models come first** for texture images, icons, reference images and static 3D props. Codex image generation is the fallback: use it when the local result does not satisfy or a job does not work locally (for example sign atlases with a lot of text). This supersedes the "Codex only" texture rule of 2026-11-16 in `docs/asset-pipeline.md`; that file keeps the style, technical and integration rules, which apply unchanged to local images.
 
-**Codex paused (Johannes, 2026-11-23):** there is no Codex fallback for now. Where the table says Codex, do a second local round (other prompt, seed or reference image); if that still fails, keep the code-painted placeholder and note it in the task file. Text-heavy sign atlases are painted in code (canvas text in `src/render`).
+**Codex last resort (Johannes, 2026-11-26):** use Codex only for what local models, code and Blender really cannot do; use Pixal3D wherever a rigid 3D piece is needed. Earlier rule, **Codex paused (2026-11-23):** there is no Codex fallback for now. Where the table says Codex, do a second local round (other prompt, seed or reference image); if that still fails, keep the code-painted placeholder and note it in the task file. Text-heavy sign atlases are painted in code (canvas text in `src/render`).
 
 Whoever drives this (Claude on the PC, or Johannes) follows the standard workflow for the asset group below. When a step goes differently than written, update this file in the same PR (a short line under Lessons).
 

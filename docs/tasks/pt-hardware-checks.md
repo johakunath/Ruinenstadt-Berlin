@@ -10,6 +10,8 @@ Cloud browsers have no real GPU: counts of draw calls and triangles are valid th
 
 ## Playtest
 
+Johannes, 2026-11-26: he plays everything in one go on the **Steam Deck** once all open work is done (`docs/steam-deck.md`); until then sessions build on and do not wait for playtest answers.
+
 Built features nobody has played yet. Delete a row once Johannes has played it; findings go to `docs/backlog.md` or a task file.
 
 | Area | What to try | Task file |
