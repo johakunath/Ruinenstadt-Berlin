@@ -20,7 +20,8 @@ if (process.env.SCARE) {
     const p = window.__game.sim().player;
     const birds = globalThis.__critters.live().filter((a) => a.kind === 'pigeon' && !a.flying);
     const b = birds.sort((a, c) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(c.x - p.x, c.z - p.z))[0];
-    if (b) { p.x = p.px = b.x + 2.5; p.z = p.pz = b.z + 1.5; }
+    // Right beside the bird (its spot is free ground), so a push out of a collider still leaves her inside the alarm distance.
+    if (b) { p.x = p.px = b.x + 0.8; p.z = p.pz = b.z + 0.6; }
   });
   await page.waitForTimeout(+process.env.SCARE);
 }
