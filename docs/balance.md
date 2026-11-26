@@ -2,6 +2,21 @@
 
 Numbers from the bot (`node tools/balance.mjs`, M14). Rerun after every balance change and replace the tables. The bot is not Johannes: it attacks without pause and never gets lost, so real clear times are longer; its skill is fitted to him after a full playtest (backlog B9).
 
+## P17 Kompso packs (2026-11-26)
+
+`node tools/balance.mjs 5 normal johannes 1` (Köpenick), before = `main` at 44d9f48, after = P17 (Kompso packs of three in the Spreepark waves from the Flugfeld on, no Kompso as boss adds, a pack drops about one raptor's loot). The runs are the same up to the Müggelturm; after that the random stream differs, so compare the averages. A first pass with Kompso packs among the boss adds and 5 % item chance per body cost power (end 307) and two deaths at the Rathaus; both were changed.
+
+| | Before | After |
+|---|---|---|
+| Won | 5 of 5 | 5 of 5 |
+| Deaths per campaign | 0.6 | 0.6 |
+| Minutes per campaign | 19.7 | 18.5 |
+| Flugfeld Johannisthal (time, life taken) | 62 s, 38 % | 61 s, 23 % |
+| Dino-Wiese | 61 s, 24 % | 55 s, 11 % |
+| Riesenrad (Rex) | 51 s, 135 %, lowest life 40 % | 52 s, 140 %, lowest life 36 % |
+| Rathausplatz (Hauptmann) | 47 s, 94 %, 0 deaths | 44 s, 110 %, 0.2 deaths |
+| Power at the end | 377 | 337 |
+
 ## P45 fix: boss loot, pity weapon, Sultan life (2026-11-24)
 
 Johannes, 2026-11-24: "fix P45 with whatever you would recommend" (his OK replaces the Fable decision pass in the backlog row). `node tools/balance.mjs 3 normal good 1 --campaign` and the same with skill `johannes`, after three changes:

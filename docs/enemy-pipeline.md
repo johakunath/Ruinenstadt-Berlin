@@ -8,7 +8,7 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 
 | Map | Kinds | On zombie rig | Own GLB | Code-built |
 |---|---|---|---|---|
-| Köpenick | 10 (6 normal, 4 bosses) | 7 | 2 (raptor, rex) | 1 (crow) |
+| Köpenick | 11 (7 normal, 4 bosses) | 7 | 3 (raptor, rex, kompso on the raptor GLB) | 1 (crow) |
 | Xhain | 12 (8 normal, 4 bosses) | 10 | 0 | 2 (rat, crow) |
 | U-Bahn tunnels | 5 (4 normal, 1 boss) | 5 | 0 | 0 |
 | Alexanderplatz | 13 (9 normal, 4 bosses) | 7 | 2 (mech, mechBig) | 4 |
@@ -18,7 +18,8 @@ Legend: **female+gear** = `assets/characters/human2.glb` (H3: UBC Superhero_Fema
 | Fernsehturm (M17) | 1 new boss (Der Zeitwart) plus three echoes and existing kinds of every district | 1 (Zeitwart on `human1`) | 0 | 0 (the echo dial is a render mark) |
 | Camp | 0 enemies, 7 keepers | 0 | 7 on `hero.glb` | 0 |
 
-- Roster: 41 kinds (19 normal or special, 21 bosses, the Spiegelbild) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types. M16 (2026-11-19, `docs/tasks/m12d-charlottenburg-enemies.md`): three Charlottenburg kinds, four bosses and the reflection, all code gear (placeholder); 1920s dress for Schlurfer, Hetzer, Brocken and Speier on `revue` maps (render only). Kodex: 3D renders E19 to E21, X20 to X23 (2026-11-20); no boss voices yet.
+- P17 (2026-11-26, `docs/tasks/m11c-dinos.md`): raptor and Rex repainted toward the board (grey-brown rot) with code extras merged into the body mesh (`src/render/dino-extras.ts`: spine spikes, neck quills, brow horns, rib bars, claw scars, sickle claws; 0 draw calls, raptor 1,248 → 1,658 and Rex 1,820 → 2,116 triangles); the Kompso on the raptor body at half size. Kodex E11 and E12 rendered again, E25 new. [Before and after](proof/p17-dinos/enemies-before-after.jpg), [busts](proof/p17-dinos/kodex-busts.jpg).
+- Roster: 42 kinds (20 normal or special, 21 bosses, the Spiegelbild) plus the Brigadeghul (walker variant on Alexanderplatz), 4 elite modifiers, 10 NPC types. M16 (2026-11-19, `docs/tasks/m12d-charlottenburg-enemies.md`): three Charlottenburg kinds, four bosses and the reflection, all code gear (placeholder); 1920s dress for Schlurfer, Hetzer, Brocken and Speier on `revue` maps (render only). Kodex: 3D renders E19 to E21, X20 to X23 (2026-11-20); no boss voices yet.
 - M18 Wedding (2026-11-21, `docs/tasks/m12e-wedding-enemies.md`): three kinds, four bosses, all code gear (placeholder); the Zecher dress (stained shirt and a mug) for Schlurfer, Hetzer and Speier, a mug for the Brocken on `fest` maps (render only). Kodex: 3D renders E22 to E24, X24 to X27. Proof `docs/proof/m18-wedding/enemies/`. Draws per body (main pass in `tools/enemy-sheet.mjs`, no shadow): Tee-Ifrit 12 (Speier 6), Baklava-Brocken 15 (Schildträger 19), Teppichschlinger 7 (Krähe 19), Zugezogener 14 and Hauptgericht 15 (Feldwebel 17), Bauherr 17 (Koloss 18), Sultan 25 (Diva 20), a Zecher 7 (Schlurfer 4).
 - KA A2 (2026-11-25, `docs/tasks/kit-texture-atlas.md`): the shared kit atlas `assets/textures/enemies/kit.webp` paints the baked filo (layers on the sides, baked crust on the tops) and brass (tarnish) of every paint-mode body, 0 draw calls. Visible on the Baklava-Brocken and the Hauptgericht (Kodex E23 and X25 rendered again), soft tarnish on the samovar; brass on small parts (buttons, crowns) shows no change at game scale. A3 the same day: dirty veined ear skin on the Rattenmutter's ears and nose (Kodex X06 rendered again); mirror and tea glass tried and dropped (parts too small). [Proof](proof/t10-kit/).
 - Bodies: 22 kinds on the zombie rig (2 without own gear: walker, runner), 4 with an own GLB, 7 code-built. None is marked `final`.
@@ -39,11 +40,12 @@ Maps: K Köpenick, X Xhain, T tunnels, A Alexanderplatz, M Mitte, C Charlottenbu
 | Hetzer | runner | normal | K X T A M | zombie, longer arms (cyber on M) | ok | E09 (3D render) | yes | none | P1 |
 | Brocken | brute | normal, elite guard | K X T A M | zombie+gear: open orange high-vis vest with reflective bands, collar | ok | E02 (3D render) | yes | none | P1 |
 | Speier | spitter | special | K X T A M | zombie+gear: throat sac, boils, bloated belly | ok | E03 (3D render) | yes | none | P1 |
-| Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0) | ok | E11 (3D render) | yes | none | P1 |
+| Raptor | raptor | special | K | GLB `raptor.glb` (Quaternius CC0), P17 extras and repaint (`dino-extras.ts`) | ok | E11 (3D render) | yes | none | P1 |
+| Kompso | kompso | normal (packs of 3) | K | GLB `raptor.glb` at 0.5 with the P17 extras, 1.3 × head, rust-ochre tint | ok | E25 (3D render) | yes | hardware look check | P2 |
 | Krähe | crow | normal | K X A M | code (body, wings, beak) | ok | E05 (3D render) | yes | none | P1 |
 | Der Feldwebel | feldwebel | boss | K | H4 trial (2026-11-24): own skinned body `boss-feldwebel.glb` (FLUX + Pixal3D on the human skeleton, `docs/local-ai-assets.md` › W8), sabre from the rack; before: human+gear (WP5 H2, pick A) with Pickelhaube, greatcoat, epaulettes, moustache | ok, trial | X04 (3D render) | yes | hardware look check | P1 |
 | Der Turmwächter | waechter | boss | K | GLB `mech.glb` (Leela, CC0; H3 step 3): the Fernsehturm on her legs, head hull hidden, ribbed tapering shaft over torso and neck, steel sphere head with lit cyan window ring (flares in his volley and ring), red-white antenna with beacon, flickering cyan sparks; rust tint on the legs | ok | X03 (3D render) | yes | hardware look check (row 36) | P1 |
-| Der Rex | rex | boss | K | GLB `rex.glb` (Quaternius CC0) | ok | E12 (3D render) | yes | none | P1 |
+| Der Rex | rex | boss | K | GLB `rex.glb` (Quaternius CC0), P17 extras and repaint (`dino-extras.ts`) | ok | E12 (3D render) | yes | none | P1 |
 | Hauptmann von Köpenick | hauptmann | boss | K | H4 own body `boss-hauptmann.glb` (Pixal3D on the human skeleton, upright clips, 2026-11-25; still code: the sabre (rack)); before: human+gear (WP5 H2, pick B): Pickelhaube with gold eagle (no plume), white moustache, long officer's greatcoat, red cape, gold sash, epaulettes, sabre | ok | X01 (3D render) | yes | hardware look check | P1 |
 | Ratte | rat | normal (packs of 5) | X | code (body, ears, tail) | ok | E04 (3D render) | yes | none | P2 |
 | Der Grenzer | grenzer | boss | X | H4 own body `boss-grenzer.glb` (Pixal3D on the human skeleton, upright clips, 2026-11-25; still code: the rifle); before: human+gear: peaked cap, olive tunic, rifle; WP5 H2: pale grey skin, GDR stone-grey trousers | ok | X11 (3D render) | yes | silhouette review | P2 |
