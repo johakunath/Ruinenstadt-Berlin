@@ -3,6 +3,7 @@
 import { ALEX_WEATHER, CHARLOTTENBURG_WEATHER, KOEPENICK_WEATHER, MITTE_WEATHER, Weather, WEDDING_WEATHER, XHAIN_WEATHER } from './weather';
 import { HeroPreview, type PreviewState } from './hero-preview';
 import { heroLook } from '../data/hero-look';
+import { heroLight } from '../data/item-light';
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
   SphereGeometry, Vector3,
@@ -14,6 +15,8 @@ import { DT, type Sim, type SimEvent } from '../sim/types';
 import { FollowCamera } from './camera';
 import { LandmarkReveal } from './reveal';
 import { HeroView, loadCharacters, type CharacterAssets } from './characters';
+import { HeroLamp } from './hero-lamp';
+import { weaponModel } from './weapons';
 import { EnemyView, ownKind } from './enemies';
 import { ENEMY_LAYER } from './layers';
 import { threatShake } from './threats';
@@ -60,6 +63,8 @@ export interface RendererOptions {
   boxShadows?: boolean;
   /** `?cut=off` / `?cut=<meters>`: V1 B cutaway off, or the Hinterhof cut height. */
   cut?: 'off' | number;
+  /** `?lamp=real|fake`: head lamp as a spot light or as the haze and ground pool only (default: fake on Leistung). */
+  lamp?: 'real' | 'fake';
   /** M11d: show each landmark once with a camera swing. */
   reveal?: boolean;
   /** M16 step 3a: skies blended by the hero's zone (`zoneSkies`), null or left out for one sky. */
@@ -174,6 +179,8 @@ export class GameRenderer {
   private readonly debug: HitDebug | null;
   /** Soft fill that travels with the hero so the fight reads against the dark ground. */
   private readonly heroLight = new PointLight(0xffe2bd, 9, 7, 1.4);
+  /** WP4 step 5b: head beam and the glow of lamps carried by the hero (tints `heroLight`). */
+  private readonly lamp: HeroLamp;
   private time = 0;
   private height = 720;
   /** Sun shadow map rate (profile `shadowEvery`). */
@@ -212,6 +219,8 @@ export class GameRenderer {
     this.scene.add(world.group);
     this.hero = new HeroView(assets, materials);
     this.scene.add(this.hero.root, this.heroLight);
+    this.lamp = new HeroLamp(this.hero.root, (opts.lamp ?? (opts.profile.id === 'leistung' ? 'fake' : 'real')) === 'real');
+    this.scene.add(this.lamp.group);
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
     // M11c: weather per zone (Köpenick only; the tunnel stays dry).
@@ -503,7 +512,9 @@ export class GameRenderer {
     this.barriers?.update(sim, dt);
     const leap = leapHeight(sim, frozen ? 1 : alpha);
     const w = sim.equipment.w;
-    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', set: w?.set, element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look: heroLook(sim.equipment) });
+    const look = heroLook(sim.equipment);
+    this.hero.update(p, alpha, dt, frozen, { kind: sim.stats.kind, base: w?.base ?? 'rohr', set: w?.set, element: sim.stats.elements[0], spin: sim.abilities.spin, guard: sim.abilities.guard, leap, look });
+    this.lamp.update(heroLight(look, weaponModel(sim.stats.kind, w?.base ?? 'rohr', w?.set)), this.hero.root.rotation.y, groundY, this.sky.lamps, this.heroLight, dt);
 
     // Enemy views follow the sim list; bodies that left go back to the pool.
     const seen = new Set<number>();
@@ -548,7 +559,9 @@ export class GameRenderer {
     this.heroZ = pz;
     const reveal = this.reveal?.update(dt, px, pz, p.state !== 'dead', this.cam.camera.aspect) ?? null;
     this.cam.update(px, pz, p.state === 'dead' ? 0 : p.vx, p.state === 'dead' ? 0 : p.vz, dt, py, reveal);
-    this.heroLight.position.set(px, py + 2.8, pz + 1.6);
+    // A lamp or neon tube in hand (WP4 step 5b): the fill drops toward the hand so its colour reaches the ground.
+    const gw = this.lamp.glowWeight;
+    this.heroLight.position.set(px, py + 2.8 - 1.6 * gw, pz + 1.6 - 1.1 * gw);
     const shadows = this.shadowClock.tick();
     // During a reveal the light pool moves to the landmark and the fog thins, so it reads at distance.
     if (reveal && reveal.weight > 0.5) this.world.follow?.(reveal.look.x, reveal.look.z, shadows, true);

@@ -42,6 +42,7 @@ Changes: no global handover log (`pipeline/log.md` grew to 800 lines; notes now 
 - Codex runs the checks a task names (`npm run check`, the e2e test once). No broad tuning or measurement passes; Claude does those.
 - Docs stay short: tables and one-line rules, dated decisions, no repeated history. Superseded text is deleted, not kept next to the new rule. A task file over 20 KB gets its finished steps collapsed to one line each when the next step starts (2026-11-20).
 - Source files: split a file past about 80 KB along its sections when you next work in it; agents read whole files (backlog P36).
+- Parallel work on Johannes' PC (i7-8700, 6 cores, 32 GB, one RTX 4070; measured 2026-11-26: six builders plus ComfyUI held the CPU at 100 % with 2 GB RAM free and map tests timed out): at most two background agents besides the main session; only one of them at a time runs `npm run check`, Playwright/swiftshader screenshots or GPU jobs in ComfyUI; Vitest with `--maxWorkers=4` while anything else runs; screenshots in the in-app browser (real GPU) where possible.
 - Model choice: `CLAUDE.md` › Model routing (Fable 5.2 decides and plans, Opus 5.5 builds); repo specifics in plan-3d.md › Model.
 
 ## Lessons (session 2026-11-16/17)

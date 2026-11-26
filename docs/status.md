@@ -77,6 +77,10 @@ What is in the game now. Updated 2026-11-25. Next work: `docs/migration.md` › 
 - Optionen start with the Konto card of the title screen (name, code, sync state; Umbenennen, Code kopieren, Konto wechseln, Ausschalten). The game has a browser and home screen icon (the 2D ruin skyline).
 - Rescue and ambush events bring only enemy types the waves ahead already bring (no elite Brocken at leg 1 any more); a fight ends when its own enemies are down (captive guards and event enemies no longer hold it open); a death after the boss falls shows the victory screen, not a boss retry.
 
+## 2026-11-26
+
+- Light-giving items: the Stirnlampe des Tunnelläufers lights the way ahead (a warm beam and haze), lamps and neon tubes in hand (Leuchtröhre, Die Letzte Bestellung, the Tunnelläufer's Rohrzange) light up the ground around the hero.
+
 ## 2026-11-19
 
 - Clothing on the hero (WP4 step 2): 36 looks from the approved mockups, rendered icons for everything worn; Köpenick drops only Köpenick wear, Xhain its own at 40 %. The red scarf only with the coats (none with collars and in the sets). Tunnelläufer set (head lamp, pressure tank, puttees, brass Rohrzange, key ring) drops only in the tunnels. Regenponcho shell waits for Blender (B1).

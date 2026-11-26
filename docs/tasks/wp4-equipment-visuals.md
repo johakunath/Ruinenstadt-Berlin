@@ -359,6 +359,7 @@ Budget: belts, hats and plates go into the gear mesh (2,500 triangles, D3). The 
 3. Done when: sheet per item; unit test per new `legendaryProc` site; `passes.mjs`: 1 draw call for all effects; a hardware check row (fps with three emitters, Tab S9).
 
 ### Step 5b Light-giving items (Johannes, 2026-11-26) [Claude · Opus high]
+Status: built 2026-11-26 (handover at the end).
 The Stirnlampe des Tunnelläufers must really light the way: a warm beam forward from the head that lights the ground and walls in front of the hero ("a cool effect, we need that"). Any other item that should glow gets the same treatment (check: Neonbrille, Leuchtröhre, Neonflinte, implants, the Tunnelläufer's lantern on the Rohrzange). Rules: keep the light count constant (one hero SpotLight always in the scene, intensity 0 when no such item is worn, or a fake beam: additive cone on `FX_LAYER` plus a projected ground spot); state the cost on Ausgewogen and Leistung (Leistung may use the fake). Ties in with backlog B7 (head lamp for dark areas, from 2D). Proof: tunnel (`?map=tunnel&line=1`) and a night district with and without the lamp.
 
 ### Step 6 Daggers and dual wield (2D #38) [Claude · Opus high, combat-animation skill]
@@ -535,4 +536,11 @@ Johannes, 2026-11-19: no painted item icons any more.
 - Reused from 2D: `HEADL`, `GLOVE`, `BOOT`, `LOOK` colours as palette start values; the Pickelhaube eagle outline from the Hauptmann boss.
 - Not verified: hardware cost and hitch (row 39 in `pt-hardware-checks.md`), look at the phone camera; known clipping: straw brim vs a raised arm, gas-mask canister and helm edge into the scarf with the chin down, collars stand off a raised shoulder.
 - Addendum (same day): scarf rule (red only with the coats, `scarf: 'none'` elsewhere, hats never hide it), neck parts refitted (`neckOf`, `collarShell`, `yoke`, `neckBand`, `coatCollar` in `gear-body.ts`; new `collar-fire`); Tunnelläufer built: `SETS.tunnel`, `SET_BONUSES.tunnel` (start values), `LootContext.tunnel` from `MapDef.tunnel`, `makeSetItem` 60 % in tunnels, never outside; gear in `gear-tunnel.ts` (1,942 triangles for the set), weapon `zange:tunnel`; icons I98 to I101 rendered, I102 (key ring) is Codex K4. Look sheet group `tunnel`.
+
+## Handover step 5b (Opus 5.5, 2026-11-26)
+- Data `src/data/item-light.ts` (tests `item-light.test.ts`): `BEAM_GEAR` (`hat-headlamp`, the Stirnlampe des Tunnelläufers), `GLOW_WEAPONS` (Leuchtröhre, Die Letzte Bestellung, Rohrzange des Tunnelläufers; softer: Boxenhammer, Mikroständer, Neonflinte), `GLOW_GEAR` (`belt-tunnel`, the hip lantern). The Neonbrille is no lamp.
+- Render `src/render/hero-lamp.ts`, hooked in `renderer.ts`: Qualität and Ausgewogen a SpotLight from the forehead (always in the scene, intensity 0 without a lamp: the light count never changes), tipped 0.3 rad down along the facing, plus an additive haze cone (stronger at night, `sky.lamps`); Leistung no spot, the haze cone and an additive ground pool. Glows tint and lift the existing hero fill light and lower it toward the hand (0 extra lights). Lamps fade in and out over 0.35 s.
+- Cost: Qualität/Ausgewogen one spot light without shadow in every lit shader + 1 draw call while worn; Leistung 2 draw calls while worn, no light. `?lamp=real|fake` switches for the A/B on the Steam Deck.
+- Proof: `docs/proof/wp4/step5b/` (tunnel off/on on Qualität; Leistung lamp and the Leuchtröhre glow), in-app browser on the PC GPU.
+- Not verified: fps cost on the Steam Deck (hardware row), the inventory doll shows no light (by design), beam through walls (no shadow).
 

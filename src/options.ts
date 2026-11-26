@@ -40,6 +40,8 @@ export interface Options {
   boxShadows: boolean;
   /** ?cut=off disables the V1 B cutaway; ?cut=<meters> overrides the Hinterhof cut height. */
   cut?: 'off' | number;
+  /** ?lamp=real|fake: the head lamp as a spot light or as haze and ground pool only (WP4 step 5b A/B). */
+  lamp?: 'real' | 'fake';
   /** Köpenick (default), the gate 1 courtyard, a tunnel, Xhain, Alexanderplatz, Mitte, Charlottenburg (M16), Wedding (M18) or the walkable camp (M20). */
   map: MapId;
   /** M20: tunnel line (0 = S3). */
@@ -179,6 +181,7 @@ export function readOptions(): Options {
     cam: parseCam(q.get('cam')),
     boxShadows: q.get('shadows') === 'boxes',
     cut: parseCut(q.get('cut')),
+    lamp: q.get('lamp') === 'real' ? 'real' : q.get('lamp') === 'fake' ? 'fake' : undefined,
     map: MAPS.find((m) => m === q.get('map')) ?? 'koepenick',
     line: Math.max(0, Math.min(5, Number(q.get('line') ?? 0) || 0)),
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),

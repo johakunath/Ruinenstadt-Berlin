@@ -4,6 +4,8 @@ Index of every equipment base and named item with its 3D model, hero look, inven
 Rule: every session that touches equipment art, models, icons or effects updates this file in the same PR.
 **Plan (2026-11-19): `docs/tasks/wp4-equipment-visuals.md`** decides how every row below gets its model (one weapon model per base, rigid gear built in code, palettes per base, pickups per kind, legendary effects) and in which order. The index stays the status; the task file is the plan.
 **Clothing looks (2026-11-19):** built in 3D from the approved mockups (`docs/mockups/wp4-clothes/`), decisions in the task file › Step 2 looks. Talisman, ring and implant stay icon-only. Needs: T = painted texture (local, T8 or T9), E = WP4 step 5 effect, M = Blender piece.
+**Light (WP4 step 5b, 2026-11-26):** the Stirnlampe des Tunnelläufers throws a real beam; Leuchtröhre, Die Letzte Bestellung, Rohrzange des Tunnelläufers (and softer the Boxenhammer, Mikroständer, Neonflinte, the Tunnelläufer hip lantern) light up around the hero; table `src/data/item-light.ts`.
+
 Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key from `src/data/weapon-look.ts`); `wear:x` = the look of `WEAR` in `src/data/hero-look.ts` (palette on a hero.glb piece, coat cut, gear parts from `src/render/gear*.ts`; WP4 step 2); `piece:x` = hero.glb node; `none` = nothing in 3D. Hero `yes` = equipping changes the hero mesh, `same` = shows the no-item default, `-` = not shown. Icon `yes/partly/no` compares the painted icon (`src/ui/item-icons.ts`, `assets/inventory/*.webp`) with what the game shows. Needs: M model or piece, I icon re-render, E effect, T texture.
 
 ## Facts checked in code (2026-11-18)
