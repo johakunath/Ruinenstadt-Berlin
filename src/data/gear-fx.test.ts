@@ -19,8 +19,8 @@ describe('legendary effects (WP4 step 5)', () => {
     for (const [id, def] of Object.entries(GEAR_FX)) {
       expect(def!.anchor.at === 'weapon', id).toBe(def!.slot === 'w');
       expect(def!.glow !== 'weapon' || def!.slot === 'w', id).toBe(true);
-      // Gear glow edges name their own gear part, so the pulse and the anchor find it.
-      if (def!.gear) expect(def!.anchor).toEqual({ at: 'gear', id: def!.gear });
+      // Armor effects hang on bones, not on gear parts: an AI outfit (W10) drops the armor's code gear.
+      if (def!.slot === 'a') expect(def!.anchor.at === 'bone' || def!.anchor.at === 'feet', id).toBe(true);
     }
   });
   it('reads ?gearfx (default B)', () => {

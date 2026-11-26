@@ -145,9 +145,10 @@ export const GEAR_FX: Readonly<Partial<Record<LegendaryId, GearFxDef>>> = {
     slot: 'w', color: '#f2d14b', glow: 'weapon', anchor: { at: 'weapon', y0: 1.55, y1: 1.72, r: 0.02 },
     proc: { on: 'legendaryProc', burst: 'glint', color: '#ffe9a0', count: 4, at: 'anchor' },
   },
-  // Armor and hats: glow edges as gear parts in `gear glow`, one pulse uniform.
+  // Armor and hats: glow edges as gear parts in `gear glow`, one pulse uniform. Armor effects anchor to bones, so
+  // they stay under an AI outfit (W10, which drops the armor's code gear and with it `fx-spaeti`, fitted to the code coat).
   spaeti: {
-    slot: 'a', color: '#ffb060', glow: 'gear', gear: 'fx-spaeti', anchor: { at: 'gear', id: 'fx-spaeti' },
+    slot: 'a', color: '#ffb060', glow: 'gear', gear: 'fx-spaeti', anchor: { at: 'bone', bone: 'spine_02', off: [0, 0.04, 0.13], r: 0.16 },
     ambient: [{ sprite: 'dot', color: '#ffc27a', rate: 1.6, life: 1.4, size: 0.05, rise: 0.28, spread: 0.06 }],
   },
   panzer: {
