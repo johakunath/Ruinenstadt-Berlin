@@ -544,3 +544,8 @@ Johannes, 2026-11-19: no painted item icons any more.
 - Proof: `docs/proof/wp4/step5b/` (tunnel off/on on Qualität; Leistung lamp and the Leuchtröhre glow), in-app browser on the PC GPU.
 - Not verified: fps cost on the Steam Deck (hardware row), the inventory doll shows no light (by design), beam through walls (no shadow).
 
+## Clothes with Pixal3D: trial and next steps (Opus 5.5, 2026-11-26)
+- Trial: Rüstung des Zitadellenritters as a W8 outfit (FLUX img2img from the hero T-pose at 0.82, pick 3, Pixal3D single image, `prepare_toy_model.py --height 1.8 --tris 60000`): [before and after](../proof/wp4/clothes-trial/armor-before-after.jpg); four FLUX Pickelhaube pictures for a rigid hat ([picks](../proof/wp4/clothes-trial/pickelhaube-flux.jpg)). Sources in `assets-src/ai/wp4-trial/`.
+- Default until Johannes says otherwise: every hat, helmet and mask as a Pixal3D piece on the `Head` bone, fitted to the code hat's bind-space box, AI hats in one shared atlas and a fourth gear slot; legendary and set armors plus one signature coat per district as W8 outfits on the hero skeleton (head and hair stay the hero's). Gloves and boots stay code. Prove one hat (Pickelhaube) end to end first.
+- Builders paused with uncommitted work in `.claude/worktrees/agent-*` (animals, dinos 2–4, pickups G2, legendary FX G3, T1b/P47); the trade screen phase 1 is committed on `worktree-agent-a97916d18b562ba86` (mockups A, B, C; recommendation C). Resume at most two at a time (`docs/workflow.md` › Token budget).
+
