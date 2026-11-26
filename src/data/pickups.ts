@@ -72,6 +72,6 @@ export const PICKUP_SAMPLES: Readonly<Record<PickupModelId, (r: PickupRarity) =>
  */
 export const DEBUG_DROPS: ReadonlyArray<readonly [PickupModelId, PickupRarity]> = [
   ['blade', 3], ['hammer', 2], ['heal', 0], ['armor', 1], ['sling', 0], ['stoff', 0],
-  ['head', 'set'], ['ring', 2], ['food', 0], ['spear', 1], ['implant', 3], ['fleisch', 0],
-  ['hands', 0], ['feet', 2], ['talisman', 1], ['metall', 0], ['chemie', 0], ['kabel', 0], ['gemuese', 0], ['gewuerz', 0],
+  ['head', 'set'], ['ring', 2], ['food', 0], ['spear', 1], ['implant', 3], ['talisman', 1],
+  ['hands', 0], ['feet', 2], ['fleisch', 0], ['metall', 0], ['chemie', 0], ['kabel', 0], ['gemuese', 0], ['gewuerz', 0],
 ];

@@ -144,7 +144,8 @@ if (mode === 'export') {
     cap.className = 'cap';
     cap.style.left = `${col * CELL + 6}px`;
     cap.style.top = `${30 + row * CELL + CELL - 34}px`;
-    cap.innerHTML = `${id}<br><i>${tris[id as PickupModelId] ?? 0} tris</i>`;
+    const t = tris[id as PickupModelId] ?? 0;
+    cap.innerHTML = `${id}<br><i>${t > 1 ? `${t} tris` : 'no model yet: crystal'}</i>`;
     wrap.append(cap);
   });
   document.title = `done ${ids.length}`;

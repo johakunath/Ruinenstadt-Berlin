@@ -138,12 +138,14 @@ export function spawnDebugDrops(sim: Sim, n: number): Drop[] {
     const [model, rarity] = DEBUG_DROPS[i % DEBUG_DROPS.length]!;
     const content = PICKUP_SAMPLES[model](rarity);
     if (content.kind === 'item') content.item.id = ctx.itemId = (ctx.itemId ?? 0) + 1;
-    // Inner ring of 12 at 2.6 m, then rings 1.4 m further out; a blocked spot moves outwards.
+    // Inner ring of 12 at 2.8 m, then rings 1.4 m further out, centred 0.7 m north of the hero (up on screen, clear of
+    // the action bar); a blocked spot moves outwards.
     const ring = i < 12 ? 0 : 1 + Math.floor((i - 12) / 16), per = ring === 0 ? 12 : 16;
     const a = ((i < 12 ? i : (i - 12) % 16) / per) * Math.PI * 2 + ring * 0.2;
-    let r = 2.6 + 1.4 * ring;
-    while (r < 8 && !free(sim, p.x + Math.sin(a) * r, p.z + Math.cos(a) * r)) r += 0.5;
-    const d: Drop = { id: sim.nextId++, x: p.x + Math.sin(a) * r, z: p.z + Math.cos(a) * r, vx: 0, vz: 0, h: 0, vh: 0, t: 0, landed: true, content };
+    const cx = p.x, cz = p.z - 0.7;
+    let r = 2.8 + 1.4 * ring;
+    while (r < 8 && !free(sim, cx + Math.sin(a) * r, cz + Math.cos(a) * r)) r += 0.5;
+    const d: Drop = { id: sim.nextId++, x: cx + Math.sin(a) * r, z: cz + Math.cos(a) * r, vx: 0, vz: 0, h: 0, vh: 0, t: 0, landed: true, content };
     sim.drops.push(d);
     out.push(d);
   }
