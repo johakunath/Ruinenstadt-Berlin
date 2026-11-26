@@ -1,8 +1,8 @@
 // Run content (M16; 2D js/state.js event plan, js/combat.js `startEvent`, js/update.js): events on
-// the way between encounters, the supply drop, hidden blessings, Litfaßsäule shrines and the trader.
+// the way between encounters, the supply drop, hidden blessings, Litfaßsäule shrines and the trader
+// (where he stands and who can be talked to; stock, prices and trade actions are `trade.ts`, M13b).
 // 2D scheduled by wave; here every stretch between two encounters ("leg") can carry one event, so a
 // run sees every event type once. Places are 2D pixel distances at 30 px per meter.
-import { CONSUMABLES } from '../data/crafting';
 import { difficultyOf } from '../data/difficulty';
 import { FUNDE, FUNDE_TEILE, fundId, TEIL_BONUS, type FundKind } from '../data/funde';
 import { PX } from '../data/powers';
@@ -11,19 +11,17 @@ import { offerBlessings } from './blessings';
 import { ELITE_MODS, type EnemyKind, districtScale } from '../data/enemies';
 import { pk } from './combat';
 import { makeElite, pickKind, spawnEnemy } from './enemies';
-import { healPlayer } from './heal';
-import { BAG_SIZE } from './inventory';
-import { lootItem, makeItem, price, type Item } from './items';
+import { lootItem, makeItem } from './items';
 import type { Level, WaveDef } from './level';
 import { setLoadout } from './loadout';
 import { creditScrap, lootContext, lootLevel, MATERIAL_IDS, spawnDrop } from './loot';
 import { Rng } from './math';
 import { enclosure, freeSpot, reachable } from './reach';
 import { restAt } from './rest';
+import { extrasRng, rollSpati, rollTrader, stockExtras, type ShopStock, type TradeOffer } from './trade';
 import { DT, type Sim } from './types';
 
 export type RunEventKind = 'ambush' | 'trader' | 'zone' | 'cache' | 'horde' | 'rescue';
-export interface TradeOffer { item: Item; price: number }
 
 export interface RunContent {
   /** Event per leg; index = the encounter the hero walks to. */
@@ -47,8 +45,8 @@ export interface RunContent {
   tradeAt: number;
   /** Who the hero can talk to now (playtest 2026-11-17: trading starts on a press, not by walking in): -1 the trader, a rest index for a Späti, null nobody. */
   talk?: number | null;
-  /** Späti stock per rest index, rolled on the first visit of a run (M13b). */
-  shops: Array<{ offers: Array<TradeOffer | null>; left: boolean } | null>;
+  /** Späti stock per rest index, rolled on the first visit of a run (M13b, `src/sim/trade.ts`). */
+  shops: Array<ShopStock | null>;
   captive: { x: number; z: number; survivor: SurvivorId; free: boolean } | null;
   cache: { x: number; z: number; t: number } | null;
   zone: { x: number; z: number; r: number; p: number; need: number; t: number; sp: number } | null;
@@ -66,8 +64,8 @@ export const FUNDE_MAPS: Readonly<Record<string, number>> = { koepenick: 0, xhai
 export const CONTENT = {
   delay: 5, touch: 34 * PX, hidden: 5, hiddenTouch: 1.2, fundTouch: 1.3, fundApart: 28, hiddenApart: 700 * PX, shrineTouch: 46 * PX, shrineTime: 60,
   trader: { near: 260 * PX, far: 480 * PX, time: 60, touch: 1.4 },
-  /** Späti counter: stand this close to the customer spot; no trade while enemies are this near. */
-  shop: { touch: 1, calm: 12, offers: 4 },
+  /** Späti counter: stand this close to the customer spot; no trade while enemies are this near. Stock: `TRADE` in trade.ts. */
+  shop: { touch: 1, calm: 12 },
   cache: { near: 520 * PX, far: 760 * PX, time: 50, scrap: 25 },
   zone: { near: 240 * PX, far: 420 * PX, radius: 70 * PX, need: 8, time: 45, every: 2.2, scrap: 30 },
   rescue: { near: 320 * PX, far: 520 * PX, touch: 36 * PX },
@@ -238,7 +236,6 @@ function tier(s: Sim): { hp: number; dmg: number } {
 }
 
 const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;
-export const healPrice = (s: Sim): number => 20 + Math.round(waveE(s) * 4);
 
 /**
  * The captive's elite guard: a Brocken once the waves ahead bring Brocken and elites, before that a
@@ -338,28 +335,6 @@ function startEvent(s: Sim, kind: RunEventKind | 'crate', rng: Rng): void {
       break;
   }
   if (at) s.events.push({ type: 'runEvent', kind, phase: 'start', x: at.x, z: at.z });
-}
-
-/**
- * 2D `tradeLvl`: two above the wave level or the best worn piece, minus the district step that `makeItem`
- * adds again (worn gear already carries it). B2 step 2: without the minus every district counted twice,
- * so each Späti visit lifted the stock by 3 levels per district and the hero's power ran away.
- */
-export function shopLevel(s: Sim, district: number, waveLevel: number): number {
-  return Math.max(0, Math.max(waveLevel, ...Object.values(s.equipment).map((it) => it?.itemLevel ?? 0)) + 2 - 3 * district);
-}
-
-/** The trader's stock (2D: three items, the third two levels higher and sometimes rare). */
-function rollTrader(s: Sim, rng: Rng): TradeOffer[] {
-  const ctx = lootContext(s);
-  const il = shopLevel(s, ctx.district, lootLevel(s));
-  const n = (s.statContext.survivors.kurier ? 4 : 3) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
-  const offers: TradeOffer[] = [];
-  for (let i = 0; i < n; i++) {
-    const item = makeItem(rng, ctx, il + (i === 2 ? 2 : 0), i === 2 && rng.next() < 0.15 ? 3 : 2);
-    offers.push({ item, price: price(item) * 5 + 15 });
-  }
-  return offers;
 }
 
 /** Marks on the HUD: where the open events are. */
@@ -492,17 +467,9 @@ export function updateContent(s: Sim): void {
   for (let i = 0; i < c.shops.length; i++) if (i !== at && c.shops[i]) c.shops[i]!.left = true;
   if (at >= 0 && L.rests[at]!.desk) {
     const desk = L.rests[at]!.desk!;
-    let shop = c.shops[at] ?? null;
-    if (!shop) {
-      const lvl = shopLevel(s, ctx().district, il);
-      const n = CONTENT.shop.offers + (s.statContext.survivors.kurier ? 1 : 0) + ((s.inventory.camp?.stations.kom ?? 1) >= 3 ? 1 : 0);
-      const offers: TradeOffer[] = [];
-      for (let i = 0; i < n; i++) {
-        const item = makeItem(rng, ctx(), lvl + (i === n - 1 ? 2 : 0), i === n - 1 && rng.next() < 0.15 ? 3 : i < 2 ? 1 : 2);
-        offers.push({ item, price: price(item) * 5 + 15 });
-      }
-      shop = c.shops[at] = { offers, left: true };
-    }
+    const shop = c.shops[at] ??= rollSpati(s, rng);
+    // A stock from a checkpoint saved before M13b gets its Aufsatz and blessings now.
+    if (shop.mod === undefined) stockExtras(s, shop, extrasRng(rng));
     const close = near(desk, CONTENT.shop.touch);
     if (close && !c.tradeOpen && !s.enemies.some((e) => e.state !== 'dead' && Math.hypot(e.x - p.x, e.z - p.z) < CONTENT.shop.calm)) c.talk = at;
   }
@@ -590,52 +557,6 @@ export function updateContent(s: Sim): void {
     }
   }
   c.rng = rng.state;
-}
-
-/** Trade screen actions (2D `tradebox`). Each returns a short German message. */
-/** The stock on the table: the Späti's or the wandering trader's. */
-export function tradeStock(s: Sim): Array<TradeOffer | null> {
-  const c = s.content;
-  return (c.tradeAt >= 0 ? c.shops[c.tradeAt]?.offers : c.trader?.offers) ?? [];
-}
-
-/** Spätis also sell Verband and Molotow (2D `CONS` prices), up to three each. */
-export function buyConsumable(s: Sim, id: 'verband' | 'molotow'): { ok: boolean; text: string } {
-  const cost = CONSUMABLES.find((c) => c.id === id)!.scrapCost;
-  const have = s.inventory.consumables?.[id] ?? 0;
-  if (have >= 3) return { ok: false, text: 'Mehr als drei trägst du nicht.' };
-  if (s.inventory.scrap < cost) return { ok: false, text: `Dir fehlen ${cost - s.inventory.scrap} Schrott.` };
-  s.inventory.scrap -= cost;
-  s.inventory.consumables = { verband: 0, molotow: 0, ...s.inventory.consumables, [id]: have + 1 };
-  s.events.push({ type: 'buy' });
-  return { ok: true, text: 'Gekauft.' };
-}
-
-export function buyOffer(s: Sim, i: number): { ok: boolean; text: string } {
-  const stock = tradeStock(s);
-  const o = stock[i];
-  if (!o) return { ok: false, text: '' };
-  if (s.inventory.scrap < o.price) return { ok: false, text: `Dir fehlen ${o.price - s.inventory.scrap} Schrott.` };
-  if (s.inventory.bag.length >= BAG_SIZE) return { ok: false, text: 'Rucksack voll.' };
-  s.inventory.scrap -= o.price;
-  s.inventory.bag.push(o.item);
-  stock[i] = null;
-  s.events.push({ type: 'buy' });
-  return { ok: true, text: 'Gekauft.' };
-}
-
-export function buyHeal(s: Sim): { ok: boolean; text: string } {
-  const cost = healPrice(s);
-  if (s.player.hp >= s.stats.maxHp) return { ok: false, text: 'Du bist unverletzt.' };
-  if (s.inventory.scrap < cost) return { ok: false, text: `Dir fehlen ${cost - s.inventory.scrap} Schrott.` };
-  s.inventory.scrap -= cost;
-  healPlayer(s, s.stats.maxHp, 'trader');
-  s.events.push({ type: 'buy' });
-  return { ok: true, text: 'Geheilt.' };
-}
-
-export function closeTrade(s: Sim): void {
-  s.content.tradeOpen = false;
 }
 
 /** Scrap multiplier from the run: SERO-Sammler, Goldrausch shrine, Schrottpresse. */

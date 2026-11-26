@@ -6,7 +6,9 @@ import type { CampBuildingId } from './progression';
 
 export type MaterialId = 'stoff' | 'metall' | 'chemie' | 'kabel';
 export type IngredientId = 'fleisch' | 'gemuese' | 'gewuerz';
-export type WeaponModId = 'nagel' | 'gewicht' | 'batt' | 'tank' | 'phiole' | 'dorn';
+export type WeaponModId = 'nagel' | 'gewicht' | 'batt' | 'tank' | 'phiole' | 'dorn'
+  // M13b: strong Aufsätze, sold only at a Späti (`spati`), never built in the Zeughaus.
+  | 'stahlnagel' | 'blei' | 'starkstrom' | 'brandsatz' | 'saeure' | 'nato';
 export type MealId = 'suppe' | 'curry' | 'kaffee' | 'soljanka' | 'gurke';
 export type ConsumableId = 'verband' | 'molotow';
 
@@ -27,6 +29,9 @@ export interface WeaponModDefinition {
   readonly eliteBossBonus?: number;
   readonly heavyHitEvery?: number;
   readonly element?: ElementId;
+  /** M13b: a strong Aufsatz the Späti sells (no recipe, the Zeughaus cannot build it); `base` is the normal one it outdoes (icon, bot score). */
+  readonly spati?: true;
+  readonly base?: WeaponModId;
 }
 
 /** 2D ZUT triplets, including the non-SVG ingredient glyph. */
@@ -118,6 +123,20 @@ export const WEAPON_MODS: readonly WeaponModDefinition[] = [
     costs: { metall: 3, kabel: 3 },
     scrapCost: 60,
     affixes: [ { id: 'leech', value: 5 }, { id: 'res', value: 10 } ] },
+  // M13b (backlog B13, Johannes 2026-11-16: "especially strong Aufsätze"): one step above each 2D mod, only at a
+  // Späti from Xhain on. `scrapCost` is the base the Späti markup multiplies (`SPATI_UPGRADE.markup`), twice the 2D one.
+  { id: 'stahlnagel', name: 'Stahlnagelband', description: '+30% Schaden, gegen Elite und Endgegner zusätzlich +30%',
+    costs: {}, scrapCost: 120, affixes: [ { id: 'dmg', value: 30 } ], eliteBossBonus: 0.3, spati: true, base: 'nagel' },
+  { id: 'blei', name: 'Bleigewicht', description: 'Jeder 3. Angriff ist ein Wuchttreffer: sicherer Krit, doppelter Rückstoß, kurz betäubt',
+    costs: {}, scrapCost: 120, heavyHitEvery: 3, spati: true, base: 'gewicht' },
+  { id: 'starkstrom', name: 'Starkstromakku', description: 'Strom-Element, auch als zweites Element. +60% Elementarschaden, Element bei jedem 2. Treffer',
+    costs: {}, scrapCost: 140, element: 'shock', affixes: [ { id: 'el', value: 25 } ], spati: true, base: 'batt' },
+  { id: 'brandsatz', name: 'Brandsatz', description: 'Feuer-Element, auch als zweites Element. +60% Elementarschaden, Element bei jedem 2. Treffer',
+    costs: {}, scrapCost: 140, element: 'fire', affixes: [ { id: 'el', value: 25 } ], spati: true, base: 'tank' },
+  { id: 'saeure', name: 'Säurekanister', description: 'Säure-Element, auch als zweites Element. +60% Elementarschaden, Element bei jedem 2. Treffer',
+    costs: {}, scrapCost: 140, element: 'acid', affixes: [ { id: 'el', value: 25 } ], spati: true, base: 'phiole' },
+  { id: 'nato', name: 'NATO-Draht', description: '+8 Leben pro Kill, +15% Widerstand',
+    costs: {}, scrapCost: 120, affixes: [ { id: 'leech', value: 8 }, { id: 'res', value: 15 } ], spati: true, base: 'dorn' },
 ];
 
 /** 2D ZUT. */

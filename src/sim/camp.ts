@@ -158,6 +158,7 @@ export const modSlots = (w: Item | undefined): number => !w || w.slot !== 'w' ? 
 export const modScrap = (s: Sim, id: WeaponModId): number => Math.round(WEAPON_MODS.find(m => m.id === id)!.scrapCost * (s.statContext.survivors.schmied ? 0.7 : 1));
 export function buildMod(s: Sim, id: WeaponModId): Result {
   const m = WEAPON_MODS.find(x => x.id === id)!, c = modScrap(s, id);
+  if (m.spati) return no('Gibt es nur im Späti.');
   if (!stationBuilt(s, 'zeug')) return no('Erst das Zeughaus bauen.');
   const miss = (Object.entries(m.costs) as Array<[MaterialId, number]>).filter(([k, v]) => have(s, k) < v);
   if (s.inventory.scrap < c || miss.length) return no(`Dir fehlt ${[...(s.inventory.scrap < c ? [`${c - s.inventory.scrap} Schrott`] : []), ...miss.map(([k, v]) => `${v - have(s, k)} ${MATERIALS[k].name}`)].join(', ')}.`);

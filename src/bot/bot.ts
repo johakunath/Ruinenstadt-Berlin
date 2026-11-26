@@ -9,6 +9,7 @@
 // B2 step 1 (economy, first guesses in `docs/tasks/b2-economy-pacing.md`): salvages what it will not
 // wear, walks to Spätis and traders and buys by item level, builds the camp cheapest first, holds the
 // tunnel generator ring, and books every Schrott it earns and spends in a `Ledger`.
+// M13b: at a Späti it also buys the Aufsatz it would fit and trades blessings (buy, swap, Stärkung; `BLESS`).
 import { travelTarget } from '../sim/turm';
 import { PLAYER, weaponAttack } from '../data/combat';
 import type { DifficultyId } from '../data/difficulty';
@@ -21,7 +22,8 @@ import type { Level } from '../sim/level';
 import { Rng } from '../sim/math';
 import { profileOf, type SaveProfile } from '../sim/save';
 import { buildMod, buildStation, buyDrill, buySpatiUpgrade, buyUpgrade, cookMeal, craftConsumable, drillCost, endExpedition, installMod, modSlots, nextLevel, removeMod, SPATI_UPGRADE, spatiUpgradeCost, stationBuilt, upgradeCost, upgradeMax } from '../sim/camp';
-import { buyConsumable, buyOffer, closeTrade, talkTo, tradeStock, type TradeOffer } from '../sim/runcontent';
+import { talkTo } from '../sim/runcontent';
+import { blessPrice, buyBlessing, buyConsumable, buyMod, buyOffer, closeTrade, modPrice, strengthenable, strengthenBlessing, swapBlessing, swapBlock, tradeShop, tradeStock, type TradeOffer } from '../sim/trade';
 import { heldFamilies, perkOf } from '../sim/blessings';
 import { pk } from '../sim/combat';
 import { setImplantMode } from '../sim/inventory';
@@ -273,7 +275,7 @@ export class Bot {
     const c = s.content;
     if (c.talk != null && !c.tradeOpen && !this.shopped.has(c.talk) && s.run.phase === 'travel') {
       this.shopped.add(c.talk);
-      if (talkTo(s)) { shop(s, this.ledger); closeTrade(s); }
+      if (talkTo(s)) { shop(s, this.ledger, this.recentLow); closeTrade(s); }
     }
   }
 
@@ -736,6 +738,11 @@ function buildProfile(s: Sim): Set<PerkFamilyId> {
 
 /** 2D perkScore: economy early in the campaign and in a mission, later blessings that fit the build; hard fights favour toughness. */
 export function perkScore(s: Sim, id: PerkId, level: number, recentLow = 1): number {
+  return perkValue(s, id, level, recentLow) * (pk(s, id) >= perkOf(id).max ? 0 : 1);
+}
+
+/** `perkScore` without the zero for a full blessing: what a held one is worth (M13b swaps). */
+export function perkValue(s: Sim, id: PerkId, level: number, recentLow = 1): number {
   const p = perkOf(id);
   const n = s.level.encounters.length, at = s.run.index / Math.max(1, n - 1);
   const mission = at < 0.35 ? 1 : at < 0.7 ? 0.5 : 0.15;
@@ -748,7 +755,7 @@ export function perkScore(s: Sim, id: PerkId, level: number, recentLow = 1): num
   if (p.weapon) v += 4;
   if (recentLow < 0.4 && TOUGH.includes(id)) v += 4;
   if (recentLow > 0.75 && HURT.includes(id)) v += 2;
-  return v * (level > 1 ? 1.5 : 1) * (pk(s, id) >= p.max ? 0 : 1);
+  return v * (level > 1 ? 1.5 : 1);
 }
 
 /**
@@ -794,14 +801,20 @@ const PERKS_TIED = (s: Sim): number => {
   return n;
 };
 
+/** How much the bot wants an Aufsatz (2D SIM.loadout); a strong Späti one (M13b) is its base plus 2. */
+export function modScore(s: Sim, id: WeaponModId): number {
+  const base = WEAPON_MODS.find((m) => m.id === id)?.base;
+  if (base) return modScore(s, base) + 2;
+  return ({ nagel: 4, gewicht: s.stats.crit >= 0.13 ? 5 : 3, dorn: 2, tank: s.stats.elements.includes('fire') ? 5 : 1, phiole: s.stats.elements.includes('acid') ? 5 : 1, batt: s.stats.elements.includes('shock') ? 5 : 1 } as Partial<Record<WeaponModId, number>>)[id] ?? 0;
+}
+
 /** Aufsätze and implant mode (2D SIM.loadout): the fitted mods are the best of those in stock, the implant mode the one with the most power. */
 function loadout(s: Sim): void {
   const w = s.equipment.w;
   const slots = modSlots(w);
   if (w && slots) {
-    const score = (id: WeaponModId): number => ({ nagel: 4, gewicht: s.stats.crit >= 0.13 ? 5 : 3, dorn: 2, tank: s.stats.elements.includes('fire') ? 5 : 1, phiole: s.stats.elements.includes('acid') ? 5 : 1, batt: s.stats.elements.includes('shock') ? 5 : 1 }[id] ?? 0);
     const have = WEAPON_MODS.map((m) => m.id).filter((id) => (w.mods ?? []).includes(id) || (s.inventory.mods[id] ?? 0) > 0);
-    const want = have.sort((a, b) => score(b) - score(a)).slice(0, slots);
+    const want = have.sort((a, b) => modScore(s, b) - modScore(s, a)).slice(0, slots);
     for (const id of [...(w.mods ?? [])]) if (!want.includes(id)) removeMod(s, id);
     for (const id of want) if (!(w.mods ?? []).includes(id)) installMod(s, id);
   }
@@ -830,11 +843,18 @@ export interface Ledger {
   upgrades: number;
   /** Everything bought in the camp: build sites, station levels, workshop upgrades, Lazarett, drill, Aufsätze. */
   camp: number;
+  /** M13b: Aufsätze and blessings bought at a Späti. */
+  mods: number;
+  bless: number;
+  /** M13b: blessing trades done (cards bought, swaps, Stärkungen) and Aufsätze bought. */
+  deals: { buy: number; swap: number; up: number; mods: number };
 }
-export const newLedger = (): Ledger => ({ salvage: 0, items: 0, upgrades: 0, camp: 0 });
+export const newLedger = (): Ledger => ({ salvage: 0, items: 0, upgrades: 0, camp: 0, mods: 0, bless: 0, deals: { buy: 0, swap: 0, up: 0, mods: 0 } });
+/** Schrott spent, all kinds. */
+export const spent = (l: Ledger): number => l.items + l.upgrades + l.camp + l.mods + l.bless;
 
 /** Runs `f` and books the Schrott it moved under `k`. */
-function book<T>(s: Sim, l: Ledger | undefined, k: keyof Ledger, f: () => T): T {
+function book<T>(s: Sim, l: Ledger | undefined, k: Exclude<keyof Ledger, 'deals'>, f: () => T): T {
   const before = s.inventory.scrap;
   const r = f();
   if (l) l[k] += Math.abs(s.inventory.scrap - before);
@@ -852,6 +872,13 @@ const EVENT_GIVE_UP = 60;
  * at `pouch`; the drill waits for `drillReserve` Schrott above its price.
  */
 export const SHOP = { lead: 2, keep: 0.3, reach: 50, minScrap: 60, giveUp: 25, pouch: 2, drillReserve: 300 } as const;
+
+/**
+ * M13b blessing trade, first guesses: buy a card whose `perkScore` reaches `buy` (it fits the build or a held
+ * family); swap the held blessing whose loss gains most for a card when the card at the carried level is worth
+ * `swap` more; the Stärkung goes to the held blessing with the best score. All keep `SHOP.keep` of the Schrott.
+ */
+export const BLESS = { buy: 7, swap: 3 } as const;
 
 /** A legendary or set piece is kept; anything else below the worn piece's item level is salvaged. */
 export function keepsItem(s: Sim, it: Item): boolean {
@@ -878,8 +905,12 @@ export function wantsOffer(s: Sim, o: TradeOffer): boolean {
   return power(heroStats({ ...s.equipment, [o.item.slot]: o.item }, s.statContext)) > power(s.stats) * wearNeed(s, o.item, true);
 }
 
-/** Späti or trader (2D state 'trade'): offers by the trade rule, Verband and Molotow up to two, Schärfen and Panzerung while the Späti cap allows. */
-function shop(s: Sim, l?: Ledger): void {
+/**
+ * Späti or trader (2D state 'trade'): offers by the trade rule, Verband and Molotow up to two, Schärfen and Panzerung
+ * while the Späti cap allows; M13b: the Aufsatz and the blessings. Selling is salvage (`sellItem` pays the same), which
+ * the bot does with every spare piece anyway.
+ */
+function shop(s: Sim, l?: Ledger, recentLow = 1): void {
   // Wear each purchase before judging the next offer, so two offers for one slot are not both bought.
   tradeStock(s).forEach((o, i) => { if (o && wantsOffer(s, o) && book(s, l, 'items', () => buyOffer(s, i)).ok) equipBest(s, true); });
   equipBest(s, true);
@@ -888,6 +919,44 @@ function shop(s: Sim, l?: Ledger): void {
     for (const c of CONSUMABLES) while ((s.inventory.consumables?.[c.id] ?? 0) < SHOP.pouch && s.inventory.scrap >= c.scrapCost * 3) if (!book(s, l, 'items', () => buyConsumable(s, c.id)).ok) break;
     for (const id of SPATI_UPGRADE.ids) while ((s.statContext.upgrades[id] ?? 0) < SPATI_UPGRADE.max && s.inventory.scrap >= spatiUpgradeCost(s, id)) if (!book(s, l, 'upgrades', () => buySpatiUpgrade(s, id)).ok) break;
   }
+  const mod = tradeShop(s)?.mod;
+  if (mod && wantsMod(s, mod.id) && book(s, l, 'mods', () => buyMod(s)).ok) {
+    if (l) l.deals.mods++;
+    loadout(s);
+  }
+  shopBlessings(s, l, recentLow);
+}
+
+/** M13b: the Späti's Aufsatz is bought when `loadout` would fit it (a free slot or it beats a fitted one) and `SHOP.keep` stays. */
+export function wantsMod(s: Sim, id: WeaponModId): boolean {
+  const w = s.equipment.w, slots = modSlots(w);
+  if (!w || !slots || modPrice(s, id) > s.inventory.scrap * (1 - SHOP.keep)) return false;
+  const have = WEAPON_MODS.map((m) => m.id).filter((x) => (w.mods ?? []).includes(x) || (s.inventory.mods[x] ?? 0) > 0);
+  if (have.includes(id)) return false;
+  return [...have, id].sort((a, b) => modScore(s, b) - modScore(s, a)).slice(0, slots).includes(id);
+}
+
+/** M13b blessing trade at a Späti (`BLESS`): the Stärkung first, then each card as a swap or a purchase. */
+export function shopBlessings(s: Sim, l: Ledger | undefined, recentLow = 1): void {
+  const shop = tradeShop(s);
+  if (!shop) return;
+  const budget = (): number => s.inventory.scrap * (1 - SHOP.keep);
+  if (shop.ups) {
+    const best = strengthenable(s).sort((a, b) => perkScore(s, b, 1, recentLow) - perkScore(s, a, 1, recentLow))[0];
+    if (best && blessPrice(s, 'up') <= budget() && book(s, l, 'bless', () => strengthenBlessing(s, best)).ok && l) l.deals.up++;
+  }
+  (shop.cards ?? []).forEach((card, i) => {
+    if (!card) return;
+    const worth = (id: PerkId, level: number): number => perkValue(s, id, 1, recentLow) * level;
+    // Swap: the held blessing whose loss gains most, against the card at the level it would carry over.
+    const gain = (id: PerkId): number => worth(card.id, Math.min(perkOf(card.id).max, Math.max(card.level, pk(s, id)))) - worth(id, pk(s, id));
+    const out = (Object.keys(s.statContext.perks) as PerkId[]).filter((id) => pk(s, id) > 0 && !swapBlock(s, id, card)).sort((a, b) => gain(b) - gain(a))[0];
+    if (out && gain(out) >= BLESS.swap && blessPrice(s, 'swap') <= budget()) {
+      if (book(s, l, 'bless', () => swapBlessing(s, i, out)).ok && l) l.deals.swap++;
+      return;
+    }
+    if (perkScore(s, card.id, card.level, recentLow) >= BLESS.buy && blessPrice(s, 'buy', card) <= budget() && book(s, l, 'bless', () => buyBlessing(s, i)).ok && l) l.deals.buy++;
+  });
 }
 
 /** Camp purchases open now, cheapest first: workshop upgrades below their cap and station levels whose needs and materials are met. */
@@ -930,7 +999,7 @@ export function botCamp(s: Sim, l?: Ledger): void {
     book(s, l, 'camp', next.buy);
   }
   for (let guard = 0; guard < 50 && !campOffers(s).length && stationBuilt(s, 'exer') && s.inventory.scrap >= drillCost(s) + SHOP.drillReserve; guard++) book(s, l, 'camp', () => buyDrill(s));
-  if (stationBuilt(s, 'zeug')) for (const m of WEAPON_MODS) if (!(s.inventory.mods[m.id] ?? 0) && !(s.equipment.w?.mods ?? []).includes(m.id)) book(s, l, 'camp', () => buildMod(s, m.id));
+  if (stationBuilt(s, 'zeug')) for (const m of WEAPON_MODS) if (!m.spati && !(s.inventory.mods[m.id] ?? 0) && !(s.equipment.w?.mods ?? []).includes(m.id)) book(s, l, 'camp', () => buildMod(s, m.id));
   loadout(s);
 }
 
@@ -1098,6 +1167,6 @@ export function runCampaign(o: CampaignOptions): CampaignReport {
   }
   endExpedition(sim, won, o.district ?? 0);
   const left = sim.inventory.scrap;
-  const economy = { ...ledger, start: scrap0, earned: left - scrap0 + ledger.items + ledger.upgrades + ledger.camp, left, itemLevel: wornLevel(sim), weaponLevel: sim.equipment.w?.itemLevel ?? 0 };
+  const economy = { ...ledger, start: scrap0, earned: left - scrap0 + spent(ledger), left, itemLevel: wornLevel(sim), weaponLevel: sim.equipment.w?.itemLevel ?? 0 };
   return { economy, profile: profileOf(sim), won, time, deaths, kills, items, encounters: reports, stuckAt: won ? '' : `${level.encounters[at]!.name} (${sim.run.phase}) at ${sim.player.x.toFixed(0)},${sim.player.z.toFixed(0)}${aliveNote(sim)}`, power: power(sim.stats), weapon: sim.stats.kind };
 }
