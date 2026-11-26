@@ -45,6 +45,7 @@ import { campPlaceAt, type CampLayout } from '../data/camp-map';
 import { campStates } from '../sim/camp';
 import { CampStationsView } from './camp-stations';
 import { BarrierView } from './barriers';
+import { Critters } from './critters';
 
 /** 2D #43: a hit taking this share of max life or more is heavy (stronger flinch and shake). */
 const HEAVY_HIT = 0.15;
@@ -165,6 +166,8 @@ export class GameRenderer {
   private readonly content: ContentView;
   private readonly campView: CampStationsView | null;
   private readonly campLayout: CampLayout | null;
+  /** P18 ambient animals (ducks, pigeons, rats); null in the courtyard. */
+  private readonly critters: Critters | null;
   private readonly hero: HeroView;
   private readonly views = new Map<number, EnemyView>();
   /** V1: living enemies nearest the hero, for their contour behind buildings (half height in m). */
@@ -223,6 +226,8 @@ export class GameRenderer {
     this.campView = def?.camp ? new CampStationsView(assets, materials, def.camp) : null;
     if (this.campView) this.scene.add(this.campView.group);
     this.scene.add(this.fx.group, this.loot.group, this.content.group);
+    this.critters = def ? new Critters(materials, def, opts.profile) : null;
+    if (this.critters) this.scene.add(this.critters.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);
     // R1: the hero outline tests occluders against a sphere around the hero and her weapon. C1: in the
@@ -324,6 +329,7 @@ export class GameRenderer {
     this.shadowClock.invalidate();
     this.world.breakables?.reset();
     for (const b of sim.breakables) if (b.broken) this.world.breakables?.broke(b.id);
+    this.critters?.reset();
   }
 
   /** Zoom: +1 farther, -1 nearer, 0 cycles through the three levels. */
@@ -568,6 +574,7 @@ export class GameRenderer {
     if (this.campView && this.campLayout) this.campView.update(campStates(sim), this.time, campPlaceAt(this.campLayout, px, pz)?.id ?? null, px, pz);
     this.fx.update(sim, alpha, dt, frozen, this.cam.pixelScale(this.height), py + leap, this.hero.thrustTipY());
     this.weather.update(dt, px, pz, this.time);
+    this.critters?.update(sim, dt, px, pz);
     this.debug?.update(sim, alpha);
 
     this.renderer.info.reset();
