@@ -1,6 +1,6 @@
 # M13b Späti trader with its own trade screen [Claude · Opus high]
 
-Status: phase 1 done (2026-11-26): findings, trade rules in the sim with tests, the bot trades, three layout mockups. Phase 2 (the screen) waits for Johannes' pick of a layout.
+Status: done (2026-11-26), playtest open. Phase 1: findings, trade rules in the sim with tests, the bot trades, three layout mockups. Phase 2: layout C built (Johannes did not object to the recommendation; the three questions below decided as recommended).
 
 ## Goal
 Backlog B13 (Johannes, 2026-11-16): every Späti has a trader. Port the 2D trader, then a trade screen with the inventory on one side and the trader on the other; weapons, equipment, strong Aufsätze; blessings Hades style (swap, buy, upgrade) for Schrott. The balance bot learns to trade.
@@ -38,9 +38,9 @@ Reused from 2D: `tradeLvl`, the offer slots and chances, `itemPrice × 5 + 15`, 
 | Verkaufen | A bag piece for its salvage value (Schrott and materials, `salvageItem`), only while trading; locked pieces stay. No better rate than salvage (E3: Schrott stays short) |
 | Wandering and tunnel trader | Stay 2D: gear and heal (no Aufsatz, no blessings) |
 
-API for the screen: `tradeStock`, `tradeShop`, `buyOffer`, `buyConsumable`, `buyHeal`, `sellItem`, `buyMod`, `modPrice`, `buyBlessing`, `swapBlessing`, `swapBlock` (reason text), `strengthenBlessing`, `strengthenable`, `blessPrice`, `healPrice`, `closeTrade`; each action returns `{ ok, text }` with short German text. Blessing helpers shared with the choice: `eligibleBlessings`, `drawBlessings`, `cardOf`, `addBlessing`, `dropBlessing` (`src/sim/blessings.ts`, choice behaviour unchanged).
+API for the screen: `tradeStock`, `tradeShop`, `buyOffer`, `buyConsumable`, `buyHeal`, `sellItem`, `sellBulk`, `buyMod`, `modPrice`, `buyBlessing`, `swapBlessing`, `swapBlock` (reason text), `strengthenBlessing`, `strengthenable`, `blessPrice`, `healPrice`, `closeTrade`; each action returns `{ ok, text }` with short German text. Blessing helpers shared with the choice: `eligibleBlessings`, `drawBlessings`, `cardOf`, `addBlessing`, `dropBlessing` (`src/sim/blessings.ts`, choice behaviour unchanged).
 
-Tests: `src/sim/trade.test.ts` (19: stock, stream fork, Mitte implant, tunnel 30 %, strong Aufsätze in Xhain, prices, buy, sell, Aufsatz fit or stock, Zeughaus refuses strong ones, blessing buy, swap with levels, swap blocks, Stärkung once, checkpoint keeps the stock, old stock gets extras); `src/bot/bot.test.ts` › bot trade (3).
+Tests: `src/sim/trade.test.ts` (20: stock, stream fork, Mitte implant, tunnel 30 %, strong Aufsätze in Xhain, prices, buy, sell, Aufsatz fit or stock, Zeughaus refuses strong ones, blessing buy, swap with levels, swap blocks, Stärkung once, bulk sell, checkpoint keeps the stock, old stock gets extras); `src/bot/bot.test.ts` › bot trade (3).
 
 ## Bot (balance tool)
 `src/bot/bot.ts`: after the gear, consumables and Späti upgrades the bot buys the Aufsatz `loadout` would fit (`wantsMod`, strong ones score base + 2), then `shopBlessings`: the Stärkung on the held blessing with the best `perkScore`, each card as a swap when the card at the carried level beats the weakest swappable held one by `BLESS.swap` (3), else bought when its score reaches `BLESS.buy` (7); all keep 30 % of the Schrott (`SHOP.keep`). Selling is salvage, which it does with every spare piece. Ledger columns Aufsätze, Segen and Deals (cards bought / swaps / Stärkungen / Aufsätze) in `node tools/balance.mjs 3 normal johannes 1 --campaign`.
@@ -60,29 +60,36 @@ Johannes plays the Deck at Chrome scale 1.5 (page 853×533, `docs/steam-deck.md`
 
 Recommendation: C. Every part has room at 844×390, it reuses the inventory detail, the blessing choice cards and the menu's tab and pad rules, and the swap flow (card, then your blessing) fits its own tab. A is the closest to the backlog wording but its list scrolls and its blessing cards are small on the phone.
 
-## Phase 2 steps (after the pick)
-1. `src/ui/trade.ts` (new): the picked screen; `renderTrade` and its handlers leave `src/ui/abilities.ts`. Styles in the U3 block of `style.css`.
-2. Actions only through `src/sim/trade.ts`; message line from each `{ text }`.
-3. Touch: first tap shows the offer and the worn piece, second tap buys (P5 rule). Swap: tap a card's Tauschen, then a held blessing (blocked ones greyed with `swapBlock` text).
-4. Pad: `moveFocus` (`src/ui/focus.ts`); variant rules from the table above; B closes, focus starts on the first offer.
-5. Wandering and tunnel trader use the same screen with gear and heal only.
-6. e2e: open a Späti, buy gear, buy an Aufsatz, buy and swap a blessing, sell a piece, close; screenshots at 1280×720, 844×390 and 1280×800 in `docs/proof/m13b-trade/`.
-7. Bot: rerun the campaign after any price change; calibrate `TRADE.bless` and `BLESS` against E3 (about 1200 Schrott left per map) and E5 (bosses).
+## Phase 2 built (layout C)
+| Part | Where |
+|---|---|
+| Screen | `src/ui/trade.ts` (`TradeUi`, new; the old panel left `src/ui/abilities.ts`), styles in `style.css` (M13b block, replaces the old trader rules). Full screen in the pause-menu look: Späti name, tabs with counts, Schrott and Leben, × and the fullscreen button top right |
+| Waren | Tiles (gear with rarity frame, item level and ▲, the Aufsatz, Schärfen, Panzerung, Verband, Molotow, Verbandskasten) with their price; the picked one on the right as the inventory shows it (offer with deltas beside the worn piece; Aufsatz: where it goes; supply: how many you carry) and Kaufen |
+| Segen | The two cards in the blessing-choice look with Kaufen and Tauschen; right your blessings with level dots and +1 (the Stärkung, greyed when used, full or short of Schrott). Tauschen: the card is marked, your blessings become buttons with the result (`→ Akkordarbeit 2`) or why not (`swapBlock`); B or Abbrechen leaves |
+| Verkaufen | The bag (eight columns), bulk chips Gewöhnl., bis Magisch, bis Selten (rare ones need a second press), the picked piece with Verkaufen and Anlegen |
+| Input | Mouse: a click picks, a click on the picked tile buys (or Kaufen). Touch: first tap picks, second tap buys (P5). Pad: focus picks, A buys or presses, LB/RB tabs, Y swaps on a card, X sells the focused bag piece, B back (out of a swap first), right stick scrolls; hints show while a pad is connected. Keys: arrows move, [ ] or Q/E tabs, Enter presses, Escape back; I, M, P do nothing while trading, Start goes back |
+| Trader | The wandering and the tunnel trader get tabs Waren (gear, heal) and Verkaufen |
+| Wiring | `src/main.ts`: `tradeUi.update` beside the abilities UI; the sim stays paused while it is open; closing saves |
+| Tests | `e2e/trade.spec.ts` (PC: buy gear and an Aufsatz, buy, swap and strengthen blessings, sell, Escape; phone: the second tap buys, tabs, ×) |
+| Proof | `docs/proof/m13b/` every tab at 1280×720 (mouse), 844×390 (touch) and 1280×800 (fake pad: RB, D-pad, hints), plus the swap at 1280×720; `node tools/trade-proof.mjs` against the dev server |
+
+Johannes plays the Deck at Chrome scale 1.5 (page 853×533): the compact rules (`max-height: 560px`) apply there as on the phone.
 
 ## Done when
-Phase 1: `npm run check` passes; the three sheets exist; bot before/after recorded here. Phase 2: the picked screen works with mouse, touch and pad at the three sizes, e2e green, status and Playtest rows added by the lead.
+`npm run check` passes; `npx playwright test e2e/trade.spec.ts` passes after `npm run build`; the screen works with mouse, touch and pad at the three sizes (proof shots); status and Playtest rows added by the lead.
 
 ## Not in scope
 Quests, Umschmieden, a walkable trader NPC with its own body, selling to the camp, prices per district beyond the reroll curve.
 
-## Questions for Johannes
-1. Tauschen: the new blessing keeps the levels of the one given up (capped at its max), for one reroll price. Recommendation: yes, it makes swapping a real build change instead of a loss.
-2. Strong Aufsätze only at Spätis from Xhain on (Köpenick sells the normal ones, since the camp has no Zeughaus yet). Recommendation: yes.
-3. Verkaufen pays the salvage value, not more. Recommendation: yes; Schrott is already plentiful after Xhain (E3).
+## Decisions (2026-11-26, the lead for Johannes: recommendations taken)
+1. Tauschen: the new blessing keeps the levels of the one given up (capped at its max), for one reroll price.
+2. Strong Aufsätze only at Spätis, from Xhain on (Köpenick sells the normal ones; the camp has no Zeughaus yet).
+3. Verkaufen pays the salvage value, not more (Schrott is already plentiful after Xhain, E3).
+4. Layout C (tabs).
 
 ## Doc updates for the lead
-- `docs/backlog.md`: delete row B13 when phase 2 is merged (until then: "Phase 1 built (rules, bot, mockups, `docs/tasks/m13b-trade-screen.md`); screen waits for the layout pick").
-- `docs/migration.md` Queue: "M13b trade screen phase 2 [Claude · Opus high], after Johannes picks A, B or C (`docs/mockups/m13b-trade/`)".
-- `docs/status.md` (after phase 2) Späti row: "Keeper behind the counter: four pieces, one Aufsatz (strong ones from Xhain on), two blessing cards to buy or swap in, one Stärkung, Verband, Molotow, Schärfen, Panzerung, full heal; sells your pieces for their salvage value. Own trade screen (layout X)". Economy note: "Mitte traders always offer an implant second (2D); the tunnel trader's third offer is legendary 30 % (2D)".
-- `docs/balance.md`: new section "Trade (M13b, 2026-11-26)" with the before/after table below.
-- `docs/tasks/pt-hardware-checks.md` Playtest (after phase 2): "Späti trade screen: buy, sell, Aufsatz, blessing buy, swap and Stärkung on PC, phone and Deck (pad focus)".
+- `docs/backlog.md`: delete row B13 (done with M13b, `docs/tasks/m13b-trade-screen.md`).
+- `docs/migration.md`: line 27 "a trade screen of its own and trader balance (M13b)" is done; a queue row for M13b, if there is one, set to `done`.
+- `docs/status.md` Späti row: "Keeper behind the counter with a trade screen of its own (tabs Waren, Segen, Verkaufen): four pieces, one Aufsatz (strong ones only here, from Xhain on), Schärfen, Panzerung, Verband, Molotow, full heal; two blessing cards to buy or swap in for a held one (it keeps the levels), one Stärkung (+1 level); sells your pieces for their salvage value. The wandering and the tunnel trader use the same screen (Waren, Verkaufen)". Economy line: "Mitte traders always offer an implant second, the tunnel trader's third offer is legendary 30 % (both 2D)".
+- `docs/balance.md`: new section "Trade (M13b, 2026-11-26)" with the before/after table and reading from this file (Bot section).
+- `docs/tasks/pt-hardware-checks.md` Playtest: "M13b Späti trade screen: buy, sell, Aufsatz, blessing buy, swap and Stärkung with mouse, touch (phone) and the Deck pad (LB/RB, A, Y, X, B); blessing prices feel (2× reroll for a card)".

@@ -619,22 +619,118 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
 }
 @media (max-width: 560px) and (orientation: portrait) { #blessing-choices { grid-template-columns: 1fr; } .pcard { grid-template-rows: none; grid-template-columns: 52px 1fr; justify-items: start; text-align: left; column-gap: 10px; } .pcard .perk-icon { grid-row: 1 / 5; } }
 
-/* ---- trader */
-#trade { z-index: 30; touch-action: pan-y; }
-.panel.trade { width: min(980px, 100%); background: linear-gradient(#1d1712, #120d0a); text-align: left; touch-action: pan-y; }
-.panel.trade h2 { color: #8fd16a; text-align: center; }
-.panel.trade .sub { margin: 0; text-align: center; font-size: 13px; }
-.trade-offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
-.trade-offer { display: flex; flex-direction: column; gap: 6px; }
-.trade-offer .inv-card { flex: 1; margin: 0; }
-.trade-offer button, .trade-row button { width: auto; margin: 0; padding: 9px 12px; font-size: 14px; }
-.trade-delta { font-size: 13px; }
-.trade-offer.sel .inv-card { outline: 2px solid var(--cream); outline-offset: 2px; }
-.trade-worn { margin: 10px 0; }
-.trade-worn .inv-card { margin: 0; max-width: 420px; }
-.trade-sold { display: grid; place-items: center; min-height: 120px; border: 1px dashed #4c453a; color: #7a7064; }
-.trade-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #4c453a; background: #202520; }
-.trade-msg { min-height: 18px; margin: 0; color: #ef9f27; font-size: 13px; text-align: center; }
+/* ---- M13b trade screen, layout C (Johannes, 2026-11-26): full screen in the pause-menu look, tabs Waren, Segen,
+   Verkaufen; tiles left, the picked one right (as the inventory). Compact below 560 px height (phone, Deck at 1.5). */
+#trade { z-index: 30; padding: 0; display: block; background: rgba(16, 11, 8, 0.93); touch-action: pan-y; }
+body:has(#trade:not([hidden])) :is(#hud, #minimap) { visibility: hidden; }
+.trade-head { flex-wrap: nowrap; align-items: flex-end; }
+.trade-name { display: flex; flex-direction: column; min-width: 0; margin-right: 8px; padding-bottom: 6px; }
+.trade-name h2 { margin: 0; font: 400 28px/1 var(--f-display); color: var(--ember); letter-spacing: .03em; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trade-name small { color: var(--dim); font-size: 14px; white-space: nowrap; }
+.trade-head .menu-tabs { flex: 0 1 auto; min-width: 0; max-width: none; }
+.trade-head .menu-tabb small { margin-left: 3px; font: 400 13px var(--f-ui); color: var(--dim); }
+.trade-head .menu-res { margin-left: auto; padding-bottom: 6px; }
+.trade-body { flex: 1; min-height: 0; margin-top: 10px; }
+.trade-cols { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); gap: 16px; }
+.trade-cols > section { min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+.trade-cols > .inv-detail { align-self: stretch; }
+.trade-list h3, .trade-held h3 { margin: 2px 0 6px; font: 500 14px var(--f-ui); color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+.trade-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 112px)); gap: 8px; margin-bottom: 12px; }
+.menu-panel .trade-tile { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-height: 0; padding: 0; background: none; border: 0; outline: 0; color: var(--bone); font: inherit; text-align: center; touch-action: manipulation; }
+.menu-panel .trade-tile:hover, .menu-panel .trade-tile:focus, .menu-panel .trade-tile:active { background: none; }
+.trade-tile .inv-cell { width: 100%; }
+.trade-tile .inv-cell > svg { width: 64%; height: 64%; }
+.trade-tile .inv-cell > img { max-height: 70%; }
+.trade-tile.sel .inv-cell, .trade-tile:focus-visible .inv-cell { outline: 2px solid var(--bone); outline-offset: 1px; }
+.trade-tile .tn { height: 29px; overflow: hidden; font-size: 13px; line-height: 1.1; color: var(--dim); }
+.trade-tile .tp { display: flex; align-items: center; justify-content: center; min-height: 28px; border: 1px solid var(--edge); border-radius: 3px; background: rgba(13, 9, 7, .6); font: 600 15px var(--f-ui); }
+.trade-tile .tp .mico { width: 18px; height: 18px; margin-right: 3px; }
+.trade-tile.sel .tp { background: var(--rust2d); border-color: var(--ember); }
+.trade-tile.poor .tp { opacity: .5; }
+.trade-tile.sold { opacity: .4; }
+.trade-ic { display: grid; place-items: center; width: 44px; height: 44px; flex: none; }
+.trade-ic svg, .trade-ic img { width: 40px; height: 40px; }
+.trade-detail .inv-actions, .trade-held .inv-actions { display: flex; gap: 8px; margin-top: 10px; }
+.trade-detail .inv-actions button { flex: 1; min-height: 46px; font-size: 17px; }
+.inv-actions .mico { width: 20px; height: 20px; vertical-align: -4px; }
+.segen-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 400px); }
+.trade-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 4px; }
+.tcard { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 14px 14px; text-align: center; border-radius: 8px; border: 2px solid var(--qc); background: linear-gradient(165deg, color-mix(in srgb, var(--qc) 14%, #221a14), #17110d 62%); box-shadow: 0 8px 22px rgba(0, 0, 0, .5), 0 0 20px color-mix(in srgb, var(--qc) 25%, transparent); }
+.tcard .perk-icon { width: 72px; height: 72px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6)); }
+.tcard .prar { color: var(--qc); }
+.tcard .pn { color: var(--qc); }
+.tcard .pd { min-height: 46px; font-size: 16px; }
+.tcard .tacts { display: flex; gap: 8px; width: 100%; margin-top: auto; }
+.menu-panel .tcard .tacts button, .menu-panel .trow > button, .menu-panel .trade-cancel { flex: 1; min-height: 42px; padding: 6px 8px; background: rgba(13, 9, 7, .6); border: 1px solid var(--edge); border-radius: 3px; color: var(--bone); font: 600 15px var(--f-ui); letter-spacing: .06em; text-transform: uppercase; outline: 0; }
+.menu-panel .tcard .tacts button.primary { background: var(--rust2d); border-color: var(--ember); }
+.menu-panel .tcard .tacts button:disabled, .menu-panel .trow > button:disabled { opacity: .45; }
+.menu-panel :is(.tcard .tacts button, .trow > button, .trade-cancel, button.trow):focus-visible { outline: 2px solid var(--bone); outline-offset: 2px; }
+.tcard .tacts .mico { width: 18px; height: 18px; margin-right: 3px; vertical-align: -3px; }
+.tcard.on { outline: 2px solid #7d9bff; outline-offset: 2px; }
+.tcard.sold { justify-content: center; min-height: 200px; border: 1px dashed var(--edge); background: none; box-shadow: none; color: var(--dim); }
+.trade-held { display: flex; flex-direction: column; gap: 6px; }
+.trade-held .inv-hint { margin: 0 0 4px; font-size: 14px; }
+.trade-held .inv-hint .mico { width: 16px; height: 16px; vertical-align: -3px; margin: 0 2px; }
+.trow { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 3px; border: 1px solid transparent; background: rgba(13, 9, 7, .45); color: var(--bone); font: inherit; text-align: left; }
+.trow .perk-icon { width: 36px; height: 36px; }
+.trow b { display: block; font-size: 16px; font-weight: 600; }
+.trow > small { color: var(--dim); font-size: 13px; text-align: right; }
+.menu-panel .trow > button { flex: none; min-width: 52px; min-height: 36px; }
+.menu-panel button.trow.pick { width: 100%; min-height: 0; border-color: #7d9bff; touch-action: manipulation; }
+.menu-panel button.trow.pick:disabled { opacity: .5; border-color: transparent; }
+.trade-swap { margin: 0 0 4px; font-size: 15px; color: #b9c8ff; }
+.menu-panel .trade-cancel { display: block; width: 100%; margin-top: 6px; min-height: 34px; }
+.trade-bulk { display: flex; gap: 6px; flex-wrap: wrap; }
+.trade-list .trade-bag { grid-template-columns: repeat(auto-fill, minmax(60px, 76px)); }
+.trade-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; padding: 2px 0 max(6px, env(safe-area-inset-bottom)); }
+.trade-msg { margin: 0; color: var(--ember); font-size: 16px; }
+.trade-msg.positive { color: var(--good); }
+.trade-pad { display: none; gap: 16px; margin: 0 0 0 auto; color: var(--dim); font-size: 14px; }
+#trade.pad .trade-pad { display: flex; }
+.trade-pad b { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-right: 5px; padding: 0 5px; border-radius: 11px; border: 1px solid var(--edge); background: #2a211b; color: var(--bone); font-size: 12px; }
+@media (max-height: 560px) {
+  .trade-name small { display: none; }
+  .trade-name h2 { font-size: 21px; }
+  .trade-name { padding-bottom: 4px; }
+  .trade-head .menu-res { font-size: 14px; gap: 2px 10px; padding-bottom: 4px; }
+  .trade-body { margin-top: 6px; }
+  .trade-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 8px; }
+  .trade-list h3, .trade-held h3 { font-size: 12px; margin-bottom: 3px; }
+  .trade-tiles { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 5px; margin-bottom: 6px; }
+  .trade-tile .tn { display: none; }
+  .trade-tile .tp { min-height: 24px; font-size: 13px; }
+  .trade-tile .tp .mico { width: 14px; height: 14px; }
+  .menu-panel .trade-tile .inv-cell { min-height: 0; }
+  .trade-detail .cmp2 { grid-template-columns: minmax(0, 1fr); }
+  .trade-detail .cmp2 .inv-card + .inv-card { display: none; }
+  .trade-detail .inv-card { padding: 7px; font-size: 14px; }
+  .trade-detail .inv-card h3 { font-size: 16px; }
+  .trade-detail .inv-actions button { min-height: 38px; font-size: 14px; }
+  .trade-detail .inv-hint { font-size: 13px; margin: 3px 0; }
+  .segen-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 250px); }
+  .trade-cards { gap: 8px; padding: 2px; }
+  .tcard { gap: 2px; padding: 6px 8px 8px; }
+  .tcard .perk-icon { width: 40px; height: 40px; }
+  .tcard .prar { font-size: 11px; }
+  .tcard .pn { font-size: 19px; }
+  .tcard .pd { min-height: 0; font-size: 13px; line-height: 1.2; }
+  .menu-panel .tcard .tacts button { min-height: 32px; padding: 3px 5px; font-size: 12px; letter-spacing: .03em; }
+  .trow { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 6px; padding: 2px 5px; }
+  .trow .perk-icon { width: 28px; height: 28px; }
+  .trow b { font-size: 14px; }
+  .menu-panel .trow > button { min-height: 30px; min-width: 42px; }
+  .trade-held .inv-hint, .trade-swap { font-size: 13px; }
+  .trade-list .trade-bag { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+  .menu-panel .trade-bag .inv-cell { min-height: 0; }
+  .trade-foot { min-height: 20px; }
+  .trade-msg { font-size: 14px; }
+}
+@media (orientation: portrait) and (max-width: 699px) {
+  .trade-head { flex-wrap: wrap; }
+  .trade-head .menu-res { order: -1; width: 100%; justify-content: flex-start; }
+  .trade-cols, .segen-cols { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .trade-cols > .inv-detail { max-height: 45vh; }
+}
 
 /* ---- phone and tablet HUD (playtest 2026-11-16): one pause button; the minimap sits top right as in 2D and opens the map. */
 #minimap { left: auto; right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 54px); }
@@ -658,9 +754,6 @@ body.touch-on #btn-molotow { right: calc(max(26px, env(safe-area-inset-right)) +
   .panel h2 { font-size: 17px; }
     }
 
-/* Menus close with a cross top right (Johannes, 2026-11-16); "Weiter" is for tutorial cards only. */
-.panel.trade { position: relative; }
-.panel.trade h2 { padding: 0 40px; }
 
 /* ---- U1/U2/U3 pause menu in the 2D look (2D css/style.css: .tabs, .ihead, .ires, .stab, .cell):
    full screen over the paused game, text tabs with line icons, × top right. One scroll area per column. */
@@ -685,7 +778,7 @@ body:has(#menu:not([hidden])) :is(#hud, #minimap), body:has(#optv:not([hidden]))
 .menu-panel button:not(.menu-tabb) { touch-action: manipulation; }
 .menu-panel button:focus-visible, .menu-panel summary:focus-visible, .menu-panel input:focus-visible, .sn:focus-visible { outline: 2px solid var(--bone); outline-offset: 2px; }
 /* 2D buttons (.btn) inside the menu: dark, thin edge, condensed caps. */
-.menu-panel .inv-actions button, .menu-panel .chip, .menu-panel .krb, .menu-panel .sgb, .trade button:not(.x-btn) { outline: 0; }
+.menu-panel .inv-actions button, .menu-panel .chip, .menu-panel .krb, .menu-panel .sgb { outline: 0; }
 .menu-panel .inv-actions button { min-height: 40px; padding: 8px 12px; background: rgba(13, 9, 7, .6); border: 1px solid var(--edge); border-radius: 3px; color: var(--bone); font: 600 15px var(--f-ui); letter-spacing: .08em; text-transform: uppercase; }
 .menu-panel .inv-actions button.primary { background: var(--rust2d); border-color: var(--ember); }
 .menu-panel .inv-actions button[aria-pressed=true] { border-color: var(--ember); color: var(--ember); }

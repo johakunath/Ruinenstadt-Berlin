@@ -1,4 +1,5 @@
 import { AbilitiesUi } from './ui/abilities';
+import { TradeUi } from './ui/trade';
 import { heroLook } from './data/hero-look';
 import { weaponModel } from './render/weapons';
 import { InventoryUi } from './ui/inventory';
@@ -84,6 +85,8 @@ const input = new Input(canvas);
 // The Steam Deck plays with its controller: pad labels and aim assist from the start (Johannes, 2026-11-25).
 if (onSteamDeck()) input.device = 'gamepad';
 const abilitiesUi = new AbilitiesUi(input);
+/** M13b: the trade screen of a Späti or a trader (layout C, tabs Waren, Segen, Verkaufen). */
+const tradeUi = new TradeUi(input);
 /** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
 function talk(): void {
   if (isCamp) { campAct(); return; }
@@ -92,7 +95,7 @@ function talk(): void {
 const talkPrompt = new TalkPrompt(() => talk());
 input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
-abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
+tradeUi.onClose = () => { input.clear(); saveNow(true); };
 
 // Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), Charlottenburg (M16, ?map=charlottenburg), Wedding (M18, ?map=wedding), the Fernsehturm finale (M17, ?map=turm), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
@@ -442,7 +445,7 @@ optionsScreen().onDevice = (d) => {
   else if (input.device !== 'mouse') input.device = 'keyboard';
 };
 if (optionsScreen().picked) optionsScreen().onDevice(optionsScreen().picked!);
-input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
+input.onInventory = () => { if (phase === 'play' && !tradeUi.open) menu.toggle('inv'); };
 // M13: the camp between expeditions, from the title and the victory screen.
 const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); if (isCamp && phase === 'play') { input.enabled = true; input.clear(); } });
 document.getElementById('open-camp')!.addEventListener('click', () => { if (isCamp) startCamp(); else goMap('lager'); });
@@ -502,7 +505,7 @@ function startCamp(): void {
   if (opts.tp) { const p = sim.player; p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z; }
 }
 
-input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen) menu.toggle('karte'); };
+input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen && !tradeUi.open) menu.toggle('karte'); };
 document.getElementById('won-explore')!.addEventListener('click', explore);
 // M18: endless waves around the hero after the district boss.
 document.getElementById('won-endless')!.addEventListener('click', () => {
@@ -559,7 +562,9 @@ window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
 input.onZoom = (dir) => { if (phase === 'play') renderer?.zoom(dir); };
 input.onMenu = () => {
-  if (optionsScreen().isOpen) optionsScreen().close();
+  // The pad's Start while trading goes back like B (the trade screen is no pause).
+  if (tradeUi.open) tradeUi.back();
+  else if (optionsScreen().isOpen) optionsScreen().close();
   else if (menu.isOpen) menu.close();
   else if (phase === 'play') menu.open('inv');
   else if (phase === 'title' && startScreen().active()) optionsScreen().open();
@@ -944,14 +949,15 @@ function frame(now: number): void {
   if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
 
   // The tutorial card blocks the blessing pad; it is polled after, so its closing press is not a pick (Codex review).
-  abilitiesUi.update(sim, phase === 'play' && !menu.isOpen, intro.isOpen);
+  abilitiesUi.update(sim, phase === 'play' && !menu.isOpen && !tradeUi.open, intro.isOpen);
+  tradeUi.update(sim, phase === 'play' && !menu.isOpen, intro.isOpen);
   intro.pollPad();
   endingCard?.pollPad();
   // After the others: a press that opens one of them is then not seen as new there (U3).
   startScreen().pollPad(now);
   optionsScreen().pollPad(now);
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
-  if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
+  if (abilitiesUi.open || tradeUi.open) input.clear();
     revealStep(dt);
   const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active && !camp.isOpen && !netBoard.isOpen;
   // Johannes 2026-11-21: the first fall to a quarter of life pauses once and shows how to roll away.
@@ -1048,7 +1054,7 @@ function frame(now: number): void {
   // Behind a still overlay (trade, blessing choice, cards) the world only idles: draw at about 10 fps
   // instead of full rate (playtest 2026-11-17: the tablet runs hot). The open menu draws nothing.
   // The reveal swing runs on real time while the sim waits for it.
-  const still = !running && phase === 'play' && (abilitiesUi.open || abilitiesUi.tradeOpen || intro.isOpen);
+  const still = !running && phase === 'play' && (abilitiesUi.open || tradeUi.open || intro.isOpen);
   const draw = !menu.isOpen && (!still || --stillSkip <= 0);
   if (still && draw) stillSkip = Math.max(1, Math.round(100 / FRAME_MS));
   if (draw) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, renderer.reveal?.active ? 0.1 : 1 / 30));

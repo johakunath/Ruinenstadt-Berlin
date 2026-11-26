@@ -12,7 +12,7 @@ import { parseSave, simFromSave, snapshot } from './save';
 import { createSim, stepSim } from './sim';
 import { heroStats } from './stats';
 import {
-  blessPrice, buyBlessing, buyMod, buyOffer, gearPrice, modPrice, rollSpati, rollTrader, sellItem, spatiGear, stockExtras,
+  blessPrice, buyBlessing, buyMod, buyOffer, gearPrice, modPrice, rollSpati, rollTrader, sellBulk, sellItem, spatiGear, stockExtras,
   strengthenable, strengthenBlessing, swapBlessing, swapBlock, TRADE, tradeShop, type ShopStock,
 } from './trade';
 import { talkTo } from './runcontent';
@@ -117,6 +117,20 @@ describe('buy and sell', () => {
     s.content.tradeOpen = false;
     s.inventory.bag[0]!.locked = false;
     expect(sellItem(s, 0).ok).toBe(false);
+  });
+  it('sells in bulk up to a rarity, never legendary, set or locked pieces', () => {
+    const s = atSpati();
+    const w = s.equipment.w!;
+    const piece = (id: number, rarity: 0 | 1 | 2 | 3, more = {}) => ({ ...structuredClone(w), id, rarity, mods: [], ...more });
+    s.inventory.bag.push(piece(1, 0), piece(2, 1), piece(3, 2), piece(4, 3), piece(5, 0, { locked: true }), piece(6, 1, { set: 'kiez' as const }));
+    const before = s.inventory.scrap;
+    const r = sellBulk(s, 1);
+    expect(r.ok).toBe(true);
+    expect(r.text).toBe(`2 verkauft · +${s.inventory.scrap - before} Schrott`);
+    expect(s.inventory.bag.map((it) => it.id)).toEqual([3, 4, 5, 6]);
+    expect(sellBulk(s, 0)).toEqual({ ok: false, text: 'Nichts zu verkaufen.' });
+    s.content.tradeOpen = false;
+    expect(sellBulk(s, 2).ok).toBe(false);
   });
   it('gear goes to the bag for its price; short Schrott says how much is missing', () => {
     const s = atSpati();

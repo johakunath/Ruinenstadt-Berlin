@@ -11,7 +11,7 @@ import { perkOf, addBlessing, cardOf, drawBlessings, dropBlessing, eligibleBless
 import { installMod, modScrap, modSlots, SPATI_UPGRADE } from './camp';
 import { pk } from './combat';
 import { healPlayer } from './heal';
-import { BAG_SIZE, salvageItem } from './inventory';
+import { BAG_SIZE, bulkCandidates, salvageItem } from './inventory';
 import { makeItem, price, type Item, type LootContext } from './items';
 import { lootContext, lootLevel } from './loot';
 import { Rng } from './math';
@@ -207,6 +207,17 @@ export function sellItem(s: Sim, bagIndex: number): Result {
   salvageItem(s, bagIndex);
   s.events.push({ type: 'buy' });
   return { ok: true, text: `+${s.inventory.scrap - before} Schrott` };
+}
+
+/** Sells every bag piece of rarity `upTo` and below (no legendary, set or locked piece; `bulkCandidates`, as bulk salvage). */
+export function sellBulk(s: Sim, upTo: number): Result {
+  if (!s.content.tradeOpen) return no('');
+  const items = bulkCandidates(s, upTo);
+  if (!items.length) return no('Nichts zu verkaufen.');
+  const before = s.inventory.scrap;
+  for (const it of items) salvageItem(s, s.inventory.bag.indexOf(it));
+  s.events.push({ type: 'buy' });
+  return { ok: true, text: `${items.length} verkauft · +${s.inventory.scrap - before} Schrott` };
 }
 
 export function closeTrade(s: Sim): void {
