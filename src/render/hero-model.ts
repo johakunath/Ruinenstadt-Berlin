@@ -8,6 +8,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { HERO_REGIONS, type BodyRegion } from '../data/hero-contract';
 import { PIECES, hiddenRegions, lookNodes, sameLook, type HeroLook } from '../data/hero-look';
 import { GEAR_SLOTS, gearGeometry, gearMaterials, type GearSlot } from './gear';
+import { aiGearMaterial } from './gear-ai';
 import { heroSource, type HeroSource } from './gear-kit';
 import { pieceVariant } from './hero-wear';
 import type { Materials } from './materials';
@@ -47,9 +48,11 @@ export class HeroModel {
   private readonly gear = new Map<GearSlot, SkinnedMesh>();
   private readonly src: HeroSource;
   private readonly boneNames: string[] = [];
+  private readonly materials: Materials | undefined;
 
   constructor(source: Object3D, materials?: Materials) {
     this.model = cloneSkinned(source);
+    this.materials = materials;
     this.src = heroSource(source);
     const m = this.model;
     for (const p of Object.values(PIECES)) {
@@ -135,6 +138,7 @@ export class HeroModel {
       const g = geo[slot];
       mesh.visible = !!g;
       if (g) mesh.geometry = g;
+      if (slot === 'ai' && g && this.materials) mesh.material = aiGearMaterial(this.materials, ids);
       // Same layers as the body (hero contour, `HeroView` sets them after construction).
       if (layers !== undefined) mesh.layers.mask = layers;
     }

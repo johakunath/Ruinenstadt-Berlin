@@ -11,6 +11,7 @@ import {
   Vector3, Vector4, type AnimationAction, type BufferGeometry, type Object3D, type Texture,
 } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { loadAiGear } from './gear-ai';
 import animsUrl from '../../assets/characters/anims.glb?url';
 import heroUrl from '../../assets/characters/hero.glb?url';
 import zombieUrl from '../../assets/characters/zombie.glb?url';
@@ -239,6 +240,7 @@ function prepare(scene: Object3D, materials: Materials): void {
 export async function loadCharacters(materials: Materials, mechs: boolean | 'small' = false, humans = true, females = true, bosses?: readonly string[]): Promise<CharacterAssets> {
   const loader = new GLTFLoader();
   const clothingLoad = loadClothing(materials.profile.anisotropy);
+  const aiGearLoad = loadAiGear(materials.profile.anisotropy);
   const detail = detailTexture(materials.profile.anisotropy), detailLoad = loadDetail(detail);
   const mechLoad = mechs ? Promise.all((mechs === 'small' ? [mechUrl] : [mechUrl, mechBigUrl]).map((u) => loader.loadAsync(u))) as Promise<[GLTF, GLTF?]> : null;
   // H3: the human boss base only where a male humanoid boss can appear (review fix: not on Alexanderplatz or in the camp).
@@ -250,6 +252,7 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const ownGltfs = await ownLoad;
   for (const g of new Set([heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs])) if (g) prepare(g.scene, materials);
   await detailLoad;
+  await aiGearLoad;
   const swatch = new Color().setRGB(225 / 255, 0, 0, SRGBColorSpace).r;
   const detailGain = new Vector4(...[0, 1, 2, 3].map((c) => {
     const id = (Object.keys(DETAILS) as DetailId[]).find((d) => DETAILS[d].channel === c)!;

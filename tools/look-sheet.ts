@@ -148,7 +148,7 @@ if (mode === 'icons') {
     cap.className = 'cap';
     cap.style.left = `${x0 + 6}px`;
     cap.style.top = `${y0 + H + 2}px`;
-    cap.innerHTML = `${items.length ? items.map(nameOf).join(' + ') : 'Ohne Rüstung'}<br><i>gear ${gt.matte}/${gt.metal}/${gt.glow} tris · ${draws()} draws</i>`;
+    cap.innerHTML = `${items.length ? items.map(nameOf).join(' + ') : 'Ohne Rüstung'}<br><i>gear ${gt.matte}/${gt.metal}/${gt.glow}${gt.ai ? ` + AI ${gt.ai}` : ''} tris · ${draws()} draws</i>`;
     wrap.append(cap);
   });
   document.title = `done ${looks.length}`;
