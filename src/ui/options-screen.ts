@@ -7,6 +7,7 @@ import { DEVICE_SVG, type ControlDevice } from './controls-gfx';
 import { keyNav, PadNav } from './focus';
 import { profileSeg, row, segment, syncSettings, toggle, volumeRange } from './settings';
 import { onSteamDeck } from '../options';
+import { closeOnTap } from './drag-scroll';
 
 const DEVICES: Array<[ControlDevice, string]> = [['touch', 'Touch'], ['key', 'Tastatur und Maus'], ['pad', 'Controller']];
 
@@ -71,7 +72,7 @@ export class OptionsScreen {
     });
     r.querySelector('#save-copy')!.addEventListener('click', e => void copySave(e.currentTarget as HTMLButtonElement));
     r.querySelector('#save-load')!.addEventListener('click', loadSaveCode);
-    r.addEventListener('click', e => { if (e.target === r) this.close(); });
+    closeOnTap(r, () => this.close());
     keyNav(r, () => this.close());
     this.pad = new PadNav(r, () => this.isOpen, () => this.close());
   }

@@ -1214,3 +1214,6 @@ svg.net g[role=button]:focus-visible rect { stroke: #ef9f27; }
 @keyframes hg-flow { to { stroke-dashoffset: -5; } }
 @media (prefers-reduced-motion: reduce) { .hourglass, .hg-sand-top, .hg-sand-bot, .hg-stream { animation: none; } }
 #loadbox.failed { pointer-events: none; background: none; }
+/* Steam Deck playtest 2026-11-26: with a pad, the pause menu's cog shows its button (Y opens Optionen). */
+#menu #menu-opt { position: relative; }
+#menu.pad #menu-opt::after { content: 'Y'; position: absolute; right: -6px; bottom: -6px; min-width: 16px; padding: 1px 3px; border-radius: 4px; border: 1px solid #8a7a5e; background: rgba(6, 10, 12, 0.92); color: #f2d14b; font: 700 11px/1.2 system-ui, sans-serif; text-align: center; pointer-events: none; }
