@@ -5,6 +5,7 @@ import { groundY } from './ground';
 import { DETAILS, type DetailId, type HeroLook } from '../data/hero-look';
 import { DETAIL_PIECES, ensureDetail } from './hero-wear';
 import { HeroModel } from './hero-model';
+import { dressDino } from './dino-extras';
 import { HERO_LAYER } from './layers';
 import {
   AnimationClip, AnimationMixer, Color, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, LoopRepeat, Mesh, RGBAFormat, RepeatWrapping, SRGBColorSpace, TextureLoader, ImageLoader,
@@ -250,6 +251,9 @@ export async function loadCharacters(materials: Materials, mechs: boolean | 'sma
   const ownLoad = Promise.all(own.map(([, o]) => { let f = files.get(o.url); if (!f) files.set(o.url, (f = loader.loadAsync(o.url))); return f; }));
   const [heroGltf, zombieGltf, animGltf, raptorGltf, rexGltf, humanGltf, femaleGltf] = await Promise.all([heroUrl, zombieUrl, animsUrl, raptorUrl, rexUrl, humans ? humanUrl : null, females ? femaleUrl : null].map((u) => (u ? loader.loadAsync(u) : Promise.resolve(undefined)))) as [GLTF, GLTF, GLTF, GLTF, GLTF, GLTF | undefined, GLTF | undefined];
   const ownGltfs = await ownLoad;
+  // P17: spikes, quills, ribs, scars and sickle claws merged into the dinosaur bodies, the hide repainted (no draw call).
+  dressDino(raptorGltf.scene, 'raptor');
+  dressDino(rexGltf.scene, 'rex');
   for (const g of new Set([heroGltf, zombieGltf, raptorGltf, rexGltf, humanGltf, femaleGltf, ...ownGltfs])) if (g) prepare(g.scene, materials);
   await detailLoad;
   await aiGearLoad;

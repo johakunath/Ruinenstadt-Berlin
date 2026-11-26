@@ -9,7 +9,7 @@ import { BossVoices } from './voices';
 
 /** Wind-up voice per kind (S2); other bosses growl, other bodies use the walker's. */
 const VOICE: Partial<Record<EnemyKind, SfxId>> = {
-  runner: 'growlRunner', brute: 'growlBrute', raptor: 'growlRaptor', spitter: 'growlSpitter', crow: 'growlCrow', rat: 'growlRat',
+  runner: 'growlRunner', brute: 'growlBrute', raptor: 'growlRaptor', kompso: 'growlRat', spitter: 'growlSpitter', crow: 'growlCrow', rat: 'growlRat',
   grenzer: 'growlGrenzer', brandmeister: 'growlBrand', rattenmutter: 'growlMutter', spreehexe: 'growlHexe',
   kabel: 'growlRunner', bass: 'growlBass', tuersteher: 'growlTuer', bassprediger: 'growlBass',
   // M15 Alexanderplatz: clockwork ticks and a steam hiss, a wooden creak, a seed pop, the big clock's chime.

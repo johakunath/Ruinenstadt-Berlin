@@ -32,8 +32,8 @@ export const LOOT = {
 export const INGREDIENT_IDS: readonly IngredientId[] = ['fleisch', 'gemuese', 'gewuerz'];
 /** 2D EZUT by role: ghoul and brute meat, spitter vegetables, the rest spices. */
 // M15: 2D EMAT and EZUT for uhr (metall, gemuese), wurz (stoff, gemuese), kern (chemie, gemuese).
-const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', crow: 'kabel', rat: 'stoff', kabel: 'kabel', bass: 'metall', drone: 'kabel', uhrwerk: 'metall', wurzler: 'stoff', kernspeier: 'chemie', zuender: 'chemie', schild: 'metall', heuler: 'kabel', scherbe: 'stoff', souffleur: 'stoff', loge: 'metall', teeifrit: 'chemie', baklava: 'metall', teppich: 'stoff' };
-const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', spitter: 'gemuese', rat: 'fleisch', uhrwerk: 'gemuese', wurzler: 'gemuese', kernspeier: 'gemuese', schild: 'gemuese', heuler: 'fleisch' };
+const ENEMY_MATERIAL: Partial<Record<EnemyKind, MaterialId>> = { walker: 'stoff', runner: 'stoff', brute: 'metall', spitter: 'chemie', raptor: 'kabel', kompso: 'kabel', crow: 'kabel', rat: 'stoff', kabel: 'kabel', bass: 'metall', drone: 'kabel', uhrwerk: 'metall', wurzler: 'stoff', kernspeier: 'chemie', zuender: 'chemie', schild: 'metall', heuler: 'kabel', scherbe: 'stoff', souffleur: 'stoff', loge: 'metall', teeifrit: 'chemie', baklava: 'metall', teppich: 'stoff' };
+const ENEMY_INGREDIENT: Partial<Record<EnemyKind, IngredientId>> = { walker: 'fleisch', runner: 'fleisch', brute: 'fleisch', crow: 'fleisch', raptor: 'fleisch', kompso: 'fleisch', spitter: 'gemuese', rat: 'fleisch', uhrwerk: 'gemuese', wurzler: 'gemuese', kernspeier: 'gemuese', schild: 'gemuese', heuler: 'fleisch' };
 export const MATERIAL_IDS: readonly MaterialId[] = ['stoff', 'metall', 'chemie', 'kabel'];
 
 export type DropContent =
@@ -137,16 +137,17 @@ export function creditScrap(sim: Sim, amount: number, x: number, z: number, from
 
 // 2D drop chances and Schrott by role (ghoul, raser, brute, spitter, crow; M12c kabel 0.12, bass 0.45, drones as crows; WP5 bomb 0.22, shield 0.4, howl 0.45).
 // M16 (spec m12d): Scherbentänzerin and Souffleur drop Stoff at the Kabelghul's chance, the Logenbrecher Metall at the Boxenkopf's.
-const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15, uhrwerk: 0.4, wurzler: 0.3, kernspeier: 0.2, zuender: 0.22, schild: 0.4, heuler: 0.45, scherbe: 0.12, souffleur: 0.12, loge: 0.45, teeifrit: 0.24, baklava: 0.4, teppich: 0.15 };
+// P17: a Kompso pack (three bodies, one wave unit) drops about as much as one raptor.
+const ITEM_CHANCE: Partial<Record<EnemyKind, number>> = { walker: 0.15, runner: 0.24, brute: 0.55, spitter: 0.24, raptor: 0.3, kompso: 0.1, crow: 0.15, rat: 0.03, kabel: 0.12, bass: 0.45, drone: 0.15, uhrwerk: 0.4, wurzler: 0.3, kernspeier: 0.2, zuender: 0.22, schild: 0.4, heuler: 0.45, scherbe: 0.12, souffleur: 0.12, loge: 0.45, teeifrit: 0.24, baklava: 0.4, teppich: 0.15 };
 const SCRAP: Partial<Record<EnemyKind, number>> = {
-  walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, crow: 1, rat: 0, kabel: 1, bass: 4, drone: 1, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70, schaffner: 60,
+  walker: 1, runner: 3, brute: 4, spitter: 2, raptor: 3, kompso: 1, crow: 1, rat: 0, kabel: 1, bass: 4, drone: 1, feldwebel: 40, waechter: 40, rex: 40, hauptmann: 70, schaffner: 60,
   grenzer: 40, brandmeister: 40, rattenmutter: 40, spreehexe: 70, tuersteher: 40, wachdrohne: 40, dirigent: 40, bassprediger: 70,
   uhrwerk: 4, wurzler: 3, kernspeier: 2, zuender: 3, schild: 4, heuler: 4, wurzelmutter: 40, uhrwerkgross: 40, volkskoloss: 40, weltzeituhr: 70,
   scherbe: 1, souffleur: 2, loge: 4, conferencier: 40, ringvater: 40, spiegelpaar: 40, diva: 70,
   teeifrit: 2, baklava: 4, teppich: 1, zugezogene: 40, hauptgericht: 40, bauherr: 40, sultan: 70,
 };
-/** 2D: rats drop material and ingredients rarely (8 % and 1 % instead of 22 % and 3 %). */
-const MAT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.08 };
+/** 2D: rats drop material and ingredients rarely (8 % and 1 % instead of 22 % and 3 %); P17 the Kompso pack (three) a little more. */
+const MAT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.08, kompso: 0.1 };
 /**
  * Playtest 2026-11-20: tunnels dropped too much. The bot measured 13 to 21 items per 100 kills there
  * against 7 to 11 in Köpenick and Xhain (late-tier mix: no rats, more elites and brutes), so enemy
@@ -160,7 +161,7 @@ export const TUNNEL_ITEMS = 0.55;
 export const FIRST_KOEPENICK = { items: 1.6, scrap: 1.3 } as const;
 const firstRun = (sim: Sim): boolean => sim.level.mapId === 'koepenick' && !sim.inventory.camp?.freed?.includes(0);
 const itemRate = (sim: Sim): number => ECONOMY.items * (sim.level.tunnel ? TUNNEL_ITEMS : 1) * (firstRun(sim) ? FIRST_KOEPENICK.items : 1);
-const ZUT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.01 };
+const ZUT_CHANCE: Partial<Record<EnemyKind, number>> = { rat: 0.01, kompso: 0.015 };
 /** M17: chance of another Telespargel once one was found. */
 export const TELESPARGEL_AGAIN = 1 / 3;
 /** District bosses: three items and a legendary (2D `big`). */

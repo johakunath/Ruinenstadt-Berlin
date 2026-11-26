@@ -186,6 +186,21 @@ export const BASE_CLIPS: Readonly<Record<string, Pick<AttackDef, 'clip' | 'clipS
   neonfl: { clip: 'Pistol_Shoot', clipStart: 0, clipSwing: 0.01, clipHit: 0.06, rec: null },
 };
 
+/**
+ * Dinosaur bites on the Quaternius `Attack` clip (render: `poseDino`): the wind-up plays the clip from 0 to `hit`, the
+ * active frames from `hit` to `hit + swipe`, the recovery to the clip's end; `walk` and `run` are metres the Walk and
+ * Run clips carry the body per second at scale 1. P17: measured with
+ * `GLB=assets/characters/raptor.glb BONE=Head node tools/clip-swing.mjs Attack`: the head pulls back until 0.20 s
+ * (0.26 m behind its rest), lunges from 0.27 s, is 0.16 m ahead at 0.33 s and furthest ahead (0.22 m) at 0.37 to 0.40 s.
+ * The raptor's long bite holds through 0.50 s; the Kompso snaps (its wind-up ends as the jaws come forward, the
+ * active frames are the furthest reach).
+ */
+export const DINO_BITE: Readonly<Record<'raptor' | 'rex' | 'kompso', { hit: number; swipe: number; walk: number; run: number }>> = {
+  raptor: { hit: 0.36, swipe: 0.14, walk: 1.1, run: 6.5 },
+  rex: { hit: 0.52, swipe: 0.16, walk: 2.4, run: 7 },
+  kompso: { hit: 0.33, swipe: 0.07, walk: 1.1, run: 6.5 },
+};
+
 /** An attack of a weapon kind; `look` (a weapon look id) swaps in the base's own clip. */
 export function weaponAttack(kind: WeaponKindId, id: AttackId, look?: string): AttackDef {
   const own = look ? BASE_CLIPS[look] : undefined;

@@ -23,7 +23,7 @@ export type BossKind = 'feldwebel' | 'waechter' | 'rex' | 'hauptmann' | 'schaffn
   | 'conferencier' | 'ringvater' | 'spiegelpaar' | 'diva'
   | 'zugezogene' | 'hauptgericht' | 'bauherr' | 'sultan'
   | 'zeitwart';
-export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
+export type EnemyKind = 'walker' | 'runner' | 'brute' | 'spitter' | 'raptor' | 'kompso' | 'crow' | 'rat' | 'kabel' | 'bass' | 'drone' | 'uhrwerk' | 'wurzler' | 'kernspeier'
   | 'zuender' | 'schild' | 'heuler' | 'scherbe' | 'loge' | 'souffleur' | 'spiegelbild' | 'teeifrit' | 'baklava' | 'teppich' | BossKind;
 /**
  * Which model and clip set draws the body (`src/render/enemies.ts`). M12c: `drone` is code-built. M15: `mech` and
@@ -107,7 +107,7 @@ export const ENEMY_CLASSES: Readonly<Record<EnemyKind, readonly EnemyClass[]>> =
   drone: ['maschinen'], uhrwerk: ['maschinen'], uhrwerkgross: ['maschinen'], wachdrohne: ['maschinen'], weltzeituhr: ['maschinen'], volkskoloss: ['maschinen'], bassprediger: ['maschinen'],
   wurzler: ['pflanzen'], kernspeier: ['pflanzen'], wurzelmutter: ['pflanzen'],
   feldwebel: ['menschen'], waechter: ['menschen'], hauptmann: ['menschen'], schaffner: ['menschen'], grenzer: ['menschen'], brandmeister: ['menschen'], tuersteher: ['menschen'], dirigent: ['menschen'],
-  raptor: ['tiere'], rex: ['tiere'], crow: ['tiere'], rat: ['tiere'], rattenmutter: ['tiere'],
+  raptor: ['tiere'], kompso: ['tiere'], rex: ['tiere'], crow: ['tiere'], rat: ['tiere'], rattenmutter: ['tiere'],
   // M16 Charlottenburg: the glass revue ghouls are Zeitlose (undead); the bosses are people of the revue.
   scherbe: ['untote'], loge: ['untote'], souffleur: ['untote'],
   conferencier: ['menschen'], ringvater: ['menschen'], spiegelpaar: ['menschen'], spiegelbild: ['menschen'], diva: ['menschen'],
@@ -145,6 +145,14 @@ const DEFS: Record<EnemyKind, Omit<EnemyDef, 'classes'>> = {
     kind: 'raptor', name: 'Raptor', body: 'raptor', ai: 'pouncer', res: 'raser', radius: 0.45, scale: 1, hp: 38, speed: 2.6,
     attackRange: 1.5, windup: 0.4, active: 0.1, recovery: 0.6,
     reach: 1.8, halfAngle: 40 * DEG, damage: 12, knockbackTaken: 0.9, poise: false, weight: 0,
+  },
+  // P17 (`docs/tasks/m11c-dinos.md`; 2D has no small dinosaur): Kompso (Compsognathus), the raptor body at half size.
+  // The rat's brain and pack rule (zig-zags in, bites, three at once), between rat and Hetzer in life and bite; the
+  // raptor's resistances. Bite timing: `DINO_BITE.kompso` (src/data/combat.ts), measured on the raptor's Attack clip.
+  kompso: {
+    kind: 'kompso', name: 'Kompso', body: 'raptor', ai: 'rat', res: 'raser', radius: 0.26, scale: 0.5, hp: 13, speed: 3.9,
+    attackRange: 0.95, windup: 0.3, active: 0.08, recovery: 0.45,
+    reach: 1.1, halfAngle: 40 * DEG, damage: 6, knockbackTaken: 1.5, poise: false, weight: 0, pack: 3,
   },
   // 2D Krähe: circles out of reach, dives, then sits dazed for a moment.
   crow: {

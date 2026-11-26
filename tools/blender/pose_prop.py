@@ -1,12 +1,15 @@
 """Turns a prepared static prop into a resting pose (docs/local-ai-assets.md W6), e.g. a statue that fell over.
 
-    blender -b --python tools/blender/pose_prop.py -- --in prop.glb --out posed.glb [--yaw 0] [--roll 180] [--sink 0] [--cut z,y]
+    blender -b --python tools/blender/pose_prop.py -- --in prop.glb --out posed.glb [--yaw 0] [--roll 180] [--sink 0] [--cut z,y] [--level] [--pitch 0] [--squash 1]
 
 --yaw   degrees around the up axis first (so the head points along +Z, the game's local forward)
 --roll  degrees around the length axis (+Z) after that: 180 = on its back, 90 / -90 = on its side
 --sink  metres pushed into the ground afterwards (a fallen figure rests on its bulk, not on one point)
 --level first turn the mesh so its bounding box is smallest (a box-like prop such as a car seen from above comes out
         of Pixal3D tilted; this squares it to the axes). Check the sheet after: it may need --yaw 90/180 or --roll 180
+--pitch degrees around the side axis after --level (a flat prop such as a nest can come out of --level standing on
+        its rim: --pitch -90 or 90 lays it flat)
+--squash height factor after the turns (a nest Pixal3D built as a deep bird's cup: 0.7 makes it a low mound)
 The result stands on the ground (lowest point y = 0) and is centred on x and z. Run before bake_low.py.
 """
 import argparse
@@ -24,6 +27,8 @@ ap.add_argument("--yaw", type=float, default=0.0)
 ap.add_argument("--roll", type=float, default=0.0)
 ap.add_argument("--sink", type=float, default=0.0)
 ap.add_argument("--level", action="store_true")
+ap.add_argument("--pitch", type=float, default=0.0)
+ap.add_argument("--squash", type=float, default=1.0)
 ap.add_argument("--cut", default="", help="z,y in glTF metres: delete faces in front of z and below y (a stray part Pixal3D guessed)")
 a = ap.parse_args(argv)
 
@@ -71,8 +76,10 @@ if a.level:
     R = rmat(*best)
     obj.data.transform(Matrix([list(R[0]) + [0], list(R[1]) + [0], list(R[2]) + [0], [0, 0, 0, 1]]))
     print("POSE level %.1f %.1f %.1f deg" % tuple(math.degrees(e) for e in best))
-rot = Matrix.Rotation(math.radians(a.roll), 4, Vector((0, -1, 0))) @ Matrix.Rotation(math.radians(a.yaw), 4, "Z")
+rot = Matrix.Rotation(math.radians(a.roll), 4, Vector((0, -1, 0))) @ Matrix.Rotation(math.radians(a.yaw), 4, "Z") @ Matrix.Rotation(math.radians(a.pitch), 4, "X")
 obj.data.transform(rot)
+if a.squash != 1.0:
+    obj.data.transform(Matrix.Diagonal((1.0, 1.0, a.squash, 1.0)))
 pts = [v.co for v in obj.data.vertices]
 lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
 hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))

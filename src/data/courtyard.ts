@@ -38,7 +38,9 @@ export interface Facade {
 
 export type PropKind = 'fireBarrel' | 'lantern' | 'van' | 'sandbags' | 'crates' | 'crate' | 'bins' | 'rubble' | 'planks' | 'bench' | 'car' | 'bollard' | 'fence' | 'lampBroken' | 'campfire' | 'bus' | 'tram' | 'bauzaun' | 'barrier' | 'workLamp' | 'candles' | 'stormLantern' | 'beacon' | 'stringLights' | 'lampions' | 'tankTrap'
   // M11c lot types (render: `src/render/props-urban.ts`, `props-market.ts`, `vegetation.ts`).
-  | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind | GdrPropKind | MittePropKind;
+  | UrbanPropKind | MarketPropKind | PlantPropKind | EdgePropKind | GdrPropKind | MittePropKind | DinoPropKind;
+/** P17 Spreepark props (render: `src/render/props-dino.ts`). */
+export type DinoPropKind = 'nest';
 /** M15 Mitte step 7 props (render: `src/render/props-mitte.ts`). */
 export type MittePropKind = 'tent' | 'beerTable' | 'speaker' | 'camPole';
 /** M15 Alexanderplatz props (render: `src/render/props-gdr.ts`). */
@@ -128,6 +130,8 @@ export const COURTYARD = {
  */
 export const EDGE_FRONT: Readonly<Partial<Record<PropKind, number>>> = { brandwand: 1.6, rubbleWall: 3, thicket: 2.4, overgrowth: 2.6, edgeHedge: 1.6, barricade: 3.2 };
 export const EDGE_BEYOND = 1.2;
+/** P17: footprint radius of a nest at size 1 (the model is 2 m across, `assets/props/dino-nest.glb`). */
+export const NEST_RADIUS = 1;
 
 /** Static footprint of a prop, or null when it does not block movement. */
 export function propCollider(p: Prop): Collider | null {
@@ -218,6 +222,8 @@ export function propCollider(p: Prop): Collider | null {
     case 'beerTable': return { kind: 'box', x: p.x, z: p.z, hx: 1.1, hz: 0.85, rot: p.rot };
     case 'speaker': return { kind: 'box', x: p.x, z: p.z, hx: 0.45 * p.size, hz: 0.4 * p.size, rot: p.rot };
     case 'camPole': return { kind: 'circle', x: p.x, z: p.z, r: 0.15 };
+    // P17: a dinosaur nest, about 2 m across at size 1 (the rim of branches blocks, the eggs sit inside it).
+    case 'nest': return { kind: 'circle', x: p.x, z: p.z, r: NEST_RADIUS * p.size };
     case 'clothesline': case 'spill': case 'gardenBed': case 'gnome': case 'jetty': case 'bush': case 'topiary': case 'flowers': case 'reeds':
       return null;
   }

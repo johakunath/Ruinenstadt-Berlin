@@ -409,7 +409,7 @@ export class ThreatView {
       if (e.state === 'dead' || (!boss && (e.def.boss || e.hp >= e.maxHp))) continue;
       const b = this.bars[nbar++]!;
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
-      const w = boss ? Math.min(2.6, 1.6 + e.def.radius * 0.5) : Math.min(1.5, 0.7 + e.def.radius * 0.6), y = (boss ? 0.25 : 0) + groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' || e.def.body === 'human' || e.def.body === 'female' || e.def.body === 'mech' ? e.def.scale * ownHeight(e.kind) : 1);
+      const w = boss ? Math.min(2.6, 1.6 + e.def.radius * 0.5) : Math.min(1.5, 0.7 + e.def.radius * 0.6), y = (boss ? 0.25 : 0) + groundY(x, z) + BAR_Y[e.def.body] * (e.def.body === 'zombie' || e.def.body === 'human' || e.def.body === 'female' || e.def.body === 'mech' || e.def.body === 'raptor' ? e.def.scale * ownHeight(e.kind) : 1);
       b.back.visible = b.fill.visible = true;
       // Sprites face the camera; the left edge is the anchor, so shift half a width to the camera's left (screen x = world x here).
       b.back.position.set(x - w / 2, y, z);
