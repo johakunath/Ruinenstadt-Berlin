@@ -358,6 +358,9 @@ Budget: belts, hats and plates go into the gear mesh (2,500 triangles, D3). The 
 
 3. Done when: sheet per item; unit test per new `legendaryProc` site; `passes.mjs`: 1 draw call for all effects; a hardware check row (fps with three emitters, Tab S9).
 
+### Step 5b Light-giving items (Johannes, 2026-11-26) [Claude · Opus high]
+The Stirnlampe des Tunnelläufers must really light the way: a warm beam forward from the head that lights the ground and walls in front of the hero ("a cool effect, we need that"). Any other item that should glow gets the same treatment (check: Neonbrille, Leuchtröhre, Neonflinte, implants, the Tunnelläufer's lantern on the Rohrzange). Rules: keep the light count constant (one hero SpotLight always in the scene, intensity 0 when no such item is worn, or a fake beam: additive cone on `FX_LAYER` plus a projected ground spot); state the cost on Ausgewogen and Leistung (Leistung may use the fake). Ties in with backlog B7 (head lamp for dark areas, from 2D). Proof: tunnel (`?map=tunnel&line=1`) and a night district with and without the lamp.
+
 ### Step 6 Daggers and dual wield (2D #38) [Claude · Opus high, combat-animation skill]
 1. 6a (option A): off-hand group on `hand_l` in `WeaponRack` (mirrored mount, measured on a strip); left-hand cut: try mirrored clips at asset build, else `Punch_Jab`. Shown while Doppelklinge is held. Done when: strips of the chain with both blades, `clip-swing` numbers of the right hand unchanged, new `anims.glb` size stated.
 2. 6b (option B), only after G4: base `dolch`, name and icon, chain `dual1` to `dual4` measured per the skill, sim rule by base flag, tests for damage, reach and timing, bot run for parity with the Klinge (± 10 %). Adding a name to `WEAPON_NAMES.blade` changes seeded blade names; fix the golden values in `src/sim/items.test.ts`.
