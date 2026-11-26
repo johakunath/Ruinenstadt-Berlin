@@ -249,6 +249,8 @@ export type SimEvent =
   | { type: 'consumable'; id: 'verband' | 'molotow'; left: number }
   | { type: 'note'; text: string; color: string; x: number; z: number }
   | { type: 'secondWind' }
+  /** WP4 step 5: a legendary power fired (`LEGENDARY_PROC_SITES` in data/gear-fx.ts) at this ground point; drawn only (proc flash). */
+  | { type: 'legendaryProc'; id: import('../data/items').LegendaryId; x: number; z: number }
   | { type: 'blessing'; id: import('../data/progression').PerkId; level: number }
   | { type: 'runEvent'; kind: import('./runcontent').RunEventKind | 'crate'; phase: 'start' | 'done' | 'lost'; x: number; z: number; text?: string }
   | { type: 'shrine'; id: import('../data/progression').ShrineId; x: number; z: number }

@@ -3,7 +3,7 @@ import { finisherOf, weaponAttack, PLAYER, WEAPON, type AttackId } from '../data
 import { POWER } from '../data/powers';
 import { BOSS } from '../data/enemies';
 import { CONSUMABLE, onDodge, shock, shoot, updateCast } from './abilities';
-import { hasL, knock, pk, STATUS } from './combat';
+import { hasL, knock, legendaryProc, pk, STATUS } from './combat';
 import { healPlayer } from './heal';
 import type { Level } from './level';
 import { angleDiff, angleOf, clamp, turnToward } from './math';
@@ -20,9 +20,15 @@ export function releaseSwing(sim: Sim): void {
   const fx = Math.sin(p.facing);
   const fz = Math.cos(p.facing);
   // Siegessäule: every attack also sends a golden blade (half damage, burns, passes two bodies).
-  if (hasL(sim, 'siegsp')) shoot(sim, { angle: p.facing, damage: a.damage * 0.5, crit: p.critical, speed: WEAPON.sling.speed * sim.stats.reachFactor, life: 0.55, pierce: 2, kind: 'nail', fire: true });
+  if (hasL(sim, 'siegsp')) {
+    shoot(sim, { angle: p.facing, damage: a.damage * 0.5, crit: p.critical, speed: WEAPON.sling.speed * sim.stats.reachFactor, life: 0.55, pierce: 2, kind: 'nail', fire: true });
+    legendaryProc(sim, 'siegsp', p.x, p.z);
+  }
   // Mauerstück: every fourth melee attack sends an acid wave.
-  if (kind !== 'sling' && hasL(sim, 'mauer') && ++sim.abilities.legSwings % 4 === 0) shock(sim, p.x, p.z, 130 / 30, { mul: 1.2, stun: 0, knock: knock(200), acid: true, kind: 'acid' });
+  if (kind !== 'sling' && hasL(sim, 'mauer') && ++sim.abilities.legSwings % 4 === 0) {
+    shock(sim, p.x, p.z, 130 / 30, { mul: 1.2, stun: 0, knock: knock(200), acid: true, kind: 'acid' });
+    legendaryProc(sim, 'mauer', p.x, p.z);
+  }
   if (kind === 'sling') {
     const S = WEAPON.sling;
     const speed = S.speed * sim.stats.reachFactor * (fin ? S.finSpeed : 1);
@@ -249,7 +255,10 @@ export function updatePlayer(sim: Sim, inp: SimInput): void {
     }
   } else if (p.state === 'dodge' && p.stateT >= PLAYER.dodge.duration) {
     // Rittersporn: the ground shakes where a dodge ends.
-    if (hasL(sim, 'ritter')) shock(sim, p.x, p.z, 110 / 30, { mul: 0.7, stun: 0.5, knock: knock(260), kind: 'small' });
+    if (hasL(sim, 'ritter')) {
+      shock(sim, p.x, p.z, 110 / 30, { mul: 0.7, stun: 0.5, knock: knock(260), kind: 'small' });
+      legendaryProc(sim, 'ritter', p.x, p.z);
+    }
     p.dodgeCd = dodgeCooldown(sim);
     p.strikeT = PLAYER.dodge.strikeGrace;
     endToMove(p);
