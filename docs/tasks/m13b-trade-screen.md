@@ -45,7 +45,28 @@ Tests: `src/sim/trade.test.ts` (20: stock, stream fork, Mitte implant, tunnel 30
 ## Bot (balance tool)
 `src/bot/bot.ts`: after the gear, consumables and Späti upgrades the bot buys the Aufsatz `loadout` would fit (`wantsMod`, strong ones score base + 2), then `shopBlessings`: the Stärkung on the held blessing with the best `perkScore`, each card as a swap when the card at the carried level beats the weakest swappable held one by `BLESS.swap` (3), else bought when its score reaches `BLESS.buy` (7); all keep 30 % of the Schrott (`SHOP.keep`). Selling is salvage, which it does with every spare piece. Ledger columns Aufsätze, Segen and Deals (cards bought / swaps / Stärkungen / Aufsätze) in `node tools/balance.mjs 3 normal johannes 1 --campaign`.
 
-Before/after campaign: pending (the first runs were cut off by a session restart; rerun in progress).
+Before/after (2026-11-26): `node tools/balance.mjs 2 normal johannes 1 --campaign`, before = `main` at 44d9f48, after = this branch (rules and bot). Two campaigns each (a session restart cut the three-campaign runs; runs repeat from their seed, so runs 1 and 2 of three are these two). Both: 2 of 2 won all twelve maps, 0.5 deaths in Köpenick, none later. Averages per map:
+
+| Map | Left before → after | Power end before → after | Segen | Aufsätze | Deals b/s/u/a (sum) |
+|---|---|---|---|---|---|
+| Köpenick | 299 → 299 | 448 → 448 | 0 | 0 | 0/0/0/0 |
+| S3-Tunnel | 754 → 596 | 490 → 519 | 0 | 0 | 0/0/0/0 |
+| Xhain | 832 → 887 | 896 → 945 | 0 | 270 | 0/0/0/2 |
+| U8-Tunnel | 510 → 503 | 1013 → 946 | 0 | 0 | 0/0/0/0 |
+| Alexanderplatz | 1239 → 1004 | 1640 → 2044 | 313 | 0 | 0/0/1/0 |
+| U2-Tunnel | 628 → 696 | 1581 → 1489 | 0 | 0 | 0/0/0/0 |
+| Mitte | 1328 → 1279 | 2701 → 2389 | 208 | 0 | 0/1/1/0 |
+| U2-Tunnel West | 622 → 669 | 2286 → 2612 | 0 | 0 | 0/0/0/0 |
+| Charlottenburg | 1627 → 642 | 3418 → 3949 | 380 | 180 | 0/1/1/1 |
+| U9-Tunnel | 1181 → 922 | 3318 → 3207 | 0 | 0 | 0/0/0/0 |
+| Wedding | 1398 → 618 | 4324 → 3510 | 1025 | 126 | 1/2/3/1 |
+| Fernsehturm | 748 → 303 | 3839 → 3054 | 475 | 0 | 1/0/3/0 |
+
+Reading:
+- The bot trades rarely: over two campaigns 2 cards bought, 4 swaps, 9 Stärkungen, 4 Aufsätze. Köpenick is unchanged (about 300 Schrott left there: the 30 % reserve stops every blessing and the Aufsatz). Most trading happens from Charlottenburg on, when the camp is mostly built.
+- E3 (about 1200 Schrott left per later map) moves into range: 600 to 1300 left after the later maps, was 1200 to 1600.
+- The Schrott that goes to run-only blessings no longer goes to the camp (Wedding: 266 camp before it, was 731), so permanent power ends lower in Wedding and the Fernsehturm (3054, was 3839). One Fernsehturm run took 186 % damage per fight (69 % before); with two runs this is within the noise but worth a look in the next balance pass.
+- Not changed: `TRADE.bless` and `BLESS` stay first guesses; calibrate them in the next balance session (B10, Fable) together with E5.
 
 ## Mockups
 `docs/mockups/m13b-trade/` (`node docs/mockups/m13b-trade/build.mjs`: real stock from `trade.ts`, the game palette, fonts and item icons; HTML per variant, shots at 1280×720, 844×390 and 1280×800 with pad hints, sheet as SVG and WebP).
@@ -74,6 +95,10 @@ Recommendation: C. Every part has room at 844×390, it reuses the inventory deta
 | Proof | `docs/proof/m13b/` every tab at 1280×720 (mouse), 844×390 (touch) and 1280×800 (fake pad: RB, D-pad, hints), plus the swap at 1280×720; `node tools/trade-proof.mjs` against the dev server |
 
 Johannes plays the Deck at Chrome scale 1.5 (page 853×533): the compact rules (`max-height: 560px`) apply there as on the phone.
+
+## Checks (2026-11-26, PC under load from other agents)
+- Type check and build pass; unit tests 1081 of 1083 with `--maxWorkers=4`. The two failures are timeouts in map tests this branch does not touch: `items.test.ts` › Wedding loot (12 s against 5 s; fails the same on `main`) and `charlottenburg.test.ts` › rest stops (passes alone).
+- `e2e/trade.spec.ts` 2 of 2, `abilities.spec.ts` and `smoke.spec.ts` 21 of 21 after `npm run build`.
 
 ## Done when
 `npm run check` passes; `npx playwright test e2e/trade.spec.ts` passes after `npm run build`; the screen works with mouse, touch and pad at the three sizes (proof shots); status and Playtest rows added by the lead.
