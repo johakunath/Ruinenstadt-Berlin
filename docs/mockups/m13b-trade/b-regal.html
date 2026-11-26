@@ -1,0 +1,112 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>M13b B · Regal oben</title><style>
+@font-face { font-family: 'Barlow Condensed'; font-weight: 400; src: url(../../../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-400-normal.woff2); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; src: url(../../../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-600-normal.woff2); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 700; src: url(../../../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2); }
+@font-face { font-family: 'Pirata One'; src: url(../../../node_modules/@fontsource/pirata-one/files/pirata-one-latin-400-normal.woff2); }
+:root { --ash:#17110d; --panel:#1d1611; --soot:#2a211b; --rust:#993c1d; --ember:#ef9f27; --bone:#ead9c0; --dim:#a8957d; --edge:#4a3a2e; --good:#8fd16a; --bad:#e05050; --f:'Barlow Condensed','Arial Narrow',sans-serif; --d:'Pirata One',serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body { font: 400 16px var(--f); color: var(--bone); letter-spacing: .02em; background: #0b0806 url(bg.webp) center/cover; }
+body::before { content: ''; position: fixed; inset: 0; background: rgba(12, 8, 6, .8); }
+.scr { position: fixed; inset: 0; display: flex; flex-direction: column; padding: 14px 18px 12px; gap: 10px; }
+.hd { display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--edge); padding-bottom: 8px; }
+.hd h1 { margin: 0; font: 400 30px var(--d); color: var(--ember); letter-spacing: .04em; line-height: 1; }
+.hd .q { color: var(--dim); font-size: 16px; }
+.hd .sp { flex: 1; }
+.res { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; color: var(--dim); }
+.res b { color: var(--bone); }
+.res img { width: 26px; height: 26px; vertical-align: middle; }
+.life { width: 120px; height: 12px; border: 1px solid var(--edge); background: #120d0a; border-radius: 2px; position: relative; }
+.life i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#c94a3a, #8b2a20); }
+.x { width: 44px; height: 44px; border: 1px solid var(--edge); background: rgba(13,9,7,.7); color: var(--bone); font-size: 24px; border-radius: 3px; display: grid; place-items: center; }
+.tabs { display: flex; gap: 22px; }
+.tab { font: 600 19px var(--f); color: var(--dim); padding: 4px 0 6px; border-bottom: 3px solid transparent; display: flex; gap: 6px; align-items: center; }
+.tab.on { color: var(--ember); border-bottom-color: var(--ember); }
+.tab small { font-size: 14px; color: var(--dim); font-weight: 400; }
+h2 { margin: 0 0 6px; font: 600 14px var(--f); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.box { background: rgba(29, 22, 17, .92); border: 1px solid var(--edge); border-radius: 4px; }
+.cell { position: relative; aspect-ratio: 1; border: 2px solid var(--rc, #3a2e26); border-radius: 3px; background: radial-gradient(circle, color-mix(in srgb, var(--rc, #312b25) 20%, transparent), #120d0a 70%); display: grid; place-items: center; }
+.cell img { width: 82%; height: 82%; object-fit: contain; }
+.cell.empty { border: 1px solid #3a2e26; background: rgba(18,13,10,.82); }
+.cell small { position: absolute; right: 3px; bottom: 1px; font-size: 12px; font-weight: 600; }
+.cell .upm { position: absolute; right: 2px; top: 2px; width: 0; height: 0; border: 6px solid transparent; border-bottom: 10px solid var(--good); border-top: 0; }
+.cell.sel { outline: 2px solid var(--bone); outline-offset: 1px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 6px 12px; background: rgba(13,9,7,.6); border: 1px solid var(--edge); border-radius: 3px; color: var(--bone); font: 600 15px var(--f); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.btn.p { background: var(--rust); border-color: var(--ember); }
+.btn.off { opacity: .45; }
+.btn img { width: 20px; height: 20px; }
+.focus { outline: 3px solid var(--bone) !important; outline-offset: 2px; box-shadow: 0 0 0 6px rgba(239,159,39,.35); }
+.pos { color: var(--good); } .neg { color: var(--bad); }
+.hex { width: 44px; height: 44px; flex: none; }
+.pad { display: none; gap: 18px; justify-content: flex-end; color: var(--dim); font-size: 15px; }
+.pad b { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 12px; background: #2a211b; border: 1px solid var(--edge); color: var(--bone); font-size: 13px; margin-right: 5px; }
+body.deck .pad { display: flex; }
+.scroll { overflow: hidden; position: relative; }
+.scroll::after { content: ''; position: absolute; right: 2px; top: 4px; width: 4px; height: 38%; background: var(--edge); border-radius: 2px; }
+.lvl { display: inline-flex; gap: 3px; vertical-align: middle; }
+.lvl i { width: 9px; height: 9px; transform: rotate(45deg); border: 1px solid var(--ember); }
+.lvl i.on { background: var(--ember); }
+.toast { color: var(--good); font-size: 15px; }
+@media (max-height: 560px) {
+  .scr { padding: 8px 12px 8px; gap: 6px; }
+  .hd { padding-bottom: 5px; gap: 10px; }
+  .hd h1 { font-size: 22px; } .hd .q { display: none; }
+  .res { font-size: 16px; } .res img { width: 22px; height: 22px; } .life { width: 70px; }
+  .x { width: 36px; height: 36px; font-size: 20px; }
+  .tab { font-size: 17px; padding: 2px 0 4px; } .tabs { gap: 16px; }
+  .btn { min-height: 32px; padding: 4px 9px; font-size: 13px; }
+  .hex { width: 34px; height: 34px; }
+  h2 { font-size: 12px; margin-bottom: 3px; }
+}
+
+.b { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; }
+.shelf { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; min-height: 0; background: linear-gradient(rgba(42,33,27,.94), rgba(29,22,17,.94)); }
+.shelf .rowx { display: flex; gap: 10px; align-items: stretch; }
+.grp { display: flex; flex-direction: column; gap: 4px; }
+.grp > div { display: flex; gap: 8px; flex: 1; }
+.ware { width: 118px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 6px 6px; border-radius: 4px; border: 1px solid var(--edge); background: rgba(13,9,7,.55); text-align: center; position: relative; }
+.ware::after { content: ''; position: absolute; left: -6px; right: -6px; bottom: -7px; height: 5px; background: #5a3f2e; border-radius: 2px; }
+.ware .cell { width: 56px; }
+.grp { gap: 2px; }
+.ware .nm { font-weight: 700; font-size: 14px; line-height: 1.05; height: 30px; overflow: hidden; }
+.ware .sb { font-size: 13px; color: var(--dim); }
+.ware .btn { margin-top: auto; min-height: 30px; padding: 3px 8px; }
+.ware.hot { border-color: var(--ember); box-shadow: 0 0 0 1px var(--ember) inset; }
+.ware.bless { width: 150px; border-color: var(--qc); }
+.ware.bless .nm { font: 400 18px var(--d); color: var(--qc); height: auto; }
+.ware.bless .ds { font-size: 12.5px; line-height: 1.1; }
+.ware.small { width: 104px; }
+.ware.small .cell { width: 44px; }
+.ware.small .nm { height: 18px; }
+.ware.small .sb { display: none; }
+.det { grid-row: 1 / 3; grid-column: 2; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.det .nm { font-weight: 700; font-size: 20px; }
+.det .cmp { border-top: 1px solid var(--edge); padding-top: 6px; color: var(--dim); font-size: 14px; }
+.det .big { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+.det .big .btn { min-height: 46px; font-size: 17px; }
+.strip { grid-column: 1; padding: 8px 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.strip .bagrow { display: grid; grid-auto-flow: column; grid-auto-columns: 46px; gap: 5px; overflow: hidden; }
+@media (max-height: 560px) {
+  .b { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; gap: 6px; }
+  .shelf { padding: 6px 8px; gap: 10px; overflow: hidden; flex-direction: row; align-items: flex-start; }
+  .shelf .rowx { display: contents; }
+  .ware { width: 96px; padding: 4px; } .ware .cell { width: 44px; } .ware .nm { font-size: 12.5px; height: 27px; } .ware .sb { font-size: 11.5px; }
+  .ware.bless { width: 120px; } .ware.bless .ds { display: none; } .ware.bless .nm { font-size: 15px; }
+  .det { grid-row: auto; grid-column: 1; flex-direction: row; align-items: center; padding: 5px 10px; gap: 10px; }
+  .det .cmp, .det .aff { display: none; } .det .nm { font-size: 15px; } .det .big { margin: 0 0 0 auto; flex-direction: row; } .det .big .btn { min-height: 34px; font-size: 14px; }
+  .strip { padding: 4px 8px; gap: 8px; } .strip .bagrow { grid-auto-columns: 34px; gap: 3px; }
+}@media (max-height: 560px) { .shelf::after { content: '›'; position: absolute; right: 6px; top: 40%; font-size: 30px; color: var(--ember); } .shelf { position: relative; } }body.deck .fx { outline: 3px solid var(--bone); outline-offset: 2px; box-shadow: 0 0 0 6px rgba(239,159,39,.35); }</style></head>
+<body class="vb"><div class="scr"><header class="hd"><h1>Späti am Wrangelkiez</h1><span class="q">„Wat darf’s sein?“</span><span class="sp"></span>
+  <div class="res"><img src="../../../assets/inventory/R05.webp" alt=""><span>Schrott <b>840</b></span><span class="life"><i style="width:62%"></i></span><span>110/177</span></div><span class="x">×</span></header><main class="b">
+  <section class="shelf box">
+    <div class="rowx"><div class="grp"><h2>Waren</h2><div><div class="ware "><div class="cell " style="--rc:#7d9bff"><img src="../../../assets/inventory/I33.webp" alt=""><small style="color:#7d9bff">17</small></div><div class="nm" style="color:#7d9bff">Siegelring des Rauchs</div><div class="sb">Ring · <span class="pos">▲ +2</span></div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">80</span></div><div class="ware hot"><div class="cell " style="--rc:#7d9bff"><img src="../../../assets/inventory/I42.webp" alt=""><small style="color:#7d9bff">17</small></div><div class="nm" style="color:#7d9bff">Fahrradkette des Schutts</div><div class="sb">Talisman · <span class="pos">▲ +2</span></div><span class="btn p  fx"><img src="../../../assets/inventory/R05.webp" alt="">80</span></div><div class="ware "><div class="cell " style="--rc:#f2d14b"><img src="../../../assets/inventory/I22.webp" alt=""><small style="color:#f2d14b">20</small></div><div class="nm" style="color:#f2d14b">Bauhelm des Spreewächters</div><div class="sb">Kopf · <span class="pos">▲ +5</span></div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">110</span></div><div class="ware "><div class="cell " style="--rc:#ff8a3d"><img src="../../../assets/inventory/I86.webp" alt=""><small style="color:#ff8a3d">26</small></div><div class="nm" style="color:#ff8a3d">Stiefel des Schaffners</div><div class="sb">Füße · <span class="pos">▲ +8</span></div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">150</span></div></div></div><div class="grp"><h2>Aufsatz</h2><div><div class="ware"><div class="cell" style="--rc:#f2d14b"><svg class="hex" viewBox="0 0 24 24"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M2 17h14l4-3h2v6H2z" fill="#b48cff" fill-opacity=".4" stroke="#b48cff"/><path d="M5 17v4" stroke="#b48cff"/><path d="M20 3l-3 3 1 3 3 1 3-3-2-1-1-2zM17.500 8.500L6 20" stroke="#b48cff" stroke-width="2.400"/></g></svg></div><div class="nm">Säurekanister</div><div class="sb">Aufsatz · stark</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">420</span></div></div></div></div>
+    <div class="rowx"><div class="grp"><h2>Segen</h2><div><div class="ware bless" style="--qc:#f2d14b"><svg class="hex" viewBox="0 0 32 32"><path d="M16 1.5L29 9v14l-13 7.5L3 23V9z" fill="#1c140f" stroke="#f2d14b" stroke-width="2"/><g transform="translate(6 6) scale(.8333)" fill="#f2d14b" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 1L4.500 13h6L8.500 23 19.500 9.500h-6.500z"/><path d="M13.500 5l-5 6.500" stroke="#fff3b0" stroke-width="1" fill="none"/><path d="M2 5l2 2M21 15l2 1M2 18l3-1M19 3l1 2.500" stroke="#7dd3ff" stroke-width="1.600" stroke-linecap="round" fill="none"/><circle cx="21" cy="6" r="1.300" fill="#7dd3ff"/></g></svg><div class="nm">Kurzschluss</div><div class="ds">Krits lösen immer dein Element aus</div><div class="sb">Doppelsegen · ⇄ 210</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">625</span></div><div class="ware bless" style="--qc:#7d9bff"><svg class="hex" viewBox="0 0 32 32"><path d="M16 1.5L29 9v14l-13 7.5L3 23V9z" fill="#1c140f" stroke="#7d9bff" stroke-width="2"/><g transform="translate(6 6) scale(.8333)" fill="#c23a2e" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14l-5 15-2-6-2 6z"/></g></svg><div class="nm">Aderlass</div><div class="ds">Jeder Kill heilt 1% Leben</div><div class="sb">2 Stufen · ⇄ 210</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">625</span></div><div class="ware bless" style="--qc:#ef9f27"><svg class="hex" viewBox="0 0 32 32"><path d="M16 1.5L29 9v14l-13 7.5L3 23V9z" fill="#1c140f" stroke="#7d9bff" stroke-width="2"/><g transform="translate(6 6) scale(.8333)" fill="#ff8a3d" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c5 5 7 9 5 14a5 5 0 0 1-10 0c-1-4 2-6 2-9 2 2 2 4 3 5 1-3 0-6 0-10z"/></g></svg><div class="nm">Stärkung</div><div class="ds">Ein Segen +1 Stufe</div><div class="sb">1 übrig</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">310</span></div></div></div></div>
+    <div class="rowx"><div class="grp"><h2>Vorräte</h2><div><div class="ware small"><div class="cell empty"><img src="../../../assets/inventory/R02.webp" alt=""><small style="color:var(--dim)">0/2</small></div><div class="nm">Schärfen</div><div class="sb">0/2</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">102</span></div><div class="ware small"><div class="cell empty"><img src="../../../assets/inventory/R02.webp" alt=""><small style="color:var(--dim)">0/2</small></div><div class="nm">Panzerung</div><div class="sb">0/2</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">102</span></div><div class="ware small"><div class="cell empty"><svg viewBox="0 0 48 48" style="width:70%;height:70%"><path d="M9 21h30v8H9z" fill="#ead9c0"/><path d="M20 10h8v28h-8z" fill="#ead9c0"/><path d="M21 18h6v12h-6zM16 22h16v4H16z" fill="#c23a2e"/></svg><small style="color:var(--dim)">1/3</small></div><div class="nm">Verband</div><div class="sb">1/3</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">15</span></div><div class="ware small"><div class="cell empty"><svg viewBox="0 0 48 48" style="width:70%;height:70%"><path d="M19 20h10l3 7v13a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V27z" fill="#6a8a5a"/><path d="M21 12h6v8h-6z" fill="#8a9a7a"/><path d="M24 2c4 4 4 7 1 10-4-2-4-6-1-10z" fill="#ff8a3d"/><path d="M17 30h14v6H17z" fill="#c9b58c"/></svg><small style="color:var(--dim)">1/3</small></div><div class="nm">Molotow</div><div class="sb">1/3</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">25</span></div><div class="ware small"><div class="cell empty"><svg viewBox="0 0 48 48" style="width:70%;height:70%"><path d="M9 21h30v8H9z" fill="#ead9c0"/><path d="M20 10h8v28h-8z" fill="#ead9c0"/><path d="M21 18h6v12h-6zM16 22h16v4H16z" fill="#c23a2e"/></svg></div><div class="nm">Verbandskasten</div><div class="sb">voll heilen</div><span class="btn   "><img src="../../../assets/inventory/R05.webp" alt="">36</span></div></div></div></div>
+  </section>
+  <aside class="det box"><h2>Ausgewählt</h2><div style="display:flex;gap:10px;align-items:center"><div class="cell" style="--rc:#7d9bff;width:64px"><img src="../../../assets/inventory/I42.webp" alt=""></div><div><div class="nm" style="color:#7d9bff">Fahrradkette des Schutts</div><div class="sb" style="color:var(--dim)">Magisch · Talisman · Stufe 17</div></div></div>
+    <div class="aff">+9% Lauftempo<br>+23% Elementarschaden</div>
+    <div class="cmp">Angelegt: <span style="color:#7d9bff">Currywurst-Abzeichen der Glut</span> · Stufe 15<br>+2.4 Leben pro Sekunde</div>
+    <div class="big"><span class="btn p fx"><img src="../../../assets/inventory/R05.webp" alt="">Kaufen · 80</span></div></aside>
+  <section class="strip box"><h2 style="margin:0">Rucksack<br>12/30</h2><div class="bagrow"><div class="cell " style="--rc:#f2d14b"><img src="../../../assets/inventory/I04.webp" alt=""><small style="color:#f2d14b">15</small></div><div class="cell " style="--rc:#e8ddd0"><img src="../../../assets/inventory/I06.webp" alt=""><small style="color:#e8ddd0">10</small></div><div class="cell sel" style="--rc:#e8ddd0"><img src="../../../assets/inventory/I39.webp" alt=""><small style="color:#e8ddd0">11</small></div><div class="cell " style="--rc:#7d9bff"><img src="../../../assets/inventory/I27.webp" alt=""><small style="color:#7d9bff">15</small></div><div class="cell " style="--rc:#7d9bff"><img src="../../../assets/inventory/I13.webp" alt=""><small style="color:#7d9bff">16</small></div><div class="cell " style="--rc:#7d9bff"><img src="../../../assets/inventory/I21.webp" alt=""><small style="color:#7d9bff">12</small></div><div class="cell " style="--rc:#e8ddd0"><img src="../../../assets/inventory/I27.webp" alt=""><small style="color:#e8ddd0">10</small></div><div class="cell " style="--rc:#f2d14b"><img src="../../../assets/inventory/I29.webp" alt=""><small style="color:#f2d14b">17</small></div><div class="cell " style="--rc:#e8ddd0"><img src="../../../assets/inventory/I04.webp" alt=""><small style="color:#e8ddd0">12</small></div><div class="cell " style="--rc:#f2d14b"><img src="../../../assets/inventory/I26.webp" alt=""><small style="color:#f2d14b">19</small><i class="upm"></i></div><div class="cell " style="--rc:#7d9bff"><img src="../../../assets/inventory/I28.webp" alt=""><small style="color:#7d9bff">12</small></div><div class="cell " style="--rc:#7d9bff"><img src="../../../assets/inventory/I09.webp" alt=""><small style="color:#7d9bff">13</small></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div></div><span class="btn"><img src="../../../assets/inventory/R05.webp" alt="">Verkaufen +3</span></section>
+  </main><footer class="pad"><span><b>A</b>Kaufen</span><span><b>◀ ▶</b>Regal</span><span><b>▲ ▼</b>Reihe / Rucksack</span><span><b>LB RB</b>Gruppe</span><span><b>B</b>Zurück</span></footer></div>
+<script>const q = new URLSearchParams(location.search); if (q.has('deck')) document.body.classList.add('deck'); for (const v of (q.get('show') || '').split(',')) if (v) document.body.classList.add('show-' + v);</script></body></html>
