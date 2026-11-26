@@ -7,7 +7,7 @@ import * as progression from './progression';
 
 describe('ported item and progression data', () => {
   test.each([
-    ['mods', crafting.WEAPON_MODS, 6],
+    ['mods (6 from 2D plus 6 strong Späti ones, M13b)', crafting.WEAPON_MODS, 12],
     ['meals', crafting.MEALS, 5],
     ['consumables', crafting.CONSUMABLES, 2],
     ['perks (50 from 2D plus 8 Umbau cards added in 3D, G1)', progression.PERKS, 58],
@@ -174,7 +174,8 @@ describe('ported item and progression data', () => {
     for (const [recipes, resources] of [
       [crafting.WEAPON_MODS, crafting.MATERIALS], [crafting.MEALS, crafting.INGREDIENTS],
     ] as const) {
-      for (const recipe of recipes) {
+      // M13b: strong Aufsätze have no recipe (only a Späti sells them).
+      for (const recipe of recipes.filter((r) => !('spati' in r && r.spati))) {
         expect(Object.keys(recipe.costs).length).toBeGreaterThan(0);
         for (const [id, amount] of Object.entries(recipe.costs)) {
           expect(resources).toHaveProperty(id);
@@ -185,6 +186,11 @@ describe('ported item and progression data', () => {
     }
     for (const mod of crafting.WEAPON_MODS) {
       if (mod.element) expect(items.ELEMENTS).toHaveProperty(mod.element);
+      // M13b: a strong one names a 2D base, has no recipe and is no base itself.
+      if (mod.spati) {
+        expect(Object.keys(mod.costs)).toHaveLength(0);
+        expect(crafting.WEAPON_MODS.find((m) => m.id === mod.base)?.spati).toBeUndefined();
+      } else expect(mod.base).toBeUndefined();
       if (mod.heavyHitEvery !== undefined) expect(mod.heavyHitEvery).toBeGreaterThan(0);
     }
     for (const meal of crafting.MEALS) {

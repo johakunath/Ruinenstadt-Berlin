@@ -6,6 +6,7 @@ import type { ElementId } from '../data/items';
 import { pk } from './combat';
 import { healPlayer } from './heal';
 import { setLoadout } from './loadout';
+import type { Rng } from './math';
 import type { Sim } from './types';
 import type { Offer } from './abilities';
 
@@ -19,14 +20,15 @@ export function heldFamilies(s: Sim): Set<PerkFamilyId> {
   return held;
 }
 
-/** 2D `wE()`: half the waves started. */
 /** Umbau cards appear from this wave on. */
 export const UMBAU_FROM = 3;
-const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;
+/** 2D `wE()`: half the waves started. */
+export const waveE = (s: Sim): number => Math.max(1, s.lootWaves) / 2;
 /** Four times the 2D price (Johannes, 2026-11-26: rerolling was too cheap; maps end with 900 to 2800 Schrott left). */
 export const rerollCost = (s: Sim): number => 80 + Math.round(waveE(s) * 32);
 
-function eligible(s: Sim, held: Set<PerkFamilyId>): PerkDefinition[] {
+/** Blessings a choice may offer now (2D `offerPerks` pool): below max, element rules, duos whose two families are held, no Umbau. */
+export function eligibleBlessings(s: Sim, held: Set<PerkFamilyId> = heldFamilies(s)): PerkDefinition[] {
   const els = s.stats.elements;
   return PERKS.filter((p) => !p.weapon && pk(s, p.id) < p.max
     && !(ELEMENT_PERKS.includes(p.id) && els.includes(p.id as ElementId))
@@ -34,26 +36,34 @@ function eligible(s: Sim, held: Set<PerkFamilyId>): PerkDefinition[] {
     && (!p.duo || p.duo.every((f) => held.has(f))));
 }
 
-function roll(s: Sim): Offer[] {
-  const held = heldFamilies(s);
-  const pool = eligible(s, held);
+/** `n` cards drawn without repeats from `pool` (taken from it): held families 2.5 times as likely, duos 3 times (2D weights). */
+export function drawBlessings(rng: Rng, pool: PerkDefinition[], held: Set<PerkFamilyId>, n: number): PerkDefinition[] {
   const weight = (p: PerkDefinition): number => (p.duo ? 3 : p.families?.some((f) => held.has(f)) ? 2.5 : 1);
   const picks: PerkDefinition[] = [];
-  while (picks.length < 3 && pool.length) {
-    let x = s.rng.next() * pool.reduce((n, p) => n + weight(p), 0);
+  while (picks.length < n && pool.length) {
+    let x = rng.next() * pool.reduce((m, p) => m + weight(p), 0);
     let i = 0;
     while (i < pool.length - 1 && (x -= weight(pool[i]!)) > 0) i++;
     picks.push(pool.splice(i, 1)[0]!);
   }
+  return picks;
+}
+
+/** Card level and frame (2D): sometimes worth two levels, more often later in the run; duos are epic. */
+export function cardOf(s: Sim, rng: Rng, p: PerkDefinition): Offer {
+  const q = rng.next();
+  const level: 1 | 2 = !p.duo && !p.weapon && p.max - pk(s, p.id) >= 2 && q < 0.18 + 0.01 * waveE(s) ? 2 : 1;
+  return { id: p.id, level, quality: p.weapon ? 3 : p.duo ? 2 : level === 2 ? (q < 0.05 ? 2 : 1) : 0 };
+}
+
+function roll(s: Sim): Offer[] {
+  const held = heldFamilies(s);
+  const picks = drawBlessings(s.rng, eligibleBlessings(s, held), held, 3);
   // Weapon mod (Umbau): rare, one per run, one of the weapon's three. 2D: one per weapon from wave five;
   // 3D (G1): three per weapon from wave three, so two runs with one weapon can play differently.
   const mods = PERKS.filter((p) => p.weapon === s.stats.kind);
   if (mods.length && s.lootWaves >= UMBAU_FROM && !PERKS.some((p) => p.weapon && pk(s, p.id) > 0) && s.rng.next() < 0.22) picks[Math.min(2, picks.length)] = s.rng.pick(mods);
-  return picks.map((p) => {
-    const q = s.rng.next();
-    const level: 1 | 2 = !p.duo && !p.weapon && p.max - pk(s, p.id) >= 2 && q < 0.18 + 0.01 * waveE(s) ? 2 : 1;
-    return { id: p.id, level, quality: p.weapon ? 3 : p.duo ? 2 : level === 2 ? (q < 0.05 ? 2 : 1) : 0 };
-  });
+  return picks.map((p) => cardOf(s, s.rng, p));
 }
 
 /** Puts a choice on screen, or queues it behind the one already open. `hidden`: a found blessing. */
@@ -80,15 +90,29 @@ export function rerollBlessings(s: Sim): boolean {
   return true;
 }
 
+/** Adds `levels` of a blessing (capped at its max) and reports it; also used by the Späti (M13b). Returns the new level. */
+export function addBlessing(s: Sim, id: PerkId, levels: number, quality: number): number {
+  const level = Math.min(perkOf(id).max, pk(s, id) + levels);
+  setLoadout(s, s.equipment, { ...s.statContext, perks: { ...s.statContext.perks, [id]: level } });
+  // 2D: Dickes Fell also heals a little when taken.
+  if (id === 'hp') healPlayer(s, 25, 'blessing');
+  s.abilities.quality[id] = Math.max(s.abilities.quality[id] ?? 0, quality);
+  return level;
+}
+
+/** Takes a held blessing away (M13b swap at a Späti). */
+export function dropBlessing(s: Sim, id: PerkId): void {
+  const perks = { ...s.statContext.perks };
+  delete perks[id];
+  setLoadout(s, s.equipment, { ...s.statContext, perks });
+  delete s.abilities.quality[id];
+}
+
 export function chooseBlessing(s: Sim, id: PerkId): boolean {
   const a = s.abilities;
   const offer = a.offers.find((o) => o.id === id);
   if (!offer) return false;
-  const level = Math.min(perkOf(id).max, pk(s, id) + offer.level);
-  setLoadout(s, s.equipment, { ...s.statContext, perks: { ...s.statContext.perks, [id]: level } });
-  // 2D: Dickes Fell also heals a little when taken.
-  if (id === 'hp') healPlayer(s, 25, 'blessing');
-  a.quality[id] = Math.max(a.quality[id] ?? 0, offer.quality);
+  const level = addBlessing(s, id, offer.level, offer.quality);
   a.offers = [];
   a.hiddenOffer = false;
   s.events.push({ type: 'blessing', id, level });

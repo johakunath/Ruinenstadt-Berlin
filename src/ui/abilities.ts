@@ -10,7 +10,7 @@ import { FAMILIES, PERKS, SHRINES, type PerkFamilyId, type PerkId, type ShrineId
 import type { Input } from '../input/input';
 import { cooldownOf, powerOf, selectPower, type Offer } from '../sim/abilities';
 import { chooseBlessing, heldFamilies, perkOf, rerollBlessings, rerollCost } from '../sim/blessings';
-import { buyConsumable, buyHeal, buyOffer, closeTrade, healPrice, tradeStock } from '../sim/runcontent';
+import { buyConsumable, buyHeal, buyOffer, closeTrade, healPrice, tradeStock } from '../sim/trade';
 import type { Sim } from '../sim/types';
 import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
 import { uiIcon } from './ui-icons';
