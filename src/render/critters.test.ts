@@ -4,7 +4,7 @@ import { koepenickMap } from '../data/koepenick';
 import { tunnelMap } from '../data/tunnel';
 import { createSim } from '../sim/sim';
 import { colliderDistance } from '../sim/collide';
-import { ColliderIndex, critterKinds, duckSite, nearWall, pigeonSite, ratSite, type SiteWorld } from './critter-sites';
+import { ColliderIndex, CrownIndex, critterKinds, duckSite, nearWall, pigeonSite, ratSite, type SiteWorld } from './critter-sites';
 import { Critters, RING } from './critters';
 import { Materials } from './materials';
 import { PROFILES } from './profile';
@@ -44,6 +44,20 @@ describe('P18 critter sites', () => {
     expect(forest).toBe(0);
   });
 
+  it('pigeons stay out from under tree crowns (the camera could not see them)', () => {
+    const trees = generateLots(koep).filter((l) => l.kind === 'tree').map((l) => ({ x: l.x, z: l.z, r: l.w / 2 }));
+    const W = { ...K, crowns: new CrownIndex(trees) };
+    let n = 0;
+    for (let x = -20; x <= 30; x += 1) {
+      for (let z = -120; z <= -80; z += 1) {
+        if (!pigeonSite(W, x, z)) continue;
+        n++;
+        expect(trees.every((t) => Math.hypot(x - t.x, z - t.z) >= t.r)).toBe(true);
+      }
+    }
+    expect(n).toBeGreaterThan(20);
+  });
+
   it('rats keep to free ground beside walls, never inside a collider', () => {
     let n = 0;
     for (let x = -20; x <= 48; x += 0.7) {
@@ -77,7 +91,7 @@ describe('P18 critters view', { timeout: 30000 }, () => {
   const levelOf = (m: MapDef): ReturnType<typeof mapLevel> => levels.get(m) ?? levels.set(m, mapLevel(m, generateLots(m))).get(m)!;
   const run = (m: MapDef, x: number, z: number, frames: number, profile = PROFILES.qualitaet): { c: Critters; ms: number } => {
     const sim = createSim({ level: levelOf(m), seed: 3 });
-    const c = new Critters(new Materials({} as Look, profile), m, profile, false);
+    const c = new Critters(new Materials({} as Look, profile), m, profile, { load: false });
     const before = JSON.stringify([sim.player, sim.enemies.map((e) => [e.x, e.z, e.hp])]);
     let ms = 0;
     for (let i = 0; i < frames; i++) {
@@ -107,7 +121,7 @@ describe('P18 critters view', { timeout: 30000 }, () => {
 
   it('a flock flies off when the hero walks into it, and lands again or leaves', () => {
     const sim = createSim({ level: K.level, seed: 3 });
-    const c = new Critters(new Materials({} as Look, PROFILES.qualitaet), koep, PROFILES.qualitaet, false);
+    const c = new Critters(new Materials({} as Look, PROFILES.qualitaet), koep, PROFILES.qualitaet, { load: false });
     for (let i = 0; i < 30; i++) c.update(sim, 1 / 60, 10, 0);
     const p = c.live().find((a) => a.kind === 'pigeon')!;
     expect(p).toBeTruthy();

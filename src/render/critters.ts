@@ -18,7 +18,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { WATER_Y, type MapDef } from '../data/map';
 import { Rng } from '../sim/math';
 import type { Sim } from '../sim/types';
-import { ColliderIndex, critterKinds, duckSite, pigeonSite, ratFree, ratSite, site, type CritterKind, type SiteWorld } from './critter-sites';
+import { ColliderIndex, CrownIndex, critterKinds, duckSite, pigeonSite, ratFree, ratSite, site, type CritterKind, type SiteWorld } from './critter-sites';
 import { groundY } from './ground';
 import type { Materials } from './materials';
 import type { Profile } from './profile';
@@ -160,7 +160,8 @@ export class Critters {
   /** CPU time of the last update (ms), for the handover numbers. */
   ms = 0;
 
-  constructor(materials: Materials, private readonly m: MapDef, profile: Profile, load = true) {
+  /** `trees`: tree crowns (pigeons keep out from under them); `load: false` skips the model file (tests). */
+  constructor(materials: Materials, private readonly m: MapDef, profile: Profile, private readonly opts: { trees?: ReadonlyArray<{ x: number; z: number; r: number }>; load?: boolean } = {}) {
     this.rng = new Rng(m.seed * 7919 + 17);
     const kinds = critterKinds(m);
     if (kinds.length === 0) return;
@@ -197,7 +198,7 @@ export class Critters {
       this.wings.geometry.dispose();
       this.wings.geometry = wingGeometry(0.3, 0.13);
     }
-    if (load) this.load(material);
+    if (opts.load ?? true) this.load(material);
     if (import.meta.env?.DEV) (globalThis as { __critters?: Critters }).__critters = this;
   }
 
@@ -255,7 +256,7 @@ export class Critters {
     const t0 = performance.now();
     if (this.level !== sim.level) {
       this.level = sim.level;
-      this.world = { m: this.m, level: sim.level, index: new ColliderIndex(sim.level.colliders) };
+      this.world = { m: this.m, level: sim.level, index: new ColliderIndex(sim.level.colliders), crowns: new CrownIndex(this.opts.trees ?? []) };
       this.reset();
     }
     const w = this.world!;
@@ -299,9 +300,9 @@ export class Critters {
     for (let p = 0; p < (fill ? FILL_PROBES : PROBES); p++) {
       const g = pool.herds.findIndex((h) => !h.on);
       if (g < 0) return;
-      // A fill aims every other probe at the visible ground (about 24 × 15 m: 12 m north to 3 m south of the hero at
-      // the normal zoom), the rest at the ring.
-      const r = this.rng.range(RING.min, RING.max), ang = this.rng.next() * TAU, view = fill && p % 2 === 0;
+      // A fill aims its first two thirds of probes at the visible ground (about 24 × 15 m: 12 m north to 3 m south of the
+      // hero at the normal zoom), so even the small Leistung pools start in view; the rest go to the ring.
+      const r = this.rng.range(RING.min, RING.max), ang = this.rng.next() * TAU, view = fill && p < (FILL_PROBES * 2) / 3;
       const x = view ? this.cx + this.rng.range(-12, 12) : this.cx + Math.sin(ang) * r;
       const z = view ? this.cz + this.rng.range(-8, 7) : this.cz + Math.cos(ang) * r;
       if (x < B.minX + 2 || x > B.maxX - 2 || z < B.minZ + 2 || z > B.maxZ - 2) continue;

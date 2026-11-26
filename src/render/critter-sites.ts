@@ -46,11 +46,33 @@ export class ColliderIndex {
   }
 }
 
-/** What the site tests read: the map, the level (walk grid) and the collider index. */
+/** Tree crowns as circles (tree lots: `w` is the crown size). The camera cannot see a pigeon under one. */
+export class CrownIndex {
+  private readonly cells = new Map<number, Array<{ x: number; z: number; r: number }>>();
+  constructor(trees: ReadonlyArray<{ x: number; z: number; r: number }>) {
+    for (const t of trees) {
+      for (let gx = Math.floor((t.x - t.r) / CELL); gx <= Math.floor((t.x + t.r) / CELL); gx++) {
+        for (let gz = Math.floor((t.z - t.r) / CELL); gz <= Math.floor((t.z + t.r) / CELL); gz++) {
+          const k = key(gx, gz);
+          let list = this.cells.get(k);
+          if (!list) this.cells.set(k, (list = []));
+          list.push(t);
+        }
+      }
+    }
+  }
+
+  under(x: number, z: number): boolean {
+    return this.cells.get(key(Math.floor(x / CELL), Math.floor(z / CELL)))?.some((t) => Math.hypot(x - t.x, z - t.z) < t.r) ?? false;
+  }
+}
+
+/** What the site tests read: the map, the level (walk grid), the collider index and the tree crowns. */
 export interface SiteWorld {
   m: MapDef;
   level: Pick<Level, 'blocked'>;
   index: ColliderIndex;
+  crowns?: CrownIndex;
 }
 
 /** Ducks keep this far from the bank: the boat wrecks lie up to about 3.2 m out (`buildBoats` in map-world.ts). */
@@ -81,11 +103,11 @@ function free(w: SiteWorld, x: number, z: number, pad: number): boolean {
   return !w.level.blocked(x, z, pad) && w.index.edge(x, z) > pad;
 }
 
-/** Paved and open: a street (not a forest path) or a cobbled or asphalt area, away from forest and jungle. */
+/** Paved and open: a street (not a forest path) or a cobbled or asphalt area, away from forest, jungle and tree crowns. */
 export function pigeonSite(w: SiteWorld, x: number, z: number): boolean {
   const m = w.m;
   // Cheap tests first: the street search runs over every street of the map.
-  if (m.tunnel || m.decks || !free(w, x, z, 0.35)) return false;
+  if (m.tunnel || m.decks || !free(w, x, z, 0.35) || w.crowns?.under(x, z)) return false;
   const g = areaAt(m, x, z)?.ground ?? m.defaultGround;
   if (g === 'forest' || g === 'jungle' || isWater(m, x, z)) return false;
   if (g === 'cobbles' || g === 'asphalt') return true;

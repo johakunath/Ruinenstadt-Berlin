@@ -226,7 +226,8 @@ export class GameRenderer {
     this.campView = def?.camp ? new CampStationsView(assets, materials, def.camp) : null;
     if (this.campView) this.scene.add(this.campView.group);
     this.scene.add(this.fx.group, this.loot.group, this.content.group);
-    this.critters = def ? new Critters(materials, def, opts.profile) : null;
+    const trees = opts.map?.lots.filter((l) => l.kind === 'tree').map((l) => ({ x: l.x, z: l.z, r: l.w / 2 }));
+    this.critters = def ? new Critters(materials, def, opts.profile, { trees }) : null;
     if (this.critters) this.scene.add(this.critters.group);
     this.debug = opts.debugHit || opts.debugFlow ? new HitDebug(opts.debugFlow) : null;
     if (this.debug) this.scene.add(this.debug.lines);

@@ -22,7 +22,7 @@ describe('P18 critters on every map', { timeout: 60000 }, () => {
   for (const [name, make] of MAPS) {
     it(name, () => {
       const m = make(), level = mapLevel(m, generateLots(m)), sim = createSim({ level, seed: 2 });
-      const c = new Critters(new Materials({} as Look, PROFILES.ausgewogen), m, PROFILES.ausgewogen, false);
+      const c = new Critters(new Materials({} as Look, PROFILES.ausgewogen), m, PROFILES.ausgewogen, { load: false });
       let total = 0;
       // The start and every encounter: animals within the view ring somewhere along the route.
       for (const p of [m.start, ...m.encounters]) {
