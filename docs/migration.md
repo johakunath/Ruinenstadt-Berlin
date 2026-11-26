@@ -24,7 +24,7 @@ Finish a task: task file status and a handover of at most 8 lines, update this q
 
 ## Parity with 2D (milestone P1)
 
-Reached 2026-11-18 for Köpenick: map, loot, inventory, save, weapons, powers, blessings, enemies, bosses, run content, side branches, camp, Späti trader, menus, endless mode, tunnels and sound are built; their playtests are in `docs/tasks/pt-hardware-checks.md` › Playtest. Still open from P1: own models for the humanoid bosses and the ghoul (H2), boss voices (S3, tool Q9), a trade screen of its own and trader balance (M13b). Not in P1: XP levels, threat levels (Bedrohung), daily fight.
+Reached 2026-11-18 for Köpenick: map, loot, inventory, save, weapons, powers, blessings, enemies, bosses, run content, side branches, camp, Späti trader, menus, endless mode, tunnels and sound are built; their playtests are in `docs/tasks/pt-hardware-checks.md` › Playtest. Still open from P1: own models for the humanoid bosses and the ghoul (H2), boss voices (S3, tool Q9); the trade screen of its own and the trade rules (M13b) are built 2026-11-26, trader balance goes to the next balance pass (B10). Not in P1: XP levels, threat levels (Bedrohung), daily fight.
 
 ## How each area moves
 

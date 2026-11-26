@@ -289,3 +289,28 @@ Read:
 - Köpenick is the only real challenge. With carried gear every later district is far too easy: no deaths, fights cost under 15 % life, bosses fall in seconds. Power keeps growing (×3 to ×4 per district), the district tiers were set against fresh gear.
 - Fix direction (decide in the balance session, P33): scale each district's tier to the power a hero brings (about 200 to 500 into Xhain, 600 into Alexanderplatz, 700 to 900 into Mitte), and slow the power growth itself (item level per district, fewer upgrades), so B10 holds over the chain.
 - Run 1 stopped in Xhain after one boss and 180 sim minutes with 0 deaths: a Ratte spawned into a Hinterhof pocket boxed in by props, so the fight never ended. Fixed in PR 55 (wave and pack spawns only on reachable ground; the bot also stops a fight with no hit for three minutes). The same seed now wins Xhain in 11 min.
+
+## Trade (M13b, 2026-11-26)
+
+Before/after (2026-11-26): `node tools/balance.mjs 2 normal johannes 1 --campaign`, before = `main` at 44d9f48, after = this branch (rules and bot). Two campaigns each (a session restart cut the three-campaign runs; runs repeat from their seed, so runs 1 and 2 of three are these two). Both: 2 of 2 won all twelve maps, 0.5 deaths in Köpenick, none later. Averages per map:
+
+| Map | Left before → after | Power end before → after | Segen | Aufsätze | Deals b/s/u/a (sum) |
+|---|---|---|---|---|---|
+| Köpenick | 299 → 299 | 448 → 448 | 0 | 0 | 0/0/0/0 |
+| S3-Tunnel | 754 → 596 | 490 → 519 | 0 | 0 | 0/0/0/0 |
+| Xhain | 832 → 887 | 896 → 945 | 0 | 270 | 0/0/0/2 |
+| U8-Tunnel | 510 → 503 | 1013 → 946 | 0 | 0 | 0/0/0/0 |
+| Alexanderplatz | 1239 → 1004 | 1640 → 2044 | 313 | 0 | 0/0/1/0 |
+| U2-Tunnel | 628 → 696 | 1581 → 1489 | 0 | 0 | 0/0/0/0 |
+| Mitte | 1328 → 1279 | 2701 → 2389 | 208 | 0 | 0/1/1/0 |
+| U2-Tunnel West | 622 → 669 | 2286 → 2612 | 0 | 0 | 0/0/0/0 |
+| Charlottenburg | 1627 → 642 | 3418 → 3949 | 380 | 180 | 0/1/1/1 |
+| U9-Tunnel | 1181 → 922 | 3318 → 3207 | 0 | 0 | 0/0/0/0 |
+| Wedding | 1398 → 618 | 4324 → 3510 | 1025 | 126 | 1/2/3/1 |
+| Fernsehturm | 748 → 303 | 3839 → 3054 | 475 | 0 | 1/0/3/0 |
+
+Reading:
+- The bot trades rarely: over two campaigns 2 cards bought, 4 swaps, 9 Stärkungen, 4 Aufsätze. Köpenick is unchanged (about 300 Schrott left there: the 30 % reserve stops every blessing and the Aufsatz). Most trading happens from Charlottenburg on, when the camp is mostly built.
+- E3 (about 1200 Schrott left per later map) moves into range: 600 to 1300 left after the later maps, was 1200 to 1600.
+- The Schrott that goes to run-only blessings no longer goes to the camp (Wedding: 266 camp before it, was 731), so permanent power ends lower in Wedding and the Fernsehturm (3054, was 3839). One Fernsehturm run took 186 % damage per fight (69 % before); with two runs this is within the noise but worth a look in the next balance pass.
+- Not changed: `TRADE.bless` and `BLESS` stay first guesses; calibrate them in the next balance session (B10, Fable) together with E5.
