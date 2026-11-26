@@ -56,8 +56,13 @@ export function initDragScroll(): void {
   }, true);
 }
 
-/** Right stick (axis 3) scrolls a list, for pad players in long screens. */
-export function stickScroll(el: HTMLElement | null, ry: number, dt = 1 / 60): void {
+/** Seconds since the last poll, for `stickScroll` (callers poll at 30, 60 or 90 Hz); 0 on the first poll or after a pause. */
+export function pollDt(now: number, last: number): number {
+  return last > 0 && now > last ? Math.min(0.1, (now - last) / 1000) : 0;
+}
+
+/** Right stick (axis 3) scrolls a list, for pad players in long screens; `dt` in seconds since the last poll. */
+export function stickScroll(el: HTMLElement | null, ry: number, dt: number): void {
   if (!el || Math.abs(ry) < 0.25) return;
   el.scrollTop += Math.sign(ry) * (Math.abs(ry) - 0.25) / 0.75 * 1100 * dt;
 }

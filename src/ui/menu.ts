@@ -15,7 +15,7 @@ import { moveFocus } from './focus';
 import { KEEPER_PORTRAIT, portraitUrl } from './portraits';
 import { uiIcon } from './ui-icons';
 import { activePad } from '../input/pad';
-import { closeOnTap, scrollParent, stickScroll } from './drag-scroll';
+import { closeOnTap, pollDt, scrollParent, stickScroll } from './drag-scroll';
 
 export type TabId = 'inv' | 'karte' | 'segen' | 'kodex';
 const TAB_NAME: Record<TabId, string> = { inv: 'Inventar', karte: 'Karte', segen: 'Segen', kodex: 'Kodex' };
@@ -90,6 +90,8 @@ export class Menu {
   readonly root = document.createElement('div');
   private readonly tabsEl = document.createElement('nav');
   private readonly resEl = document.createElement('div');
+  /** Last pad poll time, for the stick scroll speed. */
+  private stickLast = 0;
   private readonly bodies: Record<TabId, HTMLElement>;
   tab: TabId = 'inv';
   private segenSel: PerkId | null = null;
@@ -221,7 +223,9 @@ export class Menu {
     // Y opens Optionen: LB/RB only switch tabs, so the cog was out of the pad's reach.
     if (edge(3)) { this.host.options(); return; }
     const a = document.activeElement;
-    stickScroll(scrollParent(a && this.root.contains(a) ? a : this.bodies[this.tab]) ?? scrollParent(this.bodies[this.tab]), pad.axes[3] ?? 0);
+    const dt = pollDt(now, this.stickLast);
+    this.stickLast = now;
+    stickScroll(scrollParent(a && this.root.contains(a) ? a : this.bodies[this.tab]) ?? scrollParent(this.bodies[this.tab]), pad.axes[3] ?? 0, dt);
     if (edge(4) || edge(5)) { this.step(edge(5) ? 1 : -1); return; }
     if (edge(0)) { const a = document.activeElement as HTMLElement | null; if (a && this.root.contains(a)) a.click(); else this.focusFirst(); return; }
     if (now < this.padNext) return;
