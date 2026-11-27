@@ -8,7 +8,8 @@ import { generateLots, generateProps, mapLevel } from '../data/map';
 import { SURVIVORS } from '../data/progression';
 import { spawnEnemy } from './enemies';
 import { reachable } from './reach';
-import { buyHeal, buyOffer, closeTrade, CONTENT, contentMarks, healPrice, shopLevel, talkTo, type RunEventKind } from './runcontent';
+import { CONTENT, contentMarks, talkTo, type RunEventKind } from './runcontent';
+import { buyHeal, buyOffer, closeTrade, healPrice, shopLevel } from './trade';
 import { parseSave, simFromSave, snapshot } from './save';
 import { createSim, stepSim } from './sim';
 import { NO_INPUT, type Sim } from './types';
@@ -298,7 +299,7 @@ describe('events', () => {
     expect(d.content.kind === 'item' && d.content.item.rarity).toBeGreaterThanOrEqual(2);
   });
   it('Späti: a keeper behind the counter sells items, Verband and Molotow; stock is per Späti and run', async () => {
-    const { buyConsumable, tradeStock } = await import('./runcontent');
+    const { buyConsumable, tradeStock } = await import('./trade');
     const s = make();
     const rest = level.rests[0]!;
     expect(rest.desk && rest.keeper).toBeTruthy();

@@ -4,6 +4,7 @@
 //   ?map=tunnel&line=1 (a tunnel line, S3 default)
 //   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
 //   ?cut=off (no V1 B cutaway)   ?cut=4.3 (yard cut height in meters, look test)
+//   ?gear=turm,spaeti,kiez (debug: wear these legendaries and sets; never saved)
 import { PROFILES, type ProfileId } from './render/profile';
 import type { MapId } from './ui/maps';
 export type { MapId } from './ui/maps';
@@ -40,6 +41,8 @@ export interface Options {
   boxShadows: boolean;
   /** ?cut=off disables the V1 B cutaway; ?cut=<meters> overrides the Hinterhof cut height. */
   cut?: 'off' | number;
+  /** ?lamp=real|fake: the head lamp as a spot light or as haze and ground pool only (WP4 step 5b A/B). */
+  lamp?: 'real' | 'fake';
   /** Köpenick (default), the gate 1 courtyard, a tunnel, Xhain, Alexanderplatz, Mitte, Charlottenburg (M16), Wedding (M18) or the walkable camp (M20). */
   map: MapId;
   /** M20: tunnel line (0 = S3). */
@@ -53,6 +56,10 @@ export interface Options {
   tp: { x: number; z: number } | null;
   /** Debug: ?god (or ?tp) makes the hero take no damage. */
   god: boolean;
+  /** Debug: ?drops=N lays N mixed drops round the hero at the start (`spawnDebugDrops`; 12 = every rarity). */
+  drops: number;
+  /** Debug: ?gear=turm,spaeti,kiez puts on these legendaries (by base) and sets (all pieces) at the start; the run is not saved. */
+  gear: string[];
 }
 
 const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'alex', 'mitte', 'charlottenburg', 'wedding', 'turm', 'lager'];
@@ -179,6 +186,7 @@ export function readOptions(): Options {
     cam: parseCam(q.get('cam')),
     boxShadows: q.get('shadows') === 'boxes',
     cut: parseCut(q.get('cut')),
+    lamp: q.get('lamp') === 'real' ? 'real' : q.get('lamp') === 'fake' ? 'fake' : undefined,
     map: MAPS.find((m) => m === q.get('map')) ?? 'koepenick',
     line: Math.max(0, Math.min(5, Number(q.get('line') ?? 0) || 0)),
     spawn: (q.get('spawn') ?? '').split(/[, ]/).filter(Boolean),
@@ -186,6 +194,8 @@ export function readOptions(): Options {
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
     tp: parseTp(q.get('tp')),
     god: q.has('god') || q.has('tp'),
+    drops: Math.max(0, Math.min(40, Number(q.get('drops') ?? 0) || 0)),
+    gear: (q.get('gear') ?? '').split(/[, ]/).filter(Boolean),
   };
 }
 

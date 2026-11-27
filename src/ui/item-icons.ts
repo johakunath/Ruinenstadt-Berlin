@@ -13,3 +13,14 @@ export const ITEM_ICONS: Readonly<Record<string, string>> = {'latte': 'I01', 'ro
   bestellung: 'I103', 'mantel:gast': 'I104', 'handsch:gast': 'I105', 'stiefel:gast': 'I106',
   // M17 Fernsehturm: the Telespargel, rendered from its model.
   telespargel: 'I109'};
+
+/**
+ * Aufsätze and supplies (Johannes 2026-11-26: real 3D icons, no SVG): Pixal3D models from one FLUX picture each
+ * (`assets-src/ai/props/`), rendered like the item icons by `tools/prop-icons.ts` (`PAGES=props node tools/item-icons.mjs`).
+ */
+export const MOD_ICONS: Readonly<Record<string, string>> = {
+  nagel: 'I110', gewicht: 'I111', batt: 'I112', tank: 'I113', phiole: 'I114', dorn: 'I115',
+  stahlnagel: 'I116', blei: 'I117', starkstrom: 'I118', brandsatz: 'I119', saeure: 'I120', nato: 'I121',
+};
+export const SUPPLY_ICONS = { verband: 'I122', molotow: 'I123', heal: 'I124' } as const;
+

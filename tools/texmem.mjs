@@ -26,8 +26,15 @@ function hook() {
   const bound = new Map(); // `${unit}:${target}` -> WebGLTexture
   let unit = 0;
   const info = (target) => tex.get(bound.get(`${unit}:${target === G.TEXTURE_CUBE_MAP ? target : target >= G.TEXTURE_CUBE_MAP_POSITIVE_X && target <= G.TEXTURE_CUBE_MAP_NEGATIVE_Z ? G.TEXTURE_CUBE_MAP : target}`));
+  // ImageBitmaps (ImageBitmapLoader, P47 resizes) carry the file name of the fetch they were decoded from.
+  const fileOf = new WeakMap();
+  const blob = Response.prototype.blob;
+  Response.prototype.blob = async function () { const b = await blob.call(this); if (!this.url.startsWith('blob:')) fileOf.set(b, this.url); return b; };
+  const cib = self.createImageBitmap;
+  if (cib) self.createImageBitmap = async function (src, ...a) { const bm = await cib.call(this, src, ...a); if (src && typeof src === 'object' && fileOf.has(src)) fileOf.set(bm, fileOf.get(src)); return bm; };
   const label = (src, w, h) => {
     if (!src || ArrayBuffer.isView(src)) return `data ${w}x${h}`;
+    if (self.ImageBitmap && src instanceof ImageBitmap && fileOf.has(src)) return `${decodeURIComponent(fileOf.get(src).split('/').pop().split('?')[0])} ${src.width}`;
     if (src.currentSrc || src.src) return decodeURIComponent((src.currentSrc || src.src).split('/').pop().split('?')[0]);
     if (src instanceof HTMLCanvasElement || (self.OffscreenCanvas && src instanceof OffscreenCanvas)) return `canvas ${src.width}x${src.height}`;
     if (self.ImageBitmap && src instanceof ImageBitmap) return `bitmap ${src.width}x${src.height}`;

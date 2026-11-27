@@ -1,5 +1,6 @@
 // M13: the camp as a menu between expeditions (Q11). One station window as in 2D `renderStn`
 // (js/panels.js), a station list instead of the walkable camp. Rules live in `src/sim/camp.ts`.
+import { modIcon } from './prop-icon';
 import { STATIONS, type StationId } from '../data/camp';
 import { CONSUMABLES, INGREDIENTS, MATERIALS, MEALS, WEAPON_MODS, type IngredientId, type MaterialId, type WeaponModId } from '../data/crafting';
 import { CAMP_UPGRADES, type CampUpgradeId } from '../data/progression';
@@ -126,10 +127,12 @@ export class CampUi {
   }
   private mods(s: Sim): string {
     const w = s.equipment.w, slots = modSlots(w), on = w?.mods ?? [];
-    const rows = WEAPON_MODS.map(m => {
+    // M13b: strong Aufsätze come only from a Späti; they show here once owned, without a recipe.
+    const rows = WEAPON_MODS.filter(m => !m.spati || on.includes(m.id) || (s.inventory.mods[m.id] ?? 0) > 0).map(m => {
       const n = s.inventory.mods[m.id] ?? 0, inW = on.includes(m.id);
       const act = inW ? `<button type="button" data-mo="${m.id}">Ausbauen</button>` : n > 0 ? `<button type="button" class="primary" data-mi="${m.id}" ${on.length >= slots ? 'disabled' : ''}>Einbauen</button>` : '';
-      return `<div class="row-c"><div><b>${m.name}${inW ? ' · eingebaut' : n ? ` · ${n} da` : ''}</b><small>${m.description}</small><small>${modScrap(s, m.id)} Schrott · ${(Object.entries(m.costs) as Array<[MaterialId, number]>).map(([k, v]) => `<span class="${(s.inventory.materials[k] ?? 0) >= v ? '' : 'negative'}">${v} ${MATERIALS[k].name}</span>`).join(' · ')}</small></div><span class="row-b"><button type="button" data-mb="${m.id}">Bauen</button>${act}</span></div>`;
+      const recipe = m.spati ? '<small>Aus dem Späti</small>' : `<small>${modScrap(s, m.id)} Schrott · ${(Object.entries(m.costs) as Array<[MaterialId, number]>).map(([k, v]) => `<span class="${(s.inventory.materials[k] ?? 0) >= v ? '' : 'negative'}">${v} ${MATERIALS[k].name}</span>`).join(' · ')}</small>`;
+      return `<div class="row-c has-ic">${modIcon(m.id)}<div><b>${m.name}${inW ? ' · eingebaut' : n ? ` · ${n} da` : ''}</b><small>${m.description}</small>${recipe}</div><span class="row-b">${m.spati ? '' : `<button type="button" data-mb="${m.id}">Bauen</button>`}${act}</span></div>`;
     }).join('');
     return `<h3>Aufsätze · ${esc(w?.name ?? 'keine Waffe')} ${on.length}/${slots}</h3>${rows}`;
   }

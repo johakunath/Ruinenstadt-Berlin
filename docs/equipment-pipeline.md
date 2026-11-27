@@ -4,6 +4,10 @@ Index of every equipment base and named item with its 3D model, hero look, inven
 Rule: every session that touches equipment art, models, icons or effects updates this file in the same PR.
 **Plan (2026-11-19): `docs/tasks/wp4-equipment-visuals.md`** decides how every row below gets its model (one weapon model per base, rigid gear built in code, palettes per base, pickups per kind, legendary effects) and in which order. The index stays the status; the task file is the plan.
 **Clothing looks (2026-11-19):** built in 3D from the approved mockups (`docs/mockups/wp4-clothes/`), decisions in the task file › Step 2 looks. Talisman, ring and implant stay icon-only. Needs: T = painted texture (local, T8 or T9), E = WP4 step 5 effect, M = Blender piece.
+**Light (WP4 step 5b, 2026-11-26):** the Stirnlampe des Tunnelläufers throws a real beam; Leuchtröhre, Die Letzte Bestellung, Rohrzange des Tunnelläufers (and softer the Boxenhammer, Mikroständer, Neonflinte, the Tunnelläufer hip lantern) light up around the hero; table `src/data/item-light.ts`.
+
+**Local AI gear (2026-11-26):** `ai:hat-x` = Pixal3D hat on the head bone (W9, `src/render/gear-ai.ts`, fitted into the code hat's box); `ai:outfit-x` = Pixal3D outfit on the hero skeleton (W10, `src/render/outfit-ai.ts`, loads on first wear; the code look shows until then and with `?aigear=0`). Icons follow after `PAGES=wear node tools/item-icons.mjs`. Aufsätze and supplies have rendered Pixal3D icons I110 to I124, the Abzeichen der Kiezwache (I95) and the Ring der Weltzeituhr (I87) too (`tools/prop-icons.ts`, `PAGES=props node tools/item-icons.mjs`, 2026-11-27; [sheet](proof/wp4/icons-props.jpg)); hat and armor icons re-rendered from the AI pieces ([sheet](proof/wp4/icons-wear-ai.jpg)). No SVG item icon is left.
+
 Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key from `src/data/weapon-look.ts`); `wear:x` = the look of `WEAR` in `src/data/hero-look.ts` (palette on a hero.glb piece, coat cut, gear parts from `src/render/gear*.ts`; WP4 step 2); `piece:x` = hero.glb node; `none` = nothing in 3D. Hero `yes` = equipping changes the hero mesh, `same` = shows the no-item default, `-` = not shown. Icon `yes/partly/no` compares the painted icon (`src/ui/item-icons.ts`, `assets/inventory/*.webp`) with what the game shows. Needs: M model or piece, I icon re-render, E effect, T texture.
 
 ## Facts checked in code (2026-11-18)
@@ -16,7 +20,8 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Element (2026-11-19) | Element lights the weapon's glow parts (`ELEMENT_GLOW`, 2.4); without one, neon and legendary bases glow in their signature colour (1.6); else the glow mesh is hidden. No particles yet (step 5) |
 | Hero look (2026-11-19, WP4 step 2) | `heroLook` reads `WEAR` per slot (`base:set` first): outfit piece (coat or vest), coat cut (jackets), palette per piece and scarf, shoulder volume, rigid gear parts, hair hidden (Topfhelm). Every Körper, Kopf, Hände and Füße base has its own look; icons rendered from it (`node tools/item-icons.mjs`, `PAGES=wear`). Sheets: `docs/proof/wp4/step2/` |
 | Not on the hero | Talisman, ring, implant: painted icons, no 3D (Johannes, 2026-11-19) |
-| Ground drops | `src/render/loot.ts`: one instanced crystal in rarity colour, beam for rare and up. Same for every item (backlog P10) |
+| Ground drops | `src/render/loot.ts`: one model per drop kind (20, `assets/props/pickups.glb`, `src/data/pickups.ts`) on the rarity ring and beam; 7 Pixal3D, 8 reused game models, 5 code stand-ins until their Pixal3D run; look A (G2, 2026-11-27) |
+| Legendary effects (2026-11-26, WP4 step 5) | `GearFx` (`src/render/gear-fx.ts`, data `src/data/gear-fx.ts`): glow edges in the signature colour that pulse, ambient particles, proc flashes on `legendaryProc` and existing events, steady glows for talisman, ring and implant; 1 draw call, no light. look B (G3, 2026-11-27); `?gear=` debug loadout. Armor glow parts (`fx-spaeti`) drop under an AI outfit; armor effects on bones stay |
 | Starter | `starterEquipment()` (`src/sim/loadout.ts`): only `Rostige Klinge`, base `rohr`, kind `blade`. No armor, gloves, boots: hero starts in coat, boots, bare hands |
 | Legacy | `Holzlatte` (`latte`, I01) and `Rostiges Rohr` exist only in `BASES` for old saves; no drop pool rolls them |
 | M18 Wedding (2026-11-21) | One new base (`bestellung`, legendary hammer) and the set Pracht des Ewigen Gasts on five existing bases (`mantel`, `handsch`, `stiefel` with `base:gast` palettes, `feder`, `siegel`); both drop only on `fest` maps (`src/sim/items.ts`). Icons I103 to I106 rendered with `tools/item-icons.mjs`; feather and signet ring keep the plain icons. Proof `docs/proof/m18-wedding/enemies/loot-icons.png` |
@@ -65,57 +70,57 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Werkhammer | werkh | w | GDR | model:werkh | yes | I72 | yes: rendered from the model | none | 4 |
 | Aufziehwerfer | aufzieh | w | GDR | model:aufzieh | yes | I73 | yes: rendered from the model | none | 4 |
 | Zeigerlanze | zeiger | w | GDR | model:zeiger | yes | I74 | yes: rendered from the model | none | 4 |
-| Fernsehturm-Splitter | turm | w | legendary | model:turm | yes | I15 | yes: rendered from the model | E | 3 |
-| Klinge der Zitadelle | zitklinge | w | legendary | model:zitklinge | yes | I51 | yes: rendered from the model | E | 3 |
-| Mauerbrecher | mauer | w | legendary | model:mauer | yes | I16 | yes: rendered from the model | E | 3 |
-| Plattenbrecher | pbrecher | w | legendary | model:pbrecher | yes | I52 | yes: rendered from the model | E | 3 |
+| Fernsehturm-Splitter | turm | w | legendary | model:turm | yes | I15 | yes: rendered from the model | none | 3 |
+| Klinge der Zitadelle | zitklinge | w | legendary | model:zitklinge | yes | I51 | yes: rendered from the model | none | 3 |
+| Mauerbrecher | mauer | w | legendary | model:mauer | yes | I16 | yes: rendered from the model | none | 3 |
+| Plattenbrecher | pbrecher | w | legendary | model:pbrecher | yes | I52 | yes: rendered from the model | none | 3 |
 | Die Letzte Bestellung | bestellung | w | legendary (only on `fest` maps, M18) | model:bestellung (emerald shaft, gold wish-lamp head with a ruby glow band, two tea glasses on chains) | yes | I103 | yes: rendered from the model | E (tea splash on every third hit) | 3 |
 | Telespargel | telespargel | w | legendary (only from Der Zeitwart, M17) | model:telespargel (red and white banded antenna shaft, the steel sphere with a lit window ring and a brass gear rim as the guard, a red beacon at the point) | yes | I109 | yes: rendered from the model | E (Zeitzeichen: every twelfth hit stops every enemy within 5 m for 1.5 s; a shock ring) | 3 |
-| Zorn der Ringbahn | ring | w | legendary | model:ring | yes | I32 | yes: rendered from the model | E | 3 |
-| Krähenschleuder | kraehe | w | legendary | model:kraehe | yes | I53 | yes: rendered from the model | E | 3 |
-| Speer der Siegessäule | siegsp | w | legendary | model:siegsp | yes | I56 | yes: rendered from the model | E | 3 |
-| Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: rendered from the model | E | 3 |
-| Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | E | 3 |
-| Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | E | 3 |
-| Rohrzange des Tunnelläufers | zange | w | set tunnel | model:zange:tunnel | yes | I101 | yes: rendered from the model | E | 3 |
-| Lederjacke | leder | a | normal | wear:leder | yes | I17 | yes: rendered from the look (denim, KA B2) | - | 2 |
-| Arbeitsmantel | mantel | a | normal | wear:mantel | yes | I18 | yes: rendered from the look | none | 2 |
+| Zorn der Ringbahn | ring | w | legendary | model:ring | yes | I32 | yes: rendered from the model | none | 3 |
+| Krähenschleuder | kraehe | w | legendary | model:kraehe | yes | I53 | yes: rendered from the model | none | 3 |
+| Speer der Siegessäule | siegsp | w | legendary | model:siegsp | yes | I56 | yes: rendered from the model | none | 3 |
+| Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: rendered from the model | none | 3 |
+| Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | none | 3 |
+| Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | none | 3 |
+| Rohrzange des Tunnelläufers | zange | w | set tunnel | model:zange:tunnel | yes | I101 | yes: rendered from the model | none | 3 |
+| Lederjacke | leder | a | normal | wear:leder + ai:outfit-leder (W10) | yes | I17 | yes: rendered from the look (denim, KA B2) | - | 2 |
+| Arbeitsmantel | mantel | a | normal | wear:mantel + ai:outfit-mantel (W10) | yes | I18 | yes: rendered from the look | none | 2 |
 | Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |
 | Feuerwehrjacke | feuer | a | normal | wear:feuer | yes | I20 | yes: rendered from the look | none | 2 |
 | BVG-Uniform | bvg | a | normal | wear:bvg | yes | I21 | yes: rendered from the look | none | 2 |
 | Regenponcho | poncho | a | neon | wear:poncho (own `a_poncho` piece, B1, 2026-11-22) | yes | I63 | yes: rendered from the look | none | 4 |
-| Kabelmantel | kmantel | a | neon | wear:kmantel | yes | I64 | yes: rendered from the look | none | 4 |
-| Blaumann | blaumann | a | GDR | wear:blaumann | yes | I75 | yes: rendered from the look | none | 4 |
-| Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti | yes | I49 | yes: rendered from the look (patchwork, KA B2) | E | 3 |
-| Panzer vom Tempelhofer Feld | panzer | a | legendary | wear:panzer | yes | I50 | yes: rendered from the look | E | 3 |
-| Mantel der Rattenmutter | rattenmantel | a | legendary | wear:rattenmantel | yes | I54 | yes: rendered from the look | E | 3 |
-| Rüstung des Zitadellenritters | ritter | a | legendary | wear:ritter | yes | I55 | yes: rendered from the look | E | 3 |
-| Weste der Kiezwache | weste | a | set kiez | wear:weste:kiez | yes | I93 | yes: rendered from the look | none | 3 |
-| Mantel des Spreegeists | mantel | a | set spree | wear:mantel:spree | yes | I94 | yes: rendered from the look | none | 3 |
-| Kettenhemd der Zitadelle | kette | a | set zit | wear:kette:zit | yes | I57 | yes: rendered from the look (chainmail, KA B2) | - | 3 |
-| Mantel des Tunnelläufers | mantel | a | set tunnel | wear:mantel:tunnel | yes | I98 | yes: rendered from the look | none | 3 |
+| Kabelmantel | kmantel | a | neon | wear:kmantel + ai:outfit-kmantel (W10) | yes | I64 | yes: rendered from the look | none | 4 |
+| Blaumann | blaumann | a | GDR | wear:blaumann + ai:outfit-blaumann (W10) | yes | I75 | yes: rendered from the look | none | 4 |
+| Mantel des letzten Späti | spaeti | a | legendary | wear:spaeti + ai:outfit-spaeti (W10) | yes | I49 | yes: rendered from the look (patchwork, KA B2) | none | 3 |
+| Panzer vom Tempelhofer Feld | panzer | a | legendary | wear:panzer + ai:outfit-panzer (W10) | yes | I50 | yes: rendered from the look | none | 3 |
+| Mantel der Rattenmutter | rattenmantel | a | legendary | wear:rattenmantel + ai:outfit-rattenmantel (W10) | yes | I54 | yes: rendered from the look | none | 3 |
+| Rüstung des Zitadellenritters | ritter | a | legendary | wear:ritter + ai:outfit-ritter (W10) | yes | I55 | yes: rendered from the look | none | 3 |
+| Weste der Kiezwache | weste | a | set kiez | wear:weste:kiez + ai:outfit-weste-kiez (W10) | yes | I93 | yes: rendered from the look | none | 3 |
+| Mantel des Spreegeists | mantel | a | set spree | wear:mantel:spree + ai:outfit-mantel-spree (W10) | yes | I94 | yes: rendered from the look | none | 3 |
+| Kettenhemd der Zitadelle | kette | a | set zit | wear:kette:zit + ai:outfit-kette-zit (W10) | yes | I57 | yes: rendered from the look (chainmail, KA B2) | - | 3 |
+| Mantel des Tunnelläufers | mantel | a | set tunnel | wear:mantel:tunnel + ai:outfit-mantel-tunnel (W10) | yes | I98 | yes: rendered from the look | none | 3 |
 | Kaftan des Ewigen Gasts | mantel | a | set gast (M18) | wear:mantel:gast (emerald coat, ruby hem and trousers, gold cuffs and buttons, plain belt) | yes | I104 | yes: rendered from the look | none | 3 |
-| Bauhelm | helm | h | normal | wear:helm | yes | I22 | yes: rendered from the look | none | 2 |
-| Schiebermütze | schieber | h | normal | wear:schieber | yes | I23 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 2 |
+| Bauhelm | helm | h | normal | ai:hat-hard (W9; code `wear:helm` with `?aigear=0`) | yes | I22 | yes: rendered from the look | none | 2 |
+| Schiebermütze | schieber | h | normal | ai:hat-flatcap (W9; code `wear:schieber` with `?aigear=0`) | yes | I23 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 2 |
 | Wollmütze | muetze | h | normal | wear:muetze | yes | I24 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 2 |
 | Gasmaske | maske | h | normal | wear:maske | yes | I25 | yes: rendered from the look | none | 2 |
 | Neonbrille | nbrille | h | neon | wear:nbrille | yes | I65 | yes: rendered from the look | E | 4 |
-| Strohhut | stroh | h | GDR | wear:stroh | yes | I76 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 4 |
-| Pickelhaube des Hauptmanns | pickel | h | legendary | wear:pickel | yes | I78 | yes: rendered from the look | E | 3 |
-| Helm der Kiezwache | kiezhelm | h | set kiez | wear:kiezhelm | yes | I79 | yes: rendered from the look | none | 3 |
+| Strohhut | stroh | h | GDR | ai:hat-straw (W9; code `wear:stroh` with `?aigear=0`) | yes | I76 | yes: rendered from the look | none (T9 cell built 2026-11-24) | 4 |
+| Pickelhaube des Hauptmanns | pickel | h | legendary | ai:hat-pickel (W9; code `wear:pickel` with `?aigear=0`) | yes | I78 | yes: rendered from the look | none | 3 |
+| Helm der Kiezwache | kiezhelm | h | set kiez | ai:hat-kiez (W9; code `wear:kiezhelm` with `?aigear=0`) | yes | I79 | yes: rendered from the look | none | 3 |
 | Topfhelm der Zitadelle | topfhelm | h | set zit | wear:topfhelm | yes | I83 | yes: rendered from the look | none | 3 |
 | Stirnlampe des Tunnelläufers | nbrille | h | set tunnel | wear:nbrille:tunnel | yes | I99 | yes: rendered from the look | none | 3 |
 | Arbeitshandschuhe | handsch | g | normal | wear:handsch | yes | I26 | yes: rendered from the look | none | 2 |
 | Boxbandagen | bandage | g | normal | wear:bandage | yes | I27 | yes: rendered from the look | none | 2 |
 | Schweißerhandschuhe | schweiss | g | normal | wear:schweiss | yes | I28 | yes: rendered from the look | none | 2 |
 | Gartenhandschuhe | gartenh | g | GDR | wear:gartenh | yes | I77 | yes: rendered from the look | none | 4 |
-| Fäuste des Kiezboxers | kiezbox | g | legendary | wear:kiezbox | yes | I85 | yes: rendered from the look | E | 3 |
+| Fäuste des Kiezboxers | kiezbox | g | legendary | wear:kiezbox | yes | I85 | yes: rendered from the look | none | 3 |
 | Handschuhe der Kiezwache | kiezhand | g | set kiez | wear:kiezhand | yes | I80 | yes: rendered from the look | none | 3 |
 | Handschuhe des Ewigen Gasts | handsch | g | set gast (M18) | wear:handsch:gast (gold gloves, ruby cuffs) | yes | I105 | yes: rendered from the look | none | 3 |
 | Turnschuhe | turnsch | f | normal | wear:turnsch | yes | I29 | yes: rendered from the look | none | 2 |
 | Arbeitsstiefel | stiefel | f | normal | wear:stiefel | yes | I30 | yes: rendered from the look | none | 2 |
 | Gummistiefel | gummi | f | normal | wear:gummi | yes | I31 | yes: rendered from the look | none | 2 |
-| Stiefel des Schaffners | schaffner | f | legendary | wear:schaffner | yes | I86 | yes: rendered from the look | E | 3 |
+| Stiefel des Schaffners | schaffner | f | legendary | wear:schaffner | yes | I86 | yes: rendered from the look | none | 3 |
 | Stiefel des Spreegeists | spreestief | f | set spree | wear:spreestief (own `f_wickel` piece: Quaternius Ranger boots, LA3, 2026-11-22) | yes | I81 | yes: rendered from the look | none | 3 |
 | Eisenstiefel der Zitadelle | eisenstief | f | set zit | wear:eisenstief | yes | I84 | yes: rendered from the look | none | 3 |
 | Stiefel des Tunnelläufers | stiefel | f | set tunnel | wear:stiefel:tunnel | yes | I100 | yes: rendered from the look | none | 3 |
@@ -126,8 +131,8 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Fahrradkette | kette | t | normal | none | - | I42 | n/a | - | 2 |
 | Kräuterbeutel | beutel | t | normal | none | - | I43 | n/a | - | 2 |
 | Currywurst-Abzeichen | abzeichen | t | normal | none | - | I44 | n/a | - | 2 |
-| Herz der Spree | herz | t | legendary | none | - | I45 | n/a | E | 3 |
-| Auge des Fernsehturms | auge | t | legendary | none | - | I47 | n/a | E | 3 |
+| Herz der Spree | herz | t | legendary | none | - | I45 | n/a | none | 3 |
+| Auge des Fernsehturms | auge | t | legendary | none | - | I47 | n/a | none | 3 |
 | Wappen der Zitadelle | wappen | t | set zit | none | - | I46 | n/a | - | 3 |
 | Schlüsselbund des Tunnelläufers | kette | t | set tunnel | none | - | I102 | yes: painted (local FLUX, K4) | none | 3 |
 | Abzeichen der Kiezwache | abzeichen | t | set kiez | none | - | I95 | yes: painted (local FLUX, K4) | none | 3 |
@@ -139,7 +144,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Drahtring | draht | r | normal | none | - | I36 | n/a | - | 2 |
 | Ehering | ehe | r | normal | none | - | I37 | n/a | - | 2 |
 | Kupferring | kupfer | r | normal | none | - | I38 | n/a | - | 2 |
-| Ring der Weltzeituhr | weltuhr | r | legendary | none | - | I87 | n/a | E | 3 |
+| Ring der Weltzeituhr | weltuhr | r | legendary | none | - | I87 | n/a | none | 3 |
 | Ring des Spreegeists | spreering | r | set spree | none | - | I82 | n/a | - | 3 |
 | Siegelring des Ewigen Gasts | siegel | r | set gast (M18) | none | - | I108 | yes: painted (local FLUX, K5) | none | 3 |
 | Neonauge | nauge | i | neon | none | - | I66 | n/a | - | 4 |
@@ -148,7 +153,7 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Reflexkoppler | reflex | i | neon | none | - | I68 | n/a | - | 4 |
 | Bassherz | bherz | i | neon | none | - | I69 | n/a | - | 4 |
 | Nanopumpe | npumpe | i | neon | none | - | I70 | n/a | - | 4 |
-| Arm des Basspredigers | bassarm | i | legendary | none | - | I97 | yes: painted (local FLUX, K4) | E | 3 |
+| Arm des Basspredigers | bassarm | i | legendary | none | - | I97 | yes: painted (local FLUX, K4) | none | 3 |
 
 Icon judgements are from the 128 px icons against the model code and the piece names; individual item looks still need comparison. The shared H1 coat, vest, boots, sneakers, gloves and scarf have [painted albedos and review captures](proof/h1-hero/step6/README.md). Item-specific `T` entries track variants beyond those shared textures.
 

@@ -1,21 +1,17 @@
 // Combat UI (M8, M9, M16): the blessing choice, the action bar (power, ultimate, Verband, Molotow)
-// with cooldowns, buff chips and the trader. One set of buttons serves mouse, pad and touch; on
+// with cooldowns and buff chips (the trade screen is `trade.ts`, M13b). One set of buttons serves mouse, pad and touch; on
 // touch screens CSS moves them into the thumb arc around the attack button.
 import { CONSUMABLES } from '../data/crafting';
 import { WEAPON_KINDS } from '../data/items';
 import { POWERS, type PowerDef } from '../data/powers';
-import { CAMP_UPGRADES } from '../data/progression';
-import { buySpatiUpgrade, SPATI_UPGRADE, spatiUpgradeCost } from '../sim/camp';
 import { FAMILIES, PERKS, SHRINES, type PerkFamilyId, type PerkId, type ShrineId } from '../data/progression';
 import type { Input } from '../input/input';
 import { cooldownOf, powerOf, selectPower, type Offer } from '../sim/abilities';
 import { chooseBlessing, heldFamilies, perkOf, rerollBlessings, rerollCost } from '../sim/blessings';
-import { buyConsumable, buyHeal, buyOffer, closeTrade, healPrice, tradeStock } from '../sim/runcontent';
 import type { Sim } from '../sim/types';
 import { FAMILY_GLYPHS, PERK_GLYPHS, POWER_GLYPHS } from './glyphs';
+import { supplyIcon } from './prop-icon';
 import { uiIcon } from './ui-icons';
-import { itemCard } from './inventory';
-import { SLOT_NAMES } from '../data/items';
 import { activePad } from '../input/pad';
 
 const QUALITY_COLOR = ['#e8ddd0', '#7d9bff', '#f2d14b', '#b48cff'] as const;
@@ -47,17 +43,9 @@ export class AbilitiesUi {
   readonly panel = document.createElement('div');
   readonly bar = document.createElement('div');
   readonly buffs = document.createElement('div');
-  readonly trade = document.createElement('div');
   onChoose: () => void = () => {};
-  /** The trade screen closed (the loop resumes the sim). */
-  onTradeClose: () => void = () => {};
   private readonly actions = {} as Record<ActionId, Action>;
   private signature = '';
-  private tradeSig = '';
-  private tradeMsg = '';
-  /** P5: offer whose worn counterpart is shown (hover, focus or a first tap); -1 none. */
-  private tradeSel = -1;
-  private tradePointer = 'mouse';
   private buffSig = '';
   private sim: Sim | null = null;
   private padDown: boolean[] = [];
@@ -76,11 +64,7 @@ export class AbilitiesUi {
     this.bar.hidden = true;
     this.buffs.id = 'buffs';
     this.buffs.hidden = true;
-    this.trade.id = 'trade';
-    this.trade.className = 'overlay';
-    this.trade.hidden = true;
-    this.trade.innerHTML = '<div class="panel trade"></div>';
-    document.body.append(this.bar, this.buffs, this.panel, this.trade);
+    document.body.append(this.bar, this.buffs, this.panel);
 
     const make = (id: ActionId, label: string): void => {
       const el = document.createElement('button');
@@ -103,21 +87,13 @@ export class AbilitiesUi {
     make('power', 'Kraft');
     make('swap', 'Kraft wechseln');
     make('ultimate', 'Ultimative Kraft');
-    this.actions.verband.icon.innerHTML = svg(VERBAND);
-    this.actions.molotow.icon.innerHTML = svg(MOLOTOW);
+    this.actions.verband.icon.innerHTML = supplyIcon('verband', svg(VERBAND));
+    this.actions.molotow.icon.innerHTML = supplyIcon('molotow', svg(MOLOTOW));
     this.actions.swap.icon.innerHTML = svg(SWAP);
     this.input.onSwap = () => this.swap();
 
     this.panel.querySelector('#bless-reroll')!.addEventListener('click', () => this.reroll());
     window.addEventListener('keydown', (e) => {
-      if (this.tradeOpen) {
-        if (e.code === 'Escape' || e.code === 'KeyP') {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          this.closeTrade();
-        }
-        return;
-      }
       if (!this.open) return;
       if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'Tab'].includes(e.code)) {
         e.preventDefault();
@@ -125,37 +101,9 @@ export class AbilitiesUi {
       } else if (['Digit1', 'Digit2', 'Digit3'].includes(e.code)) this.pick(Number(e.code.slice(-1)) - 1);
       else if (e.code === 'KeyN') this.reroll();
     }, { capture: true });
-    this.trade.addEventListener('pointerdown', (e) => { this.tradePointer = e.pointerType; }, { capture: true });
-    // Mouse hover and pad or key focus show the worn item at once (P5).
-    const point = (e: Event): void => {
-      const o = (e.target as Element).closest<HTMLElement>('[data-offer]');
-      // A tap focuses the button before its click: on touch only the click counts, or the first tap would buy.
-      const show = e.type === 'focusin' ? this.tradePointer !== 'touch' : (e as PointerEvent).pointerType === 'mouse';
-      if (o && this.sim && show) this.showWorn(this.sim, Number(o.dataset.offer));
-    };
-    this.trade.addEventListener('pointerover', point);
-    this.trade.addEventListener('focusin', point);
-    this.trade.addEventListener('click', (e) => {
-      const b = (e.target as Element).closest<HTMLElement>('button');
-      const s = this.sim;
-      if (!b || !s) return;
-      if (b.dataset.buy !== undefined) {
-        // P5: on touch the first tap shows the comparison, the second buys.
-        const i = Number(b.dataset.buy);
-        if (this.tradePointer === 'touch' && this.tradeSel !== i) { this.showWorn(s, i); return; }
-        this.tradeMsg = buyOffer(s, i).text;
-        this.tradeSel = -1;
-      }
-      else if (b.dataset.heal) this.tradeMsg = buyHeal(s).text;
-      else if (b.dataset.cons) this.tradeMsg = buyConsumable(s, b.dataset.cons as 'verband' | 'molotow').text;
-      else if (b.dataset.up) this.tradeMsg = buySpatiUpgrade(s, b.dataset.up as 'dmg' | 'hp').text;
-      else if (b.dataset.close) return this.closeTrade();
-      this.tradeSig = '';
-    });
   }
 
   get open(): boolean { return !this.panel.hidden; }
-  get tradeOpen(): boolean { return !this.trade.hidden; }
 
   private swap(): void {
     const s = this.sim;
@@ -176,29 +124,6 @@ export class AbilitiesUi {
   private reroll(): void {
     if (this.sim && rerollBlessings(this.sim)) this.signature = '';
   }
-  /** P5: the worn item of offer `i`'s slot beside the offers; the offer is marked. */
-  private showWorn(s: Sim, i: number): void {
-    const o = tradeStock(s)[i];
-    if (!o || i === this.tradeSel) return;
-    this.tradeSel = i;
-    const worn = s.equipment[o.item.slot];
-    const box = this.trade.querySelector('.trade-worn');
-    if (box) box.innerHTML = worn ? itemCard(worn, 'Angelegt', s.equipment, false) : `<p class="inv-hint">${SLOT_NAMES[o.item.slot]}: nichts angelegt</p>`;
-    for (const el of this.trade.querySelectorAll<HTMLElement>('[data-offer]')) {
-      const on = Number(el.dataset.offer) === i;
-      el.classList.toggle('sel', on);
-      const b = el.querySelector<HTMLButtonElement>('[data-buy]');
-      if (b) b.textContent = on && this.tradePointer === 'touch' ? 'Nochmal tippen: kaufen' : b.dataset.label!;
-    }
-  }
-
-  private closeTrade(): void {
-    if (this.sim) closeTrade(this.sim);
-    this.trade.hidden = true;
-    this.tradeMsg = '';
-    this.onTradeClose();
-  }
-
   private card(s: Sim, o: Offer, i: number, held: Set<PerkFamilyId>): HTMLButtonElement {
     const p = perkOf(o.id);
     const fams = p.duo ?? p.families ?? [];
@@ -245,31 +170,6 @@ export class AbilitiesUi {
     this.selection = 0;
   }
 
-  private renderTrade(s: Sim): void {
-    this.tradeSel = -1;
-    // The next pointerdown sets it again before any focus; pad and keys then count as focus.
-    this.tradePointer = 'mouse';
-    const stock = tradeStock(s);
-    const shop = s.content.tradeAt >= 0;
-    const cons = s.inventory.consumables ?? { verband: 0, molotow: 0 };
-    const offers = stock.map((o, i) => {
-      if (!o) return '<div class="trade-sold">Verkauft</div>';
-      // Playtest 2026-11-18: compare the item level with the worn piece, not the Kampfkraft.
-      const worn = s.equipment[o.item.slot];
-      const delta = o.item.itemLevel - (worn?.itemLevel ?? 0);
-      const label = `Kaufen · ${o.price} Schrott`;
-      return `<div class="trade-offer" data-offer="${i}">${itemCard(o.item, 'Angebot', s.equipment)}<div class="trade-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">Stufe ${o.item.itemLevel}${worn ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}</div><button type="button" data-buy="${i}" data-label="${label}" class="${s.inventory.scrap >= o.price ? 'primary' : ''}">${label}</button></div>`;
-    }).join('');
-    // Playtest 2026-11-18: Schärfen and Panzerung at the Späti, up to SPATI_UPGRADE.max (they stay).
-    const ups = shop ? SPATI_UPGRADE.ids.map((id) => {
-      const u = CAMP_UPGRADES.find((q) => q.id === id)!, l = s.statContext.upgrades[id] ?? 0, c = spatiUpgradeCost(s, id), full = l >= SPATI_UPGRADE.max;
-      return `<div class="trade-row"><span><b>${u.name}</b> <small>${l}/${SPATI_UPGRADE.max}</small><br><small>+${u.perLevel}% ${id === 'dmg' ? 'Schaden' : 'Leben'}, bleibt${full ? ' · mehr im Lager' : ''}</small></span><button type="button" data-up="${id}" ${full ? 'disabled' : ''}>${full ? 'Voll' : `${c} Schrott`}</button></div>`;
-    }).join('') : '';
-    const goods = ups + (shop ? CONSUMABLES.map((c) => `<div class="trade-row"><span><b>${c.name}</b> <small>${cons[c.id as 'verband' | 'molotow']}/3</small><br><small>${c.description}</small></span><button type="button" data-cons="${c.id}" ${cons[c.id as 'verband' | 'molotow'] >= 3 ? 'disabled' : ''}>${c.scrapCost} Schrott</button></div>`).join('') : '');
-    this.trade.firstElementChild!.innerHTML = `<button type="button" class="x-btn" data-close="1" aria-label="Schließen">×</button><h2>${shop ? (s.level.rests[s.content.tradeAt]?.name ?? 'Späti') : 'Händler'}</h2><p class="sub">${shop ? '„Wat darf’s sein?“' : '„Schrott gegen Ware. Kein Feilschen.“'} · Schrott <b>${s.inventory.scrap}</b></p><div class="trade-offers">${offers}</div>${goods}`
-      + `<div class="trade-row"><span><b>Verbandskasten</b><br><small>Heilt dich vollständig</small></span><button type="button" data-heal="1">${healPrice(s)} Schrott</button></div><p class="trade-msg">${this.tradeMsg}</p>`;
-  }
-
   private setAction(id: ActionId, iconHtml: string | null, cd: number, max: number, count: number | null, usable: boolean, key: string): void {
     const A = this.actions[id];
     const sig = `${iconHtml?.length ?? 0}|${cd > 0 ? Math.ceil(cd * 10) : 0}|${count}|${usable}|${key}`;
@@ -305,21 +205,6 @@ export class AbilitiesUi {
       this.focus(0);
     }
 
-    const tradeNow = visible && sim.content.tradeOpen && tradeStock(sim).length > 0;
-    if (tradeNow) {
-      const sig = `${sim.inventory.scrap}|${tradeStock(sim).map((o) => (o ? 1 : 0)).join('')}|${Math.round(sim.player.hp)}|${this.tradeMsg}|${sim.inventory.consumables?.verband}${sim.inventory.consumables?.molotow}`;
-      const first = this.trade.hidden;
-      this.trade.hidden = false;
-      if (sig !== this.tradeSig) {
-        this.tradeSig = sig;
-        this.renderTrade(sim);
-        if (first) (this.trade.querySelector('[data-close]') as HTMLElement | null)?.focus();
-      }
-    } else if (!this.trade.hidden) {
-      this.trade.hidden = true;
-      this.tradeSig = '';
-    }
-
     const pad = activePad();
     const down = pad?.buttons.map((b) => b.pressed) ?? [];
     const edge = (i: number): boolean => !!down[i] && !this.padDown[i];
@@ -332,17 +217,10 @@ export class AbilitiesUi {
       if (edge(15) || edge(13)) this.focus(this.selection + 1);
       if (edge(0)) this.pick(this.selection);
       if (edge(3)) this.reroll();
-    } else if (this.tradeOpen) {
-      const buttons = [...this.trade.querySelectorAll<HTMLButtonElement>('button')];
-      const at = Math.max(0, buttons.indexOf(document.activeElement as HTMLButtonElement));
-      if (edge(14) || edge(12)) buttons[(at - 1 + buttons.length) % buttons.length]?.focus();
-      if (edge(15) || edge(13)) buttons[(at + 1) % buttons.length]?.focus();
-      if (edge(0)) (document.activeElement as HTMLElement | null)?.click();
-      if (edge(1)) this.closeTrade();
     }
     this.padDown = down;
 
-    const show = visible && !this.open && !this.tradeOpen;
+    const show = visible && !this.open;
     this.bar.hidden = !show;
     this.buffs.hidden = !show;
     if (!show) return;
@@ -370,7 +248,7 @@ export class AbilitiesUi {
     if (a.guard > 0) chips.push(['Deckung', '#9aa4b0', a.guard, pg('gully')]);
     if (a.banner) chips.push(['Standarte', '#f2d14b', a.banner.t, pg('stand')]);
     if (a.fed > 0) chips.push(['Satt', '#f2a04b', a.fed, svg(MEAL)]);
-    if (a.hot > 0) chips.push(['Verband', '#8fd16a', a.hot, svg(VERBAND)]);
+    if (a.hot > 0) chips.push(['Verband', '#8fd16a', a.hot, supplyIcon('verband', svg(VERBAND))]);
     if (a.hus > 0 && (sim.statContext.perks.husar ?? 0) > 0) chips.push(['Husarenritt', '#9fd8c8', a.hus, perkIcon('husar')]);
     if (a.jagd.n > 0) chips.push([`Jagdfieber ×${a.jagd.n}`, '#e05050', a.jagd.t, perkIcon('jagd')]);
     if (a.streak.n >= 5) chips.push([`Serie ${a.streak.n}`, '#e05050', a.streak.t, perkIcon('rush')]);

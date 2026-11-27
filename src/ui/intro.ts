@@ -24,6 +24,8 @@ export const TUTORIALS = {
 export type TipId = keyof typeof TUTORIALS | 'intro';
 /** M12c 2D `tip(kind)` on the first sight of a kind: one line as a toast, once per profile (`inventory.tips`). */
 export const SIGHT_TIPS: Partial<Record<import('../data/enemies').EnemyKind, string>> = {
+  // P17 Spreepark.
+  kompso: 'Kompsos jagen zu dritt. Schnell erledigen.',
   kabel: 'Kabelghule springen dich an (Linie am Boden).',
   bass: 'Boxenköpfe wummern rosa Ringe. Durchrollen.',
   // M16 Charlottenburg.

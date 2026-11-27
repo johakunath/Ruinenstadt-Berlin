@@ -1,4 +1,5 @@
 import { AbilitiesUi } from './ui/abilities';
+import { TradeUi } from './ui/trade';
 import { heroLook } from './data/hero-look';
 import { weaponModel } from './render/weapons';
 import { InventoryUi } from './ui/inventory';
@@ -24,6 +25,7 @@ import { LOOK } from './render/looks';
 import { PROFILES } from './render/profile';
 import { GameRenderer } from './render/renderer';
 import { setLoadout } from './sim/loadout';
+import { debugGear } from './sim/debug-gear';
 import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
 import { autoAttackTarget } from './sim/player';
@@ -60,7 +62,7 @@ import { Telemetry, VERSION } from './telemetry';
 import { LootLabels, rarityColor } from './ui/loot-labels';
 import { DamageNumbers } from './ui/damage-numbers';
 import { groundY } from './render/ground';
-import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
+import { dropColor, importantDrops, nearestImportantDrop, spawnDebugDrops } from './sim/loot';
 import { MATERIALS } from './data/crafting';
 import { PERKS, SHRINES } from './data/progression';
 import { contentMarks, EVENT_TEXT, talkTo } from './sim/runcontent';
@@ -84,6 +86,8 @@ const input = new Input(canvas);
 // The Steam Deck plays with its controller: pad labels and aim assist from the start (Johannes, 2026-11-25).
 if (onSteamDeck()) input.device = 'gamepad';
 const abilitiesUi = new AbilitiesUi(input);
+/** M13b: the trade screen of a Späti or a trader (layout C, tabs Waren, Segen, Verkaufen). */
+const tradeUi = new TradeUi(input);
 /** Starts a trade with whoever is in reach; the loop then pauses on `content.tradeOpen`. */
 function talk(): void {
   if (isCamp) { campAct(); return; }
@@ -92,7 +96,7 @@ function talk(): void {
 const talkPrompt = new TalkPrompt(() => talk());
 input.onTalk = talk;
 abilitiesUi.onChoose = () => { input.clear(); saveNow(true); };
-abilitiesUi.onTradeClose = () => { input.clear(); saveNow(true); };
+tradeUi.onClose = () => { input.clear(); saveNow(true); };
 
 // Köpenick (M11), a tunnel (M19/M20, ?map=tunnel&line=k), Xhain (M15, ?map=xhain), Mitte (M15, ?map=mitte), Charlottenburg (M16, ?map=charlottenburg), Wedding (M18, ?map=wedding), the Fernsehturm finale (M17, ?map=turm), the walkable camp (M20, ?map=lager) or the gate 1 courtyard (?map=hof).
 const map = opts.map !== 'hof' ? (() => {
@@ -129,8 +133,8 @@ const mapId: MapId = opts.map;
 const winText = isTunnel && line > 0 ? `${LINES[line]?.id ?? 'S3'} frei` : MAP_WON[mapId];
 const level: Level | undefined = map?.level;
 
-// M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
-const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0;
+// M6: debug starts (?at, ?stress, ?autostart, ?mapscale, ?spawn, ?drops, ?gear) never read or write the save.
+const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0 && !opts.drops && opts.gear.length === 0;
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 /** A checkpoint of another map waits while this one is played (M20: a visit to the camp must not drop it). */
@@ -442,7 +446,7 @@ optionsScreen().onDevice = (d) => {
   else if (input.device !== 'mouse') input.device = 'keyboard';
 };
 if (optionsScreen().picked) optionsScreen().onDevice(optionsScreen().picked!);
-input.onInventory = () => { if (phase === 'play') menu.toggle('inv'); };
+input.onInventory = () => { if (phase === 'play' && !tradeUi.open) menu.toggle('inv'); };
 // M13: the camp between expeditions, from the title and the victory screen.
 const camp = new CampUi(() => sim, () => { saveProfile(); ui.setResume(resumeLabel(), difficulty); if (isCamp && phase === 'play') { input.enabled = true; input.clear(); } });
 document.getElementById('open-camp')!.addEventListener('click', () => { if (isCamp) startCamp(); else goMap('lager'); });
@@ -502,7 +506,7 @@ function startCamp(): void {
   if (opts.tp) { const p = sim.player; p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z; }
 }
 
-input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen) menu.toggle('karte'); };
+input.onMap = () => { if (phase === 'play' && map && lootExit !== 'search' && !optionsScreen().isOpen && !tradeUi.open) menu.toggle('karte'); };
 document.getElementById('won-explore')!.addEventListener('click', explore);
 // M18: endless waves around the hero after the district boss.
 document.getElementById('won-endless')!.addEventListener('click', () => {
@@ -559,7 +563,9 @@ window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'z' && !
 canvas.addEventListener('wheel', (e) => { if (phase === 'play') renderer?.zoom(Math.sign(e.deltaY)); }, { passive: true });
 input.onZoom = (dir) => { if (phase === 'play') renderer?.zoom(dir); };
 input.onMenu = () => {
-  if (optionsScreen().isOpen) optionsScreen().close();
+  // The pad's Start while trading goes back like B (the trade screen is no pause).
+  if (tradeUi.open) tradeUi.back();
+  else if (optionsScreen().isOpen) optionsScreen().close();
   else if (menu.isOpen) menu.close();
   else if (phase === 'play') menu.open('inv');
   else if (phase === 'title' && startScreen().active()) optionsScreen().open();
@@ -640,10 +646,14 @@ function start(resumed = false): void {
   runScrap0 = sim.inventory.scrap; runT0 = sim.time;
   // Debug: ?tp=x,z beams the hero to a reported spot, ?god keeps her alive while looking.
   sim.god = opts.god;
+  // Debug (WP4 step 5): ?gear= puts on legendaries and sets to look at their effects.
+  if (opts.gear.length && !resumed) setLoadout(sim, { ...sim.equipment, ...debugGear(opts.gear) });
   if (opts.tp && !resumed) {
     const p = sim.player;
     p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z;
   }
+  // Debug: ?drops=N lays mixed drops round the hero (WP4 step 3 proof shots).
+  if (opts.drops && !resumed) spawnDebugDrops(sim, opts.drops);
   hitLog.length = 0;
   // A checkpoint can resume mid-encounter (no encounterStart then): count the fight from here.
   fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0;
@@ -944,14 +954,15 @@ function frame(now: number): void {
   if (now > hotAt) { hotAt = now + 500; const hot = phase === 'play' && sim.inventory.bag.some(i => isUpgrade(i, sim.equipment[i.slot])); menuBtn.classList.toggle('hot', hot); }
 
   // The tutorial card blocks the blessing pad; it is polled after, so its closing press is not a pick (Codex review).
-  abilitiesUi.update(sim, phase === 'play' && !menu.isOpen, intro.isOpen);
+  abilitiesUi.update(sim, phase === 'play' && !menu.isOpen && !tradeUi.open, intro.isOpen);
+  tradeUi.update(sim, phase === 'play' && !menu.isOpen, intro.isOpen);
   intro.pollPad();
   endingCard?.pollPad();
   // After the others: a press that opens one of them is then not seen as new there (U3).
   startScreen().pollPad(now);
   optionsScreen().pollPad(now);
   if (abilitiesUi.open && persist && phase === 'play' && !intro.isOpen && !intro.seen('perk')) intro.showTip('perk');
-  if (abilitiesUi.open || abilitiesUi.tradeOpen) input.clear();
+  if (abilitiesUi.open || tradeUi.open) input.clear();
     revealStep(dt);
   const running = !intro.isOpen && !abilitiesUi.open && !sim.content.tradeOpen && phase !== 'title' && !menu.isOpen && !held && lootExit !== 'ask' && !renderer?.reveal?.active && !camp.isOpen && !netBoard.isOpen;
   // Johannes 2026-11-21: the first fall to a quarter of life pauses once and shows how to roll away.
@@ -1048,7 +1059,7 @@ function frame(now: number): void {
   // Behind a still overlay (trade, blessing choice, cards) the world only idles: draw at about 10 fps
   // instead of full rate (playtest 2026-11-17: the tablet runs hot). The open menu draws nothing.
   // The reveal swing runs on real time while the sim waits for it.
-  const still = !running && phase === 'play' && (abilitiesUi.open || abilitiesUi.tradeOpen || intro.isOpen);
+  const still = !running && phase === 'play' && (abilitiesUi.open || tradeUi.open || intro.isOpen);
   const draw = !menu.isOpen && (!still || --stillSkip <= 0);
   if (still && draw) stillSkip = Math.max(1, Math.round(100 / FRAME_MS));
   if (draw) renderer.render(sim, running ? acc / DT : 1, running ? dt : Math.min(dt, renderer.reveal?.active ? 0.1 : 1 / 30));
@@ -1138,7 +1149,7 @@ declare global {
     __game?: {
       phase(): Phase;
       sim(): Sim;
-      perf(): { fps: number; p95: number; calls: number; triangles: number; simMs: number } | null;
+      perf(): { fps: number; p95: number; calls: number; triangles: number; simMs: number; gearFx: { sprites: number; particles: number; emitters: number; ms: number } } | null;
       start(): void;
       setLoadout(equipment: Equipment, context?: Partial<StatContext>): void;
       collectItem(item: Item): boolean;
@@ -1151,7 +1162,7 @@ declare global {
 window.__game = {
   phase: () => phase,
   sim: () => sim,
-  perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs } : null),
+  perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs, gearFx: { ...renderer.gearFxStats } } : null),
   start,
   setLoadout: (equipment, context) => setLoadout(sim, equipment, context),
   collectItem: item => collectItem(sim, item),
@@ -1212,7 +1223,7 @@ function femalesFor(): boolean {
 const skyParam = new URLSearchParams(location.search).get('sky');
 const sky = skyFor(opts.map, skyParam);
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, reveal: opts.reveal,
+  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal,
   zoneSkies: zoneSkies(opts.map, skyParam),
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),

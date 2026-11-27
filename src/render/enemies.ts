@@ -23,6 +23,7 @@ import {
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BOSS, ELITES, SPAWN, THREAT, type BodyKind, type EnemyKind } from '../data/enemies';
+import { DINO_BITE } from '../data/combat';
 import { lerp, lerpAngle } from '../sim/math';
 import { DT, type Enemy } from '../sim/types';
 import { Animator, OWN_BODIES, type CharacterAssets } from './characters';
@@ -109,7 +110,8 @@ const TINTS: Record<EnemyKind, number[]> = {
   runner: [0xcfc9a4, 0xb6c9b8],
   brute: [0x93a58f, 0xa08f86],
   spitter: [0xa9c77c, 0x9cbf86],
-  raptor: [0xffffff, 0xe8f0d8, 0xf2e2d0],
+  // P17: grey-brown rot (the hide is repainted in `dino-extras.ts`); the Kompso rust-ochre.
+  raptor: [0xffffff, 0xf0e4dc, 0xe4dcd4], kompso: [0xf2c48c, 0xe8cc98],
   crow: [0xffffff],
   // WP5 step 3 (Johannes): skin per district. Köpenick 1906 garrison: pale parchment (board, busts X04, X01, X03).
   feldwebel: [0xc2b296],
@@ -2096,12 +2098,10 @@ function bauherrSet(materials: Materials, castShadow: boolean, slab: Group): { g
 
 // ---------------------------------------------------------------- view
 
-interface DinoClips { hit: number; swipe: number; walk: number; run: number }
-/** Where the bite lands in the Attack clip and how far the clips carry the body per second. */
-const DINO: Record<'raptor' | 'rex', DinoClips> = {
-  raptor: { hit: 0.36, swipe: 0.14, walk: 1.1, run: 6.5 },
-  rex: { hit: 0.52, swipe: 0.16, walk: 2.4, run: 7 },
-};
+/** Where the bite lands in the Attack clip and how far the clips carry the body per second (`DINO_BITE`, src/data/combat.ts). */
+type DinoClips = (typeof DINO_BITE)['raptor'];
+/** P17: the Kompso's head on the raptor body, a little bigger (a young animal); every other dinosaur keeps 1. */
+const DINO_HEAD: Partial<Record<EnemyKind, number>> = { kompso: 1.3 };
 
 /**
  * Mech clips (Quaternius Animated Mech Pack): the strike clip per body, where it lands and how far the
@@ -2531,6 +2531,8 @@ export class EnemyView {
       this.shield = set.shield;
       this.key = set.key;
     }
+    // P17: a pooled raptor body is a raptor or a Kompso; the clips carry no scale tracks, so the head keeps this.
+    if (this.skin === 'raptor') this.model?.getObjectByName('Head')?.scale.setScalar(DINO_HEAD[e.kind] ?? 1);
     this.upright = this.skin === 'zombie' && !!UPRIGHT[e.kind];
     this.armK = 1;
     for (const st of this.straight ?? []) st.set = false;
@@ -2704,7 +2706,7 @@ export class EnemyView {
       this.poseZombie(pe, pe === e ? t : pe.stateT + (frozen ? 0 : alpha * DT));
     }
     else if (this.skin === 'mech' || this.skin === 'mechBig') this.poseMech(e, t, MECH[this.skin], dt2);
-    else this.poseDino(e, t, DINO[this.skin as 'raptor' | 'rex']);
+    else this.poseDino(e, t, DINO_BITE[e.kind === 'kompso' ? 'kompso' : (this.skin as 'raptor' | 'rex')]);
     if (e.state === 'dead' && !this.clock) {
       // Sink into the ground before the body is removed (the Weltzeituhr settles on its base instead).
       const sink = Math.max(0, t - (SPAWN.corpseTime - 0.8)) / 0.8;
@@ -2962,8 +2964,9 @@ export class EnemyView {
     let spin = 0;
     switch (e.state) {
       case 'chase':
-        if (e.speed > 3.4) a.loop('Run', 0.15, Math.min(2.2, e.speed / k.run));
-        else if (e.speed > 0.2) a.loop('Walk', 0.2, Math.min(3, Math.max(0.7, e.speed / k.walk)));
+        // P17: the clips' stride shrinks with the body (the Kompso at half size runs with quicker steps).
+        if (e.speed > 3.4 * def.scale) a.loop('Run', 0.15, Math.min(2.2, e.speed / (k.run * def.scale)));
+        else if (e.speed > 0.2) a.loop('Walk', 0.2, Math.min(3, Math.max(0.7, e.speed / (k.walk * def.scale))));
         else a.loop('Idle', 0.25);
         if (e.open > 0) pitch = 0.22;
         break;

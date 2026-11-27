@@ -3,11 +3,13 @@
 // HeroView and the inventory preview each own one; geometry and materials are shared. WP4 step 2:
 // a look also picks each piece's variant (palette, coat cut, shoulder volume; `hero-wear.ts`) and
 // the rigid gear meshes (`gear.ts`), and can hide the hair.
-import { BufferGeometry, Quaternion, SkinnedMesh, Vector3, type Mesh, type Object3D } from 'three';
+import { BufferGeometry, Quaternion, SkinnedMesh, Vector3, type BufferAttribute, type Matrix4, type Mesh, type Object3D } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { HERO_REGIONS, type BodyRegion } from '../data/hero-contract';
 import { PIECES, hiddenRegions, lookNodes, sameLook, type HeroLook } from '../data/hero-look';
 import { GEAR_SLOTS, gearGeometry, gearMaterials, type GearSlot } from './gear';
+import { aiGearMaterial } from './gear-ai';
+import { OUTFIT_CUT, OWN_SCARF, aiOutfitGeometry, aiOutfitMaterial, hasAiOutfit, loadAiOutfit } from './outfit-ai';
 import { heroSource, type HeroSource } from './gear-kit';
 import { pieceVariant } from './hero-wear';
 import type { Materials } from './materials';
@@ -47,9 +49,15 @@ export class HeroModel {
   private readonly gear = new Map<GearSlot, SkinnedMesh>();
   private readonly src: HeroSource;
   private readonly boneNames: string[] = [];
+  private readonly materials: Materials | undefined;
+  /** W10: the Pixal3D outfit of the armor, on the hero skeleton (only with `materials`). */
+  private outfitMesh: SkinnedMesh | undefined;
+  /** The skeleton the gear is bound to (step 5 anchors: bind space to bone space). */
+  private skel: { bones: Object3D[]; inverses: Matrix4[]; bind: Matrix4 } | null = null;
 
   constructor(source: Object3D, materials?: Materials) {
     this.model = cloneSkinned(source);
+    this.materials = materials;
     this.src = heroSource(source);
     const m = this.model;
     for (const p of Object.values(PIECES)) {
@@ -65,6 +73,7 @@ export class HeroModel {
     const anchor = m.getObjectByName('a_mantel') as SkinnedMesh | undefined;
     if (anchor?.isSkinnedMesh) {
       this.boneNames = anchor.skeleton.bones.map((b) => b.name);
+      this.skel = { bones: anchor.skeleton.bones, inverses: anchor.skeleton.boneInverses, bind: anchor.bindMatrix };
       if (materials) {
         const mat = gearMaterials(materials);
         for (const slot of GEAR_SLOTS) {
@@ -77,6 +86,14 @@ export class HeroModel {
           anchor.parent!.add(g);
           this.gear.set(slot, g);
         }
+        const o = new SkinnedMesh(new BufferGeometry(), aiOutfitMaterial(materials, ''));
+        o.name = 'outfit_ai';
+        o.castShadow = true;
+        o.frustumCulled = false;
+        o.visible = false;
+        o.bind(anchor.skeleton, anchor.bindMatrix);
+        anchor.parent!.add(o);
+        this.outfitMesh = o;
       }
     }
     for (const r of HERO_REGIONS) {
@@ -109,21 +126,50 @@ export class HeroModel {
    */
   setLook(look: HeroLook): boolean {
     if (this.look && sameLook(this.look, look)) return false;
+    const aiGeo = this.aiOutfit(look);
     const shown = new Set(lookNodes(look));
     const hidden = hiddenRegions(look);
+    // W10: the AI outfit replaces the outfit piece and covers torso and arms; the armor's code gear goes.
+    if (aiGeo) {
+      const node = PIECES[look.outfit]?.node;
+      if (node) shown.delete(node);
+      hidden.add('torso');
+      hidden.add('arms');
+      // Sneakers end below the outfit's cut: the shins show between them (else the leg would be see-through there).
+      if ((PIECES[look.boots]?.top ?? 0) < OUTFIT_CUT) hidden.delete('legs');
+    }
     for (const [node, o] of this.pieces) o.visible = shown.has(node);
     for (const [r, o] of this.regions) o.visible = !hidden.has(r);
     if (this.hair) this.hair.visible = !look.hideHair;
-    if (this.scarfMesh) this.scarfMesh.visible = !look.hideScarf;
+    // W10: the Späti and Rattenmutter outfits bring their own scarf: no second one.
+    if (this.scarfMesh) this.scarfMesh.visible = !look.hideScarf && !(aiGeo && look.aiOutfit && OWN_SCARF.has(look.aiOutfit));
     const outfit = PIECES[look.outfit]?.node, boots = PIECES[look.boots]?.node, gloves = look.gloves ? PIECES[look.gloves]?.node : undefined;
     for (const [mesh, geo] of this.sourceGeo) {
       const n = mesh.name;
       const tint = n === outfit ? look.tint.outfit : n === boots ? look.tint.boots : n === gloves ? look.tint.gloves : n === 'scarf' ? look.tint.scarf : '';
       mesh.geometry = pieceVariant(mesh, n, geo, tint, n === outfit ? look.cut : 0, n === outfit ? look.puff : 0);
     }
-    this.showGear(look.gear);
-    this.look = { ...look, gear: [...look.gear], covers: [...look.covers] };
+    this.showGear(aiGeo ? look.gear.filter((id) => !look.armorGear.includes(id)) : look.gear);
+    if (this.outfitMesh) {
+      this.outfitMesh.visible = !!aiGeo;
+      if (aiGeo && this.materials && look.aiOutfit) {
+        this.outfitMesh.geometry = aiGeo;
+        this.outfitMesh.material = aiOutfitMaterial(this.materials, look.aiOutfit);
+        const layers = (this.hair as Mesh | undefined)?.layers.mask;
+        if (layers !== undefined) this.outfitMesh.layers.mask = layers;
+      }
+    }
+    this.look = { ...look, gear: [...look.gear], covers: [...look.covers], armorGear: [...look.armorGear] };
     return true;
+  }
+
+  /** The AI outfit geometry of the look if loaded; otherwise starts the load and re-applies the look when it is in. */
+  private aiOutfit(look: HeroLook): BufferGeometry | undefined {
+    const id = look.aiOutfit;
+    if (!id || !this.materials || !this.outfitMesh || !hasAiOutfit(id)) return undefined;
+    const geo = aiOutfitGeometry(id, this.boneNames);
+    if (!geo) void loadAiOutfit(id, this.materials.profile.anisotropy).then(() => { this.look = null; });
+    return geo;
   }
 
   /** Puts the merged gear of `ids` on the gear meshes (hidden when a slot has no part). */
@@ -135,9 +181,33 @@ export class HeroModel {
       const g = geo[slot];
       mesh.visible = !!g;
       if (g) mesh.geometry = g;
+      if (slot === 'ai' && g && this.materials) mesh.material = aiGearMaterial(this.materials, ids);
       // Same layers as the body (hero contour, `HeroView` sets them after construction).
       if (layers !== undefined) mesh.layers.mask = layers;
     }
+  }
+
+  /**
+   * Step 5 anchors: bone `name` and the point `p` (hero bind space: T-pose, meters, +Y up, +Z front) in that
+   * bone's frame, so the point follows the bone (`local.applyMatrix4(bone.matrixWorld)`). Null without the bone.
+   * `p` defaults to the bone's own bind position plus `off`.
+   */
+  anchor(name: string, off?: readonly [number, number, number], p?: Vector3): { bone: Object3D; local: Vector3 } | null {
+    const i = this.boneNames.indexOf(name);
+    if (!this.skel || i < 0) return null;
+    const at = p ? p.clone() : (this.src.bones.get(name) ?? new Vector3()).clone();
+    if (off) at.add(new Vector3(off[0], off[1], off[2]));
+    return { bone: this.skel.bones[i]!, local: at.applyMatrix4(this.skel.bind).applyMatrix4(this.skel.inverses[i]!) };
+  }
+
+  /** Step 5: the centre (bind space) and radius of gear `id`'s glow parts (else all its parts), and the bone they ride on. */
+  gearCenter(id: string): { bone: string; center: Vector3; radius: number } | null {
+    const geo = gearGeometry(this.src, this.boneNames, [id]);
+    const g = geo.glow ?? geo.metal ?? geo.matte;
+    if (!g) return null;
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    const bi = (g.attributes.skinIndex as BufferAttribute | undefined)?.getX(0) ?? 0;
+    return { bone: this.boneNames[bi] ?? 'Head', center: g.boundingSphere!.center.clone(), radius: g.boundingSphere!.radius };
   }
 
   /**

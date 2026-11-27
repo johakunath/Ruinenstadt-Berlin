@@ -34,14 +34,16 @@ try {
     console.log(`\n${done}/${all.length} chains finished all ${steps.length} maps (${((Date.now() - t0) / 1000).toFixed(0)} s wall time)`);
     if (tunnels) {
       // B2 step 1: where the Schrott went, per map, averaged over the chains that reached it. "Camp" is the camp step before the map.
-      console.log('\n| Map | Played | Won | Deaths | Min | Earned (salvage) | Items | Späti upgr. | Camp before | Left | Item level end (weapon) | Power end |');
-      console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
+      // M13b: Aufsätze and blessings bought at a Späti; "Deals" counts cards bought / swaps / Stärkungen / Aufsätze (sum over the chains).
+      console.log('\n| Map | Played | Won | Deaths | Min | Earned (salvage) | Items | Späti upgr. | Aufsätze | Segen | Deals b/s/u/a | Camp before | Left | Item level end (weapon) | Power end |');
+      console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
       steps.forEach((map, d) => {
         const rows = all.map((runs) => runs[d]).filter(Boolean);
         if (!rows.length) return;
         const avg = (f) => rows.reduce((a, r) => a + f(r), 0) / rows.length;
         const n = (f) => Math.round(avg(f));
-        console.log(`| ${NAME[map]} | ${rows.length} | ${rows.filter((r) => r.won).length} | ${avg((r) => r.deaths).toFixed(1)} | ${avg((r) => r.time / 60).toFixed(1)} | ${n((r) => r.economy.earned)} (${n((r) => r.economy.salvage)}) | ${n((r) => r.economy.items)} | ${n((r) => r.economy.upgrades)} | ${n((r) => r.economy.camp)} | ${n((r) => r.economy.left)} | ${avg((r) => r.economy.itemLevel).toFixed(1)} (${n((r) => r.economy.weaponLevel)}) | ${n((r) => r.power)} |`);
+        const deals = ['buy', 'swap', 'up', 'mods'].map((k) => rows.reduce((a, r) => a + (r.economy.deals?.[k] ?? 0), 0)).join('/');
+        console.log(`| ${NAME[map]} | ${rows.length} | ${rows.filter((r) => r.won).length} | ${avg((r) => r.deaths).toFixed(1)} | ${avg((r) => r.time / 60).toFixed(1)} | ${n((r) => r.economy.earned)} (${n((r) => r.economy.salvage)}) | ${n((r) => r.economy.items)} | ${n((r) => r.economy.upgrades)} | ${n((r) => r.economy.mods ?? 0)} | ${n((r) => r.economy.bless ?? 0)} | ${deals} | ${n((r) => r.economy.camp)} | ${n((r) => r.economy.left)} | ${avg((r) => r.economy.itemLevel).toFixed(1)} (${n((r) => r.economy.weaponLevel)}) | ${n((r) => r.power)} |`);
       });
     }
     process.exit(0);
@@ -52,7 +54,7 @@ try {
   const t0 = Date.now();
   if (process.argv.includes('--carry')) console.log('carry: one hero plays the districts before this one first; every run starts with that gear');
   const reports = balance({ map, runs, difficulty, skill, seed, carry: process.argv.includes('--carry'), startAt: flag('at') ? Number(flag('at')) : undefined, until: flag('until') ? Number(flag('until')) : undefined }, (i, r) => {
-    console.log(`${String(i + 1).padStart(3)} ${r.won ? 'WIN ' : 'stop'} ${(r.time / 60).toFixed(1).padStart(5)} min  deaths ${String(r.deaths).padStart(2)}  kills ${String(r.kills).padStart(4)}  power ${String(r.power).padStart(4)} ${r.weapon.padEnd(6)} Schrott +${r.economy.earned} −${r.economy.items + r.economy.upgrades + r.economy.camp} = ${r.economy.left}  ${r.stuckAt}`);
+    console.log(`${String(i + 1).padStart(3)} ${r.won ? 'WIN ' : 'stop'} ${(r.time / 60).toFixed(1).padStart(5)} min  deaths ${String(r.deaths).padStart(2)}  kills ${String(r.kills).padStart(4)}  power ${String(r.power).padStart(4)} ${r.weapon.padEnd(6)} Schrott +${r.economy.earned} −${r.economy.items + r.economy.upgrades + r.economy.camp + r.economy.mods + r.economy.bless} =${r.economy.left}  ${r.stuckAt}`);
   });
   console.log(`\n${'Encounter'.padEnd(24)} won  deaths/run  time s  dmg taken  lowest life  power`);
   const n = reports.length;

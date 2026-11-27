@@ -70,16 +70,16 @@ If a texture would need any of those changes, Codex writes the question into the
 
 | Map | Qualität | Leistung |
 |---|---|---|
-| Köpenick | 175.9 + 98.7 | 138.0 + 44.6 |
-| Xhain | 112.9 + 98.7 | 98.0 + 44.6 |
-| Alexanderplatz | 182.6 + 98.7 | 155.0 + 44.6 |
-| Mitte | 156.3 + 98.7 | 137.4 + 44.6 |
-| Charlottenburg | 165.0 + 110.7 | 148.7 + 56.6 |
-| Wedding | 141.7 + 98.7 | 126.5 + 44.6 |
-| Fernsehturm | 42.0 + 97.1 | 36.7 + 50.7 |
-| Tunnel | | 94.3 + 44.6 |
+| Köpenick | 175.9 + 98.7 | 86.0 + 44.6 |
+| Xhain | 112.9 + 98.7 | 62.0 + 44.6 |
+| Alexanderplatz | 182.6 + 98.7 | 103.0 + 44.6 |
+| Mitte | 156.3 + 98.7 | 88.7 + 44.6 |
+| Charlottenburg | 165.0 + 110.7 | 96.7 + 56.6 |
+| Wedding | 141.7 + 98.7 | 86.5 + 44.6 |
+| Fernsehturm | 42.0 + 97.1 | 32.7 + 50.7 |
+| Tunnel | | 46.3 + 44.6 |
 
-Most of the image memory is 1024 px tiling surfaces at 5.3 MiB each (T1 to T7, M11c, the local rounds); Leistung loads them at full size, because nothing passes the `maxEdge` cap of `loadPaintedTexture` (backlog P47). The real devices' numbers stay hardware checks 33 and 38.
+Leistung caps tiling surfaces at 512 px (`Profile.tileEdge`, opt-in per `loadPaintedTexture` call, P47, 2026-11-26; image memory −32 to −38 % per district, tunnel −51 %, [proof](proof/p47/README.md)); what remains is mostly code-painted canvases (8 to 48 MiB per district, the next lever), GLB character bitmaps, the hero clothing and lettered atlases. The real devices' numbers stay hardware checks 33 and 38.
 
 ## Recycling 2D art
 
@@ -87,7 +87,7 @@ Read only: `johakunath/Ruinenstadt` `assets/buildings/koep-*.webp` (asphalt, pav
 
 ## Texture queue
 
-T1 is done (PR #14). The T1b paving and leaf images are built, with performance and rail follow-up in [T1b](tasks/t1b-ground-polish.md).
+T1 is done (PR #14). T1b is built (local FLUX paving and leaf floor, 512 px ground exports, litter edge fill, ImageBitmap loading, rail roughness): [T1b](tasks/t1b-ground-polish.md).
 
 | # | Textures | Replaces (code placeholder) | World size per tile | Task |
 |---|---|---|---|---|

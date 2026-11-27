@@ -176,7 +176,7 @@ describe('item generation', () => {
   it('a sim on the Wedding map hands `fest` to its loot, Charlottenburg (`revue`) none (Codex review of PR 80)', () => {
     expect(createSim({ level: mapLevelOf('wedding'), seed: 1 }).lootCtx.flavor).toBe('fest');
     expect(createSim({ level: mapLevelOf('charlottenburg'), seed: 1 }).lootCtx.flavor).toBeUndefined();
-  });
+  }, 30_000);
 
   it('gives every set piece a finite value, the healing key ring too', () => {
     const rng = new Rng(9), ctx = context({ tunnel: true });

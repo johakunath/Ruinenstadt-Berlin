@@ -1,17 +1,22 @@
-# T1b Köpenick ground image proof
+# T1b Köpenick ground proof
 
-## 2 × 2 repeats
+## Local image pass (2026-11-26, FLUX.2 klein)
 
-| Surface | Repeat | Runtime file |
+| Surface | 2 × 2 repeat, before \| after | In game |
 |---|---|---|
-| Paving | [Four tiles](repeat-paving.jpg) | 238,934 bytes |
-| Leaf floor | [Four tiles](repeat-leaves.jpg) | 164,966 bytes |
+| Paving | [paving-2x2-before-after.jpg](paving-2x2-before-after.jpg) | [Qualität](ground-qualitaet.jpg), [Leistung](ground-leistung.jpg), top row (Altstadt market) |
+| Leaf floor | [leaves-2x2-before-after.jpg](leaves-2x2-before-after.jpg) | Same sheets, bottom row (Friedrichshagen forest) |
+| Litter atlas edges | [litter-bleed.jpg](litter-bleed.jpg): mip 2 and 3 after `alphaTest`, before (top) and after (bottom) | |
+| Rail heads | | [Qualität](rails-qualitaet.jpg), [Leistung](rails-leistung.jpg): `?rails=old` left, new right; rows: start square, street at (10, −86) |
 
-Each runtime tile covers 5 m and is a 1024 × 1024 opaque sRGB WebP at quality 85. Paving has ten plates per axis with dark joints and no missing plates. Weathering is distributed across the slabs. The leaf tile's 8-bit luminance standard deviation fell from 16.64 to 7.86, while its mean stayed within 0.1.
+- **Paving.** The previous tile's rows were uneven: nine rows of 105 px and one of 80 px, so a narrow row came back every 5 m. The start image was resampled to an even 102.4 px grid and shifted half a plate; FLUX dropped any joint lying on the tile border in two earlier rounds (13 variants), which would have left one joint missing per tile. Then `texture-tile.mjs --match` (band 0.08, seams 1.8 against 12 before) and 85 % of the low-frequency tone removed, so single dark plates and stains do not form a 5 m pattern. All 100 plates are present; joints stay dark for the shader's height blend; colour mean and spread match the old file.
+- **Leaf floor.** Random oak and beech leaves with needles instead of the wavy regular pattern; luminance SD 7.5 (previous 7.8, T1 16.6), mean unchanged.
+- **Litter.** Transparent pixels now hold the local visible colour (pull-push fill per cell). The worst fringe darkening in the mips falls from 26 to 13 levels (mip 1) and 40 to 28 (mip 4); the mean was small before (0.7 to 2.8) and stays so.
+- **Rails.** Roughness 0.34 → 0.5 removes the white streak near lamps on both profiles; the heads still read as steel. Charlottenburg keeps 0.34 because the shared `railSteel` is its mirrors and chandelier.
 
-The 2D shared pavement and Köpenick sidewalk provided the painted concrete, worn edges and moss references. Their 256–258 px runtime tiles had fewer slabs than the 3D target. The new paving uses the 3D T1 grid. The new leaves reuse the T1 leaf floor as the source for an image edit.
+1280 × 720 swiftshader captures, seed 7, sim held; looks only, no fps. The previous T1b image pass (Codex, 2026-11-16) is the "before" in the sheets; its own comparisons follow.
 
-## In-game comparisons
+## Codex image pass (2026-11-16)
 
 | Köpenick location | Leistung | Qualität |
 |---|---|---|
@@ -19,8 +24,4 @@ The 2D shared pavement and Köpenick sidewalk provided the painted concrete, wor
 | Kietz | [Before](before-kietz-leistung.jpg) · [After](after-kietz-leistung.jpg) | [Before](before-kietz-qualitaet.jpg) · [After](after-kietz-qualitaet.jpg) |
 | Friedrichshagen forest | [Before](before-forest-leistung.jpg) · [After](after-forest-leistung.jpg) | [Before](before-forest-qualitaet.jpg) · [After](after-forest-qualitaet.jpg) |
 
-1280 × 720 Chromium captures with seed 7 and a held sim. The camera is fixed at the same position for each pair. The Altstadt market (−10.5, −20) gives a clear view of the paving. Kietz (70, 30) and Friedrichshagen forest (130, −120) use the T1 sites. The browser first loads the five runtime ground images, then the capture fixture swaps the prior and updated paving and leaf images into the same scene. See [texture load results](loading.json).
-
-`npm run check` passed type checking, all 433 unit tests and the production build.
-
-The resolution choice and performance measurements are tracked in the [T1b task](../../tasks/t1b-ground-polish.md).
+[Repeat paving](repeat-paving.jpg) and [repeat leaves](repeat-leaves.jpg) of that pass; [texture load results](loading.json).

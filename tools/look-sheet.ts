@@ -14,6 +14,7 @@ import { gearGeometry, gearMaterials, gearTriangles } from '../src/render/gear';
 import { grainReady } from '../src/render/paint';
 import { heroSource } from '../src/render/gear-kit';
 import { HeroModel } from '../src/render/hero-model';
+import { loadAiOutfit } from '../src/render/outfit-ai';
 import { LOOK } from '../src/render/looks';
 import { Materials } from '../src/render/materials';
 import { PROFILES } from '../src/render/profile';
@@ -82,12 +83,14 @@ if (mode === 'icons') {
   const out: Record<string, string> = {};
   const items: Item[] = [];
   for (const slot of ['a', 'h', 'g', 'f'] as const) for (const key of Object.keys(WEAR[slot])) { const [base, set] = key.split(':'); items.push({ slot, base: base!, set: set as SetId | undefined }); }
+  // W10: the AI outfits load on first wear; the icons wait for them.
+  await Promise.all(items.map((it) => heroLook(equip([it])).aiOutfit).filter((id): id is string => !!id).map((id) => loadAiOutfit(id, 4)));
   for (const it of items) {
     const look = heroLook(equip([it]));
     body.setLook(look);
     // The item's own piece node (PIECES: coat, vest, poncho; boots, sneakers, wrapped boots; gloves).
     const node = (piece: string): string => PIECES[piece]?.node ?? '';
-    const keep = (n: string): boolean => n.startsWith('gear_') || (it.slot === 'a' && n === node(look.outfit)) || (it.slot === 'f' && n === node(look.boots)) || (it.slot === 'g' && n === 'g_handsch' && !!look.gloves);
+    const keep = (n: string): boolean => n.startsWith('gear_') || (it.slot === 'a' && (n === node(look.outfit) || n === 'outfit_ai')) || (it.slot === 'f' && n === node(look.boots)) || (it.slot === 'g' && n === 'g_handsch' && !!look.gloves);
     const shown: Object3D[] = [];
     body.model.traverse((o) => { if ((o as Mesh).isMesh) { if (o.visible && !keep(o.name)) { o.visible = false; shown.push(o); } } });
     // Three-quarter view from the front left, a little from above; gloves and boots nearly from the side,
@@ -116,6 +119,8 @@ if (mode === 'icons') {
   document.title = `done ${items.length}`;
 } else {
   const looks = (q.get('looks') ?? GROUPS[q.get('group') ?? 'koepenick']!).split(';').map(parse);
+  // W10: AI outfits load on first wear in the game; the sheet waits for them.
+  await Promise.all(looks.map((items) => heroLook(equip(items)).aiOutfit).filter((id): id is string => !!id).map((id) => loadAiOutfit(id, 4)));
   const views = (q.get('views') ?? 'front,side,back').split(',');
   const zoom = q.get('zoom') ?? 'body';
   const W = Number(q.get('w') ?? (zoom === 'body' ? 200 : 180)), H = Number(q.get('h') ?? (zoom === 'body' ? 330 : 180));
@@ -148,7 +153,7 @@ if (mode === 'icons') {
     cap.className = 'cap';
     cap.style.left = `${x0 + 6}px`;
     cap.style.top = `${y0 + H + 2}px`;
-    cap.innerHTML = `${items.length ? items.map(nameOf).join(' + ') : 'Ohne Rüstung'}<br><i>gear ${gt.matte}/${gt.metal}/${gt.glow} tris · ${draws()} draws</i>`;
+    cap.innerHTML = `${items.length ? items.map(nameOf).join(' + ') : 'Ohne Rüstung'}<br><i>gear ${gt.matte}/${gt.metal}/${gt.glow}${gt.ai ? ` + AI ${gt.ai}` : ''} tris · ${draws()} draws</i>`;
     wrap.append(cap);
   });
   document.title = `done ${looks.length}`;

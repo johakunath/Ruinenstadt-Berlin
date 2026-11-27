@@ -24,6 +24,7 @@ import { buildBin, buildCrate } from './breakable-parts';
 import { buildCar, buildUrbanProp } from './props-urban';
 import { buildMarketProp } from './props-market';
 import { buildMitteProp } from './props-mitte';
+import { buildDinoProp } from './props-dino';
 import { buildEdgeProp } from './props-edge';
 import { buildPlantProp } from './vegetation';
 import { buildGdrProp } from './props-gdr';
@@ -205,7 +206,9 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel' | 'charlotte
   const brick = paintBrick(o);
   const cobbles = paintCobbles(o);
   const cobbleMaterial = m.surface({ map: cobbles.map, normalMap: cobbles.normalMap, roughness: 0.78, vertexColors: true });
-  loadGroundTexture('cobbles', o.anisotropy, texture => {
+  // P47: tiling surfaces opt into the profile's cap (512 px on Leistung); see `loadPaintedTexture`.
+  const tile = m.profile.tileEdge;
+  loadGroundTexture('cobbles', o.anisotropy, tile, texture => {
     cobbleMaterial.map = texture;
     cobbles.map.dispose();
   });
@@ -281,14 +284,15 @@ export function makeMats(m: Materials, district?: 'alex' | 'tunnel' | 'charlotte
   if (district === 'xhain') sources.push([XHAIN_CONCRETE, [mats.concrete]]);
   // T9i: black paint flaking to rust on the 1920 wrought iron (local FLUX.2 klein); other districts keep the painted map.
   if (district === 'charlottenburg') sources.push([new URL('../../assets/textures/charlottenburg/iron.webp', import.meta.url).href, [mats.iron]]);
-  for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat);
+  // The repeating ones are the tiling surfaces (P47 cap); shop front and van sides are pictures and stay at full size.
+  for (const [url, materials, repeat] of sources) swapPaintedMap(materials, url, o.anisotropy, repeat, repeat === false ? Infinity : tile);
   // T9a: one Charlottenburg stucco tile covers 4 m (repeat 0.5), so its repairs repeat half as often on long walls.
   if (district === 'charlottenburg') loadPaintedTexture(CHARLOTTENBURG_STUCCO, o.anisotropy, (t) => {
     t.repeat.set(0.5, 0.5);
     mats.stucco.map?.dispose();
     mats.stucco.map = t;
     mats.stucco.needsUpdate = true;
-  });
+  }, true, tile);
   if (district !== 'tunnel') loadLotPropTextures(mats);
   return mats;
 }
@@ -1111,7 +1115,7 @@ export function buildProp(b: Builder, p: Prop, rng: Rng): void {
     }
     default:
       // M11c lot type props live in their own files.
-      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng) && !buildGdrProp(b, p, rng) && !buildMitteProp(b, p, rng)) buildPlantProp(b, p, rng);
+      if (!buildUrbanProp(b, p, rng) && !buildMarketProp(b, p, rng) && !buildEdgeProp(b, p, rng) && !buildGdrProp(b, p, rng) && !buildMitteProp(b, p, rng) && !buildDinoProp(b, p, rng)) buildPlantProp(b, p, rng);
   }
 }
 

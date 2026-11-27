@@ -23,6 +23,9 @@ const PROPS = {
   wartburg: { url: new URL('../../assets/props/car-wartburg.glb', import.meta.url).href, tint: [1, 1, 1] },
   /** P3 BVG standard bus wreck, faded yellow, 12 × 2.55 m with its own wheels, origin at the bottom centre, nose along +Z. */
   bus: { url: new URL('../../assets/props/bus-bvg.glb', import.meta.url).href, tint: [1, 1, 1] },
+  /** P17 Spreepark dinosaur nest: a low mound of branches, straw and moss with big eggs, some cracked, one hatched;
+   * 2 m across, origin at the bottom centre (`props-dino.ts`). */
+  nest: { url: new URL('../../assets/props/dino-nest.glb', import.meta.url).href, tint: [0.9, 0.9, 0.9] },
 } as const;
 
 export type GlbPropKind = keyof typeof PROPS;

@@ -27,6 +27,11 @@ export interface Profile {
   normalMaps: boolean;
   /** Painted tiles load at half size (plants, corrugated metal, ruin brick). */
   smallTextures: boolean;
+  /**
+   * P47: longest edge (px) of a tiling painted surface whose load opts in (`tileEdge` in `surface-textures.ts`);
+   * Infinity keeps the file size. Lettered atlases, the Fernsehturm city image and the hero clothing never opt in.
+   */
+  tileEdge: number;
   /** Enemies farther than this (meters from the hero) animate at half / third rate. 0 = always full rate. */
   animHalfRateFrom: number;
   animThirdRateFrom: number;
@@ -47,12 +52,12 @@ export interface Profile {
 export const PROFILES: Record<ProfileId, Profile> = {
   qualitaet: {
     id: 'qualitaet', label: 'Qualität', maxDpr: 2, msaa: 4, shadowMap: 2048, shadowEvery: 1, boxShadows: false, enemyShadows: true, maxPointLights: 8,
-    gtao: true, gbufferScale: 1, bloomStrength: 1, bloomScale: 1, normalMaps: true, smallTextures: false,
+    gtao: true, gbufferScale: 1, bloomStrength: 1, bloomScale: 1, normalMaps: true, smallTextures: false, tileEdge: Infinity,
     animHalfRateFrom: 0, animThirdRateFrom: 0, embers: 140, statusGlow: true, anisotropy: 8, minScale: 1, inkFromBeauty: false,
   },
   ausgewogen: {
     id: 'ausgewogen', label: 'Ausgewogen', maxDpr: 1.25, msaa: 0, shadowMap: 1024, shadowEvery: 2, boxShadows: false, enemyShadows: false, maxPointLights: 4,
-    gtao: false, gbufferScale: 0.75, bloomStrength: 0.7, bloomScale: 1, normalMaps: false, smallTextures: true,
+    gtao: false, gbufferScale: 0.75, bloomStrength: 0.7, bloomScale: 1, normalMaps: false, smallTextures: true, tileEdge: Infinity,
     animHalfRateFrom: 6, animThirdRateFrom: 11, embers: 60, statusGlow: true, anisotropy: 2, minScale: 0.75, inkFromBeauty: false,
   },
   // Leistung (tablet playtest 2026-11-20): the Tab S9 is CPU-bound (render CPU 25 to 30 ms at 700 to
@@ -60,7 +65,7 @@ export const PROFILES: Record<ProfileId, Profile> = {
   // no outline pre-pass, box shadows every third frame; resolution and animation match Ausgewogen.
   leistung: {
     id: 'leistung', label: 'Leistung', maxDpr: 1.25, msaa: 0, shadowMap: 1024, shadowEvery: 3, boxShadows: true, enemyShadows: false, maxPointLights: 4,
-    gtao: false, gbufferScale: 0.75, bloomStrength: 0.6, bloomScale: 0.5, normalMaps: false, smallTextures: true,
+    gtao: false, gbufferScale: 0.75, bloomStrength: 0.6, bloomScale: 0.5, normalMaps: false, smallTextures: true, tileEdge: 512,
     animHalfRateFrom: 6, animThirdRateFrom: 11, embers: 30, statusGlow: false, anisotropy: 2, minScale: 0.8, inkFromBeauty: true,
   },
 };

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { botCamp, keepsItem, newLedger, runCampaign, salvageSpare, SHOP, SKILL_GOOD, wantsOffer } from './bot';
+import { BLESS, botCamp, keepsItem, newLedger, perkScore, runCampaign, salvageSpare, SHOP, shopBlessings, SKILL_GOOD, wantsMod, wantsOffer } from './bot';
+import { setLoadout } from '../sim/loadout';
+import { blessPrice, modPrice, TRADE } from '../sim/trade';
 import { koepenickLevel, mapLevelOf } from './run';
 import { Bot } from './bot';
 import { createSim, stepSim } from '../sim/sim';
@@ -100,6 +102,64 @@ describe('bot economy (B2 step 1)', () => {
     // Inside the ring for most of the hold (it charges only there).
     expect(level.encounters[gen]!.hold!.need * 60 / held).toBeGreaterThan(0.6);
   }, 120_000);
+});
+
+describe('bot trade (M13b)', () => {
+  /** The `hero()` at an open Späti with these cards. */
+  function atSpati(perks: Partial<Record<import('../data/progression').PerkId, number>>, cards: Array<{ id: import('../data/progression').PerkId; level: 1 | 2; quality: 0 | 1 | 2 }>): Sim {
+    const s = hero();
+    setLoadout(s, s.equipment, { perks });
+    s.content.shops[0] = { offers: [], left: false, mod: null, cards, ups: 0 };
+    s.content.tradeOpen = true;
+    s.content.tradeAt = 0;
+    return s;
+  }
+
+  it('buys the Aufsatz it would fit, if 30 % of the Schrott stays', () => {
+    const s = hero();
+    s.inventory.scrap = Math.ceil(modPrice(s, 'nagel') / (1 - SHOP.keep));
+    expect(wantsMod(s, 'nagel')).toBe(true);
+    s.inventory.scrap -= 1;
+    expect(wantsMod(s, 'nagel')).toBe(false);
+    // A fitted Nagelband in the only slot: Stacheldraht (weaker) is left, the Stahlnagelband (stronger) bought.
+    s.equipment.w!.mods = ['nagel'];
+    s.inventory.scrap = 5000;
+    expect(wantsMod(s, 'dorn')).toBe(false);
+    expect(wantsMod(s, 'stahlnagel')).toBe(true);
+  }, 60_000);
+
+  it('buys a card that fits the build, swaps a weak held blessing for a much better one, books both', () => {
+    // Blade: Kombo und Krit is its family, so Adlerblick scores high; Langer Kerl (Distanz) does not reach `BLESS.buy`.
+    const s = atSpati({}, [{ id: 'crit', level: 1, quality: 0 }, { id: 'reach', level: 1, quality: 0 }]);
+    expect(perkScore(s, 'crit', 1)).toBeGreaterThanOrEqual(BLESS.buy);
+    expect(perkScore(s, 'reach', 1)).toBeLessThan(BLESS.buy);
+    s.inventory.scrap = 5000;
+    const l = newLedger();
+    shopBlessings(s, l);
+    expect(s.statContext.perks.crit).toBe(1);
+    expect(s.statContext.perks.reach).toBeUndefined();
+    expect(l.deals.buy).toBe(1);
+    expect(l.bless).toBe(blessPrice(s, 'buy', { id: 'crit', level: 1, quality: 0 }));
+    // Held: Hakenschlag (weak for a blade). Offered: Akkordarbeit, worth 3 more: swapped, levels carried.
+    const t = atSpati({ dashcd: 2 }, [{ id: 'rate', level: 1, quality: 0 }]);
+    t.inventory.scrap = 5000;
+    const m = newLedger();
+    shopBlessings(t, m);
+    expect(t.statContext.perks.dashcd).toBeUndefined();
+    expect(t.statContext.perks.rate).toBe(2);
+    expect(m.deals.swap).toBe(1);
+  }, 60_000);
+
+  it('a Stärkung goes to the held blessing with the best score', () => {
+    const s = atSpati({ crit: 1, spd: 1 }, []);
+    s.content.shops[0]!.ups = TRADE.ups;
+    s.inventory.scrap = 5000;
+    const l = newLedger();
+    shopBlessings(s, l);
+    expect(s.statContext.perks.crit).toBe(2);
+    expect(s.statContext.perks.spd).toBe(1);
+    expect(l.deals.up).toBe(1);
+  }, 60_000);
 });
 
 describe('balance bot (M14)', () => {

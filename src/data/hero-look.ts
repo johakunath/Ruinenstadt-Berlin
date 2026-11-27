@@ -29,12 +29,21 @@ export interface HeroLook {
   hideScarf: boolean;
   /** Body regions under gear (boxing gloves cover the hands). */
   covers: readonly BodyRegion[];
+  /**
+   * W10: the armor's Pixal3D outfit (`assets/gear/outfit-<id>.glb`), or null. While it is loaded the renderer shows
+   * it instead of the outfit piece and drops `armorGear`; until then (and without it) the code look above stands.
+   */
+  aiOutfit: string | null;
+  /** The armor's own gear ids (dropped under an AI outfit, which has its own plates and belts). */
+  armorGear: readonly string[];
 }
 
 /** A clothing piece: its mesh node in hero.glb and the body regions it hides. */
 export interface Piece {
   node: string;
   hides: readonly BodyRegion[];
+  /** Footwear: height of its top edge in the rest pose (m); below an AI outfit's cut the legs must show (W10). */
+  top?: number;
 }
 
 export const PIECES: Readonly<Record<string, Piece>> = {
@@ -42,10 +51,10 @@ export const PIECES: Readonly<Record<string, Piece>> = {
   weste: { node: 'a_weste', hides: ['torso', 'legs'] },
   // B1 (LA3): rain poncho over a dark shirt and trousers (tools/blender/hero_clothes.py `poncho`).
   poncho: { node: 'a_poncho', hides: ['torso', 'arms', 'legs'] },
-  stiefel: { node: 'f_stiefel', hides: ['feet'] },
-  turnsch: { node: 'f_turnsch', hides: ['feet'] },
+  stiefel: { node: 'f_stiefel', hides: ['feet'], top: 0.349 },
+  turnsch: { node: 'f_turnsch', hides: ['feet'], top: 0.122 },
   // LA3: wrapped knee boots, Quaternius Outfits Fantasy (Female_Ranger_Feet), `ranger_boots` in hero_clothes.py.
-  wickel: { node: 'f_wickel', hides: ['feet'] },
+  wickel: { node: 'f_wickel', hides: ['feet'], top: 0.556 },
   handsch: { node: 'g_handsch', hides: ['hands'] },
 };
 
@@ -156,6 +165,8 @@ interface Wear {
   gear?: readonly string[];
   hideHair?: boolean;
   covers?: readonly BodyRegion[];
+  /** W10: Pixal3D outfit id (the armor slot only). */
+  ai?: string;
 }
 
 /** Shoulder volume of every outfit (Johannes, 2026-11-19: more volume round the shoulders). */
@@ -167,22 +178,22 @@ const PUFF = 0.012;
  */
 export const WEAR: Readonly<Record<'a' | 'h' | 'g' | 'f', Readonly<Record<string, Wear>>>> = {
   a: {
-    mantel: { palette: 'mantel', puff: 0.02, gear: ['belt-tool'] },
+    mantel: { palette: 'mantel', puff: 0.02, gear: ['belt-tool'], ai: 'mantel' },
     weste: { outfit: 'weste', scarf: 'none', gear: ['kneepads-dark'] },
-    leder: { cut: CUT.jacket, palette: 'leder', scarf: 'none', puff: 0.016, gear: ['studs', 'belt-studded', 'patches-punk', 'rips'] },
+    leder: { cut: CUT.jacket, palette: 'leder', scarf: 'none', puff: 0.016, gear: ['studs', 'belt-studded', 'patches-punk', 'rips'], ai: 'leder' },
     feuer: { cut: CUT.thigh, palette: 'feuer', scarf: 'none', puff: 0.024, gear: ['belt-fire', 'collar-fire'] },
     bvg: { cut: CUT.hip, palette: 'bvg', scarf: 'none', puff: 0.018, gear: ['boards-bvg', 'badge-bvg', 'belt-bvg'] },
-    blaumann: { outfit: 'weste', palette: 'blaumann', scarf: 'none', gear: ['bib', 'patch-gear', 'wrench'] },
+    blaumann: { outfit: 'weste', palette: 'blaumann', scarf: 'none', gear: ['bib', 'patch-gear', 'wrench'], ai: 'blaumann' },
     poncho: { outfit: 'poncho', palette: 'poncho', scarf: 'none', puff: 0.026, gear: ['poncho-bands', 'hood-roll'] },
-    kmantel: { palette: 'kmantel', scarf: 'none', puff: 0.018, gear: ['collar-high', 'cables', 'belt-led'] },
-    spaeti: { palette: 'spaeti', scarf: 'scarf:gold', gear: ['caps', 'sign-spaeti', 'belt-caps'] },
-    panzer: { palette: 'panzer', scarf: 'none', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'] },
-    rattenmantel: { palette: 'rattenmantel', scarf: 'scarf:acid', puff: 0.018, gear: ['collar-fur', 'belt-rattails'] },
-    ritter: { palette: 'ritter', scarf: 'none', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'] },
-    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'print-kiez', 'kneepads-orange'] },
-    'mantel:spree': { palette: 'mantel:spree', scarf: 'none', gear: ['collar-reed', 'seams-spree', 'belt-sash'] },
-    'kette:zit': { cut: CUT.knee, palette: 'kette:zit', scarf: 'none', gear: ['tabard', 'belt-knight-short'] },
-    'mantel:tunnel': { palette: 'mantel:tunnel', scarf: 'none', gear: ['harness', 'kneepads-teal', 'belt-tunnel'] },
+    kmantel: { palette: 'kmantel', scarf: 'none', puff: 0.018, gear: ['collar-high', 'cables', 'belt-led'], ai: 'kmantel' },
+    spaeti: { palette: 'spaeti', scarf: 'scarf:gold', gear: ['caps', 'sign-spaeti', 'belt-caps'], ai: 'spaeti' },
+    panzer: { palette: 'panzer', scarf: 'none', puff: 0.006, gear: ['plate-panzer', 'pauldrons-panzer', 'belt-plain'], ai: 'panzer' },
+    rattenmantel: { palette: 'rattenmantel', scarf: 'scarf:acid', puff: 0.018, gear: ['collar-fur', 'belt-rattails'], ai: 'rattenmantel' },
+    ritter: { palette: 'ritter', scarf: 'none', puff: 0.006, gear: ['gorget', 'plate-ritter', 'pauldrons-ritter', 'vambraces', 'tassets', 'belt-knight'], ai: 'ritter' },
+    'weste:kiez': { outfit: 'weste', palette: 'weste:kiez', scarf: 'none', gear: ['collar-stand', 'radio', 'whistle', 'armband', 'belt-duty', 'print-kiez', 'kneepads-orange'], ai: 'weste-kiez' },
+    'mantel:spree': { palette: 'mantel:spree', scarf: 'none', gear: ['collar-reed', 'seams-spree', 'belt-sash'], ai: 'mantel-spree' },
+    'kette:zit': { cut: CUT.knee, palette: 'kette:zit', scarf: 'none', gear: ['tabard', 'belt-knight-short'], ai: 'kette-zit' },
+    'mantel:tunnel': { palette: 'mantel:tunnel', scarf: 'none', gear: ['harness', 'kneepads-teal', 'belt-tunnel'], ai: 'mantel-tunnel' },
     'mantel:gast': { palette: 'mantel:gast', scarf: 'none', puff: 0.024, gear: ['belt-plain'] },
   },
   h: {
@@ -243,6 +254,8 @@ export function heroLook(equipment: Readonly<Partial<Record<SlotId, Equipped>>>)
     hideHair: !!h?.hideHair,
     hideScarf: a?.scarf === 'none',
     covers: [...(g?.covers ?? [])],
+    aiOutfit: a?.ai ?? null,
+    armorGear: [...(a?.gear ?? [])],
   };
 }
 
@@ -259,5 +272,5 @@ export function hiddenRegions(look: HeroLook): Set<BodyRegion> {
 export function sameLook(a: HeroLook, b: HeroLook): boolean {
   return a.outfit === b.outfit && a.cut === b.cut && a.boots === b.boots && a.gloves === b.gloves && a.puff === b.puff && a.hideHair === b.hideHair && a.hideScarf === b.hideScarf
     && a.tint.outfit === b.tint.outfit && a.tint.boots === b.tint.boots && a.tint.gloves === b.tint.gloves && a.tint.scarf === b.tint.scarf
-    && a.gear.length === b.gear.length && a.gear.every((id, i) => id === b.gear[i]) && a.covers.join() === b.covers.join();
+    && a.gear.length === b.gear.length && a.gear.every((id, i) => id === b.gear[i]) && a.covers.join() === b.covers.join() && a.aiOutfit === b.aiOutfit;
 }

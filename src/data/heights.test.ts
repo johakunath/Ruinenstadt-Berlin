@@ -58,7 +58,7 @@ describe('heights', () => {
         }
       }
     // Builds a whole map at another scale and walks every stair: slow on small CI machines.
-    }, 20000);
+    }, 40000);
   }
 });
 

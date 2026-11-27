@@ -27,7 +27,7 @@ const QUALITY = [['#e8ddd0', 'Gewöhnlich'], ['#7d9bff', 'Selten'], ['#f2d14b', 
 const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   walker: 'Langsam und zahlreich. Fürchtet Feuer.', runner: 'Schnell und schwach. Kommt in Gruppen.',
   brute: 'Markiert einen Kreis und schlägt zu. Raus aus dem Kreis.', spitter: 'Hält Abstand und spuckt. Immun gegen Säure.',
-  raptor: 'Zeigt eine Linie, dann springt er. Seitlich ausweichen.', crow: 'Kreist und stößt herab. Fliegt über alles.',
+  raptor: 'Zeigt eine Linie, dann springt er. Seitlich ausweichen.', kompso: 'Kleine Jäger im Rudel. Flink, aber zerbrechlich.', crow: 'Kreist und stößt herab. Fliegt über alles.',
   feldwebel: 'Stürmt los und ruft Männer.', waechter: 'Feuert Salven und Ringe. Nah ran.',
   rex: 'Biss, Ansturm, Brüllringe, Schwanz.', schaffner: 'Rast über die Gleise wie ein Zug, pfeift Fahrgäste herbei.', hauptmann: 'Der Hauptmann von Köpenick. Schlägt, schießt, ruft.',
   rat: 'Ratten kommen im Rudel, schnell und schwach.',
@@ -67,7 +67,7 @@ const ENEMY_TEXT: Partial<Record<EnemyKind, string>> = {
   // M17 Fernsehturm.
   zeitwart: 'Steht er im Werk: Zahnrad einsetzen.',
 };
-const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone', 'zuender', 'schild', 'heuler', 'scherbe', 'loge', 'souffleur', 'teeifrit', 'baklava', 'teppich'];
+const NORMAL: EnemyKind[] = ['walker', 'runner', 'brute', 'spitter', 'raptor', 'kompso', 'crow', 'rat', 'uhrwerk', 'wurzler', 'kernspeier', 'kabel', 'bass', 'drone', 'zuender', 'schild', 'heuler', 'scherbe', 'loge', 'souffleur', 'teeifrit', 'baklava', 'teppich'];
 const BOSSES: EnemyKind[] = ['feldwebel', 'waechter', 'rex', 'hauptmann', 'schaffner', 'grenzer', 'brandmeister', 'rattenmutter', 'spreehexe', 'wurzelmutter', 'uhrwerkgross', 'volkskoloss', 'weltzeituhr', 'tuersteher', 'wachdrohne', 'dirigent', 'bassprediger', 'conferencier', 'ringvater', 'spiegelpaar', 'diva', 'zugezogene', 'hauptgericht', 'bauherr', 'sultan', 'zeitwart'];
 const BASE_NAME: Record<string, string> = Object.fromEntries(Object.entries(BASES).map(([n, b]) => [b, n]));
 
@@ -250,6 +250,8 @@ export class Menu {
  * reads this map and `ELITE_PORTRAIT`). Ids from the 2D busts (`js/items.js` PORTI) are kept. */
 const ENEMY_PORTRAIT: Record<EnemyKind, string> = {
   walker: 'E01', runner: 'E09', brute: 'E02', spitter: 'E03', raptor: 'E11', crow: 'E05', rat: 'E04',
+  // P17: the Kompso (E10 is the 2D boss bust).
+  kompso: 'E25',
   kabel: 'E13', schild: 'E06', zuender: 'E07', heuler: 'E08', bass: 'E14', drone: 'E15', uhrwerk: 'E16', wurzler: 'E17', kernspeier: 'E18',
   feldwebel: 'X04', waechter: 'X03', rex: 'E12', hauptmann: 'X01', schaffner: 'X05',
   grenzer: 'X11', brandmeister: 'X10', rattenmutter: 'X06', spreehexe: 'X12',
