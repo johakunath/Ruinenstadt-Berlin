@@ -210,10 +210,10 @@ if (mode === 'probe') {
     }
     return out;
   }, n);
-  for (const v of VARIANTS) {
+  for (const v of (process.env.VARIANTS ?? VARIANTS.join()).split(",")) {
     await wear(page, v, gear, 0.6);
-    await frames(page, 120);
-    const calm = await sample(30);
+    await frames(page, 75);
+    const calm = await sample(15);
     // A proc burst on top (Fernsehturm crit at 1.2 m): the pool's peak.
     await page.evaluate(() => { const s = window.__game.sim(), p = s.player; s.events.push({ type: 'legendaryProc', id: 'turm', x: p.x + 1, z: p.z + 0.6 }); });
     const burst = await sample(12);
