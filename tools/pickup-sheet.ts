@@ -2,7 +2,7 @@
 //   /tools/pickup-sheet.html?mode=export     source meshes of the reused kinds (weapon models, hero wear and gear) for
 //                                            tools/pickup-models.mjs, in model or hero bind space, linear vertex colours
 //   /tools/pickup-sheet.html                 every model of assets/props/pickups.glb through the game's LootView
-//   &pickup=A|B|C (the G2 variants)  &rarity=0..3|set  &cols=5
+//   &rarity=0..3|set  &cols=5  &cell=240
 import { ACESFilmicToneMapping, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, Scene, Vector3, WebGLRenderer, type BufferGeometry, type SkinnedMesh } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { heroLook } from '../src/data/hero-look';
@@ -12,7 +12,7 @@ import { GEAR } from '../src/render/gear';
 import { GearKit, heroSource } from '../src/render/gear-kit';
 import { HeroModel } from '../src/render/hero-model';
 import { LOOK } from '../src/render/looks';
-import { LootView, pickupVariant } from '../src/render/loot';
+import { LootView } from '../src/render/loot';
 import { Materials } from '../src/render/materials';
 import { GRAIN_TONE } from '../src/render/paint';
 import { PROFILES } from '../src/render/profile';
@@ -137,7 +137,6 @@ if (mode === 'export') {
   document.title = `done ${Object.keys(out).length}`;
 } else {
   // Sheet: every model through the game's LootView, one cell each, close three-quarter view from the game camera's side.
-  const variant = pickupVariant(q.get('pickup'));
   const rarity = q.get('rarity') ?? '0';
   const cols = Number(q.get('cols') ?? 5), CELL = Number(q.get('cell') ?? 240), STEP = 3;
   const ids = PICKUP_MODELS;
@@ -153,7 +152,7 @@ if (mode === 'export') {
   const sun = new DirectionalLight(0xfff0d8, 2.4);
   sun.position.set(-3, 6, 4);
   scene.add(sun);
-  const view = new LootView(variant);
+  const view = new LootView();
   scene.add(view.group);
   await view.ready;
   // One landed drop per model on a grid, STEP m apart, standing still (no spin) for a fair look.
@@ -165,7 +164,7 @@ if (mode === 'export') {
   const cam = new OrthographicCamera(-1, 1, 1, -1, -20, 40);
   const tris = await view.triangles();
   const wrap = document.getElementById('wrap')!;
-  document.getElementById('title')!.textContent = `Pickup models (P10), variant ${variant}, rarity ${rarity}: ${ids.length} kinds, one InstancedMesh each`;
+  document.getElementById('title')!.textContent = `Pickup models (P10), rarity ${rarity}: ${ids.length} kinds, one InstancedMesh each`;
   renderer.setScissorTest(true);
   ids.forEach((id, i) => {
     const cx = (i % cols) * STEP, cz = Math.floor(i / cols) * STEP, col = i % cols, row = Math.floor(i / cols);

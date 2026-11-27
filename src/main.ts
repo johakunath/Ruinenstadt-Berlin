@@ -1227,7 +1227,7 @@ function femalesFor(): boolean {
 const skyParam = new URLSearchParams(location.search).get('sky');
 const sky = skyFor(opts.map, skyParam);
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal, pickup: opts.pickup, gearFx: opts.gearFx,
+  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal, gearFx: opts.gearFx,
   zoneSkies: zoneSkies(opts.map, skyParam),
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),

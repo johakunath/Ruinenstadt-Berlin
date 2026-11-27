@@ -50,7 +50,7 @@ for (const pair of (process.env.ALT ?? '').split(',').filter(Boolean)) { const [
 const ATLAS = 1024, CELL = 256, PAD = 6, WHITE = 15;
 
 if (stage === 'sheet') {
-  // node tools/pickup-models.mjs sheet pickups.png "pickup=A&rarity=0"   (dev server running)
+  // node tools/pickup-models.mjs sheet pickups.png "rarity=0"   (dev server running)
   const [, out = 'pickups.png', query = ''] = process.argv.slice(2);
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });

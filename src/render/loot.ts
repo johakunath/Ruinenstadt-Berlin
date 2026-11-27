@@ -2,11 +2,9 @@
 // light beam for rare and better. WP4 step 3 (P10, D4): one model per drop kind (`src/data/pickups.ts`) from
 // `assets/props/pickups.glb`, one InstancedMesh per kind (drawn only while one lies on the ground), all sharing one
 // vertex-colour material with one atlas texture. No shadows, no light sources (the light count must stay constant).
-// Gate G2 is open, so the three looks are built behind `?pickup=A|B|C` (default A):
-//   A natural colours with a slight emissive in the rarity colour, on the ring and beam;
-//   B the model tinted in the rarity colour like the old crystal;
-//   C a small model floating above the old crystal.
-// Draw calls: 1 per kind lying on the ground + glow + beam (C: + 1 for the crystals).
+// Gate G2 (Johannes, 2026-11-27: variant A): natural colours with a slight emissive in the rarity colour, on the ring
+// and beam. The old crystal only stands in for a model that is not loaded.
+// Draw calls: 1 per kind lying on the ground + glow + beam.
 import {
   AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, Color, DataTexture, DoubleSide, Float32BufferAttribute, Group,
   InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, Quaternion, SRGBColorSpace, SphereGeometry, Vector3,
@@ -22,15 +20,9 @@ import { FX_LAYER } from './world';
 const CAP = 160;
 const PICKUPS_URL = new URL('../../assets/props/pickups.glb', import.meta.url).href;
 
-export type PickupVariant = 'A' | 'B' | 'C';
-export const pickupVariant = (v: string | null | undefined): PickupVariant => (v === 'B' || v === 'C' ? v : 'A');
-
-/** Per variant: model height above the ground, scale, how the rarity colour tints and lights it. */
-const LOOKS: Readonly<Record<PickupVariant, { lift: number; scale: number; tint: number; gain: number; emit: number }>> = {
-  A: { lift: 0.1, scale: 1, tint: 0, gain: 0, emit: 0.32 },
-  B: { lift: 0.1, scale: 1, tint: 0.85, gain: 1.9, emit: 0.42 },
-  C: { lift: 0.98, scale: 0.6, tint: 0, gain: 0, emit: 0.32 },
-};
+/** Model height above the ground (m), and how strongly the rarity colour lights it. */
+const LIFT = 0.1;
+const EMIT = 0.32;
 /** Rarity colour strength on the model (instance colour): common items glow least. */
 const GLOW_BY_RARITY = [0.35, 0.8, 0.9, 1.1] as const;
 
@@ -120,17 +112,15 @@ function beamGeometry(): BufferGeometry {
 
 /**
  * The shared pickup material: atlas × vertex colour. The instance colour is the rarity colour; it no longer tints the
- * surface (as InstancedMesh would) but lights it a little (A, C) or tints and lights it (B).
+ * surface (as InstancedMesh would) but lights it a little.
  */
-function pickupMaterial(variant: PickupVariant): MeshStandardMaterial {
+function pickupMaterial(): MeshStandardMaterial {
   // A white 1 × 1 map until the atlas arrives, so the shader is compiled with its map from the start.
   const blank = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
   blank.colorSpace = SRGBColorSpace;
   blank.needsUpdate = true;
   // Double-sided: the reused wear pieces are open shells (the vest's neck and arm holes).
   const mat = new MeshStandardMaterial({ map: blank, vertexColors: true, roughness: 0.72, metalness: 0, side: DoubleSide });
-  const look = LOOKS[variant];
-  const f = (n: number): string => n.toFixed(3);
   mat.onBeforeCompile = (s): void => {
     s.vertexShader = s.vertexShader
       .replace('#include <color_pars_vertex>', '#include <color_pars_vertex>\nvarying vec3 vRarity;')
@@ -143,11 +133,9 @@ function pickupMaterial(variant: PickupVariant): MeshStandardMaterial {
 #endif`);
     s.fragmentShader = s.fragmentShader
       .replace('#include <color_pars_fragment>', '#include <color_pars_fragment>\nvarying vec3 vRarity;')
-      .replace('#include <color_fragment>', `#include <color_fragment>
-  diffuseColor.rgb = mix(diffuseColor.rgb, vRarity * dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)) * ${f(look.gain)}, ${f(look.tint)});`)
-      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\n  totalEmissiveRadiance += vRarity * ${f(look.emit)};`);
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\n  totalEmissiveRadiance += vRarity * ${EMIT.toFixed(3)};`);
   };
-  mat.customProgramCacheKey = (): string => `pickup-${variant}`;
+  mat.customProgramCacheKey = (): string => 'pickup';
   return mat;
 }
 
@@ -171,7 +159,7 @@ export class LootView {
   private readonly color = new Color();
   private readonly base = new Color();
 
-  constructor(readonly variant: PickupVariant = 'A') {
+  constructor() {
     // 6-sided double pyramid: a sphere with six segments and one ring.
     const geo = new SphereGeometry(0.2, 6, 2);
     geo.scale(1, 1.55, 1);
@@ -206,7 +194,7 @@ export class LootView {
 
     // One instanced mesh per model, all on one material. Until the file is in: a degenerate triangle with the real
     // attribute set; the meshes stay visible until the first update so the renderer's compile builds the shader.
-    this.material = pickupMaterial(variant);
+    this.material = pickupMaterial();
     for (const id of PICKUP_MODELS) {
       const stub = new BufferGeometry();
       for (const [name, size] of [['position', 3], ['normal', 3], ['uv', 2], ['color', 3]] as const) stub.setAttribute(name, new BufferAttribute(new Float32Array(3 * size), size));
@@ -242,7 +230,6 @@ export class LootView {
 
   /** `still`: no spin and no bob (the dev sheet). */
   update(sim: Sim, time: number, still = false): void {
-    const look = LOOKS[this.variant];
     for (const id of PICKUP_MODELS) this.counts.set(id, 0);
     let n = 0;
     let crystals = 0;
@@ -251,17 +238,16 @@ export class LootView {
       if (n >= CAP) break;
       const c = d.content;
       const id = pickupModel(c);
-      // The crystal carries the drop in C, and stands in for a model that is not loaded.
+      // The crystal stands in for a model that is not loaded (file missing or still loading).
       const model = this.has.has(id);
       const rarity = c.kind === 'item' ? c.item.rarity : -1;
       const set = c.kind === 'item' && !!c.item.set;
       const y0 = groundY(d.x, d.z);
-      const spin = still ? 0.6 : time * 1.3 + d.id;
       const wave = still ? 0 : Math.sin(time * 2.4 + d.id);
       this.base.set(dropColor(d));
-      this.q.setFromAxisAngle(this.axisY, spin);
 
-      if (this.variant === 'C' || !model) {
+      if (!model) {
+        this.q.setFromAxisAngle(this.axisY, still ? 0.6 : time * 1.3 + d.id);
         const small = c.kind === 'item' ? 1 : 0.7;
         // Spin and bob once it lies on the ground; the pop arc raises it while in the air.
         const bob = d.landed ? 0.42 + 0.06 * wave : 0.42;
@@ -270,20 +256,18 @@ export class LootView {
         this.crystals.setMatrixAt(crystals, this.m4.compose(this.pos, this.q, this.scale));
         this.crystals.setColorAt(crystals, this.color.copy(this.base).multiplyScalar(0.85));
         crystals++;
-      }
-
-      if (model) {
+      } else {
         const mesh = this.models.get(id)!, k = this.counts.get(id)!;
         this.counts.set(id, k + 1);
-        // A slow turn and a small float above the ring (C: above the crystal), so the shape reads from every side.
-        const bob = d.landed ? look.lift + 0.035 * wave : look.lift;
+        // A slow turn and a small float above the ring, so the shape reads from every side.
+        const bob = d.landed ? LIFT + 0.035 * wave : LIFT;
         this.q.setFromAxisAngle(this.axisY, still ? 0.6 : time * 0.9 + d.id);
         this.pos.set(d.x, y0 + bob + d.h, d.z);
-        this.scale.setScalar(look.scale);
+        this.scale.setScalar(1);
         mesh.setMatrixAt(k, this.m4.compose(this.pos, this.q, this.scale));
         // Instance colour = rarity colour × strength (consumables and materials glow in their own colour, weakly).
         const strength = rarity >= 0 ? GLOW_BY_RARITY[rarity as 0 | 1 | 2 | 3] + (set ? 0.3 : 0) : 0.3;
-        mesh.setColorAt(k, this.color.copy(this.base).multiplyScalar(this.variant === 'B' ? Math.max(strength, 0.85) : strength));
+        mesh.setColorAt(k, this.color.copy(this.base).multiplyScalar(strength));
       }
 
       // Ground glow and ring: bigger and brighter with rarity; only once it lies still.
