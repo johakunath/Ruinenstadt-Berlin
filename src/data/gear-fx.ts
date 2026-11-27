@@ -173,7 +173,8 @@ export const GEAR_FX: Readonly<Partial<Record<LegendaryId, GearFxDef>>> = {
   },
   schaffner: {
     slot: 'f', color: '#5aa8ff', anchor: { at: 'feet' },
-    ambient: [{ sprite: 'dot', color: '#6ab4ff', rate: 40, life: 0.35, size: 0.09, rise: 0.1, when: 'dodge' }],
+    // Only while rolling; bigger dots than the rest (the per-item sheet showed 0.09 m lost in the roll's dust).
+    ambient: [{ sprite: 'dot', color: '#6ab4ff', rate: 48, life: 0.4, size: 0.14, rise: 0.1, when: 'dodge' }],
   },
   // Ring, talismans, implant: no 3D model (step 2 decision); their glow is a steady sprite at the bone.
   weltuhr: {

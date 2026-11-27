@@ -7,6 +7,7 @@
 // and clips are the same on every run. The variant switches at runtime (`__game.gearFx`), one load per spot and camera.
 // The HUD is hidden (only the game canvas is read). CHROMIUM=<path> optional.
 import fs, { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
@@ -19,6 +20,8 @@ const W = mode === 'items' ? 960 : 1280, H = mode === 'items' ? 540 : 720;
 const SPOTS = [['dunkel', 'xhain', Number(process.env.DARK_DZ ?? 0)], ['hell', 'alex', Number(process.env.BRIGHT_DZ ?? 0)]];
 const CLOSE_CAM = process.env.CLOSE_CAM ?? '7,16';
 
+// Windows: sharp keeps input files open in its cache; the strip mode rewrites the sheets it reads.
+sharp.cache(false);
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 
 /** Gated clock: free 60 Hz while loading; with `on`, only `budget` more frames run. */
@@ -41,7 +44,7 @@ async function open(q, dz = 0) {
   await page.addInitScript(gate);
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
   page.on('console', (m) => { if (m.type() === 'error') console.log('CONSOLE', m.text()); });
-  await page.goto(`http://localhost:${PORT}/?autostart&god&seed=7&profile=Qualit%C3%A4t&${q}`, { waitUntil: 'load' });
+  await page.goto(`http://localhost:${PORT}/?autostart&god&seed=7&profile=${encodeURIComponent(process.env.PROFILE ?? 'Qualität')}&${q}`, { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('loading')?.hidden === true && window.__game?.phase() === 'play', null, { timeout: 300000 });
   await page.evaluate(async (dz) => {
     window.__game.hold(true);
@@ -181,10 +184,11 @@ if (mode === 'probe') {
     const strip = await procStrip(page, v);
     const g3 = join(outDir, `g3-${v}.jpg`), cmp = join(outDir, 'g3-compare.jpg'), col = VARIANTS.indexOf(v) * 426;
     const at = (buf, left, top) => ({ input: buf, left, top });
-    const a = await sharp(g3).composite(strip.map((c, i) => at(c, (i % 4) * 320, 750 + Math.floor(i / 4) * 180))).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
+    for (const [i, c] of strip.entries()) fs.writeFileSync(join(tmpdir(), `gear-fx-strip-${v}-${i}.png`), c);
+    const a = await sharp(fs.readFileSync(g3)).composite(strip.map((c, i) => at(c, (i % 4) * 320, 750 + Math.floor(i / 4) * 180))).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
     fs.writeFileSync(g3, a);
     const big = await Promise.all([1, 2].map((i) => sharp(strip[i]).resize(426, 240).png().toBuffer()));
-    const b = await sharp(cmp).composite([at(big[0], col, 510), at(big[1], col, 750)]).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
+    const b = await sharp(fs.readFileSync(cmp)).composite([at(big[0], col, 510), at(big[1], col, 750)]).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
     fs.writeFileSync(cmp, b);
     console.log(g3, cmp, spot);
   }
@@ -233,7 +237,7 @@ if (mode === 'probe') {
   };
   const pairs = (cells, per) => { const rows = []; for (let i = 0; i < cells.length; i += per) rows.push(cells.slice(i, i + per).flat()); return rows; };
   if (process.env.ONLY !== 'wear') await sheet(join(outDir, 'items-weapons.jpg'), 1800, pairs(await run(WEAPONS), 3), 'Step 5 Waffen (Variante B, Xhain nah): je Ruhe | Proc');
-  await sheet(join(outDir, 'items-wear.jpg'), 1800, pairs(await run(WEAR), 3), 'Step 5 Kleidung, Ring, Talismane, Implantat (B) und Sets (C, alle Teile): je Ruhe | Proc');
+  await sheet(join(outDir, 'items-wear.jpg'), 1800, pairs(await run(WEAR), 3), `Step 5 Kleidung, Ring, Talismane, Implantat (B) und Sets (C, alle Teile), ${process.env.PROFILE ?? 'Qualität'}: je Ruhe | Proc`);
   await page.close();
 }
 await browser.close();
