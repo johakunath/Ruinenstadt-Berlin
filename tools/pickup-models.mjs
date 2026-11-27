@@ -14,7 +14,8 @@ const [stage = 'build'] = process.argv.slice(2);
 
 /**
  * Per model: `reused` key in reused.json (else the Pixal3D bake `low/<id>.glb`), pose (Euler degrees XYZ, applied
- * before fitting), longest side in m, triangle target (reused models are simplified to it; D3: about 160, at most 400).
+ * before fitting), longest side in m, triangle target (reused models are simplified to it; D3: about 160, at most 400),
+ * `sat` saturation of a baked cell.
  * Weapons lie flat (model +Y, the tip, along −Z; the blade's face up).
  */
 const MODELS = {
@@ -32,16 +33,17 @@ const MODELS = {
   talisman: { rot: [-65, 0, 0], size: 0.56 },
   ring: { rot: [-55, 0, 0], size: 0.32 },
   implant: { rot: [0, 0, 0], size: 0.36 },
+  // Heal: the lead's Verband (`assets-src/ai/props/sup-verband-pixal.glb` copied to high/heal.glb, picture to pick/heal.png).
   heal: { rot: [0, 0, 0], size: 0.36 },
   food: { rot: [0, 0, 0], size: 0.42 },
   stoff: { rot: [0, 0, 0], size: 0.4 },
   metall: { rot: [0, 0, 0], size: 0.4 },
-  // Code stand-ins until their Pixal3D run (ComfyUI went down on 2026-11-26): drop `reused` once low/<id>.glb is baked.
-  chemie: { reused: 'chemie-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
-  kabel: { reused: 'kabel-code', rot: [0, 0, 0], size: 0.4, tris: 400 },
-  fleisch: { reused: 'fleisch-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
-  gemuese: { reused: 'gemuese-code', rot: [0, 0, 0], size: 0.42, tris: 400 },
-  gewuerz: { reused: 'gewuerz-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
+  // The glass bakes milky: `sat` lifts the cell's saturation back toward the FLUX picture.
+  chemie: { rot: [0, 0, 0], size: 0.38, sat: 1.8 },
+  kabel: { rot: [0, 0, 0], size: 0.4 },
+  fleisch: { rot: [0, 0, 0], size: 0.38 },
+  gemuese: { rot: [0, 0, 0], size: 0.42 },
+  gewuerz: { rot: [0, 0, 0], size: 0.38 },
 };
 // Overrides while trying alternatives: ALT=hands:hands-box,armor:armor-plate
 for (const pair of (process.env.ALT ?? '').split(',').filter(Boolean)) { const [id, key] = pair.split(':'); MODELS[id].reused = key; }
@@ -50,7 +52,7 @@ for (const pair of (process.env.ALT ?? '').split(',').filter(Boolean)) { const [
 const ATLAS = 1024, CELL = 256, PAD = 6, WHITE = 15;
 
 if (stage === 'sheet') {
-  // node tools/pickup-models.mjs sheet pickups.png "pickup=A&rarity=0"   (dev server running)
+  // node tools/pickup-models.mjs sheet pickups.png "rarity=0"   (dev server running)
   const [, out = 'pickups.png', query = ''] = process.argv.slice(2);
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -217,7 +219,7 @@ if (stage === 'sheet') {
       const cx = cell % 4, cy = Math.floor(cell / 4);
       // UVs into the cell (glTF v runs down the image, as the atlas rows do).
       m.U = m.U.map((t, i) => ((i % 2 === 0 ? cx : cy) * CELL + PAD + Math.min(1, Math.max(0, t)) * (CELL - 2 * PAD)) / ATLAS);
-      cells.push({ input: await sharp(Buffer.from(m.image)).resize(CELL - 2 * PAD, CELL - 2 * PAD).extend({ top: PAD, bottom: PAD, left: PAD, right: PAD, extendWith: 'copy' }).png().toBuffer(), left: cx * CELL, top: cy * CELL });
+      cells.push({ input: await sharp(Buffer.from(m.image)).modulate({ saturation: spec.sat ?? 1 }).resize(CELL - 2 * PAD, CELL - 2 * PAD).extend({ top: PAD, bottom: PAD, left: PAD, right: PAD, extendWith: 'copy' }).png().toBuffer(), left: cx * CELL, top: cy * CELL });
       cell++;
       if (cell === WHITE) throw new Error('atlas full');
     }
@@ -243,7 +245,7 @@ if (stage === 'sheet') {
       .setIndices(acc('SCALAR', m.idx, Uint16Array))
       .setMaterial(material);
     scene.addChild(doc.createNode(id).setMesh(doc.createMesh(id).addPrimitive(prim)));
-    console.log(`${id.padEnd(9)} ${String(m.idx.length / 3).padStart(4)} tris  ${m.dims.join(' × ')} m${MODELS[id].reused ? `  ${MODELS[id].reused.endsWith('-code') ? 'code' : 'reused'} ${MODELS[id].reused}` : '  Pixal3D'}`);
+    console.log(`${id.padEnd(9)} ${String(m.idx.length / 3).padStart(4)} tris  ${m.dims.join(' × ')} m${MODELS[id].reused ? `  reused ${MODELS[id].reused}` : '  Pixal3D'}`);
   }
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   await io.write(OUT, doc);

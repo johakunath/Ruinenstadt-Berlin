@@ -2,7 +2,7 @@
 //   /tools/pickup-sheet.html?mode=export     source meshes of the reused kinds (weapon models, hero wear and gear) for
 //                                            tools/pickup-models.mjs, in model or hero bind space, linear vertex colours
 //   /tools/pickup-sheet.html                 every model of assets/props/pickups.glb through the game's LootView
-//   &pickup=A|B|C (the G2 variants)  &rarity=0..3|set  &cols=5
+//   &rarity=0..3|set  &cols=5  &cell=240
 import { ACESFilmicToneMapping, Color, DirectionalLight, HemisphereLight, OrthographicCamera, PMREMGenerator, Scene, Vector3, WebGLRenderer, type BufferGeometry, type SkinnedMesh } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { heroLook } from '../src/data/hero-look';
@@ -12,11 +12,11 @@ import { GEAR } from '../src/render/gear';
 import { GearKit, heroSource } from '../src/render/gear-kit';
 import { HeroModel } from '../src/render/hero-model';
 import { LOOK } from '../src/render/looks';
-import { LootView, pickupVariant } from '../src/render/loot';
+import { LootView } from '../src/render/loot';
 import { Materials } from '../src/render/materials';
 import { GRAIN_TONE } from '../src/render/paint';
 import { PROFILES } from '../src/render/profile';
-import { METAL_TONE, Parts, ball, box, cloth, cone, cyl, metal, plain, ring, scaled, weaponParts, wood, type WeaponPart } from '../src/render/weapons';
+import { METAL_TONE, weaponParts, type WeaponPart } from '../src/render/weapons';
 import type { WeaponLookId } from '../src/data/weapon-look';
 import type { Drop, DropContent } from '../src/sim/loot';
 import type { Sim } from '../src/sim/types';
@@ -93,51 +93,10 @@ if (mode === 'export') {
   // The gear parts that sit on the piece (the sneaker stripes) join it.
   const stripes = gear(['sneaker-stripes'], left);
   for (const k of ['pos', 'nor', 'col'] as const) out['feet-turnsch']![k].push(...stripes[k]);
-  // Code stand-ins (`<id>-code`) for the kinds whose Pixal3D run did not happen yet (ComfyUI down, 2026-11-26), drawn
-  // after the 2D sprites (`pickup-*.webp`) and the FLUX picks; replaced by the baked Pixal3D props in phase 2.
-  const code = (fn: (b: Parts) => void): Src => { const b = new Parts(); fn(b); return partsMesh(b.list); };
-  out['kabel-code'] = code((b) => {
-    // Three loose turns of orange cable, two frayed copper ends.
-    for (let i = 0; i < 3; i++) b.add(ring(0.12 - i * 0.006, 0.024, 6, 14), plain(0xd8772a), i * 0.012, 0.026 + i * 0.042, -i * 0.01, Math.PI / 2 + (i - 1) * 0.12, 0, 0);
-    b.add(cyl(0.014, 0.014, 0.07, 5), metal(0xc87533), 0.14, 0.03, 0.05, 0, 0, Math.PI / 2 - 0.3);
-    b.add(cyl(0.014, 0.014, 0.06, 5), metal(0xc87533), -0.13, 0.12, 0.04, 0, 0, -Math.PI / 2 + 0.4);
-  });
-  out['chemie-code'] = code((b) => {
-    // Round flask of green liquid with a cork, in a rusty cage of four bars and two hoops.
-    b.add(ball(0.1, 10, 8), plain(0x62c83a), 0, 0.105, 0);
-    b.add(cyl(0.032, 0.038, 0.08, 8), plain(0xa8d898), 0, 0.235, 0);
-    b.add(cyl(0.04, 0.034, 0.045, 8), wood(0x8a5a32), 0, 0.29, 0);
-    for (let i = 0; i < 4; i++) { const a = (i / 4) * Math.PI * 2 + 0.4; b.add(box(0.016, 0.22, 0.016), metal(0x6a4a35), Math.sin(a) * 0.106, 0.11, Math.cos(a) * 0.106); }
-    for (const y of [0.04, 0.17]) b.add(ring(0.108, 0.009, 4, 16), metal(0x6a4a35), 0, y, 0, Math.PI / 2, 0, 0);
-  });
-  out['fleisch-code'] = code((b) => {
-    // Thick marbled steak: red meat on a cream fat rim, slightly oval.
-    b.add(scaled(cyl(0.15, 0.15, 0.045, 12), 1.3, 1, 1), plain(0xe6d2bd), 0, 0.0225, 0);
-    b.add(scaled(cyl(0.135, 0.14, 0.05, 12), 1.28, 1, 0.94), plain(0xa82d36), 0.004, 0.03, 0);
-    b.add(scaled(cyl(0.03, 0.03, 0.052, 6), 1.6, 1, 0.5), plain(0xe8c8c0), 0.05, 0.031, 0.03, 0, 0.6, 0);
-  });
-  out['gemuese-code'] = code((b) => {
-    // Three carrots tied together with their green tops, lying against a cabbage head.
-    for (let i = 0; i < 3; i++) {
-      const z = (i - 1) * 0.05;
-      b.add(cone(0.032, 0.24, 7), plain(0xe8742a), -0.02, 0.034, z, 0, 0, Math.PI / 2);
-      b.add(cone(0.03, 0.09, 5), plain(0x4f9a34), -0.18, 0.04, z, 0, 0, -Math.PI / 2);
-    }
-    b.add(ring(0.04, 0.008, 4, 10), wood(0x8a6a3a), -0.1, 0.034, 0, 0, Math.PI / 2, 0);
-    b.add(scaled(ball(0.1, 10, 8), 1, 0.9, 1), plain(0x8cc86a), 0.12, 0.09, 0.02);
-  });
-  out['gewuerz-code'] = code((b) => {
-    // Burlap sack, rope round the neck, red chilis poking out of the open top.
-    b.add(cyl(0.085, 0.11, 0.17, 10), cloth(0xb8945a), 0, 0.085, 0);
-    b.add(ring(0.085, 0.012, 4, 12), wood(0x6a4a2a), 0, 0.15, 0, Math.PI / 2, 0, 0);
-    b.add(cyl(0.1, 0.085, 0.05, 10), cloth(0xa8844a), 0, 0.19, 0);
-    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; b.add(cone(0.016, 0.1, 5), plain(0xc8281e), Math.sin(a) * 0.04, 0.23, Math.cos(a) * 0.04, Math.cos(a) * 0.5, 0, -Math.sin(a) * 0.5); }
-  });
   (window as unknown as { __src: Record<string, Src> }).__src = out;
   document.title = `done ${Object.keys(out).length}`;
 } else {
   // Sheet: every model through the game's LootView, one cell each, close three-quarter view from the game camera's side.
-  const variant = pickupVariant(q.get('pickup'));
   const rarity = q.get('rarity') ?? '0';
   const cols = Number(q.get('cols') ?? 5), CELL = Number(q.get('cell') ?? 240), STEP = 3;
   const ids = PICKUP_MODELS;
@@ -153,7 +112,7 @@ if (mode === 'export') {
   const sun = new DirectionalLight(0xfff0d8, 2.4);
   sun.position.set(-3, 6, 4);
   scene.add(sun);
-  const view = new LootView(variant);
+  const view = new LootView();
   scene.add(view.group);
   await view.ready;
   // One landed drop per model on a grid, STEP m apart, standing still (no spin) for a fair look.
@@ -165,7 +124,7 @@ if (mode === 'export') {
   const cam = new OrthographicCamera(-1, 1, 1, -1, -20, 40);
   const tris = await view.triangles();
   const wrap = document.getElementById('wrap')!;
-  document.getElementById('title')!.textContent = `Pickup models (P10), variant ${variant}, rarity ${rarity}: ${ids.length} kinds, one InstancedMesh each`;
+  document.getElementById('title')!.textContent = `Pickup models (P10), rarity ${rarity}: ${ids.length} kinds, one InstancedMesh each`;
   renderer.setScissorTest(true);
   ids.forEach((id, i) => {
     const cx = (i % cols) * STEP, cz = Math.floor(i / cols) * STEP, col = i % cols, row = Math.floor(i / cols);

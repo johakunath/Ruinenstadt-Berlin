@@ -25,7 +25,7 @@ import { threatShake } from './threats';
 import { BOSS } from '../data/enemies';
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
-import { loadPickups, LootView, type PickupVariant } from './loot';
+import { loadPickups, LootView } from './loot';
 import { ContentView } from './content';
 import { leapHeight } from '../sim/abilities';
 import type { Look } from './looks';
@@ -84,8 +84,6 @@ export interface RendererOptions {
   females?: boolean;
   /** H4: the boss kinds that can appear (own bodies are loaded only for these); omitted: all. */
   bosses?: readonly string[];
-  /** WP4 step 3 gate G2: the pickup look (`?pickup=A|B|C`), A when left out. */
-  pickup?: PickupVariant;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -204,7 +202,7 @@ export class GameRenderer {
     private readonly materials: Materials,
     private readonly opts: RendererOptions,
   ) {
-    this.loot = new LootView(opts.pickup);
+    this.loot = new LootView();
     this.shadowClock = new ShadowClock(opts.profile.shadowEvery);
     this.dynRes = new DynamicResolution({ min: opts.profile.minScale });
     const Y = COURTYARD.yard;

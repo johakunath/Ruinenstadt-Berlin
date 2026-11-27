@@ -39,23 +39,24 @@ A weapon with an element or a signature glow draws 3 per pass (the glow mesh). T
 
 ## Step 3 pickups (P10, 2026-11-26)
 
-Files in `step3/`. Gate G2 is open: all three looks are built behind `?pickup=A|B|C` (default A).
+Files in `step3/`. Gate G2: Johannes picked A (2026-11-27). Phase 1 built all three looks behind `?pickup=A|B|C`; phase 2 removed B, C and the switch. The A, B, C shots stay as the record of the choice.
 
 | File | Shows |
 |---|---|
 | `variants-qualitaet.jpg`, `variants-leistung.jpg` | Close crop of the same 12 drops in A, B and C side by side |
-| `game-{A,B,C}-{qualitaet,leistung}.jpg` | Game at 1280 × 720, Köpenick start, `?autostart&drops=12&seed=7&pickup=<v>&profile=<p>`: 12 mixed drops of every rarity (legendary Stahlklinge and Zielchip, rare Vorschlaghammer and Siegelring, set Bauhelm, magic Schutzweste, Rohrspeer and Spreekiesel, common Jagdzwille; Verband, Döner, Stoff) |
-| `pickups.jpg` | Every model close (`node tools/pickup-models.mjs sheet out.png "pickup=A&rarity=0"`), variant A, triangles per model |
+| `game-{A,B,C}-{qualitaet,leistung}.jpg` | Game at 1280 × 720, Köpenick start, `?autostart&drops=12&seed=7&pickup=<v>&profile=<p>` (phase 1; today `?autostart&drops=12` shows A): 12 mixed drops of every rarity (legendary Stahlklinge and Zielchip, rare Vorschlaghammer and Siegelring, set Bauhelm, magic Schutzweste, Rohrspeer and Spreekiesel, common Jagdzwille; Verband, Döner, Stoff) |
+| `pickups.jpg` | Every model close (`node tools/pickup-models.mjs sheet out.png "rarity=0"`), triangles per model; phase 2: all 20 final (12 Pixal3D, 8 reused game models) |
+| `game-20-qualitaet.jpg` | Phase 2: `?autostart&drops=20&seed=7`, every kind once, look A |
 
 ### Draw calls
 
-`node tools/passes.mjs "map=hof&autostart&seed=7&profile=<p>&drops=<n>&pickup=A"` (the tool now waits for the renderer: software GL needs about 30 s).
+`node tools/passes.mjs "map=hof&autostart&seed=7&profile=<p>&drops=<n>"` (the tool now waits for the renderer: software GL needs about 30 s).
 
-| Qualität, frame 1 | 0 drops | 12 drops (12 kinds) | Loot |
-|---|---|---|---|
-| Pre-pass 1280×720 | 45 | 57 | +12: one per kind |
-| Beauty 1280×720 | 99 | 114 | +15: one per kind (12), glow (1), beam (2: a transparent double-sided material draws its back and front faces apart, as before step 3) |
-| Sun shadow 2048 | 62 | 62 | 0: pickups cast no shadow |
-| Total | 247 | 274 | +27 |
+| Qualität, frame 1 | 0 drops | 12 drops (12 kinds) | 20 drops (20 kinds, phase 2) | Loot |
+|---|---|---|---|---|
+| Pre-pass 1280×720 | 45 | 57 | 65 | +1 per kind |
+| Beauty 1280×720 | 99 | 114 | 122 | +1 per kind, glow (1), beam (2: a transparent double-sided material draws its back and front faces apart, as before step 3) |
+| Sun shadow 2048 | 62 | 62 | 62 | 0: pickups cast no shadow |
+| Total | 247 | 274 | 290 | +27, +43 |
 
-Leistung: beauty 97 → 112 (+15, the same split); no pre-pass target there. Before step 3 the same 12 drops cost 4 in the beauty pass (crystal, glow, beam twice) and 1 in the pre-pass. Variant C adds the crystal mesh: +1 in both passes. A kind not on the ground costs nothing (`visible = count > 0`).
+Leistung: beauty 97 → 112 (+15, the same split); no pre-pass target there. Before step 3 the same 12 drops cost 4 in the beauty pass (crystal, glow, beam twice) and 1 in the pre-pass. A kind not on the ground costs nothing (`visible = count > 0`).
