@@ -41,7 +41,7 @@ const MODELS = {
   // The glass bakes milky: `sat` lifts the cell's saturation back toward the FLUX picture.
   chemie: { rot: [0, 0, 0], size: 0.38, sat: 1.8 },
   kabel: { rot: [0, 0, 0], size: 0.4 },
-  fleisch: { reused: 'fleisch-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
+  fleisch: { rot: [0, 0, 0], size: 0.38 },
   gemuese: { reused: 'gemuese-code', rot: [0, 0, 0], size: 0.42, tris: 400 },
   gewuerz: { reused: 'gewuerz-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
 };
