@@ -79,10 +79,10 @@ Legend: 3D `model:x` = own weapon model per base (`src/render/weapons.ts`, key f
 | Zorn der Ringbahn | ring | w | legendary | model:ring | yes | I32 | yes: rendered from the model | none | 3 |
 | Krähenschleuder | kraehe | w | legendary | model:kraehe | yes | I53 | yes: rendered from the model | none | 3 |
 | Speer der Siegessäule | siegsp | w | legendary | model:siegsp | yes | I56 | yes: rendered from the model | none | 3 |
-| Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: rendered from the model | E | 3 |
-| Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | E | 3 |
-| Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | E | 3 |
-| Rohrzange des Tunnelläufers | zange | w | set tunnel | model:zange:tunnel | yes | I101 | yes: rendered from the model | E | 3 |
+| Morgenstern der Zitadelle | morgen | w | set zit | model:morgen | yes | I48 | yes: rendered from the model | none | 3 |
+| Hackmesser der Kiezwache | brech | w | set kiez | model:brech:kiez | yes | I91 | yes: rendered from the model | none | 3 |
+| Zwille des Spreegeists | zwille | w | set spree | model:zwille:spree | yes | I92 | yes: rendered from the model | none | 3 |
+| Rohrzange des Tunnelläufers | zange | w | set tunnel | model:zange:tunnel | yes | I101 | yes: rendered from the model | none | 3 |
 | Lederjacke | leder | a | normal | wear:leder + ai:outfit-leder (W10) | yes | I17 | yes: rendered from the look (denim, KA B2) | - | 2 |
 | Arbeitsmantel | mantel | a | normal | wear:mantel + ai:outfit-mantel (W10) | yes | I18 | yes: rendered from the look | none | 2 |
 | Schutzweste | weste | a | normal | wear:weste | yes | I19 | yes: rendered from the look | none | 2 |

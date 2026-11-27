@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GEAR_FX, LEGENDARY_PROC_SITES, equippedFx, fxLook, gearFxVariant } from './gear-fx';
+import { GEAR_FX, LEGENDARY_PROC_SITES, equippedFx, fxLook } from './gear-fx';
 import { heroLook } from './hero-look';
 import { LEGENDARY_POWERS, type LegendaryId } from './items';
 
@@ -23,11 +23,10 @@ describe('legendary effects (WP4 step 5)', () => {
       if (def!.slot === 'a') expect(def!.anchor.at === 'bone' || def!.anchor.at === 'feet', id).toBe(true);
     }
   });
-  it('reads ?gearfx (default B)', () => {
-    expect(gearFxVariant('a')).toBe('A');
-    expect(gearFxVariant('C')).toBe('C');
-    expect(gearFxVariant(null)).toBe('B');
-    expect(gearFxVariant('x')).toBe('B');
+  it('stays inside the emitter and sprite budget (D3, D5): every steady glow fits the 5 reserved sprites', () => {
+    // Steady glows of one talisman, one ring and one implant at once (the slots are exclusive).
+    const most = (slot: string): number => Math.max(0, ...Object.values(GEAR_FX).filter((d) => d!.slot === slot).map((d) => d!.steady?.count ?? (d!.steady ? 1 : 0)));
+    expect(most('t') + most('r') + most('i')).toBeLessThanOrEqual(5);
   });
   it('orders equipped effects weapon, armor, then the rest; adds glow parts to the look, sorted', () => {
     expect(equippedFx(['herz', 'spaeti', 'turm', 'pickel']).map((f) => f.id)).toEqual(['turm', 'spaeti', 'pickel', 'herz']);
