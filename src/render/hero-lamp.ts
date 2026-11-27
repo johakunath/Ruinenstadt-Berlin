@@ -120,6 +120,12 @@ export class HeroLamp {
     } else this.pool = null;
   }
 
+  /** Shows the cone and pool for the one shader compile at load (`compileAsync` skips hidden meshes); the first update hides them. */
+  prewarm(): void {
+    this.cone.visible = true;
+    if (this.pool) this.pool.visible = true;
+  }
+
   /**
    * Per frame. `light`: what the hero carries now; `facing`: hero yaw; `ground`: height at x, z; `dark`: 0 by day
    * to 1 at night (the sky's lamp scale); `fill`: the hero fill light the glows tint.

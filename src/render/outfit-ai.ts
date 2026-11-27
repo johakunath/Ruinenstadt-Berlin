@@ -29,9 +29,12 @@ const pending = new Map<string, Promise<void>>();
 /** `?aigear=0`: the code looks instead (A/B and before/after sheets). */
 const off = typeof location !== 'undefined' && new URLSearchParams(location.search).get('aigear') === '0';
 
-/** Whether an outfit file exists for `id` (else the code look is final). */
+/** Outfits whose file failed to load: their code look is final (no reload attempt every frame). */
+const failed = new Set<string>();
+
+/** Whether an outfit file exists for `id` and has not failed (else the code look is final). */
 export function hasAiOutfit(id: string): boolean {
-  return !off && !!urls[`../../assets/gear/outfit-${id}.glb`];
+  return !off && !failed.has(id) && !!urls[`../../assets/gear/outfit-${id}.glb`];
 }
 
 /** Starts loading `id` once; resolves when it is in (or failed: then the code look stays). */
@@ -52,6 +55,8 @@ export function loadAiOutfit(id: string, anisotropy: number): Promise<void> {
       sources.set(id, { geo: found.geometry, joints: found.skeleton.bones.map((b) => b.name), map });
     } catch {
       // The code look stays.
+    } finally {
+      if (!sources.has(id)) failed.add(id);
     }
   })();
   pending.set(id, p);

@@ -167,6 +167,7 @@ function pay(s: Sim, cost: number, text: string): Result {
 // ---------------------------------------------------------------- gear, consumables, heal (2D trader)
 
 export function buyOffer(s: Sim, i: number): Result {
+  if (!s.content.tradeOpen) return no('');
   const stock = tradeStock(s);
   const o = stock[i];
   if (!o) return no('');

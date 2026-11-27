@@ -289,6 +289,7 @@ export class GameRenderer {
     await game.loot.ready;
     // The effect sprites too (hidden until something shows), so the first proc never compiles.
     game.gearFx.mesh.visible = true;
+    game.lamp.prewarm();
     await renderer.compileAsync(game.scene, game.cam.camera);
     return game;
   }
