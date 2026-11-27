@@ -75,6 +75,8 @@ describe('ported hero stats', () => {
     expect(s.elementPower).toBeCloseTo(2.0);
     expect(s.eliteBonus).toBe(.2);
     expect(s.weight).toBe(4);
+    // Bleigewicht (every 3rd) beats Gewicht (every 4th) when both are fitted (Codex review PR 113).
+    expect(heroStats(eq({ w: item({ mods: ['gewicht', 'blei'] }) }), context()).weight).toBe(3);
     expect(s.damage).toBe(12);
     // 10 × 1.7, × 1.1 for the shorter default hammer (D8).
     const d = heroStats(eq({ w: item({ kind: 'hammer' }) }), context({ perks: { m_dampf: 1 } }));

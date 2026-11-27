@@ -227,6 +227,13 @@ describe('blessings at the Späti (Hades style)', () => {
     setLoadout(s, { ...s.equipment, w: { ...s.equipment.w!, element: 'fire' } });
     expect(buyBlessing(s, 0).ok).toBe(true);
   });
+
+  it('a card needing fire is not sold even when a held fire blessing is stranded first (Codex review PR 113)', () => {
+    const s = atSpati({}, 1, { cards: [card('schwel')] });
+    s.inventory.scrap = 10000;
+    s.statContext.perks.spread = 1;
+    expect(buyBlessing(s, 0).ok).toBe(false);
+  });
   it('a Stärkung raises a held blessing by one, once per Späti, never past its max', () => {
     const s = atSpati({ dmg: 2, second: 1 });
     s.inventory.scrap = 10000;

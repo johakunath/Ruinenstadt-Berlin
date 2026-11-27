@@ -243,6 +243,14 @@ export function buyMod(s: Sim): Result {
 
 // ---------------------------------------------------------------- blessings (Späti, Hades style)
 
+/** Whether blessing `id` finds its element (`requires`) with `perks` held. */
+function hasElement(s: Sim, id: PerkId, perks: Partial<Record<PerkId, number>>): boolean {
+  const req = perkOf(id).requires;
+  if (!req) return true;
+  const els = heroStats(s.equipment, { ...s.statContext, perks }).elements;
+  return req === 'any' ? els.length > 0 : els.includes(req);
+}
+
 /** A blessing in `perks` whose element (`requires`) the hero would not have with them, or null. */
 function stranded(s: Sim, perks: Partial<Record<PerkId, number>>): PerkId | null {
   const els = heroStats(s.equipment, { ...s.statContext, perks }).elements;
@@ -271,7 +279,8 @@ export function buyBlessing(s: Sim, i: number): Result {
   if (!shop || !card) return no('');
   if (pk(s, card.id) >= perkOf(card.id).max) return no('Schon voll.');
   // The weapon may have changed since the stock was rolled: no blessing without its element.
-  if (stranded(s, { ...s.statContext.perks, [card.id]: card.level }) === card.id) return no(`${perkOf(card.id).name} braucht ein Element.`);
+  // Checked for the card itself, not via `stranded` (which names only the first stranded blessing, Codex review PR 113).
+  if (!hasElement(s, card.id, { ...s.statContext.perks, [card.id]: card.level })) return no(`${perkOf(card.id).name} braucht ein Element.`);
   const cost = blessPrice(s, 'buy', card);
   const miss = short(s, cost);
   if (miss) return miss;

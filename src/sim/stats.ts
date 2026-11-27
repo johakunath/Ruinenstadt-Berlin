@@ -138,7 +138,8 @@ export function heroStats(eq: Equipment, ctx: StatContext): HeroStats {
     legendary: SLOTS.flatMap((slot) => { const it = eq[slot]; const b = it ? baseOf(it) : ''; return b in LEGENDARY_POWERS ? [b as LegendaryId] : []; }),
     elementChance: wm.some(m => m.element) ? .5 : .3,
     eliteBonus: wm.reduce((n, m) => n + (m.eliteBossBonus ?? 0), 0),
-    weight: wm.find(m => m.heavyHitEvery)?.heavyHitEvery ?? 0,
+    // The shortest interval of the installed mods (Bleigewicht 3 beats Gewicht 4 when both are fitted, Codex review PR 113).
+    weight: wm.reduce((best, m) => (m.heavyHitEvery && (!best || m.heavyHitEvery < best) ? m.heavyHitEvery : best), 0),
     elementPower: Math.max(0, 1 + a.el / 100 + .15 * pk('elp')),
     damage: Math.max(1, w.value * size.damage * (1 + .07 * upg('dmg') + .08 * pk('dmg') + a.dmg / 100 + DRILL.damage * drill) * (pk('m_dampf') && kind === 'hammer' ? 1.7 : 1)
       // G1 Umbau: Sturmklinge and Schnellfeuer trade damage for tempo.
