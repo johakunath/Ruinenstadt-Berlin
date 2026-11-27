@@ -43,7 +43,7 @@ export const AI_GEAR: Readonly<Record<string, AiFit>> = {
   // three-quarter view).
 };
 
-const urls = import.meta.glob('../../assets/gear/*.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const urls = import.meta.glob('../../assets/gear/hat-*.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const urlOf = (id: string): string | undefined => urls[`../../assets/gear/${id}.glb`];
 
 interface Loaded { geo: BufferGeometry; map: Texture }
