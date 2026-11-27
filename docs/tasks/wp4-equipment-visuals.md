@@ -573,16 +573,16 @@ Johannes, 2026-11-19: no painted item icons any more.
 
 ## Step 3 handover, phase 2 (Opus 5.5, 2026-11-27)
 - G2: Johannes picked A. Variants B and C and `?pickup` are gone (`loot.ts`, `renderer.ts`, `options.ts`, `main.ts`, the sheet tool); the crystal only stands in while a model is not loaded.
-- Models: PHASE2_MODELS
+- Models: the five code stand-ins are now Pixal3D (kabel, chemie, fleisch, gemuese, gewuerz; one ComfyUI job at a time, 11 to 29 min each in the shared queue), so 12 Pixal3D and 8 reused game models, no code stand-ins left (their builders are gone from the sheet tool). Chemie's glass bakes milky: `sat: 1.8` on its atlas cell (`MODELS` in `tools/pickup-models.mjs`).
 - Heal is now the lead's Verband (`assets-src/ai/props/sup-verband-pixal.glb`, the same low-and-bake route); the own one is kept as `p10-pickups/*/heal-own.*`.
-- Numbers: PHASE2_NUMBERS
-- Proof: `docs/proof/wp4/step3/pickups.jpg` (all 20 final); the A, B, C shots stay as the G2 record.
+- Numbers: 6,401 triangles for all 20 (180 to 380 each), GLB 625 KB, atlas 217 KB (1024 px, 13 of 16 cells used). `map=hof`, Qualität: 20 kinds on the ground cost pre-pass +20 and beauty +23 (20 + glow + beam twice), shadow 0; total 247 → 290. `npm run check` green.
+- Proof: `docs/proof/wp4/step3/pickups.jpg` (all 20 final), `game-20-qualitaet.jpg` (`?autostart&drops=20`, every kind in the game); the A, B, C shots stay as the G2 record.
 
 ### Doc updates for the lead (phase 2, replaces the phase 1 list where they differ)
 - `docs/backlog.md`: delete the row `| P10 | Pickups: own model per item kind. …`.
 - `docs/status.md` › Items, the pickup part: "; ground pickups: one model per drop kind (20, WP4 step 3, `assets/props/pickups.glb`, G2 look A)".
-- `docs/migration.md` WP4 row: step 3 done 2026-11-27 (G2 A, 20 pickup models, 15 Pixal3D and 5 reused game models... see Models above).
-- `docs/equipment-pipeline.md` row Ground drops: "| Ground drops | `src/render/loot.ts`: one model per drop kind (20, `assets/props/pickups.glb`, `src/data/pickups.ts`) floating on the rarity ring and beam, natural colours with a faint rarity glow (G2 A); PHASE2_SOURCES |".
+- `docs/migration.md` WP4 row, status: "step 3 done 2026-11-27 (G2: A; 20 pickup models, 12 Pixal3D and 8 reused game models; `?drops=N`)".
+- `docs/equipment-pipeline.md` row Ground drops: "| Ground drops | `src/render/loot.ts`: one model per drop kind (20, `assets/props/pickups.glb`, `src/data/pickups.ts`) floating on the rarity ring and beam, natural colours with a faint rarity glow (G2 A); 12 Pixal3D (talisman, ring, implant, heal = the Verband, food, materials, ingredients), 8 reused game models (weapons by kind, vest, Bauhelm, glove, Turnschuh) |".
 - `docs/tasks/pt-hardware-checks.md` row 66: drop "which look, A, B or C" and `&pickup=A … (then B, C)`; it reads: "Pickups per kind (WP4 step 3): do the 20 models read at the game camera and on the phone; fps with 20 drops lying (Ausgewogen, Leistung); hitch when the first drop of a kind appears | `?drops=20&debug=perf` | PC, Tab S9 | …".
 - `CLAUDE.md` URL options: add "`?drops=N` (N mixed drops round the hero, WP4 step 3 proof)" if the lead wants it listed.
 
