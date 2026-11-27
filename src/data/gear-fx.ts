@@ -1,29 +1,18 @@
 // WP4 step 5 (P31, D5): how legendary and set items show beyond their model. Glow edge (emissive parts in the
 // weapon's or the gear's glow mesh, one pulse uniform), ambient particles and the proc flash, both drawn from
 // one shared sprite pool (`src/render/gear-fx.ts`, 1 draw call, no light). Plain data, no Three.js.
-// Values are start values (task file Step 5 table); how strong it all is, is gate G3 (Johannes).
+// Values are start values (task file Step 5 table). G3 (Johannes, 2026-11-27): variant B, glow edge plus sparse
+// particles and proc flashes; A (glow edge only) and C (plus a ground aura and a set shimmer) are gone.
 import type { HeroLook } from './hero-look';
-import type { LegendaryId, SetId, SlotId } from './items';
-
-/**
- * G3 variants (`?gearfx=A|B|C`, open until Johannes picks): A glow edge only (a proc flares the glow),
- * B glow edge and sparse particles with proc flashes (recommended, default), C B plus a soft ground aura
- * and the set shimmer at three pieces.
- */
-export type GearFxVariant = 'A' | 'B' | 'C';
-export const GEAR_FX_DEFAULT: GearFxVariant = 'B';
-export function gearFxVariant(v: string | null | undefined): GearFxVariant {
-  const u = (v ?? '').trim().toUpperCase();
-  return u === 'A' || u === 'C' ? u : GEAR_FX_DEFAULT;
-}
+import type { LegendaryId, SlotId } from './items';
 
 /** Sprites in the pool per profile (D3: 48 on Qualität, 24 on the lighter levels). */
 export const GEAR_FX_SPRITES = { qualitaet: 48, ausgewogen: 24, leistung: 24 } as const;
 /** At most this many ambient emitters at once: the weapon, the armor and one more (D5). */
 export const GEAR_FX_EMITTERS = 3;
 
-/** Sprite shapes (the shader branches on them). `ring` and `disc` lie on the ground. */
-export type FxSprite = 'dot' | 'glint' | 'feather' | 'drop' | 'disc' | 'ring';
+/** Sprite shapes (the shader branches on them). `ring` lies on the ground. */
+export type FxSprite = 'dot' | 'glint' | 'feather' | 'drop' | 'ring';
 
 /**
  * Where an item's effect sits on the hero.
@@ -40,7 +29,7 @@ export type FxAnchor =
   | { readonly at: 'feet' }
   | { readonly at: 'shots' };
 
-/** Ambient particles (variant B and C): sprites per second at 48 sprites (halved on 24), life in s, size in m. */
+/** Ambient particles: sprites per second at 48 sprites (halved on 24), life in s, size in m. */
 export interface FxAmbient {
   readonly sprite: FxSprite;
   readonly color: string;
@@ -60,7 +49,7 @@ export interface FxAmbient {
   readonly anchor?: FxAnchor;
 }
 
-/** A steady glow sprite (all variants): the glow of an item that has no 3D model (talisman, ring, implant). */
+/** A steady glow sprite: the glow of an item that has no 3D model (talisman, ring, implant). */
 export interface FxSteady {
   readonly sprite: 'dot' | 'glint';
   readonly size: number;
@@ -88,12 +77,12 @@ export interface FxProc {
 
 export interface GearFxDef {
   readonly slot: SlotId;
-  /** Signature colour: the glow edge, the aura of variant C. */
+  /** Signature colour (the glow edge). */
   readonly color: string;
   readonly anchor: FxAnchor;
   /** Extra glow parts on the hero (gear ids, `src/render/gear-fx-parts.ts`), added to the look. */
   readonly gear?: string;
-  /** Which glow a proc flares (variant A's only proc signal) and which glow pulses. */
+  /** Which glow pulses and flares on a proc. */
   readonly glow?: 'weapon' | 'gear';
   readonly steady?: FxSteady;
   readonly ambient?: readonly FxAmbient[];
@@ -198,16 +187,6 @@ export const GEAR_FX: Readonly<Partial<Record<LegendaryId, GearFxDef>>> = {
     steady: { sprite: 'dot', size: 0.06, count: 3 },
     proc: { on: 'legendaryProc', burst: 'pulse', color: '#ff7ac0', count: 10, at: 'anchor' },
   },
-};
-
-/** Set signature colours for the shimmer of variant C at three pieces (D5: Kiezwache blue, Spreegeist green, Zitadelle iron). */
-export const SET_FX: Readonly<Record<SetId, string>> = {
-  kiez: '#6a9ae0', spree: '#5fd18a', zit: '#c8d0dc', tunnel: '#ffe080', gast: '#f2d14b',
-};
-/** The set shimmer (variant C, three pieces or more): motes rising round the body. */
-export const SET_SHIMMER: FxAmbient = {
-  sprite: 'dot', color: '#ffffff', rate: 1.8, life: 1.6, size: 0.05, rise: 0.35, spread: 0.04,
-  anchor: { at: 'bone', bone: 'pelvis', off: [0, 0.25, 0], r: 0.32 },
 };
 
 /** Slot order for the emitter budget: the weapon, the armor, then one more in this order. */

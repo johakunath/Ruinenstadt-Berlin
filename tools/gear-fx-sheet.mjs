@@ -1,28 +1,25 @@
-// WP4 step 5 proof sheets of the legendary and set effects, rendered in the real game (dev server running).
-//   PORT=5178 node tools/gear-fx-sheet.mjs g3 docs/proof/wp4/step5        G3: g3-A.jpg, g3-B.jpg, g3-C.jpg, g3-compare.jpg
+// WP4 step 5 proof sheets of the legendary effects (G3 variant B, Johannes 2026-11-27), rendered in the real game
+// (dev server running).
+//   PORT=5178 node tools/gear-fx-sheet.mjs look docs/proof/wp4/step5      look.jpg: Fernsehturm-Splitter + Späti, Xhain and Alexanderplatz, game camera and close, crit-proc strip
 //   PORT=5178 node tools/gear-fx-sheet.mjs items docs/proof/wp4/step5     every item of the step 5 table: items-weapons.jpg, items-wear.jpg (ONLY=wear: the second)
-//   PORT=5178 node tools/gear-fx-sheet.mjs count - turm,spaeti,pickel     draw calls, sprites and update ms per variant (one load)
-//   PORT=5178 VARIANTS=C node tools/gear-fx-sheet.mjs strip docs/proof/wp4/step5   re-render only the proc strips into the g3 sheets
+//   PORT=5178 node tools/gear-fx-sheet.mjs count - turm,spaeti,pickel     draw calls, sprites and update ms with these items (one load)
 //   PORT=5178 node tools/gear-fx-sheet.mjs probe out-prefix "map=xhain&cam=7,16" 0,-10   frames with the hero moved north (framing)
 // Frames run on a gated 60 Hz clock: the sim is held and stepped by hand, one rendered frame per step, so particles
-// and clips are the same on every run. The variant switches at runtime (`__game.gearFx`), one load per spot and camera.
-// The HUD is hidden (only the game canvas is read). CHROMIUM=<path> optional.
-import fs, { mkdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+// and clips are the same on every run. The HUD is hidden (only the game canvas is read). CHROMIUM=<path> optional.
+// The G3 variant sheets (g3-A/B/C, g3-compare) were made by this tool before A and C were removed.
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 
-const [mode = 'g3', outDir = 'docs/proof/wp4/step5', extra, more] = process.argv.slice(2);
+const [mode = 'look', outDir = 'docs/proof/wp4/step5', extra, more] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 5173;
-// G3 frames at 1280 × 720 (the spec size); the item grid at 960 × 540 (SwiftShader takes seconds per frame at full size).
+// Look frames at 1280 × 720 (the spec size); the item grid at 960 × 540 (SwiftShader takes seconds per frame at full size).
 const W = mode === 'items' ? 960 : 1280, H = mode === 'items' ? 540 : 720;
 /** Dark: Xhain at night; bright: Alexanderplatz by day. `dz`: the hero moved this far north of the start (0: the start itself). */
 const SPOTS = [['dunkel', 'xhain', Number(process.env.DARK_DZ ?? 0)], ['hell', 'alex', Number(process.env.BRIGHT_DZ ?? 0)]];
 const CLOSE_CAM = process.env.CLOSE_CAM ?? '7,16';
 
-// Windows: sharp keeps input files open in its cache; the strip mode rewrites the sheets it reads.
-sharp.cache(false);
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 
 /** Gated clock: free 60 Hz while loading; with `on`, only `budget` more frames run. */
@@ -82,17 +79,16 @@ async function shot(page) {
   return Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
 }
 
-/** Variant, then `words` (?gear= syntax) over the start loadout; the hero turned to `facing`, standing. */
-async function wear(page, variant, words, facing = 0.6) {
-  await page.evaluate(([variant, words, facing]) => {
+/** `words` (?gear= syntax) over the start loadout; the hero turned to `facing`, standing. */
+async function wear(page, words, facing = 0.6) {
+  await page.evaluate(([words, facing]) => {
     const s = window.__game.sim();
-    window.__game.gearFx(variant);
     window.__game.setLoadout({ ...structuredClone(window.__base), ...window.__dbg.debugGear(words) });
     s.player.facing = s.player.pfacing = facing;
     s.player.state = 'move'; s.player.vx = s.player.vz = 0; s.player.attack = null; s.player.chain = null;
     s.abilities.dcrit = false;
     s.enemies.length = 0;
-  }, [variant, words, facing]);
+  }, [words, facing]);
 }
 
 const label = (w, h, text, size = 15) => Buffer.from(`<svg width="${w}" height="${h}"><rect width="100%" height="100%" fill="#000" opacity="0.55"/><text x="6" y="${Math.round(h * 0.72)}" font-family="Arial" font-size="${size}" fill="#fff">${text.replace(/&/g, '&amp;')}</text></svg>`);
@@ -112,13 +108,12 @@ async function sheet(out, width, rows, title) {
 
 /** Crop round the hero in a close frame (she stands a little below the middle). */
 const HERO = { left: Math.round(W / 2 - 400), top: Math.round(H * 0.61 - 225), width: 800, height: 450 };
-const VARIANTS = ['A', 'B', 'C'];
 
 /**
  * Proc strip: a crit on a training dummy beside her (Fernsehturm-Splitter: ember burst, the glow flares), 8 frames
  * over 2.3 s. Element procs are off for the dummy: a burning body's flame card covers a close camera (E1 status marks).
  */
-async function procStrip(page, v) {
+async function procStrip(page) {
   await page.evaluate(() => {
     const s = window.__game.sim(), p = s.player, f = 1.3;
     const e = window.__dbg.spawnEnemy(s, p.x + Math.sin(f) * 1.5, p.z + Math.cos(f) * 1.5, 'walker');
@@ -135,7 +130,7 @@ async function procStrip(page, v) {
     const n = i === 0 ? 1 : 20;
     await frames(page, n, i === 0 ? { attack: true } : {});
     t += n;
-    strip.push(await cell(await shot(page), 320, 180, `${v} · ${(t / 60).toFixed(2)} s`, HERO));
+    strip.push(await cell(await shot(page), 320, 180, `${(t / 60).toFixed(2)} s`, HERO));
   }
   return strip;
 }
@@ -149,54 +144,26 @@ if (mode === 'probe') {
     console.log(`${outDir}-${dz}.png`);
     await page.evaluate((dz) => { const p = window.__game.sim().player; p.z = p.pz = p.z - dz; }, dz);
   }
-} else if (mode === 'g3') {
+} else if (mode === 'look') {
   mkdirSync(outDir, { recursive: true });
   const gear = ['turm', 'spaeti'];
-  const pics = Object.fromEntries(VARIANTS.map((v) => [v, {}]));
+  const pics = {};
   for (const [spot, map, dz] of SPOTS) {
     for (const [view, cam] of [['Spielkamera', ''], ['nah', `&cam=${CLOSE_CAM}`]]) {
       const page = await open(`map=${map}&gear=${gear.join(',')}${cam}`, dz);
-      for (const v of VARIANTS) {
-        await wear(page, v, gear, 0.6);
-        await frames(page, 90);
-        pics[v][`${spot} ${view}`] = await shot(page);
-        if (spot !== 'dunkel' || view !== 'nah') continue;
-        pics[v].strip = await procStrip(page, v);
-      }
+      await wear(page, gear, 0.6);
+      await frames(page, 90);
+      pics[`${spot} ${view}`] = await shot(page);
+      if (spot === 'dunkel' && view === 'nah') pics.strip = await procStrip(page);
       await page.close();
     }
   }
-  for (const v of VARIANTS) {
-    const p = pics[v], big = (k) => cell(p[k], 640, 360, `${v} · ${k}`);
-    await sheet(join(outDir, `g3-${v}.jpg`), 1280, [[await big('dunkel Spielkamera'), await big('hell Spielkamera')], [await big('dunkel nah'), await big('hell nah')], p.strip.slice(0, 4), p.strip.slice(4)],
-      `G3 Variante ${v}: Fernsehturm-Splitter + Mantel des letzten Späti · Xhain Nacht, Alexanderplatz Tag · Qualität 1280×720 · unten Krit-Proc, 0 bis 2,3 s`);
-  }
-  const row = (k, crop, text = k) => Promise.all(VARIANTS.map((v) => cell(pics[v][k], 426, 240, `${v} · ${text}`, crop)));
-  const procRow = (i) => Promise.all(VARIANTS.map((v) => pics[v].strip[i]).map((c) => sharp(c).resize(426, 240).png().toBuffer()));
-  await sheet(join(outDir, 'g3-compare.jpg'), 1278, [await row('dunkel nah', HERO), await row('hell nah', HERO), await procRow(1), await procRow(2)],
-    'G3 A | B | C: nah in Xhain und am Alexanderplatz (Ausschnitt), Krit-Proc nach 0,35 und 0,68 s');
-} else if (mode === 'strip') {
-  // Re-renders only the proc strips (`VARIANTS=C`) and pastes them into the existing g3 sheets.
-  const [spot, map, dz] = SPOTS[0];
-  const page = await open(`map=${map}&gear=turm,spaeti&cam=${CLOSE_CAM}`, dz);
-  for (const v of (process.env.VARIANTS ?? 'C').split(',')) {
-    await wear(page, v, ['turm', 'spaeti'], 0.6);
-    await frames(page, 90);
-    const strip = await procStrip(page, v);
-    const g3 = join(outDir, `g3-${v}.jpg`), cmp = join(outDir, 'g3-compare.jpg'), col = VARIANTS.indexOf(v) * 426;
-    const at = (buf, left, top) => ({ input: buf, left, top });
-    for (const [i, c] of strip.entries()) fs.writeFileSync(join(tmpdir(), `gear-fx-strip-${v}-${i}.png`), c);
-    const a = await sharp(fs.readFileSync(g3)).composite(strip.map((c, i) => at(c, (i % 4) * 320, 750 + Math.floor(i / 4) * 180))).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
-    fs.writeFileSync(g3, a);
-    const big = await Promise.all([1, 2].map((i) => sharp(strip[i]).resize(426, 240).png().toBuffer()));
-    const b = await sharp(fs.readFileSync(cmp)).composite([at(big[0], col, 510), at(big[1], col, 750)]).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
-    fs.writeFileSync(cmp, b);
-    console.log(g3, cmp, spot);
-  }
-  await page.close();
+  const big = (k) => cell(pics[k], 640, 360, k);
+  await sheet(join(outDir, 'look.jpg'), 1280, [[await big('dunkel Spielkamera'), await big('hell Spielkamera')], [await big('dunkel nah'), await big('hell nah')], pics.strip.slice(0, 4), pics.strip.slice(4)],
+    'Legendäre Effekte (G3 B): Fernsehturm-Splitter + Mantel des letzten Späti · Xhain Nacht, Alexanderplatz Tag · 1280×720 · unten Krit-Proc, 0 bis 2,3 s');
 } else if (mode === 'count') {
-  // Draw calls of a whole frame (all passes) and the effect numbers per variant, one load: B and C minus A is what
-  // the sprites cost (A shows no sprite with these items). `extra`: the ?gear= list (default three emitters).
+  // Draw calls of a whole frame (all passes) and the effect numbers with the items, one load. `extra`: the ?gear= list
+  // (default three emitters). Before the switch went, A (no sprites) against B measured the sprites at 1 draw call.
   const gear = (extra ?? 'turm,spaeti,pickel').split(',');
   const page = await open(`map=${SPOTS[0][1]}&gear=${gear.join(',')}`, SPOTS[0][2]);
   const sample = (n) => page.evaluate(async (n) => {
@@ -210,8 +177,8 @@ if (mode === 'probe') {
     }
     return out;
   }, n);
-  for (const v of (process.env.VARIANTS ?? VARIANTS.join()).split(",")) {
-    await wear(page, v, gear, 0.6);
+  {
+    await wear(page, gear, 0.6);
     await frames(page, 75);
     const calm = await sample(15);
     // A proc burst on top (Fernsehturm crit at 1.2 m): the pool's peak.
@@ -219,7 +186,7 @@ if (mode === 'probe') {
     const burst = await sample(12);
     const r = (k, xs) => `${Math.min(...xs.map((x) => x[k]))}..${Math.max(...xs.map((x) => x[k]))}`;
     const ms = calm.concat(burst).map((x) => x.ms).sort((a, b) => a - b);
-    console.log(`${v}: calls ${r('calls', calm)} (burst ${r('calls', burst)}), sprites ${r('sprites', calm)} (burst ${r('sprites', burst)}), emitters ${calm[0].emitters}, update ms median ${ms[ms.length >> 1].toFixed(3)} max ${ms[ms.length - 1].toFixed(3)}`);
+    console.log(`calls ${r('calls', calm)} (burst ${r('calls', burst)}), sprites ${r('sprites', calm)} (burst ${r('sprites', burst)}), emitters ${calm[0].emitters}, update ms median ${ms[ms.length >> 1].toFixed(3)} max ${ms[ms.length - 1].toFixed(3)}`);
   }
   await page.close();
 } else if (mode === 'items') {
@@ -235,15 +202,14 @@ if (mode === 'probe') {
     ['Rüstung des Zitadellenritters', 'ritter', EV('ritter')], ['Pickelhaube des Hauptmanns', 'pickel', null], ['Fäuste des Kiezboxers', 'kiezbox', EV('kiezbox')],
     ['Stiefel des Schaffners', 'schaffner', { dodge: true }], ['Ring der Weltzeituhr', 'weltuhr', { arm: true }], ['Herz der Spree', 'herz', { ev: { type: 'secondWind' } }],
     ['Auge des Fernsehturms', 'auge', { elite: true }], ['Arm des Basspredigers', 'bassarm', EV('bassarm')],
-    ['Set Kiezwache (C)', 'kiez', null, 'C'], ['Set Spreegeist (C)', 'spree', null, 'C'], ['Set Zitadelle (C)', 'zit', null, 'C'],
   ];
   const SQ = { left: Math.round(W / 2 - 200), top: Math.round(H * 0.61 - 200), width: 400, height: 400 };
   const page = await open(`map=${SPOTS[0][1]}&cam=${CLOSE_CAM}`, SPOTS[0][2]);
   const run = async (list) => {
     const out = [];
-    for (const [name, word, trig, variant = 'B'] of list) {
+    for (const [name, word, trig] of list) {
       // Left hand items face her left side to the camera.
-      await wear(page, variant, [word], word === 'weltuhr' || word === 'bassarm' ? -0.9 : 0.6);
+      await wear(page, [word], word === 'weltuhr' || word === 'bassarm' ? -0.9 : 0.6);
       await frames(page, 45);
       const calm = await cell(await shot(page), 300, 300, `${name}`, SQ);
       if (trig?.ev) {
@@ -265,8 +231,8 @@ if (mode === 'probe') {
     return out;
   };
   const pairs = (cells, per) => { const rows = []; for (let i = 0; i < cells.length; i += per) rows.push(cells.slice(i, i + per).flat()); return rows; };
-  if (process.env.ONLY !== 'wear') await sheet(join(outDir, 'items-weapons.jpg'), 1800, pairs(await run(WEAPONS), 3), 'Step 5 Waffen (Variante B, Xhain nah): je Ruhe | Proc');
-  await sheet(join(outDir, 'items-wear.jpg'), 1800, pairs(await run(WEAR), 3), `Step 5 Kleidung, Ring, Talismane, Implantat (B) und Sets (C, alle Teile), ${process.env.PROFILE ?? 'Qualität'}: je Ruhe | Proc`);
+  if (process.env.ONLY !== 'wear') await sheet(join(outDir, 'items-weapons.jpg'), 1800, pairs(await run(WEAPONS), 3), 'Step 5 Waffen (Xhain nah): je Ruhe | Proc');
+  await sheet(join(outDir, 'items-wear.jpg'), 1800, pairs(await run(WEAR), 3), `Step 5 Kleidung, Ring, Talismane, Implantat, ${process.env.PROFILE ?? 'Qualität'}: je Ruhe | Proc`);
   await page.close();
 }
 await browser.close();

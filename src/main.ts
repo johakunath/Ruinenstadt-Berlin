@@ -26,7 +26,6 @@ import { PROFILES } from './render/profile';
 import { GameRenderer } from './render/renderer';
 import { setLoadout } from './sim/loadout';
 import { debugGear } from './sim/debug-gear';
-import { gearFxVariant } from './data/gear-fx';
 import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
 import { autoAttackTarget } from './sim/player';
@@ -1157,13 +1156,10 @@ declare global {
       /** Stops the automatic sim steps so a script can step by hand. */
       hold(on: boolean): void;
       step(input: Partial<SimInput>, steps: number): void;
-      /** WP4 step 5 G3 sheets: switch the legendary effect variant (A, B, C) without a reload. */
-      gearFx(variant: string): void;
     };
   }
 }
 window.__game = {
-  gearFx: (v) => renderer?.setGearFx(gearFxVariant(v)),
   phase: () => phase,
   sim: () => sim,
   perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs, gearFx: { ...renderer.gearFxStats } } : null),
@@ -1227,7 +1223,7 @@ function femalesFor(): boolean {
 const skyParam = new URLSearchParams(location.search).get('sky');
 const sky = skyFor(opts.map, skyParam);
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal, pickup: opts.pickup, gearFx: opts.gearFx,
+  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal, pickup: opts.pickup,
   zoneSkies: zoneSkies(opts.map, skyParam),
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),

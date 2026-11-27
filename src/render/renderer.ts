@@ -4,7 +4,7 @@ import { ALEX_WEATHER, CHARLOTTENBURG_WEATHER, KOEPENICK_WEATHER, MITTE_WEATHER,
 import { HeroPreview, type PreviewState } from './hero-preview';
 import { heroLook } from '../data/hero-look';
 import { heroLight } from '../data/item-light';
-import { GEAR_FX_DEFAULT, GEAR_FX_SPRITES, fxLook, type GearFxVariant } from '../data/gear-fx';
+import { GEAR_FX_SPRITES, fxLook } from '../data/gear-fx';
 import { GearFx, type GearFxStats } from './gear-fx';
 import {
   ACESFilmicToneMapping, BackSide, BufferAttribute, Color, FogExp2, Mesh, MeshBasicMaterial, PCFShadowMap, PMREMGenerator, PointLight, Scene,
@@ -86,8 +86,6 @@ export interface RendererOptions {
   bosses?: readonly string[];
   /** WP4 step 3 gate G2: the pickup look (`?pickup=A|B|C`), A when left out. */
   pickup?: PickupVariant;
-  /** WP4 step 5 G3: legendary effect variant (`?gearfx=A|B|C`, default B). */
-  gearFx?: GearFxVariant;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -233,7 +231,7 @@ export class GameRenderer {
     this.scene.add(this.hero.root, this.heroLight);
     this.lamp = new HeroLamp(this.hero.root, (opts.lamp ?? (opts.profile.id === 'leistung' ? 'fake' : 'real')) === 'real');
     this.scene.add(this.lamp.group);
-    this.gearFx = new GearFx(GEAR_FX_SPRITES[opts.profile.id], opts.gearFx ?? GEAR_FX_DEFAULT);
+    this.gearFx = new GearFx(GEAR_FX_SPRITES[opts.profile.id]);
     this.scene.add(this.gearFx.mesh);
     const start = opts.map?.def.start;
     const mistBox = start ? { minX: start.x - 22, maxX: start.x + 22, minZ: start.z - 18, maxZ: start.z + 14 } : COURTYARD.yard;
@@ -391,11 +389,6 @@ export class GameRenderer {
   /** WP4 step 5 effect numbers of the last frame (sprites, emitters, CPU ms) for the perf hook. */
   get gearFxStats(): GearFxStats {
     return this.gearFx.stats;
-  }
-
-  /** Debug hook (G3 sheets): switch the legendary effect variant without a reload. */
-  setGearFx(v: GearFxVariant): void {
-    this.gearFx.setVariant(v);
   }
 
   onEvent(ev: SimEvent, sim: Sim): void {

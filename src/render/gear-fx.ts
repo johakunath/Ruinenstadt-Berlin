@@ -1,27 +1,23 @@
-// WP4 step 5 (P31, D5): legendary and set effects on the hero. One instanced sprite mesh on FX_LAYER draws
-// every ambient particle, proc flash, steady glow (talisman, ring, implant) and the ground aura of variant C:
-// 1 draw call, none while nothing shows, no light, not in the normal/depth pre-pass. The glow edges themselves
-// are model parts (weapons.ts `SIG`, gear-fx-parts.ts); this file only pulses them (`WeaponRack.pulse`,
-// `GEAR_PULSE`). What each item shows is data (src/data/gear-fx.ts); G3 picks the variant (`?gearfx=A|B|C`).
-// Reads sim state and events only.
+// WP4 step 5 (P31, D5): legendary effects on the hero, G3 variant B (Johannes, 2026-11-27). One instanced sprite
+// mesh on FX_LAYER draws every ambient particle, proc flash and steady glow (talisman, ring, implant): 1 draw call,
+// none while nothing shows, no light, not in the normal/depth pre-pass. The glow edges themselves are model parts
+// (weapons.ts `SIG`, gear-fx-parts.ts); this file only pulses them (`WeaponRack.pulse`, `GEAR_PULSE`). What each
+// item shows is data (src/data/gear-fx.ts). Reads sim state and events only.
 import { BufferAttribute, Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, NormalBlending, ShaderMaterial, Vector3, type Object3D } from 'three';
-import {
-  GEAR_FX_EMITTERS, SET_FX, SET_SHIMMER, equippedFx, type FxAmbient, type FxAnchor, type FxBurst, type FxProc, type FxSprite, type GearFxDef, type GearFxVariant,
-} from '../data/gear-fx';
-import type { LegendaryId, SetId } from '../data/items';
+import { GEAR_FX_EMITTERS, equippedFx, type FxAmbient, type FxAnchor, type FxBurst, type FxProc, type FxSprite, type GearFxDef } from '../data/gear-fx';
+import type { LegendaryId } from '../data/items';
 import { lerp, Rng } from '../sim/math';
-import { setCount } from '../sim/stats';
 import type { Sim, SimEvent } from '../sim/types';
 import type { HeroView } from './characters';
 import { GEAR_PULSE } from './gear';
 import { groundY } from './ground';
 import { FX_LAYER } from './layers';
 
-// Sprite kinds (the shader branches on them). Disc and ring lie on the ground; halo is a ring facing the camera.
-const DOT = 0, GLINT = 1, FEATHER = 2, DROP = 3, DISC = 4, RING = 5, HALO = 6;
-const KIND: Readonly<Record<FxSprite, number>> = { dot: DOT, glint: GLINT, feather: FEATHER, drop: DROP, disc: DISC, ring: RING };
-/** Sprites kept for the steady glows and the aura (written every frame, outside the particle pool). */
-const STEADY_MAX = 6;
+// Sprite kinds (the shader branches on them). The ring lies on the ground; the halo is a ring facing the camera.
+const DOT = 0, GLINT = 1, FEATHER = 2, DROP = 3, RING = 4, HALO = 5;
+const KIND: Readonly<Record<FxSprite, number>> = { dot: DOT, glint: GLINT, feather: FEATHER, drop: DROP, ring: RING };
+/** Sprites kept for the steady glows (written every frame, outside the particle pool): talisman 1, ring 1, implant 3. */
+const STEADY_MAX = 5;
 /** Emission rates in the data are for 48 sprites; smaller pools emit proportionally less. */
 const RATE_POOL = 48;
 /** Slow pulse of the glow edges: 0.8 to 1.3 × over this period (D5). */
@@ -39,7 +35,7 @@ void main() {
   vCol = iCol;
   vShape = iShape.xyz;
   vec3 p;
-  if (iShape.x > 3.5 && iShape.x < 5.5) {
+  if (iShape.x > 3.5 && iShape.x < 4.5) {
     p = iPos.xyz + vec3(position.x, 0.0, -position.y) * iPos.w;
   } else {
     vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
@@ -73,9 +69,8 @@ void main() {
   } else if (k < 3.5) {
     // Drop: a narrow ellipse with a bright core.
     a = exp(-(p.x * p.x * 10.0 + p.y * p.y * 3.2)) * 1.2;
-  } else if (k < 4.5) {
-    a = exp(-r * r * 2.6) * smoothstep(1.0, 0.75, r);
   } else {
+    // Ring (on the ground) and halo (facing the camera).
     a = smoothstep(0.16, 0.0, abs(r - 0.78)) * smoothstep(1.0, 0.92, r) + exp(-r * r * 6.0) * 0.12;
   }
   a = min(a, 1.0) * vCol.a;
@@ -119,8 +114,7 @@ export class GearFx {
   // Equipped effects, rebuilt when the stats object changes (equip).
   private statsRef: unknown = null;
   private fx: Fx[] = [];
-  private emitters: Array<{ key: string; fx: Fx | null; amb: FxAmbient; color: Color }> = [];
-  private auraColor: Color | null = null;
+  private emitters: Array<{ key: string; fx: Fx; amb: FxAmbient; color: Color }> = [];
   private readonly acc = new Map<string, number>();
   private readonly anchors = new Map<string, { bone: Object3D; local: Vector3; r: number } | null>();
   private weaponFlare = 0;
@@ -132,7 +126,7 @@ export class GearFx {
   private hero: HeroView | null = null;
   private foot = 0;
 
-  constructor(max: number, private variant: GearFxVariant) {
+  constructor(max: number) {
     this.cap = Math.max(STEADY_MAX + 4, max);
     this.pool = this.cap - STEADY_MAX;
     this.scale = max / RATE_POOL;
@@ -160,20 +154,13 @@ export class GearFx {
     this.mesh.visible = false;
   }
 
-  /** Switches the G3 variant (debug hook for the look sheets): clears the sprites, rebuilds the emitters. */
-  setVariant(v: GearFxVariant): void {
-    this.variant = v;
-    this.n = 0;
-    this.statsRef = null;
-  }
-
   /** Per frame, after the hero view: pulses the glow edges, emits, moves and draws the sprites. */
   update(sim: Sim, hero: HeroView, alpha: number, dt: number): void {
     const t0 = performance.now();
     this.hero = hero;
     this.time += dt;
     if (sim.stats !== this.statsRef) this.equip(sim);
-    // Glow edges: slow pulse plus a proc's flare (variant A's only proc signal).
+    // Glow edges: slow pulse plus a proc's flare.
     const pulse = 1.05 + 0.25 * Math.sin((this.time * Math.PI * 2) / PULSE_PERIOD);
     const decay = Math.exp(-dt / 0.22);
     this.weaponFlare *= decay;
@@ -187,11 +174,9 @@ export class GearFx {
     const armed = alive && sim.abilities.dcrit;
     if (armed && !this.armed) for (const f of this.fx) if (f.def.proc?.on === 'armed') this.fire(f, f.def.proc);
     this.armed = armed;
-    if (this.variant !== 'A' && alive) this.emit(sim, alpha, dt);
+    if (alive) this.emit(sim, alpha, dt);
     this.step(dt);
-    let m = this.n;
-    m = this.steady(m, pulse);
-    if (this.variant === 'C' && this.auraColor && alive) m = this.aura(m, hero);
+    const m = this.steady(this.n, pulse);
     this.geo.instanceCount = m;
     this.mesh.visible = m > 0;
     if (m > 0) {
@@ -230,15 +215,12 @@ export class GearFx {
   private equip(sim: Sim): void {
     this.statsRef = sim.stats;
     this.fx = equippedFx(sim.stats.legendary).map(({ id, def }) => ({ id, def, color: lin(def.color) }));
-    const shimmer = (Object.keys(SET_FX) as SetId[]).find((id) => setCount(sim.equipment, id) >= 3);
     const list: GearFx['emitters'] = [];
     for (const f of this.fx) if (f.def.ambient?.length) f.def.ambient.forEach((amb, i) => list.push({ key: `${f.id}:${i}`, fx: f, amb, color: lin(amb.color) }));
     // The emitter budget counts items (an item's ambients are one emitter), weapon and armor first.
-    const items = [...new Set(list.map((e) => e.fx!.id))].slice(0, GEAR_FX_EMITTERS);
-    this.emitters = list.filter((e) => items.includes(e.fx!.id));
-    if (this.variant === 'C' && shimmer && items.length < GEAR_FX_EMITTERS) this.emitters.push({ key: `set:${shimmer}`, fx: null, amb: SET_SHIMMER, color: lin(SET_FX[shimmer]) });
-    this.stats.emitters = items.length + (this.emitters.some((e) => e.fx === null) ? 1 : 0);
-    this.auraColor = this.fx[0]?.color ?? (shimmer ? lin(SET_FX[shimmer]) : null);
+    const items = [...new Set(list.map((e) => e.fx.id))].slice(0, GEAR_FX_EMITTERS);
+    this.emitters = list.filter((e) => items.includes(e.fx.id));
+    this.stats.emitters = items.length;
     this.acc.clear();
   }
 
@@ -334,7 +316,7 @@ export class GearFx {
   private emit(sim: Sim, alpha: number, dt: number): void {
     const r = this.rng, dodging = sim.player.state === 'dodge', shots = sim.abilities.projectiles;
     for (const e of this.emitters) {
-      const amb = e.amb, anchor = amb.anchor ?? e.fx?.def.anchor;
+      const amb = e.amb, anchor = amb.anchor ?? e.fx.def.anchor;
       if (!anchor) continue;
       if (amb.when === 'dodge' && !dodging) continue;
       if (amb.when === 'armed' && !sim.abilities.dcrit) continue;
@@ -356,7 +338,7 @@ export class GearFx {
         s.s0 = amb.size; s.s1 = amb.sprite === 'feather' ? amb.size : amb.size * 0.45;
         s.kind = KIND[amb.sprite];
         s.body = amb.body ?? 0;
-        s.k = s.body > 0 ? 1 : e.fx ? 1.9 : 1.4;
+        s.k = s.body > 0 ? 1 : 1.9;
         s.grav = amb.gravity ?? 0;
         s.drag = 0.6;
         if (amb.sprite === 'feather') { s.ang = r.range(-1, 1); s.spin = r.range(-1.5, 1.5); }
@@ -415,25 +397,14 @@ export class GearFx {
     return m;
   }
 
-  /** Variant C: a soft disc of the first legendary's (or the set's) colour on the ground under the hero. */
-  private aura(m: number, hero: HeroView): number {
-    if (m >= this.cap) return m;
-    const x = hero.root.position.x, z = hero.root.position.z, c = this.auraColor!;
-    const k = 0.85 + 0.15 * Math.sin(this.time * 2.4);
-    this.iPos.set([x, groundY(x, z) + 0.04, z, 2.1], m * 4);
-    this.iCol.set([c.r * 1.2, c.g * 1.2, c.b * 1.2, 0.34 * k], m * 4);
-    this.iShape.set([DISC, 0, 0, 0], m * 4);
-    return m + 1;
-  }
-
   // ---------------------------------------------------------------- proc flashes
 
-  /** A proc: the glow flares (all variants); B and C also burst from the pool at the event and/or the item. */
+  /** A proc: the glow flares and a burst from the pool shows at the event and/or the item. */
   private fire(f: Fx, proc: FxProc, ex?: number, ez?: number): void {
     if (f.def.glow === 'weapon') this.weaponFlare = 1.6;
     else if (f.def.glow === 'gear') this.gearFlare = 1.6;
     if (f.def.steady) this.steadyFlare.set(f.id, 1.2);
-    if (this.variant === 'A' || !this.hero) return;
+    if (!this.hero) return;
     const col = _c.setStyle(proc.color).clone();
     const n = Math.max(2, Math.round(proc.count * Math.max(0.5, this.scale)));
     const where = ex !== undefined && ez !== undefined ? proc.at : 'anchor';

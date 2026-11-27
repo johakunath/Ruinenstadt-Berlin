@@ -4,8 +4,7 @@
 //   ?map=tunnel&line=1 (a tunnel line, S3 default)
 //   ?shadows=boxes (A/B test: map chunks cast no shadow, only caster boxes, instanced props and characters)
 //   ?cut=off (no V1 B cutaway)   ?cut=4.3 (yard cut height in meters, look test)
-//   ?gearfx=A|B|C (WP4 step 5 G3: legendary effects, default B)   ?gear=turm,spaeti,kiez (debug: wear these legendaries and sets; never saved)
-import { gearFxVariant, type GearFxVariant } from './data/gear-fx';
+//   ?gear=turm,spaeti,kiez (debug: wear these legendaries and sets; never saved)
 import { PROFILES, type ProfileId } from './render/profile';
 import type { MapId } from './ui/maps';
 export type { MapId } from './ui/maps';
@@ -61,8 +60,6 @@ export interface Options {
   pickup: 'A' | 'B' | 'C';
   /** Debug: ?drops=N lays N mixed drops round the hero at the start (`spawnDebugDrops`; 12 = every rarity). */
   drops: number;
-  /** WP4 step 5 G3: ?gearfx=A|B|C, legendary and set effects (default B until Johannes picks). */
-  gearFx: GearFxVariant;
   /** Debug: ?gear=turm,spaeti,kiez puts on these legendaries (by base) and sets (all pieces) at the start; the run is not saved. */
   gear: string[];
 }
@@ -201,7 +198,6 @@ export function readOptions(): Options {
     god: q.has('god') || q.has('tp'),
     pickup: q.get('pickup') === 'B' ? 'B' : q.get('pickup') === 'C' ? 'C' : 'A',
     drops: Math.max(0, Math.min(40, Number(q.get('drops') ?? 0) || 0)),
-    gearFx: gearFxVariant(q.get('gearfx')),
     gear: (q.get('gear') ?? '').split(/[, ]/).filter(Boolean),
   };
 }
