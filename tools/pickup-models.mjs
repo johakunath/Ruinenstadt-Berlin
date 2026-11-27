@@ -38,7 +38,7 @@ const MODELS = {
   metall: { rot: [0, 0, 0], size: 0.4 },
   // Code stand-ins until their Pixal3D run (ComfyUI went down on 2026-11-26): drop `reused` once low/<id>.glb is baked.
   chemie: { reused: 'chemie-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
-  kabel: { reused: 'kabel-code', rot: [0, 0, 0], size: 0.4, tris: 400 },
+  kabel: { rot: [0, 0, 0], size: 0.4 },
   fleisch: { reused: 'fleisch-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
   gemuese: { reused: 'gemuese-code', rot: [0, 0, 0], size: 0.42, tris: 400 },
   gewuerz: { reused: 'gewuerz-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
