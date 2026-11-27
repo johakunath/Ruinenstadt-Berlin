@@ -42,7 +42,7 @@ const MODELS = {
   chemie: { rot: [0, 0, 0], size: 0.38, sat: 1.8 },
   kabel: { rot: [0, 0, 0], size: 0.4 },
   fleisch: { rot: [0, 0, 0], size: 0.38 },
-  gemuese: { reused: 'gemuese-code', rot: [0, 0, 0], size: 0.42, tris: 400 },
+  gemuese: { rot: [0, 0, 0], size: 0.42 },
   gewuerz: { reused: 'gewuerz-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
 };
 // Overrides while trying alternatives: ALT=hands:hands-box,armor:armor-plate
