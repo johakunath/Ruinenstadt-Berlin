@@ -14,7 +14,8 @@ const [stage = 'build'] = process.argv.slice(2);
 
 /**
  * Per model: `reused` key in reused.json (else the Pixal3D bake `low/<id>.glb`), pose (Euler degrees XYZ, applied
- * before fitting), longest side in m, triangle target (reused models are simplified to it; D3: about 160, at most 400).
+ * before fitting), longest side in m, triangle target (reused models are simplified to it; D3: about 160, at most 400),
+ * `sat` saturation of a baked cell.
  * Weapons lie flat (model +Y, the tip, along −Z; the blade's face up).
  */
 const MODELS = {
@@ -37,7 +38,8 @@ const MODELS = {
   stoff: { rot: [0, 0, 0], size: 0.4 },
   metall: { rot: [0, 0, 0], size: 0.4 },
   // Code stand-ins until their Pixal3D run (ComfyUI went down on 2026-11-26): drop `reused` once low/<id>.glb is baked.
-  chemie: { reused: 'chemie-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
+  // The glass bakes milky: `sat` lifts the cell's saturation back toward the FLUX picture.
+  chemie: { rot: [0, 0, 0], size: 0.38, sat: 1.8 },
   kabel: { rot: [0, 0, 0], size: 0.4 },
   fleisch: { reused: 'fleisch-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
   gemuese: { reused: 'gemuese-code', rot: [0, 0, 0], size: 0.42, tris: 400 },
@@ -217,7 +219,7 @@ if (stage === 'sheet') {
       const cx = cell % 4, cy = Math.floor(cell / 4);
       // UVs into the cell (glTF v runs down the image, as the atlas rows do).
       m.U = m.U.map((t, i) => ((i % 2 === 0 ? cx : cy) * CELL + PAD + Math.min(1, Math.max(0, t)) * (CELL - 2 * PAD)) / ATLAS);
-      cells.push({ input: await sharp(Buffer.from(m.image)).resize(CELL - 2 * PAD, CELL - 2 * PAD).extend({ top: PAD, bottom: PAD, left: PAD, right: PAD, extendWith: 'copy' }).png().toBuffer(), left: cx * CELL, top: cy * CELL });
+      cells.push({ input: await sharp(Buffer.from(m.image)).modulate({ saturation: spec.sat ?? 1 }).resize(CELL - 2 * PAD, CELL - 2 * PAD).extend({ top: PAD, bottom: PAD, left: PAD, right: PAD, extendWith: 'copy' }).png().toBuffer(), left: cx * CELL, top: cy * CELL });
       cell++;
       if (cell === WHITE) throw new Error('atlas full');
     }
