@@ -3,7 +3,7 @@
 // HeroView and the inventory preview each own one; geometry and materials are shared. WP4 step 2:
 // a look also picks each piece's variant (palette, coat cut, shoulder volume; `hero-wear.ts`) and
 // the rigid gear meshes (`gear.ts`), and can hide the hair.
-import { BufferGeometry, Quaternion, SkinnedMesh, Vector3, type Mesh, type Object3D } from 'three';
+import { BufferGeometry, Quaternion, SkinnedMesh, Vector3, type BufferAttribute, type Matrix4, type Mesh, type Object3D } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { HERO_REGIONS, type BodyRegion } from '../data/hero-contract';
 import { PIECES, hiddenRegions, lookNodes, sameLook, type HeroLook } from '../data/hero-look';
@@ -52,6 +52,8 @@ export class HeroModel {
   private readonly materials: Materials | undefined;
   /** W10: the Pixal3D outfit of the armor, on the hero skeleton (only with `materials`). */
   private outfitMesh: SkinnedMesh | undefined;
+  /** The skeleton the gear is bound to (step 5 anchors: bind space to bone space). */
+  private skel: { bones: Object3D[]; inverses: Matrix4[]; bind: Matrix4 } | null = null;
 
   constructor(source: Object3D, materials?: Materials) {
     this.model = cloneSkinned(source);
@@ -71,6 +73,7 @@ export class HeroModel {
     const anchor = m.getObjectByName('a_mantel') as SkinnedMesh | undefined;
     if (anchor?.isSkinnedMesh) {
       this.boneNames = anchor.skeleton.bones.map((b) => b.name);
+      this.skel = { bones: anchor.skeleton.bones, inverses: anchor.skeleton.boneInverses, bind: anchor.bindMatrix };
       if (materials) {
         const mat = gearMaterials(materials);
         for (const slot of GEAR_SLOTS) {
@@ -182,6 +185,29 @@ export class HeroModel {
       // Same layers as the body (hero contour, `HeroView` sets them after construction).
       if (layers !== undefined) mesh.layers.mask = layers;
     }
+  }
+
+  /**
+   * Step 5 anchors: bone `name` and the point `p` (hero bind space: T-pose, meters, +Y up, +Z front) in that
+   * bone's frame, so the point follows the bone (`local.applyMatrix4(bone.matrixWorld)`). Null without the bone.
+   * `p` defaults to the bone's own bind position plus `off`.
+   */
+  anchor(name: string, off?: readonly [number, number, number], p?: Vector3): { bone: Object3D; local: Vector3 } | null {
+    const i = this.boneNames.indexOf(name);
+    if (!this.skel || i < 0) return null;
+    const at = p ? p.clone() : (this.src.bones.get(name) ?? new Vector3()).clone();
+    if (off) at.add(new Vector3(off[0], off[1], off[2]));
+    return { bone: this.skel.bones[i]!, local: at.applyMatrix4(this.skel.bind).applyMatrix4(this.skel.inverses[i]!) };
+  }
+
+  /** Step 5: the centre (bind space) and radius of gear `id`'s glow parts (else all its parts), and the bone they ride on. */
+  gearCenter(id: string): { bone: string; center: Vector3; radius: number } | null {
+    const geo = gearGeometry(this.src, this.boneNames, [id]);
+    const g = geo.glow ?? geo.metal ?? geo.matte;
+    if (!g) return null;
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    const bi = (g.attributes.skinIndex as BufferAttribute | undefined)?.getX(0) ?? 0;
+    return { bone: this.boneNames[bi] ?? 'Head', center: g.boundingSphere!.center.clone(), radius: g.boundingSphere!.radius };
   }
 
   /**

@@ -25,6 +25,8 @@ import { LOOK } from './render/looks';
 import { PROFILES } from './render/profile';
 import { GameRenderer } from './render/renderer';
 import { setLoadout } from './sim/loadout';
+import { debugGear } from './sim/debug-gear';
+import { gearFxVariant } from './data/gear-fx';
 import type { Equipment, StatContext } from './sim/stats';
 import { createSim, stepSim } from './sim/sim';
 import { autoAttackTarget } from './sim/player';
@@ -132,8 +134,8 @@ const mapId: MapId = opts.map;
 const winText = isTunnel && line > 0 ? `${LINES[line]?.id ?? 'S3'} frei` : MAP_WON[mapId];
 const level: Level | undefined = map?.level;
 
-// M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
-const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0 && !opts.drops;
+// M6: debug starts (?at, ?stress, ?autostart, ?mapscale, ?spawn, ?drops, ?gear) never read or write the save.
+const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0 && !opts.drops && opts.gear.length === 0;
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 /** A checkpoint of another map waits while this one is played (M20: a visit to the camp must not drop it). */
@@ -645,6 +647,8 @@ function start(resumed = false): void {
   runScrap0 = sim.inventory.scrap; runT0 = sim.time;
   // Debug: ?tp=x,z beams the hero to a reported spot, ?god keeps her alive while looking.
   sim.god = opts.god;
+  // Debug (WP4 step 5): ?gear= puts on legendaries and sets to look at their effects.
+  if (opts.gear.length && !resumed) setLoadout(sim, { ...sim.equipment, ...debugGear(opts.gear) });
   if (opts.tp && !resumed) {
     const p = sim.player;
     p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z;
@@ -1146,20 +1150,23 @@ declare global {
     __game?: {
       phase(): Phase;
       sim(): Sim;
-      perf(): { fps: number; p95: number; calls: number; triangles: number; simMs: number } | null;
+      perf(): { fps: number; p95: number; calls: number; triangles: number; simMs: number; gearFx: { sprites: number; particles: number; emitters: number; ms: number } } | null;
       start(): void;
       setLoadout(equipment: Equipment, context?: Partial<StatContext>): void;
       collectItem(item: Item): boolean;
       /** Stops the automatic sim steps so a script can step by hand. */
       hold(on: boolean): void;
       step(input: Partial<SimInput>, steps: number): void;
+      /** WP4 step 5 G3 sheets: switch the legendary effect variant (A, B, C) without a reload. */
+      gearFx(variant: string): void;
     };
   }
 }
 window.__game = {
+  gearFx: (v) => renderer?.setGearFx(gearFxVariant(v)),
   phase: () => phase,
   sim: () => sim,
-  perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs } : null),
+  perf: () => (renderer ? { fps: renderer.perf.fps, p95: renderer.perf.p95, calls: renderer.perf.calls, triangles: renderer.perf.triangles, simMs: renderer.perf.simMs, gearFx: { ...renderer.gearFxStats } } : null),
   start,
   setLoadout: (equipment, context) => setLoadout(sim, equipment, context),
   collectItem: item => collectItem(sim, item),
@@ -1220,7 +1227,7 @@ function femalesFor(): boolean {
 const skyParam = new URLSearchParams(location.search).get('sky');
 const sky = skyFor(opts.map, skyParam);
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal, pickup: opts.pickup,
+  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal, pickup: opts.pickup, gearFx: opts.gearFx,
   zoneSkies: zoneSkies(opts.map, skyParam),
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),

@@ -17,6 +17,8 @@ import { DT, type Enemy, type Sim } from './types';
 export const pk = (s: Sim, k: PerkId): number => s.statContext.perks[k] ?? 0;
 /** An equipped legendary with this power (2D `hasL`). */
 export const hasL = (s: Sim, id: LegendaryId): boolean => s.stats.legendary.includes(id);
+/** WP4 step 5: tells the renderer a legendary power fired here (its proc flash). Changes no rule. */
+export const legendaryProc = (s: Sim, id: LegendaryId, x: number, z: number): void => { s.events.push({ type: 'legendaryProc', id, x, z }); };
 
 /** 2D knockback impulses (px/s) on the 3D scale: the blade's 240 is the old 3D light hit of 5. */
 export const knock = (px: number): number => px / 48;
@@ -216,8 +218,8 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
   if (!o.noproc) {
     const n = ++a.legHits;
     // Kiezbox: every fourth hit stuns. Bassarm: every fifth hit chains to four.
-    if (hasL(s, 'kiezbox') && n % 4 === 0) stun(e, 0.5);
-    if (hasL(s, 'bassarm') && n % 5 === 0) chain(s, e, procBase * 0.6, 4);
+    if (hasL(s, 'kiezbox') && n % 4 === 0) { stun(e, 0.5); legendaryProc(s, 'kiezbox', e.x, e.z); }
+    if (hasL(s, 'bassarm') && n % 5 === 0) { chain(s, e, procBase * 0.6, 4); legendaryProc(s, 'bassarm', e.x, e.z); }
     // Fernsehturm: a crit bursts into fire on the neighbors.
     if (crit && hasL(s, 'turm')) {
       for (const t of s.enemies) {
@@ -226,6 +228,7 @@ export function strike(s: Sim, e: Enemy, damage: number, o: StrikeOpts = {}): nu
         ignite(s, t, procBase * 0.3, 2);
       }
       s.events.push({ type: 'impact', x: e.x, z: e.z, radius: 75 * PX, kind: 'boom' });
+      legendaryProc(s, 'turm', e.x, e.z);
     }
     // M18 Die Letzte Bestellung: every third hit spills hot tea on the neighbours (fire, half the hit).
     if (hasL(s, 'bestellung') && n % 3 === 0) {
@@ -308,9 +311,13 @@ export function killEnemy(s: Sim, e: Enemy, byHero = true): void {
   if (tough(e) && hasL(s, 'pickel')) healPlayer(s, s.stats.maxHp * 0.15, 'pickel');
   // Schaffnerkelle: a kill shortens the dodge cooldown (2D 0.5 s of 1.4 s). Zitadellenklinge: one second off the power.
   if (hasL(s, 'schaffner')) p.dodgeCd = Math.max(0, p.dodgeCd - (0.5 / 1.4) * PLAYER.dodge.cooldown);
-  if (hasL(s, 'zitklinge')) a.powerCd = Math.max(0, a.powerCd - 1);
+  if (hasL(s, 'zitklinge')) { a.powerCd = Math.max(0, a.powerCd - 1); legendaryProc(s, 'zitklinge', e.x, e.z); }
   // Presslufthammer: a crit kill of a normal enemy sends a stunning ring.
-  if (hasL(s, 'pbrecher') && e.lastCrit && !e.def.boss) a.shocks.push({ x: e.x, z: e.z, r: 10 * PX, max: 95 * PX, hits: [e.id], mul: 0.7, stun: 0.5, knock: knock(260), acid: false, kind: 'small' }), s.events.push({ type: 'shock', x: e.x, z: e.z, radius: 95 * PX, kind: 'small' });
+  if (hasL(s, 'pbrecher') && e.lastCrit && !e.def.boss) {
+    a.shocks.push({ x: e.x, z: e.z, r: 10 * PX, max: 95 * PX, hits: [e.id], mul: 0.7, stun: 0.5, knock: knock(260), acid: false, kind: 'small' });
+    s.events.push({ type: 'shock', x: e.x, z: e.z, radius: 95 * PX, kind: 'small' });
+    legendaryProc(s, 'pbrecher', e.x, e.z);
+  }
   if (pk(s, 'jagd')) {
     a.jagd.n = Math.min(STATUS.jagdMax, a.jagd.n + 1);
     a.jagd.t = STATUS.jagdTime;
@@ -451,6 +458,7 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
   if (hasL(s, 'panzer') && s.rng.next() < 0.2) {
     p.invuln = 0.3;
     s.events.push({ type: 'note', text: 'geblockt', color: '#d6cfc0', x: p.x, z: p.z });
+    legendaryProc(s, 'panzer', p.x, p.z);
     return false;
   }
   const nv = noviceFactor(s);
@@ -488,6 +496,7 @@ export function hurtPlayer(s: Sim, e: Enemy | null, raw: number, dx: number, dz:
     s.abilities.ratT = 1.5;
     s.abilities.shocks.push({ x: p.x, z: p.z, r: 10 * PX, max: 120 * PX, hits: [], mul: 1.2, stun: 0, knock: knock(200), acid: true, kind: 'acid' });
     s.events.push({ type: 'shock', x: p.x, z: p.z, radius: 120 * PX, kind: 'acid' });
+    legendaryProc(s, 'rattenmantel', p.x, p.z);
   }
   if (e && e.state !== 'dead') {
     if (pk(s, 'thorns')) strike(s, e, s.stats.damage * STATUS.thorns * pk(s, 'thorns'), { knock: knock(300), noproc: true, feel: 'none' });
