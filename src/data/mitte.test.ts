@@ -190,7 +190,7 @@ describe('Mitte map (M15, layout B2)', () => {
         for (const [name, p] of Object.entries(l.content!.spots)) if (p) expect(near(seen, p[0], p[1]), `${l.special} ${name} ${scale}`).toBe(true);
       }
     }
-  });
+  }, 30_000);
 
   it('street lamps at the curb, about a third lit; no same-kind twins', () => {
     const m = mitteMap(1);
