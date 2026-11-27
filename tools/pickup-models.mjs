@@ -36,11 +36,12 @@ const MODELS = {
   food: { rot: [0, 0, 0], size: 0.42 },
   stoff: { rot: [0, 0, 0], size: 0.4 },
   metall: { rot: [0, 0, 0], size: 0.4 },
-  chemie: { rot: [0, 0, 0], size: 0.38 },
-  kabel: { rot: [0, 0, 0], size: 0.4 },
-  fleisch: { rot: [0, 0, 0], size: 0.38 },
-  gemuese: { rot: [0, 0, 0], size: 0.42 },
-  gewuerz: { rot: [0, 0, 0], size: 0.38 },
+  // Code stand-ins until their Pixal3D run (ComfyUI went down on 2026-11-26): drop `reused` once low/<id>.glb is baked.
+  chemie: { reused: 'chemie-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
+  kabel: { reused: 'kabel-code', rot: [0, 0, 0], size: 0.4, tris: 400 },
+  fleisch: { reused: 'fleisch-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
+  gemuese: { reused: 'gemuese-code', rot: [0, 0, 0], size: 0.42, tris: 400 },
+  gewuerz: { reused: 'gewuerz-code', rot: [0, 0, 0], size: 0.38, tris: 400 },
 };
 // Overrides while trying alternatives: ALT=hands:hands-box,armor:armor-plate
 for (const pair of (process.env.ALT ?? '').split(',').filter(Boolean)) { const [id, key] = pair.split(':'); MODELS[id].reused = key; }
@@ -242,7 +243,7 @@ if (stage === 'sheet') {
       .setIndices(acc('SCALAR', m.idx, Uint16Array))
       .setMaterial(material);
     scene.addChild(doc.createNode(id).setMesh(doc.createMesh(id).addPrimitive(prim)));
-    console.log(`${id.padEnd(9)} ${String(m.idx.length / 3).padStart(4)} tris  ${m.dims.join(' × ')} m${MODELS[id].reused ? `  reused ${MODELS[id].reused}` : '  Pixal3D'}`);
+    console.log(`${id.padEnd(9)} ${String(m.idx.length / 3).padStart(4)} tris  ${m.dims.join(' × ')} m${MODELS[id].reused ? `  ${MODELS[id].reused.endsWith('-code') ? 'code' : 'reused'} ${MODELS[id].reused}` : '  Pixal3D'}`);
   }
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   await io.write(OUT, doc);
