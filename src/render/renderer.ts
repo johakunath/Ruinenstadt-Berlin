@@ -23,7 +23,7 @@ import { threatShake } from './threats';
 import { BOSS } from '../data/enemies';
 import { HitDebug, PerfStats } from './debug';
 import { Fx } from './fx';
-import { LootView } from './loot';
+import { loadPickups, LootView, type PickupVariant } from './loot';
 import { ContentView } from './content';
 import { leapHeight } from '../sim/abilities';
 import type { Look } from './looks';
@@ -82,6 +82,8 @@ export interface RendererOptions {
   females?: boolean;
   /** H4: the boss kinds that can appear (own bodies are loaded only for these); omitted: all. */
   bosses?: readonly string[];
+  /** WP4 step 3 gate G2: the pickup look (`?pickup=A|B|C`), A when left out. */
+  pickup?: PickupVariant;
 }
 
 /** M20 tunnel view state from the sim: grating times, the hold charge, the end platform's power. */
@@ -167,7 +169,7 @@ export class GameRenderer {
   private skyZ = 0;
   private readonly fx: Fx;
   private readonly weather: Weather;
-  private readonly loot = new LootView();
+  private readonly loot: LootView;
   private readonly content: ContentView;
   private readonly campView: CampStationsView | null;
   private readonly campLayout: CampLayout | null;
@@ -198,6 +200,7 @@ export class GameRenderer {
     private readonly materials: Materials,
     private readonly opts: RendererOptions,
   ) {
+    this.loot = new LootView(opts.pickup);
     this.shadowClock = new ShadowClock(opts.profile.shadowEvery);
     this.dynRes = new DynamicResolution({ min: opts.profile.minScale });
     const Y = COURTYARD.yard;
@@ -267,12 +270,15 @@ export class GameRenderer {
     renderer.shadowMap.autoUpdate = false;
     renderer.info.autoReset = false;
     const materials = new Materials(opts.look, opts.profile);
+    // The pickup models load beside the characters; they are in before the compile below.
+    void loadPickups();
     const world = opts.map ? buildMapWorld(materials, opts.map.def, opts.map.lots, opts.map.props, opts.map.breakables, { boxShadows: opts.boxShadows || opts.profile.boxShadows, cut: opts.cut, sky: opts.sky }) : buildWorld(materials);
     const assets = await loadCharacters(materials, opts.map?.def.id === 'alex' || (opts.mechs ?? false), opts.humans ?? true, opts.females ?? true, opts.bosses);
     const game = new GameRenderer(renderer, world, assets, materials, opts);
     // Every clothing piece visible for one compile, so equipping never compiles a shader mid-game;
     // the first frame applies the real look.
     game.hero.body.showAll();
+    await game.loot.ready;
     await renderer.compileAsync(game.scene, game.cam.camera);
     return game;
   }

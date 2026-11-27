@@ -61,7 +61,7 @@ import { Telemetry, VERSION } from './telemetry';
 import { LootLabels, rarityColor } from './ui/loot-labels';
 import { DamageNumbers } from './ui/damage-numbers';
 import { groundY } from './render/ground';
-import { dropColor, importantDrops, nearestImportantDrop } from './sim/loot';
+import { dropColor, importantDrops, nearestImportantDrop, spawnDebugDrops } from './sim/loot';
 import { MATERIALS } from './data/crafting';
 import { PERKS, SHRINES } from './data/progression';
 import { contentMarks, EVENT_TEXT, talkTo } from './sim/runcontent';
@@ -133,7 +133,7 @@ const winText = isTunnel && line > 0 ? `${LINES[line]?.id ?? 'S3'} frei` : MAP_W
 const level: Level | undefined = map?.level;
 
 // M6: debug starts (?at, ?stress, ?autostart, ?mapscale) never read or write the save.
-const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0;
+const persist = !opts.autostart && !opts.stress && !opts.startAt && opts.mapScale === 1 && opts.spawn.length === 0 && !opts.drops;
 const mapName = map ? map.def.name : 'Hof';
 let save: SaveV1 | null = persist ? loadSave() : null;
 /** A checkpoint of another map waits while this one is played (M20: a visit to the camp must not drop it). */
@@ -649,6 +649,8 @@ function start(resumed = false): void {
     const p = sim.player;
     p.x = p.px = opts.tp.x; p.z = p.pz = opts.tp.z;
   }
+  // Debug: ?drops=N lays mixed drops round the hero (WP4 step 3 proof shots).
+  if (opts.drops && !resumed) spawnDebugDrops(sim, opts.drops);
   hitLog.length = 0;
   // A checkpoint can resume mid-encounter (no encounterStart then): count the fight from here.
   fight.t = sim.time; fight.kills = sim.kills; fight.dmg = 0;
@@ -1218,7 +1220,7 @@ function femalesFor(): boolean {
 const skyParam = new URLSearchParams(location.search).get('sky');
 const sky = skyFor(opts.map, skyParam);
 export const ready: Promise<boolean> = GameRenderer.create(canvas, {
-  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal,
+  profile: PROFILES[opts.profile], look: { ...LOOK, ...sky.look }, sky, debugHit: opts.debugHit, debugFlow: opts.debugFlow, cam: opts.cam, boxShadows: opts.boxShadows, cut: opts.cut, lamp: opts.lamp, reveal: opts.reveal, pickup: opts.pickup,
   zoneSkies: zoneSkies(opts.map, skyParam),
   map: map ? { def: map.def, lots: map.lots, props: map.props, breakables: map.level.breakables } : undefined,
   mechs: mechsFor(),

@@ -55,6 +55,10 @@ export interface Options {
   tp: { x: number; z: number } | null;
   /** Debug: ?god (or ?tp) makes the hero take no damage. */
   god: boolean;
+  /** WP4 step 3 gate G2: ?pickup=A|B|C, the look of the ground pickup models (`src/render/loot.ts`). */
+  pickup: 'A' | 'B' | 'C';
+  /** Debug: ?drops=N lays N mixed drops round the hero at the start (`spawnDebugDrops`; 12 = every rarity). */
+  drops: number;
 }
 
 const MAPS: readonly MapId[] = ['koepenick', 'hof', 'tunnel', 'xhain', 'alex', 'mitte', 'charlottenburg', 'wedding', 'turm', 'lager'];
@@ -189,6 +193,8 @@ export function readOptions(): Options {
     startAt: Math.max(0, Number(q.get('at') ?? 0) || 0),
     tp: parseTp(q.get('tp')),
     god: q.has('god') || q.has('tp'),
+    pickup: q.get('pickup') === 'B' ? 'B' : q.get('pickup') === 'C' ? 'C' : 'A',
+    drops: Math.max(0, Math.min(40, Number(q.get('drops') ?? 0) || 0)),
   };
 }
 

@@ -98,7 +98,7 @@ export type Grain = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export interface Paint { slot: WeaponSlot; hex: number; grain: Grain }
 
 /** Mean sRGB tone of the grey metal map; metal vertex colours are divided by it. */
-const METAL_TONE = 0xa0;
+export const METAL_TONE = 0xa0;
 export const metal = (hex: number): Paint => ({ slot: 'metal', hex, grain: 0 });
 /** Clean, silvery metal: the brushed half of the metal atlas (look 2: Sichel, Hackmesser, Werkhammer). */
 export const bright = (hex: number): Paint => ({ slot: 'metal', hex, grain: 1 });
