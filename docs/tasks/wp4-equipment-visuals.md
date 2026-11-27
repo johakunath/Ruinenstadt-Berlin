@@ -538,7 +538,7 @@ Johannes, 2026-11-19: no painted item icons any more.
 - G3 open: `?gearfx=A|B|C` (default B). A glow edge only (a proc flares the glow), B plus sparse particles and proc bursts, C plus a ground aura and the set shimmer at three pieces. `?gear=turm,spaeti,kiez` equips legendaries and sets for looking (never saved); `__game.gearFx(v)` for the sheets.
 - Sim: one `legendaryProc` event at 10 rule sites, no rule change (`legendary-proc.test.ts`, a test each); Herz uses `secondWind`, Auge a hit on an elite or boss, Weltzeituhr the armed crit (`abilities.dcrit`), Schaffner the dodge, Krähenschleuder the flying shots.
 - Numbers: NUMBERS
-- Proof: `docs/proof/wp4/step5/` `g3-A.jpg`, `g3-B.jpg`, `g3-C.jpg`, `g3-compare.jpg`, `items-weapons.jpg`, `items-wear.jpg` (`node tools/gear-fx-sheet.mjs g3|items`); weapon icons I15, I51, I32, I56 re-rendered for the new edges.
+- Proof: `docs/proof/wp4/step5/` `g3-A.jpg`, `g3-B.jpg`, `g3-C.jpg`, `g3-compare.jpg`, `items-weapons.jpg`, `items-wear.jpg` (`node tools/gear-fx-sheet.mjs g3|items`); the icons I15, I51, I32, I56 are not re-rendered: at icon size the new edges change a few pixels (compared side by side), so they wait for the next icon pass.
 - Not verified: fps and look on the Tab S9 and a phone (hardware row below), glow strength under Leistung's half-resolution bloom; Die Letzte Bestellung, Telespargel, Neonbrille (step 5b light) and the set weapons keep their glow without step 5 effects; set shimmer only in C.
 
 ### Doc updates for the lead (step 5)

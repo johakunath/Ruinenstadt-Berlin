@@ -1,6 +1,7 @@
 // WP4 step 5 proof sheets of the legendary and set effects, rendered in the real game (dev server running).
 //   PORT=5178 node tools/gear-fx-sheet.mjs g3 docs/proof/wp4/step5        G3: g3-A.jpg, g3-B.jpg, g3-C.jpg, g3-compare.jpg
 //   PORT=5178 node tools/gear-fx-sheet.mjs items docs/proof/wp4/step5     every item of the step 5 table: items-weapons.jpg, items-wear.jpg (ONLY=wear: the second)
+//   PORT=5178 node tools/gear-fx-sheet.mjs count - turm,spaeti,pickel     draw calls, sprites and update ms per variant (one load)
 //   PORT=5178 VARIANTS=C node tools/gear-fx-sheet.mjs strip docs/proof/wp4/step5   re-render only the proc strips into the g3 sheets
 //   PORT=5178 node tools/gear-fx-sheet.mjs probe out-prefix "map=xhain&cam=7,16" 0,-10   frames with the hero moved north (framing)
 // Frames run on a gated 60 Hz clock: the sim is held and stepped by hand, one rendered frame per step, so particles
@@ -191,6 +192,34 @@ if (mode === 'probe') {
     const b = await sharp(fs.readFileSync(cmp)).composite([at(big[0], col, 510), at(big[1], col, 750)]).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
     fs.writeFileSync(cmp, b);
     console.log(g3, cmp, spot);
+  }
+  await page.close();
+} else if (mode === 'count') {
+  // Draw calls of a whole frame (all passes) and the effect numbers per variant, one load: B and C minus A is what
+  // the sprites cost (A shows no sprite with these items). `extra`: the ?gear= list (default three emitters).
+  const gear = (extra ?? 'turm,spaeti,pickel').split(',');
+  const page = await open(`map=${SPOTS[0][1]}&gear=${gear.join(',')}`, SPOTS[0][2]);
+  const sample = (n) => page.evaluate(async (n) => {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const g = window.__gate;
+      g.budget = 1;
+      await new Promise((res) => { const chk = () => (g.budget <= 0 ? g.raf(() => res()) : setTimeout(chk, 2)); chk(); });
+      const p = window.__game.perf();
+      out.push({ calls: p.calls, ...p.gearFx });
+    }
+    return out;
+  }, n);
+  for (const v of VARIANTS) {
+    await wear(page, v, gear, 0.6);
+    await frames(page, 120);
+    const calm = await sample(30);
+    // A proc burst on top (Fernsehturm crit at 1.2 m): the pool's peak.
+    await page.evaluate(() => { const s = window.__game.sim(), p = s.player; s.events.push({ type: 'legendaryProc', id: 'turm', x: p.x + 1, z: p.z + 0.6 }); });
+    const burst = await sample(12);
+    const r = (k, xs) => `${Math.min(...xs.map((x) => x[k]))}..${Math.max(...xs.map((x) => x[k]))}`;
+    const ms = calm.concat(burst).map((x) => x.ms).sort((a, b) => a - b);
+    console.log(`${v}: calls ${r('calls', calm)} (burst ${r('calls', burst)}), sprites ${r('sprites', calm)} (burst ${r('sprites', burst)}), emitters ${calm[0].emitters}, update ms median ${ms[ms.length >> 1].toFixed(3)} max ${ms[ms.length - 1].toFixed(3)}`);
   }
   await page.close();
 } else if (mode === 'items') {
